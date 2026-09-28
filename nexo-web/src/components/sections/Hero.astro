@@ -1,37 +1,44 @@
 ---
-import Button from "../ui/Button.astro";
-import Eyebrow from "../ui/Eyebrow.astro";
-import PlatformIcon from "../ui/PlatformIcon.astro";
-import DeviceComposition from "./DeviceComposition.astro";
-import { defaultLang, useTranslations, type Lang } from "../../i18n/utils";
+import { Image } from 'astro:assets';
+import Button from '@/components/ui/Button.astro';
+import Eyebrow from '@/components/ui/Eyebrow.astro';
+import PlatformIcon from '@/components/ui/PlatformIcon.astro';
+import heroMockup from '@/assets/hero-mockup.png';
+import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
 const platforms = [
-  { name: "android" as const, label: t("hero.platformAndroid") },
-  { name: "windows" as const, label: t("hero.platformWindows") },
-  { name: "macos" as const, label: t("hero.platformMacOS") },
-  { name: "linux" as const, label: t("hero.platformLinux") },
+  { name: 'android' as const, label: t('hero.platformAndroid') },
+  { name: 'windows' as const, label: t('hero.platformWindows') },
+  { name: 'macos' as const, label: t('hero.platformMacOS') },
+  { name: 'linux' as const, label: t('hero.platformLinux') },
 ];
 ---
+
 <!-- ══════════════ HERO ══════════════ -->
 <section class="pt-10 pb-24" id="top">
   <div class="shell grid grid-cols-[0.92fr_1.08fr] items-center gap-10 max-[900px]:grid-cols-1">
     <div class="min-w-0 rise rise-1">
-      <Eyebrow>{t("hero.eyebrow")}</Eyebrow>
+      <Eyebrow>{t('hero.eyebrow')}</Eyebrow>
 
-      <h1>{t("hero.heading")}</h1>
+      <h1>{t('hero.heading')}</h1>
 
       <p class="mt-5 max-w-[46ch] text-[1.05rem] leading-[1.75] text-ink-soft text-pretty">
-        {t("hero.lead")}
+        {t('hero.lead')}
       </p>
 
       <div class="mt-8 flex flex-wrap items-center gap-3.5 max-[640px]:gap-3">
-        <Button variant="primary" size="lg" href="#descargar" icon="download">{t("hero.cta")}</Button>
+        <Button variant="primary" size="lg" href="#descargar" icon="download">
+          {t('hero.cta')}
+        </Button>
       </div>
 
-      <ul class="mt-[30px] flex flex-wrap items-center gap-7 max-[640px]:gap-[18px]" id="dispositivos">
+      <ul
+        class="mt-[30px] flex flex-wrap items-center gap-7 max-[640px]:gap-[18px]"
+        id="dispositivos"
+      >
         {platforms.map((platform) => (
           <li class="inline-flex items-center gap-[9px]">
             <PlatformIcon name={platform.name} />
@@ -41,8 +48,18 @@ const platforms = [
       </ul>
     </div>
 
-    <div class="min-w-0 max-[900px]:mt-12">
-      <DeviceComposition />
+    <div class="rise rise-2 min-w-0 max-[900px]:mt-12">
+      <Image
+        src={heroMockup}
+        alt={t('hero.mockupAlt')}
+        widths={[480, 720, 1080, 1600]}
+        sizes="(max-width: 900px) 92vw, 610px"
+        format="webp"
+        quality={82}
+        loading="eager"
+        fetchpriority="high"
+        class="h-auto w-full"
+      />
     </div>
   </div>
 </section>
