@@ -1,0 +1,44 @@
+---
+import Button from "../ui/Button.astro";
+import PlatformIcon from "../ui/PlatformIcon.astro";
+import DeviceComposition from "./DeviceComposition.astro";
+
+const platforms = [
+  { name: "android" as const, label: "Android" },
+  { name: "windows" as const, label: "Windows" },
+  { name: "macos" as const, label: "macOS" },
+  { name: "linux" as const, label: "Linux" },
+];
+---
+<!-- ══════════════ HERO ══════════════ -->
+<section class="hero" id="top">
+  <div class="container hero-grid">
+    <div class="hero-copy rise rise-1">
+      <p class="eyebrow">TU BIBLIOTECA, SIEMPRE CONTIGO</p>
+
+      <h1>Lee, destaca y sincroniza en todos tus dispositivos.</h1>
+
+      <p class="lead">
+        Nexo es la app que te permite llevar tus libros, notas y resaltados a donde
+        quieras. Empieza en un dispositivo y continúa en otro, sin interrupciones.
+      </p>
+
+      <div class="hero-ctas">
+        <Button variant="primary" size="lg" href="#descargar" icon="download">Descargar ahora</Button>
+      </div>
+
+      <ul class="platform-inline" id="dispositivos">
+        {platforms.map((platform) => (
+          <li>
+            <PlatformIcon name={platform.name} />
+            <span class="plat-label">{platform.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="hero-visual">
+      <DeviceComposition />
+    </div>
+  </div>
+</section>

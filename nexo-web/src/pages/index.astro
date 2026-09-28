@@ -1,0 +1,27 @@
+---
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/sections/SiteHeader.astro";
+import Hero from "../components/sections/Hero.astro";
+import FeatureStrip from "../components/sections/FeatureStrip.astro";
+import ExperienceSection from "../components/sections/ExperienceSection.astro";
+import FaqSection from "../components/sections/FaqSection.astro";
+import CtaBand from "../components/sections/CtaBand.astro";
+import SiteFooter from "../components/sections/SiteFooter.astro";
+---
+
+<Layout
+  title="NEXO — Lee, destaca y sincroniza en todos tus dispositivos"
+  description="Nexo es la app que te permite llevar tus libros, notas y resaltados a donde quieras. Empieza en un dispositivo y continúa en otro, sin interrupciones."
+>
+  <SiteHeader />
+
+  <main>
+    <Hero />
+    <FeatureStrip />
+    <ExperienceSection />
+    <FaqSection />
+    <CtaBand />
+  </main>
+
+  <SiteFooter />
+</Layout>

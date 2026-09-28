@@ -1,0 +1,28 @@
+---
+import Logo from "../ui/Logo.astro";
+import Button from "../ui/Button.astro";
+---
+<!-- ══════════════ HEADER ══════════════ -->
+<header class="site-header">
+  <div class="container header-inner">
+    <Logo />
+
+    <nav class="main-nav" aria-label="Principal">
+      <a href="#caracteristicas">Características</a>
+      <a href="#dispositivos">Dispositivos</a>
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#faq">Preguntas frecuentes</a>
+    </nav>
+
+    <div class="header-actions">
+      <input type="checkbox" class="nav-toggle" id="nav-toggle" aria-label="Abrir menú de navegación" />
+      <nav class="mobile-nav" aria-label="Navegación móvil">
+        <a href="#caracteristicas">Características</a>
+        <a href="#dispositivos">Dispositivos</a>
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#faq">Preguntas frecuentes</a>
+      </nav>
+      <Button variant="primary" href="#descargar">Descargar NEXO</Button>
+    </div>
+  </div>
+</header>

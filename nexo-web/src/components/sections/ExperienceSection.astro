@@ -1,0 +1,113 @@
+---
+const miniFeatures = [
+  {
+    title: "Progreso sincronizado",
+    copy: "Retoma la lectura exactamente en la línea donde la dejaste.",
+    icon: "refresh",
+  },
+  {
+    title: "Resaltados",
+    copy: "Marca lo esencial por colores y encuéntralo en segundos.",
+    icon: "highlighter",
+  },
+  {
+    title: "Notas",
+    copy: "Escribe ideas junto al párrafo que las inspiró.",
+    icon: "note",
+  },
+  {
+    title: "Biblioteca organizada",
+    copy: "Colecciones, etiquetas y filtros para una estantería clara.",
+    icon: "book",
+  },
+] as const;
+---
+<!-- ══════════════ EXPERIENCE ══════════════ -->
+<section id="como-funciona" class="experience">
+  <div class="container experience-grid">
+    <article class="reader-card rise rise-1">
+      <div class="reader-card-top">
+        <span>Hábitos atómicos · Capítulo 4</span>
+        <span>68 %</span>
+      </div>
+
+      <div
+        class="reader-progress"
+        role="progressbar"
+        aria-label="Progreso de lectura"
+        aria-valuenow="68"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        <span></span>
+      </div>
+
+      <h3>El poder de los hábitos atómicos</h3>
+
+      <p>
+        Los hábitos son el interés compuesto de la automejora. Un uno por ciento
+        mejor cada día parece insignificante en el momento, pero decisivo con el
+        tiempo.
+      </p>
+
+      <p>
+        <mark>Pequeños cambios, repetidos en el tiempo, generan resultados extraordinarios.</mark>
+        {" "}No subes al nivel de tus objetivos: caes al nivel de tus sistemas.
+      </p>
+
+      <div class="reader-card-footer">
+        <div class="dot-row" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <span class="reader-saved" style="display: inline-flex; align-items: center; gap: 6px;">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="flex: none;" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 18h9.5a3.5 3.5 0 0 0 .4-6.98A5.5 5.5 0 0 0 6.2 10.5 3.75 3.75 0 0 0 7 18Z" />
+          </svg>
+          Guardado en todos tus dispositivos
+        </span>
+      </div>
+    </article>
+
+    <div class="experience-copy">
+      <p class="eyebrow">LA EXPERIENCIA NEXO</p>
+      <h2>Empieza a leer donde quieras. Continúa donde lo dejaste.</h2>
+
+      <div class="experience-features">
+        {miniFeatures.map((feature) => (
+          <div class="mini-feature">
+            <svg class="strip-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              {feature.icon === "refresh" ? (
+                <>
+                  <path d="M21 12a9 9 0 0 1-15.4 6.4L3 16" />
+                  <path d="M3 12a9 9 0 0 1 15.4-6.4L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M3 21v-5h5" />
+                </>
+              ) : feature.icon === "highlighter" ? (
+                <>
+                  <path d="m9 11-6 6v3h9l3-3" />
+                  <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4Z" />
+                </>
+              ) : feature.icon === "note" ? (
+                <>
+                  <path d="M15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9l5-5V5a2 2 0 0 0-2-2Z" />
+                  <path d="M14 21v-4a1 1 0 0 1 1-1h4" />
+                </>
+              ) : (
+                <>
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+                </>
+              )}
+            </svg>
+            <h3>{feature.title}</h3>
+            <p>{feature.copy}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>

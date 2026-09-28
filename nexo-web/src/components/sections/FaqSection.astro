@@ -1,0 +1,35 @@
+---
+const faqs = [
+  {
+    q: "¿En qué dispositivos funciona NEXO?",
+    a: "En Android, Windows, macOS y Linux. Tu progreso viaja contigo entre todos ellos.",
+  },
+  {
+    q: "¿Necesito conexión para leer?",
+    a: "No. Lee sin conexión y NEXO sincroniza en cuanto vuelves a tener internet.",
+  },
+  {
+    q: "¿Qué pasa con mis resaltados y notas?",
+    a: "Se guardan junto al libro y aparecen en cualquier dispositivo donde inicies sesión.",
+  },
+  {
+    q: "¿Quién puede ver mi biblioteca?",
+    a: "Solo tú. Tus datos están cifrados y nunca se comparten con terceros.",
+  },
+] as const;
+---
+<!-- ══════════════ FAQ ══════════════ -->
+<section id="faq" class="section-alt faq">
+  <div class="container faq-grid">
+    <h2>Preguntas frecuentes</h2>
+
+    <div class="faq-list">
+      {faqs.map((faq) => (
+        <details class="faq-item">
+          <summary class="faq-q">{faq.q}</summary>
+          <p class="faq-a">{faq.a}</p>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>

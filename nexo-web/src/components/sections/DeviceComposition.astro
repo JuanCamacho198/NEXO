@@ -1,0 +1,130 @@
+---
+import CoverGrid from "../ui/CoverGrid.astro";
+
+// Bookmark glyph: first <path> of the lockup in ui/Logo.astro.
+const markPath =
+  "M89.8261 6.68389C90.0141 7.77493 90.1378 38.238 90.0982 74.3838C90.0339 137.139 89.9894 140.164 89.1237 141.487C87.9761 143.243 85.1664 144.448 83.1135 144.061C82.2578 143.903 80.2346 142.807 78.622 141.627C74.1849 138.394 57.6334 126.757 51.1978 122.344C48.0715 120.203 45.1728 118.541 44.7671 118.651C44.3615 118.764 35.8978 124.461 25.9699 131.304C15.9579 138.205 7.22705 143.888 6.36633 144.056C4.46682 144.433 2.08748 143.297 0.870607 141.433C0.0494638 140.179 0 136.217 0 73.1444C0 6.2081 -1.78814e-06 6.18831 1.03385 4.20505C1.64228 3.03488 2.85916 1.77074 4.00183 1.11591C5.93597 0.0060786 5.93597 0.00607963 44.9106 0.00113384C82.5298 -0.00875774 83.9495 0.0258684 85.7699 0.952709C88.0305 2.10805 89.371 4.00228 89.8261 6.68389ZM69.0057 62.0124C69.0057 37.1628 69.0057 37.1628 67.3733 35.3774C65.8943 33.7611 65.4985 33.5929 63.1291 33.5929C60.8388 33.5929 60.3046 33.7957 58.8305 35.229C57.1486 36.8601 57.1486 36.8601 57.015 51.4571L56.8864 66.0591L45.0837 52.4829C28.3789 33.2803 28.8142 33.7067 25.9303 33.7067C24.1149 33.7067 23.2245 34.0044 22.0521 34.9906C20.5286 36.2745 20.5286 36.2745 20.5286 61.7157C20.5286 87.1509 20.5286 87.1509 22.2747 88.693C25.0696 91.1471 29.4177 90.418 31.3964 87.1608C32.3362 85.6236 32.3956 84.6671 32.4154 71.8842C32.4352 58.2497 32.4352 58.2497 34.5177 60.7137L40.7455 67.9028L51.1335 79.8173C60.5865 90.6911 60.0622 90.2301 63.0697 90.2301C65.3353 90.2301 65.8448 90.0263 67.3239 88.5446C69.0057 86.8581 69.0057 86.8581 69.0057 62.0124Z";
+---
+<!-- ══════════════ DEVICE COMPOSITION ══════════════ -->
+<div class="composition" aria-hidden="true">
+  <svg class="composition-rings" viewBox="0 0 720 560" aria-hidden="true" focusable="false">
+    <ellipse cx="360" cy="288" rx="322" ry="238" fill="none" stroke="var(--sync-soft)" stroke-width="1.5"></ellipse>
+    <ellipse class="ring-dash" cx="360" cy="288" rx="322" ry="238" fill="none" stroke="var(--sync)" stroke-width="1.5" stroke-dasharray="10 230" stroke-linecap="round" opacity="0.75"></ellipse>
+  </svg>
+
+  <div class="composition-stage">
+    <!-- laptop -->
+    <div class="laptop">
+      <div class="laptop-frame rise rise-2">
+        <div class="laptop-screen">
+          <div class="app-window">
+            <div class="app-side">
+              <strong style="display:flex;align-items:center;gap:5px">
+                <svg class="mark" viewBox="0 0 90 145" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d={markPath}></path></svg>
+                NEXO
+              </strong>
+              <div class="app-side-item is-active">Biblioteca</div>
+              <div class="app-side-item">Destacados</div>
+              <div class="app-side-item">Notas</div>
+              <div class="app-side-item">Guardados</div>
+            </div>
+            <div class="app-main">
+              <div class="app-title">Tu biblioteca</div>
+              <CoverGrid />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="laptop-base rise rise-2"></div>
+      <div class="laptop-hinge"></div>
+    </div>
+
+    <!-- phone -->
+    <div class="phone-mock rise rise-3">
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="app-phone">
+            <div class="phone-status">
+              <span>9:41</span>
+              <span>
+                <svg width="9" height="6" viewBox="0 0 9 6" aria-hidden="true" fill="currentColor"><rect x="0" y="3.6" width="1.6" height="2.4" rx=".4"></rect><rect x="2.4" y="2.4" width="1.6" height="3.6" rx=".4"></rect><rect x="4.8" y="1.2" width="1.6" height="4.8" rx=".4"></rect><rect x="7.2" y="0" width="1.6" height="6" rx=".4"></rect></svg>
+              </span>
+            </div>
+            <div class="phone-meta">Capítulo 4</div>
+            <p class="app-title">El poder de los hábitos atómicos</p>
+            <div class="phone-body">
+              <p>Los hábitos son el interés compuesto de la automejora.</p>
+              <p><mark>Pequeños cambios, repetidos en el tiempo, generan resultados extraordinarios.</mark></p>
+              <p>Cada acción es un voto por la persona que quieres llegar a ser.</p>
+            </div>
+            <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between">
+              <div class="phone-dots">
+                <i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <span class="phone-meta" style="display:flex;align-items:center;gap:4px">
+                <svg class="mark" viewBox="0 0 90 145" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d={markPath}></path></svg>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h9.5a3.5 3.5 0 0 0 .4-6.98A5 5 0 0 0 7.3 9.6 3.2 3.2 0 0 0 7 18Z"></path></svg>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- tablet -->
+    <div class="tablet-mock rise rise-4">
+      <div class="tablet-frame">
+        <div class="tablet-screen">
+          <div class="app-hl">
+            <div class="phone-status">
+              <span>9:41</span>
+              <span>100%</span>
+            </div>
+            <div class="app-title" style="display:flex;align-items:center;gap:6px">
+              <svg class="mark" viewBox="0 0 90 145" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d={markPath}></path></svg>
+              Destacados
+            </div>
+            <div style="display:flex;gap:6px">
+              <span class="hl-pill is-active">Todos</span>
+              <span class="hl-pill">Libros</span>
+              <span class="hl-pill">Notas</span>
+            </div>
+            <div class="hl-cards">
+              <div class="hl-card">
+                <p>El interés compuesto de la automejora.</p>
+                <p>Capítulo 1 · 12 mar</p>
+              </div>
+              <div class="hl-card">
+                <p>Caes al nivel de tus sistemas.</p>
+                <p>Capítulo 2 · 18 mar</p>
+              </div>
+              <div class="hl-card">
+                <p>Cada acción es un voto.</p>
+                <p>Capítulo 3 · 24 mar</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- sync badges -->
+    <div class="sync-badge sync-badge-a" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a8 8 0 0 0-13.6-5.6L4 8.2"></path><path d="M4 4.6v3.6h3.6"></path><path d="M4 12.5a8 8 0 0 0 13.6 5.6L20 15.8"></path><path d="M20 19.4v-3.6h-3.6"></path></svg>
+    </div>
+    <div class="sync-badge sync-badge-b" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a8 8 0 0 0-13.6-5.6L4 8.2"></path><path d="M4 4.6v3.6h3.6"></path><path d="M4 12.5a8 8 0 0 0 13.6 5.6L20 15.8"></path><path d="M20 19.4v-3.6h-3.6"></path></svg>
+    </div>
+    <div class="sync-badge sync-badge-c" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a8 8 0 0 0-13.6-5.6L4 8.2"></path><path d="M4 4.6v3.6h3.6"></path><path d="M4 12.5a8 8 0 0 0 13.6 5.6L20 15.8"></path><path d="M20 19.4v-3.6h-3.6"></path></svg>
+    </div>
+
+    <!-- sync chip -->
+    <div class="sync-chip">
+      <span class="sync-chip-dot" style="position:relative">
+        <span class="ping" aria-hidden="true" style="position:absolute;inset:0;border-radius:50%;background:var(--online)"></span>
+      </span>
+      <span>Sincronizado</span>
+    </div>
+  </div>
+</div>
