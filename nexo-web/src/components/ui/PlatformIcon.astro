@@ -5,7 +5,7 @@ interface Props {
 
 const { name } = Astro.props;
 ---
-<span class="plat-ico">{name === "android" ? (
+<span class="grid h-[22px] w-[22px] place-items-center text-ink transition-transform duration-[180ms] ease-[ease] hover:-translate-y-0.5 [&>svg]:h-[22px] [&>svg]:w-[22px]">{name === "android" ? (
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.2 9.4h11.6v7.2a1.4 1.4 0 0 1-1.4 1.4H7.6a1.4 1.4 0 0 1-1.4-1.4Zm-.9 0a5.8 5.8 0 0 1 11.8 0M8.4 6.2l-1-1.6m8.2 1.6 1-1.6M9.4 8.6h.01m5.19 0h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><rect x="8.2" y="10.2" width="1.6" height="2.6" rx=".8" fill="currentColor"/><rect x="14.2" y="10.2" width="1.6" height="2.6" rx=".8" fill="currentColor"/></svg>
 ) : name === "windows" ? (
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.4 10.6 5.5v6H4Zm7.4-1L20 4.2v7.3h-8.6ZM4 12.3h6.6v6L4 17.6Zm7.4 0H20v7.3l-8.6-1.3Z" fill="currentColor"/></svg>

@@ -1,43 +1,47 @@
 ---
 import Button from "../ui/Button.astro";
+import Eyebrow from "../ui/Eyebrow.astro";
 import PlatformIcon from "../ui/PlatformIcon.astro";
 import DeviceComposition from "./DeviceComposition.astro";
+import { defaultLang, useTranslations, type Lang } from "../../i18n/utils";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
 
 const platforms = [
-  { name: "android" as const, label: "Android" },
-  { name: "windows" as const, label: "Windows" },
-  { name: "macos" as const, label: "macOS" },
-  { name: "linux" as const, label: "Linux" },
+  { name: "android" as const, label: t("hero.platformAndroid") },
+  { name: "windows" as const, label: t("hero.platformWindows") },
+  { name: "macos" as const, label: t("hero.platformMacOS") },
+  { name: "linux" as const, label: t("hero.platformLinux") },
 ];
 ---
 <!-- ══════════════ HERO ══════════════ -->
-<section class="hero" id="top">
-  <div class="container hero-grid">
-    <div class="hero-copy rise rise-1">
-      <p class="eyebrow">TU BIBLIOTECA, SIEMPRE CONTIGO</p>
+<section class="pt-10 pb-24" id="top">
+  <div class="shell grid grid-cols-[0.92fr_1.08fr] items-center gap-10 max-[900px]:grid-cols-1">
+    <div class="min-w-0 rise rise-1">
+      <Eyebrow>{t("hero.eyebrow")}</Eyebrow>
 
-      <h1>Lee, destaca y sincroniza en todos tus dispositivos.</h1>
+      <h1>{t("hero.heading")}</h1>
 
-      <p class="lead">
-        Nexo es la app que te permite llevar tus libros, notas y resaltados a donde
-        quieras. Empieza en un dispositivo y continúa en otro, sin interrupciones.
+      <p class="mt-5 max-w-[46ch] text-[1.05rem] leading-[1.75] text-ink-soft text-pretty">
+        {t("hero.lead")}
       </p>
 
-      <div class="hero-ctas">
-        <Button variant="primary" size="lg" href="#descargar" icon="download">Descargar ahora</Button>
+      <div class="mt-8 flex flex-wrap items-center gap-3.5 max-[640px]:gap-3">
+        <Button variant="primary" size="lg" href="#descargar" icon="download">{t("hero.cta")}</Button>
       </div>
 
-      <ul class="platform-inline" id="dispositivos">
+      <ul class="mt-[30px] flex flex-wrap items-center gap-7 max-[640px]:gap-[18px]" id="dispositivos">
         {platforms.map((platform) => (
-          <li>
+          <li class="inline-flex items-center gap-[9px]">
             <PlatformIcon name={platform.name} />
-            <span class="plat-label">{platform.label}</span>
+            <span class="text-[13px] font-medium text-ink-soft">{platform.label}</span>
           </li>
         ))}
       </ul>
     </div>
 
-    <div class="hero-visual">
+    <div class="min-w-0 max-[900px]:mt-12">
       <DeviceComposition />
     </div>
   </div>

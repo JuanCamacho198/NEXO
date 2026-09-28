@@ -1,28 +1,51 @@
 ---
 import Logo from "../ui/Logo.astro";
 import Button from "../ui/Button.astro";
+import { defaultLang, useTranslations, type Lang } from "../../i18n/utils";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+
+const navLink =
+  "transition-[color] duration-[180ms] ease-[ease] hover:text-ink";
+const langLink =
+  "text-[14px] font-medium text-ink-soft transition-[color] duration-[180ms] ease-[ease] hover:text-ink";
+const langSwitch =
+  "flex items-center gap-2.5 text-[13px] font-semibold tracking-[0.04em] [&>a[aria-current=true]]:text-ink";
+const mobileLink =
+  "transition-[color] duration-[180ms] ease-[ease] max-[1023px]:py-2.5 max-[1023px]:text-[15px] max-[1023px]:font-medium max-[1023px]:text-ink-soft max-[1023px]:hover:text-ink";
+const mobileLangLink =
+  "text-[14px] font-medium text-ink-soft transition-[color] duration-[180ms] ease-[ease] hover:text-ink max-[1023px]:py-2.5 max-[1023px]:text-[15px]";
 ---
 <!-- ══════════════ HEADER ══════════════ -->
-<header class="site-header">
-  <div class="container header-inner">
+<header class="sticky top-0 z-[60] border-b border-border bg-[oklch(97.4%_0.007_95/0.85)] backdrop-blur-[14px]">
+  <div class="shell flex items-center gap-8 py-7 max-[640px]:gap-4 max-[640px]:py-[18px]">
     <Logo />
 
-    <nav class="main-nav" aria-label="Principal">
-      <a href="#caracteristicas">Características</a>
-      <a href="#dispositivos">Dispositivos</a>
-      <a href="#como-funciona">Cómo funciona</a>
-      <a href="#faq">Preguntas frecuentes</a>
+    <nav class="flex gap-7 text-[14.5px] font-medium text-ink-soft max-[1023px]:hidden" aria-label={t("header.navAria")}>
+      <a class={navLink} href="#caracteristicas">{t("header.navFeatures")}</a>
+      <a class={navLink} href="#dispositivos">{t("header.navDevices")}</a>
+      <a class={navLink} href="#como-funciona">{t("header.navHow")}</a>
+      <a class={navLink} href="#faq">{t("faq.title")}</a>
+      <div class={langSwitch}>
+        <a class={langLink} href="/" aria-current={lang === "es" ? "true" : undefined}>ES</a>
+        <a class={`${langLink} border-l border-border pl-2.5`} href="/en/" aria-current={lang === "en" ? "true" : undefined}>EN</a>
+      </div>
     </nav>
 
-    <div class="header-actions">
-      <input type="checkbox" class="nav-toggle" id="nav-toggle" aria-label="Abrir menú de navegación" />
-      <nav class="mobile-nav" aria-label="Navegación móvil">
-        <a href="#caracteristicas">Características</a>
-        <a href="#dispositivos">Dispositivos</a>
-        <a href="#como-funciona">Cómo funciona</a>
-        <a href="#faq">Preguntas frecuentes</a>
+    <div class="ml-auto flex items-center gap-4">
+      <input type="checkbox" class="nav-toggle peer hidden max-[1023px]:grid max-[1023px]:h-11 max-[1023px]:w-11 max-[1023px]:cursor-pointer max-[1023px]:appearance-none max-[1023px]:place-items-center max-[1023px]:rounded-xl max-[1023px]:border max-[1023px]:border-border max-[1023px]:bg-card max-[1023px]:text-ink" id="nav-toggle" aria-label={t("header.openMenuAria")} />
+      <nav class="hidden max-[1023px]:peer-checked:absolute max-[1023px]:peer-checked:inset-x-0 max-[1023px]:peer-checked:top-full max-[1023px]:peer-checked:flex max-[1023px]:peer-checked:flex-col max-[1023px]:peer-checked:gap-1 max-[1023px]:peer-checked:border-b max-[1023px]:peer-checked:border-border max-[1023px]:peer-checked:bg-surface max-[1023px]:peer-checked:pt-3.5 max-[1023px]:peer-checked:pr-5 max-[1023px]:peer-checked:pb-[22px] max-[1023px]:peer-checked:pl-5 max-[1023px]:peer-checked:shadow-soft" aria-label={t("header.mobileNavAria")}>
+        <a class={mobileLink} href="#caracteristicas">{t("header.navFeatures")}</a>
+        <a class={mobileLink} href="#dispositivos">{t("header.navDevices")}</a>
+        <a class={mobileLink} href="#como-funciona">{t("header.navHow")}</a>
+        <a class={mobileLink} href="#faq">{t("faq.title")}</a>
+        <div class={langSwitch}>
+          <a class={mobileLangLink} href="/" aria-current={lang === "es" ? "true" : undefined}>ES</a>
+          <a class={`${mobileLangLink} border-l border-border pl-2.5`} href="/en/" aria-current={lang === "en" ? "true" : undefined}>EN</a>
+        </div>
       </nav>
-      <Button variant="primary" href="#descargar">Descargar NEXO</Button>
+      <Button variant="primary" href="#descargar">{t("cta.download")}</Button>
     </div>
   </div>
 </header>
