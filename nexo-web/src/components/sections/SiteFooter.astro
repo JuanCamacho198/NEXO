@@ -1,17 +1,23 @@
 ---
 import Logo from "../ui/Logo.astro";
+import { defaultLang, useTranslations, type Lang } from "../../i18n/utils";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+
+const footerLink = "transition-[color] duration-[180ms] ease-[ease] hover:text-ink";
 ---
 <!-- ══════════════ FOOTER ══════════════ -->
-<footer class="site-footer">
-  <div class="container footer-inner">
+<footer class="border-t border-t-border bg-background">
+  <div class="shell flex items-center gap-[30px] py-8 max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-4 max-[640px]:py-[26px]">
     <Logo />
 
-    <nav class="footer-nav" aria-label="Pie de página">
-      <a href="#caracteristicas">Características</a>
-      <a href="#dispositivos">Dispositivos</a>
-      <a href="#faq">Preguntas frecuentes</a>
-      <a href="#faq">Privacidad</a>
-      <a href="https://github.com/JuanCamacho198/NEXTPAGE">GitHub</a>
+    <nav class="ml-auto flex gap-6 text-[14px] font-medium text-ink-soft max-[640px]:ml-0 max-[640px]:flex-wrap max-[640px]:gap-4" aria-label={t("footer.navAria")}>
+      <a class={footerLink} href="#caracteristicas">{t("header.navFeatures")}</a>
+      <a class={footerLink} href="#dispositivos">{t("header.navDevices")}</a>
+      <a class={footerLink} href="#faq">{t("faq.title")}</a>
+      <a class={footerLink} href="#faq">{t("footer.privacy")}</a>
+      <a class={footerLink} href="https://github.com/JuanCamacho198/NEXTPAGE">{t("footer.github")}</a>
     </nav>
   </div>
 </footer>

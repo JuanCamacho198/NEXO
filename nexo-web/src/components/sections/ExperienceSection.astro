@@ -1,40 +1,46 @@
 ---
+import Eyebrow from "../ui/Eyebrow.astro";
+import { defaultLang, useTranslations, type Lang } from "../../i18n/utils";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+
 const miniFeatures = [
   {
-    title: "Progreso sincronizado",
-    copy: "Retoma la lectura exactamente en la línea donde la dejaste.",
+    title: t("experience.syncTitle"),
+    copy: t("experience.syncCopy"),
     icon: "refresh",
   },
   {
-    title: "Resaltados",
-    copy: "Marca lo esencial por colores y encuéntralo en segundos.",
+    title: t("experience.highlightsTitle"),
+    copy: t("experience.highlightsCopy"),
     icon: "highlighter",
   },
   {
-    title: "Notas",
-    copy: "Escribe ideas junto al párrafo que las inspiró.",
+    title: t("experience.notesTitle"),
+    copy: t("experience.notesCopy"),
     icon: "note",
   },
   {
-    title: "Biblioteca organizada",
-    copy: "Colecciones, etiquetas y filtros para una estantería clara.",
+    title: t("experience.libraryTitle"),
+    copy: t("experience.libraryCopy"),
     icon: "book",
   },
 ] as const;
 ---
 <!-- ══════════════ EXPERIENCE ══════════════ -->
-<section id="como-funciona" class="experience">
-  <div class="container experience-grid">
+<section id="como-funciona" class="py-32 max-[900px]:py-24 max-[640px]:py-16">
+  <div class="shell grid grid-cols-2 items-center gap-16 max-[900px]:grid-cols-1 max-[900px]:gap-12">
     <article class="reader-card rise rise-1">
       <div class="reader-card-top">
-        <span>Hábitos atómicos · Capítulo 4</span>
-        <span>68 %</span>
+        <span>{t("experience.readerBookChapter")}</span>
+        <span>{t("experience.readerProgress")}</span>
       </div>
 
       <div
         class="reader-progress"
         role="progressbar"
-        aria-label="Progreso de lectura"
+        aria-label={t("experience.progressAria")}
         aria-valuenow="68"
         aria-valuemin="0"
         aria-valuemax="100"
@@ -42,17 +48,15 @@ const miniFeatures = [
         <span></span>
       </div>
 
-      <h3>El poder de los hábitos atómicos</h3>
+      <h3>{t("experience.readerHeading")}</h3>
 
       <p>
-        Los hábitos son el interés compuesto de la automejora. Un uno por ciento
-        mejor cada día parece insignificante en el momento, pero decisivo con el
-        tiempo.
+        {t("experience.readerParagraph")}
       </p>
 
       <p>
-        <mark>Pequeños cambios, repetidos en el tiempo, generan resultados extraordinarios.</mark>
-        {" "}No subes al nivel de tus objetivos: caes al nivel de tus sistemas.
+        <mark>{t("experience.quote")}</mark>
+        {" "}{t("experience.trailing")}
       </p>
 
       <div class="reader-card-footer">
@@ -66,19 +70,19 @@ const miniFeatures = [
           <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="flex: none;" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M7 18h9.5a3.5 3.5 0 0 0 .4-6.98A5.5 5.5 0 0 0 6.2 10.5 3.75 3.75 0 0 0 7 18Z" />
           </svg>
-          Guardado en todos tus dispositivos
+          {t("experience.saved")}
         </span>
       </div>
     </article>
 
-    <div class="experience-copy">
-      <p class="eyebrow">LA EXPERIENCIA NEXO</p>
-      <h2>Empieza a leer donde quieras. Continúa donde lo dejaste.</h2>
+    <div class="min-w-0">
+      <Eyebrow tracking="tight">{t("experience.eyebrow")}</Eyebrow>
+      <h2 class="min-[640px]:text-[3rem]">{t("experience.heading")}</h2>
 
-      <div class="experience-features">
+      <div class="mt-10 grid grid-cols-2 gap-8 max-[640px]:mt-8 max-[640px]:grid-cols-1 max-[640px]:gap-[26px]">
         {miniFeatures.map((feature) => (
-          <div class="mini-feature">
-            <svg class="strip-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <div class="min-w-0">
+            <svg class="mb-3 block h-5 w-5 text-ink" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
               {feature.icon === "refresh" ? (
                 <>
                   <path d="M21 12a9 9 0 0 1-15.4 6.4L3 16" />
@@ -103,8 +107,8 @@ const miniFeatures = [
                 </>
               )}
             </svg>
-            <h3>{feature.title}</h3>
-            <p>{feature.copy}</p>
+            <h3 class="mb-1.5 text-[15px]">{feature.title}</h3>
+            <p class="text-[0.9rem] leading-[1.6] text-ink-soft">{feature.copy}</p>
           </div>
         ))}
       </div>

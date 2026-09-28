@@ -1,15 +1,20 @@
 ---
+import { defaultLang, useTranslations, type Lang } from "../../i18n/utils";
+
 interface Props {
   class?: string;
 }
 
 const { class: className } = Astro.props;
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
 ---
 <div class:list={["app-shelf", className]}>
-  <div class="cover c-habitos"><span>Hábitos atómicos</span></div>
-  <div class="cover c-1984"><span>1984</span></div>
-  <div class="cover c-principito"><span>El principito</span></div>
-  <div class="cover c-odisea"><span>La Odisea</span></div>
-  <div class="cover c-crimen"><span>Crimen y castigo</span></div>
-  <div class="cover c-dune"><span>DUNE</span></div>
+  <div class="cover c-habitos"><span>{t("mockup.coverHabitos")}</span></div>
+  <div class="cover c-1984"><span>{t("mockup.cover1984")}</span></div>
+  <div class="cover c-principito"><span>{t("mockup.coverPrincipito")}</span></div>
+  <div class="cover c-odisea"><span>{t("mockup.coverOdisea")}</span></div>
+  <div class="cover c-crimen"><span>{t("mockup.coverCrimen")}</span></div>
+  <div class="cover c-dune"><span>{t("mockup.coverDune")}</span></div>
 </div>

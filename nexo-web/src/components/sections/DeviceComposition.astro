@@ -1,5 +1,9 @@
 ---
 import CoverGrid from "../ui/CoverGrid.astro";
+import { defaultLang, useTranslations, type Lang } from "../../i18n/utils";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
 
 // Bookmark glyph: first <path> of the lockup in ui/Logo.astro.
 const markPath =
@@ -21,15 +25,15 @@ const markPath =
             <div class="app-side">
               <strong style="display:flex;align-items:center;gap:5px">
                 <svg class="mark" viewBox="0 0 90 145" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d={markPath}></path></svg>
-                NEXO
+                {t("mockup.appName")}
               </strong>
-              <div class="app-side-item is-active">Biblioteca</div>
-              <div class="app-side-item">Destacados</div>
-              <div class="app-side-item">Notas</div>
-              <div class="app-side-item">Guardados</div>
+              <div class="app-side-item is-active">{t("mockup.library")}</div>
+              <div class="app-side-item">{t("mockup.highlights")}</div>
+              <div class="app-side-item">{t("experience.notesTitle")}</div>
+              <div class="app-side-item">{t("mockup.saved")}</div>
             </div>
             <div class="app-main">
-              <div class="app-title">Tu biblioteca</div>
+              <div class="app-title">{t("mockup.title")}</div>
               <CoverGrid />
             </div>
           </div>
@@ -45,17 +49,17 @@ const markPath =
         <div class="phone-screen">
           <div class="app-phone">
             <div class="phone-status">
-              <span>9:41</span>
+              <span>{t("mockup.statusTime")}</span>
               <span>
                 <svg width="9" height="6" viewBox="0 0 9 6" aria-hidden="true" fill="currentColor"><rect x="0" y="3.6" width="1.6" height="2.4" rx=".4"></rect><rect x="2.4" y="2.4" width="1.6" height="3.6" rx=".4"></rect><rect x="4.8" y="1.2" width="1.6" height="4.8" rx=".4"></rect><rect x="7.2" y="0" width="1.6" height="6" rx=".4"></rect></svg>
               </span>
             </div>
-            <div class="phone-meta">Capítulo 4</div>
-            <p class="app-title">El poder de los hábitos atómicos</p>
+            <div class="phone-meta">{t("mockup.chapter")}</div>
+            <p class="app-title">{t("experience.readerHeading")}</p>
             <div class="phone-body">
-              <p>Los hábitos son el interés compuesto de la automejora.</p>
-              <p><mark>Pequeños cambios, repetidos en el tiempo, generan resultados extraordinarios.</mark></p>
-              <p>Cada acción es un voto por la persona que quieres llegar a ser.</p>
+              <p>{t("mockup.phoneBody1")}</p>
+              <p><mark>{t("experience.quote")}</mark></p>
+              <p>{t("mockup.phoneBody3")}</p>
             </div>
             <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between">
               <div class="phone-dots">
@@ -77,30 +81,30 @@ const markPath =
         <div class="tablet-screen">
           <div class="app-hl">
             <div class="phone-status">
-              <span>9:41</span>
-              <span>100%</span>
+              <span>{t("mockup.statusTime")}</span>
+              <span>{t("mockup.battery")}</span>
             </div>
             <div class="app-title" style="display:flex;align-items:center;gap:6px">
               <svg class="mark" viewBox="0 0 90 145" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d={markPath}></path></svg>
-              Destacados
+              {t("mockup.highlights")}
             </div>
             <div style="display:flex;gap:6px">
-              <span class="hl-pill is-active">Todos</span>
-              <span class="hl-pill">Libros</span>
-              <span class="hl-pill">Notas</span>
+              <span class="hl-pill is-active">{t("mockup.filterAll")}</span>
+              <span class="hl-pill">{t("mockup.filterBooks")}</span>
+              <span class="hl-pill">{t("experience.notesTitle")}</span>
             </div>
             <div class="hl-cards">
               <div class="hl-card">
-                <p>El interés compuesto de la automejora.</p>
-                <p>Capítulo 1 · 12 mar</p>
+                <p>{t("mockup.card1Text")}</p>
+                <p>{t("mockup.card1Meta")}</p>
               </div>
               <div class="hl-card">
-                <p>Caes al nivel de tus sistemas.</p>
-                <p>Capítulo 2 · 18 mar</p>
+                <p>{t("mockup.card2Text")}</p>
+                <p>{t("mockup.card2Meta")}</p>
               </div>
               <div class="hl-card">
-                <p>Cada acción es un voto.</p>
-                <p>Capítulo 3 · 24 mar</p>
+                <p>{t("mockup.card3Text")}</p>
+                <p>{t("mockup.card3Meta")}</p>
               </div>
             </div>
           </div>
@@ -124,7 +128,7 @@ const markPath =
       <span class="sync-chip-dot" style="position:relative">
         <span class="ping" aria-hidden="true" style="position:absolute;inset:0;border-radius:50%;background:var(--online)"></span>
       </span>
-      <span>Sincronizado</span>
+      <span>{t("mockup.synced")}</span>
     </div>
   </div>
 </div>

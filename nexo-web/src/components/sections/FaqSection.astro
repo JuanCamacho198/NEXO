@@ -1,33 +1,38 @@
 ---
+import { defaultLang, useTranslations, type Lang } from "../../i18n/utils";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+
 const faqs = [
   {
-    q: "¿En qué dispositivos funciona NEXO?",
-    a: "En Android, Windows, macOS y Linux. Tu progreso viaja contigo entre todos ellos.",
+    q: t("faq.q1"),
+    a: t("faq.a1"),
   },
   {
-    q: "¿Necesito conexión para leer?",
-    a: "No. Lee sin conexión y NEXO sincroniza en cuanto vuelves a tener internet.",
+    q: t("faq.q2"),
+    a: t("faq.a2"),
   },
   {
-    q: "¿Qué pasa con mis resaltados y notas?",
-    a: "Se guardan junto al libro y aparecen en cualquier dispositivo donde inicies sesión.",
+    q: t("faq.q3"),
+    a: t("faq.a3"),
   },
   {
-    q: "¿Quién puede ver mi biblioteca?",
-    a: "Solo tú. Tus datos están cifrados y nunca se comparten con terceros.",
+    q: t("faq.q4"),
+    a: t("faq.a4"),
   },
 ] as const;
 ---
 <!-- ══════════════ FAQ ══════════════ -->
-<section id="faq" class="section-alt faq">
-  <div class="container faq-grid">
-    <h2>Preguntas frecuentes</h2>
+<section id="faq" class="bg-surface-alt border-t border-t-border py-24 max-[640px]:py-16">
+  <div class="shell grid grid-cols-[0.8fr_1.2fr] [align-items:start] gap-12 max-[900px]:grid-cols-1 max-[900px]:gap-7">
+    <h2 class="min-[640px]:text-[2.25rem]">{t("faq.title")}</h2>
 
-    <div class="faq-list">
+    <div class="border-t border-t-border">
       {faqs.map((faq) => (
-        <details class="faq-item">
-          <summary class="faq-q">{faq.q}</summary>
-          <p class="faq-a">{faq.a}</p>
+        <details class="border-b border-b-border py-5">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-medium text-ink [&::-webkit-details-marker]:hidden">{faq.q}</summary>
+          <p class="mt-3 max-w-[60ch] text-[0.95rem] leading-[1.7] text-ink-soft">{faq.a}</p>
         </details>
       ))}
     </div>
