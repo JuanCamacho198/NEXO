@@ -23,6 +23,9 @@ on:
       - 'packages/**'
       - 'bun.lock'
       - 'package.json'
+      # The shared untranslated-string guard runs in this job: editing it must
+      # re-prove the gate, otherwise a change to the rule ships unverified.
+      - 'scripts/check-i18n.mjs'
       - '.github/workflows/web-ci.yml'
   push:
     branches: [main]
@@ -33,6 +36,7 @@ on:
       # the web gate against the actual merge result.
       - 'bun.lock'
       - 'package.json'
+      - 'scripts/check-i18n.mjs'
       - '.github/workflows/web-ci.yml'
 
 permissions:
@@ -79,6 +83,15 @@ jobs:
 
       - name: Astro check
         run: bun run --cwd web check
+
+      - name: Check formatting
+        run: bun run --cwd web format:check
+
+      - name: Check untranslated strings
+        # scripts/check-i18n.mjs parses every .astro file with the Astro compiler
+        # and fails on hardcoded user-visible strings; it also asserts the ES/EN
+        # dictionaries expose the same non-empty key set.
+        run: bun run --cwd web check:i18n
 
       - name: Web tests
         # Enforces the addons.json seed contract (src/data/addons.spec.ts) and

@@ -1,0 +1,87 @@
+name: Nexo Web CI
+
+on:
+  pull_request:
+    # No `branches` filter on purpose, same as `web-ci.yml` and
+    # `android-ci.yml`: chained PRs target intermediate branches, not `main`,
+    # and a `branches: [main]` filter silently skipped CI for every slice.
+    #
+    # Positive `paths` instead of `paths-ignore` (see ci-trigger-hygiene): a
+    # negative list re-triggered this suite for any unlisted path (README,
+    # docs/, scripts/, …). The allow-list states exactly what nexo-web depends
+    # on; everything else starts nothing. This check is NOT required by branch
+    # protection (only `Android checks` is), so triggering on paths is safe —
+    # if it ever becomes required, move the filter in-job like android-ci.yml.
+    paths:
+      - 'nexo-web/**'
+      # The shared untranslated-string guard runs in this job: editing it must
+      # re-prove the gate, otherwise a change to the rule ships unverified.
+      - 'scripts/check-i18n.mjs'
+      - '.github/workflows/nexo-web-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'nexo-web/**'
+      - 'scripts/check-i18n.mjs'
+      - '.github/workflows/nexo-web-ci.yml'
+
+permissions:
+  contents: read
+
+# Concurrency: cancel superseded runs on the same PR/branch so we don't
+# burn runner time on stale pushes (matches the Web CI pattern).
+concurrency:
+  group: nexo-web-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nexo-web-checks:
+    name: Nexo Web checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        # nexo-web is not a member of the root Bun workspace (see the root
+        # package.json `workspaces`): it carries its own nexo-web/bun.lock, so
+        # every step — install included — runs from nexo-web/.
+        working-directory: nexo-web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # fetch-depth: 0 keeps the full git history, matching the other
+          # workflows in this repo.
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Pinned to match the root `packageManager` field (`bun@1.4.2`).
+          # Bump together with the `packageManager` field.
+          bun-version: '1.4.2'
+
+      - name: Cache Bun install
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-nexo-web-${{ hashFiles('nexo-web/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-nexo-web-
+
+      - name: Install dependencies (frozen lockfile)
+        run: bun install --frozen-lockfile
+
+      - name: Astro check
+        run: bun run check
+
+      - name: Astro build
+        run: bun run build
+
+      - name: Check formatting
+        run: bun run format:check
+
+      - name: Check untranslated strings
+        # scripts/check-i18n.mjs parses every .astro file with the Astro compiler
+        # and fails on hardcoded user-visible strings; it also asserts the ES/EN
+        # dictionaries expose the same non-empty key set.
+        run: bun run check:i18n
