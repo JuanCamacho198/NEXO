@@ -7,11 +7,16 @@ import ExperienceSection from "../components/sections/ExperienceSection.astro";
 import FaqSection from "../components/sections/FaqSection.astro";
 import CtaBand from "../components/sections/CtaBand.astro";
 import SiteFooter from "../components/sections/SiteFooter.astro";
+import { defaultLang, useTranslations, type Lang } from "../i18n/utils";
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
 ---
 
 <Layout
-  title="NEXO — Lee, destaca y sincroniza en todos tus dispositivos"
-  description="Nexo es la app que te permite llevar tus libros, notas y resaltados a donde quieras. Empieza en un dispositivo y continúa en otro, sin interrupciones."
+  lang="es"
+  title={t("meta.title")}
+  description={t("hero.lead")}
 >
   <SiteHeader />
 
