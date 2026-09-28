@@ -1,0 +1,19 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/ui/Button.astro";
+---
+
+<Layout
+  title="Página no encontrada — Nexo"
+  description="El enlace puede estar roto o la página ya no existe."
+>
+  <main id="top" class="section" style="min-height: 70vh; display: grid; place-items: center; text-align: center;">
+    <div class="container">
+      <h1>No encontramos esta página.</h1>
+      <p class="lead">El enlace puede estar roto o la página ya no existe.</p>
+      <div class="hero-ctas" style="justify-content: center;">
+        <Button variant="primary" href="/">Volver al inicio</Button>
+      </div>
+    </div>
+  </main>
+</Layout>
