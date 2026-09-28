@@ -1,5 +1,5 @@
 ---
-import { getLocaleFromUrl, t } from '../i18n';
+import { getLocaleFromUrl, t } from '@/i18n';
 
 const locale = getLocaleFromUrl(Astro.url);
 
@@ -10,6 +10,7 @@ const docsHref = locale === 'es' ? '/docs' : '/en/docs';
 const GITHUB_URL = 'https://github.com/JuanCamacho198/NEXTPAGE';
 const reportHref = `${GITHUB_URL}/issues/new?title=${encodeURIComponent('[addon] Reporte')}&body=${encodeURIComponent('Addon afectado:\nURL de la página:\n\nDescribe el problema:')}`;
 ---
+
 <footer class="border-t border-border-subtle bg-surface-1" aria-label={t(locale, 'footer.aria')}>
   <div class="mx-auto max-w-6xl px-4 py-10">
     <div class="grid gap-8 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
@@ -17,9 +18,7 @@ const reportHref = `${GITHUB_URL}/issues/new?title=${encodeURIComponent('[addon]
         <p class="font-serif text-lg font-bold text-text-primary">
           Next<span class="text-accent">Page</span> Addons
         </p>
-        <p class="mt-2 max-w-xs text-sm text-text-secondary">
-          {t(locale, 'home.footerTagline')}
-        </p>
+        <p class="mt-2 max-w-xs text-sm text-text-secondary">{t(locale, 'home.footerTagline')}</p>
       </div>
       <nav aria-label={t(locale, 'home.footerProduct')}>
         <h2 class="text-xs font-semibold tracking-widest text-text-muted uppercase">
@@ -71,7 +70,10 @@ const reportHref = `${GITHUB_URL}/issues/new?title=${encodeURIComponent('[addon]
         </h2>
         <ul class="mt-3 space-y-2 text-sm">
           <li>
-            <a href={`${GITHUB_URL}/releases`} class="text-text-secondary transition hover:text-accent">
+            <a
+              href={`${GITHUB_URL}/releases`}
+              class="text-text-secondary transition hover:text-accent"
+            >
               {t(locale, 'home.footerDownload')}
             </a>
           </li>
@@ -88,9 +90,7 @@ const reportHref = `${GITHUB_URL}/issues/new?title=${encodeURIComponent('[addon]
         </ul>
       </nav>
     </div>
-    <div
-      class="mt-8 flex flex-col gap-2 border-t border-border-subtle pt-6 text-sm text-text-muted sm:flex-row sm:items-center sm:justify-between"
-    >
+    <div class="mt-8 flex flex-col gap-2 border-t border-border-subtle pt-6 text-sm text-text-muted sm:flex-row sm:items-center sm:justify-between">
       <p>{t(locale, 'home.footerCopy')}</p>
       <p>{t(locale, 'home.footerPrivacy')}</p>
     </div>

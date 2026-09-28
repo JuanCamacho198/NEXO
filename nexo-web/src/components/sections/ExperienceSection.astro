@@ -1,46 +1,47 @@
 ---
-import Eyebrow from "../ui/Eyebrow.astro";
-import { defaultLang, useTranslations, type Lang } from "../../i18n/utils";
+import Eyebrow from '@/components/ui/Eyebrow.astro';
+import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
 const miniFeatures = [
   {
-    title: t("experience.syncTitle"),
-    copy: t("experience.syncCopy"),
-    icon: "refresh",
+    title: t('experience.syncTitle'),
+    copy: t('experience.syncCopy'),
+    icon: 'refresh',
   },
   {
-    title: t("experience.highlightsTitle"),
-    copy: t("experience.highlightsCopy"),
-    icon: "highlighter",
+    title: t('experience.highlightsTitle'),
+    copy: t('experience.highlightsCopy'),
+    icon: 'highlighter',
   },
   {
-    title: t("experience.notesTitle"),
-    copy: t("experience.notesCopy"),
-    icon: "note",
+    title: t('experience.notesTitle'),
+    copy: t('experience.notesCopy'),
+    icon: 'note',
   },
   {
-    title: t("experience.libraryTitle"),
-    copy: t("experience.libraryCopy"),
-    icon: "book",
+    title: t('experience.libraryTitle'),
+    copy: t('experience.libraryCopy'),
+    icon: 'book',
   },
 ] as const;
 ---
+
 <!-- ══════════════ EXPERIENCE ══════════════ -->
 <section id="como-funciona" class="py-32 max-[900px]:py-24 max-[640px]:py-16">
   <div class="shell grid grid-cols-2 items-center gap-16 max-[900px]:grid-cols-1 max-[900px]:gap-12">
     <article class="reader-card rise rise-1">
       <div class="reader-card-top">
-        <span>{t("experience.readerBookChapter")}</span>
-        <span>{t("experience.readerProgress")}</span>
+        <span>{t('experience.readerBookChapter')}</span>
+        <span>{t('experience.readerProgress')}</span>
       </div>
 
       <div
         class="reader-progress"
         role="progressbar"
-        aria-label={t("experience.progressAria")}
+        aria-label={t('experience.progressAria')}
         aria-valuenow="68"
         aria-valuemin="0"
         aria-valuemax="100"
@@ -48,15 +49,12 @@ const miniFeatures = [
         <span></span>
       </div>
 
-      <h3>{t("experience.readerHeading")}</h3>
+      <h3>{t('experience.readerHeading')}</h3>
+
+      <p>{t('experience.readerParagraph')}</p>
 
       <p>
-        {t("experience.readerParagraph")}
-      </p>
-
-      <p>
-        <mark>{t("experience.quote")}</mark>
-        {" "}{t("experience.trailing")}
+        <mark>{t('experience.quote')}</mark> {t('experience.trailing')}
       </p>
 
       <div class="reader-card-footer">
@@ -67,35 +65,55 @@ const miniFeatures = [
           <span></span>
         </div>
         <span class="reader-saved" style="display: inline-flex; align-items: center; gap: 6px;">
-          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="flex: none;" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            aria-hidden="true"
+            style="flex: none;"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <path d="M7 18h9.5a3.5 3.5 0 0 0 .4-6.98A5.5 5.5 0 0 0 6.2 10.5 3.75 3.75 0 0 0 7 18Z" />
           </svg>
-          {t("experience.saved")}
+          {t('experience.saved')}
         </span>
       </div>
     </article>
 
     <div class="min-w-0">
-      <Eyebrow tracking="tight">{t("experience.eyebrow")}</Eyebrow>
-      <h2 class="min-[640px]:text-[3rem]">{t("experience.heading")}</h2>
+      <Eyebrow tracking="tight">{t('experience.eyebrow')}</Eyebrow>
+      <h2 class="min-[640px]:text-[3rem]">{t('experience.heading')}</h2>
 
       <div class="mt-10 grid grid-cols-2 gap-8 max-[640px]:mt-8 max-[640px]:grid-cols-1 max-[640px]:gap-[26px]">
         {miniFeatures.map((feature) => (
           <div class="min-w-0">
-            <svg class="mb-3 block h-5 w-5 text-ink" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-              {feature.icon === "refresh" ? (
+            <svg
+              class="mb-3 block h-5 w-5 text-ink"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              {feature.icon === 'refresh' ? (
                 <>
                   <path d="M21 12a9 9 0 0 1-15.4 6.4L3 16" />
                   <path d="M3 12a9 9 0 0 1 15.4-6.4L21 8" />
                   <path d="M21 3v5h-5" />
                   <path d="M3 21v-5h5" />
                 </>
-              ) : feature.icon === "highlighter" ? (
+              ) : feature.icon === 'highlighter' ? (
                 <>
                   <path d="m9 11-6 6v3h9l3-3" />
                   <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4Z" />
                 </>
-              ) : feature.icon === "note" ? (
+              ) : feature.icon === 'note' ? (
                 <>
                   <path d="M15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9l5-5V5a2 2 0 0 0-2-2Z" />
                   <path d="M14 21v-4a1 1 0 0 1 1-1h4" />

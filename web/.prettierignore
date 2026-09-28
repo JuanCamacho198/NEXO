@@ -1,0 +1,7 @@
+dist
+.astro
+node_modules
+public/sitemap.xml
+public/catalog.json
+public/llms.txt
+public/robots.txt

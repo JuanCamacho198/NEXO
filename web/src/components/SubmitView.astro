@@ -1,5 +1,5 @@
 ---
-import { t, type UiLocale } from '../i18n';
+import { t, type UiLocale } from '@/i18n';
 
 export interface Props {
   locale: UiLocale;
@@ -31,28 +31,27 @@ const templateJson = JSON.stringify(
   2,
 );
 ---
+
 <div class="mx-auto flex max-w-6xl flex-col gap-16 px-4 py-12" data-submit-root>
   <section class="flex flex-col items-center gap-6 py-8 text-center">
-    <span
-      class="inline-flex items-center rounded-full border border-border-subtle bg-surface-1 px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-widest text-text-secondary"
-    >
+    <span class="inline-flex items-center rounded-full border border-border-subtle bg-surface-1 px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-widest text-text-secondary">
       {t(locale, 'submit.badge')}
     </span>
-    <h1 class="max-w-3xl font-serif text-5xl font-bold text-text-primary">{t(locale, 'submit.title')}</h1>
+    <h1 class="max-w-3xl font-serif text-5xl font-bold text-text-primary">
+      {t(locale, 'submit.title')}
+    </h1>
     <p class="max-w-2xl text-lg text-text-secondary">{t(locale, 'submit.subtitle')}</p>
   </section>
 
   <section class="flex flex-col gap-6">
     <ol class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      {
-        steps.map((s, i) => (
-          <li class="rounded-xl border border-border-subtle bg-surface-1 p-5">
-            <p class="font-mono text-sm text-accent">{String(i + 1).padStart(2, '0')}</p>
-            <h2 class="mt-2 font-sans text-base font-semibold text-text-primary">{s.title}</h2>
-            <p class="mt-1 text-sm text-text-secondary">{s.sub}</p>
-          </li>
-        ))
-      }
+      {steps.map((s, i) => (
+        <li class="rounded-xl border border-border-subtle bg-surface-1 p-5">
+          <p class="font-mono text-sm text-accent">{String(i + 1).padStart(2, '0')}</p>
+          <h2 class="mt-2 font-sans text-base font-semibold text-text-primary">{s.title}</h2>
+          <p class="mt-1 text-sm text-text-secondary">{s.sub}</p>
+        </li>
+      ))}
     </ol>
     <div class="flex flex-col items-start gap-3">
       <a
@@ -67,7 +66,9 @@ const templateJson = JSON.stringify(
   <section class="rounded-xl border border-border-subtle bg-surface-1 p-5">
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="font-sans text-base font-semibold text-text-primary">{t(locale, 'submit.templateTitle')}</h2>
+        <h2 class="font-sans text-base font-semibold text-text-primary">
+          {t(locale, 'submit.templateTitle')}
+        </h2>
         <p class="mt-1 text-sm text-text-secondary">{t(locale, 'submit.templateDesc')}</p>
       </div>
       <button

@@ -8,17 +8,12 @@
 // validation of this file lives in ./addons.spec.ts and is enforced in CI by
 // `bun run --cwd web test`. The value is not silently widened: consumers still
 // see `AddonSeed[]`.
-import addonsData from './addons.json';
+import addonsData from '@/data/addons.json';
 
 export type AddonKind = 'builtin';
 export type AddonAvailability = 'builtin' | 'community' | 'planned';
 export type AddonCategory =
-  | 'dominio-publico'
-  | 'bibliotecas'
-  | 'audiolibros'
-  | 'wikis'
-  | 'prensa'
-  | 'independientes';
+  'dominio-publico' | 'bibliotecas' | 'audiolibros' | 'wikis' | 'prensa' | 'independientes';
 export type AddonLang = 'es' | 'en' | 'multi';
 
 export interface AddonManifestRef {

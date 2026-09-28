@@ -3,7 +3,9 @@
     "id": "gutendex",
     "name": "Gutendex",
     "version": "1.0.0",
-    "catalogs": [{ "type": "book-catalog", "id": "gutendex", "name": "Project Gutenberg (via Gutendex)" }],
+    "catalogs": [
+      { "type": "book-catalog", "id": "gutendex", "name": "Project Gutenberg (via Gutendex)" }
+    ],
     "resources": ["search", "book-details"],
     "author": "Project Gutenberg",
     "license": "Dominio público",

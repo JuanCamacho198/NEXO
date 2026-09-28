@@ -5,13 +5,21 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "check": "astro check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:i18n": "bun ../scripts/check-i18n.mjs ."
   },
   "dependencies": {
     "astro": "^5"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
     "@tailwindcss/vite": "^4.3.0",
-    "tailwindcss": "^4.3.0"
+    "prettier": "^3.9.9",
+    "prettier-plugin-astro": "^1.1.0",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3"
   }
 }

@@ -1,9 +1,9 @@
 ---
-import { ADDONS } from '../data/addons';
-import type { AddonCategory } from '../data/addons';
-import { t, type UiLocale } from '../i18n';
-import AddonCard from './AddonCard.astro';
-import FilterSidebar from './FilterSidebar.astro';
+import { ADDONS } from '@/data/addons';
+import type { AddonCategory } from '@/data/addons';
+import { t, type UiLocale } from '@/i18n';
+import AddonCard from '@/components/AddonCard.astro';
+import FilterSidebar from '@/components/FilterSidebar.astro';
 
 export interface Props {
   locale: UiLocale;
@@ -41,12 +41,14 @@ const facetLangs = [
   {
     value: 'es',
     label: t(locale, 'catalog.langEs'),
-    count: catalogAddons.filter((a) => a.languages.includes('es') || a.languages.includes('multi')).length,
+    count: catalogAddons.filter((a) => a.languages.includes('es') || a.languages.includes('multi'))
+      .length,
   },
   {
     value: 'en',
     label: t(locale, 'catalog.langEn'),
-    count: catalogAddons.filter((a) => a.languages.includes('en') || a.languages.includes('multi')).length,
+    count: catalogAddons.filter((a) => a.languages.includes('en') || a.languages.includes('multi'))
+      .length,
   },
   {
     value: 'multi',
@@ -83,6 +85,7 @@ const facetUpdated = [
   },
 ];
 ---
+
 <div class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-12" data-catalog-root>
   <header class="flex flex-col gap-2">
     <h1 class="font-serif text-4xl font-bold text-text-primary">{t(locale, 'catalog.title')}</h1>
@@ -116,8 +119,16 @@ const facetUpdated = [
       <div class="flex flex-col gap-3 sm:flex-row">
         <label class="relative flex-1">
           <span class="sr-only">{t(locale, 'catalog.searchAria')}</span>
-          <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+          <svg
+            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="M20 20l-3.5-3.5"></path>
           </svg>
           <input
             data-search-input
@@ -126,7 +137,9 @@ const facetUpdated = [
             aria-label={t(locale, 'catalog.searchAria')}
             class="w-full rounded-lg border border-border-subtle bg-surface-1 py-2.5 pl-10 pr-12 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
           />
-          <kbd class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border-subtle px-1.5 py-0.5 font-sans text-xs text-text-muted">/</kbd>
+          <kbd class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border-subtle px-1.5 py-0.5 font-sans text-xs text-text-muted">
+            /
+          </kbd>
         </label>
         <label class="flex items-center gap-2 text-sm text-text-secondary">
           <span>{t(locale, 'catalog.sortLabel')}</span>
@@ -142,7 +155,9 @@ const facetUpdated = [
       </div>
 
       <div class="mt-2 flex justify-end">
-        <span data-count class="text-sm text-text-muted">{t(locale, 'catalog.count', { n: catalogAddons.length })}</span>
+        <span data-count class="text-sm text-text-muted">
+          {t(locale, 'catalog.count', { n: catalogAddons.length })}
+        </span>
       </div>
 
       <div data-grid class="mt-4 flex flex-col gap-8">
@@ -151,7 +166,9 @@ const facetUpdated = [
             {t(locale, 'catalog.groupBuiltin')}
           </h2>
           <div data-group-grid class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {builtinAddons.map((addon) => <AddonCard addon={addon} locale={locale} />)}
+            {builtinAddons.map((addon) => (
+              <AddonCard addon={addon} locale={locale} />
+            ))}
           </div>
         </section>
 
@@ -159,31 +176,31 @@ const facetUpdated = [
           <h2 class="font-sans text-lg font-semibold text-text-primary">
             {t(locale, 'catalog.groupCommunity')}
           </h2>
-          {
-            communityAddons.length > 0 ? (
-              <div data-group-grid class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {communityAddons.map((addon) => <AddonCard addon={addon} locale={locale} />)}
-              </div>
-            ) : (
-              <div
-                data-community-empty
-                class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-subtle px-4 py-12 text-center"
+          {communityAddons.length > 0 ? (
+            <div data-group-grid class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {communityAddons.map((addon) => (
+                <AddonCard addon={addon} locale={locale} />
+              ))}
+            </div>
+          ) : (
+            <div
+              data-community-empty
+              class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-subtle px-4 py-12 text-center"
+            >
+              <p class="font-sans text-lg font-semibold text-text-primary">
+                {t(locale, 'catalog.communityEmptyTitle')}
+              </p>
+              <p class="max-w-md text-sm text-text-secondary">
+                {t(locale, 'catalog.communityEmptySub')}
+              </p>
+              <a
+                href={submitHref}
+                class="mt-1 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink transition hover:brightness-110"
               >
-                <p class="font-sans text-lg font-semibold text-text-primary">
-                  {t(locale, 'catalog.communityEmptyTitle')}
-                </p>
-                <p class="max-w-md text-sm text-text-secondary">
-                  {t(locale, 'catalog.communityEmptySub')}
-                </p>
-                <a
-                  href={submitHref}
-                  class="mt-1 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink transition hover:brightness-110"
-                >
-                  {t(locale, 'catalog.submitAddon')}
-                </a>
-              </div>
-            )
-          }
+                {t(locale, 'catalog.submitAddon')}
+              </a>
+            </div>
+          )}
         </section>
       </div>
 
@@ -196,8 +213,15 @@ const facetUpdated = [
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-text-muted"
             aria-hidden="true"
           >
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path>
+            <svg
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 7v5l3 2"></path>
             </svg>
           </span>
           <h2 class="font-sans text-lg font-semibold text-text-primary">
@@ -206,7 +230,9 @@ const facetUpdated = [
         </div>
         <p class="max-w-2xl text-sm text-text-secondary">{t(locale, 'catalog.roadmapSub')}</p>
         <div class="grid grid-cols-1 gap-4 opacity-80 sm:grid-cols-2 lg:grid-cols-4">
-          {plannedAddons.map((addon) => <AddonCard addon={addon} locale={locale} />)}
+          {plannedAddons.map((addon) => (
+            <AddonCard addon={addon} locale={locale} />
+          ))}
         </div>
       </section>
     </div>
@@ -223,7 +249,9 @@ const facetUpdated = [
     <div data-drawer-backdrop class="absolute inset-0 bg-black/40"></div>
     <div class="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-2xl border border-border-subtle bg-surface-1 p-4">
       <div class="mb-2 flex items-center justify-between">
-        <p class="font-sans text-sm font-semibold text-text-primary">{t(locale, 'catalog.filter.title')}</p>
+        <p class="font-sans text-sm font-semibold text-text-primary">
+          {t(locale, 'catalog.filter.title')}
+        </p>
         <button
           type="button"
           data-drawer-close
@@ -243,26 +271,51 @@ const facetUpdated = [
     </div>
   </div>
 
-  <div data-empty hidden class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-subtle px-4 py-16 text-center">
+  <div
+    data-empty
+    hidden
+    class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-subtle px-4 py-16 text-center"
+  >
     <span class="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-text-muted">
-      <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-        <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+      <svg
+        class="h-6 w-6"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        aria-hidden="true"
+      >
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="M20 20l-3.5-3.5"></path>
       </svg>
     </span>
-    <p class="font-sans text-lg font-semibold text-text-primary">{t(locale, 'catalog.emptyTitle')}</p>
+    <p class="font-sans text-lg font-semibold text-text-primary">
+      {t(locale, 'catalog.emptyTitle')}
+    </p>
     <p class="text-sm text-text-secondary">{t(locale, 'catalog.emptySub')}</p>
     <div class="flex gap-2 pt-1">
-      <button data-clear class="rounded-lg border border-border-subtle px-4 py-2 text-sm text-text-secondary transition hover:border-accent hover:text-accent">
+      <button
+        data-clear
+        class="rounded-lg border border-border-subtle px-4 py-2 text-sm text-text-secondary transition hover:border-accent hover:text-accent"
+      >
         {t(locale, 'catalog.clearFilters')}
       </button>
-      <a href={submitHref} class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink transition hover:brightness-110">
+      <a
+        href={submitHref}
+        class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink transition hover:brightness-110"
+      >
         {t(locale, 'catalog.submitAddon')}
       </a>
     </div>
   </div>
 </div>
 
-<script define:vars={{ countTemplate: t(locale, 'catalog.count'), countOne: t(locale, 'catalog.countOne') }}>
+<script
+  define:vars={{
+    countTemplate: t(locale, 'catalog.count'),
+    countOne: t(locale, 'catalog.countOne'),
+  }}
+>
   const root = document.querySelector('[data-catalog-root]');
   const search = root.querySelector('[data-search-input]');
   const sort = root.querySelector('[data-sort-select]');
@@ -280,13 +333,18 @@ const facetUpdated = [
     return [...root.querySelectorAll(`input[data-facet="${facet}"]`)];
   }
   function selSet(facet) {
-    return new Set(allInputs(facet).filter((i) => i.checked).map((i) => i.value));
+    return new Set(
+      allInputs(facet)
+        .filter((i) => i.checked)
+        .map((i) => i.value),
+    );
   }
   function matchLangAny(cardLangs, sel) {
     if (sel.size === 0) return true;
     const langs = cardLangs.split(',');
     for (const f of sel) {
-      if (f === 'multi' ? langs.includes('multi') : langs.includes(f) || langs.includes('multi')) return true;
+      if (f === 'multi' ? langs.includes('multi') : langs.includes(f) || langs.includes('multi'))
+        return true;
     }
     return false;
   }
@@ -331,7 +389,8 @@ const facetUpdated = [
       for (const c of groupVisible) g.appendChild(c);
     }
     empty.hidden = visible.length > 0;
-    countEl.textContent = visible.length === 1 ? countOne : countTemplate.replace('{{n}}', String(visible.length));
+    countEl.textContent =
+      visible.length === 1 ? countOne : countTemplate.replace('{{n}}', String(visible.length));
 
     const params = new URLSearchParams();
     if (state.q) params.set('q', state.q);
@@ -423,6 +482,7 @@ const facetUpdated = [
   const qParam = params.get('q');
   if (qParam) search.value = qParam;
   const sortParam = params.get('sort');
-  if (sortParam === 'name' || sortParam === 'updated' || sortParam === 'relevance') sort.value = sortParam;
+  if (sortParam === 'name' || sortParam === 'updated' || sortParam === 'relevance')
+    sort.value = sortParam;
   apply();
 </script>

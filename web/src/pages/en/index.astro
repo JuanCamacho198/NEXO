@@ -1,7 +1,7 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import HomeView from '../../components/HomeView.astro';
-import { t } from '../../i18n';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import HomeView from '@/components/HomeView.astro';
+import { t } from '@/i18n';
 
 const locale = 'en' as const;
 const site = (Astro.site?.href ?? '').replace(/\/$/, '');
@@ -13,6 +13,7 @@ const jsonLd = {
   inLanguage: 'en',
 };
 ---
+
 <BaseLayout
   title={`${t(locale, 'home.title')} — NextPage`}
   description={t(locale, 'home.subtitle')}

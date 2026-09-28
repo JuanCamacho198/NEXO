@@ -1,8 +1,8 @@
 ---
-import type { AddonAvailability, AddonLang } from '../data/addons';
-import { addonDetailHref, type AddonSeed } from '../data/addons';
-import { t, type UiLocale } from '../i18n';
-import AddonIcon from './AddonIcon.astro';
+import type { AddonAvailability, AddonLang } from '@/data/addons';
+import { addonDetailHref, type AddonSeed } from '@/data/addons';
+import { t, type UiLocale } from '@/i18n';
+import AddonIcon from '@/components/AddonIcon.astro';
 
 export interface Props {
   addon: AddonSeed;
@@ -28,6 +28,7 @@ const availabilityTag: Record<AddonAvailability, string> = {
 
 const searchable = [addon.name, addon.author, addon.description[locale]].join(' ').toLowerCase();
 ---
+
 <a
   href={addonDetailHref(locale, addon.id)}
   data-card
@@ -35,7 +36,7 @@ const searchable = [addon.name, addon.author, addon.description[locale]].join(' 
   data-search={searchable}
   data-kind={addon.kind}
   data-langs={addon.languages.join(',')}
-      data-resources={addon.resources.join(',')}
+  data-resources={addon.resources.join(',')}
   data-cat={addon.category}
   data-updated={addon.updatedAt}
   class="group flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface-1 p-5 transition hover:border-accent"
@@ -47,8 +48,16 @@ const searchable = [addon.name, addon.author, addon.description[locale]].join(' 
     {addon.name}
   </span>
   <span class="flex items-center gap-1.5 text-sm text-text-muted">
-    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 3.5-6.5 8-6.5s8 2.5 8 6.5"></path>
+    <svg
+      class="h-3.5 w-3.5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="8" r="4"></circle>
+      <path d="M4 21c0-4 3.5-6.5 8-6.5s8 2.5 8 6.5"></path>
     </svg>
     {addon.author}
   </span>

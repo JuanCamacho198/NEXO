@@ -11,15 +11,15 @@
    design are defined here and nowhere else. */
 @theme {
   --color-surface-0: #121218;
-  --color-surface-1: #18181F;
-  --color-surface-2: #1E1E26;
-  --color-border-subtle: #2A2A34;
-  --color-text-primary: #F2F0E9;
-  --color-text-secondary: #B8B6C2;
-  --color-text-muted: #8B8998;
-  --color-accent: #FF8A4C;
-  --color-accent-soft: #FFB36B;
-  --color-accent-ink: #2E2118;
+  --color-surface-1: #18181f;
+  --color-surface-2: #1e1e26;
+  --color-border-subtle: #2a2a34;
+  --color-text-primary: #f2f0e9;
+  --color-text-secondary: #b8b6c2;
+  --color-text-muted: #8b8998;
+  --color-accent: #ff8a4c;
+  --color-accent-soft: #ffb36b;
+  --color-accent-ink: #2e2118;
 
   --font-serif: 'Source Serif 4', serif;
   --font-sans: 'Inter', sans-serif;

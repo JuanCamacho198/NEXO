@@ -1,6 +1,6 @@
-import type { UiKey } from './ui.en';
-import { messagesEn } from './ui.en';
-import { messagesEs } from './ui.es';
+import type { UiKey } from '@/i18n/ui.en';
+import { messagesEn } from '@/i18n/ui.en';
+import { messagesEs } from '@/i18n/ui.es';
 
 export type UiLocale = 'es' | 'en';
 

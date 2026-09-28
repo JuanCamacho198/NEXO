@@ -1,10 +1,11 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import SubmitView from '../components/SubmitView.astro';
-import { t } from '../i18n';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import SubmitView from '@/components/SubmitView.astro';
+import { t } from '@/i18n';
 
 const locale = 'es' as const;
 ---
+
 <BaseLayout
   title={`${t(locale, 'submit.title')} — NextPage`}
   description={t(locale, 'submit.subtitle')}

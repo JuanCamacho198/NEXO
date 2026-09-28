@@ -1,7 +1,7 @@
 ---
-import { ADDONS, addonDetailHref, getAddon } from '../../data/addons';
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import DetailView from '../../components/DetailView.astro';
+import { ADDONS, addonDetailHref, getAddon } from '@/data/addons';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import DetailView from '@/components/DetailView.astro';
 
 export function getStaticPaths() {
   return ADDONS.map((a) => ({ params: { id: a.id } }));
@@ -26,6 +26,7 @@ const jsonLd = {
   description: addon.description.es,
 };
 ---
+
 <BaseLayout
   title={`${addon.name} — NextPage`}
   description={addon.description.es}

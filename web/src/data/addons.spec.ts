@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import addonsData from './addons.json';
-import type { AddonAvailability, AddonCategory, AddonKind, AddonLang, AddonSeed } from './addons';
+import addonsData from '@/data/addons.json';
+import type {
+  AddonAvailability,
+  AddonCategory,
+  AddonKind,
+  AddonLang,
+  AddonSeed,
+} from '@/data/addons';
 
 // Runtime allow-lists. `satisfies` ties every entry back to the union declared
 // in addons.ts, so widening the source of truth there forces this file to move
 // with it instead of silently accepting the new value.
-const AVAILABILITIES = ['builtin', 'community', 'planned'] as const satisfies readonly AddonAvailability[];
+const AVAILABILITIES = [
+  'builtin',
+  'community',
+  'planned',
+] as const satisfies readonly AddonAvailability[];
 const KINDS = ['builtin'] as const satisfies readonly AddonKind[];
 const CATEGORIES = [
   'dominio-publico',
@@ -31,7 +41,12 @@ const REQUIRED_STRINGS = ['id', 'name', 'version', 'author', 'license', 'updated
 // catalog has NOT been proven to return results. Keeping them `planned` is the
 // load-bearing part of this spec: promoting one is a product decision that needs
 // evidence, not a data tidy-up. Flipping an entry here must fail loudly.
-const HOLLOW_MUST_STAY_PLANNED = ['standard-ebooks', 'librivox', 'wikisource', 'faded-page'] as const;
+const HOLLOW_MUST_STAY_PLANNED = [
+  'standard-ebooks',
+  'librivox',
+  'wikisource',
+  'faded-page',
+] as const;
 const PROVEN_MUST_STAY_BUILTIN = ['gutendex', 'openlibrary'] as const;
 
 type RawAddon = Record<string, unknown>;
@@ -56,7 +71,10 @@ describe('addons.json seed contract', () => {
     expect(Array.isArray(addons), 'addons.json must contain an array').toBe(true);
     expect(addons.length, 'addons.json must contain at least one addon').toBeGreaterThan(0);
     for (const [index, addon] of addons.entries()) {
-      expect(addon !== null && typeof addon === 'object', `addons.json[${index}] must be an object`).toBe(true);
+      expect(
+        addon !== null && typeof addon === 'object',
+        `addons.json[${index}] must be an object`,
+      ).toBe(true);
     }
   });
 
@@ -65,7 +83,10 @@ describe('addons.json seed contract', () => {
       for (const field of REQUIRED_STRINGS) {
         const value = addon[field];
         expect(typeof value, `${where(addon, index)}.${field} must be a string`).toBe('string');
-        expect((value as string).trim(), `${where(addon, index)}.${field} must not be blank`).not.toBe('');
+        expect(
+          (value as string).trim(),
+          `${where(addon, index)}.${field} must not be blank`,
+        ).not.toBe('');
       }
     }
   });
@@ -99,7 +120,9 @@ describe('addons.json seed contract', () => {
   it('languages is a non-empty array drawn from the AddonLang union', () => {
     for (const [index, addon] of addons.entries()) {
       const { languages } = addon;
-      expect(Array.isArray(languages), `${where(addon, index)}.languages must be an array`).toBe(true);
+      expect(Array.isArray(languages), `${where(addon, index)}.languages must be an array`).toBe(
+        true,
+      );
       const list = languages as unknown[];
       expect(list.length, `${where(addon, index)}.languages must not be empty`).toBeGreaterThan(0);
       for (const lang of list) {
@@ -114,9 +137,14 @@ describe('addons.json seed contract', () => {
   it('resources is an array of non-empty strings', () => {
     for (const [index, addon] of addons.entries()) {
       const { resources } = addon;
-      expect(Array.isArray(resources), `${where(addon, index)}.resources must be an array`).toBe(true);
+      expect(Array.isArray(resources), `${where(addon, index)}.resources must be an array`).toBe(
+        true,
+      );
       for (const [resourceIndex, resource] of (resources as unknown[]).entries()) {
-        expect(typeof resource, `${where(addon, index)}.resources[${resourceIndex}] must be a string`).toBe('string');
+        expect(
+          typeof resource,
+          `${where(addon, index)}.resources[${resourceIndex}] must be a string`,
+        ).toBe('string');
         expect(
           (resource as string).trim(),
           `${where(addon, index)}.resources[${resourceIndex}] must not be blank`,
@@ -129,14 +157,19 @@ describe('addons.json seed contract', () => {
     for (const [index, addon] of addons.entries()) {
       const { installUrl } = addon;
       if (installUrl === null) continue;
-      expect(typeof installUrl, `${where(addon, index)}.installUrl must be null or a string`).toBe('string');
+      expect(typeof installUrl, `${where(addon, index)}.installUrl must be null or a string`).toBe(
+        'string',
+      );
       let parsed: URL | undefined;
       try {
         parsed = new URL(installUrl as string);
       } catch {
         parsed = undefined;
       }
-      expect(parsed, `${where(addon, index)}.installUrl "${String(installUrl)}" must be a valid URL`).toBeInstanceOf(URL);
+      expect(
+        parsed,
+        `${where(addon, index)}.installUrl "${String(installUrl)}" must be a valid URL`,
+      ).toBeInstanceOf(URL);
       expect(parsed?.protocol, `${where(addon, index)}.installUrl must use https:`).toBe('https:');
     }
   });
@@ -144,7 +177,9 @@ describe('addons.json seed contract', () => {
   it('catalogs is a non-empty array of { type, id, name } with non-empty strings', () => {
     for (const [index, addon] of addons.entries()) {
       const { catalogs } = addon;
-      expect(Array.isArray(catalogs), `${where(addon, index)}.catalogs must be an array`).toBe(true);
+      expect(Array.isArray(catalogs), `${where(addon, index)}.catalogs must be an array`).toBe(
+        true,
+      );
       const list = catalogs as unknown[];
       expect(list.length, `${where(addon, index)}.catalogs must not be empty`).toBeGreaterThan(0);
       for (const [catalogIndex, catalog] of list.entries()) {
@@ -177,7 +212,9 @@ describe('addons.json seed contract', () => {
       const localized = description as Record<string, unknown>;
       for (const locale of ['es', 'en'] as const) {
         const value = localized[locale];
-        expect(typeof value, `${where(addon, index)}.description.${locale} must be a string`).toBe('string');
+        expect(typeof value, `${where(addon, index)}.description.${locale} must be a string`).toBe(
+          'string',
+        );
         expect(
           (value as string).trim(),
           `${where(addon, index)}.description.${locale} must not be blank`,

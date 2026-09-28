@@ -1,5 +1,5 @@
 ---
-import { t, type UiLocale } from '../i18n';
+import { t, type UiLocale } from '@/i18n';
 
 export interface FacetOption {
   value: string;
@@ -25,6 +25,7 @@ const groups = [
 
 const visible = (opts: FacetOption[]) => opts.filter((o) => o.count > 0);
 ---
+
 <div data-facet-panel class="flex flex-col gap-5">
   <div class="flex items-center justify-between">
     <p class="font-sans text-sm font-semibold uppercase tracking-wide text-text-muted">
@@ -38,34 +39,30 @@ const visible = (opts: FacetOption[]) => opts.filter((o) => o.count > 0);
       {t(locale, 'catalog.filter.clearAll')}
     </button>
   </div>
-  {
-    groups.map((g) => (
-      <fieldset class="m-0 border-0 p-0">
-        <legend class="p-0 font-sans text-xs font-semibold text-text-secondary">{g.legend}</legend>
-        <div class="mt-2 flex flex-wrap gap-1.5">
-          {visible(g.opts).map((o) => (
-            <label class="facet-pill">
-              <input type="checkbox" data-facet={g.facet} value={o.value} class="sr-only" />
-              {o.label} ({o.count})
-            </label>
-          ))}
-        </div>
-      </fieldset>
-    ))
-  }
+  {groups.map((g) => (
+    <fieldset class="m-0 border-0 p-0">
+      <legend class="p-0 font-sans text-xs font-semibold text-text-secondary">{g.legend}</legend>
+      <div class="mt-2 flex flex-wrap gap-1.5">
+        {visible(g.opts).map((o) => (
+          <label class="facet-pill">
+            <input type="checkbox" data-facet={g.facet} value={o.value} class="sr-only" />
+            {o.label} ({o.count})
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  ))}
   <fieldset class="m-0 border-0 p-0">
     <legend class="p-0 font-sans text-xs font-semibold text-text-secondary">
       {t(locale, 'catalog.filter.updated')}
     </legend>
     <div class="mt-2 flex flex-wrap gap-1.5">
-      {
-        visible(updated).map((o) => (
-          <label class="facet-pill">
-            <input type="radio" data-facet="upd" value={o.value} class="sr-only" />
-            {o.label} ({o.count})
-          </label>
-        ))
-      }
+      {visible(updated).map((o) => (
+        <label class="facet-pill">
+          <input type="radio" data-facet="upd" value={o.value} class="sr-only" />
+          {o.label} ({o.count})
+        </label>
+      ))}
     </div>
   </fieldset>
 </div>
@@ -78,7 +75,10 @@ const visible = (opts: FacetOption[]) => opts.filter((o) => o.count > 0);
     font-size: 0.8125rem;
     color: var(--color-text-secondary);
     cursor: pointer;
-    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    transition:
+      border-color 0.15s,
+      color 0.15s,
+      background 0.15s;
   }
   .facet-pill:hover {
     border-color: var(--color-accent);

@@ -1,46 +1,56 @@
 ---
-import { defaultLang, useTranslations, type Lang } from "../../i18n/utils";
+import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
 const features = [
   {
-    title: t("strip.cloudTitle"),
-    copy: t("strip.cloudCopy"),
-    icon: "cloud",
+    title: t('strip.cloudTitle'),
+    copy: t('strip.cloudCopy'),
+    icon: 'cloud',
   },
   {
-    title: t("strip.devicesTitle"),
-    copy: t("strip.devicesCopy"),
-    icon: "monitor",
+    title: t('strip.devicesTitle'),
+    copy: t('strip.devicesCopy'),
+    icon: 'monitor',
   },
   {
-    title: t("strip.searchTitle"),
-    copy: t("strip.searchCopy"),
-    icon: "search",
+    title: t('strip.searchTitle'),
+    copy: t('strip.searchCopy'),
+    icon: 'search',
   },
   {
-    title: t("strip.privacyTitle"),
-    copy: t("strip.privacyCopy"),
-    icon: "shield",
+    title: t('strip.privacyTitle'),
+    copy: t('strip.privacyCopy'),
+    icon: 'shield',
   },
 ] as const;
 ---
+
 <!-- ══════════════ FEATURE STRIP ══════════════ -->
 <section id="caracteristicas" class="border-t border-border bg-surface-alt py-24 max-[640px]:py-16">
   <div class="shell grid grid-cols-4 gap-12 max-[900px]:grid-cols-2 max-[900px]:gap-10 max-[640px]:grid-cols-1 max-[640px]:gap-8">
     {features.map((feature) => (
       <div class="min-w-0">
-        <svg class="mb-4 block h-5 w-5 text-ink" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          {feature.icon === "cloud" ? (
+        <svg
+          class="mb-4 block h-5 w-5 text-ink"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          {feature.icon === 'cloud' ? (
             <path d="M7 18h9.5a3.5 3.5 0 0 0 .4-6.98A5.5 5.5 0 0 0 6.2 10.5 3.75 3.75 0 0 0 7 18Z" />
-          ) : feature.icon === "monitor" ? (
+          ) : feature.icon === 'monitor' ? (
             <>
               <rect x="2.5" y="4" width="19" height="13" rx="2" />
               <path d="M8.5 21h7M12 17v4" />
             </>
-          ) : feature.icon === "search" ? (
+          ) : feature.icon === 'search' ? (
             <>
               <circle cx="11" cy="11" r="7" />
               <path d="m20.5 20.5-4.2-4.2" />

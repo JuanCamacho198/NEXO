@@ -1,6 +1,6 @@
 ---
-import "../styles/global.css";
-import { useTranslations, type Lang } from "../i18n/utils";
+import '@/styles/global.css';
+import { useTranslations, type Lang } from '@/i18n/utils';
 
 interface Props {
   title: string;
@@ -11,6 +11,7 @@ interface Props {
 const { title, description, lang } = Astro.props;
 const t = useTranslations(lang);
 ---
+
 <!doctype html>
 <html lang={lang}>
   <head>
@@ -22,21 +23,26 @@ const t = useTranslations(lang);
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:locale" content={lang === "en" ? "en_US" : "es_ES"} />
+    <meta property="og:locale" content={lang === 'en' ? 'en_US' : 'es_ES'} />
     {Astro.site && (
       <>
-        <link rel="alternate" hreflang="es" href={new URL("/", Astro.site)} />
-        <link rel="alternate" hreflang="en" href={new URL("/en/", Astro.site)} />
-        <link rel="alternate" hreflang="x-default" href={new URL("/", Astro.site)} />
+        <link rel="alternate" hreflang="es" href={new URL('/', Astro.site)} />
+        <link rel="alternate" hreflang="en" href={new URL('/en/', Astro.site)} />
+        <link rel="alternate" hreflang="x-default" href={new URL('/', Astro.site)} />
       </>
     )}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <a class="skip-link" href="#top">{t("header.skipLink")}</a>
+    <a class="skip-link" href="#top">
+      {t('header.skipLink')}
+    </a>
     <slot />
   </body>
 </html>

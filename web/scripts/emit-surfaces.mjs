@@ -26,7 +26,8 @@ function fail(message) {
 // --- Single source: canonical origin from astro.config.mjs -------------------
 const configSrc = readFileSync(join(root, 'astro.config.mjs'), 'utf8');
 const siteMatch = configSrc.match(/site:\s*['"]([^'"]+)['"]/);
-if (!siteMatch) fail('`site` not found in astro.config.mjs; refusing to emit with a guessed origin.');
+if (!siteMatch)
+  fail('`site` not found in astro.config.mjs; refusing to emit with a guessed origin.');
 const SITE = siteMatch[1].replace(/\/$/, '');
 const abs = (p) => `${SITE}${p.startsWith('/') ? p : `/${p}`}`;
 
@@ -37,7 +38,8 @@ try {
 } catch (err) {
   fail(`Could not parse src/data/addons.json: ${err.message}`);
 }
-if (!Array.isArray(ADDONS) || ADDONS.length === 0) fail('src/data/addons.json must contain a non-empty array.');
+if (!Array.isArray(ADDONS) || ADDONS.length === 0)
+  fail('src/data/addons.json must contain a non-empty array.');
 
 // --- Route table (404 excluded; param URLs never emitted) --------------------
 const esIndex = ['/', '/catalogo', '/enviar', '/docs'];
@@ -51,11 +53,19 @@ const enDetail = ids.map((id) => `/en/catalog/${id}`);
 
 const pairs = [
   ...esIndex.map((es, i) => ({ es, en: enIndex[i] })),
-  ...ids.map((id) => ({ es: `/catalogo/${id}`, en: `/en/catalog/${id}`, updatedAt: ADDONS.find((a) => a.id === id)?.updatedAt })),
+  ...ids.map((id) => ({
+    es: `/catalogo/${id}`,
+    en: `/en/catalog/${id}`,
+    updatedAt: ADDONS.find((a) => a.id === id)?.updatedAt,
+  })),
 ];
 
 function escXml(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 // --- sitemap.xml --------------------------------------------------------------

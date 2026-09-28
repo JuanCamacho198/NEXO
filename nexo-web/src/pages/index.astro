@@ -1,23 +1,19 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import SiteHeader from "../components/sections/SiteHeader.astro";
-import Hero from "../components/sections/Hero.astro";
-import FeatureStrip from "../components/sections/FeatureStrip.astro";
-import ExperienceSection from "../components/sections/ExperienceSection.astro";
-import FaqSection from "../components/sections/FaqSection.astro";
-import CtaBand from "../components/sections/CtaBand.astro";
-import SiteFooter from "../components/sections/SiteFooter.astro";
-import { defaultLang, useTranslations, type Lang } from "../i18n/utils";
+import Layout from '@/layouts/Layout.astro';
+import SiteHeader from '@/components/sections/SiteHeader.astro';
+import Hero from '@/components/sections/Hero.astro';
+import FeatureStrip from '@/components/sections/FeatureStrip.astro';
+import ExperienceSection from '@/components/sections/ExperienceSection.astro';
+import FaqSection from '@/components/sections/FaqSection.astro';
+import CtaBand from '@/components/sections/CtaBand.astro';
+import SiteFooter from '@/components/sections/SiteFooter.astro';
+import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 ---
 
-<Layout
-  lang="es"
-  title={t("meta.title")}
-  description={t("hero.lead")}
->
+<Layout lang="es" title={t('meta.title')} description={t('hero.lead')}>
   <SiteHeader />
 
   <main>

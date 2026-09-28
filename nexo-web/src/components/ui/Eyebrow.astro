@@ -1,11 +1,14 @@
 ---
 interface Props {
-  tracking?: "wide" | "tight";
+  tracking?: 'wide' | 'tight';
 }
 
-const { tracking = "wide" } = Astro.props;
+const { tracking = 'wide' } = Astro.props;
 const className = `mb-[18px] text-[12px] font-semibold uppercase text-sync ${
-  tracking === "wide" ? "tracking-[0.34em]" : "tracking-[0.28em]"
+  tracking === 'wide' ? 'tracking-[0.34em]' : 'tracking-[0.28em]'
 }`;
 ---
-<p class={className}><slot /></p>
+
+<p class={className}>
+  <slot />
+</p>

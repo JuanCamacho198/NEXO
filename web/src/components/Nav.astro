@@ -1,6 +1,6 @@
 ---
-import { getLocaleFromUrl, t, type UiLocale } from '../i18n';
-import type { UiKey } from '../i18n/ui.en';
+import { getLocaleFromUrl, t, type UiLocale } from '@/i18n';
+import type { UiKey } from '@/i18n/ui.en';
 
 const locale: UiLocale = getLocaleFromUrl(Astro.url);
 const pathname = Astro.url.pathname;
@@ -62,10 +62,8 @@ const otherHref = samePageHref();
 const menuOpenLabel = t(locale, 'nav.menuOpen');
 const menuCloseLabel = t(locale, 'nav.menuClose');
 ---
-<nav
-  class="border-b border-border-subtle bg-surface-1"
-  aria-label={t(locale, 'nav.aria')}
->
+
+<nav class="border-b border-border-subtle bg-surface-1" aria-label={t(locale, 'nav.aria')}>
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
     <a href={brandHref} class="font-serif text-lg font-bold text-text-primary">
       Next<span class="text-accent">Page</span>
@@ -95,24 +93,22 @@ const menuCloseLabel = t(locale, 'nav.menuClose');
         </svg>
       </button>
       <div class="hidden items-center gap-6 sm:flex">
-        {
-          links.map((link) => {
-            const active = isActive(link.href);
-            return (
-              <a
-                href={link.href}
-                aria-current={active ? 'page' : undefined}
-                class={
-                  active
-                    ? 'font-medium text-accent transition hover:text-accent'
-                    : 'text-text-secondary transition hover:text-accent'
-                }
-              >
-                {t(locale, link.key)}
-              </a>
-            );
-          })
-        }
+        {links.map((link) => {
+          const active = isActive(link.href);
+          return (
+            <a
+              href={link.href}
+              aria-current={active ? 'page' : undefined}
+              class={
+                active
+                  ? 'font-medium text-accent transition hover:text-accent'
+                  : 'text-text-secondary transition hover:text-accent'
+              }
+            >
+              {t(locale, link.key)}
+            </a>
+          );
+        })}
       </div>
       <a
         href={otherHref}
@@ -123,26 +119,29 @@ const menuCloseLabel = t(locale, 'nav.menuClose');
       </a>
     </div>
   </div>
-  <div id="mobile-nav" data-nav-panel hidden class="border-b border-border-subtle bg-surface-1 sm:hidden">
+  <div
+    id="mobile-nav"
+    data-nav-panel
+    hidden
+    class="border-b border-border-subtle bg-surface-1 sm:hidden"
+  >
     <div class="flex flex-col gap-1 px-4 pb-3">
-      {
-        links.map((link) => {
-          const active = isActive(link.href);
-          return (
-            <a
-              href={link.href}
-              aria-current={active ? 'page' : undefined}
-              class={
-                active
-                  ? 'rounded-md px-2 py-2 font-medium text-accent transition hover:text-accent'
-                  : 'rounded-md px-2 py-2 text-text-secondary transition hover:text-accent'
-              }
-            >
-              {t(locale, link.key)}
-            </a>
-          );
-        })
-      }
+      {links.map((link) => {
+        const active = isActive(link.href);
+        return (
+          <a
+            href={link.href}
+            aria-current={active ? 'page' : undefined}
+            class={
+              active
+                ? 'rounded-md px-2 py-2 font-medium text-accent transition hover:text-accent'
+                : 'rounded-md px-2 py-2 text-text-secondary transition hover:text-accent'
+            }
+          >
+            {t(locale, link.key)}
+          </a>
+        );
+      })}
       <a
         href={otherHref}
         class="mt-1 rounded-md border border-border-subtle px-2 py-2 text-sm text-text-muted transition hover:border-accent hover:text-accent"
@@ -154,22 +153,22 @@ const menuCloseLabel = t(locale, 'nav.menuClose');
   </div>
   <script define:vars={{ menuOpenLabel, menuCloseLabel }}>
     const nav = document.currentScript.closest('nav');
-  const btn = nav.querySelector('[data-nav-toggle]');
-  const panel = nav.querySelector('[data-nav-panel]');
-  function setOpen(open) {
-    btn.setAttribute('aria-expanded', String(open));
-    btn.setAttribute('aria-label', open ? menuCloseLabel : menuOpenLabel);
-    panel.hidden = !open;
-  }
-  btn.addEventListener('click', () => setOpen(panel.hidden));
-  panel.addEventListener('click', (e) => {
-    if (e.target.closest('a')) setOpen(false);
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !panel.hidden) {
-      setOpen(false);
-      btn.focus();
+    const btn = nav.querySelector('[data-nav-toggle]');
+    const panel = nav.querySelector('[data-nav-panel]');
+    function setOpen(open) {
+      btn.setAttribute('aria-expanded', String(open));
+      btn.setAttribute('aria-label', open ? menuCloseLabel : menuOpenLabel);
+      panel.hidden = !open;
     }
-  });
+    btn.addEventListener('click', () => setOpen(panel.hidden));
+    panel.addEventListener('click', (e) => {
+      if (e.target.closest('a')) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !panel.hidden) {
+        setOpen(false);
+        btn.focus();
+      }
+    });
   </script>
 </nav>

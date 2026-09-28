@@ -1,5 +1,5 @@
 ---
-import { t, type UiLocale } from '../i18n';
+import { t, type UiLocale } from '@/i18n';
 
 export interface Props {
   locale: UiLocale;
@@ -29,7 +29,12 @@ const fields = [
     required: yes,
     desc: t(locale, 'docs.fieldDesc.catalogs'),
   },
-  { name: 'resources', type: 'string[]', required: yes, desc: t(locale, 'docs.fieldDesc.resources') },
+  {
+    name: 'resources',
+    type: 'string[]',
+    required: yes,
+    desc: t(locale, 'docs.fieldDesc.resources'),
+  },
   { name: 'searchUrl', type: 'string?', required: no, desc: t(locale, 'docs.fieldDesc.searchUrl') },
   {
     name: 'detailsUrl',
@@ -58,21 +63,24 @@ const checklist = [
   t(locale, 'docs.check6'),
 ];
 ---
+
 <div class="mx-auto flex max-w-6xl flex-col gap-16 px-4 py-12">
   <section class="flex flex-col items-center gap-6 py-8 text-center">
-    <span
-      class="inline-flex items-center rounded-full border border-border-subtle bg-surface-1 px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-widest text-text-secondary"
-    >
+    <span class="inline-flex items-center rounded-full border border-border-subtle bg-surface-1 px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-widest text-text-secondary">
       {t(locale, 'docs.badge')}
     </span>
-    <h1 class="max-w-3xl font-serif text-5xl font-bold text-text-primary">{t(locale, 'docs.title')}</h1>
+    <h1 class="max-w-3xl font-serif text-5xl font-bold text-text-primary">
+      {t(locale, 'docs.title')}
+    </h1>
     <p class="max-w-2xl text-lg text-text-secondary">{t(locale, 'docs.subtitle')}</p>
   </section>
 
   <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
     <div class="flex flex-col gap-12 lg:col-span-2">
       <section class="flex flex-col gap-4">
-        <h2 class="font-serif text-3xl font-bold text-text-primary">{t(locale, 'docs.tableTitle')}</h2>
+        <h2 class="font-serif text-3xl font-bold text-text-primary">
+          {t(locale, 'docs.tableTitle')}
+        </h2>
         <div class="overflow-x-auto rounded-xl border border-border-subtle bg-surface-1">
           <table class="w-full min-w-[560px] border-collapse text-left text-sm">
             <thead>
@@ -92,41 +100,39 @@ const checklist = [
               </tr>
             </thead>
             <tbody>
-              {
-                fields.map((f) => (
-                  <tr class="border-b border-border-subtle last:border-0">
-                    <td class="px-4 py-3 font-mono text-xs text-accent">{f.name}</td>
-                    <td class="px-4 py-3 font-mono text-xs text-text-primary">{f.type}</td>
-                    <td class="px-4 py-3 text-sm text-text-secondary">{f.required}</td>
-                    <td class="px-4 py-3 text-sm text-text-secondary">{f.desc}</td>
-                  </tr>
-                ))
-              }
+              {fields.map((f) => (
+                <tr class="border-b border-border-subtle last:border-0">
+                  <td class="px-4 py-3 font-mono text-xs text-accent">{f.name}</td>
+                  <td class="px-4 py-3 font-mono text-xs text-text-primary">{f.type}</td>
+                  <td class="px-4 py-3 text-sm text-text-secondary">{f.required}</td>
+                  <td class="px-4 py-3 text-sm text-text-secondary">{f.desc}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </section>
 
       <section class="flex flex-col gap-4">
-        <h2 class="font-serif text-3xl font-bold text-text-primary">{t(locale, 'docs.checklistTitle')}</h2>
+        <h2 class="font-serif text-3xl font-bold text-text-primary">
+          {t(locale, 'docs.checklistTitle')}
+        </h2>
         <ul class="flex flex-col gap-3">
-          {
-            checklist.map((item) => (
-              <li class="flex items-start gap-3 rounded-xl border border-border-subtle bg-surface-1 px-4 py-3">
-                <svg
-                  class="mt-0.5 h-5 w-5 shrink-0 text-emerald-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-                  <path d="M4 12.5l5 5L20 6.5" />
-                </svg>
-                <span class="text-sm text-text-secondary">{item}</span>
-              </li>
-            ))
-          }
+          {checklist.map((item) => (
+            <li class="flex items-start gap-3 rounded-xl border border-border-subtle bg-surface-1 px-4 py-3">
+              <svg
+                class="mt-0.5 h-5 w-5 shrink-0 text-emerald-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path d="M4 12.5l5 5L20 6.5" />
+              </svg>
+              <span class="text-sm text-text-secondary">{item}</span>
+            </li>
+          ))}
         </ul>
       </section>
     </div>
@@ -139,29 +145,27 @@ const checklist = [
         {t(locale, 'docs.rulesTitle')}
       </h2>
       <ul class="flex flex-col gap-4">
-        {
-          rules.map((r) => (
-            <li class="flex flex-col gap-1">
-              <p class="font-sans text-sm font-semibold text-text-primary">{r.title}</p>
-              <p class="text-sm text-text-secondary">{r.sub}</p>
-            </li>
-          ))
-        }
+        {rules.map((r) => (
+          <li class="flex flex-col gap-1">
+            <p class="font-sans text-sm font-semibold text-text-primary">{r.title}</p>
+            <p class="text-sm text-text-secondary">{r.sub}</p>
+          </li>
+        ))}
       </ul>
     </aside>
   </div>
 
   <section class="flex flex-col gap-4">
-    <h2 class="font-serif text-3xl font-bold text-text-primary">{t(locale, 'docs.approvalTitle')}</h2>
+    <h2 class="font-serif text-3xl font-bold text-text-primary">
+      {t(locale, 'docs.approvalTitle')}
+    </h2>
     <p class="max-w-3xl text-base text-text-secondary">{t(locale, 'docs.approvalIntro')}</p>
     <ul class="flex flex-col gap-3">
-      {
-        gates.map((gate) => (
-          <li class="rounded-xl border border-border-subtle bg-surface-1 px-4 py-3">
-            <p class="font-mono text-xs leading-relaxed text-text-secondary">{gate}</p>
-          </li>
-        ))
-      }
+      {gates.map((gate) => (
+        <li class="rounded-xl border border-border-subtle bg-surface-1 px-4 py-3">
+          <p class="font-mono text-xs leading-relaxed text-text-secondary">{gate}</p>
+        </li>
+      ))}
     </ul>
     <p class="max-w-3xl text-sm text-text-secondary">{t(locale, 'docs.approvalNetwork')}</p>
     <p class="max-w-3xl text-sm text-text-secondary">{t(locale, 'docs.approvalLanding')}</p>
