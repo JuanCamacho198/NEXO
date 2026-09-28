@@ -5,8 +5,8 @@ import {
   catalogHref,
   type AddonAvailability,
   type AddonCategory,
-} from '../data/addons';
-import { t, type UiLocale } from '../i18n';
+} from '@/data/addons';
+import { t, type UiLocale } from '@/i18n';
 
 export interface Props {
   locale: UiLocale;
@@ -57,14 +57,15 @@ const steps = [
   { title: t(locale, 'home.step3Title'), sub: t(locale, 'home.step3Sub') },
 ];
 ---
+
 <div class="mx-auto flex max-w-6xl flex-col gap-16 px-4 py-12">
   <section class="flex flex-col items-center gap-6 py-8 text-center">
-    <span
-      class="inline-flex items-center rounded-full border border-border-subtle bg-surface-1 px-4 py-1.5 text-sm text-text-secondary"
-    >
+    <span class="inline-flex items-center rounded-full border border-border-subtle bg-surface-1 px-4 py-1.5 text-sm text-text-secondary">
       {t(locale, 'home.badge')}
     </span>
-    <h1 class="max-w-3xl font-serif text-5xl font-bold text-text-primary">{t(locale, 'home.title')}</h1>
+    <h1 class="max-w-3xl font-serif text-5xl font-bold text-text-primary">
+      {t(locale, 'home.title')}
+    </h1>
     <p class="max-w-2xl text-lg text-text-secondary">{t(locale, 'home.subtitle')}</p>
     <div class="flex flex-col gap-3 sm:flex-row">
       <a
@@ -82,7 +83,7 @@ const steps = [
     </div>
   </section>
 
-  <section aria-label="stats" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+  <section aria-label={t(locale, 'home.statsAria')} class="grid grid-cols-1 gap-4 sm:grid-cols-3">
     <div class="rounded-xl border border-border-subtle bg-surface-1 p-6 text-center">
       <p class="font-serif text-4xl font-bold text-text-primary">{addonCount}</p>
       <p class="mt-1 text-sm text-text-secondary">{t(locale, 'home.statsAddons')}</p>
@@ -102,18 +103,18 @@ const steps = [
       <p class="font-sans text-xs font-semibold uppercase tracking-widest text-text-muted">
         {t(locale, 'home.stepsEyebrow')}
       </p>
-      <h2 class="font-serif text-3xl font-bold text-text-primary">{t(locale, 'home.stepsTitle')}</h2>
+      <h2 class="font-serif text-3xl font-bold text-text-primary">
+        {t(locale, 'home.stepsTitle')}
+      </h2>
     </div>
     <ol class="grid grid-cols-1 gap-4 md:grid-cols-3">
-      {
-        steps.map((s, i) => (
-          <li class="rounded-xl border border-border-subtle bg-surface-1 p-5">
-            <p class="font-mono text-sm text-accent">{i + 1}</p>
-            <h3 class="mt-2 font-sans text-base font-semibold text-text-primary">{s.title}</h3>
-            <p class="mt-1 text-sm text-text-secondary">{s.sub}</p>
-          </li>
-        ))
-      }
+      {steps.map((s, i) => (
+        <li class="rounded-xl border border-border-subtle bg-surface-1 p-5">
+          <p class="font-mono text-sm text-accent">{i + 1}</p>
+          <h3 class="mt-2 font-sans text-base font-semibold text-text-primary">{s.title}</h3>
+          <p class="mt-1 text-sm text-text-secondary">{s.sub}</p>
+        </li>
+      ))}
     </ol>
   </section>
 
@@ -122,23 +123,27 @@ const steps = [
       <p class="font-sans text-xs font-semibold uppercase tracking-widest text-text-muted">
         {t(locale, 'home.categoriesEyebrow')}
       </p>
-      <h2 class="font-serif text-3xl font-bold text-text-primary">{t(locale, 'home.categoriesTitle')}</h2>
+      <h2 class="font-serif text-3xl font-bold text-text-primary">
+        {t(locale, 'home.categoriesTitle')}
+      </h2>
     </div>
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {
-        categories.map((c) => (
-          <a
-            href={catalogUrl}
-            class="rounded-xl border border-border-subtle bg-surface-1 p-5 transition hover:border-accent"
-          >
-            <h3 class="font-sans text-base font-semibold text-text-primary">
-              {t(locale, `catalog.cat.${c}`)}
-            </h3>
-            <p class="mt-1 text-sm text-text-secondary">{t(locale, `home.catDesc.${c}`)}</p>
-            <p class="mt-3 text-sm text-text-muted">{countFor(c) === 1 ? t(locale, 'catalog.countOne') : t(locale, 'catalog.count', { n: countFor(c) })}</p>
-          </a>
-        ))
-      }
+      {categories.map((c) => (
+        <a
+          href={catalogUrl}
+          class="rounded-xl border border-border-subtle bg-surface-1 p-5 transition hover:border-accent"
+        >
+          <h3 class="font-sans text-base font-semibold text-text-primary">
+            {t(locale, `catalog.cat.${c}`)}
+          </h3>
+          <p class="mt-1 text-sm text-text-secondary">{t(locale, `home.catDesc.${c}`)}</p>
+          <p class="mt-3 text-sm text-text-muted">
+            {countFor(c) === 1
+              ? t(locale, 'catalog.countOne')
+              : t(locale, 'catalog.count', { n: countFor(c) })}
+          </p>
+        </a>
+      ))}
     </div>
   </section>
 
@@ -147,40 +152,45 @@ const steps = [
       <p class="font-sans text-xs font-semibold uppercase tracking-widest text-text-muted">
         {t(locale, 'home.latestEyebrow')}
       </p>
-      <h2 class="font-serif text-3xl font-bold text-text-primary">{t(locale, 'home.updatesTitle')}</h2>
+      <h2 class="font-serif text-3xl font-bold text-text-primary">
+        {t(locale, 'home.updatesTitle')}
+      </h2>
     </div>
     <ul class="flex flex-col gap-3">
-      {
-        latest.map((addon) => (
-          <li class="rounded-xl border border-border-subtle bg-surface-1">
-            <a href={addonDetailHref(locale, addon.id)} class="flex items-center gap-4 px-4 py-3">
-              <span class="min-w-0 flex-1">
-                <span class="block truncate font-sans text-sm font-semibold text-text-primary">
-                  {addon.name}
-                </span>
-                <span class="block truncate text-sm text-text-secondary">{addon.description[locale]}</span>
+      {latest.map((addon) => (
+        <li class="rounded-xl border border-border-subtle bg-surface-1">
+          <a href={addonDetailHref(locale, addon.id)} class="flex items-center gap-4 px-4 py-3">
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-sans text-sm font-semibold text-text-primary">
+                {addon.name}
               </span>
-              <span class="flex shrink-0 flex-col items-end gap-1">
-                <span
-                  class={`rounded-full px-2.5 py-0.5 text-xs ${
-                    addon.availability === 'planned'
-                      ? 'bg-surface-2 text-text-muted'
-                      : 'bg-accent/15 text-accent'
-                  }`}
-                >
-                  {availabilityTag[addon.availability]}
-                </span>
-                <span class="text-xs text-text-muted">
-                  {t(locale, 'detail.updatedAgo', { x: agoFor(addon.updatedAt) })}
-                </span>
+              <span class="block truncate text-sm text-text-secondary">
+                {addon.description[locale]}
               </span>
-            </a>
-          </li>
-        ))
-      }
+            </span>
+            <span class="flex shrink-0 flex-col items-end gap-1">
+              <span
+                class={`rounded-full px-2.5 py-0.5 text-xs ${
+                  addon.availability === 'planned'
+                    ? 'bg-surface-2 text-text-muted'
+                    : 'bg-accent/15 text-accent'
+                }`}
+              >
+                {availabilityTag[addon.availability]}
+              </span>
+              <span class="text-xs text-text-muted">
+                {t(locale, 'detail.updatedAgo', { x: agoFor(addon.updatedAt) })}
+              </span>
+            </span>
+          </a>
+        </li>
+      ))}
     </ul>
     <p>
-      <a href={catalogUrl} class="text-sm font-semibold text-accent transition hover:brightness-110">
+      <a
+        href={catalogUrl}
+        class="text-sm font-semibold text-accent transition hover:brightness-110"
+      >
         {t(locale, 'home.seeAll')} →
       </a>
     </p>

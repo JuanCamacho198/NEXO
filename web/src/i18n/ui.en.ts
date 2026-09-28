@@ -9,7 +9,9 @@ export const messagesEn = {
   'nav.menuClose': 'Close menu',
   'footer.aria': 'Site footer',
   'catalog.title': 'Addon catalog',
-  'catalog.subtitle': 'Book sources that work with NextPage. Search, filter, and open any addon for details.',
+  'catalog.pageTitle': 'Addon catalog — NextPage',
+  'catalog.subtitle':
+    'Book sources that work with NextPage. Search, filter, and open any addon for details.',
   'catalog.searchPlaceholder': 'Search addons…',
   'catalog.searchAria': 'Search addons',
   'catalog.sortLabel': 'Sort',
@@ -36,8 +38,7 @@ export const messagesEn = {
   'catalog.communityEmptySub':
     'When someone publishes an addon, it will show up here and can be installed by URL from the app.',
   'catalog.roadmapTitle': 'In the works',
-  'catalog.roadmapSub':
-    'These addons are registered, but they do not have a working catalog yet.',
+  'catalog.roadmapSub': 'These addons are registered, but they do not have a working catalog yet.',
   'catalog.cat.dominio-publico': 'Public domain',
   'catalog.cat.bibliotecas': 'Open libraries',
   'catalog.cat.audiolibros': 'Audiobooks',
@@ -64,10 +65,12 @@ export const messagesEn = {
   'catalog.filter.capDetails': 'Full details',
   'detail.breadcrumbHome': 'Home',
   'detail.breadcrumbCatalog': 'Catalog',
+  'detail.breadcrumbAria': 'breadcrumb',
   'detail.updatedAgo': 'Updated {{x}}',
   'detail.includedTitle': 'Included in NextPage',
   'detail.includedSub': 'This addon ships with the app. Enable it under Addons.',
-  'detail.plannedSub': 'This addon does not have a working catalog yet. Check back once it is available.',
+  'detail.plannedSub':
+    'This addon does not have a working catalog yet. Check back once it is available.',
   'detail.step1': 'Open NextPage and go to Addons.',
   'detail.step2': 'Find this addon in the list.',
   'detail.step3': 'Turn it on and start reading.',
@@ -87,14 +90,18 @@ export const messagesEn = {
   'home.statsAddons': 'working addons',
   'home.statsSources': 'active sources',
   'home.statsPlanned': 'in the works',
+  'home.statsAria': 'stats',
   'home.stepsEyebrow': 'HOW IT WORKS',
   'home.stepsTitle': 'Three steps, under a minute',
   'home.step1Title': 'Install NextPage',
-  'home.step1Sub': 'Download the free desktop or Android app from GitHub Releases. No accounts needed.',
+  'home.step1Sub':
+    'Download the free desktop or Android app from GitHub Releases. No accounts needed.',
   'home.step2Title': 'Pick an addon',
-  'home.step2Sub': 'Browse the catalog and find the source you want. Built-in addons already work; the ones in the works are marked as not available yet.',
+  'home.step2Sub':
+    'Browse the catalog and find the source you want. Built-in addons already work; the ones in the works are marked as not available yet.',
   'home.step3Title': 'Enable the addon',
-  'home.step3Sub': 'Enable built-in addons from the Addons section in NextPage. When community addons are available, you will be able to copy the manifest URL.',
+  'home.step3Sub':
+    'Enable built-in addons from the Addons section in NextPage. When community addons are available, you will be able to copy the manifest URL.',
   'home.categoriesEyebrow': 'CATEGORIES',
   'home.categoriesTitle': 'Browse by category',
   'home.catDesc.dominio-publico': 'Rights-free classics',
@@ -106,7 +113,8 @@ export const messagesEn = {
   'home.latestEyebrow': 'JUST ARRIVED',
   'home.updatesTitle': 'Latest additions',
   'home.seeAll': 'See the full catalog',
-  'home.footerTagline': 'Community directory of catalogs for NextPage. No trackers, no cookies, no accounts.',
+  'home.footerTagline':
+    'Community directory of catalogs for NextPage. No trackers, no cookies, no accounts.',
   'home.footerProduct': 'PRODUCT',
   'home.footerResources': 'RESOURCES',
   'home.footerNextpage': 'NEXTPAGE',
@@ -126,18 +134,23 @@ export const messagesEn = {
   'submit.subtitle':
     'Publishing an addon means proposing its manifest: host it at an HTTPS URL, open a submission issue from the template, pass automated validation, and wait for maintainer review. Two built-in addons already work, four more are in the works, and community addons install by URL from the app.',
   'submit.step1Title': 'Host the manifest',
-  'submit.step1Sub': 'Serve the manifest JSON at a public URL over HTTPS. It must be served as application/json and stay within 64 KB.',
+  'submit.step1Sub':
+    'Serve the manifest JSON at a public URL over HTTPS. It must be served as application/json and stay within 64 KB.',
   'submit.step2Title': 'Open a submission issue',
-  'submit.step2Sub': 'Use the pre-filled template link to open a submission issue with the manifest URL, the name, the Spanish and English descriptions, and the category.',
+  'submit.step2Sub':
+    'Use the pre-filled template link to open a submission issue with the manifest URL, the name, the Spanish and English descriptions, and the category.',
   'submit.step3Title': 'Pass automated validation',
-  'submit.step3Sub': 'Automated validation checks HTTPS, valid JSON up to 64 KB, and the manifest shape (id, name, version, catalogs, resources). An unreachable host is reported as advisory only: reachability never marks a manifest invalid.',
+  'submit.step3Sub':
+    'Automated validation checks HTTPS, valid JSON up to 64 KB, and the manifest shape (id, name, version, catalogs, resources). An unreachable host is reported as advisory only: reachability never marks a manifest invalid.',
   'submit.step4Title': 'Maintainer review',
-  'submit.step4Sub': 'A maintainer approves or declines the proposal. On approval the addon lands in addons.json and shows up in the catalog; there is no guaranteed timeline.',
+  'submit.step4Sub':
+    'A maintainer approves or declines the proposal. On approval the addon lands in addons.json and shows up in the catalog; there is no guaranteed timeline.',
   'submit.issueCta': 'Open the submission issue',
   'submit.installNote':
     'Community addons install from the app with a nextpage://install?url=… link pointing at the HTTPS manifest URL.',
   'submit.templateTitle': 'Starter template',
-  'submit.templateDesc': 'Copy the template: it is the exact minimal shape the validator enforces (id, name, version, catalogs, resources). The optional searchUrl, detailsUrl and resolveUrl endpoints are HTTPS-only with placeholders such as {query} or {bookId}, and capabilities is an optional list.',
+  'submit.templateDesc':
+    'Copy the template: it is the exact minimal shape the validator enforces (id, name, version, catalogs, resources). The optional searchUrl, detailsUrl and resolveUrl endpoints are HTTPS-only with placeholders such as {query} or {bookId}, and capabilities is an optional list.',
   'submit.templateFile': 'mi-addon.json',
   'submit.copyButton': 'Copy',
   'submit.copied': 'Copied',
@@ -164,18 +177,21 @@ export const messagesEn = {
   'docs.ruleSizeTitle': '64 KB max',
   'docs.ruleSizeSub': 'The JSON must not exceed 64 KiB uncompressed.',
   'docs.ruleContentTypeTitle': 'JSON content',
-  'docs.ruleContentTypeSub': 'The content-type must be application/json or end in +json; parameters are ignored.',
+  'docs.ruleContentTypeSub':
+    'The content-type must be application/json or end in +json; parameters are ignored.',
   'docs.ruleParseTitle': 'Valid UTF-8 JSON',
   'docs.ruleParseSub': 'The manifest must parse as UTF-8 JSON and be an object.',
   'docs.ruleShapeTitle': 'Valid shape',
-  'docs.ruleShapeSub': 'Non-empty catalogs and resources (max 16 each); catalog fields up to 512 chars, resources up to 64, endpoints up to 2048.',
+  'docs.ruleShapeSub':
+    'Non-empty catalogs and resources (max 16 each); catalog fields up to 512 chars, resources up to 64, endpoints up to 2048.',
   'docs.ruleOrderTitle': 'Fixed order',
   'docs.ruleOrderSub': 'Validation runs in order: size, content-type, parse, then shape.',
   'docs.ruleUnknownTitle': 'Unknown fields',
   'docs.ruleUnknownSub': 'Unknown fields are ignored, they do not fail.',
   'docs.checklistTitle': 'Publishing checklist',
   'docs.ruleCodesTitle': 'Error codes',
-  'docs.ruleCodesSub': 'The validator returns stable codes: ADDON_FETCH_HTTPS_REQUIRED, ADDON_FETCH_TOO_LARGE, ADDON_FETCH_BAD_CONTENT_TYPE, ADDON_FETCH_INVALID_MANIFEST, ADDON_FETCH_NETWORK.',
+  'docs.ruleCodesSub':
+    'The validator returns stable codes: ADDON_FETCH_HTTPS_REQUIRED, ADDON_FETCH_TOO_LARGE, ADDON_FETCH_BAD_CONTENT_TYPE, ADDON_FETCH_INVALID_MANIFEST, ADDON_FETCH_NETWORK.',
   'docs.check1': 'The JSON passes the local validator.',
   'docs.check2': 'Endpoints respond and use HTTPS.',
   'docs.check3': 'I tried search and detail in NextPage.',
@@ -185,16 +201,20 @@ export const messagesEn = {
   'docs.approvalTitle': 'Approval process',
   'docs.approvalIntro':
     'The pipeline is: submission issue → automated validation → pull request → human approval. Nothing is published without maintainer review.',
-  'docs.approvalGateHttps': 'HTTPS_REQUIRED: the manifest URL must use https. It is rejected before any network request.',
-  'docs.approvalGateSize': 'TOO_LARGE: the manifest exceeds 64 KB. Reading stops without buffering the full body.',
-  'docs.approvalGateType': 'BAD_CONTENT_TYPE: the content-type must be application/json or end in +json.',
+  'docs.approvalGateHttps':
+    'HTTPS_REQUIRED: the manifest URL must use https. It is rejected before any network request.',
+  'docs.approvalGateSize':
+    'TOO_LARGE: the manifest exceeds 64 KB. Reading stops without buffering the full body.',
+  'docs.approvalGateType':
+    'BAD_CONTENT_TYPE: the content-type must be application/json or end in +json.',
   'docs.approvalGateShape':
     'INVALID_MANIFEST: the JSON does not parse as a UTF-8 object or misses the required shape (non-empty id, name, version, catalogs and resources; optional searchUrl, detailsUrl and resolveUrl are HTTPS-only up to 2048 chars; optional capabilities up to 16 entries).',
   'docs.approvalNetwork':
     'NETWORK: the manifest could not be reached (network error, timeout, or non-2xx HTTP). It is reported as advisory and never conflated with an invalid manifest.',
   'docs.approvalLanding':
     'On approval the addon lands in addons.json and installs from the app with nextpage://install?url=… pointing at the HTTPS manifest URL.',
-  'docs.approvalLicense': 'License and source are declared by the author in the manifest; reviewers do not verify them.',
+  'docs.approvalLicense':
+    'License and source are declared by the author in the manifest; reviewers do not verify them.',
   'docs.approvalSubmitCta': 'Propose an addon',
   'notFound.title': 'Page not found',
   'notFound.subtitle': 'The route you are looking for does not exist or moved.',

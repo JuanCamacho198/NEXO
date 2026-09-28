@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { messagesEn, type UiKey } from './ui.en';
-import { messagesEs } from './ui.es';
+import { messagesEn, type UiKey } from '@/i18n/ui.en';
+import { messagesEs } from '@/i18n/ui.es';
 
 describe('i18n dictionary parity', () => {
   it('ES and EN dictionaries expose the same key set', () => {

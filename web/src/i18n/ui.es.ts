@@ -1,4 +1,4 @@
-import type { UiKey } from './ui.en';
+import type { UiKey } from '@/i18n/ui.en';
 
 export const messagesEs: Record<UiKey, string> = {
   'nav.aria': 'Navegación principal',
@@ -11,7 +11,9 @@ export const messagesEs: Record<UiKey, string> = {
   'nav.menuClose': 'Cerrar menú',
   'footer.aria': 'Pie de página',
   'catalog.title': 'Catálogo de addons',
-  'catalog.subtitle': 'Fuentes de libros que funcionan con NextPage. Busca, filtra y abre cada addon para ver el detalle.',
+  'catalog.pageTitle': 'Catálogo de addons — NextPage',
+  'catalog.subtitle':
+    'Fuentes de libros que funcionan con NextPage. Busca, filtra y abre cada addon para ver el detalle.',
   'catalog.searchPlaceholder': 'Buscar addons…',
   'catalog.searchAria': 'Buscar addons',
   'catalog.sortLabel': 'Ordenar',
@@ -66,10 +68,12 @@ export const messagesEs: Record<UiKey, string> = {
   'catalog.filter.capDetails': 'Ficha completa',
   'detail.breadcrumbHome': 'Inicio',
   'detail.breadcrumbCatalog': 'Catálogo',
+  'detail.breadcrumbAria': 'breadcrumb',
   'detail.updatedAgo': 'Actualizado {{x}}',
   'detail.includedTitle': 'Incluido en NextPage',
   'detail.includedSub': 'Este addon viene con la app. Actívalo en Addons.',
-  'detail.plannedSub': 'Este addon todavía no tiene un catálogo que funcione. Vuelve cuando esté disponible.',
+  'detail.plannedSub':
+    'Este addon todavía no tiene un catálogo que funcione. Vuelve cuando esté disponible.',
   'detail.step1': 'Abre NextPage y ve a Addons.',
   'detail.step2': 'Busca este addon en la lista.',
   'detail.step3': 'Actívalo y empieza a leer.',
@@ -89,14 +93,18 @@ export const messagesEs: Record<UiKey, string> = {
   'home.statsAddons': 'addons que funcionan',
   'home.statsSources': 'fuentes activas',
   'home.statsPlanned': 'en preparación',
+  'home.statsAria': 'stats',
   'home.stepsEyebrow': 'CÓMO FUNCIONA',
   'home.stepsTitle': 'Tres pasos, menos de un minuto',
   'home.step1Title': 'Instala NextPage',
-  'home.step1Sub': 'Descarga la app para escritorio o Android desde GitHub Releases. Es gratuita y sin cuentas.',
+  'home.step1Sub':
+    'Descarga la app para escritorio o Android desde GitHub Releases. Es gratuita y sin cuentas.',
   'home.step2Title': 'Elige un addon',
-  'home.step2Sub': 'Explora el catálogo y encuentra la fuente que quieres. Los addons integrados ya funcionan; los que están en preparación se marcan como no disponibles.',
+  'home.step2Sub':
+    'Explora el catálogo y encuentra la fuente que quieres. Los addons integrados ya funcionan; los que están en preparación se marcan como no disponibles.',
   'home.step3Title': 'Activa el addon',
-  'home.step3Sub': 'Activa los addons integrados desde la sección Addons de NextPage. Cuando haya addons de la comunidad, podrás copiar la URL del manifiesto.',
+  'home.step3Sub':
+    'Activa los addons integrados desde la sección Addons de NextPage. Cuando haya addons de la comunidad, podrás copiar la URL del manifiesto.',
   'home.categoriesEyebrow': 'CATEGORÍAS',
   'home.categoriesTitle': 'Explorar por categoría',
   'home.catDesc.dominio-publico': 'Clásicos libres de derechos',
@@ -108,7 +116,8 @@ export const messagesEs: Record<UiKey, string> = {
   'home.latestEyebrow': 'RECIÉN LLEGADOS',
   'home.updatesTitle': 'Últimas incorporaciones',
   'home.seeAll': 'Ver catálogo completo',
-  'home.footerTagline': 'Directorio comunitario de catálogos para NextPage. Sin rastreadores, sin cookies, sin cuentas.',
+  'home.footerTagline':
+    'Directorio comunitario de catálogos para NextPage. Sin rastreadores, sin cookies, sin cuentas.',
   'home.footerProduct': 'PRODUCTO',
   'home.footerResources': 'RECURSOS',
   'home.footerNextpage': 'NEXTPAGE',
@@ -128,18 +137,23 @@ export const messagesEs: Record<UiKey, string> = {
   'submit.subtitle':
     'Publicar un addon es proponer su manifiesto: alójalo en una URL HTTPS, abre un issue de envío con la plantilla, pasa la validación automática y espera la revisión de un mantenedor. Dos addons integrados ya funcionan, cuatro están en preparación y los de la comunidad se instalan por URL desde la app.',
   'submit.step1Title': 'Aloja el manifiesto',
-  'submit.step1Sub': 'Sirve el JSON del manifiesto en una URL pública con HTTPS. Debe servirse como application/json y no superar los 64 KB.',
+  'submit.step1Sub':
+    'Sirve el JSON del manifiesto en una URL pública con HTTPS. Debe servirse como application/json y no superar los 64 KB.',
   'submit.step2Title': 'Abre un issue de envío',
-  'submit.step2Sub': 'Usa el enlace con la plantilla pre-rellenada para abrir un issue de envío con la URL del manifiesto, el nombre, la descripción en español e inglés y la categoría.',
+  'submit.step2Sub':
+    'Usa el enlace con la plantilla pre-rellenada para abrir un issue de envío con la URL del manifiesto, el nombre, la descripción en español e inglés y la categoría.',
   'submit.step3Title': 'Pasa la validación automática',
-  'submit.step3Sub': 'La validación automática comprueba HTTPS, JSON válido de hasta 64 KB y la forma del manifiesto (id, name, version, catalogs, resources). Un servidor inalcanzable solo se informa como aviso: el alcance nunca marca un manifiesto como inválido.',
+  'submit.step3Sub':
+    'La validación automática comprueba HTTPS, JSON válido de hasta 64 KB y la forma del manifiesto (id, name, version, catalogs, resources). Un servidor inalcanzable solo se informa como aviso: el alcance nunca marca un manifiesto como inválido.',
   'submit.step4Title': 'Revisión del mantenedor',
-  'submit.step4Sub': 'Un mantenedor aprueba o rechaza la propuesta. Al aprobarse, el addon entra en addons.json y aparece en el catálogo; no hay plazos garantizados.',
+  'submit.step4Sub':
+    'Un mantenedor aprueba o rechaza la propuesta. Al aprobarse, el addon entra en addons.json y aparece en el catálogo; no hay plazos garantizados.',
   'submit.issueCta': 'Abrir el issue de envío',
   'submit.installNote':
     'Los addons de la comunidad se instalan desde la app con un enlace nextpage://install?url=… que apunta a la URL HTTPS del manifiesto.',
   'submit.templateTitle': 'Plantilla inicial',
-  'submit.templateDesc': 'Copia la plantilla: es la forma mínima exacta que exige el validador (id, name, version, catalogs, resources). Los endpoints opcionales searchUrl, detailsUrl y resolveUrl son solo HTTPS con variables como {query} o {bookId}, y capabilities es una lista opcional.',
+  'submit.templateDesc':
+    'Copia la plantilla: es la forma mínima exacta que exige el validador (id, name, version, catalogs, resources). Los endpoints opcionales searchUrl, detailsUrl y resolveUrl son solo HTTPS con variables como {query} o {bookId}, y capabilities es una lista opcional.',
   'submit.templateFile': 'mi-addon.json',
   'submit.copyButton': 'Copiar',
   'submit.copied': 'Copiado',
@@ -160,24 +174,28 @@ export const messagesEs: Record<UiKey, string> = {
   'docs.fieldDesc.version': 'Versión SemVer. Se incrementa en cada cambio.',
   'docs.fieldDesc.catalogs': 'Entradas {type, id, name}; no vacío, máximo 16.',
   'docs.fieldDesc.resources': 'Recursos como search o book-details; no vacío, máximo 16.',
-  'docs.fieldDesc.searchUrl': 'Plantilla opcional del endpoint de catálogo ({query}, {page}); solo HTTPS.',
+  'docs.fieldDesc.searchUrl':
+    'Plantilla opcional del endpoint de catálogo ({query}, {page}); solo HTTPS.',
   'docs.fieldDesc.detailsUrl': 'Plantilla opcional del endpoint de detalle ({bookId}); solo HTTPS.',
   'docs.rulesTitle': 'Reglas de validación',
   'docs.ruleSizeTitle': 'Máximo 64 KB',
   'docs.ruleSizeSub': 'El JSON no puede superar los 64 KiB sin comprimir.',
   'docs.ruleContentTypeTitle': 'Contenido JSON',
-  'docs.ruleContentTypeSub': 'El content-type debe ser application/json o terminar en +json; los parámetros se ignoran.',
+  'docs.ruleContentTypeSub':
+    'El content-type debe ser application/json o terminar en +json; los parámetros se ignoran.',
   'docs.ruleParseTitle': 'JSON UTF-8 válido',
   'docs.ruleParseSub': 'El manifiesto debe parsear como JSON UTF-8 y ser un objeto.',
   'docs.ruleShapeTitle': 'Forma válida',
-  'docs.ruleShapeSub': 'catalogs y resources no vacíos (máx. 16 cada uno); campos de catálogo de hasta 512 caracteres, recursos de hasta 64 y endpoints de hasta 2048.',
+  'docs.ruleShapeSub':
+    'catalogs y resources no vacíos (máx. 16 cada uno); campos de catálogo de hasta 512 caracteres, recursos de hasta 64 y endpoints de hasta 2048.',
   'docs.ruleOrderTitle': 'Orden fijo',
   'docs.ruleOrderSub': 'La validación corre en orden: tamaño, content-type, parseo y forma.',
   'docs.ruleUnknownTitle': 'Campos desconocidos',
   'docs.ruleUnknownSub': 'Los campos desconocidos se ignoran, no fallan.',
   'docs.checklistTitle': 'Checklist para publicar',
   'docs.ruleCodesTitle': 'Códigos de error',
-  'docs.ruleCodesSub': 'El validador devuelve códigos estables: ADDON_FETCH_HTTPS_REQUIRED, ADDON_FETCH_TOO_LARGE, ADDON_FETCH_BAD_CONTENT_TYPE, ADDON_FETCH_INVALID_MANIFEST, ADDON_FETCH_NETWORK.',
+  'docs.ruleCodesSub':
+    'El validador devuelve códigos estables: ADDON_FETCH_HTTPS_REQUIRED, ADDON_FETCH_TOO_LARGE, ADDON_FETCH_BAD_CONTENT_TYPE, ADDON_FETCH_INVALID_MANIFEST, ADDON_FETCH_NETWORK.',
   'docs.check1': 'El JSON pasa el validador local.',
   'docs.check2': 'Los endpoints responden y usan HTTPS.',
   'docs.check3': 'Probé búsqueda y detalle en NextPage.',
@@ -187,16 +205,20 @@ export const messagesEs: Record<UiKey, string> = {
   'docs.approvalTitle': 'Proceso de aprobación',
   'docs.approvalIntro':
     'El camino es: issue de envío → validación automática → pull request → aprobación humana. Nada se publica sin la revisión de un mantenedor.',
-  'docs.approvalGateHttps': 'HTTPS_REQUIRED: la URL del manifiesto debe usar https. Se rechaza antes de cualquier petición de red.',
-  'docs.approvalGateSize': 'TOO_LARGE: el manifiesto supera los 64 KB. La lectura se corta sin guardar el cuerpo completo.',
-  'docs.approvalGateType': 'BAD_CONTENT_TYPE: el content-type debe ser application/json o terminar en +json.',
+  'docs.approvalGateHttps':
+    'HTTPS_REQUIRED: la URL del manifiesto debe usar https. Se rechaza antes de cualquier petición de red.',
+  'docs.approvalGateSize':
+    'TOO_LARGE: el manifiesto supera los 64 KB. La lectura se corta sin guardar el cuerpo completo.',
+  'docs.approvalGateType':
+    'BAD_CONTENT_TYPE: el content-type debe ser application/json o terminar en +json.',
   'docs.approvalGateShape':
     'INVALID_MANIFEST: el JSON no parsea como objeto UTF-8 o no tiene la forma exigida (id, name, version, catalogs y resources no vacíos; searchUrl, detailsUrl y resolveUrl opcionales solo HTTPS de hasta 2048 caracteres; capabilities opcional de hasta 16 entradas).',
   'docs.approvalNetwork':
     'NETWORK: el manifiesto no se pudo alcanzar (error de red, timeout o HTTP no 2xx). Se informa como aviso y nunca se confunde con un manifiesto inválido.',
   'docs.approvalLanding':
     'Al aprobarse, el addon entra en addons.json y se instala desde la app con nextpage://install?url=… apuntando a la URL HTTPS del manifiesto.',
-  'docs.approvalLicense': 'La licencia y la fuente las declara el autor en su manifiesto; quien revisa no las verifica.',
+  'docs.approvalLicense':
+    'La licencia y la fuente las declara el autor en su manifiesto; quien revisa no las verifica.',
   'docs.approvalSubmitCta': 'Proponer un addon',
   'notFound.title': 'Página no encontrada',
   'notFound.subtitle': 'La ruta que buscas no existe o se movió.',

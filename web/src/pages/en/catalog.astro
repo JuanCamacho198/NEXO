@@ -1,8 +1,8 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import CatalogView from '../../components/CatalogView.astro';
-import { ADDONS, addonDetailHref } from '../../data/addons';
-import { t } from '../../i18n';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import CatalogView from '@/components/CatalogView.astro';
+import { ADDONS, addonDetailHref } from '@/data/addons';
+import { t } from '@/i18n';
 
 const locale = 'en' as const;
 const site = (Astro.site?.href ?? '').replace(/\/$/, '');
@@ -24,8 +24,9 @@ const jsonLd = {
   })),
 };
 ---
+
 <BaseLayout
-  title="Addon catalog — NextPage"
+  title={t(locale, 'catalog.pageTitle')}
   description={t(locale, 'catalog.subtitle')}
   canonicalPath="/en/catalog"
   alternateEs="/catalogo"
