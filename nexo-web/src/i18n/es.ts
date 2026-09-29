@@ -75,8 +75,32 @@ export const es = {
   'cta.lead': 'Lee en cualquier dispositivo y mantén todo sincronizado.',
   'cta.download': 'Descargar NEXO',
 
+  // Download section
+  'download.eyebrow': 'Descargar',
+  'download.detected': 'Detectado en tu dispositivo',
+  'download.recommended': 'Recomendado',
+  'download.versionLabel': 'Versión',
+  'download.sizeLabel': 'Tamaño',
+  'download.sizeUnit': 'MB',
+  'download.ctaGeneric': 'Descargar NEXO',
+  'download.ctaWindows': 'Descargar para Windows',
+  'download.ctaMacOS': 'Descargar para macOS',
+  'download.ctaLinux': 'Descargar para Linux',
+  'download.ctaAndroid': 'Descargar para Android',
+  'download.altVersions': 'Otros formatos',
+  'download.allVersions': 'Todas las versiones en GitHub',
+  'download.checksums': 'Verificar con SHA-256',
+  'download.checksumsNote':
+    'Compara el checksum del archivo que descargaste con la lista publicada.',
+  'download.androidNote':
+    'Instalación directa por APK. Puede que necesites permitir la instalación desde orígenes desconocidos.',
+  'download.unavailable': 'Las descargas no están disponibles ahora mismo',
+  'download.unavailableNote':
+    'Consulta todas las versiones en GitHub mientras restauramos los enlaces directos.',
+
   // Footer
   'footer.navAria': 'Pie de página',
+  'footer.download': 'Descargar',
   'footer.privacy': 'Privacidad',
   'footer.github': 'GitHub',
 

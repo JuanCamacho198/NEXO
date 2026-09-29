@@ -13,6 +13,15 @@
   --color-card: #ffffff;
   --color-muted: oklch(95.5% 0.008 95);
 
+  /* glass — the sticky header's translucent surface and its scrolled pill state */
+  --glass-bg: oklch(97.4% 0.007 95 / 0.72);
+  --glass-bg-scrolled: oklch(98.6% 0.004 95 / 0.82);
+  --glass-border: oklch(90% 0.008 95 / 0.9);
+  --glass-highlight: oklch(100% 0 0 / 0.55);
+  --glass-shadow: 0 18px 40px -24px oklch(20% 0.06 260 / 0.34);
+  --glass-blur: 14px;
+  --glass-saturate: 1.8;
+
   /* ink */
   --color-ink: oklch(22.3% 0.062 264);
   --color-ink-soft: oklch(46% 0.045 259);
@@ -31,6 +40,7 @@
   --radius-lg: 0.75rem;
   --radius-2xl: 20px;
   --container: 1240px;
+  --header-offset: 124px;
   --shadow-soft: 0 18px 40px -24px oklch(20% 0.06 260 / 0.28);
   --shadow-device:
     0 40px 80px -30px oklch(20% 0.06 260 / 0.35), 0 12px 28px -12px oklch(20% 0.06 260 / 0.18);
@@ -68,6 +78,13 @@
   --color-surface-alt: oklch(26% 0.035 264);
   --color-card: oklch(24.5% 0.035 264);
   --color-muted: oklch(30% 0.03 264);
+
+  /* glass — the dark counterpart of the header surface */
+  --glass-bg: oklch(22% 0.03 264 / 0.66);
+  --glass-bg-scrolled: oklch(26% 0.035 264 / 0.8);
+  --glass-border: oklch(40% 0.03 264 / 0.75);
+  --glass-highlight: oklch(100% 0 0 / 0.1);
+  --glass-shadow: 0 18px 40px -24px oklch(0% 0 0 / 0.6);
 
   /* ink — the warm off-white the light palette already used for inverted text */
   --color-ink: oklch(96% 0.01 95);
@@ -121,8 +138,13 @@
   html {
     scroll-behavior: smooth;
   }
-  section[id] {
-    scroll-margin-top: 96px;
+  /* Every anchor target gets the offset, not just <section>: #dispositivos in
+     Hero.astro is a <ul>, so the old `section[id]` selector gave it no offset at
+     all and the sticky header covered it completely. 124px clears the header,
+     which runs about 107px tall (28px + 28px padding, a 49px logo and the
+     reserved 1px border). */
+  [id] {
+    scroll-margin-top: var(--header-offset);
   }
   body {
     margin: 0;
@@ -219,6 +241,70 @@
 
 @layer components {
   /* ═══════════════ header ═══════════════ */
+  /* The header is a glass surface at rest and a suspended pill once scrolled.
+     `.site-header` is `position: sticky`, so it stays in normal flow and its
+     height is part of the layout below it. The border is therefore always 1px:
+     transparent on the sides and top, coloured only on the bottom edge. If the
+     pill state added a border the rest state did not have, the page would shift
+     by 1px the moment the user starts scrolling. */
+  .site-header {
+    /* `top` is owned HERE, not by a `top-0` utility. Tailwind emits
+       @layer components BEFORE @layer utilities, and a later layer wins over an
+       earlier one REGARDLESS OF SPECIFICITY — so `.site-header[data-scrolled]`
+       at 0,2,0 still loses to `.top-0` at 0,1,0. Verified in a real browser: the
+       scrolled state applied its radius, border, background and shadow but
+       `top` stayed 0px, so the bar never detached from the viewport edge. Do not
+       reintroduce a `top-*` utility on this element. */
+    top: 0;
+    background-color: var(--glass-bg);
+    border: 1px solid transparent;
+    border-bottom-color: var(--color-border);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+    transition:
+      background-color 0.28s ease,
+      backdrop-filter 0.28s ease,
+      border-radius 0.28s ease,
+      border-color 0.28s ease,
+      box-shadow 0.28s ease,
+      top 0.28s ease;
+  }
+  /* The suspension reads from the offset, the radius, the gap above the bar and
+     the shadow — never from shrinking. Only top, max-width, border-radius,
+     border-color, background-color, box-shadow and backdrop-filter may change
+     here; margin-inline merely recentres the narrower box. Padding, height and
+     font-size must NOT change, or the pill would resize the header's box and
+     reflow the page under it. (The earlier claim that 0,2,0 outranks the `top-0`
+     utility was wrong: see the note on `.site-header` above.) */
+  .site-header[data-scrolled] {
+    top: 12px;
+    max-width: min(1240px, calc(100% - 24px));
+    margin-inline: auto;
+    border-radius: 18px;
+    border-color: var(--glass-border);
+    background-color: var(--glass-bg-scrolled);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      var(--glass-shadow);
+  }
+  /* At 390px the looser inset keeps the burger, the CTA and the logo from
+     squeezing each other once the bar is no longer full-bleed. */
+  @media (max-width: 640px) {
+    .site-header[data-scrolled] {
+      max-width: calc(100% - 16px);
+    }
+  }
+  /* No backdrop-filter (older Firefox, forced-colours): swap the translucent
+     glass for the opaque surface tokens so the bar stays readable. */
+  @supports not (backdrop-filter: blur(1px)) {
+    .site-header {
+      background-color: var(--color-background);
+    }
+    .site-header[data-scrolled] {
+      background-color: var(--color-surface);
+    }
+  }
+
   .logo {
     display: inline-flex;
     align-items: center;
@@ -322,6 +408,17 @@
   .lang-picker[open] .lang-chevron {
     transform: rotate(180deg);
   }
+  /* The closed state is stated explicitly instead of left to the user agent.
+     `.lang-menu` sets `display: grid`, and a browser that hides closed
+     `<details>` content with a user-agent `display: none` rule would lose to
+     that author declaration — the menu would render open always. Modern Chrome
+     hides it through `::details-content` + `content-visibility` instead, so it
+     happens to work today, but relying on which mechanism the engine picked is
+     not something to leave implicit. 0,3,0 beats the bare `.lang-menu` in the
+     same layer, so no `!important` is needed. */
+  .lang-picker:not([open]) .lang-menu {
+    display: none;
+  }
   .lang-menu {
     position: absolute;
     top: calc(100% + 12px);
@@ -354,6 +451,15 @@
   }
   .lang-menu a[aria-current='true'] {
     color: var(--color-ink);
+  }
+  /* A right-aligned menu hangs from the right edge of its summary. The menu is
+     96px wide, so the desktop instance needs right: 0 to keep it inside the
+     viewport, and the mobile instance must not be right-aligned: it is the first
+     item in the dropdown row, so right: 0 there would push the menu off the
+     left edge of the screen. */
+  .lang-menu-right {
+    left: auto;
+    right: 0;
   }
 
   /* ═══════════════ experience ═══════════════ */
@@ -487,6 +593,208 @@
       font-size: 1.25rem;
     }
   }
+
+  /* ═══════════════ download ═══════════════ */
+  /* The section's rhythm, its card grid and its foot are utilities in
+     DownloadSection.astro, matching every sibling section. What stays here is
+     what utilities cannot express: the repeated card surface (the same idiom as
+     .reader-card), the marker reset on <summary>, and the html[data-os=…] state
+     selectors that reveal and hoist the visitor's own card. */
+
+  /* Same surface idiom as .reader-card so the cards read as native to the page. */
+  .dl-card {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+    padding: 26px;
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    background: var(--color-card);
+    box-shadow: var(--shadow-soft);
+  }
+  .dl-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+  }
+  .dl-plat {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+
+  .dl-badge,
+  .dl-detected {
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .dl-badge {
+    display: inline-flex;
+    background: var(--color-muted);
+    color: var(--color-ink-soft);
+  }
+  /* Hidden until the visitor's own platform is known; the reveal rules below
+     flip it to inline-flex through html[data-os=…]. */
+  .dl-detected {
+    display: none;
+    border: 1px solid var(--color-sync);
+    color: var(--color-sync);
+  }
+
+  .dl-meta {
+    display: grid;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .dl-version,
+  .dl-size {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .dl-version > :first-child,
+  .dl-size > :first-child {
+    color: var(--color-muted-foreground);
+  }
+  .dl-version > :last-child,
+  .dl-size > :last-child {
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+
+  .dl-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    /* A pill CTA label must never wrap: wrapping changes the button's height,
+       and the card sits in a grid, so the whole row would jump. */
+    white-space: nowrap;
+    margin-top: auto;
+    padding: 12px 18px;
+    border-radius: 999px;
+    background: var(--color-ink);
+    /* Both tokens invert with the theme, so the label stays legible in dark
+       mode without a literal light value and its dark counterpart. */
+    color: var(--color-surface);
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1;
+    transition:
+      background-color 0.18s ease,
+      translate 0.18s ease;
+  }
+  .dl-cta:hover {
+    background: var(--color-ink-soft);
+    translate: 0 -1px;
+  }
+  .dl-cta svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .dl-alt {
+    font-size: 13px;
+  }
+  .dl-alt > summary {
+    cursor: pointer;
+    list-style: none;
+    font-weight: 600;
+    color: var(--color-ink-soft);
+  }
+  .dl-alt > summary::-webkit-details-marker {
+    display: none;
+  }
+  .dl-alt-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .dl-alt-list a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    color: var(--color-ink-soft);
+    transition:
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+  .dl-alt-list a:hover {
+    border-color: var(--color-ink-soft);
+    color: var(--color-ink);
+  }
+  /* Kind on the left, size pushed to the right edge of the row. */
+  .dl-alt-list a > :first-child {
+    margin-right: auto;
+  }
+  .dl-alt-list a > :last-child {
+    color: var(--color-muted-foreground);
+  }
+
+  .dl-note {
+    padding: 12px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-surface-alt);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-ink-soft);
+  }
+  /* OS detection, applied before first paint by the blocking head script in
+     Layout.astro. `other` deliberately matches nothing: a phone or an
+     unrecognised OS keeps the default order with no highlight. */
+  html[data-os='windows'] .dl-card[data-platform='windows'] .dl-detected,
+  html[data-os='macos'] .dl-card[data-platform='macos'] .dl-detected,
+  html[data-os='linux'] .dl-card[data-platform='linux'] .dl-detected,
+  html[data-os='android'] .dl-card[data-platform='android'] .dl-detected {
+    display: inline-flex;
+  }
+  html[data-os='windows'] .dl-card[data-platform='windows'],
+  html[data-os='macos'] .dl-card[data-platform='macos'],
+  html[data-os='linux'] .dl-card[data-platform='linux'],
+  html[data-os='android'] .dl-card[data-platform='android'] {
+    order: -1;
+    border-color: var(--color-ring);
+    box-shadow:
+      0 0 0 1px var(--color-ring),
+      var(--shadow-soft);
+  }
+
+  /* ═══════════════ adaptive hero CTA ═══════════════ */
+  /* Five labels are pre-rendered inside one button, so every platform string is
+     resolved at build time and no text is ever chosen in JavaScript. The swap is
+     a state selector over the same html[data-os='…'] the blocking head script in
+     Layout.astro sets before first paint. `html:not([data-os])` and
+     `html[data-os='other']` match no rule below, so the generic label stays. */
+  .os-label {
+    display: none;
+  }
+  .os-label-generic {
+    display: inline;
+  }
+  html[data-os='windows'] .os-label-generic,
+  html[data-os='macos'] .os-label-generic,
+  html[data-os='linux'] .os-label-generic,
+  html[data-os='android'] .os-label-generic {
+    display: none;
+  }
+  html[data-os='windows'] .os-label-windows,
+  html[data-os='macos'] .os-label-macos,
+  html[data-os='linux'] .os-label-linux,
+  html[data-os='android'] .os-label-android {
+    display: inline;
+  }
 }
 
 /* ═══════════════ keyframes ═══════════════ */
@@ -503,12 +811,10 @@
 
 /* ═══════════════ dark overrides for literal light surfaces ═══════════════ */
 /* A handful of surfaces carry a literal light value because no token or utility
-   can express them (an alpha header, a data-URI glyph, an inverted button). Each
-   gets a dark counterpart here and is left untouched in light mode. Unlayered, so
-   they outrank the @layer utilities that carry the originals. */
-[data-theme='dark'] .site-header {
-  background-color: oklch(20% 0.03 264 / 0.85);
-}
+   can express them (the hamburger glyph, an inverted button). Each gets a dark
+   counterpart here and is left untouched in light mode. Unlayered, so they
+   outrank the @layer utilities that carry the originals. The header used to be
+   on this list; it now swaps through the --glass-* tokens instead. */
 [data-theme='dark'] .nav-toggle {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23f4f2ea' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h16M4 12h16M4 17h16'/%3E%3C/svg%3E");
 }
@@ -525,8 +831,10 @@
 /* The toggle icons and the picker chevron only move for decoration; kill their
    transitions for reduced-motion users, matching the .rise handling above. */
 @media (prefers-reduced-motion: reduce) {
+  .site-header,
   .theme-toggle-icon,
-  .lang-chevron {
+  .lang-chevron,
+  .dl-cta {
     transition: none;
   }
 }

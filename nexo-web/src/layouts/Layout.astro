@@ -37,6 +37,57 @@ const t = useTranslations(lang);
         }
       })();
     </script>
+    <script is:inline>
+      // Same justification as the theme script above, and the same deliberate
+      // break of the no-JS rule: the download section reveals its "detected"
+      // badge and reorders the matching card through `html[data-os='…']` CSS
+      // selectors, so the OS has to be on <html> before the first paint. A
+      // deferred script would show the wrong card first and then jump.
+      (function () {
+        try {
+          var data = navigator.userAgentData;
+          // The user agent is always appended, even when `userAgentData` exists:
+          // on Chrome OS `userAgentData.platform` is the bare string "Chrome OS",
+          // which carries neither the Linux nor the CrOS token the checks below
+          // need, so a platform-only probe silently loses that case.
+          var probe =
+            (data && data.platform ? data.platform : '') +
+            ' ' +
+            (navigator.platform || '') +
+            ' ' +
+            (navigator.userAgent || '');
+          // Order is load-bearing. An Android user agent also carries Linux, and
+          // a Chrome OS one carries Linux, CrOS and X11 at once, so the more
+          // specific platforms are resolved first. There is no iOS build, so
+          // every Apple mobile form factor maps to `other` instead of guessing
+          // macOS and pointing it at a .dmg it cannot open.
+          var os = 'other';
+          if (/android/i.test(probe)) {
+            os = 'android';
+          } else if (/iphone|ipad|ipod/i.test(probe)) {
+            os = 'other';
+          } else if (/cros|chrome os/i.test(probe)) {
+            os = 'other';
+          } else if (/windows|win32|win64|wow64|win16/i.test(probe)) {
+            // Matched as a word, not as `/win/i`: macOS browsers report
+            // "Darwin" in the user agent, which a bare `/win/` would steal.
+            os = 'windows';
+          } else if (/mac/i.test(probe)) {
+            // iPadOS 13+ asks sites for the desktop layout and then reports
+            // itself as "MacIntel", which no user-agent token distinguishes from
+            // a real Mac. Multitouch is the remaining signal: a Mac reports one
+            // contact, an iPad several.
+            os = navigator.maxTouchPoints > 1 ? 'other' : 'macos';
+          } else if (/linux|x11/i.test(probe)) {
+            os = 'linux';
+          }
+          document.documentElement.dataset.os = os;
+        } catch (error) {
+          // Detection unavailable: `data-os` stays unset, so the default card
+          // order renders with no highlight.
+        }
+      })();
+    </script>
     <title>{title}</title>
     <meta name="description" content={description} />
     <meta name="theme-color" content="#f8f6f1" media="(prefers-color-scheme: light)" />
@@ -94,6 +145,41 @@ const t = useTranslations(lang);
           });
         });
         sync();
+      })();
+    </script>
+    <script is:inline>
+      // <details> gives the language menu its toggle for free, but it cannot be
+      // dismissed with Escape or a click outside. One pass over every instance
+      // covers both the top bar and the small-screen menu, which is why this
+      // lives here and not inside LanguagePicker.astro (which would emit it
+      // twice per page). Escape and outline dismissal stay optional: without
+      // this script the menu still opens and its links still work.
+      (function () {
+        var pickers = document.querySelectorAll('.lang-picker');
+        if (!pickers.length) return;
+        function closeAll() {
+          pickers.forEach(function (picker) {
+            picker.open = false;
+          });
+        }
+        // Capturing, so the panel is already closed by the time the click lands
+        // anywhere else. A click on a link inside a menu also closes it, so
+        // going back does not return to a page with a stale open panel.
+        document.addEventListener(
+          'click',
+          function (event) {
+            var target = event.target;
+            pickers.forEach(function (picker) {
+              if (!picker.contains(target) || target.closest('a')) {
+                picker.open = false;
+              }
+            });
+          },
+          true,
+        );
+        document.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') closeAll();
+        });
       })();
     </script>
   </body>

@@ -1,0 +1,141 @@
+---
+import Eyebrow from '@/components/ui/Eyebrow.astro';
+import PlatformIcon from '@/components/ui/PlatformIcon.astro';
+import { formatSize, getDownloadCatalog, type Platform } from '@/lib/releases';
+import { defaultLang, useTranslations, type Lang, type UIKey } from '@/i18n/utils';
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+
+/** Resolved exactly once. `null` means every asset lookup failed and the fallback renders. */
+const catalog = await getDownloadCatalog();
+
+const platformLabels: Record<Platform, UIKey> = {
+  android: 'hero.platformAndroid',
+  windows: 'hero.platformWindows',
+  macos: 'hero.platformMacOS',
+  linux: 'hero.platformLinux',
+};
+
+const ctaLabels: Record<Platform, UIKey> = {
+  android: 'download.ctaAndroid',
+  windows: 'download.ctaWindows',
+  macos: 'download.ctaMacOS',
+  linux: 'download.ctaLinux',
+};
+
+/** A card is only renderable with a primary asset; anything malformed is dropped. */
+const offers = (catalog?.offers ?? []).filter((offer) =>
+  Boolean(offer?.primary?.url && offer?.platform && offer?.version),
+);
+---
+
+<!-- ══════════════ DOWNLOAD ══════════════ -->
+<section id="descargar" class="border-t border-border py-24 max-[640px]:py-16">
+  <div class="shell">
+    <Eyebrow>{t('download.eyebrow')}</Eyebrow>
+    <h2 class="max-w-[20ch]">{t('cta.heading')}</h2>
+    <p class="mt-4 max-w-[52ch] text-[1.05rem] leading-[1.75] text-ink-soft text-pretty">
+      {t('cta.lead')}
+    </p>
+
+    {catalog && offers.length > 0 ? (
+      <>
+        <ul class="mt-10 grid grid-cols-4 gap-5 max-[900px]:grid-cols-2 max-[640px]:grid-cols-1">
+          {offers.map((offer) => (
+            <li class="dl-card" data-platform={offer.platform}>
+              <div class="dl-card-head">
+                <PlatformIcon name={offer.platform} />
+                <span class="dl-plat">{t(platformLabels[offer.platform])}</span>
+                <span class="dl-badge">{t('download.recommended')}</span>
+                <span class="dl-detected">{t('download.detected')}</span>
+              </div>
+
+              <ul class="dl-meta">
+                <li class="dl-version">
+                  <span>{t('download.versionLabel')}</span>
+                  <span>{offer.version}</span>
+                </li>
+                <li class="dl-size">
+                  <span>{t('download.sizeLabel')}</span>
+                  <span>
+                    {formatSize(offer.primary.sizeBytes)} {t('download.sizeUnit')}
+                  </span>
+                </li>
+              </ul>
+
+              <a class="dl-cta" href={offer.primary.url} rel="noopener">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M12 3v11m0 0 4.5-4.5M12 14l-4.5-4.5M4 17.5V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                {t(ctaLabels[offer.platform])}
+              </a>
+
+              {offer.alternates.length > 0 && (
+                <details class="dl-alt">
+                  <summary>{t('download.altVersions')}</summary>
+                  <ul class="dl-alt-list">
+                    {offer.alternates.map((alternate) => (
+                      <li>
+                        <a href={alternate.url} rel="noopener">
+                          <span>{alternate.kind.toUpperCase()}</span>
+                          <span>
+                            {formatSize(alternate.sizeBytes)} {t('download.sizeUnit')}
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+
+              {offer.platform === 'android' && <p class="dl-note">{t('download.androidNote')}</p>}
+            </li>
+          ))}
+        </ul>
+
+        <div class="mt-[34px] flex flex-wrap items-baseline gap-x-[22px] gap-y-[10px] text-[14px]">
+          <a
+            class="font-semibold text-ink underline underline-offset-[3px]"
+            href="https://github.com/JuanCamacho198/NEXTPAGE/releases"
+          >
+            {t('download.allVersions')}
+          </a>
+          {catalog.checksumsUrl && (
+            <p class="flex flex-wrap items-baseline gap-2 text-[13px] text-muted-foreground">
+              <a
+                class="font-semibold text-sync underline underline-offset-[3px]"
+                href={catalog.checksumsUrl}
+              >
+                {t('download.checksums')}
+              </a>
+              <span>{t('download.checksumsNote')}</span>
+            </p>
+          )}
+        </div>
+      </>
+    ) : (
+      <>
+        <div class="dl-note mt-[34px] grid max-w-[60ch] gap-1.5">
+          <strong>{t('download.unavailable')}</strong>
+          <span>{t('download.unavailableNote')}</span>
+        </div>
+        <div class="mt-[34px] flex flex-wrap items-baseline gap-x-[22px] gap-y-[10px] text-[14px]">
+          <a
+            class="font-semibold text-ink underline underline-offset-[3px]"
+            href="https://github.com/JuanCamacho198/NEXTPAGE/releases"
+          >
+            {t('download.allVersions')}
+          </a>
+        </div>
+      </>
+    )}
+  </div>
+</section>
