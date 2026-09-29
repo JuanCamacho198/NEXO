@@ -1,4 +1,5 @@
 import java.text.SimpleDateFormat
+import java.util.Base64
 import java.util.Date
 import java.util.Locale
 import java.util.Properties
@@ -208,7 +209,7 @@ android {
             if (useReleaseSigning) {
                 val keystoreFile = layout.buildDirectory.file("signing/release.keystore").get().asFile
                 keystoreFile.parentFile.mkdirs()
-                keystoreFile.writeBytes(java.util.Base64.getDecoder().decode(releaseKeystoreBase64))
+                keystoreFile.writeBytes(Base64.getDecoder().decode(releaseKeystoreBase64))
                 storeFile = keystoreFile
             }
             storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: ""
