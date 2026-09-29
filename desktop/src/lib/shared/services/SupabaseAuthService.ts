@@ -26,6 +26,7 @@ import type { Session } from '@supabase/supabase-js';
 import { getSessionClient, getLiveSession } from '$lib/services/supabase';
 import { savePersistedAuth } from '$lib/shared/stores/authPersistence';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
+import { isAnonymousSession } from '$lib/shared/services/anonymousSession';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { logger } from '$lib/shared/logger/Logger';
 
@@ -253,6 +254,7 @@ async function handleSession(session: Session): Promise<void> {
     email: session.user.email ?? null,
     displayName: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null,
     photoUrl: session.user.user_metadata?.avatar_url ?? session.user.user_metadata?.picture ?? null,
+    isAnonymous: isAnonymousSession(session),
   });
 
   await savePersistedAuth({
@@ -339,6 +341,7 @@ export async function signInAnonymously(): Promise<void> {
       email: null,
       displayName: null,
       photoUrl: null,
+      isAnonymous: true,
     });
   }
 }

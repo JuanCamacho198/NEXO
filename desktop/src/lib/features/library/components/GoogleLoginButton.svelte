@@ -31,13 +31,15 @@
   });
 
   // Show a success toast only on a false→true transition AFTER mount, i.e. a
-  // fresh login — not on app reload with a persisted session.
-  let prevSignedIn = $state(authState.isSignedIn);
+  // fresh login — not on app reload with a persisted session. Uses the
+  // authenticated predicate so the anonymous fallback session never reads as a
+  // successful Google login.
+  let prevAuthenticated = $state(authState.isAuthenticated);
   $effect(() => {
-    if (mounted && !prevSignedIn && authState.isSignedIn) {
+    if (mounted && !prevAuthenticated && authState.isAuthenticated) {
       showSuccessToast = true;
     }
-    prevSignedIn = authState.isSignedIn;
+    prevAuthenticated = authState.isAuthenticated;
   });
 
   async function handleLogin(): Promise<void> {
@@ -55,7 +57,7 @@
   }
 </script>
 
-{#if authState.isSignedIn}
+{#if authState.isAuthenticated}
   <div
     class="flex w-full items-center justify-center gap-2 rounded-md border border-(--color-success)/30 bg-(--color-success)/10 px-4 py-2 text-sm font-medium text-(--color-primary)"
     role="status"

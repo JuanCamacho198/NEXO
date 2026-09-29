@@ -5,7 +5,7 @@
  * here instead of being console.error-only; `SyncAuthBanner` renders the global
  * re-auth banner with a "Sign in with Google" CTA. The banner clears
  * automatically when the user re-authenticates (the banner component watches
- * `authState.isSignedIn` — D7) and via explicit dismiss.
+ * `authState.isAuthenticated` — D7) and via explicit dismiss.
  *
  * The store never schedules retries: it is a pure state holder, so repeated
  * auth-class reports just refresh the banner (no hot retry loop — SR-2).

@@ -25,7 +25,12 @@ import {
   getLiveSession,
 } from '$lib/services/supabase';
 import type { Session } from '@supabase/supabase-js';
-import { signInAnonymously, restoreSession, signOut } from '$lib/shared/services';
+import {
+  signInAnonymously,
+  restoreSession,
+  signOut,
+  isAnonymousSession,
+} from '$lib/shared/services';
 import { SyncService } from '$lib/shared/services/SyncService';
 import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
 import { syncHealthState } from '$lib/shared/stores/SyncHealthState.svelte';
@@ -155,15 +160,19 @@ export class AppState {
     this.bulkImport.isImporting = false;
     this.bulkImport.importProgress = null;
     let initialRoute: AppRoute = 'welcome';
-    let restoredAuthenticatedSession = false;
+    let restoredSupabaseSession = false;
     try {
       const supabaseSession = await restoreSession();
       if (supabaseSession) {
-        restoredAuthenticatedSession = true;
+        // DA-3: an anonymous session is restored only as an RLS auth context.
+        // It still gets the live-session cache and the authenticated sync
+        // wiring (unchanged sync behaviour), but it must NOT count as a
+        // login: a fresh install lands on the welcome screen.
+        restoredSupabaseSession = true;
         setLiveSession(supabaseSession);
         this.hydrateAuthState(supabaseSession);
         this.startAuthenticatedSync();
-        initialRoute = 'home';
+        initialRoute = isAnonymousSession(supabaseSession) ? 'welcome' : 'home';
       } else {
         const cached = await loadPersistedAuth();
         if (cached) {
@@ -196,9 +205,10 @@ export class AppState {
     } catch {}
     this.navigation.route = initialRoute;
     SyncService.setupOutboxProcessor();
-    if (authState.userId && !restoredAuthenticatedSession) SyncService.syncBookCatalog();
+    if (authState.userId && !restoredSupabaseSession) SyncService.syncBookCatalog();
     getSessionClient().auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        const anonymous = isAnonymousSession(session);
         setLiveSession(session);
         SyncService.resetOutboxBreaker();
         this.startAuthenticatedSync();
@@ -210,10 +220,15 @@ export class AppState {
         try {
           dictionaryState.subscribeToRemoteChanges();
         } catch {}
-        if (this.navigation.route === 'welcome') {
-          this.navigation.route = 'home';
-          this.loadLibrary();
-          this.statsDomain.loadStats(undefined);
+        if (!anonymous) {
+          // A real session landing clears the anonymous marker (DA-3): refresh
+          // authState from the session so `isAuthenticated` flips true.
+          this.hydrateAuthState(session);
+          if (this.navigation.route === 'welcome') {
+            this.navigation.route = 'home';
+            this.loadLibrary();
+            this.statsDomain.loadStats(undefined);
+          }
         }
         void this.loadDailyGoalForCurrentUser();
         return;
@@ -358,6 +373,7 @@ export class AppState {
         session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null,
       photoUrl:
         session.user.user_metadata?.avatar_url ?? session.user.user_metadata?.picture ?? null,
+      isAnonymous: isAnonymousSession(session),
     });
   }
 }

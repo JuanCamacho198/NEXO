@@ -54,7 +54,7 @@
   }
 
   $effect(() => {
-    if (authState.isSignedIn && authState.userId) {
+    if (authState.isAuthenticated && authState.userId) {
       devicesState.loadDevices(authState.userId);
     }
   });
@@ -174,7 +174,7 @@
           {/if}
         </h3>
         <p class="text-xs text-(--color-text-muted)">
-          {#if authState.isSignedIn}
+          {#if authState.isAuthenticated}
             {t('settings.sync.signedIn')} · {authState.userId?.slice(0, 8) ?? ''}
           {:else}
             {t('settings.sync.signedOut')}
@@ -197,7 +197,7 @@
       <button
         type="button"
         class="inline-flex items-center gap-2 rounded-xl border border-(--color-primary) bg-(--color-primary) px-4 py-2 text-sm font-medium text-(--color-background) hover:opacity-90 disabled:opacity-60 cursor-pointer shrink-0"
-        disabled={isSyncing || !authState.isSignedIn}
+        disabled={isSyncing || !authState.isAuthenticated}
         onclick={() => void handleSyncNow()}
       >
         {#if isSyncing}
@@ -208,7 +208,7 @@
         {isSyncing ? t('settings.notifications.syncingNow') : t('settings.sync.syncNow')}
       </button>
     </div>
-    {#if !authState.isSignedIn}
+    {#if !authState.isAuthenticated}
       <p class="text-xs text-amber-600">{t('settings.authDescription')}</p>
     {/if}
   </div>

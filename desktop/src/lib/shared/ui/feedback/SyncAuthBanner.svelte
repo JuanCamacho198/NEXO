@@ -16,11 +16,12 @@
   let isSigningIn = $state(false);
 
   // D7: a fresh authenticated session (SIGNED_IN/TOKEN_REFRESHED — both flip
-  // `authState.isSignedIn` to true) clears the banner so re-auth resumes sync.
-  // Runs only when the tracked accessToken changes — a Drive AUTH_REQUIRED
-  // while still signed in does NOT re-trigger it (the banner stays).
+  // `authState.isAuthenticated` to true) clears the banner so re-auth resumes
+  // sync. The DA-3 anonymous fallback session is not a re-auth and must not
+  // clear the banner. Runs only when the tracked accessToken changes — a Drive
+  // AUTH_REQUIRED while still signed in does NOT re-trigger it (the banner stays).
   $effect(() => {
-    if (authState.isSignedIn) syncAlertStore.clear();
+    if (authState.isAuthenticated) syncAlertStore.clear();
   });
 
   async function handleReAuth(): Promise<void> {

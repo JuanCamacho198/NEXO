@@ -290,7 +290,7 @@
         </div>
       {/if}
 
-      {#if !authState.isSignedIn}
+      {#if !authState.isAuthenticated}
         <p class="text-xs text-amber-600">
           {t('settings.sync.signedOut')} — {t('settings.authDescription')}
         </p>

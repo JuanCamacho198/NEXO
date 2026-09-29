@@ -45,6 +45,7 @@ function hydrateAuthState(userId: string): void {
     email: null,
     displayName: null,
     photoUrl: null,
+    isAnonymous: false,
   });
 }
 

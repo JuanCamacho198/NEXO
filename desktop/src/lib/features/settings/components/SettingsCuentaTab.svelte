@@ -137,7 +137,7 @@
         {t('settings.authDescription')}
       </p>
       <GoogleLoginButton {t} />
-      {#if authState.isSignedIn}
+      {#if authState.isAuthenticated}
         <Button
           variant="danger"
           disabled={isSigningOut}
@@ -163,7 +163,7 @@
     <div class="p-4 border-b border-(--color-border) last:border-b-0">
       <ProfileCard {profile} {isProfileLoading} {profileError} {t} />
     </div>
-    {#if authState.isSignedIn && authState.userId}
+    {#if authState.isAuthenticated && authState.userId}
       <div class="p-4 border-b border-(--color-border) last:border-b-0">
         <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
           {t('settings.connectedDevices.title')}

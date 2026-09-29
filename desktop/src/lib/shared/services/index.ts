@@ -40,6 +40,7 @@ export {
   signInWithGoogle,
   signOut,
 } from './SupabaseAuthService';
+export { isAnonymousSession } from './anonymousSession';
 export type { SupabaseSessionData } from '$lib/shared/stores/AuthState.svelte';
 export {
   beginDriveConnect,

@@ -174,7 +174,7 @@
       onkeydown={handleUserBlockKeydown}
     >
       <div class="flex items-center gap-3">
-        {#if authState.isSignedIn && profile.avatarUrl}
+        {#if authState.isAuthenticated && profile.avatarUrl}
           <img
             src={profile.avatarUrl}
             alt={profile.name}

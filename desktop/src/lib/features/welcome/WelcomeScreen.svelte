@@ -78,10 +78,11 @@
 
   // ─── Supabase auth → navigate home ───
   // The Supabase session is already persisted by TauriStorage adapter
-  // (supabase-session.json in appDataDir). When the login completes and
-  // authState.isSignedIn becomes true, navigate to home.
+  // (supabase-session.json in appDataDir). When a real login completes and
+  // authState.isAuthenticated becomes true, navigate to home. The DA-3
+  // anonymous fallback session is NOT a login — it must not skip the gate.
   $effect(() => {
-    if (authState.isSignedIn && authState.accessToken) {
+    if (authState.isAuthenticated && authState.accessToken) {
       navigationState.navigateToHome();
     }
   });

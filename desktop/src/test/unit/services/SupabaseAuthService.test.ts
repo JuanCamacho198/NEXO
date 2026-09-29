@@ -7,6 +7,7 @@
  * provider detection, and callback registration.
  */
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { isAnonymousSession } from '$lib/shared/services/anonymousSession';
 
 // ---- Mock control variables ----
 const mockPluginStart = vi.fn();
@@ -411,6 +412,7 @@ describe('SupabaseAuthService — signInAnonymously', () => {
         userId: 'anon-1',
         email: null,
         displayName: null,
+        isAnonymous: true,
       }),
     );
   });
@@ -449,6 +451,19 @@ describe('SupabaseAuthService — signInAnonymously', () => {
 
     expect(mockSignInAnonymously).toHaveBeenCalledTimes(1);
     expect(mockSetSupabaseSession).not.toHaveBeenCalled();
+  });
+});
+
+describe('SupabaseAuthService — isAnonymousSession', () => {
+  it('is true for a GoTrue anonymous user', () => {
+    const session = makeMockSession({
+      user: { id: 'anon-1', email: null, user_metadata: {}, is_anonymous: true },
+    });
+    expect(isAnonymousSession(session as never)).toBe(true);
+  });
+
+  it('is false for a real user without the anonymous claim', () => {
+    expect(isAnonymousSession(makeMockSession() as never)).toBe(false);
   });
 });
 

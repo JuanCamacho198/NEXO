@@ -88,7 +88,7 @@
 
   // Auto-load devices when signed in
   $effect(() => {
-    if (authState.isSignedIn && authState.userId) {
+    if (authState.isAuthenticated && authState.userId) {
       void profile.loadDevices(authState.userId);
     }
   });
@@ -114,7 +114,8 @@
     router.activeTab = tab;
     if (tab === 'cuenta') {
       await profile.loadProfileData();
-      if (authState.isSignedIn && authState.userId) await profile.loadDevices(authState.userId);
+      if (authState.isAuthenticated && authState.userId)
+        await profile.loadDevices(authState.userId);
     } else {
       profile.stopHeartbeat();
     }

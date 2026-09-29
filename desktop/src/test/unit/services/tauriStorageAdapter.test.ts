@@ -195,6 +195,7 @@ describe('tauriStorageAdapter — corrupt-file resilience (DA-4.2)', () => {
       email: null,
       displayName: null,
       photoUrl: null,
+      isAnonymous: false,
     });
     setLiveSession({ user: { id: 'u1' } } as never);
     files.set(SESSION_FILE, '{not valid json');

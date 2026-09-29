@@ -4,14 +4,23 @@
  * Wraps a Supabase Auth session internally but exposes the same
  * reactive interface as before for backward compatibility.
  *
- * Consumers read: `isSignedIn`, `email`, `userId`, `displayName`,
- * `photoUrl`, `isLocalUser`, `accessToken`, `refreshToken`, `expiresAt`.
+ * Consumers read: `isSignedIn`, `isAnonymous`, `isAuthenticated`, `email`,
+ * `userId`, `displayName`, `photoUrl`, `isLocalUser`, `accessToken`,
+ * `refreshToken`, `expiresAt`.
  *
  * Local-user support:
  * Local users are first-class profiles that do NOT set `accessToken`.
  * `isSignedIn` therefore evaluates to `false` for local users.
  * Callers that need "has any profile" should check
  * `authState.isLocalUser || authState.isSignedIn`.
+ *
+ * Anonymous sessions (DA-3):
+ * The boot fallback calls `signInAnonymously()` so RLS has an auth context
+ * when no real session can be restored. That session carries a token, so
+ * `isSignedIn` is `true`, but it is NOT a login. `isAnonymous` marks it and
+ * `isAuthenticated` is the predicate every "this session means logged in"
+ * decision must use (`isSignedIn && !isAnonymous`). Sync/RLS gates keep
+ * using `isSignedIn` so the fallback session still works as before.
  */
 
 import type { LocalUserProfile } from './authPersistence';
@@ -33,6 +42,12 @@ export interface SupabaseSessionData {
   email: string | null;
   displayName: string | null;
   photoUrl: string | null;
+  /**
+   * True when the session comes from the DA-3 anonymous fallback rather than
+   * a real sign-in. Anonymous sessions exist only to give RLS an auth
+   * context; they are never treated as a login.
+   */
+  isAnonymous: boolean;
 }
 
 let accessToken: string | null = $state(null);
@@ -43,8 +58,11 @@ let displayName: string | null = $state(null);
 let photoUrl: string | null = $state(null);
 let userId: string | null = $state(null);
 let localUser: LocalUserProfile | null = $state(null);
+let anonymous = $state(false);
 
 const isSignedIn = $derived(accessToken !== null);
+const isAnonymous = $derived(anonymous);
+const isAuthenticated = $derived(isSignedIn && !anonymous);
 const isLocalUser = $derived(localUser !== null);
 const isTokenExpired = $derived(
   expiresAt === null || Date.now() >= expiresAt - 60000, // 1-minute buffer
@@ -61,6 +79,7 @@ export function setSupabaseSession(data: SupabaseSessionData): void {
   email = data.email;
   displayName = data.displayName;
   photoUrl = data.photoUrl;
+  anonymous = data.isAnonymous;
   localUser = null; // Clear local user when supabase session is set
 }
 
@@ -76,6 +95,7 @@ export function clearSupabaseSession(): void {
   displayName = null;
   photoUrl = null;
   userId = null;
+  anonymous = false;
 }
 
 /**
@@ -114,6 +134,12 @@ export function needsRefresh(): boolean {
 export const authState = {
   get isSignedIn(): boolean {
     return isSignedIn;
+  },
+  get isAnonymous(): boolean {
+    return isAnonymous;
+  },
+  get isAuthenticated(): boolean {
+    return isAuthenticated;
   },
   get isTokenExpired(): boolean {
     return isTokenExpired;

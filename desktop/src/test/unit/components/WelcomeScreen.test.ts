@@ -17,7 +17,13 @@ vi.mock('$lib/shared/stores/AppState.svelte', () => ({
 }));
 
 vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
-  authState: { isSignedIn: false, accessToken: null, email: null },
+  authState: {
+    isSignedIn: false,
+    isAnonymous: false,
+    isAuthenticated: false,
+    accessToken: null,
+    email: null,
+  },
   setLocalUser: vi.fn(),
 }));
 

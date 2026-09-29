@@ -81,6 +81,7 @@ describe('SyncAuthBanner', () => {
       email: null,
       displayName: null,
       photoUrl: null,
+      isAnonymous: false,
     });
     await tick();
 
@@ -97,6 +98,7 @@ describe('SyncAuthBanner', () => {
       email: null,
       displayName: null,
       photoUrl: null,
+      isAnonymous: false,
     });
     await tick();
     render(SyncAuthBanner);
