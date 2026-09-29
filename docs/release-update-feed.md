@@ -1,9 +1,10 @@
 # Release Update Feed Contract
 
 Status: contract for change `app-auto-update`, PR 1 slice (feed contract + mock fixtures).
-Scope: defines the single feed convention both update clients consume. No client code
-in this slice. Clients MUST run against the mock/staging feed until the signing
-prerequisites (blocked-until-decided) land.
+Updated 2026-09-28: signing prerequisites DECIDED (section 6) — release 3.0.1
+ships signed with working updater feeds. Pre-3.0.1 builds and local/dev builds
+(with an empty feed URL) stay on the mock/staging feed or disabled.
+Scope: defines the single feed convention both update clients consume.
 
 Related capability: `release-update-feed`.
 Source versions at contract time: Android `0.3.0` / versionCode `300`
@@ -24,6 +25,13 @@ https://github.com/<owner>/<repo>/releases/download/<tag>/latest-<platform>.json
 
 - Production feed URL resolves per platform: the update client uses the
   platform-specific feed URL defined by the release convention above.
+- Desktop carve-out (decided 2026-09-28): tauri-action publishes ONE
+  `latest.json` per `desktop-v<version>` release (its `platforms` map covers
+  windows/macOS/linux), so the desktop production feed is
+  `https://github.com/<owner>/<repo>/releases/download/desktop-v<version>/latest.json`
+  (mirrored in `tauri.conf.json` updater endpoints). The per-platform
+  `latest-<platform>.json` pattern above applies to Android
+  (`latest-android.json` under the `android-v<version>` tag).
 - Mock feed override: a build configured with a staging/mock feed URL fetches the
   mock feed instead of the production feed. Production feed infrastructure is not
   required for the check to succeed.
@@ -37,13 +45,13 @@ each entry carries a download `url` and a cryptographic `signature`.
 
 ```json
 {
-  "version": "0.4.0",
+  "version": "3.0.1",
   "notes": "Example release notes.",
   "pub_date": "2026-09-28T12:00:00Z",
   "channel": "stable",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/<owner>/<repo>/releases/download/v0.4.0/nextpage-desktop-v0.4.0-windows-x86_64.exe",
+      "url": "https://github.com/<owner>/<repo>/releases/download/v3.0.1/nextpage-desktop-v3.0.1-windows-x86_64.exe",
       "signature": "<tauri-action signature>"
     }
   }
@@ -68,14 +76,14 @@ ABI/arch qualifier `abi`, and file `size` in bytes.
 
 ```json
 {
-  "version": "0.4.0",
+  "version": "3.0.1",
   "versionCode": 400,
   "notes": "Example release notes.",
   "pubDate": "2026-09-28T12:00:00Z",
   "channel": "stable",
   "assets": [
     {
-      "url": "https://github.com/<owner>/<repo>/releases/download/v0.4.0/nextpage-android-v0.4.0.apk",
+      "url": "https://github.com/<owner>/<repo>/releases/download/v3.0.1/nextpage-android-v3.0.1.apk",
       "abi": "universal",
       "size": 12345678
     }
@@ -98,11 +106,13 @@ Release assets encode product, platform/target, and version. Feed URLs MUST
 reference exactly these names.
 
 - Android APK/AAB: `nextpage-android-v{version}.apk` / `nextpage-android-v{version}.aab`
-  (example: `nextpage-android-v0.4.0.apk`).
-- Desktop bundles: `nextpage-desktop-v{version}-{target}.{ext}`
-  (examples: `nextpage-desktop-v0.4.0-windows-x86_64.exe`,
-  `nextpage-desktop-v0.4.0-macos-universal.dmg`,
-  `nextpage-desktop-v0.4.0-linux-x86_64.AppImage`).
+  (example: `nextpage-android-v3.0.1.apk`). Enforced by the release workflow
+  (`nextpage-${GITHUB_REF_NAME}.apk/.aab`).
+- Desktop bundles: uploaded under tauri-action default names; the desktop feed
+  (`latest.json`) is authoritative for desktop download URLs — clients MUST
+  follow the feed's per-platform `url` fields, not a filename convention.
+  (`nextpage-desktop-v{version}-{target}.{ext}` remains the desired convention
+  if `releaseAssetNamePattern` is ever set; it is NOT enforced today.)
 
 A release with version X publishes feed download URLs that resolve to assets whose
 filenames follow the convention for that platform and version X.
@@ -170,31 +180,56 @@ Coverage: check entry, checking progress, up-to-date confirmation, update
 available title/body, release notes, update-now, remind-later, metered consent,
 install guidance, relaunch confirmation, error states.
 
-## 6. Signing and publishing prerequisites (blocked-until-decided)
+## 6. Signing and publishing (DECIDED 2026-09-28 — release 3.0.1 cutover)
 
-Production cutover is BLOCKED until the signing prerequisites are decided. Until
-then clients MUST run against the mock/staging feed. No keys, keystores, or CI
-secret values are created by this slice.
+Key material lives OUTSIDE the repo in `~/.nextpage-keys/` (README.txt there
+holds fingerprints + dates only, never secrets). Repo root `.gitignore` bans
+`*.key`, `*.jks`, `*.keystore`, `.nextpage-keys/` belt-and-braces.
 
-Reference (read-only): `.github/workflows/release-builds.yml` — current state is
-unsigned desktop builds (no `TAURI_SIGNING_PRIVATE_KEY`) and debug-keystore
-signed Android release builds (`signingConfig = signingConfigs.getByName("debug")`
-in `android/app/build.gradle.kts`).
+Reference: `.github/workflows/release-builds.yml` — desktop builds are
+updater-signed via `TAURI_SIGNING_PRIVATE_KEY`, Android release builds use
+`signingConfigs.release` decoded from `ANDROID_KEYSTORE_BASE64`.
 
-Blocked work package:
+Decided work package (producer: `release-builds.yml`):
 
-1. Android release-key continuity/rotation decision. No production Android feed
-   until decided; rotating signing keys later requires keeping the first key,
-   so this is not rushed.
-2. Tauri updater keypair generation, `TAURI_SIGNING_PRIVATE_KEY` CI secret
-   provisioning, and published public key for the updater config. The desktop
-   updater path is nonfunctional in production until present.
-3. CI publishes one `latest-<platform>.json` per platform alongside the signed
-   assets after signing, matching the contracted shapes in sections 2-3.
+1. Android release key. RSA-4096 keystore, alias `nextpage-release`, created
+   2026-09-28, valid 2026-09-28 → 2056-09-20. This is the FIRST release key —
+   keep the `~/.nextpage-keys/` backup forever; a future rotation keeps this
+   key alongside the new one.
+   SHA-256 cert fingerprint:
+   `E7:30:AE:35:71:9C:3A:45:D4:F9:78:7C:D6:2E:1F:87:42:4D:A2:FC:A8:0E:34:96:25:D9:29:07:D5:6D:53:BB`
+   SHA-1 cert fingerprint:
+   `3E:0A:F2:0A:D7:01:C0:B8:4A:72:86:3D:16:D0:7D:A4:F3:F5:E9:43`
+   (register the SHA-1 in the Google Cloud "Nextpage Android" OAuth client
+   alongside the debug fingerprint). CI secrets: `ANDROID_KEYSTORE_BASE64`,
+   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
+   (PKCS12 forces store and key passwords equal — both secrets hold the same
+   value, kept separate for Gradle compatibility). The android job fails loud
+   when any of them is missing so a release never ships debug-signed.
+2. Tauri updater keypair. Minisign keypair generated 2026-09-28; the public
+   key is published in `desktop/src-tauri/tauri.conf.json`
+   (`plugins.updater.pubkey`):
+   `dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE4OUREODBFNDZFMkNDQTIKUldTaXpPSkdEdGlkcUhCNlpscmZuZHZtYVhoY2JOOUUzMmxpY2lyT095M0FTMGpvZEt4bHVneloK`
+   CI secrets: `TAURI_SIGNING_PRIVATE_KEY`,
+   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. The desktop job signs every bundle
+   with them; without them the build now fails (real pubkey in config).
+   Note: this authenticates UPDATES, not the OS publisher — Windows
+   SmartScreen / macOS Gatekeeper warnings remain a separate work item.
+3. Feed publishing. Desktop: tauri-action auto-publishes one `latest.json`
+   per `desktop-v*` release (`uploadUpdaterJson: true`, set explicitly);
+   no custom publish step. Android: the explicit `latest-android.json`
+   publish step (section 3 shape, `versionCode` mirroring the
+   major*10000+minor*100+patch formula) uploads alongside the signed APK/AAB.
 
-Production cutover rule: given no Android release keystore decision or no Tauri
-updater keypair/CI secret, a production feed publication is treated as blocked
-and clients remain on the mock/staging feed.
+Production cutover rule: 3.0.1+ release builds run against the production
+feeds (`VITE_UPDATE_FEED_URL` baked at release time for desktop,
+`-PupdateFeedUrl` for Android). Pre-3.0.1 builds and local/dev builds (empty
+feed URL) stay on the mock/staging feed or disabled.
+
+Post-3.0.1 verification (open): confirm the published `latest.json`
+contains all three platform entries — the windows/macOS/linux matrix legs
+each upload it, and it is only a complete feed if the action merges (rather
+than last-writer-wins). If incomplete, add a merge fan-in step.
 
 ## 7. Mock/staging fixtures
 

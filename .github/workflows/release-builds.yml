@@ -23,16 +23,18 @@
 # here (three platforms × full suites would double every release's cost for
 # a merge that was already gated).
 #
-# Signing status (deliberate, documented — not an oversight):
-# - Desktop: UNSIGNED. Windows shows SmartScreen, macOS shows Gatekeeper.
-#   Adding certificates (Apple Developer + a code-signing cert, Windows EV/SMB
-#   cert) is a separate work item; delaying automated releases on it ships
-#   nothing instead of shipping unsigned builds.
-# - Android: DEBUG-keystore signed — `android/app/build.gradle.kts` assigns
-#   `signingConfig = signingConfigs.getByName("debug")` to the release build
-#   type on purpose (installable without a release keystore). A real keystore
-#   is a separate work item; rotating signing keys later requires keeping the
-#   first key forever, so it is not rushed here.
+# Signing status:
+# - Desktop: UPDATER-signed. TAURI_SIGNING_PRIVATE_KEY (+ password) signs the
+#   bundles for the Tauri updater feed and tauri-action publishes latest.json
+#   automatically (uploadUpdaterJson, default true — set explicitly below so
+#   the feed dependency is visible). OS-level code signing is still absent:
+#   Windows SmartScreen / macOS Gatekeeper warnings remain (separate work
+#   item — the updater key authenticates updates, not the OS publisher).
+# - Android: RELEASE-keystore signed (`signingConfigs.release` in
+#   app/build.gradle.kts, decoded from ANDROID_KEYSTORE_BASE64). RSA-4096,
+#   valid to 2056 — this is the FIRST release key, so the backup in
+#   ~/.nextpage-keys/ must be kept forever; rotating keys later means keeping
+#   this one alongside the new key.
 # - Web: no executable; the deploy is the artifact. The dist tarball attached
 #   to the release pins the exact bytes that were deployed.
 #
@@ -158,7 +160,15 @@ jobs:
         uses: tauri-apps/tauri-action@action-v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # No TAURI_SIGNING_PRIVATE_KEY: unsigned by design (see header).
+          # Updater signing (release 0.4.0 cutover): signs every bundle for
+          # the updater feed; without it the build fails now that
+          # tauri.conf.json carries a real pubkey.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Bakes the production feed URL into the frontend so the Settings
+          # update check (VITE_UPDATE_FEED_URL) runs against this release's
+          # own latest.json. Empty = disabled (local/dev behavior unchanged).
+          VITE_UPDATE_FEED_URL: https://github.com/JuanCamacho198/NEXTPAGE/releases/download/${{ github.ref_name }}/latest.json
         with:
           # Monorepo: the Tauri project lives at desktop/, and the runner
           # has no cwd context for the action otherwise.
@@ -173,6 +183,10 @@ jobs:
           releaseName: ${{ github.ref_name }}
           releaseDraft: false
           prerelease: false
+          # Explicit (default is true): latest.json IS the desktop update
+          # feed — the action generates it from the signed bundles and
+          # attaches it to this same release when the updater is configured.
+          uploadUpdaterJson: true
           args: ${{ matrix.platform.args }}
 
   android:
@@ -184,6 +198,14 @@ jobs:
       # Read at Gradle config time by the Sentry Gradle plugin; empty is
       # tolerated (mapping upload skipped with a warning).
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      # Release signing (release 0.4.0 cutover): base64 keystore + passwords
+      # decoded by signingConfigs.release in app/build.gradle.kts. Fail-loud
+      # verified below — without them Gradle would silently fall back to
+      # debug signing and ship a wrongly-signed release.
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -225,6 +247,18 @@ jobs:
           printf '%s\n' "${ANDROID_LOCAL_PROPERTIES}" \
             | sed '/^sdk\.dir=/d' > android/local.properties
 
+      - name: Verify release signing secrets
+        # build.gradle.kts falls back to debug signing when the keystore env
+        # is absent (local-dev behavior). A release must never ship in that
+        # state, hence fail-loud — same rationale as local.properties above.
+        run: |
+          for v in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::Secret ${v} is missing or empty. Without it the APK/AAB would ship debug-signed."
+              exit 1
+            fi
+          done
+
       - name: Build release APK + AAB
         # --no-daemon and the explicit VFS flag mirror the anti-hang settings
         # documented in android/AGENTS.md. --configuration-cache is dropped
@@ -238,6 +272,7 @@ jobs:
             --no-daemon \
             --build-cache \
             -Dorg.gradle.vfs.watch=false \
+            -PupdateFeedUrl="https://github.com/JuanCamacho198/NEXTPAGE/releases/download/${GITHUB_REF_NAME}/latest-android.json" \
             :app:assembleRelease \
             :app:bundleRelease \
             :app:verifyReleaseMapping
@@ -264,6 +299,34 @@ jobs:
             "nextpage-${GITHUB_REF_NAME}.apk" \
             "nextpage-${GITHUB_REF_NAME}.aab" \
             --clobber
+
+      - name: Publish Android update feed (latest-android.json)
+        # Producer for the Android feed contracted in docs/release-update-feed.md
+        # (section 3 shape). The APK URL is deterministic (uploaded above), so
+        # this runs after a successful upload. versionCode mirrors the
+        # major*10000 + minor*100 + patch formula in app/build.gradle.kts.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"              # android-v3.0.1
+          VERSION="${TAG#android-v}"            # 3.0.1
+          IFS=. read -r MAJOR MINOR PATCH <<< "${VERSION}"
+          VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+          APK_OUT=android/app/build/outputs/apk/release/app-release.apk
+          NOTES="$(gh release view "${TAG}" --json body --jq '.body')"
+          jq -n \
+            --arg version "${VERSION}" \
+            --argjson versionCode "${VERSION_CODE}" \
+            --arg notes "${NOTES}" \
+            --arg pubDate "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg url "https://github.com/JuanCamacho198/NEXTPAGE/releases/download/${TAG}/nextpage-${TAG}.apk" \
+            --argjson size "$(stat -c%s "${APK_OUT}")" \
+            '{version: $version, versionCode: $versionCode, notes: $notes,
+              pubDate: $pubDate, channel: "stable",
+              assets: [{url: $url, abi: "universal", size: $size}]}' \
+            > latest-android.json
+          gh release upload "${TAG}" latest-android.json --clobber
 
   web:
     name: Web (build + deploy)
