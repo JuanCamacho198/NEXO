@@ -9,7 +9,7 @@ interface Props {
 const { variant, size, href = '#', icon } = Astro.props;
 
 const base =
-  'inline-flex cursor-pointer items-center justify-center gap-2 rounded-[999px] border font-sans font-semibold transition-[background-color,border-color,color,translate,box-shadow] duration-[180ms] ease-[ease] active:translate-y-px';
+  'inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-[999px] border font-sans font-semibold transition-[background-color,border-color,color,translate,box-shadow] duration-[180ms] ease-[ease] active:translate-y-px';
 const tone =
   variant === 'primary'
     ? 'btn-primary border-transparent bg-ink text-[oklch(98.6%_0.004_95)] hover:bg-[oklch(28%_0.055_264)] hover:shadow-soft'
