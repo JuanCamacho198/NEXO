@@ -1,5 +1,5 @@
 {
-  "version": "2.18",
+  "version": "2.19",
   "children": [
     {
       "type": "frame",
@@ -68751,39 +68751,7 @@
                     "mode": "fill"
                   },
                   "stroke": "$--np-border",
-                  "layout": "none",
-                  "children": [
-                    {
-                      "type": "ellipse",
-                      "id": "l9abqK",
-                      "layoutPosition": "absolute",
-                      "x": -117,
-                      "y": -58,
-                      "name": "Glow",
-                      "fill": {
-                        "type": "gradient",
-                        "gradientType": "radial",
-                        "enabled": true,
-                        "rotation": 0,
-                        "size": {
-                          "width": 1,
-                          "height": 1
-                        },
-                        "colors": [
-                          {
-                            "color": "$--np-accent-glow",
-                            "position": 0
-                          },
-                          {
-                            "color": "$--np-bg",
-                            "position": 1
-                          }
-                        ]
-                      },
-                      "width": 691,
-                      "height": 665
-                    }
-                  ]
+                  "layout": "none"
                 },
                 {
                   "type": "frame",
@@ -70389,7 +70357,7 @@
                       "type": "frame",
                       "id": "xWyXg",
                       "name": "Feat C",
-                      "width": 420,
+                      "width": 399,
                       "height": 220,
                       "fill": "$--np-bg",
                       "cornerRadius": 18,
@@ -70438,7 +70406,7 @@
                           "name": "D",
                           "fill": "$--np-text-secondary",
                           "textGrowth": "fixed-width",
-                          "width": 360,
+                          "width": 344,
                           "content": "Consulta el significado de palabras sin salir de la lectura. Funciona offline.",
                           "lineHeight": 1.5,
                           "fontFamily": "Inter",
@@ -70451,7 +70419,7 @@
                       "type": "frame",
                       "id": "b2E51C",
                       "name": "Feat D",
-                      "width": 420,
+                      "width": 315,
                       "height": 220,
                       "fill": "$--np-bg",
                       "cornerRadius": 18,
@@ -70499,8 +70467,9 @@
                           "id": "Tpgew",
                           "name": "D",
                           "fill": "$--np-text-secondary",
-                          "textGrowth": "fixed-width",
-                          "width": 360,
+                          "textGrowth": "fixed-width-height",
+                          "width": 251,
+                          "height": 42,
                           "content": "Visualiza tus rachas, tiempo de lectura y progreso por libro.",
                           "lineHeight": 1.5,
                           "fontFamily": "Inter",
@@ -70513,7 +70482,7 @@
                       "type": "frame",
                       "id": "osBxi",
                       "name": "Feat E",
-                      "width": 420,
+                      "width": 267,
                       "height": 220,
                       "fill": "$--np-bg",
                       "cornerRadius": 18,
@@ -70551,7 +70520,7 @@
                           "id": "nWSRA",
                           "name": "T",
                           "fill": "$--np-text-primary",
-                          "content": "Tema claro y oscuro",
+                          "content": "Catalago de libros",
                           "fontFamily": "Inter",
                           "fontSize": 17,
                           "fontWeight": "600"
@@ -70562,7 +70531,69 @@
                           "name": "D",
                           "fill": "$--np-text-secondary",
                           "textGrowth": "fixed-width",
-                          "width": 360,
+                          "width": 191,
+                          "content": "se usa la API de GUTENDEX con mas 80000 libros gratis",
+                          "lineHeight": 1.5,
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iKIiG",
+                      "name": "Feat E",
+                      "width": 267,
+                      "height": 220,
+                      "fill": "$--np-bg",
+                      "cornerRadius": 18,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "gap": 14,
+                      "padding": 28,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "NL8Yk",
+                          "name": "Ico",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "$--np-violet-soft",
+                          "cornerRadius": 11,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "bAjdU",
+                              "name": "Ic",
+                              "width": 20,
+                              "height": 20,
+                              "icon": "moon",
+                              "library": "lucide",
+                              "fill": "$--np-violet"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "LZKFL",
+                          "name": "T",
+                          "fill": "$--np-text-primary",
+                          "content": "Tema claro y oscuro",
+                          "fontFamily": "Inter",
+                          "fontSize": 17,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "W4J9xk",
+                          "name": "D",
+                          "fill": "$--np-text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": 191,
                           "content": "Protege tus ojos con temas diseñados para largas sesiones.",
                           "lineHeight": 1.5,
                           "fontFamily": "Inter",
@@ -75760,8 +75791,7 @@
                       "x": 0,
                       "y": 4
                     },
-                    "blur": 16,
-                    "spread": -2
+                    "blur": 16
                   },
                   "layout": "vertical",
                   "gap": 6,
@@ -75799,8 +75829,7 @@
                       "x": 0,
                       "y": 8
                     },
-                    "blur": 32,
-                    "spread": -4
+                    "blur": 32
                   },
                   "layout": "vertical",
                   "gap": 6,
@@ -90536,8 +90565,8 @@
     {
       "type": "frame",
       "id": "Y4YpG",
-      "x": 9000,
-      "y": 1900,
+      "x": 9272,
+      "y": 2780,
       "name": "NP Discover Book Card",
       "reusable": true,
       "width": 200,
@@ -90658,8 +90687,8 @@
     {
       "type": "frame",
       "id": "TLuQP",
-      "x": 9000,
-      "y": 2280,
+      "x": 8986,
+      "y": 2320,
       "name": "NP Discover Rail",
       "reusable": true,
       "width": 1216,
@@ -93435,6 +93464,36 @@
       "fontFamily": "Inter",
       "fontSize": 12,
       "fontWeight": "normal"
+    },
+    {
+      "type": "ellipse",
+      "id": "l9abqK",
+      "x": -1294.5534492374343,
+      "y": -3762.4965928985266,
+      "name": "Glow",
+      "rotation": -0.24870681798282127,
+      "fill": {
+        "type": "gradient",
+        "gradientType": "radial",
+        "enabled": true,
+        "rotation": 0,
+        "size": {
+          "width": 1,
+          "height": 1
+        },
+        "colors": [
+          {
+            "color": "$--np-accent-glow",
+            "position": 0
+          },
+          {
+            "color": "$--np-bg",
+            "position": 1
+          }
+        ]
+      },
+      "width": 691,
+      "height": 665
     }
   ],
   "themes": {
