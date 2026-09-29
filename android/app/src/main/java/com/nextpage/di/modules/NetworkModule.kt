@@ -47,6 +47,9 @@ import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.repository.SupabaseAuthRepository
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.session.SupabaseSessionManager
+import com.nextpage.data.update.AndroidUpdateNetworkGate
+import com.nextpage.data.update.UpdateDownloader
+import com.nextpage.data.update.UpdateFeedService
 import com.nextpage.di.createConnectivityObserver
 import com.nextpage.domain.access.LegalAccess
 import com.nextpage.domain.connectivity.ConnectivityObserver
@@ -335,5 +338,42 @@ class NetworkModule(
     // also used by HiltFoundationModule (Hilt graph + manual container agree).
     val connectivityObserver: ConnectivityObserver by lazy {
         createConnectivityObserver(context)
+    }
+
+    // ── app-auto-update PR2: Android self-check slice ───────────────────
+    // Dedicated feed client (same OkHttp + timeouts + JSON shape as the
+    // catalog client, separate instance so update traffic stays isolated).
+    // Feed URL comes from BuildConfig.UPDATE_FEED_URL; empty = disabled.
+    val updateHttpClient: HttpClient by lazy {
+        HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        isLenient = true
+                    },
+                )
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 15_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 15_000
+            }
+            defaultRequest {
+                header(HttpHeaders.UserAgent, ANDROID_USER_AGENT)
+            }
+        }
+    }
+
+    val updateFeedService: UpdateFeedService by lazy {
+        UpdateFeedService(updateHttpClient, BuildConfig.UPDATE_FEED_URL)
+    }
+
+    val updateNetworkGate: AndroidUpdateNetworkGate by lazy {
+        AndroidUpdateNetworkGate(context.applicationContext, connectivityObserver)
+    }
+
+    val updateDownloader: UpdateDownloader by lazy {
+        UpdateDownloader(context.applicationContext)
     }
 }

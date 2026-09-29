@@ -6,6 +6,10 @@ import { join } from 'node:path';
  * Guard: addon fetching goes through the Rust command (reqwest), never the
  * webview. The Tauri CSP connect-src must remain byte-for-byte unchanged —
  * no addon hosts may be added to the webview allowlist.
+ *
+ * Exception (sdd/app-auto-update, desktop slice): `https://github.com` is the
+ * release-feed host for the Tauri updater endpoints (tauri.conf
+ * plugins.updater). It is a built-in allowlist entry, not an addon host.
  */
 const CSP_CONNECT_SRC = [
   "'self'",
@@ -20,6 +24,8 @@ const CSP_CONNECT_SRC = [
   'https://openlibrary.org',
   'https://covers.openlibrary.org',
   'https://*.archive.org',
+  // sdd/app-auto-update: release-feed host for the Tauri updater endpoints.
+  'https://github.com',
 ].join(' ');
 
 describe('addon registry CSP guard', () => {
@@ -60,6 +66,8 @@ describe('addon registry CSP guard', () => {
         'https://openlibrary.org',
         'https://covers.openlibrary.org',
         'https://*.archive.org',
+        // sdd/app-auto-update: release-feed host for the Tauri updater endpoints.
+        'https://github.com',
       ]).toContain(entry);
     }
   });

@@ -1054,6 +1054,20 @@ export const messagesEn = {
   'settings.privacy.sendTelemetry': 'Send telemetry',
   'settings.privacy.telemetryOn': 'Telemetry is being sent.',
   'settings.privacy.telemetryOff': 'Telemetry sending is stopped.',
+
+  // App auto-update (release-update-feed contract, desktop slice)
+  'update.check': 'Check for updates',
+  'update.checking': 'Checking for updates...',
+  'update.upToDate': 'You are up to date',
+  'update.availableTitle': 'Update available',
+  'update.availableBody': 'Version {{version}} is available. You have {{current}}.',
+  'update.notes': 'Release notes',
+  'update.now': 'Update now',
+  'update.later': 'Remind me later',
+  'update.relaunchConfirm': 'The update is installed. Relaunch now to use the new version?',
+  'update.errorUnreachable': 'Could not reach the update feed. Try again later.',
+  'update.errorMalformed': 'The update feed is invalid. Try again later.',
+  'update.errorOffline': 'You appear to be offline. Reconnect and try again.',
 } as const;
 
 export type MessageKey = keyof typeof messagesEn;

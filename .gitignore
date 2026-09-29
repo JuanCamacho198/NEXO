@@ -45,9 +45,11 @@ desktop/node_modules/
 desktop/dist/
 desktop/src-tauri/target/
 
-# Project-specific
-docs/
+# Project-specific (docs/* rather than docs/ so single-file exceptions work:
+# git never re-includes a file under an excluded directory)
+docs/*
 !android/docs/
+!docs/release-update-feed.md
 openspec/
 CLAUDE.md
 
@@ -59,3 +61,10 @@ odd/
 
 # Local scratch (not part of the repo)
 .trabajo/
+
+# Release signing — key material lives OUTSIDE the repo (~/.nextpage-keys/).
+# Belt-and-braces: never commit keys, keystores, or password files.
+*.key
+*.jks
+*.keystore
+.nextpage-keys/

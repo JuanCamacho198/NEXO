@@ -972,4 +972,18 @@
     <!-- U5: legal empty state + universal sources -->
     <string name="discover_empty_legal_title">No legal matches</string>
     <string name="discover_empty_legal_body">Nothing in %1$s matches “%2$s”. Try another source or another search.</string>
+
+    <!-- App update self-check (SDD app-auto-update, Android slice) -->
+    <string name="update_check">Check for updates</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_up_to_date">You\'re up to date</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_body">Version %1$s is available.</string>
+    <string name="update_now">Update now</string>
+    <string name="update_later">Remind me later</string>
+    <string name="update_metered_consent">You\'re on a metered connection. Download the update now? It may use mobile data.</string>
+    <string name="update_install_guidance">The system blocked the install. Enable “Install unknown apps” for NextPage, then try again.</string>
+    <string name="update_error_unreachable">Couldn\'t reach the update server. Try again later.</string>
+    <string name="update_error_malformed">The update feed is invalid. Try again later.</string>
+    <string name="update_error_offline">You\'re offline. Connect and try again.</string>
 </resources>

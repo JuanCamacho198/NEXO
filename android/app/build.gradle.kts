@@ -1,4 +1,5 @@
 import java.text.SimpleDateFormat
+import java.util.Base64
 import java.util.Date
 import java.util.Locale
 import java.util.Properties
@@ -98,6 +99,15 @@ val releaseMinifyEnabled =
 
 fun String.escapeForBuildConfig(): String = replace("\\", "\\\\").replace("\"", "\\\"")
 
+// Release signing (app-auto-update signing cutover, release 0.4.0). The release
+// keystore never lives in the repo: the release workflow exports it as base64
+// (ANDROID_KEYSTORE_BASE64 + ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS /
+// ANDROID_KEY_PASSWORD). When present it is decoded under build/ (gitignored)
+// and the release build type signs with it; when absent (local dev) release
+// keeps debug signing so it stays installable with no secrets.
+val releaseKeystoreBase64 = System.getenv("ANDROID_KEYSTORE_BASE64") ?: ""
+val useReleaseSigning = releaseKeystoreBase64.isNotEmpty()
+
 android {
     namespace = "com.nextpage"
     compileSdk = 36
@@ -106,7 +116,7 @@ android {
         applicationId = "com.nextpage"
         minSdk = 26
         targetSdk = 36
-        val appVersionName = "0.3.0" // x-release-please-version
+        val appVersionName = "0.3.1" // x-release-please-version
         versionName = appVersionName
         // versionCode is derived from versionName so a release never has to bump it by
         // hand (and can never forget to): major*10000 + minor*100 + patch stays monotonic
@@ -150,6 +160,18 @@ android {
         val supabaseAnonKey = (localProperties.getProperty("SUPABASE_ANON_KEY") ?: "").escapeForBuildConfig()
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
 
+        // Release update-feed URL (SDD app-auto-update, Android slice).
+        // Empty default = disabled (version-display-only, no check attempted).
+        // Override per build with -PupdateFeedUrl=<url> or local.properties
+        // (update.feed.url); mock/staging fixtures from PR 1 until signing lands.
+        val updateFeedUrl =
+            (
+                providers.gradleProperty("updateFeedUrl").orNull
+                    ?: localProperties.getProperty("update.feed.url")
+                    ?: ""
+            ).escapeForBuildConfig()
+        buildConfigField("String", "UPDATE_FEED_URL", "\"$updateFeedUrl\"")
+
         // Sentry DSN — read from local.properties (gitignored). When empty,
         // SentryAndroid.init becomes a no-op (see NextPageApplication.onCreate).
         // Sentry auth token is read at Gradle config time from env vars below;
@@ -178,6 +200,28 @@ android {
         buildConfigField("String", "BUILD_TIME", "\"$buildTime\"")
     }
 
+    signingConfigs {
+        // `debug` is AGP-provided. `release` decodes the CI-provided base64
+        // keystore at configuration time (only when the env var is present,
+        // i.e. release CI — never locally). Passwords default to "" when the
+        // env is absent; the config is unused in that case (see buildTypes).
+        create("release") {
+            if (useReleaseSigning) {
+                val keystoreFile =
+                    layout.buildDirectory
+                        .file("signing/release.keystore")
+                        .get()
+                        .asFile
+                keystoreFile.parentFile.mkdirs()
+                keystoreFile.writeBytes(Base64.getDecoder().decode(releaseKeystoreBase64))
+                storeFile = keystoreFile
+            }
+            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: ""
+            keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: ""
+            keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: ""
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = releaseMinifyEnabled
@@ -186,7 +230,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.getByName("debug")
+            // Release-keystore signed in CI (env present), debug-signed locally
+            // so release builds stay installable without secrets.
+            signingConfig =
+                if (useReleaseSigning) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
         }
 
         // SDD android-stack-modernization S9: the macrobenchmark target variant
