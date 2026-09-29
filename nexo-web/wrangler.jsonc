@@ -1,0 +1,13 @@
+{
+  // Static-assets Worker for the NEXO landing. `assets.directory` is relative to this
+  // file, and the build output is already the whole site (no server code), so the
+  // Worker has no entry point: Cloudflare serves the uploaded files and falls back
+  // to 404.html, exactly like the addons site does with ./web/dist.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nexo-web",
+  "compatibility_date": "2025-01-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}
