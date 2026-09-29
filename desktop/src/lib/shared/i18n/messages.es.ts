@@ -1065,4 +1065,20 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.privacy.sendTelemetry': 'Enviar telemetría',
   'settings.privacy.telemetryOn': 'Se está enviando telemetría.',
   'settings.privacy.telemetryOff': 'El envío de telemetría está detenido.',
+
+  // App auto-update (release-update-feed contract, desktop slice)
+  'update.check': 'Buscar actualizaciones',
+  'update.checking': 'Buscando actualizaciones...',
+  'update.upToDate': 'Tienes la última versión',
+  'update.availableTitle': 'Actualización disponible',
+  'update.availableBody': 'La versión {{version}} está disponible. Tienes {{current}}.',
+  'update.notes': 'Notas de la versión',
+  'update.now': 'Actualizar ahora',
+  'update.later': 'Recordar más tarde',
+  'update.relaunchConfirm':
+    'La actualización está instalada. ¿Reiniciar ahora para usar la nueva versión?',
+  'update.errorUnreachable':
+    'No se pudo contactar el feed de actualizaciones. Inténtalo más tarde.',
+  'update.errorMalformed': 'El feed de actualizaciones no es válido. Inténtalo más tarde.',
+  'update.errorOffline': 'Parece que estás sin conexión. Reconéctate e inténtalo de nuevo.',
 };

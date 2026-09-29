@@ -963,4 +963,18 @@
     <!-- U5: legal empty state + universal sources -->
     <string name="discover_empty_legal_title">Sin coincidencias legales</string>
     <string name="discover_empty_legal_body">Nada en %1$s coincide con «%2$s». Probá con otra fuente u otra búsqueda.</string>
+
+    <!-- App update self-check (SDD app-auto-update, Android slice) -->
+    <string name="update_check">Buscar actualizaciones</string>
+    <string name="update_checking">Buscando…</string>
+    <string name="update_up_to_date">Está al día</string>
+    <string name="update_available_title">Actualización disponible</string>
+    <string name="update_available_body">La versión %1$s está disponible.</string>
+    <string name="update_now">Actualizar ahora</string>
+    <string name="update_later">Recordarme más tarde</string>
+    <string name="update_metered_consent">Está en una conexión medida. ¿Descargar la actualización ahora? Puede usar datos móviles.</string>
+    <string name="update_install_guidance">El sistema bloqueó la instalación. Active “Instalar apps desconocidas” para NextPage e inténtelo de nuevo.</string>
+    <string name="update_error_unreachable">No se pudo contactar el servidor de actualizaciones. Inténtelo más tarde.</string>
+    <string name="update_error_malformed">El feed de actualización no es válido. Inténtelo más tarde.</string>
+    <string name="update_error_offline">Está sin conexión. Conéctese e inténtelo de nuevo.</string>
 </resources>

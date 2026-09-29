@@ -18,6 +18,8 @@
     "oauth:allow-start",
     "oauth:allow-cancel",
     "opener:default",
+    "process:default",
+    "updater:default",
     "core:window:allow-set-fullscreen",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",

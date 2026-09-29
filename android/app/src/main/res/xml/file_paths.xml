@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <files-path name="books" path="." />
+    <!-- SDD app-auto-update: APKs downloaded via DownloadManager into the app
+         external Download dir are served to the system installer here. -->
+    <external-files-path name="updates" path="Download/" />
 </paths>

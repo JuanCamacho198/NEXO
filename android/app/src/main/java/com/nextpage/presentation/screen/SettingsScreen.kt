@@ -48,6 +48,7 @@ import com.nextpage.presentation.screen.settings.StorageScreen
 import com.nextpage.presentation.screen.settings.SyncScreen
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
+import com.nextpage.presentation.viewmodel.UpdateViewModel
 
 @Composable
 fun SettingsScreen(
@@ -71,6 +72,7 @@ fun SettingsScreen(
     storageRepository: StorageRepository? = null,
     cacheRepository: CacheRepository? = null,
     libraryRepository: LibraryRepository? = null,
+    updateViewModel: UpdateViewModel? = null,
 ) {
     SettingsScreenContent(
         contentPadding = contentPadding,
@@ -93,6 +95,7 @@ fun SettingsScreen(
         storageRepository = storageRepository,
         cacheRepository = cacheRepository,
         libraryRepository = libraryRepository,
+        updateViewModel = updateViewModel,
     )
 }
 
@@ -118,6 +121,7 @@ private fun SettingsScreenContent(
     storageRepository: StorageRepository? = null,
     cacheRepository: CacheRepository? = null,
     libraryRepository: LibraryRepository? = null,
+    updateViewModel: UpdateViewModel? = null,
 ) {
     val nestedNavController = rememberNavController()
     val dictionaryViewModel = rememberDictionaryViewModel(dictionaryRepository)
@@ -276,9 +280,20 @@ private fun SettingsScreenContent(
             }
 
             composable(route = NextPageDestination.SettingsAbout.route) {
-                AboutScreen(
-                    onBack = { nestedNavController.popBackStack() },
-                )
+                val vm = updateViewModel
+                if (vm != null) {
+                    val updateState by vm.uiState.collectAsStateWithLifecycle()
+                    AboutScreen(
+                        onBack = { nestedNavController.popBackStack() },
+                        isUpdateCheckEnabled = vm.isFeedEnabled(),
+                        updateState = updateState,
+                        onCheckUpdates = vm::checkManually,
+                    )
+                } else {
+                    AboutScreen(
+                        onBack = { nestedNavController.popBackStack() },
+                    )
+                }
             }
 
             composable(route = NextPageDestination.SettingsStatistics.route) {

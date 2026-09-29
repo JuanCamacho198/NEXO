@@ -13,6 +13,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +44,7 @@ import com.nextpage.presentation.navigation.feature.onboardingGraph
 import com.nextpage.presentation.navigation.feature.readerGraph
 import com.nextpage.presentation.navigation.feature.settingsGraph
 import com.nextpage.presentation.screen.StatisticsScreen
+import com.nextpage.presentation.screen.settings.UpdateDialogHost
 import com.nextpage.ui.components.atoms.NextPageSnackbar
 import com.nextpage.ui.components.molecules.BottomNavItem
 import com.nextpage.ui.components.molecules.NextPageBottomNavBar
@@ -146,6 +148,16 @@ fun NextPageNavHost(
 
     // ── Addon install deep-link dialog (nextpage://install) ─────────────
     AddonInstallDialogHost(controller = appContainer.installDeepLinkController)
+
+    // ── App-update self-check (SDD app-auto-update) ────────────────────
+    // Single shared instance: the startup check fires once here, the About
+    // manual row (settings graph) drives the same state. The dialog host
+    // lives at root so the startup prompt surfaces on any screen.
+    val updateViewModel = rememberUpdateViewModel(appContainer)
+    LaunchedEffect(Unit) {
+        updateViewModel.checkAtStartup()
+    }
+    UpdateDialogHost(viewModel = updateViewModel)
 
     // ── Supabase OAuth deep-link handling ────────────────────────────
     // NOTE: Google sign-in now uses native Credential Manager (no browser OAuth).
@@ -356,6 +368,7 @@ fun NextPageNavHost(
                             appThemeMode = appThemeMode,
                             onAppThemeModeChanged = onAppThemeModeChanged,
                             contentPadding = innerPadding,
+                            updateViewModel = updateViewModel,
                         )
                     }
 

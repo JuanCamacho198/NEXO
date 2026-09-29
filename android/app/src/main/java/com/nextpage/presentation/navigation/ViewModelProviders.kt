@@ -36,6 +36,7 @@ import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 import com.nextpage.presentation.viewmodel.SettingsDevicesViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
 import com.nextpage.presentation.viewmodel.StorageViewModel
+import com.nextpage.presentation.viewmodel.UpdateViewModel
 import kotlinx.coroutines.Dispatchers
 
 /**
@@ -290,6 +291,28 @@ internal fun rememberStorageViewModel(
         } else {
             null
         }
+    }
+
+/**
+ * Resolves the app-update self-check [UpdateViewModel] (SDD app-auto-update).
+ *
+ * App-scoped and container-backed: `remember`ed on the container key, exactly
+ * like the inline pattern before S14, so startup check (root host) and the
+ * About manual row share one instance. A disabled feed URL still resolves —
+ * the ViewModel reports version-display-only and never checks.
+ */
+@Composable
+internal fun rememberUpdateViewModel(appContainer: AppContainer): UpdateViewModel =
+    remember(appContainer) {
+        UpdateViewModel(
+            appContainer.checkForUpdatesUseCase,
+            appContainer.updatePrefs,
+            appContainer.updateNetworkGate,
+            appContainer.updateDownloader,
+            com.nextpage.BuildConfig.VERSION_CODE,
+            Dispatchers.Main,
+            { System.currentTimeMillis() },
+        )
     }
 
 /**
