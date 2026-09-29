@@ -68,3 +68,4 @@ odd/
 *.jks
 *.keystore
 .nextpage-keys/
+.playwright-mcp/
