@@ -45,9 +45,11 @@ desktop/node_modules/
 desktop/dist/
 desktop/src-tauri/target/
 
-# Project-specific
-docs/
+# Project-specific (docs/* rather than docs/ so single-file exceptions work:
+# git never re-includes a file under an excluded directory)
+docs/*
 !android/docs/
+!docs/release-update-feed.md
 openspec/
 CLAUDE.md
 
