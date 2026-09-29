@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://asset.localhost data: https://covers.openlibrary.org https://www.gutenberg.org https://books.google.com; style-src 'self' 'unsafe-inline' asset: http://asset.localhost https://asset.localhost; font-src 'self' asset: http://asset.localhost https://asset.localhost; connect-src 'self' asset: http://asset.localhost https://asset.localhost https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://*.supabase.co https://gutendex.com https://openlibrary.org https://covers.openlibrary.org https://*.archive.org",
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://asset.localhost data: https://covers.openlibrary.org https://www.gutenberg.org https://books.google.com; style-src 'self' 'unsafe-inline' asset: http://asset.localhost https://asset.localhost; font-src 'self' asset: http://asset.localhost https://asset.localhost; connect-src 'self' asset: http://asset.localhost https://asset.localhost https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://*.supabase.co https://gutendex.com https://openlibrary.org https://covers.openlibrary.org https://*.archive.org https://github.com",
       "assetProtocol": {
         "enable": true,
         "scope": [
@@ -40,6 +40,15 @@
           "nextpage"
         ]
       }
+    },
+    "updater": {
+      "active": true,
+      "pubkey": "MOCK-PUBKEY-DO-NOT-USE-IN-PRODUCTION",
+      "endpoints": [
+        "https://github.com/JuanCamacho198/NEXTPAGE/releases/download/v0.4.0/latest-windows.json",
+        "https://github.com/JuanCamacho198/NEXTPAGE/releases/download/v0.4.0/latest-macos.json",
+        "https://github.com/JuanCamacho198/NEXTPAGE/releases/download/v0.4.0/latest-linux.json"
+      ]
     },
     "fs": {}
   },
