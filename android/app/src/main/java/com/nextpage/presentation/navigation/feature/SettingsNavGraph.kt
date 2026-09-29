@@ -22,6 +22,7 @@ import com.nextpage.presentation.screen.SettingsScreen
 import com.nextpage.presentation.screen.settings.AddonManagementRoute
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
+import com.nextpage.presentation.viewmodel.UpdateViewModel
 
 /**
  * Feature NavGraph for Settings + LogViewer.
@@ -43,6 +44,7 @@ fun NavGraphBuilder.settingsGraph(
     appThemeMode: ThemeMode,
     onAppThemeModeChanged: (ThemeMode) -> Unit,
     contentPadding: PaddingValues,
+    updateViewModel: UpdateViewModel,
 ) {
     composable(
         route = NextPageDestination.Settings.route,
@@ -117,6 +119,7 @@ fun NavGraphBuilder.settingsGraph(
             storageRepository = appContainer.storageRepository,
             cacheRepository = appContainer.cacheRepository,
             libraryRepository = appContainer.libraryRepository,
+            updateViewModel = updateViewModel,
         )
     }
 

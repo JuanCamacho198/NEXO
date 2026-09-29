@@ -26,8 +26,11 @@ import com.nextpage.data.remote.work.WorkManagerOutboxDrainScheduler
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.ReadingGoalPreferences
 import com.nextpage.data.session.SessionManager
+import com.nextpage.data.session.UpdatePrefs
 import com.nextpage.data.storage.AppInternalCoverStorage
 import com.nextpage.data.sync.SessionGateImpl
+import com.nextpage.data.update.UpdateDownloader
+import com.nextpage.data.update.UpdateFeedService
 import com.nextpage.di.modules.DatabaseModule
 import com.nextpage.di.modules.NetworkModule
 import com.nextpage.di.modules.PreferencesModule
@@ -46,6 +49,8 @@ import com.nextpage.domain.repository.StorageRepository
 import com.nextpage.domain.sync.OutboxDrainScheduler
 import com.nextpage.domain.sync.SessionGate
 import com.nextpage.domain.sync.SyncSettleGate
+import com.nextpage.domain.update.CheckForUpdatesUseCase
+import com.nextpage.domain.update.UpdateNetworkGate
 import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
 import com.nextpage.domain.usecase.GetBookProgressUseCase
 import com.nextpage.domain.usecase.GetStatisticsUseCase
@@ -108,6 +113,7 @@ class AppContainer(
     val cacheRepository: CacheRepository get() = repositoryModule.cacheRepository
     val storageRepository: StorageRepository get() = repositoryModule.storageRepository
     val readerPreferences: ReaderPreferences get() = preferencesModule.readerPreferences
+    val updatePrefs: UpdatePrefs get() = preferencesModule.updatePrefs
     val readingGoalPreferences: ReadingGoalPreferences get() = preferencesModule.readingGoalPreferences
     val dailyGoalProvider: () -> Int get() = preferencesModule.dailyGoalProvider
 
@@ -134,6 +140,16 @@ class AppContainer(
     // HiltFoundationModule. Manual container retained until slices 5-6 migrate
     // consumers; no `hiltViewModel()` / ViewModel migration in this slice.
     val connectivityObserver: ConnectivityObserver by lazy { networkModule.connectivityObserver }
+    val updateFeedService: UpdateFeedService by lazy { networkModule.updateFeedService }
+    val updateNetworkGate: UpdateNetworkGate by lazy { networkModule.updateNetworkGate }
+    val updateDownloader: UpdateDownloader by lazy { networkModule.updateDownloader }
+    val checkForUpdatesUseCase: CheckForUpdatesUseCase by lazy {
+        CheckForUpdatesUseCase(
+            fetcher = networkModule.updateFeedService,
+            suppression = preferencesModule.updatePrefs,
+            networkGate = networkModule.updateNetworkGate,
+        )
+    }
     val catalogFileDownloader: CatalogFileDownloader by lazy { networkModule.catalogFileDownloader }
     val downloadAndImportBookUseCase: DownloadAndImportBookUseCase by lazy {
         DownloadAndImportBookUseCase(

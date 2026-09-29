@@ -150,6 +150,18 @@ android {
         val supabaseAnonKey = (localProperties.getProperty("SUPABASE_ANON_KEY") ?: "").escapeForBuildConfig()
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
 
+        // Release update-feed URL (SDD app-auto-update, Android slice).
+        // Empty default = disabled (version-display-only, no check attempted).
+        // Override per build with -PupdateFeedUrl=<url> or local.properties
+        // (update.feed.url); mock/staging fixtures from PR 1 until signing lands.
+        val updateFeedUrl =
+            (
+                providers.gradleProperty("updateFeedUrl").orNull
+                    ?: localProperties.getProperty("update.feed.url")
+                    ?: ""
+            ).escapeForBuildConfig()
+        buildConfigField("String", "UPDATE_FEED_URL", "\"$updateFeedUrl\"")
+
         // Sentry DSN — read from local.properties (gitignored). When empty,
         // SentryAndroid.init becomes a no-op (see NextPageApplication.onCreate).
         // Sentry auth token is read at Gradle config time from env vars below;
