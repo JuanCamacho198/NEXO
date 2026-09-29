@@ -6,15 +6,37 @@ on:
   # release tag whose commit happens to touch nothing under nexo-web/ would then
   # silently skip the deploy. `release-builds.yml` avoids the same trap by
   # declaring pure tag triggers, and this mirrors that.
+  #
+  # There is a SECOND reason the site rebuilds, and it is not a tag: the
+  # `app-release` dispatch sent by `release-builds.yml` once an app release has
+  # finished attaching its assets. The download section resolves the newest
+  # release assets AT BUILD TIME (`nexo-web/src/lib/releases.ts`), so the
+  # deployed page is frozen at the moment nexo-web was built — without the
+  # dispatch a freshly published desktop/android release would stay invisible,
+  # with the page still pointing at the previous version's installers, until
+  # someone happened to cut another `nexo-web-v*` tag.
   push:
     tags:
       - 'nexo-web-v*'
+  repository_dispatch:
+    types: [app-release]
 
 permissions:
   contents: read
 
 concurrency:
-  group: nexo-web-deploy-${{ github.ref }}
+  # Serialises deploys of the same thing. `${{ github.ref }}` alone is no longer
+  # enough now that a `repository_dispatch` also triggers this workflow: on a
+  # dispatch the ref is the default branch (`refs/heads/main`), not a tag, so a
+  # bare ref key would label every dispatched build with the same branch-shaped
+  # key — indistinguishable from a (not currently existing) branch deploy, and
+  # blind to which app release asked for the rebuild. `github.event_name` plus
+  # the payload tag keeps the two trigger families explicit; a pushed nexo-web
+  # tag still gets its own key, so the two run as separate deploys rather than
+  # queueing behind each other under an ambiguous one. `cancel-in-progress`
+  # stays false: a cancelled deploy could leave the Worker on a half-published
+  # build.
+  group: nexo-web-deploy-${{ github.event_name }}-${{ github.event.client_payload.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -51,6 +73,14 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build
+        # The build resolves the newest release assets through the GitHub REST
+        # API (`nexo-web/src/lib/releases.ts`). Without a token that request is
+        # anonymous and capped at 60 requests/hour per IP — and GitHub runners
+        # share IP ranges, so the cap is not this workflow's budget alone. The
+        # token raises it to 5,000/hour and is what keeps the download section
+        # from silently falling back to the plain releases link.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run build
 
       - name: Deploy

@@ -75,6 +75,14 @@ jobs:
         run: bun run check
 
       - name: Astro build
+        # The build resolves the newest release assets through the GitHub REST
+        # API (`nexo-web/src/lib/releases.ts`), so it gets a token for the same
+        # reason as the deploy workflow's build step: anonymous requests are
+        # capped at 60/hour per IP and GitHub runners share IP ranges, which
+        # would make the download section flake rather than fail. Nothing else
+        # about this step changes.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run build
 
       - name: Check formatting
