@@ -25,3 +25,20 @@
     public static *** d(...);
     public static *** v(...);
 }
+
+# R8 missing-class warnings for Apache HttpComponents' optional JNDI/GSSAPI
+# integrations (javax.naming.*, org.ietf.jgss.*). Copied verbatim from AGP's
+# generated app/build/outputs/mapping/release/missing_rules.txt — these classes
+# are not on the Android classpath, and the referenced code paths are unused.
+-dontwarn javax.naming.InvalidNameException
+-dontwarn javax.naming.NamingException
+-dontwarn javax.naming.directory.Attribute
+-dontwarn javax.naming.directory.Attributes
+-dontwarn javax.naming.ldap.LdapName
+-dontwarn javax.naming.ldap.Rdn
+-dontwarn org.ietf.jgss.GSSContext
+-dontwarn org.ietf.jgss.GSSCredential
+-dontwarn org.ietf.jgss.GSSException
+-dontwarn org.ietf.jgss.GSSManager
+-dontwarn org.ietf.jgss.GSSName
+-dontwarn org.ietf.jgss.Oid

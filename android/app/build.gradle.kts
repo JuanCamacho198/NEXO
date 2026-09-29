@@ -373,9 +373,17 @@ sentry {
     autoInstallation {
         enabled.set(true)
     }
+    val sentryAuthToken = System.getenv("SENTRY_AUTH_TOKEN") ?: ""
     org.set(System.getenv("SENTRY_ORG") ?: "nextpage-android")
     projectName.set("nextpage-android")
-    authToken.set(System.getenv("SENTRY_AUTH_TOKEN") ?: "")
+    authToken.set(sentryAuthToken)
+    // SAGP has NO skip-on-missing-token path: with an empty token the upload
+    // task still runs, the extracted sentry-cli rejects the call and the
+    // release build fails (observed in the 0.3.1 release run). The only
+    // supported knob is the upload switch itself, so gate it on the token:
+    // CI (token present) uploads exactly as before; any token-less build
+    // takes the plugin's dry-run path and exits 0.
+    autoUploadProguardMapping.set(sentryAuthToken.isNotBlank())
     // Disable telemetry to avoid phoning home
     telemetry.set(false)
 }
@@ -690,12 +698,16 @@ tasks.register("verifyReleaseMapping") {
     group = "verification"
     description = "Verifies release mapping artifact when minify is enabled"
 
-    // Resolve the provider at configuration time (configuration-cache safe).
+    // Resolve the provider and capture the logger at configuration time
+    // (configuration-cache safe) — the doLast closure must not reference the
+    // Gradle script object. Same pattern as `verifySentryMappingUpload`.
     val mappingFileProvider = layout.buildDirectory.file("outputs/mapping/release/mapping.txt")
+    val taskLogger = logger
+    val minifyEnabled = releaseMinifyEnabled
 
     doLast {
-        if (!releaseMinifyEnabled) {
-            logger.lifecycle("Skipping mapping verification because -PreleaseMinify=false")
+        if (!minifyEnabled) {
+            taskLogger.lifecycle("Skipping mapping verification because -PreleaseMinify=false")
             return@doLast
         }
 

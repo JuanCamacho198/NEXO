@@ -1,8 +1,9 @@
 # Sentry debug-files upload for Rust crashes (spec C3).
 #
 # Uploads Tauri's Rust debug artifacts (from the `tauri build` bundle output)
-# to the `nextpage-desktop` Sentry project under the `nextpage-android` org so
-# stack traces resolve to source file:line.
+# to the `nextpage-desktop` Sentry project under the org slug carried by the
+# `SENTRY_ORG` repository secret (see the upload step) so stack traces resolve
+# to source file:line.
 #
 # Token-gated: when `SENTRY_AUTH_TOKEN` is absent (local dev, fork PRs) the
 # upload step is skipped with an `echo` so the workflow stays green. The
@@ -96,7 +97,12 @@ jobs:
         working-directory: desktop
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ vars.SENTRY_ORG || 'nextpage-android' }}
+          # From the secret, not `vars.SENTRY_ORG`: no such repository variable
+          # exists, so the `|| 'nextpage-android'` fallback this used to carry
+          # resolved to a slug that is NOT this project's org — the upload would
+          # have failed the moment a token made this step run (the same wrong
+          # fallback app/build.gradle.kts used to have).
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: nextpage-desktop
         run: |
           if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then

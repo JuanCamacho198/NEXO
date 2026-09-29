@@ -25,9 +25,12 @@
 #
 # Signing status:
 # - Desktop: UPDATER-signed. TAURI_SIGNING_PRIVATE_KEY (+ password) signs the
-#   bundles for the Tauri updater feed and tauri-action publishes latest.json
+#   bundles for the Tauri updater feed, `bundle.createUpdaterArtifacts: true`
+#   in tauri.conf.json is what makes Tauri emit those updater artifacts and
+#   their .sig files at all, and tauri-action then publishes latest.json
 #   automatically (uploadUpdaterJson, default true — set explicitly below so
-#   the feed dependency is visible). OS-level code signing is still absent:
+#   the feed dependency is visible; each matrix leg merges its platform keys
+#   into the single file). OS-level code signing is still absent:
 #   Windows SmartScreen / macOS Gatekeeper warnings remain (separate work
 #   item — the updater key authenticates updates, not the OS publisher).
 # - Android: RELEASE-keystore signed (`signingConfigs.release` in
@@ -45,10 +48,17 @@
 #   the missing file with `file.exists()`, so a build without it succeeds but
 #   produces an APK with EMPTY runtime config — a broken release. That is why
 #   this job fails loud instead of shipping it.
-# - SENTRY_AUTH_TOKEN (optional): the Sentry Gradle plugin uploads the R8
-#   mapping during assembleRelease when set; skipped with a plugin warning
-#   when absent. `verifySentryMappingUpload` is NOT invoked here for that
-#   reason; `verifyReleaseMapping` (mapping.txt exists) always runs.
+# - SENTRY_AUTH_TOKEN + SENTRY_ORG: read at Gradle config time by the Sentry
+#   Gradle plugin, which uploads the R8 mapping during assembleRelease. SAGP has
+#   NO skip-on-missing-token path — an empty token makes the release build fail,
+#   which is what blocked the first 0.3.1 android run — so `sentry { }` in
+#   app/build.gradle.kts gates `autoUploadProguardMapping` on the token itself
+#   and a token-less build takes the plugin's dry run (exit 0) instead.
+#   SENTRY_ORG must be set as well: the extension's fallback slug
+#   (`nextpage-android`) is NOT this project's org, so a token without it would
+#   upload the mapping to the wrong organization.
+#   `verifySentryMappingUpload` is NOT invoked here (it would re-introduce the
+#   hard requirement); `verifyReleaseMapping` (mapping.txt exists) always runs.
 # - CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID (optional): web deploy is
 #   token-gated with an `::notice::` skip when absent, same pattern as
 #   sentry-symbols.yml — the release record and tarball still ship.
@@ -132,8 +142,33 @@ jobs:
       - name: Add macOS universal targets
         # `--target universal-apple-darwin` builds both arch slices; rustup
         # does not preinstall them on the runner.
+        #
+        # BOTH the working-directory and the explicit --toolchain are
+        # load-bearing. cargo always runs inside desktop/src-tauri, where
+        # rust-toolchain.toml pins channel 1.95.0 — so the BUILD uses 1.95.0,
+        # while a bare `rustup target add` run from the repo root targets the
+        # runner's default toolchain (stable-aarch64-apple-darwin, installed by
+        # the step above). This step then reported success while the pinned
+        # 1.95.0 kept only its host target, and the x86_64 slice died with
+        # "Target x86_64-apple-darwin is not installed (installed targets:
+        # aarch64-apple-darwin)" in run 36579821358.
+        #
+        # Reading the channel out of the .toml instead of hardcoding it keeps
+        # this in sync with the pin; the explicit `target list --installed`
+        # fails the step here rather than seven minutes into a cargo build.
         if: runner.os == 'macOS'
-        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+        working-directory: desktop/src-tauri
+        run: |
+          set -euo pipefail
+          toolchain="$(sed -n 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"\(.*\)".*$/\1/p' rust-toolchain.toml | head -n 1)"
+          if [ -z "${toolchain}" ]; then
+            echo "::error::Could not read the pinned toolchain channel from desktop/src-tauri/rust-toolchain.toml"
+            exit 1
+          fi
+          echo "Pinned toolchain: ${toolchain}"
+          rustup toolchain install "${toolchain}" --profile minimal --no-self-update
+          rustup target add --toolchain "${toolchain}" aarch64-apple-darwin x86_64-apple-darwin
+          rustup target list --toolchain "${toolchain}" --installed
 
       - name: Install Linux system deps (Tauri)
         # Same package set as sentry-symbols.yml / desktop-ci.yml — glib-sys
@@ -184,8 +219,17 @@ jobs:
           releaseDraft: false
           prerelease: false
           # Explicit (default is true): latest.json IS the desktop update
-          # feed — the action generates it from the signed bundles and
-          # attaches it to this same release when the updater is configured.
+          # feed. Each matrix leg appends only its OWN platform keys to the
+          # file already attached to the release — uploadVersionJSON reads the
+          # existing asset and merges its `platforms` map before re-uploading —
+          # so no fan-in job is needed and the legs cannot clobber each other.
+          #
+          # It can only merge what the build produced: the signed updater
+          # artifacts only exist when tauri.conf.json sets
+          # `bundle.createUpdaterArtifacts`. Without it the action logs
+          # "Signature not found for the updater JSON. Skipping upload..." and
+          # the release ships NO feed at all (run 36579821358) — the config
+          # decides, not this workflow.
           uploadUpdaterJson: true
           args: ${{ matrix.platform.args }}
 
@@ -195,9 +239,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      # Read at Gradle config time by the Sentry Gradle plugin; empty is
-      # tolerated (mapping upload skipped with a warning).
+      # Read at Gradle config time by the Sentry Gradle plugin. An empty token
+      # makes `autoUploadProguardMapping` false (see app/build.gradle.kts), so
+      # the plugin dry-runs instead of failing the release — while a set token
+      # uploads for real. SENTRY_ORG is what routes the upload; the extension's
+      # built-in fallback slug is not this project's org.
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       # Release signing (release 0.4.0 cutover): base64 keystore + passwords
       # decoded by signingConfigs.release in app/build.gradle.kts. Fail-loud
       # verified below — without them Gradle would silently fall back to
@@ -226,6 +274,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Make gradlew executable
+        # android/gradlew is committed 100644 (a Windows checkout cannot set
+        # the exec bit), so without this the build step dies immediately with
+        # `./gradlew: Permission denied` (exit 126). The working-directory is
+        # load-bearing: the repo root has no `gradlew`, so a root-level chmod
+        # is a silent no-op behind `|| true`. Mirrors android-ci.yml.
+        working-directory: android
         run: chmod +x ./gradlew || true
 
       - name: Materialize android/local.properties
@@ -261,11 +315,9 @@ jobs:
 
       - name: Build release APK + AAB
         # --no-daemon and the explicit VFS flag mirror the anti-hang settings
-        # documented in android/AGENTS.md. --configuration-cache is dropped
-        # vs android-ci: release + Sentry plugin tasks have not been verified
-        # against it, and a cache miss must not fail a release.
-        # verifyReleaseMapping runs in the same invocation: minify is on by
-        # default and a release without mapping.txt cannot be debugged.
+        # documented in android/AGENTS.md. Configuration cache stays on
+        # (org.gradle.configuration-cache=true in gradle.properties); the
+        # release-path tasks are CC-safe, including verifyReleaseMapping below.
         working-directory: android
         run: |
           ./gradlew \
@@ -274,7 +326,18 @@ jobs:
             -Dorg.gradle.vfs.watch=false \
             -PupdateFeedUrl="https://github.com/JuanCamacho198/NEXTPAGE/releases/download/${GITHUB_REF_NAME}/latest-android.json" \
             :app:assembleRelease \
-            :app:bundleRelease \
+            :app:bundleRelease
+
+      - name: Verify release mapping
+        # Separate invocation ON PURPOSE: mapping.txt is an output of
+        # assembleRelease, so running verifyReleaseMapping in the same
+        # invocation makes the artifact's existence order-dependent. Minify is
+        # on by default and a release without mapping.txt cannot be debugged.
+        working-directory: android
+        run: |
+          ./gradlew \
+            --no-daemon \
+            -Dorg.gradle.vfs.watch=false \
             :app:verifyReleaseMapping
 
       - name: Upload APK + AAB to the release
