@@ -309,8 +309,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"              # android-v3.0.1
-          VERSION="${TAG#android-v}"            # 3.0.1
+          TAG="${GITHUB_REF_NAME}"              # android-v0.3.1
+          VERSION="${TAG#android-v}"            # 0.3.1
           IFS=. read -r MAJOR MINOR PATCH <<< "${VERSION}"
           VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
           APK_OUT=android/app/build/outputs/apk/release/app-release.apk

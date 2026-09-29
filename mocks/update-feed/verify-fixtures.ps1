@@ -7,7 +7,7 @@ function Check($cond, $msg) {
 $a = Get-Content 'mocks/update-feed/android-latest.json' -Raw | ConvertFrom-Json
 $d = Get-Content 'mocks/update-feed/desktop-latest.json' -Raw | ConvertFrom-Json
 
-Check ($a.version -eq '3.0.1') 'android version must be 3.0.1'
+Check ($a.version -eq '0.3.1') 'android version must be 0.3.1'
 Check ($a.versionCode -gt 300) 'android versionCode must be above 300'
 Check ($a.channel -eq 'stable') 'android channel must be stable'
 Check ($null -ne $a.notes -and $a.notes.Length -gt 0) 'android notes required'
@@ -19,7 +19,7 @@ foreach ($asset in $a.assets) {
   Check ($asset.size -gt 0) 'android asset size required'
 }
 
-Check ($d.version -eq '3.0.1') 'desktop version must be 3.0.1'
+Check ($d.version -eq '0.3.1') 'desktop version must be 0.3.1'
 Check ($d.channel -eq 'stable') 'desktop channel must be stable'
 Check ($null -ne $d.notes -and $d.notes.Length -gt 0) 'desktop notes required'
 Check ($null -ne $d.pub_date) 'desktop pub_date required'
@@ -29,7 +29,7 @@ foreach ($k in $names) {
   $e = $d.platforms.$k
   Check ($null -ne $e.url) "desktop platform $k url required"
   Check ($null -ne $e.signature) "desktop platform $k signature required"
-  Check ($e.url -match [regex]::Escape("nextpage-desktop-v3.0.1-$k")) "desktop url naming for $k : $($e.url)"
+  Check ($e.url -match [regex]::Escape("nextpage-desktop-v0.3.1-$k")) "desktop url naming for $k : $($e.url)"
 }
 
 if (-not $fail) { Write-Output 'ALL FIXTURE CHECKS PASS' } else { exit 1 }

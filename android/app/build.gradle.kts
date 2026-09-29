@@ -116,7 +116,7 @@ android {
         applicationId = "com.nextpage"
         minSdk = 26
         targetSdk = 36
-        val appVersionName = "3.0.1" // x-release-please-version
+        val appVersionName = "0.3.1" // x-release-please-version
         versionName = appVersionName
         // versionCode is derived from versionName so a release never has to bump it by
         // hand (and can never forget to): major*10000 + minor*100 + patch stays monotonic
@@ -207,7 +207,11 @@ android {
         // env is absent; the config is unused in that case (see buildTypes).
         create("release") {
             if (useReleaseSigning) {
-                val keystoreFile = layout.buildDirectory.file("signing/release.keystore").get().asFile
+                val keystoreFile =
+                    layout.buildDirectory
+                        .file("signing/release.keystore")
+                        .get()
+                        .asFile
                 keystoreFile.parentFile.mkdirs()
                 keystoreFile.writeBytes(Base64.getDecoder().decode(releaseKeystoreBase64))
                 storeFile = keystoreFile

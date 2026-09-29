@@ -1,8 +1,8 @@
 # Release Update Feed Contract
 
 Status: contract for change `app-auto-update`, PR 1 slice (feed contract + mock fixtures).
-Updated 2026-09-28: signing prerequisites DECIDED (section 6) — release 3.0.1
-ships signed with working updater feeds. Pre-3.0.1 builds and local/dev builds
+Updated 2026-09-28: signing prerequisites DECIDED (section 6) — release 0.3.1
+ships signed with working updater feeds. Pre-0.3.1 builds and local/dev builds
 (with an empty feed URL) stay on the mock/staging feed or disabled.
 Scope: defines the single feed convention both update clients consume.
 
@@ -45,13 +45,13 @@ each entry carries a download `url` and a cryptographic `signature`.
 
 ```json
 {
-  "version": "3.0.1",
+  "version": "0.3.1",
   "notes": "Example release notes.",
   "pub_date": "2026-09-28T12:00:00Z",
   "channel": "stable",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/<owner>/<repo>/releases/download/v3.0.1/nextpage-desktop-v3.0.1-windows-x86_64.exe",
+      "url": "https://github.com/<owner>/<repo>/releases/download/v0.3.1/nextpage-desktop-v0.3.1-windows-x86_64.exe",
       "signature": "<tauri-action signature>"
     }
   }
@@ -76,14 +76,14 @@ ABI/arch qualifier `abi`, and file `size` in bytes.
 
 ```json
 {
-  "version": "3.0.1",
+  "version": "0.3.1",
   "versionCode": 400,
   "notes": "Example release notes.",
   "pubDate": "2026-09-28T12:00:00Z",
   "channel": "stable",
   "assets": [
     {
-      "url": "https://github.com/<owner>/<repo>/releases/download/v3.0.1/nextpage-android-v3.0.1.apk",
+      "url": "https://github.com/<owner>/<repo>/releases/download/v0.3.1/nextpage-android-v0.3.1.apk",
       "abi": "universal",
       "size": 12345678
     }
@@ -106,7 +106,7 @@ Release assets encode product, platform/target, and version. Feed URLs MUST
 reference exactly these names.
 
 - Android APK/AAB: `nextpage-android-v{version}.apk` / `nextpage-android-v{version}.aab`
-  (example: `nextpage-android-v3.0.1.apk`). Enforced by the release workflow
+  (example: `nextpage-android-v0.3.1.apk`). Enforced by the release workflow
   (`nextpage-${GITHUB_REF_NAME}.apk/.aab`).
 - Desktop bundles: uploaded under tauri-action default names; the desktop feed
   (`latest.json`) is authoritative for desktop download URLs — clients MUST
@@ -180,7 +180,7 @@ Coverage: check entry, checking progress, up-to-date confirmation, update
 available title/body, release notes, update-now, remind-later, metered consent,
 install guidance, relaunch confirmation, error states.
 
-## 6. Signing and publishing (DECIDED 2026-09-28 — release 3.0.1 cutover)
+## 6. Signing and publishing (DECIDED 2026-09-28 — release 0.3.1 cutover)
 
 Key material lives OUTSIDE the repo in `~/.nextpage-keys/` (README.txt there
 holds fingerprints + dates only, never secrets). Repo root `.gitignore` bans
@@ -221,12 +221,12 @@ Decided work package (producer: `release-builds.yml`):
    publish step (section 3 shape, `versionCode` mirroring the
    major*10000+minor*100+patch formula) uploads alongside the signed APK/AAB.
 
-Production cutover rule: 3.0.1+ release builds run against the production
+Production cutover rule: 0.3.1+ release builds run against the production
 feeds (`VITE_UPDATE_FEED_URL` baked at release time for desktop,
-`-PupdateFeedUrl` for Android). Pre-3.0.1 builds and local/dev builds (empty
+`-PupdateFeedUrl` for Android). Pre-0.3.1 builds and local/dev builds (empty
 feed URL) stay on the mock/staging feed or disabled.
 
-Post-3.0.1 verification (open): confirm the published `latest.json`
+Post-0.3.1 verification (open): confirm the published `latest.json`
 contains all three platform entries — the windows/macOS/linux matrix legs
 each upload it, and it is only a complete feed if the action merges (rather
 than last-writer-wins). If incomplete, add a merge fan-in step.
