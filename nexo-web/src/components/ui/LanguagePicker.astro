@@ -1,0 +1,34 @@
+---
+import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+---
+
+<details class="lang-picker">
+  <summary class="text-ink" aria-label={t('header.languageAria')}>
+    {lang === 'en' ? 'EN' : 'ES'}
+    <svg class="lang-chevron" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="m6 9 6 6 6-6"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  </summary>
+  <ul class="lang-menu">
+    <li>
+      <a href="/" aria-current={lang === 'es' ? 'true' : undefined}>
+        ES
+      </a>
+    </li>
+    <li>
+      <a href="/en/" aria-current={lang === 'en' ? 'true' : undefined}>
+        EN
+      </a>
+    </li>
+  </ul>
+</details>

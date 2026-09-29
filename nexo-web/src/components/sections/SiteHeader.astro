@@ -1,25 +1,22 @@
 ---
 import Logo from '@/components/ui/Logo.astro';
 import Button from '@/components/ui/Button.astro';
+import ThemeToggle from '@/components/ui/ThemeToggle.astro';
+import LanguagePicker from '@/components/ui/LanguagePicker.astro';
 import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
 const navLink = 'transition-[color] duration-[180ms] ease-[ease] hover:text-ink';
-const langLink =
-  'text-[14px] font-medium text-ink-soft transition-[color] duration-[180ms] ease-[ease] hover:text-ink';
-const langSwitch =
-  'flex items-center gap-2.5 text-[13px] font-semibold tracking-[0.04em] [&>a[aria-current=true]]:text-ink';
+const langSwitch = 'flex items-center gap-2.5 text-[13px] font-semibold tracking-[0.04em]';
 const mobileLink =
   'transition-[color] duration-[180ms] ease-[ease] max-[1023px]:py-2.5 max-[1023px]:text-[15px] max-[1023px]:font-medium max-[1023px]:text-ink-soft max-[1023px]:hover:text-ink';
-const mobileLangLink =
-  'text-[14px] font-medium text-ink-soft transition-[color] duration-[180ms] ease-[ease] hover:text-ink max-[1023px]:py-2.5 max-[1023px]:text-[15px]';
 ---
 
 <!-- ══════════════ HEADER ══════════════ -->
-<header class="sticky top-0 z-[60] border-b border-border bg-[oklch(97.4%_0.007_95/0.85)] backdrop-blur-[14px]">
-  <div class="shell flex items-center gap-8 py-7 max-[640px]:gap-4 max-[640px]:py-[18px]">
+<header class="site-header sticky top-0 z-[60] border-b border-border bg-[oklch(97.4%_0.007_95/0.85)] backdrop-blur-[14px]">
+  <div class="shell flex items-center gap-8 py-7 max-[1100px]:gap-5 max-[640px]:gap-4 max-[640px]:py-[18px]">
     <Logo />
 
     <nav
@@ -39,16 +36,7 @@ const mobileLangLink =
         {t('faq.title')}
       </a>
       <div class={langSwitch}>
-        <a class={langLink} href="/" aria-current={lang === 'es' ? 'true' : undefined}>
-          ES
-        </a>
-        <a
-          class={`${langLink} border-l border-border pl-2.5`}
-          href="/en/"
-          aria-current={lang === 'en' ? 'true' : undefined}
-        >
-          EN
-        </a>
+        <LanguagePicker />
       </div>
     </nav>
 
@@ -75,19 +63,14 @@ const mobileLangLink =
         <a class={mobileLink} href="#faq">
           {t('faq.title')}
         </a>
-        <div class={langSwitch}>
-          <a class={mobileLangLink} href="/" aria-current={lang === 'es' ? 'true' : undefined}>
-            ES
-          </a>
-          <a
-            class={`${mobileLangLink} border-l border-border pl-2.5`}
-            href="/en/"
-            aria-current={lang === 'en' ? 'true' : undefined}
-          >
-            EN
-          </a>
+        <div class="flex items-center gap-4">
+          <div class={langSwitch}>
+            <LanguagePicker />
+          </div>
+          <ThemeToggle class="hidden max-[640px]:grid" />
         </div>
       </nav>
+      <ThemeToggle class="max-[640px]:hidden" />
       <Button variant="primary" href="#descargar">
         {t('cta.download')}
       </Button>

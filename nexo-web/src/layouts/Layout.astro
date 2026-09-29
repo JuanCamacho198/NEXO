@@ -17,9 +17,31 @@ const t = useTranslations(lang);
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // The landing keeps its zero-JS rule everywhere it can. The theme is the one
+      // justified exception: a stored or OS-preferred colour scheme has to be applied
+      // before the first paint or the page flashes the wrong theme. Only a blocking
+      // inline head script can do that, so the no-JS rule is broken here on purpose.
+      (function () {
+        try {
+          var stored = localStorage.getItem('nexo-theme');
+          var theme =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+          document.documentElement.dataset.theme = theme;
+        } catch (error) {
+          // Storage unavailable (private mode / blocked): fall through to light.
+        }
+      })();
+    </script>
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#f8f6f1" />
+    <meta name="theme-color" content="#f8f6f1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1624" media="(prefers-color-scheme: dark)" />
+
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -44,5 +66,35 @@ const t = useTranslations(lang);
       {t('header.skipLink')}
     </a>
     <slot />
+    <script is:inline>
+      // The only other bit of client JS: flip the theme and remember the explicit
+      // choice. The button label already reflects the theme through CSS, so this
+      // only has to keep aria-pressed in sync. There are two toggle buttons — one
+      // in the top bar, one in the small-screen menu — so bind every instance.
+      (function () {
+        var root = document.documentElement;
+        var toggles = document.querySelectorAll('[data-theme-toggle]');
+        if (!toggles.length) return;
+        function sync() {
+          var pressed = root.dataset.theme === 'dark' ? 'true' : 'false';
+          toggles.forEach(function (toggle) {
+            toggle.setAttribute('aria-pressed', pressed);
+          });
+        }
+        toggles.forEach(function (toggle) {
+          toggle.addEventListener('click', function () {
+            var next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+            root.dataset.theme = next;
+            try {
+              localStorage.setItem('nexo-theme', next);
+            } catch (error) {
+              // Storage unavailable: the choice simply will not persist.
+            }
+            sync();
+          });
+        });
+        sync();
+      })();
+    </script>
   </body>
 </html>

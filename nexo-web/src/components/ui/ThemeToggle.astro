@@ -1,0 +1,29 @@
+---
+import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
+
+interface Props {
+  class?: string;
+}
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+const className = Astro.props.class ?? '';
+---
+
+<button type="button" class={`theme-toggle ${className}`} data-theme-toggle aria-pressed="false">
+  <span class="vh theme-label-light">{t('header.themeToDark')}</span>
+  <span class="vh theme-label-dark">{t('header.themeToLight')}</span>
+  <svg class="theme-toggle-icon theme-toggle-sun" viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="4.4" fill="none" stroke="currentColor" stroke-width="1.7" />
+    <path
+      d="M12 2.6v2.3M12 19.1v2.3M2.6 12h2.3M19.1 12h2.3M5.4 5.4 7 7M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+    />
+  </svg>
+  <svg class="theme-toggle-icon theme-toggle-moon" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20.4 14.5A8.5 8.5 0 0 1 9.5 3.6a8.5 8.5 0 1 0 10.9 10.9Z" fill="currentColor" />
+  </svg>
+</button>

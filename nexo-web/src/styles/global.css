@@ -52,6 +52,43 @@
   --animate-rise: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* ═══════════════ dark theme ═══════════════ */
+/* The @theme block above is the light palette and stays byte-for-byte what the
+   landing shipped with. When a visitor picks a theme, the blocking head script in
+   Layout.astro sets data-theme on <html> before first paint; these overrides swap
+   the same custom properties for the dark variant. They are deliberately
+   unlayered so they outrank both the @layer theme declarations Tailwind emits and
+   the @layer utilities used for the few literal light surfaces below. */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* surfaces — the light warm greys inverted to deep, brand-adjacent navy */
+  --color-background: oklch(20% 0.03 264);
+  --color-surface: oklch(23.5% 0.035 264);
+  --color-surface-alt: oklch(26% 0.035 264);
+  --color-card: oklch(24.5% 0.035 264);
+  --color-muted: oklch(30% 0.03 264);
+
+  /* ink — the warm off-white the light palette already used for inverted text */
+  --color-ink: oklch(96% 0.01 95);
+  --color-ink-soft: oklch(78% 0.02 259);
+  --color-muted-foreground: oklch(72% 0.02 259);
+
+  /* accents brighten so they stay legible on the dark surface */
+  --color-sync: oklch(72% 0.15 253);
+  --color-sync-soft: oklch(42% 0.08 253);
+  --color-border: oklch(34% 0.03 264);
+  --color-ring: oklch(72% 0.15 253);
+
+  /* The lockup draws with currentColor, so flipping --color-brand is what turns
+     the navy header/footer logo into the light one. */
+  --color-brand: oklch(96% 0.01 95);
+
+  /* shadows deepen so elevation still reads against a dark surface */
+  --shadow-soft: 0 18px 40px -24px oklch(0% 0 0 / 0.6);
+  --shadow-device: 0 40px 80px -30px oklch(0% 0 0 / 0.68), 0 12px 28px -12px oklch(0% 0 0 / 0.45);
+}
+
 /* ═══════════════ shell (layout container) ═══════════════ */
 /* Deliberately NOT named `container`: Tailwind ships a built-in `container`
    utility in @layer utilities, which outranks @layer components and silently
@@ -191,6 +228,132 @@
   .logo-mark {
     height: 49px;
     width: auto;
+  }
+
+  /* ═══════════════ theme toggle ═══════════════ */
+  .theme-toggle {
+    position: relative;
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-card);
+    color: var(--color-ink);
+    cursor: pointer;
+    transition:
+      border-color 0.18s ease,
+      color 0.18s ease;
+  }
+  .theme-toggle:hover {
+    border-color: var(--color-ink-soft);
+  }
+  .theme-toggle-icon {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 18px;
+    height: 18px;
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .theme-toggle-sun {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+  .theme-toggle-moon {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.4);
+  }
+  [data-theme='dark'] .theme-toggle-sun {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.4);
+  }
+  [data-theme='dark'] .theme-toggle-moon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+  /* Exactly one label stays in the accessibility tree: the inactive one is
+     display:none, the active one keeps the visually-hidden clip. The button's
+     accessible name therefore always describes what the toggle will do next. */
+  .theme-label-dark {
+    display: none;
+  }
+  [data-theme='dark'] .theme-label-light {
+    display: none;
+  }
+  [data-theme='dark'] .theme-label-dark {
+    display: block;
+  }
+  .vh {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ═══════════════ language picker ═══════════════ */
+  .lang-picker {
+    position: relative;
+  }
+  .lang-picker > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    list-style: none;
+  }
+  .lang-picker > summary::-webkit-details-marker {
+    display: none;
+  }
+  .lang-chevron {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.2s ease;
+  }
+  .lang-picker[open] .lang-chevron {
+    transform: rotate(180deg);
+  }
+  .lang-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    z-index: 70;
+    display: grid;
+    gap: 2px;
+    min-width: 96px;
+    padding: 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-card);
+    box-shadow: var(--shadow-soft);
+  }
+  .lang-menu a {
+    display: block;
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-ink-soft);
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+  .lang-menu a:hover {
+    background: var(--color-muted);
+    color: var(--color-ink);
+  }
+  .lang-menu a[aria-current='true'] {
+    color: var(--color-ink);
   }
 
   /* ═══════════════ experience ═══════════════ */
@@ -335,5 +498,35 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ═══════════════ dark overrides for literal light surfaces ═══════════════ */
+/* A handful of surfaces carry a literal light value because no token or utility
+   can express them (an alpha header, a data-URI glyph, an inverted button). Each
+   gets a dark counterpart here and is left untouched in light mode. Unlayered, so
+   they outrank the @layer utilities that carry the originals. */
+[data-theme='dark'] .site-header {
+  background-color: oklch(20% 0.03 264 / 0.85);
+}
+[data-theme='dark'] .nav-toggle {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23f4f2ea' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h16M4 12h16M4 17h16'/%3E%3C/svg%3E");
+}
+[data-theme='dark'] .skip-link {
+  color: var(--color-background);
+}
+[data-theme='dark'] .btn-primary {
+  color: oklch(20% 0.03 264);
+}
+[data-theme='dark'] .btn-primary:hover {
+  background-color: oklch(88% 0.015 95);
+}
+
+/* The toggle icons and the picker chevron only move for decoration; kill their
+   transitions for reduced-motion users, matching the .rise handling above. */
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle-icon,
+  .lang-chevron {
+    transition: none;
   }
 }
