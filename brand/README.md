@@ -27,6 +27,13 @@ width/height attributes (scale freely).
 - Pick the export matching the background: `-light` on light surfaces,
   `-dark` on dark surfaces. Never place a `-light` export on a dark background
   or vice versa.
+- Exception to the rule above: on a surface that IS the brand navy `#0D1D3B`,
+  the `-dark` exports do not read — their ribbon ink is `#0D1D3B`, so it
+  disappears and only the grey "N" (and any white wordmark) survives. Verified
+  by rendering all eight exports over magenta versus navy: 6 of 8 lose at least
+  one element on `#0D1D3B`. On brand-navy surfaces use `nexo-app-dark.svg`,
+  whose tile coincides with the surface and whose white mark and wordmark carry
+  all the information.
 - Minimum size for the horizontal lockup: 96px wide.
 
 ## Regenerating
