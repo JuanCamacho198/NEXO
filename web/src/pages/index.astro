@@ -8,14 +8,14 @@ const site = (Astro.site?.href ?? '').replace(/\/$/, '');
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'NextPage Addons',
+  name: 'NEXO Addons',
   url: site ? `${site}/` : '/',
   inLanguage: 'es',
 };
 ---
 
 <BaseLayout
-  title={`${t(locale, 'home.title')} — NextPage`}
+  title={`${t(locale, 'home.title')} — NEXO`}
   description={t(locale, 'home.subtitle')}
   canonicalPath="/"
   alternateEs="/"

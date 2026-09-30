@@ -1,6 +1,7 @@
 import type { UiKey } from '@/i18n/ui.en';
 
 export const messagesEs: Record<UiKey, string> = {
+  'brand.name': 'NEXO',
   'nav.aria': 'Navegación principal',
   'nav.home': 'Inicio',
   'nav.catalog': 'Catálogo',
@@ -11,9 +12,9 @@ export const messagesEs: Record<UiKey, string> = {
   'nav.menuClose': 'Cerrar menú',
   'footer.aria': 'Pie de página',
   'catalog.title': 'Catálogo de addons',
-  'catalog.pageTitle': 'Catálogo de addons — NextPage',
+  'catalog.pageTitle': 'Catálogo de addons — NEXO',
   'catalog.subtitle':
-    'Fuentes de libros que funcionan con NextPage. Busca, filtra y abre cada addon para ver el detalle.',
+    'Fuentes de libros que funcionan con NEXO. Busca, filtra y abre cada addon para ver el detalle.',
   'catalog.searchPlaceholder': 'Buscar addons…',
   'catalog.searchAria': 'Buscar addons',
   'catalog.sortLabel': 'Ordenar',
@@ -34,7 +35,7 @@ export const messagesEs: Record<UiKey, string> = {
   'catalog.emptySub': 'Prueba limpiar los filtros o sugiere un addon nuevo.',
   'catalog.clearFilters': 'Limpiar filtros',
   'catalog.submitAddon': 'Enviar un addon',
-  'catalog.groupBuiltin': 'Vienen con NextPage',
+  'catalog.groupBuiltin': 'Vienen con NEXO',
   'catalog.groupCommunity': 'De la comunidad',
   'catalog.communityEmptyTitle': 'Todavía no hay addons de la comunidad',
   'catalog.communityEmptySub':
@@ -70,11 +71,11 @@ export const messagesEs: Record<UiKey, string> = {
   'detail.breadcrumbCatalog': 'Catálogo',
   'detail.breadcrumbAria': 'breadcrumb',
   'detail.updatedAgo': 'Actualizado {{x}}',
-  'detail.includedTitle': 'Incluido en NextPage',
+  'detail.includedTitle': 'Incluido en NEXO',
   'detail.includedSub': 'Este addon viene con la app. Actívalo en Addons.',
   'detail.plannedSub':
     'Este addon todavía no tiene un catálogo que funcione. Vuelve cuando esté disponible.',
-  'detail.step1': 'Abre NextPage y ve a Addons.',
+  'detail.step1': 'Abre NEXO y ve a Addons.',
   'detail.step2': 'Busca este addon en la lista.',
   'detail.step3': 'Actívalo y empieza a leer.',
   'detail.copyUrl': 'Copiar URL',
@@ -87,7 +88,7 @@ export const messagesEs: Record<UiKey, string> = {
   'home.badge': 'Directorio comunitario · libre y abierto',
   'home.title': 'Extiende tu biblioteca',
   'home.subtitle':
-    'Suma catálogos de la comunidad a NextPage. Project Gutenberg y Open Library ya funcionan; hay más fuentes en preparación.',
+    'Suma catálogos de la comunidad a NEXO. Project Gutenberg y Open Library ya funcionan; hay más fuentes en preparación.',
   'home.catalogCta': 'Explorar catálogo',
   'home.submitCta': 'Publicar un addon',
   'home.statsAddons': 'addons que funcionan',
@@ -96,7 +97,7 @@ export const messagesEs: Record<UiKey, string> = {
   'home.statsAria': 'stats',
   'home.stepsEyebrow': 'CÓMO FUNCIONA',
   'home.stepsTitle': 'Tres pasos, menos de un minuto',
-  'home.step1Title': 'Instala NextPage',
+  'home.step1Title': 'Instala NEXO',
   'home.step1Sub':
     'Descarga la app para escritorio o Android desde GitHub Releases. Es gratuita y sin cuentas.',
   'home.step2Title': 'Elige un addon',
@@ -104,7 +105,7 @@ export const messagesEs: Record<UiKey, string> = {
     'Explora el catálogo y encuentra la fuente que quieres. Los addons integrados ya funcionan; los que están en preparación se marcan como no disponibles.',
   'home.step3Title': 'Activa el addon',
   'home.step3Sub':
-    'Activa los addons integrados desde la sección Addons de NextPage. Cuando haya addons de la comunidad, podrás copiar la URL del manifiesto.',
+    'Activa los addons integrados desde la sección Addons de NEXO. Cuando haya addons de la comunidad, podrás copiar la URL del manifiesto.',
   'home.categoriesEyebrow': 'CATEGORÍAS',
   'home.categoriesTitle': 'Explorar por categoría',
   'home.catDesc.dominio-publico': 'Clásicos libres de derechos',
@@ -117,10 +118,9 @@ export const messagesEs: Record<UiKey, string> = {
   'home.updatesTitle': 'Últimas incorporaciones',
   'home.seeAll': 'Ver catálogo completo',
   'home.footerTagline':
-    'Directorio comunitario de catálogos para NextPage. Sin rastreadores, sin cookies, sin cuentas.',
+    'Directorio comunitario de catálogos para NEXO. Sin rastreadores, sin cookies, sin cuentas.',
   'home.footerProduct': 'PRODUCTO',
   'home.footerResources': 'RECURSOS',
-  'home.footerNextpage': 'NEXTPAGE',
   'home.footerCatalog': 'Catálogo',
   'home.footerSubmit': 'Enviar addon',
   'home.footerDocs': 'Documentación',
@@ -130,7 +130,7 @@ export const messagesEs: Record<UiKey, string> = {
   'home.footerDownload': 'Descargar app',
   'home.footerWebsite': 'Sitio web',
   'home.footerCommunity': 'Comunidad',
-  'home.footerCopy': '© 2025 NextPage Addons · Hecho por la comunidad, para la comunidad',
+  'home.footerCopy': '© 2025 NEXO Addons · Hecho por la comunidad, para la comunidad',
   'home.footerPrivacy': 'Sin cookies · Sin rastreo',
   'submit.badge': 'CONTRIBUIR',
   'submit.title': 'Publica tu addon',
@@ -198,7 +198,7 @@ export const messagesEs: Record<UiKey, string> = {
     'El validador devuelve códigos estables: ADDON_FETCH_HTTPS_REQUIRED, ADDON_FETCH_TOO_LARGE, ADDON_FETCH_BAD_CONTENT_TYPE, ADDON_FETCH_INVALID_MANIFEST, ADDON_FETCH_NETWORK.',
   'docs.check1': 'El JSON pasa el validador local.',
   'docs.check2': 'Los endpoints responden y usan HTTPS.',
-  'docs.check3': 'Probé búsqueda y detalle en NextPage.',
+  'docs.check3': 'Probé búsqueda y detalle en NEXO.',
   'docs.check4': 'La descripción explica qué fuentes provee.',
   'docs.check5': 'La version está incrementada si es un update.',
   'docs.check6': 'El tamaño está dentro de los 64 KB.',

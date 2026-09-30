@@ -1,6 +1,6 @@
 {
-  "generated-at": "2026-09-17T22:17:54.982Z",
-  "site": "https://nextpage-addons.jcamachomolina503.workers.dev",
+  "generated-at": "2026-09-29T22:18:23.229Z",
+  "site": "https://nexo-addons.jcamachomolina503.workers.dev",
   "count": 2,
   "addons": [
     {
@@ -32,8 +32,8 @@
         "book-details"
       ],
       "detailUrl": {
-        "es": "https://nextpage-addons.jcamachomolina503.workers.dev/catalogo/gutendex",
-        "en": "https://nextpage-addons.jcamachomolina503.workers.dev/en/catalog/gutendex"
+        "es": "https://nexo-addons.jcamachomolina503.workers.dev/catalogo/gutendex",
+        "en": "https://nexo-addons.jcamachomolina503.workers.dev/en/catalog/gutendex"
       }
     },
     {
@@ -64,8 +64,8 @@
         "search"
       ],
       "detailUrl": {
-        "es": "https://nextpage-addons.jcamachomolina503.workers.dev/catalogo/openlibrary",
-        "en": "https://nextpage-addons.jcamachomolina503.workers.dev/en/catalog/openlibrary"
+        "es": "https://nexo-addons.jcamachomolina503.workers.dev/catalogo/openlibrary",
+        "en": "https://nexo-addons.jcamachomolina503.workers.dev/en/catalog/openlibrary"
       }
     }
   ]
