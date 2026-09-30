@@ -11,7 +11,7 @@ import {
   assertHttpsInstallUrl,
   validateManifest,
   type AddonManifest,
-} from '@nextpage/manifest-validator';
+} from '@nexo/manifest-validator';
 import type { AddonTransport } from '$lib/shared/services/addons/AddonRegistry';
 
 export interface InstallDeepLinkRegistry {

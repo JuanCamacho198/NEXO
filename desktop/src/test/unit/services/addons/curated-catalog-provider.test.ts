@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateManifest } from '@nextpage/manifest-validator';
+import { validateManifest } from '@nexo/manifest-validator';
 import { CuratedCatalogProvider } from '$lib/shared/services/addons/CuratedCatalogProvider';
 import curatedJson from '$lib/shared/services/addons/curated.json';
 import { CompositeCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';

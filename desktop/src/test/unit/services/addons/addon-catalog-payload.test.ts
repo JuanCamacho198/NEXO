@@ -8,7 +8,7 @@ import { GutendexDataSource } from '$lib/shared/services/catalog/GutendexDataSou
 import gutendexFixture from '$lib/shared/services/catalog/fixtures/gutendex-search.json';
 import type { GutendexRecord } from '$lib/shared/services/catalog/mappers';
 import { addonIdFromUrl } from '$lib/shared/services/addons/addonId';
-import type { AddonManifest } from '@nextpage/manifest-validator';
+import type { AddonManifest } from '@nexo/manifest-validator';
 import type { AddonTransport } from '$lib/shared/services/addons/AddonRegistry';
 
 const ADDON_ID = 'a1b2c3d4e5f60718';

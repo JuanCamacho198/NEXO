@@ -18,7 +18,7 @@ import type {
 } from '../catalog/CatalogProvider';
 import { parseCatalogSource } from '../catalog/CatalogProvider';
 import { resolveDownloadUrl } from '../catalog/mappers';
-import { validateManifest, type AddonManifest } from '@nextpage/manifest-validator';
+import { validateManifest, type AddonManifest } from '@nexo/manifest-validator';
 import curatedJson from './curated.json';
 
 interface CuratedBundle {

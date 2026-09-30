@@ -31,7 +31,7 @@ import {
 } from '$lib/shared/services/catalog/CompositeCatalogProvider';
 import { CatalogError } from '$lib/shared/services/catalog/errors';
 import type { CatalogBook, CatalogSource } from '$lib/shared/services/catalog/CatalogProvider';
-import type { AddonManifest } from '@nextpage/manifest-validator';
+import type { AddonManifest } from '@nexo/manifest-validator';
 import type { AddonTransport, InstalledAddonRow } from '$lib/shared/services/addons/AddonRegistry';
 
 /**

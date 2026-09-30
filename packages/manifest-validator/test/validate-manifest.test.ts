@@ -6,7 +6,7 @@ import {
   validateManifest,
   assertHttpsInstallUrl,
   MAX_MANIFEST_BYTES,
-} from '@nextpage/manifest-validator';
+} from '@nexo/manifest-validator';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 

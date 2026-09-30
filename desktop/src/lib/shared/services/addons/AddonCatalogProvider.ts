@@ -27,7 +27,7 @@ import {
   MAX_MANIFEST_BYTES,
   declaredCapabilities,
   type AddonManifest,
-} from '@nextpage/manifest-validator';
+} from '@nexo/manifest-validator';
 import { defaultAddonTransport, type AddonTransport } from './AddonRegistry';
 import type { AddonFetchResult } from './AddonRegistry';
 

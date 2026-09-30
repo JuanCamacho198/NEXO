@@ -17,7 +17,7 @@ import {
   ADDON_INSTALL_CONFIRM_ALREADY_INSTALLED,
   addonInstallConfirmErrorText,
 } from '$lib/shared/ui/addons/addonInstallDialog';
-import { AddonFetchErrorCode, type AddonManifest } from '@nextpage/manifest-validator';
+import { AddonFetchErrorCode, type AddonManifest } from '@nexo/manifest-validator';
 
 const MANIFEST: AddonManifest = {
   id: 'my-addon',

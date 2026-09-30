@@ -26,7 +26,7 @@ import { createSettingsAddons } from '$lib/features/settings/useSettingsAddons.s
 import { createInstallDeepLink } from '$lib/features/settings/useInstallDeepLink.svelte';
 import { createRebuildingCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
 import { addonIdFromUrl as registryAddonIdFromUrl } from '$lib/shared/services/addons/addonId';
-import type { AddonManifest } from '@nextpage/manifest-validator';
+import type { AddonManifest } from '@nexo/manifest-validator';
 import type { AddonTransport } from '$lib/shared/services/addons/AddonRegistry';
 import type { MessageKey } from '$lib/shared/i18n';
 

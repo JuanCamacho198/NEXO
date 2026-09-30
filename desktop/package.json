@@ -1,5 +1,5 @@
 {
-  "name": "nextpage-desktop",
+  "name": "nexo-desktop",
   "private": true,
   "version": "0.3.1",
   "type": "module",
@@ -32,7 +32,7 @@
   "dependencies": {
     "@fabianlars/tauri-plugin-oauth": "^2.1.0",
     "@internationalized/date": "^3.8.1",
-    "@nextpage/manifest-validator": "workspace:*",
+    "@nexo/manifest-validator": "workspace:*",
     "@sentry/browser": "^10.53.1",
     "@supabase/supabase-js": "^2.110.2",
     "@tauri-apps/api": "^2.11.0",

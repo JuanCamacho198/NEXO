@@ -18,7 +18,7 @@
   import { EMPTY_ADDON_ACCESS } from '$lib/shared/services/addons/AddonCatalogProvider';
   import { addonConsent } from '$lib/shared/services/addons/AddonConsent';
   import { discoverState } from '$lib/features/discover/DiscoverDomainState.svelte';
-  import { declaredCapabilities } from '@nextpage/manifest-validator';
+  import { declaredCapabilities } from '@nexo/manifest-validator';
 
   type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
 
