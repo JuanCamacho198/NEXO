@@ -36,7 +36,7 @@
 # - Android: RELEASE-keystore signed (`signingConfigs.release` in
 #   app/build.gradle.kts, decoded from ANDROID_KEYSTORE_BASE64). RSA-4096,
 #   valid to 2056 — this is the FIRST release key, so the backup in
-#   ~/.nextpage-keys/ must be kept forever; rotating keys later means keeping
+#   ~/.nexo-keys/ must be kept forever; rotating keys later means keeping
 #   this one alongside the new key.
 # - Web: no executable; the deploy is the artifact. The dist tarball attached
 #   to the release pins the exact bytes that were deployed.
