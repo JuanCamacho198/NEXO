@@ -1,7 +1,7 @@
 # Shared subflow: silently dismiss known recurring MIUI/system dialogs.
 # Allowlist discipline (design D4): only the texts below are ever tapped.
 # Generic confirmations such as "Aceptar" / "OK" are intentionally NOT tapped.
-appId: com.nextpage
+appId: com.nexo
 ---
 - runFlow:
     when:

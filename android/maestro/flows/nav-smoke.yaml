@@ -1,6 +1,6 @@
 # Nav smoke: preserved session launches with all four tabs visible and navigable.
 # NEVER uses clearState — the logged-in session and Room data must persist.
-appId: com.nextpage
+appId: com.nexo
 tags: [smoke]
 ---
 - launchApp:

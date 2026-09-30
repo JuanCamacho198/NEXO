@@ -11,7 +11,7 @@
 #
 # Pinned seed fixture (device locale is Spanish):
 #   ROW  excerpt containing "postreros" (rebuilt device seed, newest row)
-appId: com.nextpage
+appId: com.nexo
 tags: [chaos]
 ---
 - launchApp:

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive launcher icon. minSdk is 26, so every supported device renders
+     this (the legacy mipmap-*/ic_launcher.png files stay only as a fallback).
+
+     - background: brand navy @color/ic_launcher_background (#0D1D3B).
+     - foreground: the NEXO mark (bookmark ribbon with the "N" knocked out), no
+       wordmark, scaled into the central 66x66 of the 108x108 canvas that stays
+       visible under any launcher mask. Brand source and the exact transform are
+       documented in drawable/ic_launcher_foreground.xml.
+     - monochrome: the same mark as a single-colour silhouette for Material You
+       themed icons (API 33+; ignored by the platform on older releases). -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
+</adaptive-icon>

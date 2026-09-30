@@ -4,9 +4,9 @@ The Auth flow signs a user in by collecting a Google ID token via Credential Man
 
 ## Quick path
 
-1. Open `app/src/main/java/com/nextpage/presentation/screen/AuthScreen.kt` and find the `NextPageButton` whose `onClick` calls `viewModel.startGoogleSignIn()`. The label is `R.string.auth_continue_with_google` ("Continue with Google").
-2. Open `app/src/main/java/com/nextpage/presentation/viewmodel/AuthViewModel.kt` and follow `startGoogleSignIn()` → `authRepository.signInWithGoogle()`. The VM sets `isLoading=true` and clears `errorMessage` before the call, then calls `triggerSyncForSession(session)` on success.
-3. Open `app/src/main/java/com/nextpage/data/repository/GoogleAuthRepository.kt` — `signInWithGoogle()` builds a `GetCredentialRequest` with `GetGoogleIdOption`, calls `CredentialManager.getCredential(...)`, parses the `GoogleIdTokenCredential`, builds an `AuthSession`, and calls `sessionManager.setCurrentSession(session)`.
+1. Open `app/src/main/java/com/nexo/presentation/screen/AuthScreen.kt` and find the `NexoButton` whose `onClick` calls `viewModel.startGoogleSignIn()`. The label is `R.string.auth_continue_with_google` ("Continue with Google").
+2. Open `app/src/main/java/com/nexo/presentation/viewmodel/AuthViewModel.kt` and follow `startGoogleSignIn()` → `authRepository.signInWithGoogle()`. The VM sets `isLoading=true` and clears `errorMessage` before the call, then calls `triggerSyncForSession(session)` on success.
+3. Open `app/src/main/java/com/nexo/data/repository/GoogleAuthRepository.kt` — `signInWithGoogle()` builds a `GetCredentialRequest` with `GetGoogleIdOption`, calls `CredentialManager.getCredential(...)`, parses the `GoogleIdTokenCredential`, builds an `AuthSession`, and calls `sessionManager.setCurrentSession(session)`.
 4. Back in `AuthViewModel`, the `onSuccess` branch calls `triggerSyncForSession(session)` → `syncService.bootstrap(session.userId)` then `syncService.schedulePull()` and `syncService.schedulePush()`.
 5. Cross-check the Pencil design node `W29xCr` in `design/nextPage-movil.pen` to confirm the screen matches the doc.
 
@@ -110,12 +110,12 @@ After tracing Auth, open `docs/onboarding/README.md` for the first-build path. F
 
 | Code path | Pencil node | Role |
 |-----------|-------------|------|
-| `app/src/main/java/com/nextpage/presentation/screen/AuthScreen.kt` | `W29xCr` | Compose entry — renders the Auth form, calls `viewModel.startGoogleSignIn()` from the Google button. |
-| `app/src/main/java/com/nextpage/presentation/viewmodel/AuthViewModel.kt` | `W29xCr` | State owner — exposes `StateFlow<AuthUiState>` and orchestrates One Tap sign-in + sync bootstrap. |
-| `app/src/main/java/com/nextpage/domain/repository/AuthRepository.kt` | (none — domain) | Contract — pure interface in the domain layer. Default `signInWithGoogle` throws; `signIn` / `signUp` are not throwing defaults but `GoogleAuthRepository` overrides them to throw. |
-| `app/src/main/java/com/nextpage/data/repository/GoogleAuthRepository.kt` | (none — data) | One Tap impl — wraps `CredentialManager`, builds `AuthSession` from `GoogleIdTokenCredential`, persists via `SessionManager`. |
-| `app/src/main/java/com/nextpage/data/session/SessionManager.kt` | (none — data) | Persists the `AuthSession`; implemented by `GoogleSessionManager`. |
-| `app/src/main/java/com/nextpage/data/remote/sync/SyncService.kt` | (none — data) | `bootstrap(userId)` + `schedulePull()` / `schedulePush()` after successful sign-in. |
-| `app/src/main/java/com/nextpage/domain/model/AuthSession.kt` | (none — model) | Result type returned through the chain. |
+| `app/src/main/java/com/nexo/presentation/screen/AuthScreen.kt` | `W29xCr` | Compose entry — renders the Auth form, calls `viewModel.startGoogleSignIn()` from the Google button. |
+| `app/src/main/java/com/nexo/presentation/viewmodel/AuthViewModel.kt` | `W29xCr` | State owner — exposes `StateFlow<AuthUiState>` and orchestrates One Tap sign-in + sync bootstrap. |
+| `app/src/main/java/com/nexo/domain/repository/AuthRepository.kt` | (none — domain) | Contract — pure interface in the domain layer. Default `signInWithGoogle` throws; `signIn` / `signUp` are not throwing defaults but `GoogleAuthRepository` overrides them to throw. |
+| `app/src/main/java/com/nexo/data/repository/GoogleAuthRepository.kt` | (none — data) | One Tap impl — wraps `CredentialManager`, builds `AuthSession` from `GoogleIdTokenCredential`, persists via `SessionManager`. |
+| `app/src/main/java/com/nexo/data/session/SessionManager.kt` | (none — data) | Persists the `AuthSession`; implemented by `GoogleSessionManager`. |
+| `app/src/main/java/com/nexo/data/remote/sync/SyncService.kt` | (none — data) | `bootstrap(userId)` + `schedulePull()` / `schedulePush()` after successful sign-in. |
+| `app/src/main/java/com/nexo/domain/model/AuthSession.kt` | (none — model) | Result type returned through the chain. |
 
 > Domain and data layer rows have no Pencil node by design — the UI design does not reach them. The table is the contract: re-edit when the Pencil design changes.

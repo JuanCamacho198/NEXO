@@ -25,7 +25,7 @@ maestro test maestro/flows/auth/j01_google_mock.yaml
 
 # Upload app-debug.apk to emulator step, then:
 maestro test maestro/flows/auth/ --include-tags auth
-# or explicit appId from maestro/config.yaml (appId: com.nextpage)
+# or explicit appId from maestro/config.yaml (appId: com.nexo)
 ```
 
 ## Selector contract
@@ -37,7 +37,7 @@ maestro test maestro/flows/auth/ --include-tags auth
   Select-String -Pattern 'text:' android/maestro/flows/auth/j*.yaml | Where-Object { $_.Line -notmatch 'inputText' }
   ```
 - Every wait uses `extendedWaitUntil` with `timeout: 15000` (cold-start + Supabase mock token exchange).
-- `maestro/config.yaml` holds `appId: com.nextpage` — flows omit `appId`.
+- `maestro/config.yaml` holds `appId: com.nexo` — flows omit `appId`.
 
 ## Journeys J1-J7
 

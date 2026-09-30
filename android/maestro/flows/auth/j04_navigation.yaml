@@ -1,4 +1,4 @@
-appId: com.nextpage
+appId: com.nexo
 ---
 # J4 - Navigation Login <-> Register <-> Forgot via text
 # Footer link = Regístrate (es) / Sign up (en) = auth_register_footer_link. Use ASCII regex to avoid diacritic encoding.

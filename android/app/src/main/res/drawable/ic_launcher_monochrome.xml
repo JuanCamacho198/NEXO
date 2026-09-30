@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NEXO brand mark as a single-colour silhouette for Material You themed
+     icons (the <monochrome> layer, API 33+; ignored on older releases).
+     Generated from the brand source: brand/nexo-app-dark.svg, mark path only,
+     at the exact same geometry as @drawable/ic_launcher_foreground so the two
+     layers stay congruent.
+     The platform uses this drawable's alpha channel as the mask and tints it,
+     so the colour only matters for a launcher that renders the layer untinted:
+     white keeps the themed icon identical to the normal icon in that case,
+     while black would disappear against the navy background.
+     Generated file: regenerate from the brand source, do not hand-edit. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <group
+      android:translateX="-173.192"
+      android:translateY="-60.7383"
+      android:scaleX="0.507692"
+      android:scaleY="0.507692">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M487.749 167.028C487.918 168.013 488.029 195.488 487.993 228.09C487.936 284.691 487.896 287.42 487.117 288.613C486.086 290.197 483.56 291.283 481.715 290.935C480.945 290.792 479.127 289.803 477.677 288.739C473.688 285.823 458.809 275.327 453.024 271.347C450.214 269.416 447.608 267.917 447.243 268.016C446.879 268.118 439.27 273.256 430.346 279.428C421.345 285.653 413.497 290.778 412.723 290.93C411.015 291.27 408.877 290.246 407.783 288.564C407.044 287.433 407 283.86 407 226.972C407 166.599 407 166.581 407.929 164.793C408.476 163.737 409.57 162.597 410.597 162.006C412.336 161.005 412.336 161.005 447.372 161.001C481.19 160.992 482.466 161.023 484.102 161.859C486.135 162.901 487.34 164.61 487.749 167.028ZM469.032 216.932C469.032 194.519 469.032 194.519 467.565 192.908C466.235 191.451 465.88 191.299 463.75 191.299C461.691 191.299 461.21 191.482 459.885 192.774C458.373 194.246 458.373 194.246 458.253 207.411L458.138 220.581L447.528 208.336C432.511 191.017 432.902 191.401 430.31 191.401C428.678 191.401 427.878 191.67 426.824 192.559C425.454 193.717 425.454 193.717 425.454 216.664C425.454 239.605 425.454 239.605 427.024 240.996C429.536 243.209 433.445 242.552 435.224 239.614C436.068 238.227 436.122 237.365 436.14 225.835C436.157 213.538 436.157 213.538 438.03 215.76L443.628 222.244L452.966 232.99C461.464 242.798 460.993 242.382 463.696 242.382C465.733 242.382 466.191 242.198 467.52 240.862C469.032 239.341 469.032 239.341 469.032 216.932Z" />
+  </group>
+</vector>

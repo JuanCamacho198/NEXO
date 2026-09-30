@@ -1,4 +1,4 @@
-# Baseline Profile for NextPage — AOT-compiled startup paths
+# Baseline Profile for NEXO — AOT-compiled startup paths
 # These rules ensure critical user-facing screens are pre-compiled
 # on first install, reducing cold-start JIT overhead.
 #
@@ -20,21 +20,21 @@
 # in *Kt classes) and are dropped by profgen; real generation replaces the whole list.
 
 # LibraryScreen — first screen most users see
-Lcom/nextpage/presentation/screen/LibraryScreen;
-Lcom/nextpage/presentation/screen/library/BookGridSection;
-Lcom/nextpage/presentation/screen/library/FilterSheetContent;
-Lcom/nextpage/presentation/screen/library/LibraryDialogs;
-Lcom/nextpage/presentation/screen/library/LibraryToolbar;
-Lcom/nextpage/presentation/viewmodel/LibraryViewModel;
+Lcom/nexo/presentation/screen/LibraryScreen;
+Lcom/nexo/presentation/screen/library/BookGridSection;
+Lcom/nexo/presentation/screen/library/FilterSheetContent;
+Lcom/nexo/presentation/screen/library/LibraryDialogs;
+Lcom/nexo/presentation/screen/library/LibraryToolbar;
+Lcom/nexo/presentation/viewmodel/LibraryViewModel;
 
 # HomeScreen — dashboard after auth or cold start
-Lcom/nextpage/presentation/screen/HomeScreen;
-Lcom/nextpage/presentation/viewmodel/HomeViewModel;
+Lcom/nexo/presentation/screen/HomeScreen;
+Lcom/nexo/presentation/viewmodel/HomeViewModel;
 
 # ReaderScreen — reading experience
-Lcom/nextpage/presentation/screen/ReaderScreen;
-Lcom/nextpage/presentation/viewmodel/ReaderViewModel;
+Lcom/nexo/presentation/screen/ReaderScreen;
+Lcom/nexo/presentation/viewmodel/ReaderViewModel;
 
 # AuthScreen — login/register
-Lcom/nextpage/presentation/screen/AuthScreen;
-Lcom/nextpage/presentation/viewmodel/AuthViewModel;
+Lcom/nexo/presentation/screen/AuthScreen;
+Lcom/nexo/presentation/viewmodel/AuthViewModel;

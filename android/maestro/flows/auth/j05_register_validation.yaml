@@ -1,4 +1,4 @@
-appId: com.nextpage
+appId: com.nexo
 ---
 # J5 - Register validation: <8 chars blocked, >=8 submits (text selectors)
 - launchApp:

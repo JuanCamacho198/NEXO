@@ -6,7 +6,7 @@
 # render and silently skip. Gate on a stable detail marker first, then enter
 # the reader via whichever CTA applies: "Continuar leyendo" (book has
 # progress) or "Empezar a leer" (fresh import, 0%).
-appId: com.nextpage
+appId: com.nexo
 ---
 - assertVisible: Estantería
 - tapOn: ${BOOK_TITLE}

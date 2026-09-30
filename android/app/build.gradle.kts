@@ -109,11 +109,11 @@ val releaseKeystoreBase64 = System.getenv("ANDROID_KEYSTORE_BASE64") ?: ""
 val useReleaseSigning = releaseKeystoreBase64.isNotEmpty()
 
 android {
-    namespace = "com.nextpage"
+    namespace = "com.nexo"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.nextpage"
+        applicationId = "com.nexo"
         minSdk = 26
         targetSdk = 36
         val appVersionName = "0.3.1" // x-release-please-version
@@ -136,9 +136,13 @@ android {
 
         // Android OAuth client ID for the Drive authorization-code + PKCE flow.
         // Public client identifier (it ships inside the APK). Configured in
-        // local.properties (google.oauth.android.client.id) like the web client —
-        // must match the "Nextpage Android" OAuth client in Google Cloud Console
-        // (package com.nextpage + the debug/release SHA-1 fingerprints).
+        // local.properties (google.oauth.android.client.id) like the web client.
+        // OUT-OF-BAND STEP REQUIRED BY THE com.nexo RENAME: the Google Cloud
+        // Console OAuth client is bound to the app's package name, so an existing
+        // client registered for `com.nextpage` no longer authorizes this build.
+        // Register/update an Android OAuth client for `com.nexo` with the
+        // debug/release SHA-1 fingerprints and put its id in local.properties,
+        // or Google sign-in and the Drive flow fail with DEVELOPER_ERROR.
         val googleOAuthAndroidClientId = (localProperties.getProperty("google.oauth.android.client.id") ?: "").escapeForBuildConfig()
         buildConfigField("String", "GOOGLE_OAUTH_ANDROID_CLIENT_ID", "\"$googleOAuthAndroidClientId\"")
 
@@ -173,7 +177,7 @@ android {
         buildConfigField("String", "UPDATE_FEED_URL", "\"$updateFeedUrl\"")
 
         // Sentry DSN — read from local.properties (gitignored). When empty,
-        // SentryAndroid.init becomes a no-op (see NextPageApplication.onCreate).
+        // SentryAndroid.init becomes a no-op (see NexoApplication.onCreate).
         // Sentry auth token is read at Gradle config time from env vars below;
         // it never enters BuildConfig because it must not be shipped in the APK.
         val sentryDsn = (localProperties.getProperty("SENTRY_DSN") ?: "").escapeForBuildConfig()
@@ -361,6 +365,12 @@ listOf("main", "release").forEach { sourceSetName ->
 //   Sentry OkHttp interceptor to the application.
 // - org/projectName: bound to the Sentry project `nextpage-android` under the
 //   organization slug the user creates in sentry.io before Phase 3.
+//   `nextpage-android` is a Sentry organisation/project slug that intentionally
+//   does NOT match the NEXO brand: it is a GitHub secret (`SENTRY_ORG`) plus a
+//   console-side identifier, and neither can be renamed from this repository.
+//   The value must stay byte-identical to the secret or mapping upload fails.
+//   The release name it composes (`nextpage-android@<version>+<sha12>`) is
+//   asserted by ReleaseFormatTest, so it is deliberately left as-is.
 // - authToken: read ONLY from env vars. The auth token is NEVER committed;
 //   users set SENTRY_AUTH_TOKEN locally (or in CI secrets). When unset,
 //   release builds will fail `verifySentryMappingUpload` (see below) — this
@@ -536,7 +546,7 @@ tasks.register("verifyAuthScreenNoHardcodedStrings") {
     // configuration-cache type (Project.file() would capture the script).
     val authScreenFile =
         layout.projectDirectory.file(
-            "src/main/java/com/nextpage/presentation/screen/AuthScreen.kt",
+            "src/main/java/com/nexo/presentation/screen/AuthScreen.kt",
         )
 
     doLast {
@@ -630,13 +640,13 @@ tasks.register("verifyNoReaderUiStateResidue") {
     //    AuthViewModel.
     val readerRoots =
         listOf(
-            "src/main/java/com/nextpage/presentation/viewmodel/ReaderViewModel.kt",
-            "src/main/java/com/nextpage/presentation/viewmodel/reader",
-            "src/main/java/com/nextpage/presentation/screen/reader",
-            "src/main/java/com/nextpage/presentation/screen/ReaderScreen.kt",
-            "src/main/java/com/nextpage/presentation/screen/ReadiumPdfReaderContent.kt",
-            "src/main/java/com/nextpage/presentation/screen/readium",
-            "src/main/java/com/nextpage/debug/DebugPanel.kt",
+            "src/main/java/com/nexo/presentation/viewmodel/ReaderViewModel.kt",
+            "src/main/java/com/nexo/presentation/viewmodel/reader",
+            "src/main/java/com/nexo/presentation/screen/reader",
+            "src/main/java/com/nexo/presentation/screen/ReaderScreen.kt",
+            "src/main/java/com/nexo/presentation/screen/ReadiumPdfReaderContent.kt",
+            "src/main/java/com/nexo/presentation/screen/readium",
+            "src/main/java/com/nexo/debug/DebugPanel.kt",
         )
     val typeBanPattern = Regex("\\bReaderUiState\\b")
     val memberPattern = Regex("\\.uiState\\b")
