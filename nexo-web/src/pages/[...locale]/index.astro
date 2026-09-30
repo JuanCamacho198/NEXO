@@ -3,13 +3,17 @@ import Layout from '@/layouts/Layout.astro';
 import SiteHeader from '@/components/sections/SiteHeader.astro';
 import HomeSections from '@/components/sections/HomeSections.astro';
 import SiteFooter from '@/components/sections/SiteFooter.astro';
-import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
+import { defaultLang, localeStaticPaths, useTranslations, type Lang } from '@/i18n/utils';
+
+export function getStaticPaths() {
+  return localeStaticPaths();
+}
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 ---
 
-<Layout lang="es" title={t('meta.title')} description={t('hero.lead')}>
+<Layout lang={lang} title={t('meta.title')} description={t('hero.lead')}>
   <SiteHeader />
 
   <HomeSections />
