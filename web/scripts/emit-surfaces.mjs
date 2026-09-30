@@ -3,7 +3,7 @@
 // Reads the single source of truth for each input and writes deterministic
 // artifacts into web/public/ (Astro copies public/ verbatim to dist/):
 //   - sitemap.xml  (route table + ADDONS seed ids, hreflang alternates, no 404)
-//   - catalog.json (ADDONS seed projection + generated-at)
+//   - catalog.json (ADDONS seed projection; deterministic, no build timestamp)
 //   - llms.txt     (summary + routes + catalog pointer)
 //   - robots.txt   (allow all + absolute sitemap reference)
 //
@@ -87,8 +87,16 @@ for (const pair of pairs) {
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urlEntries.join('\n')}\n</urlset>\n`;
 
 // --- catalog.json ---------------------------------------------------------------
+// No `generated-at`. It was written with `new Date().toISOString()` on every run
+// of this script, which runs as `prebuild`, so every `bun run build` rewrote that
+// one line even when the catalog content was identical and left the worktree
+// permanently dirty. Nothing read it: the only other references were the CI gate,
+// which had to carry a bespoke `--ignore-matching-lines` rule to stop failing on
+// it, and the file itself. The catalog now changes only when the addon list or the
+// routes actually change, which is what "generated" should mean. If a consumer
+// ever needs freshness, derive it from the last commit that touched the source
+// rather than from the build clock.
 const catalog = {
-  'generated-at': new Date().toISOString(),
   site: SITE,
   count: visibleAddons.length,
   addons: [...visibleAddons]
