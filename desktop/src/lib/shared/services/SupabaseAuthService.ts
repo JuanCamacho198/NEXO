@@ -41,7 +41,7 @@ const LOOPBACK_SUCCESS_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Signed in — NextPage</title>
+  <title>Signed in — Nexo</title>
   <style>
     :root { color-scheme: light dark; }
     * { box-sizing: border-box; }
@@ -76,7 +76,7 @@ const LOOPBACK_SUCCESS_HTML = `<!DOCTYPE html>
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
     </div>
     <h1>You're signed in</h1>
-    <p>You can close this tab and return to NextPage.</p>
+    <p>You can close this tab and return to Nexo.</p>
   </div>
 </body>
 </html>`;

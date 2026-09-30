@@ -14,7 +14,7 @@
 export const FEEDBACK_EYEBROW = 'SE CERRÓ SIN AVISO';
 
 /** Modal headline. */
-export const FEEDBACK_TITLE = 'NextPage se cerró de repente';
+export const FEEDBACK_TITLE = 'Nexo se cerró de repente';
 
 /** Subhead (subtitle) below the title. */
 export const FEEDBACK_SUBTITLE =

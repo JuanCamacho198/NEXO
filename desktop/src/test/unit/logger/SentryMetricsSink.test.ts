@@ -30,7 +30,7 @@ const FULL_SETTINGS: SentrySettings = {
   dsn: 'https://valid@x.ingest.sentry.io/1',
   enabled: true,
   tracesSampleRate: 0.1,
-  release: 'nextpage-desktop@0.1.0+abc1234',
+  release: 'nexo-desktop@0.1.0+abc1234',
   environment: 'production',
   sendDefaultPii: false,
   replaysSessionSampleRate: 0,

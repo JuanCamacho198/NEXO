@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 /**
- * Deterministic Bun script — syncs design/nextpage-desktop.pen (v2.15)
+ * Deterministic Bun script — syncs design/nexo-desktop.pen (v2.15)
  * to code truth (AppSidebar/CustomTitleBar/HomeDesktopView/LibraryShelfScreen).
  *
  * Safety: .bak + temp-write + JSON.parse guard + atomic rename
  * Re-entrant: second run -> inserts:0 hash unchanged
- * Single write target: design/nextpage-desktop.pen
+ * Single write target: design/nexo-desktop.pen
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,7 +13,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PEN_PATH = path.resolve(__dirname, '..', 'design', 'nextpage-desktop.pen');
+const PEN_PATH = path.resolve(__dirname, '..', 'design', 'nexo-desktop.pen');
 const BAK_PATH = PEN_PATH + '.bak';
 const TMP_PATH = PEN_PATH + '.tmp';
 
@@ -176,7 +176,7 @@ function createSidebarReusable(all) {
         layout: 'vertical',
         gap: 2,
         children: [
-          { type: 'text', id: newId(all), fill: '$textPrimary', content: 'NextPage', fontFamily: 'Inter', fontSize: 14, fontWeight: 'bold' },
+          { type: 'text', id: newId(all), fill: '$textPrimary', content: 'Nexo', fontFamily: 'Inter', fontSize: 14, fontWeight: 'bold' },
           { type: 'text', id: newId(all), fill: '$textSecondary', content: 'Desktop', fontFamily: 'Inter', fontSize: 11, fontWeight: 'normal' },
         ],
       },
@@ -258,7 +258,7 @@ function createTitleBarReusable(all) {
     alignItems: 'center',
     children: [
       { type: 'frame', id: newId(all), name: 'logo32', width: 32, height: 32, fill: '$bgCard', cornerRadius: 16, justifyContent: 'center', alignItems: 'center', children: [{ type: 'text', id: newId(all), fill: '$accent', content: 'NP', fontFamily: 'Inter', fontSize: 12, fontWeight: 'bold' }] },
-      { type: 'text', id: newId(all), fill: '$textPrimary', content: 'NextPage', fontFamily: 'Inter', fontSize: 14, fontWeight: '600' },
+      { type: 'text', id: newId(all), fill: '$textPrimary', content: 'Nexo', fontFamily: 'Inter', fontSize: 14, fontWeight: '600' },
     ],
   };
   const center = {
@@ -455,7 +455,7 @@ function validateBoundsNoOverlap(pen) {
 function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
-    console.log(`sync-pen-home.mjs — sync design/nextpage-desktop.pen to code truth
+    console.log(`sync-pen-home.mjs — sync design/nexo-desktop.pen to code truth
 Usage: bun run scripts/sync-pen-home.mjs [--help] [--dry-run]
 Creates .bak, temp-write + JSON.parse guard, re-entrant inserts:0 on second run`);
     process.exit(0);

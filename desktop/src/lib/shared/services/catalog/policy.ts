@@ -22,7 +22,7 @@ export const RETRY_BASE_DELAY_MS = 800;
 export const REQUEST_DEADLINE_MS = 15_000;
 
 export function buildUserAgent(platform: 'Desktop' | 'Android'): string {
-  return `NextPage/${platform} (contact: TBD)`;
+  return `Nexo/${platform} (contact: TBD)`;
 }
 
 export const DESKTOP_USER_AGENT = buildUserAgent('Desktop');

@@ -89,7 +89,7 @@
           /></svg
         >
       </span>
-      <span class="text-xs font-semibold" style="color: var(--preview-text)">NextPage</span>
+      <span class="text-xs font-semibold" style="color: var(--preview-text)">Nexo</span>
     </div>
     <div style="color: var(--preview-text)">
       <p class="text-xs m-1">Sample text preview</p>

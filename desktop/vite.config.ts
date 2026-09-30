@@ -29,10 +29,13 @@ const packageJson = JSON.parse(
   fs.readFileSync(path.resolve("package.json"), "utf-8"),
 ) as { version: string };
 
-// `nextpage-desktop@<version>+<git-sha>`. The plugin uploads source maps
+// `nexo-desktop@<version>+<git-sha>`. The plugin uploads source maps
 // against the same release name so stack traces deobfuscate correctly.
+// The prefix MUST match the Sentry project slug and the Rust side
+// (`desktop/src-tauri/src/sentry_init.rs`, `SENTRY_RELEASE_PREFIX`), or the
+// renderer's source maps land under a different release than its events.
 // Sourced from `sdd/sentry-cross-platform/design` decision #2.
-const sentryRelease = `nextpage-desktop@${packageJson.version}+${gitShortSha}`;
+const sentryRelease = `nexo-desktop@${packageJson.version}+${gitShortSha}`;
 
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
 

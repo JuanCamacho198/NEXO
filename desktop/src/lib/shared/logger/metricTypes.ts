@@ -50,7 +50,7 @@ export const METRIC_NAMES = {
 
 /**
  * Shared metric vocabulary (metric-vocabulary spec). The Kotlin mirror lives
- * in `android/app/src/main/java/com/nextpage/debug/MetricVocabulary.kt`;
+ * in `android/app/src/main/java/com/nexo/debug/MetricVocabulary.kt`;
  * `metricVocabulary.lockstep.test.ts` fails the build on drift.
  */
 export const SHARED_METRIC_VOCABULARY: ReadonlyArray<string> = [

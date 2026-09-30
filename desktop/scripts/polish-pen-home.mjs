@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Polish design/nextpage-desktop.pen v2.17 — Home DS polish
+ * Polish design/nexo-desktop.pen v2.17 — Home DS polish
  * Adds 6 reusable:true to GImmK + populates 2fbd0/fa92e
  * Mirrors sync-pen-home.mjs helpers with extended guards
  */
@@ -10,7 +10,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const PEN_PATH = path.resolve(__dirname, '..', 'design', 'nextpage-desktop.pen');
+export const PEN_PATH = path.resolve(__dirname, '..', 'design', 'nexo-desktop.pen');
 export const BAK_PATH = PEN_PATH + '.bak';
 export const TMP_PATH = PEN_PATH + '.tmp';
 
@@ -473,7 +473,7 @@ function collectRefIds(pen) {
 function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
-    console.log(`polish-pen-home.mjs — polish design/nextpage-desktop.pen v2.17
+    console.log(`polish-pen-home.mjs — polish design/nexo-desktop.pen v2.17
 Usage: bun run scripts/polish-pen-home.mjs [--help] [--dry-run]
 Adds 6 reusable to GImmK + populates 2fbd0/fa92e, guards: hex, bounds, .bak, re-entrancy`);
     process.exit(0);

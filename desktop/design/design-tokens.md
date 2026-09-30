@@ -1,6 +1,6 @@
-# NextPage Desktop - Design Tokens
+# Nexo Desktop - Design Tokens
 
-> Sistema de diseño para la aplicación de escritorio NextPage.
+> Sistema de diseño para la aplicación de escritorio Nexo.
 > Basado en `src/styles.css` + sistema Tailwind CSS.
 
 ---
@@ -259,7 +259,7 @@ input[type="text"] {
 
 ## 11. Pen Sync Drift Note — `pen-desktop-home-sync` (2026-08-26)
 
-> Sync `design/nextpage-desktop.pen` v2.15 (1240 nodes → 17 frames, `GImmK` 1200w preserved) to code truth via `scripts/sync-pen-home.mjs`.
+> Sync `design/nexo-desktop.pen` v2.15 (1240 nodes → 17 frames, `GImmK` 1200w preserved) to code truth via `scripts/sync-pen-home.mjs`.
 
 ### Variables 7 → 10 (hex-only `type:color`)
 
@@ -278,7 +278,7 @@ New child `layoutSec` (child of `GImmK`, `width:fill_container`, `gap:16`, verti
 | Reusable | Geometry | Mapping |
 |---|---|---|
 | `Sidebar` | `w:260` `fill:$bgBase` `stroke:$border` `r:1` `pad:16` `gap:12` | `AppSidebar.svelte` `w-64 (260px) ↔ w-18 (72px)` — pen static 260, collapsed 72 documented in `layoutSec.description` |
-| `CustomTitleBar` | `h:36` `fill:$bgPanel` `layout:horizontal` `justify:space_between` | `CustomTitlebar.svelte` `h-9 (36px)` — `left NP32 NextPage | center flex1 data-tauri-drag-region | right 3×32w` |
+| `CustomTitleBar` | `h:36` `fill:$bgPanel` `layout:horizontal` `justify:space_between` | `CustomTitlebar.svelte` `h-9 (36px)` — `left NP32 Nexo | center flex1 data-tauri-drag-region | right 3×32w` |
 | `LibraryGrid` | `clone:DN5F1` `layout:grid` `gap:16` `pad:16` `cards 200×280 r:12 ref→vVEie` | `LibraryShelfScreen.svelte` `ShelfGrid` — `grid 4 cols` wrapper |
 
 `layoutSec` description field: `w-64↔w-18 (260→72) mapping — Sidebar 260 static, collapsed 72 documented for impl`.

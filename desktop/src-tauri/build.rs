@@ -1,8 +1,8 @@
 use std::process::Command;
 
 /// Resolve the current commit's short SHA (12 chars) at build time and emit it
-/// as the `NEXTPAGE_GIT_SHA` env var so `sentry_init.rs` can compose the
-/// release string `nextpage-desktop@{CARGO_PKG_VERSION}+{sha12}`.
+/// as the `NEXO_GIT_SHA` env var so `sentry_init.rs` can compose the
+/// release string `nexo-desktop@{CARGO_PKG_VERSION}+{sha12}`.
 ///
 /// Falls back to `unknown` when git is unavailable (e.g. Docker scratch
 /// image) so `cargo build` never fails because of missing git history.
@@ -20,5 +20,5 @@ fn main() {
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "unknown".to_string());
 
-    println!("cargo:rustc-env=NEXTPAGE_GIT_SHA={}", sha);
+    println!("cargo:rustc-env=NEXO_GIT_SHA={}", sha);
 }

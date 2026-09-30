@@ -58,7 +58,7 @@ describe('WelcomeScreen', () => {
     render(WelcomeScreen, { props: { t } });
 
     expect(screen.getByText('NP')).toBeInTheDocument();
-    expect(screen.getByText('NextPage')).toBeInTheDocument();
+    expect(screen.getByText('Nexo')).toBeInTheDocument();
     expect(screen.getByText('welcome.brandDesktop')).toBeInTheDocument();
   });
 

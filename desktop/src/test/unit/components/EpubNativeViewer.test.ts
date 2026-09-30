@@ -221,12 +221,12 @@ describe('EpubNativeViewer', () => {
       expect(srcdoc).toContain('window.parent.postMessage');
       expect(srcdoc).toContain('epub-selection');
       expect(srcdoc).toContain('epub-resize');
-      expect(srcdoc).toContain('nextpage-reader-overrides');
+      expect(srcdoc).toContain('nexo-reader-overrides');
       expect(srcdoc).toContain('OEBPS/css/book.css');
       expect(srcdoc).toContain('font-weight: 700');
     });
 
-    it('pins the ::highlight() style element in srcdoc, separate from nextpage-reader-overrides', async () => {
+    it('pins the ::highlight() style element in srcdoc, separate from nexo-reader-overrides', async () => {
       render(EpubNativeViewer, {
         filePath: '/test/book.epub',
         bookId: 'test-book',
@@ -242,20 +242,20 @@ describe('EpubNativeViewer', () => {
       // REQ-STYLING / design D4: a dedicated style element carries the
       // ::highlight() rules. The default (yellow) canonical color must
       // render at alpha 0.4.
-      expect(srcdoc).toContain('<style id="nextpage-highlight-styles">');
+      expect(srcdoc).toContain('<style id="nexo-highlight-styles">');
       expect(srcdoc).toContain(
         '::highlight(epub-hl-yellow) { background-color: rgba(250, 204, 21, 0.4); }',
       );
 
-      // The rules must NOT live inside nextpage-reader-overrides:
+      // The rules must NOT live inside nexo-reader-overrides:
       // refreshReaderStyles() rewrites that element's textContent on
       // settings change and would wipe them. Parse the srcdoc to check
       // element-level containment instead of relying on string order.
       const parsed = new DOMParser().parseFromString(srcdoc, 'text/html');
-      const highlightStyle = parsed.getElementById('nextpage-highlight-styles');
+      const highlightStyle = parsed.getElementById('nexo-highlight-styles');
       expect(highlightStyle).toBeTruthy();
       expect(highlightStyle?.textContent ?? '').toContain('::highlight(epub-hl-yellow)');
-      const overrides = parsed.getElementById('nextpage-reader-overrides');
+      const overrides = parsed.getElementById('nexo-reader-overrides');
       expect(overrides?.textContent ?? '').not.toContain('::highlight(');
     });
   });
@@ -463,7 +463,7 @@ describe('EpubNativeViewer', () => {
       // it appends to the doc before serialising, so the inlined JS
       // does not appear in the srcdoc attribute. The scripts run from
       // the iframe's parsed document in production.)
-      expect(srcdoc).toContain('nextpage-reader-overrides');
+      expect(srcdoc).toContain('nexo-reader-overrides');
       expect(srcdoc).toContain('Hello');
     });
 

@@ -20,7 +20,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `nextpage-logs-${new Date().toISOString().slice(0, 10)}.jsonl`;
+      a.download = `nexo-logs-${new Date().toISOString().slice(0, 10)}.jsonl`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {

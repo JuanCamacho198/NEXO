@@ -236,7 +236,7 @@ describe('datasources (offline stubs)', () => {
     }) as typeof fetch;
     const ds = new GutendexDataSource(recording);
     const { books, totalCount } = await ds.search('pride', 1);
-    expect(userAgent).toContain('NextPage/Desktop');
+    expect(userAgent).toContain('Nexo/Desktop');
     expect(totalCount).toBe(3);
     expect(books.map((b) => b.id)).toEqual(['gutendex:1342', 'gutendex:11']);
   });

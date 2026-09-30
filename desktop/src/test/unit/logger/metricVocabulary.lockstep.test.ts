@@ -1,6 +1,6 @@
 /**
  * Metric-vocabulary lockstep test: the TS vocabulary and the Kotlin mirror
- * (`android/app/src/main/java/com/nextpage/debug/MetricVocabulary.kt`) must
+ * (`android/app/src/main/java/com/nexo/debug/MetricVocabulary.kt`) must
  * stay identical. Any drift fails the build, same pattern as the CFI
  * lockstep test.
  */
@@ -11,7 +11,7 @@ import { SHARED_METRIC_VOCABULARY } from '$lib/shared/logger/metricTypes';
 
 const KOTLIN_PATH = resolve(
   process.cwd(),
-  '../android/app/src/main/java/com/nextpage/debug/MetricVocabulary.kt',
+  '../android/app/src/main/java/com/nexo/debug/MetricVocabulary.kt',
 );
 
 describe('metricVocabulary lockstep', () => {

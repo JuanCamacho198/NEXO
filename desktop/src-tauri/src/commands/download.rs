@@ -12,7 +12,7 @@
 //! `fetchAddonResource`, which stays the 64 KiB JSON path):
 //! - `check_https` runs BEFORE any I/O;
 //! - the client is built once (`download_client`) with a bounded redirect
-//!   policy, the NextPage User-Agent, connect/read timeouts and no cookie
+//!   policy, the Nexo User-Agent, connect/read timeouts and no cookie
 //!   persistence (`reqwest` is built without its cookie feature, so cookies
 //!   can neither be stored nor replayed);
 //! - `MAX_DOWNLOAD_BYTES` is enforced twice: pre-stream from `content-length`
@@ -40,7 +40,7 @@ use tauri::Manager;
 
 use crate::filename::{sanitize_extension, sanitize_segment};
 
-pub const DOWNLOAD_USER_AGENT: &str = "NextPage/Desktop (contact: TBD)";
+pub const DOWNLOAD_USER_AGENT: &str = "Nexo/Desktop (contact: TBD)";
 pub const MAX_DOWNLOAD_BYTES: u64 = 67_108_864;
 pub const MAX_REDIRECTS: usize = 5;
 pub const CONNECT_TIMEOUT_S: u64 = 15;
@@ -973,7 +973,7 @@ mod download_tests {
 
     #[test]
     fn mandated_constants_are_pinned() {
-        assert_eq!(DOWNLOAD_USER_AGENT, "NextPage/Desktop (contact: TBD)");
+        assert_eq!(DOWNLOAD_USER_AGENT, "Nexo/Desktop (contact: TBD)");
         assert_eq!(MAX_DOWNLOAD_BYTES, 67_108_864);
         assert_eq!(MAX_REDIRECTS, 5);
         assert_eq!(CONNECT_TIMEOUT_S, 15);
