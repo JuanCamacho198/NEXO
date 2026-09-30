@@ -4,10 +4,10 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   // Static output plus an explicit site: the site URL activates canonical URLs and
   // the hreflang alternates in Layout.astro, which stay conditional until a real
-  // domain is configured. This is the account's default Workers subdomain; point it
-  // at the custom domain when one is attached.
+  // domain is configured. trynexo.app is the production custom domain attached to
+  // the nexo-web Worker, and the homepage registered on the Google OAuth consent screen.
   output: 'static',
-  site: 'https://nexo-web.jcamachomolina503.workers.dev',
+  site: 'https://trynexo.app',
   i18n: {
     defaultLocale: 'es',
     locales: ['es', 'en'],

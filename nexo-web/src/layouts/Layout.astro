@@ -101,6 +101,10 @@ const t = useTranslations(lang);
     <meta property="og:locale" content={lang === 'en' ? 'en_US' : 'es_ES'} />
     {Astro.site && (
       <>
+        <link
+          rel="canonical"
+          href={new URL(lang === 'en' ? canonicalEn : canonicalEs, Astro.site)}
+        />
         <link rel="alternate" hreflang="es" href={new URL(canonicalEs, Astro.site)} />
         <link rel="alternate" hreflang="en" href={new URL(canonicalEn, Astro.site)} />
         <link rel="alternate" hreflang="x-default" href={new URL(canonicalEs, Astro.site)} />
