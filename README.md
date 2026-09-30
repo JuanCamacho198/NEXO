@@ -1,4 +1,4 @@
-# NextPage 📚
+# NEXO 📚
 
 A modern Android ebook reader built with Kotlin and Jetpack Compose.
 
@@ -18,7 +18,7 @@ A modern Android ebook reader built with Kotlin and Jetpack Compose.
 
 ## Overview
 
-NextPage is a local-first ebook reader for Android that supports EPUB and PDF formats with a clean, modern interface built with Jetpack Compose.
+NEXO is a local-first ebook reader for Android that supports EPUB and PDF formats with a clean, modern interface built with Jetpack Compose.
 
 ### Features
 
@@ -46,7 +46,7 @@ NextPage is a local-first ebook reader for Android that supports EPUB and PDF fo
 
 ```
 app/
-├── src/main/java/com/nextpage/
+├── src/main/java/com/nexo/
 │   ├── domain/           # Domain layer (business logic)
 │   │   ├── model/       # Domain models
 │   │   ├── repository/ # Repository interfaces
@@ -79,8 +79,8 @@ app/
 
 ```bash
 # Clone the repository
-git clone https://github.com/JuanCamacho198/NEXTPAGE.git
-cd NEXTPAGE/android
+git clone https://github.com/JuanCamacho198/NEXO.git
+cd NEXO/android
 
 # Build debug APK
 ./gradlew.bat assembleDebug
@@ -122,6 +122,6 @@ Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for detai
 
 ## Links
 
-- [GitHub Repository](https://github.com/JuanCamacho198/NEXTPAGE)
-- [Issue Tracker](https://github.com/JuanCamacho198/NEXTPAGE/issues)
+- [GitHub Repository](https://github.com/JuanCamacho198/NEXO)
+- [Issue Tracker](https://github.com/JuanCamacho198/NEXO/issues)
 - [Changelog](CHANGELOG.md)

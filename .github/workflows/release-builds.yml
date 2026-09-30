@@ -63,9 +63,9 @@
 #   which is what blocked the first 0.3.1 android run — so `sentry { }` in
 #   app/build.gradle.kts gates `autoUploadProguardMapping` on the token itself
 #   and a token-less build takes the plugin's dry run (exit 0) instead.
-#   SENTRY_ORG must be set as well: the extension's fallback slug
-#   (`nextpage-android`) is NOT this project's org, so a token without it would
-#   upload the mapping to the wrong organization.
+#   SENTRY_ORG must be set as well: the org slug is `nexo-app` and the Android
+#   project is `nexo-android` (both must match the Sentry console), so a token
+#   without it would upload the mapping to the wrong organization.
 #   `verifySentryMappingUpload` is NOT invoked here (it would re-introduce the
 #   hard requirement); `verifyReleaseMapping` (mapping.txt exists) always runs.
 # - CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID (optional): web deploy is
@@ -234,7 +234,7 @@ jobs:
           # Bakes the production feed URL into the frontend so the Settings
           # update check (VITE_UPDATE_FEED_URL) runs against this release's
           # own latest.json. Empty = disabled (local/dev behavior unchanged).
-          VITE_UPDATE_FEED_URL: https://github.com/JuanCamacho198/NEXTPAGE/releases/download/${{ github.ref_name }}/latest.json
+          VITE_UPDATE_FEED_URL: https://github.com/JuanCamacho198/NEXO/releases/download/${{ github.ref_name }}/latest.json
           # Production backend + Google client config. tauri-action runs the
           # beforeBuildCommand (`bun run build`) with this env, so Vite inlines
           # all five into the bundle — without them the app cannot reach
@@ -315,7 +315,7 @@ jobs:
         # `digest: "sha256:<hex>"` per released asset — the hash of the bytes
         # the CDN actually serves. Re-hashing local build outputs is NOT an
         # alternative: Tauri rewrites spaces to dots when it names the accepted
-        # bundles, so a local path (`NextPage Desktop_0.3.1_x64-setup.exe`)
+        # bundles, so a local path (`Nexo Desktop_0.3.1_x64-setup.exe`)
         # does not match the released asset name, and the resulting file would
         # name nothing the user has on disk.
         #
@@ -383,8 +383,9 @@ jobs:
       # Read at Gradle config time by the Sentry Gradle plugin. An empty token
       # makes `autoUploadProguardMapping` false (see app/build.gradle.kts), so
       # the plugin dry-runs instead of failing the release — while a set token
-      # uploads for real. SENTRY_ORG is what routes the upload; the extension's
-      # built-in fallback slug is not this project's org.
+      # uploads for real. SENTRY_ORG is what routes the upload; the org slug is
+      # `nexo-app` and the project is `nexo-android`, and both must match the
+      # Sentry console (the extension's built-in fallback slug does not).
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       # Release signing (release 0.4.0 cutover): base64 keystore + passwords
@@ -465,7 +466,7 @@ jobs:
             --no-daemon \
             --build-cache \
             -Dorg.gradle.vfs.watch=false \
-            -PupdateFeedUrl="https://github.com/JuanCamacho198/NEXTPAGE/releases/download/${GITHUB_REF_NAME}/latest-android.json" \
+            -PupdateFeedUrl="https://github.com/JuanCamacho198/NEXO/releases/download/${GITHUB_REF_NAME}/latest-android.json" \
             :app:assembleRelease \
             :app:bundleRelease
 
@@ -524,7 +525,7 @@ jobs:
             --argjson versionCode "${VERSION_CODE}" \
             --arg notes "${NOTES}" \
             --arg pubDate "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --arg url "https://github.com/JuanCamacho198/NEXTPAGE/releases/download/${TAG}/nextpage-${TAG}.apk" \
+            --arg url "https://github.com/JuanCamacho198/NEXO/releases/download/${TAG}/nextpage-${TAG}.apk" \
             --argjson size "$(stat -c%s "${APK_OUT}")" \
             '{version: $version, versionCode: $versionCode, notes: $notes,
               pubDate: $pubDate, channel: "stable",
@@ -637,7 +638,7 @@ jobs:
         # the deploy is additive to the release record (tarball already
         # attached above), so a missing local/fork token must not redden the
         # release. wrangler.jsonc at the repo root carries the Worker name
-        # (`nextpage-addons`) and the assets directory (`./web/dist`).
+        # (`nexo-addons`) and the assets directory (`./web/dist`).
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

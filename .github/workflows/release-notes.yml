@@ -12,13 +12,13 @@
 # release-please has no updater that can maintain it safely — `generic` is annotation-driven
 # and a machine-generated lockfile has nowhere to put a hint, while `toml` re-serialises the
 # whole document and strips its generated header comments. So the manifest stays one release
-# ahead of the lock's entry for `nextpage-desktop`; cargo corrects it on the next build and no
+# ahead of the lock's entry for `nexo-desktop`; cargo corrects it on the next build and no
 # workflow uses `--locked`, so nothing fails. Fixing it properly means moving the desktop
 # package onto the crate itself (release-type: rust, component: desktop, changelog-path) so
 # the lock is updated natively — deferred until that change can get its own validation cycle.
 #
 # Note the crate version is NOT cosmetic: `desktop/src-tauri/src/sentry_init.rs` uses
-# `CARGO_PKG_VERSION` to build the Sentry release string (`nextpage-desktop@{version}+{sha}`).
+# `CARGO_PKG_VERSION` to build the Sentry release string (`nexo-desktop@{version}+{sha}`).
 #
 # Token-gated: `RELEASE_PLEASE_TOKEN` is a Personal Access Token, and it MUST be passed as
 # the `token` INPUT. release-please-action only reads `inputs.token` (whose default is

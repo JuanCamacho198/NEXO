@@ -200,7 +200,7 @@ Decided work package (producer: `release-builds.yml`):
    `E7:30:AE:35:71:9C:3A:45:D4:F9:78:7C:D6:2E:1F:87:42:4D:A2:FC:A8:0E:34:96:25:D9:29:07:D5:6D:53:BB`
    SHA-1 cert fingerprint:
    `3E:0A:F2:0A:D7:01:C0:B8:4A:72:86:3D:16:D0:7D:A4:F3:F5:E9:43`
-   (register the SHA-1 in the Google Cloud "Nextpage Android" OAuth client
+   (register the SHA-1 in the Google Cloud "Nexo Android" OAuth client
    alongside the debug fingerprint). CI secrets: `ANDROID_KEYSTORE_BASE64`,
    `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
    (PKCS12 forces store and key passwords equal — both secrets hold the same
