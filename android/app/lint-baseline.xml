@@ -183,7 +183,7 @@
         errorLine2="             ~~~~~~~~~~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="40"
+            line="41"
             column="14"/>
     </issue>
 
@@ -194,7 +194,7 @@
         errorLine2="                                  ~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="49"
+            line="50"
             column="35"/>
     </issue>
 
@@ -205,7 +205,7 @@
         errorLine2="                                  ~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="53"
+            line="54"
             column="35"/>
     </issue>
 
@@ -216,7 +216,7 @@
         errorLine2="                                  ~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="64"
+            line="65"
             column="35"/>
     </issue>
 
@@ -227,7 +227,7 @@
         errorLine2="                                  ~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="68"
+            line="69"
             column="35"/>
     </issue>
 
@@ -238,7 +238,7 @@
         errorLine2="                                  ~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="77"
+            line="78"
             column="35"/>
     </issue>
 
@@ -249,7 +249,7 @@
         errorLine2="                                  ~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="81"
+            line="82"
             column="35"/>
     </issue>
 
@@ -260,7 +260,7 @@
         errorLine2="                                  ~~~~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="89"
+            line="90"
             column="35"/>
     </issue>
 
@@ -271,7 +271,7 @@
         errorLine2="                                  ~~~~~~~">
         <location
             file="src/main/AndroidManifest.xml"
-            line="92"
+            line="93"
             column="35"/>
     </issue>
 
@@ -282,7 +282,7 @@
         errorLine2="                ^">
         <location
             file="src/main/AndroidManifest.xml"
-            line="106"
+            line="107"
             column="17"/>
     </issue>
 
@@ -315,7 +315,7 @@
         errorLine2="                ^">
         <location
             file="src/main/AndroidManifest.xml"
-            line="47"
+            line="48"
             column="17"/>
     </issue>
 
@@ -326,7 +326,7 @@
         errorLine2="                ^">
         <location
             file="src/main/AndroidManifest.xml"
-            line="51"
+            line="52"
             column="17"/>
     </issue>
 
@@ -337,7 +337,7 @@
         errorLine2="                ^">
         <location
             file="src/main/AndroidManifest.xml"
-            line="62"
+            line="63"
             column="17"/>
     </issue>
 
@@ -348,7 +348,7 @@
         errorLine2="                ^">
         <location
             file="src/main/AndroidManifest.xml"
-            line="66"
+            line="67"
             column="17"/>
     </issue>
 
@@ -359,7 +359,7 @@
         errorLine2="                ^">
         <location
             file="src/main/AndroidManifest.xml"
-            line="75"
+            line="76"
             column="17"/>
     </issue>
 
@@ -370,7 +370,7 @@
         errorLine2="                ^">
         <location
             file="src/main/AndroidManifest.xml"
-            line="79"
+            line="80"
             column="17"/>
     </issue>
 
@@ -381,7 +381,7 @@
         errorLine2="                ^">
         <location
             file="src/main/AndroidManifest.xml"
-            line="87"
+            line="88"
             column="17"/>
     </issue>
 
@@ -392,7 +392,7 @@
         errorLine2="                ^">
         <location
             file="src/main/AndroidManifest.xml"
-            line="90"
+            line="91"
             column="17"/>
     </issue>
 
@@ -591,6 +591,17 @@
         <location
             file="src/main/res/drawable/ic_trash.xml"
             line="2"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="VectorRaster"
+        message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
+        errorLine1="    android:width=&quot;288dp&quot;"
+        errorLine2="                   ~~~~~">
+        <location
+            file="src/main/res/drawable/nexo_splash_mark.xml"
+            line="20"
             column="20"/>
     </issue>
 
@@ -2163,7 +2174,7 @@
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/NexoApplication.kt"
-            line="230"
+            line="231"
             column="17"/>
     </issue>
 
@@ -5392,7 +5403,7 @@
         errorLine2="                ^">
         <location
             file="src/main/java/com/nexo/NexoApplication.kt"
-            line="206"
+            line="207"
             column="17"/>
     </issue>
 

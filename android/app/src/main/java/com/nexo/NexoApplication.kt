@@ -115,14 +115,15 @@ class NexoApplication :
         if (SentryInitGuard.shouldInitialize()) {
             SentryAndroid.init(this) { options ->
                 options.dsn = BuildConfig.SENTRY_DSN.takeIf { it.isNotEmpty() }
-                // Spec C1 — cross-platform release `nextpage-android@<version>+<sha12>`.
-                // `nextpage-android` is the Sentry org/project slug (GitHub secret
-                // SENTRY_ORG + console-side identifier), deliberately NOT the NEXO brand:
-                // it must stay byte-identical or mapping upload fails.
+                // Spec C1 — cross-platform release `<prefix>@<version>+<sha12>`, where
+                // the prefix is BuildConfig.SENTRY_RELEASE_PREFIX (`nexo-android`,
+                // single-sourced from `sentryProject` in app/build.gradle.kts and shared
+                // with the Sentry Gradle plugin's projectName, so the release string
+                // cannot drift from the uploaded project).
                 // GIT_SHA is emitted by `build.gradle.kts` from `git rev-parse --short=12 HEAD`
                 // (or `unknown` fallback) and is identical to the TS web build for the same
                 // commit. See `sdd/sentry-observability-v2/design` data-flow note C.
-                options.release = "nextpage-android@${BuildConfig.VERSION_NAME}+${BuildConfig.GIT_SHA}"
+                options.release = "${BuildConfig.SENTRY_RELEASE_PREFIX}@${BuildConfig.VERSION_NAME}+${BuildConfig.GIT_SHA}"
                 options.environment = if (BuildConfig.DEBUG) "development" else "production"
                 options.tracesSampleRate = TRACES_SAMPLE_RATE
                 // Spec C2 — explicit session tracking (web sets autoSessionTracking=true;

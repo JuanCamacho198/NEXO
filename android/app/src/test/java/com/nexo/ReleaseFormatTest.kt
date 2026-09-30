@@ -7,6 +7,7 @@ import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -16,14 +17,18 @@ import org.junit.Test
 /**
  * PR2 plumbing — Android release string format (spec C1).
  *
- * The release sent to Sentry MUST be `nextpage-android@<VERSION_NAME>+<sha12>`
+ * The release sent to Sentry MUST be `<prefix>@<VERSION_NAME>+<sha12>`
  * (or `+unknown` fallback). Same commit MUST yield the same suffix on every
  * platform — so `git rev-parse --short=12 HEAD` is the single source of
  * truth across the web build (TS), Rust build (build.rs) and Android build
  * (build.gradle.kts).
  *
- * `nextpage-android` is the Sentry org/project slug and is deliberately NOT the
- * NEXO brand: it is asserted verbatim here and cannot be renamed from this repo.
+ * `<prefix>` is `BuildConfig.SENTRY_RELEASE_PREFIX` (`nexo-android`), which
+ * `build.gradle.kts` derives from the single Gradle-level `sentryProject` value
+ * that also supplies the Sentry plugin's `projectName`. This test consumes that
+ * same BuildConfig field instead of a local literal, so it can no longer agree
+ * with a stale copy of the slug: renaming the prefix in one place flows to both
+ * the production release string and these assertions.
  *
  * This test exercises the exact `format!` shape that
  * `NexoApplication.SentryAndroid.init` composes against `BuildConfig`
@@ -61,14 +66,14 @@ class ReleaseFormatTest {
     }
 
     /** Mirrors the composition in `NexoApplication.SentryAndroid.init`. */
-    private fun composedRelease(): String = "nextpage-android@${BuildConfig.VERSION_NAME}+${BuildConfig.GIT_SHA}"
+    private fun composedRelease(): String = "${BuildConfig.SENTRY_RELEASE_PREFIX}@${BuildConfig.VERSION_NAME}+${BuildConfig.GIT_SHA}"
 
     @Test
     fun release_startsWithPlatformAndVersion() {
         val release = composedRelease()
         assertTrue(
-            "release `\$release` must start with `nextpage-android@<version>+`",
-            release.startsWith("nextpage-android@${BuildConfig.VERSION_NAME}+"),
+            "release `\$release` must start with `${BuildConfig.SENTRY_RELEASE_PREFIX}@<version>+`",
+            release.startsWith("${BuildConfig.SENTRY_RELEASE_PREFIX}@${BuildConfig.VERSION_NAME}+"),
         )
     }
 
@@ -104,7 +109,14 @@ class ReleaseFormatTest {
             3,
             parts.size,
         )
-        assertEquals("nextpage-android", parts[0])
+        // The prefix is single-sourced from BuildConfig, so this guards the format
+        // invariant the split relies on (the prefix must not contain `@` or `+`)
+        // instead of a literal snapshot that could go stale.
+        assertFalse(
+            "prefix `${BuildConfig.SENTRY_RELEASE_PREFIX}` must not contain `@` or `+`",
+            BuildConfig.SENTRY_RELEASE_PREFIX.any { it == '@' || it == '+' },
+        )
+        assertEquals(BuildConfig.SENTRY_RELEASE_PREFIX, parts[0])
         assertEquals(BuildConfig.VERSION_NAME, parts[1])
         assertNotNull(parts[2])
     }

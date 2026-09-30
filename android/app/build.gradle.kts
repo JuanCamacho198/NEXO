@@ -99,6 +99,15 @@ val releaseMinifyEnabled =
 
 fun String.escapeForBuildConfig(): String = replace("\\", "\\\\").replace("\"", "\\\"")
 
+// Single source of truth for the Android Sentry identity. The organisation is the
+// console-side `nexo-app` slug and the project is `nexo-android`; neither can be
+// renamed from this repository. `sentryProject` feeds both `sentry.projectName` and
+// the `BuildConfig.SENTRY_RELEASE_PREFIX` that composes the cross-platform release
+// `nexo-android@<VERSION_NAME>+<sha12>` (consumed by NexoApplication and
+// ReleaseFormatTest), so the slug is written once and cannot drift between the
+// plugin's uploaded project and the runtime release string.
+val sentryProject = "nexo-android"
+
 // Release signing (app-auto-update signing cutover, release 0.4.0). The release
 // keystore never lives in the repo: the release workflow exports it as base64
 // (ANDROID_KEYSTORE_BASE64 + ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS /
@@ -183,9 +192,15 @@ android {
         val sentryDsn = (localProperties.getProperty("SENTRY_DSN") ?: "").escapeForBuildConfig()
         buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
 
+        // Release prefix for the cross-platform Sentry release scheme, single-sourced
+        // from the Gradle-level `sentryProject` above so the runtime string and the
+        // plugin's uploaded project cannot drift. Consumers: NexoApplication (release
+        // composition) and ReleaseFormatTest.
+        buildConfigField("String", "SENTRY_RELEASE_PREFIX", "\"$sentryProject\"")
+
         // Git SHA (short=12) — injected at build time so every APK has a unique
         // fingerprint and matches the cross-platform release scheme from spec C1
-        // (`nextpage-android@<VERSION_NAME>+<sha12>`). Truncated to 12 chars if a
+        // (`<SENTRY_RELEASE_PREFIX>@<VERSION_NAME>+<sha12>`). Truncated to 12 chars if a
         // shallow clone returns a shorter SHA; falls back to `unknown` on git
         // failure so debug builds never block.
         val gitSha =
@@ -363,14 +378,16 @@ listOf("main", "release").forEach { sourceSetName ->
 // Sentry Android Gradle Plugin extension. Out-of-android block per plugin docs.
 // - autoInstallation: enabled → plugin auto-adds the Sentry Android SDK + a
 //   Sentry OkHttp interceptor to the application.
-// - org/projectName: bound to the Sentry project `nextpage-android` under the
-//   organization slug the user creates in sentry.io before Phase 3.
-//   `nextpage-android` is a Sentry organisation/project slug that intentionally
-//   does NOT match the NEXO brand: it is a GitHub secret (`SENTRY_ORG`) plus a
-//   console-side identifier, and neither can be renamed from this repository.
-//   The value must stay byte-identical to the secret or mapping upload fails.
-//   The release name it composes (`nextpage-android@<version>+<sha12>`) is
-//   asserted by ReleaseFormatTest, so it is deliberately left as-is.
+// - org: the console-side Sentry organisation slug, `nexo-app`. It is also a
+//   deployed GitHub secret (`SENTRY_ORG`), so the environment is read first and
+//   the literal is only the local/fallback value; either way it must stay
+//   byte-identical to the console slug or mapping upload fails.
+// - projectName: the Sentry project slug `nexo-android`, read from the
+//   Gradle-level `sentryProject` above. Like the org it is a console-side
+//   identifier that keeps its `nexo-` prefix and cannot be renamed from this
+//   repository; single-sourcing it also feeds `BuildConfig.SENTRY_RELEASE_PREFIX`,
+//   so the uploaded project and the runtime release string (`nexo-android@...`)
+//   cannot diverge.
 // - authToken: read ONLY from env vars. The auth token is NEVER committed;
 //   users set SENTRY_AUTH_TOKEN locally (or in CI secrets). When unset,
 //   release builds will fail `verifySentryMappingUpload` (see below) — this
@@ -384,8 +401,8 @@ sentry {
         enabled.set(true)
     }
     val sentryAuthToken = System.getenv("SENTRY_AUTH_TOKEN") ?: ""
-    org.set(System.getenv("SENTRY_ORG") ?: "nextpage-android")
-    projectName.set("nextpage-android")
+    org.set(System.getenv("SENTRY_ORG") ?: "nexo-app")
+    projectName.set(sentryProject)
     authToken.set(sentryAuthToken)
     // SAGP has NO skip-on-missing-token path: with an empty token the upload
     // task still runs, the extracted sentry-cli rejects the call and the

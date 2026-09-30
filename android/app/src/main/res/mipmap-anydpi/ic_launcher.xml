@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Adaptive launcher icon. minSdk is 26, so every supported device renders
-     this (the legacy mipmap-*/ic_launcher.png files stay only as a fallback).
+<!-- Adaptive launcher icon. Placed in `mipmap-anydpi` rather than the historical
+     `mipmap-anydpi-v26`: minSdk is 26, so the `-v26` qualifier is dead weight
+     (lint ObsoleteSdkInt) and `anydpi` already outranks every density bucket, so
+     all supported devices resolve this file. The legacy mipmap-*/ic_launcher.png
+     files are therefore shadowed and unreachable at minSdk 26.
 
      - background: brand navy @color/ic_launcher_background (#0D1D3B).
      - foreground: the NEXO mark (bookmark ribbon with the "N" knocked out), no
