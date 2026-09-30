@@ -69,8 +69,8 @@ class UpdateFeedServiceTest {
 
             assertTrue(result is UpdateFeedFetch.Found)
             val found = result as UpdateFeedFetch.Found
-            assertEquals("0.3.1", found.version)
-            assertEquals(301, found.versionCode)
+            assertEquals("0.3.2", found.version)
+            assertEquals(302, found.versionCode)
         }
 
     @Test

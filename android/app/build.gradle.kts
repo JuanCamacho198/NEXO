@@ -116,11 +116,11 @@ android {
         applicationId = "com.nexo"
         minSdk = 26
         targetSdk = 36
-        val appVersionName = "0.3.1" // x-release-please-version
+        val appVersionName = "0.3.2" // x-release-please-version
         versionName = appVersionName
         // versionCode is derived from versionName so a release never has to bump it by
         // hand (and can never forget to): major*10000 + minor*100 + patch stays monotonic
-        // across every normal bump (0.2.0 -> 200, 0.3.0 -> 300, 0.3.1 -> 301, 1.0.0 -> 10000).
+        // across every normal bump (each patch adds 1, each minor adds 100).
         versionCode =
             appVersionName.split('.').let { (major, minor, patch) ->
                 major.toInt() * 10_000 + minor.toInt() * 100 + patch.toInt()
@@ -389,7 +389,7 @@ sentry {
     authToken.set(sentryAuthToken)
     // SAGP has NO skip-on-missing-token path: with an empty token the upload
     // task still runs, the extracted sentry-cli rejects the call and the
-    // release build fails (observed in the 0.3.1 release run). The only
+    // release build fails (observed in a past release run). The only
     // supported knob is the upload switch itself, so gate it on the token:
     // CI (token present) uploads exactly as before; any token-less build
     // takes the plugin's dry-run path and exits 0.

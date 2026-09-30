@@ -56,11 +56,11 @@ const availableOf = (state: UpdateCheckState | null) => {
 };
 
 describe('desktop feed parsing against the mock fixture', () => {
-  it('parses the real mock fixture and finds the 0.3.1 candidate', () => {
+  it('parses the real mock fixture and finds the 0.3.2 candidate', () => {
     const parsed = parseDesktopFeed(fixture);
     expect(parsed.kind).toBe('feed');
     if (parsed.kind !== 'feed') return;
-    expect(parsed.feed.version).toBe('0.3.1');
+    expect(parsed.feed.version).toBe('0.3.2');
     expect(parsed.feed.notes.length).toBeGreaterThan(0);
     expect(parsed.feed.pubDate.length).toBeGreaterThan(0);
     expect(Object.keys(parsed.feed.platforms).length).toBeGreaterThan(0);
@@ -97,7 +97,7 @@ describe('desktop check state mapping', () => {
   it('reports available for the newer mock feed', async () => {
     const state = await checkForUpdates(baseDeps(), { manual: true });
     const available = availableOf(state);
-    expect(available.feedVersion).toBe('0.3.1');
+    expect(available.feedVersion).toBe('0.3.2');
     expect(available.installedVersion).toBe('0.3.0');
     expect(available.notes.length).toBeGreaterThan(0);
   });
@@ -150,7 +150,7 @@ describe('desktop check state mapping', () => {
 
   it('manual checks bypass remind-later suppression, startup honors it', async () => {
     const storage = createMemoryStorage();
-    recordRemindLater(storage, '0.3.1', 1_000_000);
+    recordRemindLater(storage, '0.3.2', 1_000_000);
     const deps = () => baseDeps({ storage });
 
     const manual = await checkForUpdates(deps(), { manual: true });
@@ -188,7 +188,7 @@ describe('desktop mock-feed fetch over MSW', () => {
     const state = await checkForUpdates(baseDeps({ fetchFeed: (url) => defaultFetchFeed(url) }), {
       manual: true,
     });
-    expect(availableOf(state).feedVersion).toBe('0.3.1');
+    expect(availableOf(state).feedVersion).toBe('0.3.2');
   });
 
   it('maps a schema-invalid body to malformed', async () => {
