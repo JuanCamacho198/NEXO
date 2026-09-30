@@ -26,7 +26,7 @@
  * section falls back to the plain GitHub releases link.
  */
 
-const RELEASES_API = 'https://api.github.com/repos/JuanCamacho198/NEXTPAGE/releases?per_page=100';
+const RELEASES_API = 'https://api.github.com/repos/JuanCamacho198/NEXO/releases?per_page=100';
 
 /** Anonymous callers get 60 requests per hour; a token raises it to 5000. */
 const REQUEST_TIMEOUT_MS = 8000;
