@@ -69,7 +69,8 @@ export const en = {
   'faq.q3': 'What happens to my highlights and notes?',
   'faq.a3': 'They are saved with the book and appear on any device where you sign in.',
   'faq.q4': 'Who can see my library?',
-  'faq.a4': 'Only you. Your data is encrypted and never shared with third parties.',
+  'faq.a4':
+    'Only you. Your data is encrypted and is not shared with third parties beyond the services the app needs to work.',
 
   // Call to action
   'cta.heading': 'Your library. Everywhere.',

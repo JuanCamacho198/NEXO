@@ -68,7 +68,8 @@ export const es = {
   'faq.q3': '¿Qué pasa con mis resaltados y notas?',
   'faq.a3': 'Se guardan junto al libro y aparecen en cualquier dispositivo donde inicies sesión.',
   'faq.q4': '¿Quién puede ver mi biblioteca?',
-  'faq.a4': 'Solo tú. Tus datos están cifrados y nunca se comparten con terceros.',
+  'faq.a4':
+    'Solo tú. Tus datos están cifrados y no se comparten con terceros fuera de los servicios que la app necesita para funcionar.',
 
   // Call to action
   'cta.heading': 'Tu biblioteca. En todas partes.',

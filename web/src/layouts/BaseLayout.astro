@@ -24,7 +24,12 @@ const {
   alternateEs,
   alternateEn,
   ogType = 'website',
-  ogImage = '/og-default.svg',
+  // Raster on purpose. Social scrapers (WhatsApp, X, LinkedIn, Discord, Slack)
+  // do not render SVG for link previews, so pointing og:image at the SVG files
+  // this project started with meant sharing a link produced no preview image at
+  // all. `og-default.svg` stays as the editable source; `og-default.png` is the
+  // 1200x630 render that is actually served.
+  ogImage = '/og-default.png',
   jsonLd,
   noindex = false,
 } = Astro.props;

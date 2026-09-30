@@ -189,9 +189,9 @@ install guidance, relaunch confirmation, error states.
 
 ## 6. Signing and publishing (DECIDED 2026-09-28 — release 0.3.2 cutover)
 
-Key material lives OUTSIDE the repo in `~/.nextpage-keys/` (README.txt there
+Key material lives OUTSIDE the repo in `~/.nexo-keys/` (README.txt there
 holds fingerprints + dates only, never secrets). Repo root `.gitignore` bans
-`*.key`, `*.jks`, `*.keystore`, `.nextpage-keys/` belt-and-braces.
+`*.key`, `*.jks`, `*.keystore`, `.nexo-keys/` belt-and-braces.
 
 Reference: `.github/workflows/release-builds.yml` — desktop builds are
 updater-signed via `TAURI_SIGNING_PRIVATE_KEY`, Android release builds use
@@ -201,7 +201,7 @@ Decided work package (producer: `release-builds.yml`):
 
 1. Android release key. RSA-4096 keystore, alias `nextpage-release`, created
    2026-09-28, valid 2026-09-28 → 2056-09-20. This is the FIRST release key —
-   keep the `~/.nextpage-keys/` backup forever; a future rotation keeps this
+   keep the `~/.nexo-keys/` backup forever; a future rotation keeps this
    key alongside the new one.
    SHA-256 cert fingerprint:
    `E7:30:AE:35:71:9C:3A:45:D4:F9:78:7C:D6:2E:1F:87:42:4D:A2:FC:A8:0E:34:96:25:D9:29:07:D5:6D:53:BB`
