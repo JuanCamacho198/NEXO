@@ -147,7 +147,7 @@ class AddonManifestV2ConsentTest {
             val page = provider.search("anything", 1)
             assertEquals(0, page.results.size)
             assertEquals(0, page.totalCount)
-            assertNull(page.nextPage)
+            assertNull(page.nexoPage)
             assertEquals(0, transport.urls.size)
         }
 

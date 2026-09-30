@@ -88,7 +88,7 @@ describe('AddonCatalogProvider payload flow', () => {
       subjects: ['sci-fi'],
     });
     expect(page.totalCount).toBe(1);
-    expect(page.nextPage).toBeNull();
+    expect(page.nexoPage).toBeNull();
   });
 
   it('clamps results to the shared page size and computes nextPage from totalCount', async () => {
@@ -100,7 +100,7 @@ describe('AddonCatalogProvider payload flow', () => {
     const page = await provider.search('x', 1);
     expect(page.results).toHaveLength(32);
     expect(page.totalCount).toBe(100);
-    expect(page.nextPage).toBe(2);
+    expect(page.nexoPage).toBe(2);
   });
 
   it('order test (addon-provider R2.1): built-in results come first, then addons A, B, C in install order', async () => {
@@ -230,7 +230,7 @@ describe('AddonCatalogProvider payload flow', () => {
     const provider = new AddonCatalogProvider(bare, ADDON_ID, transport);
     await expect(provider.search('q', 1)).resolves.toEqual({
       results: [],
-      nextPage: null,
+      nexoPage: null,
       totalCount: 0,
     });
     await expect(provider.getDetails(`addon:${ADDON_ID}:x`)).rejects.toMatchObject({

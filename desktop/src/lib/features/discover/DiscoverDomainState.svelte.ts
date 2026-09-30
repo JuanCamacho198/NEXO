@@ -126,7 +126,7 @@ class DiscoverDomainState {
       const page = await this.provider.search(this.query, 1);
       this.books = page.results;
       this.totalCount = page.totalCount;
-      this.nextPage = page.nextPage;
+      this.nextPage = page.nexoPage;
       this.activePage = 1;
       this.status = page.results.length === 0 ? 'empty' : 'loaded';
     } catch (err) {
@@ -153,7 +153,7 @@ class DiscoverDomainState {
         }
       }
       this.totalCount = result.totalCount;
-      this.nextPage = result.nextPage;
+      this.nextPage = result.nexoPage;
       this.activePage = page;
       this.errorCode = null;
       this.status = 'loaded';

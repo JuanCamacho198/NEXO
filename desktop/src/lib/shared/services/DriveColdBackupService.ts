@@ -4,8 +4,8 @@
  * keeps 403 parents fix, drive.file scope). Export/import are Settings-only;
  * hot save/open never touches Drive.
  *
- * Cold backup file: `books/{userId}/nextpage_cold_backup.json`
- * (physical `nextpage_cold_backup.json` inside `NextPage/Books`). JSON carries
+ * Cold backup file: `books/{userId}/nexo_cold_backup.json`
+ * (physical `nexo_cold_backup.json` inside `Nexo/Books`). JSON carries
  * metadata for FK-order restore; bins are Drive book files already in Books folder.
  *
  * Import is FK-ordered `books→progress→highlights→bookmarks→sessions`
@@ -79,7 +79,7 @@ export interface ImportResult {
 }
 
 const CHUNK_SIZE = 100;
-const COLD_BACKUP_FILE = 'nextpage_cold_backup.json';
+const COLD_BACKUP_FILE = 'nexo_cold_backup.json';
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];

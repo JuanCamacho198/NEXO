@@ -71,7 +71,7 @@ class PreferencesSessionStore(
     }
 
     private companion object {
-        const val PREFS_NAME = "nextpage_auth_session"
+        const val PREFS_NAME = "nexo_auth_session"
         const val KEY_USER_ID = "user_id"
         const val KEY_EMAIL = "email"
         const val KEY_DISPLAY_NAME = "display_name"

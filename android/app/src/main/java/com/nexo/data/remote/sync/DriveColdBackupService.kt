@@ -28,8 +28,8 @@ import java.util.TimeZone
  * PATCH without parents keeps 403 parents fix). Export/import are Settings-only;
  * hot save/open never touches Drive.
  *
- * Cold backup file lives as `books/{userId}/nextpage_cold_backup.json`
- * (physical `nextpage_cold_backup.json` inside `NextPage/Books`). JSON+bin shape
+ * Cold backup file lives as `books/{userId}/nexo_cold_backup.json`
+ * (physical `nexo_cold_backup.json` inside `Nexo/Books`). JSON+bin shape
  * mirrors desktop parity; bins are book files already in Drive — JSON carries
  * metadata for FK-order restore.
  *
@@ -49,9 +49,9 @@ class DriveColdBackupService(
     private val gson: Gson = Gson(),
 ) {
     companion object {
-        // Drive-level filename shared with desktop: deliberately NOT rebranded, so existing
-        // Drive backups remain findable.
-        const val COLD_BACKUP_FILE = "nextpage_cold_backup.json"
+        // Drive-level filename shared with desktop (renamed under the total migration;
+        // the Supabase `books/{userId}/` path below reuses the same filename).
+        const val COLD_BACKUP_FILE = "nexo_cold_backup.json"
         const val CHUNK_SIZE = 100
 
         fun coldBackupPath(userId: String) = "books/$userId/$COLD_BACKUP_FILE"

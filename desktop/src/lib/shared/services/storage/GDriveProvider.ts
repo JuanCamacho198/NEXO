@@ -18,7 +18,7 @@ export type DriveError = Error & { code?: SyncErrorCode; retryable?: boolean };
  * Module-level folder-resolution cache shared across ALL GDriveProvider
  * instances (SyncService.gdrive and GoogleDriveStateSync.gdrive are separate
  * instances). Without it, concurrent sync paths (syncBooks + syncState in
- * Promise.all) race to create duplicate NextPage/Books trees on first run.
+ * Promise.all) race to create duplicate Nexo/Books trees on first run.
  */
 let folderIds: string | null = null;
 let folderIdsPromise: Promise<string> | null = null;
@@ -93,7 +93,7 @@ export class GDriveProvider implements StorageProvider {
   private async getOrCreateFolder(accessToken: string): Promise<string> {
     // Module-level memoization: the first caller resolves the folder tree,
     // concurrent callers await the SAME promise instead of racing to create
-    // duplicate NextPage/Books folders (DRIVE_DUP_FOLDERS).
+    // duplicate Nexo/Books folders (DRIVE_DUP_FOLDERS).
     if (folderIds !== null) return folderIds;
     if (folderIdsPromise === null) {
       folderIdsPromise = this.resolveFolderIds(accessToken);
@@ -103,8 +103,8 @@ export class GDriveProvider implements StorageProvider {
 
   private async resolveFolderIds(accessToken: string): Promise<string> {
     const root =
-      (await this.findFolder(accessToken, 'NextPage')) ??
-      (await this.createFolder(accessToken, 'NextPage'));
+      (await this.findFolder(accessToken, 'Nexo')) ??
+      (await this.createFolder(accessToken, 'Nexo'));
     const books = await this.findFolder(accessToken, 'Books', root);
     if (books) {
       folderIds = books;
@@ -156,7 +156,7 @@ export class GDriveProvider implements StorageProvider {
   }
 
   /**
-   * Upload a file to `NextPage/Books`, idempotently (DRP-3): find an existing
+   * Upload a file to `Nexo/Books`, idempotently (DRP-3): find an existing
    * non-trashed file by canonical name and PATCH-update it (Android
    * findFileByName → files().update parity); otherwise POST-create. Never
    * creates a second Drive file for the same canonical name. Returns the real
@@ -244,7 +244,7 @@ export class GDriveProvider implements StorageProvider {
 
   /**
    * Trash a Drive book (NOT permanent delete, REQ-11): resolve the file ID
-   * when `remotePath` is not ID-shaped (search by name inside `NextPage/Books`,
+   * when `remotePath` is not ID-shaped (search by name inside `Nexo/Books`,
    * same heuristic as `download`), then `PATCH /files/{fileId}` with
    * `{ trashed: true }` (files.update). Idempotent: a missing file is a no-op.
    * Trashed files stop appearing in `list()` (its query filters
@@ -255,7 +255,7 @@ export class GDriveProvider implements StorageProvider {
 
     let fileId = remotePath;
     if (!remotePath.match(/^[a-zA-Z0-9_-]{25,}$/)) {
-      // Name-shaped path: resolve the ID inside NextPage/Books (upload parity).
+      // Name-shaped path: resolve the ID inside Nexo/Books (upload parity).
       const folderId = await this.getOrCreateFolder(accessToken);
       const query = encodeURIComponent(
         `name = '${remotePath}' and '${folderId}' in parents and trashed = false`,

@@ -45,7 +45,7 @@ fun HighlightsHeaderSection(
     val isSynced = syncState is HighlightsSyncState.Synced
 
     NexoHeader(
-        title = stringResource(R.string.home_nextpage_title),
+        title = stringResource(R.string.home_nexo_title),
         avatarImageUrl = authSession?.photoUrl,
         avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP",
         onAvatarClick = onOpenAccount,

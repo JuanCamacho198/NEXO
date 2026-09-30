@@ -33,7 +33,7 @@ describe('SHA-256 computation — hex output', () => {
   });
 
   it('produces 64-character hex after prefix', async () => {
-    const hash = await computeSha256('Test content for nextpage');
+    const hash = await computeSha256('Test content for nexo');
     const hexPart = hash.replace('sha256:', '');
     expect(hexPart).toHaveLength(64);
     expect(hexPart).toMatch(/^[0-9a-f]+$/);

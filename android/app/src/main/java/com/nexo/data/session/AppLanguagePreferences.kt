@@ -17,7 +17,7 @@ class AppLanguagePreferences(
     }
 
     companion object {
-        private const val PREFS_NAME = "nextpage_app_language"
+        private const val PREFS_NAME = "nexo_app_language"
         private const val KEY_LANG = "app_language_code"
     }
 }

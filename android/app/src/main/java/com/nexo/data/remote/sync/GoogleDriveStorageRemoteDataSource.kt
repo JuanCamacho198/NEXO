@@ -19,7 +19,7 @@ import java.io.ByteArrayOutputStream
  * Implements [StorageSyncRemoteDataSource] using Google Drive REST API v3,
  * unifying Android on the **desktop protocol**.
  *
- * Files live in the shared `NextPage/Books` protocol folder and are named
+ * Files live in the shared `Nexo/Books` protocol folder and are named
  * `{bookId}.{ext}` (no per-user subfolders). Lookup is by
  * `name='{bookId}.{ext}' and trashed=false`. Uses the `drive.file` scope.
  *
@@ -118,7 +118,7 @@ class GoogleDriveStorageRemoteDataSource(
             runCatching {
                 val folder = booksFolderIdOrNull() ?: return@runCatching emptyList()
 
-                // Every file in the shared NextPage/Books folder belongs to this
+                // Every file in the shared Nexo/Books folder belongs to this
                 // Drive account, so map physical names back under the caller's prefix.
                 val userId = prefix.trim('/').substringAfter("books/").substringBefore('/')
 
@@ -168,11 +168,11 @@ class GoogleDriveStorageRemoteDataSource(
     ): String = "books/$userId/$physicalName".replace("//", "/")
 
     /**
-     * Finds the shared `NextPage/Books` folder id, creating it if missing.
+     * Finds the shared `Nexo/Books` folder id, creating it if missing.
      *
      * Memoized at companion level so concurrent callers (e.g. push of several
      * books in parallel, or push + state sync racing on first run) resolve the
-     * SAME folder instead of creating duplicate NextPage/Books trees
+     * SAME folder instead of creating duplicate Nexo/Books trees
      * (DRIVE_DUP_FOLDERS, desktop parity).
      */
     private suspend fun ensureBooksFolder(): String {
@@ -197,7 +197,7 @@ class GoogleDriveStorageRemoteDataSource(
     }
 
     /**
-     * Locates the `NextPage` root folder (or its `Books` subfolder) by name.
+     * Locates the `Nexo` root folder (or its `Books` subfolder) by name.
      */
     private fun findFolder(
         name: String,
@@ -220,7 +220,7 @@ class GoogleDriveStorageRemoteDataSource(
     }
 
     private fun createBooksFolder(): String {
-        // Create NextPage root if missing
+        // Create Nexo root if missing
         val nexoId =
             findFolder(DriveCatalogContract.BOOKS_PATH.substringBefore('/'))
                 ?: driveService
@@ -311,7 +311,7 @@ class GoogleDriveStorageRemoteDataSource(
         /**
          * Module-level (companion) folder cache shared across ALL data-source
          * instances. Without it, concurrent sync paths race to create duplicate
-         * NextPage/Books trees on first run.
+         * Nexo/Books trees on first run.
          */
         private var booksFolderId: String? = null
         private var booksFolderDeferred: Deferred<String>? = null

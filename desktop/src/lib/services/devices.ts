@@ -33,7 +33,7 @@ export interface DeviceInfo {
 
 // --- Helpers ---
 export function getHardwareId(): string {
-  const key = 'nextpage-hardware-id';
+  const key = 'nexo-hardware-id';
   let id = localStorage.getItem(key);
   if (!id) {
     id = crypto.randomUUID();

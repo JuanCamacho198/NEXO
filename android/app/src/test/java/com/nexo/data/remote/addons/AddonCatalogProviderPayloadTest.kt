@@ -84,7 +84,7 @@ class AddonCatalogProviderPayloadTest {
             assertEquals(listOf("Herbert"), page.results[0].authors)
             assertEquals(null, page.results[0].coverUrl)
             assertEquals(1, page.totalCount)
-            assertNull(page.nextPage)
+            assertNull(page.nexoPage)
         }
 
     @Test
@@ -98,7 +98,7 @@ class AddonCatalogProviderPayloadTest {
             val page = provider.search("x", 1)
             assertEquals(MAX_PAGE_SIZE, page.results.size)
             assertEquals(100, page.totalCount)
-            assertEquals(2, page.nextPage)
+            assertEquals(2, page.nexoPage)
         }
 
     @Test
@@ -247,7 +247,7 @@ class AddonCatalogProviderPayloadTest {
             val page = provider.search("q", 1)
             assertEquals(0, page.results.size)
             assertEquals(0, page.totalCount)
-            assertNull(page.nextPage)
+            assertNull(page.nexoPage)
             try {
                 provider.getDetails("addon:$ADDON_ID:x")
                 fail("expected NOT_FOUND")

@@ -400,7 +400,7 @@ class AddonRegistryTest {
             assertEquals("My Addon", sources[0].name)
             val page = provider.search("anything", 1)
             assertEquals(0, page.results.size)
-            assertEquals(null, page.nextPage)
+            assertEquals(null, page.nexoPage)
             assertEquals(0, page.totalCount)
             try {
                 provider.getDetails("addon:$addonId:some-book")

@@ -36,6 +36,6 @@ class CompositeAllFailTest {
             val page = catalog.search("alice", 1)
             assertEquals(0, page.results.size)
             assertEquals(0, page.totalCount)
-            assertNull(page.nextPage)
+            assertNull(page.nexoPage)
         }
 }

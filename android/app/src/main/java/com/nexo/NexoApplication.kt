@@ -56,7 +56,7 @@ class NexoApplication :
     Configuration.Provider {
     companion object {
         private const val TAG = "NexoApplication"
-        const val PREFS_NAME = "nextpage_debug_crash"
+        const val PREFS_NAME = "nexo_debug_crash"
         const val KEY_LAST_CRASH = "last_crash"
 
         /** A1 - cold start origin: first line of Application.onCreate. */

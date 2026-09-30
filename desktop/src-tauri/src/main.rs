@@ -50,9 +50,9 @@ mod deep_link_tests {
     use super::*;
 
     #[test]
-    fn extract_install_url_finds_first_nextpage_arg() {
+    fn extract_install_url_finds_first_legacy_arg() {
         let argv = vec![
-            "nextpage-desktop.exe".to_string(),
+            "nexo-desktop.exe".to_string(),
             "nextpage://install?url=https://example.com/manifest.json".to_string(),
         ];
         assert_eq!(

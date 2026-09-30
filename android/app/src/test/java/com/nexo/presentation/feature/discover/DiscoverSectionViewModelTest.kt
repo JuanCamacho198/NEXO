@@ -89,10 +89,10 @@ class DiscoverSectionViewModelTest {
                     firstPage =
                         PagedResult(
                             listOf(book("gutendex:1", "One"), book("gutendex:2", "Two")),
-                            nextPage = 2,
+                            nexoPage = 2,
                             totalCount = 3,
                         ),
-                    secondPage = PagedResult(listOf(book("gutendex:3", "Three")), nextPage = null, totalCount = 3),
+                    secondPage = PagedResult(listOf(book("gutendex:3", "Three")), nexoPage = null, totalCount = 3),
                 )
             val vm =
                 DiscoverSectionViewModel(

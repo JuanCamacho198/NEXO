@@ -234,7 +234,7 @@ describe('search/getDetails stay ungated (regression)', () => {
 
     // No provider owns this addon source: empty page, never a crash, no I/O.
     const page = await composite.searchSource('addon:0000000000000000' as CatalogSource, 'dune', 1);
-    expect(page).toEqual({ results: [], nextPage: null, totalCount: 0 });
+    expect(page).toEqual({ results: [], nexoPage: null, totalCount: 0 });
     expect(transport.calls).toHaveLength(0);
   });
 

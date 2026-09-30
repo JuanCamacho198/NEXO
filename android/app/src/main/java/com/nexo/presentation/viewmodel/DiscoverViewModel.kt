@@ -577,7 +577,7 @@ class DiscoverViewModel(
                                 status = DiscoverStatus.LOADED,
                                 books = merged,
                                 totalCount = result.totalCount,
-                                nextPage = result.nextPage,
+                                nextPage = result.nexoPage,
                                 activePage = page,
                             )
                         } else {
@@ -590,7 +590,7 @@ class DiscoverViewModel(
                                     },
                                 books = result.results,
                                 totalCount = result.totalCount,
-                                nextPage = result.nextPage,
+                                nextPage = result.nexoPage,
                                 activePage = page,
                             )
                         }

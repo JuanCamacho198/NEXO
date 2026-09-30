@@ -24,7 +24,7 @@ describe('i18n', () => {
 
     expect(locale).toBe('es');
     expect(mockUpsert).toHaveBeenCalledWith('es');
-    expect(globalThis.localStorage?.getItem('nextpage.ui.locale')).toBe('es');
+    expect(globalThis.localStorage?.getItem('nexo.ui.locale')).toBe('es');
   });
 
   it('falls back to en for unsupported persisted locale', async () => {
@@ -36,7 +36,7 @@ describe('i18n', () => {
 
     expect(locale).toBe('en');
     expect(upsertLocaleSetting).toHaveBeenCalledWith('en');
-    expect(globalThis.localStorage?.getItem('nextpage.ui.locale')).toBe('en');
+    expect(globalThis.localStorage?.getItem('nexo.ui.locale')).toBe('en');
   });
 
   // All MessageKey entries are required in both locales (Record<MessageKey, string>),

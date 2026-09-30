@@ -98,7 +98,7 @@ class MapOpenLibraryAnyDocTest {
                   "downloadUrl": null
                 }
               ],
-              "nextPage": null,
+              "nexoPage": null,
               "totalCount": 1
             }
             """.trimIndent()

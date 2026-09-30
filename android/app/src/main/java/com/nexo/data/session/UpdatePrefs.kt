@@ -37,7 +37,7 @@ class UpdatePrefs(
     }
 
     companion object {
-        private const val PREFS_NAME = "nextpage_update_prefs"
+        private const val PREFS_NAME = "nexo_update_prefs"
         private const val KEY_DISMISSED_VERSION = "dismissed_version"
         private const val KEY_DISMISSED_AT = "dismissed_at_epoch_ms"
 

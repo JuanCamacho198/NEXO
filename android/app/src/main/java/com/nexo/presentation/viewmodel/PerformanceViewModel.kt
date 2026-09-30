@@ -202,7 +202,7 @@ class PerformanceViewModel(
         runCatching {
             val state = _uiState.value
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val outFile = File(appContext.cacheDir, "nextpage_performance_$timestamp.zip")
+            val outFile = File(appContext.cacheDir, "nexo_performance_$timestamp.zip")
             ZipOutputStream(outFile.outputStream().buffered()).use { zos ->
                 fun entry(
                     name: String,

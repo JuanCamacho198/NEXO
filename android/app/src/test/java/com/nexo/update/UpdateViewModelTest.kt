@@ -150,7 +150,7 @@ class UpdateViewModelTest {
     fun updateNow_unmetered_enqueuesDownload() =
         runTest(StandardTestDispatcher()) {
             val dispatcher = StandardTestDispatcher(testScheduler)
-            every { downloader.fileNameFor(any(), any()) } returns "nextpage-update-v0.4.0.apk"
+            every { downloader.fileNameFor(any(), any()) } returns "nexo-update-v0.4.0.apk"
             every { downloader.enqueue(any(), any()) } returns 42L
             val vm = viewModel(foundFetch(), dispatcher = dispatcher)
 

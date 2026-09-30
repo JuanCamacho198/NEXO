@@ -84,7 +84,7 @@ describe('DriveColdBackupService — cold export/import', () => {
     await DriveColdBackupService.exportColdBackup('u1');
     expect(mockUpload).toHaveBeenCalled();
     const [id, bytes] = mockUpload.mock.calls[0];
-    expect(id).toBe('nextpage_cold_backup.json');
+    expect(id).toBe('nexo_cold_backup.json');
     const json = JSON.parse(new TextDecoder().decode(bytes as Uint8Array));
     expect(json.version).toBe(1);
     expect(Array.isArray(json.books)).toBe(true);

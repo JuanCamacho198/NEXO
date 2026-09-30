@@ -91,7 +91,7 @@ data class CatalogBook(
 data class PagedResult(
     val results: List<CatalogBook>,
     /** Next 1-based page, or null when the last page was reached. */
-    val nextPage: Int?,
+    val nexoPage: Int?,
     val totalCount: Int,
 )
 

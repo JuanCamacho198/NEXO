@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 
-const STORAGE_KEY = 'nextpage-theme';
+const STORAGE_KEY = 'nexo-theme';
 
 type Theme = 'dark' | 'light';
 

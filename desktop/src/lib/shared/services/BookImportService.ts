@@ -78,7 +78,7 @@ export async function importBook(
   onProgress?: (progress: ImportProgress) => void,
 ): Promise<BookDto> {
   const locale =
-    i18n.toSupportedLocale((globalThis.localStorage?.getItem('nextpage.ui.locale') ?? '').trim()) ??
+    i18n.toSupportedLocale((globalThis.localStorage?.getItem('nexo.ui.locale') ?? '').trim()) ??
     'es';
   onProgress?.({
     status: 'reading',

@@ -9,7 +9,7 @@ import android.content.Context
  * launches.
  */
 object SentryPrivacyPrefs {
-    private const val PREFS_NAME = "nextpage_sentry"
+    private const val PREFS_NAME = "nexo_sentry"
     private const val KEY_ENABLED = "telemetry_enabled"
 
     fun isEnabled(context: Context): Boolean =

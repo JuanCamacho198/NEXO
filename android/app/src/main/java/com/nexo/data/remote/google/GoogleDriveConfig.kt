@@ -61,8 +61,8 @@ data class GoogleDriveConfig(
         /** Google OAuth authorization endpoint used by the OAuth authorization-code flow. */
         const val GOOGLE_OAUTH_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
 
-        // Shared Drive protocol folder - intentionally NOT rebranded (see DriveCatalogContract).
-        const val DRIVE_BOOKS_PATH = "NextPage/Books"
+        // Shared Drive protocol folder, same value as DriveCatalogContract.BOOKS_PATH.
+        const val DRIVE_BOOKS_PATH = "Nexo/Books"
         const val DRIVE_PROTOCOL_VERSION = 1
     }
 }

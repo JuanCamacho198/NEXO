@@ -35,8 +35,7 @@ const readErrorMessage = (error: unknown): string => {
 };
 
 const resolveLocale = (): 'es' | 'en' =>
-  i18n.toSupportedLocale((globalThis.localStorage?.getItem('nextpage.ui.locale') ?? '').trim()) ??
-  'es';
+  i18n.toSupportedLocale((globalThis.localStorage?.getItem('nexo.ui.locale') ?? '').trim()) ?? 'es';
 
 const buildSummary = (results: BulkImportItemResult[]): BulkImportSummary => {
   let queued = 0;

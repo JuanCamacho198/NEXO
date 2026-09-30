@@ -327,7 +327,7 @@ class AddonCatalogProvider(
             val clamped = books.take(MAX_PAGE_SIZE)
             return PagedResult(
                 results = clamped,
-                nextPage = computeNextPage(page, clamped.size, totalCount),
+                nexoPage = computeNextPage(page, clamped.size, totalCount),
                 totalCount = totalCount,
             )
         }

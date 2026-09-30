@@ -132,7 +132,7 @@
     <string name="onboarding_goal_option_intense_value">Más de 40 min/día</string>
     <string name="onboarding_goal_action">Establecer meta</string>
     <string name="onboarding_goal_footer_note">Puedes cambiar esta configuración más tarde en Ajustes.</string>
-    <string name="home_nextpage_title">NEXO</string>
+    <string name="home_nexo_title">NEXO</string>
     <string name="home_avatar_content_description">Abrir cuenta</string>
     <string name="home_search_results">Resultados</string>
     <string name="nav_home">Inicio</string>

@@ -298,7 +298,7 @@ class SupabaseBookCatalogDownloadTest {
                         contentHash = sha256(bytes),
                         remoteProvider = "google_drive",
                         remoteFileId = "drive-1",
-                        remotePath = "NextPage/Books/mapping.epub",
+                        remotePath = "Nexo/Books/mapping.epub",
                         protocolVersion = 7,
                     ),
                 )

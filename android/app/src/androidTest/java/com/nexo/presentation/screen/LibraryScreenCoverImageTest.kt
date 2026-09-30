@@ -62,7 +62,7 @@ class LibraryScreenCoverImageTest {
 
         composeRule.setContent {
             CoverThumbnail(
-                coverPath = "/tmp/nextpage-does-not-exist-cover.png",
+                coverPath = "/tmp/nexo-does-not-exist-cover.png",
                 onImageState = { state -> states += state::class.simpleName.orEmpty() },
             )
         }

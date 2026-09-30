@@ -83,7 +83,7 @@ class CuratedCatalogProviderTest {
             val provider = providerFromBundle()
             val page = provider.search("pride", 1)
             assertEquals(0, page.results.size)
-            assertEquals(null, page.nextPage)
+            assertEquals(null, page.nexoPage)
             assertEquals(0, page.totalCount)
         }
 

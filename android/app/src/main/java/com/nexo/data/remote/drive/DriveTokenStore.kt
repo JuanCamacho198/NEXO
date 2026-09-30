@@ -204,7 +204,7 @@ class EncryptedDriveTokenStore(
     }
 
     companion object {
-        private const val PREFS_NAME = "nextpage_drive_token_store"
+        private const val PREFS_NAME = "nexo_drive_token_store"
         private const val KEY_ACCESS = "drive_access_token"
         private const val KEY_REFRESH = "drive_refresh_token"
     }

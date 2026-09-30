@@ -87,13 +87,13 @@ class GoogleDriveStorageRemoteDataSourceTest {
 
     @Test fun secondUpload_reusesResolvedFolder_noDuplicateFolders() =
         runBlocking {
-            // First upload: find NextPage (empty) → create; find Books (empty) → create; find file (empty) → upload.
+            // First upload: find Nexo (empty) → create; find Books (empty) → create; find file (empty) → upload.
             // Second upload (cache hit): find file (empty) → upload — NO folder creations.
             repeat(5) { listResults.add(empty()) }
             val src = source()
             src.upload("books/u1/a.epub", "a".toByteArray())
             src.upload("books/u1/b.epub", "b".toByteArray())
-            // Exactly TWO folder creates total (one NextPage + one Books), never four.
+            // Exactly TWO folder creates total (one Nexo + one Books), never four.
             verify(exactly = 2) { files.create(any<File>()) }
             verify(exactly = 2) { files.create(match { it.name == "a.epub" || it.name == "b.epub" }, any<AbstractInputStreamContent>()) }
         }

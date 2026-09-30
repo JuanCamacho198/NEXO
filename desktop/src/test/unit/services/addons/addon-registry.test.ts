@@ -216,7 +216,7 @@ describe('AddonCatalogProvider + dynamic composite', () => {
     expect(sources[0].name).toBe('My Addon');
     await expect(provider.search('anything', 1)).resolves.toEqual({
       results: [],
-      nextPage: null,
+      nexoPage: null,
       totalCount: 0,
     });
     await expect(provider.getDetails(`addon:${addonId}:some-book`)).rejects.toMatchObject({

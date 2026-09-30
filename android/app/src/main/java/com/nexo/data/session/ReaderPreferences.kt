@@ -150,7 +150,7 @@ class ReaderPreferences(
     }
 
     companion object {
-        private const val PREFS_NAME = "nextpage_reader_prefs"
+        private const val PREFS_NAME = "nexo_reader_prefs"
         private const val KEY_FONT_SIZE = "font_size"
         private const val KEY_THEME = "theme"
         private const val KEY_LINE_HEIGHT = "line_height"

@@ -32,7 +32,7 @@ class CatalogBookLenientDecodeTest {
                   "downloadUrl": null
                 }
               ],
-              "nextPage": null,
+              "nexoPage": null,
               "totalCount": 1
             }
             """.trimIndent()
@@ -64,7 +64,7 @@ class CatalogBookLenientDecodeTest {
                         "application/epub+zip" to "https://www.gutenberg.org/ebooks/11.epub.noimages",
                     ),
             )
-        val page = PagedResult(results = listOf(book), nextPage = null, totalCount = 1)
+        val page = PagedResult(results = listOf(book), nexoPage = null, totalCount = 1)
 
         val decoded = json.decodeFromString<PagedResult>(json.encodeToString(page))
 

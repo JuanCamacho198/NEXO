@@ -35,7 +35,7 @@ class LibraryRepositoryImplDeleteFileTest {
 
     @Before
     fun setUp() {
-        tempRoot = Files.createTempDirectory("nextpage-delete-file-test").toFile()
+        tempRoot = Files.createTempDirectory("nexo-delete-file-test").toFile()
     }
 
     @After

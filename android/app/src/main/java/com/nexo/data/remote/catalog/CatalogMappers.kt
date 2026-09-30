@@ -237,7 +237,7 @@ fun toPagedResult(
 ): PagedResult =
     PagedResult(
         results = results,
-        nextPage = computeNextPage(page, results.size, totalCount),
+        nexoPage = computeNextPage(page, results.size, totalCount),
         totalCount = totalCount,
     )
 

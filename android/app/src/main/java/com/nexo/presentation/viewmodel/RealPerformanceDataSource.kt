@@ -53,7 +53,7 @@ class RealPerformanceDataSource(
                 )
             }
 
-            val dbFile = context.getDatabasePath("nextpage.db")
+            val dbFile = context.getDatabasePath("nexo.db")
             val dbBytes =
                 runCatching {
                     var total = 0L

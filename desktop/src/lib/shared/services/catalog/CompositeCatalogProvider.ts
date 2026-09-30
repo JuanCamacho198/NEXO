@@ -343,7 +343,7 @@ export class CompositeCatalogProvider implements CatalogProvider {
       provider.listSources().some((source) => source.sourceId === sourceId),
     );
     if (!owner) {
-      return { results: [], nextPage: null, totalCount: 0 };
+      return { results: [], nexoPage: null, totalCount: 0 };
     }
     const active = this.activeSourceIds();
     const cached = this.readPageHit(owner, query, page, active);

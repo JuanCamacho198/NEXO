@@ -23,7 +23,7 @@ import org.json.JSONObject
  *   triggers one notification.
  */
 object CrashNotificationHelper {
-    const val CHANNEL_ID = "nextpage_debug_crashes"
+    const val CHANNEL_ID = "nexo_debug_crashes"
     const val NOTIFICATION_ID = 7301
     const val EXTRA_CRASH_JSON = "crash_json"
 

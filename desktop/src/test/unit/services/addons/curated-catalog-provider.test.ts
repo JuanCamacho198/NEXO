@@ -70,7 +70,7 @@ describe('CuratedCatalogProvider', () => {
   it('search is browse-only: empty page, no I/O, no throw', async () => {
     const provider = new CuratedCatalogProvider();
     const page = await provider.search('pride', 1);
-    expect(page).toEqual({ results: [], nextPage: null, totalCount: 0 });
+    expect(page).toEqual({ results: [], nexoPage: null, totalCount: 0 });
   });
 
   it('getDetails fails stable not-routable (NOT_FOUND, no crash)', async () => {
@@ -100,7 +100,7 @@ describe('composite integration', () => {
 
     /** Test fake: no featured capability (fail-closed). */
     async featured(): Promise<PagedResult> {
-      return { results: [], nextPage: null, totalCount: 0 };
+      return { results: [], nexoPage: null, totalCount: 0 };
     }
 
     supportsFeatured(): boolean {
@@ -108,7 +108,7 @@ describe('composite integration', () => {
     }
 
     async searchSource(): Promise<PagedResult> {
-      return { results: [], nextPage: null, totalCount: 0 };
+      return { results: [], nexoPage: null, totalCount: 0 };
     }
   }
 

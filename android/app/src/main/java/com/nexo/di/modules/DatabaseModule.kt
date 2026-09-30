@@ -32,7 +32,7 @@ class DatabaseModule(
             .databaseBuilder(
                 context = context.applicationContext,
                 klass = AppDatabase::class.java,
-                name = "nextpage.db",
+                name = "nexo.db",
             ).addMigrations(*AppDatabaseMigrations.ALL)
             .let { builder ->
                 if (BuildConfig.DEBUG) {

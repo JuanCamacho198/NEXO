@@ -98,7 +98,7 @@ class FeedbackPersistence(
          * prefs live in the same XML file (simpler dumpsys inspection during
          * support, and one less SharedPreferences handle to leak).
          */
-        const val PREFS_NAME = "nextpage_debug_crash"
+        const val PREFS_NAME = "nexo_debug_crash"
 
         /** Last Sentry eventId captured by `installCrashHandler` — set in PR4 wiring. */
         const val KEY_LAST_EVENT_ID = "feedback_last_event_id"

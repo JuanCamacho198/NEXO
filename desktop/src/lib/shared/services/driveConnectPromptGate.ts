@@ -50,12 +50,12 @@ export function markDriveDeclined(currentUser: string | null): string | null {
 
 /**
  * localStorage key prefix for the per-user decline marker. The full key is
- * `nextpage.drivePromptDeclined.<userId>`; localStorage is the marker home
+ * `nexo.drivePromptDeclined.<userId>`; localStorage is the marker home
  * (Q3 verified: it is the established durable UI-state store on this desktop
  * webview target — feedback queue, locale, storage auto-backup all persist
  * there — and it survives restart, satisfying the decline scenario).
  */
-export const DRIVE_PROMPT_DECLINE_KEY_PREFIX = 'nextpage.drivePromptDeclined.';
+export const DRIVE_PROMPT_DECLINE_KEY_PREFIX = 'nexo.drivePromptDeclined.';
 
 export function declineKeyForUser(userId: string): string {
   return `${DRIVE_PROMPT_DECLINE_KEY_PREFIX}${userId}`;

@@ -35,7 +35,7 @@ function book(id: string): CatalogBook {
 }
 
 function paged(books: CatalogBook[]): PagedResult {
-  return { results: books, nextPage: null, totalCount: books.length };
+  return { results: books, nexoPage: null, totalCount: books.length };
 }
 
 /** Let already-resolved promises publish without advancing timers. */

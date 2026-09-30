@@ -96,7 +96,7 @@
     <string name="onboarding_goal_option_intense_value">More than 40 min/day</string>
     <string name="onboarding_goal_action">Set goal</string>
     <string name="onboarding_goal_footer_note">You can change this later in Settings.</string>
-    <string name="home_nextpage_title">NEXO</string>
+    <string name="home_nexo_title">NEXO</string>
     <string name="home_avatar_content_description">Open account settings</string>
     <string name="home_search_results">Results</string>
     <string name="home_close_search">Close search</string>

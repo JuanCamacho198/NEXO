@@ -19,7 +19,7 @@ class UpdateDownloader(
         assetUrl: String,
     ): String {
         val lastSegment = assetUrl.substringAfterLast('/').substringBefore('?')
-        return lastSegment.ifBlank { "nextpage-update-v$version.apk" }
+        return lastSegment.ifBlank { "nexo-update-v$version.apk" }
     }
 
     fun enqueue(

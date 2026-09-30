@@ -59,7 +59,7 @@ class CatalogFeaturedSeamTest {
                             downloadUrl = null,
                         ),
                     ),
-                nextPage = null,
+                nexoPage = null,
                 totalCount = 1,
             )
         }
@@ -124,7 +124,7 @@ class CatalogFeaturedSeamTest {
 
             assertEquals(listOf("gutendex:10", "gutendex:11"), page.results.map { it.id })
             assertEquals(40, page.totalCount)
-            assertEquals(2, page.nextPage)
+            assertEquals(2, page.nexoPage)
             assertEquals(listOf(CatalogFeaturedSort.NEWEST to 1), capable.featuredCalls)
             assertTrue(notCapable.featuredCalls.isEmpty())
             assertTrue(composite.supportsFeatured())
@@ -151,7 +151,7 @@ class CatalogFeaturedSeamTest {
             )
             // Left-fold merge takes the FIRST provider's counts and appends later books.
             assertEquals(40, gutendexFirst.totalCount)
-            assertEquals(2, gutendexFirst.nextPage)
+            assertEquals(2, gutendexFirst.nexoPage)
 
             val openLibraryFirst =
                 CompositeCatalogProvider(listOf(openLibrary, gutendex))
@@ -161,7 +161,7 @@ class CatalogFeaturedSeamTest {
                 openLibraryFirst.results.map { it.id },
             )
             assertEquals(1, openLibraryFirst.totalCount)
-            assertNull(openLibraryFirst.nextPage)
+            assertNull(openLibraryFirst.nexoPage)
         }
 
     @Test
@@ -174,7 +174,7 @@ class CatalogFeaturedSeamTest {
 
             assertTrue(page.results.isEmpty())
             assertEquals(0, page.totalCount)
-            assertNull(page.nextPage)
+            assertNull(page.nexoPage)
             assertFalse(composite.supportsFeatured())
         }
 
@@ -241,7 +241,7 @@ class CatalogFeaturedSeamTest {
 
             assertTrue(page.results.isEmpty())
             assertEquals(0, page.totalCount)
-            assertNull(page.nextPage)
+            assertNull(page.nexoPage)
             assertEquals(0, gutendex.searchCalls)
         }
 

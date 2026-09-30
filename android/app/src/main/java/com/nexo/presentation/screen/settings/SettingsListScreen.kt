@@ -229,7 +229,7 @@ fun SettingsListScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             NexoHeader(
-                title = stringResource(R.string.home_nextpage_title),
+                title = stringResource(R.string.home_nexo_title),
                 avatarInitials = stringResource(R.string.app_logo_initials),
             )
 

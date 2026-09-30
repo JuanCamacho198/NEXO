@@ -36,7 +36,7 @@ function loadCuratedManifests(): AddonManifest[] {
   );
 }
 
-const EMPTY_PAGE: PagedResult = { results: [], nextPage: null, totalCount: 0 };
+const EMPTY_PAGE: PagedResult = { results: [], nexoPage: null, totalCount: 0 };
 
 export class CuratedCatalogProvider implements CatalogProvider {
   private readonly sources: CatalogSourceInfo[];

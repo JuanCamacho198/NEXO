@@ -180,7 +180,7 @@ describe('GDriveProvider — idempotent upload (DRP-3)', () => {
     expect(uploadCall[0]).toContain('upload/drive/v3/files?uploadType=multipart');
     expect(uploadCall[1]?.method).toBe('POST');
     // On create (POST) `parents` IS valid and must be sent to place the file
-    // in the NextPage/Books folder.
+    // in the Nexo/Books folder.
     const postFormData = uploadCall[1]?.body as FormData;
     const postMetadata = JSON.parse(await (postFormData.get('metadata') as Blob).text());
     expect(postMetadata.name).toBe('book-2.epub');
@@ -326,13 +326,13 @@ describe('GDriveProvider — token refresh layers (DTL-1/DTL-2/DTL-3)', () => {
     expect(refreshDriveAccessToken).toHaveBeenCalledTimes(1);
   });
 
-  it('RED: second upload reuses the resolved folder (no duplicate NextPage/Books)', async () => {
+  it('RED: second upload reuses the resolved folder (no duplicate Nexo/Books)', async () => {
     mockAuth('token-conc');
-    // First upload: find NextPage (none) → create → find Books (none) → create → find file (none) → upload
+    // First upload: find Nexo (none) → create → find Books (none) → create → find file (none) → upload
     // Second upload (cache hit): find file (none) → upload — NO folder creations.
     mockDriveApiResponses([
-      { ok: true, json: () => Promise.resolve({ files: [] }) }, // find NextPage → none
-      { ok: true, json: () => Promise.resolve({ id: 'root-new' }) }, // create NextPage
+      { ok: true, json: () => Promise.resolve({ files: [] }) }, // find Nexo → none
+      { ok: true, json: () => Promise.resolve({ id: 'root-new' }) }, // create Nexo
       { ok: true, json: () => Promise.resolve({ files: [] }) }, // find Books → none
       { ok: true, json: () => Promise.resolve({ id: 'books-new' }) }, // create Books
       { ok: true, json: () => Promise.resolve({ files: [] }) }, // find file-a → none
@@ -345,7 +345,7 @@ describe('GDriveProvider — token refresh layers (DTL-1/DTL-2/DTL-3)', () => {
     const b = await provider.upload('book-b', new Uint8Array([2]), 'book-b.epub');
 
     expect(b).toBe('file-b');
-    // Exactly TWO folder-create calls total (one NextPage + one Books), never four.
+    // Exactly TWO folder-create calls total (one Nexo + one Books), never four.
     const createCalls = vi
       .mocked(globalThis.fetch)
       .mock.calls.filter((c) => String(c[1]?.body).includes('google-apps.folder'));
@@ -405,7 +405,7 @@ describe('GDriveProvider — delete (trash, REQ-11)', () => {
     expect(JSON.parse(await body.text())).toEqual({ trashed: true });
   });
 
-  it('trashes by name: searches NextPage/Books then PATCHes the found ID', async () => {
+  it('trashes by name: searches Nexo/Books then PATCHes the found ID', async () => {
     mockAuth('token-del-2');
     mockDriveApiResponses([
       { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-del-2' }] }) },
@@ -417,7 +417,7 @@ describe('GDriveProvider — delete (trash, REQ-11)', () => {
     await provider.delete('book-1.epub');
 
     const calls = vi.mocked(globalThis.fetch).mock.calls;
-    // Search request scoped to NextPage/Books with trashed = false
+    // Search request scoped to Nexo/Books with trashed = false
     const searchUrl = decodeURIComponent(String(calls[2][0]));
     expect(searchUrl).toContain(
       "name = 'book-1.epub' and 'folder-del-2' in parents and trashed = false",

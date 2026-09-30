@@ -22,7 +22,7 @@ class AppThemePreferences(
     }
 
     companion object {
-        private const val PREFS_NAME = "nextpage_app_theme"
+        private const val PREFS_NAME = "nexo_app_theme"
         private const val KEY_THEME = "app_theme_mode"
     }
 }

@@ -26,7 +26,7 @@ class ReadingGoalPreferences(
     }
 
     companion object {
-        private const val PREFS_NAME = "nextpage_reading_goal"
+        private const val PREFS_NAME = "nexo_reading_goal"
         private const val KEY_DAILY_GOAL_MINUTES = "daily_goal_minutes"
     }
 }

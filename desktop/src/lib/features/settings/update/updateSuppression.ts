@@ -11,7 +11,7 @@ export type SuppressionStorage = {
   remove(): void;
 };
 
-const STORAGE_KEY = 'nextpage.update.suppression';
+const STORAGE_KEY = 'nexo.update.suppression';
 
 const createLocalStorageBacking = (): SuppressionStorage => ({
   read(): string | null {

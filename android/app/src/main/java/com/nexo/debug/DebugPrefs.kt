@@ -3,7 +3,7 @@ package com.nexo.debug
 import android.content.Context
 
 object DebugPrefs {
-    private const val PREFS_NAME = "nextpage_debug"
+    private const val PREFS_NAME = "nexo_debug"
     private const val KEY_ENABLED = "debug_mode_enabled"
 
     fun isEnabled(context: Context): Boolean =

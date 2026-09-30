@@ -27,7 +27,7 @@ class StorageRepositoryImplTest {
 
     @Before
     fun setUp() {
-        root = Files.createTempDirectory("nextpage-sweep-test").toFile()
+        root = Files.createTempDirectory("nexo-sweep-test").toFile()
     }
 
     @After

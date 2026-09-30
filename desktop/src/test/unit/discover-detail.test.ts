@@ -46,7 +46,7 @@ function fakeBook(overrides: Partial<CatalogBook> = {}): CatalogBook {
 function fakeProvider(books: Record<string, CatalogBook>): CatalogProvider {
   return {
     async search() {
-      return { results: [], nextPage: null, totalCount: 0 };
+      return { results: [], nexoPage: null, totalCount: 0 };
     },
     async getDetails(id: string) {
       const book = books[id];
@@ -60,13 +60,13 @@ function fakeProvider(books: Record<string, CatalogBook>): CatalogProvider {
       return [];
     },
     async featured() {
-      return { results: [], nextPage: null, totalCount: 0 };
+      return { results: [], nexoPage: null, totalCount: 0 };
     },
     supportsFeatured() {
       return false;
     },
     async searchSource() {
-      return { results: [], nextPage: null, totalCount: 0 };
+      return { results: [], nexoPage: null, totalCount: 0 };
     },
   };
 }
