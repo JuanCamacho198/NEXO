@@ -127,12 +127,12 @@ describe('googleBooksProviderOrNull', () => {
     expect(provider.supportsFeatured('POPULAR')).toBe(false);
     expect(await provider.featured('POPULAR', 6)).toEqual({
       results: [],
-      nextPage: null,
+      nexoPage: null,
       totalCount: 0,
     });
     expect(await provider.searchSource('builtin:gutendex' as CatalogSource, 'x', 1)).toEqual({
       results: [],
-      nextPage: null,
+      nexoPage: null,
       totalCount: 0,
     });
   });

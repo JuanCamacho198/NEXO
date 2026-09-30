@@ -67,7 +67,7 @@ export class GutendexCatalogProvider implements CatalogProvider {
    */
   async searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {
     if (sourceId !== BUILTIN_GUTENDEX) {
-      return { results: [], nextPage: null, totalCount: 0 };
+      return { results: [], nexoPage: null, totalCount: 0 };
     }
     return this.search(query, page);
   }
@@ -103,7 +103,7 @@ export class OpenLibraryCatalogProvider implements CatalogProvider {
     if (!Number.isInteger(limit) || limit < 1) {
       throw catalogError('INVALID_PAGE', `limit must be >= 1, got ${limit}`);
     }
-    return { results: [], nextPage: null, totalCount: 0 };
+    return { results: [], nexoPage: null, totalCount: 0 };
   }
 
   supportsFeatured(_sort: CatalogFeaturedSort): boolean {
@@ -116,7 +116,7 @@ export class OpenLibraryCatalogProvider implements CatalogProvider {
    */
   async searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {
     if (sourceId !== BUILTIN_OPENLIBRARY) {
-      return { results: [], nextPage: null, totalCount: 0 };
+      return { results: [], nexoPage: null, totalCount: 0 };
     }
     return this.search(query, page);
   }
@@ -157,7 +157,7 @@ export class GoogleBooksCatalogProvider implements CatalogProvider {
     if (!Number.isInteger(limit) || limit < 1) {
       throw catalogError('INVALID_PAGE', `limit must be >= 1, got ${limit}`);
     }
-    return { results: [], nextPage: null, totalCount: 0 };
+    return { results: [], nexoPage: null, totalCount: 0 };
   }
 
   supportsFeatured(_sort: CatalogFeaturedSort): boolean {
@@ -170,7 +170,7 @@ export class GoogleBooksCatalogProvider implements CatalogProvider {
    */
   async searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {
     if (sourceId !== BUILTIN_GOOGLEBOOKS) {
-      return { results: [], nextPage: null, totalCount: 0 };
+      return { results: [], nexoPage: null, totalCount: 0 };
     }
     return this.search(query, page);
   }

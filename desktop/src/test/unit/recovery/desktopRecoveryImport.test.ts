@@ -27,7 +27,7 @@ const row = (o: Partial<SupabaseUserBookRow> = {}): SupabaseUserBookRow => ({
   catalogVersion: 2,
   remoteProvider: 'google_drive',
   remoteFileId: 'file-abc123',
-  remotePath: 'NextPage/Books/book-1.epub',
+  remotePath: 'Nexo/Books/book-1.epub',
   remoteName: 'book-1.epub',
   protocolVersion: 1,
   ...o,

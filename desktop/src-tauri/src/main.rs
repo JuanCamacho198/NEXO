@@ -1,11 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use nextpage_desktop::commands;
-use nextpage_desktop::db::{open_and_migrate, resolve_db_path};
-use nextpage_desktop::queue::repository::QueueRepository;
-use nextpage_desktop::repository::LibraryRepository;
-use nextpage_desktop::sentry_init;
-use nextpage_desktop::state::AppState;
+use nexo_desktop::commands;
+use nexo_desktop::db::{open_and_migrate, resolve_db_path};
+use nexo_desktop::queue::repository::QueueRepository;
+use nexo_desktop::repository::LibraryRepository;
+use nexo_desktop::sentry_init;
+use nexo_desktop::state::AppState;
 use rusqlite::Connection;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
@@ -21,11 +21,14 @@ fn build_state(app: &AppHandle) -> Result<AppState, String> {
     Ok(AppState::new(repository, queue_repository, app_data_dir, db_path))
 }
 
-/// Pure helper: first nextpage:// or nextpage-desktop:// argument in argv.
+/// Pure helper: first nexo://, nextpage:// or nextpage-desktop:// argument in argv.
 fn extract_install_url(argv: &[String]) -> Option<String> {
     argv.iter().skip(1).find_map(|arg| {
         let lower = arg.to_ascii_lowercase();
-        if lower.starts_with("nextpage://") || lower.starts_with("nextpage-desktop://") {
+        if lower.starts_with("nexo://")
+            || lower.starts_with("nextpage://")
+            || lower.starts_with("nextpage-desktop://")
+        {
             Some(arg.clone())
         } else {
             None
@@ -47,14 +50,26 @@ mod deep_link_tests {
     use super::*;
 
     #[test]
-    fn extract_install_url_finds_first_nextpage_arg() {
+    fn extract_install_url_finds_first_legacy_arg() {
         let argv = vec![
-            "nextpage-desktop.exe".to_string(),
+            "nexo-desktop.exe".to_string(),
             "nextpage://install?url=https://example.com/manifest.json".to_string(),
         ];
         assert_eq!(
             extract_install_url(&argv).as_deref(),
             Some("nextpage://install?url=https://example.com/manifest.json")
+        );
+    }
+
+    #[test]
+    fn extract_install_url_accepts_canonical_nexo_scheme() {
+        let argv = vec![
+            "app.exe".to_string(),
+            "nexo://install?url=https://example.com/m.json".to_string(),
+        ];
+        assert_eq!(
+            extract_install_url(&argv).as_deref(),
+            Some("nexo://install?url=https://example.com/m.json")
         );
     }
 
@@ -85,25 +100,25 @@ fn main() {
     // Initialize Sentry BEFORE the Tauri Builder. Init failures are logged
     // and swallowed; the app boots regardless of Sentry availability.
     if sentry_init::init_or_log() {
-        eprintln!("[nextpage] Sentry initialized for desktop backend");
+        eprintln!("[nexo] Sentry initialized for desktop backend");
     } else {
-        eprintln!("[nextpage] Sentry disabled (no SENTRY_DSN or init failed)");
+        eprintln!("[nexo] Sentry disabled (no SENTRY_DSN or init failed)");
     }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             // sdd/addon-deeplink-v1: warm-start forwarding. Must be the FIRST
-            // plugin (Tauri docs). Scan argv for a nextpage:// deep link; only
+            // plugin (Tauri docs). Scan argv for a deep-link URL; only
             // install URLs are emitted, everything else is logged for QA.
             if let Some(url) = extract_install_url(&argv) {
                 if deep_link_host(&url) == "install" {
                     use tauri::Emitter;
                     let _ = app.emit("deep-link-install", url);
                 } else {
-                    eprintln!("[nextpage] unhandled deep-link argv: {argv:?}");
+                    eprintln!("[nexo] unhandled deep-link argv: {argv:?}");
                 }
             } else if argv.iter().skip(1).any(|arg| arg.contains("://")) {
-                eprintln!("[nextpage] unhandled deep-link argv: {argv:?}");
+                eprintln!("[nexo] unhandled deep-link argv: {argv:?}");
             }
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_focus();
@@ -121,6 +136,13 @@ fn main() {
             let state = build_state(app.handle()).map_err(std::io::Error::other)?;
             app.manage(state);
 
+            // Register the scheme(s) declared in `tauri.conf.json`. `nexo` is the
+            // canonical NEXO scheme; the `nextpage*` schemes are legacy and are
+            // retained for the transition window (already-issued auth callbacks
+            // and shared addon links must keep resolving). `deep_link_host`
+            // parses by host, so the handler is scheme-agnostic.
+            #[cfg(desktop)]
+            app.deep_link().register("nexo")?;
             #[cfg(desktop)]
             app.deep_link().register("nextpage-desktop")?;
             #[cfg(desktop)]

@@ -19,7 +19,7 @@ describe('addonIdFromUrl', () => {
   );
 
   it('matches node crypto sha256 utf-8 digest directly', async () => {
-    const url = 'https://addons.nextpage.app/catalog.json';
+    const url = 'https://addons.nexo.example/catalog.json';
     const expected = createHash('sha256').update(url, 'utf8').digest('hex').slice(0, 16);
     expect(await addonIdFromUrl(url)).toBe(expected);
   });

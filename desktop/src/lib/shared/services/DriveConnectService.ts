@@ -167,7 +167,7 @@ const LOOPBACK_SUCCESS_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Drive connected — NextPage</title>
+  <title>Drive connected — Nexo</title>
   <style>
     :root { color-scheme: light dark; }
     * { box-sizing: border-box; }
@@ -203,7 +203,7 @@ const LOOPBACK_SUCCESS_HTML = `<!DOCTYPE html>
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
     </div>
     <h1>Drive connected</h1>
-    <p>You can close this tab and return to NextPage. The app will pick up where you left off.</p>
+    <p>You can close this tab and return to Nexo. The app will pick up where you left off.</p>
   </div>
 </body>
 </html>`;

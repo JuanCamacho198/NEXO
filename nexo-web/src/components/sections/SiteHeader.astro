@@ -15,7 +15,9 @@ const mobileLink =
 ---
 
 <!-- ══════════════ HEADER ══════════════ -->
-<header class="site-header sticky top-0 z-[60] border-b border-border bg-[oklch(97.4%_0.007_95/0.85)] backdrop-blur-[14px]">
+<!-- The glass surface and its scrolled pill state live in `.site-header` in
+     global.css, where the tokens and the specificity are controllable. -->
+<header class="site-header sticky z-[60]">
   <div class="shell flex items-center gap-8 py-7 max-[1100px]:gap-5 max-[640px]:gap-4 max-[640px]:py-[18px]">
     <Logo />
 
@@ -35,9 +37,6 @@ const mobileLink =
       <a class={navLink} href="#faq">
         {t('faq.title')}
       </a>
-      <div class={langSwitch}>
-        <LanguagePicker />
-      </div>
     </nav>
 
     <div class="ml-auto flex items-center gap-4">
@@ -70,10 +69,43 @@ const mobileLink =
           <ThemeToggle class="hidden max-[640px]:grid" />
         </div>
       </nav>
+      <LanguagePicker class="max-[1023px]:hidden" align="right" />
       <ThemeToggle class="max-[640px]:hidden" />
+      <!-- Deliberately NOT the adaptive DownloadButton: at 390px the bar already
+           holds the logo, the burger and the CTA, and a 20-character
+           "Descargar para Windows" label there risks overflow. -->
       <Button variant="primary" href="#descargar">
         {t('cta.download')}
       </Button>
     </div>
   </div>
 </header>
+
+<script is:inline>
+  // The header is flush at rest and a suspended pill once scrolled. The pill is a
+  // boolean attribute on the element, so CSS owns the whole visual change and this
+  // script only reports scroll position. rAF with a ticking flag keeps it to one
+  // update per frame instead of one per scroll event.
+  (function () {
+    var header = document.querySelector('.site-header');
+    if (!header) return;
+    var ticking = false;
+    function update() {
+      ticking = false;
+      if (window.scrollY > 24) {
+        header.setAttribute('data-scrolled', '');
+      } else {
+        header.removeAttribute('data-scrolled');
+      }
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(update);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    // Run once immediately: a reload at a restored scroll position must render
+    // the pill straight away instead of the flush bar.
+    update();
+  })();
+</script>

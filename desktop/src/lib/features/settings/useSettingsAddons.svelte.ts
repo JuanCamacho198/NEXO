@@ -4,7 +4,7 @@ import {
   AddonRegistry as DefaultAddonRegistry,
   type InstalledAddonRow,
 } from '$lib/shared/services/addons/AddonRegistry';
-import { AddonFetchError, AddonFetchErrorCode } from '@nextpage/manifest-validator';
+import { AddonFetchError, AddonFetchErrorCode } from '@nexo/manifest-validator';
 
 export type AddonsDeps = {
   registry?: {

@@ -1,0 +1,19 @@
+---
+import Button from '@/components/ui/Button.astro';
+import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+---
+
+<!-- A thin wrapper around Button: every platform label is rendered here and the
+     CSS reveals the one matching html[data-os], so no copy is ever chosen in
+     JavaScript. Reusing Button instead of duplicating its class strings keeps the
+     two from drifting apart. -->
+<Button variant="primary" size="lg" href="#descargar" icon="download">
+  <span class="os-label os-label-generic">{t('download.ctaGeneric')}</span>
+  <span class="os-label os-label-windows">{t('download.ctaWindows')}</span>
+  <span class="os-label os-label-macos">{t('download.ctaMacOS')}</span>
+  <span class="os-label os-label-linux">{t('download.ctaLinux')}</span>
+  <span class="os-label os-label-android">{t('download.ctaAndroid')}</span>
+</Button>

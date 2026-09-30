@@ -10,7 +10,7 @@ import {
 
 // Golden vectors shared with Android LocatorCodec.kt
 // These vectors MUST stay in sync cross-language.
-// If you update them here, update android/app/src/test/java/com/nextpage/data/sync/LocatorCodecGoldenTest.kt
+// If you update them here, update android/app/src/test/java/com/nexo/data/sync/LocatorCodecGoldenTest.kt
 const GOLDEN_VECTORS = [
   {
     name: 'backslash href normalized via normalizeHref',

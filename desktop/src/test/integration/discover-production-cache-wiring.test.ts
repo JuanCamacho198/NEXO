@@ -90,7 +90,7 @@ describe('production discover cache wiring (liveComposite path)', () => {
   it('serves a seeded production cache entry with zero provider I/O', async () => {
     const query = 'seeded-cache-read';
     const nowEpochSecs = Math.floor(Date.now() / 1000);
-    const seeded: PagedResult = { results: [seededBook()], nextPage: null, totalCount: 1 };
+    const seeded: PagedResult = { results: [seededBook()], nexoPage: null, totalCount: 1 };
     // Seed the PRODUCTION cache instance with the page the composite would have
     // written on a first read; both I/O-capable single-source built-ins are
     // seeded so a correctly wired composite needs no provider call at all.
@@ -102,13 +102,13 @@ describe('production discover cache wiring (liveComposite path)', () => {
     );
     discoverCache.put(
       pageCacheKey('builtin:openlibrary', query, 1),
-      JSON.stringify({ results: [], nextPage: null, totalCount: 0 }),
+      JSON.stringify({ results: [], nexoPage: null, totalCount: 0 }),
       nowEpochSecs,
       PAGE_TTL_S,
     );
     discoverCache.put(
       pageCacheKey('builtin:googlebooks', query, 1),
-      JSON.stringify({ results: [], nextPage: null, totalCount: 0 }),
+      JSON.stringify({ results: [], nexoPage: null, totalCount: 0 }),
       nowEpochSecs,
       PAGE_TTL_S,
     );

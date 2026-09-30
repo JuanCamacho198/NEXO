@@ -11,7 +11,7 @@ We release patches for security vulnerabilities. The following versions are curr
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in NextPage, please report it responsibly.
+If you discover a security vulnerability in NEXO, please report it responsibly.
 
 ### How to Report
 
@@ -60,4 +60,4 @@ If you discover a security vulnerability in NextPage, please report it responsib
 
 ## Thank You
 
-We appreciate your help keeping NextPage secure for everyone. Responsible disclosure helps protect our users and community.
+We appreciate your help keeping NEXO secure for everyone. Responsible disclosure helps protect our users and community.

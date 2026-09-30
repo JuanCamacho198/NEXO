@@ -10,7 +10,7 @@ pub fn getStorageStats(
     app: AppHandle,
     _state: State<'_, AppState>,
 ) -> Result<crate::services::storage_stats::StorageStats, String> {
-    let db_path = app.path().app_data_dir().map_err(|e| format!("{}", e))?.join("nextpage.db");
+    let db_path = app.path().app_data_dir().map_err(|e| format!("{}", e))?.join("nexo.db");
     let app_data_dir = app.path().app_data_dir().map_err(|e| format!("{}", e))?;
     crate::services::storage_stats::compute_storage_stats(&app_data_dir, &db_path)
         .map_err(map_command_error)

@@ -93,7 +93,7 @@ export interface CatalogBook {
 export interface PagedResult {
   results: CatalogBook[];
   /** Next 1-based page, or null when the last page was reached. */
-  nextPage: number | null;
+  nexoPage: number | null;
   totalCount: number;
 }
 

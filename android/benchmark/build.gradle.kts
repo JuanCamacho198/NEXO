@@ -22,7 +22,7 @@ spotless {
 }
 
 android {
-    namespace = "com.nextpage.benchmark"
+    namespace = "com.nexo.benchmark"
     compileSdk = 36
 
     defaultConfig {

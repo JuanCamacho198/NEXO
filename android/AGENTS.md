@@ -18,11 +18,11 @@
 .\gradlew.bat testReleaseUnitTest
 
 # Run single test class
-.\gradlew.bat testDebugUnitTest --tests "com.nextpage.presentation.viewmodel.AuthViewModelTest"
-.\gradlew.bat testReleaseUnitTest --tests "com.nextpage.presentation.viewmodel.AuthViewModelTest"
+.\gradlew.bat testDebugUnitTest --tests "com.nexo.presentation.viewmodel.AuthViewModelTest"
+.\gradlew.bat testReleaseUnitTest --tests "com.nexo.presentation.viewmodel.AuthViewModelTest"
 
 # Run single test method
-.\gradlew.bat testDebugUnitTest --tests "com.nextpage.presentation.viewmodel.AuthViewModelTest.signInWithEmailPassword_Success"
+.\gradlew.bat testDebugUnitTest --tests "com.nexo.presentation.viewmodel.AuthViewModelTest.signInWithEmailPassword_Success"
 ```
 
 ### Verification Tasks
@@ -55,7 +55,7 @@ emulator -avd <avd_name>
 android/
 ├── app/
 │   └── src/
-│       ├── main/java/com/nextpage/
+│       ├── main/java/com/nexo/
 │       │   ├── data/              # Data layer (repositories, Room, Supabase, PDF, EPUB)
 │       │   ├── domain/           # Domain layer (models, repository interfaces, usecases)
 │       │   ├── presentation/    # UI layer (screens, viewmodels, theme, navigation)
@@ -63,13 +63,13 @@ android/
 │       │   ├── di/              # Dependency injection (AppContainer)
 │       │   └── MainActivity.kt  # Entry point
 │       ├── test/                # Unit tests (JVM)
-│       │   └── java/com/nextpage/
+│       │   └── java/com/nexo/
 │       │       ├── data/
 │       │       ├── domain/
 │       │       ├── presentation/
 │       │       └── testutil/     # Test utilities (MainDispatcherRule)
 │       └── androidTest/         # Instrumented tests (device/emulator)
-│           └── java/com/nextpage/
+│           └── java/com/nexo/
 ├── gradle/                      # Gradle wrapper
 ├── build.gradle.kts             # Root build config
 ├── app/build.gradle.kts          # App build config
@@ -142,7 +142,7 @@ import androidx.lifecycle.viewModelScope
 ## Conventions
 
 ### Room Database
-- Schema location: `app/schemas/com.nextpage.data.local.AppDatabase/` (auto-generated)
+- Schema location: `app/schemas/com.nexo.data.local.AppDatabase/` (auto-generated)
 - Migration files: `AppDatabaseMigrations.kt`
 - Use **@Dao** for data access
 - Use **@Entity** for tables

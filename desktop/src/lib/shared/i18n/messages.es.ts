@@ -1,7 +1,7 @@
 import type { MessageKey } from './messages.en';
 
 export const messagesEs: Record<MessageKey, string> = {
-  'app.title': 'NextPage Desktop',
+  'app.title': 'Nexo Desktop',
   'app.subtitle':
     'Integracion de paridad desktop: biblioteca, ajustes, estadisticas y busqueda en lector',
   'app.importBook': 'Importar libro',
@@ -160,7 +160,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.saving': 'Guardando...',
   'settings.highlights': 'Resaltados',
   'settings.bookmarks': 'Marcadores',
-  'settings.about': 'Acerca de NextPage',
+  'settings.about': 'Acerca de Nexo',
   'settings.resetDefaults': 'Restablecer valores',
   'settings.resetConfirmTitle': '¿Restablecer ajustes?',
   'settings.resetConfirmMessage':
@@ -187,7 +187,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.profile.signInPrompt':
     'Inicia sesion con Google desde la pestana Cuenta para personalizar este perfil.',
   'settings.shortcuts.title': 'Atajos de teclado',
-  'settings.shortcuts.description': 'Estos atajos estan disponibles actualmente en NextPage.',
+  'settings.shortcuts.description': 'Estos atajos estan disponibles actualmente en Nexo.',
   'settings.shortcuts.readerPrev': 'Ir a la pagina/ubicacion anterior en el lector',
   'settings.shortcuts.readerNext': 'Ir a la siguiente pagina/ubicacion en el lector',
   'settings.shortcuts.readerScrollUp': 'Desplazarse hacia arriba en la vista actual del lector',
@@ -965,7 +965,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'welcome.headline': 'Tu biblioteca.\nTu conocimiento.',
   'welcome.subtitle':
     'Organiza tus libros, sigue tu lectura, resalta ideas y descubre tu progreso — todo en un solo lugar tranquilo.',
-  'welcome.cardTitle': '¡Bienvenido a NextPage!',
+  'welcome.cardTitle': '¡Bienvenido a Nexo!',
   'welcome.cardSubtitle': 'Inicia sesión para continuar con tu lectura.',
   'welcome.divider': 'o',
   'welcome.continueGoogle': 'Continuar con Google',
@@ -988,7 +988,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'welcome.loggingIn': 'Iniciando sesion...',
   'welcome.devSkipHint': 'Modo dev: se creara un usuario local simulado.',
   'welcome.nav.features': 'Funciones',
-  'welcome.nav.trust': 'Por que NextPage',
+  'welcome.nav.trust': 'Por que Nexo',
   'welcome.feature1Label': 'Lee sin distracciones',
   'welcome.feature1Description':
     'Un lector limpio y personalizable para que te concentres en lo que importa.',

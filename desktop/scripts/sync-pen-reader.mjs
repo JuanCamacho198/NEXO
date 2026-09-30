@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 /**
- * Deterministic Bun script — syncs design/nextpage-desktop.pen (v2.17)
+ * Deterministic Bun script — syncs design/nexo-desktop.pen (v2.17)
  * to ReaderWorkspace truth (ReaderHeader, PaperContainer, TextSettings, TocPanel, Mesa).
  *
  * Safety: .bak + temp-write + JSON.parse guard + atomic rename
  * Re-entrant: second run -> inserts:0 hash unchanged
- * Single write target: design/nextpage-desktop.pen
+ * Single write target: design/nexo-desktop.pen
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,7 +13,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const PEN_PATH = path.resolve(__dirname, '..', 'design', 'nextpage-desktop.pen');
+export const PEN_PATH = path.resolve(__dirname, '..', 'design', 'nexo-desktop.pen');
 export const BAK_PATH = PEN_PATH + '.bak';
 export const TMP_PATH = PEN_PATH + '.tmp';
 
@@ -493,7 +493,7 @@ function wireRefs(pen, all, reusableIds) {
 function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
-    console.log(`sync-pen-reader.mjs — sync design/nextpage-desktop.pen to ReaderWorkspace truth
+    console.log(`sync-pen-reader.mjs — sync design/nexo-desktop.pen to ReaderWorkspace truth
 Usage: bun run scripts/sync-pen-reader.mjs [--help] [--dry-run]
 Creates .bak, temp-write + JSON.parse guard, re-entrant inserts:0 on second run`);
     process.exit(0);

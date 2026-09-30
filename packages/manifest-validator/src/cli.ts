@@ -26,7 +26,7 @@ import {
 } from './validateManifest';
 
 /** Names the project, not a browser identity. */
-export const CLI_USER_AGENT = 'NextPage/manifest-validator-cli';
+export const CLI_USER_AGENT = 'NEXO/manifest-validator-cli';
 
 /** Hard cap so CI cannot hang on a host that never answers. */
 export const DEFAULT_TIMEOUT_MS = 10_000;

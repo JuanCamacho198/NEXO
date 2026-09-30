@@ -117,7 +117,7 @@ export async function installTauriInvokeStub(
 
     // Force the English UI so labels are stable regardless of the developer
     // machine's persisted locale.
-    window.localStorage.setItem('nextpage.ui.locale', 'en');
+    window.localStorage.setItem('nexo.ui.locale', 'en');
 
     const internals = {
       transformCallback: (callback: unknown) => {

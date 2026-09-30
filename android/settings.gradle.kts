@@ -18,7 +18,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NextPageAndroid"
+rootProject.name = "NexoAndroid"
 include(":app")
 // SDD android-stack-modernization S9: macrobenchmark test module. It is a
 // self-instrumenting `com.android.test` module targeting `:app` (see

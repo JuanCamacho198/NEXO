@@ -1,4 +1,4 @@
-appId: com.nextpage
+appId: com.nexo
 ---
 # J7 - Session routing: disabled Google does not crash, shows reason + cold-start session restore (text)
 # After dev bypass, onboarding "Establece tu ritmo" appears before Home → handle it.

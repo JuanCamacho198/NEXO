@@ -297,5 +297,5 @@ export function toPagedResult(
   page: number,
   totalCount: number,
 ): PagedResult {
-  return { results, nextPage: computeNextPage(page, results.length, totalCount), totalCount };
+  return { results, nexoPage: computeNextPage(page, results.length, totalCount), totalCount };
 }

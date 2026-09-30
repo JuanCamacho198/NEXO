@@ -69,7 +69,7 @@ const baseDictionaryEntries: Array<[string, string]> = [
   ['settings.data.clearCacheDescription', 'Remove temp files'],
   ['settings.data.clearing', 'Clearing...'],
   ['settings.data.cleared', 'Cache cleared'],
-  ['settings.about', 'About NextPage'],
+  ['settings.about', 'About Nexo'],
   ['errors.commandFailure', 'Command failed'],
   ['settings.unknownBook', 'Unknown'],
   ['settings.color.yellow', 'Yellow'],
@@ -287,14 +287,14 @@ describe('SettingsPanel', () => {
     const user = userEvent.setup();
     render(SettingsPanel, defaultProps);
     await user.click(screen.getByRole('tab', { name: 'About' }));
-    expect(screen.getByText('NextPage')).toBeInTheDocument();
+    expect(screen.getByText('Nexo')).toBeInTheDocument();
   });
 
   it('switches to about tab when clicked', async () => {
     const user = userEvent.setup();
     render(SettingsPanel, defaultProps);
     await user.click(screen.getByRole('tab', { name: 'About' }));
-    expect(screen.getByText('NextPage')).toBeInTheDocument();
+    expect(screen.getByText('Nexo')).toBeInTheDocument();
   });
 
   it('shows reset modal when reset button clicked', async () => {

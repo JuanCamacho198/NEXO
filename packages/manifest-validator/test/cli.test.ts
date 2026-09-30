@@ -3,7 +3,7 @@ import {
   AddonFetchError,
   AddonFetchErrorCode,
   MAX_MANIFEST_BYTES,
-} from '@nextpage/manifest-validator';
+} from '@nexo/manifest-validator';
 import {
   CLI_USER_AGENT,
   fetchAndValidateManifest,
@@ -188,7 +188,7 @@ describe('fetchAndValidateManifest', () => {
     };
     await fetchAndValidateManifest(URL_OK, { fetcher });
     expect(seenInit?.headers['user-agent']).toBe(CLI_USER_AGENT);
-    expect(seenInit?.headers['user-agent']).toContain('NextPage');
+    expect(seenInit?.headers['user-agent']).toContain('NEXO');
     expect(seenInit?.headers.accept).toBe('application/json');
   });
 

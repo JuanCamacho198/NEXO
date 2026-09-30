@@ -1,0 +1,70 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import Eyebrow from '@/components/ui/Eyebrow.astro';
+import SiteHeader from '@/components/sections/SiteHeader.astro';
+import SiteFooter from '@/components/sections/SiteFooter.astro';
+import { defaultLang, localeStaticPaths, useTranslations, type Lang } from '@/i18n/utils';
+
+export function getStaticPaths() {
+  return localeStaticPaths();
+}
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+
+const sections = [
+  { title: t('privacy.s1Title'), body: t('privacy.s1Body') },
+  { title: t('privacy.s2Title'), body: t('privacy.s2Body') },
+  { title: t('privacy.s3Title'), body: t('privacy.s3Body') },
+  { title: t('privacy.s4Title'), body: t('privacy.s4Body') },
+  { title: t('privacy.s5Title'), body: t('privacy.s5Body') },
+  { title: t('privacy.s6Title'), body: t('privacy.s6Body') },
+  { title: t('privacy.s7Title'), body: t('privacy.s7Body') },
+  { title: t('privacy.s8Title'), body: t('privacy.s8Body') },
+] as const;
+
+const email = t('privacy.contactEmail');
+---
+
+<Layout
+  lang={lang}
+  title={t('privacy.metaTitle')}
+  description={t('privacy.lead')}
+  canonicalEs="/privacidad"
+  canonicalEn="/en/privacidad"
+>
+  <SiteHeader />
+
+  <main id="top" class="py-24 max-[640px]:py-16">
+    <div class="shell max-w-[68ch]">
+      <Eyebrow>{t('privacy.eyebrow')}</Eyebrow>
+      <h1>{t('privacy.heading')}</h1>
+      <p class="mt-5 text-[1.05rem] leading-[1.75] text-ink-soft text-pretty">
+        {t('privacy.lead')}
+      </p>
+
+      {sections.map((section) => (
+        <section class="mt-12">
+          <h2>{section.title}</h2>
+          <p class="mt-3 leading-[1.75] text-ink-soft">{section.body}</p>
+        </section>
+      ))}
+
+      <section class="mt-12">
+        <h2>{t('privacy.s9Title')}</h2>
+        <p class="mt-3 leading-[1.75] text-ink-soft">{t('privacy.s9Body')}</p>
+        <p class="mt-3 leading-[1.75] text-ink-soft">
+          <a class="underline underline-offset-4" href={`mailto:${email}`}>
+            {email}
+          </a>
+        </p>
+      </section>
+
+      <p class="mt-12 text-[0.95rem] leading-[1.7] text-ink-soft">
+        {t('privacy.updatedOn')} {t('privacy.effectiveDate')}
+      </p>
+    </div>
+  </main>
+
+  <SiteFooter />
+</Layout>

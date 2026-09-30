@@ -1,6 +1,6 @@
 ---
 import { Image } from 'astro:assets';
-import Button from '@/components/ui/Button.astro';
+import DownloadButton from '@/components/ui/DownloadButton.astro';
 import Eyebrow from '@/components/ui/Eyebrow.astro';
 import PlatformIcon from '@/components/ui/PlatformIcon.astro';
 import heroMockup from '@/assets/hero-mockup.png';
@@ -19,7 +19,7 @@ const platforms = [
 
 <!-- ══════════════ HERO ══════════════ -->
 <section class="pt-10 pb-24" id="top">
-  <div class="shell grid grid-cols-[0.92fr_1.08fr] items-center gap-10 max-[900px]:grid-cols-1">
+  <div class="shell grid grid-cols-[0.86fr_1.19fr] items-center gap-10 max-[900px]:grid-cols-1">
     <div class="min-w-0 rise rise-1">
       <Eyebrow>{t('hero.eyebrow')}</Eyebrow>
 
@@ -30,9 +30,7 @@ const platforms = [
       </p>
 
       <div class="mt-8 flex flex-wrap items-center gap-3.5 max-[640px]:gap-3">
-        <Button variant="primary" size="lg" href="#descargar" icon="download">
-          {t('hero.cta')}
-        </Button>
+        <DownloadButton />
       </div>
 
       <ul
@@ -40,20 +38,24 @@ const platforms = [
         id="dispositivos"
       >
         {platforms.map((platform) => (
-          <li class="inline-flex items-center gap-[9px]">
-            <PlatformIcon name={platform.name} />
-            <span class="text-[13px] font-medium text-ink-soft">{platform.label}</span>
+          <li class="inline-flex">
+            <a href="#descargar" class="group inline-flex items-center gap-[9px]">
+              <PlatformIcon name={platform.name} />
+              <span class="text-[13px] font-medium text-ink-soft transition-[color] duration-[180ms] ease-[ease] group-hover:text-ink">
+                {platform.label}
+              </span>
+            </a>
           </li>
         ))}
       </ul>
     </div>
 
-    <div class="rise rise-2 min-w-0 max-[900px]:mt-12">
+    <div class="rise rise-2 min-w-0 max-[900px]:mt-12 min-[901px]:-translate-y-4 min-[901px]:translate-x-[2%]">
       <Image
         src={heroMockup}
         alt={t('hero.mockupAlt')}
         widths={[480, 720, 1080, 1600]}
-        sizes="(max-width: 900px) 92vw, 610px"
+        sizes="(max-width: 900px) 92vw, 680px"
         format="webp"
         quality={82}
         loading="eager"

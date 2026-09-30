@@ -1,12 +1,12 @@
 name: Addon submission
-description: Propose a community addon so it can be reviewed and listed in the NextPage catalog.
+description: Propose a community addon so it can be reviewed and listed in the NEXO catalog.
 title: "[Addon submission] "
 labels: ["addon-submission"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for proposing an addon. NextPage installs community addons by URL, so
+        Thanks for proposing an addon. NEXO installs community addons by URL, so
         everything starts from a **manifest**: a small JSON document served over HTTPS
         by whoever hosts the catalog.
 

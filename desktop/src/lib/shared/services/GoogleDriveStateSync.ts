@@ -54,7 +54,7 @@ export interface PullResult {
 
 export class GoogleDriveStateSync {
   private static gdrive = new GDriveProvider();
-  private static STATE_PATH_PREFIX = 'nextpage/books';
+  private static STATE_PATH_PREFIX = 'nexo/books';
 
   private static highlightResolver = new LastWriteWinsConflictResolver<HighlightStateJson>();
   private static bookmarkResolver = new LastWriteWinsConflictResolver<BookmarkStateJson>();

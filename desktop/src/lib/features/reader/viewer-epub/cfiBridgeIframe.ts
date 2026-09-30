@@ -29,7 +29,7 @@ export const IFRAME_CFI_BRIDGE_SCRIPT = `
   function isBlacklisted(node) {
     if (node.nodeType !== 1) return false;
     var el = node;
-    if (el.id === 'nextpage-reader-overrides') return true;
+    if (el.id === 'nexo-reader-overrides') return true;
     return !!BLACKLIST_TAGS[el.tagName.toLowerCase()];
   }
   function cfiChildIndex(parent, target) {

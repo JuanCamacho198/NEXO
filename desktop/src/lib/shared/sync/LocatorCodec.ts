@@ -2,7 +2,7 @@
  * Canonical Readium Locator JSON codec — cross-device continuity (T1).
  *
  * A single canonical locator string is stored in `locator_json` and consumed
- * by both NEXTPAGE engines (desktop + android). Shape (Readium):
+ * by both NEXO engines (desktop + android). Shape (Readium):
  *
  *   {"href":"chapter/001.xhtml","type":"application/xhtml+xml",
  *    "locations":{"progression":0.37,"position":6,"fragment":"epubcfi(...)"}}

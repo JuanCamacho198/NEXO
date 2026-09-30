@@ -105,7 +105,7 @@ class FakeAddonProvider implements CatalogProvider {
       subjects: [],
       downloadUrl: null,
     };
-    return { results: page >= 1 ? [book] : [], nextPage: null, totalCount: 1 };
+    return { results: page >= 1 ? [book] : [], nexoPage: null, totalCount: 1 };
   }
 
   async getDetails(id: string): Promise<CatalogBook> {
@@ -134,7 +134,7 @@ class FakeAddonProvider implements CatalogProvider {
 
   /** Test fake: no featured capability (fail-closed, never called by fan-out). */
   async featured(): Promise<PagedResult> {
-    return { results: [], nextPage: null, totalCount: 0 };
+    return { results: [], nexoPage: null, totalCount: 0 };
   }
 
   supportsFeatured(): boolean {
@@ -164,7 +164,7 @@ class DisabledProvider implements CatalogProvider {
 
   /** Test fake: no featured capability (fail-closed, never called by fan-out). */
   async featured(): Promise<PagedResult> {
-    return { results: [], nextPage: null, totalCount: 0 };
+    return { results: [], nexoPage: null, totalCount: 0 };
   }
 
   supportsFeatured(): boolean {
@@ -172,7 +172,7 @@ class DisabledProvider implements CatalogProvider {
   }
 
   async searchSource(): Promise<PagedResult> {
-    return { results: [], nextPage: null, totalCount: 0 };
+    return { results: [], nexoPage: null, totalCount: 0 };
   }
 }
 
@@ -203,7 +203,7 @@ describe('CompositeCatalogProvider (ordered dynamic providers)', () => {
     const page = await provider.search('pride', 1);
     expect(page.results).toEqual([prideGolden, aliceGolden]);
     expect(page.totalCount).toBe(3);
-    expect(page.nextPage).toBe(2);
+    expect(page.nexoPage).toBe(2);
     expect(calls).toEqual({ g: 1, o: 1 });
   });
 

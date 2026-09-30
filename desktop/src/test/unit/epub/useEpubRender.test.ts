@@ -238,7 +238,7 @@ describe('useEpubRender — pure helpers', () => {
       expect(srcdoc).toContain('asset://localhost');
     });
 
-    it('injects separate nextpage-reader-overrides and nextpage-highlight-styles (::highlight)', () => {
+    it('injects separate nexo-reader-overrides and nexo-highlight-styles (::highlight)', () => {
       const srcdoc = buildChapterSrcdoc(
         chapterData as any,
         RESOURCES,
@@ -246,15 +246,15 @@ describe('useEpubRender — pure helpers', () => {
         'OEBPS/Text/chapter1.xhtml',
         2,
       );
-      expect(srcdoc).toContain('id="nextpage-reader-overrides"');
-      expect(srcdoc).toContain('id="nextpage-highlight-styles"');
+      expect(srcdoc).toContain('id="nexo-reader-overrides"');
+      expect(srcdoc).toContain('id="nexo-highlight-styles"');
       expect(srcdoc).toContain('::highlight(epub-hl-yellow)');
       // highlight rules must NOT be inside overrides
       const parser = new DOMParser();
       const doc = parser.parseFromString(srcdoc, 'text/html');
-      const overrides = doc.getElementById('nextpage-reader-overrides');
+      const overrides = doc.getElementById('nexo-reader-overrides');
       expect(overrides?.textContent ?? '').not.toContain('::highlight(');
-      const hl = doc.getElementById('nextpage-highlight-styles');
+      const hl = doc.getElementById('nexo-highlight-styles');
       expect(hl?.textContent ?? '').toContain('::highlight(epub-hl-yellow)');
     });
 

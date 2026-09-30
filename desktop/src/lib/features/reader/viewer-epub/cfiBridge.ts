@@ -19,7 +19,7 @@
  *
  * The DOM we operate on is the chapter `srcdoc` produced by
  * `EpubNativeViewer.buildChapterSrcdoc`, which has had all `<script>`
- * tags removed and an injected `<style id="nextpage-reader-overrides">`
+ * tags removed and an injected `<style id="nexo-reader-overrides">`
  * appended. Blacklisting is by element-id (the injected style is the only
  * element that ever has a non-`null` `id` in the chapter body), and by
  * a fixed set of element tags that should never appear in CFI paths
@@ -156,12 +156,12 @@ function getChapterBasePrefix(chapterHref: string): string | null {
 /**
  * Filter children of an element, removing nodes that should not appear
  * in CFI paths (blacklist tags) and any element with the injected
- * reader-style id (`nextpage-reader-overrides`).
+ * reader-style id (`nexo-reader-overrides`).
  */
 function isBlacklisted(node: Node): boolean {
   if (node.nodeType !== 1) return false;
   const el = node as Element;
-  if (el.id === 'nextpage-reader-overrides') return true;
+  if (el.id === 'nexo-reader-overrides') return true;
   return BLACKLIST_TAGS.has(el.tagName.toLowerCase());
 }
 

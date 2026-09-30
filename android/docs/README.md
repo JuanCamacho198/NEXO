@@ -1,6 +1,6 @@
 # Project documentation
 
-Architecture, UX, diagrams, and onboarding docs for the NextPage Android app live here. This folder is the single, long-lived home for prose that does not belong in `AGENTS.md` (a quick-reference card) or in code (KDoc).
+Architecture, UX, diagrams, and onboarding docs for the NEXO Android app live here. This folder is the single, long-lived home for prose that does not belong in `AGENTS.md` (a quick-reference card) or in code (KDoc).
 
 ## Purpose
 

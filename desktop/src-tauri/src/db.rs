@@ -43,7 +43,7 @@ const MIGRATIONS: [(&str, &str); 20] = [
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
     let app_data_dir = app.path().app_data_dir()?;
     fs::create_dir_all(&app_data_dir)?;
-    Ok(app_data_dir.join("nextpage.db"))
+    Ok(app_data_dir.join("nexo.db"))
 }
 
 pub fn open_and_migrate(db_path: &Path) -> AppResult<Connection> {

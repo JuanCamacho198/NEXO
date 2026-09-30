@@ -2,6 +2,6 @@
 # Param: TAB (exact Spanish tab label, e.g. "Estanteria").
 # Note: Maestro's text matcher is full-string regex (ignore-case), so the label
 # must match the whole tab text, not just part of it.
-appId: com.nextpage
+appId: com.nexo
 ---
 - tapOn: ${TAB}

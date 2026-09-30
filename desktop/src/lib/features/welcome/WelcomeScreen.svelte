@@ -116,7 +116,7 @@
           <span class="text-2xl font-bold tracking-tight">NP</span>
         </div>
         <div class="flex flex-col">
-          <span class="text-[30px] font-bold leading-tight tracking-tight">NextPage</span>
+          <span class="text-[30px] font-bold leading-tight tracking-tight">Nexo</span>
           <span class="text-lg font-medium text-(--welcome-brand-blue)">
             {t('welcome.brandDesktop')}
           </span>

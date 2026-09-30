@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">NextPage</string>
-    <string name="app_logo_initials">NP</string>
+    <string name="app_name">NEXO</string>
+    <string name="app_logo_initials">N</string>
     <string name="auth_config_error_google_unavailable">Error de configuracion: el inicio de sesion con Google no esta disponible porque el ID de cliente OAuth no esta configurado. Podes continuar usando funciones de biblioteca local.</string>
     <string name="auth_continue_with_google">Continuar con Google</string>
     <string name="auth_google_disabled_loading">El inicio de sesion con Google esta en progreso.</string>
@@ -57,7 +57,7 @@
     <string name="highlights_quote_author">Francis Bacon</string>
     <string name="highlights_idea_content">La consistencia diaria construye resultados.</string>
     <string name="settings_title">Ajustes</string>
-    <string name="settings_subtitle">Personaliza tu experiencia en NextPage.</string>
+    <string name="settings_subtitle">Personaliza tu experiencia en NEXO.</string>
     <string name="settings_account_section">Cuenta</string>
     <string name="settings_preferences_section">Preferencias</string>
     <string name="settings_pref_theme">Tema</string>
@@ -132,7 +132,7 @@
     <string name="onboarding_goal_option_intense_value">Más de 40 min/día</string>
     <string name="onboarding_goal_action">Establecer meta</string>
     <string name="onboarding_goal_footer_note">Puedes cambiar esta configuración más tarde en Ajustes.</string>
-    <string name="home_nextpage_title">NextPage</string>
+    <string name="home_nexo_title">NEXO</string>
     <string name="home_avatar_content_description">Abrir cuenta</string>
     <string name="home_search_results">Resultados</string>
     <string name="nav_home">Inicio</string>
@@ -304,7 +304,7 @@
     <!-- Notifications -->
     <string name="notifications_title">Notificaciones</string>
     <string name="notifications_empty">No tenés notificaciones aún</string>
-    <string name="notifications_mock_welcome_title">¡Bienvenido a NextPage!</string>
+    <string name="notifications_mock_welcome_title">¡Bienvenido a NEXO!</string>
     <string name="notifications_mock_welcome_body">Empezá a leer tu primer libro.</string>
     <string name="notifications_mock_streak_title">Meta de lectura</string>
     <string name="notifications_mock_streak_body">Completaste 3 días de lectura consecutiva. ¡Seguí así!</string>
@@ -496,7 +496,7 @@
     <!-- Debug: notificación de crash + detalle -->
     <string name="debug_crash_channel_name">Reportes de crash (debug)</string>
     <string name="debug_crash_channel_description">Notifica cuando la app crasheó en un inicio anterior</string>
-    <string name="debug_crash_notification_title">NextPage crasheó (debug)</string>
+    <string name="debug_crash_notification_title">NEXO crasheó (debug)</string>
     <string name="debug_crash_notification_body">Toca para ver el stacktrace</string>
     <string name="debug_crash_detail_title">Último crash</string>
     <string name="debug_crash_copy">Copiar al portapapeles</string>
@@ -830,7 +830,7 @@
     <string name="about_licenses">Licencias</string>
     <string name="about_contact">Contactar</string>
     <string name="about_rate">Calificar</string>
-    <string name="about_footer">© 2026 NextPage</string>
+    <string name="about_footer">© 2026 NEXO</string>
 
     <!-- Rendimiento (Ajustes → Rendimiento) -->
     <string name="settings_performance_title">Rendimiento</string>
@@ -931,7 +931,7 @@
     <string name="addon_consent_body">«%1$s» puede ver el título, el autor y los identificadores de este libro para buscar dónde leerlo. Los enlaces se abren en tu navegador; nada se descarga sin tu acción.</string>
     <string name="addon_consent_allow">Permitir</string>
     <string name="addon_consent_deny">Ahora no</string>
-    <string name="addon_consent_trust_note">Los complementos corren fuera de NextPage. Compartí datos solo con fuentes en las que confíes.</string>
+    <string name="addon_consent_trust_note">Los complementos corren fuera de NEXO. Compartí datos solo con fuentes en las que confíes.</string>
     <string name="addon_consent_state_granted">Acceso otorgado: este complemento puede resolver enlaces de lectura.</string>
     <string name="addon_consent_state_missing">Acceso no otorgado: este complemento no va a resolver enlaces de lectura.</string>
     <!-- U5: addon capabilities -->
@@ -948,17 +948,17 @@
     <string name="addon_read_legal_notice">Fuente externa: los enlaces se abren en tu navegador. La disponibilidad y los derechos dependen del proveedor y de tu región.</string>
     <!-- U5: legal disclaimer + policy page -->
     <string name="legal_disclaimer_title">Un aviso antes de explorar</string>
-    <string name="legal_disclaimer_body">NextPage apunta a fuentes externas legales. Las descargas en la app solo se ofrecen para libros de dominio público; lo demás se abre en tu navegador, donde la disponibilidad y los derechos dependen del proveedor.</string>
+    <string name="legal_disclaimer_body">NEXO apunta a fuentes externas legales. Las descargas en la app solo se ofrecen para libros de dominio público; lo demás se abre en tu navegador, donde la disponibilidad y los derechos dependen del proveedor.</string>
     <string name="legal_disclaimer_accept">Entendido</string>
     <string name="legal_disclaimer_view_policy">Leer aviso legal</string>
     <string name="legal_policy_title">Aviso legal</string>
-    <string name="legal_policy_intro">NextPage es una app de lectura, no una librería: te ayuda a encontrar dónde leer legalmente y mantiene tu biblioteca sincronizada.</string>
+    <string name="legal_policy_intro">NEXO es una app de lectura, no una librería: te ayuda a encontrar dónde leer legalmente y mantiene tu biblioteca sincronizada.</string>
     <string name="legal_policy_sources_title">De dónde viene el catálogo</string>
     <string name="legal_policy_sources_body">Los resultados vienen de catálogos públicos (Open Library, Project Gutenberg vía Gutendex, Google Books) y de complementos comunitarios que vos instalás. Cada resultado nombra su fuente.</string>
     <string name="legal_policy_public_domain_title">Descargas</string>
     <string name="legal_policy_public_domain_body">La descarga en la app solo se ofrece para libros de dominio público. Cualquier otro título se abre en tu navegador, donde los términos del proveedor y tu región deciden la disponibilidad.</string>
     <string name="legal_policy_addons_title">Complementos y consentimiento</string>
-    <string name="legal_policy_addons_body">Los complementos corren fuera de NextPage. Un complemento solo resuelve enlaces de lectura después de que le otorgues acceso al título, autor e identificadores del libro, y podés revocar ese acceso cuando quieras desde la pantalla de complementos.</string>
+    <string name="legal_policy_addons_body">Los complementos corren fuera de NEXO. Un complemento solo resuelve enlaces de lectura después de que le otorgues acceso al título, autor e identificadores del libro, y podés revocar ese acceso cuando quieras desde la pantalla de complementos.</string>
     <string name="legal_policy_updated_note">Este aviso puede cambiar a medida que se agreguen fuentes.</string>
     <!-- U5: legal empty state + universal sources -->
     <string name="discover_empty_legal_title">Sin coincidencias legales</string>
@@ -973,7 +973,7 @@
     <string name="update_now">Actualizar ahora</string>
     <string name="update_later">Recordarme más tarde</string>
     <string name="update_metered_consent">Está en una conexión medida. ¿Descargar la actualización ahora? Puede usar datos móviles.</string>
-    <string name="update_install_guidance">El sistema bloqueó la instalación. Active “Instalar apps desconocidas” para NextPage e inténtelo de nuevo.</string>
+    <string name="update_install_guidance">El sistema bloqueó la instalación. Active “Instalar apps desconocidas” para NEXO e inténtelo de nuevo.</string>
     <string name="update_error_unreachable">No se pudo contactar el servidor de actualizaciones. Inténtelo más tarde.</string>
     <string name="update_error_malformed">El feed de actualización no es válido. Inténtelo más tarde.</string>
     <string name="update_error_offline">Está sin conexión. Conéctese e inténtelo de nuevo.</string>

@@ -8,6 +8,18 @@ export type Lang = keyof typeof languages;
 export const ui = { es, en } as const;
 export type UIKey = keyof (typeof ui)[typeof defaultLang];
 
+/**
+ * One static path per locale for a `[...locale]` catch-all route. The default
+ * locale renders at the bare path (`locale: undefined`), every other locale at
+ * its prefix (`locale: 'en'`). Adding a language means adding it to
+ * `languages` above — no new route file.
+ */
+export function localeStaticPaths(): { params: { locale: string | undefined } }[] {
+  return (Object.keys(languages) as Lang[]).map((lang) => ({
+    params: { locale: lang === defaultLang ? undefined : lang },
+  }));
+}
+
 export function getLangFromUrl(url: URL): Lang {
   const first = url.pathname.split('/')[1];
   if (first && first in languages) return first as Lang;

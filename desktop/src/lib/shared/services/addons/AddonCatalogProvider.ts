@@ -27,11 +27,11 @@ import {
   MAX_MANIFEST_BYTES,
   declaredCapabilities,
   type AddonManifest,
-} from '@nextpage/manifest-validator';
+} from '@nexo/manifest-validator';
 import { defaultAddonTransport, type AddonTransport } from './AddonRegistry';
 import type { AddonFetchResult } from './AddonRegistry';
 
-const EMPTY_PAGE: PagedResult = { results: [], nextPage: null, totalCount: 0 };
+const EMPTY_PAGE: PagedResult = { results: [], nexoPage: null, totalCount: 0 };
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
@@ -103,7 +103,7 @@ function parseSearchPayload(payload: unknown, sourceId: string, page: number): P
   const clamped = books.slice(0, MAX_PAGE_SIZE);
   return {
     results: clamped,
-    nextPage: computeNextPage(page, clamped.length, totalCount),
+    nexoPage: computeNextPage(page, clamped.length, totalCount),
     totalCount,
   };
 }

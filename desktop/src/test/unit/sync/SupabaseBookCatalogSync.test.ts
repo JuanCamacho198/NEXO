@@ -201,7 +201,7 @@ describe('SupabaseBookCatalogSync — upsertBook merge semantics (DRP-2/DRP-5)',
       content_hash: 'sha256:existing',
       remote_provider: 'google_drive',
       remote_file_id: 'file-keep-1',
-      remote_path: 'NextPage/Books/book-1.epub',
+      remote_path: 'Nexo/Books/book-1.epub',
       remote_name: 'book-1.epub',
       protocol_version: '1',
       recovery_protocol: 'recovery_protocol_v1',
@@ -224,7 +224,7 @@ describe('SupabaseBookCatalogSync — upsertBook merge semantics (DRP-2/DRP-5)',
     expect(payload.catalog_version).toBe(3);
     expect(payload.remote_provider).toBe('google_drive');
     expect(payload.remote_file_id).toBe('file-keep-1');
-    expect(payload.remote_path).toBe('NextPage/Books/book-1.epub');
+    expect(payload.remote_path).toBe('Nexo/Books/book-1.epub');
     expect(payload.remote_name).toBe('book-1.epub');
   });
 
@@ -266,7 +266,7 @@ describe('SupabaseBookCatalogSync — upsertBook merge semantics (DRP-2/DRP-5)',
         catalogVersion: 1,
         remoteProvider: 'google_drive',
         remoteFileId: 'file-new-1',
-        remotePath: 'NextPage/Books/book-1.epub',
+        remotePath: 'Nexo/Books/book-1.epub',
         remoteName: 'book-1.epub',
         protocolVersion: 1,
         recoveryProtocol: 'recovery_protocol_v1',

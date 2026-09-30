@@ -5,7 +5,7 @@
 #
 # Design D2: "Sincronizado" is asserted on Estantería, the sole mount of
 # SyncStatusIndicator reachable with stable selectors (LibraryScreen).
-appId: com.nextpage
+appId: com.nexo
 tags: [chaos, sync]
 ---
 - launchApp:

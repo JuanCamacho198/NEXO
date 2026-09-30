@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">NextPage</string>
-    <string name="app_logo_initials">NP</string>
+    <string name="app_name">NEXO</string>
+    <string name="app_logo_initials">N</string>
     <string name="tab_auth">Auth</string>
     <string name="tab_highlights">Highlights</string>
     <string name="tab_settings">Settings</string>
@@ -96,7 +96,7 @@
     <string name="onboarding_goal_option_intense_value">More than 40 min/day</string>
     <string name="onboarding_goal_action">Set goal</string>
     <string name="onboarding_goal_footer_note">You can change this later in Settings.</string>
-    <string name="home_nextpage_title">NextPage</string>
+    <string name="home_nexo_title">NEXO</string>
     <string name="home_avatar_content_description">Open account settings</string>
     <string name="home_search_results">Results</string>
     <string name="home_close_search">Close search</string>
@@ -324,7 +324,7 @@
     <!-- Notifications -->
     <string name="notifications_title">Notifications</string>
     <string name="notifications_empty">You have no notifications yet</string>
-    <string name="notifications_mock_welcome_title">Welcome to NextPage!</string>
+    <string name="notifications_mock_welcome_title">Welcome to NEXO!</string>
     <string name="notifications_mock_welcome_body">Start reading your first book.</string>
     <string name="notifications_mock_streak_title">Reading goal</string>
     <string name="notifications_mock_streak_body">You completed 3 consecutive reading days. Keep it up!</string>
@@ -462,7 +462,7 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
-    <string name="settings_subtitle">Customize your NextPage experience.</string>
+    <string name="settings_subtitle">Customize your NEXO experience.</string>
     <string name="settings_account_section">Account</string>
     <string name="settings_preferences_section">Preferences</string>
     <string name="settings_pref_theme">Theme</string>
@@ -610,7 +610,7 @@
     <!-- Debug: crash notification + detail -->
     <string name="debug_crash_channel_name">Crash reports (debug)</string>
     <string name="debug_crash_channel_description">Notifies when the app crashed on a previous launch</string>
-    <string name="debug_crash_notification_title">NextPage crashed (debug)</string>
+    <string name="debug_crash_notification_title">NEXO crashed (debug)</string>
     <string name="debug_crash_notification_body">Tap to see the stacktrace</string>
     <string name="debug_crash_detail_title">Last crash</string>
     <string name="debug_crash_copy">Copy to clipboard</string>
@@ -827,7 +827,7 @@
     <string name="about_licenses">Licenses</string>
     <string name="about_contact">Contact</string>
     <string name="about_rate">Rate app</string>
-    <string name="about_footer">© 2026 NextPage</string>
+    <string name="about_footer">© 2026 NEXO</string>
 
     <!-- Performance (Settings → Performance) -->
     <string name="settings_performance_title">Performance</string>
@@ -940,7 +940,7 @@
     <string name="addon_consent_body">“%1$s” can see this book\'s title, author and identifiers to find where to read it. Links open in your browser; nothing downloads without your action.</string>
     <string name="addon_consent_allow">Allow</string>
     <string name="addon_consent_deny">Not now</string>
-    <string name="addon_consent_trust_note">Addons run outside NextPage. Share details only with sources you trust.</string>
+    <string name="addon_consent_trust_note">Addons run outside NEXO. Share details only with sources you trust.</string>
     <string name="addon_consent_state_granted">Access granted: this addon may resolve reading links.</string>
     <string name="addon_consent_state_missing">Access not granted: this addon won\'t resolve reading links.</string>
     <!-- U5: addon capabilities -->
@@ -957,17 +957,17 @@
     <string name="addon_read_legal_notice">External source: links open in your browser. Availability and rights depend on the provider and your region.</string>
     <!-- U5: legal disclaimer + policy page -->
     <string name="legal_disclaimer_title">A note before you browse</string>
-    <string name="legal_disclaimer_body">NextPage points to legal external sources. In-app downloads are only offered for public-domain books; everything else opens in your browser, where availability and rights depend on the provider.</string>
+    <string name="legal_disclaimer_body">NEXO points to legal external sources. In-app downloads are only offered for public-domain books; everything else opens in your browser, where availability and rights depend on the provider.</string>
     <string name="legal_disclaimer_accept">Understood</string>
     <string name="legal_disclaimer_view_policy">Read legal notice</string>
     <string name="legal_policy_title">Legal notice</string>
-    <string name="legal_policy_intro">NextPage is a reading app, not a bookstore: it helps you find where to read legally and keeps your library in sync.</string>
+    <string name="legal_policy_intro">NEXO is a reading app, not a bookstore: it helps you find where to read legally and keeps your library in sync.</string>
     <string name="legal_policy_sources_title">Where the catalog comes from</string>
     <string name="legal_policy_sources_body">Results come from public catalogs (Open Library, Project Gutenberg via Gutendex, Google Books) and optional community addons you install. Each result names its source.</string>
     <string name="legal_policy_public_domain_title">Downloads</string>
     <string name="legal_policy_public_domain_body">The in-app download is only offered for public-domain books. Any other title opens externally in your browser, where the provider\'s terms and your region decide availability.</string>
     <string name="legal_policy_addons_title">Addons and consent</string>
-    <string name="legal_policy_addons_body">Addons run outside NextPage. An addon only resolves reading links after you grant it access to the book\'s title, author and identifiers, and you can revoke that access anytime from the addons screen.</string>
+    <string name="legal_policy_addons_body">Addons run outside NEXO. An addon only resolves reading links after you grant it access to the book\'s title, author and identifiers, and you can revoke that access anytime from the addons screen.</string>
     <string name="legal_policy_updated_note">This notice may change as new sources are added.</string>
     <!-- U5: legal empty state + universal sources -->
     <string name="discover_empty_legal_title">No legal matches</string>
@@ -982,7 +982,7 @@
     <string name="update_now">Update now</string>
     <string name="update_later">Remind me later</string>
     <string name="update_metered_consent">You\'re on a metered connection. Download the update now? It may use mobile data.</string>
-    <string name="update_install_guidance">The system blocked the install. Enable “Install unknown apps” for NextPage, then try again.</string>
+    <string name="update_install_guidance">The system blocked the install. Enable “Install unknown apps” for NEXO, then try again.</string>
     <string name="update_error_unreachable">Couldn\'t reach the update server. Try again later.</string>
     <string name="update_error_malformed">The update feed is invalid. Try again later.</string>
     <string name="update_error_offline">You\'re offline. Connect and try again.</string>

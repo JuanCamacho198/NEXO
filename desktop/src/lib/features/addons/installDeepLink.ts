@@ -5,7 +5,9 @@
  * which delegates install URLs to the useInstallDeepLink store via a setter
  * — keeping this module free of store/Tauri imports for testability.
  */
-const INSTALL_SCHEMES = new Set(['nextpage', 'nextpage-desktop']);
+// `nexo` is the canonical NEXO scheme; the `nextpage*` schemes are legacy and
+// stay accepted during the transition so shared addon links keep resolving.
+const INSTALL_SCHEMES = new Set(['nexo', 'nextpage', 'nextpage-desktop']);
 const INSTALL_HOST = 'install';
 
 export interface InstallDeepLinkDeps {

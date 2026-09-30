@@ -14,7 +14,7 @@ import {
   assertHttpsInstallUrl,
   validateManifest,
   type AddonManifest,
-} from '@nextpage/manifest-validator';
+} from '@nexo/manifest-validator';
 
 /** Closed set of built-in source names addon manifests must not claim. */
 const BUILTIN_SOURCE_NAMES = new Set(['gutendex', 'openlibrary']);

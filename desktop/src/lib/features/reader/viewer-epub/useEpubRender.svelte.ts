@@ -360,16 +360,16 @@ export function buildChapterSrcdoc(
       `;
   }
 
-  let readerStyle = doc.getElementById('nextpage-reader-overrides');
+  let readerStyle = doc.getElementById('nexo-reader-overrides');
   if (!readerStyle) {
     readerStyle = doc.createElement('style');
-    readerStyle.id = 'nextpage-reader-overrides';
+    readerStyle.id = 'nexo-reader-overrides';
     doc.head.appendChild(readerStyle);
   }
   readerStyle.textContent = readerCss;
 
   const highlightStyle = doc.createElement('style');
-  highlightStyle.id = 'nextpage-highlight-styles';
+  highlightStyle.id = 'nexo-highlight-styles';
   highlightStyle.textContent = HIGHLIGHT_COLORS.map(
     (color) =>
       `::highlight(epub-hl-${color.label}) { background-color: ${highlightFillRgba(nearestHighlightHex(color.hex), 0.4)}; }`,
@@ -672,10 +672,10 @@ export function createEpubRender(deps: EpubRenderDeps) {
     const doc = iframeEl.contentDocument;
     const head = doc.head;
     if (!head) return;
-    let readerStyle = doc.getElementById('nextpage-reader-overrides');
+    let readerStyle = doc.getElementById('nexo-reader-overrides');
     if (!readerStyle) {
       readerStyle = doc.createElement('style');
-      readerStyle.id = 'nextpage-reader-overrides';
+      readerStyle.id = 'nexo-reader-overrides';
       head.appendChild(readerStyle);
     }
     let css = buildReaderOverrideCssLocal();

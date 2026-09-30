@@ -1,6 +1,6 @@
-# NextPage Desktop
+# Nexo Desktop
 
-Desktop shell for NextPage: a local-first book reader for EPUB and PDF files. Built with **Tauri 2** (Rust) and **Svelte 5** (TypeScript + Tailwind CSS v4). Books are stored and indexed in a local SQLite database, with optional cloud sync through Supabase and Drive-backed downloads.
+Desktop shell for Nexo: a local-first book reader for EPUB and PDF files. Built with **Tauri 2** (Rust) and **Svelte 5** (TypeScript + Tailwind CSS v4). Books are stored and indexed in a local SQLite database, with optional cloud sync through Supabase and Drive-backed downloads.
 
 ## Requisitos previos
 

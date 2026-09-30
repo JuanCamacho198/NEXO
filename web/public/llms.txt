@@ -1,36 +1,36 @@
-# NextPage Addons
+# NEXO Addons
 
-> Community directory of book catalogs (addons) for NextPage. Search, filter, and open any addon for details.
+> Community directory of book catalogs (addons) for NEXO. Search, filter, and open any addon for details.
 
 ## Routes
 
 ES (default locale, no prefix):
 
-- https://nextpage-addons.jcamachomolina503.workers.dev/
-- https://nextpage-addons.jcamachomolina503.workers.dev/catalogo
-- https://nextpage-addons.jcamachomolina503.workers.dev/enviar
-- https://nextpage-addons.jcamachomolina503.workers.dev/docs
+- https://nexo-addons.jcamachomolina503.workers.dev/
+- https://nexo-addons.jcamachomolina503.workers.dev/catalogo
+- https://nexo-addons.jcamachomolina503.workers.dev/enviar
+- https://nexo-addons.jcamachomolina503.workers.dev/docs
 
-- https://nextpage-addons.jcamachomolina503.workers.dev/catalogo/gutendex
-- https://nextpage-addons.jcamachomolina503.workers.dev/catalogo/openlibrary
+- https://nexo-addons.jcamachomolina503.workers.dev/catalogo/gutendex
+- https://nexo-addons.jcamachomolina503.workers.dev/catalogo/openlibrary
 
 EN (under /en/):
 
-- https://nextpage-addons.jcamachomolina503.workers.dev/en/
-- https://nextpage-addons.jcamachomolina503.workers.dev/en/catalog
-- https://nextpage-addons.jcamachomolina503.workers.dev/en/submit
-- https://nextpage-addons.jcamachomolina503.workers.dev/en/docs
+- https://nexo-addons.jcamachomolina503.workers.dev/en/
+- https://nexo-addons.jcamachomolina503.workers.dev/en/catalog
+- https://nexo-addons.jcamachomolina503.workers.dev/en/submit
+- https://nexo-addons.jcamachomolina503.workers.dev/en/docs
 
-- https://nextpage-addons.jcamachomolina503.workers.dev/en/catalog/gutendex
-- https://nextpage-addons.jcamachomolina503.workers.dev/en/catalog/openlibrary
+- https://nexo-addons.jcamachomolina503.workers.dev/en/catalog/gutendex
+- https://nexo-addons.jcamachomolina503.workers.dev/en/catalog/openlibrary
 
 ## Catalog
 
-Complete machine-readable catalog: https://nextpage-addons.jcamachomolina503.workers.dev/catalog.json
+Complete machine-readable catalog: https://nexo-addons.jcamachomolina503.workers.dev/catalog.json
 
-- Gutendex — Over 70,000 free ebooks from Project Gutenberg, with search and full details. — https://nextpage-addons.jcamachomolina503.workers.dev/catalogo/gutendex
-- Open Library — Millions of records and covers from the Internet Archive open library. — https://nextpage-addons.jcamachomolina503.workers.dev/catalogo/openlibrary
+- Gutendex — Over 70,000 free ebooks from Project Gutenberg, with search and full details. — https://nexo-addons.jcamachomolina503.workers.dev/catalogo/gutendex
+- Open Library — Millions of records and covers from the Internet Archive open library. — https://nexo-addons.jcamachomolina503.workers.dev/catalogo/openlibrary
 
 ## Contribute
 
-Propose a new addon at https://github.com/JuanCamacho198/NEXTPAGE (see the submit page).
+Propose a new addon at https://github.com/JuanCamacho198/NEXO (see the submit page).

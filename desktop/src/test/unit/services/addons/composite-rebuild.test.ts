@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AddonRegistry, type AddonRegistryStore } from '$lib/shared/services/addons/AddonRegistry';
 import { createRebuildingCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
 import { addonIdFromUrl } from '$lib/shared/services/addons/addonId';
-import type { AddonManifest } from '@nextpage/manifest-validator';
+import type { AddonManifest } from '@nexo/manifest-validator';
 import type { AddonTransport } from '$lib/shared/services/addons/AddonRegistry';
 import { createSettingsAddons } from '$lib/features/settings/useSettingsAddons.svelte';
 

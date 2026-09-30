@@ -1,6 +1,6 @@
-# Contributing to NextPage
+# Contributing to NEXO
 
-Thank you for your interest in contributing to NextPage! This guide will help you get started.
+Thank you for your interest in contributing to NEXO! This guide will help you get started.
 
 ## Code of Conduct
 
@@ -76,7 +76,7 @@ test(viewmodel): add deletion event tests
 
 ```bash
 # Clone and open in Android Studio
-git clone https://github.com/JuanCamacho198/NEXTPAGE.git
+git clone https://github.com/JuanCamacho198/NEXO.git
 # Open android/ folder in Android Studio
 
 # Build from command line
@@ -122,4 +122,4 @@ Contributors will be added to the project's contributors list.
 - Start a discussion for general questions
 - Don't hesitate to ask for help!
 
-We appreciate every contribution, no matter how small. Thank you for supporting NextPage!
+We appreciate every contribution, no matter how small. Thank you for supporting NEXO!

@@ -16,7 +16,7 @@
 #     NO confirmation AlertDialog between the context-menu tap and removal.
 #   - "Eliminar" resolves by content-description of the trash icon
 #     (context_menu_delete); no other visible node has that exact text.
-appId: com.nextpage
+appId: com.nexo
 tags: [regression]
 ---
 - launchApp:

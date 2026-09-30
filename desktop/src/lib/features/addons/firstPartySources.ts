@@ -11,7 +11,7 @@ import {
   BUILTIN_GUTENDEX,
   BUILTIN_OPENLIBRARY,
 } from '$lib/shared/services/catalog/CatalogProvider';
-import { validateManifest } from '@nextpage/manifest-validator';
+import { validateManifest } from '@nexo/manifest-validator';
 import curatedJson from '$lib/shared/services/addons/curated.json';
 
 export interface FirstPartySource {

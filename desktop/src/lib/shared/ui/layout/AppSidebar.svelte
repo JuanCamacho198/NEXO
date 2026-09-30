@@ -59,7 +59,7 @@
           NP
         </div>
         <h1 class="text-base font-bold tracking-tight text-(--color-primary)">
-          NextPage<br /><span class="text-xs font-normal text-(--color-text-muted)">Desktop</span>
+          Nexo<br /><span class="text-xs font-normal text-(--color-text-muted)">Desktop</span>
         </h1>
         <button
           onclick={() => (collapsed = !collapsed)}

@@ -8,31 +8,47 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
-        android:name=".NextPageApplication"
+        android:name=".NexoApplication"
         android:allowBackup="false"
         android:fullBackupContent="false"
-        android:label="NextPage"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
         android:supportsRtl="true"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:theme="@style/Theme.NextPage">
+        android:theme="@style/Theme.Nexo">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:theme="@style/Theme.NextPage.Splash">
+            android:theme="@style/Theme.Nexo.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Supabase OAuth callback deep-link -->
+            <!-- App deep links (auth callbacks + addon install).
+
+                 BOTH schemes are registered here and map to this one activity and
+                 its one handler:
+                 - `nexo` is the canonical NEXO scheme;
+                 - `nextpage` is RETAINED as a legacy scheme for the transition
+                   window, so links already delivered to users (password-reset and
+                   email-confirmation mails, previously shared addon links) keep
+                   resolving. Do NOT remove it in this release: retire it together
+                   with the matching Supabase redirect-allowlist change. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
+                <!-- Supabase OAuth callback deep-link -->
+                <data
+                    android:scheme="nexo"
+                    android:host="auth"
+                    android:pathPrefix="/callback" />
                 <data
                     android:scheme="nextpage"
                     android:host="auth"
@@ -40,26 +56,41 @@
 
                 <!-- Password-reset email link (Supabase resetPasswordForEmail
                      redirectUrl = nextpage://auth/reset-password). The app
-                     resolves this cold-start and lands on the forgot screen. -->
+                     resolves this cold-start and lands on the forgot screen. The
+                     outgoing redirect URL deliberately keeps the legacy scheme so
+                     it stays valid in the Supabase redirect allowlist, which is a
+                     project setting this repository cannot migrate. -->
+                <data
+                    android:scheme="nexo"
+                    android:host="auth"
+                    android:pathPrefix="/reset-password" />
                 <data
                     android:scheme="nextpage"
                     android:host="auth"
                     android:pathPrefix="/reset-password" />
 
                 <!-- Email-confirmation deep link (Supabase Site URL
-                     nextpage://auth/confirm). supabase-kt's handleDeeplinks
-                     parses the fragment and imports the signup session. -->
+                     nexo://auth/confirm, legacy nextpage://auth/confirm).
+                     supabase-kt's handleDeeplinks parses the fragment and imports
+                     the signup session. -->
+                <data
+                    android:scheme="nexo"
+                    android:host="auth"
+                    android:pathPrefix="/confirm" />
                 <data
                     android:scheme="nextpage"
                     android:host="auth"
                     android:pathPrefix="/confirm" />
 
-            <!-- Addon install deep link (addon-deeplink-v1): routed by
-                 MainActivity BEFORE supabase handleDeeplinks. Custom scheme -
-                 no assetlinks.json needed. -->
-            <data
-                android:scheme="nextpage"
-                android:host="install" />
+                <!-- Addon install deep link (addon-deeplink-v1): routed by
+                     MainActivity BEFORE supabase handleDeeplinks. Custom scheme -
+                     no assetlinks.json needed. -->
+                <data
+                    android:scheme="nexo"
+                    android:host="install" />
+                <data
+                    android:scheme="nextpage"
+                    android:host="install" />
             </intent-filter>
 
             <!-- Google Drive OAuth redirect (authorization-code + PKCE).
@@ -90,7 +121,7 @@
         <activity
             android:name=".debug.FeedbackActivity"
             android:exported="false"
-            android:theme="@style/Theme.NextPage.Splash" />
+            android:theme="@style/Theme.Nexo.Splash" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -102,7 +133,7 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- WorkManager on-demand initialization (S6). NextPageApplication
+        <!-- WorkManager on-demand initialization (S6). NexoApplication
              implements Configuration.Provider + HiltWorkerFactory, so the
              default androidx.startup WorkManagerInitializer MUST be removed —
              otherwise the default Configuration wins and the Hilt worker
@@ -122,7 +153,7 @@
         </provider>
 
         <!-- Disable Sentry's auto-init ContentProvider (SentryInitProvider).
-             We init manually in NextPageApplication.onCreate with the DSN
+             We init manually in NexoApplication.onCreate with the DSN
              from BuildConfig (local.properties, gitignored). Without this,
              the provider crashes on launch with "DSN is required" when no
              DSN is set via manifest meta-data. -->

@@ -1,6 +1,6 @@
-# NextPage Web
+# NEXO Web
 
-Public web surface for NextPage: a static Astro 5 site with ES-first i18n and
+Public web surface for NEXO: a static Astro 5 site with ES-first i18n and
 the design tokens shared with the desktop app.
 
 ## Local development
@@ -35,8 +35,8 @@ the Cloudflare console for v1.
 2. Build command: `bun run --cwd web build`
 3. Build output directory: `web/dist`
 4. Environment variables: none (the site is fully static).
-5. Bind the custom domain `nextpage.app` (apex) and add `www.nextpage.app`
-   with a redirect to the apex.
+5. Bind the site's custom domain (apex) and add `www` with a redirect to the
+   apex. No apex domain is decided for NEXO yet, so the deployer picks it.
 
 ## Known gaps
 

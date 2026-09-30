@@ -99,6 +99,15 @@ val releaseMinifyEnabled =
 
 fun String.escapeForBuildConfig(): String = replace("\\", "\\\\").replace("\"", "\\\"")
 
+// Single source of truth for the Android Sentry identity. The organisation is the
+// console-side `nexo-app` slug and the project is `nexo-android`; neither can be
+// renamed from this repository. `sentryProject` feeds both `sentry.projectName` and
+// the `BuildConfig.SENTRY_RELEASE_PREFIX` that composes the cross-platform release
+// `nexo-android@<VERSION_NAME>+<sha12>` (consumed by NexoApplication and
+// ReleaseFormatTest), so the slug is written once and cannot drift between the
+// plugin's uploaded project and the runtime release string.
+val sentryProject = "nexo-android"
+
 // Release signing (app-auto-update signing cutover, release 0.4.0). The release
 // keystore never lives in the repo: the release workflow exports it as base64
 // (ANDROID_KEYSTORE_BASE64 + ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS /
@@ -109,18 +118,18 @@ val releaseKeystoreBase64 = System.getenv("ANDROID_KEYSTORE_BASE64") ?: ""
 val useReleaseSigning = releaseKeystoreBase64.isNotEmpty()
 
 android {
-    namespace = "com.nextpage"
+    namespace = "com.nexo"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.nextpage"
+        applicationId = "com.nexo"
         minSdk = 26
         targetSdk = 36
-        val appVersionName = "0.3.1" // x-release-please-version
+        val appVersionName = "0.3.2" // x-release-please-version
         versionName = appVersionName
         // versionCode is derived from versionName so a release never has to bump it by
         // hand (and can never forget to): major*10000 + minor*100 + patch stays monotonic
-        // across every normal bump (0.2.0 -> 200, 0.3.0 -> 300, 0.3.1 -> 301, 1.0.0 -> 10000).
+        // across every normal bump (each patch adds 1, each minor adds 100).
         versionCode =
             appVersionName.split('.').let { (major, minor, patch) ->
                 major.toInt() * 10_000 + minor.toInt() * 100 + patch.toInt()
@@ -136,9 +145,13 @@ android {
 
         // Android OAuth client ID for the Drive authorization-code + PKCE flow.
         // Public client identifier (it ships inside the APK). Configured in
-        // local.properties (google.oauth.android.client.id) like the web client —
-        // must match the "Nextpage Android" OAuth client in Google Cloud Console
-        // (package com.nextpage + the debug/release SHA-1 fingerprints).
+        // local.properties (google.oauth.android.client.id) like the web client.
+        // OUT-OF-BAND STEP REQUIRED BY THE com.nexo RENAME: the Google Cloud
+        // Console OAuth client is bound to the app's package name, so an existing
+        // client registered for `com.nextpage` no longer authorizes this build.
+        // Register/update an Android OAuth client for `com.nexo` with the
+        // debug/release SHA-1 fingerprints and put its id in local.properties,
+        // or Google sign-in and the Drive flow fail with DEVELOPER_ERROR.
         val googleOAuthAndroidClientId = (localProperties.getProperty("google.oauth.android.client.id") ?: "").escapeForBuildConfig()
         buildConfigField("String", "GOOGLE_OAUTH_ANDROID_CLIENT_ID", "\"$googleOAuthAndroidClientId\"")
 
@@ -173,15 +186,21 @@ android {
         buildConfigField("String", "UPDATE_FEED_URL", "\"$updateFeedUrl\"")
 
         // Sentry DSN — read from local.properties (gitignored). When empty,
-        // SentryAndroid.init becomes a no-op (see NextPageApplication.onCreate).
+        // SentryAndroid.init becomes a no-op (see NexoApplication.onCreate).
         // Sentry auth token is read at Gradle config time from env vars below;
         // it never enters BuildConfig because it must not be shipped in the APK.
         val sentryDsn = (localProperties.getProperty("SENTRY_DSN") ?: "").escapeForBuildConfig()
         buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
 
+        // Release prefix for the cross-platform Sentry release scheme, single-sourced
+        // from the Gradle-level `sentryProject` above so the runtime string and the
+        // plugin's uploaded project cannot drift. Consumers: NexoApplication (release
+        // composition) and ReleaseFormatTest.
+        buildConfigField("String", "SENTRY_RELEASE_PREFIX", "\"$sentryProject\"")
+
         // Git SHA (short=12) — injected at build time so every APK has a unique
         // fingerprint and matches the cross-platform release scheme from spec C1
-        // (`nextpage-android@<VERSION_NAME>+<sha12>`). Truncated to 12 chars if a
+        // (`<SENTRY_RELEASE_PREFIX>@<VERSION_NAME>+<sha12>`). Truncated to 12 chars if a
         // shallow clone returns a shorter SHA; falls back to `unknown` on git
         // failure so debug builds never block.
         val gitSha =
@@ -359,8 +378,16 @@ listOf("main", "release").forEach { sourceSetName ->
 // Sentry Android Gradle Plugin extension. Out-of-android block per plugin docs.
 // - autoInstallation: enabled → plugin auto-adds the Sentry Android SDK + a
 //   Sentry OkHttp interceptor to the application.
-// - org/projectName: bound to the Sentry project `nextpage-android` under the
-//   organization slug the user creates in sentry.io before Phase 3.
+// - org: the console-side Sentry organisation slug, `nexo-app`. It is also a
+//   deployed GitHub secret (`SENTRY_ORG`), so the environment is read first and
+//   the literal is only the local/fallback value; either way it must stay
+//   byte-identical to the console slug or mapping upload fails.
+// - projectName: the Sentry project slug `nexo-android`, read from the
+//   Gradle-level `sentryProject` above. Like the org it is a console-side
+//   identifier that keeps its `nexo-` prefix and cannot be renamed from this
+//   repository; single-sourcing it also feeds `BuildConfig.SENTRY_RELEASE_PREFIX`,
+//   so the uploaded project and the runtime release string (`nexo-android@...`)
+//   cannot diverge.
 // - authToken: read ONLY from env vars. The auth token is NEVER committed;
 //   users set SENTRY_AUTH_TOKEN locally (or in CI secrets). When unset,
 //   release builds will fail `verifySentryMappingUpload` (see below) — this
@@ -374,12 +401,12 @@ sentry {
         enabled.set(true)
     }
     val sentryAuthToken = System.getenv("SENTRY_AUTH_TOKEN") ?: ""
-    org.set(System.getenv("SENTRY_ORG") ?: "nextpage-android")
-    projectName.set("nextpage-android")
+    org.set(System.getenv("SENTRY_ORG") ?: "nexo-app")
+    projectName.set(sentryProject)
     authToken.set(sentryAuthToken)
     // SAGP has NO skip-on-missing-token path: with an empty token the upload
     // task still runs, the extracted sentry-cli rejects the call and the
-    // release build fails (observed in the 0.3.1 release run). The only
+    // release build fails (observed in a past release run). The only
     // supported knob is the upload switch itself, so gate it on the token:
     // CI (token present) uploads exactly as before; any token-less build
     // takes the plugin's dry-run path and exits 0.
@@ -536,7 +563,7 @@ tasks.register("verifyAuthScreenNoHardcodedStrings") {
     // configuration-cache type (Project.file() would capture the script).
     val authScreenFile =
         layout.projectDirectory.file(
-            "src/main/java/com/nextpage/presentation/screen/AuthScreen.kt",
+            "src/main/java/com/nexo/presentation/screen/AuthScreen.kt",
         )
 
     doLast {
@@ -630,13 +657,13 @@ tasks.register("verifyNoReaderUiStateResidue") {
     //    AuthViewModel.
     val readerRoots =
         listOf(
-            "src/main/java/com/nextpage/presentation/viewmodel/ReaderViewModel.kt",
-            "src/main/java/com/nextpage/presentation/viewmodel/reader",
-            "src/main/java/com/nextpage/presentation/screen/reader",
-            "src/main/java/com/nextpage/presentation/screen/ReaderScreen.kt",
-            "src/main/java/com/nextpage/presentation/screen/ReadiumPdfReaderContent.kt",
-            "src/main/java/com/nextpage/presentation/screen/readium",
-            "src/main/java/com/nextpage/debug/DebugPanel.kt",
+            "src/main/java/com/nexo/presentation/viewmodel/ReaderViewModel.kt",
+            "src/main/java/com/nexo/presentation/viewmodel/reader",
+            "src/main/java/com/nexo/presentation/screen/reader",
+            "src/main/java/com/nexo/presentation/screen/ReaderScreen.kt",
+            "src/main/java/com/nexo/presentation/screen/ReadiumPdfReaderContent.kt",
+            "src/main/java/com/nexo/presentation/screen/readium",
+            "src/main/java/com/nexo/debug/DebugPanel.kt",
         )
     val typeBanPattern = Regex("\\bReaderUiState\\b")
     val memberPattern = Regex("\\.uiState\\b")

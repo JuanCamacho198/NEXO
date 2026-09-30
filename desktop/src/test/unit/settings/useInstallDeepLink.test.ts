@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createInstallDeepLink } from '$lib/features/settings/useInstallDeepLink.svelte';
-import { AddonFetchErrorCode, type AddonManifest } from '@nextpage/manifest-validator';
+import { AddonFetchErrorCode, type AddonManifest } from '@nexo/manifest-validator';
 import type { AddonFetchResult } from '$lib/shared/services/addons/AddonRegistry';
 
 const MANIFEST: AddonManifest = {

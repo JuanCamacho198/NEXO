@@ -29,7 +29,7 @@ import AddonsScreen from '$lib/features/addons/AddonsScreen.svelte';
 import { addonsState } from '$lib/features/addons/addonsStore.svelte';
 import { addonConsent } from '$lib/shared/services/addons/AddonConsent';
 import type { CatalogBook, CatalogSource } from '$lib/shared/services/catalog/CatalogProvider';
-import type { AddonManifest } from '@nextpage/manifest-validator';
+import type { AddonManifest } from '@nexo/manifest-validator';
 import type { MessageKey } from '$lib/shared/i18n';
 import type { AddonReadState } from '$lib/features/addons/useAddonReadSheet.svelte';
 

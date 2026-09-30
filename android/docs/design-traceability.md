@@ -10,11 +10,11 @@ The Pencil design file (`design/nextPage-movil.pen`) is the visual source of tru
 
 | Pencil node | Screen | Code entry |
 |-------------|--------|------------|
-| `W29xCr` | Welcome / AuthScreen | `app/src/main/java/com/nextpage/presentation/screen/AuthScreen.kt` |
-| `WDYjT` | Home | `app/src/main/java/com/nextpage/presentation/screen/HomeScreen.kt` |
-| `HQRl6` | Bookshelf / Library | `app/src/main/java/com/nextpage/presentation/screen/LibraryScreen.kt` |
-| `iSSWb` | Highlights | `app/src/main/java/com/nextpage/presentation/screen/HighlightsScreen.kt` |
-| `EQsNd` | Settings | `app/src/main/java/com/nextpage/presentation/screen/SettingsScreen.kt` |
+| `W29xCr` | Welcome / AuthScreen | `app/src/main/java/com/nexo/presentation/screen/AuthScreen.kt` |
+| `WDYjT` | Home | `app/src/main/java/com/nexo/presentation/screen/HomeScreen.kt` |
+| `HQRl6` | Bookshelf / Library | `app/src/main/java/com/nexo/presentation/screen/LibraryScreen.kt` |
+| `iSSWb` | Highlights | `app/src/main/java/com/nexo/presentation/screen/HighlightsScreen.kt` |
+| `EQsNd` | Settings | `app/src/main/java/com/nexo/presentation/screen/SettingsScreen.kt` |
 
 ## How to use
 

@@ -303,10 +303,10 @@ function fakeBook(id: string, subjects: string[] = ['Fiction']): CatalogBook {
 }
 
 function paged(books: CatalogBook[]): PagedResult {
-  return { results: books, nextPage: null, totalCount: books.length };
+  return { results: books, nexoPage: null, totalCount: books.length };
 }
 
-const EMPTY_PAGE: PagedResult = { results: [], nextPage: null, totalCount: 0 };
+const EMPTY_PAGE: PagedResult = { results: [], nexoPage: null, totalCount: 0 };
 
 interface FakeProviderOptions {
   sources?: CatalogSourceInfo[];
@@ -429,7 +429,7 @@ describe('desktop-descubrir Phase 3.1 — featured() sorts + liveComposite forwa
     const composite = new CompositeCatalogProvider([empty], { debounceMs: 0 });
     const page = await composite.featured('POPULAR', 6);
     // Empty success still merges to an empty page (the rail renders `Hidden`).
-    expect(page).toEqual({ results: [], nextPage: null, totalCount: 0 });
+    expect(page).toEqual({ results: [], nexoPage: null, totalCount: 0 });
   });
 
   it('Composite featured() merges the opted-in fan-out and leaves an empty rail Hidden', async () => {

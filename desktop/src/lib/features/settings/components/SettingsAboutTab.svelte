@@ -170,7 +170,7 @@
         /></svg
       >
       <div class="flex flex-col">
-        <span class="text-lg font-semibold text-(--color-primary)">NextPage</span>
+        <span class="text-lg font-semibold text-(--color-primary)">Nexo</span>
         {#if installedVersion}
           <span class="text-xs text-(--color-text-muted)">Version {installedVersion}</span>
         {:else if versionFailed}
@@ -267,7 +267,7 @@
     <ul class="m-0 p-0 list-none">
       <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
         <span class="text-xs text-(--color-text-muted)">Core Team</span>
-        <span class="text-xs text-(--color-primary) font-medium">NextPage Contributors</span>
+        <span class="text-xs text-(--color-primary) font-medium">Nexo Contributors</span>
       </li>
       <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
         <span class="text-xs text-(--color-text-muted)">EPUB Parsing</span>
@@ -284,14 +284,14 @@
     <h4 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">Links</h4>
     <div class="flex gap-2">
       <Button
-        onclick={() => window.open('https://github.com/anomalyco/nextpage', '_blank')}
+        onclick={() => window.open('https://github.com/JuanCamacho198/NEXO', '_blank')}
         variant="ghost"
         size="sm"
       >
         GitHub
       </Button>
       <Button
-        onclick={() => window.open('https://github.com/anomalyco/nextpage/issues', '_blank')}
+        onclick={() => window.open('https://github.com/JuanCamacho198/NEXO/issues', '_blank')}
         variant="ghost"
         size="sm"
       >

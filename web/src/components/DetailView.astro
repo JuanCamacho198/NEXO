@@ -29,7 +29,7 @@ const showsInstallSteps = isBuiltin || installUrl !== null;
 
 const homeHref = locale === 'es' ? '/' : '/en/';
 const docsHref = locale === 'es' ? '/docs' : '/en/docs';
-const GITHUB_URL = 'https://github.com/JuanCamacho198/NEXTPAGE';
+const GITHUB_URL = 'https://github.com/JuanCamacho198/NEXO';
 const reportHref = `${GITHUB_URL}/issues/new?title=${encodeURIComponent(`[addon:${addon.id}] Problema en ${addon.name} ${addon.version}`)}&body=${encodeURIComponent(`Addon: ${addon.name} (${addon.id}) ${addon.version}\nPágina: ${Astro.site}catalogo/${addon.id}\n\nDescribe el problema:`)}`;
 
 const days = Math.max(0, Math.round((Date.now() - new Date(addon.updatedAt).getTime()) / 86400000));

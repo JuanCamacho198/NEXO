@@ -2,17 +2,17 @@ use std::fs;
 use std::path::PathBuf;
 
 use chrono::Utc;
-use nextpage_desktop::commands::list_library_books_internal;
-use nextpage_desktop::db::open_and_migrate;
-use nextpage_desktop::models::{
+use nexo_desktop::commands::list_library_books_internal;
+use nexo_desktop::db::open_and_migrate;
+use nexo_desktop::models::{
     ActivityPoint, AppSettingDto, BookDto, ListLibraryBooksInput, ReadingSessionInput,
     RemoteHighlightRow, RemoteReadingSessionRow,
 };
-use nextpage_desktop::repository::LibraryRepository;
+use nexo_desktop::repository::LibraryRepository;
 use uuid::Uuid;
 
 fn temp_db_path() -> PathBuf {
-    std::env::temp_dir().join(format!("nextpage_desktop_it_{}.db", Uuid::new_v4()))
+    std::env::temp_dir().join(format!("nexo_desktop_it_{}.db", Uuid::new_v4()))
 }
 
 #[test]
@@ -148,7 +148,7 @@ fn restart_roundtrip_preserves_settings_and_stats() {
 
 #[test]
 fn dto_camel_case_contract_and_mapper_roundtrip_are_preserved() {
-    let dto = nextpage_desktop::models::dto::ReadingProgressDto {
+    let dto = nexo_desktop::models::dto::ReadingProgressDto {
         id: "p1".to_string(),
         book_id: "b1".to_string(),
         cfi_location: "epubcfi(/6/2)".to_string(),
@@ -161,8 +161,8 @@ fn dto_camel_case_contract_and_mapper_roundtrip_are_preserved() {
     assert!(json.get("cfiLocation").is_some());
     assert!(json.get("updatedAt").is_some());
 
-    let domain = nextpage_desktop::models::mapper::progress_dto_to_domain(dto.clone());
-    let back = nextpage_desktop::models::mapper::progress_domain_to_dto(domain);
+    let domain = nexo_desktop::models::mapper::progress_dto_to_domain(dto.clone());
+    let back = nexo_desktop::models::mapper::progress_domain_to_dto(domain);
     assert_eq!(dto, back);
 }
 
@@ -212,7 +212,7 @@ fn commands_feature_isolation_contract_is_enforced_by_module_layout() {
 
 #[test]
 fn domain_evolution_keeps_ipc_contract_stable_via_mapper_boundaries() {
-    let domain = nextpage_desktop::models::domain::ReadingProgress {
+    let domain = nexo_desktop::models::domain::ReadingProgress {
         id: "p2".to_string(),
         book_id: "b2".to_string(),
         locator: "epubcfi(/6/4)".to_string(),
@@ -220,7 +220,7 @@ fn domain_evolution_keeps_ipc_contract_stable_via_mapper_boundaries() {
         updated_at: Utc::now().to_rfc3339(),
     };
 
-    let dto = nextpage_desktop::models::mapper::progress_domain_to_dto(domain);
+    let dto = nexo_desktop::models::mapper::progress_domain_to_dto(domain);
     let json = serde_json::to_value(dto).unwrap();
 
     assert!(json.get("bookId").is_some());
@@ -588,7 +588,7 @@ fn upsert_remote_highlights_merges_through_facade_and_summary_round_trips() {
 
 #[test]
 fn upsert_remote_highlights_summary_serde_contract() {
-    let summary = nextpage_desktop::models::UpsertRemoteSummary {
+    let summary = nexo_desktop::models::UpsertRemoteSummary {
         applied: 2,
         skipped_unknown_book: 1,
         skipped_invalid: 3,

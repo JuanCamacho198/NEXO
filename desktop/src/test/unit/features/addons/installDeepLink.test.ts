@@ -2,7 +2,8 @@
  * installDeepLink pure routing tests (sdd/addon-deeplink-v1 Work Unit A).
  * Parse matrix per design: valid install URL; wrong host; missing url param;
  * http:// / file:// targets (still parsed — https is enforced later);
- * garbage → null; legacy nextpage-desktop:// accepted; non-install → null.
+ * garbage → null; canonical nexo:// and legacy nextpage-desktop:// accepted;
+ * non-install → null.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -26,6 +27,12 @@ describe('parseInstallDeepLink', () => {
     expect(
       parseInstallDeepLink('nextpage-desktop://install?url=https://example.com/manifest.json'),
     ).toEqual({ installUrl: 'https://example.com/manifest.json' });
+  });
+
+  it('accepts the canonical nexo:// scheme', () => {
+    expect(parseInstallDeepLink('nexo://install?url=https://example.com/manifest.json')).toEqual({
+      installUrl: 'https://example.com/manifest.json',
+    });
   });
 
   it('rejects a wrong host', () => {

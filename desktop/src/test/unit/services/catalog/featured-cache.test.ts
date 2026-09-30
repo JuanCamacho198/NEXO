@@ -46,7 +46,7 @@ function book(id: string): CatalogBook {
 }
 
 function page(ids: string[]): PagedResult {
-  return { results: ids.map(book), nextPage: null, totalCount: ids.length };
+  return { results: ids.map(book), nexoPage: null, totalCount: ids.length };
 }
 
 /** Single-source provider that counts featured/search calls and can defer them. */
@@ -466,7 +466,7 @@ describe('CompositeCatalogProvider searchSource page caching', () => {
     });
 
     const result = await composite.searchSource('builtin:openlibrary' as CatalogSource, 'pride', 1);
-    expect(result).toEqual({ results: [], nextPage: null, totalCount: 0 });
+    expect(result).toEqual({ results: [], nexoPage: null, totalCount: 0 });
     expect(provider.searchCalls).toBe(0);
     expect(cache.size()).toBe(0);
   });

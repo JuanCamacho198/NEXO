@@ -366,7 +366,7 @@ mod tests {
     #[test]
     fn compute_storage_stats_basic() {
         let tmp = TempDir::new().unwrap();
-        let db_path = tmp.path().join("nextpage.db");
+        let db_path = tmp.path().join("nexo.db");
         fs::write(&db_path, vec![0u8; 1024]).unwrap();
         let covers = tmp.path().join("covers");
         fs::create_dir_all(&covers).unwrap();

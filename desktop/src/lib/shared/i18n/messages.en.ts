@@ -1,5 +1,5 @@
 export const messagesEn = {
-  'app.title': 'NextPage Desktop',
+  'app.title': 'Nexo Desktop',
   'app.subtitle': 'Desktop parity integration: library, settings, stats, and reader search',
   'app.importBook': 'Import Book',
   'app.importing': 'Importing...',
@@ -157,7 +157,7 @@ export const messagesEn = {
   'settings.saving': 'Saving...',
   'settings.highlights': 'Highlights',
   'settings.bookmarks': 'Bookmarks',
-  'settings.about': 'About NextPage',
+  'settings.about': 'About Nexo',
   'settings.resetDefaults': 'Reset to defaults',
   'settings.resetConfirmTitle': 'Reset settings?',
   'settings.resetConfirmMessage':
@@ -189,7 +189,7 @@ export const messagesEn = {
   'settings.profile.signInPrompt':
     'Sign in with Google from the Account tab to personalize this profile.',
   'settings.shortcuts.title': 'Keyboard Shortcuts',
-  'settings.shortcuts.description': 'These shortcuts are currently available in NextPage.',
+  'settings.shortcuts.description': 'These shortcuts are currently available in Nexo.',
   'settings.shortcuts.readerPrev': 'Go to previous page/location in reader',
   'settings.shortcuts.readerNext': 'Go to next page/location in reader',
   'settings.shortcuts.readerScrollUp': 'Scroll up in the current reader view',
@@ -1007,7 +1007,7 @@ export const messagesEn = {
   'welcome.headline': 'Your library.\nYour knowledge.',
   'welcome.subtitle':
     'Organize your books, track your reading, highlight ideas, and discover your progress — all in one quiet place.',
-  'welcome.cardTitle': 'Welcome to NextPage!',
+  'welcome.cardTitle': 'Welcome to Nexo!',
   'welcome.cardSubtitle': 'Sign in to continue reading.',
   'welcome.divider': 'or',
   'welcome.continueGoogle': 'Continue with Google',
@@ -1030,7 +1030,7 @@ export const messagesEn = {
   'welcome.loggingIn': 'Logging in...',
   'welcome.devSkipHint': 'Dev mode: a mock local user will be created.',
   'welcome.nav.features': 'Features',
-  'welcome.nav.trust': 'Why NextPage',
+  'welcome.nav.trust': 'Why Nexo',
   'welcome.feature1Label': 'Read without distractions',
   'welcome.feature1Description': 'A clean, customizable reader so you focus on what matters.',
   'welcome.feature2Label': 'Highlight and take notes',

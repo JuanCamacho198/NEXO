@@ -260,7 +260,7 @@ export class DiscoverRailsDomainState {
         }
       }
       this.scopePage += 1;
-      this.scopeExhausted = page.nextPage === null;
+      this.scopeExhausted = page.nexoPage === null;
     } catch (err) {
       this.scopeError = catalogCodeOf(err);
     }

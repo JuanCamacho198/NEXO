@@ -1,6 +1,6 @@
 # Sentry Reader Error Alerts
 
-Setup guide for reader failure alerts across the Nextpage Sentry projects.
+Setup guide for reader failure alerts across the NEXO Sentry projects.
 D.1/D.2 (saved searches, alert rule) are manual steps in the sentry.io UI;
 this document records the exact queries, thresholds, and rollback procedure
 so any maintainer can reproduce them.
@@ -9,10 +9,10 @@ so any maintainer can reproduce them.
 
 | Project | Platform | Purpose |
 |---------|----------|---------|
-| `nextpage-desktop` | Tauri (desktop renderer) | Reader errors routed via `handleError(err, 'reader')` with `source: reader` tag and context extras (PR1) |
-| `nextpage-android` | Android | Typed reader events via `captureTypedEvent` with `source=reader` + `event` tags and structured extras (PR2) |
+| `nexo-desktop` | Tauri (desktop renderer) | Reader errors routed via `handleError(err, 'reader')` with `source: reader` tag and context extras (PR1) |
+| `nexo-android` | Android | Typed reader events via `captureTypedEvent` with `source=reader` + `event` tags and structured extras (PR2) |
 
-Organization: `nextpage-android`. Create the saved searches and alert rule in
+Organization: `nexo-app`. Create the saved searches and alert rule in
 **both** projects unless noted otherwise.
 
 ## Tag contract
@@ -105,10 +105,10 @@ are stored.
 
 ## Performance metric vocabulary (cross-platform-telemetry-v1)
 
-The P0 performance metrics share one vocabulary across `nextpage-desktop` and
-`nextpage-android` (defined in TS in
+The P0 performance metrics share one vocabulary across `nexo-desktop` and
+`nexo-android` (defined in TS in
 `desktop/src/lib/shared/logger/metricTypes.ts`, mirrored in
-`android/app/src/main/java/com/nextpage/debug/MetricVocabulary.kt`; a lockstep
+`android/app/src/main/java/com/nexo/debug/MetricVocabulary.kt`; a lockstep
 test fails the build on drift):
 
 | Metric | Type | Producers |

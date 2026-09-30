@@ -63,9 +63,9 @@
 #   which is what blocked the first 0.3.1 android run — so `sentry { }` in
 #   app/build.gradle.kts gates `autoUploadProguardMapping` on the token itself
 #   and a token-less build takes the plugin's dry run (exit 0) instead.
-#   SENTRY_ORG must be set as well: the extension's fallback slug
-#   (`nextpage-android`) is NOT this project's org, so a token without it would
-#   upload the mapping to the wrong organization.
+#   SENTRY_ORG must be set as well: the org slug is `nexo-app` and the Android
+#   project is `nexo-android` (both must match the Sentry console), so a token
+#   without it would upload the mapping to the wrong organization.
 #   `verifySentryMappingUpload` is NOT invoked here (it would re-introduce the
 #   hard requirement); `verifyReleaseMapping` (mapping.txt exists) always runs.
 # - CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID (optional): web deploy is
@@ -234,7 +234,7 @@ jobs:
           # Bakes the production feed URL into the frontend so the Settings
           # update check (VITE_UPDATE_FEED_URL) runs against this release's
           # own latest.json. Empty = disabled (local/dev behavior unchanged).
-          VITE_UPDATE_FEED_URL: https://github.com/JuanCamacho198/NEXTPAGE/releases/download/${{ github.ref_name }}/latest.json
+          VITE_UPDATE_FEED_URL: https://github.com/JuanCamacho198/NEXO/releases/download/${{ github.ref_name }}/latest.json
           # Production backend + Google client config. tauri-action runs the
           # beforeBuildCommand (`bun run build`) with this env, so Vite inlines
           # all five into the bundle — without them the app cannot reach
@@ -275,6 +275,105 @@ jobs:
           uploadUpdaterJson: true
           args: ${{ matrix.platform.args }}
 
+  desktop-checksums:
+    name: Desktop checksums (SHA256SUMS.txt)
+    # Fan-in over the three desktop matrix legs. A checksums step INSIDE the
+    # matrix would run three times, each seeing only the legs that had already
+    # uploaded at that moment, and each publishing a partial SHA256SUMS.txt
+    # with --clobber — so the release would end up with whichever leg wrote
+    # last instead of the six downloadable assets. Waiting for the whole matrix
+    # is the entire reason this is a separate job.
+    #
+    # The `if` is spelled out rather than left to GitHub's implicit "skip a job
+    # whose needed job was skipped": on an `android-v*` / `web-v*` tag the
+    # `desktop` job is skipped and this job must be skipped with it. Naming the
+    # tag prefix keeps that scope readable instead of implicit, and is why it
+    # can never run for an android or web release.
+    needs: [desktop]
+    if: startsWith(github.ref_name, 'desktop-v') && needs.desktop.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # No checkout and no setup: this job only talks to the GitHub API and the
+    # release record already exists by the time any build leg finishes (see the
+    # header for why the tag implies the release).
+    steps:
+      - name: Build and publish SHA256SUMS.txt
+        # `nexo-web`'s download section resolves release assets at build time
+        # and renders a "Verify with SHA-256" link when the release carries a
+        # SHA256SUMS.txt asset. Tauri's `.sig` files are updater signatures,
+        # NOT user-checkable hashes, so before this job the page offered six
+        # downloads and nothing to verify a single one of them against.
+        #
+        # The listed set must be EXACTLY the set the page offers:
+        # nexo-web/src/lib/releases.ts#classifyDesktopAsset accepts only
+        # .exe/.msi/.dmg/.AppImage/.deb/.rpm and skips the updater `.sig`
+        # files, the macOS updater archive `.app.tar.gz` and `latest.json`.
+        # Listing more would publish hashes for assets the page never links to;
+        # listing fewer would leave a download the user cannot check.
+        #
+        # The digests come from the REST API, which returns
+        # `digest: "sha256:<hex>"` per released asset — the hash of the bytes
+        # the CDN actually serves. Re-hashing local build outputs is NOT an
+        # alternative: Tauri rewrites spaces to dots when it names the accepted
+        # bundles, so a local path (`Nexo Desktop_0.3.1_x64-setup.exe`)
+        # does not match the released asset name, and the resulting file would
+        # name nothing the user has on disk.
+        #
+        # `SHA256SUMS.txt` excludes itself: on a re-run the previous run's copy
+        # is already attached to the release, and listing it would hash its own
+        # predecessor. An asset without a `sha256:` digest aborts through jq's
+        # `error()` instead of silently yielding a file that covers only part
+        # of the downloads — the same fail-loud stance as the env and signing
+        # guards in the jobs above.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" \
+            --jq '.assets[]
+                  | select(.name | test("\\.sig$|\\.app\\.tar\\.gz$|^latest\\.json$|^SHA256SUMS\\.txt$") | not)
+                  | if ((.digest // "") | startswith("sha256:"))
+                    then "\(.digest | sub("^sha256:"; ""))  \(.name)"
+                    else error("asset \(.name) carries no sha256 digest")
+                    end' \
+            > SHA256SUMS.txt
+          # Two spaces between hash and name: the GNU coreutils `sha256sum
+          # --check` format, which is what the page's verify instructions hand
+          # to the user.
+          if [ ! -s SHA256SUMS.txt ]; then
+            echo "::error::No checksummable assets found on release ${GITHUB_REF_NAME}. Refusing to publish an empty SHA256SUMS.txt (it would render as a verify link covering nothing)."
+            exit 1
+          fi
+          cat SHA256SUMS.txt
+          gh release upload "${GITHUB_REF_NAME}" SHA256SUMS.txt --clobber
+
+      - name: Dispatch the nexo-web rebuild
+        # The landing page resolves the newest release assets AT BUILD TIME
+        # (nexo-web/src/lib/releases.ts), so its links are frozen at the moment
+        # nexo-web was built. A `nexo-web-v*` tag rebuilds it; an app release
+        # does not — so the release has to ask for one, or the deployed page
+        # keeps offering the previous version's installers.
+        #
+        # `secrets.GITHUB_TOKEN` is sufficient here even though this repository
+        # deliberately pushes tags with a PAT (see the header): GitHub
+        # documents `repository_dispatch` and `workflow_dispatch` as the two
+        # events EXEMPT from the rule that "events raised by GITHUB_TOKEN do
+        # not start new workflow runs". A dispatch made with the default token
+        # therefore DOES start nexo-web-deploy.yml, so no PAT is needed for
+        # this one call. Creating a dispatch needs `contents: write`, which the
+        # `permissions:` block above already grants.
+        #
+        # Exactly one dispatch per component release, never one per matrix leg
+        # — which is why this step lives in the fan-in job and not in the
+        # desktop matrix.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/dispatches" \
+            -f event_type=app-release \
+            -f "client_payload[tag]=${GITHUB_REF_NAME}"
+
   android:
     name: Android (APK + AAB)
     if: startsWith(github.ref_name, 'android-v')
@@ -284,8 +383,9 @@ jobs:
       # Read at Gradle config time by the Sentry Gradle plugin. An empty token
       # makes `autoUploadProguardMapping` false (see app/build.gradle.kts), so
       # the plugin dry-runs instead of failing the release — while a set token
-      # uploads for real. SENTRY_ORG is what routes the upload; the extension's
-      # built-in fallback slug is not this project's org.
+      # uploads for real. SENTRY_ORG is what routes the upload; the org slug is
+      # `nexo-app` and the project is `nexo-android`, and both must match the
+      # Sentry console (the extension's built-in fallback slug does not).
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       # Release signing (release 0.4.0 cutover): base64 keystore + passwords
@@ -366,7 +466,7 @@ jobs:
             --no-daemon \
             --build-cache \
             -Dorg.gradle.vfs.watch=false \
-            -PupdateFeedUrl="https://github.com/JuanCamacho198/NEXTPAGE/releases/download/${GITHUB_REF_NAME}/latest-android.json" \
+            -PupdateFeedUrl="https://github.com/JuanCamacho198/NEXO/releases/download/${GITHUB_REF_NAME}/latest-android.json" \
             :app:assembleRelease \
             :app:bundleRelease
 
@@ -398,11 +498,11 @@ jobs:
               exit 1
             fi
           done
-          cp "${APK}" "nextpage-${GITHUB_REF_NAME}.apk"
-          cp "${AAB}" "nextpage-${GITHUB_REF_NAME}.aab"
+          cp "${APK}" "nexo-${GITHUB_REF_NAME}.apk"
+          cp "${AAB}" "nexo-${GITHUB_REF_NAME}.aab"
           gh release upload "${GITHUB_REF_NAME}" \
-            "nextpage-${GITHUB_REF_NAME}.apk" \
-            "nextpage-${GITHUB_REF_NAME}.aab" \
+            "nexo-${GITHUB_REF_NAME}.apk" \
+            "nexo-${GITHUB_REF_NAME}.aab" \
             --clobber
 
       - name: Publish Android update feed (latest-android.json)
@@ -425,13 +525,76 @@ jobs:
             --argjson versionCode "${VERSION_CODE}" \
             --arg notes "${NOTES}" \
             --arg pubDate "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --arg url "https://github.com/JuanCamacho198/NEXTPAGE/releases/download/${TAG}/nextpage-${TAG}.apk" \
+            --arg url "https://github.com/JuanCamacho198/NEXO/releases/download/${TAG}/nexo-${TAG}.apk" \
             --argjson size "$(stat -c%s "${APK_OUT}")" \
             '{version: $version, versionCode: $versionCode, notes: $notes,
               pubDate: $pubDate, channel: "stable",
               assets: [{url: $url, abi: "universal", size: $size}]}' \
             > latest-android.json
           gh release upload "${TAG}" latest-android.json --clobber
+
+      - name: Build and publish SHA256SUMS.txt
+        # Same contract as the desktop job's checksums step, without the fan-in
+        # job: this job is single, so the APK and AAB are on the release before
+        # this step runs and nothing here needs to wait for a matrix.
+        #
+        # The listed set must be EXACTLY what the page offers:
+        # nexo-web/src/lib/releases.ts#buildAndroidOffer takes the `.apk` and
+        # ignores everything else, so `.sig`, the Play Store upload bundle
+        # (`.aab`) and the feed file `latest-android.json` are excluded.
+        # `SHA256SUMS.txt` excludes itself so a re-run does not list the
+        # previous run's file.
+        #
+        # `.aab$` is ANCHORED on purpose. The tag `android-v0.3.1` also appears
+        # in the APK's own name (`nexo-android-v0.3.1.apk`), so a bare
+        # `aab` substring test would be a fragile way to say "the AAB"; `$`
+        # pins it to the extension. The digests are the API's
+        # `digest: "sha256:<hex>"` for the exact bytes the CDN serves —
+        # re-hashing the local bundle is not equivalent, since the released
+        # asset is a renamed copy (`nexo-${GITHUB_REF_NAME}.apk`). A
+        # missing digest aborts via jq's `error()` rather than shipping a file
+        # that covers only part of the downloads.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" \
+            --jq '.assets[]
+                  | select(.name | test("\\.sig$|\\.aab$|^latest-android\\.json$|^SHA256SUMS\\.txt$") | not)
+                  | if ((.digest // "") | startswith("sha256:"))
+                    then "\(.digest | sub("^sha256:"; ""))  \(.name)"
+                    else error("asset \(.name) carries no sha256 digest")
+                    end' \
+            > SHA256SUMS.txt
+          # Two spaces between hash and name: GNU coreutils `sha256sum --check`
+          # format, matching the desktop checksums file.
+          if [ ! -s SHA256SUMS.txt ]; then
+            echo "::error::No checksummable assets found on release ${GITHUB_REF_NAME}. Refusing to publish an empty SHA256SUMS.txt (it would render as a verify link covering nothing)."
+            exit 1
+          fi
+          cat SHA256SUMS.txt
+          gh release upload "${GITHUB_REF_NAME}" SHA256SUMS.txt --clobber
+
+      - name: Dispatch the nexo-web rebuild
+        # See the desktop fan-in job for the full reasoning: the landing page
+        # resolves the newest release assets at BUILD time, so an app release
+        # must ask for a rebuild or the deployed page keeps serving the
+        # previous version's links. This job is single, so one step here is
+        # already exactly one dispatch per release — no fan-in needed for that
+        # half of the problem.
+        #
+        # `secrets.GITHUB_TOKEN` is sufficient: `repository_dispatch` and
+        # `workflow_dispatch` are the two events GitHub documents as exempt
+        # from "events raised by GITHUB_TOKEN do not start new workflow runs",
+        # which is why the PAT used for tag pushes is not needed for this call.
+        # Creating a dispatch needs `contents: write`, already granted above.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/dispatches" \
+            -f event_type=app-release \
+            -f "client_payload[tag]=${GITHUB_REF_NAME}"
 
   web:
     name: Web (build + deploy)
@@ -475,7 +638,7 @@ jobs:
         # the deploy is additive to the release record (tarball already
         # attached above), so a missing local/fork token must not redden the
         # release. wrangler.jsonc at the repo root carries the Worker name
-        # (`nextpage-addons`) and the assets directory (`./web/dist`).
+        # (`nexo-addons`) and the assets directory (`./web/dist`).
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

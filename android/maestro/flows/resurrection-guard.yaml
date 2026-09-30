@@ -9,7 +9,7 @@
 #             every delete path (card menu, reader simulate-tap) targets the
 #             topmost card, and the marker must match exactly that row and
 #             no other alive row.
-appId: com.nextpage
+appId: com.nexo
 tags: [regression, sync]
 ---
 - launchApp:

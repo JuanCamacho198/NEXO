@@ -2,4 +2,9 @@
 <resources>
     <!-- Splash background matching the app's dark canvas (BgMain #0B1120). -->
     <color name="splash_background">#0B1120</color>
+
+    <!-- Adaptive launcher icon background: the NEXO brand navy
+         (brand/README.md). A dark surface, which is why the mark layer is built
+         from the -dark brand export: see drawable/ic_launcher_foreground.xml. -->
+    <color name="ic_launcher_background">#0D1D3B</color>
 </resources>

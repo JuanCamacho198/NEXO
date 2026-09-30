@@ -193,7 +193,7 @@ vi.mock('$lib/features/home/components/HomeDesktopView.svelte', async () => {
 });
 
 const dictionary: Record<string, string> = {
-  'app.title': 'NextPage',
+  'app.title': 'Nexo Desktop',
   'app.brandPlaceholder': 'Reading workspace',
   'app.homeNavLabel': 'Home navigation',
   'app.navBookshelf': 'Bookshelf',

@@ -1,5 +1,12 @@
 {
-	"name": "nextpage-addons",
+	// Renamed from `nextpage-addons` as part of the NEXO rebrand. A Worker rename
+	// is a CUTOVER, not an in-place change: the next deploy creates a NEW Worker
+	// on `nexo-addons.<account>.workers.dev` while the old one keeps serving
+	// `nextpage-addons.<account>.workers.dev` until it is deleted. The old URL
+	// cannot redirect from here, so the transition window is real. Every in-repo
+	// reference already points at the new origin (see web/astro.config.mjs, which
+	// is the single source it is generated from).
+	"name": "nexo-addons",
 	"compatibility_date": "2025-01-01",
 	"assets": {
 		"directory": "./web/dist",

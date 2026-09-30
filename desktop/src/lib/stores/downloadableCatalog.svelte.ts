@@ -2,7 +2,7 @@
  * Reactive store for books available for download from other devices.
  *
  * The shelf "Available from other devices" section sources its list directly
- * from Drive `NextPage/Books/` (REQ-01) via `loadAvailableFromDrive()`, filtered
+ * from Drive `Nexo/Books/` (REQ-01) via `loadAvailableFromDrive()`, filtered
  * against the local library — instead of the Supabase user_books catalog.
  * Populated on shelf mount by the screen; downloaded files land in the local
  * library and are removed from the section on success.
@@ -31,7 +31,7 @@ import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibra
 
 // ─── Types ─────────────────────────────────────────────────────────────
 
-/** A book listed from Drive `NextPage/Books/` and absent from the local library. */
+/** A book listed from Drive `Nexo/Books/` and absent from the local library. */
 export interface AvailableDriveBook {
   id: string;
   ext: string;
@@ -126,7 +126,7 @@ export function clearDownloadError(): void {
 let availableLoadPromise: Promise<void> | null = null;
 
 /**
- * List `NextPage/Books/` via Drive and expose the books absent from the local
+ * List `Nexo/Books/` via Drive and expose the books absent from the local
  * library (SCN-01/SCN-02). Unparseable filenames (`_state.json`, no dot,
  * trailing dot) are dropped. When a live user session exists the Supabase
  * catalog is fetched once and used to enrich titles/author/cover (falling back

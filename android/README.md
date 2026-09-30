@@ -1,4 +1,4 @@
-# NextPage 📖
+# NEXO 📖
 
 Aplicación de lectura para Android. Lee **EPUB** y **PDF** con ajustes de lectura (tamaño de fuente, tema claro/oscuro/sepia, temporizador), sincronización con Supabase (progreso, resaltados y marcadores) y modo local offline.
 
@@ -17,7 +17,7 @@ Construida con **Kotlin + Jetpack Compose + Material 3** y Clean Architecture.
 
    ```powershell
    git clone <url-del-repositorio>
-   cd NEXTPAGE/android
+   cd NEXO/android
    ```
 
 2. **Abrir el proyecto en Android Studio**
@@ -62,7 +62,7 @@ El APK queda en `app/build/outputs/apk/`.
 
 ```
 android/
-├── app/src/main/java/com/nextpage/
+├── app/src/main/java/com/nexo/
 │   ├── data/           # Capa de datos (Room, Supabase, EPUB, PDF)
 │   ├── domain/         # Capa de dominio (modelos, repositorios, use cases)
 │   ├── presentation/   # UI (pantallas, ViewModels, tema, navegación)
@@ -72,4 +72,4 @@ android/
 
 ## Licencia
 
-Uso interno — NextPage
+Uso interno - NEXO

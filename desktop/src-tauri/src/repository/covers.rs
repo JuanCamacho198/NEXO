@@ -553,7 +553,7 @@ mod tests {
 
     #[test]
     fn cover_source_path_prefers_supported_sidecar_assets() {
-        let temp_dir = std::env::temp_dir().join(format!("nextpage_cover_test_{}", Uuid::new_v4()));
+        let temp_dir = std::env::temp_dir().join(format!("nexo_cover_test_{}", Uuid::new_v4()));
         fs::create_dir_all(&temp_dir).unwrap();
 
         let book_path = temp_dir.join("sample.epub");

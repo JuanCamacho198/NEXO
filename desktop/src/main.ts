@@ -126,7 +126,8 @@ onOpenUrl((urls) => {
   void handleDeepLinkUrls(urls);
 });
 
-// Warm start: single-instance plugin forwards nextpage:// argv via this event.
+// Warm start: single-instance plugin forwards the scheme argv (nexo:// and the
+// legacy nextpage*://) via this event.
 // The listener is Tauri wiring and lives in the adapter; routing stays in the
 // pure feature module, which is what keeps that module free of Tauri imports.
 void registerDeepLinkListener((url) => {

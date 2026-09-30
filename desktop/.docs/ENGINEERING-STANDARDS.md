@@ -1,4 +1,4 @@
-# Engineering Standards — NextPage Desktop
+# Engineering Standards — Nexo Desktop
 
 > 4 commandments + architecture and quality gates for Svelte 5 + Tauri. RDD review is DISABLED — manual review only.
 

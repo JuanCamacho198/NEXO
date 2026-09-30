@@ -1,7 +1,7 @@
 # Sentry debug-files upload for Rust crashes (spec C3).
 #
 # Uploads Tauri's Rust debug artifacts (from the `tauri build` bundle output)
-# to the `nextpage-desktop` Sentry project under the org slug carried by the
+# to the `nexo-desktop` Sentry project under the org slug carried by the
 # `SENTRY_ORG` repository secret (see the upload step) so stack traces resolve
 # to source file:line.
 #
@@ -10,6 +10,13 @@
 # release itself can still ship — symbolication is an additive improvement
 # and is not on the critical path for app start.
 name: Sentry debug-files
+
+# Non-secret identifiers shared by every job. `SENTRY_PROJECT` MUST match the
+# Sentry project slug; the literal is only the fallback used when the repository
+# variable `vars.SENTRY_PROJECT` is unset, so the name can never silently become
+# empty.
+env:
+  SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT || 'nexo-desktop' }}
 
 on:
   push:
@@ -97,13 +104,10 @@ jobs:
         working-directory: desktop
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          # From the secret, not `vars.SENTRY_ORG`: no such repository variable
-          # exists, so the `|| 'nextpage-android'` fallback this used to carry
-          # resolved to a slug that is NOT this project's org — the upload would
-          # have failed the moment a token made this step run (the same wrong
-          # fallback app/build.gradle.kts used to have).
+          # Organization slug: the existing design keeps it a secret, so it is
+          # read from the `SENTRY_ORG` repository secret — update its value in
+          # GitHub settings when the org changes (it is now `nexo-app`).
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: nextpage-desktop
         run: |
           if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
             echo "::notice::SENTRY_AUTH_TOKEN is empty — skipping debug-files upload (local-green run)."

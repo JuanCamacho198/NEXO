@@ -7,7 +7,7 @@ const catalogHref = locale === 'es' ? '/catalogo' : '/en/catalog';
 const submitHref = locale === 'es' ? '/enviar' : '/en/submit';
 const docsHref = locale === 'es' ? '/docs' : '/en/docs';
 
-const GITHUB_URL = 'https://github.com/JuanCamacho198/NEXTPAGE';
+const GITHUB_URL = 'https://github.com/JuanCamacho198/NEXO';
 const reportHref = `${GITHUB_URL}/issues/new?title=${encodeURIComponent('[addon] Reporte')}&body=${encodeURIComponent('Addon afectado:\nURL de la página:\n\nDescribe el problema:')}`;
 ---
 
@@ -16,7 +16,7 @@ const reportHref = `${GITHUB_URL}/issues/new?title=${encodeURIComponent('[addon]
     <div class="grid gap-8 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
       <div>
         <p class="font-serif text-lg font-bold text-text-primary">
-          Next<span class="text-accent">Page</span> Addons
+          <span class="text-accent">{t(locale, 'brand.name')}</span> Addons
         </p>
         <p class="mt-2 max-w-xs text-sm text-text-secondary">{t(locale, 'home.footerTagline')}</p>
       </div>
@@ -64,9 +64,9 @@ const reportHref = `${GITHUB_URL}/issues/new?title=${encodeURIComponent('[addon]
           </li>
         </ul>
       </nav>
-      <nav aria-label={t(locale, 'home.footerNextpage')}>
+      <nav aria-label={t(locale, 'brand.name')}>
         <h2 class="text-xs font-semibold tracking-widest text-text-muted uppercase">
-          {t(locale, 'home.footerNextpage')}
+          {t(locale, 'brand.name')}
         </h2>
         <ul class="mt-3 space-y-2 text-sm">
           <li>

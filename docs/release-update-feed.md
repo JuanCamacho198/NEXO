@@ -1,8 +1,8 @@
 # Release Update Feed Contract
 
 Status: contract for change `app-auto-update`, PR 1 slice (feed contract + mock fixtures).
-Updated 2026-09-28: signing prerequisites DECIDED (section 6) — release 0.3.1
-ships signed with working updater feeds. Pre-0.3.1 builds and local/dev builds
+Updated 2026-09-28: signing prerequisites DECIDED (section 6) — release 0.3.2
+ships signed with working updater feeds. Pre-0.3.2 builds and local/dev builds
 (with an empty feed URL) stay on the mock/staging feed or disabled.
 Scope: defines the single feed convention both update clients consume.
 
@@ -45,13 +45,13 @@ each entry carries a download `url` and a cryptographic `signature`.
 
 ```json
 {
-  "version": "0.3.1",
+  "version": "0.3.2",
   "notes": "Example release notes.",
   "pub_date": "2026-09-28T12:00:00Z",
   "channel": "stable",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/<owner>/<repo>/releases/download/v0.3.1/nextpage-desktop-v0.3.1-windows-x86_64.exe",
+      "url": "https://github.com/<owner>/<repo>/releases/download/desktop-v0.3.2/Nexo.Desktop_0.3.2_x64-setup.exe",
       "signature": "<tauri-action signature>"
     }
   }
@@ -76,14 +76,14 @@ ABI/arch qualifier `abi`, and file `size` in bytes.
 
 ```json
 {
-  "version": "0.3.1",
+  "version": "0.3.2",
   "versionCode": 400,
   "notes": "Example release notes.",
   "pubDate": "2026-09-28T12:00:00Z",
   "channel": "stable",
   "assets": [
     {
-      "url": "https://github.com/<owner>/<repo>/releases/download/v0.3.1/nextpage-android-v0.3.1.apk",
+      "url": "https://github.com/<owner>/<repo>/releases/download/android-v0.3.2/nexo-android-v0.3.2.apk",
       "abi": "universal",
       "size": 12345678
     }
@@ -105,14 +105,21 @@ Rules:
 Release assets encode product, platform/target, and version. Feed URLs MUST
 reference exactly these names.
 
-- Android APK/AAB: `nextpage-android-v{version}.apk` / `nextpage-android-v{version}.aab`
-  (example: `nextpage-android-v0.3.1.apk`). Enforced by the release workflow
-  (`nextpage-${GITHUB_REF_NAME}.apk/.aab`).
-- Desktop bundles: uploaded under tauri-action default names; the desktop feed
-  (`latest.json`) is authoritative for desktop download URLs — clients MUST
-  follow the feed's per-platform `url` fields, not a filename convention.
-  (`nextpage-desktop-v{version}-{target}.{ext}` remains the desired convention
-  if `releaseAssetNamePattern` is ever set; it is NOT enforced today.)
+- Android APK/AAB: `nexo-android-v{version}.apk` / `nexo-android-v{version}.aab`
+  (example: `nexo-android-v0.3.2.apk`). Enforced by the release workflow
+  (`nexo-${GITHUB_REF_NAME}.apk/.aab`).
+- Desktop bundles: uploaded under tauri-action default names, derived from
+  `productName` (`Nexo Desktop`) and the version. The released asset name
+  replaces the space in the local bundle name with a dot (the release asset's
+  `label` keeps the space), so a bundle built as
+  `Nexo Desktop_0.3.2_amd64.AppImage` is published as
+  `Nexo.Desktop_0.3.2_amd64.AppImage`. Published shapes:
+  `Nexo.Desktop_0.3.2_x64_en-US.msi`, `Nexo.Desktop_0.3.2_x64-setup.exe`,
+  `Nexo.Desktop_0.3.2_universal.dmg`, `Nexo.Desktop_0.3.2_amd64.AppImage`,
+  `Nexo.Desktop_0.3.2_amd64.deb`, `Nexo.Desktop-0.3.2-1.x86_64.rpm`.
+  The desktop feed (`latest.json`) is authoritative for desktop download URLs —
+  clients MUST follow the feed's per-platform `url` fields, not a filename
+  convention.
 
 A release with version X publishes feed download URLs that resolve to assets whose
 filenames follow the convention for that platform and version X.
@@ -180,7 +187,7 @@ Coverage: check entry, checking progress, up-to-date confirmation, update
 available title/body, release notes, update-now, remind-later, metered consent,
 install guidance, relaunch confirmation, error states.
 
-## 6. Signing and publishing (DECIDED 2026-09-28 — release 0.3.1 cutover)
+## 6. Signing and publishing (DECIDED 2026-09-28 — release 0.3.2 cutover)
 
 Key material lives OUTSIDE the repo in `~/.nextpage-keys/` (README.txt there
 holds fingerprints + dates only, never secrets). Repo root `.gitignore` bans
@@ -200,7 +207,7 @@ Decided work package (producer: `release-builds.yml`):
    `E7:30:AE:35:71:9C:3A:45:D4:F9:78:7C:D6:2E:1F:87:42:4D:A2:FC:A8:0E:34:96:25:D9:29:07:D5:6D:53:BB`
    SHA-1 cert fingerprint:
    `3E:0A:F2:0A:D7:01:C0:B8:4A:72:86:3D:16:D0:7D:A4:F3:F5:E9:43`
-   (register the SHA-1 in the Google Cloud "Nextpage Android" OAuth client
+   (register the SHA-1 in the Google Cloud "Nexo Android" OAuth client
    alongside the debug fingerprint). CI secrets: `ANDROID_KEYSTORE_BASE64`,
    `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
    (PKCS12 forces store and key passwords equal — both secrets hold the same
@@ -221,12 +228,12 @@ Decided work package (producer: `release-builds.yml`):
    publish step (section 3 shape, `versionCode` mirroring the
    major*10000+minor*100+patch formula) uploads alongside the signed APK/AAB.
 
-Production cutover rule: 0.3.1+ release builds run against the production
+Production cutover rule: 0.3.2+ release builds run against the production
 feeds (`VITE_UPDATE_FEED_URL` baked at release time for desktop,
-`-PupdateFeedUrl` for Android). Pre-0.3.1 builds and local/dev builds (empty
+`-PupdateFeedUrl` for Android). Pre-0.3.2 builds and local/dev builds (empty
 feed URL) stay on the mock/staging feed or disabled.
 
-Post-0.3.1 verification (open): confirm the published `latest.json`
+Post-0.3.2 verification (open): confirm the published `latest.json`
 contains all three platform entries — the windows/macOS/linux matrix legs
 each upload it, and it is only a complete feed if the action merges (rather
 than last-writer-wins). If incomplete, add a merge fan-in step.

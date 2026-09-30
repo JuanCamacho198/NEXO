@@ -21,7 +21,7 @@ impl QueueWorkerRuntime {
         let thread_shutdown = shutdown.clone();
 
         let join_handle = thread::Builder::new()
-            .name("nextpage-queue-worker".to_string())
+            .name("nexo-queue-worker".to_string())
             .spawn(move || {
                 let dispatcher = NoopJobDispatcher;
 

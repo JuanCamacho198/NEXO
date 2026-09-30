@@ -1,13 +1,13 @@
 //! Addon resource fetch — Tauri command + transport guards.
 //!
-//! Transport guards only: HTTPS pre-check, 64KB streaming cap, NextPage UA,
+//! Transport guards only: HTTPS pre-check, 64KB streaming cap, Nexo UA,
 //! no cookie store. Manifest JSON validation lives in TS/Kotlin
 //! (`validateManifest` / `ManifestValidator`) so both platforms share it.
 
 use serde::Serialize;
 
 pub const ADDON_MAX_BYTES: u64 = 64 * 1024;
-pub const ADDON_USER_AGENT: &str = "NextPage/Desktop (contact: TBD)";
+pub const ADDON_USER_AGENT: &str = "Nexo/Desktop (contact: TBD)";
 
 pub const ERR_HTTPS_REQUIRED: &str = "ADDON_FETCH_HTTPS_REQUIRED";
 pub const ERR_TOO_LARGE: &str = "ADDON_FETCH_TOO_LARGE";

@@ -16,18 +16,24 @@ use crate::logger::Logger;
 /// (no DSN provided or init failed).
 static SENTRY_GUARD: OnceLock<Option<sentry::ClientInitGuard>> = OnceLock::new();
 
+/// Sentry release prefix — MUST match the Sentry project slug (`nexo-desktop`).
+///
+/// The composed release is `"<prefix>@<CARGO_PKG_VERSION>+<sha12>"`, the same
+/// shape the Android and web builds emit for the same commit (spec C1).
+const SENTRY_RELEASE_PREFIX: &str = "nexo-desktop";
+
 /// Build a [`sentry::ClientOptions`] from env vars.
 ///
 /// Returns `None` when `SENTRY_DSN` is absent or empty — callers treat that
 /// as a deliberate opt-out and skip initialization entirely.
 fn build_options() -> Option<sentry::ClientOptions> {
     let dsn = std::env::var("SENTRY_DSN").ok().filter(|v| !v.is_empty())?;
-    // Release scheme per spec C1: `nextpage-desktop@<semver>+<sha12>`.
-    // `NEXTPAGE_GIT_SHA` is emitted by `build.rs` from `git rev-parse --short=12 HEAD`,
+    // Release scheme per spec C1: `nexo-desktop@<semver>+<sha12>`.
+    // `NEXO_GIT_SHA` is emitted by `build.rs` from `git rev-parse --short=12 HEAD`,
     // falling back to `unknown` when git is unavailable. Identical suffix to the
     // TS web build for the same commit — see `sdd/sentry-observability-v2/design`.
     let release =
-        format!("nextpage-desktop@{}+{}", env!("CARGO_PKG_VERSION"), env!("NEXTPAGE_GIT_SHA"));
+        format!("{}@{}+{}", SENTRY_RELEASE_PREFIX, env!("CARGO_PKG_VERSION"), env!("NEXO_GIT_SHA"));
     let environment =
         std::env::var("SENTRY_ENVIRONMENT").unwrap_or_else(|_| "development".to_string());
     let traces_sample_rate = std::env::var("SENTRY_TRACES_SAMPLE_RATE")
@@ -157,29 +163,32 @@ mod tests {
         assert!(opts.is_none(), "empty DSN MUST be treated as opt-out");
     }
 
-    /// Spec C1 — cross-platform release format `nextpage-desktop@<semver>+<sha12>`.
+    /// Spec C1 — cross-platform release format `<prefix>@<semver>+<sha12>`,
+    /// where the prefix is [`SENTRY_RELEASE_PREFIX`] (`nexo-desktop`) and MUST
+    /// match the Sentry project slug.
     /// The sha segment MUST be exactly 12 chars or the literal `unknown` fallback.
     /// Validates against the env var emitted by `build.rs`.
     #[test]
     fn release_format_matches_spec_c1() {
-        let sha = env!("NEXTPAGE_GIT_SHA");
+        let sha = env!("NEXO_GIT_SHA");
         let version = env!("CARGO_PKG_VERSION");
-        let expected = format!("nextpage-desktop@{}+{}", version, sha);
+        let expected = format!("{}@{}+{}", SENTRY_RELEASE_PREFIX, version, sha);
 
         assert!(
             sha == "unknown" || sha.len() == 12,
-            "NEXTPAGE_GIT_SHA must be `unknown` fallback or exactly 12 chars, got {:?}",
+            "NEXO_GIT_SHA must be `unknown` fallback or exactly 12 chars, got {:?}",
             sha
         );
         assert!(
             sha.chars().all(|c| c.is_ascii_hexdigit() || sha == "unknown"),
-            "NEXTPAGE_GIT_SHA must be lowercase hex (or `unknown`), got {:?}",
+            "NEXO_GIT_SHA must be lowercase hex (or `unknown`), got {:?}",
             sha
         );
         assert!(
-            expected.starts_with(&format!("nextpage-desktop@{}+", version)),
-            "release `{}` must start with `nextpage-desktop@<version>+`",
-            expected
+            expected.starts_with(&format!("{}@{}+", SENTRY_RELEASE_PREFIX, version)),
+            "release `{}` must start with `{}@<version>+`",
+            expected,
+            SENTRY_RELEASE_PREFIX
         );
     }
 
@@ -199,8 +208,8 @@ mod tests {
 
         let release = opts.release.expect("release always set");
         let version = env!("CARGO_PKG_VERSION");
-        let sha = env!("NEXTPAGE_GIT_SHA");
+        let sha = env!("NEXO_GIT_SHA");
 
-        assert_eq!(release, format!("nextpage-desktop@{}+{}", version, sha));
+        assert_eq!(release, format!("{}@{}+{}", SENTRY_RELEASE_PREFIX, version, sha));
     }
 }

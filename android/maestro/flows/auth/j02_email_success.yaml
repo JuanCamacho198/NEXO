@@ -1,4 +1,4 @@
-appId: com.nextpage
+appId: com.nexo
 ---
 # J2 - Email Login Success (MOCK) -> Home — uses hidden mock token bypass (DEBUG only)
 # Original e2e_success@nextpage.test does not exist in Supabase; mock guarantees deterministic pass.

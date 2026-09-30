@@ -1,11 +1,22 @@
 ---
 import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
+interface Props {
+  class?: string;
+  align?: 'left' | 'right';
+}
+
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
+const { class: className = '', align = 'left' } = Astro.props;
 ---
 
-<details class="lang-picker">
+<!-- Kept as <details>: its native toggle needs no JS, which the zero-JS baseline
+     depends on. The `popover` attribute is not an option here — its user-agent
+     style is `position: fixed; inset: 0; margin: auto`, which centres the panel
+     on screen and needs CSS Anchor Positioning to anchor it back to the button,
+     and that is not available in Firefox stable. -->
+<details class={`lang-picker ${className}`}>
   <summary class="text-ink" aria-label={t('header.languageAria')}>
     {lang === 'en' ? 'EN' : 'ES'}
     <svg class="lang-chevron" viewBox="0 0 24 24" aria-hidden="true">
@@ -19,7 +30,7 @@ const t = useTranslations(lang);
       />
     </svg>
   </summary>
-  <ul class="lang-menu">
+  <ul class={`lang-menu${align === 'right' ? ' lang-menu-right' : ''}`}>
     <li>
       <a href="/" aria-current={lang === 'es' ? 'true' : undefined}>
         ES

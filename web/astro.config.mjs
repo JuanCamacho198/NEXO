@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   output: 'static',
-  site: 'https://nextpage-addons.jcamachomolina503.workers.dev',
+  site: 'https://nexo-addons.jcamachomolina503.workers.dev',
   vite: {
     plugins: [tailwindcss()],
   },

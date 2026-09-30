@@ -1,4 +1,4 @@
-# NextPage - Design Tokens
+# NEXO - Design Tokens
 
 ## Colors
 

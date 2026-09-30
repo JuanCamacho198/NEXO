@@ -6,7 +6,7 @@
 
 ## 1. El problema
 
-Al seleccionar texto en el lector EPUB (y PDF), el menú default de Android (Copiar/Compartir/Seleccionar todo/⋯) se superpone al menú personalizado de NextPage (color picker de 5 colores + Copy). El objetivo es **suprimir el menú default** y mostrar **solo el menú personalizado**.
+Al seleccionar texto en el lector EPUB (y PDF), el menú default de Android (Copiar/Compartir/Seleccionar todo/⋯) se superpone al menú personalizado de NEXO (color picker de 5 colores + Copy). El objetivo es **suprimir el menú default** y mostrar **solo el menú personalizado**.
 
 ---
 
@@ -73,10 +73,19 @@ document.addEventListener('selectionchange', function() {
     var sel = window.getSelection();
     if (sel && !sel.isCollapsed) {
         var rect = range.getBoundingClientRect();
-        NextPageBridge.onTextSelectionEvent(sel.toString(), rect.left, rect.top, rect.right, rect.bottom);
+        NexoBridge.onTextSelectionEvent(sel.toString(), rect.left, rect.top, rect.right, rect.bottom);
     }
 });
 ```
+
+> **Nota de vigencia (NEXO):** el símbolo `NexoBridge` **no existe** en el
+> repositorio: no hay `addJavascriptInterface` en `android/` ni ninguna clase
+> llamada `NexoBridge`, y `EpubWebView.kt` tampoco existe. El fragmento anterior
+> es ilustrativo e histórico, no una descripción del código actual. La selección
+> de texto se resuelve hoy sin inyectar un objeto JS: `ReadiumSelectionBridge`
+> consulta la selección con `evaluateJavascript`, y los tests
+> `ReaderViewModelAnnotationTest` y `ReaderViewModelFinalSweepTest` fallan si se
+> reintroduce el delegate `onTextSelectionEvent` en el ViewModel.
 
 **Resultado**: La selección de texto funciona correctamente. El evento `selectionchange` detecta cuando el usuario selecciona texto y envía las coordenadas al bridge de Kotlin. El ViewModel muestra el `TextSelectionMenu` (color picker).
 
@@ -166,14 +175,14 @@ document.addEventListener('selectionchange', function() {
 
 | Archivo | Propósito |
 |---------|-----------|
-| `app/src/main/java/com/nextpage/ui/components/molecules/EpubWebView.kt` | EPUB reader WebView con `selectionchange` + `ActionMode.Callback2` |
-| `app/src/main/java/com/nextpage/ui/components/molecules/PdfWebView.kt` | PDF reader con Base64 chunk injection |
+| `app/src/main/java/com/nexo/ui/components/molecules/EpubWebView.kt` | EPUB reader WebView con `selectionchange` + `ActionMode.Callback2` |
+| `app/src/main/java/com/nexo/ui/components/molecules/PdfWebView.kt` | PDF reader con Base64 chunk injection |
 | `app/src/main/assets/pdfjs/index.html` | PDF.js HTML con long-press handler + chunk loading |
-| `app/src/main/java/com/nextpage/ui/components/molecules/TextSelectionMenu.kt` | Color picker bar (5 colores + copy) |
-| `app/src/main/java/com/nextpage/ui/components/molecules/FloatingContextMenu.kt` | Menú contextual expandido |
-| `app/src/main/java/com/nextpage/ui/components/molecules/SelectionOverlay.kt` | Shared overlay component para EPUB y PDF |
-| `app/src/main/java/com/nextpage/presentation/screen/ReaderScreen.kt` | Reader screen que orquesta EPUB y PDF |
-| `app/src/main/java/com/nextpage/presentation/viewmodel/ReaderViewModel.kt` | ViewModel con lógica de selección de texto |
+| `app/src/main/java/com/nexo/ui/components/molecules/TextSelectionMenu.kt` | Color picker bar (5 colores + copy) |
+| `app/src/main/java/com/nexo/ui/components/molecules/FloatingContextMenu.kt` | Menú contextual expandido |
+| `app/src/main/java/com/nexo/ui/components/molecules/SelectionOverlay.kt` | Shared overlay component para EPUB y PDF |
+| `app/src/main/java/com/nexo/presentation/screen/ReaderScreen.kt` | Reader screen que orquesta EPUB y PDF |
+| `app/src/main/java/com/nexo/presentation/viewmodel/ReaderViewModel.kt` | ViewModel con lógica de selección de texto |
 
 ---
 

@@ -215,7 +215,7 @@ describe('scrubEvent — Sentry PII scrubber', () => {
   // `sentry-observability-v2` PR1 (task 1.4): iframe error context keys.
   it('reduces extra.iframeSource to basename only', () => {
     const out = scrubEvent({
-      extra: { iframeSource: '/data/user/0/com.nextpage/files/OEBPS/Text/ch9.xhtml' },
+      extra: { iframeSource: '/data/user/0/com.nexo/files/OEBPS/Text/ch9.xhtml' },
     });
 
     expect(out.extra?.['iframeSource']).toBe('ch9.xhtml');

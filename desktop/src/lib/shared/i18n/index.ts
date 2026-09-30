@@ -11,7 +11,7 @@ type TranslationParams = Record<string, string | number>;
 
 const DEFAULT_LOCALE: UiLocale = 'es';
 const FALLBACK_LOCALE: UiLocale = 'en';
-const LOCALE_STORAGE_KEY = 'nextpage.ui.locale';
+const LOCALE_STORAGE_KEY = 'nexo.ui.locale';
 
 const supportedLocales = new Set<string>(SUPPORTED_UI_LOCALES);
 

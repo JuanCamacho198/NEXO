@@ -8,9 +8,8 @@ export interface Props {
 const { locale } = Astro.props;
 
 const docsHref = locale === 'es' ? '/docs' : '/en/docs';
-const contribHref = 'https://github.com/JuanCamacho198/NEXTPAGE/blob/main/CONTRIBUTING.md';
-const issueHref =
-  'https://github.com/JuanCamacho198/NEXTPAGE/issues/new?template=addon-submission.yml';
+const contribHref = 'https://github.com/JuanCamacho198/NEXO/blob/main/CONTRIBUTING.md';
+const issueHref = 'https://github.com/JuanCamacho198/NEXO/issues/new?template=addon-submission.yml';
 
 const steps = [
   { title: t(locale, 'submit.step1Title'), sub: t(locale, 'submit.step1Sub') },

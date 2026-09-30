@@ -121,9 +121,9 @@ const enRoutes = [...enIndex, ...enDetail];
 const addonBullets = [...visibleAddons]
   .sort((a, b) => a.id.localeCompare(b.id))
   .map((a) => `- ${a.name} — ${a.description.en} — ${abs(`/catalogo/${a.id}`)}`);
-const llms = `# NextPage Addons
+const llms = `# NEXO Addons
 
-> Community directory of book catalogs (addons) for NextPage. Search, filter, and open any addon for details.
+> Community directory of book catalogs (addons) for NEXO. Search, filter, and open any addon for details.
 
 ## Routes
 
@@ -147,7 +147,7 @@ ${addonBullets.join('\n')}
 
 ## Contribute
 
-Propose a new addon at https://github.com/JuanCamacho198/NEXTPAGE (see the submit page).
+Propose a new addon at https://github.com/JuanCamacho198/NEXO (see the submit page).
 `;
 
 // --- robots.txt ---------------------------------------------------------------------
