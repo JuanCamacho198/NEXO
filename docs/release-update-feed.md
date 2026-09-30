@@ -51,7 +51,7 @@ each entry carries a download `url` and a cryptographic `signature`.
   "channel": "stable",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/<owner>/<repo>/releases/download/v0.3.2/nextpage-desktop-v0.3.2-windows-x86_64.exe",
+      "url": "https://github.com/<owner>/<repo>/releases/download/desktop-v0.3.2/Nexo.Desktop_0.3.2_x64-setup.exe",
       "signature": "<tauri-action signature>"
     }
   }
@@ -83,7 +83,7 @@ ABI/arch qualifier `abi`, and file `size` in bytes.
   "channel": "stable",
   "assets": [
     {
-      "url": "https://github.com/<owner>/<repo>/releases/download/v0.3.2/nextpage-android-v0.3.2.apk",
+      "url": "https://github.com/<owner>/<repo>/releases/download/android-v0.3.2/nexo-android-v0.3.2.apk",
       "abi": "universal",
       "size": 12345678
     }
@@ -105,14 +105,21 @@ Rules:
 Release assets encode product, platform/target, and version. Feed URLs MUST
 reference exactly these names.
 
-- Android APK/AAB: `nextpage-android-v{version}.apk` / `nextpage-android-v{version}.aab`
-  (example: `nextpage-android-v0.3.2.apk`). Enforced by the release workflow
-  (`nextpage-${GITHUB_REF_NAME}.apk/.aab`).
-- Desktop bundles: uploaded under tauri-action default names; the desktop feed
-  (`latest.json`) is authoritative for desktop download URLs — clients MUST
-  follow the feed's per-platform `url` fields, not a filename convention.
-  (`nextpage-desktop-v{version}-{target}.{ext}` remains the desired convention
-  if `releaseAssetNamePattern` is ever set; it is NOT enforced today.)
+- Android APK/AAB: `nexo-android-v{version}.apk` / `nexo-android-v{version}.aab`
+  (example: `nexo-android-v0.3.2.apk`). Enforced by the release workflow
+  (`nexo-${GITHUB_REF_NAME}.apk/.aab`).
+- Desktop bundles: uploaded under tauri-action default names, derived from
+  `productName` (`Nexo Desktop`) and the version. The released asset name
+  replaces the space in the local bundle name with a dot (the release asset's
+  `label` keeps the space), so a bundle built as
+  `Nexo Desktop_0.3.2_amd64.AppImage` is published as
+  `Nexo.Desktop_0.3.2_amd64.AppImage`. Published shapes:
+  `Nexo.Desktop_0.3.2_x64_en-US.msi`, `Nexo.Desktop_0.3.2_x64-setup.exe`,
+  `Nexo.Desktop_0.3.2_universal.dmg`, `Nexo.Desktop_0.3.2_amd64.AppImage`,
+  `Nexo.Desktop_0.3.2_amd64.deb`, `Nexo.Desktop-0.3.2-1.x86_64.rpm`.
+  The desktop feed (`latest.json`) is authoritative for desktop download URLs —
+  clients MUST follow the feed's per-platform `url` fields, not a filename
+  convention.
 
 A release with version X publishes feed download URLs that resolve to assets whose
 filenames follow the convention for that platform and version X.

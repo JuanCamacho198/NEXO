@@ -27,7 +27,7 @@ private const val VALID_FEED_BODY =
     "{\"version\":\"0.4.0\",\"versionCode\":400," +
         "\"notes\":\"Mock release notes.\",\"pubDate\":\"2026-09-28T12:00:00Z\"," +
         "\"channel\":\"stable\",\"assets\":[{\"url\":" +
-        "\"https://github.com/nexo/nextpage/releases/download/v0.4.0/nextpage-android-v0.4.0.apk\"," +
+        "\"https://github.com/nexo/nextpage/releases/download/v0.4.0/nexo-android-v0.4.0.apk\"," +
         "\"abi\":\"universal\",\"size\":12345678}]}"
 
 class UpdateFeedServiceTest {
@@ -56,7 +56,7 @@ class UpdateFeedServiceTest {
             assertEquals("0.4.0", found.version)
             assertEquals(400, found.versionCode)
             assertEquals("stable", found.channel)
-            assertTrue(found.assetUrl.endsWith("nextpage-android-v0.4.0.apk"))
+            assertTrue(found.assetUrl.endsWith("nexo-android-v0.4.0.apk"))
         }
 
     @Test

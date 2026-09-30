@@ -498,11 +498,11 @@ jobs:
               exit 1
             fi
           done
-          cp "${APK}" "nextpage-${GITHUB_REF_NAME}.apk"
-          cp "${AAB}" "nextpage-${GITHUB_REF_NAME}.aab"
+          cp "${APK}" "nexo-${GITHUB_REF_NAME}.apk"
+          cp "${AAB}" "nexo-${GITHUB_REF_NAME}.aab"
           gh release upload "${GITHUB_REF_NAME}" \
-            "nextpage-${GITHUB_REF_NAME}.apk" \
-            "nextpage-${GITHUB_REF_NAME}.aab" \
+            "nexo-${GITHUB_REF_NAME}.apk" \
+            "nexo-${GITHUB_REF_NAME}.aab" \
             --clobber
 
       - name: Publish Android update feed (latest-android.json)
@@ -525,7 +525,7 @@ jobs:
             --argjson versionCode "${VERSION_CODE}" \
             --arg notes "${NOTES}" \
             --arg pubDate "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --arg url "https://github.com/JuanCamacho198/NEXO/releases/download/${TAG}/nextpage-${TAG}.apk" \
+            --arg url "https://github.com/JuanCamacho198/NEXO/releases/download/${TAG}/nexo-${TAG}.apk" \
             --argjson size "$(stat -c%s "${APK_OUT}")" \
             '{version: $version, versionCode: $versionCode, notes: $notes,
               pubDate: $pubDate, channel: "stable",
@@ -546,12 +546,12 @@ jobs:
         # previous run's file.
         #
         # `.aab$` is ANCHORED on purpose. The tag `android-v0.3.1` also appears
-        # in the APK's own name (`nextpage-android-v0.3.1.apk`), so a bare
+        # in the APK's own name (`nexo-android-v0.3.1.apk`), so a bare
         # `aab` substring test would be a fragile way to say "the AAB"; `$`
         # pins it to the extension. The digests are the API's
         # `digest: "sha256:<hex>"` for the exact bytes the CDN serves —
         # re-hashing the local bundle is not equivalent, since the released
-        # asset is a renamed copy (`nextpage-${GITHUB_REF_NAME}.apk`). A
+        # asset is a renamed copy (`nexo-${GITHUB_REF_NAME}.apk`). A
         # missing digest aborts via jq's `error()` rather than shipping a file
         # that covers only part of the downloads.
         env:
