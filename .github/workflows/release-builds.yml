@@ -345,7 +345,15 @@ jobs:
             exit 1
           fi
           cat SHA256SUMS.txt
-          gh release upload "${GITHUB_REF_NAME}" SHA256SUMS.txt --clobber
+          # `--repo` is required, not decorative: this fan-in job deliberately
+          # runs without `actions/checkout` because it otherwise only talks to
+          # the API, so there is no local git repository for `gh` to infer the
+          # target from. `gh api` does not need one (its path is absolute) but
+          # `gh release upload` does, and without this flag it dies with
+          # "failed to run git: fatal: not a git repository" — exactly how the
+          # first 0.3.2 desktop run failed, after it had already built the
+          # correct six-line checksum list.
+          gh release upload "${GITHUB_REF_NAME}" SHA256SUMS.txt --clobber --repo "${GITHUB_REPOSITORY}"
 
       - name: Dispatch the nexo-web rebuild
         # The landing page resolves the newest release assets AT BUILD TIME
