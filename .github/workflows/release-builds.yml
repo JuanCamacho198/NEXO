@@ -351,7 +351,7 @@ jobs:
           # target from. `gh api` does not need one (its path is absolute) but
           # `gh release upload` does, and without this flag it dies with
           # "failed to run git: fatal: not a git repository" — exactly how the
-          # first 0.3.2 desktop run failed, after it had already built the
+          # first desktop release run failed, after it had already built the
           # correct six-line checksum list.
           gh release upload "${GITHUB_REF_NAME}" SHA256SUMS.txt --clobber --repo "${GITHUB_REPOSITORY}"
 

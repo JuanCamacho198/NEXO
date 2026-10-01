@@ -1,17 +1,8 @@
 export type SettingsTab =
-  | 'cuenta'
-  | 'apariencia'
-  | 'reader'
-  | 'datos'
-  | 'almacenamiento'
-  | 'sincronizacion'
-  | 'atajos'
-  | 'acerca';
+  'cuenta' | 'datos' | 'almacenamiento' | 'sincronizacion' | 'atajos' | 'acerca';
 
 export const SETTINGS_TABS: SettingsTab[] = [
   'cuenta',
-  'apariencia',
-  'reader',
   'datos',
   'almacenamiento',
   'sincronizacion',

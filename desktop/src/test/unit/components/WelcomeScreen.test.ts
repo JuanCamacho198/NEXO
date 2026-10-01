@@ -54,12 +54,12 @@ describe('WelcomeScreen', () => {
     expect(card.classList.contains('overflow-y-auto')).toBe(true);
   });
 
-  it('renders the brand block with glass logo, name and Desktop subtitle', () => {
+  it('renders the brand wordmark in place of the ad-hoc initials lockup', () => {
     render(WelcomeScreen, { props: { t } });
 
-    expect(screen.getByText('NP')).toBeInTheDocument();
-    expect(screen.getByText('Nexo')).toBeInTheDocument();
-    expect(screen.getByText('welcome.brandDesktop')).toBeInTheDocument();
+    const wordmark = screen.getByAltText('NEXO');
+    expect(wordmark).toBeInTheDocument();
+    expect(wordmark.getAttribute('src')).toBe('./nexo-horizontal-dark.svg');
   });
 
   it('renders the eyebrow, headline, subtitle and the 4 feature items', () => {

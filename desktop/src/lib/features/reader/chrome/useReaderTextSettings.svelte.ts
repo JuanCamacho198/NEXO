@@ -8,6 +8,9 @@ import {
   cyclePresetBy,
 } from './readerTextPresets';
 
+export const READER_BRIGHTNESS_MIN = 50;
+export const READER_BRIGHTNESS_MAX = 150;
+
 export type UseReaderTextSettingsDeps = {
   getSettings: () => ReaderSettings;
   onSettingsChange: (settings: ReaderSettings) => void;
@@ -17,6 +20,8 @@ export function useReaderTextSettings(deps: UseReaderTextSettingsDeps): {
   showSavedToast: boolean;
   changeFontSize: (delta: number) => void;
   changeLetterSpacing: (delta: number) => void;
+  setBrightness: (value: number) => void;
+  setContrast: (value: number) => void;
   cycleLineHeight: () => void;
   cycleAlignment: () => void;
   cycleParagraphSpacing: () => void;
@@ -56,6 +61,30 @@ export function useReaderTextSettings(deps: UseReaderTextSettingsDeps): {
     const next = Math.max(-2, Math.min(10, current + delta));
     if (next !== current) {
       deps.onSettingsChange({ ...s, letterSpacing: next });
+      notifyChange();
+    }
+  }
+
+  function setBrightness(value: number): void {
+    const s = deps.getSettings();
+    const next = Math.max(
+      READER_BRIGHTNESS_MIN,
+      Math.min(READER_BRIGHTNESS_MAX, Math.round(value)),
+    );
+    if (next !== s.brightness) {
+      deps.onSettingsChange({ ...s, brightness: next });
+      notifyChange();
+    }
+  }
+
+  function setContrast(value: number): void {
+    const s = deps.getSettings();
+    const next = Math.max(
+      READER_BRIGHTNESS_MIN,
+      Math.min(READER_BRIGHTNESS_MAX, Math.round(value)),
+    );
+    if (next !== s.contrast) {
+      deps.onSettingsChange({ ...s, contrast: next });
       notifyChange();
     }
   }
@@ -135,6 +164,8 @@ export function useReaderTextSettings(deps: UseReaderTextSettingsDeps): {
     },
     changeFontSize,
     changeLetterSpacing,
+    setBrightness,
+    setContrast,
     cycleLineHeight,
     cycleAlignment,
     cycleParagraphSpacing,

@@ -8,21 +8,21 @@ import {
 } from '../harness/appShell';
 import { DEFAULT_SEEDED_TITLE } from '../harness/tauriStub';
 
-// Pre-swap baselines for the nine live `Modal` consumers, captured before
+// Pre-swap baselines for the live `Modal` consumers, captured before
 // slice 7 replaces its internals with bits-ui `Dialog`.
 //
 // Consumer coverage list (the tenth `<Modal` site was `ConfirmDialog`, deleted
-// in slice 2, so the set is nine):
+// in slice 2; `SettingsResetModal` was deleted in the settings-cleanup unit
+// along with the Appearance / Reader settings tabs, so the set is eight):
 //
 //   1. ShelfDetailModal           covered here (home)          - detail + edit views
 //   2. BulkImportModal            covered here (home)
 //   3. EditMetadataModal          covered here (home)
 //   4. RemoveBookModal            covered here (library)
-//   5. SettingsResetModal         covered here (settings, Appearance tab)
-//   6. ReadingStatisticsView      covered here (stats, chart modal)
-//   7. DiscoverDetail             UNREACHABLE - see below
-//   8. AddonInstallConfirmDialog  UNREACHABLE - see below
-//   9. DriveConnectPrompt         UNREACHABLE - see below
+//   5. ReadingStatisticsView      covered here (stats, chart modal)
+//   6. DiscoverDetail             UNREACHABLE - see below
+//   7. AddonInstallConfirmDialog  UNREACHABLE - see below
+//   8. DriveConnectPrompt         UNREACHABLE - see below
 //
 // The three unreachable consumers cannot be opened from the stubbed app, and a
 // synthetic open would require a production change (forbidden: zero call-site
@@ -112,21 +112,6 @@ test('library: the remove-book dialog renders over the shelf', async ({ page }) 
   await expect(page.locator(DIALOG)).toHaveCount(1);
   await expect(page.locator(DIALOG)).toContainText(TITLE);
   await captureViewport(page, 'modal-remove-book.png');
-
-  await page.keyboard.press('Escape');
-  await expect(page.locator(DIALOG)).toBeHidden();
-});
-
-test('settings: the reset-settings dialog renders over the settings page', async ({ page }) => {
-  await openApp(page, { bookCount: 2 });
-  await gotoRoute(page, 'settings');
-
-  await page.getByRole('tab', { name: 'Appearance' }).click();
-  await page.getByRole('button', { name: 'Reset to defaults' }).click();
-
-  await expect(page.locator(DIALOG)).toHaveCount(1);
-  await expect(page.locator(DIALOG)).toContainText('Reset settings?');
-  await captureViewport(page, 'modal-settings-reset.png');
 
   await page.keyboard.press('Escape');
   await expect(page.locator(DIALOG)).toBeHidden();

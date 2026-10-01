@@ -29,6 +29,10 @@
 
   let profile = $derived(profileSessionFromAuthState());
 
+  let wordmarkSrc = $derived(
+    $theme === 'light' ? './nexo-horizontal-light.svg' : './nexo-horizontal-dark.svg',
+  );
+
   const handleUserBlockKeydown = (event: KeyboardEvent): void => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -53,14 +57,7 @@
       </button>
     {:else}
       <div class="flex items-center gap-3 w-full">
-        <div
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--color-accent-soft) text-sm font-bold text-(--color-accent-blue) border border-(--color-border-strong)"
-        >
-          NP
-        </div>
-        <h1 class="text-base font-bold tracking-tight text-(--color-primary)">
-          Nexo<br /><span class="text-xs font-normal text-(--color-text-muted)">Desktop</span>
-        </h1>
+        <img src={wordmarkSrc} alt="NEXO" class="h-13 w-auto shrink-0" />
         <button
           onclick={() => (collapsed = !collapsed)}
           class="ml-auto flex items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary) transition-colors shrink-0"

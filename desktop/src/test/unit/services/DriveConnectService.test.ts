@@ -270,12 +270,15 @@ describe('beginDriveConnect', () => {
 });
 
 describe('getDriveAccessToken', () => {
-  it('throws AUTH_REQUIRED with no stored grant', async () => {
+  it('throws DRIVE_NOT_CONNECTED (connect route) with no stored grant', async () => {
     try {
       await getDriveAccessToken();
       expect.unreachable();
     } catch (error) {
-      expect((error as { code?: string }).code).toBe('AUTH_REQUIRED');
+      // Not AUTH_REQUIRED: a missing Drive grant is a connect-route state, not
+      // an identity/re-auth incident, so it must not reach the global auth
+      // banner (v0.3.3 removed the Drive-not-connected notification).
+      expect((error as { code?: string }).code).toBe('DRIVE_NOT_CONNECTED');
     }
   });
 

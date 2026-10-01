@@ -2,9 +2,9 @@
  * Build-time release resolver for the landing's download section.
  *
  * The asset names this repository publishes carry the version and are not
- * uniformly shaped (`Nexo.Desktop_0.3.2_x64-setup.exe` uses underscores,
- * `Nexo.Desktop-0.3.2-1.x86_64.rpm` uses hyphens,
- * `nexo-android-v0.3.2.apk` embeds a `v`). They cannot be assembled by
+ * uniformly shaped (`Nexo.Desktop_0.3.3_x64-setup.exe` uses underscores,
+ * `Nexo.Desktop-0.3.3-1.x86_64.rpm` uses hyphens,
+ * `nexo-android-v0.3.3.apk` embeds a `v`). They cannot be assembled by
  * string concatenation, so every URL here comes from enumerating the release's
  * own asset list.
  *

@@ -1,22 +1,18 @@
 <script lang="ts">
-  import SettingsResetModal from './SettingsResetModal.svelte';
   import { createSettingsRouter, type SettingsTab } from '../useSettingsRouter.svelte';
-  import { createSettingsAppearance } from '../useSettingsAppearance.svelte';
-  import { createSettingsReader } from '../useSettingsReader.svelte';
+  import { createSettingsLocale } from '../useSettingsLocale.svelte';
   import { createSettingsData } from '../useSettingsData.svelte';
   import { addonsState, bindAddonsNotifier } from '$lib/features/addons/addonsStore.svelte';
   import SettingsAddonsSection from './SettingsAddonsSection.svelte';
   import { createSettingsProfile } from '../useSettingsProfile.svelte';
   import SettingsTabs from './SettingsTabs.svelte';
   import SettingsCuentaTab from './SettingsCuentaTab.svelte';
-  import SettingsAppearanceTab from './SettingsAppearanceTab.svelte';
-  import SettingsReaderTab from './SettingsReaderTab.svelte';
   import SettingsDataTab from './SettingsDataTab.svelte';
   import SettingsStorageTab from './SettingsStorageTab.svelte';
   import SettingsSyncTab from './SettingsSyncTab.svelte';
   import SettingsShortcutsTab from './SettingsShortcutsTab.svelte';
   import SettingsAboutTab from './SettingsAboutTab.svelte';
-  import type { UiLocale, ReaderSettings } from '$lib/shared/types';
+  import type { UiLocale } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
   import { onDestroy } from 'svelte';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
@@ -31,7 +27,6 @@
     onRequestClose,
     locale,
     onLocaleChange,
-    onReaderSettingsChange,
     t,
     books = [],
     initialTab,
@@ -41,7 +36,6 @@
     onRequestClose?: () => void;
     locale: UiLocale;
     onLocaleChange?: (locale: UiLocale) => void;
-    onReaderSettingsChange?: (settings: ReaderSettings) => void;
     books?: { id: string; title: string }[];
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     initialTab?: SettingsTab;
@@ -53,14 +47,10 @@
     if (initialTab !== undefined) router.activeTab = initialTab;
   });
 
-  const appearance = createSettingsAppearance({
-    onLocaleChange: (next) => {
-      locale = next as UiLocale;
-      onLocaleChange?.(next as UiLocale);
-    },
-  });
-  const reader = createSettingsReader({
-    onReaderSettingsChange: (next) => onReaderSettingsChange?.(next),
+  // `locale` is a read-only prop: the parent owns the value (`settingsState.locale`)
+  // and this panel only forwards changes upward, never writes the prop back.
+  const localeState = createSettingsLocale({
+    onLocaleChange: (next) => onLocaleChange?.(next),
   });
   // svelte-ignore state_referenced_locally
   const profile = createSettingsProfile({ t });
@@ -73,18 +63,15 @@
     void addonsState.refresh();
   });
 
-  // Keep appearance locale in sync if parent changes locale externally
+  // Keep the local locale hook in sync if the parent changes locale externally
   $effect(() => {
     void locale;
-    if (appearance.locale !== locale) appearance.locale = locale;
+    if (localeState.locale !== locale) localeState.locale = locale;
   });
   $effect(() => {
     void settingsState.dailyGoalMinutes;
     profile.syncFromStore();
   });
-
-  let showResetModal = $state(false);
-  let pendingResetTab = $state<'cuenta' | 'apariencia' | 'reader' | null>(null);
 
   // Auto-load devices when signed in
   $effect(() => {
@@ -119,9 +106,6 @@
     } else {
       profile.stopHeartbeat();
     }
-    if (tab === 'apariencia' || tab === 'reader') {
-      await Promise.all([appearance.loadAppearance(), reader.loadReader()]);
-    }
   }
 
   function handleTabKeydown(e: KeyboardEvent): void {
@@ -147,29 +131,9 @@
     }
   }
 
-  function openResetModal(tab: 'cuenta' | 'apariencia' | 'reader'): void {
-    pendingResetTab = tab;
-    showResetModal = true;
-  }
-  function closeResetModal(): void {
-    showResetModal = false;
-    pendingResetTab = null;
-  }
-  async function confirmReset(): Promise<void> {
-    if (pendingResetTab === 'cuenta') appearance.resetToDefaults();
-    else if (pendingResetTab === 'reader') reader.resetToDefaults();
-    else if (pendingResetTab === 'apariencia') appearance.resetToDefaults();
-    closeResetModal();
-    await Promise.all([appearance.saveAppearance(), reader.saveReader()]);
-  }
-  async function handleSaveSettings(): Promise<void> {
-    await Promise.all([appearance.saveAppearance(), reader.saveReader()]);
-  }
-
   $effect(() => {
     if (isOpen) {
-      void appearance.loadAppearance();
-      void reader.loadReader();
+      void localeState.loadLocale();
       void profile.loadProfileData();
     }
   });
@@ -224,37 +188,7 @@
 
     <form novalidate onsubmit={(e) => e.preventDefault()} class="flex-1 flex flex-col min-h-0">
       {#if router.activeTab === 'cuenta'}
-        <SettingsCuentaTab {t} profileState={profile} appearanceState={appearance} />
-      {:else if router.activeTab === 'apariencia'}
-        <div
-          role="tabpanel"
-          id="tabpanel-apariencia"
-          aria-labelledby="tab-apariencia"
-          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
-        >
-          <SettingsAppearanceTab
-            {t}
-            preferredTheme={appearance.preferredTheme}
-            preferredFontScale={appearance.preferredFontScale}
-            readerThemeMode={reader.readerThemeMode}
-            readerBrightness={reader.readerBrightness}
-            readerContrast={reader.readerContrast}
-            readerEpubFontSize={reader.readerEpubFontSize}
-            readerEpubFontFamily={reader.readerEpubFontFamily}
-            isSavingSettings={appearance.isSavingSettings || reader.isSavingSettings}
-            onSaveSettings={() => void handleSaveSettings()}
-            onOpenResetModal={() => openResetModal('apariencia')}
-            onPreferredThemeChange={(v: string) => appearance.handlePreferredThemeChange(v)}
-            onPreferredFontScaleChange={(v: number) => appearance.handlePreferredFontScaleChange(v)}
-            onReaderThemeModeChange={(v) => reader.handleReaderThemeModeChange(v)}
-            onReaderBrightnessChange={(v) => reader.handleReaderBrightnessChange(v)}
-            onReaderContrastChange={(v) => reader.handleReaderContrastChange(v)}
-            onReaderEpubFontSizeChange={(v) => reader.handleReaderEpubFontSizeChange(v)}
-            onReaderEpubFontFamilyChange={(v) => reader.handleReaderEpubFontFamilyChange(v)}
-          />
-        </div>
-      {:else if router.activeTab === 'reader'}
-        <SettingsReaderTab {t} {reader} onOpenResetModal={() => openResetModal('reader')} />
+        <SettingsCuentaTab {t} profileState={profile} {localeState} />
       {:else if router.activeTab === 'datos'}
         <div
           role="tabpanel"
@@ -320,12 +254,5 @@
         </div>
       {/if}
     </form>
-
-    <SettingsResetModal
-      show={showResetModal}
-      {t}
-      onClose={closeResetModal}
-      onConfirm={confirmReset}
-    />
   </aside>
 {/if}

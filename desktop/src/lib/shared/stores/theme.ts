@@ -31,6 +31,12 @@ export function toggleTheme(): void {
   });
 }
 
+/** Set an explicit theme (the single source of truth for `data-theme`), persists to localStorage */
+export function setTheme(value: Theme): void {
+  theme.set(value);
+  applyThemeToDom(value);
+}
+
 /** Call once in onMount to apply the stored theme to the DOM */
 export function initTheme(): void {
   theme.subscribe((value) => {

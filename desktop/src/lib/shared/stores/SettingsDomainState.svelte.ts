@@ -62,13 +62,21 @@ class SettingsDomainState {
     }
   }
 
-  handleReaderSettingsChange(nextSettings: ReaderSettings): void {
+  // Deliberately bound arrow fields. Both handlers are forwarded verbatim onto
+  // component props (`onLocaleChange={settingsState.handleLocaleChange}`), and
+  // Svelte invokes such props as `$$props.onLocaleChange?.(...)`, which rebinds
+  // `this` to the props object. A prototype method would then write
+  // `this.locale = ...` onto the props accessors instead of onto this store —
+  // and when the parent passes `locale={settingsState.locale}` without `bind:`,
+  // that accessor is getter-only, so the write throws
+  // "Cannot set property locale of #<Object> which has only a getter".
+  handleReaderSettingsChange = (nextSettings: ReaderSettings): void => {
     this.readerSettings = nextSettings;
-  }
+  };
 
-  handleLocaleChange(nextLocale: UiLocale): void {
+  handleLocaleChange = (nextLocale: UiLocale): void => {
     this.locale = nextLocale;
-  }
+  };
 
   async loadDailyGoalMinutes(userId?: string): Promise<void> {
     try {
