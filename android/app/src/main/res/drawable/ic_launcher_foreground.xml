@@ -13,11 +13,15 @@
      that the brand already uses for its own dark app icon; nexo-icon-dark.svg
      was not used because its ribbon is filled #0D1D3B, identical to the
      background layer, which would erase the ribbon and leave only the "N".
-     Geometry: source bbox 81 x 130 units, centre (447.5, 226). Scale 0.507692
-     (= 66/130) and the translation below place it at 41.12 x 66.00 units
-     centred on (54, 54) of the 108 x 108 adaptive-icon canvas, i.e. inside the
-     central 66 x 66 that stays visible under any launcher mask (the mark is
-     61.1% of the canvas height).
+     Geometry: the rendered mark bbox is 80 x 129 units, centre (447, 225.5)
+     (measured from the rasterised path; the Bezier control points reach
+     407..488 / 161..291, but the curve itself tops out at 487 / 290). Scale
+     0.431538 (= 0.507692 * 0.85) and the translation below place it at
+     34.52 x 55.67 units centred on (54, 54) of the 108 x 108 adaptive-icon
+     canvas, i.e. inside the central 66 x 66 that stays visible under any
+     launcher mask. The mark is now 51.5% of the canvas height (was 60.6%),
+     which is 85% of its previous on-screen size: more breathing room from the
+     masked edges while still filling the safe area.
      Generated file: regenerate from the brand source, do not hand-edit. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -25,10 +29,10 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
   <group
-      android:translateX="-173.192"
-      android:translateY="-60.7383"
-      android:scaleX="0.507692"
-      android:scaleY="0.507692">
+      android:translateX="-138.8975"
+      android:translateY="-43.3118"
+      android:scaleX="0.431538"
+      android:scaleY="0.431538">
     <path
         android:fillColor="#FFFFFFFF"
         android:fillType="evenOdd"
