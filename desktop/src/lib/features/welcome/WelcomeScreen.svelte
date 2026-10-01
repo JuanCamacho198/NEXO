@@ -108,20 +108,7 @@
       class="flex w-full lg:flex-1 lg:max-w-xl min-w-0 flex-col gap-3 my-auto"
       aria-labelledby="welcome-headline"
     >
-      <div class="flex items-center gap-3.5">
-        <div
-          class="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white/5 backdrop-blur-xl"
-          aria-hidden="true"
-        >
-          <span class="text-2xl font-bold tracking-tight">NP</span>
-        </div>
-        <div class="flex flex-col">
-          <span class="text-[30px] font-bold leading-tight tracking-tight">Nexo</span>
-          <span class="text-lg font-medium text-(--welcome-brand-blue)">
-            {t('welcome.brandDesktop')}
-          </span>
-        </div>
-      </div>
+      <img src="./nexo-horizontal-dark.svg" alt="NEXO" class="h-14 w-auto" />
 
       <p class="m-0 text-2xs font-semibold uppercase tracking-wider text-(--color-accent-blue)">
         {t('welcome.eyebrow')}
