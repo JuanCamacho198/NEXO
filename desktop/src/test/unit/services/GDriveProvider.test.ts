@@ -471,3 +471,83 @@ describe('GDriveProvider — delete (trash, REQ-11)', () => {
     expect(err.retryable).toBe(false);
   });
 });
+
+describe('GDriveProvider — getUsage (read-only Drive byte measurement)', () => {
+  let provider: GDriveProvider;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    globalThis.fetch = vi.fn();
+    __resetGDriveFolderCache();
+    provider = new GDriveProvider();
+    vi.mocked(refreshDriveAccessToken).mockResolvedValue('ya29.refreshed-token');
+  });
+
+  it('sums every page of Nexo/Books without creating folders', async () => {
+    mockAuth('token-usage-1');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-u' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-u' }] }) },
+      {
+        ok: true,
+        json: () =>
+          Promise.resolve({ files: [{ size: '100' }, { size: '250' }], nextPageToken: 'tok' }),
+      },
+      { ok: true, json: () => Promise.resolve({ files: [{ size: '50' }] }) },
+    ]);
+
+    const usage = await provider.getUsage();
+
+    expect(usage).toEqual({ bytes: 400, fileCount: 3 });
+    // No folder creation (POST) happened on a read-only measurement.
+    const createCalls = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.filter((c) => c[1]?.method === 'POST');
+    expect(createCalls).toHaveLength(0);
+    // The second page request forwards the page token.
+    const pageCall = String(vi.mocked(globalThis.fetch).mock.calls[3][0]);
+    expect(pageCall).toContain('pageToken=tok');
+    expect(pageCall).toContain('fields=');
+  });
+
+  it('returns zero without creating Nexo/Books when the folders do not exist', async () => {
+    mockAuth('token-usage-2');
+    mockDriveApiResponses([{ ok: true, json: () => Promise.resolve({ files: [] }) }]);
+
+    const usage = await provider.getUsage();
+
+    expect(usage).toEqual({ bytes: 0, fileCount: 0 });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats files without a size (folders) as zero bytes', async () => {
+    mockAuth('token-usage-3');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-u3' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-u3' }] }) },
+      {
+        ok: true,
+        json: () => Promise.resolve({ files: [{}, { size: '10' }, { id: 'nested-folder' }] }),
+      },
+    ]);
+
+    const usage = await provider.getUsage();
+
+    expect(usage).toEqual({ bytes: 10, fileCount: 3 });
+  });
+
+  it('surfaces a typed AUTH_EXPIRED instead of reporting 0 bytes on 401', async () => {
+    mockAuth('token-usage-4');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-u4' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-u4' }] }) },
+      { ok: false, status: 401, json: () => Promise.resolve({}) },
+      { ok: false, status: 401, json: () => Promise.resolve({}) },
+    ]);
+
+    const err = (await provider.getUsage().catch((e) => e)) as DriveError;
+
+    expect(err.code).toBe('AUTH_EXPIRED');
+    expect(err.retryable).toBe(false);
+  });
+});

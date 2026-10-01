@@ -1,4 +1,5 @@
 import { invoke } from '$lib/shared/api/invokeWrapper';
+import { getDriveUsage, type DriveUsage } from '$lib/shared/services/storage/DriveUsageService';
 
 export type StorageStats = {
   totalBytes: number;
@@ -7,7 +8,6 @@ export type StorageStats = {
   tempBytes: number;
   cacheBytes: number;
   coverBytes: number;
-  driveBytesEstimate: number | null;
 };
 
 export type PerBookSize = {
@@ -16,29 +16,6 @@ export type PerBookSize = {
   bytes: number;
 };
 
-export type AutoBackupConfig = {
-  enabled: boolean;
-  frequency: '1h' | '6h' | '24h';
-  retention: 3 | 7 | 30;
-  onAuth: boolean;
-};
-
-const AUTO_BACKUP_KEY = 'storage.autoBackup';
-
-function loadAutoBackup(): AutoBackupConfig {
-  try {
-    const raw = localStorage.getItem(AUTO_BACKUP_KEY);
-    if (raw) return JSON.parse(raw) as AutoBackupConfig;
-  } catch {}
-  return { enabled: false, frequency: '24h', retention: 7, onAuth: false };
-}
-
-function persistAutoBackup(cfg: AutoBackupConfig): void {
-  try {
-    localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(cfg));
-  } catch {}
-}
-
 export function createStorageState() {
   let stats = $state<StorageStats | null>(null);
   let perBookSizes = $state<PerBookSize[]>([]);
@@ -46,7 +23,8 @@ export function createStorageState() {
   let error = $state<string | null>(null);
   let isClearing = $state(false);
   let clearProgress = $state<number | null>(null);
-  let autoBackup = $state<AutoBackupConfig>(loadAutoBackup());
+  let driveUsage = $state<DriveUsage | null>(null);
+  let isLoadingDriveUsage = $state(false);
 
   async function loadStats(): Promise<void> {
     isLoading = true;
@@ -54,15 +32,21 @@ export function createStorageState() {
     try {
       const res = await invoke<StorageStats>('getStorageStats');
       stats = res;
-      if (res.driveBytesEstimate === null) {
-        console.warn('[storageState] driveBytesEstimate null (Drive unavailable)');
-      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       error = msg;
       stats = null;
     } finally {
       isLoading = false;
+    }
+  }
+
+  async function loadDriveUsage(force = false): Promise<void> {
+    isLoadingDriveUsage = true;
+    try {
+      driveUsage = await getDriveUsage({ force });
+    } finally {
+      isLoadingDriveUsage = false;
     }
   }
 
@@ -110,11 +94,6 @@ export function createStorageState() {
     return res;
   }
 
-  function setAutoBackup(patch: Partial<AutoBackupConfig>): void {
-    autoBackup = { ...autoBackup, ...patch };
-    persistAutoBackup(autoBackup);
-  }
-
   return {
     get stats() {
       return stats;
@@ -134,15 +113,18 @@ export function createStorageState() {
     get clearProgress() {
       return clearProgress;
     },
-    get autoBackup() {
-      return autoBackup;
+    get driveUsage() {
+      return driveUsage;
+    },
+    get isLoadingDriveUsage() {
+      return isLoadingDriveUsage;
     },
     loadStats,
+    loadDriveUsage,
     clearCache,
     getPerBookSizes,
     deleteBookData,
     cleanupOrphans,
-    setAutoBackup,
   };
 }
 

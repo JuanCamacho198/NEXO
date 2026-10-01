@@ -15,6 +15,12 @@ export {
 } from './BookImportService';
 export type { StorageProvider } from './storage/StorageProvider';
 export { GDriveProvider } from './storage/GDriveProvider';
+export {
+  getDriveUsage,
+  DRIVE_USAGE_CACHE_TTL_MS,
+  type DriveUsage,
+  type DriveUsageReader,
+} from './storage/DriveUsageService';
 export * from './catalog';
 export { DriveColdBackupService } from './DriveColdBackupService';
 export { GoogleDriveStateSync } from './GoogleDriveStateSync';

@@ -14,7 +14,6 @@ pub struct StorageStats {
     pub temp_bytes: u64,
     pub cache_bytes: u64,
     pub cover_bytes: u64,
-    pub drive_bytes_estimate: Option<u64>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -112,7 +111,6 @@ pub fn compute_storage_stats(app_data_dir: &Path, db_path: &Path) -> AppResult<S
         temp_bytes,
         cache_bytes,
         cover_bytes: covers_bytes,
-        drive_bytes_estimate: None,
     })
 }
 
@@ -375,6 +373,5 @@ mod tests {
         assert_eq!(stats.db_bytes, 1024);
         assert_eq!(stats.covers_bytes, 512);
         assert!(stats.total_bytes >= 1536);
-        assert!(stats.drive_bytes_estimate.is_none());
     }
 }
