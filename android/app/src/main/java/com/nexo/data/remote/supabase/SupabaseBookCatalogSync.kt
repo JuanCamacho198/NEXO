@@ -619,7 +619,7 @@ class SupabaseBookCatalogSync(
                         remoteCatalogVersion = row.catalogVersion,
                         remoteCoverRef = row.coverObjectPath,
                         remoteProvider = row.remoteProvider,
-                        remoteProtocolVersion = row.protocolVersion,
+                        remoteProtocolVersion = row.protocolVersion?.toIntOrNull(),
                     ),
                 )
                 if (!tempFile.renameTo(targetFile)) throw IOException("Atomic import rename failed")
@@ -781,7 +781,7 @@ class SupabaseBookCatalogSync(
             remoteFileId = remoteFileId,
             remotePath = remotePath,
             coverObjectPath = remoteCoverRef,
-            protocolVersion = remoteProtocolVersion ?: 1,
+            protocolVersion = (remoteProtocolVersion ?: 1).toString(),
         )
     }
 

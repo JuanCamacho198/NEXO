@@ -299,7 +299,7 @@ class SupabaseBookCatalogDownloadTest {
                         remoteProvider = "google_drive",
                         remoteFileId = "drive-1",
                         remotePath = "Nexo/Books/mapping.epub",
-                        protocolVersion = 7,
+                        protocolVersion = "7",
                     ),
                 )
             coEvery { mockRemote.download(any()) } returns bytes
