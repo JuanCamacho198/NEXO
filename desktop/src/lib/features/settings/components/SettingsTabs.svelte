@@ -1,10 +1,8 @@
 <script lang="ts">
-  import Book from 'lucide-svelte/icons/book';
   import Bookmark from 'lucide-svelte/icons/bookmark';
   import CloudCheck from 'lucide-svelte/icons/cloud-check';
   import Database from 'lucide-svelte/icons/database';
   import Info from 'lucide-svelte/icons/info';
-  import Sun from 'lucide-svelte/icons/sun';
   import User from 'lucide-svelte/icons/user';
   import type { Icon as LucideIcon } from 'lucide-svelte';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -30,8 +28,6 @@
 
   const tabs: TabMeta[] = [
     { id: 'cuenta', icon: User, labelKey: 'settings.tab.account', fallback: 'Cuenta' },
-    { id: 'apariencia', icon: Sun, labelKey: 'settings.tab.appearance', fallback: 'Apariencia' },
-    { id: 'reader', icon: Book, labelKey: 'settings.tab.reader', fallback: 'Reader' },
     { id: 'datos', icon: Database, labelKey: 'settings.tab.data', fallback: 'Datos' },
     {
       id: 'almacenamiento',

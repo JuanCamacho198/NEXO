@@ -15,8 +15,8 @@ describe('useSettingsRouter', () => {
   });
 
   it('respects initialTab', () => {
-    const router = createSettingsRouter({ initialTab: 'reader' });
-    expect(router.activeTab).toBe('reader');
+    const router = createSettingsRouter({ initialTab: 'atajos' });
+    expect(router.activeTab).toBe('atajos');
   });
 
   it('handleTabChange sets activeTab', async () => {
@@ -25,12 +25,10 @@ describe('useSettingsRouter', () => {
     expect(router.activeTab).toBe('datos');
   });
 
-  it('SETTINGS_TABS has 8 entries', () => {
-    expect(SETTINGS_TABS).toHaveLength(8);
+  it('SETTINGS_TABS has 6 entries', () => {
+    expect(SETTINGS_TABS).toHaveLength(6);
     expect(SETTINGS_TABS).toEqual([
       'cuenta',
-      'apariencia',
-      'reader',
       'datos',
       'almacenamiento',
       'sincronizacion',
@@ -53,8 +51,8 @@ describe('useSettingsRouter', () => {
     const e = { key: 'ArrowRight', preventDefault: vi.fn() } as unknown as KeyboardEvent;
     router.handleTabKeydown(e);
     expect(e.preventDefault).toHaveBeenCalled();
-    expect(router.activeTab).toBe('apariencia');
-    expect(spy).toHaveBeenCalledWith('tab-apariencia');
+    expect(router.activeTab).toBe('datos');
+    expect(spy).toHaveBeenCalledWith('tab-datos');
     expect(focus).toHaveBeenCalled();
   });
 

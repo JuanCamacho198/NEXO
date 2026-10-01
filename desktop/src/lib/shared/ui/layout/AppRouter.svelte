@@ -272,7 +272,6 @@
                   t={appState.t}
                   locale={settingsState.locale}
                   onLocaleChange={settingsState.handleLocaleChange}
-                  onReaderSettingsChange={settingsState.handleReaderSettingsChange}
                   books={libraryState.books.map((b) => ({ id: b.id, title: b.title }))}
                 />
               </section>
@@ -290,7 +289,6 @@
                   t={appState.t}
                   locale={settingsState.locale}
                   onLocaleChange={settingsState.handleLocaleChange}
-                  onReaderSettingsChange={settingsState.handleReaderSettingsChange}
                   books={libraryState.books.map((b) => ({ id: b.id, title: b.title }))}
                 />
               </section>

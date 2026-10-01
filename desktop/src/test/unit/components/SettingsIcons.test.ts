@@ -28,7 +28,7 @@ function expectShimContract(icon: Element): void {
 }
 
 describe('settings icon migration', () => {
-  it('renders the eight settings tabs through direct lucide components', () => {
+  it('renders the six settings tabs through direct lucide components', () => {
     render(SettingsTabs, {
       activeTab: 'cuenta',
       onTabChange: () => {},
@@ -39,8 +39,6 @@ describe('settings icon migration', () => {
     const icons = Array.from(screen.getByRole('tablist').querySelectorAll('svg'));
     expect(icons.map(glyphOf)).toEqual([
       'lucide-user',
-      'lucide-sun',
-      'lucide-book',
       'lucide-database',
       'lucide-database',
       'lucide-cloud-check',

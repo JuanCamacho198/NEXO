@@ -252,7 +252,6 @@ describe('SettingsPanel', () => {
     locale: 'es' as const,
     onRequestClose: vi.fn(),
     onLocaleChange: vi.fn(),
-    onReaderSettingsChange: vi.fn(),
     books: [],
     t,
   };
@@ -269,11 +268,11 @@ describe('SettingsPanel', () => {
   it('renders all tab buttons', () => {
     render(SettingsPanel, defaultProps);
     expect(screen.getByRole('tab', { name: 'Account' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Appearance' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Reader' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Data' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Keyboard Shortcuts' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'About' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Appearance' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Reader' })).not.toBeInTheDocument();
   });
 
   it('switches to shortcuts tab when clicked', async () => {
@@ -295,17 +294,6 @@ describe('SettingsPanel', () => {
     render(SettingsPanel, defaultProps);
     await user.click(screen.getByRole('tab', { name: 'About' }));
     expect(screen.getByText('Nexo')).toBeInTheDocument();
-  });
-
-  it('shows reset modal when reset button clicked', async () => {
-    const user = userEvent.setup();
-    render(SettingsPanel, defaultProps);
-    await user.click(screen.getByRole('tab', { name: 'Appearance' }));
-    const resetButtons = screen.getAllByText('Reset to defaults');
-    await user.click(resetButtons[0]);
-    expect(screen.getByText('Reset settings?')).toBeInTheDocument();
-    expect(screen.getByText('Cancel')).toBeInTheDocument();
-    expect(screen.getByText('Reset')).toBeInTheDocument();
   });
 
   it('closes panel when close button clicked in overlay mode', async () => {

@@ -11,16 +11,17 @@
   import type { ProfileSessionViewModel } from '../profileSession';
   import type { DeviceViewModel } from '$lib/services/devices';
   import type { createSettingsProfile, DailyGoalIcon } from '../useSettingsProfile.svelte';
-  import type { createSettingsAppearance } from '../useSettingsAppearance.svelte';
+  import type { createSettingsLocale } from '../useSettingsLocale.svelte';
+  import { setTheme, theme } from '$lib/shared/stores/theme';
 
   type ProfileState = ReturnType<typeof createSettingsProfile>;
-  type AppearanceState = ReturnType<typeof createSettingsAppearance>;
+  type LocaleState = ReturnType<typeof createSettingsLocale>;
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     // New composable-driven API (preferred)
     profileState?: ProfileState;
-    appearanceState?: AppearanceState;
+    localeState?: LocaleState;
     // Legacy scalars (fallback)
     profile?: ProfileSessionViewModel;
     isProfileLoading?: boolean;
@@ -52,7 +53,7 @@
   let {
     t,
     profileState,
-    appearanceState,
+    localeState,
     profile: legacyProfile,
     isProfileLoading: legacyProfileLoading,
     profileError: legacyProfileError,
@@ -79,7 +80,7 @@
     profileState?.isProfileLoading ?? legacyProfileLoading ?? false,
   );
   const profileError = $derived(profileState?.profileError ?? legacyProfileError ?? null);
-  const locale = $derived((appearanceState?.locale as string) ?? legacyLocale ?? 'es');
+  const locale = $derived((localeState?.locale as string) ?? legacyLocale ?? 'es');
   const localeOptions = $derived(
     legacyLocaleOptions ?? [
       { value: 'es', label: t('settings.languageSpanish') },
@@ -96,12 +97,12 @@
   const dailyGoalCards = $derived(profileState?.dailyGoalCards ?? legacyCards ?? []);
   const isSavingDailyGoal = $derived(profileState?.isSavingDailyGoal ?? legacySavingGoal ?? false);
   const settingsUnavailable = $derived(
-    appearanceState?.settingsUnavailable ?? legacyUnavailable ?? null,
+    localeState?.settingsUnavailable ?? legacyUnavailable ?? null,
   );
-  const settingsError = $derived(appearanceState?.settingsError ?? legacyError ?? null);
+  const settingsError = $derived(localeState?.settingsError ?? legacyError ?? null);
 
   function handleLocaleChange(value: string): void {
-    if (appearanceState) void appearanceState.handleLocaleSelect(value);
+    if (localeState) void localeState.handleLocaleSelect(value);
     else legacyOnLocaleChange?.(value);
   }
   function handleSignOut(): void {
@@ -177,14 +178,43 @@
         />
       </div>
     {/if}
-    <div class="p-4">
-      <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.language')}</span>
-      <Dropdown
-        options={localeOptions}
-        value={locale}
-        class="w-full"
-        onchange={({ value }) => handleLocaleChange(value)}
-      />
+    <div class="p-4 flex flex-col gap-4">
+      <div>
+        <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.language')}</span>
+        <Dropdown
+          options={localeOptions}
+          value={locale}
+          class="w-full"
+          onchange={({ value }) => handleLocaleChange(value)}
+        />
+      </div>
+      <div>
+        <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.theme')}</span>
+        <div class="flex gap-2" role="group" aria-label={t('settings.theme')}>
+          <button
+            type="button"
+            class="flex-1 cursor-pointer rounded-lg border px-3 py-2 text-sm transition-all duration-200 {$theme ===
+            'light'
+              ? 'border-(--color-primary) text-(--color-primary)'
+              : 'border-(--color-border) text-(--color-text-muted)'}"
+            aria-pressed={$theme === 'light'}
+            onclick={() => setTheme('light')}
+          >
+            {t('settings.theme.light')}
+          </button>
+          <button
+            type="button"
+            class="flex-1 cursor-pointer rounded-lg border px-3 py-2 text-sm transition-all duration-200 {$theme ===
+            'dark'
+              ? 'border-(--color-primary) text-(--color-primary)'
+              : 'border-(--color-border) text-(--color-text-muted)'}"
+            aria-pressed={$theme === 'dark'}
+            onclick={() => setTheme('dark')}
+          >
+            {t('settings.theme.dark')}
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 
