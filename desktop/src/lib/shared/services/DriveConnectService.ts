@@ -282,6 +282,28 @@ async function exchangeCodeForGrant(
   return { accessToken: data.access_token, refreshToken: data.refresh_token };
 }
 
+/**
+ * Drive connect-route error: no grant on disk, so the feature is simply not
+ * connected. Carries `DRIVE_NOT_CONNECTED` (the non-retryable connect-route
+ * code) instead of `AUTH_REQUIRED`: Drive is a separate opt-in grant
+ * (login-drive-separation), so "never connected" is not an identity/re-auth
+ * incident. Reporting it as an auth error put a global re-auth banner
+ * ("Sign in with Google") in front of every signed-in user who had not yet
+ * connected Drive.
+ */
+function driveNotConnected(): Error {
+  return syncError(
+    'DRIVE_NOT_CONNECTED',
+    'Google Drive is not connected. Connect Google Drive in Settings to use Drive features.',
+    false,
+  );
+}
+
+/**
+ * Drive grant rejected mid-refresh (`invalid_grant`): the user HAD connected
+ * Drive and the grant is now dead, so this is a real re-connect incident and
+ * stays `AUTH_REQUIRED` so the global auth banner surfaces it (SR-3.1).
+ */
 function driveAuthRequired(): Error {
   return syncError(
     'AUTH_REQUIRED',
@@ -293,7 +315,7 @@ function driveAuthRequired(): Error {
 async function doRefreshDriveAccessToken(): Promise<string> {
   const grant = await loadDriveGrant();
   if (!grant) {
-    throw driveAuthRequired();
+    throw driveNotConnected();
   }
   const config = requireDriveOAuthConfig();
   let response: Response;
