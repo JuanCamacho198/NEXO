@@ -386,8 +386,16 @@ class ColdBackupE2ETest {
             assertEquals("b2", result.failures[0].id)
             assertEquals("AUTH_REQUIRED", result.failures[0].error.code)
             // Redaction: the token value never survives into the failure message.
-            assertTrue(result.failures[0].error.message.contains("[REDACTED]"))
-            assertTrue(!result.failures[0].error.message.contains("abc"))
+            assertTrue(
+                result.failures[0]
+                    .error.message
+                    .contains("[REDACTED]"),
+            )
+            assertTrue(
+                !result.failures[0]
+                    .error.message
+                    .contains("abc"),
+            )
         }
 
     @Test

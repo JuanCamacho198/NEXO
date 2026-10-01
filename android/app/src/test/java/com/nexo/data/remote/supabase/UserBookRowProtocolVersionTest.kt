@@ -8,12 +8,12 @@ import io.github.jan.supabase.serializer.KotlinXSerializer
 import io.ktor.http.Headers
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlinx.serialization.json.Json
 
 /**
  * Cross-device wire-type contract for `user_books.protocol_version`.
