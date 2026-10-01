@@ -142,6 +142,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.theme.light': 'Claro',
   'settings.theme.dark': 'Oscuro',
   'settings.readerFontScale': 'Escala de fuente del lector',
+  'settings.reader.brightness': 'Brillo del lector',
+  'settings.reader.contrast': 'Contraste del lector',
   'settings.saving': 'Guardando...',
   'settings.highlights': 'Resaltados',
   'settings.bookmarks': 'Marcadores',

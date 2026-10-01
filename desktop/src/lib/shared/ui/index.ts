@@ -23,9 +23,7 @@ export { default as AppSidebar } from './layout/AppSidebar.svelte';
 
 // Navigation components
 export { default as ThemeToggle } from './navigation/ThemeToggle.svelte';
-export { default as VisualSlider } from './navigation/VisualSlider.svelte';
 export { default as SearchBar } from './navigation/SearchBar.svelte';
 export { default as Dropdown } from './navigation/Dropdown.svelte';
 export { default as Pagination } from './navigation/Pagination.svelte';
-export { default as LivePreview } from './navigation/LivePreview.svelte';
 export { default as DropMenu } from './navigation/DropMenu.svelte';

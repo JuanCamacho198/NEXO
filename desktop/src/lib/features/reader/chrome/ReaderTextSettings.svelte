@@ -5,7 +5,11 @@
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
   import { fly } from 'svelte/transition';
   import ThemeSwatches from './ThemeSwatches.svelte';
-  import { useReaderTextSettings } from './useReaderTextSettings.svelte';
+  import {
+    READER_BRIGHTNESS_MAX,
+    READER_BRIGHTNESS_MIN,
+    useReaderTextSettings,
+  } from './useReaderTextSettings.svelte';
   import { FONT_FAMILY_PRESETS, cyclePreset } from './readerTextPresets';
 
   type Props = {
@@ -98,6 +102,25 @@
   </div>
 {/snippet}
 
+{#snippet sliderRow(label: string, value: number, oninput: (value: number) => void)}
+  <div class="flex flex-col gap-1.5">
+    <div class="flex items-center justify-between">
+      <span class="text-sm text-(--color-text-muted)">{label}</span>
+      <span class="text-xs text-(--color-accent-blue)">{value}%</span>
+    </div>
+    <input
+      type="range"
+      min={READER_BRIGHTNESS_MIN}
+      max={READER_BRIGHTNESS_MAX}
+      step="1"
+      {value}
+      oninput={(e) => oninput(Number((e.currentTarget as HTMLInputElement).value))}
+      class="slider-thumb w-full cursor-pointer accent-(--color-accent-blue)"
+      aria-label={label}
+    />
+  </div>
+{/snippet}
+
 <!-- prettier-ignore-start -->
 {#if open}
   <div class="fixed inset-0 z-40" onclick={handleBackdropClick} onkeydown={(e) => e.key === 'Escape' && onClose()} role="presentation">
@@ -119,6 +142,12 @@
       </header>
       <section class="flex flex-col gap-6 p-4">
         <ThemeSwatches {readerSettings} {onSettingsChange} {t} />
+        <div class="h-px w-full bg-(--color-border)"></div>
+        <div class="flex flex-col gap-4">
+          {@render sliderRow(t('settings.reader.brightness'), readerSettings.brightness, textSettings.setBrightness)}
+          {@render sliderRow(t('settings.reader.contrast'), readerSettings.contrast, textSettings.setContrast)}
+        </div>
+        <div class="h-px w-full bg-(--color-border)"></div>
         {#if format === 'epub'}
           <button type="button" class="flex w-full items-center justify-between rounded-xl bg-(--color-border) px-3 py-2" onclick={cycleFontFamily}><span class="text-sm font-normal text-(--color-accent-blue)">{readerSettings.epub.fontFamily || t('reader.fontDefault')}</span><svg xmlns="http://www.w3.org/2000/svg" width="9" height="6" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
           <div class="flex justify-between">

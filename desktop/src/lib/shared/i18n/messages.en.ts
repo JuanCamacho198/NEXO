@@ -139,6 +139,8 @@ export const messagesEn = {
   'settings.theme.light': 'Light',
   'settings.theme.dark': 'Dark',
   'settings.readerFontScale': 'Reader font scale',
+  'settings.reader.brightness': 'Reader brightness',
+  'settings.reader.contrast': 'Reader contrast',
   'settings.saving': 'Saving...',
   'settings.highlights': 'Highlights',
   'settings.bookmarks': 'Bookmarks',
