@@ -284,6 +284,8 @@ export const messagesEn = {
   'settings.data.importError': 'Error importing settings',
   'settings.data.importPartialFailure':
     '{{count}} record(s) failed to import ({{codes}}) — the rest were imported.',
+  'settings.data.catalogSyncPartial':
+    '{{count}} book(s) could not be synced to the catalog ({{codes}}). They will retry automatically.',
   'settings.data.resetSection': 'Reset section',
   'settings.data.exportLibrary': 'Export library',
   'settings.data.exportLibraryDescription': 'Download all your books as JSON',

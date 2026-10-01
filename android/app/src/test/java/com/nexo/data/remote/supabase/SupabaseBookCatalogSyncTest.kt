@@ -6,6 +6,7 @@ import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.local.entity.SyncOutboxEntity
+import com.nexo.data.remote.sync.CatalogSyncStatus
 import com.nexo.data.session.SessionManager
 import com.nexo.domain.model.AuthSession
 import io.mockk.coEvery
@@ -37,6 +38,7 @@ class SupabaseBookCatalogSyncTest {
 
     @Before
     fun setUp() {
+        CatalogSyncStatus.clear()
         fakeBookDao = FakeBookDao()
         fakeOutboxDao = FakeSyncOutboxDao()
         mockSessionManager = mockk(relaxed = true)
@@ -186,6 +188,66 @@ class SupabaseBookCatalogSyncTest {
             val pendingItems = fakeOutboxDao.getPendingItems()
             assertEquals(1, pendingItems.size)
             assertEquals(1, pendingItems.first().retryCount)
+        }
+
+    // ─── Background catalog failure status (aggregate, no toast) ─────────
+
+    @Test
+    fun processOutbox_aggregatesTypedFailureReportAndKeepsSyncingRest() =
+        runBlocking {
+            fakeBookDao.upsert(createSampleBook("book-bad"))
+            fakeBookDao.upsert(createSampleBook("book-good"))
+            fakeOutboxDao.insert(bookOutboxItem("outbox-bad", "book-bad"))
+            fakeOutboxDao.insert(bookOutboxItem("outbox-good", "book-good"))
+
+            coEvery { mockDataSource.upsertBook(match { it.id == "book-bad" }) } throws
+                RuntimeException("Network error")
+            coEvery { mockDataSource.upsertBook(match { it.id == "book-good" }) } returns mockk()
+
+            sync.startProcessing()
+            Thread.sleep(500)
+
+            val report = CatalogSyncStatus.report.value
+            assertEquals(1, report?.failedCount)
+            assertEquals(listOf("UNAVAILABLE"), report?.codes)
+            // The surviving book still synced.
+            coVerify { mockDataSource.upsertBook(match { it.id == "book-good" }) }
+            // The failing book keeps its retry state — outbox resilience unchanged.
+            val pending = fakeOutboxDao.getPendingItems()
+            assertEquals(1, pending.size)
+            assertEquals("book-bad", pending.first().entityId)
+            assertEquals(1, pending.first().retryCount)
+        }
+
+    @Test
+    fun processOutbox_clearsStatusWhenSameBookLaterSyncs() =
+        runBlocking {
+            fakeBookDao.upsert(createSampleBook("book-retry"))
+            fakeOutboxDao.insert(bookOutboxItem("outbox-retry", "book-retry"))
+
+            coEvery { mockDataSource.upsertBook(any()) } throws RuntimeException("Network error")
+            sync.startProcessing()
+            Thread.sleep(500)
+            assertEquals(1, CatalogSyncStatus.report.value?.failedCount)
+
+            coEvery { mockDataSource.upsertBook(any()) } returns mockk()
+            sync.startProcessing()
+            Thread.sleep(500)
+
+            assertEquals(null, CatalogSyncStatus.report.value)
+        }
+
+    @Test
+    fun processOutbox_reportsNothingWhenAllBooksSync() =
+        runBlocking {
+            fakeBookDao.upsert(createSampleBook("book-ok"))
+            fakeOutboxDao.insert(bookOutboxItem("outbox-ok", "book-ok"))
+            coEvery { mockDataSource.upsertBook(any()) } returns mockk()
+
+            sync.startProcessing()
+            Thread.sleep(500)
+
+            assertEquals(null, CatalogSyncStatus.report.value)
         }
 
     // ─── Content-Hash Dedup (PR 5) ────────────────────────────────
@@ -695,6 +757,19 @@ class SupabaseBookCatalogSyncTest {
         }
 
     // ─── Factory helpers ─────────────────────────────────────────
+
+    private fun bookOutboxItem(
+        id: String,
+        entityId: String,
+    ): SyncOutboxEntity =
+        SyncOutboxEntity(
+            id = id,
+            entityType = SyncEntityType.BOOK.name,
+            entityId = entityId,
+            operation = SyncOperation.UPDATE.name,
+            payloadJson = "{}",
+            createdAtEpochMillis = 100L,
+        )
 
     private fun createSampleBook(id: String): BookEntity =
         BookEntity(

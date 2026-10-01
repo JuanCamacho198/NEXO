@@ -6,6 +6,7 @@
   import { DriveColdBackupService } from '$lib/shared/services';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { storageState } from '$lib/shared/stores/StorageState.svelte';
+  import { catalogSyncStatus } from '$lib/shared/stores/catalogSyncStatus.svelte';
   import StorageBreakdown from './StorageBreakdown.svelte';
   import { onMount } from 'svelte';
 
@@ -132,6 +133,7 @@
   }
 
   const stats = $derived(storageState.stats);
+  const catalogFailures = $derived(catalogSyncStatus.report);
 </script>
 
 <section class="space-y-5 w-full max-w-none">
@@ -225,6 +227,15 @@
           {isImporting ? t('settings.data.importing') : t('settings.data.coldImport')}
         </Button>
       </div>
+
+      {#if catalogFailures}
+        <p class="text-xs text-amber-600" data-testid="catalog-sync-status">
+          {t('settings.data.catalogSyncPartial', {
+            count: catalogFailures.failedCount,
+            codes: catalogFailures.codes.join(', '),
+          })}
+        </p>
+      {/if}
 
       {#if showClearConfirm}
         <div class="rounded border border-amber-300 bg-amber-50 p-3 flex items-center gap-2">

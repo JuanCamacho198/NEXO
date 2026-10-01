@@ -9,9 +9,11 @@ import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.remote.drive.coverFailureError
 import com.nexo.data.remote.drive.redactLogLine
 import com.nexo.data.remote.sync.ApplyOutcome
+import com.nexo.data.remote.sync.CatalogSyncStatus
 import com.nexo.data.remote.sync.CommitOutcome
 import com.nexo.data.remote.sync.OutboxCommit
 import com.nexo.data.remote.sync.StorageSyncRemoteDataSource
+import com.nexo.data.remote.sync.classifyImportFailure
 import com.nexo.data.session.SessionManager
 import com.nexo.debug.DebugLog
 import com.nexo.domain.error.AppError
@@ -188,9 +190,11 @@ class SupabaseBookCatalogSync(
             commitOutbox(item) {
                 try {
                     dataSource.upsertBook(row)
+                    CatalogSyncStatus.recordSuccess(bookId)
                     DebugLog.success(TAG, "processBookItem: book '${row.title}' upserted to Supabase OK")
                     ApplyOutcome.Ok
                 } catch (e: Exception) {
+                    CatalogSyncStatus.recordFailure(bookId, classifyImportFailure(e, bookId).code)
                     DebugLog.error(TAG, "processBookItem: FAILED for book $bookId (${item.operation}) — ${e.javaClass.simpleName}: ${e.message}")
                     runCatching { Log.w(TAG, "processBookItem: failed for book $bookId", e) }
                     // Catalog preserves D4 immediate-401 retry semantics: the
@@ -228,8 +232,10 @@ class SupabaseBookCatalogSync(
                             ) + 1,
                     )
                 dataSource.upsertBook(tombstone)
+                CatalogSyncStatus.recordSuccess(bookId)
                 ApplyOutcome.Ok
             } catch (e: Exception) {
+                CatalogSyncStatus.recordFailure(bookId, classifyImportFailure(e, bookId).code)
                 DebugLog.error(TAG, "processBookItem: FAILED for book $bookId (${item.operation}) — ${e.javaClass.simpleName}: ${e.message}")
                 runCatching { Log.w(TAG, "processBookItem: failed for book $bookId", e) }
                 ApplyOutcome.Retryable(e)
@@ -310,8 +316,10 @@ class SupabaseBookCatalogSync(
                     val row = book.toUserBookRow(userId)
                     DebugLog.info(TAG, "reconcileLocalBooks: pushing '${book.title}' (id=${book.id}) catalogVersion=${row.catalogVersion}")
                     dataSource.upsertBook(row)
+                    CatalogSyncStatus.recordSuccess(book.id)
                     DebugLog.success(TAG, "reconcileLocalBooks: '${book.title}' upserted OK")
                 } catch (e: Exception) {
+                    CatalogSyncStatus.recordFailure(book.id, classifyImportFailure(e, book.id).code)
                     // A single book must never crash the reconcile pass; the
                     // outbox/reconcile will retry it later.
                     DebugLog.error(TAG, "reconcileLocalBooks: FAILED to push '${book.title}' (${book.id}) — ${e.javaClass.simpleName}: ${e.message}")

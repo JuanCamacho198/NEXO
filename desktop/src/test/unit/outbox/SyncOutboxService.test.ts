@@ -1,6 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { SyncOutboxService, type OutboxHandler } from '$lib/shared/outbox/SyncOutboxService';
 import type { SyncOutboxDao, SyncOutboxRow } from '$lib/shared/outbox/SyncOutboxDao';
+import {
+  catalogSyncStatus,
+  clearCatalogSyncStatus,
+} from '$lib/shared/stores/catalogSyncStatus.svelte';
 
 // ---- Mock control variables ----
 let mockRecheckLiveSession = vi.fn<() => Promise<boolean>>();
@@ -307,5 +311,41 @@ describe('SyncOutboxService — auth circuit breaker (D4, SR-2.1/4.2)', () => {
     await service.flush();
 
     expect(service.isBreakerPaused()).toBe(false);
+  });
+});
+
+describe('SyncOutboxService — BOOK catalog failure status (aggregate, retry unchanged)', () => {
+  beforeEach(() => {
+    clearCatalogSyncStatus();
+  });
+
+  it('records a BOOK handler failure with its typed code and clears it on a later success', async () => {
+    const dao = makeDao([row('BOOK')]);
+    const service = new SyncOutboxService(dao, gateOpen);
+    service.setHandler(vi.fn().mockRejectedValue(new Error('network drop')));
+
+    await service.flush();
+
+    // Retry/backoff resilience is untouched: the row still goes through markFailed.
+    expect(dao.markFailed).toHaveBeenCalledWith('row-1', 'network drop');
+    expect(dao.delete).not.toHaveBeenCalled();
+    // Typed aggregate for the status line.
+    expect(catalogSyncStatus.report).toEqual({ failedCount: 1, codes: ['UNAVAILABLE'] });
+
+    service.setHandler(vi.fn().mockResolvedValue(undefined));
+    await service.flush();
+
+    expect(catalogSyncStatus.report).toBeNull();
+  });
+
+  it('leaves the catalog status alone for non-BOOK failures', async () => {
+    const dao = makeDao([row('READING_PROGRESS')]);
+    const service = new SyncOutboxService(dao, gateOpen);
+    service.setHandler(vi.fn().mockRejectedValue(new Error('network drop')));
+
+    await service.flush();
+
+    expect(dao.markFailed).toHaveBeenCalledWith('row-1', 'network drop');
+    expect(catalogSyncStatus.report).toBeNull();
   });
 });

@@ -18,6 +18,11 @@ import {
   reportCoverFailure,
 } from '../sync/SupabaseBookCatalogSync';
 import { canonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
+import { toSyncError } from '$lib/shared/recovery/desktopRecoveryImport';
+import {
+  recordCatalogSyncFailure,
+  recordCatalogSyncSuccess,
+} from '$lib/shared/stores/catalogSyncStatus.svelte';
 import { SyncOutboxService } from '../outbox/SyncOutboxService';
 import { SyncOutboxDao } from '../outbox/SyncOutboxDao';
 import type { SyncHealth, RealtimeStatus } from '$lib/shared/types/book';
@@ -610,7 +615,11 @@ export class SyncService {
             updatedAt: book.updatedAt,
             ...(remoteRefs ?? {}),
           });
+          recordCatalogSyncSuccess(book.id);
         } catch (e) {
+          // Aggregate, never a toast: a background cycle surfaces the typed
+          // per-book failure in the Data/Storage panel status line instead.
+          recordCatalogSyncFailure(book.id, toSyncError(e, book.id).code);
           console.error(`Failed to push local book ${book.id} to catalog:`, e);
         }
       }

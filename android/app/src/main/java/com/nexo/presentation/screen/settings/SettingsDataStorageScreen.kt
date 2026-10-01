@@ -16,6 +16,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +37,7 @@ import com.nexo.data.remote.drive.DriveTokenPair
 import com.nexo.data.remote.drive.GoogleDriveAuthHelper
 import com.nexo.data.remote.drive.InMemoryDriveTokenStore
 import com.nexo.data.remote.drive.driveOAuthRedirectUri
+import com.nexo.data.remote.sync.CatalogSyncStatus
 import com.nexo.data.remote.sync.DriveColdBackupService
 import com.nexo.presentation.theme.NexoTheme
 import com.nexo.ui.components.molecules.NexoPreferenceItem
@@ -68,6 +70,7 @@ fun SettingsDataStorageScreen(
     var isImporting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val coldBackupAvailable = driveColdBackupService != null && userId != null
+    val catalogFailure by CatalogSyncStatus.report.collectAsState()
 
     val oauthErrorText = stringResource(R.string.settings_drive_error_oauth)
 
@@ -282,6 +285,23 @@ fun SettingsDataStorageScreen(
                 if (isImporting) CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
                 Text(text = stringResource(if (isImporting) R.string.settings_drive_cold_importing else R.string.settings_drive_cold_import))
             }
+        }
+
+        // Background catalog sync status: aggregated per-book failures, silent
+        // when nothing failed, cleared when a later sync succeeds. Never a toast.
+        catalogFailure?.let { failure ->
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text =
+                    stringResource(
+                        R.string.settings_catalog_sync_partial,
+                        failure.failedCount,
+                        failure.codes.joinToString(", "),
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
         }
     }
 }

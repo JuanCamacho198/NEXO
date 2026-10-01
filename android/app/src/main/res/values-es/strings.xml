@@ -616,6 +616,7 @@
     <string name="settings_drive_cold_import_success">Respaldo frío importado</string>
     <string name="settings_drive_cold_import_error">Falló la importación del respaldo frío</string>
     <string name="settings_drive_cold_import_partial">%1$d registro(s) no se pudieron importar (%2$s) — el resto sí se importó</string>
+    <string name="settings_catalog_sync_partial">%1$d libro(s) no se pudieron sincronizar con el catálogo (%2$s). Se reintentará automáticamente.</string>
 
     <!-- Drive connect prompt (one-time, after successful import) -->
     <string name="drive_connect_prompt_title">¿Conectar Google Drive?</string>
