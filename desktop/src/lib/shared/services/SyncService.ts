@@ -12,7 +12,11 @@ import { GDriveProvider } from './storage/GDriveProvider';
 import { GoogleDriveStateSync } from './GoogleDriveStateSync';
 import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
 import { SupabaseDictionarySync } from '../sync/SupabaseDictionarySync';
-import { SupabaseBookCatalogSync, buildRemoteRefs } from '../sync/SupabaseBookCatalogSync';
+import {
+  SupabaseBookCatalogSync,
+  buildRemoteRefs,
+  reportCoverFailure,
+} from '../sync/SupabaseBookCatalogSync';
 import { canonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
 import { SyncOutboxService } from '../outbox/SyncOutboxService';
 import { SyncOutboxDao } from '../outbox/SyncOutboxDao';
@@ -228,7 +232,7 @@ export class SyncService {
             );
           }
         } catch (e) {
-          console.warn('Cover upload failed for book', entityId, e);
+          reportCoverFailure(entityId, e);
           // Non-blocking — continue with null coverUrl
         }
 
@@ -568,7 +572,7 @@ export class SyncService {
               );
             }
           } catch (e) {
-            console.warn('Cover upload failed for book', book.id, e);
+            reportCoverFailure(book.id, e);
           }
 
           // Binary upload to Drive + remote-ref persistence (DRP-1) when the

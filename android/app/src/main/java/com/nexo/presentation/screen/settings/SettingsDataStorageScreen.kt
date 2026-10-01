@@ -255,13 +255,19 @@ fun SettingsDataStorageScreen(
                         isImporting = true
                         try {
                             val result = driveColdBackupService!!.importColdBackup(userId!!)
+                            val failures = result.getOrNull()?.failures.orEmpty()
                             val msg =
-                                if (result.isSuccess) {
-                                    context.getString(R.string.settings_drive_cold_import_success)
-                                } else {
-                                    context.getString(R.string.settings_drive_cold_import_error)
+                                when {
+                                    result.isFailure -> context.getString(R.string.settings_drive_cold_import_error)
+                                    failures.isNotEmpty() ->
+                                        context.getString(
+                                            R.string.settings_drive_cold_import_partial,
+                                            failures.size,
+                                            failures.map { it.error.code }.distinct().joinToString(", "),
+                                        )
+                                    else -> context.getString(R.string.settings_drive_cold_import_success)
                                 }
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                         } catch (e: Exception) {
                             Toast.makeText(context, e.message ?: context.getString(R.string.settings_drive_cold_import_error), Toast.LENGTH_SHORT).show()
                         } finally {

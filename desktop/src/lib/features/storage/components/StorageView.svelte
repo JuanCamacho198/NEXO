@@ -116,8 +116,17 @@
     }
     isImporting = true;
     try {
-      await DriveColdBackupService.importColdBackup(authState.userId);
-      pushToast('success', t('settings.data.importSuccess'));
+      const result = await DriveColdBackupService.importColdBackup(authState.userId);
+      const failures = result?.failures ?? [];
+      if (failures.length > 0) {
+        const codes = [...new Set(failures.map((f) => f.error.code))].join(', ');
+        pushToast(
+          'error',
+          t('settings.data.importPartialFailure', { count: failures.length, codes }),
+        );
+      } else {
+        pushToast('success', t('settings.data.importSuccess'));
+      }
     } catch (e) {
       pushToast('error', e instanceof Error ? e.message : t('errors.importCommandFailed'));
     } finally {

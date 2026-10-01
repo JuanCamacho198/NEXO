@@ -85,6 +85,56 @@ describe('useSettingsData', () => {
     expect(importColdBackup).toHaveBeenCalledWith('u1');
   });
 
+  it('handleImportColdBackup surfaces ONE aggregated toast when some rows fail', async () => {
+    const importColdBackup = vi.fn().mockResolvedValue({
+      books: 1,
+      progress: 0,
+      highlights: 0,
+      bookmarks: 0,
+      sessions: 0,
+      totalImported: 1,
+      failures: [
+        { entity: 'book', id: 'b2', error: { code: 'AUTH_REQUIRED' } },
+        { entity: 'book', id: 'b3', error: { code: 'UNAVAILABLE' } },
+      ],
+    });
+    const pushToast = vi.fn();
+    const t = vi.fn((k: string) => k);
+    const d = createSettingsData({
+      authState: { userId: 'u1' } as never,
+      DriveColdBackupService: { importColdBackup } as never,
+      drive: { isAuthorized: async () => true },
+      pushToast: pushToast as never,
+      t: t as never,
+    });
+    await d.handleImportColdBackup();
+    expect(importColdBackup).toHaveBeenCalledWith('u1');
+    // Exactly one notification for the whole operation — not one per row.
+    expect(pushToast).toHaveBeenCalledTimes(1);
+    expect(pushToast).toHaveBeenCalledWith('error', 'settings.data.importPartialFailure');
+    expect(t).toHaveBeenCalledWith('settings.data.importPartialFailure', {
+      count: 2,
+      codes: 'AUTH_REQUIRED, UNAVAILABLE',
+    });
+  });
+
+  it('handleImportColdBackup stays silent about failures on a fully successful run', async () => {
+    const importColdBackup = vi.fn().mockResolvedValue({ totalImported: 3, failures: [] });
+    const pushToast = vi.fn();
+    const t = vi.fn((k: string) => k);
+    const d = createSettingsData({
+      authState: { userId: 'u1' } as never,
+      DriveColdBackupService: { importColdBackup } as never,
+      drive: { isAuthorized: async () => true },
+      pushToast: pushToast as never,
+      t: t as never,
+    });
+    await d.handleImportColdBackup();
+    // No failure notification; the existing success toast is unchanged.
+    expect(pushToast).toHaveBeenCalledTimes(1);
+    expect(pushToast).toHaveBeenCalledWith('success', 'settings.data.importSuccess');
+  });
+
   it('handleExportColdBackup routes unauthorized to the connect CTA toast without Drive I/O', async () => {
     const exportColdBackup = vi.fn().mockResolvedValue(undefined);
     const pushToast = vi.fn();

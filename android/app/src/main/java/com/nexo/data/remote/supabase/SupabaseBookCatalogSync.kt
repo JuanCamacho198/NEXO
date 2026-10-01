@@ -6,7 +6,8 @@ import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncOperation
-import com.nexo.data.remote.drive.SyncErrorCodes
+import com.nexo.data.remote.drive.coverFailureError
+import com.nexo.data.remote.drive.redactLogLine
 import com.nexo.data.remote.sync.ApplyOutcome
 import com.nexo.data.remote.sync.CommitOutcome
 import com.nexo.data.remote.sync.OutboxCommit
@@ -739,8 +740,13 @@ class SupabaseBookCatalogSync(
                 .from("book-covers")
                 .publicUrl(path)
         } catch (e: Exception) {
-            DebugLog.warn(TAG, "Cover upload failed for book $bookId (${SyncErrorCodes.COVER_FAILED}): ${e.message}")
-            runCatching { Log.w(TAG, "Cover upload failed for book $bookId (${SyncErrorCodes.COVER_FAILED})", e) }
+            // Non-blocking, but never silent: report through the ERROR surface
+            // (in-memory error ring + Sentry) with the stable COVER_FAILED code.
+            val failed = coverFailureError(correlationId = bookId, bookId = bookId)
+            DebugLog.error(
+                TAG,
+                "${failed.code}: Cover upload failed for book $bookId — ${redactLogLine(e.message ?: e.javaClass.simpleName)}",
+            )
             null
         }
     }

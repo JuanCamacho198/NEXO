@@ -284,6 +284,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.data.exportSuccess': 'Configuracion exportada',
   'settings.data.importSuccess': 'Configuracion importada',
   'settings.data.importError': 'Error al importar configuracion',
+  'settings.data.importPartialFailure':
+    '{{count}} registro(s) no se pudieron importar ({{codes}}) — el resto si se importo.',
   'settings.data.resetSection': 'Restablecer seccion',
   'settings.data.exportLibrary': 'Exportar biblioteca',
   'settings.data.exportLibraryDescription': 'Descarga todos tus libros en formato JSON',

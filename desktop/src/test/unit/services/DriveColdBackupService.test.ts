@@ -58,6 +58,7 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
 let DriveColdBackupService: typeof import('$lib/shared/services/DriveColdBackupService').DriveColdBackupService;
 beforeEach(async () => {
   vi.clearAllMocks();
+  mockUpsertBook.mockReset();
   mockHasLiveSession.mockReturnValue(true);
   mockIsDriveAuthorized.mockResolvedValue(true);
   mockUpload.mockResolvedValue('id');
@@ -182,6 +183,75 @@ describe('DriveColdBackupService — cold export/import', () => {
     expect(r1.totalImported).toBe(2);
     expect(r2.totalImported).toBe(2);
     expect(mockUpsertBook).toHaveBeenCalledTimes(2);
+  });
+
+  it('partial failure collects typed failures (record id + stable code) and still imports survivors', async () => {
+    const iso = new Date().toISOString();
+    const backup = {
+      version: 1,
+      exportedAt: Date.now(),
+      books: ['b1', 'b2', 'b3'].map((id) => ({
+        id,
+        userId: 'u1',
+        title: `Book ${id}`,
+        author: null,
+        format: 'epub',
+        importedAt: iso,
+        updatedAt: iso,
+      })),
+      progress: [],
+      highlights: [],
+      bookmarks: [],
+      sessions: [],
+    };
+    mockDownload.mockResolvedValue(new TextEncoder().encode(JSON.stringify(backup)));
+    mockUpsertBook.mockImplementation((row: { id: string }) => {
+      if (row.id === 'b2') return Promise.reject(new Error('401 unauthorized token=abc'));
+      return Promise.resolve();
+    });
+
+    const result = await DriveColdBackupService.importColdBackup('u1');
+
+    // Resilience: every row was attempted, the two survivors imported.
+    expect(mockUpsertBook).toHaveBeenCalledTimes(3);
+    expect(result.books).toBe(2);
+    // Visibility: the failing record is reported once with its id + stable code.
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0].entity).toBe('book');
+    expect(result.failures[0].id).toBe('b2');
+    expect(result.failures[0].error.code).toBe('AUTH_REQUIRED');
+    // Redaction: the token value never survives into the failure message.
+    expect(result.failures[0].error.message).toContain('[REDACTED]');
+    expect(result.failures[0].error.message).not.toContain('abc');
+  });
+
+  it('fully successful import reports no failures', async () => {
+    const iso = new Date().toISOString();
+    const backup = {
+      version: 1,
+      exportedAt: Date.now(),
+      books: [
+        {
+          id: 'b1',
+          userId: 'u1',
+          title: 'Book',
+          author: null,
+          format: 'epub',
+          importedAt: iso,
+          updatedAt: iso,
+        },
+      ],
+      progress: [],
+      highlights: [],
+      bookmarks: [],
+      sessions: [],
+    };
+    mockDownload.mockResolvedValue(new TextEncoder().encode(JSON.stringify(backup)));
+
+    const result = await DriveColdBackupService.importColdBackup('u1');
+
+    expect(result.totalImported).toBe(1);
+    expect(result.failures).toEqual([]);
   });
 
   it('import gated by hasLiveSession — no request when no live session', async () => {

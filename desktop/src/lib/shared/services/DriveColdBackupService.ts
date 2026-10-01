@@ -13,7 +13,12 @@
  */
 import { GDriveProvider } from './storage/GDriveProvider';
 import { isDriveAuthorized } from '$lib/shared/services/DriveConnectService';
-import { syncError } from '$lib/shared/protocol/DriveCatalogContract';
+import {
+  syncError,
+  redactLogLine,
+  type SyncError,
+} from '$lib/shared/protocol/DriveCatalogContract';
+import { toSyncError } from '$lib/shared/recovery/desktopRecoveryImport';
 import { hasLiveSession } from '$lib/services/supabase';
 import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
 import { SupabaseBookCatalogSync } from '../sync/SupabaseBookCatalogSync';
@@ -69,6 +74,17 @@ export interface ColdBackupJson {
   sessions: RemoteReadingSessionRow[];
 }
 
+/** Domain of a single row inside a cold-backup import (FK order). */
+export type ImportEntity = 'book' | 'progress' | 'highlight' | 'bookmark' | 'session';
+
+/** One per-row import failure: which record, which stable error code (REQ-07). */
+export interface ImportFailure {
+  entity: ImportEntity;
+  /** Stable identifier of the failing record (book id for progress, own id otherwise). */
+  id: string;
+  error: SyncError;
+}
+
 export interface ImportResult {
   books: number;
   progress: number;
@@ -76,10 +92,34 @@ export interface ImportResult {
   bookmarks: number;
   sessions: number;
   totalImported: number;
+  /** Per-row failures collected instead of swallowed; empty on a fully successful run. */
+  failures: ImportFailure[];
 }
 
 const CHUNK_SIZE = 100;
 const COLD_BACKUP_FILE = 'nexo_cold_backup.json';
+
+function emptyImportResult(): ImportResult {
+  return {
+    books: 0,
+    progress: 0,
+    highlights: 0,
+    bookmarks: 0,
+    sessions: 0,
+    totalImported: 0,
+    failures: [],
+  };
+}
+
+/**
+ * Collect a per-row import failure using the existing SyncError taxonomy and
+ * the sync error mapper; the message always travels through `redactLogLine`
+ * (DTL-3) so tokens, JWTs, and hashes never reach the aggregated UI message.
+ */
+function collectImportFailure(entity: ImportEntity, id: string, err: unknown): ImportFailure {
+  const mapped = toSyncError(err, id);
+  return { entity, id, error: { ...mapped, message: redactLogLine(mapped.message) } };
+}
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -233,8 +273,7 @@ export class DriveColdBackupService {
    */
   static async importColdBackup(userId: string): Promise<ImportResult> {
     await this.requireDriveAuthorized('import');
-    if (!hasLiveSession())
-      return { books: 0, progress: 0, highlights: 0, bookmarks: 0, sessions: 0, totalImported: 0 };
+    if (!hasLiveSession()) return emptyImportResult();
     const bytes: Uint8Array = await this.gdrive.download(COLD_BACKUP_FILE);
     const json = new TextDecoder().decode(bytes);
     const backup = JSON.parse(json) as ColdBackupJson;
@@ -248,8 +287,7 @@ export class DriveColdBackupService {
    */
   static async backfillFromDrive(userId: string): Promise<ImportResult> {
     await this.requireDriveAuthorized('backfill');
-    if (!hasLiveSession())
-      return { books: 0, progress: 0, highlights: 0, bookmarks: 0, sessions: 0, totalImported: 0 };
+    if (!hasLiveSession()) return emptyImportResult();
     try {
       const res = await this.importColdBackup(userId);
       if (res.totalImported > 0) return res;
@@ -258,15 +296,7 @@ export class DriveColdBackupService {
     try {
       const files = await this.gdrive.list('');
       const stateFiles = files.filter((f) => f.endsWith('_state.json'));
-      if (stateFiles.length === 0)
-        return {
-          books: 0,
-          progress: 0,
-          highlights: 0,
-          bookmarks: 0,
-          sessions: 0,
-          totalImported: 0,
-        };
+      if (stateFiles.length === 0) return emptyImportResult();
       // Best-effort: each state.json is BookStateJson with progress/highlights/bookmarks
       const backup: ColdBackupJson = {
         version: 1,
@@ -342,18 +372,11 @@ export class DriveColdBackupService {
         backup.highlights.length === 0 &&
         backup.bookmarks.length === 0
       ) {
-        return {
-          books: 0,
-          progress: 0,
-          highlights: 0,
-          bookmarks: 0,
-          sessions: 0,
-          totalImported: 0,
-        };
+        return emptyImportResult();
       }
       return this.importInFkOrder(backup, userId);
     } catch {
-      return { books: 0, progress: 0, highlights: 0, bookmarks: 0, sessions: 0, totalImported: 0 };
+      return emptyImportResult();
     }
   }
 
@@ -366,6 +389,7 @@ export class DriveColdBackupService {
     let highlights = 0;
     let bookmarks = 0;
     let sessions = 0;
+    const failures: ImportFailure[] = [];
 
     const bookSync = new SupabaseBookCatalogSync(userId);
     const progressSync = new SupabaseProgressSync(userId);
@@ -390,7 +414,9 @@ export class DriveColdBackupService {
             updatedAt: row.updatedAt,
           });
           books++;
-        } catch {}
+        } catch (e) {
+          failures.push(collectImportFailure('book', row.id, e));
+        }
       }
     }
     // 2. progress
@@ -405,7 +431,9 @@ export class DriveColdBackupService {
             updatedAt: row.updatedAt,
           });
           progress++;
-        } catch {}
+        } catch (e) {
+          failures.push(collectImportFailure('progress', row.bookId, e));
+        }
       }
     }
     // 3. highlights
@@ -423,7 +451,9 @@ export class DriveColdBackupService {
             deletedAt: row.deletedAt ?? null,
           } as never);
           highlights++;
-        } catch {}
+        } catch (e) {
+          failures.push(collectImportFailure('highlight', row.id, e));
+        }
       }
     }
     // 4. bookmarks
@@ -439,7 +469,9 @@ export class DriveColdBackupService {
             deletedAt: row.deletedAt ?? null,
           } as never);
           bookmarks++;
-        } catch {}
+        } catch (e) {
+          failures.push(collectImportFailure('bookmark', row.id, e));
+        }
       }
     }
     // 5. sessions last (chunk 100, idempotent onConflict id)
@@ -459,11 +491,13 @@ export class DriveColdBackupService {
             endPercentage: row.endPercentage ?? null,
           });
           sessions++;
-        } catch {}
+        } catch (e) {
+          failures.push(collectImportFailure('session', row.id, e));
+        }
       }
     }
 
     const totalImported = books + progress + highlights + bookmarks + sessions;
-    return { books, progress, highlights, bookmarks, sessions, totalImported };
+    return { books, progress, highlights, bookmarks, sessions, totalImported, failures };
   }
 }

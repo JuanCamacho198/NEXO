@@ -282,6 +282,8 @@ export const messagesEn = {
   'settings.data.exportSuccess': 'Settings exported',
   'settings.data.importSuccess': 'Settings imported',
   'settings.data.importError': 'Error importing settings',
+  'settings.data.importPartialFailure':
+    '{{count}} record(s) failed to import ({{codes}}) — the rest were imported.',
   'settings.data.resetSection': 'Reset section',
   'settings.data.exportLibrary': 'Export library',
   'settings.data.exportLibraryDescription': 'Download all your books as JSON',

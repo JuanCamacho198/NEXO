@@ -7,6 +7,9 @@ import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.HighlightDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingSessionDao
+import com.nexo.data.remote.drive.SyncError
+import com.nexo.data.remote.drive.SyncErrorCodes
+import com.nexo.data.remote.drive.redactLogLine
 import com.nexo.data.remote.supabase.BookmarkRow
 import com.nexo.data.remote.supabase.HighlightRow
 import com.nexo.data.remote.supabase.ReadingProgressRow
@@ -15,11 +18,49 @@ import com.nexo.data.remote.supabase.SupabaseBookCatalogDataSource
 import com.nexo.data.remote.supabase.SupabaseProgressDataSource
 import com.nexo.data.remote.supabase.UserBookRow
 import com.nexo.data.session.SessionManager
+import com.nexo.domain.error.AppError
+import com.nexo.domain.error.ErrorCategory
 import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.util.UUID
+
+/**
+ * Maps a per-record cold-backup import failure onto the stable SyncError
+ * taxonomy (REQ-07). The message is always redacted (DTL-3) so tokens, JWTs,
+ * and long hashes never reach the aggregated UI message.
+ */
+internal fun classifyImportFailure(
+    error: Throwable,
+    recordId: String,
+): SyncError {
+    val raw = error.message ?: error.javaClass.simpleName
+    val code =
+        when {
+            error is AppError && error.category == ErrorCategory.AUTH -> SyncErrorCodes.AUTH_REQUIRED
+            error is AppError && error.code.isNotBlank() -> error.code
+            AUTH_PATTERN.containsMatchIn(raw) -> SyncErrorCodes.AUTH_REQUIRED
+            PERMISSION_PATTERN.containsMatchIn(raw) -> SyncErrorCodes.PERMISSION_DENIED
+            NOT_FOUND_PATTERN.containsMatchIn(raw) -> SyncErrorCodes.REMOTE_NOT_FOUND
+            CONFLICT_PATTERN.containsMatchIn(raw) -> SyncErrorCodes.CONFLICT
+            else -> SyncErrorCodes.UNAVAILABLE
+        }
+    return SyncError(
+        code = code,
+        message = redactLogLine(raw),
+        retryable = code != SyncErrorCodes.PERMISSION_DENIED,
+        correlationId = UUID.randomUUID().toString(),
+        bookId = recordId,
+    )
+}
+
+private val AUTH_PATTERN =
+    Regex("401|unauthorized|token|sign in|authentication required", RegexOption.IGNORE_CASE)
+private val PERMISSION_PATTERN = Regex("403|permission", RegexOption.IGNORE_CASE)
+private val NOT_FOUND_PATTERN = Regex("not found", RegexOption.IGNORE_CASE)
+private val CONFLICT_PATTERN = Regex("conflict", RegexOption.IGNORE_CASE)
 
 /**
  * DriveColdBackupService — cold backup on demand only (PR3).
@@ -324,13 +365,15 @@ class DriveColdBackupService(
         var h = 0
         var bm = 0
         var s = 0
+        val failures = mutableListOf<ImportFailure>()
         // 1. books first (FK parent)
         for (chunk in backup.books.chunked(CHUNK_SIZE)) {
             for (row in chunk) {
                 try {
                     bookCatalogDataSource.upsertBook(row.copy(userId = userId))
                     b++
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    failures += ImportFailure(ImportEntity.BOOK, row.id, classifyImportFailure(e, row.id))
                 }
             }
         }
@@ -340,7 +383,8 @@ class DriveColdBackupService(
                 try {
                     progressDataSource.upsertProgress(row.copy(userId = userId))
                     p++
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    failures += ImportFailure(ImportEntity.PROGRESS, row.bookId, classifyImportFailure(e, row.bookId))
                 }
             }
         }
@@ -350,7 +394,9 @@ class DriveColdBackupService(
                 try {
                     progressDataSource.upsertHighlight(row.copy(userId = userId))
                     h++
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    val recordId = row.id ?: row.bookId
+                    failures += ImportFailure(ImportEntity.HIGHLIGHT, recordId, classifyImportFailure(e, recordId))
                 }
             }
         }
@@ -360,7 +406,9 @@ class DriveColdBackupService(
                 try {
                     progressDataSource.upsertBookmark(row.copy(userId = userId))
                     bm++
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    val recordId = row.id ?: row.bookId
+                    failures += ImportFailure(ImportEntity.BOOKMARK, recordId, classifyImportFailure(e, recordId))
                 }
             }
         }
@@ -370,12 +418,23 @@ class DriveColdBackupService(
                 try {
                     progressDataSource.upsertReadingSession(row.copy(userId = userId))
                     s++
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    failures += ImportFailure(ImportEntity.SESSION, row.id, classifyImportFailure(e, row.id))
                 }
             }
         }
-        return ImportResult(b, p, h, bm, s)
+        return ImportResult(b, p, h, bm, s, failures)
     }
+
+    /** Domain of a single row inside a cold-backup import (FK order). */
+    enum class ImportEntity { BOOK, PROGRESS, HIGHLIGHT, BOOKMARK, SESSION }
+
+    /** One per-row import failure: which record, which stable error code (REQ-07). */
+    data class ImportFailure(
+        val entity: ImportEntity,
+        val id: String,
+        val error: SyncError,
+    )
 
     data class ImportResult(
         val books: Int,
@@ -383,6 +442,8 @@ class DriveColdBackupService(
         val highlights: Int,
         val bookmarks: Int,
         val sessions: Int,
+        /** Per-row failures collected instead of swallowed; empty on a fully successful run. */
+        val failures: List<ImportFailure> = emptyList(),
     ) {
         val totalImported: Int get() = books + progress + highlights + bookmarks + sessions
     }
