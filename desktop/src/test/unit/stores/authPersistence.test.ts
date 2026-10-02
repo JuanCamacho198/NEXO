@@ -27,6 +27,7 @@ const mockWriteTextFile = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise
 const mockRemove = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<void>>());
 const mockRename = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<void>>());
 const mockExists = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<boolean>>());
+const mockInvoke = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<string>>());
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   BaseDirectory: { AppData: 0 },
@@ -35,6 +36,11 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
   writeTextFile: mockWriteTextFile,
   remove: mockRemove,
   rename: mockRename,
+}));
+
+// Mock DPAPI Rust command: reversible test transform, never real crypto.
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: mockInvoke,
 }));
 
 const localProfile: LocalUserProfile = {
@@ -52,7 +58,39 @@ beforeEach(() => {
   mockRemove.mockReset();
   mockRename.mockReset();
   mockExists.mockReset();
+  mockInvoke.mockReset();
+  mockInvoke.mockImplementation(((cmd: unknown, args: unknown) => {
+    if (cmd === 'protectSecret') {
+      // Opaque like real DPAPI output: base64, so "no plaintext on disk"
+      // assertions are meaningful against this mock.
+      const plaintext = (args as { plaintext: string }).plaintext;
+      return Promise.resolve(`sealed:${Buffer.from(plaintext, 'utf8').toString('base64')}`);
+    }
+    if (cmd === 'unprotectSecret') {
+      const ciphertext = (args as { ciphertext: string }).ciphertext;
+      if (!ciphertext.startsWith('sealed:')) {
+        return Promise.reject(new Error('bad ciphertext'));
+      }
+      return Promise.resolve(
+        Buffer.from(ciphertext.slice('sealed:'.length), 'base64').toString('utf8'),
+      );
+    }
+    return Promise.reject(new Error(`unexpected command ${String(cmd)}`));
+  }) as (...args: unknown[]) => Promise<string>);
 });
+
+function readWrittenEnvelope(): { v: number; alg: string; data: string } {
+  const written = mockWriteTextFile.mock.calls[0]?.[1] as string;
+  return JSON.parse(written) as { v: number; alg: string; data: string };
+}
+
+function sealFixture(payload: string): string {
+  return JSON.stringify({
+    v: 1,
+    alg: 'dpapi-current-user',
+    data: `sealed:${Buffer.from(payload, 'utf8').toString('base64')}`,
+  });
+}
 
 describe('loadPersistedAuth', () => {
   it('returns null when the cache file does not exist', async () => {
@@ -60,6 +98,38 @@ describe('loadPersistedAuth', () => {
     const result = await loadPersistedAuth();
     expect(result).toBeNull();
     expect(mockReadTextFile).not.toHaveBeenCalled();
+  });
+
+  it('returns the auth stored inside a sealed envelope', async () => {
+    const sealedBody = sealFixture(JSON.stringify(localAuth));
+    mockExists.mockResolvedValue(true);
+    mockReadTextFile.mockResolvedValue(sealedBody);
+    const result = await loadPersistedAuth();
+    expect(result).toEqual(localAuth);
+    expect(mockInvoke).toHaveBeenCalledWith('unprotectSecret', {
+      ciphertext: (JSON.parse(sealedBody) as { data: string }).data,
+    });
+  });
+
+  it('migrates a legacy plaintext file to sealed storage on read (no backup kept)', async () => {
+    mockExists.mockResolvedValue(true);
+    mockReadTextFile.mockResolvedValue(JSON.stringify(localAuth));
+    mockWriteTextFile.mockResolvedValue();
+    mockRename.mockResolvedValue();
+
+    const result = await loadPersistedAuth();
+
+    expect(result).toEqual(localAuth);
+    expect(mockInvoke).toHaveBeenCalledWith('protectSecret', {
+      plaintext: JSON.stringify(localAuth),
+    });
+    const envelope = readWrittenEnvelope();
+    expect(envelope.v).toBe(1);
+    expect(envelope.alg).toBe('dpapi-current-user');
+    expect(mockRename).toHaveBeenCalledWith('auth.json.tmp', 'auth.json', {
+      oldPathBaseDir: 0,
+      newPathBaseDir: 0,
+    });
   });
 
   it('returns null when the cache contains a legacy Google record (discarded per MG-01)', async () => {
@@ -76,7 +146,7 @@ describe('loadPersistedAuth', () => {
 
   it('returns a parsed local auth when the cache contains a valid local record', async () => {
     mockExists.mockResolvedValue(true);
-    mockReadTextFile.mockResolvedValue(JSON.stringify(localAuth));
+    mockReadTextFile.mockResolvedValue(sealFixture(JSON.stringify(localAuth)));
     const result = await loadPersistedAuth();
     expect(result).toEqual(localAuth);
   });
@@ -137,7 +207,7 @@ describe('loadPersistedAuth', () => {
 });
 
 describe('savePersistedAuth', () => {
-  it('writes Supabase auth to the tmp file, then renames over the real file (atomic write)', async () => {
+  it('seals Supabase auth via DPAPI, then writes the envelope to tmp and renames (atomic write)', async () => {
     mockWriteTextFile.mockResolvedValue();
     mockRename.mockResolvedValue();
     const supabaseAuth: PersistedAuth = {
@@ -147,8 +217,14 @@ describe('savePersistedAuth', () => {
 
     await savePersistedAuth(supabaseAuth);
 
+    expect(mockInvoke).toHaveBeenCalledWith('protectSecret', {
+      plaintext: JSON.stringify(supabaseAuth),
+    });
     expect(mockWriteTextFile).toHaveBeenCalledTimes(1);
-    expect(mockWriteTextFile).toHaveBeenCalledWith('auth.json.tmp', JSON.stringify(supabaseAuth), {
+    const envelope = readWrittenEnvelope();
+    expect(envelope.v).toBe(1);
+    expect(envelope.alg).toBe('dpapi-current-user');
+    expect(mockWriteTextFile).toHaveBeenCalledWith('auth.json.tmp', expect.any(String), {
       baseDir: 0,
     });
     expect(mockRename).toHaveBeenCalledTimes(1);
@@ -158,19 +234,32 @@ describe('savePersistedAuth', () => {
     });
   });
 
-  it('writes local auth to the tmp file, then renames over the real file', async () => {
+  it('writes local auth sealed to the tmp file, then renames over the real file', async () => {
     mockWriteTextFile.mockResolvedValue();
     mockRename.mockResolvedValue();
 
     await savePersistedAuth(localAuth);
 
-    expect(mockWriteTextFile).toHaveBeenCalledWith('auth.json.tmp', JSON.stringify(localAuth), {
+    expect(mockInvoke).toHaveBeenCalledWith('protectSecret', {
+      plaintext: JSON.stringify(localAuth),
+    });
+    const envelope = readWrittenEnvelope();
+    expect(envelope.v).toBe(1);
+    expect(mockWriteTextFile).toHaveBeenCalledWith('auth.json.tmp', expect.any(String), {
       baseDir: 0,
     });
     expect(mockRename).toHaveBeenCalledWith('auth.json.tmp', 'auth.json', {
       oldPathBaseDir: 0,
       newPathBaseDir: 0,
     });
+  });
+
+  it('does not rename if the seal fails (never writes plaintext)', async () => {
+    mockInvoke.mockRejectedValueOnce(new Error('DPAPI unavailable'));
+
+    await expect(savePersistedAuth(localAuth)).rejects.toThrow('DPAPI unavailable');
+    expect(mockWriteTextFile).not.toHaveBeenCalled();
+    expect(mockRename).not.toHaveBeenCalled();
   });
 
   it('does not rename if the write fails (no half-written real file)', async () => {

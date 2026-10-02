@@ -242,7 +242,9 @@ fn main() {
             commands::discoverCachePut,
             commands::downloadRemoteBook,
             commands::cancelRemoteDownload,
-            commands::discardRemoteDownload
+            commands::discardRemoteDownload,
+            commands::protectSecret,
+            commands::unprotectSecret
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

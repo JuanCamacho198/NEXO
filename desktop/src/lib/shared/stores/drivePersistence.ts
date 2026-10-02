@@ -4,7 +4,8 @@
  * Holds the on-demand Drive OAuth grant in `appDataDir/drive.json`, separate
  * from `auth.json`, so identity sign-out, session refresh, or session clear
  * never implicitly wipe or move Drive tokens. Writes are atomic (tmp file +
- * rename), mirroring `authPersistence.ts`.
+ * rename) and DPAPI-sealed (see `secretVault.ts`); legacy plaintext files are
+ * re-sealed on first read with no backup kept.
  *
  * `migrateLoginGrantOnce()` is the one-shot seeder for pre-separation
  * installs: it copies the login-coupled `provider_refresh_token` out of
@@ -12,17 +13,12 @@
  * an existing grant.
  */
 
-import {
-  BaseDirectory,
-  exists,
-  readTextFile,
-  remove,
-  rename,
-  writeTextFile,
-} from '@tauri-apps/plugin-fs';
+import { BaseDirectory, exists, remove } from '@tauri-apps/plugin-fs';
 import { logger } from '$lib/shared/logger/Logger';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { DRIVE_SCOPE } from '$lib/shared/protocol/DriveCatalogContract';
+import { loadPersistedAuth } from '$lib/shared/stores/authPersistence';
+import { readSealedFile, writeSealedFile } from '$lib/shared/services/secretVault';
 
 const DRIVE_FILE = 'drive.json';
 const DRIVE_TMP_FILE = 'drive.json.tmp';
@@ -41,13 +37,15 @@ export interface DriveGrant {
  */
 export async function loadDriveGrant(): Promise<DriveGrant | null> {
   try {
-    const fileExists = await exists(DRIVE_FILE, { baseDir: BASE_DIR });
-    if (!fileExists) {
+    const opened = await readSealedFile(
+      DRIVE_FILE,
+      DRIVE_TMP_FILE,
+      'DRIVE_GRANT_MIGRATED_TO_SEALED',
+    );
+    if (opened === null) {
       return null;
     }
-
-    const raw = await readTextFile(DRIVE_FILE, { baseDir: BASE_DIR });
-    return validateDriveGrant(JSON.parse(raw) as unknown);
+    return validateDriveGrant(JSON.parse(opened.plaintext) as unknown);
   } catch (error) {
     logger.warn(
       createErrorEvent({
@@ -65,15 +63,11 @@ export async function loadDriveGrant(): Promise<DriveGrant | null> {
 }
 
 /**
- * Persist the Drive grant atomically (tmp file + rename).
+ * Persist the Drive grant atomically, DPAPI-sealed (tmp file + rename).
  */
 export async function saveDriveGrant(grant: DriveGrant): Promise<void> {
   const payload = JSON.stringify(grant);
-  await writeTextFile(DRIVE_TMP_FILE, payload, { baseDir: BASE_DIR });
-  await rename(DRIVE_TMP_FILE, DRIVE_FILE, {
-    oldPathBaseDir: BASE_DIR,
-    newPathBaseDir: BASE_DIR,
-  });
+  await writeSealedFile(DRIVE_FILE, DRIVE_TMP_FILE, payload);
 }
 
 /**
@@ -134,23 +128,17 @@ export async function migrateLoginGrantOnce(): Promise<'seeded' | 'skipped'> {
 }
 
 /**
- * Read the pre-separation login-coupled `provider_refresh_token` straight
- * from `auth.json` (login-drive-separation work unit 4: the seeder owns
+ * Read the pre-separation login-coupled `provider_refresh_token` via the
+ * sealed auth cache (login-drive-separation work unit 4: the seeder owns
  * migration — `authPersistence.ts` no longer exposes Drive-token helpers).
- * Returns `null` when missing, corrupt, or malformed — never throws.
+ * Handles sealed and legacy-plaintext `auth.json` alike. Returns `null`
+ * when missing, corrupt, or malformed — never throws.
  */
 async function loadLoginGrantFromAuthJson(): Promise<string | null> {
   try {
-    const fileExists = await exists('auth.json', { baseDir: BASE_DIR });
-    if (!fileExists) return null;
-    const raw = await readTextFile('auth.json', { baseDir: BASE_DIR });
-    const parsed = JSON.parse(raw) as unknown;
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;
-    const record = parsed as Record<string, unknown>;
-    if (record.kind !== 'supabase') return null;
-    const session = record.session;
-    if (typeof session !== 'object' || session === null || Array.isArray(session)) return null;
-    const value = (session as Record<string, unknown>).provider_refresh_token;
+    const persisted = await loadPersistedAuth();
+    if (persisted === null || persisted.kind !== 'supabase') return null;
+    const value = persisted.session.provider_refresh_token;
     return typeof value === 'string' && value.length > 0 ? value : null;
   } catch {
     return null;

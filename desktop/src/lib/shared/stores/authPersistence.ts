@@ -2,24 +2,21 @@
  * Persisted authentication cache.
  *
  * Stores auth state to `appDataDir/auth.json` so returning users can skip the
- * welcome screen. Writes are atomic (tmp file + rename).
+ * welcome screen. Writes are atomic (tmp file + rename) and DPAPI-sealed
+ * (see `secretVault.ts`): the bytes on disk are a `{ v, alg, data }`
+ * envelope, never plaintext. Legacy plaintext files are re-sealed on first
+ * read with no backup kept.
  *
- * Discriminated union on disk:
+ * Discriminated union on disk (inside the sealed envelope):
  *   { kind: "supabase", session: Record<string, unknown> }
  *   { kind: "local",    profile: LocalUserProfile }
  *   { kind: "google",   tokens: unknown }  // legacy, discarded on read
  */
 
-import {
-  BaseDirectory,
-  exists,
-  readTextFile,
-  remove,
-  rename,
-  writeTextFile,
-} from '@tauri-apps/plugin-fs';
+import { BaseDirectory, exists, remove } from '@tauri-apps/plugin-fs';
 import { logger } from '$lib/shared/logger/Logger';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
+import { readSealedFile, writeSealedFile } from '$lib/shared/services/secretVault';
 
 const CACHE_FILE = 'auth.json';
 const TMP_FILE = 'auth.json.tmp';
@@ -44,13 +41,11 @@ export type PersistedAuth =
  */
 export async function loadPersistedAuth(): Promise<PersistedAuth | null> {
   try {
-    const fileExists = await exists(CACHE_FILE, { baseDir: BASE_DIR });
-    if (!fileExists) {
+    const opened = await readSealedFile(CACHE_FILE, TMP_FILE, 'AUTH_CACHE_MIGRATED_TO_SEALED');
+    if (opened === null) {
       return null;
     }
-
-    const raw = await readTextFile(CACHE_FILE, { baseDir: BASE_DIR });
-    const parsed = JSON.parse(raw) as unknown;
+    const parsed = JSON.parse(opened.plaintext) as unknown;
     return validatePersistedAuth(parsed);
   } catch (error) {
     logger.warn(
@@ -69,15 +64,11 @@ export async function loadPersistedAuth(): Promise<PersistedAuth | null> {
 }
 
 /**
- * Persist the given auth record atomically.
+ * Persist the given auth record atomically, DPAPI-sealed.
  */
 export async function savePersistedAuth(auth: PersistedAuth): Promise<void> {
   const payload = JSON.stringify(auth);
-  await writeTextFile(TMP_FILE, payload, { baseDir: BASE_DIR });
-  await rename(TMP_FILE, CACHE_FILE, {
-    oldPathBaseDir: BASE_DIR,
-    newPathBaseDir: BASE_DIR,
-  });
+  await writeSealedFile(CACHE_FILE, TMP_FILE, payload);
 }
 
 /**
