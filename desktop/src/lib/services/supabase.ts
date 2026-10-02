@@ -18,6 +18,7 @@ import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { logger } from '$lib/shared/logger/Logger';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { redactLogLine } from '$lib/shared/protocol/DriveCatalogContract';
+import { openPayload, sealPayload } from '$lib/shared/services/secretVault';
 
 const SESSION_FILE = 'supabase-session.json';
 const SESSION_TMP_FILE = 'supabase-session.json.tmp';
@@ -26,12 +27,17 @@ const BASE_DIR = BaseDirectory.AppData;
 // ─── Session Storage Adapter ──────────────────────────────────────
 // supabase-js normally uses localStorage. Tauri webview's localStorage
 // is ephemeral (cleared on app restart). This adapter persists the
-// session to a JSON file in appDataDir so it survives restarts.
+// session to `appDataDir/supabase-session.json` so it survives restarts.
+//
+// The file is DPAPI-sealed (see `secretVault.ts`): on-disk bytes are a
+// `{ v, alg, data }` envelope, never plaintext. Legacy plaintext files are
+// re-sealed on first successful read with no backup kept. Sealing failures
+// never fall back to plaintext — the write is skipped and reported.
 //
 // Writes are atomic (tmp file + rename, mirroring authPersistence.ts
 // savePersistedAuth) so a crash mid-write can never leave a truncated
-// main file: after any crash the main file is either the old valid JSON
-// or the new valid JSON, and the orphaned tmp is cleaned on the next
+// main file: after any crash the main file is either the old valid payload
+// or the new valid payload, and the orphaned tmp is cleaned on the next
 // write (DA-4.1). Reads never throw and never touch the live in-memory
 // session mirror (liveSessionCache) — a corrupt file degrades to "no
 // persisted session" with a typed event, not a crash or session wipe
@@ -42,7 +48,14 @@ export const tauriStorageAdapter = {
       const fileExists = await exists(SESSION_FILE, { baseDir: BASE_DIR });
       if (!fileExists) return null;
       const raw = await readTextFile(SESSION_FILE, { baseDir: BASE_DIR });
-      const data = JSON.parse(raw) as Record<string, string>;
+      const opened = await openPayload(raw);
+      if (opened === null) {
+        throw new Error('unreadable session file');
+      }
+      const data = JSON.parse(opened.plaintext) as Record<string, string>;
+      if (opened.wasLegacy) {
+        await migrateSessionFileToSealed(opened.plaintext);
+      }
       return data[key] ?? null;
     } catch (error) {
       // Corrupt or unreadable session file: return null (never throw) and
@@ -65,20 +78,14 @@ export const tauriStorageAdapter = {
   setItem: async (key: string, value: string): Promise<void> => {
     try {
       await removeStaleTmp();
-      let data: Record<string, string> = {};
-      const fileExists = await exists(SESSION_FILE, { baseDir: BASE_DIR });
-      if (fileExists) {
-        try {
-          const raw = await readTextFile(SESSION_FILE, { baseDir: BASE_DIR });
-          data = JSON.parse(raw) as Record<string, string>;
-        } catch {
-          // corrupted main file, start fresh
-        }
-      }
+      const data = await readSessionMap();
       data[key] = value;
-      // Atomic write: write to tmp, then rename over the main file. A crash
-      // between these steps leaves the old main file intact (DA-4.1).
-      await writeTextFile(SESSION_TMP_FILE, JSON.stringify(data, null, 0), {
+      // Seal BEFORE touching disk: a DPAPI failure must skip the write,
+      // never fall back to plaintext. Atomic write: tmp, then rename over
+      // the main file. A crash between these steps leaves the old main file
+      // intact (DA-4.1).
+      const sealed = await sealPayload(JSON.stringify(data));
+      await writeTextFile(SESSION_TMP_FILE, sealed, {
         baseDir: BASE_DIR,
       });
       await rename(SESSION_TMP_FILE, SESSION_FILE, {
@@ -110,11 +117,11 @@ export const tauriStorageAdapter = {
       await removeStaleTmp();
       const fileExists = await exists(SESSION_FILE, { baseDir: BASE_DIR });
       if (!fileExists) return;
-      const raw = await readTextFile(SESSION_FILE, { baseDir: BASE_DIR });
-      const data = JSON.parse(raw) as Record<string, string>;
+      const data = await readSessionMap();
       delete data[key];
-      // Atomic rewrite, same crash-safety as setItem (DA-4.1).
-      await writeTextFile(SESSION_TMP_FILE, JSON.stringify(data, null, 0), {
+      // Atomic rewrite, same crash-safety and seal-before-disk as setItem.
+      const sealed = await sealPayload(JSON.stringify(data));
+      await writeTextFile(SESSION_TMP_FILE, sealed, {
         baseDir: BASE_DIR,
       });
       await rename(SESSION_TMP_FILE, SESSION_FILE, {
@@ -126,6 +133,73 @@ export const tauriStorageAdapter = {
     }
   },
 };
+
+/**
+ * Read the current session map from disk (sealed or legacy plaintext).
+ * Returns an empty map when the file is missing or corrupt — a corrupted
+ * main file starts fresh on write, never blocks it.
+ */
+async function readSessionMap(): Promise<Record<string, string>> {
+  try {
+    if (!(await exists(SESSION_FILE, { baseDir: BASE_DIR }))) {
+      return {};
+    }
+    const raw = await readTextFile(SESSION_FILE, { baseDir: BASE_DIR });
+    const opened = await openPayload(raw);
+    if (opened === null) {
+      return {};
+    }
+    const data = JSON.parse(opened.plaintext) as Record<string, string>;
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+      return {};
+    }
+    return data;
+  } catch {
+    // corrupted main file, start fresh
+    return {};
+  }
+}
+
+/**
+ * Re-seal a legacy plaintext session body on disk (no backup kept).
+ * Best-effort: a failure is logged (redacted) and the in-memory value from
+ * the completed read is still returned to the caller.
+ */
+async function migrateSessionFileToSealed(plaintext: string): Promise<void> {
+  try {
+    const sealed = await sealPayload(plaintext);
+    await writeTextFile(SESSION_TMP_FILE, sealed, { baseDir: BASE_DIR });
+    await rename(SESSION_TMP_FILE, SESSION_FILE, {
+      oldPathBaseDir: BASE_DIR,
+      newPathBaseDir: BASE_DIR,
+    });
+    logger.warn(
+      createErrorEvent({
+        severity: 'low',
+        category: 'runtime',
+        code: 'SUPABASE_SESSION_MIGRATED_TO_SEALED',
+        message: 'Migrated a legacy plaintext session file to DPAPI-sealed storage.',
+        context: { file: SESSION_FILE },
+        source: 'app_shell',
+        recoverable: true,
+      }),
+    );
+  } catch (error) {
+    logger.warn(
+      createErrorEvent({
+        severity: 'medium',
+        category: 'runtime',
+        code: 'SUPABASE_SESSION_PERSIST_FAILED',
+        message: 'Failed to re-seal the legacy session file; the session remains in memory only.',
+        context: {
+          reason: redactLogLine(error instanceof Error ? error.message : String(error)),
+        },
+        source: 'app_shell',
+        recoverable: true,
+      }),
+    );
+  }
+}
 
 /**
  * Remove a stale `.tmp` session file left behind by a crashed write. The main

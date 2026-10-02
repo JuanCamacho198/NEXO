@@ -3,6 +3,8 @@
 package com.nexo.data.session
 
 import com.nexo.data.remote.supabase.SupabaseClientProvider
+import com.nexo.domain.error.AppError
+import com.nexo.domain.error.ErrorCategory
 import com.nexo.domain.model.AuthSession
 import io.github.jan.supabase.auth.auth
 import kotlinx.serialization.json.JsonElement
@@ -29,7 +31,9 @@ internal fun JsonElement?.asMetadataString(): String? = this?.jsonPrimitive?.con
  * @see SessionManager
  * @see SupabaseClientProvider
  */
-class SupabaseSessionManager : SessionManager {
+class SupabaseSessionManager(
+    private val sessionStore: SessionStore = InMemorySessionStore(),
+) : SessionManager {
     private val supabase get() = SupabaseClientProvider.client
 
     override suspend fun restoreSession(): Result<AuthSession?> = getCurrentSession()
@@ -98,14 +102,39 @@ class SupabaseSessionManager : SessionManager {
         try {
             supabase.auth.signOut()
             SupabaseClientProvider.reset()
+            runCatching { sessionStore.clear() }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
 
-    override suspend fun setCurrentSession(session: AuthSession?): Result<Unit> {
-        // supabase-kt manages session persistence internally.
-        // The AuthSession is used by ViewModel/UI, not persisted separately.
-        return Result.success(Unit)
+    /**
+     * Persists the [AuthSession] metadata mirror into the encrypted [SessionStore] (0.3.5 secrets encryption).
+     * supabase-kt keeps owning the token pair in its own encrypted store; this keeps the UI/domain mirror that
+     * repositories (Google, Supabase, anonymous) publish on every sign-in next to it instead of dropping it.
+     */
+    override suspend fun setCurrentSession(session: AuthSession?): Result<Unit> =
+        runCatching {
+            if (session == null) {
+                sessionStore.clear()
+            } else {
+                sessionStore.write(session)
+            }
+        }.fold(
+            onSuccess = { Result.success(Unit) },
+            onFailure = { throwable ->
+                Result.failure(
+                    AppError(
+                        category = ErrorCategory.WIRING_ERROR,
+                        code = "SUPABASE_SESSION_PERSIST_FAILED",
+                        message = throwable.message ?: "Failed to persist local session.",
+                        component = COMPONENT,
+                    ),
+                )
+            },
+        )
+
+    companion object {
+        const val COMPONENT = "SupabaseSessionManager"
     }
 }
