@@ -137,7 +137,8 @@ class AppContainer(
 
     /** Invoked at app start (see `MainActivity`) — never auth-gated. */
     val progressBackfillRunner: com.nexo.data.sync.ProgressBackfillRunner by lazy {
-        com.nexo.data.sync.ProgressBackfillRunner(progressReconciler, progressBackfillScope)
+        com.nexo.data.sync
+            .ProgressBackfillRunner(progressReconciler, progressBackfillScope)
     }
     val driveOAuthSession: DriveOAuthSession by lazy { networkModule.driveOAuthSession }
     val googleDriveAuthHelper: GoogleDriveAuthHelper by lazy { networkModule.googleDriveAuthHelper }
