@@ -1,6 +1,7 @@
 package com.nexo.data.remote.supabase
 
 import com.nexo.data.local.dao.BookDao
+import com.nexo.data.local.dao.StoredBookPath
 import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.SyncEntityType
@@ -791,6 +792,13 @@ class SupabaseBookCatalogSyncTest {
     // ─── Fake DAOs (inline, same pattern as LibraryRepositoryImplTest) ─
 
     private class FakeBookDao : BookDao {
+        override suspend fun allStoredPaths(): List<StoredBookPath> = emptyList()
+
+        override suspend fun updateFilePath(
+            bookId: String,
+            filePath: String,
+        ) = Unit
+
         private val booksState = MutableStateFlow<List<BookEntity>>(emptyList())
 
         override fun observeAllBooks(): Flow<List<BookEntity>> = booksState.map { books -> books.filter { it.deletedAtEpochMillis == null } }
