@@ -31,6 +31,11 @@
 import { SyncOutboxDao, isAuthClassError } from './SyncOutboxDao';
 import { recheckLiveSession } from '$lib/services/supabase';
 import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
+import {
+  recordCatalogSyncFailure,
+  recordCatalogSyncSuccess,
+} from '$lib/shared/stores/catalogSyncStatus.svelte';
+import { toSyncError } from '$lib/shared/recovery/desktopRecoveryImport';
 import { captureBreadcrumb } from '$lib/shared/logger/BreadcrumbsStore';
 import { BREADCRUMB_LABELS } from '$lib/shared/logger/breadcrumbTypes';
 import { metricsStore } from '$lib/shared/logger/MetricsStore';
@@ -188,11 +193,19 @@ export class SyncOutboxService {
       }
 
       for (const item of items) {
+        const isBook = item.entityType === 'BOOK';
         try {
           await this.handler(item.entityType, item.entityId, item.operation, item.payloadJson);
           await this.dao.delete(item.id);
+          if (isBook && item.entityId) recordCatalogSyncSuccess(item.entityId);
         } catch (err) {
           hadAnyFailure = true;
+          // BOOK rows feed the background catalog status line (aggregated, not
+          // a per-cycle toast); the retry/backoff/breaker behaviour below is
+          // unchanged.
+          if (isBook && item.entityId) {
+            recordCatalogSyncFailure(item.entityId, toSyncError(err, item.entityId).code);
+          }
           captureBreadcrumb('action', BREADCRUMB_LABELS.SYNC_FAIL, {
             entityType: item.entityType,
             queueDepth: items.length,

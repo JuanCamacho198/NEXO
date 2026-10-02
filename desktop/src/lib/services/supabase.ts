@@ -17,6 +17,7 @@ import {
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { logger } from '$lib/shared/logger/Logger';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
+import { redactLogLine } from '$lib/shared/protocol/DriveCatalogContract';
 
 const SESSION_FILE = 'supabase-session.json';
 const SESSION_TMP_FILE = 'supabase-session.json.tmp';
@@ -85,7 +86,23 @@ export const tauriStorageAdapter = {
         newPathBaseDir: BASE_DIR,
       });
     } catch (error) {
-      console.warn('Supabase session persist failed:', error);
+      // Best-effort persist, but never silent: a failed session write means the
+      // session may not survive a restart, so it is reported as a typed event
+      // (redacted — the reason can carry a path/token).
+      logger.warn(
+        createErrorEvent({
+          severity: 'medium',
+          category: 'runtime',
+          code: 'SUPABASE_SESSION_PERSIST_FAILED',
+          message:
+            'Failed to persist the Supabase session cache; the session may not survive a restart.',
+          context: {
+            reason: redactLogLine(error instanceof Error ? error.message : String(error)),
+          },
+          source: 'app_shell',
+          recoverable: true,
+        }),
+      );
     }
   },
   removeItem: async (key: string): Promise<void> => {

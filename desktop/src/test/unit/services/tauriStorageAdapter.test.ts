@@ -113,6 +113,22 @@ describe('tauriStorageAdapter — atomic writes (DA-4.1)', () => {
 
     await expect(tauriStorageAdapter.setItem('supabase.auth.token', 'x')).resolves.toBeUndefined();
   });
+
+  it('reports a typed, redacted SUPABASE_SESSION_PERSIST_FAILED event when the write fails', async () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    mockWriteTextFile.mockRejectedValueOnce(new Error('disk full token=secret123'));
+
+    await tauriStorageAdapter.setItem('supabase.auth.token', 'x');
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const event = warnSpy.mock.calls[0]?.[0] as {
+      code?: string;
+      context?: { reason?: string };
+    };
+    expect(event.code).toBe('SUPABASE_SESSION_PERSIST_FAILED');
+    expect(event.context?.reason).not.toContain('secret123');
+    warnSpy.mockRestore();
+  });
 });
 
 describe('tauriStorageAdapter — crash-sim: orphaned tmp cleanup (DA-4.1)', () => {

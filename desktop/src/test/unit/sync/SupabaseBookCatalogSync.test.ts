@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { decideCatalogChange } from '$lib/shared/sync/SupabaseBookCatalogSync';
 import type { SupabaseUserBookRow } from '$lib/shared/sync/SupabaseBookCatalogSync';
+import { logger } from '$lib/shared/logger/Logger';
 
 // ---- Mock control variables ----
 let mockFrom = vi.fn();
@@ -747,10 +748,10 @@ describe('Reconciliation — gap detection logic', () => {
 
 describe('SupabaseBookCatalogSync — uploadCover COVER_FAILED mapping', () => {
   it('maps upload failure to the stable COVER_FAILED code and never returns a blocking error', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
     mockStorage = {
       from: vi.fn().mockReturnValue({
-        upload: vi.fn().mockResolvedValue({ error: new Error('storage denied') }),
+        upload: vi.fn().mockResolvedValue({ error: new Error('storage denied token=abc') }),
         getPublicUrl: vi
           .fn()
           .mockReturnValue({ data: { publicUrl: 'https://cdn.example/cover.jpg' } }),
@@ -760,13 +761,25 @@ describe('SupabaseBookCatalogSync — uploadCover COVER_FAILED mapping', () => {
     const url = await sync.uploadCover('user-1', 'book-1', new Uint8Array([1]).buffer);
     expect(url).toBeNull();
     expect(mockStorage.from).toHaveBeenCalledWith('book-covers');
-    // The failure is typed with the stable code (observability) while import stays non-blocking.
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('COVER_FAILED'), expect.anything());
+    // The failure is typed with the stable code and reported through the
+    // structured error-event surface (ring + Sentry), while import stays
+    // non-blocking (null, no throw).
+    expect(warn).toHaveBeenCalledTimes(1);
+    const event = warn.mock.calls[0][0] as {
+      code: string;
+      message: string;
+      context: Record<string, unknown>;
+    };
+    expect(event.code).toBe('COVER_FAILED');
+    expect(event.context.bookId).toBe('book-1');
+    // Redaction (DTL-3): the token value never reaches the log sink.
+    expect(event.message).toContain('[REDACTED]');
+    expect(event.message).not.toContain('abc');
     warn.mockRestore();
   });
 
-  it('returns the signed public URL and no COVER_FAILED warning on success', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  it('returns the signed public URL and reports no COVER_FAILED event on success', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
     const sync = new SupabaseBookCatalogSync('user-1');
     const url = await sync.uploadCover('user-1', 'book-1', new Uint8Array([1]).buffer);
     expect(url).toBe('https://cdn.example/cover.jpg');

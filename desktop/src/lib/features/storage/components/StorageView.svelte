@@ -6,6 +6,8 @@
   import { DriveColdBackupService } from '$lib/shared/services';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { storageState } from '$lib/shared/stores/StorageState.svelte';
+  import { catalogSyncStatus } from '$lib/shared/stores/catalogSyncStatus.svelte';
+  import StorageBreakdown from './StorageBreakdown.svelte';
   import { onMount } from 'svelte';
 
   type Props = {
@@ -24,6 +26,7 @@
 
   onMount(() => {
     void storageState.loadStats();
+    void storageState.loadDriveUsage();
     void loadPerBook();
   });
 
@@ -44,11 +47,6 @@
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     const val = bytes / Math.pow(k, i);
     return `${val.toFixed(i === 0 ? 0 : 1)} ${sizes[i]}`;
-  }
-
-  function pct(part: number, total: number): number {
-    if (total === 0) return 0;
-    return Math.min(100, Math.round((part / total) * 100));
   }
 
   async function handleClearCache(kind: 'covers' | 'temp' | 'all'): Promise<void> {
@@ -116,8 +114,17 @@
     }
     isImporting = true;
     try {
-      await DriveColdBackupService.importColdBackup(authState.userId);
-      pushToast('success', t('settings.data.importSuccess'));
+      const result = await DriveColdBackupService.importColdBackup(authState.userId);
+      const failures = result?.failures ?? [];
+      if (failures.length > 0) {
+        const codes = [...new Set(failures.map((f) => f.error.code))].join(', ');
+        pushToast(
+          'error',
+          t('settings.data.importPartialFailure', { count: failures.length, codes }),
+        );
+      } else {
+        pushToast('success', t('settings.data.importSuccess'));
+      }
     } catch (e) {
       pushToast('error', e instanceof Error ? e.message : t('errors.importCommandFailed'));
     } finally {
@@ -126,8 +133,7 @@
   }
 
   const stats = $derived(storageState.stats);
-  const total = $derived(stats?.totalBytes ?? 0);
-  const localBytes = $derived((stats?.dbBytes ?? 0) + (stats?.coversBytes ?? 0));
+  const catalogFailures = $derived(catalogSyncStatus.report);
 </script>
 
 <section class="space-y-5 w-full max-w-none">
@@ -160,9 +166,7 @@
           <p class="text-2xs text-(--color-text-muted)">
             DB {formatBytes(stats.dbBytes)} · Covers {formatBytes(stats.coversBytes)} · Temp {formatBytes(
               stats.tempBytes,
-            )} · Drive {stats.driveBytesEstimate === null
-              ? '—'
-              : formatBytes(stats.driveBytesEstimate)}
+            )}
           </p>
         </div>
         <span
@@ -171,68 +175,17 @@
         >
       </div>
 
-      <!-- Hot / Cold / Local diagram -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <!-- Hot - Supabase -->
-        <div class="rounded-lg border border-(--color-border) bg-(--color-background) p-3">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="size-2 rounded-full bg-emerald-500"></span>
-            <span class="text-xs font-semibold text-(--color-primary)">Hot · Supabase</span>
-            <span class="ml-auto text-2xs text-(--color-text-muted)"
-              >{stats.driveBytesEstimate === null
-                ? '—'
-                : formatBytes(stats.driveBytesEstimate)}</span
-            >
-          </div>
-          <p class="text-2xs text-(--color-text-muted)">progress / highlights / bookmarks</p>
-          <div class="mt-2 h-1.5 rounded bg-(--color-border) overflow-hidden">
-            <div
-              class="h-full bg-emerald-500"
-              style="width: {stats.driveBytesEstimate ? pct(stats.driveBytesEstimate, total) : 0}%"
-            ></div>
-          </div>
-          {#if stats.driveBytesEstimate === null}
-            <p class="text-2xs text-amber-600 mt-1">Drive unavailable (null)</p>
-          {/if}
-        </div>
-        <!-- Cold - Drive -->
-        <div class="rounded-lg border border-(--color-border) bg-(--color-background) p-3">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="size-2 rounded-full bg-sky-500"></span>
-            <span class="text-xs font-semibold text-(--color-primary)">Cold · Drive</span>
-            <span class="ml-auto text-2xs text-(--color-text-muted)"
-              >{stats.driveBytesEstimate === null
-                ? '—'
-                : formatBytes(stats.driveBytesEstimate)}</span
-            >
-          </div>
-          <p class="text-2xs text-(--color-text-muted)">book-covers + cold_backup.json</p>
-          <div class="mt-2 h-1.5 rounded bg-(--color-border) overflow-hidden">
-            <div
-              class="h-full bg-sky-500"
-              style="width: {stats.driveBytesEstimate ? pct(stats.driveBytesEstimate, total) : 0}%"
-            ></div>
-          </div>
-        </div>
-        <!-- Local - SQLite + covers -->
-        <div class="rounded-lg border border-(--color-border) bg-(--color-background) p-3">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="size-2 rounded-full bg-orange-500"></span>
-            <span class="text-xs font-semibold text-(--color-primary)">Local</span>
-            <span class="ml-auto text-2xs text-(--color-text-muted)">{formatBytes(localBytes)}</span
-            >
-          </div>
-          <p class="text-2xs text-(--color-text-muted)">
-            SQLite {formatBytes(stats.dbBytes)} + covers {formatBytes(stats.coversBytes)}
-          </p>
-          <div class="mt-2 h-1.5 rounded bg-(--color-border) overflow-hidden">
-            <div class="h-full bg-orange-500" style="width: {pct(localBytes, total)}%"></div>
-          </div>
-          <p class="text-2xs text-(--color-text-muted) mt-1">
-            Temp {formatBytes(stats.tempBytes)} ({pct(stats.tempBytes, total)}%)
-          </p>
-        </div>
-      </div>
+      <StorageBreakdown
+        {t}
+        {formatBytes}
+        totalBytes={stats.totalBytes}
+        dbBytes={stats.dbBytes}
+        coversBytes={stats.coversBytes}
+        tempBytes={stats.tempBytes}
+        driveUsage={storageState.driveUsage}
+        isLoadingDriveUsage={storageState.isLoadingDriveUsage}
+        onRefreshDrive={() => void storageState.loadDriveUsage(true)}
+      />
 
       <div class="flex flex-wrap items-center gap-2">
         <Button
@@ -274,6 +227,15 @@
           {isImporting ? t('settings.data.importing') : t('settings.data.coldImport')}
         </Button>
       </div>
+
+      {#if catalogFailures}
+        <p class="text-xs text-amber-600" data-testid="catalog-sync-status">
+          {t('settings.data.catalogSyncPartial', {
+            count: catalogFailures.failedCount,
+            codes: catalogFailures.codes.join(', '),
+          })}
+        </p>
+      {/if}
 
       {#if showClearConfirm}
         <div class="rounded border border-amber-300 bg-amber-50 p-3 flex items-center gap-2">

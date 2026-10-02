@@ -531,6 +531,8 @@
     <string name="settings_drive_cold_importing">Importing…</string>
     <string name="settings_drive_cold_import_success">Cold backup imported</string>
     <string name="settings_drive_cold_import_error">Cold backup import failed</string>
+    <string name="settings_drive_cold_import_partial">%1$d record(s) failed to import (%2$s) — the rest were imported</string>
+    <string name="settings_catalog_sync_partial">%1$d book(s) could not be synced to the catalog (%2$s). They will retry automatically.</string>
 
     <!-- Drive connect prompt (one-time, after successful import) -->
     <string name="drive_connect_prompt_title">Connect Google Drive?</string>

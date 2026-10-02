@@ -1569,7 +1569,7 @@
         errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/settings/SettingsDataStorageScreen.kt"
-            line="231"
+            line="240"
             column="37"/>
     </issue>
 
@@ -1580,7 +1580,7 @@
         errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/settings/SettingsDataStorageScreen.kt"
-            line="233"
+            line="242"
             column="37"/>
     </issue>
 
@@ -1591,40 +1591,7 @@
         errorLine2="                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/settings/SettingsDataStorageScreen.kt"
-            line="237"
-            column="66"/>
-    </issue>
-
-    <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                                    context.getString(R.string.settings_drive_cold_import_success)"
-        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/settings/SettingsDataStorageScreen.kt"
-            line="260"
-            column="37"/>
-    </issue>
-
-    <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                                    context.getString(R.string.settings_drive_cold_import_error)"
-        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/settings/SettingsDataStorageScreen.kt"
-            line="262"
-            column="37"/>
-    </issue>
-
-    <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                            Toast.makeText(context, e.message ?: context.getString(R.string.settings_drive_cold_import_error), Toast.LENGTH_SHORT).show()"
-        errorLine2="                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/settings/SettingsDataStorageScreen.kt"
-            line="266"
+            line="246"
             column="66"/>
     </issue>
 
@@ -2713,7 +2680,7 @@
         errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="194"
+            line="199"
             column="35"/>
     </issue>
 
@@ -2724,7 +2691,7 @@
         errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="233"
+            line="240"
             column="31"/>
     </issue>
 
@@ -2735,7 +2702,7 @@
         errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="300"
+            line="307"
             column="31"/>
     </issue>
 
@@ -2746,19 +2713,8 @@
         errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="317"
+            line="326"
             column="35"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="            runCatching { Log.w(TAG, &quot;Cover upload failed for book $bookId (${SyncErrorCodes.COVER_FAILED})&quot;, e) }"
-        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="743"
-            column="27"/>
     </issue>
 
     <issue
@@ -2906,12 +2862,34 @@
 
     <issue
         id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;record&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;settings_drive_cold_import_partial&quot;>%1$d record(s) failed to import (%2$s) — the rest were imported&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="534"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;book&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;settings_catalog_sync_partial&quot;>%1$d book(s) could not be synced to the catalog (%2$s). They will retry automatically.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="535"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;more&quot;): This should probably be a plural rather than a string"
         errorLine1="    &lt;string name=&quot;debug_log_viewer_crash_logs_more&quot;>... and %1$d more&lt;/string>"
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="635"
+            line="637"
             column="5"/>
     </issue>
 
@@ -2922,7 +2900,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="695"
+            line="697"
             column="5"/>
     </issue>
 
@@ -2933,7 +2911,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="776"
+            line="778"
             column="5"/>
     </issue>
 
@@ -4655,7 +4633,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="557"
+            line="559"
             column="13"/>
     </issue>
 
@@ -4666,7 +4644,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="558"
+            line="560"
             column="13"/>
     </issue>
 
@@ -4677,7 +4655,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="595"
+            line="597"
             column="13"/>
     </issue>
 
@@ -4688,7 +4666,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="596"
+            line="598"
             column="13"/>
     </issue>
 
@@ -4699,7 +4677,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="607"
+            line="609"
             column="13"/>
     </issue>
 
@@ -4710,7 +4688,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="630"
+            line="632"
             column="13"/>
     </issue>
 
@@ -4721,7 +4699,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="631"
+            line="633"
             column="13"/>
     </issue>
 
@@ -4732,7 +4710,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="643"
+            line="645"
             column="13"/>
     </issue>
 
@@ -4743,7 +4721,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="658"
+            line="660"
             column="13"/>
     </issue>
 
@@ -4754,7 +4732,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="665"
+            line="667"
             column="13"/>
     </issue>
 
@@ -4765,7 +4743,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="666"
+            line="668"
             column="13"/>
     </issue>
 
@@ -4776,7 +4754,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="668"
+            line="670"
             column="13"/>
     </issue>
 
@@ -4787,7 +4765,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="693"
+            line="695"
             column="13"/>
     </issue>
 
@@ -4798,7 +4776,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="694"
+            line="696"
             column="13"/>
     </issue>
 
@@ -4809,7 +4787,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="708"
+            line="710"
             column="13"/>
     </issue>
 
@@ -4820,7 +4798,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="709"
+            line="711"
             column="13"/>
     </issue>
 
@@ -4831,7 +4809,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="721"
+            line="723"
             column="13"/>
     </issue>
 
@@ -4842,7 +4820,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="723"
+            line="725"
             column="13"/>
     </issue>
 
@@ -4853,7 +4831,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="766"
+            line="768"
             column="13"/>
     </issue>
 
@@ -4864,7 +4842,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="767"
+            line="769"
             column="13"/>
     </issue>
 
@@ -4875,7 +4853,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="768"
+            line="770"
             column="13"/>
     </issue>
 
@@ -4886,7 +4864,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="769"
+            line="771"
             column="13"/>
     </issue>
 
@@ -4897,7 +4875,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="773"
+            line="775"
             column="13"/>
     </issue>
 
@@ -4908,7 +4886,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="774"
+            line="776"
             column="13"/>
     </issue>
 
@@ -4919,7 +4897,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="804"
+            line="806"
             column="13"/>
     </issue>
 
@@ -4930,7 +4908,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="805"
+            line="807"
             column="13"/>
     </issue>
 
@@ -4941,7 +4919,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="877"
+            line="879"
             column="13"/>
     </issue>
 
@@ -4952,7 +4930,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="893"
+            line="895"
             column="13"/>
     </issue>
 
@@ -4963,7 +4941,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="894"
+            line="896"
             column="13"/>
     </issue>
 
@@ -4974,7 +4952,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="916"
+            line="918"
             column="13"/>
     </issue>
 
@@ -4985,7 +4963,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="924"
+            line="926"
             column="13"/>
     </issue>
 
@@ -4996,7 +4974,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="934"
+            line="936"
             column="13"/>
     </issue>
 
@@ -5117,7 +5095,7 @@
         errorLine2="                                                    ~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="635"
+            line="637"
             column="53"/>
     </issue>
 

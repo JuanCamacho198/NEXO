@@ -1180,7 +1180,6 @@ export type StorageStats = {
   tempBytes: number;
   cacheBytes: number;
   coverBytes: number;
-  driveBytesEstimate: number | null;
 };
 
 export type PerBookSize = { id: string; title: string; bytes: number };

@@ -205,9 +205,13 @@ data class UserBookRow(
     @SerialName("remote_path") val remotePath: String? = null,
     @SerialName("file_size") val fileSize: Long? = null,
     @SerialName("cover_object_path") val coverObjectPath: String? = null,
-    // Desktop persists protocol_version as NULL when the row was never written
-    // by the recovery protocol. Declare it nullable so kotlinx.serialization
-    // does NOT crash decoding "protocol_version":null (JsonDecodingException
-    // "Unexpected symbol 'n' in numeric literal"). Consumers default to 1.
-    @SerialName("protocol_version") val protocolVersion: Int? = null,
+    // Desktop and the remote `user_books.protocol_version` column are BOTH
+    // text: the column is declared `text` (cross_device_library_recovery
+    // migration) and desktop persists `String(protocolVersion)` and reads it
+    // back with `Number(...)`. Android must therefore model the wire type as a
+    // String so the contract matches the column instead of relying on the JSON
+    // decoder to coerce a quoted literal into an Int. Nullable because desktop
+    // persists NULL for rows never written by the recovery protocol. Consumers
+    // convert with `toIntOrNull()` and default to 1.
+    @SerialName("protocol_version") val protocolVersion: String? = null,
 )

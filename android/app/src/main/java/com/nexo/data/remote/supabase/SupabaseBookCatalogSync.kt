@@ -6,11 +6,14 @@ import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncOperation
-import com.nexo.data.remote.drive.SyncErrorCodes
+import com.nexo.data.remote.drive.coverFailureError
+import com.nexo.data.remote.drive.redactLogLine
 import com.nexo.data.remote.sync.ApplyOutcome
+import com.nexo.data.remote.sync.CatalogSyncStatus
 import com.nexo.data.remote.sync.CommitOutcome
 import com.nexo.data.remote.sync.OutboxCommit
 import com.nexo.data.remote.sync.StorageSyncRemoteDataSource
+import com.nexo.data.remote.sync.classifyImportFailure
 import com.nexo.data.session.SessionManager
 import com.nexo.debug.DebugLog
 import com.nexo.domain.error.AppError
@@ -187,9 +190,11 @@ class SupabaseBookCatalogSync(
             commitOutbox(item) {
                 try {
                     dataSource.upsertBook(row)
+                    CatalogSyncStatus.recordSuccess(bookId)
                     DebugLog.success(TAG, "processBookItem: book '${row.title}' upserted to Supabase OK")
                     ApplyOutcome.Ok
                 } catch (e: Exception) {
+                    CatalogSyncStatus.recordFailure(bookId, classifyImportFailure(e, bookId).code)
                     DebugLog.error(TAG, "processBookItem: FAILED for book $bookId (${item.operation}) — ${e.javaClass.simpleName}: ${e.message}")
                     runCatching { Log.w(TAG, "processBookItem: failed for book $bookId", e) }
                     // Catalog preserves D4 immediate-401 retry semantics: the
@@ -227,8 +232,10 @@ class SupabaseBookCatalogSync(
                             ) + 1,
                     )
                 dataSource.upsertBook(tombstone)
+                CatalogSyncStatus.recordSuccess(bookId)
                 ApplyOutcome.Ok
             } catch (e: Exception) {
+                CatalogSyncStatus.recordFailure(bookId, classifyImportFailure(e, bookId).code)
                 DebugLog.error(TAG, "processBookItem: FAILED for book $bookId (${item.operation}) — ${e.javaClass.simpleName}: ${e.message}")
                 runCatching { Log.w(TAG, "processBookItem: failed for book $bookId", e) }
                 ApplyOutcome.Retryable(e)
@@ -309,8 +316,10 @@ class SupabaseBookCatalogSync(
                     val row = book.toUserBookRow(userId)
                     DebugLog.info(TAG, "reconcileLocalBooks: pushing '${book.title}' (id=${book.id}) catalogVersion=${row.catalogVersion}")
                     dataSource.upsertBook(row)
+                    CatalogSyncStatus.recordSuccess(book.id)
                     DebugLog.success(TAG, "reconcileLocalBooks: '${book.title}' upserted OK")
                 } catch (e: Exception) {
+                    CatalogSyncStatus.recordFailure(book.id, classifyImportFailure(e, book.id).code)
                     // A single book must never crash the reconcile pass; the
                     // outbox/reconcile will retry it later.
                     DebugLog.error(TAG, "reconcileLocalBooks: FAILED to push '${book.title}' (${book.id}) — ${e.javaClass.simpleName}: ${e.message}")
@@ -618,7 +627,7 @@ class SupabaseBookCatalogSync(
                         remoteCatalogVersion = row.catalogVersion,
                         remoteCoverRef = row.coverObjectPath,
                         remoteProvider = row.remoteProvider,
-                        remoteProtocolVersion = row.protocolVersion,
+                        remoteProtocolVersion = row.protocolVersion?.toIntOrNull(),
                     ),
                 )
                 if (!tempFile.renameTo(targetFile)) throw IOException("Atomic import rename failed")
@@ -739,8 +748,13 @@ class SupabaseBookCatalogSync(
                 .from("book-covers")
                 .publicUrl(path)
         } catch (e: Exception) {
-            DebugLog.warn(TAG, "Cover upload failed for book $bookId (${SyncErrorCodes.COVER_FAILED}): ${e.message}")
-            runCatching { Log.w(TAG, "Cover upload failed for book $bookId (${SyncErrorCodes.COVER_FAILED})", e) }
+            // Non-blocking, but never silent: report through the ERROR surface
+            // (in-memory error ring + Sentry) with the stable COVER_FAILED code.
+            val failed = coverFailureError(correlationId = bookId, bookId = bookId)
+            DebugLog.error(
+                TAG,
+                "${failed.code}: Cover upload failed for book $bookId — ${redactLogLine(e.message ?: e.javaClass.simpleName)}",
+            )
             null
         }
     }
@@ -775,7 +789,7 @@ class SupabaseBookCatalogSync(
             remoteFileId = remoteFileId,
             remotePath = remotePath,
             coverObjectPath = remoteCoverRef,
-            protocolVersion = remoteProtocolVersion ?: 1,
+            protocolVersion = (remoteProtocolVersion ?: 1).toString(),
         )
     }
 

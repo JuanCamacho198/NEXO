@@ -346,6 +346,87 @@ class ColdBackupE2ETest {
             assertTrue(true)
         }
 
+    @Test
+    fun importPartialFailure_collectsTypedFailuresAndKeepsSurvivors() =
+        runBlocking {
+            // Three books; b2 fails. The other two must still import and the
+            // failure must be collected with its record id + stable error code.
+            val gson = com.google.gson.Gson()
+            val books =
+                (1..3).map { i ->
+                    com.nexo.data.remote.supabase.UserBookRow(
+                        id = "b$i",
+                        userId = "u1",
+                        title = "T$i",
+                        format = "epub",
+                        importedAt = "2026-01-01T00:00:00.000Z",
+                        updatedAt = "2026-01-01T00:00:00.000Z",
+                    )
+                }
+            val backup =
+                DriveColdBackupService.ColdBackupJson(
+                    exportedAt = System.currentTimeMillis(),
+                    books = books,
+                )
+            coEvery { remote.download(any()) } returns gson.toJson(backup).toByteArray(Charsets.UTF_8)
+            coEvery { catalogDataSource.upsertBook(any()) } answers {
+                val row = firstArg<com.nexo.data.remote.supabase.UserBookRow>()
+                if (row.id == "b2") throw RuntimeException("401 unauthorized token=abc")
+                row
+            }
+
+            val svc = service(hasSession = true)
+            val result = svc.importColdBackup("u1").getOrThrow()
+
+            // Resilience: every row was attempted; the two survivors imported.
+            coVerify(exactly = 3) { catalogDataSource.upsertBook(any()) }
+            assertEquals(2, result.books)
+            assertEquals(1, result.failures.size)
+            assertEquals(DriveColdBackupService.ImportEntity.BOOK, result.failures[0].entity)
+            assertEquals("b2", result.failures[0].id)
+            assertEquals("AUTH_REQUIRED", result.failures[0].error.code)
+            // Redaction: the token value never survives into the failure message.
+            assertTrue(
+                result.failures[0]
+                    .error.message
+                    .contains("[REDACTED]"),
+            )
+            assertTrue(
+                !result.failures[0]
+                    .error.message
+                    .contains("abc"),
+            )
+        }
+
+    @Test
+    fun importFullySuccessful_reportsNoFailures() =
+        runBlocking {
+            val gson = com.google.gson.Gson()
+            val backup =
+                DriveColdBackupService.ColdBackupJson(
+                    exportedAt = System.currentTimeMillis(),
+                    books =
+                        listOf(
+                            com.nexo.data.remote.supabase.UserBookRow(
+                                id = "b1",
+                                userId = "u1",
+                                title = "T",
+                                format = "epub",
+                                importedAt = "2026-01-01T00:00:00.000Z",
+                                updatedAt = "2026-01-01T00:00:00.000Z",
+                            ),
+                        ),
+                )
+            coEvery { remote.download(any()) } returns gson.toJson(backup).toByteArray(Charsets.UTF_8)
+            coEvery { catalogDataSource.upsertBook(any()) } answers { firstArg() }
+
+            val svc = service(hasSession = true)
+            val result = svc.importColdBackup("u1").getOrThrow()
+
+            assertEquals(1, result.books)
+            assertTrue(result.failures.isEmpty())
+        }
+
     // ── Fakes ───────────────────────────────────────────────────────────
     private class FakeBookDao : BookDao {
         val books = mutableMapOf<String, BookEntity>()

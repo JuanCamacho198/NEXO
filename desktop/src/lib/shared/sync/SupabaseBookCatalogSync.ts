@@ -14,7 +14,10 @@ import {
   canonicalBookName,
   canonicalBookPath,
   coverError,
+  redactLogLine,
 } from '$lib/shared/protocol/DriveCatalogContract';
+import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
+import { logger } from '$lib/shared/logger/Logger';
 import type { SupabaseClient, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export interface SupabaseUserBookRow {
@@ -104,6 +107,33 @@ export function buildRemoteRefs(
     protocolVersion: PROTOCOL_VERSION,
     recoveryProtocol: 'recovery_protocol_v1',
   };
+}
+
+/**
+ * Report a non-blocking cover failure through the structured error-event
+ * surface with the stable COVER_FAILED code (REQ-07). Cover persistence must
+ * never block a book upsert, so this never throws; the message always travels
+ * through `redactLogLine` (DTL-3) so tokens, JWTs, and hashes never reach a log
+ * sink. Shared by every cover upload/read path (SyncService cold + hot).
+ */
+export function reportCoverFailure(bookId: string, err: unknown): void {
+  const failed = coverError(crypto.randomUUID(), bookId);
+  const reason = err instanceof Error ? err.message : String(err);
+  logger.warn(
+    createErrorEvent({
+      severity: 'low',
+      category: 'runtime',
+      code: failed.code,
+      message: redactLogLine(`Cover upload failed: ${reason}`),
+      context: {
+        bookId,
+        correlationId: failed.correlationId,
+        retryable: failed.retryable,
+      },
+      source: 'sync',
+      recoverable: true,
+    }),
+  );
 }
 
 export class SupabaseBookCatalogSync {
@@ -272,8 +302,7 @@ export class SupabaseBookCatalogSync {
         .upload(path, coverBytes, { upsert: true });
 
       if (uploadError) {
-        const failed = coverError(crypto.randomUUID(), bookId);
-        console.warn(`${failed.code}: Cover upload failed for book ${bookId}:`, uploadError);
+        reportCoverFailure(bookId, uploadError);
         return null;
       }
 
@@ -281,8 +310,7 @@ export class SupabaseBookCatalogSync {
 
       return urlData.publicUrl;
     } catch (e) {
-      const failed = coverError(crypto.randomUUID(), bookId);
-      console.warn(`${failed.code}: Cover upload failed for book ${bookId}`, e);
+      reportCoverFailure(bookId, e);
       return null;
     }
   }

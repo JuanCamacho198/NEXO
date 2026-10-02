@@ -282,6 +282,10 @@ export const messagesEn = {
   'settings.data.exportSuccess': 'Settings exported',
   'settings.data.importSuccess': 'Settings imported',
   'settings.data.importError': 'Error importing settings',
+  'settings.data.importPartialFailure':
+    '{{count}} record(s) failed to import ({{codes}}) — the rest were imported.',
+  'settings.data.catalogSyncPartial':
+    '{{count}} book(s) could not be synced to the catalog ({{codes}}). They will retry automatically.',
   'settings.data.resetSection': 'Reset section',
   'settings.data.exportLibrary': 'Export library',
   'settings.data.exportLibraryDescription': 'Download all your books as JSON',
@@ -511,6 +515,12 @@ export const messagesEn = {
   'dictionary.added': '"{{word}}" added',
   'storage.title': 'Storage',
   'storage.subtitle': 'Manage cached files and storage usage.',
+  'storage.drive.notConnected': 'Drive not connected',
+  'storage.drive.measuring': 'Measuring Drive usage…',
+  'storage.drive.failed': 'Drive usage unavailable',
+  'storage.drive.measuredAgo': 'measured {{age}} ago',
+  'storage.drive.refresh': 'Refresh Drive usage',
+  'storage.supabase.notMeasured': 'not measured',
   'sync.title': 'Sync',
   'sync.subtitle': 'Synchronization status and cloud backup.',
   'reader.share': 'Share',

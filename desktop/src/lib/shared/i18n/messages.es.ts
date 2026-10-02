@@ -284,6 +284,10 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.data.exportSuccess': 'Configuracion exportada',
   'settings.data.importSuccess': 'Configuracion importada',
   'settings.data.importError': 'Error al importar configuracion',
+  'settings.data.importPartialFailure':
+    '{{count}} registro(s) no se pudieron importar ({{codes}}) — el resto si se importo.',
+  'settings.data.catalogSyncPartial':
+    '{{count}} libro(s) no se pudieron sincronizar con el catálogo ({{codes}}). Se reintentará automáticamente.',
   'settings.data.resetSection': 'Restablecer seccion',
   'settings.data.exportLibrary': 'Exportar biblioteca',
   'settings.data.exportLibraryDescription': 'Descarga todos tus libros en formato JSON',
@@ -515,6 +519,12 @@ export const messagesEs: Record<MessageKey, string> = {
   'dictionary.added': '"{{word}}" agregada',
   'storage.title': 'Almacenamiento',
   'storage.subtitle': 'Gestiona archivos en caché y uso de almacenamiento.',
+  'storage.drive.notConnected': 'Drive no conectado',
+  'storage.drive.measuring': 'Midiendo uso de Drive…',
+  'storage.drive.failed': 'Uso de Drive no disponible',
+  'storage.drive.measuredAgo': 'medido hace {{age}}',
+  'storage.drive.refresh': 'Actualizar uso de Drive',
+  'storage.supabase.notMeasured': 'sin medir',
   'sync.title': 'Sincronización',
   'sync.subtitle': 'Estado de sincronización y respaldo en la nube.',
   'reader.share': 'Compartir',

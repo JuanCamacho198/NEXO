@@ -3,6 +3,11 @@
  * Tests auth gate, book file sync, and state sync flow.
  */
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import {
+  catalogSyncStatus,
+  clearCatalogSyncStatus,
+} from '$lib/shared/stores/catalogSyncStatus.svelte';
+import { toastQueue } from '$lib/shared/stores/ToastQueue.svelte';
 
 // ---- Mock control variables (set before each test) ----
 let mockIsSignedIn = vi.fn<() => boolean>();
@@ -740,5 +745,68 @@ describe('SyncService — outbox DICTIONARY_WORD handler (REQ-DSI-002)', () => {
     );
 
     expect(mockDictDelete).toHaveBeenCalledWith('');
+  });
+});
+
+describe('SyncService — background catalog sync failure status (aggregate, no toast)', () => {
+  beforeEach(() => {
+    clearCatalogSyncStatus();
+  });
+
+  it('records the typed per-book aggregate and still syncs the surviving books', async () => {
+    mockIsSignedIn.mockReturnValue(true);
+    const bad = makeLocalBook('book-bad', 'Bad', '/tmp/book-bad.epub');
+    const good = makeLocalBook('book-good', 'Good', '/tmp/book-good.epub');
+    mockListBooks.mockResolvedValue([bad, good]);
+    mockListLibraryBooks.mockResolvedValue([
+      { ...bad, coverPath: null },
+      { ...good, coverPath: null },
+    ]);
+    mockCatalogFetchCatalog.mockResolvedValue([]);
+    mockCatalogUpsertBook.mockImplementation((b: { id: string }) =>
+      b.id === 'book-bad' ? Promise.reject(new Error('network drop')) : Promise.resolve(),
+    );
+    const toastsBefore = toastQueue.items.length;
+
+    await SyncService.syncBookCatalog();
+
+    // The surviving book still reached the catalog — one bad book never aborts the pass.
+    expect(mockCatalogUpsertBook).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'book-good' }),
+    );
+    // Typed aggregate: one failing book with its stable code, not a log per book.
+    expect(catalogSyncStatus.report).toEqual({ failedCount: 1, codes: ['UNAVAILABLE'] });
+    // A background cycle is silent: the status line is the surface, never a toast.
+    expect(toastQueue.items.length).toBe(toastsBefore);
+  });
+
+  it('reports nothing when every book syncs', async () => {
+    mockIsSignedIn.mockReturnValue(true);
+    const book = makeLocalBook('book-ok', 'Ok', '/tmp/book-ok.epub');
+    mockListBooks.mockResolvedValue([book]);
+    mockListLibraryBooks.mockResolvedValue([{ ...book, coverPath: null }]);
+    mockCatalogFetchCatalog.mockResolvedValue([]);
+    mockCatalogUpsertBook.mockResolvedValue(undefined);
+
+    await SyncService.syncBookCatalog();
+
+    expect(mockCatalogUpsertBook).toHaveBeenCalledWith(expect.objectContaining({ id: 'book-ok' }));
+    expect(catalogSyncStatus.report).toBeNull();
+  });
+
+  it('clears a previous failure once the same book later syncs', async () => {
+    mockIsSignedIn.mockReturnValue(true);
+    const book = makeLocalBook('book-later', 'Later', '/tmp/book-later.epub');
+    mockListBooks.mockResolvedValue([book]);
+    mockListLibraryBooks.mockResolvedValue([{ ...book, coverPath: null }]);
+    mockCatalogFetchCatalog.mockResolvedValue([]);
+
+    mockCatalogUpsertBook.mockRejectedValueOnce(new Error('network drop'));
+    await SyncService.syncBookCatalog();
+    expect(catalogSyncStatus.report?.failedCount).toBe(1);
+
+    mockCatalogUpsertBook.mockResolvedValue(undefined);
+    await SyncService.syncBookCatalog();
+    expect(catalogSyncStatus.report).toBeNull();
   });
 });

@@ -12,8 +12,17 @@ import { GDriveProvider } from './storage/GDriveProvider';
 import { GoogleDriveStateSync } from './GoogleDriveStateSync';
 import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
 import { SupabaseDictionarySync } from '../sync/SupabaseDictionarySync';
-import { SupabaseBookCatalogSync, buildRemoteRefs } from '../sync/SupabaseBookCatalogSync';
+import {
+  SupabaseBookCatalogSync,
+  buildRemoteRefs,
+  reportCoverFailure,
+} from '../sync/SupabaseBookCatalogSync';
 import { canonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
+import { toSyncError } from '$lib/shared/recovery/desktopRecoveryImport';
+import {
+  recordCatalogSyncFailure,
+  recordCatalogSyncSuccess,
+} from '$lib/shared/stores/catalogSyncStatus.svelte';
 import { SyncOutboxService } from '../outbox/SyncOutboxService';
 import { SyncOutboxDao } from '../outbox/SyncOutboxDao';
 import type { SyncHealth, RealtimeStatus } from '$lib/shared/types/book';
@@ -228,7 +237,7 @@ export class SyncService {
             );
           }
         } catch (e) {
-          console.warn('Cover upload failed for book', entityId, e);
+          reportCoverFailure(entityId, e);
           // Non-blocking — continue with null coverUrl
         }
 
@@ -568,7 +577,7 @@ export class SyncService {
               );
             }
           } catch (e) {
-            console.warn('Cover upload failed for book', book.id, e);
+            reportCoverFailure(book.id, e);
           }
 
           // Binary upload to Drive + remote-ref persistence (DRP-1) when the
@@ -606,7 +615,11 @@ export class SyncService {
             updatedAt: book.updatedAt,
             ...(remoteRefs ?? {}),
           });
+          recordCatalogSyncSuccess(book.id);
         } catch (e) {
+          // Aggregate, never a toast: a background cycle surfaces the typed
+          // per-book failure in the Data/Storage panel status line instead.
+          recordCatalogSyncFailure(book.id, toSyncError(e, book.id).code);
           console.error(`Failed to push local book ${book.id} to catalog:`, e);
         }
       }

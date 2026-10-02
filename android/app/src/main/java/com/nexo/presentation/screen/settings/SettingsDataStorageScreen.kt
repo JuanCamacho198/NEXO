@@ -16,6 +16,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +37,7 @@ import com.nexo.data.remote.drive.DriveTokenPair
 import com.nexo.data.remote.drive.GoogleDriveAuthHelper
 import com.nexo.data.remote.drive.InMemoryDriveTokenStore
 import com.nexo.data.remote.drive.driveOAuthRedirectUri
+import com.nexo.data.remote.sync.CatalogSyncStatus
 import com.nexo.data.remote.sync.DriveColdBackupService
 import com.nexo.presentation.theme.NexoTheme
 import com.nexo.ui.components.molecules.NexoPreferenceItem
@@ -68,8 +70,15 @@ fun SettingsDataStorageScreen(
     var isImporting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val coldBackupAvailable = driveColdBackupService != null && userId != null
+    val catalogFailure by CatalogSyncStatus.report.collectAsState()
 
     val oauthErrorText = stringResource(R.string.settings_drive_error_oauth)
+    // Resolved during composition with stringResource, not read from
+    // LocalContext.current inside the click lambdas, so configuration changes are
+    // tracked and the Compose lint rule LocalContextGetResourceValueCall stays clean.
+    val importSuccessText = stringResource(R.string.settings_drive_cold_import_success)
+    val importErrorText = stringResource(R.string.settings_drive_cold_import_error)
+    val importPartialTemplate = stringResource(R.string.settings_drive_cold_import_partial)
 
     // Redirect-driven outcome (browser → MainActivity.onNewIntent → helper.onRedirect):
     // Success → authorized; Failure → actionable toast; Canceled → silent (no toast).
@@ -255,15 +264,22 @@ fun SettingsDataStorageScreen(
                         isImporting = true
                         try {
                             val result = driveColdBackupService!!.importColdBackup(userId!!)
+                            val failures = result.getOrNull()?.failures.orEmpty()
                             val msg =
-                                if (result.isSuccess) {
-                                    context.getString(R.string.settings_drive_cold_import_success)
-                                } else {
-                                    context.getString(R.string.settings_drive_cold_import_error)
+                                when {
+                                    result.isFailure -> importErrorText
+                                    failures.isNotEmpty() ->
+                                        String.format(
+                                            java.util.Locale.getDefault(),
+                                            importPartialTemplate,
+                                            failures.size,
+                                            failures.map { it.error.code }.distinct().joinToString(", "),
+                                        )
+                                    else -> importSuccessText
                                 }
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                         } catch (e: Exception) {
-                            Toast.makeText(context, e.message ?: context.getString(R.string.settings_drive_cold_import_error), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, e.message ?: importErrorText, Toast.LENGTH_SHORT).show()
                         } finally {
                             isImporting = false
                         }
@@ -276,6 +292,23 @@ fun SettingsDataStorageScreen(
                 if (isImporting) CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
                 Text(text = stringResource(if (isImporting) R.string.settings_drive_cold_importing else R.string.settings_drive_cold_import))
             }
+        }
+
+        // Background catalog sync status: aggregated per-book failures, silent
+        // when nothing failed, cleared when a later sync succeeds. Never a toast.
+        catalogFailure?.let { failure ->
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text =
+                    stringResource(
+                        R.string.settings_catalog_sync_partial,
+                        failure.failedCount,
+                        failure.codes.joinToString(", "),
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
         }
     }
 }

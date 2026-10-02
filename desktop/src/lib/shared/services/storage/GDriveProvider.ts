@@ -145,6 +145,30 @@ export class GDriveProvider implements StorageProvider {
     return data.files?.[0]?.id ?? null;
   }
 
+  /**
+   * `findFolder` with honest failure semantics: a non-OK response throws a
+   * typed, redacted Drive error instead of collapsing an auth/permission
+   * failure into "folder absent" (which would misreport usage as 0 bytes).
+   */
+  private async findFolderStrict(
+    accessToken: string,
+    name: string,
+    parentId?: string,
+  ): Promise<string | null> {
+    const parent = parentId ? ` and '${parentId}' in parents` : '';
+    const query = encodeURIComponent(
+      `name = '${name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false${parent}`,
+    );
+    const response = await this.fetchWithToken(
+      `${GDriveProvider.GDRIVE_API_BASE}/files?q=${query}&fields=files(id)`,
+      { method: 'GET' },
+      accessToken,
+    );
+    if (!response.ok) throw await this.driveError('GDrive search failed', response);
+    const data = await response.json();
+    return data.files?.[0]?.id ?? null;
+  }
+
   private async createFolder(accessToken: string, name: string): Promise<string> {
     const response = await fetch(`${GDriveProvider.GDRIVE_API_BASE}/files`, {
       method: 'POST',
@@ -299,5 +323,47 @@ export class GDriveProvider implements StorageProvider {
 
     const data = await response.json();
     return (data.files || []).map((f: { name: string }) => f.name);
+  }
+
+  /**
+   * Sum the bytes of every non-trashed file the app owns under `Nexo/Books`.
+   * Read-only: it reuses an already-resolved folder or resolves existing
+   * folders via `findFolderStrict`, never creating them — opening the storage
+   * panel must not mutate Drive. Paginates the full listing, so a single page
+   * is never treated as complete.
+   */
+  async getUsage(): Promise<{ bytes: number; fileCount: number }> {
+    const accessToken = await this.getAccessToken();
+
+    let folderId = folderIds;
+    if (folderId === null) {
+      const root = await this.findFolderStrict(accessToken, 'Nexo');
+      if (!root) return { bytes: 0, fileCount: 0 };
+      folderId = await this.findFolderStrict(accessToken, 'Books', root);
+      if (!folderId) return { bytes: 0, fileCount: 0 };
+    }
+
+    let bytes = 0;
+    let fileCount = 0;
+    let pageToken: string | undefined;
+    do {
+      const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+      const fields = encodeURIComponent('nextPageToken,files(size)');
+      let url = `${GDriveProvider.GDRIVE_API_BASE}/files?q=${query}&fields=${fields}&pageSize=1000`;
+      if (pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
+
+      const response = await this.fetchWithToken(url, { method: 'GET' }, accessToken);
+      if (!response.ok) throw await this.driveError('GDrive usage failed', response);
+
+      const data = await response.json();
+      const files: Array<{ size?: string }> = data.files ?? [];
+      for (const file of files) {
+        bytes += Number(file.size ?? 0) || 0;
+      }
+      fileCount += files.length;
+      pageToken = data.nextPageToken;
+    } while (pageToken);
+
+    return { bytes, fileCount };
   }
 }
