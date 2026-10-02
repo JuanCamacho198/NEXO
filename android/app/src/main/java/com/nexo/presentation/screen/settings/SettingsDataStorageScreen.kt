@@ -73,6 +73,12 @@ fun SettingsDataStorageScreen(
     val catalogFailure by CatalogSyncStatus.report.collectAsState()
 
     val oauthErrorText = stringResource(R.string.settings_drive_error_oauth)
+    // Resolved during composition with stringResource, not read from
+    // LocalContext.current inside the click lambdas, so configuration changes are
+    // tracked and the Compose lint rule LocalContextGetResourceValueCall stays clean.
+    val importSuccessText = stringResource(R.string.settings_drive_cold_import_success)
+    val importErrorText = stringResource(R.string.settings_drive_cold_import_error)
+    val importPartialTemplate = stringResource(R.string.settings_drive_cold_import_partial)
 
     // Redirect-driven outcome (browser → MainActivity.onNewIntent → helper.onRedirect):
     // Success → authorized; Failure → actionable toast; Canceled → silent (no toast).
@@ -261,18 +267,19 @@ fun SettingsDataStorageScreen(
                             val failures = result.getOrNull()?.failures.orEmpty()
                             val msg =
                                 when {
-                                    result.isFailure -> context.getString(R.string.settings_drive_cold_import_error)
+                                    result.isFailure -> importErrorText
                                     failures.isNotEmpty() ->
-                                        context.getString(
-                                            R.string.settings_drive_cold_import_partial,
+                                        String.format(
+                                            java.util.Locale.getDefault(),
+                                            importPartialTemplate,
                                             failures.size,
                                             failures.map { it.error.code }.distinct().joinToString(", "),
                                         )
-                                    else -> context.getString(R.string.settings_drive_cold_import_success)
+                                    else -> importSuccessText
                                 }
                             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                         } catch (e: Exception) {
-                            Toast.makeText(context, e.message ?: context.getString(R.string.settings_drive_cold_import_error), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, e.message ?: importErrorText, Toast.LENGTH_SHORT).show()
                         } finally {
                             isImporting = false
                         }
