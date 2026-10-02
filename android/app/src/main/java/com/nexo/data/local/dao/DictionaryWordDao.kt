@@ -40,7 +40,8 @@ interface DictionaryWordDao {
 
     @Query(
         "UPDATE dictionary_words SET definition = :definition, part_of_speech = :partOfSpeech, " +
-            "phonetic = :phonetic, example = :example WHERE id = :wordId",
+            "phonetic = :phonetic, example = :example, " +
+            "updated_at_epoch_millis = :updatedAtEpochMillis WHERE id = :wordId",
     )
     suspend fun updateUserFields(
         wordId: String,
@@ -48,6 +49,7 @@ interface DictionaryWordDao {
         partOfSpeech: String?,
         phonetic: String?,
         example: String?,
+        updatedAtEpochMillis: Long,
     )
 
     @Query("SELECT word FROM dictionary_words")

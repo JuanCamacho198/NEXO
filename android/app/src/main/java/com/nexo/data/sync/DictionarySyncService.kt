@@ -122,7 +122,7 @@ class DictionarySyncService(
     /** Push one locally created or edited entry. Returns true when it reached remote. */
     suspend fun pushWord(
         entity: DictionaryWordEntity,
-        updatedAtEpochMillis: Long = entity.addedAtEpochMillis,
+        updatedAtEpochMillis: Long = entity.updatedAtEpochMillis,
     ): Boolean {
         val session = sessionManager.ensureFreshSession().getOrNull() ?: return false
         return try {
@@ -163,6 +163,9 @@ class DictionarySyncService(
             for (row in rows) {
                 mergeRemote(row, localByNormalized)
             }
+            // TODO(sync-cursor): the cursor is the device wall clock; if the clock
+            // jumps forward, remote rows written in the skipped window are not
+            // pulled until the next process restart (cursor null -> full pull).
             lastPullEpochMillis = nowMillis()
             rows.size
         } catch (t: Throwable) {
@@ -184,7 +187,7 @@ class DictionarySyncService(
             // Tombstone: drop the local row only when the deletion is newer than
             // the local change; a newer local edit must not be resurrected away.
             val remoteDeleted = parseTimestamp(deletedAt)
-            if (local != null && remoteDeleted > local.addedAtEpochMillis) {
+            if (local != null && remoteDeleted > local.updatedAtEpochMillis) {
                 dao.delete(local.id)
                 localByNormalized.remove(row.normalizedWord)
             }
@@ -198,10 +201,11 @@ class DictionarySyncService(
             return
         }
 
-        if (remoteTime > local.addedAtEpochMillis) {
+        if (remoteTime > local.updatedAtEpochMillis) {
             val merged = local.copy(
                 word = row.word,
-                addedAtEpochMillis = remoteTime,
+                // Keep the local "first added" time; only the write clock moves.
+                updatedAtEpochMillis = remoteTime,
                 definition = row.definition,
                 partOfSpeech = row.partOfSpeech,
                 phonetic = row.phonetic,
@@ -244,6 +248,7 @@ class DictionarySyncService(
             id = id ?: UUID.randomUUID().toString(),
             word = word,
             addedAtEpochMillis = updatedAtEpochMillis,
+            updatedAtEpochMillis = updatedAtEpochMillis,
             definition = definition,
             partOfSpeech = partOfSpeech,
             phonetic = phonetic,

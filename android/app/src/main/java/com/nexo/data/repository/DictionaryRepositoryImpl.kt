@@ -44,11 +44,13 @@ class DictionaryRepositoryImpl(
         sourceLocator: String?,
     ): Result<DictionaryWord> =
         runCatching {
+            val now = System.currentTimeMillis()
             val entity =
                 DictionaryWordEntity(
                     id = UUID.randomUUID().toString(),
                     word = word.trim(),
-                    addedAtEpochMillis = System.currentTimeMillis(),
+                    addedAtEpochMillis = now,
+                    updatedAtEpochMillis = now,
                     definition = definition.cleaned(),
                     partOfSpeech = partOfSpeech.cleaned(),
                     phonetic = phonetic.cleaned(),
@@ -73,18 +75,19 @@ class DictionaryRepositoryImpl(
         example: String?,
     ): Result<DictionaryWord> =
         runCatching {
+            val now = System.currentTimeMillis()
             dao.updateUserFields(
                 wordId = wordId,
                 definition = definition.cleaned(),
                 partOfSpeech = partOfSpeech.cleaned(),
                 phonetic = phonetic.cleaned(),
                 example = example.cleaned(),
+                updatedAtEpochMillis = now,
             )
             val updated = dao.findById(wordId) ?: error("Word $wordId not found after update")
-            // The local row has no separate updatedAt column, so an edit pushes
-            // the current instant; the next pull folds that timestamp back into
-            // addedAtEpochMillis via LWW.
-            sync?.pushWord(updated, System.currentTimeMillis())
+            // The edit advances the local LWW write clock, so a later pull of an
+            // older remote row cannot win the merge and discard this change.
+            sync?.pushWord(updated, now)
             updated.toDomain()
         }
 

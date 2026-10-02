@@ -39,7 +39,7 @@ import com.nexo.data.local.entity.SyncOutboxEntity
         DiscoverCacheEntity::class,
         AddonEntity::class,
     ],
-    version = 28,
+    version = 29,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

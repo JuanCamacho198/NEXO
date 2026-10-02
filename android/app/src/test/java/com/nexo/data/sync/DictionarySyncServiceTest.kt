@@ -64,11 +64,13 @@ class DictionarySyncServiceTest {
         id: String = "local-1",
         word: String = "Abyss",
         addedAt: Long = 1_000L,
+        updatedAt: Long = addedAt,
         definition: String? = null,
     ) = DictionaryWordEntity(
         id = id,
         word = word,
         addedAtEpochMillis = addedAt,
+        updatedAtEpochMillis = updatedAt,
         definition = definition,
         partOfSpeech = "noun",
         phonetic = "/abc/",
@@ -223,7 +225,10 @@ class DictionarySyncServiceTest {
 
             val stored = dao.getAll().single()
             assertEquals("Remote", stored.word)
-            assertEquals(5_000L, stored.addedAtEpochMillis)
+            // The write clock advances to the remote time; the local "first added"
+            // time is preserved because a remote update does not re-add the word.
+            assertEquals(5_000L, stored.updatedAtEpochMillis)
+            assertEquals(1_000L, stored.addedAtEpochMillis)
         }
 
     @Test
@@ -284,6 +289,55 @@ class DictionarySyncServiceTest {
             remote.store[key(USER, "abyss")] = remoteRow()
 
             assertEquals(0, service(remote, session = gatedSession()).pullRemote())
+        }
+
+    // ─── Regression: offline edit vs stale remote (LWW write clock) ──────
+
+    @Test
+    fun `offline local edit survives a stale remote merge`() =
+        runBlocking {
+            val remote = FakeDictionaryRemote()
+            // Word added at t=1000, then edited locally at t=9000 while offline
+            // (push failed); updatedAtEpochMillis advanced, addedAt unchanged.
+            dao.insert(
+                entity(
+                    id = "local-1",
+                    word = "Local",
+                    addedAt = 1_000L,
+                    updatedAt = 9_000L,
+                    definition = "edited offline",
+                ),
+            )
+            // A concurrent, OLDER desktop row (t=5000) that predates the edit.
+            remote.store[key(USER, "local")] =
+                remoteRow(id = "server-9", word = "Local", normalized = "local", updatedAtMillis = 5_000L)
+
+            service(remote).pullRemote()
+
+            val stored = dao.getAll().single()
+            assertEquals("edited offline", stored.definition)
+            assertEquals(9_000L, stored.updatedAtEpochMillis)
+            assertEquals(1_000L, stored.addedAtEpochMillis)
+        }
+
+    @Test
+    fun `user field edit advances the sync version and preserves the added time`() =
+        runBlocking {
+            dao.insert(entity(id = "local-1", word = "Local", addedAt = 1_000L, updatedAt = 1_000L))
+
+            dao.updateUserFields(
+                wordId = "local-1",
+                definition = "edited",
+                partOfSpeech = "noun",
+                phonetic = null,
+                example = null,
+                updatedAtEpochMillis = 9_000L,
+            )
+
+            val stored = dao.findById("local-1")!!
+            assertEquals("edited", stored.definition)
+            assertEquals(9_000L, stored.updatedAtEpochMillis)
+            assertEquals(1_000L, stored.addedAtEpochMillis)
         }
 
     // ─── Fakes ───────────────────────────────────────────────────────────
