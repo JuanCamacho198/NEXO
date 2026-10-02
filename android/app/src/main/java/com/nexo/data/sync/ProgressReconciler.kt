@@ -59,14 +59,26 @@ class ProgressReconciler(
                 }
                 return@withContext
             }
-            val bookAt = book.progressUpdatedAtEpochMillis ?: 0L
+            val bookAt = book.progressUpdatedAtEpochMillis
             val progAt = progress.updatedAtEpochMillis
             val bookPct = book.progressPercentage
             val progPct = progress.percentage
 
             if (bookPct == progPct) return@withContext
 
-            if (progAt >= bookAt) {
+            // WU2a correction (verify W4): a NULL cache timestamp has unknown
+            // provenance, so it must not be read as "canonical is newer". When the
+            // cache carries a real position and disagrees, the cache wins and is
+            // backfilled; when the cache carries no position (0f), canonical is
+            // left untouched. Known timestamps keep the normal LWW order.
+            val canonicalWins =
+                if (bookAt == null) {
+                    bookPct <= 0f
+                } else {
+                    progAt >= bookAt
+                }
+
+            if (canonicalWins) {
                 // Canonical wins. WU2a: cache write is retired — log only.
                 DebugDual.log(
                     DebugEvent.ProgressReconciled(
@@ -79,13 +91,14 @@ class ProgressReconciler(
                     ),
                 )
             } else {
-                // Cache newer — push to canonical (offline case)
-                // Use same timestamp from book to preserve LWW
+                // Cache newer (or unknown timestamp carrying real progress) —
+                // push to canonical. Use the cache timestamp when known, else the
+                // book's own updatedAt, to preserve the ordering contract.
                 try {
                     readingProgressDao.upsert(
                         progress.copy(
                             percentage = bookPct,
-                            updatedAtEpochMillis = bookAt,
+                            updatedAtEpochMillis = bookAt ?: book.updatedAtEpochMillis,
                         ),
                     )
                     DebugDual.log(

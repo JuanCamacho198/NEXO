@@ -56,6 +56,9 @@ import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.GetStatisticsUseCase
 import com.nexo.domain.usecase.ImportEpubBookUseCase
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 class AppContainer(
     context: Context,
@@ -123,6 +126,19 @@ class AppContainer(
     val getStatisticsUseCase: GetStatisticsUseCase by lazy { useCaseModule.getStatisticsUseCase }
     val getBookProgressUseCase: GetBookProgressUseCase by lazy { useCaseModule.getBookProgressUseCase }
     val progressReconciler: com.nexo.data.sync.ProgressReconciler by lazy { useCaseModule.progressReconciler }
+
+    /**
+     * WU2a correction (verify W3): app-lifetime IO scope owned by the
+     * container, so the auth-independent [com.nexo.data.sync.ProgressBackfillRunner]
+     * can run the local backfill without blocking startup and without being
+     * torn down with any Activity.
+     */
+    private val progressBackfillScope: CoroutineScope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
+
+    /** Invoked at app start (see `MainActivity`) — never auth-gated. */
+    val progressBackfillRunner: com.nexo.data.sync.ProgressBackfillRunner by lazy {
+        com.nexo.data.sync.ProgressBackfillRunner(progressReconciler, progressBackfillScope)
+    }
     val driveOAuthSession: DriveOAuthSession by lazy { networkModule.driveOAuthSession }
     val googleDriveAuthHelper: GoogleDriveAuthHelper by lazy { networkModule.googleDriveAuthHelper }
     val driveCoordinator: DriveCoordinator by lazy { networkModule.driveCoordinator }

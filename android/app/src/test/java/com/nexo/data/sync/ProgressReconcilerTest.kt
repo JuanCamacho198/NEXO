@@ -184,6 +184,9 @@ class ProgressReconcilerTest {
             seed(bookDao, progressDao, "D", cachePct = 0f, cacheAt = null, canonPct = 66f, canonAt = 6000L)
             // E: both stores agree (untouched).
             seed(bookDao, progressDao, "E", cachePct = 44f, cacheAt = 4000L, canonPct = 44f, canonAt = 4000L)
+            // F: divergent, cache timestamp NULL but carries real progress (legacy
+            // row). NULL is unknown provenance, so the cache value wins.
+            seed(bookDao, progressDao, "F", cachePct = 55f, cacheAt = null, canonPct = 10f, canonAt = 6000L)
 
             reconciler.reconcileAll()
 
@@ -193,10 +196,12 @@ class ProgressReconcilerTest {
             assertEquals(33f, progressDao.getProgressForBook("C")?.percentage)
             assertEquals(66f, progressDao.getProgressForBook("D")?.percentage)
             assertEquals(44f, progressDao.getProgressForBook("E")?.percentage)
+            assertEquals(55f, progressDao.getProgressForBook("F")?.percentage)
 
             // G2 invariant: zero positions live ONLY in the retired column.
-            // 1) no cache>0 without a canonical row; 2) no cache strictly newer than canonical.
-            for (book in listOf("A", "B", "C", "D", "E")) {
+            // 1) no cache>0 without a canonical row; 2) no known cache timestamp
+            // strictly newer than canonical.
+            for (book in listOf("A", "B", "C", "D", "E", "F")) {
                 val entity = bookDao.getBookById(book)!!
                 val canonical = progressDao.getProgressForBook(book)
                 if (entity.progressPercentage > 0f) {
@@ -210,6 +215,69 @@ class ProgressReconcilerTest {
                     )
                 }
             }
+        }
+
+    /**
+     * WU2a correction (verify W3): the backfill must run WITHOUT an authenticated
+     * session. This drives the exact auth-independent startup entry point
+     * ([ProgressBackfillRunner]) over a real reconciler and fakes. No
+     * `SessionManager`, Drive bootstrap, or session gate is constructed or
+     * consulted anywhere in the path, so a legacy device that never signs in
+     * still backfills.
+     */
+    @Test
+    fun backfill_runsOnAuthIndependentStartupPath_withNoAuthenticatedSession() =
+        runBlocking {
+            val bookDao = FakeBookDao()
+            val progressDao = FakeReadingProgressDao()
+            val reconciler = ProgressReconciler(bookDao, progressDao)
+
+            seed(bookDao, progressDao, "S", cachePct = 40f, cacheAt = 2000L, canonPct = null, canonAt = null)
+
+            val runner = ProgressBackfillRunner(reconciler, this)
+            runner.schedule().join()
+
+            assertEquals(40f, progressDao.getProgressForBook("S")?.percentage)
+        }
+
+    /**
+     * WU2a correction (verify W4): a NULL cache timestamp has unknown provenance
+     * and must NOT be read as "canonical is newer". When the cache carries a real
+     * position and disagrees with an older canonical row, the cache value wins
+     * and is backfilled.
+     */
+    @Test
+    fun reconcile_nullCacheTimestamp_divergentWithRealCacheProgress_cacheWins() =
+        runBlocking {
+            val bookDao = FakeBookDao()
+            val progressDao = FakeReadingProgressDao()
+            val reconciler = ProgressReconciler(bookDao, progressDao)
+
+            seed(bookDao, progressDao, "N", cachePct = 55f, cacheAt = null, canonPct = 10f, canonAt = 6000L)
+
+            reconciler.reconcile("N")
+
+            // Legacy row: cache holds the only trustworthy position, so it is
+            // pushed to canonical instead of losing to the older canonical row.
+            assertEquals(55f, progressDao.getProgressForBook("N")?.percentage)
+        }
+
+    /**
+     * WU2a correction (verify W4), defensive half: a NULL cache timestamp with no
+     * real cache progress (0f) must never overwrite a canonical position.
+     */
+    @Test
+    fun reconcile_nullCacheTimestamp_zeroCacheProgress_canonicalStays() =
+        runBlocking {
+            val bookDao = FakeBookDao()
+            val progressDao = FakeReadingProgressDao()
+            val reconciler = ProgressReconciler(bookDao, progressDao)
+
+            seed(bookDao, progressDao, "Z", cachePct = 0f, cacheAt = null, canonPct = 66f, canonAt = 6000L)
+
+            reconciler.reconcile("Z")
+
+            assertEquals(66f, progressDao.getProgressForBook("Z")?.percentage)
         }
 
     private suspend fun seed(
