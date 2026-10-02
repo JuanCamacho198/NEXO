@@ -226,6 +226,6 @@ class DownloadAndImportBookUseCaseTest {
             assertEquals(2, names.size)
             assertEquals(names[0], names[1])
             assertTrue(names[0].endsWith(".part"))
-            assertTrue(names[0].startsWith("gutendex_1342"))
+            assertTrue(names[0].startsWith("gutendex1342"))
         }
 }

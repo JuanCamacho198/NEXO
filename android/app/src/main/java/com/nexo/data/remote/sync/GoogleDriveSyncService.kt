@@ -10,6 +10,7 @@ import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncFileMappingEntity
 import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.session.SessionManager
+import com.nexo.data.sync.DriveFilename
 import com.nexo.debug.DebugLog
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.IOException
+import java.util.Locale
 
 /**
  * Implements [SyncService] using Google Drive REST API v3 for file storage
@@ -235,7 +237,7 @@ class GoogleDriveSyncService(
                 }
 
         for (remotePath in remotePaths.distinct()) {
-            if (remotePath.endsWith("/state.json")) {
+            if (remotePath.endsWith("_state.json") || remotePath.endsWith("/state.json")) {
                 // State JSON files are handled via pullState below
                 continue
             }
@@ -425,38 +427,17 @@ class GoogleDriveSyncService(
         userId: String,
         bookId: String,
         extension: String,
-    ): String {
-        val userToken = sanitizeIdToken(userId)
-        val bookToken = sanitizeIdToken(bookId)
-        return "books/$userToken/$bookToken.$extension"
-    }
+    ): String = DriveFilename.objectPath(userId, DriveFilename.canonical(bookId), extension)
 
-    private fun extensionFor(book: BookEntity): String =
-        sanitizeToken(book.format)
-            .ifBlank {
-                File(book.filePath).extension.lowercase().ifBlank { DEFAULT_EXTENSION }
-            }
-
-    private fun sanitizeToken(raw: String): String = raw.lowercase().replace(NON_ALNUM_REGEX, "")
-
-    private fun sanitizeIdToken(raw: String): String {
-        val sanitized = raw.lowercase().replace(NON_PATH_SAFE_REGEX, "-").trim('-')
-        return if (sanitized.isBlank()) "unknown" else sanitized
+    private fun extensionFor(book: BookEntity): String {
+        val fromFormat = book.format.lowercase(Locale.ROOT).filter { it in 'a'..'z' || it in '0'..'9' }
+        val candidate = fromFormat.ifBlank { File(book.filePath).extension.lowercase(Locale.ROOT) }
+        return DriveFilename.canonicalExtension(candidate)
     }
 
     private fun parseDrivePath(drivePath: String): ParsedDrivePath? {
-        val segments = drivePath.split('/')
-        if (segments.size != 3 || segments.first() != "books") {
-            return null
-        }
-        val fileName = segments.last()
-        val dotIndex = fileName.lastIndexOf('.')
-        if (dotIndex <= 0 || dotIndex == fileName.lastIndex) {
-            return null
-        }
-        val bookId = fileName.substring(0, dotIndex)
-        val extension = fileName.substring(dotIndex + 1)
-        return ParsedDrivePath(bookId = bookId, extension = sanitizeToken(extension).ifBlank { DEFAULT_EXTENSION })
+        val parsed = DriveFilename.parseDrivePath(drivePath) ?: return null
+        return ParsedDrivePath(bookId = parsed.stem, extension = parsed.extension)
     }
 
     private data class ParsedDrivePath(
@@ -479,11 +460,8 @@ class GoogleDriveSyncService(
 
     companion object {
         const val COMPONENT = "GoogleDriveSyncService"
-        const val DEFAULT_EXTENSION = "bin"
         const val MAX_ATTEMPTS = 3
         const val DEFAULT_MAX_RETRIES = 3
-        val NON_ALNUM_REGEX = Regex("[^a-z0-9]")
-        val NON_PATH_SAFE_REGEX = Regex("[^a-z0-9_-]")
     }
 }
 

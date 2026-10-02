@@ -1,8 +1,6 @@
 use super::LibraryRepository;
 use crate::error::{AppError, AppResult};
-use crate::filename::{
-    sanitize_extension, sanitize_file_stem, FALLBACK_BOOK_ID, MAX_BOOK_ID_CHARS,
-};
+use crate::filename::{canonical_extension, canonical_stem};
 use chrono::Utc;
 use rusqlite::{params, OptionalExtension};
 use std::fs;
@@ -86,8 +84,8 @@ fn save_book_file_under(
     // The catalog id (`gutendex:2701`) is not a valid Windows path segment:
     // `:` starts an NTFS ADS. Sanitize the stem and keep the persisted `format`
     // untouched for the row below.
-    let stem = sanitize_file_stem(book_id, MAX_BOOK_ID_CHARS, FALLBACK_BOOK_ID);
-    let ext = sanitize_extension(Some(fmt));
+    let stem = canonical_stem(book_id);
+    let ext = canonical_extension(Some(fmt));
     let sanitized = books_dir.join(format!("{stem}.{ext}"));
     let destination = match existing_path.as_deref() {
         Some(path) if Path::new(path) == sanitized.as_path() => PathBuf::from(path),
@@ -433,8 +431,8 @@ mod tests {
         book_id: &str,
     ) {
         let now = Utc::now().to_rfc3339();
-        let stem = sanitize_file_stem(book_id, MAX_BOOK_ID_CHARS, FALLBACK_BOOK_ID);
-        let ext = sanitize_extension(Some("epub"));
+        let stem = canonical_stem(book_id);
+        let ext = canonical_extension(Some("epub"));
         let sanitized_path = books_dir.join(format!("{stem}.{ext}")).to_string_lossy().to_string();
         seed_hidden_row(repo, book_id, &sanitized_path, &now);
     }
