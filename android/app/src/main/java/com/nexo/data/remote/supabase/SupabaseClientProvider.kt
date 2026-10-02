@@ -7,6 +7,7 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.auth.SessionManager as SupabaseAuthSessionManager
 
 /**
  * Singleton factory that provides the Supabase client for Android.
@@ -19,6 +20,21 @@ import io.github.jan.supabase.storage.Storage
  */
 object SupabaseClientProvider {
     private var _client: SupabaseClient? = null
+
+    @Volatile
+    private var sessionManager: SupabaseAuthSessionManager? = null
+
+    /**
+     * Installs the session store supabase-kt persists tokens through.
+     *
+     * The app wires the encrypted Keystore-backed store here (0.3.5 secrets encryption); without it the client
+     * falls back to supabase-kt's plaintext default. Must be called before the first [client] access — enforced,
+     * because silently keeping plaintext after opting into encryption would be worse than crashing.
+     */
+    fun configureSessionManager(manager: SupabaseAuthSessionManager) {
+        check(_client == null) { "SupabaseClientProvider already initialized" }
+        sessionManager = manager
+    }
 
     /**
      * The session-aware Supabase client. Created lazily on first access.
@@ -57,6 +73,10 @@ object SupabaseClientProvider {
                 // registered in AndroidManifest.xml reach the same handler.
                 scheme = "nextpage"
                 host = "auth"
+                // Encrypted token storage (0.3.5). Installed when the app
+                // configured one before first client access; otherwise the
+                // supabase-kt plaintext default applies (tests, misconfig).
+                this@SupabaseClientProvider.sessionManager?.let { sessionManager = it }
             }
             install(Postgrest)
             install(Realtime)
