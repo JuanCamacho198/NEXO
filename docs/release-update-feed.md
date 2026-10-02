@@ -25,12 +25,30 @@ https://github.com/<owner>/<repo>/releases/download/<tag>/latest-<platform>.json
 
 - Production feed URL resolves per platform: the update client uses the
   platform-specific feed URL defined by the release convention above.
-- Desktop carve-out (decided 2026-09-28): tauri-action publishes ONE
-  `latest.json` per `desktop-v<version>` release (its `platforms` map covers
-  windows/macOS/linux), so the desktop production feed is
-  `https://github.com/<owner>/<repo>/releases/download/desktop-v<version>/latest.json`
-  (mirrored in `tauri.conf.json` updater endpoints). The per-platform
-  `latest-<platform>.json` pattern above applies to Android
+- Desktop carve-out (updated 2026-10-01, updater feed fix): tauri-action
+  publishes ONE `latest.json` per `desktop-v<version>` release (its `platforms`
+  map covers windows/macOS/linux). That per-version file is the **historical
+  record**, not the endpoint: the updater endpoint is baked into each build at
+  build time, so a per-version URL can only ever report its own version and the
+  app concludes "up to date" forever.
+- The desktop production feed is the **stable, versionless** location
+  `https://github.com/<owner>/<repo>/releases/download/desktop-latest/latest.json`,
+  mirrored in `tauri.conf.json` updater endpoints and in the build-time
+  `VITE_UPDATE_FEED_URL`. `desktop-latest` is a dedicated **prerelease** whose
+  only asset is `latest.json`, re-uploaded with `--clobber` after every
+  `desktop-v*` release by the `desktop-checksums` fan-in job in
+  `release-builds.yml`.
+  - `releases/latest` MUST NOT be used: android and desktop releases are both
+    non-prerelease, so `latest` can resolve to the Android release, which
+    carries no `latest.json`. Marking the stable feed a prerelease keeps it off
+    the repository "Latest" badge and keeps `releases/latest` from resolving to
+    it.
+  - The stable feed's `platforms.*.url` values are **browser download URLs**
+    (`releases/download/<tag>/<file>`), rewritten from the per-version file's
+    GitHub API asset URLs. A plain GET on an API asset URL returns asset
+    metadata (`application/json`), not the binary; a plain GET on a browser
+    download URL returns the binary.
+- The per-platform `latest-<platform>.json` pattern above applies to Android
   (`latest-android.json` under the `android-v<version>` tag).
 - Mock feed override: a build configured with a staging/mock feed URL fetches the
   mock feed instead of the production feed. Production feed infrastructure is not
@@ -222,11 +240,22 @@ Decided work package (producer: `release-builds.yml`):
    with them; without them the build now fails (real pubkey in config).
    Note: this authenticates UPDATES, not the OS publisher — Windows
    SmartScreen / macOS Gatekeeper warnings remain a separate work item.
-3. Feed publishing. Desktop: tauri-action auto-publishes one `latest.json`
-   per `desktop-v*` release (`uploadUpdaterJson: true`, set explicitly);
-   no custom publish step. Android: the explicit `latest-android.json`
-   publish step (section 3 shape, `versionCode` mirroring the
-   major*10000+minor*100+patch formula) uploads alongside the signed APK/AAB.
+3. Feed publishing. Desktop: tauri-action auto-publishes one per-version
+   `latest.json` per `desktop-v*` release (`uploadUpdaterJson: true`, set
+   explicitly). The `desktop-checksums` fan-in job then copies that file to the
+   stable `desktop-latest` prerelease as `latest.json` (`--clobber`),
+   rewriting its `platforms.*.url` values from API asset URLs to browser
+   download URLs (`scripts/release/publish-desktop-updater-feed.sh`) and keeping
+   every signature byte-identical. The copy runs only after all three matrix
+   legs succeed, so the stable feed can never be published missing a platform.
+   Android: the explicit `latest-android.json` publish step (section 3 shape,
+   `versionCode` mirroring the major*10000+minor*100+patch formula) uploads
+   alongside the signed APK/AAB.
+4. Forward-only cutover. The endpoint is baked at build time, so no build
+   shipped before the stable feed existed can benefit: a 0.3.2 or 0.3.3 install
+   will never auto-update and must be re-downloaded by hand once. Updates work
+   automatically **from the first build that ships the stable endpoint onward**.
+   `release-builds.yml` prepends this warning to the desktop release notes.
 
 Production cutover rule: 0.3.2+ release builds run against the production
 feeds (`VITE_UPDATE_FEED_URL` baked at release time for desktop,
