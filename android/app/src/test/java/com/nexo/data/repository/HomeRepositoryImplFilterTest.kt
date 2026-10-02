@@ -33,7 +33,7 @@ class HomeRepositoryImplFilterTest {
         runBlocking {
             val books =
                 currentBooksFor(
-                    listOf(book("completed", status = BookStatus.COMPLETED, cachedProgress = 40f)),
+                    listOf(book("completed", status = BookStatus.COMPLETED)),
                 )
 
             assertTrue("completed book must not appear in Continue Reading", books.isEmpty())
@@ -45,7 +45,7 @@ class HomeRepositoryImplFilterTest {
         runBlocking {
             val books =
                 currentBooksFor(
-                    books = listOf(book("finished-canonically", status = null, cachedProgress = 40f)),
+                    books = listOf(book("finished-canonically", status = null)),
                     progresses = listOf(canonical("finished-canonically", percentage = 100f)),
                 )
 
@@ -58,7 +58,7 @@ class HomeRepositoryImplFilterTest {
         runBlocking {
             val books =
                 currentBooksFor(
-                    listOf(book("planned", status = BookStatus.PLAN_TO_READ, cachedProgress = 30f)),
+                    listOf(book("planned", status = BookStatus.PLAN_TO_READ)),
                 )
 
             assertTrue("plan-to-read book must not appear in Continue Reading", books.isEmpty())
@@ -70,7 +70,7 @@ class HomeRepositoryImplFilterTest {
         runBlocking {
             val books =
                 currentBooksFor(
-                    listOf(book("reading", status = BookStatus.READING, cachedProgress = 40f)),
+                    listOf(book("reading", status = BookStatus.READING)),
                 )
 
             assertEquals(listOf("reading"), books.map { it.id })
@@ -82,7 +82,7 @@ class HomeRepositoryImplFilterTest {
         runBlocking {
             val books =
                 currentBooksFor(
-                    books = listOf(book("in-progress", status = null, cachedProgress = 15f)),
+                    books = listOf(book("in-progress", status = null)),
                     progresses = listOf(canonical("in-progress", percentage = 55f)),
                 )
 
@@ -95,7 +95,7 @@ class HomeRepositoryImplFilterTest {
         runBlocking {
             val books =
                 currentBooksFor(
-                    books = listOf(book("stale-status", status = BookStatus.PLAN_TO_READ, cachedProgress = 20f)),
+                    books = listOf(book("stale-status", status = BookStatus.PLAN_TO_READ)),
                     progresses = listOf(canonical("stale-status", percentage = 100f)),
                 )
 
@@ -108,7 +108,7 @@ class HomeRepositoryImplFilterTest {
         runBlocking {
             val books =
                 currentBooksFor(
-                    books = listOf(book("stale-state", status = null, cachedProgress = 10f)),
+                    books = listOf(book("stale-state", status = null)),
                     progresses = listOf(canonical("stale-state", percentage = 100f)),
                 )
 
@@ -122,10 +122,10 @@ class HomeRepositoryImplFilterTest {
                 currentBooksFor(
                     books =
                         listOf(
-                            book("completed", status = BookStatus.COMPLETED, cachedProgress = 50f),
-                            book("planned", status = BookStatus.PLAN_TO_READ, cachedProgress = 50f),
-                            book("canonical-100", status = null, cachedProgress = 50f),
-                            book("active", status = BookStatus.READING, cachedProgress = 50f),
+                            book("completed", status = BookStatus.COMPLETED),
+                            book("planned", status = BookStatus.PLAN_TO_READ),
+                            book("canonical-100", status = null),
+                            book("active", status = BookStatus.READING),
                         ),
                     progresses = listOf(canonical("canonical-100", percentage = 100f)),
                 )
@@ -200,7 +200,6 @@ class HomeRepositoryImplFilterTest {
     private fun book(
         id: String,
         status: String? = null,
-        cachedProgress: Float = 0f,
     ): BookEntity =
         BookEntity(
             id = id,
@@ -212,7 +211,6 @@ class HomeRepositoryImplFilterTest {
             updatedAtEpochMillis = 1_000L,
             status = status,
             readingState = ReadingState.READING,
-            progressPercentage = cachedProgress,
         )
 
     private fun canonical(

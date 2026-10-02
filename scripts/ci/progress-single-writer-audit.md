@@ -1,9 +1,11 @@
-# G2 writer/reader audit — reading progress single source of truth (WU2a)
+# G2 writer/reader audit — reading progress single source of truth (WU2a/WU2b)
 
-Change: `storage-layout-and-sync` (FR-10). Slice: PR3 / WU2a. Gate: G2 (blocks WU2b).
+Change: `storage-layout-and-sync` (FR-10). Slices: PR3 / WU2a (single-writer gate)
+and PR4 / WU2b (column drop). Gate: G2.
 
 `reading_progress.percentage` is the sole canonical writer target. `books.progress_percentage`
-is write-dead (read-only fallback) and stays present until WU2b.
+was write-dead under WU2a and is dropped by the WU2b Room migration (29→30); this audit now
+guards against reintroducing a writer of that retired column.
 
 ## Scanned scope
 
@@ -29,70 +31,59 @@ A writer is any of:
 3. Any `INSERT`/`upsert` statement on the same line that carries the column.
 4. A setter-style mutation: `setProgressPercentage(...)`, `SetProgressPercentage(...)`, or
    `set_progress_percentage(...)`.
-5. An `INSERT ... INTO ... progress_percentage` whose column list spans several lines. The scan
-   cannot see those line-by-line, so a portable awk pass collapses each file to one logical
-   statement per line (append lines, split at `;`) and applies the SQL test there. This runs
-   identically with or without ripgrep.
+5. `progress_percentage` inside an `INSERT` **target column list** whose list spans several lines.
+   The line-based scan cannot see those, so a portable awk pass collapses each file to one logical
+   statement per line (append lines, split at `;`) and checks only the parenthesized list that
+   follows `INTO <table>`. Anything after `SELECT` is a read, not a write: the WU2b DROP migration
+   legitimately reads the column it is about to drop (backfill + verification), and flagging that
+   read would be a false positive. This runs identically with or without ripgrep.
 
 Mappers that copy the field from itself or from the canonical progress source
 (`progressPercentage = progressPercentage`, `progressPercentage = canonical.percentage`) introduce
 no new position and are excluded from the camelCase failure set.
 
-## Intentional writers (post-change) — expected: none
-
-Central retirement point:
+## Intentional writers (post-WU2b) — expected: none
 
 - `android/app/src/main/java/com/nexo/data/local/dao/BookDao.kt`
-  - `updateReadingProgress`: no longer sets `progress_percentage` (reads `:progress` only to
-    derive `reading_state` / `completed_at`; still bumps `progress_updated_at` for reading-list
-    ordering until WU2b joins `reading_progress`).
-  - `completeReading`: no longer sets `progress_percentage = 100`.
-- `android/app/src/main/java/com/nexo/data/sync/ProgressReconciler.kt`
-  - canonical-wins branch no longer writes the cache column (log only).
-  - cache-only / cache-newer positions are backfilled INTO `reading_progress` (the backfill).
-  - `reconcileAll` now walks every book, not only canonical-backed books, so cache-only rows are
-    actually reached.
+  - `updateReadingProgress`: reads `:progress` only to derive `reading_state` / `completed_at`;
+    still bumps `progress_updated_at` for reading-list ordering. It never sets the dropped column.
+  - `completeReading`: sets `reading_state='completed'` / `completed_at`, not a percentage.
+- All previous cache writers routed through `BookDao.updateReadingProgress`
+  (`UpdateReadingProgressUseCase` -> `ReaderRepositoryImpl.updateBookReadingState`,
+  `LibraryRepositoryImpl.updateReadingProgress`, `SupabaseBookCatalogSync` seed) are therefore
+  write-dead with no call-site change.
 
-All previous cache writers routed through `BookDao.updateReadingProgress`
-(`UpdateReadingProgressUseCase` -> `ReaderRepositoryImpl.updateBookReadingState`,
-`LibraryRepositoryImpl.updateReadingProgress`, `SupabaseBookCatalogSync` seed) are therefore
-write-dead with no call-site change.
+`ProgressReconciler` and `ProgressBackfillRunner` were deleted in WU2b: their reason to exist — the
+cache column — is gone, and the reconcile/backfill now lives inside the 29→30 DROP migration.
 
-### Auth-independent backfill path (verify W3)
+### In-migration backfill (WU2b, version-skip safe)
 
-`ProgressReconciler.reconcileAll()` is invoked from two places:
-
-- `GoogleDriveSyncService.bootstrap` (session-gated, kept — gives authenticated devices a prompt
-  backfill).
-- `ProgressBackfillRunner` (new), scheduled from `MainActivity.onCreate` on the container's IO
-  scope. This path has no `SessionManager`, Drive login, or session gate anywhere in the call
-  chain, so a legacy device that never signs in still backfills before WU2b drops the column.
-
-Chosen over a WorkManager one-shot because the reconcile is a bounded local Room scan that must not
-block startup but also must not depend on the background scheduler eventually running it; the
-launch is non-blocking and idempotent (`reconcileAll` is safe to run repeatedly).
+A version-skip upgrade (a device jumping from a pre-WU2a build straight to the WU2b APK) opens the
+database and runs migrations during open, BEFORE `MainActivity.onCreate` could schedule any
+app-start runner. The backfill therefore runs INSIDE `MIGRATION_29_30`: seed cache-only positions,
+let the cache win where it is newer (or where a NULL timestamp carries real divergent progress —
+the WU2a verify-W4 semantics), verify zero divergence, and only then recreate `books` without the
+column. A failed verification throws, so Room rolls the transaction back and the column survives.
 
 ### Known non-position writer (documented, not a violation)
 
-`BookDao.upsert` / `upsertAll` persist a whole `BookEntity`, so the column is physically rewritten
-with the entity's default/stale value (typically `0f`) on import/sync. It carries no reading
-position; positions are written only through `reading_progress`.
+`BookDao.upsert` / `upsertAll` persist a whole `BookEntity`; the retired column no longer exists on
+the entity, so import/sync cannot rewrite it. Positions are written only through `reading_progress`.
 
 ## Reader inventory
 
-Android (production):
+Android (production), post-WU2b:
 
 | Location | Read | Classification |
 |---|---|---|
-| `data/local/dao/BookDao.kt` `observeReadingBooks` | `progress_percentage < 100` | reading-list SQL filter; `reading_state='reading'` is the primary gate. WU2b moves ordering to a `reading_progress` join. |
-| `domain/usecase/GetBookProgressUseCase.kt` | `observeBookById(...).progressPercentage` | canonical path fallback (`canonical ?: cache ?: 0`). |
-| `data/sync/ProgressReconciler.kt` | `book.progressPercentage` | backfill source (intended). |
-| `data/repository/LibraryRepositoryImpl.kt` `toDomain()` | `progressPercentage = progressPercentage` | fallback only; `observeLibrary()` prefers `toDomainWithCanonical` when a canonical row exists. |
-| `data/repository/HomeRepositoryImpl.kt` `toBook()` | `progressPercentage = progressPercentage` | same fallback pattern. |
-| `presentation/feature/bookdetail/ReadingProgressSection.kt` | `progress?.percentage ?: book.progressPercentage` | UI reads the domain `Book`, canonical-derived when canonical exists. |
+| `data/local/dao/BookDao.kt` `observeReadingBooks` | `reading_progress.percentage < 100` (join) | reading-list SQL filter on canonical. |
+| `domain/usecase/GetBookProgressUseCase.kt` | `reading_progress.percentage` | canonical-only path (`null` -> `0f`). |
+| `data/repository/LibraryRepositoryImpl.kt` `toDomainWithCanonical()` / `observeBookById()` | `canonical.percentage` | canonical-derived. |
+| `data/repository/HomeRepositoryImpl.kt` `toBookWithCanonical()` | `canonical.percentage` | same. |
+| `presentation/feature/bookdetail/ReadingProgressSection.kt` | `progress?.percentage ?: book.progressPercentage` | UI reads the domain `Book`, canonical-derived. |
 | `presentation/feature/bookdetail/BookDetailHero.kt` | `book.progressPercentage > 0f` | same. |
-| `data/local/entity/BookEntity.kt` | field + `@Deprecated` | schema declaration. |
-| `data/local/AppDatabaseMigrations.kt` | `ALTER TABLE ... ADD COLUMN progress_percentage` | historical migration, retained. |
+| `data/local/AppDatabaseMigrations.kt` | `MIGRATION_29_30` reads the column for the backfill/verify | the only remaining reader; this is a read and is not flagged. |
+| `domain/model/Book.kt` | `progressPercentage` domain field | canonical value carried into the UI. |
 
 Desktop: **no `books.progress_percentage` column exists** (`migrations/0001_init.sql` books table has
 no progress column; `0002_books.sql` adds `current_page`/`total_pages`). Desktop progress is already
@@ -103,9 +94,7 @@ canonical-only:
 - `models/mod.rs` `LibraryBookDto.progress_percentage` is that DTO field; `avg_progress_percentage`
   is a separate reading-stats aggregate.
 
-Consequence: the desktop double-write and the prescribed desktop backfill migration do not exist to
-remove. Creating an empty migration would be dishonest, so none was added. WU2a's backfill is
-Android-only.
+Consequence: no desktop column drop exists to perform, and no desktop work is needed for WU2b.
 
 ## Self-test (proves the gate can fail)
 
@@ -119,7 +108,7 @@ so a future change that blinds the pattern fails CI instead of passing silently.
 | `snake-case-assignment` | `SET progress_percentage = ...` |
 | `camel-case-assignment` | `book.progressPercentage = ...` |
 | `same-line-insert` | `INSERT ... progress_percentage ...` on one line |
-| `multiline-insert` | column list spanning lines (caught by the normalized pass) |
+| `multiline-insert` | target column list spanning lines (caught by the normalized pass) |
 | `setter-style` | `holder.setProgressPercentage(...)` |
 
 Run locally: `bash scripts/ci/progress-single-writer-audit-selftest.sh`.
@@ -133,18 +122,15 @@ Zero positions exist ONLY in the retired column when all hold after backfill:
 3. A NULL cache timestamp is unknown provenance. When it carries real progress it must have won
    the reconcile and been backfilled, so the cache row equals its canonical row.
 
-The design's literal equality query
-(`... id NOT IN (SELECT book_id FROM reading_progress WHERE percentage = books.progress_percentage)`)
-is stricter than the invariant and would report false positives on every divergent row where
-canonical is newer (the common case). The timestamp-based invariant above is the correct no-loss
-check and is what the acceptance test asserts.
+`MIGRATION_29_30` runs exactly this check before dropping the column and throws if any count is
+non-zero, so a lossy migration can never commit.
 
-Asserted by `ProgressReconcilerTest.backfill_divergent_cacheOnly_canonicalOnly_preservesEveryPosition`
-(fixtures: canonical-newer, cache-newer, cache-only, canonical-only, equal, NULL-timestamp divergent)
-and by `backfill_runsOnAuthIndependentStartupPath_withNoAuthenticatedSession` (the auth-independent
-startup path).
+Asserted by `AppDatabaseMigrationTest.migration 29 to 30 backfills every divergent position before
+dropping the cache column` (fixtures: canonical-newer, cache-newer, cache-only, canonical-only,
+zero, NULL-timestamp divergent) plus the version-skip and no-op cases in the same test class.
 
 ## Rollback
 
-Re-enable cache writers in `BookDao` (column still present) and revert `ProgressReconciler`; no
-schema change, no migration to undo.
+`git revert` the WU2b commit: the column, the reconciler, the runner and the cache readers are all
+restored together. The migration is one-way, but the backfill is lossless, so a forward re-drop is
+safe.

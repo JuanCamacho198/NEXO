@@ -3,7 +3,6 @@ package com.nexo.data.remote.sync
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.HighlightDao
-import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.SyncFileMappingDao
 import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
@@ -11,7 +10,6 @@ import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncFileMappingEntity
 import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.session.SessionManager
-import com.nexo.data.sync.ProgressReconciler
 import com.nexo.debug.DebugLog
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
@@ -31,7 +29,6 @@ class GoogleDriveSyncService(
     private val outboxDao: SyncOutboxDao,
     private val bookDao: BookDao,
     private val mappingDao: SyncFileMappingDao,
-    private val readingProgressDao: ReadingProgressDao,
     private val highlightDao: HighlightDao,
     private val bookmarkDao: BookmarkDao,
     private val sessionManager: SessionManager,
@@ -43,11 +40,6 @@ class GoogleDriveSyncService(
     },
     private val diagnosticError: AppError? = null,
     private val maxRetries: Int = DEFAULT_MAX_RETRIES,
-    // SDD 3: drive service now owns the auth-gated reconcile seam so the
-    // VMs don't each call reconcileAll() on init. Default-constructed from
-    // the already-injected DAOs to avoid breaking direct test construction
-    // (GoogleDriveSyncServiceTest builds with the bare-args shape).
-    private val progressReconciler: ProgressReconciler = ProgressReconciler(bookDao, readingProgressDao),
 ) : SyncService {
     private val state = MutableStateFlow<DriveSyncState>(if (isEnabled()) DriveSyncState.Idle else DriveSyncState.Disabled)
 
@@ -80,11 +72,6 @@ class GoogleDriveSyncService(
             localBooksDir.mkdirs()
         }
         state.value = DriveSyncState.Idle
-        // SDD 3: reconcile divergent progress once on auth bootstrap.
-        // Fire-and-forget — failures are logged and swallowed so the auth
-        // bootstrap result is not poisoned by reconcile errors.
-        runCatching { progressReconciler.reconcileAll() }
-            .onFailure { DebugLog.warn(COMPONENT, "bootstrap: reconcileAll failed: ${it.message}") }
         return Result.success(Unit)
     }
 

@@ -124,10 +124,10 @@ jobs:
         run: chmod +x ./gradlew || true
 
       - name: Progress single-writer audit (G2)
-        # FR-10 / WU2a gate: fails if any code path reintroduces an intentional
-        # writer of books.progress_percentage outside the backfill. The DB-level
-        # backfill invariant (== 0 unrepresentable positions) is asserted by
-        # ProgressReconcilerTest in the unit suite below.
+        # FR-10 / WU2a-WU2b gate: fails if any code path reintroduces an intentional
+        # writer of the retired books.progress_percentage column. The DB-level
+        # backfill invariant (== 0 unrepresentable positions) is asserted by the
+        # 29->30 migration test in the unit suite below.
         if: steps.changes.outputs.relevant == 'true'
         run: bash scripts/ci/progress-single-writer-audit.sh
 

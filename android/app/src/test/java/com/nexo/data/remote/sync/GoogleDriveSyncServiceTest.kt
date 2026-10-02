@@ -3,7 +3,6 @@ package com.nexo.data.remote.sync
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.HighlightDao
-import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.SyncFileMappingDao
 import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
@@ -52,7 +51,6 @@ class GoogleDriveSyncServiceTest {
             outboxDao = mockk<SyncOutboxDao>(relaxed = true),
             bookDao = bookDao,
             mappingDao = mappingDao,
-            readingProgressDao = mockk<ReadingProgressDao>(relaxed = true),
             highlightDao = mockk<HighlightDao>(relaxed = true),
             bookmarkDao = mockk<BookmarkDao>(relaxed = true),
             sessionManager = sessionManager,
