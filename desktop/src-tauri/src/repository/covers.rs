@@ -196,7 +196,7 @@ pub(super) fn upsert_book_cover_from_bytes(
 fn resolve_covers_dir(_repo: &LibraryRepository, app: &tauri::AppHandle) -> AppResult<PathBuf> {
     let app_data_dir =
         app.path().app_data_dir().map_err(|err| AppError::InvalidInput(err.to_string()))?;
-    Ok(app_data_dir.join("covers"))
+    Ok(crate::layout::resolved_covers_dir(&app_data_dir))
 }
 
 fn deferred_cleanup_queue_path(
@@ -205,7 +205,7 @@ fn deferred_cleanup_queue_path(
 ) -> AppResult<PathBuf> {
     let app_data_dir =
         app.path().app_data_dir().map_err(|err| AppError::InvalidInput(err.to_string()))?;
-    Ok(app_data_dir.join("cover_cleanup_queue.txt"))
+    Ok(crate::layout::state_dir(&app_data_dir).join("cover_cleanup_queue.txt"))
 }
 
 fn deferred_cleanup_log_path(
@@ -214,7 +214,7 @@ fn deferred_cleanup_log_path(
 ) -> AppResult<PathBuf> {
     let app_data_dir =
         app.path().app_data_dir().map_err(|err| AppError::InvalidInput(err.to_string()))?;
-    Ok(app_data_dir.join("cover_cleanup.log"))
+    Ok(crate::layout::state_dir(&app_data_dir).join("cover_cleanup.log"))
 }
 
 pub(super) fn enqueue_cover_cleanup(

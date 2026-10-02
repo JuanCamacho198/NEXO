@@ -98,6 +98,8 @@ export interface ImportResult {
 
 const CHUNK_SIZE = 100;
 const COLD_BACKUP_FILE = 'nexo_cold_backup.json';
+/** WU6 target folder for cold backups (`Nexo/backups/{userId}/...`). */
+const BACKUP_FOLDER = 'backups';
 
 function emptyImportResult(): ImportResult {
   return {
@@ -258,26 +260,47 @@ export class DriveColdBackupService {
     };
 
     const jsonBytes = new TextEncoder().encode(JSON.stringify(backup));
-    // Reuses GDriveProvider.upload: POST with parents on create, PATCH without parents on update (403 fix)
+    // WU6 cold-backup cutover: DUAL-WRITE the legacy `Nexo/Books/` path AND the
+    // new `Nexo/backups/{userId}/` path. A pre-change client can still restore
+    // from the legacy file; the new path becomes primary for readers.
     await this.gdrive.upload(
       COLD_BACKUP_FILE,
       jsonBytes as unknown as Uint8Array,
       COLD_BACKUP_FILE,
     );
+    try {
+      await this.gdrive.uploadToFolderPath([BACKUP_FOLDER, userId], COLD_BACKUP_FILE, jsonBytes);
+    } catch (error) {
+      // The legacy write already succeeded, so a new-path failure never loses
+      // the backup; surface it for observability only.
+      console.error('Cold-backup new-path dual-write failed:', error);
+    }
   }
 
   /**
    * Import cold backup JSON from Drive, FK-order chunk 100 idempotent.
    * Gated by the Drive grant (typed DRIVE_NOT_CONNECTED) and the live
    * session — no request fires without both.
+   *
+   * WU6 read fallback: try the new `Nexo/backups/{userId}/` path first, then
+   * fall back to the legacy `Nexo/Books/` path so every client generation can
+   * restore.
    */
   static async importColdBackup(userId: string): Promise<ImportResult> {
     await this.requireDriveAuthorized('import');
     if (!hasLiveSession()) return emptyImportResult();
-    const bytes: Uint8Array = await this.gdrive.download(COLD_BACKUP_FILE);
+    const bytes = await this.readColdBackupBytes(userId);
     const json = new TextDecoder().decode(bytes);
     const backup = JSON.parse(json) as ColdBackupJson;
     return this.importInFkOrder(backup, userId);
+  }
+
+  private static async readColdBackupBytes(userId: string): Promise<Uint8Array> {
+    try {
+      return await this.gdrive.downloadFromFolderPath([BACKUP_FOLDER, userId], COLD_BACKUP_FILE);
+    } catch {
+      return await this.gdrive.download(COLD_BACKUP_FILE);
+    }
   }
 
   /**

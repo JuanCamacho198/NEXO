@@ -248,7 +248,8 @@ pub(crate) fn should_emit(elapsed_ms: u128, delta_bytes: u64) -> bool {
 }
 
 fn downloads_dir(app_data_dir: &Path) -> PathBuf {
-    app_data_dir.join("tmp").join(DOWNLOADS_DIR)
+    // WU6: staging lives under the unified cache dir (`cache/tmp/downloads`).
+    crate::layout::cache_dir(app_data_dir).join("tmp").join(DOWNLOADS_DIR)
 }
 
 pub(crate) fn download_paths(

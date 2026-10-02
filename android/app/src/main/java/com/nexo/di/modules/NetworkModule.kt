@@ -285,9 +285,14 @@ class NetworkModule(
         KtorCatalogFileDownloader(catalogHttpClient)
     }
 
-    /** Internal storage where catalog downloads stage before import. */
+    /** Internal cache where catalog downloads stage before import (WU6). */
     val catalogTempDir: java.io.File by lazy {
-        java.io.File(context.filesDir, "catalog")
+        java.io.File(context.cacheDir, "catalog")
+    }
+
+    /** Internal target tree where imported book binaries are stored (WU6, FR-03). */
+    val libraryBooksDir: java.io.File by lazy {
+        java.io.File(context.filesDir, "books")
     }
 
     val gutendexDataSource: GutendexDataSource by lazy {

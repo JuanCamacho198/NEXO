@@ -86,19 +86,27 @@ pub fn vacuum_db(conn: &rusqlite::Connection) -> AppResult<()> {
 
 pub fn compute_storage_stats(app_data_dir: &Path, db_path: &Path) -> AppResult<StorageStats> {
     let db_bytes = get_db_size(db_path)?;
-    let covers_dir = app_data_dir.join("covers");
+    let covers_dir = crate::layout::covers_dir(app_data_dir);
+    let legacy_covers_dir = app_data_dir.join("covers");
     let covers_tmp_dir = covers_dir.join("tmp");
-    let epub_cache_dir = app_data_dir.join("epub_cache");
-    let tmp_dir = app_data_dir.join("tmp");
-    let parsed_tmp_dir = app_data_dir.join("parsed_epubs");
+    let legacy_covers_tmp_dir = legacy_covers_dir.join("tmp");
+    let epub_cache_dir = crate::layout::cache_dir(app_data_dir).join("epub");
+    let legacy_epub_cache_dir = app_data_dir.join("epub_cache");
+    let tmp_dir = crate::layout::cache_dir(app_data_dir).join("tmp");
+    let legacy_tmp_dir = app_data_dir.join("tmp");
+    let parsed_tmp_dir = crate::layout::cache_dir(app_data_dir).join("parsed");
+    let legacy_parsed_tmp_dir = app_data_dir.join("parsed_epubs");
 
-    let covers_total = dir_size_recursive(&covers_dir)?;
-    let covers_tmp_bytes = dir_size_recursive(&covers_tmp_dir)?;
+    let covers_total = dir_size_recursive(&covers_dir)? + dir_size_recursive(&legacy_covers_dir)?;
+    let covers_tmp_bytes =
+        dir_size_recursive(&covers_tmp_dir)? + dir_size_recursive(&legacy_covers_tmp_dir)?;
     let covers_bytes = covers_total.saturating_sub(covers_tmp_bytes);
 
-    let epub_cache_bytes = dir_size_recursive(&epub_cache_dir)?;
-    let tmp_bytes_raw = dir_size_recursive(&tmp_dir)?;
-    let parsed_tmp_bytes = dir_size_recursive(&parsed_tmp_dir)?;
+    let epub_cache_bytes =
+        dir_size_recursive(&epub_cache_dir)? + dir_size_recursive(&legacy_epub_cache_dir)?;
+    let tmp_bytes_raw = dir_size_recursive(&tmp_dir)? + dir_size_recursive(&legacy_tmp_dir)?;
+    let parsed_tmp_bytes =
+        dir_size_recursive(&parsed_tmp_dir)? + dir_size_recursive(&legacy_parsed_tmp_dir)?;
 
     let temp_bytes = covers_tmp_bytes + epub_cache_bytes + tmp_bytes_raw + parsed_tmp_bytes;
     let cache_bytes = covers_bytes + temp_bytes;
@@ -143,28 +151,35 @@ pub fn clear_cache(
     deep: bool,
     conn: &rusqlite::Connection,
 ) -> AppResult<ClearCacheResult> {
-    let covers_dir = app_data_dir.join("covers");
-    let covers_tmp_dir = covers_dir.join("tmp");
-    let epub_cache_dir = app_data_dir.join("epub_cache");
-    let tmp_dir = app_data_dir.join("tmp");
-    let parsed_tmp_dir = app_data_dir.join("parsed_epubs");
+    let covers_dirs = [crate::layout::covers_dir(app_data_dir), app_data_dir.join("covers")];
+    let covers_tmp_dirs = [covers_dirs[0].join("tmp"), covers_dirs[1].join("tmp")];
+    let cache = crate::layout::cache_dir(app_data_dir);
+    let epub_cache_dirs = [cache.join("epub"), app_data_dir.join("epub_cache")];
+    let tmp_dirs = [cache.join("tmp"), app_data_dir.join("tmp")];
+    let parsed_tmp_dirs = [cache.join("parsed"), app_data_dir.join("parsed_epubs")];
 
     let mut freed: u64 = 0;
     match kind {
         "covers" => {
-            freed += remove_dir_contents_freed(&covers_dir)?;
+            for dir in &covers_dirs {
+                freed += remove_dir_contents_freed(dir)?;
+            }
         }
         "temp" => {
-            freed += remove_dir_contents_freed(&covers_tmp_dir)?;
-            freed += remove_dir_contents_freed(&epub_cache_dir)?;
-            freed += remove_dir_contents_freed(&tmp_dir)?;
-            freed += remove_dir_contents_freed(&parsed_tmp_dir)?;
+            for dir in &covers_tmp_dirs {
+                freed += remove_dir_contents_freed(dir)?;
+            }
+            for dir in epub_cache_dirs.iter().chain(tmp_dirs.iter()).chain(parsed_tmp_dirs.iter()) {
+                freed += remove_dir_contents_freed(dir)?;
+            }
         }
         "all" => {
-            freed += remove_dir_contents_freed(&covers_dir)?;
-            freed += remove_dir_contents_freed(&epub_cache_dir)?;
-            freed += remove_dir_contents_freed(&tmp_dir)?;
-            freed += remove_dir_contents_freed(&parsed_tmp_dir)?;
+            for dir in &covers_dirs {
+                freed += remove_dir_contents_freed(dir)?;
+            }
+            for dir in epub_cache_dirs.iter().chain(tmp_dirs.iter()).chain(parsed_tmp_dirs.iter()) {
+                freed += remove_dir_contents_freed(dir)?;
+            }
         }
         other => return Err(AppError::InvalidInput(format!("invalid clearCache kind: {}", other))),
     }
@@ -228,9 +243,13 @@ pub fn delete_book_data(
         if let Some(cp) = cover_path {
             let _ = fs::remove_file(PathBuf::from(cp));
         }
-        let cache_dir = app_data_dir.join("epub_cache").join(book_id);
-        if cache_dir.exists() {
-            let _ = fs::remove_dir_all(cache_dir);
+        for cache_dir in [
+            crate::layout::cache_dir(app_data_dir).join("epub").join(book_id),
+            app_data_dir.join("epub_cache").join(book_id),
+        ] {
+            if cache_dir.exists() {
+                let _ = fs::remove_dir_all(cache_dir);
+            }
         }
     }
     Ok(())
@@ -254,8 +273,11 @@ pub fn cleanup_orphans(conn: &rusqlite::Connection, app_data_dir: &Path) -> AppR
             orphan_ids.push(_id);
         }
     }
-    let covers_dir = app_data_dir.join("covers");
-    if covers_dir.exists() {
+    let covers_dirs = [crate::layout::covers_dir(app_data_dir), app_data_dir.join("covers")];
+    for covers_dir in &covers_dirs {
+        if !covers_dir.exists() {
+            continue;
+        }
         let known_paths: std::collections::HashSet<String> = {
             let mut s = std::collections::HashSet::new();
             let mut stmt2 =
@@ -265,7 +287,7 @@ pub fn cleanup_orphans(conn: &rusqlite::Connection, app_data_dir: &Path) -> AppR
             s.extend(rows2.flatten());
             s
         };
-        if let Ok(entries) = fs::read_dir(&covers_dir) {
+        if let Ok(entries) = fs::read_dir(covers_dir) {
             for entry in entries.flatten() {
                 let p = entry.path();
                 if p.is_file() {
@@ -299,9 +321,13 @@ pub fn cleanup_orphans(conn: &rusqlite::Connection, app_data_dir: &Path) -> AppR
         s.extend(rows3.flatten());
         s
     };
-    let epub_cache_base = app_data_dir.join("epub_cache");
-    if epub_cache_base.exists() {
-        if let Ok(entries) = fs::read_dir(&epub_cache_base) {
+    let epub_cache_bases =
+        [crate::layout::cache_dir(app_data_dir).join("epub"), app_data_dir.join("epub_cache")];
+    for epub_cache_base in &epub_cache_bases {
+        if !epub_cache_base.exists() {
+            continue;
+        }
+        if let Ok(entries) = fs::read_dir(epub_cache_base) {
             for entry in entries.flatten() {
                 let p = entry.path();
                 if p.is_dir() {

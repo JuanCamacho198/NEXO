@@ -13,11 +13,20 @@ use tauri_plugin_deep_link::DeepLinkExt;
 fn build_state(app: &AppHandle) -> Result<AppState, String> {
     let db_path = resolve_db_path(app).map_err(|err| err.to_string())?;
     let connection = open_and_migrate(&db_path).map_err(|err| err.to_string())?;
+    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+
+    // WU6 (FR-02, INV-5): version-gated, idempotent layout migration. Moves
+    // files, rewrites stored paths and verifies BEFORE the marker is bumped; a
+    // verification failure leaves the legacy tree live and the app boots on it.
+    match nexo_desktop::layout::migrate_layout(&app_data_dir, &connection) {
+        Ok(outcome) => eprintln!("[nexo] layout migration: {outcome:?}"),
+        Err(err) => eprintln!("[nexo] layout migration failed (legacy tree kept): {err}"),
+    }
+
     let queue_connection = Connection::open(&db_path).map_err(|err| err.to_string())?;
     queue_connection.execute_batch("PRAGMA foreign_keys = ON;").map_err(|err| err.to_string())?;
     let repository = LibraryRepository::new(connection);
     let queue_repository = QueueRepository::new(queue_connection);
-    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
 
     // FR-14: startup-idle retention. Runs on its own connection/thread so it
     // never blocks the setup path; prunes tombstones older than 30 days, then

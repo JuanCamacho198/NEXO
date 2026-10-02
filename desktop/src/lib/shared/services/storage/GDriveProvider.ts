@@ -312,6 +312,119 @@ export class GDriveProvider implements StorageProvider, DriveGuardPort {
     return (await response.json()).id;
   }
 
+  /** Create a folder nested under an explicit parent. */
+  private async createFolderIn(
+    accessToken: string,
+    name: string,
+    parentId: string,
+  ): Promise<string> {
+    const response = await fetch(`${GDriveProvider.GDRIVE_API_BASE}/files`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentId],
+      }),
+    });
+    if (!response.ok) throw await this.driveError('GDrive folder creation failed', response);
+    return (await response.json()).id;
+  }
+
+  /** Resolve (creating as needed) `Nexo/<parts...>` and return the leaf folder id. */
+  private async ensureFolderPath(accessToken: string, parts: string[]): Promise<string> {
+    let parent =
+      (await this.findFolder(accessToken, 'Nexo')) ??
+      (await this.createFolder(accessToken, 'Nexo'));
+    for (const part of parts) {
+      const next = await this.findFolder(accessToken, part, parent);
+      parent = next ?? (await this.createFolderIn(accessToken, part, parent));
+    }
+    return parent;
+  }
+
+  /** Resolve `Nexo/<parts...>` read-only; null when any segment is missing. */
+  private async findFolderPath(accessToken: string, parts: string[]): Promise<string | null> {
+    let parent = await this.findFolderStrict(accessToken, 'Nexo');
+    for (const part of parts) {
+      if (!parent) return null;
+      parent = await this.findFolderStrict(accessToken, part, parent);
+    }
+    return parent;
+  }
+
+  /**
+   * Upload bytes into `Nexo/<parts...>` (create-if-missing), idempotent
+   * find-by-name. Used by the cold-backup dual-write and the manifest marker.
+   */
+  async uploadToFolderPath(
+    parts: string[],
+    name: string,
+    bytes: Uint8Array,
+  ): Promise<string> {
+    const accessToken = await this.getAccessToken();
+    const folderId = await this.ensureFolderPath(accessToken, parts);
+    const query = encodeURIComponent(
+      `name = '${name}' and '${folderId}' in parents and trashed = false`,
+    );
+    const searchResponse = await this.fetchWithToken(
+      `${GDriveProvider.GDRIVE_API_BASE}/files?q=${query}`,
+      { method: 'GET' },
+      accessToken,
+    );
+    if (!searchResponse.ok) throw await this.driveError('GDrive search failed', searchResponse);
+    const searchData = await searchResponse.json();
+    const existing =
+      (searchData.files ?? []).find((f: { trashed?: boolean }) => !f.trashed) ?? null;
+
+    const method = existing ? 'PATCH' : 'POST';
+    const metadata = existing ? { name } : { name, parents: [folderId] };
+    const formData = new FormData();
+    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    formData.append('file', new Blob([bytes.buffer as ArrayBuffer]));
+    const url = existing
+      ? `${GDriveProvider.GDRIVE_UPLOAD_BASE}/files/${existing.id}?uploadType=multipart`
+      : `${GDriveProvider.GDRIVE_UPLOAD_BASE}/files?uploadType=multipart`;
+    const response = await this.fetchWithToken(url, { method, body: formData }, accessToken);
+    if (!response.ok) throw await this.driveError('GDrive upload failed', response);
+    return (await response.json()).id;
+  }
+
+  /**
+   * Download a named file from `Nexo/<parts...>`. Throws `REMOTE_NOT_FOUND`
+   * when the folder or file is absent so callers can fall back.
+   */
+  async downloadFromFolderPath(parts: string[], name: string): Promise<Uint8Array> {
+    const accessToken = await this.getAccessToken();
+    const folderId = await this.findFolderPath(accessToken, parts);
+    if (!folderId) throw this.authError('REMOTE_NOT_FOUND', `Drive folder missing: ${parts.join('/')}`);
+    const query = encodeURIComponent(
+      `name = '${name}' and '${folderId}' in parents and trashed = false`,
+    );
+    const searchResponse = await this.fetchWithToken(
+      `${GDriveProvider.GDRIVE_API_BASE}/files?q=${query}`,
+      { method: 'GET' },
+      accessToken,
+    );
+    if (!searchResponse.ok) throw await this.driveError('GDrive search failed', searchResponse);
+    const searchData = await searchResponse.json();
+    const file = (searchData.files ?? []).find((f: { trashed?: boolean }) => !f.trashed) ?? null;
+    if (!file?.id) {
+      throw this.authError('REMOTE_NOT_FOUND', `Drive file missing: ${parts.join('/')}/${name}`);
+    }
+    const response = await this.fetchWithToken(
+      `${GDriveProvider.GDRIVE_API_BASE}/files/${file.id}?alt=media`,
+      { method: 'GET' },
+      accessToken,
+    );
+    if (!response.ok) throw await this.driveError('GDrive download failed', response);
+    const buffer = await response.arrayBuffer();
+    return new Uint8Array(buffer);
+  }
+
   async download(remotePath: string): Promise<Uint8Array> {
     const accessToken = await this.getAccessToken();
 
