@@ -131,6 +131,15 @@ jobs:
         if: steps.changes.outputs.relevant == 'true'
         run: bash scripts/ci/progress-single-writer-audit.sh
 
+      - name: Progress audit self-test (fixtures must fail, tree must pass)
+        # Proves the gate above can actually fail: every committed writer fixture
+        # under scripts/ci/fixtures/progress-audit/ MUST be caught (audit exits
+        # 1) and the real tree MUST pass (exit 0). Covers the two writer shapes
+        # the line-based scan used to miss: a multi-line INSERT column list and a
+        # setter-style mutation. Runs identically with or without ripgrep.
+        if: steps.changes.outputs.relevant == 'true'
+        run: bash scripts/ci/progress-single-writer-audit-selftest.sh
+
       - name: Run unit tests, detekt and verification gates
         if: steps.changes.outputs.relevant == 'true'
         working-directory: android

@@ -14,8 +14,10 @@
 # (desktop/src-tauri/migrations, supabase). A desktop- or migration-only
 # regression must not pass unnoticed.
 #
-# AUDIT_ROOT overrides the scanned root (used by the self-test that injects a
-# fake writer into a fixture tree). Default: this repository.
+# AUDIT_ROOT overrides the scanned root. The committed self-test
+# (progress-single-writer-audit-selftest.sh) points it at each fixture tree in
+# scripts/ci/fixtures/progress-audit/ and asserts every fixture is caught while
+# the real repository passes. Default: this repository.
 #
 # Exit 0 = gate green. Exit 1 = a writer was found (hard failure).
 set -euo pipefail
@@ -31,13 +33,27 @@ ROOTS=(
 )
 EXCLUDES=(--glob '!**/schemas/**' --glob '!**/build/**' --glob '!**/target/**')
 
+# Fixture trees carry only the one root a case needs, so scan the roots that
+# exist instead of failing on a missing directory.
+SCAN_ROOTS=()
+for d in "${ROOTS[@]}"; do
+  [ -d "$d" ] && SCAN_ROOTS+=("$d")
+done
+if [ ${#SCAN_ROOTS[@]} -eq 0 ]; then
+  echo "FAIL: none of the scanned roots exist under $ROOT" >&2
+  exit 1
+fi
+
 # A writer is any occurrence of the field on the left side of an assignment
-# (snake_case SQL/Kotlin or camelCase Kotlin), or any upsert/insert statement
-# that carries the column. `\b` keeps `avg_progress_percentage` (a read alias)
-# from being mistaken for the cache column.
+# (snake_case SQL/Kotlin or camelCase Kotlin), any upsert/insert statement that
+# carries the column, or a setter-style mutation such as
+# `setProgressPercentage(5f)` / `set_progress_percentage(5f)`. `\b` keeps
+# `avg_progress_percentage` (a read alias) from being mistaken for the cache
+# column.
 WRITER_PATTERN='(\bprogress_percentage[[:space:]]*=[^=])'
 WRITER_PATTERN+='|(progressPercentage[[:space:]]*=[^=])'
 WRITER_PATTERN+='|((INSERT|insert|upsert|Upsert|UPSERT)[^;]*(progress_percentage|progressPercentage))'
+WRITER_PATTERN+='|([sS]et[_]?[pP]rogress[_]?[pP]ercentage[[:space:]]*\()'
 
 # Mappers that copy the field from itself or from the canonical progress source
 # introduce no new position; they are readers in the single-writer inventory, so
@@ -46,10 +62,15 @@ CAMEL_READER_ALLOW='progressPercentage[[:space:]]*=[[:space:]]*(progressPercenta
 
 if command -v rg >/dev/null 2>&1; then
   SEARCH() { rg -n "$@"; }
+  # `rg --files` avoids the Git-Bash-on-Windows `find` name collision with the
+  # Windows FIND.EXE that shows up in a non-login shell, and honors the same
+  # excludes. Backslashes are normalized to `/` because on Windows rg emits
+  # `dir\file` and the awk pass below could not open those paths.
+  LIST_FILES() { rg --files "${SCAN_ROOTS[@]}" "${EXCLUDES[@]}" 2>/dev/null | tr '\\' '/' || true; }
 else
   # Fallback: grep -rE, no glob excludes (schemas are JSON and match the writer
   # pattern only inside a createSql string, which is intentionally not on disk
-  # SQL; to stay honest, exclude them explicitly with find).
+  # SQL; to stay honest, exclude them explicitly).
   SEARCH() {
     local pattern="$1"; shift
     local dirs=()
@@ -60,14 +81,51 @@ else
       | grep -v '/build/' \
       | grep -v '/target/' || true
   }
+  LIST_FILES() {
+    find "${SCAN_ROOTS[@]}" -type f \
+      -not -path '*/schemas/*' -not -path '*/build/*' -not -path '*/target/*'
+  }
 fi
+
+# Blind spot the line-based scan structurally cannot see: an INSERT whose column
+# list spans several physical lines (`progress_percentage` on its own line, the
+# keyword and INTO on others). rg and grep are line-oriented, so collapse each
+# file to one logical statement per line (append lines, split at `;`) with a
+# single portable awk pass, then apply the SQL INSERT ... INTO test. Works
+# identically with or without rg.
+multiline_insert_writers() {
+  LIST_FILES | xargs -d '\n' -r awk '
+    function check(s) {
+      if (s ~ /(INSERT|insert).*[[:space:]](INTO|into)[[:space:]].*progress_percentage/) print file ": " s
+    }
+    FNR == 1 { check(stmt); stmt = ""; file = FILENAME }
+    {
+      stmt = stmt " " $0
+      while ((i = index(stmt, ";")) > 0) {
+        check(substr(stmt, 1, i - 1))
+        stmt = substr(stmt, i + 1)
+      }
+    }
+    END { check(stmt) }
+  ' 2>/dev/null || true
+}
 
 echo "== G2: intentional writers of books.progress_percentage (must be none) =="
 WRITERS=""
 if command -v rg >/dev/null 2>&1; then
-  WRITERS="$(rg -n "$WRITER_PATTERN" "${ROOTS[@]}" "${EXCLUDES[@]}" | grep -vE "$CAMEL_READER_ALLOW" || true)"
+  WRITERS="$(rg -n "$WRITER_PATTERN" "${SCAN_ROOTS[@]}" "${EXCLUDES[@]}" | grep -vE "$CAMEL_READER_ALLOW" || true)"
 else
-  WRITERS="$(SEARCH "$WRITER_PATTERN" "${ROOTS[@]}" | grep -vE "$CAMEL_READER_ALLOW" || true)"
+  WRITERS="$(SEARCH "$WRITER_PATTERN" "${SCAN_ROOTS[@]}" | grep -vE "$CAMEL_READER_ALLOW" || true)"
+fi
+
+MULTILINE="$(multiline_insert_writers)"
+if [ -n "$MULTILINE" ]; then
+  if [ -n "$WRITERS" ]; then
+    WRITERS="$WRITERS
+$MULTILINE"
+  else
+    WRITERS="$MULTILINE"
+  fi
 fi
 
 if [ -n "$WRITERS" ]; then
@@ -82,9 +140,9 @@ echo "OK: no intentional writer of books.progress_percentage outside the backfil
 echo
 echo "== Reader inventory of books.progress_percentage (informational) =="
 if command -v rg >/dev/null 2>&1; then
-  rg -n 'progress_percentage|progressPercentage' "${ROOTS[@]}" "${EXCLUDES[@]}" || true
+  rg -n 'progress_percentage|progressPercentage' "${SCAN_ROOTS[@]}" "${EXCLUDES[@]}" || true
 else
-  SEARCH 'progress_percentage|progressPercentage' "${ROOTS[@]}" || true
+  SEARCH 'progress_percentage|progressPercentage' "${SCAN_ROOTS[@]}" || true
 fi
 
 echo

@@ -14,7 +14,9 @@ Every root where a writer could hide:
 - `desktop/src-tauri/migrations` — desktop SQLite migration tree.
 - `supabase` — SQL migrations and policies.
 
-`AUDIT_ROOT` overrides the root (fixture self-test); CI uses the repository default.
+`AUDIT_ROOT` overrides the root. The committed self-test
+(`progress-single-writer-audit-selftest.sh`) points it at each fixture tree in
+`fixtures/progress-audit/`; CI runs the self-test right after the audit.
 
 ## Writer detection
 
@@ -25,6 +27,12 @@ A writer is any of:
    mistaken for the cache column.
 2. `progressPercentage` on the left side of a camelCase assignment.
 3. Any `INSERT`/`upsert` statement on the same line that carries the column.
+4. A setter-style mutation: `setProgressPercentage(...)`, `SetProgressPercentage(...)`, or
+   `set_progress_percentage(...)`.
+5. An `INSERT ... INTO ... progress_percentage` whose column list spans several lines. The scan
+   cannot see those line-by-line, so a portable awk pass collapses each file to one logical
+   statement per line (append lines, split at `;`) and applies the SQL test there. This runs
+   identically with or without ripgrep.
 
 Mappers that copy the field from itself or from the canonical progress source
 (`progressPercentage = progressPercentage`, `progressPercentage = canonical.percentage`) introduce
@@ -98,6 +106,23 @@ canonical-only:
 Consequence: the desktop double-write and the prescribed desktop backfill migration do not exist to
 remove. Creating an empty migration would be dishonest, so none was added. WU2a's backfill is
 Android-only.
+
+## Self-test (proves the gate can fail)
+
+`scripts/ci/progress-single-writer-audit-selftest.sh` runs the audit against every fixture tree in
+`scripts/ci/fixtures/progress-audit/` and asserts each is caught (audit exits 1), then runs it
+against the repository and asserts it passes (exit 0). CI runs it immediately after the audit step,
+so a future change that blinds the pattern fails CI instead of passing silently.
+
+| Fixture | Writer shape |
+|---|---|
+| `snake-case-assignment` | `SET progress_percentage = ...` |
+| `camel-case-assignment` | `book.progressPercentage = ...` |
+| `same-line-insert` | `INSERT ... progress_percentage ...` on one line |
+| `multiline-insert` | column list spanning lines (caught by the normalized pass) |
+| `setter-style` | `holder.setProgressPercentage(...)` |
+
+Run locally: `bash scripts/ci/progress-single-writer-audit-selftest.sh`.
 
 ## G2 backfill invariant (=== 0 required)
 
