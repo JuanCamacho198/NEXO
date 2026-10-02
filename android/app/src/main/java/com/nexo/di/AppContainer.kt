@@ -99,6 +99,7 @@ class AppContainer(
             preferencesModule = preferencesModule,
             syncSettleGateProvider = { syncSettleGate },
             drainSchedulerProvider = { outboxDrainScheduler },
+            dictionarySyncProvider = { networkModule.dictionarySyncService },
         )
     private val useCaseModule = UseCaseModule(repositoryModule, databaseModule, preferencesModule)
 
@@ -133,6 +134,7 @@ class AppContainer(
     val supabaseProgressSync: SupabaseProgressSync by lazy { networkModule.supabaseProgressSync }
     val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy { networkModule.supabaseBookCatalogDataSource }
     val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy { networkModule.supabaseBookCatalogSync }
+    val dictionarySyncService: com.nexo.data.sync.DictionarySyncService by lazy { networkModule.dictionarySyncService }
     val catalogProvider: CatalogProvider by lazy { networkModule.catalogProvider }
 
     // SDD android-tooling-hygiene WS2a slice 4: delegated — NetworkModule builds
@@ -200,6 +202,7 @@ class AppContainer(
             drive = syncService,
             catalog = supabaseBookCatalogSync,
             progress = supabaseProgressSync,
+            dictionary = dictionarySyncService,
             gate = sessionGate,
             outboxDao = databaseModule.syncOutboxDao,
         )

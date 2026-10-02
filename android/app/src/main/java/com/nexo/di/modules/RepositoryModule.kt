@@ -9,6 +9,7 @@ import com.nexo.data.repository.LibraryRepositoryImpl
 import com.nexo.data.repository.ReaderRepositoryImpl
 import com.nexo.data.repository.ReadingStatsRepositoryImpl
 import com.nexo.data.repository.StorageRepositoryImpl
+import com.nexo.data.sync.DictionarySyncService
 import com.nexo.domain.repository.CacheRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.HomeRepository
@@ -32,6 +33,11 @@ class RepositoryModule(
      * (tests) keep working.
      */
     drainSchedulerProvider: () -> OutboxDrainScheduler = { OutboxDrainScheduler.NoOp },
+    /**
+     * Resolves the dictionary sync mirror lazily-equivalent at construction.
+     * Defaults to absent so unit tests and non-wired callers stay local-only.
+     */
+    dictionarySyncProvider: () -> DictionarySyncService? = { null },
 ) {
     companion object {
         private const val TAG = "RepositoryModule"
@@ -100,6 +106,7 @@ class RepositoryModule(
     val dictionaryRepository: DictionaryRepository =
         DictionaryRepositoryImpl(
             dao = databaseModule.dictionaryWordDao,
+            sync = dictionarySyncProvider(),
         )
 
     val cacheRepository: CacheRepository =

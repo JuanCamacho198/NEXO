@@ -30,6 +30,14 @@ interface DictionaryWordDao {
     @Query("SELECT * FROM dictionary_words WHERE id = :wordId LIMIT 1")
     suspend fun findById(wordId: String): DictionaryWordEntity?
 
+    /**
+     * Full local snapshot used by dictionary sync to resolve remote rows to
+     * their local counterpart by normalized word (FR-09). The dictionary is a
+     * small user-curated set; WU3 replaces this scan with the normalized index.
+     */
+    @Query("SELECT * FROM dictionary_words")
+    suspend fun getAll(): List<DictionaryWordEntity>
+
     @Query(
         "UPDATE dictionary_words SET definition = :definition, part_of_speech = :partOfSpeech, " +
             "phonetic = :phonetic, example = :example WHERE id = :wordId",

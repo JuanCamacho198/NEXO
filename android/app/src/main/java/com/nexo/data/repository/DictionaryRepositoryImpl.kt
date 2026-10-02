@@ -4,13 +4,21 @@ import com.nexo.data.local.DictionaryNormalizer
 import com.nexo.data.local.dao.DictionaryWordDao
 import com.nexo.data.local.entity.DictionaryWordEntity
 import com.nexo.domain.model.DictionaryWord
+import com.nexo.data.sync.DictionarySyncService
 import com.nexo.domain.repository.DictionaryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 
+/**
+ * [sync] is an optional best-effort cross-device mirror (FR-09). When present,
+ * every local mutation is pushed to `user_dictionary_words`; the push never
+ * throws, so an offline save still succeeds locally. `null` keeps legacy
+ * local-only callers and tests working.
+ */
 class DictionaryRepositoryImpl(
     private val dao: DictionaryWordDao,
+    private val sync: DictionarySyncService? = null,
 ) : DictionaryRepository {
     override fun observeAll(): Flow<List<DictionaryWord>> =
         dao.observeAll().map { entities ->
@@ -53,6 +61,7 @@ class DictionaryRepositoryImpl(
                     sourceLocator = sourceLocator.cleaned(),
                 )
             dao.insert(entity)
+            sync?.pushWord(entity)
             entity.toDomain()
         }
 
@@ -72,11 +81,17 @@ class DictionaryRepositoryImpl(
                 example = example.cleaned(),
             )
             val updated = dao.findById(wordId) ?: error("Word $wordId not found after update")
+            // The local row has no separate updatedAt column, so an edit pushes
+            // the current instant; the next pull folds that timestamp back into
+            // addedAtEpochMillis via LWW.
+            sync?.pushWord(updated, System.currentTimeMillis())
             updated.toDomain()
         }
 
     override suspend fun delete(wordId: String) {
+        val word = dao.findById(wordId)?.word
         dao.delete(wordId)
+        if (word != null) sync?.deleteWord(word)
     }
 
     /**
