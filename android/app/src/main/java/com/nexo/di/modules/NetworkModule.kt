@@ -162,7 +162,6 @@ class NetworkModule(
             outboxDao = databaseModule.syncOutboxDao,
             bookDao = databaseModule.bookDao,
             mappingDao = databaseModule.syncFileMappingDao,
-            readingProgressDao = databaseModule.readingProgressDao,
             highlightDao = databaseModule.highlightDao,
             bookmarkDao = databaseModule.bookmarkDao,
             sessionManager = sessionManager,

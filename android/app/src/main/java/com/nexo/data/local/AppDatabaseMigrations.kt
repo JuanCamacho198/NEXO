@@ -504,6 +504,141 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * WU2b (storage-layout-and-sync / FR-10): drop the retired
+     * `books.progress_percentage` cache, but only after folding every position it
+     * still holds into canonical `reading_progress`.
+     *
+     * A version-skip upgrade (a device jumping straight from a pre-WU2a build to
+     * this one) opens the database and runs migrations during open, BEFORE
+     * `MainActivity.onCreate` could schedule any app-start backfill. The backfill
+     * therefore lives INSIDE this migration: seed cache-only positions, let the
+     * cache win where it is newer (or where a NULL timestamp carries real
+     * divergent progress — the WU2a verify-W4 semantics), verify zero divergence,
+     * and only then recreate `books` without the column. A failed verification
+     * throws, so Room rolls the whole transaction back and the column (still the
+     * only copy of an unmigrated position) survives.
+     */
+    val MIGRATION_29_30 =
+        object : Migration(29, 30) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // (1) Cache-only positions: seed a canonical row.
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO reading_progress
+                        (id, book_id, cfi_location, percentage, current_page, updated_at, locator_json)
+                    SELECT 'progress-' || b.id, b.id, '', b.progress_percentage, NULL,
+                           COALESCE(b.progress_updated_at, b.updated_at), NULL
+                    FROM books b
+                    WHERE b.progress_percentage > 0
+                      AND NOT EXISTS (SELECT 1 FROM reading_progress rp WHERE rp.book_id = b.id)
+                    """.trimIndent(),
+                )
+
+                // (2) Cache wins: a known cache timestamp strictly newer, or a NULL
+                // timestamp carrying real divergent progress. Copy value and clock.
+                db.execSQL(
+                    """
+                    UPDATE reading_progress
+                    SET percentage = (SELECT b.progress_percentage FROM books b WHERE b.id = reading_progress.book_id),
+                        updated_at = (SELECT COALESCE(b.progress_updated_at, b.updated_at) FROM books b WHERE b.id = reading_progress.book_id)
+                    WHERE EXISTS (
+                        SELECT 1 FROM books b
+                        WHERE b.id = reading_progress.book_id
+                          AND b.progress_percentage > 0
+                          AND (
+                            (b.progress_updated_at IS NOT NULL AND b.progress_updated_at > reading_progress.updated_at)
+                            OR (b.progress_updated_at IS NULL AND b.progress_percentage <> reading_progress.percentage)
+                          )
+                    )
+                    """.trimIndent(),
+                )
+
+                // (3) Verify zero loss before dropping the only remaining copy.
+                val divergent =
+                    db
+                        .compileStatement(
+                            """
+                            SELECT COUNT(*) FROM books b
+                            LEFT JOIN reading_progress rp ON rp.book_id = b.id
+                            WHERE b.progress_percentage > 0
+                              AND (
+                                rp.id IS NULL
+                                OR (b.progress_updated_at IS NOT NULL AND b.progress_updated_at > rp.updated_at)
+                                OR (b.progress_updated_at IS NULL AND rp.percentage <> b.progress_percentage)
+                              )
+                            """.trimIndent(),
+                        ).simpleQueryForLong()
+                if (divergent != 0L) {
+                    throw IllegalStateException(
+                        "progress backfill incomplete before dropping books.progress_percentage: $divergent divergent row(s)",
+                    )
+                }
+
+                // (4) Recreate `books` without the retired column.
+                db.execSQL("PRAGMA defer_foreign_keys = ON")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS books_new (
+                        id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        author TEXT,
+                        cover_path TEXT,
+                        file_path TEXT NOT NULL,
+                        format TEXT NOT NULL,
+                        total_pages INTEGER,
+                        chapter_count INTEGER,
+                        description TEXT,
+                        user_rating INTEGER,
+                        updated_at INTEGER NOT NULL,
+                        deleted_at INTEGER,
+                        status TEXT,
+                        content_hash TEXT,
+                        reading_state TEXT NOT NULL,
+                        started_at INTEGER,
+                        completed_at INTEGER,
+                        progress_updated_at INTEGER,
+                        state_version INTEGER NOT NULL,
+                        remote_file_id TEXT,
+                        remote_path TEXT,
+                        remote_lifecycle TEXT NOT NULL,
+                        remote_catalog_version INTEGER NOT NULL,
+                        remote_cover_ref TEXT,
+                        remote_provider TEXT,
+                        remote_protocol_version INTEGER,
+                        genre TEXT,
+                        language TEXT,
+                        publisher TEXT,
+                        tags TEXT,
+                        published_date TEXT,
+                        PRIMARY KEY(id)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    INSERT INTO books_new
+                        (id, title, author, cover_path, file_path, format, total_pages, chapter_count,
+                         description, user_rating, updated_at, deleted_at, status, content_hash, reading_state,
+                         started_at, completed_at, progress_updated_at, state_version, remote_file_id, remote_path,
+                         remote_lifecycle, remote_catalog_version, remote_cover_ref, remote_provider,
+                         remote_protocol_version, genre, language, publisher, tags, published_date)
+                    SELECT
+                        id, title, author, cover_path, file_path, format, total_pages, chapter_count,
+                        description, user_rating, updated_at, deleted_at, status, content_hash, reading_state,
+                        started_at, completed_at, progress_updated_at, state_version, remote_file_id, remote_path,
+                        remote_lifecycle, remote_catalog_version, remote_cover_ref, remote_provider,
+                        remote_protocol_version, genre, language, publisher, tags, published_date
+                    FROM books
+                    """.trimIndent(),
+                )
+                db.execSQL("DROP TABLE books")
+                db.execSQL("ALTER TABLE books_new RENAME TO books")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
+                db.execSQL("PRAGMA defer_foreign_keys = OFF")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -534,5 +669,6 @@ object AppDatabaseMigrations {
             MIGRATION_26_27,
             MIGRATION_27_28,
             MIGRATION_28_29,
+            MIGRATION_29_30,
         )
 }

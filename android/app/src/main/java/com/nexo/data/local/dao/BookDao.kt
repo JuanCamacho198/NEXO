@@ -13,7 +13,14 @@ interface BookDao {
     fun observeAllBooks(): Flow<List<BookEntity>>
 
     @Query(
-        "SELECT * FROM books WHERE deleted_at IS NULL AND reading_state='reading' AND progress_percentage < 100 ORDER BY progress_updated_at DESC, updated_at DESC",
+        """
+        SELECT books.* FROM books
+        LEFT JOIN reading_progress ON reading_progress.book_id = books.id
+        WHERE books.deleted_at IS NULL
+          AND books.reading_state = 'reading'
+          AND COALESCE(reading_progress.percentage, 0) < 100
+        ORDER BY books.progress_updated_at DESC, books.updated_at DESC
+        """,
     )
     fun observeReadingBooks(): Flow<List<BookEntity>>
 
@@ -62,11 +69,10 @@ interface BookDao {
         updatedAt: Long,
     )
 
-    // WU2a storage-layout-and-sync: reading position lives ONLY in reading_progress.
-    // `progress_percentage` is retired as a write target (write-dead, read-only
-    // fallback); `progress` is still used to derive reading_state/completed_at, and
-    // `progress_updated_at` keeps the reading-list ordering stable until WU2b joins
-    // reading_progress.
+    // WU2b storage-layout-and-sync: reading position lives ONLY in reading_progress.
+    // The retired `books.progress_percentage` cache has been dropped. `progress` is
+    // still used to derive reading_state/completed_at, and `progress_updated_at`
+    // keeps the reading-list ordering stable.
     @Query(
         "UPDATE books SET reading_state = CASE WHEN :progress >= 100 THEN 'completed' ELSE 'reading' END, completed_at = CASE WHEN :progress >= 100 THEN :updatedAt ELSE completed_at END, progress_updated_at = :updatedAt, updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL",
     )

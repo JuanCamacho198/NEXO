@@ -50,14 +50,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // WU2a correction (verify W3): the cache -> canonical progress backfill
-        // must be reachable without a Drive login. GoogleDriveSyncService.bootstrap
-        // still runs it on auth, but that path is session-gated; a legacy device
-        // that never signs in must still migrate every reading position out of
-        // the retired cache column before WU2b drops it. Fire-and-forget on the
-        // container's IO scope so app startup is never blocked.
-        appContainer.progressBackfillRunner.schedule()
-
         // Addon install deep links (nexo://install?url=..., legacy
         // nextpage://install?url=...) are checked FIRST: install URIs are never
         // auth URIs, so supabase handleDeeplinks is skipped for them entirely

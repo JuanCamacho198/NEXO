@@ -5,9 +5,10 @@
 #   * zero intentional writers of books.progress_percentage outside the backfill
 #   * every reader of that column is inventoried (canonical path or documented fallback)
 #
-# The DB-level backfill count (== 0) is asserted by
-# android/app/src/test/java/com/nexo/data/sync/ProgressReconcilerTest.kt
-# (backfill_divergent_cacheOnly_canonicalOnly_preservesEveryPosition).
+# The DB-level backfill count (== 0) is asserted by the WU2b migration test
+# android/app/src/test/java/com/nexo/data/local/AppDatabaseMigrationTest.kt
+# (`migration 29 to 30 backfills every divergent position before dropping the
+# cache column`).
 #
 # Scope: every root where a writer could hide — the Android app sources (DAOs,
 # entities, migrations), the desktop Rust sources, and both SQL migration trees
@@ -91,12 +92,35 @@ fi
 # list spans several physical lines (`progress_percentage` on its own line, the
 # keyword and INTO on others). rg and grep are line-oriented, so collapse each
 # file to one logical statement per line (append lines, split at `;`) with a
-# single portable awk pass, then apply the SQL INSERT ... INTO test. Works
-# identically with or without rg.
+# single portable awk pass, then check only the INSERT *target column list* for
+# the column. A writer is `progress_percentage` inside the parenthesized list
+# that follows `INTO <table>`; anything after `SELECT` is a read, not a write —
+# the WU2b DROP migration legitimately reads the column it is about to drop
+# (backfill + verification), and flagging that read would be a false positive.
+# Works identically with or without ripgrep.
 multiline_insert_writers() {
   LIST_FILES | xargs -d '\n' -r awk '
-    function check(s) {
-      if (s ~ /(INSERT|insert).*[[:space:]](INTO|into)[[:space:]].*progress_percentage/) print file ": " s
+    function check(s,    lower, rest, p, start, tail, into, openPos, closePos, cols) {
+      lower = tolower(s)
+      p = 1
+      while (1) {
+        rest = substr(lower, p)
+        if (index(rest, "insert") == 0) return
+        start = p + index(rest, "insert") - 1
+        tail = substr(lower, start)
+        into = index(tail, "into")
+        if (into > 0) {
+          openPos = index(substr(tail, into), "(")
+          if (openPos > 0) {
+            closePos = index(substr(tail, into + openPos), ")")
+            if (closePos > 0) {
+              cols = substr(tail, into + openPos, closePos - 1)
+              if (cols ~ /progress_percentage/) print file ": " s
+            }
+          }
+        }
+        p = start + 5
+      }
     }
     FNR == 1 { check(stmt); stmt = ""; file = FILENAME }
     {
@@ -146,7 +170,7 @@ else
 fi
 
 echo
-echo "== G2 backfill invariant (DB-level, asserted by ProgressReconcilerTest) =="
+echo "== G2 backfill invariant (DB-level, asserted by the WU2b 29->30 migration test) =="
 cat <<'SQL'
 Zero positions representable ONLY in books.progress_percentage means:
   1) No cache>0 row lacks a canonical row:
@@ -166,7 +190,7 @@ Zero positions representable ONLY in books.progress_percentage means:
         WHERE b.progress_percentage > 0
           AND b.progress_updated_at IS NULL
           AND rp.percentage <> b.progress_percentage;
-  All counts MUST be 0 after the WU2a backfill (G2).
+  All counts MUST be 0 after the WU2b DROP migration's in-migration backfill (G2).
 SQL
 
 echo
