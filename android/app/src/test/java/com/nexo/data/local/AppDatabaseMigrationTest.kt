@@ -45,6 +45,13 @@ class AppDatabaseMigrationTest {
             .getDatabasePath("migration-27-28")
             .absolutePath
 
+    private fun testDbPath28To29(): String =
+        InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getDatabasePath("migration-28-29")
+            .absolutePath
+
     @Test
     fun `migration 26 to 27 creates installed_addons and preserves existing rows`() {
         val dbPath = testDbPath()
@@ -135,6 +142,31 @@ class AppDatabaseMigrationTest {
         val outboxAfter = query(db, "SELECT COUNT(*) FROM sync_outbox")
         assertEquals(outboxBefore, outboxAfter)
         assertEquals(1L, outboxAfter)
+        db.close()
+    }
+
+    @Test
+    fun `migration 28 to 29 adds the LWW write clock backfilled from the added time`() {
+        val dbPath = testDbPath28To29()
+        helper.createDatabase(dbPath, 28).use { db ->
+            db.execSQL(
+                "INSERT INTO dictionary_words (id, word, addedAtEpochMillis, definition) " +
+                    "VALUES ('dw-lww', 'efimero', 7000, 'kept')",
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(dbPath, 29, true, AppDatabaseMigrations.MIGRATION_28_29)
+
+        db
+            .query(
+                "SELECT addedAtEpochMillis, updated_at_epoch_millis, definition " +
+                    "FROM dictionary_words WHERE id = 'dw-lww'",
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(7000L, cursor.getLong(0))
+                assertEquals(7000L, cursor.getLong(1))
+                assertEquals("kept", cursor.getString(2))
+            }
         db.close()
     }
 }

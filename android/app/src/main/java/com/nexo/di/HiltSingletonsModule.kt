@@ -14,6 +14,7 @@ import com.nexo.data.remote.sync.SyncOrchestrator
 import com.nexo.data.remote.sync.SyncOrchestratorImpl
 import com.nexo.data.remote.sync.SyncOrchestratorSettleGate
 import com.nexo.data.remote.sync.SyncService
+import com.nexo.data.sync.DictionarySyncService
 import com.nexo.domain.repository.AuthRepository
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.LibraryRepository
@@ -145,6 +146,7 @@ fun createSyncOrchestrator(
     progress: SupabaseProgressSync,
     gate: SessionGate,
     outboxDao: SyncOutboxDao,
+    dictionary: DictionarySyncService? = null,
     externalScope: CoroutineScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ): SyncOrchestrator =
@@ -154,6 +156,7 @@ fun createSyncOrchestrator(
         progress = progress,
         gate = gate,
         outboxDao = outboxDao,
+        dictionary = dictionary,
         externalScope = externalScope,
     )
 

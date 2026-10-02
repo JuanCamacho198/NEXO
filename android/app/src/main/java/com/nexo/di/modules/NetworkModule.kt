@@ -52,6 +52,7 @@ import com.nexo.data.session.PreferencesSessionStore
 import com.nexo.data.session.SessionManager
 import com.nexo.data.session.SessionStore
 import com.nexo.data.session.SupabaseSessionManager
+import com.nexo.data.sync.DictionarySyncService
 import com.nexo.data.update.AndroidUpdateNetworkGate
 import com.nexo.data.update.UpdateDownloader
 import com.nexo.data.update.UpdateFeedService
@@ -194,6 +195,18 @@ class NetworkModule(
             sessionManager = sessionManager,
             dataSource = supabaseProgressDataSource,
             outboxCommit = outboxCommit,
+        )
+    }
+
+    /**
+     * Dictionary push/pull (FR-09). Reuses the same session manager as the
+     * other Supabase syncers; the remote default is the shared
+     * `user_dictionary_words` contract.
+     */
+    val dictionarySyncService: DictionarySyncService by lazy {
+        DictionarySyncService(
+            dao = databaseModule.dictionaryWordDao,
+            sessionManager = sessionManager,
         )
     }
 

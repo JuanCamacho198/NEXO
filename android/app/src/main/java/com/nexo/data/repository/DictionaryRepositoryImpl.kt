@@ -3,14 +3,22 @@ package com.nexo.data.repository
 import com.nexo.data.local.DictionaryNormalizer
 import com.nexo.data.local.dao.DictionaryWordDao
 import com.nexo.data.local.entity.DictionaryWordEntity
+import com.nexo.data.sync.DictionarySyncService
 import com.nexo.domain.model.DictionaryWord
 import com.nexo.domain.repository.DictionaryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 
+/**
+ * [sync] is an optional best-effort cross-device mirror (FR-09). When present,
+ * every local mutation is pushed to `user_dictionary_words`; the push never
+ * throws, so an offline save still succeeds locally. `null` keeps legacy
+ * local-only callers and tests working.
+ */
 class DictionaryRepositoryImpl(
     private val dao: DictionaryWordDao,
+    private val sync: DictionarySyncService? = null,
 ) : DictionaryRepository {
     override fun observeAll(): Flow<List<DictionaryWord>> =
         dao.observeAll().map { entities ->
@@ -36,11 +44,13 @@ class DictionaryRepositoryImpl(
         sourceLocator: String?,
     ): Result<DictionaryWord> =
         runCatching {
+            val now = System.currentTimeMillis()
             val entity =
                 DictionaryWordEntity(
                     id = UUID.randomUUID().toString(),
                     word = word.trim(),
-                    addedAtEpochMillis = System.currentTimeMillis(),
+                    addedAtEpochMillis = now,
+                    updatedAtEpochMillis = now,
                     definition = definition.cleaned(),
                     partOfSpeech = partOfSpeech.cleaned(),
                     phonetic = phonetic.cleaned(),
@@ -53,6 +63,7 @@ class DictionaryRepositoryImpl(
                     sourceLocator = sourceLocator.cleaned(),
                 )
             dao.insert(entity)
+            sync?.pushWord(entity)
             entity.toDomain()
         }
 
@@ -64,19 +75,26 @@ class DictionaryRepositoryImpl(
         example: String?,
     ): Result<DictionaryWord> =
         runCatching {
+            val now = System.currentTimeMillis()
             dao.updateUserFields(
                 wordId = wordId,
                 definition = definition.cleaned(),
                 partOfSpeech = partOfSpeech.cleaned(),
                 phonetic = phonetic.cleaned(),
                 example = example.cleaned(),
+                updatedAtEpochMillis = now,
             )
             val updated = dao.findById(wordId) ?: error("Word $wordId not found after update")
+            // The edit advances the local LWW write clock, so a later pull of an
+            // older remote row cannot win the merge and discard this change.
+            sync?.pushWord(updated, now)
             updated.toDomain()
         }
 
     override suspend fun delete(wordId: String) {
+        val word = dao.findById(wordId)?.word
         dao.delete(wordId)
+        if (word != null) sync?.deleteWord(word)
     }
 
     /**

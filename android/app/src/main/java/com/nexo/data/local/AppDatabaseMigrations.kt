@@ -488,6 +488,22 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * Dictionary sync LWW write clock (FR-09). `updated_at_epoch_millis` is the
+     * local write clock compared against the remote `updated_at` during merge;
+     * `addedAtEpochMillis` means "when the word was first added", is read by the
+     * list ordering and the UI date, and therefore cannot double as the clock.
+     * Backfilled from `addedAtEpochMillis` so pre-existing rows keep their prior
+     * LWW rank. Additive; no data loss.
+     */
+    val MIGRATION_28_29 =
+        object : Migration(28, 29) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN updated_at_epoch_millis INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE dictionary_words SET updated_at_epoch_millis = addedAtEpochMillis")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -517,5 +533,6 @@ object AppDatabaseMigrations {
             MIGRATION_25_26,
             MIGRATION_26_27,
             MIGRATION_27_28,
+            MIGRATION_28_29,
         )
 }

@@ -30,4 +30,13 @@ data class DictionaryWordEntity(
     val sourceChapter: String? = null,
     @ColumnInfo(name = "source_locator")
     val sourceLocator: String? = null,
+    /**
+     * Local LWW write clock (FR-09). Distinct from [addedAtEpochMillis], which
+     * means "when the word was first added" and drives list ordering/date
+     * display. An edit advances this value; dictionary sync compares the remote
+     * `updated_at` against it so an older remote row can never clobber a newer
+     * local edit.
+     */
+    @ColumnInfo(name = "updated_at_epoch_millis")
+    val updatedAtEpochMillis: Long = 0L,
 )
