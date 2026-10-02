@@ -1,6 +1,8 @@
 package com.nexo.di
 
 import android.content.Context
+import com.nexo.data.local.AppDatabase
+import com.nexo.data.local.RetentionPruner
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.HighlightDao
@@ -14,6 +16,7 @@ import com.nexo.data.remote.sync.SyncOrchestrator
 import com.nexo.data.remote.sync.SyncOrchestratorImpl
 import com.nexo.data.remote.sync.SyncOrchestratorSettleGate
 import com.nexo.data.remote.sync.SyncService
+import com.nexo.data.remote.work.WorkManagerRetentionPruneScheduler
 import com.nexo.data.sync.DictionarySyncService
 import com.nexo.domain.repository.AuthRepository
 import com.nexo.domain.repository.HomeRepository
@@ -87,6 +90,18 @@ object HiltSingletonsModule {
     /** S6: WorkManager-backed outbox drain scheduler (scheduler-only). */
     @Provides @Singleton
     fun provideOutboxDrainScheduler(a: AppContainer): OutboxDrainScheduler = a.outboxDrainScheduler
+
+    /** FR-14: Room database for the retention pruner + its worker. */
+    @Provides @Singleton
+    fun provideAppDatabase(a: AppContainer): AppDatabase = a.appDatabase
+
+    /** FR-14: prune + VACUUM implementation consumed by RetentionPruneWorker. */
+    @Provides @Singleton
+    fun provideRetentionPruner(a: AppContainer): RetentionPruner = a.retentionPruner
+
+    /** FR-14: WorkManager-backed periodic retention scheduler (scheduler-only). */
+    @Provides @Singleton
+    fun provideRetentionPruneScheduler(a: AppContainer): WorkManagerRetentionPruneScheduler = a.retentionPruneScheduler
 
     @Provides
     @Named("isAuthConfigured")
