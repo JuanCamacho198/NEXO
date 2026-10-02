@@ -31,6 +31,7 @@ const mockReadTextFile = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<
 const mockWriteTextFile = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<void>>());
 const mockRename = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<void>>());
 const mockRemove = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<void>>());
+const mockInvoke = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<string>>());
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   BaseDirectory: { AppData: 0 },
@@ -41,11 +42,61 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
   remove: mockRemove,
 }));
 
+// Mock DPAPI Rust command: reversible test transform, never real crypto.
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: mockInvoke,
+}));
+
 /** In-memory file map used to simulate the adapter's filesystem. */
 let files: Map<string, string>;
 
+function sealForTest(plaintext: string): string {
+  return JSON.stringify({
+    v: 1,
+    alg: 'dpapi-current-user',
+    data: `sealed:${Buffer.from(plaintext, 'utf8').toString('base64')}`,
+  });
+}
+
+/** Read the (mock-decrypted) session map straight from the fake disk. */
+function readDiskMap(): Record<string, string> {
+  const raw = files.get(SESSION_FILE) as string;
+  const envelope = JSON.parse(raw) as { data: string };
+  const ciphertext: string = envelope.data;
+  if (!ciphertext.startsWith('sealed:')) throw new Error('disk file is not sealed');
+  return JSON.parse(
+    Buffer.from(ciphertext.slice('sealed:'.length), 'base64').toString('utf8'),
+  ) as Record<string, string>;
+}
+
 beforeEach(() => {
   files = new Map<string, string>();
+  // Reset histories AND once-queues: without this, mock call counts and
+  // queued one-time rejections leak across tests in this file.
+  mockExists.mockReset();
+  mockReadTextFile.mockReset();
+  mockWriteTextFile.mockReset();
+  mockRename.mockReset();
+  mockRemove.mockReset();
+  mockInvoke.mockReset();
+  mockInvoke.mockImplementation(((cmd: unknown, args: unknown) => {
+    if (cmd === 'protectSecret') {
+      // Opaque like real DPAPI output: base64, so "no plaintext on disk"
+      // assertions are meaningful against this mock.
+      const plaintext = (args as { plaintext: string }).plaintext;
+      return Promise.resolve(`sealed:${Buffer.from(plaintext, 'utf8').toString('base64')}`);
+    }
+    if (cmd === 'unprotectSecret') {
+      const ciphertext = (args as { ciphertext: string }).ciphertext;
+      if (!ciphertext.startsWith('sealed:')) {
+        return Promise.reject(new Error('bad ciphertext'));
+      }
+      return Promise.resolve(
+        Buffer.from(ciphertext.slice('sealed:'.length), 'base64').toString('utf8'),
+      );
+    }
+    return Promise.reject(new Error(`unexpected command ${String(cmd)}`));
+  }) as (...args: unknown[]) => Promise<string>);
   mockExists.mockImplementation((path: unknown) => Promise.resolve(files.has(String(path))));
   mockReadTextFile.mockImplementation((path: unknown) => {
     const key = String(path);
@@ -71,9 +122,13 @@ beforeEach(() => {
 });
 
 describe('tauriStorageAdapter — atomic writes (DA-4.1)', () => {
-  it('setItem writes to the tmp file, then renames over the main file', async () => {
+  it('seals the payload via DPAPI, writes the envelope to tmp, then renames over the main file', async () => {
     await tauriStorageAdapter.setItem('supabase.auth.token', '{"access_token":"t1"}');
 
+    expect(mockInvoke).toHaveBeenCalledWith(
+      'protectSecret',
+      expect.objectContaining({ plaintext: expect.any(String) }),
+    );
     expect(mockWriteTextFile).toHaveBeenCalledTimes(1);
     expect(mockWriteTextFile).toHaveBeenCalledWith(TMP_FILE, expect.any(String), {
       baseDir: 0,
@@ -83,9 +138,24 @@ describe('tauriStorageAdapter — atomic writes (DA-4.1)', () => {
       oldPathBaseDir: 0,
       newPathBaseDir: 0,
     });
-    // tmp never lingers after a successful write
+    // tmp never lingers after a successful write; main file is a sealed envelope
     expect(files.has(TMP_FILE)).toBe(false);
     expect(files.has(SESSION_FILE)).toBe(true);
+    expect(readDiskMap()['supabase.auth.token']).toBe('{"access_token":"t1"}');
+  });
+
+  it('never writes plaintext when sealing fails (skips the write, reports a typed event)', async () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    mockInvoke.mockRejectedValueOnce(new Error('DPAPI unavailable'));
+
+    await expect(tauriStorageAdapter.setItem('supabase.auth.token', 'x')).resolves.toBeUndefined();
+
+    expect(files.has(SESSION_FILE)).toBe(false);
+    expect(mockWriteTextFile).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const event = warnSpy.mock.calls[0]?.[0] as { code?: string };
+    expect(event.code).toBe('SUPABASE_SESSION_PERSIST_FAILED');
+    warnSpy.mockRestore();
   });
 
   it('round-trips a value written via setItem and read via getItem', async () => {
@@ -141,11 +211,9 @@ describe('tauriStorageAdapter — crash-sim: orphaned tmp cleanup (DA-4.1)', () 
 
     expect(mockRemove).toHaveBeenCalledWith(TMP_FILE, { baseDir: 0 });
     expect(files.has(TMP_FILE)).toBe(false);
-    const mainRaw = files.get(SESSION_FILE);
-    expect(mainRaw).toBeDefined();
-    // Main file must be valid JSON after the write (never truncated/corrupt).
-    const main = JSON.parse(mainRaw as string) as Record<string, string>;
-    expect(main['supabase.auth.token']).toBe('{"access_token":"new"}');
+    expect(files.has(SESSION_FILE)).toBe(true);
+    // Main file must be a sealed envelope holding the new value (never truncated/corrupt).
+    expect(readDiskMap()['supabase.auth.token']).toBe('{"access_token":"new"}');
   });
 
   it('cleans an orphaned tmp even when the main file is missing (crash before rename on first write)', async () => {
@@ -158,21 +226,51 @@ describe('tauriStorageAdapter — crash-sim: orphaned tmp cleanup (DA-4.1)', () 
     const mainRaw = files.get(SESSION_FILE);
     expect(mainRaw).toBeDefined();
     expect(() => JSON.parse(mainRaw as string)).not.toThrow();
+    expect(readDiskMap()['supabase.auth.token']).toBe('{"access_token":"fresh"}');
   });
 
   it('removeItem also cleans an orphaned tmp and rewrites atomically', async () => {
-    files.set(SESSION_FILE, JSON.stringify({ 'supabase.auth.token': 't1', keep: 'k' }));
+    files.set(
+      SESSION_FILE,
+      sealForTest(JSON.stringify({ 'supabase.auth.token': 't1', keep: 'k' })),
+    );
     files.set(TMP_FILE, 'garbage');
 
     await tauriStorageAdapter.removeItem('supabase.auth.token');
 
     expect(files.has(TMP_FILE)).toBe(false);
-    const main = JSON.parse(files.get(SESSION_FILE) as string) as Record<string, string>;
+    const main = readDiskMap();
     expect(main['supabase.auth.token']).toBeUndefined();
     expect(main.keep).toBe('k');
     expect(mockWriteTextFile).toHaveBeenCalledWith(TMP_FILE, expect.any(String), {
       baseDir: 0,
     });
+  });
+});
+
+describe('tauriStorageAdapter — legacy migration (0.3.5 sealed storage)', () => {
+  it('returns the legacy value on getItem and re-seals the file on disk', async () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    files.set(SESSION_FILE, JSON.stringify({ 'supabase.auth.token': '{"access_token":"t1"}' }));
+
+    const value = await tauriStorageAdapter.getItem('supabase.auth.token');
+
+    expect(value).toBe('{"access_token":"t1"}');
+    // No plaintext remains: the file is now a sealed envelope with the same content.
+    expect(readDiskMap()['supabase.auth.token']).toBe('{"access_token":"t1"}');
+    const event = warnSpy.mock.calls[0]?.[0] as { code?: string };
+    expect(event.code).toBe('SUPABASE_SESSION_MIGRATED_TO_SEALED');
+    warnSpy.mockRestore();
+  });
+
+  it('merges a legacy main file on setItem without losing existing keys', async () => {
+    files.set(SESSION_FILE, JSON.stringify({ keep: 'k' }));
+
+    await tauriStorageAdapter.setItem('supabase.auth.token', '{"access_token":"new"}');
+
+    const main = readDiskMap();
+    expect(main.keep).toBe('k');
+    expect(main['supabase.auth.token']).toBe('{"access_token":"new"}');
   });
 });
 

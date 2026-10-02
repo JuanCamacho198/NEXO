@@ -24,6 +24,7 @@ pub mod progress;
 pub mod reading_stats;
 pub mod reading_status;
 pub mod search;
+pub mod secrets;
 pub mod settings;
 pub mod storage;
 
@@ -63,6 +64,8 @@ pub use reading_stats::*;
 pub use reading_status::*;
 #[allow(unused_imports)]
 pub use search::*;
+#[allow(unused_imports)]
+pub use secrets::*;
 #[allow(unused_imports)]
 pub use settings::*;
 #[allow(unused_imports)]

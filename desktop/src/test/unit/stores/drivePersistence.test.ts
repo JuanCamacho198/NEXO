@@ -17,6 +17,7 @@ import {
 } from '$lib/shared/stores/drivePersistence';
 
 const files = vi.hoisted(() => new Map<string, string>());
+const mockInvoke = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<string>>());
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   BaseDirectory: { AppData: 0 },
@@ -40,6 +41,11 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
   }),
 }));
 
+// Mock DPAPI Rust command: reversible test transform, never real crypto.
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: mockInvoke,
+}));
+
 const grant: DriveGrant = {
   refreshToken: 'drive-refresh-1',
   scope: 'https://www.googleapis.com/auth/drive.file',
@@ -61,6 +67,25 @@ function seedLoginGrant(token: string): void {
 
 beforeEach(() => {
   files.clear();
+  mockInvoke.mockReset();
+  mockInvoke.mockImplementation(((cmd: unknown, args: unknown) => {
+    if (cmd === 'protectSecret') {
+      // Opaque like real DPAPI output: base64, so "no plaintext on disk"
+      // assertions are meaningful against this mock.
+      const plaintext = (args as { plaintext: string }).plaintext;
+      return Promise.resolve(`sealed:${Buffer.from(plaintext, 'utf8').toString('base64')}`);
+    }
+    if (cmd === 'unprotectSecret') {
+      const ciphertext = (args as { ciphertext: string }).ciphertext;
+      if (!ciphertext.startsWith('sealed:')) {
+        return Promise.reject(new Error('bad ciphertext'));
+      }
+      return Promise.resolve(
+        Buffer.from(ciphertext.slice('sealed:'.length), 'base64').toString('utf8'),
+      );
+    }
+    return Promise.reject(new Error(`unexpected command ${String(cmd)}`));
+  }) as (...args: unknown[]) => Promise<string>);
 });
 
 describe('loadDriveGrant', () => {
@@ -89,6 +114,29 @@ describe('saveDriveGrant / loadDriveGrant round-trip', () => {
   it('returns the same grant that was saved', async () => {
     await saveDriveGrant(grant);
     await expect(loadDriveGrant()).resolves.toEqual(grant);
+  });
+
+  it('stores a DPAPI-sealed envelope on disk, never the plaintext grant', async () => {
+    await saveDriveGrant(grant);
+
+    const stored = files.get('drive.json') as string;
+    expect(stored).not.toContain('drive-refresh-1');
+    const envelope = JSON.parse(stored) as { v: number; alg: string; data: string };
+    expect(envelope.v).toBe(1);
+    expect(envelope.alg).toBe('dpapi-current-user');
+    await expect(loadDriveGrant()).resolves.toEqual(grant);
+  });
+
+  it('migrates a legacy plaintext grant to sealed storage on read', async () => {
+    files.set('drive.json', JSON.stringify(grant));
+
+    await expect(loadDriveGrant()).resolves.toEqual(grant);
+
+    const stored = files.get('drive.json') as string;
+    expect(stored).not.toContain('drive-refresh-1');
+    const envelope = JSON.parse(stored) as { v: number; alg: string };
+    expect(envelope.v).toBe(1);
+    expect(envelope.alg).toBe('dpapi-current-user');
   });
 
   it('writes atomically via the tmp file (no tmp leftover)', async () => {

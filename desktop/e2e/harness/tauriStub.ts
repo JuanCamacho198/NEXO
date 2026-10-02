@@ -29,10 +29,7 @@ export type TauriStubSeed = {
 
 type ResolvedSeed = Required<TauriStubSeed>;
 
-export async function installTauriInvokeStub(
-  page: Page,
-  seed: TauriStubSeed = {},
-): Promise<void> {
+export async function installTauriInvokeStub(page: Page, seed: TauriStubSeed = {}): Promise<void> {
   const resolved: ResolvedSeed = {
     title: seed.title ?? DEFAULT_SEEDED_TITLE,
     bookCount: seed.bookCount ?? 1,
@@ -88,6 +85,8 @@ export async function installTauriInvokeStub(
     // Tiny in-memory FS backing @tauri-apps/plugin-fs. `auth.json` holds a
     // local profile so AppState boots straight to the authenticated shell
     // (route 'home') instead of the welcome screen, with no Supabase session.
+    // Seeded as legacy plaintext on purpose: the app re-seals it to a DPAPI
+    // envelope on first read, exercising the 0.3.5 migration path in E2E.
     const files = new Map<string, string>();
     files.set(
       'auth.json',
@@ -128,6 +127,21 @@ export async function installTauriInvokeStub(
       unregisterCallback: () => undefined,
       convertFileSrc: (filePath: string) => filePath,
       invoke: async (cmd: string, args?: { path?: unknown; data?: unknown }) => {
+        // 0.3.5 secrets encryption: mock the DPAPI Rust commands with an
+        // opaque reversible transform (base64, never real crypto). Unknown
+        // ciphertext rejects like the real `unprotectSecret` would on
+        // tampered input.
+        if (cmd === 'protectSecret') {
+          const plaintext = (args as unknown as { plaintext?: unknown }).plaintext;
+          return `stub-sealed:${btoa(typeof plaintext === 'string' ? plaintext : '')}`;
+        }
+        if (cmd === 'unprotectSecret') {
+          const ciphertext = (args as unknown as { ciphertext?: unknown }).ciphertext;
+          if (typeof ciphertext !== 'string' || !ciphertext.startsWith('stub-sealed:')) {
+            throw new Error('stub DPAPI: bad ciphertext');
+          }
+          return atob(ciphertext.slice('stub-sealed:'.length));
+        }
         if (cmd.startsWith('plugin:fs|')) {
           const path = typeof args?.path === 'string' ? args.path : '';
           if (cmd === 'plugin:fs|exists') return files.has(path);
@@ -145,6 +159,29 @@ export async function installTauriInvokeStub(
           }
           if (cmd === 'plugin:fs|remove') {
             files.delete(path);
+            return null;
+          }
+          if (cmd === 'plugin:fs|rename') {
+            // plugin-fs rename carries old/new paths; the stub only sees the
+            // generic shape, so accept the known serializations best-effort.
+            const raw = args as unknown as Record<string, unknown>;
+            const from =
+              typeof raw.oldPath === 'string'
+                ? raw.oldPath
+                : typeof raw.from === 'string'
+                  ? raw.from
+                  : undefined;
+            const to =
+              typeof raw.newPath === 'string'
+                ? raw.newPath
+                : typeof raw.to === 'string'
+                  ? raw.to
+                  : undefined;
+            if (from !== undefined && to !== undefined && files.has(from)) {
+              const content = files.get(from) as string;
+              files.delete(from);
+              files.set(to, content);
+            }
             return null;
           }
           return null;
