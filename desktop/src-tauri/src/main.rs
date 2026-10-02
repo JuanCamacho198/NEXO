@@ -18,6 +18,21 @@ fn build_state(app: &AppHandle) -> Result<AppState, String> {
     let repository = LibraryRepository::new(connection);
     let queue_repository = QueueRepository::new(queue_connection);
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+
+    // FR-14: startup-idle retention. Runs on its own connection/thread so it
+    // never blocks the setup path; prunes tombstones older than 30 days, then
+    // vacuums. There is no pg_cron in this repo, so desktop is the executor for
+    // both the local SQLite store (here) and the documented Supabase function.
+    let retention_db_path = db_path.clone();
+    std::thread::spawn(move || {
+        if let Ok(connection) = Connection::open(&retention_db_path) {
+            let _ = nexo_desktop::retention::run_retention(
+                &connection,
+                nexo_desktop::retention::RETENTION_DAYS,
+            );
+        }
+    });
+
     Ok(AppState::new(repository, queue_repository, app_data_dir, db_path))
 }
 
