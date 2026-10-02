@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProgressReconcilerTest {
@@ -45,10 +47,10 @@ class ProgressReconcilerTest {
 
             reconciler.reconcile(bookId)
 
-            // canonical newer (5000 > 1000) => book cache should be updated to 50
+            // WU2a: canonical wins, but the cache column is write-dead — it stays untouched.
             val updatedBook = bookDao.getBookById(bookId)
-            assertEquals(50f, updatedBook?.progressPercentage)
-            assertEquals(5000L, updatedBook?.progressUpdatedAtEpochMillis)
+            assertEquals(10f, updatedBook?.progressPercentage)
+            assertEquals(1000L, updatedBook?.progressUpdatedAtEpochMillis)
         }
 
     @Test
@@ -124,13 +126,13 @@ class ProgressReconcilerTest {
 
             reconciler.reconcile(bookId)
 
-            // equal => canonical wins (progAt >= bookAt) => book updated to 70
+            // WU2a: equal => canonical wins, cache write retired => cache stays 30
             val updatedBook = bookDao.getBookById(bookId)
-            assertEquals(70f, updatedBook?.progressPercentage)
+            assertEquals(30f, updatedBook?.progressPercentage)
         }
 
     @Test
-    fun reconcile_noCanonical_noOpOrSeed() =
+    fun reconcile_cacheOnly_backfillsCanonical() =
         runBlocking {
             val bookDao = FakeBookDao()
             val progressDao = FakeReadingProgressDao()
@@ -154,11 +156,96 @@ class ProgressReconcilerTest {
 
             reconciler.reconcile(bookId)
 
-            // Should not crash, and no progress created (seed is logged but not inserted in this impl)
-            // The current reconciler returns early without inserting; verify no exception and progress still null
+            // WU2a: a cache-only position is backfilled into canonical (FR-10).
             val progress = progressDao.getProgressForBook(bookId)
-            assertEquals(null, progress)
+            assertEquals(25f, progress?.percentage)
+            assertEquals(2000L, progress?.updatedAtEpochMillis)
         }
+
+    /**
+     * FR-10 / G2 acceptance: given divergent, cache-only and canonical-only rows,
+     * the backfill leaves no reading position representable only in the retired
+     * books.progress_percentage column.
+     */
+    @Test
+    fun backfill_divergent_cacheOnly_canonicalOnly_preservesEveryPosition() =
+        runBlocking {
+            val bookDao = FakeBookDao()
+            val progressDao = FakeReadingProgressDao()
+            val reconciler = ProgressReconciler(bookDao, progressDao)
+
+            // A: divergent, canonical newer (canonical wins; stale cache 10 is obsolete).
+            seed(bookDao, progressDao, "A", cachePct = 10f, cacheAt = 1000L, canonPct = 50f, canonAt = 5000L)
+            // B: divergent, cache newer (offline read — must be pushed to canonical).
+            seed(bookDao, progressDao, "B", cachePct = 80f, cacheAt = 8000L, canonPct = 20f, canonAt = 3000L)
+            // C: cache-only (no canonical row — must be seeded).
+            seed(bookDao, progressDao, "C", cachePct = 33f, cacheAt = 2000L, canonPct = null, canonAt = null)
+            // D: canonical-only (cache 0 — untouched).
+            seed(bookDao, progressDao, "D", cachePct = 0f, cacheAt = null, canonPct = 66f, canonAt = 6000L)
+            // E: both stores agree (untouched).
+            seed(bookDao, progressDao, "E", cachePct = 44f, cacheAt = 4000L, canonPct = 44f, canonAt = 4000L)
+
+            reconciler.reconcileAll()
+
+            // Canonical now represents the reconciled winner for every book.
+            assertEquals(50f, progressDao.getProgressForBook("A")?.percentage)
+            assertEquals(80f, progressDao.getProgressForBook("B")?.percentage)
+            assertEquals(33f, progressDao.getProgressForBook("C")?.percentage)
+            assertEquals(66f, progressDao.getProgressForBook("D")?.percentage)
+            assertEquals(44f, progressDao.getProgressForBook("E")?.percentage)
+
+            // G2 invariant: zero positions live ONLY in the retired column.
+            // 1) no cache>0 without a canonical row; 2) no cache strictly newer than canonical.
+            for (book in listOf("A", "B", "C", "D", "E")) {
+                val entity = bookDao.getBookById(book)!!
+                val canonical = progressDao.getProgressForBook(book)
+                if (entity.progressPercentage > 0f) {
+                    assertNotNull("cache-only position left unbackfilled: $book", canonical)
+                }
+                if (canonical != null) {
+                    val cacheAt = entity.progressUpdatedAtEpochMillis ?: 0L
+                    assertTrue(
+                        "cache newer than canonical left unbackfilled: $book",
+                        cacheAt <= canonical.updatedAtEpochMillis,
+                    )
+                }
+            }
+        }
+
+    private suspend fun seed(
+        bookDao: FakeBookDao,
+        progressDao: FakeReadingProgressDao,
+        bookId: String,
+        cachePct: Float,
+        cacheAt: Long?,
+        canonPct: Float?,
+        canonAt: Long?,
+    ) {
+        bookDao.upsert(
+            BookEntity(
+                id = bookId,
+                title = bookId,
+                author = null,
+                coverPath = null,
+                filePath = "/$bookId.epub",
+                format = "epub",
+                updatedAtEpochMillis = 1000L,
+                progressPercentage = cachePct,
+                progressUpdatedAtEpochMillis = cacheAt,
+            ),
+        )
+        if (canonPct != null && canonAt != null) {
+            progressDao.upsert(
+                ReadingProgressEntity(
+                    id = "progress-$bookId",
+                    bookId = bookId,
+                    cfiLocation = "epubcfi(/6/2)",
+                    percentage = canonPct,
+                    updatedAtEpochMillis = canonAt,
+                ),
+            )
+        }
+    }
 
     @Test
     fun reconcile_samePercentage_noOp() =
