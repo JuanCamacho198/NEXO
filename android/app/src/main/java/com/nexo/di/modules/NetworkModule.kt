@@ -37,6 +37,7 @@ import com.nexo.data.remote.drive.KtorAuthApi
 import com.nexo.data.remote.drive.driveOAuthRedirectUri
 import com.nexo.data.remote.supabase.SupabaseBookCatalogDataSource
 import com.nexo.data.remote.supabase.SupabaseBookCatalogSync
+import com.nexo.data.remote.supabase.SupabaseClientProvider
 import com.nexo.data.remote.supabase.SupabaseProgressDataSource
 import com.nexo.data.remote.supabase.SupabaseProgressSync
 import com.nexo.data.remote.sync.DriveColdBackupService
@@ -45,7 +46,11 @@ import com.nexo.data.remote.sync.OutboxCommit
 import com.nexo.data.remote.sync.StorageSyncRemoteDataSource
 import com.nexo.data.remote.sync.SyncService
 import com.nexo.data.repository.SupabaseAuthRepository
+import com.nexo.data.session.EncryptedSessionSettings
+import com.nexo.data.session.InMemorySessionStore
+import com.nexo.data.session.PreferencesSessionStore
 import com.nexo.data.session.SessionManager
+import com.nexo.data.session.SessionStore
 import com.nexo.data.session.SupabaseSessionManager
 import com.nexo.data.update.AndroidUpdateNetworkGate
 import com.nexo.data.update.UpdateDownloader
@@ -56,6 +61,8 @@ import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
 import com.nexo.domain.repository.AuthRepository
+import io.github.jan.supabase.auth.MemorySessionManager
+import io.github.jan.supabase.auth.SettingsSessionManager
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
@@ -65,6 +72,7 @@ import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import io.github.jan.supabase.auth.SessionManager as SupabaseAuthSessionManager
 
 class NetworkModule(
     private val context: Context,
@@ -110,7 +118,36 @@ class NetworkModule(
     }
 
     val sessionManager: SessionManager by lazy {
-        SupabaseSessionManager()
+        SupabaseSessionManager(sessionStore)
+    }
+
+    /**
+     * Encrypted AuthSession metadata mirror (0.3.5 secrets encryption).
+     * PreferencesSessionStore is EncryptedSharedPreferences-backed; the in-memory fallback preserves the
+     * historical behavior on Keystore failure instead of crashing startup (same policy as [driveTokenStore]).
+     */
+    val sessionStore: SessionStore by lazy {
+        runCatching { PreferencesSessionStore(context.applicationContext) }
+            .getOrElse { InMemorySessionStore() }
+    }
+
+    /**
+     * Encrypted supabase-kt token store (0.3.5 secrets encryption). The access/refresh pair supabase-kt
+     * auto-persists now lands in EncryptedSharedPreferences instead of its plaintext SharedPreferences default.
+     * Keystore failure degrades to process-memory storage (session lost on restart, app keeps working).
+     */
+    val supabaseTokenSessionManager: SupabaseAuthSessionManager by lazy {
+        runCatching {
+            SettingsSessionManager(
+                EncryptedSessionSettings.create(context.applicationContext, BuildConfig.SUPABASE_URL),
+            )
+        }.getOrElse { MemorySessionManager() }
+    }
+
+    init {
+        // Must run before the first SupabaseClientProvider.client access (AppContainer builds NetworkModule
+        // first), otherwise token persistence silently stays plaintext.
+        SupabaseClientProvider.configureSessionManager(supabaseTokenSessionManager)
     }
 
     val authRepository: AuthRepository by lazy {
