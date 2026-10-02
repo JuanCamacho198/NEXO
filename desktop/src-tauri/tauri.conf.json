@@ -46,7 +46,7 @@
       "active": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE4OUREODBFNDZFMkNDQTIKUldTaXpPSkdEdGlkcUhCNlpscmZuZHZtYVhoY2JOOUUzMmxpY2lyT095M0FTMGpvZEt4bHVneloK",
       "endpoints": [
-        "https://github.com/JuanCamacho198/NEXO/releases/download/desktop-v0.3.3/latest.json"
+        "https://github.com/JuanCamacho198/NEXO/releases/download/desktop-latest/latest.json"
       ]
     },
     "fs": {}

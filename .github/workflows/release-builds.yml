@@ -30,7 +30,10 @@
 #   their .sig files at all, and tauri-action then publishes latest.json
 #   automatically (uploadUpdaterJson, default true — set explicitly below so
 #   the feed dependency is visible; each matrix leg merges its platform keys
-#   into the single file). OS-level code signing is still absent:
+#   into the single file). That per-version file is the historical record; the
+#   updater itself reads a stable, versionless copy published by the
+#   desktop-checksums fan-in job to the `desktop-latest` prerelease. OS-level
+#   code signing is still absent:
 #   Windows SmartScreen / macOS Gatekeeper warnings remain (separate work
 #   item — the updater key authenticates updates, not the OS publisher).
 # - Android: RELEASE-keystore signed (`signingConfigs.release` in
@@ -232,9 +235,14 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # Bakes the production feed URL into the frontend so the Settings
-          # update check (VITE_UPDATE_FEED_URL) runs against this release's
-          # own latest.json. Empty = disabled (local/dev behavior unchanged).
-          VITE_UPDATE_FEED_URL: https://github.com/JuanCamacho198/NEXO/releases/download/${{ github.ref_name }}/latest.json
+          # update check (VITE_UPDATE_FEED_URL) reads the stable feed. It MUST
+          # be the versionless desktop-latest release, not this tag's own
+          # latest.json: an installed build's endpoint is frozen at build time,
+          # so a per-tag URL would point every future build at a feed that can
+          # only ever report its own version ("you are up to date" forever).
+          # The stable feed is published by the desktop-checksums fan-in job
+          # below. Empty = disabled (local/dev behavior unchanged).
+          VITE_UPDATE_FEED_URL: https://github.com/JuanCamacho198/NEXO/releases/download/desktop-latest/latest.json
           # Production backend + Google client config. tauri-action runs the
           # beforeBuildCommand (`bun run build`) with this env, so Vite inlines
           # all five into the bundle — without them the app cannot reach
@@ -260,11 +268,14 @@ jobs:
           releaseName: ${{ github.ref_name }}
           releaseDraft: false
           prerelease: false
-          # Explicit (default is true): latest.json IS the desktop update
-          # feed. Each matrix leg appends only its OWN platform keys to the
-          # file already attached to the release — uploadVersionJSON reads the
+          # Explicit (default is true): latest.json IS the desktop feed source.
+          # Each matrix leg appends only its OWN platform keys to the file
+          # already attached to the release — uploadVersionJSON reads the
           # existing asset and merges its `platforms` map before re-uploading —
-          # so no fan-in job is needed and the legs cannot clobber each other.
+          # so no merge fan-in is needed and the legs cannot clobber each other.
+          # The stable, versionless copy the updater actually reads IS produced
+          # by a fan-in step (desktop-checksums), because it must not be copied
+          # until every leg has merged its keys here.
           #
           # It can only merge what the build produced: the signed updater
           # artifacts only exist when tauri.conf.json sets
@@ -293,10 +304,15 @@ jobs:
     if: startsWith(github.ref_name, 'desktop-v') && needs.desktop.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # No checkout and no setup: this job only talks to the GitHub API and the
-    # release record already exists by the time any build leg finishes (see the
-    # header for why the tag implies the release).
+    # The release record already exists by the time any build leg finishes (see
+    # the header for why the tag implies the release). Everything below talks to
+    # the GitHub API except the feed scripts, which is the only reason this job
+    # checks the repository out.
     steps:
+      - name: Checkout
+        # Only scripts/release/ is used; no history is needed.
+        uses: actions/checkout@v7
+
       - name: Build and publish SHA256SUMS.txt
         # `nexo-web`'s download section resolves release assets at build time
         # and renders a "Verify with SHA-256" link when the release carries a
@@ -345,15 +361,63 @@ jobs:
             exit 1
           fi
           cat SHA256SUMS.txt
-          # `--repo` is required, not decorative: this fan-in job deliberately
-          # runs without `actions/checkout` because it otherwise only talks to
-          # the API, so there is no local git repository for `gh` to infer the
-          # target from. `gh api` does not need one (its path is absolute) but
-          # `gh release upload` does, and without this flag it dies with
-          # "failed to run git: fatal: not a git repository" — exactly how the
-          # first desktop release run failed, after it had already built the
-          # correct six-line checksum list.
+          # `--repo` is kept explicit rather than inferred from the checkout's
+          # remote: that removes any dependence on the local remote (a fork or a
+          # missing remote would otherwise point `gh` at the wrong target). This
+          # job used to run with no checkout at all, and `gh release upload`
+          # then died with "failed to run git: fatal: not a git repository"
+          # without the flag — exactly how the first desktop release run failed,
+          # after it had already built the correct six-line checksum list.
           gh release upload "${GITHUB_REF_NAME}" SHA256SUMS.txt --clobber --repo "${GITHUB_REPOSITORY}"
+
+      - name: Test the stable feed builder
+        # Offline and cheap: proves the API-url -> browser-download-url rewrite,
+        # the untouched already-correct URLs, and signature preservation before
+        # anything is published.
+        run: bash scripts/release/test-build-desktop-updater-feed.sh
+
+      - name: Publish the stable desktop updater feed
+        # This MUST run here, in the fan-in job, and never inside the matrix.
+        # `needs: [desktop]` with `needs.desktop.result == 'success'` means all
+        # three desktop legs finished successfully, so the versioned
+        # latest.json already carries windows, darwin and linux keys; copying
+        # from a matrix leg would race the others and publish a feed missing a
+        # platform.
+        #
+        # The script rewrites the versioned feed's API asset URLs to browser
+        # download URLs and uploads the result as latest.json on the prerelease
+        # `desktop-latest` (created on first run). It never touches the
+        # per-version latest.json.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/release/publish-desktop-updater-feed.sh "${GITHUB_REF_NAME}"
+
+      - name: Verify the stable desktop updater feed
+        # One plain GET plus a few jq checks: the feed must exist, report THIS
+        # release's version, cover all three platform families, and carry only
+        # browser download URLs.
+        run: bash scripts/release/check-desktop-updater-feed.sh "${GITHUB_REF_NAME#desktop-v}"
+
+      - name: Prepend the forward-only note to the desktop release notes
+        # The updater endpoint is baked in at build time, so no build shipped
+        # before this change can ever auto-update; users on those builds must
+        # re-download once. Say so on the release page. Idempotent: a rerun of
+        # this tag skips once the marker is present.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          marker='<!-- forward-only-update-note -->'
+          note="${marker}
+          > **Forward-only note:** desktop auto-update only works for builds that ship the fixed, versionless updater endpoint. Builds released before that change cannot update themselves and must download an installer once; every build from this release onward updates automatically."
+          body="$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json body --jq '.body')"
+          case "${body}" in
+            *"${marker}"*) echo "Forward-only note already present; skipping." ;;
+            *)
+              printf '%s\n\n%s\n' "${note}" "${body}" > release-body.md
+              gh release edit "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --notes-file release-body.md
+              ;;
+          esac
 
       - name: Dispatch the nexo-web rebuild
         # The landing page resolves the newest release assets AT BUILD TIME
