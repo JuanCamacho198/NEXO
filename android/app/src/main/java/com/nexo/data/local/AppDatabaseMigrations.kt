@@ -639,6 +639,40 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * WU3 (storage-layout-and-sync / FR-11, FR-12): index the dictionary
+     * lookups and the library `reading_state` filter.
+     *
+     * - `dictionary_words.word_normalized` is the shared
+     *   [DictionaryNormalizer] key (trim, lowercase, NFD, strip combining
+     *   marks). SQL cannot reproduce NFD stripping, so existing rows are
+     *   backfilled row-by-row in Kotlin before the index is created. The
+     *   column/index are additive and `IF NOT EXISTS`-safe.
+     * - `index_books_reading_state` serves the `observeReadingBooks` filter.
+     */
+    val MIGRATION_30_31 =
+        object : Migration(30, 31) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN word_normalized TEXT NOT NULL DEFAULT ''")
+
+                val backfill = mutableListOf<Pair<String, String>>()
+                db.query("SELECT id, word FROM dictionary_words").use { cursor ->
+                    while (cursor.moveToNext()) {
+                        backfill += cursor.getString(0) to DictionaryNormalizer.normalize(cursor.getString(1))
+                    }
+                }
+                for ((id, normalized) in backfill) {
+                    db.execSQL(
+                        "UPDATE dictionary_words SET word_normalized = ? WHERE id = ?",
+                        arrayOf(normalized, id),
+                    )
+                }
+
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_dictionary_words_word_normalized ON dictionary_words(word_normalized)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_books_reading_state ON books(reading_state)")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -670,5 +704,6 @@ object AppDatabaseMigrations {
             MIGRATION_27_28,
             MIGRATION_28_29,
             MIGRATION_29_30,
+            MIGRATION_30_31,
         )
 }

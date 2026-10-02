@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.nexo.data.local.AppDatabase
+import com.nexo.data.local.DictionaryNormalizer
 import com.nexo.data.local.dao.DictionaryWordDao
 import com.nexo.domain.model.DictionaryWord
 import kotlinx.coroutines.flow.first
@@ -215,4 +216,100 @@ class DictionaryRepositoryImplTest {
                     .word,
             )
         }
+
+    /**
+     * FR-11 parity: the indexed `exists()` must agree with the retired in-memory
+     * `allWords()` scan (here reproduced by normalizing every stored word) across
+     * the shared REQ-DSI-004 vectors.
+     */
+    @Test
+    fun `indexed exists returns identical results to the retired allWords scan`() =
+        runBlocking {
+            listOf("Café", "Abyss", "Hello,", "Tōkyō", "Ñandú", "Serendipity").forEach {
+                repository.save(it).getOrThrow()
+            }
+            val probes =
+                listOf(
+                    "Café",
+                    "café",
+                    "CAFÉ",
+                    "Cafe",
+                    "  Cafe  ",
+                    "Cafeína",
+                    "abyss",
+                    "Abyss,",
+                    "hello,",
+                    "tokyo",
+                    "TŌKYŌ",
+                    "nandu",
+                    "serendipity",
+                    "Serendipity!",
+                    "missing",
+                )
+
+            val stored = dao.getAll()
+            for (probe in probes) {
+                val key = DictionaryNormalizer.normalize(probe)
+                val oldScan = stored.any { DictionaryNormalizer.normalize(it.word) == key }
+                assertEquals("exists($probe) must match the old scan", oldScan, repository.exists(probe))
+            }
+        }
+
+    @Test
+    fun `insert stamps the indexed normalized key`() =
+        runBlocking {
+            repository.save("  Tōkyō  ").getOrThrow()
+
+            val stored = dao.getAll().single()
+            assertEquals("tokyo", stored.wordNormalized)
+        }
+
+    /**
+     * FR-11 replacement semantics: the indexed lookup is a prefix match on the
+     * normalized word (the device-safe form of the old `LIKE '%q%'` scan). It is
+     * accent/case-insensitive and intentionally does NOT match mid-word infixes.
+     */
+    @Test
+    fun `indexed search matches by normalized prefix`() =
+        runBlocking {
+            repository.save("Café").getOrThrow()
+            repository.save("Serendipity").getOrThrow()
+
+            assertEquals(listOf("Café"), repository.search("caf").first().map { it.word })
+            assertEquals(listOf("Café"), repository.search("CAF").first().map { it.word })
+            assertEquals(listOf("Serendipity"), repository.search("Seren").first().map { it.word })
+            assertTrue(repository.search("fé").first().isEmpty())
+            assertTrue(repository.search("endi").first().isEmpty())
+        }
+
+    @Test
+    fun `exists and search use the normalized index`() {
+        val existsPlan =
+            explain(
+                "SELECT EXISTS(SELECT 1 FROM dictionary_words WHERE word_normalized = 'cafe' LIMIT 1)",
+            )
+        assertTrue(
+            "exists() must use index_dictionary_words_word_normalized but plan was:\n$existsPlan",
+            existsPlan.contains("index_dictionary_words_word_normalized"),
+        )
+
+        val searchPlan =
+            explain(
+                "SELECT * FROM dictionary_words WHERE word_normalized >= 'cafe' " +
+                    "AND word_normalized < 'cafe' || char(1114111) ORDER BY addedAtEpochMillis DESC",
+            )
+        assertTrue(
+            "search() must use index_dictionary_words_word_normalized but plan was:\n$searchPlan",
+            searchPlan.contains("index_dictionary_words_word_normalized"),
+        )
+    }
+
+    private fun explain(query: String): String {
+        val details = mutableListOf<String>()
+        db.openHelper.writableDatabase.query("EXPLAIN QUERY PLAN $query").use { cursor ->
+            val detailIndex = cursor.getColumnIndex("detail")
+            while (cursor.moveToNext()) details.add(cursor.getString(detailIndex))
+        }
+        return details.joinToString("\n")
+    }
 }

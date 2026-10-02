@@ -2,9 +2,13 @@ package com.nexo.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "dictionary_words")
+@Entity(
+    tableName = "dictionary_words",
+    indices = [Index(value = ["word_normalized"])],
+)
 data class DictionaryWordEntity(
     @PrimaryKey
     val id: String,
@@ -39,4 +43,13 @@ data class DictionaryWordEntity(
      */
     @ColumnInfo(name = "updated_at_epoch_millis")
     val updatedAtEpochMillis: Long = 0L,
+    /**
+     * Indexed natural key (FR-11): the shared [com.nexo.data.local.DictionaryNormalizer]
+     * form of [word] (trim, lowercase, NFD, strip combining marks). It backs the
+     * `exists()` equality lookup and the prefix search without touching [word].
+     * Written through `DictionaryWordDao.insert`, which normalizes on the way in;
+     * pre-existing rows are backfilled by the v30→v31 migration.
+     */
+    @ColumnInfo(name = "word_normalized")
+    val wordNormalized: String = "",
 )
