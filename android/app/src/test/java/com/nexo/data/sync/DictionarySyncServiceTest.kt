@@ -123,7 +123,12 @@ class DictionarySyncServiceTest {
             sync.pushWord(entity(id = "local-2", word = "abyss"))
 
             assertEquals(1, remote.store.size)
-            assertEquals("server-1", remote.store.values.single().id)
+            assertEquals(
+                "server-1",
+                remote.store.values
+                    .single()
+                    .id,
+            )
         }
 
     @Test
@@ -168,7 +173,10 @@ class DictionarySyncServiceTest {
             val remote = FakeDictionaryRemote()
             val sync = service(remote)
             sync.pushWord(entity(word = "Abyss"))
-            val pushedAt = remote.store.values.single().updatedAt
+            val pushedAt =
+                remote.store.values
+                    .single()
+                    .updatedAt
 
             assertTrue(sync.deleteWord("Abyss"))
 

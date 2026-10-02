@@ -3,8 +3,8 @@ package com.nexo.data.repository
 import com.nexo.data.local.DictionaryNormalizer
 import com.nexo.data.local.dao.DictionaryWordDao
 import com.nexo.data.local.entity.DictionaryWordEntity
-import com.nexo.domain.model.DictionaryWord
 import com.nexo.data.sync.DictionarySyncService
+import com.nexo.domain.model.DictionaryWord
 import com.nexo.domain.repository.DictionaryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

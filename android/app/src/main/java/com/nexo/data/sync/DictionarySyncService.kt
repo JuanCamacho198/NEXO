@@ -202,21 +202,22 @@ class DictionarySyncService(
         }
 
         if (remoteTime > local.updatedAtEpochMillis) {
-            val merged = local.copy(
-                word = row.word,
-                // Keep the local "first added" time; only the write clock moves.
-                updatedAtEpochMillis = remoteTime,
-                definition = row.definition,
-                partOfSpeech = row.partOfSpeech,
-                phonetic = row.phonetic,
-                example = row.example,
-                quote = row.quote,
-                sourceBookId = row.sourceBookId,
-                sourceBookTitle = row.sourceBookTitle,
-                sourceBookAuthor = row.sourceBookAuthor,
-                sourceChapter = row.sourceChapter,
-                sourceLocator = row.sourceLocator,
-            )
+            val merged =
+                local.copy(
+                    word = row.word,
+                    // Keep the local "first added" time; only the write clock moves.
+                    updatedAtEpochMillis = remoteTime,
+                    definition = row.definition,
+                    partOfSpeech = row.partOfSpeech,
+                    phonetic = row.phonetic,
+                    example = row.example,
+                    quote = row.quote,
+                    sourceBookId = row.sourceBookId,
+                    sourceBookTitle = row.sourceBookTitle,
+                    sourceBookAuthor = row.sourceBookAuthor,
+                    sourceChapter = row.sourceChapter,
+                    sourceLocator = row.sourceLocator,
+                )
             dao.insert(merged)
             localByNormalized[row.normalizedWord] = merged
         }
