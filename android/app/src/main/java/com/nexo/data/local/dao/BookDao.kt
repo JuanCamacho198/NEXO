@@ -62,8 +62,13 @@ interface BookDao {
         updatedAt: Long,
     )
 
+    // WU2a storage-layout-and-sync: reading position lives ONLY in reading_progress.
+    // `progress_percentage` is retired as a write target (write-dead, read-only
+    // fallback); `progress` is still used to derive reading_state/completed_at, and
+    // `progress_updated_at` keeps the reading-list ordering stable until WU2b joins
+    // reading_progress.
     @Query(
-        "UPDATE books SET reading_state = CASE WHEN :progress >= 100 THEN 'completed' ELSE 'reading' END, completed_at = CASE WHEN :progress >= 100 THEN :updatedAt ELSE completed_at END, progress_percentage = :progress, progress_updated_at = :updatedAt, updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL",
+        "UPDATE books SET reading_state = CASE WHEN :progress >= 100 THEN 'completed' ELSE 'reading' END, completed_at = CASE WHEN :progress >= 100 THEN :updatedAt ELSE completed_at END, progress_updated_at = :updatedAt, updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL",
     )
     suspend fun updateReadingProgress(
         bookId: String,
@@ -72,7 +77,7 @@ interface BookDao {
     )
 
     @Query(
-        "UPDATE books SET reading_state = 'completed', completed_at = :updatedAt, progress_percentage = 100, progress_updated_at = :updatedAt, updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL",
+        "UPDATE books SET reading_state = 'completed', completed_at = :updatedAt, progress_updated_at = :updatedAt, updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL",
     )
     suspend fun completeReading(
         bookId: String,
