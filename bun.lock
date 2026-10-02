@@ -7,7 +7,7 @@
     },
     "desktop": {
       "name": "nexo-desktop",
-      "version": "0.3.1",
+      "version": "0.3.3",
       "dependencies": {
         "@fabianlars/tauri-plugin-oauth": "^2.1.0",
         "@internationalized/date": "^3.8.1",
@@ -64,6 +64,13 @@
         "vitest": "^4.1.11",
         "vitest-axe": "^0.1.0",
         "vitest-svelte-kit": "^0.0.7",
+      },
+    },
+    "packages/drive-filename-fixtures": {
+      "name": "@nexo/drive-filename-fixtures",
+      "version": "0.0.0",
+      "devDependencies": {
+        "vitest": "^4.1.11",
       },
     },
     "packages/manifest-validator": {
@@ -539,6 +546,8 @@
     "@napi-rs/canvas-win32-x64-msvc": ["@napi-rs/canvas-win32-x64-msvc@1.0.9", "", { "os": "win32", "cpu": "x64" }, "sha512-QlSYQdMQslB81nlABo9wNfQ6npFhE7/O+saCZdqVGueGanyRk4jCogD5EwQenfP3kIq9e+mm6GreQBjX5MrA8g=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.2.4", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1 || ^2.0.0-alpha.4", "@emnapi/runtime": "^1.7.1 || ^2.0.0-alpha.4" } }, "sha512-AJxoUD2/15ESHbvpcyjU274nsAPLuOtPHCk0vKJM5pj//Fg/B1FXNWjPnXTT9PymCYYiHo4zPj0ZomXBKhoy7g=="],
+
+    "@nexo/drive-filename-fixtures": ["@nexo/drive-filename-fixtures@workspace:packages/drive-filename-fixtures"],
 
     "@nexo/manifest-validator": ["@nexo/manifest-validator@workspace:packages/manifest-validator"],
 
