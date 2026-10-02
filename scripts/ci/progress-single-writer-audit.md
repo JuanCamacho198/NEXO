@@ -5,6 +5,31 @@ Change: `storage-layout-and-sync` (FR-10). Slice: PR3 / WU2a. Gate: G2 (blocks W
 `reading_progress.percentage` is the sole canonical writer target. `books.progress_percentage`
 is write-dead (read-only fallback) and stays present until WU2b.
 
+## Scanned scope
+
+Every root where a writer could hide:
+
+- `android/app/src/main` — Room DAOs/entities, repositories, `AppDatabaseMigrations.kt`.
+- `desktop/src-tauri/src` — Rust repositories/models.
+- `desktop/src-tauri/migrations` — desktop SQLite migration tree.
+- `supabase` — SQL migrations and policies.
+
+`AUDIT_ROOT` overrides the root (fixture self-test); CI uses the repository default.
+
+## Writer detection
+
+A writer is any of:
+
+1. `progress_percentage` on the left side of a snake_case assignment (SQL `SET`, Kotlin/TS
+   assignment), matched with a word boundary so the `avg_progress_percentage` read alias is not
+   mistaken for the cache column.
+2. `progressPercentage` on the left side of a camelCase assignment.
+3. Any `INSERT`/`upsert` statement on the same line that carries the column.
+
+Mappers that copy the field from itself or from the canonical progress source
+(`progressPercentage = progressPercentage`, `progressPercentage = canonical.percentage`) introduce
+no new position and are excluded from the camelCase failure set.
+
 ## Intentional writers (post-change) — expected: none
 
 Central retirement point:
@@ -24,6 +49,20 @@ All previous cache writers routed through `BookDao.updateReadingProgress`
 (`UpdateReadingProgressUseCase` -> `ReaderRepositoryImpl.updateBookReadingState`,
 `LibraryRepositoryImpl.updateReadingProgress`, `SupabaseBookCatalogSync` seed) are therefore
 write-dead with no call-site change.
+
+### Auth-independent backfill path (verify W3)
+
+`ProgressReconciler.reconcileAll()` is invoked from two places:
+
+- `GoogleDriveSyncService.bootstrap` (session-gated, kept — gives authenticated devices a prompt
+  backfill).
+- `ProgressBackfillRunner` (new), scheduled from `MainActivity.onCreate` on the container's IO
+  scope. This path has no `SessionManager`, Drive login, or session gate anywhere in the call
+  chain, so a legacy device that never signs in still backfills before WU2b drops the column.
+
+Chosen over a WorkManager one-shot because the reconcile is a bounded local Room scan that must not
+block startup but also must not depend on the background scheduler eventually running it; the
+launch is non-blocking and idempotent (`reconcileAll` is safe to run repeatedly).
 
 ### Known non-position writer (documented, not a violation)
 
@@ -62,10 +101,12 @@ Android-only.
 
 ## G2 backfill invariant (=== 0 required)
 
-Zero positions exist ONLY in the retired column when both hold after backfill:
+Zero positions exist ONLY in the retired column when all hold after backfill:
 
 1. No `cache > 0` row lacks a canonical row.
-2. No cache row is strictly newer than its canonical row.
+2. No cache row with a **known** timestamp is strictly newer than its canonical row.
+3. A NULL cache timestamp is unknown provenance. When it carries real progress it must have won
+   the reconcile and been backfilled, so the cache row equals its canonical row.
 
 The design's literal equality query
 (`... id NOT IN (SELECT book_id FROM reading_progress WHERE percentage = books.progress_percentage)`)
@@ -74,7 +115,9 @@ canonical is newer (the common case). The timestamp-based invariant above is the
 check and is what the acceptance test asserts.
 
 Asserted by `ProgressReconcilerTest.backfill_divergent_cacheOnly_canonicalOnly_preservesEveryPosition`
-(fixtures: canonical-newer, cache-newer, cache-only, canonical-only, equal).
+(fixtures: canonical-newer, cache-newer, cache-only, canonical-only, equal, NULL-timestamp divergent)
+and by `backfill_runsOnAuthIndependentStartupPath_withNoAuthenticatedSession` (the auth-independent
+startup path).
 
 ## Rollback
 

@@ -9,15 +9,40 @@
 # android/app/src/test/java/com/nexo/data/sync/ProgressReconcilerTest.kt
 # (backfill_divergent_cacheOnly_canonicalOnly_preservesEveryPosition).
 #
+# Scope: every root where a writer could hide — the Android app sources (DAOs,
+# entities, migrations), the desktop Rust sources, and both SQL migration trees
+# (desktop/src-tauri/migrations, supabase). A desktop- or migration-only
+# regression must not pass unnoticed.
+#
+# AUDIT_ROOT overrides the scanned root (used by the self-test that injects a
+# fake writer into a fixture tree). Default: this repository.
+#
 # Exit 0 = gate green. Exit 1 = a writer was found (hard failure).
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="${AUDIT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 cd "$ROOT"
 
-ANDROID_MAIN="android/app/src/main"
-DESKTOP_SRC="desktop/src-tauri/src"
+ROOTS=(
+  "android/app/src/main"
+  "desktop/src-tauri/src"
+  "desktop/src-tauri/migrations"
+  "supabase"
+)
 EXCLUDES=(--glob '!**/schemas/**' --glob '!**/build/**' --glob '!**/target/**')
+
+# A writer is any occurrence of the field on the left side of an assignment
+# (snake_case SQL/Kotlin or camelCase Kotlin), or any upsert/insert statement
+# that carries the column. `\b` keeps `avg_progress_percentage` (a read alias)
+# from being mistaken for the cache column.
+WRITER_PATTERN='(\bprogress_percentage[[:space:]]*=[^=])'
+WRITER_PATTERN+='|(progressPercentage[[:space:]]*=[^=])'
+WRITER_PATTERN+='|((INSERT|insert|upsert|Upsert|UPSERT)[^;]*(progress_percentage|progressPercentage))'
+
+# Mappers that copy the field from itself or from the canonical progress source
+# introduce no new position; they are readers in the single-writer inventory, so
+# they are excluded from the camelCase failure set.
+CAMEL_READER_ALLOW='progressPercentage[[:space:]]*=[[:space:]]*(progressPercentage|canonical\.percentage)[[:space:]]*,'
 
 if command -v rg >/dev/null 2>&1; then
   SEARCH() { rg -n "$@"; }
@@ -29,6 +54,7 @@ else
     local pattern="$1"; shift
     local dirs=()
     for d in "$@"; do [ -d "$d" ] && dirs+=("$d"); done
+    [ ${#dirs[@]} -eq 0 ] && return 0
     grep -rnE "$pattern" "${dirs[@]}" \
       | grep -v '/schemas/' \
       | grep -v '/build/' \
@@ -37,12 +63,11 @@ else
 fi
 
 echo "== G2: intentional writers of books.progress_percentage (must be none) =="
-WRITER_PATTERN='progress_percentage[[:space:]]*=[^=]'
 WRITERS=""
 if command -v rg >/dev/null 2>&1; then
-  WRITERS="$(rg -n "$WRITER_PATTERN" "$ANDROID_MAIN" "$DESKTOP_SRC" "${EXCLUDES[@]}" || true)"
+  WRITERS="$(rg -n "$WRITER_PATTERN" "${ROOTS[@]}" "${EXCLUDES[@]}" | grep -vE "$CAMEL_READER_ALLOW" || true)"
 else
-  WRITERS="$(SEARCH "$WRITER_PATTERN" "$ANDROID_MAIN" "$DESKTOP_SRC")"
+  WRITERS="$(SEARCH "$WRITER_PATTERN" "${ROOTS[@]}" | grep -vE "$CAMEL_READER_ALLOW" || true)"
 fi
 
 if [ -n "$WRITERS" ]; then
@@ -57,9 +82,9 @@ echo "OK: no intentional writer of books.progress_percentage outside the backfil
 echo
 echo "== Reader inventory of books.progress_percentage (informational) =="
 if command -v rg >/dev/null 2>&1; then
-  rg -n 'progress_percentage|progressPercentage' "$ANDROID_MAIN" "$DESKTOP_SRC" "${EXCLUDES[@]}" || true
+  rg -n 'progress_percentage|progressPercentage' "${ROOTS[@]}" "${EXCLUDES[@]}" || true
 else
-  SEARCH 'progress_percentage|progressPercentage' "$ANDROID_MAIN" "$DESKTOP_SRC" || true
+  SEARCH 'progress_percentage|progressPercentage' "${ROOTS[@]}" || true
 fi
 
 echo
@@ -70,12 +95,20 @@ Zero positions representable ONLY in books.progress_percentage means:
        SELECT COUNT(*) FROM books b
         WHERE b.progress_percentage > 0
           AND NOT EXISTS (SELECT 1 FROM reading_progress rp WHERE rp.book_id = b.id);
-  2) No cache row is strictly newer than its canonical row:
+  2) No cache row with a KNOWN timestamp is strictly newer than its canonical row:
        SELECT COUNT(*) FROM books b
          JOIN reading_progress rp ON rp.book_id = b.id
         WHERE b.progress_percentage > 0
+          AND b.progress_updated_at IS NOT NULL
           AND b.progress_updated_at > rp.updated_at;
-  Both counts MUST be 0 after the WU2a backfill (G2).
+  3) A NULL cache timestamp is unknown provenance: after backfill, a cache row
+     carrying progress must equal its canonical row (the cache value won):
+       SELECT COUNT(*) FROM books b
+         JOIN reading_progress rp ON rp.book_id = b.id
+        WHERE b.progress_percentage > 0
+          AND b.progress_updated_at IS NULL
+          AND rp.percentage <> b.progress_percentage;
+  All counts MUST be 0 after the WU2a backfill (G2).
 SQL
 
 echo

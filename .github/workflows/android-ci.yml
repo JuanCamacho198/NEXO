@@ -28,6 +28,9 @@ on:
     branches: [main]
     paths:
       - 'android/**'
+      - 'desktop/src-tauri/**'
+      - 'supabase/**'
+      - 'scripts/ci/**'
       - '.github/workflows/android-ci.yml'
 
 permissions:
@@ -72,6 +75,11 @@ jobs:
         # desktop-only PRs, so the required check never appeared and the PR was
         # unmergeable. A non-relevant PR now reports a fast, successful no-op
         # instead of paying for the full Android suite.
+        #
+        # The relevance set includes every root the G2 progress writer audit
+        # scans (desktop/src-tauri, supabase, scripts/ci), not just android/:
+        # otherwise a desktop- or migration-only writer regression would skip
+        # the audit entirely.
         id: changes
         run: |
           if [ "${{ github.event_name }}" != "pull_request" ]; then
@@ -83,7 +91,7 @@ jobs:
           base="${{ github.event.pull_request.base.sha }}"
           head="${{ github.event.pull_request.head.sha }}"
           if git diff --name-only "$base" "$head" \
-            | grep -qE '^(android/|\.github/workflows/android-ci\.yml)'; then
+            | grep -qE '^(android/|desktop/src-tauri/|supabase/|scripts/ci/|\.github/workflows/android-ci\.yml)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
