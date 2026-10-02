@@ -15,6 +15,8 @@ let mockUserId = vi.fn<() => string | null>();
 let mockGDriveUpload = vi.fn();
 let mockGDriveDownload = vi.fn();
 let mockGDriveList = vi.fn();
+let mockGDriveReadMarker = vi.fn();
+let mockGDriveUploadToFolderPath = vi.fn();
 let mockPushState = vi.fn();
 let mockPullState = vi.fn();
 let mockListStateFiles = vi.fn();
@@ -84,6 +86,12 @@ vi.mock('$lib/shared/services/storage/GDriveProvider', () => {
         upload: mockGDriveUpload,
         download: mockGDriveDownload,
         list: mockGDriveList,
+        // FR-08 guard port: a null marker means "unknown", so the guard adopts
+        // the remote version; writeBinary reuses the upload mock as the file id
+        // source so existing ref-persistence assertions stay meaningful.
+        readMarker: (...args: unknown[]) => mockGDriveReadMarker(...args),
+        writeBinary: (name: string, bytes: Uint8Array) => mockGDriveUpload(name, bytes, name),
+        uploadToFolderPath: (...args: unknown[]) => mockGDriveUploadToFolderPath(...args),
       };
     }),
   };
@@ -184,6 +192,8 @@ beforeEach(() => {
   mockGDriveList.mockResolvedValue([]);
   mockGDriveDownload.mockRejectedValue(new Error('not found'));
   mockGDriveUpload.mockResolvedValue('file-id');
+  mockGDriveReadMarker.mockResolvedValue(null);
+  mockGDriveUploadToFolderPath.mockResolvedValue('manifest-id');
   mockPushState.mockResolvedValue(undefined);
   mockPullState.mockResolvedValue({ progress: null, highlights: [], bookmarks: [] });
   mockListStateFiles.mockResolvedValue([]);
@@ -399,7 +409,7 @@ describe('SyncService — outbox BOOK handler remote-ref persistence (DRP-1/DRP-
 
     // Binary uploaded under the canonical name
     expect(mockGDriveUpload).toHaveBeenCalledWith(
-      'book-1',
+      'book-1.epub',
       new Uint8Array([9, 8, 7]),
       'book-1.epub',
     );
@@ -505,7 +515,7 @@ describe('SyncService — syncBookCatalog reconciles books missing Drive refs (D
 
     // Binary upload under the canonical name, then refs persisted on the row.
     expect(mockGDriveUpload).toHaveBeenCalledWith(
-      'book-gap',
+      'book-gap.epub',
       new Uint8Array([1, 2, 3]),
       'book-gap.epub',
     );
