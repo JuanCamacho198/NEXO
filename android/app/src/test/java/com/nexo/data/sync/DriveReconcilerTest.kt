@@ -36,6 +36,17 @@ class DriveReconcilerTest {
         override suspend fun list(prefix: String): List<String> = objects.keys.map { prefix + it }
 
         override suspend fun getFileSize(path: String): Long? = objects[path.substringAfterLast('/')]?.size?.toLong()
+
+        override suspend fun readMarker(objectName: String): DriveVersionMarker? = null
+
+        override suspend fun writeBinary(
+            objectName: String,
+            bytes: ByteArray,
+            marker: DriveVersionMarker,
+        ): String {
+            objects[objectName] = bytes
+            return objectName
+        }
     }
 
     private fun bytes(vararg values: Int): ByteArray = values.map { it.toByte() }.toByteArray()

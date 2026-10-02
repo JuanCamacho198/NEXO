@@ -1,6 +1,13 @@
 package com.nexo.data.remote.sync
 
-interface StorageSyncRemoteDataSource {
+import com.nexo.data.sync.DriveGuardPort
+
+/**
+ * Remote binary surface plus the FR-08 write-guard port (marker read + guarded
+ * write). The guard's upload entry only accepts a `CanonicalName`, so an
+ * uncanonicalized raw string cannot reach [upload] through it.
+ */
+interface StorageSyncRemoteDataSource : DriveGuardPort {
     suspend fun upload(
         path: String,
         bytes: ByteArray,

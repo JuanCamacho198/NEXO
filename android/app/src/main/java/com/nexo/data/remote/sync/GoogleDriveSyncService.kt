@@ -11,6 +11,7 @@ import com.nexo.data.local.entity.SyncFileMappingEntity
 import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.session.SessionManager
 import com.nexo.data.sync.DriveFilename
+import com.nexo.data.sync.DriveWriteGuard
 import com.nexo.debug.DebugLog
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
@@ -172,10 +173,19 @@ class GoogleDriveSyncService(
             )
         }
 
-        val drivePath = drivePathFor(userId, book.id, extensionFor(book))
+        val extension = extensionFor(book)
+        val drivePath = drivePathFor(userId, book.id, extension)
+        val canonical = DriveFilename.canonical(book.id)
+        val objectName = DriveWriteGuard.objectName(canonical, extension)
         val uploadResult =
             retryable {
-                remoteDataSource.upload(drivePath, localFile.readBytes())
+                DriveWriteGuard.uploadWithRetry(
+                    port = remoteDataSource,
+                    book = canonical,
+                    extension = extension,
+                    bytes = localFile.readBytes(),
+                    loadBase = { DriveWriteGuard.recallBase(objectName) },
+                )
             }
 
         if (uploadResult.isFailure) {
@@ -286,6 +296,14 @@ class GoogleDriveSyncService(
                 localFile.parentFile?.mkdirs()
                 localFile.writeBytes(bytes)
             }
+
+            // Seed the FR-08 guard base from the remote marker so a later push in
+            // this session compares against the version this device just saw.
+            // Best-effort: a missing/unreadable marker must not fail the pull.
+            val physicalName = remotePath.substringAfterLast('/')
+            runCatching { remoteDataSource.readMarker(physicalName) }
+                .getOrNull()
+                ?.let { DriveWriteGuard.rememberBase(physicalName, it) }
 
             val mergedBook =
                 mergeBook(

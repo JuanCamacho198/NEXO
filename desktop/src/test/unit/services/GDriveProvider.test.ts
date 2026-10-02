@@ -551,3 +551,65 @@ describe('GDriveProvider — getUsage (read-only Drive byte measurement)', () =>
     expect(err.retryable).toBe(false);
   });
 });
+
+describe('GDriveProvider — FR-08 marker + guarded upload', () => {
+  let provider: GDriveProvider;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    globalThis.fetch = vi.fn();
+    __resetGDriveFolderCache();
+    provider = new GDriveProvider();
+    vi.mocked(refreshDriveAccessToken).mockResolvedValue('ya29.refreshed-token');
+  });
+
+  it('readMarker parses appProperties, and null when the marker is absent', async () => {
+    mockAuth('token-marker');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'file-m', name: 'x.epub' }] }) },
+      {
+        ok: true,
+        json: () => Promise.resolve({ appProperties: { nexoVersion: '3', nexoChecksum: 'ab' } }),
+      },
+    ]);
+
+    expect(await provider.readMarker('x.epub')).toEqual({ version: 3, checksum: 'ab' });
+  });
+
+  it('readMarker returns null when the file has no marker', async () => {
+    mockAuth('token-marker-none');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'file-n', name: 'y.epub' }] }) },
+      { ok: true, json: () => Promise.resolve({}) },
+    ]);
+
+    expect(await provider.readMarker('y.epub')).toBeNull();
+  });
+
+  it('uploadGuarded sends the marker in the Drive metadata (create)', async () => {
+    mockAuth('token-guard');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-g' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-g' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [] }) },
+      { ok: true, json: () => Promise.resolve({ id: 'file-g' }) },
+    ]);
+
+    const fileId = await provider.uploadGuarded('a.epub', new Uint8Array([1]), {
+      version: 2,
+      checksum: 'cd',
+    });
+
+    expect(fileId).toBe('file-g');
+    const uploadCall = vi.mocked(globalThis.fetch).mock.calls[3];
+    expect(uploadCall[1]?.method).toBe('POST');
+    const metadata = JSON.parse(
+      await ((uploadCall[1]?.body as FormData).get('metadata') as Blob).text(),
+    );
+    expect(metadata).toEqual({
+      name: 'a.epub',
+      appProperties: { nexoVersion: '2', nexoChecksum: 'cd' },
+      parents: ['folder-g'],
+    });
+  });
+});
