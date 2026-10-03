@@ -442,11 +442,7 @@ export class GDriveProvider implements StorageProvider, DriveGuardPort {
    * Upload bytes into `Nexo/<parts...>` (create-if-missing), idempotent
    * find-by-name. Used by the cold-backup dual-write and the manifest marker.
    */
-  async uploadToFolderPath(
-    parts: string[],
-    name: string,
-    bytes: Uint8Array,
-  ): Promise<string> {
+  async uploadToFolderPath(parts: string[], name: string, bytes: Uint8Array): Promise<string> {
     const accessToken = await this.getAccessToken();
     const folderId = await this.ensureFolderPath(accessToken, parts);
     const query = encodeURIComponent(
@@ -482,7 +478,8 @@ export class GDriveProvider implements StorageProvider, DriveGuardPort {
   async downloadFromFolderPath(parts: string[], name: string): Promise<Uint8Array> {
     const accessToken = await this.getAccessToken();
     const folderId = await this.findFolderPath(accessToken, parts);
-    if (!folderId) throw this.authError('REMOTE_NOT_FOUND', `Drive folder missing: ${parts.join('/')}`);
+    if (!folderId)
+      throw this.authError('REMOTE_NOT_FOUND', `Drive folder missing: ${parts.join('/')}`);
     const query = encodeURIComponent(
       `name = '${name}' and '${folderId}' in parents and trashed = false`,
     );

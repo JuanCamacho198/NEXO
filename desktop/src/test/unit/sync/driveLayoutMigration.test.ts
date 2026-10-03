@@ -15,9 +15,7 @@ describe('driveLayoutMigration (WU6 FR-01 / filenameVersion gate)', () => {
     // Nothing to migrate: no legacy tree, so even a version-0 manifest cannot
     // block the fresh install.
     expect(planBooksFolderMigration(null, null, null)).toEqual({ kind: 'create' });
-    expect(
-      planBooksFolderMigration(null, null, createManifest()),
-    ).toEqual({ kind: 'create' });
+    expect(planBooksFolderMigration(null, null, createManifest())).toEqual({ kind: 'create' });
   });
 
   it('a legacy tree with filenameVersion < 1 is BLOCKED (layout must not migrate first)', () => {

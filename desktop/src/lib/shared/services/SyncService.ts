@@ -25,11 +25,7 @@ import {
   manifestObjectEntry,
   type VersionMarker,
 } from '$lib/shared/sync/driveWriteGuard';
-import {
-  MANIFEST_FILE,
-  createManifest,
-  serializeManifest,
-} from '$lib/shared/sync/driveManifest';
+import { MANIFEST_FILE, createManifest, serializeManifest } from '$lib/shared/sync/driveManifest';
 import { planReconciliation } from '../sync/driveReconciler';
 import { toSyncError } from '$lib/shared/recovery/desktopRecoveryImport';
 import {

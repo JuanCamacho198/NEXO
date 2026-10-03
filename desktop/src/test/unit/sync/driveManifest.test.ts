@@ -45,7 +45,9 @@ describe('driveManifest (WU6 FR-01 / INV-5)', () => {
   });
 
   it('gates the layout migration on filenameVersion >= 1', () => {
-    expect(canRunLayoutMigration(parseManifest(JSON.stringify({ filenameVersion: 0 })))).toBe(false);
+    expect(canRunLayoutMigration(parseManifest(JSON.stringify({ filenameVersion: 0 })))).toBe(
+      false,
+    );
     expect(canRunLayoutMigration(parseManifest(JSON.stringify({ filenameVersion: 1 })))).toBe(true);
     expect(canRunLayoutMigration(parseManifest(JSON.stringify({ filenameVersion: 2 })))).toBe(true);
   });

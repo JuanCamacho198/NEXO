@@ -629,7 +629,10 @@ describe('GDriveProvider — WU6 gated books-folder migration (Nexo/books)', () 
     mockAuth('token-legacy-blocked');
     mockDriveApiResponses([
       { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l' }] }) }, // find Nexo
-      { ok: true, json: () => Promise.resolve({ files: [{ id: 'legacy-folder', name: 'Books' }] }) }, // combined
+      {
+        ok: true,
+        json: () => Promise.resolve({ files: [{ id: 'legacy-folder', name: 'Books' }] }),
+      }, // combined
       { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l' }] }) }, // findFolderStrict Nexo
       { ok: true, json: () => Promise.resolve({ files: [] }) }, // manifest absent
       { ok: true, json: () => Promise.resolve({ files: [] }) }, // find file
@@ -644,7 +647,9 @@ describe('GDriveProvider — WU6 gated books-folder migration (Nexo/books)', () 
       .mock.calls.filter(([, init]) => init?.method === 'PATCH');
     expect(patchCalls).toHaveLength(0); // never renames before WU4 is proven
     const metadata = JSON.parse(
-      await ((vi.mocked(globalThis.fetch).mock.calls[5][1]?.body as FormData).get('metadata') as Blob).text(),
+      await (
+        (vi.mocked(globalThis.fetch).mock.calls[5][1]?.body as FormData).get('metadata') as Blob
+      ).text(),
     );
     expect(metadata.parents).toEqual(['legacy-folder']); // still writes into legacy
   });
@@ -653,7 +658,10 @@ describe('GDriveProvider — WU6 gated books-folder migration (Nexo/books)', () 
     mockAuth('token-legacy-rename');
     mockDriveApiResponses([
       { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l2' }] }) }, // find Nexo
-      { ok: true, json: () => Promise.resolve({ files: [{ id: 'legacy-folder', name: 'Books' }] }) }, // combined
+      {
+        ok: true,
+        json: () => Promise.resolve({ files: [{ id: 'legacy-folder', name: 'Books' }] }),
+      }, // combined
       { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l2' }] }) }, // findFolderStrict Nexo
       { ok: true, json: () => Promise.resolve({ files: [{ id: 'manifest-f' }] }) }, // manifest search
       { ok: true, json: () => Promise.resolve({}), text: async () => '{"filenameVersion":1}' }, // media
@@ -667,15 +675,16 @@ describe('GDriveProvider — WU6 gated books-folder migration (Nexo/books)', () 
     const renameCall = vi
       .mocked(globalThis.fetch)
       .mock.calls.find(
-        ([url, init]) =>
-          String(url).includes('/files/legacy-folder') && init?.method === 'PATCH',
+        ([url, init]) => String(url).includes('/files/legacy-folder') && init?.method === 'PATCH',
       );
     expect(renameCall).toBeDefined();
     const body = renameCall?.[1]?.body as Blob;
     expect(JSON.parse(await body.text())).toEqual({ name: 'books' });
     // Same folder id keeps every child: the create still lands in legacy-folder.
     const metadata = JSON.parse(
-      await ((vi.mocked(globalThis.fetch).mock.calls[7][1]?.body as FormData).get('metadata') as Blob).text(),
+      await (
+        (vi.mocked(globalThis.fetch).mock.calls[7][1]?.body as FormData).get('metadata') as Blob
+      ).text(),
     );
     expect(metadata.parents).toEqual(['legacy-folder']);
   });
