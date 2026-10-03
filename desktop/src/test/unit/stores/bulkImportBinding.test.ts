@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BulkImportDomainState } from '$lib/shared/stores/BulkImportDomainState.svelte';
 import { pickFile, pickFolder } from '$lib/shared/services/FilePicker';
 import { importBook } from '$lib/shared/services/BookImportService';
+import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
 
 vi.mock('$lib/shared/services/FilePicker', () => ({
   pickFile: vi.fn(),
@@ -162,6 +163,30 @@ describe('FR-BI2 — error banner auto-dismiss and dedup', () => {
     expect(state.importNotice).toBeNull();
     setTimeoutSpy.mockRestore();
     clearTimeoutSpy.mockRestore();
+  });
+
+  it('dedups across progress and catch when the metadata title differs from the file stem', async () => {
+    const state = freshState();
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    mockPickedFile();
+    vi.mocked(extractPdfMetadata).mockResolvedValue({
+      author: null,
+      title: 'The Real Title',
+      subject: null,
+      totalPages: null,
+      thumbnailBytes: null,
+    });
+    importBookMock.mockImplementation(async (_req, onProgress) => {
+      onProgress?.({ status: 'error', message: 'boom', percentage: 0 });
+      throw new Error('boom');
+    });
+    await expect(state.handleImportFile()).rejects.toThrow('boom');
+    // The old mixed key reported (displayName, 'boom') then (fileStem, 'boom')
+    // and armed two timers; the source-path identity dedups the one failure.
+    const errorTimers = setTimeoutSpy.mock.calls.filter((args) => args[1] === 3500);
+    expect(errorTimers).toHaveLength(1);
+    expect(state.importNotice?.fileName).toBe('The Real Title');
+    setTimeoutSpy.mockRestore();
   });
 
   it('distinct errors replace the visible notice', async () => {
