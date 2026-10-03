@@ -25,7 +25,8 @@ impl AppState {
     ) -> Self {
         let queue_repository = Arc::new(Mutex::new(queue_repository));
         let job_service = Arc::new(JobService::new(queue_repository.clone()));
-        let worker = QueueWorkerRuntime::start(db_path, WorkerConfig::default());
+        let worker =
+            QueueWorkerRuntime::start(db_path, WorkerConfig::default(), app_data_dir.clone());
 
         Self {
             repository: Arc::new(Mutex::new(repository)),

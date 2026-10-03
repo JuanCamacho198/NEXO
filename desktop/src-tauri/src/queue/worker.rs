@@ -6,9 +6,10 @@ use std::time::Duration;
 
 use rusqlite::Connection;
 
+use crate::queue::handlers::LocalJobDispatcher;
 use crate::queue::repository::QueueRepository;
 use crate::queue::types::WorkerConfig;
-use crate::services::job_service::{JobDispatcher, NoopJobDispatcher};
+use crate::services::job_service::JobDispatcher;
 
 pub struct QueueWorkerRuntime {
     shutdown: Arc<AtomicBool>,
@@ -16,14 +17,14 @@ pub struct QueueWorkerRuntime {
 }
 
 impl QueueWorkerRuntime {
-    pub fn start(db_path: PathBuf, config: WorkerConfig) -> Self {
+    pub fn start(db_path: PathBuf, config: WorkerConfig, app_data_dir: PathBuf) -> Self {
         let shutdown = Arc::new(AtomicBool::new(false));
         let thread_shutdown = shutdown.clone();
 
         let join_handle = thread::Builder::new()
             .name("nexo-queue-worker".to_string())
             .spawn(move || {
-                let dispatcher = NoopJobDispatcher;
+                let dispatcher = LocalJobDispatcher::new(app_data_dir);
 
                 while !thread_shutdown.load(Ordering::Relaxed) {
                     let mut repository = match open_queue_repository(&db_path) {
