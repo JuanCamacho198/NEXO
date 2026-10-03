@@ -248,8 +248,18 @@ export const saveProgress = async (payload: SaveProgressInput): Promise<void> =>
 export const saveReadingSession = async (
   payload: ReadingSessionInput,
 ): Promise<ReadingSessionSavedDto> => {
-  return invoke<ReadingSessionSavedDto>('saveReadingSession', { payload });
+  // Zone is explicit: the offset the browser reports for this device, sent on
+  // the wire. The backend never falls back to a device default.
+  return invoke<ReadingSessionSavedDto>('saveReadingSession', {
+    payload: { ...payload, zoneOffsetMinutes: localZoneOffsetMinutes() },
+  });
 };
+
+/**
+ * Explicit zone offset in minutes (positive = east of UTC) matching the
+ * convention used by the shared reading-day contract on both platforms.
+ */
+export const localZoneOffsetMinutes = (): number => -new Date().getTimezoneOffset();
 
 /**
  * Merge remote `reading_sessions` rows into local SQLite via the Rust
@@ -294,7 +304,12 @@ export const getReadingActivity = async (
   bookId?: string,
 ): Promise<ActivityPoint[]> => {
   try {
-    return await invoke<ActivityPoint[]>('getReadingActivity', { period, granularity, bookId });
+    return await invoke<ActivityPoint[]>('getReadingActivity', {
+      period,
+      granularity,
+      bookId,
+      zoneOffsetMinutes: localZoneOffsetMinutes(),
+    });
   } catch (error) {
     return attachCommandError(error);
   }
@@ -314,7 +329,11 @@ export const getReadingStatsForRange = async (
 
 export const getReadingStreak = async (bookId?: string, userId = ''): Promise<number> => {
   try {
-    return await invoke<number>('getReadingStreak', { bookId, userId });
+    return await invoke<number>('getReadingStreak', {
+      bookId,
+      userId,
+      zoneOffsetMinutes: localZoneOffsetMinutes(),
+    });
   } catch (error) {
     return attachCommandError(error);
   }
@@ -1163,6 +1182,7 @@ export const getTodayMinutes = async (userId: string, bookId?: string): Promise<
     const minutes = await invoke<number>('getTodayMinutes', {
       userId,
       bookId: bookId ?? null,
+      zoneOffsetMinutes: localZoneOffsetMinutes(),
     });
     if (typeof minutes === 'number' && Number.isFinite(minutes) && minutes >= 0) {
       return Math.floor(minutes);

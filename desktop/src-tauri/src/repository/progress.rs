@@ -4,6 +4,7 @@ use crate::models::{
     ActivityPoint, ReadingProgressDto, ReadingSessionInput, ReadingSessionSavedDto,
     ReadingStatsSummaryDto, RemoteReadingSessionRow, SaveProgressInput,
 };
+use crate::reading_day::{reading_day, reading_day_timestamp, zone_offset_minutes_from_rfc3339};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 use rusqlite::{params, OptionalExtension};
 use sha2::{Digest, Sha256};
@@ -257,7 +258,15 @@ pub fn save_reading_session(
     let started_epoch_millis = started_utc.timestamp_millis();
     let id = reading_session_id(&session.user_id, book_id, started_epoch_millis);
     let duration_minutes = session.duration_seconds / 60;
-    let date = started_utc.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc().to_rfc3339();
+    // Reading day = the user's LOCAL calendar day at an explicit zone, encoded
+    // as 00:00 UTC of that day so any reader recovers it zone-free. The zone is
+    // the client-supplied offset, falling back to the offset carried by
+    // `started_at`; it is never a device default.
+    let zone_offset_minutes = session
+        .zone_offset_minutes
+        .or_else(|| zone_offset_minutes_from_rfc3339(&session.started_at))
+        .unwrap_or(0);
+    let date = reading_day_timestamp(started_utc, zone_offset_minutes);
     let updated_at_epoch_millis = Utc::now().timestamp_millis();
 
     repo.connection.execute(
@@ -336,11 +345,13 @@ fn since_for_period(period: &str) -> AppResult<Option<DateTime<Utc>>> {
 }
 
 fn bucket_expr(granularity: &str) -> &'static str {
+    // Group by the stored reading day (canonical 00:00 UTC of the user's local
+    // calendar day). Legacy rows without a stored day fall back to the raw
+    // `started_at` instant (interpreted as UTC) — the documented cutover rule.
     match granularity {
-        "day" => "strftime('%Y-%m-%d', started_at)",
-        "week" => "strftime('%Y-%W', started_at)",
-        "month" => "strftime('%Y-%m', started_at)",
-        _ => "strftime('%Y-%m-%d', started_at)",
+        "week" => "strftime('%Y-%W', COALESCE(date, started_at))",
+        "month" => "strftime('%Y-%m', COALESCE(date, started_at))",
+        _ => "strftime('%Y-%m-%d', COALESCE(date, started_at))",
     }
 }
 
@@ -388,6 +399,7 @@ pub fn get_reading_activity(
     period: &str,
     granularity: &str,
     book_id: Option<&str>,
+    zone_offset_minutes: i32,
 ) -> AppResult<Vec<ActivityPoint>> {
     if let Some(id) = book_id {
         if id.trim().is_empty() {
@@ -426,9 +438,9 @@ pub fn get_reading_activity(
         rows.collect::<Result<Vec<_>, _>>()?
     };
 
-    let now = Utc::now().date_naive();
+    let now = reading_day(Utc::now(), zone_offset_minutes);
     let start_date = match (since, period) {
-        (Some(dt), _) => dt.date_naive() + Duration::days(1),
+        (Some(dt), _) => reading_day(dt, zone_offset_minutes) + Duration::days(1),
         (None, _) => {
             let mut statement = repo.connection.prepare(
                 "SELECT MIN(started_at) FROM reading_sessions WHERE (?1 IS NULL OR book_id = ?1)",
@@ -438,7 +450,7 @@ pub fn get_reading_activity(
             if let Some(min_str) = min_row {
                 if let Ok(parsed) = DateTime::parse_from_rfc3339(&min_str) {
                     return build_dense_series(
-                        parsed.with_timezone(&Utc).date_naive(),
+                        reading_day(parsed.with_timezone(&Utc), zone_offset_minutes),
                         now,
                         granularity,
                         bucket_index,
@@ -632,6 +644,7 @@ pub fn get_reading_streak(
     repo: &LibraryRepository,
     book_id: Option<&str>,
     user_id: &str,
+    zone_offset_minutes: i32,
 ) -> AppResult<i64> {
     if let Some(id) = book_id {
         if id.trim().is_empty() {
@@ -639,13 +652,12 @@ pub fn get_reading_streak(
         }
     }
 
-    // TODO(read-stats): localize streak days to user's local timezone; consider removing the 45-day cap once we can index on DATE(started_at, 'localtime').
     const CAP: i64 = 45;
     let since_dt = Utc::now() - Duration::days(CAP);
     let since_str = since_dt.to_rfc3339();
 
     let mut statement = repo.connection.prepare(
-        "SELECT DISTINCT strftime('%Y-%m-%d', started_at) AS day
+        "SELECT DISTINCT strftime('%Y-%m-%d', COALESCE(date, started_at)) AS day
          FROM reading_sessions
          WHERE started_at >= ?1
            AND (?2 IS NULL OR book_id = ?2)
@@ -663,7 +675,7 @@ pub fn get_reading_streak(
         .collect();
 
     let set: std::collections::HashSet<NaiveDate> = days.into_iter().collect();
-    let today = Utc::now().date_naive();
+    let today = reading_day(Utc::now(), zone_offset_minutes);
 
     if set.is_empty() {
         return Ok(0);
@@ -705,6 +717,7 @@ pub fn get_today_minutes(
     repo: &LibraryRepository,
     user_id: &str,
     book_id: Option<&str>,
+    zone_offset_minutes: i32,
 ) -> AppResult<i64> {
     if user_id.trim().is_empty() {
         return Ok(0);
@@ -720,16 +733,26 @@ pub fn get_today_minutes(
         [],
     );
 
+    // "Today" is the user's local calendar day, derived from an explicit zone —
+    // the same rule the write path used, so the stored day and this comparison
+    // can never disagree. Legacy rows without a stored day fall back to
+    // `started_at` (the documented cutover rule).
+    let today = reading_day(Utc::now(), zone_offset_minutes).format("%Y-%m-%d").to_string();
+
     let total_seconds: i64 = if let Some(bid) = book_id {
         repo.connection.query_row(
-            "SELECT COALESCE(SUM(duration_seconds), 0) FROM reading_sessions WHERE user_id = ?1 AND book_id = ?2 AND date(started_at, 'localtime') = date('now', 'localtime')",
-            params![user_id, bid],
+            "SELECT COALESCE(SUM(duration_seconds), 0) FROM reading_sessions
+             WHERE user_id = ?1 AND book_id = ?2
+               AND strftime('%Y-%m-%d', COALESCE(date, started_at)) = ?3",
+            params![user_id, bid, &today],
             |row| row.get(0),
         )?
     } else {
         repo.connection.query_row(
-            "SELECT COALESCE(SUM(duration_seconds), 0) FROM reading_sessions WHERE user_id = ?1 AND date(started_at, 'localtime') = date('now', 'localtime')",
-            params![user_id],
+            "SELECT COALESCE(SUM(duration_seconds), 0) FROM reading_sessions
+             WHERE user_id = ?1
+               AND strftime('%Y-%m-%d', COALESCE(date, started_at)) = ?2",
+            params![user_id, &today],
             |row| row.get(0),
         )?
     };
@@ -818,6 +841,7 @@ mod tests {
             duration_seconds,
             start_percentage: Some(10.0),
             end_percentage: Some(20.0),
+            zone_offset_minutes: None,
         }
     }
 
@@ -1132,11 +1156,11 @@ mod tests {
             save_reading_session(&repo, session_input("", "book-iso", &yesterday, 300)).unwrap();
 
         // u1: {D, D-1, D-2} (+ legacy D-1) -> 3.
-        assert_eq!(get_reading_streak(&repo, None, "u1").unwrap(), 3);
+        assert_eq!(get_reading_streak(&repo, None, "u1", 0).unwrap(), 3);
         // u2: {D} + legacy {D-1} -> 2 (today-alive walk-back).
-        assert_eq!(get_reading_streak(&repo, None, "u2").unwrap(), 2);
+        assert_eq!(get_reading_streak(&repo, None, "u2", 0).unwrap(), 2);
         // Other user: only legacy {D-1} -> yesterday-alive counts that day -> 1.
-        assert_eq!(get_reading_streak(&repo, None, "u-other").unwrap(), 1);
+        assert_eq!(get_reading_streak(&repo, None, "u-other", 0).unwrap(), 1);
     }
 
     /// Raw INSERT helper for `reading_sessions` that bypasses the validated
@@ -1206,6 +1230,7 @@ mod tests {
             duration_seconds: 0,
             start_percentage: Some(10.0),
             end_percentage: Some(10.0),
+            zone_offset_minutes: None,
         });
 
         assert!(matches!(result, Err(AppError::InvalidInput(_))));
@@ -1227,6 +1252,7 @@ mod tests {
                 duration_seconds: 45,
                 start_percentage: Some(12.0),
                 end_percentage: Some(14.0),
+                zone_offset_minutes: None,
             })
             .unwrap();
 
@@ -1255,6 +1281,7 @@ mod tests {
                 duration_seconds: 120,
                 start_percentage: Some(10.0),
                 end_percentage: Some(20.0),
+                zone_offset_minutes: None,
             })
             .unwrap();
         repository
@@ -1266,6 +1293,7 @@ mod tests {
                 duration_seconds: 180,
                 start_percentage: Some(30.0),
                 end_percentage: Some(90.0),
+                zone_offset_minutes: None,
             })
             .unwrap();
 
@@ -1291,7 +1319,7 @@ mod tests {
             insert_reading_session(&repository, "book-activity", &started_at, 300);
         }
 
-        let series = repository.get_reading_activity("month", "day", None).unwrap();
+        let series = repository.get_reading_activity("month", "day", None, 0).unwrap();
 
         assert_eq!(series.len(), 30);
         let filled = series.iter().filter(|p| p.minutes == 5).count();
@@ -1306,13 +1334,13 @@ mod tests {
     #[test]
     fn get_reading_activity_rejects_unknown_period() {
         let repository = new_repository();
-        let result = repository.get_reading_activity("hourly", "day", None);
+        let result = repository.get_reading_activity("hourly", "day", None, 0);
         assert!(matches!(result, Err(AppError::InvalidInput(_))));
     }
     #[test]
     fn get_reading_activity_rejects_unknown_granularity() {
         let repository = new_repository();
-        let result = repository.get_reading_activity("week", "biweekly", None);
+        let result = repository.get_reading_activity("week", "biweekly", None, 0);
         assert!(matches!(result, Err(AppError::InvalidInput(_))));
     }
     #[test]
@@ -1329,11 +1357,11 @@ mod tests {
         insert_reading_session(&repository, "book-a", &day_a.to_rfc3339(), 600);
         insert_reading_session(&repository, "book-b", &day_b.to_rfc3339(), 1800);
 
-        let only_a = repository.get_reading_activity("week", "day", Some("book-a")).unwrap();
+        let only_a = repository.get_reading_activity("week", "day", Some("book-a"), 0).unwrap();
         let total_a: i64 = only_a.iter().map(|p| p.minutes).sum();
         assert_eq!(total_a, 10);
 
-        let only_b = repository.get_reading_activity("week", "day", Some("book-b")).unwrap();
+        let only_b = repository.get_reading_activity("week", "day", Some("book-b"), 0).unwrap();
         let total_b: i64 = only_b.iter().map(|p| p.minutes).sum();
         assert_eq!(total_b, 30);
     }
@@ -1376,7 +1404,7 @@ mod tests {
     #[test]
     fn get_reading_streak_returns_zero_for_empty_table() {
         let repository = new_repository();
-        let streak = repository.get_reading_streak(None, "").unwrap();
+        let streak = repository.get_reading_streak(None, "", 0).unwrap();
         assert_eq!(streak, 0);
     }
     #[test]
@@ -1386,7 +1414,7 @@ mod tests {
         let now = Utc::now().date_naive().and_hms_opt(10, 0, 0).unwrap().and_utc();
         insert_reading_session(&repository, "book-streak-1", &now.to_rfc3339(), 600);
 
-        let streak = repository.get_reading_streak(None, "").unwrap();
+        let streak = repository.get_reading_streak(None, "", 0).unwrap();
         assert_eq!(streak, 1);
     }
     #[test]
@@ -1404,7 +1432,7 @@ mod tests {
             insert_reading_session(&repository, "book-streak-3", &at.to_rfc3339(), 600);
         }
 
-        let streak = repository.get_reading_streak(None, "").unwrap();
+        let streak = repository.get_reading_streak(None, "", 0).unwrap();
         assert_eq!(streak, 3);
     }
     #[test]
@@ -1424,7 +1452,7 @@ mod tests {
         let today = Utc::now().date_naive().and_hms_opt(9, 0, 0).unwrap().and_utc();
         insert_reading_session(&repository, "book-streak-gap", &today.to_rfc3339(), 600);
 
-        let streak = repository.get_reading_streak(None, "").unwrap();
+        let streak = repository.get_reading_streak(None, "", 0).unwrap();
         assert_eq!(streak, 1);
     }
     #[test]
@@ -1442,7 +1470,7 @@ mod tests {
             insert_reading_session(&repository, "book-streak-cap", &at.to_rfc3339(), 600);
         }
 
-        let streak = repository.get_reading_streak(None, "").unwrap();
+        let streak = repository.get_reading_streak(None, "", 0).unwrap();
         assert_eq!(streak, 45);
     }
 }

@@ -125,6 +125,7 @@ fn restart_roundtrip_preserves_settings_and_stats() {
                 duration_seconds: 300,
                 start_percentage: Some(0.0),
                 end_percentage: Some(45.0),
+                zone_offset_minutes: None,
             })
             .unwrap();
     }
@@ -304,12 +305,13 @@ fn reading_stats_activity_command_round_trips_through_repository() {
                 duration_seconds: 300,
                 start_percentage: Some(0.0),
                 end_percentage: Some(10.0),
+                zone_offset_minutes: None,
             })
             .unwrap();
     }
 
     // Call get_reading_activity with week period, day granularity
-    let activity = repository.get_reading_activity("week", "day", None).unwrap();
+    let activity = repository.get_reading_activity("week", "day", None, 0).unwrap();
 
     // Assert exactly 7 ActivityPoints (one per day for a week)
     assert_eq!(activity.len(), 7);
@@ -381,6 +383,7 @@ fn save_reading_session_returns_deterministic_id_and_dto_roundtrip() {
         duration_seconds: 300,
         start_percentage: Some(0.0),
         end_percentage: Some(5.0),
+        zone_offset_minutes: None,
     };
 
     let saved = repository.save_reading_session(input).unwrap();
@@ -401,6 +404,7 @@ fn save_reading_session_returns_deterministic_id_and_dto_roundtrip() {
             duration_seconds: 360,
             start_percentage: Some(0.0),
             end_percentage: Some(6.0),
+            zone_offset_minutes: None,
         })
         .unwrap();
     assert_eq!(saved2.id, saved.id);
@@ -445,6 +449,7 @@ fn reading_streak_counts_legacy_and_user_scoped_rows_union() {
             duration_seconds: 300,
             start_percentage: Some(0.0),
             end_percentage: Some(10.0),
+            zone_offset_minutes: None,
         })
         .unwrap();
 
@@ -462,11 +467,12 @@ fn reading_streak_counts_legacy_and_user_scoped_rows_union() {
             duration_seconds: 300,
             start_percentage: Some(0.0),
             end_percentage: Some(10.0),
+            zone_offset_minutes: None,
         })
         .unwrap();
 
     // u1: today (u1) + yesterday (legacy '') -> 2-day streak.
-    let streak = repository.get_reading_streak(None, "u1").unwrap();
+    let streak = repository.get_reading_streak(None, "u1", 0).unwrap();
     assert_eq!(streak, 2);
 
     let _ = fs::remove_file(db_path);

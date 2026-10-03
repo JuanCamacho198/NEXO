@@ -5,6 +5,7 @@ pub mod filename;
 pub mod logger;
 pub mod models;
 pub mod queue;
+pub mod reading_day;
 pub mod repository;
 pub mod sentry_init;
 pub mod services;

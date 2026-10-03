@@ -415,6 +415,10 @@ pub struct ReadingSessionInput {
     pub duration_seconds: i64,
     pub start_percentage: Option<f64>,
     pub end_percentage: Option<f64>,
+    /// Explicit zone offset in minutes (positive = east of UTC) supplied by the
+    /// client. Falls back to the offset carried by `started_at` when absent.
+    #[serde(default)]
+    pub zone_offset_minutes: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
