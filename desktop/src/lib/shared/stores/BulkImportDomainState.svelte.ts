@@ -54,6 +54,10 @@ class BulkImportDomainState {
   // Internal
   bulkImportService: BulkImportService;
   private importNoticeTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  // Stable identity of the currently visible error notice, used for dedup.
+  // Kept separate from the visible label so the banner can show the metadata
+  // display name while the progress and catch paths dedup on the same file.
+  private importNoticeDedupKey: string | null = null;
 
   // ─── Callback for post-import refresh ───
   onLibraryRefreshNeeded: (() => Promise<void>) | null = null;
@@ -66,6 +70,7 @@ class BulkImportDomainState {
       this.importNoticeTimeoutId = null;
     }
     this.importNotice = null;
+    this.importNoticeDedupKey = null;
   }
 
   private setImportNotice(notice: ImportNotice, autoDismissMs?: number): void {
@@ -84,27 +89,31 @@ class BulkImportDomainState {
 
   /**
    * FR-BI2: single error reporter. Auto-dismisses after ERROR_DISMISS_MS and
-   * dedups identical errors (file+message key): re-reporting the visible
-   * error neither stacks nor restarts its timer. Distinct errors replace.
+   * dedups identical errors. The dedup identity is the import's source path,
+   * which is stable across the progress and catch paths of the same failure
+   * even when the metadata display name differs from the filename stem. The
+   * visible label is passed separately so the banner keeps the most useful
+   * name.
    *
    * FR-DN1 feed: every reported error also records one tray entry per event
    * (before banner dedup — the tray counts outcome events, not visible
    * banners). Feed-only: banner behavior below is unchanged.
    */
-  private reportImportError(fileName: string, message: string): void {
-    reportImportOutcome(false, fileName, message);
+  private reportImportError(identity: string, message: string, label: string = identity): void {
+    reportImportOutcome(false, label, message);
     const current = this.importNotice;
     if (
       current?.status === 'error' &&
-      current.fileName === fileName &&
+      this.importNoticeDedupKey === identity &&
       current.message === message
     ) {
       return;
     }
+    this.importNoticeDedupKey = identity;
     this.setImportNotice(
       {
         status: 'error',
-        fileName,
+        fileName: label,
         message,
         percentage: 0,
       },
@@ -206,7 +215,7 @@ class BulkImportDomainState {
                 ? 'error'
                 : 'importing';
           if (noticeStatus === 'error') {
-            this.reportImportError(displayName, progress.message);
+            this.reportImportError(file.path, progress.message, displayName);
           } else {
             this.importNotice = {
               status: noticeStatus,
@@ -236,7 +245,7 @@ class BulkImportDomainState {
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.reportImportError(fileStem, errorMessage);
+      this.reportImportError(file.path, errorMessage, fileStem);
       // Re-throw so the coordinator can surface the error elsewhere if needed.
       throw error;
     } finally {
