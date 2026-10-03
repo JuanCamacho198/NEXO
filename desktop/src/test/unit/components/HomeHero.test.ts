@@ -35,7 +35,7 @@ vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
 const dictionary: Record<string, string> = {
   'home.greeting': 'Hi',
   'home.greetingName': 'Hi, {{name}}',
-  'home.heroDescription': 'The home workspace prioritizes active reading.',
+  'home.heroDescription': 'Pick up where you left off, on any device.',
 };
 
 const t = (key: string, params?: Record<string, string | number>): string => {
