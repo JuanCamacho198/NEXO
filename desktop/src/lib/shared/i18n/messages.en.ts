@@ -64,8 +64,7 @@ export const messagesEn = {
   'home.continueReadingPlaceholder': 'Your active reads will appear here.',
   'home.heroEyebrow': 'Focused reading system',
   'home.heroTitle': 'Pick up the next page with less friction and more context.',
-  'home.heroDescription':
-    'Pick up where you left off, on any device.',
+  'home.heroDescription': 'Pick up where you left off, on any device.',
   'home.heroContinueLabel': 'Active reads',
   'home.heroShelfLabel': 'Shelf books',
   'home.heroMinutesHint': 'Minutes logged across reading sessions',
