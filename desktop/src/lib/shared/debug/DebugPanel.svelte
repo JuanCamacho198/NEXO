@@ -1,10 +1,13 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { debugState } from './debugState.svelte';
   import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
   import { epubCache } from '$lib/features/reader/viewer-epub/epubCache';
   import { documentCache } from '$lib/features/reader/viewer-pdf/pdfStreaming';
   import { metricsStore } from '$lib/shared/logger/MetricsStore';
   import { createDebugIpcStats } from './useDebugIpcStats.svelte';
+  import { openDevTools } from './devtoolsClient';
+  import { type as osType } from '@tauri-apps/plugin-os';
   import type { DiagnoseResult } from '$lib/shared/types';
   const viewerPort = new TauriViewerAdapter();
   let logsLoading = $state(false);
@@ -12,6 +15,32 @@
   let diagnoseLoading = $state(false);
   const ipc = createDebugIpcStats();
   const CHART_W = 340;
+  const handleOpenDevTools = async (): Promise<void> => {
+    await openDevTools();
+  };
+  // DevTools entry point: F12 and Ctrl+Shift+I (Cmd+Option+I on macOS) are
+  // handled unconditionally so the inspector is reachable in release builds.
+  onMount(() => {
+    let isMac = false;
+    try {
+      isMac = osType() === 'macos';
+    } catch {
+      isMac = false;
+    }
+    const handleDevToolsShortcut = (event: KeyboardEvent): void => {
+      const key = event.key.toLowerCase();
+      const isInspect =
+        event.key === 'F12' ||
+        (isMac
+          ? event.metaKey && event.altKey && key === 'i'
+          : event.ctrlKey && event.shiftKey && key === 'i');
+      if (!isInspect) return;
+      event.preventDefault();
+      void handleOpenDevTools();
+    };
+    window.addEventListener('keydown', handleDevToolsShortcut);
+    return () => window.removeEventListener('keydown', handleDevToolsShortcut);
+  });
   const handleExportLogs = async (): Promise<void> => {
     logsLoading = true;
     try {
@@ -70,6 +99,20 @@
           >{debugState.breakpoint}</span
         >
       </div>
+    </div>
+    <div class="border-b border-(--color-border) p-3">
+      <div class="flex items-center justify-between">
+        <h4 class="text-micro uppercase tracking-wider text-(--color-text-muted)">DevTools</h4>
+        <button
+          type="button"
+          class="shrink-0 rounded px-2 py-0.5 text-micro font-medium bg-(--color-primary) text-white hover:opacity-80"
+          onclick={() => void handleOpenDevTools()}
+          title="Open the webview inspector">Open DevTools</button
+        >
+      </div>
+      <p class="mt-1 text-[9px] text-(--color-text-muted)">
+        Shortcuts: F12 · Ctrl+Shift+I (Cmd+Option+I on macOS)
+      </p>
     </div>
     <div class="border-b border-(--color-border) p-3">
       <div class="flex items-center justify-between">

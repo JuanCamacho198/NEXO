@@ -239,6 +239,7 @@ fn main() {
             commands::pruneSyncOutbox,
             commands::reportErrorEvent,
             commands::logEvent,
+            commands::open_devtools,
             commands::diagnose,
             commands::getLogs,
             commands::parse_epub,

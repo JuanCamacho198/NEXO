@@ -11,6 +11,7 @@ pub mod addon_fetch;
 pub mod addon_registry;
 pub mod bookmarks;
 pub mod collections;
+pub mod devtools;
 pub mod diagnostics;
 pub mod dictionary;
 pub mod discover_cache;
@@ -38,6 +39,8 @@ pub use addon_registry::*;
 pub use bookmarks::*;
 #[allow(unused_imports)]
 pub use collections::*;
+#[allow(unused_imports)]
+pub use devtools::*;
 #[allow(unused_imports)]
 pub use diagnostics::*;
 #[allow(unused_imports)]
