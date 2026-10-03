@@ -58,6 +58,28 @@ export function canonicalDriveObjectName(bookId: string, extension?: string | nu
   return `${canonicalStem(bookId)}.${canonicalExtension(extension)}`;
 }
 
+/**
+ * Branded canonical stem (FR-06). Constructible only through
+ * {@link canonicalName}; the write guard's upload entry (FR-08) accepts this
+ * type so an uncanonicalized raw string cannot reach a Drive upload.
+ */
+declare const canonicalNameBrand: unique symbol;
+export type CanonicalName = string & { readonly [canonicalNameBrand]: true };
+
+/** Canonical stem wrapped in the {@link CanonicalName} newtype. */
+export function canonicalName(rawBookId: string): CanonicalName {
+  return canonicalStem(rawBookId) as CanonicalName;
+}
+
+/**
+ * Canonical Drive object name from an already-canonical stem. Equivalent to
+ * {@link canonicalDriveObjectName} but keeps the guard's entry type-checked,
+ * since only a {@link CanonicalName} can be passed here.
+ */
+export function canonicalObjectName(book: CanonicalName, extension?: string | null): string {
+  return `${book}.${canonicalExtension(extension)}`;
+}
+
 function dropFilter(raw: string): string {
   return raw
     .split('')

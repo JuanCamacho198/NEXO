@@ -5,6 +5,8 @@ import com.google.api.client.http.HttpResponseException
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
 import com.nexo.data.remote.drive.DriveCatalogContract
+import com.nexo.data.sync.DriveVersionMarker
+import com.nexo.data.sync.DriveWriteGuard
 import com.nexo.debug.DebugLog
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
@@ -79,6 +81,64 @@ class GoogleDriveStorageRemoteDataSource(
             }
         }
     }
+
+    /**
+     * FR-08 guard port: read the `{ nexoVersion, nexoChecksum }` marker from the
+     * object's Drive `appProperties`. Returns null when the file or marker is
+     * absent; the guard treats that as version 0.
+     */
+    override suspend fun readMarker(objectName: String): DriveVersionMarker? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val folder = booksFolderIdOrNull() ?: return@runCatching null
+                val file = findFileByNameWithProperties(folderId = folder, name = objectName) ?: return@runCatching null
+                DriveWriteGuard.markerFromAppProperties(file.appProperties)
+            }.getOrElse { throwable ->
+                throw mapDriveError(throwable, "GOOGLE_DRIVE_MARKER_READ_FAILED", "Failed to read the Drive marker for $objectName")
+            }
+        }
+
+    /**
+     * FR-08 guard port: write bytes + marker in one `files.update`/create so the
+     * binary and its version marker move together.
+     */
+    override suspend fun writeBinary(
+        objectName: String,
+        bytes: ByteArray,
+        marker: DriveVersionMarker,
+    ): String =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val folder = ensureBooksFolder()
+                val existing = findFileByName(folderId = folder, name = objectName)
+                val mediaContent = ByteArrayContent("application/octet-stream", bytes)
+                val appProperties = DriveWriteGuard.appProperties(marker)
+                if (existing != null) {
+                    val updateMetadata =
+                        File().apply {
+                            name = objectName
+                            this.appProperties = appProperties
+                        }
+                    driveService.files().update(existing.id, updateMetadata, mediaContent).execute()
+                    existing.id
+                } else {
+                    val createMetadata =
+                        File().apply {
+                            name = objectName
+                            parents = listOf(folder)
+                            this.appProperties = appProperties
+                        }
+                    driveService
+                        .files()
+                        .create(createMetadata, mediaContent)
+                        .setFields("id")
+                        .execute()
+                        .id
+                }
+            }.getOrElse { throwable ->
+                throw mapDriveError(throwable, "GOOGLE_DRIVE_UPLOAD_FAILED", "Failed to upload to Google Drive: $objectName")
+            }
+        }
 
     override suspend fun download(path: String): ByteArray =
         withContext(Dispatchers.IO) {
@@ -266,6 +326,26 @@ class GoogleDriveStorageRemoteDataSource(
                 .setSpaces("drive")
                 .setQ(query)
                 .setFields("files(id, name)")
+                .execute()
+        return files.files?.firstOrNull { it.name == name }
+    }
+
+    /**
+     * Like [findFileByName] but requests `appProperties` so the guard marker can
+     * be read without a second `files.get` round-trip.
+     */
+    private fun findFileByNameWithProperties(
+        folderId: String,
+        name: String,
+    ): File? {
+        val query = "name='$name' and '$folderId' in parents and trashed = false"
+        val files =
+            driveService
+                .files()
+                .list()
+                .setSpaces("drive")
+                .setQ(query)
+                .setFields("files(id, name, appProperties)")
                 .execute()
         return files.files?.firstOrNull { it.name == name }
     }
