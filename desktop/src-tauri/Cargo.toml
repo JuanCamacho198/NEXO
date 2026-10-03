@@ -17,7 +17,11 @@ rusqlite = { version = "0.32.1", features = ["bundled", "chrono"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sentry = { version = "0.49", default-features = false, features = ["panic", "rustls"] }
-tauri = { version = "2.11.5", features = ["protocol-asset"] }
+# SECURITY DEBT: `devtools` exposes the webview inspector in release builds.
+# Anyone with local access can read the live Supabase session from the webview.
+# Acceptable while NEXO is pre-release; before public distribution gate the
+# entry point (or drop the feature) — one-line change.
+tauri = { version = "2.11.5", features = ["protocol-asset", "devtools"] }
 tauri-plugin-deep-link = "2.4.9"
 tauri-plugin-single-instance = "2.4"
 tauri-plugin-updater = "2"
