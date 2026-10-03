@@ -108,7 +108,7 @@
       class="flex w-full lg:flex-1 lg:max-w-xl min-w-0 flex-col gap-3 my-auto"
       aria-labelledby="welcome-headline"
     >
-      <img src="./nexo-horizontal-dark.svg" alt="NEXO" class="h-14 w-auto" />
+      <img src="./nexo-horizontal-dark.svg" alt="NEXO" class="h-14 w-auto mr-auto ml-0" />
 
       <p class="m-0 text-2xs font-semibold uppercase tracking-wider text-(--color-accent-blue)">
         {t('welcome.eyebrow')}
