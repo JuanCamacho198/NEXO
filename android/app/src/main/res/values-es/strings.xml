@@ -525,6 +525,17 @@
     <string name="debug_mode_title">Modo debug</string>
     <string name="debug_mode_subtitle">Mostrar herramientas de desarrollo</string>
 
+    <!-- Debug toolkit extras -->
+    <string name="debug_panel_recent_errors_title">Errores recientes</string>
+    <string name="debug_panel_recent_errors_empty">No hay errores registrados</string>
+    <string name="debug_panel_sync_never">nunca</string>
+    <string name="debug_panel_clear_cache">Borrar caché</string>
+    <string name="debug_panel_clear_cache_confirm_title">Borrar caché</string>
+    <string name="debug_panel_clear_cache_confirm_message">Elimina archivos en caché (imágenes, caché de libros extraídos, catálogo). Los libros y el progreso se conservan.</string>
+    <string name="debug_panel_clear_cache_confirm_action">Borrar</string>
+    <string name="debug_panel_cancel">Cancelar</string>
+    <string name="debug_panel_clear_cache_done">Se borraron %1$d entradas (%2$d bytes)</string>
+
     <!-- Navegación y nuevas keys -->
     <string name="tab_auth">Acceso</string>
     <string name="tab_highlights">Resaltados</string>

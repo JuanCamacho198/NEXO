@@ -13,7 +13,11 @@ import com.nexo.data.local.dao.HighlightDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingSessionDao
 import com.nexo.data.remote.supabase.SupabaseProgressSync
+import com.nexo.data.remote.sync.DriveSyncState
 import com.nexo.data.remote.sync.SyncService
+import com.nexo.debug.CacheClearReport
+import com.nexo.debug.DebugSyncStatusStore
+import com.nexo.debug.DebugToolkit
 import com.nexo.domain.model.AuthSession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +28,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 /**
@@ -49,6 +54,8 @@ class DebugViewModel
     ) : ViewModel() {
         companion object {
             private const val TAG = "DebugViewModel"
+            private const val CRASH_DIR = "crashes"
+            private const val LOG_DIR = "logs"
         }
 
         private val _debugInfo = MutableStateFlow(DebugInfo())
@@ -107,6 +114,8 @@ class DebugViewModel
             viewModelScope.launch {
                 val state = syncService.syncState.first()
                 val pending = syncService.pendingCount.first()
+                val liveFailure = (state as? DriveSyncState.Error)?.message
+                val recorded = DebugSyncStatusStore.snapshot()
                 // Supabase sync state + pending count via provider (AFR-3)
                 val supabaseState = supabaseProgressSyncProvider().state.first()
                 val supabasePending = supabaseProgressSyncProvider().pendingCount.first()
@@ -125,6 +134,8 @@ class DebugViewModel
                             SyncDebugSection(
                                 state = state.toString().removePrefix("DriveSyncState."),
                                 pendingCount = pending,
+                                lastSyncAtMs = recorded.lastSyncAtMs,
+                                lastFailure = liveFailure ?: recorded.lastFailure,
                             ),
                         supabaseSyncDebug =
                             SupabaseSyncDebugSection(
@@ -205,13 +216,74 @@ class DebugViewModel
 
         fun forceSyncPush() {
             viewModelScope.launch {
-                syncServiceProvider().schedulePush()
+                val result =
+                    runCatching { syncServiceProvider().schedulePush() }
+                        .getOrElse { Result.failure(it) }
+                recordForceSyncOutcome(result)
             }
         }
 
         fun forceSyncPull() {
             viewModelScope.launch {
-                syncServiceProvider().schedulePull()
+                val result =
+                    runCatching { syncServiceProvider().schedulePull() }
+                        .getOrElse { Result.failure(it) }
+                recordForceSyncOutcome(result)
+            }
+        }
+
+        /**
+         * Records the outcome of a toolkit-triggered sync so the sync-status
+         * readout can show a last-sync time and last failure. Session-scoped,
+         * in-memory only (see [DebugSyncStatusStore]).
+         */
+        private fun recordForceSyncOutcome(result: Result<Unit>) {
+            val failure = result.exceptionOrNull()?.message
+            if (result.isSuccess) {
+                DebugSyncStatusStore.recordSuccess()
+            } else {
+                DebugSyncStatusStore.recordFailure(failure ?: "Sync failed")
+            }
+            val recorded = DebugSyncStatusStore.snapshot()
+            _debugInfo.update {
+                it.copy(
+                    syncDebug =
+                        it.syncDebug.copy(
+                            lastSyncAtMs = recorded.lastSyncAtMs,
+                            lastFailure = recorded.lastFailure,
+                        ),
+                )
+            }
+        }
+
+        /** Loads the newest crash summaries (PII-scrubbed) for the recent-errors viewer. */
+        fun loadRecentErrors(context: Context) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val entries = DebugToolkit.recentErrors(File(context.cacheDir, CRASH_DIR))
+                _debugInfo.update { it.copy(recentErrors = entries) }
+            }
+        }
+
+        /**
+         * Clears `context.cacheDir` children only. Library data lives under
+         * `filesDir`, so it is out of reach here. Recreates the `crashes`/`logs`
+         * dirs afterwards so the crash handler and log buffer keep working.
+         */
+        fun clearCache(
+            context: Context,
+            onResult: (CacheClearReport) -> Unit,
+        ) {
+            viewModelScope.launch {
+                val report =
+                    withContext(Dispatchers.IO) {
+                        val cacheDir = context.cacheDir
+                        val cleared = DebugToolkit.clearCache(cacheDir)
+                        File(cacheDir, CRASH_DIR).mkdirs()
+                        File(cacheDir, LOG_DIR).mkdirs()
+                        cleared
+                    }
+                _debugInfo.update { it.copy(lastCacheClear = report) }
+                onResult(report)
             }
         }
 
