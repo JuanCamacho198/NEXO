@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.5.0](https://github.com/JuanCamacho198/NEXO/compare/desktop-v0.4.0...desktop-v0.5.0) (2026-10-03)
+
+
+### Features
+
+* **desktop:** add Drive settings section with three honest states ([68cadda](https://github.com/JuanCamacho198/NEXO/commit/68cadda89dbe1ffdcf119cfa3f9b753a14df435c))
+* **desktop:** add local-only notification tray with sidebar bell ([7358f49](https://github.com/JuanCamacho198/NEXO/commit/7358f49335f45e131dabf421314f8e6d120bdeb1))
+* **desktop:** Drive settings section with three honest states (WU4) ([0e82289](https://github.com/JuanCamacho198/NEXO/commit/0e8228932c5f5c388c3bb1f7944b08268b784f65))
+* **desktop:** enable the webview inspector in release builds ([819fb03](https://github.com/JuanCamacho198/NEXO/commit/819fb03513d10f5ddf55919434e7f1332d1fc046))
+* **desktop:** enable the webview inspector in release builds ([89ab64f](https://github.com/JuanCamacho198/NEXO/commit/89ab64f878650280e90a2ac6f3f6525ca3f9c36e))
+* **desktop:** local notification tray with sidebar bell (WU3) ([b04b8b4](https://github.com/JuanCamacho198/NEXO/commit/b04b8b47ec19500eacacecce3f2ff658bc77753c))
+
+
+### Bug Fixes
+
+* **desktop:** align EN hero copy and stabilize import-error dedup ([cb5053c](https://github.com/JuanCamacho198/NEXO/commit/cb5053cf2a5cccd44c7c7c956336d167c1106739))
+* **desktop:** bind bulk-import handlers and dedup error banner ([5a6d5a3](https://github.com/JuanCamacho198/NEXO/commit/5a6d5a3c28aa1b636017c1f2a7f761af76de9db9))
+* **desktop:** bind import handlers and auto-dismiss error banner (WU1) ([ce75ca8](https://github.com/JuanCamacho198/NEXO/commit/ce75ca8355bc7fce2c158e039caf1e9ae5e9fd9e))
+* **desktop:** home hero copy option B (WU2) ([89ce559](https://github.com/JuanCamacho198/NEXO/commit/89ce559a0781e043fb846a1c66b03adfce709ab2))
+* **desktop:** home hero copy option B in ES+EN ([75d00d5](https://github.com/JuanCamacho198/NEXO/commit/75d00d5754844684660994d29d4a3aa415c08e61))
+* **i18n:** align English home hero description with resolved copy ([163bc6b](https://github.com/JuanCamacho198/NEXO/commit/163bc6bef095449e37ef48e0a0e9278ba35620e4))
+* **import:** dedup single-file import errors on stable source path ([53135f5](https://github.com/JuanCamacho198/NEXO/commit/53135f5cf280259e6328a8ca193827a1b88c8dd3))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/desktop-v0.2.0...desktop-v0.3.0) (2026-09-17)
 
 
