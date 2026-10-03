@@ -2,6 +2,7 @@ package com.nexo.domain.usecase
 
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.DailyReadingActivity
+import com.nexo.domain.model.ReadingDay
 import com.nexo.domain.model.Statistics
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.ReadingStatsData
@@ -13,7 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.util.Calendar
+import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 /**
@@ -25,17 +26,8 @@ import java.util.concurrent.TimeUnit
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class GetStatisticsUseCaseTest {
-    private val todayStart: Long =
-        run {
-            val cal =
-                Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-            cal.timeInMillis
-        }
+    private val zoneId: ZoneId = ZoneId.systemDefault()
+    private val todayStart: Long = ReadingDay.todayStartMillis(zoneId)
 
     private fun daysAgo(days: Long): Long = todayStart - TimeUnit.DAYS.toMillis(days)
 

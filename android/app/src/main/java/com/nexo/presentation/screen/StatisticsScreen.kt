@@ -56,6 +56,7 @@ import com.nexo.ui.components.molecules.NexoSectionHeader
 import com.nexo.ui.icons.NexoIcons
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.TimeZone
 
 @Composable
 fun StatisticsScreen(
@@ -301,7 +302,12 @@ private fun ReadingActivitySection(weeklyActivity: List<DailyReadingActivity>) {
                 verticalAlignment = Alignment.Bottom,
             ) {
                 val maxMinutes = weeklyActivity.maxOfOrNull { it.minutesRead }?.coerceAtLeast(1) ?: 1
-                val dateFormatter = SimpleDateFormat("EEE", Locale.getDefault())
+                val dateFormatter =
+                    SimpleDateFormat("EEE", Locale.getDefault()).apply {
+                        // Canonical reading-day keys are 00:00 UTC of the local
+                        // day; format in UTC so the weekday never shifts.
+                        timeZone = TimeZone.getTimeZone("UTC")
+                    }
                 weeklyActivity.forEach { day ->
                     val heightFraction = day.minutesRead.toFloat() / maxMinutes
                     Column(
