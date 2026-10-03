@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class GetStatisticsUseCaseTest {
-    private val zoneId: ZoneId = ZoneId.systemDefault()
+    private val zoneId: ZoneId = ZoneId.of("UTC")
     private val todayStart: Long = ReadingDay.todayStartMillis(zoneId)
 
     private fun daysAgo(days: Long): Long = todayStart - TimeUnit.DAYS.toMillis(days)
@@ -38,7 +38,7 @@ class GetStatisticsUseCaseTest {
                 FakeReadingStatsRepository().apply {
                     dailyActivity = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 5))
                 }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             val first = useCase().first()
             val firstToday = first.weeklyActivity.find { it.dateEpochMillis == todayStart }
@@ -57,7 +57,7 @@ class GetStatisticsUseCaseTest {
     @Test
     fun weeklyActivity_coversSevenDays_evenWhenNoData() =
         runBlocking {
-            val useCase = GetStatisticsUseCase(FakeReadingStatsRepository(), FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(FakeReadingStatsRepository(), FakeHomeRepository(), zoneId = zoneId)
             val stats = useCase().first()
             assertEquals(7, stats.weeklyActivity.size)
             // Each day's minutes should default to 0 when no data is present
@@ -78,6 +78,7 @@ class GetStatisticsUseCaseTest {
                     statsRepo,
                     FakeHomeRepository(),
                     dailyGoalProvider = { 45 },
+                    zoneId = zoneId,
                 )
 
             val stats = useCase().first()
@@ -105,6 +106,7 @@ class GetStatisticsUseCaseTest {
                     statsRepo,
                     FakeHomeRepository(),
                     dailyGoalProvider = { 30 },
+                    zoneId = zoneId,
                 )
 
             val stats = useCase().first()
@@ -124,6 +126,7 @@ class GetStatisticsUseCaseTest {
                     statsRepo,
                     FakeHomeRepository(),
                     dailyGoalProvider = { 0 },
+                    zoneId = zoneId,
                 )
 
             val stats = useCase().first()
@@ -141,7 +144,7 @@ class GetStatisticsUseCaseTest {
                     scopedActivity["user-a"] = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 30))
                     scopedActivity["user-b"] = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 7))
                 }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             useCase.setUserId("user-a")
             val statsA: Statistics = useCase().first()
@@ -171,7 +174,7 @@ class GetStatisticsUseCaseTest {
                 FakeReadingStatsRepository().apply {
                     scopedActivity[null] = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 3))
                 }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             useCase.setUserId(null)
             val stats = useCase().first()
@@ -195,7 +198,7 @@ class GetStatisticsUseCaseTest {
                     DailyReadingActivity(dateEpochMillis = daysAgo(dayOffset), minutesRead = 10)
                 }
             val statsRepo = FakeReadingStatsRepository().apply { dailyActivity = activity }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             val stats = useCase().first()
 
@@ -212,7 +215,7 @@ class GetStatisticsUseCaseTest {
                     DailyReadingActivity(dateEpochMillis = daysAgo(2), minutesRead = 10),
                 )
             val statsRepo = FakeReadingStatsRepository().apply { dailyActivity = activity }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             val stats = useCase().first()
 
@@ -231,7 +234,7 @@ class GetStatisticsUseCaseTest {
                     DailyReadingActivity(dateEpochMillis = daysAgo(4), minutesRead = 10),
                 )
             val statsRepo = FakeReadingStatsRepository().apply { dailyActivity = activity }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             val stats = useCase().first()
 
@@ -241,7 +244,7 @@ class GetStatisticsUseCaseTest {
     @Test
     fun streak_noActivity_isZero() =
         runBlocking {
-            val useCase = GetStatisticsUseCase(FakeReadingStatsRepository(), FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(FakeReadingStatsRepository(), FakeHomeRepository(), zoneId = zoneId)
             val stats = useCase().first()
             assertEquals(0, stats.currentStreak)
         }

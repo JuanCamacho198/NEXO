@@ -33,11 +33,11 @@ class ReadingStatsRepositoryImpl(
      */
     private val drainScheduler: OutboxDrainScheduler? = null,
     /**
-     * Explicit zone for the reading-day contract. Production passes it at the
-     * DI composition root; tests pass a fixed zone. The session day is derived
-     * from the session's own start instant, never the device default here.
+     * Explicit zone for the reading-day contract. Required: production passes
+     * it at the DI composition root, tests pass a fixed zone, and no call site
+     * can fall back to a device default.
      */
-    private val zoneId: ZoneId = ZoneId.systemDefault(),
+    private val zoneId: ZoneId,
 ) : ReadingStatsRepository {
     override fun observeStats(bookId: String): Flow<ReadingStatsData?> =
         readingStatsDao.observeStatsForBook(bookId).map { entity ->

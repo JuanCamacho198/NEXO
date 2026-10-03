@@ -18,10 +18,10 @@ class HomeRepositoryImpl(
     private val readingProgressDao: ReadingProgressDao,
     private val readingSessionDao: ReadingSessionDao,
     /**
-     * Explicit zone for the reading-day contract. Production passes it at the
-     * DI composition root; tests pass a fixed zone.
+     * Explicit zone for the reading-day contract. Required: production passes
+     * it at the DI composition root, tests pass a fixed zone.
      */
-    private val zoneId: ZoneId = ZoneId.systemDefault(),
+    private val zoneId: ZoneId,
 ) : HomeRepository {
     override fun observeBooks(): Flow<List<Book>> =
         combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { entities, progresses ->

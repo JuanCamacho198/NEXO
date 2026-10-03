@@ -194,6 +194,7 @@ class HomeRepositoryImplFilterTest {
             bookDao = bookDao,
             readingProgressDao = readingProgressDao,
             readingSessionDao = mockk<ReadingSessionDao>(),
+            zoneId = java.time.ZoneId.of("UTC"),
         ).observeCurrentBooks().first()
     }
 

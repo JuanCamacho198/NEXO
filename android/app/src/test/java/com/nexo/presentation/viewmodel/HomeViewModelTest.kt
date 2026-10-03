@@ -38,6 +38,7 @@ class HomeViewModelTest {
                 readingStatsRepository = FakeReadingStatsRepository(),
                 homeRepository = mockRepo,
                 dailyGoalProvider = { 30 },
+                zoneId = java.time.ZoneId.of("UTC"),
             )
 
         return HomeViewModel(
@@ -148,6 +149,7 @@ class HomeViewModelTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     homeRepository = mockRepo,
                     dailyGoalProvider = { 30 },
+                    zoneId = java.time.ZoneId.of("UTC"),
                 )
             val viewModel =
                 HomeViewModel(
@@ -188,6 +190,7 @@ class HomeViewModelTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     homeRepository = mockRepo,
                     dailyGoalProvider = { 30 },
+                    zoneId = java.time.ZoneId.of("UTC"),
                 )
             val viewModel =
                 HomeViewModel(
@@ -222,6 +225,7 @@ class HomeViewModelTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     homeRepository = mockRepo,
                     dailyGoalProvider = { 30 },
+                    zoneId = java.time.ZoneId.of("UTC"),
                 )
             val viewModel =
                 HomeViewModel(

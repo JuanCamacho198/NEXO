@@ -19,10 +19,10 @@ class GetStatisticsUseCase(
     private val homeRepository: HomeRepository,
     private val dailyGoalProvider: () -> Int = { 30 },
     /**
-     * Explicit zone for the reading-day contract. Production passes it at the
-     * DI composition root; tests pass a fixed zone.
+     * Explicit zone for the reading-day contract. Required: production passes
+     * it at the DI composition root, tests pass a fixed zone.
      */
-    private val zoneId: ZoneId = ZoneId.systemDefault(),
+    private val zoneId: ZoneId,
 ) {
     private val refreshTrigger = MutableStateFlow(Unit)
 
