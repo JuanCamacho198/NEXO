@@ -110,10 +110,11 @@ migrate.
 
 ## In-migration backfill note
 
-WU2b dropped `books.progress_percentage`. The cache → canonical backfill runs
+WU2b dropped `books.progress_percentage` on Android. The cache → canonical backfill runs
 **inside the DROP migration itself** — the Room migration step
-(`AppDatabaseMigrations.kt`) and the desktop SQLite drop migration — not in the
-app-start runner (`ProgressBackfillRunner` / `MainActivity.onCreate`). A
+(`AppDatabaseMigrations.kt`) — not in the
+app-start runner (`ProgressBackfillRunner` / `MainActivity.onCreate`). (Desktop never
+carried this column, so there is no desktop drop migration.) A
 version-skip upgrade opens the database and runs migrations before
 `MainActivity.onCreate`, so an app-start backfill would run after the column is
 already gone and lose every cache-only position. The backfill is a no-op when
