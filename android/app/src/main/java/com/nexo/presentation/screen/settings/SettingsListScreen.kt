@@ -78,6 +78,9 @@ fun SettingsListScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val langPrefs = androidx.compose.runtime.remember { AppLanguagePreferences(context = context) }
 
+    // FR-AD1: the persisted toggle is the sole authority for debug tools.
+    var debugEnabled by remember { mutableStateOf(DebugPrefs.isEnabled(context)) }
+
     val currentLanguageLabel =
         when (langPrefs.load()) {
             "es" -> R.string.settings_language_spanish
@@ -248,19 +251,27 @@ fun SettingsListScreen(
             // Android DSN is compile-time, so this vetoes at the SDK hooks).
             PrivacyTelemetrySection(context = context)
 
-            DebugModeSection(context = context)
+            DebugModeSection(
+                debugEnabled = debugEnabled,
+                onToggle = { enabled ->
+                    debugEnabled = enabled
+                    DebugPrefs.setEnabled(context, enabled)
+                },
+            )
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = stringResource(R.string.debug_panel_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                NexoPreferenceItem(
-                    icon = NexoIcons.BugReport,
-                    label = stringResource(R.string.debug_settings_log_viewer),
-                    onClick = onNavigateToLogViewer,
-                )
+            if (debugEnabled) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(R.string.debug_panel_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    NexoPreferenceItem(
+                        icon = NexoIcons.BugReport,
+                        label = stringResource(R.string.debug_settings_log_viewer),
+                        onClick = onNavigateToLogViewer,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -359,9 +370,10 @@ private fun SettingsGroupBlock(group: SettingsGroup) {
 }
 
 @Composable
-private fun DebugModeSection(context: android.content.Context) {
-    var debugEnabled by remember { mutableStateOf(DebugPrefs.isEnabled(context)) }
-
+private fun DebugModeSection(
+    debugEnabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.debug_mode_title),
@@ -395,10 +407,7 @@ private fun DebugModeSection(context: android.content.Context) {
                 }
                 androidx.compose.material3.Switch(
                     checked = debugEnabled,
-                    onCheckedChange = { enabled ->
-                        debugEnabled = enabled
-                        DebugPrefs.setEnabled(context, enabled)
-                    },
+                    onCheckedChange = onToggle,
                 )
             }
         }

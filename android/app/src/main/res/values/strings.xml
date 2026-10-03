@@ -640,6 +640,17 @@
     <!-- Debug mode toggle -->
     <string name="debug_mode_title">Debug mode</string>
     <string name="debug_mode_subtitle">Show development tools</string>
+
+    <!-- Debug toolkit extras -->
+    <string name="debug_panel_recent_errors_title">Recent errors</string>
+    <string name="debug_panel_recent_errors_empty">No errors recorded</string>
+    <string name="debug_panel_sync_never">never</string>
+    <string name="debug_panel_clear_cache">Clear cache</string>
+    <string name="debug_panel_clear_cache_confirm_title">Clear cache</string>
+    <string name="debug_panel_clear_cache_confirm_message">Removes cached files (images, extracted book cache, catalog). Library books and progress are kept.</string>
+    <string name="debug_panel_clear_cache_confirm_action">Clear</string>
+    <string name="debug_panel_cancel">Cancel</string>
+    <string name="debug_panel_clear_cache_done">Cleared %1$d entries (%2$d bytes)</string>
     <string name="reader_cancel">Cancel</string>
     <string name="reader_save">Save</string>
     <string name="reader_title">Reader</string>
