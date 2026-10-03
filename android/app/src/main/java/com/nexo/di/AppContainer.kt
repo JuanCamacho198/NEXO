@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import coil3.ImageLoader
 import com.nexo.BuildConfig
+import com.nexo.data.local.AppDatabase
+import com.nexo.data.local.RetentionPruner
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.HighlightDao
@@ -23,6 +25,7 @@ import com.nexo.data.remote.sync.StorageSyncRemoteDataSource
 import com.nexo.data.remote.sync.SyncOrchestrator
 import com.nexo.data.remote.sync.SyncService
 import com.nexo.data.remote.work.WorkManagerOutboxDrainScheduler
+import com.nexo.data.remote.work.WorkManagerRetentionPruneScheduler
 import com.nexo.data.session.ReaderPreferences
 import com.nexo.data.session.ReadingGoalPreferences
 import com.nexo.data.session.SessionManager
@@ -90,6 +93,17 @@ class AppContainer(
             sessionManager = networkModule.sessionManager,
         )
     }
+
+    /**
+     * FR-14 retention: scheduler-only periodic prune + VACUUM. Lazy so a
+     * container construction never touches WorkManager.
+     */
+    val retentionPruneScheduler: WorkManagerRetentionPruneScheduler by lazy {
+        WorkManagerRetentionPruneScheduler(context = appContext)
+    }
+
+    /** FR-14 prune implementation, shared by the worker (Hilt) and tests. */
+    val retentionPruner: RetentionPruner by lazy { RetentionPruner(appDatabase) }
 
     private val repositoryModule =
         RepositoryModule(
@@ -307,6 +321,7 @@ class AppContainer(
     val bookmarkDao: BookmarkDao get() = databaseModule.bookmarkDao
     val readingSessionDao: ReadingSessionDao get() = databaseModule.readingSessionDao
     val readingProgressDao: ReadingProgressDao get() = databaseModule.readingProgressDao
+    val appDatabase: AppDatabase get() = databaseModule.appDatabase
 
     fun clearAllData() {
         databaseModule.clearAllTables()

@@ -75,6 +75,13 @@ class AppDatabaseMigrationTest {
             .getDatabasePath("migration-29-30-noop")
             .absolutePath
 
+    private fun testDbPath30To31(): String =
+        InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getDatabasePath("migration-30-31")
+            .absolutePath
+
     private fun columnNames(
         db: SupportSQLiteDatabase,
         table: String,
@@ -309,6 +316,49 @@ class AppDatabaseMigrationTest {
         assertNull(progressPercentage(db, "untouched"))
         assertEquals(0L, query(db, "SELECT COUNT(*) FROM reading_progress"))
         assertEquals(1L, query(db, "SELECT COUNT(*) FROM books"))
+        db.close()
+    }
+
+    @Test
+    fun `migration 30 to 31 backfills the indexed normalized key and adds both indexes`() {
+        val dbPath = testDbPath30To31()
+        helper.createDatabase(dbPath, 30).use { db ->
+            // NFD stripping + case/space folding can only run in Kotlin, so the
+            // backfill must reproduce the shared normalizer for existing rows.
+            db.execSQL(
+                "INSERT INTO dictionary_words (id, word, addedAtEpochMillis, definition, updated_at_epoch_millis) " +
+                    "VALUES ('dw-norm', '  Café  ', 7000, 'coffee', 7000)",
+            )
+            db.execSQL(
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, " +
+                    "state_version, remote_lifecycle, remote_catalog_version) " +
+                    "VALUES ('bk-norm', 'Book', '/b.epub', 'epub', 1000, 'reading', 0, 'imported', 0)",
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(dbPath, 31, true, AppDatabaseMigrations.MIGRATION_30_31)
+
+        db
+            .query("SELECT word, word_normalized, definition FROM dictionary_words WHERE id = 'dw-norm'")
+            .use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("  Café  ", cursor.getString(0))
+                assertEquals("cafe", cursor.getString(1))
+                assertEquals("coffee", cursor.getString(2))
+            }
+
+        val indexes =
+            mutableListOf<String>()
+        db
+            .query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name IN ('dictionary_words','books')")
+            .use { cursor ->
+                while (cursor.moveToNext()) indexes.add(cursor.getString(0))
+            }
+        assertTrue(
+            "expected index_dictionary_words_word_normalized, got $indexes",
+            indexes.contains("index_dictionary_words_word_normalized"),
+        )
+        assertTrue("expected index_books_reading_state, got $indexes", indexes.contains("index_books_reading_state"))
         db.close()
     }
 }

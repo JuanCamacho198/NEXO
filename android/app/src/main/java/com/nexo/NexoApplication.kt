@@ -8,6 +8,7 @@ import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import com.nexo.data.remote.supabase.SupabaseClientProvider
+import com.nexo.data.remote.work.WorkManagerRetentionPruneScheduler
 import com.nexo.debug.CrashLogStore
 import com.nexo.debug.DebugLog
 import com.nexo.debug.FeedbackPersistence
@@ -86,6 +87,9 @@ class NexoApplication :
      */
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
+
+    @Inject
+    lateinit var retentionPruneScheduler: WorkManagerRetentionPruneScheduler
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -169,6 +173,13 @@ class NexoApplication :
         // The client is created lazily on first use if this warm-up races.
         supabaseWarmupScope.launch {
             runCatching { SupabaseClientProvider.client }
+        }
+
+        // FR-14: (re)assert the weekly retention prune. KEEP makes this
+        // idempotent across app starts; scheduled off the main thread so
+        // Application.onCreate never blocks on WorkManager.
+        supabaseWarmupScope.launch {
+            runCatching { retentionPruneScheduler.schedule() }
         }
     }
 

@@ -7,25 +7,44 @@ import androidx.room.Query
 import androidx.room.RawQuery
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
+import com.nexo.data.local.DictionaryNormalizer
 import com.nexo.data.local.entity.DictionaryWordEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface DictionaryWordDao {
+    /**
+     * Raw insert. Use [insert] for every write path: it stamps the indexed
+     * `word_normalized` key from the shared normalizer so `exists()` and
+     * `search()` stay consistent with the stored row.
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(word: DictionaryWordEntity)
+    suspend fun insertRaw(word: DictionaryWordEntity)
+
+    suspend fun insert(word: DictionaryWordEntity) = insertRaw(word.copy(wordNormalized = DictionaryNormalizer.normalize(word.word)))
 
     @Query("SELECT * FROM dictionary_words ORDER BY addedAtEpochMillis DESC")
     fun observeAll(): Flow<List<DictionaryWordEntity>>
 
-    @Query("SELECT * FROM dictionary_words WHERE word LIKE '%' || :query || '%' ORDER BY addedAtEpochMillis DESC")
-    fun search(query: String): Flow<List<DictionaryWordEntity>>
+    /**
+     * FR-11: prefix lookup served by `index_dictionary_words_word_normalized`.
+     * The upper bound `char(1114111)` (U+10FFFF) makes the range cover every
+     * string sharing the prefix, which a BINARY index can seek — unlike the old
+     * non-sargable `LIKE '%query%'` scan.
+     */
+    @Query(
+        "SELECT * FROM dictionary_words WHERE word_normalized >= :normalizedQuery " +
+            "AND word_normalized < :normalizedQuery || char(1114111) " +
+            "ORDER BY addedAtEpochMillis DESC",
+    )
+    fun search(normalizedQuery: String): Flow<List<DictionaryWordEntity>>
 
     @Query("DELETE FROM dictionary_words WHERE id = :wordId")
     suspend fun delete(wordId: String)
 
-    @Query("SELECT COUNT(*) FROM dictionary_words WHERE LOWER(word) = LOWER(:word)")
-    suspend fun countByWord(word: String): Int
+    /** FR-11: normalized equality lookup served by the same index as [search]. */
+    @Query("SELECT EXISTS(SELECT 1 FROM dictionary_words WHERE word_normalized = :normalizedWord LIMIT 1)")
+    suspend fun existsNormalized(normalizedWord: String): Boolean
 
     @Query("SELECT * FROM dictionary_words WHERE id = :wordId LIMIT 1")
     suspend fun findById(wordId: String): DictionaryWordEntity?
@@ -33,7 +52,7 @@ interface DictionaryWordDao {
     /**
      * Full local snapshot used by dictionary sync to resolve remote rows to
      * their local counterpart by normalized word (FR-09). The dictionary is a
-     * small user-curated set; WU3 replaces this scan with the normalized index.
+     * small user-curated set; identity is the indexed `word_normalized` column.
      */
     @Query("SELECT * FROM dictionary_words")
     suspend fun getAll(): List<DictionaryWordEntity>
@@ -51,9 +70,6 @@ interface DictionaryWordDao {
         example: String?,
         updatedAtEpochMillis: Long,
     )
-
-    @Query("SELECT word FROM dictionary_words")
-    suspend fun allWords(): List<String>
 
     @RawQuery(observedEntities = [DictionaryWordEntity::class])
     suspend fun searchFtsRaw(query: SupportSQLiteQuery): List<DictionaryWordEntity>

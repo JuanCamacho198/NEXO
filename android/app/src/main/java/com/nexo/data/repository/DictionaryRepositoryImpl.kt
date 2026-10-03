@@ -26,7 +26,7 @@ class DictionaryRepositoryImpl(
         }
 
     override fun search(query: String): Flow<List<DictionaryWord>> =
-        dao.search(query).map { entities ->
+        dao.search(DictionaryNormalizer.normalize(query)).map { entities ->
             entities.map { it.toDomain() }
         }
 
@@ -98,13 +98,11 @@ class DictionaryRepositoryImpl(
     }
 
     /**
-     * Identity is the normalized key (REQ-DSI-004). Android has no `normalized_word` column
-     * (Decision 12), so the comparison runs in Kotlin over the narrow `word` projection.
+     * Identity is the normalized key (REQ-DSI-004). FR-11: the lookup is an
+     * indexed equality on `dictionary_words.word_normalized`; the previous
+     * in-memory scan over every stored word is gone.
      */
-    override suspend fun exists(word: String): Boolean {
-        val key = DictionaryNormalizer.normalize(word)
-        return dao.allWords().any { DictionaryNormalizer.normalize(it) == key }
-    }
+    override suspend fun exists(word: String): Boolean = dao.existsNormalized(DictionaryNormalizer.normalize(word))
 
     private fun String?.cleaned(): String? = this?.trim()?.takeIf { it.isNotBlank() }
 
