@@ -13,6 +13,8 @@ const dictionary: Record<string, string> = {
   'stats.days': '{{count}} days',
   'home.metrics.dailyGoalLabel': 'Daily goal',
   'home.metrics.minutesFormat': '{{current}}/{{total}} min',
+  'home.progressTitle': 'Reading progress',
+  'home.progressGoalAria': 'Daily goal progress',
 };
 
 const t = (key: string, params?: Record<string, string | number>): string => {
@@ -34,7 +36,7 @@ const stats: ReadingStatsSummaryDto = {
 };
 
 describe('HomeStatsGrid', () => {
-  it('renders five metric cards in Pen order with translated labels and values', () => {
+  it('renders goal, streak and activity in one compact progress field', () => {
     const { container } = render(HomeStatsGrid, {
       props: {
         stats,
@@ -47,27 +49,34 @@ describe('HomeStatsGrid', () => {
       },
     });
 
-    const grid = container.querySelector('[data-testid="stats-grid"]');
-    expect(grid).not.toBeNull();
+    const summary = container.querySelector('[data-testid="stats-summary"]');
+    expect(summary).not.toBeNull();
 
-    for (const label of ['Started', 'Completed', 'Daily goal', 'Sessions', 'Streak']) {
-      expect(grid).toHaveTextContent(label);
+    for (const label of [
+      'Reading progress',
+      'Daily goal',
+      'Streak',
+      'Sessions',
+      'Started',
+      'Completed',
+    ]) {
+      expect(summary).toHaveTextContent(label);
     }
 
-    const text = grid?.textContent ?? '';
-    const labels = ['Started', 'Completed', 'Daily goal', 'Sessions', 'Streak'];
-    const indexes = labels.map((label) => text.indexOf(label));
-    expect(indexes.every((index) => index >= 0)).toBe(true);
-    expect(indexes).toEqual([...indexes].sort((a, b) => a - b));
+    expect(summary).toHaveTextContent('10/20 min');
 
-    expect(grid).toHaveTextContent('4');
-    expect(grid).toHaveTextContent('2');
-    expect(grid).toHaveTextContent('10/20 min');
-    expect(grid).toHaveTextContent('7');
-    expect(grid).toHaveTextContent('3 days');
+    const activity = summary?.querySelector('dl');
+    expect(activity).toHaveTextContent('Streak');
+    expect(activity).toHaveTextContent('3 days');
+    expect(activity).toHaveTextContent('Sessions');
+    expect(activity).toHaveTextContent('7');
+    expect(activity).toHaveTextContent('Started');
+    expect(activity).toHaveTextContent('4');
+    expect(activity).toHaveTextContent('Completed');
+    expect(activity).toHaveTextContent('2');
   });
 
-  it('shows a progress bar on the daily goal card with the goal progress', () => {
+  it('exposes a named progress bar with the goal progress', () => {
     const { container } = render(HomeStatsGrid, {
       props: {
         stats,
@@ -81,7 +90,21 @@ describe('HomeStatsGrid', () => {
 
     const bar = container.querySelector('[role="progressbar"]');
     expect(bar).not.toBeNull();
+    expect(bar).toHaveAttribute('aria-label', 'Daily goal progress');
     expect(bar).toHaveAttribute('aria-valuenow', '50');
+    expect(bar?.querySelector('div')?.getAttribute('style')).toContain('width: 50%');
+  });
+
+  it('clamps goal progress outside the 0..1 range', () => {
+    const { container: high } = render(HomeStatsGrid, {
+      props: { stats, t, todayMinutes: 99, dailyGoalMinutes: 20, goalProgress: 1.7 },
+    });
+    expect(high.querySelector('[role="progressbar"]')).toHaveAttribute('aria-valuenow', '100');
+
+    const { container: low } = render(HomeStatsGrid, {
+      props: { stats, t, todayMinutes: 0, dailyGoalMinutes: 20, goalProgress: -0.4 },
+    });
+    expect(low.querySelector('[role="progressbar"]')).toHaveAttribute('aria-valuenow', '0');
   });
 
   it('shows an em dash for the streak while the streak is loading', () => {
@@ -89,27 +112,38 @@ describe('HomeStatsGrid', () => {
       props: { stats, t, streakDays: 3, isLoadingStreak: true },
     });
 
-    expect(container.querySelector('[data-testid="stats-grid"]')).toHaveTextContent('—');
-    expect(container.querySelector('[data-testid="stats-grid"]')).not.toHaveTextContent('3 days');
+    expect(container.querySelector('[data-testid="stats-summary"]')).toHaveTextContent('—');
+    expect(container.querySelector('[data-testid="stats-summary"]')).not.toHaveTextContent(
+      '3 days',
+    );
   });
 
   it('shows skeletons instead of values while loading', () => {
     const { container } = render(HomeStatsGrid, {
-      props: { stats, t, isLoading: true },
+      props: {
+        stats,
+        t,
+        isLoading: true,
+        todayMinutes: 10,
+        dailyGoalMinutes: 20,
+        goalProgress: 0.5,
+      },
     });
 
-    const grid = container.querySelector('[data-testid="stats-grid"]');
-    expect(grid?.querySelectorAll('.animate-pulse').length).toBe(5);
-    expect(grid).not.toHaveTextContent('4');
+    const summary = container.querySelector('[data-testid="stats-summary"]');
+    expect(summary?.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(summary).not.toHaveTextContent('10/20 min');
+    expect(summary).not.toHaveTextContent('7');
   });
 
-  it('renders the disabled reason panel instead of the cards', () => {
+  it('renders the disabled reason panel instead of the progress field', () => {
     const { container } = render(HomeStatsGrid, {
       props: { stats, t, disabledReason: 'Stats unavailable right now.' },
     });
 
     expect(screen.getByText('Stats unavailable right now.')).toBeInTheDocument();
-    expect(container.querySelector('[data-testid="stats-grid"]')).toBeNull();
+    expect(container.querySelector('[role="progressbar"]')).toBeNull();
+    expect(container.querySelector('dl')).toBeNull();
   });
 
   it('contains no hardcoded hex colors', () => {

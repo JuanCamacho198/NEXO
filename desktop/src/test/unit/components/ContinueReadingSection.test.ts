@@ -98,6 +98,15 @@ describe('ContinueReadingSection (5.3)', () => {
     expect(trigger).toBeTruthy();
   });
 
+  it('renders the resume action as the NEXO-blue primary CTA', () => {
+    setContinueReadingBooks([makeBook('b1')]);
+    render(ContinueReadingSection);
+
+    const button = screen.getByText('Continue').closest('button');
+    expect(button).not.toBeNull();
+    expect(button!.className).toContain('bg-(--color-accent)');
+  });
+
   it('renders action menu trigger for each book when 2+ books', () => {
     setContinueReadingBooks([makeBook('b1'), makeBook('b2')]);
     render(ContinueReadingSection);

@@ -149,7 +149,7 @@
           <li class="relative snap-start shrink-0 w-full">
             {#if book.readingStatus === 'reading'}
               <span
-                class="pointer-events-none absolute left-2 top-2 z-10 rounded-full bg-(--color-accent-soft) px-2 py-0.5 text-2xs font-semibold uppercase tracking-wider text-(--color-accent)"
+                class="pointer-events-none absolute left-2 top-2 z-10 rounded-full bg-(--color-accent-soft) px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-(--color-primary)"
               >
                 {appState.t('home.continue.liveBadge')}
               </span>

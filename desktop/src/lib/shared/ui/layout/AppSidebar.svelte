@@ -38,6 +38,14 @@
     $theme === 'light' ? './nexo-horizontal-light.svg' : './nexo-horizontal-dark.svg',
   );
 
+  /**
+   * Intent groups, in the order the navigation model already returns them
+   * (home, library, discover, addons, stats, highlights, settings). Grouping
+   * inserts restrained separators only; it never reorders destinations.
+   */
+  const groupOf = (id: AppRoute): 'reading' | 'tools' | 'system' =>
+    id === 'home' || id === 'library' ? 'reading' : id === 'settings' ? 'system' : 'tools';
+
   const handleUserBlockKeydown = (event: KeyboardEvent): void => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -51,26 +59,66 @@
   };
 </script>
 
+{#snippet navButton(item: NavItem)}
+  {@const ItemIcon = item.icon}
+  <Tooltip.Root>
+    <Tooltip.Trigger
+      class={`relative w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+        collapsed ? 'flex items-center justify-center' : 'flex items-center gap-3'
+      } ${
+        activeRoute === item.id
+          ? 'bg-(--color-accent-nav-bg) text-(--color-accent-nav-fg)'
+          : 'text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary)'
+      }`}
+      aria-label={t(item.messageKey)}
+      onclick={item.action}
+    >
+      {#if activeRoute === item.id}
+        <span
+          class="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-(--color-accent-nav-bar)"
+          aria-hidden="true"
+        ></span>
+      {/if}
+      <ItemIcon size={16} strokeWidth={1.8} aria-hidden="true" />
+      {#if !collapsed}
+        {t(item.messageKey)}
+      {/if}
+    </Tooltip.Trigger>
+    <Tooltip.Portal>
+      <Tooltip.Content
+        role="tooltip"
+        side="right"
+        sideOffset={8}
+        class="z-50 whitespace-nowrap rounded bg-(--color-surface) p-1 text-xs text-(--color-primary) shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
+      >
+        {t(item.messageKey)}
+      </Tooltip.Content>
+    </Tooltip.Portal>
+  </Tooltip.Root>
+{/snippet}
+
 <aside
-  class="sticky top-0 h-full shrink-0 border-r border-(--color-border) bg-[rgba(12,20,32,0.6)] backdrop-blur-xl max-lg:hidden lg:flex lg:flex-col transition-all duration-300"
+  class="sticky top-0 flex h-full shrink-0 flex-col overflow-hidden border-r border-(--color-border) bg-(--color-sidebar-bg) transition-[width] duration-300 max-lg:hidden"
   class:w-64={!collapsed}
   class:w-18={collapsed}
 >
-  <div class="flex items-center justify-center p-4 pb-2">
+  <div class="flex items-center p-3 {collapsed ? 'justify-center' : ''}">
     {#if collapsed}
       <button
+        type="button"
         onclick={() => (collapsed = !collapsed)}
-        class="flex items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary) transition-colors"
+        class="flex items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
         aria-label={t('sidebar.expand')}
       >
         <ChevronRight size={14} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     {:else}
-      <div class="flex items-center gap-3 w-full">
-        <img src={wordmarkSrc} alt="NEXO" class="h-13 w-auto shrink-0" />
+      <div class="flex w-full items-center gap-2">
+        <img src={wordmarkSrc} alt="NEXO" class="h-10 w-auto shrink-0" />
         <button
+          type="button"
           onclick={() => (collapsed = !collapsed)}
-          class="ml-auto flex items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary) transition-colors shrink-0"
+          class="ml-auto flex shrink-0 items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
           aria-label={t('sidebar.collapse')}
         >
           <ChevronLeft size={14} class="h-3.5 w-3.5" aria-hidden="true" />
@@ -79,83 +127,31 @@
     {/if}
   </div>
 
-  <nav class="flex-1 space-y-1 overflow-y-auto p-4">
+  <nav class="min-h-0 flex-1 overflow-y-auto px-3 py-2">
     <Tooltip.Provider delayDuration={0} skipDelayDuration={0}>
-      {#each navItems as item}
-        {@const ItemIcon = item.icon}
-        <Tooltip.Root>
-          <Tooltip.Trigger
-            class={`w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-              collapsed ? 'flex items-center justify-center' : 'flex items-center gap-3'
-            } ${
-              activeRoute === item.id || (activeRoute === 'home' && item.id === 'home')
-                ? 'bg-(--color-accent-blue) text-(--color-background) shadow-(--shadow-glow)'
-                : 'text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary)'
-            }`}
-            onclick={item.action}
-          >
-            <ItemIcon size={16} strokeWidth={1.8} aria-hidden="true" />
-            {#if !collapsed}
-              {t(item.messageKey)}
-            {/if}
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content
-              role="tooltip"
-              side="right"
-              sideOffset={8}
-              class="z-50 whitespace-nowrap rounded bg-(--color-surface) p-1 text-xs text-(--color-primary) shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
-            >
-              {t(item.messageKey)}
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
+      {#each navItems as item, index (item.id)}
+        {#if index > 0 && groupOf(navItems[index - 1].id) !== groupOf(item.id)}
+          <div class="my-2 h-px bg-(--color-border) opacity-60" aria-hidden="true"></div>
+        {/if}
+        {@render navButton(item)}
       {/each}
 
       {#if dataNavItems.length > 0}
-        <div class="mt-4 pt-3 border-t border-(--color-border)/50">
-          {#each dataNavItems as item}
-            {@const ItemIcon = item.icon}
-            <Tooltip.Root>
-              <Tooltip.Trigger
-                class={`w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                  collapsed ? 'flex items-center justify-center' : 'flex items-center gap-3'
-                } ${
-                  activeRoute === item.id
-                    ? 'bg-(--color-accent-blue) text-(--color-background) shadow-(--shadow-glow)'
-                    : 'text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary)'
-                }`}
-                onclick={item.action}
-              >
-                <ItemIcon size={16} strokeWidth={1.8} aria-hidden="true" />
-                {#if !collapsed}
-                  {t(item.messageKey)}
-                {/if}
-              </Tooltip.Trigger>
-              <Tooltip.Portal>
-                <Tooltip.Content
-                  role="tooltip"
-                  side="right"
-                  sideOffset={8}
-                  class="z-50 whitespace-nowrap rounded bg-(--color-surface) p-1 text-xs text-(--color-primary) shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
-                >
-                  {t(item.messageKey)}
-                </Tooltip.Content>
-              </Tooltip.Portal>
-            </Tooltip.Root>
-          {/each}
-        </div>
+        <div class="my-2 h-px bg-(--color-border) opacity-60" aria-hidden="true"></div>
+        {#each dataNavItems as item (item.id)}
+          {@render navButton(item)}
+        {/each}
       {/if}
     </Tooltip.Provider>
   </nav>
 
-  <div class="p-4 border-t border-(--color-border) flex flex-col gap-2">
-    <!-- Theme toggle button -->
+  <div class="flex flex-col gap-1.5 border-t border-(--color-border) p-3">
     {#if collapsed}
       <button
+        type="button"
         onclick={toggleTheme}
-        class="flex items-center justify-center rounded-lg size-8 bg-transparent border border-(--color-border) text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary) transition-all duration-200 shrink-0"
-        aria-label={$theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+        class="mx-auto flex size-8 shrink-0 items-center justify-center rounded-lg border border-(--color-border) text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
+        aria-label={$theme === 'dark' ? t('theme.switchToLight') : t('theme.switchToDark')}
       >
         {#if $theme === 'dark'}
           <Moon size={14} class="h-3.5 w-3.5" aria-hidden="true" />
@@ -164,13 +160,13 @@
         {/if}
       </button>
     {:else}
-      <ThemeToggle />
+      <ThemeToggle {t} />
     {/if}
 
-    <!-- Notification bell (FR-DN2): next to the profile block, badge while unread exist -->
     <button
+      type="button"
       onclick={openNotificationCenter}
-      class="relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-(--color-text-muted) transition-all duration-200 hover:bg-(--color-panel-accent) hover:text-(--color-primary)"
+      class="relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
       class:justify-center={collapsed}
       aria-label={t('notifications.bell.label')}
     >
@@ -178,7 +174,7 @@
         <Bell size={16} strokeWidth={1.8} aria-hidden="true" />
         {#if notificationCenter.unreadCount > 0}
           <span
-            class="absolute -top-1.5 -right-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white"
+            class="absolute -top-1.5 -right-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-(--color-error) px-1 text-[10px] font-bold text-(--color-background)"
             aria-hidden="true"
           >
             {notificationCenter.unreadCount > 9 ? '9+' : notificationCenter.unreadCount}
@@ -190,42 +186,36 @@
       {/if}
     </button>
 
-    <!-- User section (REQ-12): clickable → Settings → Cuenta -->
     <div
-      class="w-full flex items-center rounded-xl p-3 cursor-pointer transition-colors hover:bg-(--color-panel-accent)"
-      class:justify-between={!collapsed}
+      class="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 transition-colors hover:bg-(--color-panel-accent) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
       class:justify-center={collapsed}
-      class:bg-(--color-surface)={!collapsed}
-      class:border={!collapsed}
-      class:border-(--color-border)={!collapsed}
       role="button"
       tabindex="0"
+      aria-label={`${profile.name}, ${profile.email}`}
       onclick={onNavigateSettings}
       onkeydown={handleUserBlockKeydown}
     >
-      <div class="flex items-center gap-3">
-        {#if authState.isAuthenticated && profile.avatarUrl}
-          <img
-            src={profile.avatarUrl}
-            alt={profile.name}
-            class="size-8 shrink-0 rounded-full object-cover"
-          />
-        {:else}
-          <div
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white"
-          >
-            {getProfileInitials(profile.name)}
-          </div>
-        {/if}
-        {#if !collapsed}
-          <div class="text-left">
-            <p class="text-sm font-medium text-(--color-primary) truncate max-w-36">
-              {profile.name}
-            </p>
-            <p class="text-xs text-(--color-text-muted) truncate max-w-36">{profile.email}</p>
-          </div>
-        {/if}
-      </div>
+      {#if authState.isAuthenticated && profile.avatarUrl}
+        <img
+          src={profile.avatarUrl}
+          alt=""
+          class="size-8 shrink-0 rounded-full object-cover"
+          aria-hidden="true"
+        />
+      {:else}
+        <div
+          class="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--color-accent) text-xs font-bold text-(--color-background)"
+          aria-hidden="true"
+        >
+          {getProfileInitials(profile.name)}
+        </div>
+      {/if}
+      {#if !collapsed}
+        <p class="min-w-0 truncate text-xs">
+          <span class="font-medium text-(--color-primary)">{profile.name}</span>
+          <span class="text-(--color-text-muted)"> · {profile.email}</span>
+        </p>
+      {/if}
     </div>
   </div>
 </aside>

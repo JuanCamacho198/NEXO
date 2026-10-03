@@ -33,6 +33,7 @@ vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
 }));
 
 const dictionary: Record<string, string> = {
+  'home.pageTitle': 'Home',
   'home.greeting': 'Hi',
   'home.greetingName': 'Hi, {{name}}',
   'home.heroDescription': 'Continue reading where you left off, on any device.',
@@ -96,6 +97,21 @@ describe('HomeHero', () => {
 
     expect(screen.getByText('Hi')).toBeInTheDocument();
     expect(screen.queryByText(/Hi,/)).toBeNull();
+  });
+
+  it('keeps a long profile name on one truncating line as supporting chrome', () => {
+    mockAuthState.email = 'long@example.com';
+    mockAuthState.displayName =
+      'Alexandria Cassandra Montgomery-Wellington the Third of the Northern Reading Guild';
+
+    const { container } = render(HomeHero, { props: { t } });
+
+    const heading = screen.getByRole('heading', { level: 2 });
+    expect(heading).toHaveTextContent('Alexandria Cassandra Montgomery-Wellington');
+    expect(heading).toHaveClass('truncate');
+
+    const section = container.querySelector('section');
+    expect(section).toHaveAttribute('aria-label', 'Home');
   });
 
   it('contains no gradient or glow classes', () => {

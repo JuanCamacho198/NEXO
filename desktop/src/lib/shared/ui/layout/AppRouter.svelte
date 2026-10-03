@@ -139,6 +139,7 @@
                 onNavigateHome={() => navigationState.navigateToHome()}
                 onNavigateHighlights={() => navigationState.navigateToHighlights()}
                 onNavigateSettings={() => navigationState.navigateToSettings()}
+                onNavigateLibrary={() => navigationState.navigateToLibrary()}
                 onRefreshStats={() => {
                   void statsState.loadStats(navigationState.previewBookId ?? undefined);
                   void statsState.loadStreak();

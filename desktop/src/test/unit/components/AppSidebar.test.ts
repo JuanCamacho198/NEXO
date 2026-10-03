@@ -11,6 +11,14 @@ function fakeT(key: string): string {
     'sidebar.stats': 'Estadísticas',
     'sidebar.highlights': 'Notas y resaltados',
     'sidebar.settings': 'Ajustes',
+    'sidebar.expand': 'Expandir sidebar',
+    'sidebar.collapse': 'Colapsar sidebar',
+    'notifications.bell.label': 'Abrir notificaciones',
+    'notifications.center.title': 'Notificaciones',
+    'theme.currentDark': 'Tema oscuro',
+    'theme.currentLight': 'Tema claro',
+    'theme.switchToLight': 'Cambiar a tema claro',
+    'theme.switchToDark': 'Cambiar a tema oscuro',
   };
   return labels[key] ?? key;
 }
@@ -55,11 +63,42 @@ describe('AppSidebar', () => {
     expect(screen.getAllByText('Ajustes').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('highlights the active route button', () => {
+  it('highlights the active route button with a quiet tinted selection', () => {
     render(AppSidebar, { ...defaultProps, activeRoute: 'settings' });
     const activeButton = findNavButton('Ajustes');
     expect(activeButton).not.toBeNull();
     expect(activeButton!.className).toContain('accent');
+    // HOME-04: the oversized cyan block and its glow are gone.
+    expect(activeButton!.className).not.toContain('accent-blue');
+    expect(activeButton!.className).not.toContain('shadow-glow');
+  });
+
+  it('separates navigation groups with restrained dividers', () => {
+    const { container } = render(AppSidebar, defaultProps);
+    const nav = container.querySelector('nav');
+    expect(nav).not.toBeNull();
+    const dividers = nav!.querySelectorAll('div[aria-hidden="true"].h-px');
+    // reading | tools | system boundaries in the default order
+    expect(dividers.length).toBeGreaterThanOrEqual(2);
+    // Dividers never wrap destinations: nav buttons stay direct children.
+    const buttons = nav!.querySelectorAll(':scope > button');
+    expect(buttons.length).toBe(5);
+  });
+
+  it('collapses to an icon rail that keeps every destination reachable', async () => {
+    const user = userEvent.setup();
+    render(AppSidebar, defaultProps);
+
+    await user.click(screen.getByLabelText('Colapsar sidebar'));
+
+    for (const name of ['Inicio', 'Estantería', 'Estadísticas', 'Notas y resaltados', 'Ajustes']) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    }
+
+    // The active brand stays visible in the rail.
+    expect(screen.getByRole('button', { name: 'Inicio' }).className).toContain('accent');
+    // Profile collapses to the avatar only, still labelled by name.
+    expect(screen.getByRole('button', { name: /Reader/ })).toBeInTheDocument();
   });
 
   it('calls onNavigateHome when home is clicked', async () => {

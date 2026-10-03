@@ -21,7 +21,8 @@
  *   $--np-border-strong → --color-border-strong
  *   card shadow         → --shadow-soft
  *   card radius 24px    → --radius-xl
- *   Import gradient     → --gradient-import (PR #2)
+ *   Import action       → --color-import / --color-import-bg (HOME-04)
+ *   Sidebar chrome      → --color-sidebar-bg, --color-accent-nav-* (HOME-04)
  * ============================================ */
 
 @import 'tailwindcss';
@@ -159,6 +160,7 @@
   --color-accent-sky: #38bdf8;
   --color-accent-soft: rgba(73, 212, 255, 0.1);
   --color-accent: var(--color-accent-start);
+  --color-accent-on: #061222;
   --color-bg-deep: #0b1120;
 
   /* Surface hierarchy */
@@ -201,11 +203,16 @@
     linear-gradient(180deg, #07111d 0%, #09111d 45%, #08101a 100%);
   --gradient-accent: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
   --gradient-accent-h: linear-gradient(90deg, var(--color-accent-start), var(--color-accent-end));
-  /* Import button gradient (SD-5, PR #2 — Pen `#FFA94D→#FB7185`).
-     Consumed via inline `style="background-image: var(--gradient-import)"`:
-     Tailwind v4 `bg-(--var)` maps to background-color, which rejects
-     gradient images, so the image has to be set as background-image. */
-  --gradient-import: linear-gradient(135deg, #ffa94d, #fb7185);
+  /* HOME-04 semantic roles. Import is a secondary warm action (solid coral,
+     no gradient) so the reading/resume CTA can own the NEXO-blue primary.
+     Selection is a quiet tinted field with a light-blue label and a thin
+     accent bar, replacing the oversized cyan active block. */
+  --color-import: #ffb59a;
+  --color-import-bg: rgba(255, 181, 154, 0.12);
+  --color-sidebar-bg: #0b1626;
+  --color-accent-nav-bg: rgba(78, 140, 255, 0.14);
+  --color-accent-nav-fg: #8fb8ff;
+  --color-accent-nav-bar: #4e8cff;
 
   /* Welcome screen — dark glassmorphism (login-redesign change) */
   --welcome-card-bg: rgba(21, 29, 44, 0.64);
@@ -255,6 +262,7 @@
   --color-accent-sky: #0284c7;
   --color-accent-soft: rgba(0, 110, 200, 0.12);
   --color-accent: var(--color-accent-start);
+  --color-accent-on: #ffffff;
   --color-bg-deep: #dbe4ed;
 
   /* Surface hierarchy */
@@ -297,10 +305,14 @@
     linear-gradient(180deg, #e8eef6 0%, #eef2f8 50%, #f0f4fa 100%);
   --gradient-accent: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
   --gradient-accent-h: linear-gradient(90deg, var(--color-accent-start), var(--color-accent-end));
-  /* Import button gradient — light variant darkened from the proposed
-     `#b45309→#e11d48` (4.21–4.44:1 vs --color-background, below WCAG 2.1 AA
-     4.5:1 for normal text) to `#92400e→#be123c` (6.3:1 / 5.6:1, AA pass). */
-  --gradient-import: linear-gradient(135deg, #92400e, #be123c);
+  /* HOME-04 semantic roles (light). `--color-import: #be123c` passes AA on the
+     light background (≈5.6:1); selection stays a quiet NEXO-blue tint. */
+  --color-import: #be123c;
+  --color-import-bg: rgba(190, 18, 60, 0.08);
+  --color-sidebar-bg: #ffffff;
+  --color-accent-nav-bg: rgba(0, 110, 200, 0.1);
+  --color-accent-nav-fg: #006ec8;
+  --color-accent-nav-bar: #006ec8;
 }
 
 /* ============================================

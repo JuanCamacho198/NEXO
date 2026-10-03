@@ -5,7 +5,7 @@
     children?: Snippet;
     onclick?: () => void;
     type?: 'button' | 'submit' | 'reset';
-    variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+    variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent';
     size?: 'sm' | 'md' | 'lg';
     disabled?: boolean;
     class?: string;
@@ -37,6 +37,10 @@
       'bg-(--color-error) text-(--color-background) hover:opacity-90 focus:ring-(--color-error)',
     ghost:
       'bg-transparent text-(--color-primary) hover:bg-(--color-surface-hover) focus:ring-(--color-primary)',
+    // NEXO-blue primary action for reading CTAs (HOME-04). Global `primary`
+    // stays untouched so unrelated screens are unaffected.
+    accent:
+      'bg-(--color-accent) text-(--color-accent-on) hover:opacity-90 focus:ring-(--color-accent)',
   };
 
   const sizes = {

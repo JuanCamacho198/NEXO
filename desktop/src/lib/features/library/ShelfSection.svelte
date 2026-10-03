@@ -144,7 +144,7 @@
         <button
           type="button"
           data-testid={`shelf-tab-${tabOption.key}`}
-          class={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${shelfQueryState.tab === tabOption.key ? 'border-transparent bg-(--color-accent-soft) text-(--color-accent)' : 'border-(--color-border) bg-(--color-background) text-(--color-text-muted) hover:bg-(--color-surface-hover)'}`}
+          class={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${shelfQueryState.tab === tabOption.key ? 'border-(--color-accent) bg-(--color-background) text-(--color-primary)' : 'border-(--color-border) bg-(--color-background) text-(--color-text-muted) hover:bg-(--color-surface-hover)'}`}
           onclick={() => {
             onSetTab(tabOption.key);
           }}

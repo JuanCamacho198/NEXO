@@ -127,7 +127,7 @@
               </div>
               <div class="h-1.5 w-full overflow-hidden rounded bg-(--color-border)">
                 <div
-                  class="h-full rounded bg-(--color-primary)"
+                  class="h-full rounded bg-(--color-accent)"
                   style={`width:${progress}%`}
                   role="progressbar"
                   aria-valuemin="0"
@@ -148,7 +148,12 @@
         : 'flex shrink-0 items-start gap-2'}
     >
       {#if showReadButton}
-        <Button size="sm" class="shrink-0 whitespace-nowrap" onclick={onRead}>
+        <Button
+          size="sm"
+          variant={variant === 'continue-reading' ? 'accent' : 'primary'}
+          class="shrink-0 whitespace-nowrap"
+          onclick={onRead}
+        >
           {readLabel}
         </Button>
       {/if}

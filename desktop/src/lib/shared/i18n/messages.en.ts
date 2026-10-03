@@ -375,6 +375,11 @@ export const messagesEn = {
   'sidebar.home': 'Home',
   'sidebar.library': 'Library',
   'sidebar.discover': 'Discover',
+  // Sidebar theme control (HOME-04)
+  'theme.currentDark': 'Dark theme',
+  'theme.currentLight': 'Light theme',
+  'theme.switchToLight': 'Switch to light theme',
+  'theme.switchToDark': 'Switch to dark theme',
   'discover.search': 'Search',
   'discover.searchPlaceholder': 'Search the catalog…',
   'discover.searchAriaLabel': 'Catalog search query',
@@ -832,6 +837,14 @@ export const messagesEn = {
   'home.continue.countAria': '{{count}} in progress',
   'home.continue.nextBook': 'Next',
   'home.continue.prevBook': 'Previous',
+
+  // Home reading desk (HOME-01..03)
+  'home.pageTitle': 'Home',
+  'home.activeReading': 'Active reading',
+  'home.progressTitle': 'Reading progress',
+  'home.progressGoalAria': 'Daily goal progress',
+  'home.recentBooksTitle': 'Recent books',
+  'home.recentBooksHint': 'A compact preview of your shelf',
 
   // Collection Manager (PR3b)
   'collection.managerTitle': 'Manage Collections',

@@ -379,6 +379,11 @@ export const messagesEs: Record<MessageKey, string> = {
   'sidebar.home': 'Inicio',
   'sidebar.library': 'Estantería',
   'sidebar.discover': 'Descubrir',
+  // Sidebar theme control (HOME-04)
+  'theme.currentDark': 'Tema oscuro',
+  'theme.currentLight': 'Tema claro',
+  'theme.switchToLight': 'Cambiar a tema claro',
+  'theme.switchToDark': 'Cambiar a tema oscuro',
   'discover.search': 'Buscar',
   'discover.searchPlaceholder': 'Buscar en el catálogo…',
   'discover.searchAriaLabel': 'Consulta de búsqueda del catálogo',
@@ -790,6 +795,14 @@ export const messagesEs: Record<MessageKey, string> = {
   'home.continue.countAria': '{{count}} en curso',
   'home.continue.nextBook': 'Siguiente',
   'home.continue.prevBook': 'Anterior',
+
+  // Home reading desk (HOME-01..03)
+  'home.pageTitle': 'Inicio',
+  'home.activeReading': 'Lectura activa',
+  'home.progressTitle': 'Progreso de lectura',
+  'home.progressGoalAria': 'Progreso de la meta diaria',
+  'home.recentBooksTitle': 'Libros recientes',
+  'home.recentBooksHint': 'Una vista compacta de tu estantería',
 
   // Collection Manager (PR3b)
   'collection.managerTitle': 'Administrar Colecciones',

@@ -17,32 +17,31 @@
 </script>
 
 <section
-  class="flex flex-col gap-4 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) px-6 py-4 shadow-(--shadow-soft) md:flex-row md:items-center"
+  class="flex items-center justify-between gap-4 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) px-4 py-3 shadow-(--shadow-soft)"
+  aria-label={t('home.pageTitle')}
 >
-  <div class="flex min-w-0 flex-1 items-center gap-5">
+  <div class="flex min-w-0 flex-1 items-center gap-3">
     <Avatar
       src={profile.avatarUrl ?? undefined}
       name={profile.name}
-      size="xl"
+      size="md"
       class="border-(--color-border-strong)"
     />
     <div class="min-w-0">
-      <h2 class="text-2xl font-bold tracking-tight text-(--color-primary)">
+      <h2 class="truncate text-lg font-semibold tracking-tight text-(--color-primary)">
         {#if profile.isSignedIn}
           {t('home.greetingName', { name: profile.name })}
         {:else}
           {t('home.greeting')}
         {/if}
       </h2>
-      <p class="mt-1 text-sm leading-relaxed text-(--color-text-muted)">
-        {t('home.heroDescription')}
-      </p>
+      <p class="mt-0.5 truncate text-sm text-(--color-text-muted)">{t('home.heroDescription')}</p>
     </div>
   </div>
 
-  <div class="flex shrink-0 items-center gap-3">
-    {#if actions}
+  {#if actions}
+    <div class="flex shrink-0 items-center gap-2">
       {@render actions()}
-    {/if}
-  </div>
+    </div>
+  {/if}
 </section>

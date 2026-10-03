@@ -22,6 +22,7 @@
     onNavigateHome?: () => void;
     onNavigateHighlights?: () => void;
     onNavigateSettings?: () => void;
+    onNavigateLibrary?: () => void;
     navbarActions?: Snippet;
     continueSection?: Snippet;
     shelfSection?: Snippet;
@@ -40,6 +41,7 @@
     navbarActions,
     continueSection,
     shelfSection,
+    onNavigateLibrary,
   }: Props = $props();
 
   onMount(() => {
@@ -47,17 +49,36 @@
   });
 </script>
 
-<div class="space-y-6">
+<div class="space-y-5">
+  <h1 class="sr-only">{t('home.pageTitle')}</h1>
+
   <HomeHero actions={navbarActions} {t} />
 
-  <HomeStatsGrid
-    {stats}
-    isLoading={isLoadingStats}
-    disabledReason={statsUnavailableReason}
-    {streakDays}
-    {isLoadingStreak}
-    {t}
-  />
+  <section
+    class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start"
+    aria-labelledby="home-active-reading-heading"
+  >
+    <h2 id="home-active-reading-heading" class="sr-only">{t('home.activeReading')}</h2>
 
-  <HomeMainContent {t} {continueSection} {shelfSection} />
+    <div
+      class="min-w-0 rounded-(--radius-xl) border border-(--color-border) bg-(--color-panel-accent) p-4"
+    >
+      {#if continueSection}
+        {@render continueSection()}
+      {:else}
+        <p class="text-sm text-(--color-text-muted)">{t('home.continueReadingPlaceholder')}</p>
+      {/if}
+    </div>
+
+    <HomeStatsGrid
+      {stats}
+      isLoading={isLoadingStats}
+      disabledReason={statsUnavailableReason}
+      {streakDays}
+      {isLoadingStreak}
+      {t}
+    />
+  </section>
+
+  <HomeMainContent {t} {shelfSection} {onNavigateLibrary} />
 </div>

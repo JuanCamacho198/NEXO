@@ -1,13 +1,8 @@
 <script lang="ts">
   import type { ReadingStatsSummaryDto } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
-  import Book from 'lucide-svelte/icons/book';
-  import Check from 'lucide-svelte/icons/check';
   import Clock from 'lucide-svelte/icons/clock';
   import Flame from 'lucide-svelte/icons/flame';
-  import TrendingUp from 'lucide-svelte/icons/trending-up';
-  import type { Icon as LucideIcon } from 'lucide-svelte';
-  import MetricCard from './MetricCard.svelte';
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
 
@@ -46,67 +41,100 @@
   const goalProgress = $derived(
     goalProgressProp !== null ? goalProgressProp : statsState.goalProgress,
   );
+
+  const goalPct = $derived(Math.round(Math.min(1, Math.max(0, goalProgress ?? 0)) * 100));
   const goalValue = $derived(
     _t
       ? _t('home.metrics.minutesFormat', { current: todayMinutes, total: dailyGoalMinutes })
       : `${todayMinutes}/${dailyGoalMinutes} min`,
   );
 
-  type StatItem = {
-    label: string;
-    value: string;
-    icon: typeof LucideIcon;
-    progress?: number;
-  };
+  const progressTitle = $derived(_t ? _t('home.progressTitle') : 'Reading progress');
+  const goalLabel = $derived(_t ? _t('home.metrics.dailyGoalLabel') : 'Daily goal');
+  const progressGoalAria = $derived(_t ? _t('home.progressGoalAria') : 'Daily goal progress');
+  const streakLabel = $derived(_t ? _t('stats.streakLabel') : 'Streak');
+  const sessionsLabel = $derived(_t ? _t('stats.sessionsLabel') : 'Sessions');
+  const startedLabel = $derived(_t ? _t('stats.booksStartedLabel') : 'Started');
+  const completedLabel = $derived(_t ? _t('stats.booksCompletedLabel') : 'Completed');
 
-  const statItems = $derived<StatItem[]>([
-    {
-      label: _t ? _t('stats.booksStartedLabel') : 'Iniciados',
-      value: stats?.booksStarted?.toString() ?? '0',
-      icon: Book,
-    },
-    {
-      label: _t ? _t('stats.booksCompletedLabel') : 'Completados',
-      value: stats?.booksCompleted?.toString() ?? '0',
-      icon: Check,
-    },
-    {
-      label: _t ? _t('home.metrics.dailyGoalLabel') : 'Meta diaria',
-      value: goalValue,
-      icon: Clock,
-      progress: goalProgress,
-    },
-    {
-      label: _t ? _t('stats.sessionsLabel') : 'Sesiones',
-      value: stats?.totalSessions?.toString() ?? '0',
-      icon: TrendingUp,
-    },
-    {
-      label: _t ? _t('stats.streakLabel') : 'Racha',
-      value: isLoadingStreak
-        ? '—'
-        : _t
-          ? _t('stats.days', { count: streakDays })
-          : `${streakDays} ${streakDays === 1 ? 'día' : 'días'}`,
-      icon: Flame,
-    },
+  const streakValue = $derived(
+    isLoadingStreak
+      ? '—'
+      : _t
+        ? _t('stats.days', { count: streakDays })
+        : `${streakDays} ${streakDays === 1 ? 'day' : 'days'}`,
+  );
+
+  type ActivityItem = { label: string; value: number };
+
+  const activityItems = $derived<ActivityItem[]>([
+    { label: sessionsLabel, value: stats?.totalSessions ?? 0 },
+    { label: startedLabel, value: stats?.booksStarted ?? 0 },
+    { label: completedLabel, value: stats?.booksCompleted ?? 0 },
   ]);
 </script>
 
-{#if disabledReason}
-  <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-4 text-center">
+<aside
+  class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4 shadow-(--shadow-soft)"
+  data-testid="stats-summary"
+  aria-busy={isLoading || undefined}
+>
+  {#if disabledReason}
     <p class="text-sm text-(--color-text-muted)">{disabledReason}</p>
-  </div>
-{:else}
-  <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5" data-testid="stats-grid">
-    {#each statItems as item}
-      <MetricCard
-        {isLoading}
-        label={item.label}
-        value={item.value}
-        icon={item.icon}
-        progress={item.progress}
-      />
-    {/each}
-  </div>
-{/if}
+  {:else}
+    <div class="flex items-center gap-2">
+      <Clock size={14} strokeWidth={1.8} class="text-(--color-text-muted)" aria-hidden="true" />
+      <h2 class="text-sm font-semibold tracking-tight text-(--color-primary)">{progressTitle}</h2>
+    </div>
+
+    <div class="mt-3">
+      <div class="flex items-baseline justify-between gap-3">
+        <span class="text-xs font-medium text-(--color-text-muted)">{goalLabel}</span>
+        {#if isLoading}
+          <span class="h-5 w-20 animate-pulse rounded bg-(--color-border)" aria-hidden="true"
+          ></span>
+        {:else}
+          <span class="text-base font-semibold text-(--color-primary)">{goalValue}</span>
+        {/if}
+      </div>
+      <div
+        class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-(--color-border)"
+        role="progressbar"
+        aria-label={progressGoalAria}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={isLoading ? undefined : goalPct}
+      >
+        {#if !isLoading}
+          <div class="h-full rounded-full bg-(--color-accent)" style="width: {goalPct}%"></div>
+        {/if}
+      </div>
+    </div>
+
+    <dl class="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-(--color-border) pt-3">
+      <div class="min-w-0">
+        <dt
+          class="flex items-center gap-1 text-2xs uppercase tracking-wider text-(--color-text-muted)"
+        >
+          <Flame size={12} strokeWidth={1.8} aria-hidden="true" />
+          {streakLabel}
+        </dt>
+        <dd class="mt-1 truncate text-sm font-semibold text-(--color-primary)">{streakValue}</dd>
+      </div>
+      {#each activityItems as item (item.label)}
+        <div class="min-w-0">
+          <dt class="truncate text-2xs uppercase tracking-wider text-(--color-text-muted)">
+            {item.label}
+          </dt>
+          <dd class="mt-1 text-sm font-semibold text-(--color-primary)">
+            {#if isLoading}
+              <span class="inline-block h-4 w-8 animate-pulse rounded bg-(--color-border)"></span>
+            {:else}
+              {item.value}
+            {/if}
+          </dd>
+        </div>
+      {/each}
+    </dl>
+  {/if}
+</aside>

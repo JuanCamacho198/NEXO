@@ -1,3 +1,6 @@
+// Must evaluate before any Tauri plugin call: in a plain `bun run dev` browser
+// there is no IPC bridge, so without it the shell stalls on the welcome screen.
+import './lib/dev/browserTauriShim';
 import './styles.css';
 import App from './App.svelte';
 import { mount } from 'svelte';
