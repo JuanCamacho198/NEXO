@@ -76,10 +76,7 @@ export function canonicalName(rawBookId: string): CanonicalName {
  * {@link canonicalDriveObjectName} but keeps the guard's entry type-checked,
  * since only a {@link CanonicalName} can be passed here.
  */
-export function canonicalObjectName(
-  book: CanonicalName,
-  extension?: string | null,
-): string {
+export function canonicalObjectName(book: CanonicalName, extension?: string | null): string {
   return `${book}.${canonicalExtension(extension)}`;
 }
 

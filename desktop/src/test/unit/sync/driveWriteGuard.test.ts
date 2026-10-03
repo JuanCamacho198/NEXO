@@ -35,11 +35,7 @@ class FakeDrive implements DriveGuardPort {
     return this.objects.get(objectName)?.marker ?? null;
   }
 
-  async writeBinary(
-    objectName: string,
-    bytes: Uint8Array,
-    marker: VersionMarker,
-  ): Promise<string> {
+  async writeBinary(objectName: string, bytes: Uint8Array, marker: VersionMarker): Promise<string> {
     if (this.writeFailures > 0) {
       this.writeFailures -= 1;
       throw new Error('transient network drop');
@@ -116,13 +112,10 @@ describe('DriveWriteGuard — retry path', () => {
   it('rebases on a stale rejection and succeeds on the next attempt', async () => {
     drive.objects.set(NAME, { bytes: bytes(1), marker: { version: 2, checksum: 'bb' } });
 
-    const result = await guardedUploadWithRetry(
-      drive,
-      BOOK,
-      'epub',
-      bytes(3),
-      () => ({ version: 1, checksum: 'aa' }),
-    );
+    const result = await guardedUploadWithRetry(drive, BOOK, 'epub', bytes(3), () => ({
+      version: 1,
+      checksum: 'aa',
+    }));
 
     expect(result.marker.version).toBe(3);
     expect(drive.writes).toBe(1);

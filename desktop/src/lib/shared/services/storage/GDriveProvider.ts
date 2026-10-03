@@ -250,8 +250,7 @@ export class GDriveProvider implements StorageProvider, DriveGuardPort {
     );
     if (!search.ok) throw await this.driveError('GDrive marker search failed', search);
     const listing = await search.json();
-    const existing =
-      (listing.files ?? []).find((f: { trashed?: boolean }) => !f.trashed) ?? null;
+    const existing = (listing.files ?? []).find((f: { trashed?: boolean }) => !f.trashed) ?? null;
     if (!existing?.id) return null;
 
     const meta = await this.fetchWithToken(
@@ -265,11 +264,7 @@ export class GDriveProvider implements StorageProvider, DriveGuardPort {
   }
 
   /** FR-08 guard port: write bytes + marker in one `files.update`/create. */
-  async writeBinary(
-    objectName: string,
-    bytes: Uint8Array,
-    marker: VersionMarker,
-  ): Promise<string> {
+  async writeBinary(objectName: string, bytes: Uint8Array, marker: VersionMarker): Promise<string> {
     return this.uploadGuarded(objectName, bytes, marker);
   }
 
