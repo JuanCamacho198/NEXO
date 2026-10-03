@@ -378,9 +378,9 @@ fun NexoNavHost(
                 // DrivePromptHost handles its own dialog; no host-level dialog needed
 
                 // ── Debug FAB ──────────────────────────────────────────────────
-                val showDebugFab =
-                    DebugPrefs.isEnabled(context) &&
-                        authState.currentSession?.userId?.startsWith("local-") == true
+                // FR-AD1: the persisted DebugPrefs toggle is the SOLE authority.
+                // The previous local-user-only conjunct was removed.
+                val showDebugFab = DebugPrefs.isEnabled(context)
 
                 if (showDebugFab) {
                     FloatingActionButton(
