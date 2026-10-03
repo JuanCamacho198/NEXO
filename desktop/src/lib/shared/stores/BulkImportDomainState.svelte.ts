@@ -7,6 +7,7 @@ import { inferGenreFromText } from '$lib/shared/services/genreHeuristic';
 import type { BulkImportSummary, ScanFolderResult } from '$lib/shared/types';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+import { reportImportOutcome } from '$lib/shared/stores/notificationCenter.svelte';
 
 export type ImportNoticeStatus = 'importing' | 'success' | 'error';
 
@@ -85,8 +86,13 @@ class BulkImportDomainState {
    * FR-BI2: single error reporter. Auto-dismisses after ERROR_DISMISS_MS and
    * dedups identical errors (file+message key): re-reporting the visible
    * error neither stacks nor restarts its timer. Distinct errors replace.
+   *
+   * FR-DN1 feed: every reported error also records one tray entry per event
+   * (before banner dedup — the tray counts outcome events, not visible
+   * banners). Feed-only: banner behavior below is unchanged.
    */
   private reportImportError(fileName: string, message: string): void {
+    reportImportOutcome(false, fileName, message);
     const current = this.importNotice;
     if (
       current?.status === 'error' &&
@@ -217,7 +223,8 @@ class BulkImportDomainState {
       // After successful import, ensure the banner shows a success state
       // for SUCCESS_DISMISS_MS. The progress callback already set it, but
       // (a) we re-confirm and (b) schedule the auto-dismiss here, where
-      // the import lifecycle is owned.
+      // the import lifecycle is owned. FR-DN1 feed: record the tray entry.
+      reportImportOutcome(true, displayName, '');
       this.setImportNotice(
         {
           status: 'success',
@@ -314,6 +321,13 @@ class BulkImportDomainState {
       );
 
       this.bulkImportSummary = summary;
+
+      // FR-DN1 feed: one tray entry per bulk-import outcome (feed-only).
+      reportImportOutcome(
+        summary.failed === 0,
+        this.bulkImportFolderName ?? this.bulkImportFolderPath ?? '',
+        `${summary.success} ok · ${summary.failed} failed · ${summary.skipped} skipped`,
+      );
 
       if (
         summary.success > 0 ||
