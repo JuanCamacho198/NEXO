@@ -7,19 +7,19 @@ function Check($cond, $msg) {
 $a = Get-Content 'mocks/update-feed/android-latest.json' -Raw | ConvertFrom-Json
 $d = Get-Content 'mocks/update-feed/desktop-latest.json' -Raw | ConvertFrom-Json
 
-Check ($a.version -eq '0.3.3') 'android version must be 0.3.3'
+Check ($a.version -eq '0.4.0') 'android version must be 0.4.0'
 Check ($a.versionCode -gt 300) 'android versionCode must be above 300'
 Check ($a.channel -eq 'stable') 'android channel must be stable'
 Check ($null -ne $a.notes -and $a.notes.Length -gt 0) 'android notes required'
 Check ($null -ne $a.pubDate) 'android pubDate required'
 Check ($a.assets.Count -ge 1) 'android needs at least one asset'
 foreach ($asset in $a.assets) {
-  Check ($asset.url -match 'nexo-android-v0\.3\.3\.apk$') "android asset naming: $($asset.url)"
+  Check ($asset.url -match 'nexo-android-v0\.4\.0\.apk$') "android asset naming: $($asset.url)"
   Check ($null -ne $asset.abi) 'android asset abi required'
   Check ($asset.size -gt 0) 'android asset size required'
 }
 
-Check ($d.version -eq '0.3.3') 'desktop version must be 0.3.3'
+Check ($d.version -eq '0.4.0') 'desktop version must be 0.4.0'
 Check ($d.channel -eq 'stable') 'desktop channel must be stable'
 Check ($null -ne $d.notes -and $d.notes.Length -gt 0) 'desktop notes required'
 Check ($null -ne $d.pub_date) 'desktop pub_date required'
@@ -29,9 +29,9 @@ Check ($names.Count -ge 1) 'desktop needs at least one platform'
 # version; GitHub replaces the space in the local bundle name with a dot, so
 # the released names read `Nexo.Desktop_<version>_<target>.<ext>`.
 $expectedDesktopAsset = @{
-  'linux-x86_64'    = 'Nexo\.Desktop_0\.3\.3_amd64\.AppImage$'
-  'macos-universal' = 'Nexo\.Desktop_0\.3\.3_universal\.dmg$'
-  'windows-x86_64'  = 'Nexo\.Desktop_0\.3\.3_x64-setup\.exe$'
+  'linux-x86_64'    = 'Nexo\.Desktop_0\.4\.0_amd64\.AppImage$'
+  'macos-universal' = 'Nexo\.Desktop_0\.4\.0_universal\.dmg$'
+  'windows-x86_64'  = 'Nexo\.Desktop_0\.4\.0_x64-setup\.exe$'
 }
 foreach ($k in $names) {
   $e = $d.platforms.$k

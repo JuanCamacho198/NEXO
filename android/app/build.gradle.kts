@@ -125,7 +125,7 @@ android {
         applicationId = "com.nexo"
         minSdk = 26
         targetSdk = 36
-        val appVersionName = "0.3.3" // x-release-please-version
+        val appVersionName = "0.4.0" // x-release-please-version
         versionName = appVersionName
         // versionCode is derived from versionName so a release never has to bump it by
         // hand (and can never forget to): major*10000 + minor*100 + patch stays monotonic
