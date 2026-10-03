@@ -419,7 +419,7 @@ describe('SyncService — outbox BOOK handler remote-ref persistence (DRP-1/DRP-
         id: 'book-1',
         remoteProvider: 'google_drive',
         remoteFileId: 'drive-file-1',
-        remotePath: 'Nexo/Books/book-1.epub',
+        remotePath: 'Nexo/books/book-1.epub',
         remoteName: 'book-1.epub',
         protocolVersion: 1,
         recoveryProtocol: 'recovery_protocol_v1',

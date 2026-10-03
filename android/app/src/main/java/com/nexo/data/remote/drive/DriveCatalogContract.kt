@@ -8,9 +8,10 @@ object DriveCatalogContract {
     const val PROVIDER = "google_drive"
     const val SCOPE = "https://www.googleapis.com/auth/drive.file"
 
-    // Cross-platform Drive protocol folder shared with desktop/web. Renamed under the
-    // confirmed total migration (no installed base), so no legacy-name path is kept.
-    const val BOOKS_PATH = "Nexo/Books"
+    // Cross-platform Drive protocol folder shared with desktop/web. WU6 moved it
+    // from the capitalized legacy `Nexo/Books` to this target; the data source
+    // adopts or renames the legacy folder in place (never deletes).
+    const val BOOKS_PATH = "Nexo/books"
     const val PROTOCOL_VERSION = 1
 
     fun canonicalBookName(

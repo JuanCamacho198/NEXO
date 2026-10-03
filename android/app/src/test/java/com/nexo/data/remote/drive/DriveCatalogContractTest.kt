@@ -16,7 +16,7 @@ class DriveCatalogContractTest {
             val r = resolve("legacy-id", listOf(legacy, canonical), "legacy")
             assertEquals("legacy-id", r?.fileId)
             assertEquals("book-1.epub", r?.fileName)
-            assertEquals("Nexo/Books/book-1.epub", r?.canonicalPath)
+            assertEquals("Nexo/books/book-1.epub", r?.canonicalPath)
         }
 
     @Test fun precedence_isIdThenNameThenHash() =

@@ -613,3 +613,70 @@ describe('GDriveProvider — FR-08 marker + guarded upload', () => {
     });
   });
 });
+
+describe('GDriveProvider — WU6 gated books-folder migration (Nexo/books)', () => {
+  let provider: GDriveProvider;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    globalThis.fetch = vi.fn();
+    __resetGDriveFolderCache();
+    provider = new GDriveProvider();
+    vi.mocked(refreshDriveAccessToken).mockResolvedValue('ya29.refreshed-token');
+  });
+
+  it('keeps the legacy Books folder when no manifest proves filenameVersion >= 1 (blocked)', async () => {
+    mockAuth('token-legacy-blocked');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l' }] }) }, // find Nexo
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'legacy-folder', name: 'Books' }] }) }, // combined
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l' }] }) }, // findFolderStrict Nexo
+      { ok: true, json: () => Promise.resolve({ files: [] }) }, // manifest absent
+      { ok: true, json: () => Promise.resolve({ files: [] }) }, // find file
+      { ok: true, json: () => Promise.resolve({ id: 'file-l' }) }, // create
+    ]);
+
+    const fileId = await provider.upload('b', new Uint8Array([1]), 'b.epub');
+
+    expect(fileId).toBe('file-l');
+    const patchCalls = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.filter(([, init]) => init?.method === 'PATCH');
+    expect(patchCalls).toHaveLength(0); // never renames before WU4 is proven
+    const metadata = JSON.parse(
+      await ((vi.mocked(globalThis.fetch).mock.calls[5][1]?.body as FormData).get('metadata') as Blob).text(),
+    );
+    expect(metadata.parents).toEqual(['legacy-folder']); // still writes into legacy
+  });
+
+  it('renames the legacy Books folder in place once the manifest reports filenameVersion 1', async () => {
+    mockAuth('token-legacy-rename');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l2' }] }) }, // find Nexo
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'legacy-folder', name: 'Books' }] }) }, // combined
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l2' }] }) }, // findFolderStrict Nexo
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'manifest-f' }] }) }, // manifest search
+      { ok: true, json: () => Promise.resolve({}), text: async () => '{"filenameVersion":1}' }, // media
+      { ok: true, json: () => Promise.resolve({}) }, // rename PATCH
+      { ok: true, json: () => Promise.resolve({ files: [] }) }, // find file
+      { ok: true, json: () => Promise.resolve({ id: 'file-l2' }) }, // create
+    ]);
+
+    await provider.upload('b', new Uint8Array([1]), 'b.epub');
+
+    const renameCall = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.find(
+        ([url, init]) =>
+          String(url).includes('/files/legacy-folder') && init?.method === 'PATCH',
+      );
+    expect(renameCall).toBeDefined();
+    const body = renameCall?.[1]?.body as Blob;
+    expect(JSON.parse(await body.text())).toEqual({ name: 'books' });
+    // Same folder id keeps every child: the create still lands in legacy-folder.
+    const metadata = JSON.parse(
+      await ((vi.mocked(globalThis.fetch).mock.calls[7][1]?.body as FormData).get('metadata') as Blob).text(),
+    );
+    expect(metadata.parents).toEqual(['legacy-folder']);
+  });
+});

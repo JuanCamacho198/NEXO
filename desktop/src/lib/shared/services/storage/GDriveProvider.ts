@@ -10,6 +10,14 @@ import {
   type DriveGuardPort,
   type VersionMarker,
 } from '$lib/shared/sync/driveWriteGuard';
+import { MANIFEST_FILE, parseManifest, type DriveManifest } from '$lib/shared/sync/driveManifest';
+import {
+  BOOKS_FOLDER,
+  LEGACY_BOOKS_FOLDER,
+  pickBooksFolder,
+  planBooksFolderMigration,
+  type DriveFolderRef,
+} from '$lib/shared/sync/driveLayoutMigration';
 import type { StorageProvider } from './StorageProvider';
 
 /**
@@ -111,28 +119,102 @@ export class GDriveProvider implements StorageProvider, DriveGuardPort {
     const root =
       (await this.findFolder(accessToken, 'Nexo')) ??
       (await this.createFolder(accessToken, 'Nexo'));
-    const books = await this.findFolder(accessToken, 'Books', root);
-    if (books) {
-      folderIds = books;
-      return books;
+
+    const folders = await this.findBooksFolders(accessToken, root);
+    const canonical = folders.find((f) => f.name === BOOKS_FOLDER) ?? null;
+    const legacy = folders.find((f) => f.name === LEGACY_BOOKS_FOLDER) ?? null;
+
+    // The filenameVersion gate is only consulted when a legacy tree exists and
+    // no canonical folder was adopted; a fresh install never reads it (FR-01).
+    const manifest =
+      canonical === null && legacy !== null ? await this.readRemoteManifest(accessToken) : null;
+    const plan = planBooksFolderMigration(canonical, legacy, manifest);
+
+    if (plan.kind === 'blocked') {
+      // Legacy tree + WU4 not shipped: keep the legacy folder live.
+      folderIds = plan.folderId;
+      return plan.folderId;
     }
-    const createResponse = await fetch(`${GDriveProvider.GDRIVE_API_BASE}/files`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: 'Books',
-        mimeType: 'application/vnd.google-apps.folder',
-        parents: [root],
-      }),
-    });
-    if (!createResponse.ok)
-      throw await this.driveError('GDrive folder creation failed', createResponse);
-    const createData = await createResponse.json();
-    folderIds = createData.id;
-    return createData.id;
+    if (plan.kind === 'rename') {
+      // True in-place rename (`files.update` on the SAME folder id): every child
+      // is preserved and no duplicate `books/` folder is created.
+      await this.renameFolder(accessToken, plan.folderId, BOOKS_FOLDER);
+      folderIds = plan.folderId;
+      return plan.folderId;
+    }
+    if (plan.kind === 'adopt') {
+      folderIds = plan.folderId;
+      return plan.folderId;
+    }
+    const created = await this.createFolderIn(accessToken, BOOKS_FOLDER, root);
+    folderIds = created;
+    return created;
+  }
+
+  /**
+   * One lookup for both folder names. Drive's `name = '...'` query is
+   * case-sensitive, so probing `books` and `Books` in a single request is what
+   * lets us detect the case-sensitive duplicate instead of creating a third
+   * tree. A match without a name (mock/legacy response shape) is treated as
+   * canonical so a found folder is never shadowed by a create.
+   */
+  private async findBooksFolders(accessToken: string, rootId: string): Promise<DriveFolderRef[]> {
+    const query = encodeURIComponent(
+      `(name = '${BOOKS_FOLDER}' or name = '${LEGACY_BOOKS_FOLDER}') and ` +
+        `mimeType = 'application/vnd.google-apps.folder' and trashed = false and '${rootId}' in parents`,
+    );
+    const response = await this.fetchWithToken(
+      `${GDriveProvider.GDRIVE_API_BASE}/files?q=${query}&fields=files(id,name)`,
+      { method: 'GET' },
+      accessToken,
+    );
+    if (!response.ok) throw await this.driveError('GDrive folder search failed', response);
+    const data = await response.json();
+    const files: Array<{ id: string; name?: string }> = data.files ?? [];
+    return files.map((f) => ({ id: f.id, name: f.name ?? BOOKS_FOLDER }));
+  }
+
+  /** Rename a folder in place (`files.update`, id and children preserved). */
+  private async renameFolder(accessToken: string, folderId: string, name: string): Promise<void> {
+    // A Blob carries the JSON Content-Type: fetchWithToken only forwards the
+    // Authorization header, never init.headers (delete() parity).
+    const body = new Blob([JSON.stringify({ name })], { type: 'application/json' });
+    const response = await this.fetchWithToken(
+      `${GDriveProvider.GDRIVE_API_BASE}/files/${folderId}`,
+      { method: 'PATCH', body },
+      accessToken,
+    );
+    if (!response.ok) throw await this.driveError('GDrive folder rename failed', response);
+  }
+
+  /** Parse the remote `Nexo/manifest.json`; `null` when absent or unparseable. */
+  private async readRemoteManifest(accessToken: string): Promise<DriveManifest | null> {
+    try {
+      const rootId = await this.findFolderStrict(accessToken, 'Nexo');
+      if (!rootId) return null;
+      const query = encodeURIComponent(
+        `name = '${MANIFEST_FILE}' and '${rootId}' in parents and trashed = false`,
+      );
+      const search = await this.fetchWithToken(
+        `${GDriveProvider.GDRIVE_API_BASE}/files?q=${query}&fields=files(id)`,
+        { method: 'GET' },
+        accessToken,
+      );
+      if (!search.ok) return null;
+      const listing = await search.json();
+      const fileId = listing.files?.[0]?.id;
+      if (!fileId) return null;
+      const media = await this.fetchWithToken(
+        `${GDriveProvider.GDRIVE_API_BASE}/files/${fileId}?alt=media`,
+        { method: 'GET' },
+        accessToken,
+      );
+      if (!media.ok) return null;
+      return parseManifest(await media.text());
+    } catch {
+      // A missing/unreadable manifest is version 0, never "current".
+      return null;
+    }
   }
 
   private async findFolder(
@@ -535,8 +617,13 @@ export class GDriveProvider implements StorageProvider, DriveGuardPort {
     if (folderId === null) {
       const root = await this.findFolderStrict(accessToken, 'Nexo');
       if (!root) return { bytes: 0, fileCount: 0 };
-      folderId = await this.findFolderStrict(accessToken, 'Books', root);
-      if (!folderId) return { bytes: 0, fileCount: 0 };
+      const folders = await this.findBooksFolders(accessToken, root);
+      const picked = pickBooksFolder(
+        folders.find((f) => f.name === BOOKS_FOLDER) ?? null,
+        folders.find((f) => f.name === LEGACY_BOOKS_FOLDER) ?? null,
+      );
+      if (!picked) return { bytes: 0, fileCount: 0 };
+      folderId = picked.id;
     }
 
     let bytes = 0;
