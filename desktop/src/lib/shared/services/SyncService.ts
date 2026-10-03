@@ -18,6 +18,7 @@ import {
   reportCoverFailure,
 } from '../sync/SupabaseBookCatalogSync';
 import { canonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
+import { planReconciliation } from '../sync/driveReconciler';
 import { toSyncError } from '$lib/shared/recovery/desktopRecoveryImport';
 import {
   recordCatalogSyncFailure,
@@ -800,6 +801,47 @@ export class SyncService {
   }
 
   /**
+   * FR-07 Phase A: for each local book, adopt an already-canonical remote
+   * object or copy a legacy-named one to the canonical name. The source is
+   * never deleted; a failed verification leaves it in place. Reuses the caller's
+   * remote listing so no extra Drive round-trip is issued.
+   */
+  private static async reconcileDriveNames(
+    localBooks: Awaited<ReturnType<LibraryPort['listBooks']>>,
+    remoteBookFiles: string[],
+  ): Promise<void> {
+    const books = localBooks.map((book) => ({
+      bookId: book.id,
+      extension: book.format || 'epub',
+    }));
+    const actions = planReconciliation(
+      books,
+      remoteBookFiles.map((name) => ({ name })),
+    );
+
+    for (const action of actions) {
+      if (action.kind === 'flag-mismatch') {
+        console.warn(`Drive reconcile: canonical/legacy twin mismatch for ${action.canonicalName}`);
+        continue;
+      }
+      if (action.kind !== 'copy-to-canonical') continue;
+      try {
+        const sourceBytes = await this.gdrive.download(action.sourceName);
+        await this.gdrive.upload(action.canonicalName, sourceBytes, action.canonicalName);
+        const verifyBytes = await this.gdrive.download(action.canonicalName);
+        if (verifyBytes.length !== sourceBytes.length) {
+          console.error(
+            `Drive reconcile: verification failed for ${action.canonicalName}; source kept`,
+          );
+        }
+      } catch (e) {
+        reportAuthError(e);
+        console.error(`Drive reconcile failed for ${action.sourceName}:`, e);
+      }
+    }
+  }
+
+  /**
    * Sync book files with Drive — download missing files, upload local-only files.
    * Book metadata (title, author) stays local-only (no table sync).
    */
@@ -816,12 +858,16 @@ export class SyncService {
     // 2. Get local books from SQLite
     const localBooks = await this.libraryPort.listBooks();
 
+    // 2b. FR-07 Phase A reconciliation: adopt an already-canonical remote
+    // object, or copy a legacy-named one to the canonical name without ever
+    // deleting the source. Reuses the listing above (no extra Drive round-trip).
+    await this.reconcileDriveNames(localBooks, remoteBookFiles);
+
     // 3. Download book files that are on Drive but missing locally
     for (const remoteFile of remoteBookFiles) {
-      const localBook = localBooks.find((b) => {
-        const ext = b.format || 'epub';
-        return remoteFile === `${b.id}.${ext}` || remoteFile.startsWith(b.id);
-      });
+      const localBook = localBooks.find(
+        (b) => canonicalBookName(b.id, b.format || 'epub') === remoteFile,
+      );
 
       if (localBook) {
         const existsLocally = await this.libraryPort.fileExists(localBook.filePath);
@@ -841,8 +887,7 @@ export class SyncService {
     // 4. Upload local-only books to Drive (file only, not metadata)
     const remoteFileIds = new Set(remoteBookFiles);
     for (const localBook of localBooks) {
-      const ext = localBook.format || 'epub';
-      const expectedName = `${localBook.id}.${ext}`;
+      const expectedName = canonicalBookName(localBook.id, localBook.format || 'epub');
       if (!remoteFileIds.has(expectedName)) {
         try {
           const existsLocally = await this.libraryPort.fileExists(localBook.filePath);

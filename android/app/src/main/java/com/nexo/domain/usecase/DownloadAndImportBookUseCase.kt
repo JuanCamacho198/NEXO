@@ -4,6 +4,7 @@ import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogException
 import com.nexo.data.remote.catalog.CatalogFileDownloader
+import com.nexo.data.sync.DriveFilename
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.BookImportRequest
 import com.nexo.domain.model.DuplicateBookException
@@ -90,7 +91,7 @@ class DownloadAndImportBookUseCase(
             }
 
             tempDir.mkdirs()
-            val key = sanitize(book.id)
+            val key = DriveFilename.canonicalStem(book.id)
             val partFile = File(tempDir, "$key.part")
             val finalFile = File(tempDir, "$key.epub")
             var committed = false
@@ -143,8 +144,5 @@ class DownloadAndImportBookUseCase(
 
     private companion object {
         const val DUPLICATE_MESSAGE = "Book already in the library"
-
-        /** Filesystem-safe, deterministic per-book id used for the temp names. */
-        fun sanitize(raw: String): String = raw.replace(Regex("[^A-Za-z0-9._-]"), "_")
     }
 }
