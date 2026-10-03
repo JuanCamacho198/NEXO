@@ -72,9 +72,6 @@ mod tests {
 
         assert_eq!(report.pruned, 1);
         assert_eq!(count(&connection, "SELECT COUNT(*) FROM books"), 2);
-        assert_eq!(
-            count(&connection, "SELECT COUNT(*) FROM books WHERE id = 'old'"),
-            0
-        );
+        assert_eq!(count(&connection, "SELECT COUNT(*) FROM books WHERE id = 'old'"), 0);
     }
 }
