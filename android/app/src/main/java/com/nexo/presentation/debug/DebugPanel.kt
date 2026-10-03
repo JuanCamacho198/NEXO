@@ -36,11 +36,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nexo.R
+import com.nexo.debug.DebugToolkit
 import com.nexo.presentation.viewmodel.AuthViewModel
 import com.nexo.presentation.viewmodel.reader.SessionUiState
 import com.nexo.ui.icons.NexoIcons
@@ -70,13 +74,16 @@ fun DebugPanel(
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showClearCacheConfirm by remember { mutableStateOf(false) }
 
     // Load async data when sheet opens
     LaunchedEffect(Unit) {
         viewModel.loadDbCounts()
         viewModel.updateSyncInfo(syncService)
+        viewModel.loadRecentErrors(context)
 
         // Populate session info
         val sessionInfo = authState.currentSession
@@ -125,6 +132,45 @@ fun DebugPanel(
             dismissButton = {
                 TextButton(onClick = { showClearConfirm = false }) {
                     Text("Cancel")
+                }
+            },
+        )
+    }
+
+    // Clear cache confirmation dialog (cacheDir only — library data survives)
+    if (showClearCacheConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearCacheConfirm = false },
+            title = { Text(stringResource(R.string.debug_panel_clear_cache_confirm_title)) },
+            text = { Text(stringResource(R.string.debug_panel_clear_cache_confirm_message)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClearCacheConfirm = false
+                        viewModel.clearCache(context) { report ->
+                            Toast
+                                .makeText(
+                                    context,
+                                    resources.getString(
+                                        R.string.debug_panel_clear_cache_done,
+                                        report.deletedEntries,
+                                        report.deletedBytes,
+                                    ),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                        }
+                    },
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE53935),
+                        ),
+                ) {
+                    Text(stringResource(R.string.debug_panel_clear_cache_confirm_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCacheConfirm = false }) {
+                    Text(stringResource(R.string.debug_panel_cancel))
                 }
             },
         )
@@ -236,6 +282,15 @@ fun DebugPanel(
             SectionHeader(title = "Sync")
             DebugRow(label = "state", value = debugInfo.syncDebug.state)
             DebugRow(label = "pendingCount", value = debugInfo.syncDebug.pendingCount.toString())
+            DebugRow(
+                label = "lastSync",
+                value =
+                    debugInfo.syncDebug.lastSyncAtMs?.let { DebugToolkit.formatTimestamp(it) }
+                        ?: stringResource(R.string.debug_panel_sync_never),
+            )
+            debugInfo.syncDebug.lastFailure?.let { failure ->
+                DebugRow(label = "lastFailure", value = failure)
+            }
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 12.dp),
@@ -250,6 +305,39 @@ fun DebugPanel(
                 DebugRow(label = "gatedReason", value = gatedReason)
             }
             DebugRow(label = "pendingCount", value = debugInfo.supabaseSyncDebug.pendingCount.toString())
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = DARK_SURFACE,
+            )
+
+            // ── 4c. Recent Errors Section ─────────────────────────────
+            SectionHeader(title = stringResource(R.string.debug_panel_recent_errors_title))
+            val recentErrors = debugInfo.recentErrors
+            if (recentErrors.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.debug_panel_recent_errors_empty),
+                    color = SECTION_LABEL,
+                    fontSize = 13.sp,
+                )
+            } else {
+                recentErrors.forEach { entry ->
+                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Text(
+                            text = DebugToolkit.formatTimestamp(entry.timestampMs),
+                            color = SECTION_LABEL,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                        )
+                        Text(
+                            text = entry.message,
+                            color = VALUE_TEXT,
+                            fontSize = 13.sp,
+                            fontFamily = FontFamily.Monospace,
+                        )
+                    }
+                }
+            }
 
             // ── 5. PDF Debug Section (conditional) ───────────────────
             val pdfDebug = debugInfo.pdfDebug
@@ -311,6 +399,13 @@ fun DebugPanel(
                     viewModel.copySessionInfo(context, authState.currentSession)
                     Toast.makeText(context, "Session info copied", Toast.LENGTH_SHORT).show()
                 },
+            )
+            Spacer(Modifier.height(8.dp))
+            QuickActionButton(
+                icon = NexoIcons.Storage,
+                label = stringResource(R.string.debug_panel_clear_cache),
+                color = Color(0xFFE53935),
+                onClick = { showClearCacheConfirm = true },
             )
         }
     }

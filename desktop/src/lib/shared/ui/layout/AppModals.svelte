@@ -133,12 +133,12 @@
   isImporting={bulkImportState.isBulkImporting}
   importProgress={bulkImportState.bulkImportProgress}
   importSummary={bulkImportState.bulkImportSummary}
-  onClose={bulkImportState.closeBulkImportModal}
+  onClose={() => bulkImportState.closeBulkImportModal()}
   onPickFolder={() =>
     bulkImportState.handlePickBulkImportFolder(appState.t('library.bulkImport.selectFolderTitle'))}
-  onScan={bulkImportState.handleScanBulkImportFolder}
-  onStartImport={bulkImportState.handleStartBulkImport}
-  onCancelImport={bulkImportState.handleCancelBulkImport}
+  onScan={() => bulkImportState.handleScanBulkImportFolder()}
+  onStartImport={() => bulkImportState.handleStartBulkImport()}
+  onCancelImport={() => bulkImportState.handleCancelBulkImport()}
   t={appState.t}
 />
 

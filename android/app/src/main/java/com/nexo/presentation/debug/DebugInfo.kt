@@ -1,5 +1,8 @@
 package com.nexo.presentation.debug
 
+import com.nexo.debug.CacheClearReport
+import com.nexo.debug.DebugErrorEntry
+
 data class DebugInfo(
     val session: SessionSection = SessionSection(),
     val initTimings: InitTimingsSection = InitTimingsSection(),
@@ -8,6 +11,8 @@ data class DebugInfo(
     val supabaseSyncDebug: SupabaseSyncDebugSection = SupabaseSyncDebugSection(),
     val pdfDebug: PdfDebugSection? = null,
     val isLoadingDbCounts: Boolean = false,
+    val recentErrors: List<DebugErrorEntry> = emptyList(),
+    val lastCacheClear: CacheClearReport? = null,
 )
 
 data class SessionSection(
@@ -37,6 +42,8 @@ data class DbCountsSection(
 data class SyncDebugSection(
     val state: String = "unknown",
     val pendingCount: Int = 0,
+    val lastSyncAtMs: Long? = null,
+    val lastFailure: String? = null,
 )
 
 data class SupabaseSyncDebugSection(

@@ -64,8 +64,7 @@ export const messagesEn = {
   'home.continueReadingPlaceholder': 'Your active reads will appear here.',
   'home.heroEyebrow': 'Focused reading system',
   'home.heroTitle': 'Pick up the next page with less friction and more context.',
-  'home.heroDescription':
-    'The home workspace now prioritizes active reading, shelf control, and quick orientation before you jump into the reader.',
+  'home.heroDescription': 'Pick up where you left off, on any device.',
   'home.heroContinueLabel': 'Active reads',
   'home.heroShelfLabel': 'Shelf books',
   'home.heroMinutesHint': 'Minutes logged across reading sessions',
@@ -238,6 +237,17 @@ export const messagesEn = {
   'settings.notifications.lastSync': 'Last sync',
   'settings.notifications.neverSynced': 'Never',
   'settings.notifications.syncingNow': 'Syncing...',
+
+  // Notification Center (desktop tray, FR-DN1/FR-DN2)
+  'notifications.center.title': 'Notifications',
+  'notifications.center.emptyTitle': 'No notifications yet',
+  'notifications.center.emptyDescription': 'Import and sync outcomes will appear here.',
+  'notifications.center.clear': 'Clear all',
+  'notifications.bell.label': 'Open notifications',
+  'notifications.kind.importSuccess': 'Import completed',
+  'notifications.kind.importFailure': 'Import failed',
+  'notifications.kind.syncSuccess': 'Sync completed',
+  'notifications.kind.syncFailure': 'Sync failed',
 
   // Sync Tab
   'settings.sync.description': 'Configure Google Drive synchronization.',

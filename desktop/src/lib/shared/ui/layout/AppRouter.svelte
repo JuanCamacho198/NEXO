@@ -203,7 +203,7 @@
                 books={libraryState.books}
                 isImporting={bulkImportState.isImporting}
                 t={appState.t}
-                onImportBook={bulkImportState.handleImportFile}
+                onImportBook={() => bulkImportState.handleImportFile()}
                 onOpenBook={(book: Parameters<typeof appState.startReading>[0]) => {
                   void appState.startReading(book);
                 }}

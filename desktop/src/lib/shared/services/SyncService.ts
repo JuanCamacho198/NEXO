@@ -32,6 +32,7 @@ import {
   recordCatalogSyncFailure,
   recordCatalogSyncSuccess,
 } from '$lib/shared/stores/catalogSyncStatus.svelte';
+import { reportSyncOutcome } from '$lib/shared/stores/notificationCenter.svelte';
 import { SyncOutboxService } from '../outbox/SyncOutboxService';
 import { SyncOutboxDao } from '../outbox/SyncOutboxDao';
 import type { SyncHealth, RealtimeStatus } from '$lib/shared/types/book';
@@ -677,8 +678,13 @@ export class SyncService {
     if (this.metadataSyncPromise) return this.metadataSyncPromise;
 
     const syncPromise = Promise.all([this.syncBooks(), this.syncState(), this.syncBookCatalog()])
-      .then(() => undefined)
+      .then(() => {
+        // FR-DN1 feed: one tray entry per sync-run outcome (feed-only).
+        reportSyncOutcome(true, 'Sync', 'Completed');
+        return undefined;
+      })
       .catch((error: unknown) => {
+        reportSyncOutcome(false, 'Sync', error instanceof Error ? error.message : 'Failed');
         reportAuthError(error);
         console.error('Failed to sync startup metadata:', error);
       })

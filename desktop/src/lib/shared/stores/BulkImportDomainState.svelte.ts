@@ -7,6 +7,7 @@ import { inferGenreFromText } from '$lib/shared/services/genreHeuristic';
 import type { BulkImportSummary, ScanFolderResult } from '$lib/shared/types';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+import { reportImportOutcome } from '$lib/shared/stores/notificationCenter.svelte';
 
 export type ImportNoticeStatus = 'importing' | 'success' | 'error';
 
@@ -18,6 +19,7 @@ export type ImportNotice = {
 };
 
 const SUCCESS_DISMISS_MS = 3500;
+const ERROR_DISMISS_MS = SUCCESS_DISMISS_MS;
 
 class BulkImportDomainState {
   private readonly libraryPort: LibraryPort;
@@ -44,8 +46,8 @@ class BulkImportDomainState {
   /**
    * Persistent import notice for the top progress banner. Lives across the
    * full lifecycle of a single-file import (start → success/error) and is
-   * cleared manually via `dismissImportNotice()` or automatically on
-   * success after SUCCESS_DISMISS_MS.
+   * cleared manually via `dismissImportNotice()` or automatically after
+   * SUCCESS_DISMISS_MS (success) / ERROR_DISMISS_MS (error).
    */
   importNotice = $state<ImportNotice | null>(null);
 
@@ -78,6 +80,36 @@ class BulkImportDomainState {
         this.importNoticeTimeoutId = null;
       }, autoDismissMs);
     }
+  }
+
+  /**
+   * FR-BI2: single error reporter. Auto-dismisses after ERROR_DISMISS_MS and
+   * dedups identical errors (file+message key): re-reporting the visible
+   * error neither stacks nor restarts its timer. Distinct errors replace.
+   *
+   * FR-DN1 feed: every reported error also records one tray entry per event
+   * (before banner dedup — the tray counts outcome events, not visible
+   * banners). Feed-only: banner behavior below is unchanged.
+   */
+  private reportImportError(fileName: string, message: string): void {
+    reportImportOutcome(false, fileName, message);
+    const current = this.importNotice;
+    if (
+      current?.status === 'error' &&
+      current.fileName === fileName &&
+      current.message === message
+    ) {
+      return;
+    }
+    this.setImportNotice(
+      {
+        status: 'error',
+        fileName,
+        message,
+        percentage: 0,
+      },
+      ERROR_DISMISS_MS,
+    );
   }
 
   // ─── Single file import ───
@@ -173,12 +205,16 @@ class BulkImportDomainState {
               : progress.status === 'error'
                 ? 'error'
                 : 'importing';
-          this.importNotice = {
-            status: noticeStatus,
-            fileName: displayName,
-            message: progress.message,
-            percentage: progress.percentage ?? 0,
-          };
+          if (noticeStatus === 'error') {
+            this.reportImportError(displayName, progress.message);
+          } else {
+            this.importNotice = {
+              status: noticeStatus,
+              fileName: displayName,
+              message: progress.message,
+              percentage: progress.percentage ?? 0,
+            };
+          }
         },
       );
 
@@ -187,7 +223,8 @@ class BulkImportDomainState {
       // After successful import, ensure the banner shows a success state
       // for SUCCESS_DISMISS_MS. The progress callback already set it, but
       // (a) we re-confirm and (b) schedule the auto-dismiss here, where
-      // the import lifecycle is owned.
+      // the import lifecycle is owned. FR-DN1 feed: record the tray entry.
+      reportImportOutcome(true, displayName, '');
       this.setImportNotice(
         {
           status: 'success',
@@ -199,12 +236,7 @@ class BulkImportDomainState {
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.setImportNotice({
-        status: 'error',
-        fileName: fileStem,
-        message: errorMessage,
-        percentage: 0,
-      });
+      this.reportImportError(fileStem, errorMessage);
       // Re-throw so the coordinator can surface the error elsewhere if needed.
       throw error;
     } finally {
@@ -289,6 +321,13 @@ class BulkImportDomainState {
       );
 
       this.bulkImportSummary = summary;
+
+      // FR-DN1 feed: one tray entry per bulk-import outcome (feed-only).
+      reportImportOutcome(
+        summary.failed === 0,
+        this.bulkImportFolderName ?? this.bulkImportFolderPath ?? '',
+        `${summary.success} ok · ${summary.failed} failed · ${summary.skipped} skipped`,
+      );
 
       if (
         summary.success > 0 ||

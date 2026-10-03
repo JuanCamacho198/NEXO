@@ -67,8 +67,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'home.continueReadingPlaceholder': 'Tus lecturas activas apareceran aqui.',
   'home.heroEyebrow': 'Sistema de lectura enfocado',
   'home.heroTitle': 'Retoma la siguiente pagina con menos friccion y mas contexto.',
-  'home.heroDescription':
-    'La pantalla inicial ahora prioriza lectura activa, control de estanteria y orientacion rapida antes de entrar al lector.',
+  'home.heroDescription': 'Sigue leyendo donde lo dejaste, en cualquier dispositivo.',
   'home.heroContinueLabel': 'Lecturas activas',
   'home.heroShelfLabel': 'Libros en estanteria',
   'home.heroMinutesHint': 'Minutos registrados en sesiones de lectura',
@@ -240,6 +239,18 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.notifications.lastSync': 'Ultima sincronizacion',
   'settings.notifications.neverSynced': 'Nunca',
   'settings.notifications.syncingNow': 'Sincronizando...',
+
+  // Notification Center (desktop tray, FR-DN1/FR-DN2)
+  'notifications.center.title': 'Notificaciones',
+  'notifications.center.emptyTitle': 'Aun no hay notificaciones',
+  'notifications.center.emptyDescription':
+    'Los resultados de importacion y sincronizacion apareceran aqui.',
+  'notifications.center.clear': 'Borrar todo',
+  'notifications.bell.label': 'Abrir notificaciones',
+  'notifications.kind.importSuccess': 'Importacion completada',
+  'notifications.kind.importFailure': 'Importacion fallida',
+  'notifications.kind.syncSuccess': 'Sincronizacion completada',
+  'notifications.kind.syncFailure': 'Sincronizacion fallida',
 
   // Sync Tab
   'settings.sync.description': 'Configura la sincronizacion con Google Drive.',
