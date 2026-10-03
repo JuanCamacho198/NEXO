@@ -18,6 +18,7 @@ export type ImportNotice = {
 };
 
 const SUCCESS_DISMISS_MS = 3500;
+const ERROR_DISMISS_MS = SUCCESS_DISMISS_MS;
 
 class BulkImportDomainState {
   private readonly libraryPort: LibraryPort;
@@ -44,8 +45,8 @@ class BulkImportDomainState {
   /**
    * Persistent import notice for the top progress banner. Lives across the
    * full lifecycle of a single-file import (start → success/error) and is
-   * cleared manually via `dismissImportNotice()` or automatically on
-   * success after SUCCESS_DISMISS_MS.
+   * cleared manually via `dismissImportNotice()` or automatically after
+   * SUCCESS_DISMISS_MS (success) / ERROR_DISMISS_MS (error).
    */
   importNotice = $state<ImportNotice | null>(null);
 
@@ -78,6 +79,31 @@ class BulkImportDomainState {
         this.importNoticeTimeoutId = null;
       }, autoDismissMs);
     }
+  }
+
+  /**
+   * FR-BI2: single error reporter. Auto-dismisses after ERROR_DISMISS_MS and
+   * dedups identical errors (file+message key): re-reporting the visible
+   * error neither stacks nor restarts its timer. Distinct errors replace.
+   */
+  private reportImportError(fileName: string, message: string): void {
+    const current = this.importNotice;
+    if (
+      current?.status === 'error' &&
+      current.fileName === fileName &&
+      current.message === message
+    ) {
+      return;
+    }
+    this.setImportNotice(
+      {
+        status: 'error',
+        fileName,
+        message,
+        percentage: 0,
+      },
+      ERROR_DISMISS_MS,
+    );
   }
 
   // ─── Single file import ───
@@ -173,12 +199,16 @@ class BulkImportDomainState {
               : progress.status === 'error'
                 ? 'error'
                 : 'importing';
-          this.importNotice = {
-            status: noticeStatus,
-            fileName: displayName,
-            message: progress.message,
-            percentage: progress.percentage ?? 0,
-          };
+          if (noticeStatus === 'error') {
+            this.reportImportError(displayName, progress.message);
+          } else {
+            this.importNotice = {
+              status: noticeStatus,
+              fileName: displayName,
+              message: progress.message,
+              percentage: progress.percentage ?? 0,
+            };
+          }
         },
       );
 
@@ -199,12 +229,7 @@ class BulkImportDomainState {
       );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.setImportNotice({
-        status: 'error',
-        fileName: fileStem,
-        message: errorMessage,
-        percentage: 0,
-      });
+      this.reportImportError(fileStem, errorMessage);
       // Re-throw so the coordinator can surface the error elsewhere if needed.
       throw error;
     } finally {
