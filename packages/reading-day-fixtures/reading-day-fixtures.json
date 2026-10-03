@@ -1,0 +1,12 @@
+[
+  { "instant": "2026-10-01T12:00:00Z", "zoneOffsetMinutes": 780, "expectedDay": "2026-10-02" },
+  { "instant": "2026-10-01T12:00:00Z", "zoneOffsetMinutes": -660, "expectedDay": "2026-10-01" },
+  { "instant": "2026-10-01T10:59:59Z", "zoneOffsetMinutes": 780, "expectedDay": "2026-10-01" },
+  { "instant": "2026-10-01T11:00:00Z", "zoneOffsetMinutes": 780, "expectedDay": "2026-10-02" },
+  { "instant": "2026-10-01T10:59:59Z", "zoneOffsetMinutes": -660, "expectedDay": "2026-09-30" },
+  { "instant": "2026-10-01T11:00:00Z", "zoneOffsetMinutes": -660, "expectedDay": "2026-10-01" },
+  { "instant": "2026-10-02T02:00:00Z", "zoneOffsetMinutes": -660, "expectedDay": "2026-10-01" },
+  { "instant": "2026-10-01T20:00:00Z", "zoneOffsetMinutes": 330, "expectedDay": "2026-10-02" },
+  { "instant": "2026-10-01T23:59:59Z", "zoneOffsetMinutes": 0, "expectedDay": "2026-10-01" },
+  { "instant": "2026-10-01T23:00:00Z", "zoneOffsetMinutes": 120, "expectedDay": "2026-10-02" }
+]

@@ -1,6 +1,7 @@
 package com.nexo.domain.usecase
 
 import com.nexo.domain.model.DailyReadingActivity
+import com.nexo.domain.model.ReadingDay
 import com.nexo.domain.model.Statistics
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.ReadingStatsRepository
@@ -9,7 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import java.util.Calendar
+import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -17,6 +18,11 @@ class GetStatisticsUseCase(
     private val readingStatsRepository: ReadingStatsRepository,
     private val homeRepository: HomeRepository,
     private val dailyGoalProvider: () -> Int = { 30 },
+    /**
+     * Explicit zone for the reading-day contract. Required: production passes
+     * it at the DI composition root, tests pass a fixed zone.
+     */
+    private val zoneId: ZoneId,
 ) {
     private val refreshTrigger = MutableStateFlow(Unit)
 
@@ -88,7 +94,6 @@ class GetStatisticsUseCase(
         if (activeDates.isEmpty()) return 0
         if (!activeDates.contains(todayStart)) return 0
 
-        val calendar = Calendar.getInstance()
         var currentDate = todayStart
         var streak = 0
 
@@ -113,16 +118,7 @@ class GetStatisticsUseCase(
         return days
     }
 
-    private fun getTodayStartMillis(): Long {
-        val calendar =
-            Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-        return calendar.timeInMillis
-    }
+    private fun getTodayStartMillis(): Long = ReadingDay.todayStartMillis(zoneId)
 
     companion object {
         private const val BOOKS_READ_MINUTES = 300L

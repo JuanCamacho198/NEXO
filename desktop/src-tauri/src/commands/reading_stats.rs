@@ -10,13 +10,14 @@ pub fn getReadingActivity(
     period: String,
     granularity: String,
     book_id: Option<String>,
+    zone_offset_minutes: i32,
 ) -> Result<Vec<ActivityPoint>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     if !repository.has_desktop_parity_schema().unwrap_or(true) {
         return Ok(vec![]);
     }
     repository
-        .get_reading_activity(&period, &granularity, book_id.as_deref())
+        .get_reading_activity(&period, &granularity, book_id.as_deref(), zone_offset_minutes)
         .map_err(map_command_error)
 }
 
@@ -49,12 +50,15 @@ pub fn getReadingStreak(
     state: State<'_, AppState>,
     book_id: Option<String>,
     user_id: String,
+    zone_offset_minutes: i32,
 ) -> Result<i64, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     if !repository.has_desktop_parity_schema().unwrap_or(true) {
         return Ok(0);
     }
-    repository.get_reading_streak(book_id.as_deref(), &user_id).map_err(map_command_error)
+    repository
+        .get_reading_streak(book_id.as_deref(), &user_id, zone_offset_minutes)
+        .map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]
@@ -90,12 +94,15 @@ pub fn getTodayMinutes(
     state: State<'_, AppState>,
     user_id: String,
     book_id: Option<String>,
+    zone_offset_minutes: i32,
 ) -> Result<i64, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     if !repository.has_desktop_parity_schema().unwrap_or(true) {
         return Ok(0);
     }
-    repository.get_today_minutes(&user_id, book_id.as_deref()).map_err(map_command_error)
+    repository
+        .get_today_minutes(&user_id, book_id.as_deref(), zone_offset_minutes)
+        .map_err(map_command_error)
 }
 
 #[allow(non_snake_case)]

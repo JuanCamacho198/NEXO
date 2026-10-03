@@ -78,8 +78,13 @@ impl LibraryRepository {
         settings::save_daily_goal_minutes(self, minutes, user_id)
     }
 
-    pub fn get_today_minutes(&self, user_id: &str, book_id: Option<&str>) -> AppResult<i64> {
-        progress::get_today_minutes(self, user_id, book_id)
+    pub fn get_today_minutes(
+        &self,
+        user_id: &str,
+        book_id: Option<&str>,
+        zone_offset_minutes: i32,
+    ) -> AppResult<i64> {
+        progress::get_today_minutes(self, user_id, book_id, zone_offset_minutes)
     }
     pub fn is_feature_enabled(&self, feature_name: &str) -> AppResult<bool> {
         metrics::is_feature_enabled(self, feature_name)
@@ -191,8 +196,9 @@ impl LibraryRepository {
         period: &str,
         granularity: &str,
         book_id: Option<&str>,
+        zone_offset_minutes: i32,
     ) -> AppResult<Vec<ActivityPoint>> {
-        progress::get_reading_activity(self, period, granularity, book_id)
+        progress::get_reading_activity(self, period, granularity, book_id, zone_offset_minutes)
     }
 
     pub fn get_reading_stats_for_range(
@@ -204,8 +210,13 @@ impl LibraryRepository {
         progress::get_reading_stats_for_range(self, from, to, book_id)
     }
 
-    pub fn get_reading_streak(&self, book_id: Option<&str>, user_id: &str) -> AppResult<i64> {
-        progress::get_reading_streak(self, book_id, user_id)
+    pub fn get_reading_streak(
+        &self,
+        book_id: Option<&str>,
+        user_id: &str,
+        zone_offset_minutes: i32,
+    ) -> AppResult<i64> {
+        progress::get_reading_streak(self, book_id, user_id, zone_offset_minutes)
     }
 
     pub fn upsert_remote_reading_sessions(

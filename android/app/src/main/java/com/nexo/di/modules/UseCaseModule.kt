@@ -3,6 +3,7 @@ package com.nexo.di.modules
 import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.GetStatisticsUseCase
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
+import java.time.ZoneId
 
 class UseCaseModule(
     private val repositoryModule: RepositoryModule,
@@ -17,6 +18,7 @@ class UseCaseModule(
             readingStatsRepository = repositoryModule.readingStatsRepository,
             homeRepository = repositoryModule.homeRepository,
             dailyGoalProvider = preferencesModule.dailyGoalProvider,
+            zoneId = ZoneId.systemDefault(),
         )
     }
 

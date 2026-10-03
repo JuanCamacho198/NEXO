@@ -415,6 +415,7 @@ describe('tauriClient reading stats commands', () => {
       period: 'week',
       granularity: 'day',
       bookId: undefined,
+      zoneOffsetMinutes: expect.any(Number),
     });
     expect(result).toEqual(expected);
   });
@@ -428,6 +429,7 @@ describe('tauriClient reading stats commands', () => {
       period: 'month',
       granularity: 'day',
       bookId: 'book-1',
+      zoneOffsetMinutes: expect.any(Number),
     });
   });
 
@@ -473,6 +475,7 @@ describe('tauriClient reading stats commands', () => {
     expect(invokeMock).toHaveBeenCalledWith('getReadingStreak', {
       bookId: 'book-1',
       userId: 'user-1',
+      zoneOffsetMinutes: expect.any(Number),
     });
     expect(result).toBe(5);
   });
@@ -485,6 +488,7 @@ describe('tauriClient reading stats commands', () => {
     expect(invokeMock).toHaveBeenCalledWith('getReadingStreak', {
       bookId: 'book-1',
       userId: '',
+      zoneOffsetMinutes: expect.any(Number),
     });
     expect(result).toBe(0);
   });
@@ -497,6 +501,7 @@ describe('tauriClient reading stats commands', () => {
     expect(invokeMock).toHaveBeenCalledWith('getReadingStreak', {
       bookId: undefined,
       userId: '',
+      zoneOffsetMinutes: expect.any(Number),
     });
     expect(result).toBe(0);
   });

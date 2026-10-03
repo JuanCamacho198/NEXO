@@ -4,18 +4,24 @@ import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingSessionDao
 import com.nexo.domain.model.Book
+import com.nexo.domain.model.ReadingDay
 import com.nexo.domain.model.ReadingStats
 import com.nexo.domain.model.isActiveReadingCandidate
 import com.nexo.domain.repository.HomeRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import java.util.Calendar
+import java.time.ZoneId
 
 class HomeRepositoryImpl(
     private val bookDao: BookDao,
     private val readingProgressDao: ReadingProgressDao,
     private val readingSessionDao: ReadingSessionDao,
+    /**
+     * Explicit zone for the reading-day contract. Required: production passes
+     * it at the DI composition root, tests pass a fixed zone.
+     */
+    private val zoneId: ZoneId,
 ) : HomeRepository {
     override fun observeBooks(): Flow<List<Book>> =
         combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { entities, progresses ->
@@ -82,16 +88,7 @@ class HomeRepositoryImpl(
             readingSessionDao.deleteSessionsForBook(bookId)
         }
 
-    private fun getTodayStartMillis(): Long {
-        val calendar =
-            Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-        return calendar.timeInMillis
-    }
+    private fun getTodayStartMillis(): Long = ReadingDay.todayStartMillis(zoneId)
 
     private fun calculateProgress(
         minutesRead: Int,

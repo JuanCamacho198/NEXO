@@ -9,6 +9,7 @@ import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.local.entity.SyncOutboxEntity
 import com.nexo.domain.model.DailyReadingActivity
+import com.nexo.domain.model.ReadingDay
 import com.nexo.domain.model.readingSessionId
 import com.nexo.domain.repository.ReadingStatsData
 import com.nexo.domain.repository.ReadingStatsRepository
@@ -17,7 +18,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import org.json.JSONObject
-import java.util.Calendar
+import java.time.Instant
+import java.time.ZoneId
 import java.util.UUID
 
 class ReadingStatsRepositoryImpl(
@@ -30,6 +32,12 @@ class ReadingStatsRepositoryImpl(
      * and a drain is requested after a successful reading-session enqueue.
      */
     private val drainScheduler: OutboxDrainScheduler? = null,
+    /**
+     * Explicit zone for the reading-day contract. Required: production passes
+     * it at the DI composition root, tests pass a fixed zone, and no call site
+     * can fall back to a device default.
+     */
+    private val zoneId: ZoneId,
 ) : ReadingStatsRepository {
     override fun observeStats(bookId: String): Flow<ReadingStatsData?> =
         readingStatsDao.observeStatsForBook(bookId).map { entity ->
@@ -100,7 +108,7 @@ class ReadingStatsRepositoryImpl(
         userId: String,
     ) {
         val now = System.currentTimeMillis()
-        val date = todayStartMillis()
+        val date = ReadingDay.readingDayStartMillis(Instant.ofEpochMilli(startTimeEpochMillis), zoneId)
         val id = readingSessionId(userId, bookId, startTimeEpochMillis)
 
         readingSessionDao.insert(
@@ -145,16 +153,5 @@ class ReadingStatsRepositoryImpl(
         )
         // S6: request a drain after a successful enqueue.
         drainScheduler?.scheduleDrain()
-    }
-
-    private fun todayStartMillis(): Long {
-        val calendar =
-            Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-        return calendar.timeInMillis
     }
 }

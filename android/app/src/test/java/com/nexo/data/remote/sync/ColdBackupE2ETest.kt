@@ -328,6 +328,7 @@ class ColdBackupE2ETest {
                     readingStatsDao = mockk(relaxed = true),
                     readingSessionDao = fakeSessionDao,
                     outboxDao = fakeStatsOutbox,
+                    zoneId = java.time.ZoneId.of("UTC"),
                 )
             // Offline queue (no session check inside recordReadingSession — it always queues)
             statsRepo.recordReadingSession(bookId = "b1", startTimeEpochMillis = 1000L, durationMinutes = 5, userId = "u1")

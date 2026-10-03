@@ -18,6 +18,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.ZoneId
 
 /**
  * Tests for the refactored ReadingStatsRepository — verifies the suspend
@@ -39,6 +40,7 @@ class ReadingStatsRepositoryImplTest {
                 ReadingStatsRepositoryImpl(
                     readingStatsDao = FakeReadingStatsDao(),
                     readingSessionDao = fakeSessionDao,
+                    zoneId = ZoneId.of("UTC"),
                 )
 
             val result: List<DailyReadingActivity> = repository.getDailyActivity()
@@ -62,6 +64,7 @@ class ReadingStatsRepositoryImplTest {
                 ReadingStatsRepositoryImpl(
                     readingStatsDao = FakeReadingStatsDao(),
                     readingSessionDao = fakeSessionDao,
+                    zoneId = ZoneId.of("UTC"),
                 )
 
             val first = repository.getDailyActivity()
@@ -93,6 +96,7 @@ class ReadingStatsRepositoryImplTest {
                 ReadingStatsRepositoryImpl(
                     readingStatsDao = FakeReadingStatsDao(),
                     readingSessionDao = fakeSessionDao,
+                    zoneId = ZoneId.of("UTC"),
                 )
 
             val result = repository.getDailyActivity()
@@ -113,6 +117,7 @@ class ReadingStatsRepositoryImplTest {
                 ReadingStatsRepositoryImpl(
                     readingStatsDao = FakeReadingStatsDao(),
                     readingSessionDao = fakeSessionDao,
+                    zoneId = ZoneId.of("UTC"),
                 )
 
             val result = repository.getDailyActivity(userId = "user-42")
@@ -132,6 +137,7 @@ class ReadingStatsRepositoryImplTest {
                     readingStatsDao = FakeReadingStatsDao(),
                     readingSessionDao = fakeSessionDao,
                     outboxDao = fakeOutboxDao,
+                    zoneId = ZoneId.of("UTC"),
                 )
 
             repository.recordReadingSession(
@@ -166,6 +172,7 @@ class ReadingStatsRepositoryImplTest {
                     readingStatsDao = FakeReadingStatsDao(),
                     readingSessionDao = fakeSessionDao,
                     outboxDao = null,
+                    zoneId = ZoneId.of("UTC"),
                 )
 
             repository.recordReadingSession(
@@ -189,6 +196,7 @@ class ReadingStatsRepositoryImplTest {
                     readingSessionDao = FakeReadingSessionDao(),
                     outboxDao = FakeSyncOutboxDao(),
                     drainScheduler = scheduler,
+                    zoneId = ZoneId.of("UTC"),
                 )
 
             repository.recordReadingSession(
@@ -211,6 +219,7 @@ class ReadingStatsRepositoryImplTest {
                     readingSessionDao = FakeReadingSessionDao(),
                     outboxDao = null,
                     drainScheduler = scheduler,
+                    zoneId = ZoneId.of("UTC"),
                 )
 
             repository.recordReadingSession(
@@ -248,6 +257,7 @@ class ReadingStatsRepositoryImplTest {
                 ReadingStatsRepositoryImpl(
                     readingStatsDao = fakeStatsDao,
                     readingSessionDao = FakeReadingSessionDao(),
+                    zoneId = ZoneId.of("UTC"),
                 )
 
             val result: List<ReadingStatsData> = repository.observeBookStats().first()

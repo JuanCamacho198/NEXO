@@ -2,6 +2,7 @@ package com.nexo.domain.usecase
 
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.DailyReadingActivity
+import com.nexo.domain.model.ReadingDay
 import com.nexo.domain.model.Statistics
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.ReadingStatsData
@@ -13,7 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.util.Calendar
+import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 /**
@@ -25,17 +26,8 @@ import java.util.concurrent.TimeUnit
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class GetStatisticsUseCaseTest {
-    private val todayStart: Long =
-        run {
-            val cal =
-                Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-            cal.timeInMillis
-        }
+    private val zoneId: ZoneId = ZoneId.of("UTC")
+    private val todayStart: Long = ReadingDay.todayStartMillis(zoneId)
 
     private fun daysAgo(days: Long): Long = todayStart - TimeUnit.DAYS.toMillis(days)
 
@@ -46,7 +38,7 @@ class GetStatisticsUseCaseTest {
                 FakeReadingStatsRepository().apply {
                     dailyActivity = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 5))
                 }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             val first = useCase().first()
             val firstToday = first.weeklyActivity.find { it.dateEpochMillis == todayStart }
@@ -65,7 +57,7 @@ class GetStatisticsUseCaseTest {
     @Test
     fun weeklyActivity_coversSevenDays_evenWhenNoData() =
         runBlocking {
-            val useCase = GetStatisticsUseCase(FakeReadingStatsRepository(), FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(FakeReadingStatsRepository(), FakeHomeRepository(), zoneId = zoneId)
             val stats = useCase().first()
             assertEquals(7, stats.weeklyActivity.size)
             // Each day's minutes should default to 0 when no data is present
@@ -86,6 +78,7 @@ class GetStatisticsUseCaseTest {
                     statsRepo,
                     FakeHomeRepository(),
                     dailyGoalProvider = { 45 },
+                    zoneId = zoneId,
                 )
 
             val stats = useCase().first()
@@ -113,6 +106,7 @@ class GetStatisticsUseCaseTest {
                     statsRepo,
                     FakeHomeRepository(),
                     dailyGoalProvider = { 30 },
+                    zoneId = zoneId,
                 )
 
             val stats = useCase().first()
@@ -132,6 +126,7 @@ class GetStatisticsUseCaseTest {
                     statsRepo,
                     FakeHomeRepository(),
                     dailyGoalProvider = { 0 },
+                    zoneId = zoneId,
                 )
 
             val stats = useCase().first()
@@ -149,7 +144,7 @@ class GetStatisticsUseCaseTest {
                     scopedActivity["user-a"] = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 30))
                     scopedActivity["user-b"] = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 7))
                 }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             useCase.setUserId("user-a")
             val statsA: Statistics = useCase().first()
@@ -179,7 +174,7 @@ class GetStatisticsUseCaseTest {
                 FakeReadingStatsRepository().apply {
                     scopedActivity[null] = listOf(DailyReadingActivity(dateEpochMillis = todayStart, minutesRead = 3))
                 }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             useCase.setUserId(null)
             val stats = useCase().first()
@@ -203,7 +198,7 @@ class GetStatisticsUseCaseTest {
                     DailyReadingActivity(dateEpochMillis = daysAgo(dayOffset), minutesRead = 10)
                 }
             val statsRepo = FakeReadingStatsRepository().apply { dailyActivity = activity }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             val stats = useCase().first()
 
@@ -220,7 +215,7 @@ class GetStatisticsUseCaseTest {
                     DailyReadingActivity(dateEpochMillis = daysAgo(2), minutesRead = 10),
                 )
             val statsRepo = FakeReadingStatsRepository().apply { dailyActivity = activity }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             val stats = useCase().first()
 
@@ -239,7 +234,7 @@ class GetStatisticsUseCaseTest {
                     DailyReadingActivity(dateEpochMillis = daysAgo(4), minutesRead = 10),
                 )
             val statsRepo = FakeReadingStatsRepository().apply { dailyActivity = activity }
-            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(statsRepo, FakeHomeRepository(), zoneId = zoneId)
 
             val stats = useCase().first()
 
@@ -249,7 +244,7 @@ class GetStatisticsUseCaseTest {
     @Test
     fun streak_noActivity_isZero() =
         runBlocking {
-            val useCase = GetStatisticsUseCase(FakeReadingStatsRepository(), FakeHomeRepository())
+            val useCase = GetStatisticsUseCase(FakeReadingStatsRepository(), FakeHomeRepository(), zoneId = zoneId)
             val stats = useCase().first()
             assertEquals(0, stats.currentStreak)
         }

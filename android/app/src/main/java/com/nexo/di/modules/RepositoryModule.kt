@@ -19,6 +19,7 @@ import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.repository.StorageRepository
 import com.nexo.domain.sync.OutboxDrainScheduler
 import com.nexo.domain.sync.SyncSettleGate
+import java.time.ZoneId
 
 class RepositoryModule(
     context: Context,
@@ -94,6 +95,7 @@ class RepositoryModule(
             readingSessionDao = databaseModule.readingSessionDao,
             outboxDao = databaseModule.syncOutboxDao,
             drainScheduler = drainScheduler,
+            zoneId = ZoneId.systemDefault(),
         )
 
     val homeRepository: HomeRepository =
@@ -101,6 +103,7 @@ class RepositoryModule(
             bookDao = databaseModule.bookDao,
             readingProgressDao = databaseModule.readingProgressDao,
             readingSessionDao = databaseModule.readingSessionDao,
+            zoneId = ZoneId.systemDefault(),
         )
 
     val dictionaryRepository: DictionaryRepository =

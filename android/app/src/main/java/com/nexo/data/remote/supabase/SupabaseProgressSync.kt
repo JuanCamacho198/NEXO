@@ -184,6 +184,11 @@ class SupabaseProgressSync(
         return if (applyRemoteProgress(row)) row else null
     }
 
+    /**
+     * Serializes reading-day keys in the canonical UTC form (00:00 UTC of the
+     * user's local calendar day — see `com.nexo.domain.model.ReadingDay`), so
+     * the value round-trips through Supabase without a zone.
+     */
     private val dateFormat: SimpleDateFormat =
         SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
