@@ -821,9 +821,7 @@ export class SyncService {
 
     for (const action of actions) {
       if (action.kind === 'flag-mismatch') {
-        console.warn(
-          `Drive reconcile: canonical/legacy twin mismatch for ${action.canonicalName}`,
-        );
+        console.warn(`Drive reconcile: canonical/legacy twin mismatch for ${action.canonicalName}`);
         continue;
       }
       if (action.kind !== 'copy-to-canonical') continue;

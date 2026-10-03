@@ -67,12 +67,18 @@ describe('DriveReconciler — plan', () => {
 
   it('plans copy-to-canonical for a legacy underscore name', () => {
     const actions = planReconciliation([BOOK], [{ name: 'gutendex_2701.epub' }]);
-    expect(actions[0]).toMatchObject({ kind: 'copy-to-canonical', sourceName: 'gutendex_2701.epub' });
+    expect(actions[0]).toMatchObject({
+      kind: 'copy-to-canonical',
+      sourceName: 'gutendex_2701.epub',
+    });
   });
 
   it('recognizes a raw colon-bearing desktop name', () => {
     const actions = planReconciliation([BOOK], [{ name: 'gutendex:2701.epub' }]);
-    expect(actions[0]).toMatchObject({ kind: 'copy-to-canonical', sourceName: 'gutendex:2701.epub' });
+    expect(actions[0]).toMatchObject({
+      kind: 'copy-to-canonical',
+      sourceName: 'gutendex:2701.epub',
+    });
   });
 
   it('keeps canonical live and never deletes a matching twin', () => {

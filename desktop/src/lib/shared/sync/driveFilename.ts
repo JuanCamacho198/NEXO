@@ -30,9 +30,7 @@ const RESERVED_DEVICE_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 function isCanonicalChar(ch: string): boolean {
-  return (
-    (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch === '-' || ch === '_'
-  );
+  return (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch === '-' || ch === '_';
 }
 
 /** Canonical, Windows-safe stem for a raw book id (see module docs). */
@@ -56,22 +54,29 @@ export function canonicalExtension(raw: string | null | undefined): string {
 }
 
 /** Canonical Drive object name: canonical stem plus canonical extension. */
-export function canonicalDriveObjectName(
-  bookId: string,
-  extension?: string | null,
-): string {
+export function canonicalDriveObjectName(bookId: string, extension?: string | null): string {
   return `${canonicalStem(bookId)}.${canonicalExtension(extension)}`;
 }
 
 function dropFilter(raw: string): string {
   return raw
     .split('')
-    .filter((ch) => (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch === '-' || ch === '_')
+    .filter(
+      (ch) =>
+        (ch >= 'a' && ch <= 'z') ||
+        (ch >= 'A' && ch <= 'Z') ||
+        (ch >= '0' && ch <= '9') ||
+        ch === '-' ||
+        ch === '_',
+    )
     .join('');
 }
 
 function dashFilter(raw: string): string {
-  const replaced = raw.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/^-+|-+$/g, '');
+  const replaced = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '-')
+    .replace(/^-+|-+$/g, '');
   return replaced.length === 0 ? 'unknown' : replaced;
 }
 
