@@ -71,6 +71,23 @@ class DebugToolkitTest {
     }
 
     @Test
+    fun `recentErrors orders by parsed timestamp even when mtimes disagree`() {
+        val crashDir = tempFolder.newFolder("crashes-mtime")
+        val oldCrash = writeCrash(crashDir, "crash_old.txt", timestamp = 1000L, message = "old failure")
+        val newCrash = writeCrash(crashDir, "crash_new.txt", timestamp = 2000L, message = "new failure")
+
+        // mtimes point the opposite way to the parsed timestamps: the older crash
+        // looks like the most recently modified file. mtime-only ordering selects
+        // it first, so this test fails against that code and passes on parsed order.
+        assertTrue(oldCrash.setLastModified(2_000_000_000_000L))
+        assertTrue(newCrash.setLastModified(1_000_000_000_000L))
+
+        val entries = DebugToolkit.recentErrors(crashDir)
+
+        assertEquals(listOf(2000L, 1000L), entries.map { it.timestampMs })
+    }
+
+    @Test
     fun `recentErrors respects the limit and a non-positive limit returns empty`() {
         val crashDir = tempFolder.newFolder("crashes")
         repeat(4) { i -> writeCrash(crashDir, "crash_$i.txt", timestamp = i.toLong(), message = "err $i") }
@@ -107,8 +124,9 @@ class DebugToolkitTest {
         name: String,
         timestamp: Long,
         message: String,
-    ) {
-        File(dir, name).writeText(
+    ): File {
+        val file = File(dir, name)
+        file.writeText(
             buildString {
                 appendLine("Timestamp: $timestamp")
                 appendLine("Thread: main")
@@ -117,5 +135,6 @@ class DebugToolkitTest {
                 appendLine("at com.nexo.Fake.fail(Fake.kt:1)")
             },
         )
+        return file
     }
 }

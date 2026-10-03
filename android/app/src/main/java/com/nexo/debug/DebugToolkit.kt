@@ -37,7 +37,9 @@ object DebugToolkit {
 
     /**
      * Reads the newest `crash_*.txt` files written by [NexoApplication]'s crash
-     * handler and returns scrubbed summaries, newest first. Returns an empty
+     * handler and returns scrubbed summaries, newest first. "Newest" is the
+     * parsed `Timestamp:` value; file mtime is only a tie-breaker, and the file
+     * name a final one, so ordering is total and deterministic. Returns an empty
      * list when [crashDir] is missing, unreadable, or has no crash files.
      */
     fun recentErrors(
@@ -49,10 +51,22 @@ object DebugToolkit {
             crashDir
                 .listFiles()
                 ?.filter { it.isFile && it.name.startsWith("crash_") && it.name.endsWith(".txt") }
-                ?.sortedByDescending { it.lastModified() }
                 ?: return emptyList()
-        return files.take(limit).mapNotNull(::parseError)
+        return files
+            .mapNotNull { file -> parseError(file)?.let { ParsedError(it, file) } }
+            .sortedWith(
+                compareByDescending<ParsedError> { it.entry.timestampMs }
+                    .thenByDescending { it.file.lastModified() }
+                    .thenBy { it.file.name },
+            ).take(limit)
+            .map { it.entry }
     }
+
+    /** Entry plus the source file, so ordering can fall back to mtime/name ties. */
+    private data class ParsedError(
+        val entry: DebugErrorEntry,
+        val file: File,
+    )
 
     /**
      * Strips PII from raw crash text before it is rendered. Layered on top of
