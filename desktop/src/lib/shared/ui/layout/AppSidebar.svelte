@@ -3,7 +3,10 @@
   import type { NavItem } from '$lib/shared/stores/NavigationState.svelte';
   import type { MessageKey } from '../../i18n';
   import ThemeToggle from '$lib/shared/ui/navigation/ThemeToggle.svelte';
+  import NotificationCenter from '$lib/shared/ui/feedback/NotificationCenter.svelte';
+  import { notificationCenter, markAllRead } from '$lib/shared/stores/notificationCenter.svelte';
   import { Tooltip } from 'bits-ui';
+  import Bell from 'lucide-svelte/icons/bell';
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Moon from 'lucide-svelte/icons/moon';
@@ -27,6 +30,8 @@
 
   let collapsed = $state(false);
 
+  let notificationOpen = $state(false);
+
   let profile = $derived(profileSessionFromAuthState());
 
   let wordmarkSrc = $derived(
@@ -38,6 +43,11 @@
       event.preventDefault();
       onNavigateSettings?.();
     }
+  };
+
+  const openNotificationCenter = (): void => {
+    notificationOpen = true;
+    markAllRead();
   };
 </script>
 
@@ -157,6 +167,29 @@
       <ThemeToggle />
     {/if}
 
+    <!-- Notification bell (FR-DN2): next to the profile block, badge while unread exist -->
+    <button
+      onclick={openNotificationCenter}
+      class="relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-(--color-text-muted) transition-all duration-200 hover:bg-(--color-panel-accent) hover:text-(--color-primary)"
+      class:justify-center={collapsed}
+      aria-label={t('notifications.bell.label')}
+    >
+      <span class="relative shrink-0">
+        <Bell size={16} strokeWidth={1.8} aria-hidden="true" />
+        {#if notificationCenter.unreadCount > 0}
+          <span
+            class="absolute -top-1.5 -right-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white"
+            aria-hidden="true"
+          >
+            {notificationCenter.unreadCount > 9 ? '9+' : notificationCenter.unreadCount}
+          </span>
+        {/if}
+      </span>
+      {#if !collapsed}
+        {t('notifications.center.title')}
+      {/if}
+    </button>
+
     <!-- User section (REQ-12): clickable → Settings → Cuenta -->
     <div
       class="w-full flex items-center rounded-xl p-3 cursor-pointer transition-colors hover:bg-(--color-panel-accent)"
@@ -196,3 +229,5 @@
     </div>
   </div>
 </aside>
+
+<NotificationCenter bind:open={notificationOpen} {t} />
