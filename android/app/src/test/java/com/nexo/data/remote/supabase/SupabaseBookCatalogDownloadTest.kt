@@ -1,6 +1,7 @@
 package com.nexo.data.remote.supabase
 
 import com.nexo.data.local.dao.BookDao
+import com.nexo.data.local.dao.StoredBookPath
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.SyncOutboxEntity
 import com.nexo.data.remote.sync.StorageSyncRemoteDataSource
@@ -420,6 +421,13 @@ class SupabaseBookCatalogDownloadTest {
 
     // ── Fake BookDao ───────────────────────────────────────────────────────
     private class FakeBookDao : BookDao {
+        override suspend fun allStoredPaths(): List<StoredBookPath> = emptyList()
+
+        override suspend fun updateFilePath(
+            bookId: String,
+            filePath: String,
+        ) = Unit
+
         private val byId = mutableMapOf<String, BookEntity>()
         var failUpsert = false
 

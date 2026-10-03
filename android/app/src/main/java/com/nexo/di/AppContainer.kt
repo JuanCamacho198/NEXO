@@ -172,6 +172,7 @@ class AppContainer(
             importEpubBookUseCase = ImportEpubBookUseCase(repositoryModule.libraryRepository),
             libraryRepository = repositoryModule.libraryRepository,
             tempDir = networkModule.catalogTempDir,
+            booksDir = networkModule.libraryBooksDir,
         )
     }
     val addonRegistry: com.nexo.data.remote.addons.AddonRegistry by lazy { networkModule.addonRegistry }

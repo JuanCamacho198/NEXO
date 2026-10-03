@@ -2,7 +2,7 @@ import { canonicalDriveObjectName } from '$lib/shared/sync/driveFilename';
 
 export const DRIVE_PROVIDER = 'google_drive' as const;
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file' as const;
-export const DRIVE_BOOKS_PATH = 'Nexo/Books' as const;
+export const DRIVE_BOOKS_PATH = 'Nexo/books' as const;
 export const PROTOCOL_VERSION = 1 as const;
 export type Lifecycle = 'available' | 'imported' | 'unavailable' | 'deleted';
 export type SyncErrorCode =

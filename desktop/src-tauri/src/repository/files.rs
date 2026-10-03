@@ -38,7 +38,8 @@ pub fn save_book_file(
         return Err(AppError::MissingBookId);
     }
 
-    let books_dir = app.path().app_data_dir()?.join("books");
+    let root = app.path().app_data_dir()?;
+    let books_dir = crate::layout::resolved_books_dir(&root);
     save_book_file_under(repo, &books_dir, book_id, data, title, author, format)
 }
 

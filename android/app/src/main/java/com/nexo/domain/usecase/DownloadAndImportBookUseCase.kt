@@ -68,6 +68,7 @@ class DownloadAndImportBookUseCase(
     private val importEpubBookUseCase: ImportEpubBookUseCase,
     private val libraryRepository: LibraryRepository,
     private val tempDir: File,
+    private val booksDir: File,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     suspend operator fun invoke(book: CatalogBook): Flow<DownloadImportState> =
@@ -91,9 +92,11 @@ class DownloadAndImportBookUseCase(
             }
 
             tempDir.mkdirs()
+            booksDir.mkdirs()
             val key = DriveFilename.canonicalStem(book.id)
             val partFile = File(tempDir, "$key.part")
-            val finalFile = File(tempDir, "$key.epub")
+            val stagedFile = File(tempDir, "$key.epub")
+            val finalFile = File(booksDir, "$key.epub")
             var committed = false
 
             try {
@@ -105,10 +108,16 @@ class DownloadAndImportBookUseCase(
                     trySend(DownloadImportState.Downloading(bytesSoFar, totalBytes))
                 }
 
-                // Atomic same-volume move (`<id>.part` → `<id>.epub`).
-                if (finalFile.exists()) finalFile.delete()
-                if (!partFile.renameTo(finalFile)) {
+                // Atomic same-volume move inside the cache staging dir, then a
+                // second same-volume move into the durable `filesDir/books` tree
+                // (WU6, FR-03): staging is disposable, the library file is not.
+                if (stagedFile.exists()) stagedFile.delete()
+                if (!partFile.renameTo(stagedFile)) {
                     throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "atomic rename failed")
+                }
+                if (finalFile.exists()) finalFile.delete()
+                if (!stagedFile.renameTo(finalFile)) {
+                    throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "library move failed")
                 }
 
                 send(DownloadImportState.Importing)
@@ -138,6 +147,7 @@ class DownloadAndImportBookUseCase(
                 send(DownloadImportState.Failure(null))
             } finally {
                 partFile.delete()
+                stagedFile.delete()
                 if (!committed) finalFile.delete()
             }
         }

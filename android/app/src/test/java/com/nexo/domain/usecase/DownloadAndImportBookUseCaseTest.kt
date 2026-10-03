@@ -102,6 +102,7 @@ class DownloadAndImportBookUseCaseTest {
         importEpubBookUseCase = importUseCase,
         libraryRepository = repo,
         tempDir = tempDir,
+        booksDir = File(tempDir.parentFile, "books"),
         ioDispatcher = dispatcher,
     )
 

@@ -1,11 +1,19 @@
 package com.nexo.data.local.dao
 
 import androidx.paging.PagingSource
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import com.nexo.data.local.entity.BookEntity
 import kotlinx.coroutines.flow.Flow
+
+/** Raw `books.id` + `books.file_path` pair used by the WU6 layout migration. */
+data class StoredBookPath(
+    @ColumnInfo(name = "id") val id: String,
+    @ColumnInfo(name = "file_path") val filePath: String,
+)
 
 @Dao
 interface BookDao {
@@ -109,4 +117,20 @@ interface BookDao {
 
     @Query("SELECT COUNT(*) FROM books")
     suspend fun count(): Int
+
+    // ── WU6 layout migration ───────────────────────────────────────────────
+
+    @Query("SELECT id, file_path FROM books WHERE file_path IS NOT NULL")
+    suspend fun allStoredPaths(): List<StoredBookPath>
+
+    @Query("UPDATE books SET file_path = :filePath WHERE id = :bookId")
+    suspend fun updateFilePath(
+        bookId: String,
+        filePath: String,
+    )
+
+    @Transaction
+    suspend fun rewriteFilePaths(rows: List<StoredBookPath>) {
+        rows.forEach { updateFilePath(it.id, it.filePath) }
+    }
 }

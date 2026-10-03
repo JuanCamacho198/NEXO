@@ -50,6 +50,7 @@ desktop/src-tauri/target/
 docs/*
 !android/docs/
 !docs/release-update-feed.md
+!docs/storage-layout-and-sync.md
 openspec/
 CLAUDE.md
 

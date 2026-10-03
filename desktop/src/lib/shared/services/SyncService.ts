@@ -18,6 +18,14 @@ import {
   reportCoverFailure,
 } from '../sync/SupabaseBookCatalogSync';
 import { canonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
+import { canonicalName } from '$lib/shared/sync/driveFilename';
+import {
+  guardedUploadWithRetry,
+  recallBase,
+  manifestObjectEntry,
+  type VersionMarker,
+} from '$lib/shared/sync/driveWriteGuard';
+import { MANIFEST_FILE, createManifest, serializeManifest } from '$lib/shared/sync/driveManifest';
 import { planReconciliation } from '../sync/driveReconciler';
 import { toSyncError } from '$lib/shared/recovery/desktopRecoveryImport';
 import {
@@ -81,6 +89,24 @@ export class SyncService {
 
   /** Shared in-flight startup sync so repeated auth wiring cannot duplicate work. */
   private static metadataSyncPromise: Promise<void> | null = null;
+
+  /** WU6: per-object manifest entries recorded by the write guard this cycle. */
+  private static manifestObjects = new Map<
+    string,
+    { name: string; version: number; checksum: string }
+  >();
+
+  private static rememberManifestObject(name: string, marker: VersionMarker): void {
+    this.manifestObjects.set(name, manifestObjectEntry(name, marker));
+  }
+
+  /** Persist the accumulated per-object entries at `Nexo/manifest.json`. */
+  private static async flushManifest(): Promise<void> {
+    if (this.manifestObjects.size === 0) return;
+    const manifest = createManifest([...this.manifestObjects.values()]);
+    const bytes = new TextEncoder().encode(serializeManifest(manifest));
+    await this.gdrive.uploadToFolderPath([], MANIFEST_FILE, bytes);
+  }
 
   /**
    * Override the sync mode at runtime.
@@ -255,12 +281,15 @@ export class SyncService {
           const expectedName = canonicalBookName(entityId, format);
           if (localSource?.filePath) {
             const fileBytes = await this.libraryPort.getFileBytes(localSource.filePath);
-            const fileId = await this.gdrive.upload(
-              entityId,
+            const guarded = await guardedUploadWithRetry(
+              this.gdrive,
+              canonicalName(entityId),
+              format,
               new Uint8Array(fileBytes),
-              expectedName,
+              () => recallBase(expectedName),
             );
-            remoteRefs = buildRemoteRefs(entityId, format, fileId);
+            this.rememberManifestObject(guarded.objectName, guarded.marker);
+            remoteRefs = buildRemoteRefs(entityId, format, guarded.fileId);
           }
         } catch (e) {
           throw e;
@@ -284,6 +313,11 @@ export class SyncService {
             metadata.updatedAt != null ? String(metadata.updatedAt) : new Date().toISOString(),
           ...(remoteRefs ?? {}),
         });
+        try {
+          await this.flushManifest();
+        } catch (e) {
+          console.error('Failed to persist Drive manifest:', e);
+        }
       } else if (entityType === 'BOOK' && operation === 'DELETE') {
         const bookSync = new SupabaseBookCatalogSync(userId);
         await bookSync.tombstoneBook(entityId);
@@ -589,13 +623,17 @@ export class SyncService {
           if (book.filePath && missingRemoteRef) {
             try {
               const fileBytes = await this.libraryPort.getFileBytes(book.filePath);
-              const expectedName = canonicalBookName(book.id, book.format);
-              const fileId = await this.gdrive.upload(
-                book.id,
+              const format = book.format || 'epub';
+              const expectedName = canonicalBookName(book.id, format);
+              const guarded = await guardedUploadWithRetry(
+                this.gdrive,
+                canonicalName(book.id),
+                format,
                 new Uint8Array(fileBytes),
-                expectedName,
+                () => recallBase(expectedName),
               );
-              remoteRefs = buildRemoteRefs(book.id, book.format, fileId);
+              this.rememberManifestObject(guarded.objectName, guarded.marker);
+              remoteRefs = buildRemoteRefs(book.id, format, guarded.fileId);
             } catch (e) {
               console.error(`Failed to upload book file for ${book.id}:`, e);
             }
@@ -827,8 +865,16 @@ export class SyncService {
       if (action.kind !== 'copy-to-canonical') continue;
       try {
         const sourceBytes = await this.gdrive.download(action.sourceName);
-        await this.gdrive.upload(action.canonicalName, sourceBytes, action.canonicalName);
-        const verifyBytes = await this.gdrive.download(action.canonicalName);
+        const extension = action.canonicalName.split('.').pop() ?? 'epub';
+        const guarded = await guardedUploadWithRetry(
+          this.gdrive,
+          canonicalName(action.bookId),
+          extension,
+          sourceBytes,
+          () => recallBase(action.canonicalName),
+        );
+        this.rememberManifestObject(guarded.objectName, guarded.marker);
+        const verifyBytes = await this.gdrive.download(guarded.objectName);
         if (verifyBytes.length !== sourceBytes.length) {
           console.error(
             `Drive reconcile: verification failed for ${action.canonicalName}; source kept`,
@@ -893,11 +939,14 @@ export class SyncService {
           const existsLocally = await this.libraryPort.fileExists(localBook.filePath);
           if (existsLocally) {
             const fileBytes = await this.libraryPort.getFileBytes(localBook.filePath);
-            const fileId = await this.gdrive.upload(
-              expectedName,
+            const guarded = await guardedUploadWithRetry(
+              this.gdrive,
+              canonicalName(localBook.id),
+              localBook.format || 'epub',
               new Uint8Array(fileBytes),
-              expectedName,
+              () => recallBase(expectedName),
             );
+            this.rememberManifestObject(guarded.objectName, guarded.marker);
             // Persist the remote ref (DRP-1): the upload fileId was previously
             // discarded. The merge upsert preserves existing fields and never
             // lowers catalog_version (DRP-2).
@@ -914,7 +963,7 @@ export class SyncService {
                 description: null,
                 totalPages: null,
                 sourceDevice: 'desktop',
-                ...buildRemoteRefs(localBook.id, localBook.format, fileId),
+                ...buildRemoteRefs(localBook.id, localBook.format, guarded.fileId),
                 importedAt: localBook.createdAt,
                 updatedAt: new Date().toISOString(),
               });
@@ -927,6 +976,12 @@ export class SyncService {
           console.error(`Failed to upload book file for ${localBook.id}:`, e);
         }
       }
+    }
+
+    try {
+      await this.flushManifest();
+    } catch (e) {
+      console.error('Failed to persist Drive manifest:', e);
     }
   }
 

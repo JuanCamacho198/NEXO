@@ -7,8 +7,10 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import com.nexo.data.local.dao.BookDao
 import com.nexo.data.remote.supabase.SupabaseClientProvider
 import com.nexo.data.remote.work.WorkManagerRetentionPruneScheduler
+import com.nexo.data.sync.LayoutMigrationRunner
 import com.nexo.debug.CrashLogStore
 import com.nexo.debug.DebugLog
 import com.nexo.debug.FeedbackPersistence
@@ -91,6 +93,9 @@ class NexoApplication :
     @Inject
     lateinit var retentionPruneScheduler: WorkManagerRetentionPruneScheduler
 
+    @Inject
+    lateinit var bookDao: BookDao
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
@@ -166,6 +171,13 @@ class NexoApplication :
         SentryMetrics.install { SentryPrivacyPrefs.isEnabled(this@NexoApplication) }
 
         installCrashHandler()
+
+        // WU6 (FR-02, INV-5): version-gated, idempotent layout migration. Move
+        // files, rewrite stored paths, verify, THEN bump layout.json. A failure
+        // leaves the marker unbumped and the legacy tree live; a re-run resumes.
+        supabaseWarmupScope.launch {
+            runCatching { LayoutMigrationRunner.run(bookDao, filesDir, cacheDir) }
+        }
 
         // Warm the Supabase client on a background thread so the first Activity
         // frame never pays the ~2s client-construction cost on the main thread

@@ -27,9 +27,9 @@ const files = [
 describe('Drive catalog contract', () => {
   it('builds the canonical folder/file protocol', () => {
     expect(DRIVE_SCOPE).toContain('/drive.file');
-    expect(DRIVE_BOOKS_PATH).toBe('Nexo/Books');
+    expect(DRIVE_BOOKS_PATH).toBe('Nexo/books');
     expect(canonicalBookName('book-1', '.EPUB')).toBe('book-1.epub');
-    expect(canonicalBookPath('book-1', 'epub')).toBe('Nexo/Books/book-1.epub');
+    expect(canonicalBookPath('book-1', 'epub')).toBe('Nexo/books/book-1.epub');
   });
   it('parses canonical filenames into bookId + lowercase ext', () => {
     expect(parseCanonicalBookName('uuid.epub')).toEqual({ bookId: 'uuid', ext: 'epub' });
@@ -54,7 +54,7 @@ describe('Drive catalog contract', () => {
     );
     expect(r?.fileId).toBe('legacy-id');
     expect(r?.fileName).toBe('book-1.epub');
-    expect(r?.canonicalPath).toBe('Nexo/Books/book-1.epub');
+    expect(r?.canonicalPath).toBe('Nexo/books/book-1.epub');
     expect((await reconcileLegacyReference('missing', files, 'book-1', 'epub', null))?.fileId).toBe(
       'canonical-id',
     );
