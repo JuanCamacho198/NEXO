@@ -68,7 +68,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'home.heroEyebrow': 'Sistema de lectura enfocado',
   'home.heroTitle': 'Retoma la siguiente pagina con menos friccion y mas contexto.',
   'home.heroDescription':
-    'La pantalla inicial ahora prioriza lectura activa, control de estanteria y orientacion rapida antes de entrar al lector.',
+    'Sigue leyendo donde lo dejaste, en cualquier dispositivo.',
   'home.heroContinueLabel': 'Lecturas activas',
   'home.heroShelfLabel': 'Libros en estanteria',
   'home.heroMinutesHint': 'Minutos registrados en sesiones de lectura',

@@ -65,7 +65,7 @@ export const messagesEn = {
   'home.heroEyebrow': 'Focused reading system',
   'home.heroTitle': 'Pick up the next page with less friction and more context.',
   'home.heroDescription':
-    'The home workspace now prioritizes active reading, shelf control, and quick orientation before you jump into the reader.',
+    'Pick up where you left off, on any device.',
   'home.heroContinueLabel': 'Active reads',
   'home.heroShelfLabel': 'Shelf books',
   'home.heroMinutesHint': 'Minutes logged across reading sessions',
