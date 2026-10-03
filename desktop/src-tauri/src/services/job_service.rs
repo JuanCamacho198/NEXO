@@ -20,14 +20,6 @@ pub trait JobDispatcher: Send + Sync {
     fn dispatch(&self, job: &JobRecord) -> JobOutcome;
 }
 
-pub struct NoopJobDispatcher;
-
-impl JobDispatcher for NoopJobDispatcher {
-    fn dispatch(&self, _job: &JobRecord) -> JobOutcome {
-        JobOutcome::Done { result_json: None }
-    }
-}
-
 #[derive(Clone)]
 pub struct JobService {
     queue_repository: Arc<Mutex<QueueRepository>>,

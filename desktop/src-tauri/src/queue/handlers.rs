@@ -5,17 +5,10 @@ use std::time::Instant;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppResult};
-use crate::queue::types::{JobOutcome, JobRecord};
+use crate::queue::types::{JobOutcome, JobRecord, JOB_TYPE_COVER_CLEANUP, JOB_TYPE_THUMBNAIL};
 use crate::services::job_service::JobDispatcher;
 
-const MAX_IMPORT_SIZE_MB: u64 = 500;
 const MAX_THUMBNAIL_SIZE_MB: u64 = 50;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImportPayload {
-    pub book_id: String,
-    pub file_path: String,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThumbnailPayload {
@@ -86,107 +79,44 @@ impl JobDispatcher for CoverCleanupHandler {
     }
 }
 
-pub struct ImportJobHandler {
-    app_data_dir: PathBuf,
-}
-
-impl ImportJobHandler {
-    pub fn new(app_data_dir: PathBuf) -> Self {
-        Self { app_data_dir }
-    }
-}
-
-impl JobDispatcher for ImportJobHandler {
-    fn dispatch(&self, job: &JobRecord) -> JobOutcome {
-        let start = Instant::now();
-        let payload: Result<ImportPayload, _> = serde_json::from_str(&job.payload_json);
-
-        let payload = match payload {
-            Ok(p) => p,
-            Err(e) => {
-                return JobOutcome::Failed { error: format!("invalid import payload: {}", e) }
-            }
-        };
-
-        let source_path = PathBuf::from(&payload.file_path);
-        if !source_path.exists() {
-            return JobOutcome::Failed {
-                error: AppError::ImportError(format!(
-                    "source file not found: {}",
-                    payload.file_path
-                ))
-                .to_string(),
-            };
-        }
-
-        let metadata = match fs::metadata(&source_path) {
-            Ok(m) => m,
-            Err(e) => {
-                return JobOutcome::Failed {
-                    error: AppError::ImportError(format!("cannot read file metadata: {}", e))
-                        .to_string(),
-                };
-            }
-        };
-
-        let file_size_mb = metadata.len() / (1024 * 1024);
-        if file_size_mb > MAX_IMPORT_SIZE_MB {
-            return JobOutcome::Failed {
-                error: AppError::ImportError(format!(
-                    "file too large: {}MB (max {}MB)",
-                    file_size_mb, MAX_IMPORT_SIZE_MB
-                ))
-                .to_string(),
-            };
-        }
-
-        let extension = source_path
-            .extension()
-            .and_then(|e| e.to_str())
-            .map(|e| e.to_lowercase())
-            .unwrap_or_default();
-
-        let valid_extensions = ["epub", "pdf", "mobi", "azw", "azw3", "txt", "fb2", "cbr", "cbz"];
-        if !valid_extensions.contains(&extension.as_str()) {
-            return JobOutcome::Failed {
-                error: AppError::ImportError(format!("unsupported file format: {}", extension))
-                    .to_string(),
-            };
-        }
-
-        let duration_ms = start.elapsed().as_millis() as f64;
-        let _ = self.record_progress(&job.id, "file_validated", duration_ms);
-
-        JobOutcome::Done {
-            result_json: Some(
-                serde_json::json!({
-                    "status": "import_completed",
-                    "book_id": payload.book_id,
-                    "duration_ms": duration_ms
-                })
-                .to_string(),
-            ),
-        }
-    }
-}
-
-impl ImportJobHandler {
-    fn record_progress(&self, _job_id: &str, _stage: &str, _duration_ms: f64) -> AppResult<()> {
-        let _tags = serde_json::json!({
-            "job_id": _job_id,
-            "stage": _stage
-        })
-        .to_string();
-        let _ = self.app_data_dir.join("metrics.db");
-        Ok(())
-    }
-}
-
 pub struct ThumbnailHandler {}
 
 impl ThumbnailHandler {
     pub fn new(_app_data_dir: PathBuf) -> Self {
         Self {}
+    }
+}
+
+/// Job types with a live handler behind the queue worker.
+pub const SUPPORTED_JOB_TYPES: &[&str] = &[JOB_TYPE_COVER_CLEANUP, JOB_TYPE_THUMBNAIL];
+
+/// Routes claimed jobs to the handler that owns their type.
+///
+/// Unknown types fail loudly instead of resolving to `Done`: a silent
+/// success here is how the queue once reported work it never performed.
+pub struct LocalJobDispatcher {
+    cover_cleanup: CoverCleanupHandler,
+    thumbnail: ThumbnailHandler,
+}
+
+impl LocalJobDispatcher {
+    pub fn new(app_data_dir: PathBuf) -> Self {
+        Self {
+            cover_cleanup: CoverCleanupHandler::new(app_data_dir.clone()),
+            thumbnail: ThumbnailHandler::new(app_data_dir),
+        }
+    }
+}
+
+impl JobDispatcher for LocalJobDispatcher {
+    fn dispatch(&self, job: &JobRecord) -> JobOutcome {
+        match job.job_type.as_str() {
+            JOB_TYPE_COVER_CLEANUP => self.cover_cleanup.dispatch(job),
+            JOB_TYPE_THUMBNAIL => self.thumbnail.dispatch(job),
+            unsupported => {
+                JobOutcome::Failed { error: format!("unsupported job type: {}", unsupported) }
+            }
+        }
     }
 }
 
@@ -259,5 +189,142 @@ impl JobDispatcher for ThumbnailHandler {
                 .to_string(),
             ),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+
+    use crate::queue::types::JobState;
+
+    fn job_record(job_type: &str, payload: serde_json::Value) -> JobRecord {
+        JobRecord {
+            id: format!("job-{}", Uuid::new_v4()),
+            job_type: job_type.to_string(),
+            payload_json: payload.to_string(),
+            state: JobState::Running,
+            attempt: 1,
+            max_attempts: 3,
+            next_run_at: "2026-01-01T00:00:00Z".to_string(),
+            lease_expires_at: None,
+            dedupe_key: None,
+            last_error: None,
+        }
+    }
+
+    fn temp_dir() -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("nexo_queue_test_{}", Uuid::new_v4()));
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn cover_cleanup_job_reaches_handler_and_deletes_queued_file() {
+        let dir = temp_dir();
+        let orphan = dir.join("orphan.jpg");
+        fs::write(&orphan, b"orphan").unwrap();
+        fs::write(dir.join("cover_cleanup_queue.txt"), format!("{}\n", orphan.display())).unwrap();
+
+        let dispatcher = LocalJobDispatcher::new(dir.clone());
+        let job = job_record(JOB_TYPE_COVER_CLEANUP, serde_json::json!({}));
+        let outcome = dispatcher.dispatch(&job);
+
+        assert!(matches!(outcome, JobOutcome::Done { .. }), "got {:?}", outcome);
+        assert!(!orphan.exists(), "queued orphan file must be deleted");
+        assert!(
+            !dir.join("cover_cleanup_queue.txt").exists(),
+            "drained cleanup queue file must be removed"
+        );
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn thumbnail_job_validates_real_image() {
+        let dir = temp_dir();
+        let source = dir.join("cover.png");
+        fs::write(&source, b"fake-png-bytes").unwrap();
+
+        let dispatcher = LocalJobDispatcher::new(dir.clone());
+        let job = job_record(
+            JOB_TYPE_THUMBNAIL,
+            serde_json::json!({
+                "book_id": "book-1",
+                "source_path": source.to_string_lossy(),
+            }),
+        );
+        let outcome = dispatcher.dispatch(&job);
+
+        match outcome {
+            JobOutcome::Done { result_json } => {
+                let result = result_json.expect("thumbnail result must carry payload");
+                assert!(result.contains("thumbnail_completed"), "got {}", result);
+            }
+            other => panic!("valid image must validate, got {:?}", other),
+        }
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn thumbnail_job_rejects_missing_source() {
+        let dir = temp_dir();
+        let dispatcher = LocalJobDispatcher::new(dir.clone());
+        let job = job_record(
+            JOB_TYPE_THUMBNAIL,
+            serde_json::json!({
+                "book_id": "book-1",
+                "source_path": dir.join("absent.png").to_string_lossy(),
+            }),
+        );
+
+        match dispatcher.dispatch(&job) {
+            JobOutcome::Failed { error } => assert!(error.contains("not found"), "got {}", error),
+            other => panic!("missing source must fail, got {:?}", other),
+        }
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn every_supported_type_reaches_its_handler() {
+        let dir = temp_dir();
+        let dispatcher = LocalJobDispatcher::new(dir.clone());
+
+        assert_eq!(SUPPORTED_JOB_TYPES.len(), 2);
+        for job_type in SUPPORTED_JOB_TYPES {
+            let job = job_record(job_type, serde_json::json!({}));
+            match dispatcher.dispatch(&job) {
+                JobOutcome::Failed { error } => {
+                    assert!(
+                        !error.contains("unsupported job type"),
+                        "{} must route to a handler, got {}",
+                        job_type,
+                        error
+                    );
+                }
+                JobOutcome::Done { .. } | JobOutcome::Retry { .. } => {}
+            }
+        }
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn unsupported_job_type_fails_loudly_never_silent_done() {
+        let dir = temp_dir();
+        let dispatcher = LocalJobDispatcher::new(dir.clone());
+        let job = job_record("import", serde_json::json!({}));
+
+        match dispatcher.dispatch(&job) {
+            JobOutcome::Failed { error } => {
+                assert!(error.contains("unsupported job type"), "got {}", error)
+            }
+            other => panic!("unknown type must fail loudly, got {:?}", other),
+        }
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }
