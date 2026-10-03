@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::Manager;
 
-use crate::filename::{sanitize_extension, sanitize_segment};
+use crate::filename::{canonical_extension, normalize_segment};
 
 pub const DOWNLOAD_USER_AGENT: &str = "Nexo/Desktop (contact: TBD)";
 pub const MAX_DOWNLOAD_BYTES: u64 = 67_108_864;
@@ -248,7 +248,8 @@ pub(crate) fn should_emit(elapsed_ms: u128, delta_bytes: u64) -> bool {
 }
 
 fn downloads_dir(app_data_dir: &Path) -> PathBuf {
-    app_data_dir.join("tmp").join(DOWNLOADS_DIR)
+    // WU6: staging lives under the unified cache dir (`cache/tmp/downloads`).
+    crate::layout::cache_dir(app_data_dir).join("tmp").join(DOWNLOADS_DIR)
 }
 
 pub(crate) fn download_paths(
@@ -256,8 +257,8 @@ pub(crate) fn download_paths(
     transfer_id: &str,
     format: Option<&str>,
 ) -> (PathBuf, PathBuf) {
-    let id = sanitize_segment(transfer_id, MAX_ID_CHARS, FALLBACK_ID);
-    let ext = sanitize_extension(format);
+    let id = normalize_segment(transfer_id, MAX_ID_CHARS, FALLBACK_ID);
+    let ext = canonical_extension(format);
     let dir = downloads_dir(app_data_dir);
     let final_path = dir.join(format!("{id}.{ext}"));
     let part_path = dir.join(format!("{id}.{ext}.part"));

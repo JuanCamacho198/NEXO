@@ -7,7 +7,10 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import com.nexo.data.local.dao.BookDao
 import com.nexo.data.remote.supabase.SupabaseClientProvider
+import com.nexo.data.remote.work.WorkManagerRetentionPruneScheduler
+import com.nexo.data.sync.LayoutMigrationRunner
 import com.nexo.debug.CrashLogStore
 import com.nexo.debug.DebugLog
 import com.nexo.debug.FeedbackPersistence
@@ -87,6 +90,12 @@ class NexoApplication :
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var retentionPruneScheduler: WorkManagerRetentionPruneScheduler
+
+    @Inject
+    lateinit var bookDao: BookDao
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
@@ -163,12 +172,26 @@ class NexoApplication :
 
         installCrashHandler()
 
+        // WU6 (FR-02, INV-5): version-gated, idempotent layout migration. Move
+        // files, rewrite stored paths, verify, THEN bump layout.json. A failure
+        // leaves the marker unbumped and the legacy tree live; a re-run resumes.
+        supabaseWarmupScope.launch {
+            runCatching { LayoutMigrationRunner.run(bookDao, filesDir, cacheDir) }
+        }
+
         // Warm the Supabase client on a background thread so the first Activity
         // frame never pays the ~2s client-construction cost on the main thread
         // (measured via logcat: AppContainer fully initialized in ~1950ms).
         // The client is created lazily on first use if this warm-up races.
         supabaseWarmupScope.launch {
             runCatching { SupabaseClientProvider.client }
+        }
+
+        // FR-14: (re)assert the weekly retention prune. KEEP makes this
+        // idempotent across app starts; scheduled off the main thread so
+        // Application.onCreate never blocks on WorkManager.
+        supabaseWarmupScope.launch {
+            runCatching { retentionPruneScheduler.schedule() }
         }
     }
 

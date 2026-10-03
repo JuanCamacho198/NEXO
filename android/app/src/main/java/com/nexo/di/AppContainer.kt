@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import coil3.ImageLoader
 import com.nexo.BuildConfig
+import com.nexo.data.local.AppDatabase
+import com.nexo.data.local.RetentionPruner
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.HighlightDao
@@ -23,6 +25,7 @@ import com.nexo.data.remote.sync.StorageSyncRemoteDataSource
 import com.nexo.data.remote.sync.SyncOrchestrator
 import com.nexo.data.remote.sync.SyncService
 import com.nexo.data.remote.work.WorkManagerOutboxDrainScheduler
+import com.nexo.data.remote.work.WorkManagerRetentionPruneScheduler
 import com.nexo.data.session.ReaderPreferences
 import com.nexo.data.session.ReadingGoalPreferences
 import com.nexo.data.session.SessionManager
@@ -91,6 +94,17 @@ class AppContainer(
         )
     }
 
+    /**
+     * FR-14 retention: scheduler-only periodic prune + VACUUM. Lazy so a
+     * container construction never touches WorkManager.
+     */
+    val retentionPruneScheduler: WorkManagerRetentionPruneScheduler by lazy {
+        WorkManagerRetentionPruneScheduler(context = appContext)
+    }
+
+    /** FR-14 prune implementation, shared by the worker (Hilt) and tests. */
+    val retentionPruner: RetentionPruner by lazy { RetentionPruner(appDatabase) }
+
     private val repositoryModule =
         RepositoryModule(
             context = context.applicationContext,
@@ -99,8 +113,9 @@ class AppContainer(
             preferencesModule = preferencesModule,
             syncSettleGateProvider = { syncSettleGate },
             drainSchedulerProvider = { outboxDrainScheduler },
+            dictionarySyncProvider = { networkModule.dictionarySyncService },
         )
-    private val useCaseModule = UseCaseModule(repositoryModule, databaseModule, preferencesModule)
+    private val useCaseModule = UseCaseModule(repositoryModule, preferencesModule)
 
     // ── Eager delegation via get() — no double init ───────────────────
     val coverStorage: AppInternalCoverStorage get() = storageModule.coverStorage
@@ -121,7 +136,6 @@ class AppContainer(
     val updateReadingProgressUseCase: UpdateReadingProgressUseCase by lazy { useCaseModule.updateReadingProgressUseCase }
     val getStatisticsUseCase: GetStatisticsUseCase by lazy { useCaseModule.getStatisticsUseCase }
     val getBookProgressUseCase: GetBookProgressUseCase by lazy { useCaseModule.getBookProgressUseCase }
-    val progressReconciler: com.nexo.data.sync.ProgressReconciler by lazy { useCaseModule.progressReconciler }
     val driveOAuthSession: DriveOAuthSession by lazy { networkModule.driveOAuthSession }
     val googleDriveAuthHelper: GoogleDriveAuthHelper by lazy { networkModule.googleDriveAuthHelper }
     val driveCoordinator: DriveCoordinator by lazy { networkModule.driveCoordinator }
@@ -133,6 +147,7 @@ class AppContainer(
     val supabaseProgressSync: SupabaseProgressSync by lazy { networkModule.supabaseProgressSync }
     val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy { networkModule.supabaseBookCatalogDataSource }
     val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy { networkModule.supabaseBookCatalogSync }
+    val dictionarySyncService: com.nexo.data.sync.DictionarySyncService by lazy { networkModule.dictionarySyncService }
     val catalogProvider: CatalogProvider by lazy { networkModule.catalogProvider }
 
     // SDD android-tooling-hygiene WS2a slice 4: delegated — NetworkModule builds
@@ -157,6 +172,7 @@ class AppContainer(
             importEpubBookUseCase = ImportEpubBookUseCase(repositoryModule.libraryRepository),
             libraryRepository = repositoryModule.libraryRepository,
             tempDir = networkModule.catalogTempDir,
+            booksDir = networkModule.libraryBooksDir,
         )
     }
     val addonRegistry: com.nexo.data.remote.addons.AddonRegistry by lazy { networkModule.addonRegistry }
@@ -200,6 +216,7 @@ class AppContainer(
             drive = syncService,
             catalog = supabaseBookCatalogSync,
             progress = supabaseProgressSync,
+            dictionary = dictionarySyncService,
             gate = sessionGate,
             outboxDao = databaseModule.syncOutboxDao,
         )
@@ -305,6 +322,7 @@ class AppContainer(
     val bookmarkDao: BookmarkDao get() = databaseModule.bookmarkDao
     val readingSessionDao: ReadingSessionDao get() = databaseModule.readingSessionDao
     val readingProgressDao: ReadingProgressDao get() = databaseModule.readingProgressDao
+    val appDatabase: AppDatabase get() = databaseModule.appDatabase
 
     fun clearAllData() {
         databaseModule.clearAllTables()

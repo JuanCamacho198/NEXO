@@ -1,0 +1,20 @@
+[
+  { "input": "gutendex:2701", "expectedStem": "gutendex2701" },
+  { "input": "openlibrary:/works/OL45804W", "expectedStem": "openlibraryworksol45804w" },
+  { "input": "CON", "expectedStem": "con_" },
+  { "input": "con", "expectedStem": "con_" },
+  { "input": ":::", "expectedStem": "book" },
+  { "input": "", "expectedStem": "book" },
+  {
+    "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expectedStem": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  { "input": "Ｈｅｌｌｏ:123", "expectedStem": "hello123" },
+  { "input": "📚book🎉", "expectedStem": "book" },
+  { "input": "Moby Dick. ", "expectedStem": "mobydick" },
+  { "input": "a<b>c:d\"e/f\\g|h?i*j", "expectedStem": "abcdefghij" },
+  { "input": "my-book_2:edition", "expectedStem": "my-book_2edition" },
+  { "input": "chapter_one-two", "expectedStem": "chapter_one-two" },
+  { "input": "gutendex2701", "expectedStem": "gutendex2701" },
+  { "input": "GuTeNdEx:2701", "expectedStem": "gutendex2701" }
+]

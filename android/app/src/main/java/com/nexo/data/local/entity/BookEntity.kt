@@ -7,7 +7,10 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "books",
-    indices = [Index(value = ["deleted_at", "updated_at"], orders = [Index.Order.ASC, Index.Order.DESC])],
+    indices = [
+        Index(value = ["deleted_at", "updated_at"], orders = [Index.Order.ASC, Index.Order.DESC]),
+        Index(value = ["reading_state"]),
+    ],
 )
 data class BookEntity(
     @PrimaryKey
@@ -40,12 +43,6 @@ data class BookEntity(
     val startedAtEpochMillis: Long? = null,
     @ColumnInfo(name = "completed_at")
     val completedAtEpochMillis: Long? = null,
-    @Deprecated(
-        message = "Use reading_progress.percentage as canonical source via ReaderRepository.observeProgress; this field is derived cache only",
-        replaceWith = ReplaceWith("readingProgressDao.observeProgressForBook()"),
-    )
-    @ColumnInfo(name = "progress_percentage")
-    val progressPercentage: Float = 0f,
     @ColumnInfo(name = "progress_updated_at")
     val progressUpdatedAtEpochMillis: Long? = null,
     @ColumnInfo(name = "state_version")

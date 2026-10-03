@@ -3,7 +3,6 @@ package com.nexo.data.remote.sync
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.HighlightDao
-import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.SyncFileMappingDao
 import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
@@ -11,7 +10,8 @@ import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncFileMappingEntity
 import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.session.SessionManager
-import com.nexo.data.sync.ProgressReconciler
+import com.nexo.data.sync.DriveFilename
+import com.nexo.data.sync.DriveWriteGuard
 import com.nexo.debug.DebugLog
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.IOException
+import java.util.Locale
 
 /**
  * Implements [SyncService] using Google Drive REST API v3 for file storage
@@ -31,7 +32,6 @@ class GoogleDriveSyncService(
     private val outboxDao: SyncOutboxDao,
     private val bookDao: BookDao,
     private val mappingDao: SyncFileMappingDao,
-    private val readingProgressDao: ReadingProgressDao,
     private val highlightDao: HighlightDao,
     private val bookmarkDao: BookmarkDao,
     private val sessionManager: SessionManager,
@@ -43,11 +43,6 @@ class GoogleDriveSyncService(
     },
     private val diagnosticError: AppError? = null,
     private val maxRetries: Int = DEFAULT_MAX_RETRIES,
-    // SDD 3: drive service now owns the auth-gated reconcile seam so the
-    // VMs don't each call reconcileAll() on init. Default-constructed from
-    // the already-injected DAOs to avoid breaking direct test construction
-    // (GoogleDriveSyncServiceTest builds with the bare-args shape).
-    private val progressReconciler: ProgressReconciler = ProgressReconciler(bookDao, readingProgressDao),
 ) : SyncService {
     private val state = MutableStateFlow<DriveSyncState>(if (isEnabled()) DriveSyncState.Idle else DriveSyncState.Disabled)
 
@@ -80,11 +75,6 @@ class GoogleDriveSyncService(
             localBooksDir.mkdirs()
         }
         state.value = DriveSyncState.Idle
-        // SDD 3: reconcile divergent progress once on auth bootstrap.
-        // Fire-and-forget — failures are logged and swallowed so the auth
-        // bootstrap result is not poisoned by reconcile errors.
-        runCatching { progressReconciler.reconcileAll() }
-            .onFailure { DebugLog.warn(COMPONENT, "bootstrap: reconcileAll failed: ${it.message}") }
         return Result.success(Unit)
     }
 
@@ -183,10 +173,19 @@ class GoogleDriveSyncService(
             )
         }
 
-        val drivePath = drivePathFor(userId, book.id, extensionFor(book))
+        val extension = extensionFor(book)
+        val drivePath = drivePathFor(userId, book.id, extension)
+        val canonical = DriveFilename.canonical(book.id)
+        val objectName = DriveWriteGuard.objectName(canonical, extension)
         val uploadResult =
             retryable {
-                remoteDataSource.upload(drivePath, localFile.readBytes())
+                DriveWriteGuard.uploadWithRetry(
+                    port = remoteDataSource,
+                    book = canonical,
+                    extension = extension,
+                    bytes = localFile.readBytes(),
+                    loadBase = { DriveWriteGuard.recallBase(objectName) },
+                )
             }
 
         if (uploadResult.isFailure) {
@@ -248,7 +247,7 @@ class GoogleDriveSyncService(
                 }
 
         for (remotePath in remotePaths.distinct()) {
-            if (remotePath.endsWith("/state.json")) {
+            if (remotePath.endsWith("_state.json") || remotePath.endsWith("/state.json")) {
                 // State JSON files are handled via pullState below
                 continue
             }
@@ -297,6 +296,14 @@ class GoogleDriveSyncService(
                 localFile.parentFile?.mkdirs()
                 localFile.writeBytes(bytes)
             }
+
+            // Seed the FR-08 guard base from the remote marker so a later push in
+            // this session compares against the version this device just saw.
+            // Best-effort: a missing/unreadable marker must not fail the pull.
+            val physicalName = remotePath.substringAfterLast('/')
+            runCatching { remoteDataSource.readMarker(physicalName) }
+                .getOrNull()
+                ?.let { DriveWriteGuard.rememberBase(physicalName, it) }
 
             val mergedBook =
                 mergeBook(
@@ -438,38 +445,17 @@ class GoogleDriveSyncService(
         userId: String,
         bookId: String,
         extension: String,
-    ): String {
-        val userToken = sanitizeIdToken(userId)
-        val bookToken = sanitizeIdToken(bookId)
-        return "books/$userToken/$bookToken.$extension"
-    }
+    ): String = DriveFilename.objectPath(userId, DriveFilename.canonical(bookId), extension)
 
-    private fun extensionFor(book: BookEntity): String =
-        sanitizeToken(book.format)
-            .ifBlank {
-                File(book.filePath).extension.lowercase().ifBlank { DEFAULT_EXTENSION }
-            }
-
-    private fun sanitizeToken(raw: String): String = raw.lowercase().replace(NON_ALNUM_REGEX, "")
-
-    private fun sanitizeIdToken(raw: String): String {
-        val sanitized = raw.lowercase().replace(NON_PATH_SAFE_REGEX, "-").trim('-')
-        return if (sanitized.isBlank()) "unknown" else sanitized
+    private fun extensionFor(book: BookEntity): String {
+        val fromFormat = book.format.lowercase(Locale.ROOT).filter { it in 'a'..'z' || it in '0'..'9' }
+        val candidate = fromFormat.ifBlank { File(book.filePath).extension.lowercase(Locale.ROOT) }
+        return DriveFilename.canonicalExtension(candidate)
     }
 
     private fun parseDrivePath(drivePath: String): ParsedDrivePath? {
-        val segments = drivePath.split('/')
-        if (segments.size != 3 || segments.first() != "books") {
-            return null
-        }
-        val fileName = segments.last()
-        val dotIndex = fileName.lastIndexOf('.')
-        if (dotIndex <= 0 || dotIndex == fileName.lastIndex) {
-            return null
-        }
-        val bookId = fileName.substring(0, dotIndex)
-        val extension = fileName.substring(dotIndex + 1)
-        return ParsedDrivePath(bookId = bookId, extension = sanitizeToken(extension).ifBlank { DEFAULT_EXTENSION })
+        val parsed = DriveFilename.parseDrivePath(drivePath) ?: return null
+        return ParsedDrivePath(bookId = parsed.stem, extension = parsed.extension)
     }
 
     private data class ParsedDrivePath(
@@ -492,11 +478,8 @@ class GoogleDriveSyncService(
 
     companion object {
         const val COMPONENT = "GoogleDriveSyncService"
-        const val DEFAULT_EXTENSION = "bin"
         const val MAX_ATTEMPTS = 3
         const val DEFAULT_MAX_RETRIES = 3
-        val NON_ALNUM_REGEX = Regex("[^a-z0-9]")
-        val NON_PATH_SAFE_REGEX = Regex("[^a-z0-9_-]")
     }
 }
 

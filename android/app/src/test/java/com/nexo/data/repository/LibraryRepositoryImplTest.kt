@@ -6,6 +6,7 @@ import com.nexo.data.epub.EpubParserService
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingStatsDao
+import com.nexo.data.local.dao.StoredBookPath
 import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.ReadingStatsEntity
@@ -550,6 +551,13 @@ class LibraryRepositoryImplTest {
     }
 
     private class FakeBookDao : BookDao {
+        override suspend fun allStoredPaths(): List<StoredBookPath> = emptyList()
+
+        override suspend fun updateFilePath(
+            bookId: String,
+            filePath: String,
+        ) = Unit
+
         private val booksState = MutableStateFlow<List<BookEntity>>(emptyList())
         var lastUpserted: BookEntity? = null
 
@@ -557,7 +565,7 @@ class LibraryRepositoryImplTest {
 
         override fun observeReadingBooks(): Flow<List<BookEntity>> =
             booksState.map { books ->
-                books.filter { it.deletedAtEpochMillis == null && it.readingState == "reading" && it.progressPercentage < 100f }
+                books.filter { it.deletedAtEpochMillis == null && it.readingState == "reading" }
             }
 
         override suspend fun upsert(book: BookEntity) {

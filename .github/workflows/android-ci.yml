@@ -28,6 +28,9 @@ on:
     branches: [main]
     paths:
       - 'android/**'
+      - 'desktop/src-tauri/**'
+      - 'supabase/**'
+      - 'scripts/ci/**'
       - '.github/workflows/android-ci.yml'
 
 permissions:
@@ -72,6 +75,11 @@ jobs:
         # desktop-only PRs, so the required check never appeared and the PR was
         # unmergeable. A non-relevant PR now reports a fast, successful no-op
         # instead of paying for the full Android suite.
+        #
+        # The relevance set includes every root the G2 progress writer audit
+        # scans (desktop/src-tauri, supabase, scripts/ci), not just android/:
+        # otherwise a desktop- or migration-only writer regression would skip
+        # the audit entirely.
         id: changes
         run: |
           if [ "${{ github.event_name }}" != "pull_request" ]; then
@@ -83,7 +91,7 @@ jobs:
           base="${{ github.event.pull_request.base.sha }}"
           head="${{ github.event.pull_request.head.sha }}"
           if git diff --name-only "$base" "$head" \
-            | grep -qE '^(android/|\.github/workflows/android-ci\.yml)'; then
+            | grep -qE '^(android/|desktop/src-tauri/|supabase/|scripts/ci/|\.github/workflows/android-ci\.yml)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -114,6 +122,23 @@ jobs:
         # rather than failing the job with a confusing permission error.
         working-directory: android
         run: chmod +x ./gradlew || true
+
+      - name: Progress single-writer audit (G2)
+        # FR-10 / WU2a-WU2b gate: fails if any code path reintroduces an intentional
+        # writer of the retired books.progress_percentage column. The DB-level
+        # backfill invariant (== 0 unrepresentable positions) is asserted by the
+        # 29->30 migration test in the unit suite below.
+        if: steps.changes.outputs.relevant == 'true'
+        run: bash scripts/ci/progress-single-writer-audit.sh
+
+      - name: Progress audit self-test (fixtures must fail, tree must pass)
+        # Proves the gate above can actually fail: every committed writer fixture
+        # under scripts/ci/fixtures/progress-audit/ MUST be caught (audit exits
+        # 1) and the real tree MUST pass (exit 0). Covers the two writer shapes
+        # the line-based scan used to miss: a multi-line INSERT column list and a
+        # setter-style mutation. Runs identically with or without ripgrep.
+        if: steps.changes.outputs.relevant == 'true'
+        run: bash scripts/ci/progress-single-writer-audit-selftest.sh
 
       - name: Run unit tests, detekt and verification gates
         if: steps.changes.outputs.relevant == 'true'

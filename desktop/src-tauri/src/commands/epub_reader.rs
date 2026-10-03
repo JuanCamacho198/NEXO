@@ -12,7 +12,7 @@ const CACHE_VERSION: u32 = 4;
 
 fn get_cache_dir(app: &AppHandle, book_id: &str) -> PathBuf {
     let app_data = app.path().app_data_dir().expect("app data dir");
-    app_data.join("epub_cache").join(book_id)
+    crate::layout::cache_dir(&app_data).join("epub").join(book_id)
 }
 
 fn cache_version_path(cache_dir: &std::path::Path) -> PathBuf {

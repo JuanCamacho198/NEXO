@@ -1,6 +1,7 @@
 package com.nexo.data.remote.supabase
 
 import com.nexo.data.local.dao.BookDao
+import com.nexo.data.local.dao.StoredBookPath
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.SyncOutboxEntity
 import com.nexo.data.remote.sync.StorageSyncRemoteDataSource
@@ -342,8 +343,10 @@ class SupabaseBookCatalogDownloadTest {
 
             assertTrue(sync.downloadRemoteBook("seed-1").isSuccess)
             val book = fakeBookDao.getBookById("seed-1")!!
+            // WU2b: the retired books.progress_percentage cache no longer carries the
+            // cloud-seeded percentage; reading_progress is the canonical store and is
+            // populated by the progress sync path, so only the reading state is seeded.
             assertEquals("reading", book.readingState)
-            assertEquals(42f, book.progressPercentage)
         }
 
     @Test
@@ -371,7 +374,6 @@ class SupabaseBookCatalogDownloadTest {
             assertTrue(sync.downloadRemoteBook("noseed-1").isSuccess)
             val book = fakeBookDao.getBookById("noseed-1")!!
             assertEquals("to_read", book.readingState)
-            assertEquals(0f, book.progressPercentage)
         }
 
     private fun sha256(bytes: ByteArray) =
@@ -419,6 +421,13 @@ class SupabaseBookCatalogDownloadTest {
 
     // ── Fake BookDao ───────────────────────────────────────────────────────
     private class FakeBookDao : BookDao {
+        override suspend fun allStoredPaths(): List<StoredBookPath> = emptyList()
+
+        override suspend fun updateFilePath(
+            bookId: String,
+            filePath: String,
+        ) = Unit
+
         private val byId = mutableMapOf<String, BookEntity>()
         var failUpsert = false
 
@@ -437,7 +446,7 @@ class SupabaseBookCatalogDownloadTest {
 
         override fun observeReadingBooks(): Flow<List<BookEntity>> =
             MutableStateFlow(
-                byId.values.filter { it.deletedAtEpochMillis == null && it.readingState == "reading" && it.progressPercentage < 100f },
+                byId.values.filter { it.deletedAtEpochMillis == null && it.readingState == "reading" },
             )
 
         override fun observeBookById(bookId: String): Flow<BookEntity?> = MutableStateFlow(byId[bookId])
@@ -491,7 +500,6 @@ class SupabaseBookCatalogDownloadTest {
             byId[bookId] =
                 existing.copy(
                     readingState = readingState,
-                    progressPercentage = progress.coerceIn(0f, 100f),
                     progressUpdatedAtEpochMillis = updatedAt,
                     completedAtEpochMillis = if (progress >= 100f) updatedAt else existing.completedAtEpochMillis,
                     updatedAtEpochMillis = updatedAt,
@@ -506,7 +514,6 @@ class SupabaseBookCatalogDownloadTest {
             byId[bookId] =
                 existing.copy(
                     readingState = "completed",
-                    progressPercentage = 100f,
                     completedAtEpochMillis = updatedAt,
                     updatedAtEpochMillis = updatedAt,
                 )

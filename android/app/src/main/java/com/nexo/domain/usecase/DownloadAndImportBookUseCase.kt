@@ -4,6 +4,7 @@ import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogException
 import com.nexo.data.remote.catalog.CatalogFileDownloader
+import com.nexo.data.sync.DriveFilename
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.BookImportRequest
 import com.nexo.domain.model.DuplicateBookException
@@ -67,6 +68,7 @@ class DownloadAndImportBookUseCase(
     private val importEpubBookUseCase: ImportEpubBookUseCase,
     private val libraryRepository: LibraryRepository,
     private val tempDir: File,
+    private val booksDir: File,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     suspend operator fun invoke(book: CatalogBook): Flow<DownloadImportState> =
@@ -90,9 +92,11 @@ class DownloadAndImportBookUseCase(
             }
 
             tempDir.mkdirs()
-            val key = sanitize(book.id)
+            booksDir.mkdirs()
+            val key = DriveFilename.canonicalStem(book.id)
             val partFile = File(tempDir, "$key.part")
-            val finalFile = File(tempDir, "$key.epub")
+            val stagedFile = File(tempDir, "$key.epub")
+            val finalFile = File(booksDir, "$key.epub")
             var committed = false
 
             try {
@@ -104,10 +108,16 @@ class DownloadAndImportBookUseCase(
                     trySend(DownloadImportState.Downloading(bytesSoFar, totalBytes))
                 }
 
-                // Atomic same-volume move (`<id>.part` → `<id>.epub`).
-                if (finalFile.exists()) finalFile.delete()
-                if (!partFile.renameTo(finalFile)) {
+                // Atomic same-volume move inside the cache staging dir, then a
+                // second same-volume move into the durable `filesDir/books` tree
+                // (WU6, FR-03): staging is disposable, the library file is not.
+                if (stagedFile.exists()) stagedFile.delete()
+                if (!partFile.renameTo(stagedFile)) {
                     throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "atomic rename failed")
+                }
+                if (finalFile.exists()) finalFile.delete()
+                if (!stagedFile.renameTo(finalFile)) {
+                    throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "library move failed")
                 }
 
                 send(DownloadImportState.Importing)
@@ -137,14 +147,12 @@ class DownloadAndImportBookUseCase(
                 send(DownloadImportState.Failure(null))
             } finally {
                 partFile.delete()
+                stagedFile.delete()
                 if (!committed) finalFile.delete()
             }
         }
 
     private companion object {
         const val DUPLICATE_MESSAGE = "Book already in the library"
-
-        /** Filesystem-safe, deterministic per-book id used for the temp names. */
-        fun sanitize(raw: String): String = raw.replace(Regex("[^A-Za-z0-9._-]"), "_")
     }
 }

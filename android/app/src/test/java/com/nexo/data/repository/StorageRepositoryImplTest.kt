@@ -101,6 +101,60 @@ class StorageRepositoryImplTest {
             assertTrue("a file a live book references is not an orphan", referenced.exists())
         }
 
+    // ── WU6 (FR-04): sweep covers every managed directory ───────────────
+
+    @Test
+    fun sweep_removesOrphansInBooksAndCovers() =
+        runBlocking {
+            val bookOrphan = fileIn("books", "orphan.epub", ageMillis = 10 * 60 * 1000L)
+            val coverOrphan = fileIn("covers", "orphan.jpg", ageMillis = 10 * 60 * 1000L)
+            val repository = repository(settled = true, liveBooks = emptyList())
+
+            val deleted = repository.sweepOrphanBookFiles()
+
+            assertEquals(2, deleted)
+            assertFalse(bookOrphan.exists())
+            assertFalse(coverOrphan.exists())
+        }
+
+    @Test
+    fun sweep_keepsCoversReferencedByLiveBooks() =
+        runBlocking {
+            val book = fileIn("books", "book.epub", ageMillis = 10 * 60 * 1000L)
+            val cover = fileIn("covers", "book.jpg", ageMillis = 10 * 60 * 1000L)
+            val repository =
+                repository(
+                    settled = true,
+                    liveBooks =
+                        listOf(bookEntity(filePath = book.absolutePath, coverPath = cover.absolutePath)),
+                )
+
+            val deleted = repository.sweepOrphanBookFiles()
+
+            assertEquals(0, deleted)
+            assertTrue("a referenced cover is never an orphan", cover.exists())
+            assertTrue(book.exists())
+        }
+
+    @Test
+    fun sweep_cleanLibraryReportsZero() =
+        runBlocking {
+            val book = fileIn("books", "book.epub", ageMillis = 10 * 60 * 1000L)
+            val cover = fileIn("covers", "book.jpg", ageMillis = 10 * 60 * 1000L)
+            val repository =
+                repository(
+                    settled = true,
+                    liveBooks =
+                        listOf(bookEntity(filePath = book.absolutePath, coverPath = cover.absolutePath)),
+                )
+
+            val deleted = repository.sweepOrphanBookFiles()
+
+            assertEquals("clean library sweeps to zero", 0, deleted)
+            assertTrue(book.exists())
+            assertTrue(cover.exists())
+        }
+
     // ── Slice 7: per-book sizing ────────────────────────────────────────
 
     @Test

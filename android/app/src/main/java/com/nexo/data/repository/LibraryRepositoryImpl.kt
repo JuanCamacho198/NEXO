@@ -73,7 +73,10 @@ class LibraryRepositoryImpl(
             }
         }
 
-    override fun observeBookById(bookId: String): Flow<Book?> = bookDao.observeBookById(bookId).map { it?.toDomain() }
+    override fun observeBookById(bookId: String): Flow<Book?> =
+        bookDao.observeBookById(bookId).combine(readingProgressDao.observeProgressForBook(bookId)) { entity, canonical ->
+            entity?.let { if (canonical != null) it.toDomainWithCanonical(canonical) else it.toDomain() }
+        }
 
     override fun observeProgressForBook(bookId: String): Flow<ReadingProgress?> = readingProgressDao.observeProgressForBook(bookId).map { it?.toDomain() }
 
@@ -392,7 +395,6 @@ class LibraryRepositoryImpl(
             null
         }
 
-    @Suppress("DEPRECATION")
     private fun BookEntity.toDomain(): Book =
         Book(
             id = id,
@@ -409,7 +411,6 @@ class LibraryRepositoryImpl(
             readingState = readingState,
             startedAtEpochMillis = startedAtEpochMillis,
             completedAtEpochMillis = completedAtEpochMillis,
-            progressPercentage = progressPercentage,
             progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
             stateVersion = stateVersion,
             genre = genre,
@@ -455,7 +456,6 @@ class LibraryRepositoryImpl(
             updatedAtEpochMillis = updatedAtEpochMillis,
         )
 
-    @Suppress("DEPRECATION")
     private fun Book.toEntity(): BookEntity =
         BookEntity(
             id = id,
@@ -473,7 +473,6 @@ class LibraryRepositoryImpl(
             readingState = readingState,
             startedAtEpochMillis = startedAtEpochMillis,
             completedAtEpochMillis = completedAtEpochMillis,
-            progressPercentage = progressPercentage,
             progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
             stateVersion = stateVersion,
             genre = genre,

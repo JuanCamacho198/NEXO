@@ -11,6 +11,7 @@ import com.nexo.data.local.dao.HighlightDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingSessionDao
 import com.nexo.data.local.dao.ReadingStatsDao
+import com.nexo.data.local.dao.RetentionDao
 import com.nexo.data.local.dao.SyncFileMappingDao
 import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.AddonEntity
@@ -39,7 +40,7 @@ import com.nexo.data.local.entity.SyncOutboxEntity
         DiscoverCacheEntity::class,
         AddonEntity::class,
     ],
-    version = 28,
+    version = 31,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -64,4 +65,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun discoverCacheDao(): DiscoverCacheDao
 
     abstract fun addonDao(): AddonDao
+
+    abstract fun retentionDao(): RetentionDao
 }

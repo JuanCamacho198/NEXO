@@ -1,11 +1,19 @@
 package com.nexo.data.local.dao
 
 import androidx.paging.PagingSource
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import com.nexo.data.local.entity.BookEntity
 import kotlinx.coroutines.flow.Flow
+
+/** Raw `books.id` + `books.file_path` pair used by the WU6 layout migration. */
+data class StoredBookPath(
+    @ColumnInfo(name = "id") val id: String,
+    @ColumnInfo(name = "file_path") val filePath: String,
+)
 
 @Dao
 interface BookDao {
@@ -13,7 +21,14 @@ interface BookDao {
     fun observeAllBooks(): Flow<List<BookEntity>>
 
     @Query(
-        "SELECT * FROM books WHERE deleted_at IS NULL AND reading_state='reading' AND progress_percentage < 100 ORDER BY progress_updated_at DESC, updated_at DESC",
+        """
+        SELECT books.* FROM books
+        LEFT JOIN reading_progress ON reading_progress.book_id = books.id
+        WHERE books.deleted_at IS NULL
+          AND books.reading_state = 'reading'
+          AND COALESCE(reading_progress.percentage, 0) < 100
+        ORDER BY books.progress_updated_at DESC, books.updated_at DESC
+        """,
     )
     fun observeReadingBooks(): Flow<List<BookEntity>>
 
@@ -62,8 +77,12 @@ interface BookDao {
         updatedAt: Long,
     )
 
+    // WU2b storage-layout-and-sync: reading position lives ONLY in reading_progress.
+    // The retired `books.progress_percentage` cache has been dropped. `progress` is
+    // still used to derive reading_state/completed_at, and `progress_updated_at`
+    // keeps the reading-list ordering stable.
     @Query(
-        "UPDATE books SET reading_state = CASE WHEN :progress >= 100 THEN 'completed' ELSE 'reading' END, completed_at = CASE WHEN :progress >= 100 THEN :updatedAt ELSE completed_at END, progress_percentage = :progress, progress_updated_at = :updatedAt, updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL",
+        "UPDATE books SET reading_state = CASE WHEN :progress >= 100 THEN 'completed' ELSE 'reading' END, completed_at = CASE WHEN :progress >= 100 THEN :updatedAt ELSE completed_at END, progress_updated_at = :updatedAt, updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL",
     )
     suspend fun updateReadingProgress(
         bookId: String,
@@ -72,7 +91,7 @@ interface BookDao {
     )
 
     @Query(
-        "UPDATE books SET reading_state = 'completed', completed_at = :updatedAt, progress_percentage = 100, progress_updated_at = :updatedAt, updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL",
+        "UPDATE books SET reading_state = 'completed', completed_at = :updatedAt, progress_updated_at = :updatedAt, updated_at = :updatedAt, state_version = state_version + 1 WHERE id = :bookId AND deleted_at IS NULL",
     )
     suspend fun completeReading(
         bookId: String,
@@ -98,4 +117,20 @@ interface BookDao {
 
     @Query("SELECT COUNT(*) FROM books")
     suspend fun count(): Int
+
+    // ── WU6 layout migration ───────────────────────────────────────────────
+
+    @Query("SELECT id, file_path FROM books WHERE file_path IS NOT NULL")
+    suspend fun allStoredPaths(): List<StoredBookPath>
+
+    @Query("UPDATE books SET file_path = :filePath WHERE id = :bookId")
+    suspend fun updateFilePath(
+        bookId: String,
+        filePath: String,
+    )
+
+    @Transaction
+    suspend fun rewriteFilePaths(rows: List<StoredBookPath>) {
+        rows.forEach { updateFilePath(it.id, it.filePath) }
+    }
 }

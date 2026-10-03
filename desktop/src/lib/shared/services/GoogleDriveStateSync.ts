@@ -6,6 +6,7 @@
 import { GDriveProvider } from './storage/GDriveProvider';
 import { LastWriteWinsConflictResolver } from '../sync/ConflictResolver';
 import type { VersionedSyncRecord } from './storage/StorageProvider';
+import { canonicalStateName, legacyStateNames } from '$lib/shared/sync/driveFilename';
 
 // ---- Types (matching Android's BookStateJson) ----
 
@@ -70,7 +71,7 @@ export class GoogleDriveStateSync {
   ): Promise<void> {
     const state: BookStateJson = { progress, highlights, bookmarks };
     const jsonBytes = new TextEncoder().encode(JSON.stringify(state));
-    const fileName = `${bookId}_state.json`;
+    const fileName = canonicalStateName(bookId);
     await this.gdrive.upload(fileName, jsonBytes, fileName);
   }
 
@@ -84,12 +85,20 @@ export class GoogleDriveStateSync {
     localHighlights: HighlightStateJson[],
     localBookmarks: BookmarkStateJson[],
   ): Promise<PullResult> {
-    const fileName = `${bookId}_state.json`;
+    // Canonical first, then the raw colon-bearing legacy name a pre-WU4 desktop
+    // client wrote (`gutendex:2701_state.json`).
+    const candidates = [...legacyStateNames(bookId)];
 
-    let jsonBytes: Uint8Array;
-    try {
-      jsonBytes = await this.gdrive.download(fileName);
-    } catch {
+    let jsonBytes: Uint8Array | null = null;
+    for (const candidate of candidates) {
+      try {
+        jsonBytes = await this.gdrive.download(candidate);
+        break;
+      } catch {
+        // Try the next legacy spelling; fall through to local when none exists.
+      }
+    }
+    if (!jsonBytes) {
       // No remote state yet — return local as-is
       return {
         progress: localProgress,

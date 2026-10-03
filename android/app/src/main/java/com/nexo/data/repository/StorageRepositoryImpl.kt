@@ -14,10 +14,11 @@ import java.io.File
  * JVM/Android implementation of [StorageRepository].
  *
  * Measurement sums the backing file plus cover of every live book. The sweep is
- * best-effort and local-only: it scans the managed book directories
- * (`catalog`, `pdfs`, `epubs`) for files no live book references, skipping
- * `*.part` in-flight downloads and anything modified inside the grace window.
- * It never touches remote/Drive bytes.
+ * best-effort and local-only: it scans EVERY managed book directory
+ * (`books`, `covers`, `catalog`, `pdfs`, `epubs`) for files no live book
+ * references — a file is referenced when it matches a live book's `file_path`
+ * OR `cover_path` — skipping `*.part` in-flight downloads and anything modified
+ * inside the grace window. It never touches remote/Drive bytes.
  */
 class StorageRepositoryImpl(
     private val appContext: Context,
@@ -47,11 +48,16 @@ class StorageRepositoryImpl(
             // Never sweep mid-sync: a download may be renaming into place.
             if (!settleGate.awaitSettled()) return@withContext 0
 
+            // A file is referenced when it is a live book's backing file OR its
+            // cover. Missing either set is how files downloaded from Drive (which
+            // land in `books/`) and cover images (`covers/`) previously grew
+            // without bound: the sweep never scanned those directories and the
+            // referenced set never contained cover paths.
             val referenced =
                 bookDao
                     .observeAllBooks()
                     .first()
-                    .mapNotNull { it.filePath }
+                    .flatMap { listOfNotNull(it.filePath, it.coverPath) }
                     .toSet()
             val cutoff = nowMillis() - IN_FLIGHT_GRACE_MS
 
@@ -70,7 +76,7 @@ class StorageRepositoryImpl(
         }
 
     private fun managedBookDirs(): List<File> =
-        listOf(CATALOG_DIR, PDFS_DIR, EPUBS_DIR)
+        listOf(BOOKS_DIR, COVERS_DIR, CATALOG_DIR, PDFS_DIR, EPUBS_DIR)
             .map { File(appContext.filesDir, it) }
 
     companion object {
@@ -78,6 +84,8 @@ class StorageRepositoryImpl(
         const val IN_FLIGHT_GRACE_MS = 5 * 60 * 1000L
 
         private const val PART_SUFFIX = ".part"
+        private const val BOOKS_DIR = "books"
+        private const val COVERS_DIR = "covers"
         private const val CATALOG_DIR = "catalog"
         private const val PDFS_DIR = "pdfs"
         private const val EPUBS_DIR = "epubs"

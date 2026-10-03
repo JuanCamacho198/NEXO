@@ -3,6 +3,7 @@ package com.nexo.data.remote.sync
 import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.remote.supabase.SupabaseBookCatalogSync
 import com.nexo.data.remote.supabase.SupabaseProgressSync
+import com.nexo.data.sync.DictionarySyncService
 import com.nexo.debug.DebugLog
 import com.nexo.domain.sync.SessionEvent
 import com.nexo.domain.sync.SessionGate
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 
 /**
  * [SyncOrchestrator] implementation.
@@ -45,6 +47,12 @@ class SyncOrchestratorImpl(
     private val progress: SupabaseProgressSync,
     private val gate: SessionGate,
     private val outboxDao: SyncOutboxDao,
+    /**
+     * Optional dictionary mirror (FR-09). Absent for legacy callers/tests; when
+     * present, [start] performs the login-time pull that restores remote entries
+     * after a reinstall. Local mutations push directly from the repository.
+     */
+    private val dictionary: DictionarySyncService? = null,
     private val externalScope: CoroutineScope,
 ) : SyncOrchestrator {
     private val orchestratorScope: CoroutineScope =
@@ -130,6 +138,19 @@ class SyncOrchestratorImpl(
             progress.subscribeToRealtimeChanges()
         } catch (t: Throwable) {
             DebugLog.warn(TAG, "Progress subscribeToRealtimeChanges threw: ${t.message}")
+        }
+
+        // Dictionary (FR-09): fire-and-forget pull so a reinstall restores the
+        // remote entry set on first sync. Pushes are triggered by repository
+        // mutations and stay off this lifecycle.
+        dictionary?.let { dictionarySync ->
+            orchestratorScope.launch {
+                try {
+                    dictionarySync.pullRemote()
+                } catch (t: Throwable) {
+                    DebugLog.warn(TAG, "Dictionary pull threw: ${t.message}")
+                }
+            }
         }
 
         // Start the pendingCount collector (single shared DAO table).

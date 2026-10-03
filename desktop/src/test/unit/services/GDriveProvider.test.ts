@@ -551,3 +551,141 @@ describe('GDriveProvider — getUsage (read-only Drive byte measurement)', () =>
     expect(err.retryable).toBe(false);
   });
 });
+
+describe('GDriveProvider — FR-08 marker + guarded upload', () => {
+  let provider: GDriveProvider;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    globalThis.fetch = vi.fn();
+    __resetGDriveFolderCache();
+    provider = new GDriveProvider();
+    vi.mocked(refreshDriveAccessToken).mockResolvedValue('ya29.refreshed-token');
+  });
+
+  it('readMarker parses appProperties, and null when the marker is absent', async () => {
+    mockAuth('token-marker');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'file-m', name: 'x.epub' }] }) },
+      {
+        ok: true,
+        json: () => Promise.resolve({ appProperties: { nexoVersion: '3', nexoChecksum: 'ab' } }),
+      },
+    ]);
+
+    expect(await provider.readMarker('x.epub')).toEqual({ version: 3, checksum: 'ab' });
+  });
+
+  it('readMarker returns null when the file has no marker', async () => {
+    mockAuth('token-marker-none');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'file-n', name: 'y.epub' }] }) },
+      { ok: true, json: () => Promise.resolve({}) },
+    ]);
+
+    expect(await provider.readMarker('y.epub')).toBeNull();
+  });
+
+  it('uploadGuarded sends the marker in the Drive metadata (create)', async () => {
+    mockAuth('token-guard');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-g' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-g' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [] }) },
+      { ok: true, json: () => Promise.resolve({ id: 'file-g' }) },
+    ]);
+
+    const fileId = await provider.uploadGuarded('a.epub', new Uint8Array([1]), {
+      version: 2,
+      checksum: 'cd',
+    });
+
+    expect(fileId).toBe('file-g');
+    const uploadCall = vi.mocked(globalThis.fetch).mock.calls[3];
+    expect(uploadCall[1]?.method).toBe('POST');
+    const metadata = JSON.parse(
+      await ((uploadCall[1]?.body as FormData).get('metadata') as Blob).text(),
+    );
+    expect(metadata).toEqual({
+      name: 'a.epub',
+      appProperties: { nexoVersion: '2', nexoChecksum: 'cd' },
+      parents: ['folder-g'],
+    });
+  });
+});
+
+describe('GDriveProvider — WU6 gated books-folder migration (Nexo/books)', () => {
+  let provider: GDriveProvider;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    globalThis.fetch = vi.fn();
+    __resetGDriveFolderCache();
+    provider = new GDriveProvider();
+    vi.mocked(refreshDriveAccessToken).mockResolvedValue('ya29.refreshed-token');
+  });
+
+  it('keeps the legacy Books folder when no manifest proves filenameVersion >= 1 (blocked)', async () => {
+    mockAuth('token-legacy-blocked');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l' }] }) }, // find Nexo
+      {
+        ok: true,
+        json: () => Promise.resolve({ files: [{ id: 'legacy-folder', name: 'Books' }] }),
+      }, // combined
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l' }] }) }, // findFolderStrict Nexo
+      { ok: true, json: () => Promise.resolve({ files: [] }) }, // manifest absent
+      { ok: true, json: () => Promise.resolve({ files: [] }) }, // find file
+      { ok: true, json: () => Promise.resolve({ id: 'file-l' }) }, // create
+    ]);
+
+    const fileId = await provider.upload('b', new Uint8Array([1]), 'b.epub');
+
+    expect(fileId).toBe('file-l');
+    const patchCalls = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.filter(([, init]) => init?.method === 'PATCH');
+    expect(patchCalls).toHaveLength(0); // never renames before WU4 is proven
+    const metadata = JSON.parse(
+      await (
+        (vi.mocked(globalThis.fetch).mock.calls[5][1]?.body as FormData).get('metadata') as Blob
+      ).text(),
+    );
+    expect(metadata.parents).toEqual(['legacy-folder']); // still writes into legacy
+  });
+
+  it('renames the legacy Books folder in place once the manifest reports filenameVersion 1', async () => {
+    mockAuth('token-legacy-rename');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l2' }] }) }, // find Nexo
+      {
+        ok: true,
+        json: () => Promise.resolve({ files: [{ id: 'legacy-folder', name: 'Books' }] }),
+      }, // combined
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-l2' }] }) }, // findFolderStrict Nexo
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'manifest-f' }] }) }, // manifest search
+      { ok: true, json: () => Promise.resolve({}), text: async () => '{"filenameVersion":1}' }, // media
+      { ok: true, json: () => Promise.resolve({}) }, // rename PATCH
+      { ok: true, json: () => Promise.resolve({ files: [] }) }, // find file
+      { ok: true, json: () => Promise.resolve({ id: 'file-l2' }) }, // create
+    ]);
+
+    await provider.upload('b', new Uint8Array([1]), 'b.epub');
+
+    const renameCall = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.find(
+        ([url, init]) => String(url).includes('/files/legacy-folder') && init?.method === 'PATCH',
+      );
+    expect(renameCall).toBeDefined();
+    const body = renameCall?.[1]?.body as Blob;
+    expect(JSON.parse(await body.text())).toEqual({ name: 'books' });
+    // Same folder id keeps every child: the create still lands in legacy-folder.
+    const metadata = JSON.parse(
+      await (
+        (vi.mocked(globalThis.fetch).mock.calls[7][1]?.body as FormData).get('metadata') as Blob
+      ).text(),
+    );
+    expect(metadata.parents).toEqual(['legacy-folder']);
+  });
+});
