@@ -108,6 +108,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'home.highlightsFilterDate': 'Fecha',
   'home.highlightsFilterTag': 'Etiqueta',
   'home.highlightsFilterType': 'Tipo',
+  'home.highlightsFiltersHeading': 'Filtros',
   'home.highlightsTypeAll': 'Todos',
   'home.highlightsTypeQuotes': 'Citas',
   'home.highlightsTypeIdeas': 'Ideas',
@@ -127,6 +128,10 @@ export const messagesEs: Record<MessageKey, string> = {
   'home.highlightsDelete': 'Eliminar',
   'home.highlightsEmptyTitle': 'Sin resaltados',
   'home.highlightsEmptyDescription': 'No se encontraron resaltados con los filtros actuales.',
+  'home.highlightsEmptyNoDataTitle': 'Aún no hay resaltados',
+  'home.highlightsEmptyNoDataDescription':
+    'Selecciona texto mientras lees un libro para guardar un resaltado. Todo lo que resaltes aparecerá aquí.',
+  'home.highlightsResultsHeading': 'Lista de resaltados',
   'home.highlightsSyncing': 'Sincronizando…',
   'home.highlightsSynced': 'Sincronizado',
   'home.highlightsRefresh': 'Actualizar resaltados',

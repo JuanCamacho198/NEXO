@@ -105,6 +105,7 @@ export const messagesEn = {
   'home.highlightsFilterDate': 'Date',
   'home.highlightsFilterTag': 'Tag',
   'home.highlightsFilterType': 'Type',
+  'home.highlightsFiltersHeading': 'Filters',
   'home.highlightsTypeAll': 'All',
   'home.highlightsTypeQuotes': 'Quotes',
   'home.highlightsTypeIdeas': 'Ideas',
@@ -124,6 +125,10 @@ export const messagesEn = {
   'home.highlightsDelete': 'Delete',
   'home.highlightsEmptyTitle': 'No highlights',
   'home.highlightsEmptyDescription': 'No highlights found with current filters.',
+  'home.highlightsEmptyNoDataTitle': 'No highlights yet',
+  'home.highlightsEmptyNoDataDescription':
+    'Select text while reading a book to save a highlight. Everything you highlight will appear here.',
+  'home.highlightsResultsHeading': 'Highlight results',
   'home.highlightsSyncing': 'Synchronizing…',
   'home.highlightsSynced': 'Synchronized',
   'home.highlightsRefresh': 'Refresh highlights',

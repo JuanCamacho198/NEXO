@@ -1,8 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import { axe } from 'vitest-axe';
+import { toHaveNoViolations } from 'vitest-axe/dist/matchers.js';
 import AppSidebar from '$lib/shared/ui/layout/AppSidebar.svelte';
 import { getNavItems } from '$lib/shared/stores/NavigationState.svelte';
+
+expect.extend({ toHaveNoViolations });
 
 function fakeT(key: string): string {
   const labels: Record<string, string> = {
@@ -171,6 +175,25 @@ describe('AppSidebar', () => {
     const userBlock = screen.getByRole('button', { name: /Reader/ });
     expect(userBlock).toHaveAttribute('role', 'button');
     expect(userBlock).toHaveAttribute('tabindex', '0');
+  });
+
+  it('names the profile button with the exact visible "name · email" text', async () => {
+    render(AppSidebar, defaultProps);
+    const userBlock = screen.getByRole('button', { name: /Reader/ });
+
+    const visible = (userBlock.querySelector('p')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    // The visible chrome separates name and email with a middle dot.
+    expect(visible).toContain('·');
+    expect(visible).toContain('No email available');
+
+    const label = userBlock.getAttribute('aria-label') ?? '';
+    // The accessible name must contain the visible text verbatim, including
+    // the `·` separator (a comma did not satisfy label-content-name-mismatch).
+    expect(label).toContain(visible);
+
+    const results = await axe(userBlock);
+    const mismatches = results.violations.filter((v) => v.id === 'label-content-name-mismatch');
+    expect(mismatches).toHaveLength(0);
   });
 
   it('calls onNavigateSettings when the user block is clicked (REQ-12)', async () => {

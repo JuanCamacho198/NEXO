@@ -198,7 +198,7 @@
       class:justify-center={collapsed}
       role="button"
       tabindex="0"
-      aria-label={`${getProfileInitials(profile.name)} ${profile.name}, ${profile.email}`}
+      aria-label={`${getProfileInitials(profile.name)} ${profile.name} · ${profile.email}`}
       onclick={onNavigateSettings}
       onkeydown={handleUserBlockKeydown}
     >

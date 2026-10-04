@@ -16,8 +16,12 @@
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import DropMenu from '$lib/shared/ui/navigation/DropMenu.svelte';
   import Book from 'lucide-svelte/icons/book';
+  import CircleCheck from 'lucide-svelte/icons/circle-check';
   import Copy from 'lucide-svelte/icons/copy';
   import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
+  import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+  import RefreshCw from 'lucide-svelte/icons/refresh-cw';
+  import Search from 'lucide-svelte/icons/search';
   import SquarePen from 'lucide-svelte/icons/square-pen';
   import Trash2 from 'lucide-svelte/icons/trash-2';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
@@ -30,6 +34,7 @@
   const deps: HighlightsViewDeps = depsProp ?? createHighlightsViewDeps(viewerPort);
   let highlights = $state<HighlightDto[]>([]);
   let isLoading = $state(true);
+  const totalHighlights = $derived(highlights.length);
   const filters = createHighlightsFilters({
     getHighlights: () => highlights,
     getBooks: () => books,
@@ -152,39 +157,11 @@
         disabled={sync.syncState === 'syncing'}
         onclick={() => void sync.syncHighlightsInBackground(true)}
       >
-        {#if sync.syncState === 'syncing'}<svg
-            class="w-5 h-5 animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            ><circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle><path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            ></path></svg
-          >
-        {:else}<svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-            ><path
-              d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8V3h-5l2.26 2.26A7 7 0 1 0 21 12"
-            ></path><path
-              d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16v5h5l-2.26-2.26A7 7 0 0 0 21 12"
-            ></path></svg
-          >{/if}
+        {#if sync.syncState === 'syncing'}
+          <LoaderCircle size={20} strokeWidth={1.8} class="animate-spin" aria-hidden="true" />
+        {:else}
+          <RefreshCw size={20} strokeWidth={1.8} aria-hidden="true" />
+        {/if}
       </button>
     </div>
     {#if sync.syncState === 'syncing' || sync.syncState === 'synced'}<div
@@ -192,55 +169,35 @@
       >
         <span
           class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-(--color-border) bg-(--color-surface) text-[0.7rem] font-medium text-(--color-text-muted) shadow-sm"
-          >{#if sync.syncState === 'syncing'}<svg
-              class="w-3.5 h-3.5 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
+          >{#if sync.syncState === 'syncing'}<LoaderCircle
+              size={14}
+              strokeWidth={1.8}
+              class="animate-spin"
               aria-hidden="true"
-              ><circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle><path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              ></path></svg
-            >{t('home.highlightsSyncing')}{:else}<svg
-              class="w-3.5 h-3.5 text-emerald-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              stroke-width="2"
+            />{t('home.highlightsSyncing')}{:else}<CircleCheck
+              size={14}
+              strokeWidth={1.8}
+              class="text-(--color-success)"
               aria-hidden="true"
-              ><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg
-            >{t('home.highlightsSynced')}{/if}</span
+            />{t('home.highlightsSynced')}{/if}</span
+        >
         >
       </div>{/if}
   </header>
-  <div class="flex items-center gap-2 mb-4">
+  <div class="flex flex-wrap items-center gap-2 mb-4">
     {#each typeTabs as tab}<button
         type="button"
-        class={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${filters.selectedType === tab.value ? 'bg-(--color-accent-blue) text-white border-(--color-accent-blue)' : 'bg-(--color-surface) text-(--color-text-muted) border-(--color-border) hover:border-(--color-border-strong) hover:text-(--color-primary)'}`}
+        class={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${filters.selectedType === tab.value ? 'bg-(--color-accent-soft) text-(--color-primary) border-(--color-accent)' : 'bg-(--color-surface) text-(--color-text-muted) border-(--color-border) hover:border-(--color-border-strong) hover:text-(--color-primary)'}`}
         onclick={() => (filters.selectedType = tab.value)}>{t(tab.labelKey)}</button
       >{/each}
   </div>
   <div class="relative flex items-center mb-5">
-    <svg
-      class="pointer-events-none absolute left-4 z-0 w-5 h-5 text-(--color-text-muted)"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-      ><path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-      /></svg
-    ><input
+    <Search
+      size={20}
+      strokeWidth={1.8}
+      class="pointer-events-none absolute left-4 z-0 text-(--color-text-muted)"
+      aria-hidden="true"
+    /><input
       id="highlights-search"
       type="text"
       class="w-full h-12 pl-14 pr-20 rounded-2xl border border-(--color-border) bg-(--color-surface) text-(--color-primary) text-[0.875rem] font-sans transition-colors focus:outline-none focus:border-(--color-accent-blue,#49d4ff) focus:shadow-[0_0_0_3px_rgba(73,212,255,0.15)] placeholder:text-(--color-text-muted)"
@@ -251,75 +208,94 @@
       >Ctrl K</kbd
     >
   </div>
-  <div
-    class="flex flex-wrap items-center gap-4 mb-4 px-4 py-3 rounded-2xl border border-(--color-border) bg-(--color-surface)"
-  >
-    <div class="flex items-center gap-2 border-r border-(--color-border) pr-4">
-      <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
-        >{t('home.highlightsFilterColor')}</span
+  <div class="mb-4 rounded-2xl border border-(--color-border) bg-(--color-surface) px-4 py-3">
+    <div class="mb-3 flex items-center justify-between gap-3">
+      <h2
+        class="m-0 text-[0.75rem] font-semibold text-(--color-text-muted) uppercase tracking-wider"
       >
-      <div class="flex items-center gap-1">
-        {#each HIGHLIGHT_COLORS as color}<button
-            type="button"
-            class="w-6 h-6 rounded-full border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {filters.selectedColors.has(
-              color.key,
-            )
-              ? 'border-(--color-primary) shadow-[0_0_0_3px_rgba(73,212,255,0.25)] scale-110'
-              : ''}"
-            style="background: {color.hex};"
-            aria-label={t('highlight.selectColor', {
-              color: t(`settings.color.${color.key}` as import('$lib/shared/i18n').MessageKey),
-            })}
-            onclick={() => filters.toggleColor(color.key)}
-          ></button>{/each}<button
-          type="button"
-          class="px-2 py-1 rounded-md border border-(--color-border) bg-transparent text-(--color-text-muted) text-[0.75rem] cursor-pointer transition-all font-sans hover:bg-(--color-surface-hover,rgba(25,41,62,0.96)) {filters
-            .selectedColors.size === 0
-            ? 'border-(--color-accent-blue,#49d4ff) text-(--color-primary) bg-(--color-panel-accent)'
-            : ''}"
-          onclick={() => {
-            filters.selectedColors = new Set();
-          }}>{t('home.shelfTab.all')}</button
+        {t('home.highlightsFiltersHeading')}
+      </h2>
+      <Button size="sm" variant="ghost" onclick={filters.clearFilters}
+        >{t('home.highlightsClearFilters')}</Button
+      >
+    </div>
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-3">
+      <div class="flex items-center gap-2">
+        <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
+          >{t('home.highlightsFilterColor')}</span
         >
+        <div class="flex items-center gap-1">
+          {#each HIGHLIGHT_COLORS as color}<button
+              type="button"
+              class="w-6 h-6 rounded-full border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {filters.selectedColors.has(
+                color.key,
+              )
+                ? 'border-(--color-primary) shadow-[0_0_0_3px_rgba(73,212,255,0.25)] scale-110'
+                : ''}"
+              style="background: {color.hex};"
+              aria-label={t('highlight.selectColor', {
+                color: t(`settings.color.${color.key}` as import('$lib/shared/i18n').MessageKey),
+              })}
+              onclick={() => filters.toggleColor(color.key)}
+            ></button>{/each}<button
+            type="button"
+            class="px-2 py-1 rounded-md border border-(--color-border) bg-transparent text-(--color-text-muted) text-[0.75rem] cursor-pointer transition-all font-sans hover:bg-(--color-surface-hover,rgba(25,41,62,0.96)) {filters
+              .selectedColors.size === 0
+              ? 'border-(--color-accent-blue,#49d4ff) text-(--color-primary) bg-(--color-panel-accent)'
+              : ''}"
+            onclick={() => {
+              filters.selectedColors = new Set();
+            }}>{t('home.shelfTab.all')}</button
+          >
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div class="flex items-center gap-2">
+          <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
+            >{t('home.highlightsFilterBook')}</span
+          ><Dropdown
+            options={bookFilterOptions}
+            bind:value={filters.selectedBookId}
+            class="min-w-[150px]"
+          />
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
+            >{t('home.highlightsFilterTag')}</span
+          ><Dropdown
+            options={tagFilterOptions}
+            bind:value={filters.selectedTagId}
+            class="min-w-[130px]"
+          />
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
+            >{t('home.highlightsFilterDate')}</span
+          ><Dropdown
+            options={dateFilterOptions}
+            bind:value={filters.selectedDateRange}
+            class="min-w-[140px]"
+          />
+        </div>
       </div>
     </div>
-    <div class="flex items-center gap-2">
-      <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
-        >{t('home.highlightsFilterBook')}</span
-      ><Dropdown
-        options={bookFilterOptions}
-        bind:value={filters.selectedBookId}
-        class="min-w-[150px]"
-      />
-    </div>
-    <div class="flex items-center gap-2">
-      <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
-        >{t('home.highlightsFilterTag')}</span
-      ><Dropdown
-        options={tagFilterOptions}
-        bind:value={filters.selectedTagId}
-        class="min-w-[130px]"
-      />
-    </div>
-    <div class="flex items-center gap-2">
-      <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
-        >{t('home.highlightsFilterDate')}</span
-      ><Dropdown
-        options={dateFilterOptions}
-        bind:value={filters.selectedDateRange}
-        class="min-w-[140px]"
-      />
-    </div>
-    <Button size="sm" variant="ghost" onclick={filters.clearFilters}
-      >{t('home.highlightsClearFilters')}</Button
-    >
   </div>
-  <p class="text-[0.75rem] text-(--color-text-muted) m-0 mb-3">
-    {t('home.highlightsShowingCount', { count: filters.filteredHighlights.length })}
-  </p>
+  <h2 class="sr-only">{t('home.highlightsResultsHeading')}</h2>
+  {#if !isLoading && totalHighlights > 0}
+    <p class="text-[0.75rem] text-(--color-text-muted) m-0 mb-3">
+      {t('home.highlightsShowingCount', { count: filters.filteredHighlights.length })}
+    </p>
+  {/if}
   {#if isLoading}<ul class="list-none p-0 m-0 flex flex-col gap-2">
       {#each Array(3) as _}<Skeleton variant="book" height="100px" />{/each}
     </ul>
+  {:else if totalHighlights === 0}<div class="flex min-h-[55vh] items-center justify-center">
+      <EmptyState
+        icon="book"
+        title={t('home.highlightsEmptyNoDataTitle')}
+        description={t('home.highlightsEmptyNoDataDescription')}
+      />
+    </div>
   {:else if filters.filteredHighlights.length === 0}<div
       class="flex min-h-[55vh] items-center justify-center"
     >
@@ -327,7 +303,13 @@
         icon="search"
         title={t('home.highlightsEmptyTitle')}
         description={t('home.highlightsEmptyDescription')}
-      />
+      >
+        {#snippet action()}
+          <Button size="sm" variant="ghost" onclick={filters.clearFilters}
+            >{t('home.highlightsClearFilters')}</Button
+          >
+        {/snippet}
+      </EmptyState>
     </div>
   {:else}<ul class="list-none p-0 m-0 flex flex-col gap-2">
       {#each filters.paginatedHighlights as highlight (highlight.id)}{@const book = bookMap.get(
