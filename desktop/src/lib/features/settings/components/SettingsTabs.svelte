@@ -62,11 +62,11 @@
       aria-controls="tabpanel-{tab.id}"
       id="tab-{tab.id}"
       tabindex={activeTab === tab.id ? 0 : -1}
-      class="flex-1 px-2 py-3 border-none cursor-pointer text-2sm text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
-      class:bg-(--color-accent-soft)={activeTab === tab.id}
-      class:text-(--color-primary)={activeTab === tab.id}
-      class:border-(--color-accent-start)={activeTab === tab.id}
-      class:font-semibold={activeTab === tab.id}
+      class={`flex-1 px-2 py-3 border-none cursor-pointer text-2sm border-b-2 transition-all duration-200 flex items-center justify-center gap-1.5 ${
+        activeTab === tab.id
+          ? 'bg-(--color-accent-soft) text-(--color-primary) border-(--color-accent-start) font-semibold'
+          : 'border-transparent text-(--color-text-muted,var(--color-secondary)) hover:text-(--color-primary)'
+      }`}
       onclick={() => onTabChange(tab.id)}
     >
       <TabIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />

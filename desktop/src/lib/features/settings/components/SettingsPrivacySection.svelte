@@ -45,7 +45,9 @@
     <p class="text-xs text-(--color-text-muted)">{t('settings.privacy.description')}</p>
     <button
       type="button"
-      class="self-start flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all duration-200 text-xs disabled:opacity-60 disabled:cursor-not-allowed border-(--color-border) bg-(--color-background) hover:bg-(--color-surface-hover)"
+      role="switch"
+      aria-checked={telemetryEnabled}
+      class="self-start flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all duration-200 text-xs disabled:opacity-60 disabled:cursor-not-allowed border-(--color-border) bg-(--color-background) hover:bg-(--color-surface-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent)"
       onclick={onToggle}
     >
       <span

@@ -7,6 +7,9 @@ import {
   dictionaryState as defaultDictionaryState,
   type DictionaryStateApi,
 } from '$lib/shared/stores/DictionaryState.svelte';
+import type { CollectionDto, HighlightDto, LibraryBookDto } from '$lib/shared/types';
+import { TauriViewerAdapter } from '$lib/shared/ports';
+import { buildExportEnvelope, projectBookForExport } from './exportEnvelope';
 
 export type DriveAuthDep = {
   isAuthorized: () => Promise<boolean>;
@@ -14,6 +17,9 @@ export type DriveAuthDep = {
 
 /** The two store operations the dictionary transfer needs; nothing else. */
 export type DictionaryTransferDep = Pick<DictionaryStateApi, 'exportData' | 'importData'>;
+
+/** The real highlight read path (ViewerPort), injected so tests stay pure. */
+export type HighlightLister = (bookId?: string) => Promise<HighlightDto[]>;
 
 export type DataDeps = {
   storageState?: typeof defaultStorageState;
@@ -23,6 +29,7 @@ export type DataDeps = {
   pushToast?: typeof defaultPushToast;
   t?: (key: string, params?: Record<string, string | number>) => string;
   dictionaryState?: DictionaryTransferDep;
+  listHighlights?: HighlightLister;
 };
 
 export function createSettingsData(deps: DataDeps = {}): {
@@ -30,7 +37,12 @@ export function createSettingsData(deps: DataDeps = {}): {
   cacheCleared: boolean;
   selectedExportBook: string;
   selectedExportFormat: 'json' | 'markdown';
+  annotationsOnlyWithNote: boolean;
+  isExportingLibrary: boolean;
   isExportingHighlights: boolean;
+  isExportingCollections: boolean;
+  isExportingBook: boolean;
+  isExportingEverything: boolean;
   isExportingColdBackup: boolean;
   isImportingColdBackup: boolean;
   isExportingDictionary: boolean;
@@ -41,13 +53,21 @@ export function createSettingsData(deps: DataDeps = {}): {
   isSaving: boolean;
   isDirty: boolean;
   handleClearCache: () => Promise<void>;
-  handleExportHighlights: () => Promise<void>;
+  handleExportLibrary: (books?: LibraryBookDto[]) => Promise<void>;
+  handleExportHighlights: (books?: LibraryBookDto[]) => Promise<void>;
+  handleExportCollections: (collections?: CollectionDto[]) => Promise<void>;
+  handleExportBook: (bookId: string, books?: LibraryBookDto[]) => Promise<void>;
+  handleExportEverything: (
+    books?: LibraryBookDto[],
+    collections?: CollectionDto[],
+  ) => Promise<void>;
   handleExportColdBackup: () => Promise<void>;
   handleImportColdBackup: () => Promise<void>;
   handleExportDictionary: (format: 'json' | 'csv') => Promise<void>;
   handleImportDictionary: (file: File) => Promise<void>;
   handleSelectedExportBookChange: (value: string) => void;
   handleSelectedExportFormatChange: (value: 'json' | 'markdown') => void;
+  handleAnnotationsOnlyWithNoteChange: (value: boolean) => void;
 } {
   const storage = deps.storageState ?? defaultStorageState;
   const ColdBackup = deps.DriveColdBackupService ?? DefaultDriveColdBackupService;
@@ -56,12 +76,19 @@ export function createSettingsData(deps: DataDeps = {}): {
   const pushToast = deps.pushToast ?? defaultPushToast;
   const t = deps.t ?? ((k: string) => k);
   const dictionary = deps.dictionaryState ?? defaultDictionaryState;
+  const listHighlights: HighlightLister =
+    deps.listHighlights ?? ((bookId?: string) => new TauriViewerAdapter().listHighlights(bookId));
 
   let isClearingCache = $state(false);
   let cacheCleared = $state(false);
   let selectedExportBook = $state('all');
   let selectedExportFormat = $state<'json' | 'markdown'>('json');
+  let annotationsOnlyWithNote = $state(false);
+  let isExportingLibrary = $state(false);
   let isExportingHighlights = $state(false);
+  let isExportingCollections = $state(false);
+  let isExportingBook = $state(false);
+  let isExportingEverything = $state(false);
   let isExportingColdBackup = $state(false);
   let isImportingColdBackup = $state(false);
   let isExportingDictionary = $state(false);
@@ -71,9 +98,69 @@ export function createSettingsData(deps: DataDeps = {}): {
   let dictionaryImportError = $state<string | null>(null);
 
   const isSaving = $derived(
-    isClearingCache || isExportingHighlights || isExportingColdBackup || isImportingColdBackup,
+    isClearingCache ||
+      isExportingLibrary ||
+      isExportingHighlights ||
+      isExportingCollections ||
+      isExportingBook ||
+      isExportingEverything ||
+      isExportingColdBackup ||
+      isImportingColdBackup,
   );
   const isDirty = $derived(selectedExportBook !== 'all' || selectedExportFormat !== 'json');
+
+  /** `YYYY-MM-DD`, so exported files carry the day they were produced. */
+  function fileStamp(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  /**
+   * The single local file sink. The dictionary export already used this exact
+   * object-URL + anchor pattern; the library and highlights exports reuse it
+   * instead of inventing a second mechanism.
+   */
+  function downloadTextFile(content: string, filename: string, mime: string): void {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Markdown rendering of the real HighlightDto fields: text, note,
+   * pageNumber, color and createdAt, grouped under the book title and author
+   * resolved from the same `books` prop the panel already receives. A
+   * highlight whose book is absent falls back to a labelled raw id rather
+   * than crashing or printing an unlabelled id.
+   */
+  function highlightsToMarkdown(rows: HighlightDto[], books: LibraryBookDto[]): string {
+    const meta = new Map(books.map((b) => [b.id, { title: b.title, author: b.author }]));
+    const byBook = new Map<string, HighlightDto[]>();
+    for (const row of rows) {
+      const list = byBook.get(row.bookId) ?? [];
+      list.push(row);
+      byBook.set(row.bookId, list);
+    }
+    const lines: string[] = ['# Highlights', ''];
+    for (const [bookId, items] of byBook) {
+      const book = meta.get(bookId);
+      const heading = book
+        ? book.author
+          ? `${book.title} — ${book.author}`
+          : book.title
+        : `${t('settings.unknownBook')} (${bookId})`;
+      lines.push(`## ${heading}`, '');
+      for (const row of items) {
+        lines.push(`> ${row.text.replace(/\n/g, '\n> ')}`, '');
+        if (row.note) lines.push(`Note: ${row.note}`, '');
+        lines.push(`Page ${row.pageNumber} · ${row.color} · ${row.createdAt}`, '');
+      }
+    }
+    return lines.join('\n');
+  }
 
   async function handleClearCache(): Promise<void> {
     isClearingCache = true;
@@ -93,12 +180,160 @@ export function createSettingsData(deps: DataDeps = {}): {
     }
   }
 
-  async function handleExportHighlights(): Promise<void> {
+  async function handleExportLibrary(books: LibraryBookDto[] = []): Promise<void> {
+    if (books.length === 0) {
+      pushToast('error', t('settings.data.libraryExportEmpty'));
+      return;
+    }
+    isExportingLibrary = true;
+    try {
+      const payload = buildExportEnvelope({
+        books: books.map(projectBookForExport),
+      });
+      downloadTextFile(
+        JSON.stringify(payload, null, 2),
+        `nexo-library-${fileStamp()}.json`,
+        'application/json',
+      );
+      pushToast('success', t('settings.data.libraryExported'));
+    } catch (e) {
+      pushToast('error', e instanceof Error ? e.message : t('settings.data.libraryExportFailed'));
+    } finally {
+      isExportingLibrary = false;
+    }
+  }
+
+  async function handleExportHighlights(books: LibraryBookDto[] = []): Promise<void> {
     isExportingHighlights = true;
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const bookId = selectedExportBook === 'all' ? undefined : selectedExportBook;
+      const allRows = await listHighlights(bookId);
+      // "Only with a note" is a filter over the annotations module, not a
+      // separate exporter: a note cannot exist without its highlight.
+      const rows = annotationsOnlyWithNote ? allRows.filter((row) => Boolean(row.note)) : allRows;
+      if (rows.length === 0) {
+        pushToast('error', t('settings.data.highlightsExportEmpty'));
+        return;
+      }
+      if (selectedExportFormat === 'markdown') {
+        downloadTextFile(
+          highlightsToMarkdown(rows, books),
+          `nexo-highlights-${fileStamp()}.md`,
+          'text/markdown',
+        );
+      } else {
+        const payload = buildExportEnvelope({ annotations: rows });
+        downloadTextFile(
+          JSON.stringify(payload, null, 2),
+          `nexo-highlights-${fileStamp()}.json`,
+          'application/json',
+        );
+      }
+      pushToast('success', t('settings.data.highlightsExported'));
+    } catch (e) {
+      pushToast(
+        'error',
+        e instanceof Error ? e.message : t('settings.data.highlightsExportFailed'),
+      );
     } finally {
       isExportingHighlights = false;
+    }
+  }
+
+  /**
+   * The collections module on its own — one of the granular per-domain
+   * scopes. Collections have no book files and no notes, so this is the whole
+   * payload.
+   */
+  async function handleExportCollections(collections: CollectionDto[] = []): Promise<void> {
+    if (collections.length === 0) {
+      pushToast('error', t('settings.data.collectionsExportEmpty'));
+      return;
+    }
+    isExportingCollections = true;
+    try {
+      const payload = buildExportEnvelope({ collections });
+      downloadTextFile(
+        JSON.stringify(payload, null, 2),
+        `nexo-collections-${fileStamp()}.json`,
+        'application/json',
+      );
+      pushToast('success', t('settings.data.collectionsExported'));
+    } catch (e) {
+      pushToast(
+        'error',
+        e instanceof Error ? e.message : t('settings.data.collectionsExportFailed'),
+      );
+    } finally {
+      isExportingCollections = false;
+    }
+  }
+
+  /**
+   * The per-book scope: the book's own `books` entry plus the `annotations`
+   * module filtered to that book. A book that is no longer in the list is a
+   * refusal, not an empty file.
+   */
+  async function handleExportBook(bookId: string, books: LibraryBookDto[] = []): Promise<void> {
+    const book = books.find((b) => b.id === bookId);
+    if (!book) {
+      pushToast('error', t('settings.data.bookExportNone'));
+      return;
+    }
+    isExportingBook = true;
+    try {
+      const annotations = await listHighlights(book.id);
+      const payload = buildExportEnvelope({
+        books: [projectBookForExport(book)],
+        annotations,
+      });
+      downloadTextFile(
+        JSON.stringify(payload, null, 2),
+        `nexo-book-${book.id}-${fileStamp()}.json`,
+        'application/json',
+      );
+      pushToast('success', t('settings.data.bookExported'));
+    } catch (e) {
+      pushToast('error', e instanceof Error ? e.message : t('settings.data.bookExportFailed'));
+    } finally {
+      isExportingBook = false;
+    }
+  }
+
+  /**
+   * The everything scope: every module of the same envelope in one file. It
+   * refuses only when there is nothing at all to write; a module that is empty
+   * while another carries data is still listed as selected.
+   */
+  async function handleExportEverything(
+    books: LibraryBookDto[] = [],
+    collections: CollectionDto[] = [],
+  ): Promise<void> {
+    isExportingEverything = true;
+    try {
+      const annotations = await listHighlights();
+      if (books.length === 0 && collections.length === 0 && annotations.length === 0) {
+        pushToast('error', t('settings.data.exportEverythingEmpty'));
+        return;
+      }
+      const payload = buildExportEnvelope({
+        books: books.map(projectBookForExport),
+        annotations,
+        collections,
+      });
+      downloadTextFile(
+        JSON.stringify(payload, null, 2),
+        `nexo-export-${fileStamp()}.json`,
+        'application/json',
+      );
+      pushToast('success', t('settings.data.exportedEverything'));
+    } catch (e) {
+      pushToast(
+        'error',
+        e instanceof Error ? e.message : t('settings.data.exportEverythingFailed'),
+      );
+    } finally {
+      isExportingEverything = false;
     }
   }
 
@@ -190,15 +425,11 @@ export function createSettingsData(deps: DataDeps = {}): {
     isExportingDictionary = true;
     try {
       const data = await dictionary.exportData(format);
-      const blob = new Blob([data], {
-        type: format === 'json' ? 'application/json' : 'text/csv',
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `dictionary.${format}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadTextFile(
+        data,
+        `dictionary.${format}`,
+        format === 'json' ? 'application/json' : 'text/csv',
+      );
     } catch (e) {
       dictionaryExportError =
         e instanceof Error ? e.message : t('settings.data.dictionary.exportFailed');
@@ -240,6 +471,10 @@ export function createSettingsData(deps: DataDeps = {}): {
     selectedExportFormat = value;
   }
 
+  function handleAnnotationsOnlyWithNoteChange(value: boolean): void {
+    annotationsOnlyWithNote = value;
+  }
+
   return {
     get isClearingCache() {
       return isClearingCache;
@@ -265,11 +500,41 @@ export function createSettingsData(deps: DataDeps = {}): {
     set selectedExportFormat(v: 'json' | 'markdown') {
       selectedExportFormat = v;
     },
+    get annotationsOnlyWithNote() {
+      return annotationsOnlyWithNote;
+    },
+    set annotationsOnlyWithNote(v: boolean) {
+      annotationsOnlyWithNote = v;
+    },
+    get isExportingLibrary() {
+      return isExportingLibrary;
+    },
+    set isExportingLibrary(v: boolean) {
+      isExportingLibrary = v;
+    },
     get isExportingHighlights() {
       return isExportingHighlights;
     },
     set isExportingHighlights(v: boolean) {
       isExportingHighlights = v;
+    },
+    get isExportingCollections() {
+      return isExportingCollections;
+    },
+    set isExportingCollections(v: boolean) {
+      isExportingCollections = v;
+    },
+    get isExportingBook() {
+      return isExportingBook;
+    },
+    set isExportingBook(v: boolean) {
+      isExportingBook = v;
+    },
+    get isExportingEverything() {
+      return isExportingEverything;
+    },
+    set isExportingEverything(v: boolean) {
+      isExportingEverything = v;
     },
     get isExportingColdBackup() {
       return isExportingColdBackup;
@@ -320,12 +585,17 @@ export function createSettingsData(deps: DataDeps = {}): {
       return isDirty;
     },
     handleClearCache,
+    handleExportLibrary,
     handleExportHighlights,
+    handleExportCollections,
+    handleExportBook,
+    handleExportEverything,
     handleExportColdBackup,
     handleImportColdBackup,
     handleExportDictionary,
     handleImportDictionary,
     handleSelectedExportBookChange,
     handleSelectedExportFormatChange,
+    handleAnnotationsOnlyWithNoteChange,
   };
 }

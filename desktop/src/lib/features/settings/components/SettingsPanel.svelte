@@ -12,7 +12,7 @@
   import SettingsSyncTab from './SettingsSyncTab.svelte';
   import SettingsShortcutsTab from './SettingsShortcutsTab.svelte';
   import SettingsAboutTab from './SettingsAboutTab.svelte';
-  import type { UiLocale } from '$lib/shared/types';
+  import type { LibraryBookDto, CollectionDto, UiLocale } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
   import { onDestroy } from 'svelte';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
@@ -29,6 +29,7 @@
     onLocaleChange,
     t,
     books = [],
+    collections = [],
     initialTab,
   } = $props<{
     isOpen: boolean;
@@ -36,7 +37,8 @@
     onRequestClose?: () => void;
     locale: UiLocale;
     onLocaleChange?: (locale: UiLocale) => void;
-    books?: { id: string; title: string }[];
+    books?: LibraryBookDto[];
+    collections?: CollectionDto[];
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     initialTab?: SettingsTab;
   }>();
@@ -194,16 +196,22 @@
           role="tabpanel"
           id="tabpanel-datos"
           aria-labelledby="tab-datos"
-          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 [&>*]:shrink-0"
         >
           <SettingsDataTab
             {t}
             {books}
+            {collections}
             isClearingCache={data.isClearingCache}
             cacheCleared={data.cacheCleared}
             selectedExportBook={data.selectedExportBook}
             selectedExportFormat={data.selectedExportFormat}
+            annotationsOnlyWithNote={data.annotationsOnlyWithNote}
+            isExportingLibrary={data.isExportingLibrary}
             isExportingHighlights={data.isExportingHighlights}
+            isExportingCollections={data.isExportingCollections}
+            isExportingBook={data.isExportingBook}
+            isExportingEverything={data.isExportingEverything}
             isExportingColdBackup={data.isExportingColdBackup}
             isImportingColdBackup={data.isImportingColdBackup}
             isExportingDictionary={data.isExportingDictionary}
@@ -215,15 +223,21 @@
             isConnectingDrive={driveState.isConnecting}
             onConnectDrive={() => void handleConnectDrive()}
             onClearCache={() => void data.handleClearCache()}
-            onExportLibrary={() => {}}
-            onExportHighlights={() => void data.handleExportHighlights()}
+            onExportLibrary={() => void data.handleExportLibrary(books)}
+            onExportHighlights={() => void data.handleExportHighlights(books)}
+            onExportCollections={() => void data.handleExportCollections(collections)}
+            onExportBook={(bookId: string) => void data.handleExportBook(bookId, books)}
+            onExportEverything={() => void data.handleExportEverything(books, collections)}
             onExportColdBackup={() => void data.handleExportColdBackup()}
             onImportColdBackup={() => void data.handleImportColdBackup()}
             onExportDictionary={(format) => void data.handleExportDictionary(format)}
             onImportDictionary={(file) => void data.handleImportDictionary(file)}
+            onNavigateToStorage={() => void handleTabChange('almacenamiento')}
             onSelectedExportBookChange={(v: string) => data.handleSelectedExportBookChange(v)}
             onSelectedExportFormatChange={(v: 'json' | 'markdown') =>
               data.handleSelectedExportFormatChange(v)}
+            onAnnotationsOnlyWithNoteChange={(v: boolean) =>
+              data.handleAnnotationsOnlyWithNoteChange(v)}
           />
           <SettingsAddonsSection
             {t}
@@ -248,7 +262,7 @@
           role="tabpanel"
           id="tabpanel-acerca"
           aria-labelledby="tab-acerca"
-          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 [&>*]:shrink-0"
         >
           <SettingsAboutTab {t} />
         </div>

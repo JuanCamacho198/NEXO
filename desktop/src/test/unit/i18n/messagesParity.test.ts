@@ -228,6 +228,54 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
     expect(messagesEs['discover.accessOpen']).toBe('Abrir');
   });
 
+  it('includes the honest export scopes and file-boundary keys in both locales', () => {
+    const exportKeys = [
+      'settings.data.exportLibraryDescription',
+      'settings.data.exportHighlightsDescription',
+      'settings.data.exportFilesNotIncluded',
+      'settings.data.exportEverything',
+      'settings.data.exportEverythingDescription',
+      'settings.data.exportEverythingButton',
+      'settings.data.exportedEverything',
+      'settings.data.exportEverythingEmpty',
+      'settings.data.exportEverythingFailed',
+      'settings.data.exportCollections',
+      'settings.data.exportCollectionsDescription',
+      'settings.data.exportCollectionsButton',
+      'settings.data.collectionsExported',
+      'settings.data.collectionsExportEmpty',
+      'settings.data.collectionsExportFailed',
+      'settings.data.exportOneBook',
+      'settings.data.exportOneBookDescription',
+      'settings.data.exportOneBookButton',
+      'settings.data.selectBook',
+      'settings.data.bookExported',
+      'settings.data.bookExportNone',
+      'settings.data.bookExportFailed',
+      'settings.data.annotationsOnlyWithNote',
+    ] as const;
+
+    for (const key of exportKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+      // Spanish is a real translation, never the English fallback.
+      expect(messagesEs[key]).not.toBe(messagesEn[key]);
+    }
+
+    // The old lossy promise must be gone: the library file is metadata only.
+    expect(messagesEn['settings.data.exportLibraryDescription']).not.toContain(
+      'Download all your books',
+    );
+    expect(messagesEs['settings.data.exportLibraryDescription']).not.toContain(
+      'Descarga todos tus libros',
+    );
+    // Both locales state plainly that book files are not included.
+    expect(messagesEn['settings.data.exportFilesNotIncluded']).toContain('never the book files');
+    expect(messagesEs['settings.data.exportFilesNotIncluded']).toContain(
+      'nunca los archivos de los libros',
+    );
+  });
+
   it('includes the addon read-sheet keys in both locales', () => {
     const readSheetKeys = [
       'addons.readSheet.resolving',

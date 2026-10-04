@@ -315,7 +315,8 @@ export const messagesEn = {
     '{{count}} book(s) could not be synced to the catalog ({{codes}}). They will retry automatically.',
   'settings.data.resetSection': 'Reset section',
   'settings.data.exportLibrary': 'Export library',
-  'settings.data.exportLibraryDescription': 'Download all your books as JSON',
+  'settings.data.exportLibraryDescription':
+    'Metadata only — titles, authors, progress, reading status and dates. Book files are not included; the Drive cold backup carries those.',
 
   'settings.addons.title': 'Catalog addons',
   'settings.addons.description': 'Install catalogs from a manifest URL (HTTPS only)',
@@ -367,7 +368,7 @@ export const messagesEn = {
   'addons.readSheet.empty.body': 'This addon has no readable options for this title.',
   'settings.data.exportHighlights': 'Export highlights',
   'settings.data.exportHighlightsDescription':
-    'Download your annotations and highlights in JSON or Markdown',
+    'Your highlights and their notes in JSON or Markdown. Book files are not included.',
   'settings.data.allBooks': 'All books',
   'settings.data.markdown': 'Markdown',
   'settings.data.exporting': 'Exporting...',
@@ -951,7 +952,44 @@ export const messagesEn = {
   'pdf.highlightAria': 'Highlight',
 
   // Settings Data Tab (PR3b)
+  'settings.data.group.backup': 'Backup',
+  'settings.data.group.export': 'Export',
+  'settings.data.group.maintenance': 'Maintenance',
+  'settings.data.group.privacyAddons': 'Privacy & advanced',
+  'settings.data.exportLibraryTitle': 'Export your library',
   'settings.data.exportLibraryButton': 'Export library',
+  'settings.data.libraryExported': 'Library exported',
+  'settings.data.libraryExportEmpty': 'No books to export',
+  'settings.data.libraryExportFailed': 'Could not export the library',
+  'settings.data.highlightsExported': 'Highlights exported',
+  'settings.data.highlightsExportEmpty': 'No highlights to export',
+  'settings.data.highlightsExportFailed': 'Could not export highlights',
+  'settings.data.annotationsOnlyWithNote': 'Only entries with a note',
+  'settings.data.exportFilesNotIncluded':
+    'These exports carry library and annotation data, never the book files themselves. Use the cold backup (Drive) to back up the actual files.',
+  'settings.data.exportEverything': 'Export everything',
+  'settings.data.exportEverythingDescription':
+    'One file with every module: books, highlights and collections. Book files are not included.',
+  'settings.data.exportEverythingButton': 'Export everything',
+  'settings.data.exportedEverything': 'Everything exported',
+  'settings.data.exportEverythingEmpty': 'There is nothing to export yet',
+  'settings.data.exportEverythingFailed': 'Could not export everything',
+  'settings.data.exportCollections': 'Export collections',
+  'settings.data.exportCollectionsDescription':
+    'Your collections with their names, colors and creation dates.',
+  'settings.data.exportCollectionsButton': 'Export collections',
+  'settings.data.collectionsExported': 'Collections exported',
+  'settings.data.collectionsExportEmpty': 'No collections to export',
+  'settings.data.collectionsExportFailed': 'Could not export collections',
+  'settings.data.exportOneBook': 'Export one book',
+  'settings.data.exportOneBookDescription': 'One book with its metadata, highlights and notes.',
+  'settings.data.exportOneBookButton': 'Export book',
+  'settings.data.selectBook': 'Select a book',
+  'settings.data.bookExported': 'Book exported',
+  'settings.data.bookExportNone': 'Select a book to export',
+  'settings.data.bookExportFailed': 'Could not export the book',
+  'settings.data.cancel': 'Cancel',
+  'settings.data.storageOptions': 'More options in Storage',
   'settings.data.coldBackup': 'Cold Backup (Drive)',
   'settings.data.coldBackupDescription':
     'Export or import your library as a cold backup to Drive. Settings-only — saves never touch Drive.',

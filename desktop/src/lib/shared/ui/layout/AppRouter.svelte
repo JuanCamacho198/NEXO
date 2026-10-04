@@ -264,7 +264,8 @@
                   t={appState.t}
                   locale={settingsState.locale}
                   onLocaleChange={settingsState.handleLocaleChange}
-                  books={libraryState.books.map((b) => ({ id: b.id, title: b.title }))}
+                  books={libraryState.books}
+                  collections={libraryState.collections}
                 />
               </section>
             </div>
@@ -281,7 +282,8 @@
                   t={appState.t}
                   locale={settingsState.locale}
                   onLocaleChange={settingsState.handleLocaleChange}
-                  books={libraryState.books.map((b) => ({ id: b.id, title: b.title }))}
+                  books={libraryState.books}
+                  collections={libraryState.collections}
                 />
               </section>
             </div>
