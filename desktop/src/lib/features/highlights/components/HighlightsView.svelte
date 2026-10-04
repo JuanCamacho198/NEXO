@@ -28,6 +28,7 @@
   import Skeleton from '$lib/shared/ui/feedback/Skeleton.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import { HIGHLIGHT_COLORS, formatDate, resolveHighlightHex, type Props } from '../state.svelte';
+  import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
   let { books, t, viewerPort: viewerPortProp, deps: depsProp }: Props = $props();
   const viewerPort: ViewerPort = viewerPortProp ?? new TauriViewerAdapter();
   // svelte-ignore state_referenced_locally
@@ -110,10 +111,11 @@
     navigator.clipboard.writeText(text);
   }
   const handleKeydown = (e: KeyboardEvent): void => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      e.preventDefault();
-      document.getElementById('highlights-search')?.focus();
-    }
+    if (e.key !== '/') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (hasEditableContext(e.target as Element | null)) return;
+    e.preventDefault();
+    document.getElementById('highlights-search')?.focus();
   };
   onMount(() => {
     void (async () => {
@@ -205,7 +207,7 @@
       bind:value={filters.searchQuery}
     /><kbd
       class="absolute right-4 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-(--color-border) bg-(--color-background) text-(--color-text-muted) text-[0.7rem] font-sans pointer-events-none"
-      >Ctrl K</kbd
+      aria-hidden="true">{t('library.searchShortcut')}</kbd
     >
   </div>
   <div class="mb-4 rounded-2xl border border-(--color-border) bg-(--color-surface) px-4 py-3">

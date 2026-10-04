@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   SHORTCUT_CONTEXT_LABELS,
   SHORTCUT_GROUPS,
@@ -10,7 +10,14 @@ import {
   type ShortcutBinding,
   type ShortcutPlatform,
 } from '$lib/shared/shortcuts/registry';
-import { WIRED_HANDLER_KEYS } from '$lib/shared/shortcuts/handlers';
+import { WIRED_COMMAND_KEYS, WIRED_HANDLER_KEYS } from '$lib/shared/shortcuts/handlers';
+import {
+  COMMAND_ACTION_BY_HANDLER,
+  COMMAND_GROUPS,
+  COMMAND_REGISTRY,
+  runCommand,
+  type CommandPaletteActions,
+} from '$lib/shared/shortcuts/commands';
 import { GLOBAL_HANDLER_KEYS, handleGlobalShortcut } from '$lib/shared/shortcuts/globalShortcuts';
 
 function eventFor(binding: ShortcutBinding, platform: ShortcutPlatform): KeyboardEvent {
@@ -123,10 +130,16 @@ describe('shortcut binding matcher', () => {
 });
 
 describe('registry truth (regression guards)', () => {
-  it('does not list a command palette while none exists', () => {
-    const row = SHORTCUT_REGISTRY.find((entry) => entry.id === 'library-search');
-    expect(row?.descriptionKey).toBe('settings.shortcuts.focusSearch');
-    expect(row?.combos.default.keys).toEqual(['k']);
+  it('documents the Ctrl+K palette as global and `/` as the field search', () => {
+    const palette = getShortcutEntry('app-command-palette');
+    expect(palette?.handlerKey).toBe('app.commandPalette');
+    expect(palette?.context).toBe('global');
+    expect(palette?.descriptionKey).toBe('settings.shortcuts.commandPalette');
+    expect(palette?.combos.default.keys).toEqual(['k']);
+
+    const fieldSearch = SHORTCUT_REGISTRY.find((entry) => entry.id === 'library-search');
+    expect(fieldSearch?.descriptionKey).toBe('settings.shortcuts.focusSearch');
+    expect(fieldSearch?.combos.default.keys).toEqual(['/']);
   });
 
   it('lists the real reader fullscreen key and the app window fullscreen separately', () => {
@@ -141,5 +154,56 @@ describe('registry truth (regression guards)', () => {
 
   it('exposes no-op-safe global handling for non-matching keys', () => {
     expect(handleGlobalShortcut(new KeyboardEvent('keydown', { key: 'q' }))).toBe(false);
+  });
+});
+
+function makeCommandActions(): CommandPaletteActions {
+  return {
+    navigateToHome: vi.fn(),
+    navigateToLibrary: vi.fn(),
+    navigateToDiscover: vi.fn(),
+    navigateToAddons: vi.fn(),
+    navigateToStats: vi.fn(),
+    navigateToHighlights: vi.fn(),
+    navigateToSettings: vi.fn(),
+    navigateToDictionary: vi.fn(),
+    navigateToStorage: vi.fn(),
+    navigateToSync: vi.fn(),
+    importBooks: vi.fn(),
+    syncNow: vi.fn(),
+    toggleTheme: vi.fn(),
+    toggleFullscreen: vi.fn(),
+    showShortcuts: vi.fn(),
+  };
+}
+
+describe('command palette registry — every row runs something real', () => {
+  it('every row points at a handler in the command manifest', () => {
+    for (const entry of COMMAND_REGISTRY) {
+      expect(
+        WIRED_COMMAND_KEYS.has(entry.handlerKey),
+        `command "${entry.id}" names handler "${entry.handlerKey}" which is not wired`,
+      ).toBe(true);
+    }
+  });
+
+  it('every manifest handler resolves to an action that runs exactly once', () => {
+    for (const entry of COMMAND_REGISTRY) {
+      const actions = makeCommandActions();
+      runCommand(entry, actions);
+      const called = Object.entries(actions)
+        .filter(([, fn]) => vi.mocked(fn).mock.calls.length > 0)
+        .map(([name]) => name);
+      expect(called, `command "${entry.id}" must run exactly one action`).toEqual([
+        COMMAND_ACTION_BY_HANDLER[entry.handlerKey],
+      ]);
+    }
+  });
+
+  it('every command group declares a label and is used by at least one row', () => {
+    for (const group of COMMAND_GROUPS) {
+      expect(group.labelKey).toBeTruthy();
+      expect(COMMAND_REGISTRY.some((entry) => entry.group === group.id)).toBe(true);
+    }
   });
 });

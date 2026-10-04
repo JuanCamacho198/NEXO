@@ -48,6 +48,12 @@
     size?: 'sm' | 'md' | 'lg' | 'xl';
     noCloseButton?: boolean;
     class?: string;
+    /**
+     * Take the dialog's initial focus. Forwarded to bits-ui's content, whose
+     * default is the first focusable element — the close button here. Call
+     * `event.preventDefault()` and focus what you want instead.
+     */
+    onOpenAutoFocus?: (event: Event) => void;
   };
 
   let {
@@ -58,6 +64,7 @@
     size = 'md',
     noCloseButton = false,
     class: className = '',
+    onOpenAutoFocus,
   }: Props = $props();
 
   // Track open dialogs so an unmount-while-open releases the body lock
@@ -95,6 +102,7 @@
       {#snippet child({ props })}
         <div {...props} transition:fade={{ duration: 200 }}>
           <Dialog.Content
+            {onOpenAutoFocus}
             class="flex max-h-[calc(100vh-2rem)] w-full {sizeClass} flex-col overflow-hidden rounded-xl border border-(--color-border) bg-(--color-elevated) shadow-xl {className}"
           >
             {#snippet child({ props })}

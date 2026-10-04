@@ -16,6 +16,7 @@
     getSafeProgressPercentage,
     type ShelfBook,
   } from '$lib/features/library/utils';
+  import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -64,14 +65,15 @@
     searchInput?.select();
   }
 
-  // Ctrl+K / Cmd+K focuses the shelf search. The chip advertises this shortcut,
-  // so it has to actually work. Scoped to the window while this screen is
-  // mounted; the reader never renders this component.
+  // `/` focuses the shelf search (the chip advertises it). Ctrl+K belongs to
+  // the global command palette, so the field no longer claims that combo. The
+  // guard keeps `/` from swallowing a slash typed into a field.
   function handleSearchShortcut(event: KeyboardEvent): void {
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'k' || event.key === 'K')) {
-      event.preventDefault();
-      focusSearch();
-    }
+    if (event.key !== '/') return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (hasEditableContext(event.target as Element | null)) return;
+    event.preventDefault();
+    focusSearch();
   }
 
   function handleDownloaded(): void {

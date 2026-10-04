@@ -6,18 +6,21 @@ import {
   type GlobalShortcutActions,
 } from '$lib/shared/shortcuts/globalShortcuts';
 import { helpState } from '$lib/shared/shortcuts/helpState.svelte';
+import { commandPaletteState } from '$lib/shared/shortcuts/commandPaletteState.svelte';
 
 function makeActions(): GlobalShortcutActions {
   return {
     toggleTheme: vi.fn(),
     toggleAppFullscreen: vi.fn(),
     toggleHelp: vi.fn(),
+    toggleCommandPalette: vi.fn(),
   };
 }
 
 describe('global shortcuts dispatcher', () => {
   beforeEach(() => {
     helpState.hide();
+    commandPaletteState.hide();
   });
 
   it('runs Ctrl+D to toggle the theme', () => {
@@ -85,6 +88,73 @@ describe('global shortcuts dispatcher', () => {
     });
     expect(second).toBe(true);
     expect(helpState.open).toBe(false);
+  });
+
+  it('opens the command palette with Ctrl+K and ⌘K', () => {
+    const actions = makeActions();
+    const handled = handleGlobalShortcut(
+      new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }),
+      {
+        actions,
+        platform: 'default',
+        dialogOpen: () => false,
+      },
+    );
+    expect(handled).toBe(true);
+    expect(actions.toggleCommandPalette).toHaveBeenCalledTimes(1);
+
+    const macActions = makeActions();
+    const macHandled = handleGlobalShortcut(
+      new KeyboardEvent('keydown', { key: 'k', metaKey: true }),
+      {
+        actions: macActions,
+        platform: 'mac',
+        dialogOpen: () => false,
+      },
+    );
+    expect(macHandled).toBe(true);
+    expect(macActions.toggleCommandPalette).toHaveBeenCalledTimes(1);
+  });
+
+  it('toggles the command palette closed again with Ctrl+K', () => {
+    const first = handleGlobalShortcut(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }), {
+      actions: defaultGlobalShortcutActions,
+      platform: 'default',
+      dialogOpen: () => false,
+    });
+    expect(first).toBe(true);
+    expect(commandPaletteState.open).toBe(true);
+
+    commandPaletteState.hide();
+    expect(commandPaletteState.open).toBe(false);
+  });
+
+  it('does not open the command palette on top of another dialog', () => {
+    const handled = handleGlobalShortcut(
+      new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }),
+      {
+        actions: defaultGlobalShortcutActions,
+        platform: 'default',
+        dialogOpen: () => true,
+      },
+    );
+    expect(handled).toBe(false);
+    expect(commandPaletteState.open).toBe(false);
+  });
+
+  it('never opens the command palette while the user types in a field', () => {
+    const element = document.createElement('input');
+    document.body.appendChild(element);
+    const uninstall = installGlobalShortcuts({
+      actions: defaultGlobalShortcutActions,
+      platform: 'default',
+    });
+
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+
+    expect(commandPaletteState.open).toBe(false);
+    uninstall();
+    element.remove();
   });
 
   it('never fires while the user types in an input', () => {

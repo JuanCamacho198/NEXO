@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LibraryShelfScreen from '$lib/features/library/components/LibraryShelfScreen.svelte';
@@ -94,5 +94,22 @@ describe('LibraryShelfScreen states (LIB-02)', () => {
 
     expect(await screen.findByText('Alpha')).toBeInTheDocument();
     expect(screen.queryByText('No results')).toBeNull();
+  });
+
+  it('focuses the search field on `/` but not while typing in another field', async () => {
+    render(LibraryShelfScreen, { props: { books: [book], isLoading: false, t } });
+
+    const search = screen.getByTestId('shelf-search');
+    await fireEvent.keyDown(window, { key: '/' });
+    expect(document.activeElement).toBe(search);
+
+    const external = document.createElement('input');
+    document.body.appendChild(external);
+    external.focus();
+    await fireEvent.keyDown(external, { key: '/' });
+
+    expect(document.activeElement).toBe(external);
+    expect(document.activeElement).not.toBe(search);
+    external.remove();
   });
 });

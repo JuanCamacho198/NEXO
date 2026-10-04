@@ -18,6 +18,7 @@ const dictionary: Record<string, string> = {
   'settings.shortcuts.showHelp': 'Show keyboard shortcuts',
   'settings.shortcuts.toggleDarkMode': 'Toggle dark mode',
   'settings.shortcuts.focusSearch': 'Focus the search field',
+  'settings.shortcuts.commandPalette': 'Command palette',
   'settings.shortcuts.closeDialog': 'Close open dialogs and menus',
   'settings.shortcuts.context.global': 'Anywhere in the app',
   'settings.shortcuts.context.reader': 'In the reader',
@@ -54,10 +55,13 @@ describe('ShortcutList', () => {
     expect(screen.getByText('Application')).toBeInTheDocument();
   });
 
-  it('describes Ctrl+K by what it does today and never promises a palette', () => {
+  it('lists the command palette and the `/` field search as separate rows', () => {
     render(ShortcutList, { t });
+    expect(screen.getByText('Command palette')).toBeInTheDocument();
     expect(screen.getByText('Focus the search field')).toBeInTheDocument();
-    expect(screen.queryByText('Command palette')).not.toBeInTheDocument();
+    expect(screen.getByText('/')).toBeInTheDocument();
+    // The field row must not still advertise the old Ctrl+K combo.
+    expect(screen.queryByText('Ctrl + K')).not.toBeInTheDocument();
   });
 
   it('shows the real reader fullscreen key and the app fullscreen key', () => {

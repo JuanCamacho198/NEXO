@@ -158,6 +158,14 @@ export const SHORTCUT_REGISTRY: readonly ShortcutEntry[] = [
     descriptionKey: 'settings.shortcuts.showHelp',
   },
   {
+    id: 'app-command-palette',
+    handlerKey: 'app.commandPalette',
+    group: 'app',
+    context: 'global',
+    combos: ctrl('k', 'K'),
+    descriptionKey: 'settings.shortcuts.commandPalette',
+  },
+  {
     id: 'app-toggle-dark',
     handlerKey: 'app.toggleTheme',
     group: 'app',
@@ -170,7 +178,9 @@ export const SHORTCUT_REGISTRY: readonly ShortcutEntry[] = [
     handlerKey: 'library.search',
     group: 'app',
     context: 'library',
-    combos: ctrl('k', 'K'),
+    // `/` searches, matching the keycap the library and highlights fields show.
+    // `shift` is left unconstrained: some layouts need Shift to produce `/`.
+    combos: deck({ keys: ['/'], label: '/', mod: false, alt: false }),
     descriptionKey: 'settings.shortcuts.focusSearch',
   },
   {

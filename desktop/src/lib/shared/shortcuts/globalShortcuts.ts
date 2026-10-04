@@ -1,5 +1,6 @@
 import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
 import { helpState } from './helpState.svelte';
+import { commandPaletteState } from './commandPaletteState.svelte';
 import { toggleAppFullscreen } from './fullscreen';
 import { toggleTheme } from '$lib/shared/stores/theme';
 import {
@@ -16,12 +17,14 @@ export type GlobalShortcutActions = {
   toggleTheme: () => void;
   toggleAppFullscreen: () => void;
   toggleHelp: () => void;
+  toggleCommandPalette: () => void;
 };
 
 export const defaultGlobalShortcutActions: GlobalShortcutActions = {
   toggleTheme: () => toggleTheme(),
   toggleAppFullscreen: () => void toggleAppFullscreen(),
   toggleHelp: () => helpState.toggle(),
+  toggleCommandPalette: () => commandPaletteState.toggle(),
 };
 
 /** Which global registry rows the dispatcher is allowed to run. */
@@ -29,6 +32,7 @@ const GLOBAL_ACTION_BY_HANDLER: Record<string, keyof GlobalShortcutActions> = {
   'app.toggleTheme': 'toggleTheme',
   'app.fullscreen': 'toggleAppFullscreen',
   'app.toggleHelp': 'toggleHelp',
+  'app.commandPalette': 'toggleCommandPalette',
 };
 
 export const GLOBAL_HANDLER_KEYS: readonly string[] = Object.keys(GLOBAL_ACTION_BY_HANDLER);
