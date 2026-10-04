@@ -14,7 +14,9 @@
 </script>
 
 {#if profileError}
-  <p class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
+  <p
+    class="mb-2 rounded border border-(--color-error)/40 bg-(--color-error-soft) px-2 py-1 text-xs text-(--color-primary)"
+  >
     {profileError}
   </p>
 {/if}
@@ -46,7 +48,7 @@
         <span
           class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-(--color-accent-soft) text-(--color-accent-start) text-2xs font-medium w-fit"
         >
-          Modo local
+          {t('settings.profile.localMode')}
         </span>
       </div>
     {/if}

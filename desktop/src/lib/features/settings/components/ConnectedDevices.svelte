@@ -50,7 +50,9 @@
 </script>
 
 {#if error}
-  <p class="mb-3 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
+  <p
+    class="mb-3 rounded border border-(--color-error)/40 bg-(--color-error-soft) px-2 py-1 text-xs text-(--color-primary)"
+  >
     {error}
   </p>
 {/if}
@@ -73,7 +75,7 @@
     {#if otherDevices.length > 0}
       <div class="flex items-center gap-2">
         <span class="h-px flex-1 bg-(--color-border)"></span>
-        <span class="shrink-0 text-(--text-3xs) text-(--color-text-muted) uppercase tracking-wider">
+        <span class="shrink-0 text-2xs text-(--color-text-muted) uppercase tracking-wider">
           {t('settings.connectedDevices.count', { count: otherDevices.length })}
         </span>
         <span class="h-px flex-1 bg-(--color-border)"></span>
@@ -221,13 +223,13 @@
         </span>
         {#if isCurrent}
           <span
-            class="shrink-0 rounded-md bg-(--color-accent-soft) px-1.5 py-0.5 text-(--text-3xs) font-medium text-(--color-accent-start)"
+            class="shrink-0 rounded-md bg-(--color-accent-soft) px-1.5 py-0.5 text-2xs font-medium text-(--color-accent-start)"
           >
             {t('settings.connectedDevices.thisDevice')}
           </span>
         {/if}
       </div>
-      <p class="m-0 mt-0.5 truncate text-(--text-3xs) text-(--color-text-muted)">
+      <p class="m-0 mt-0.5 truncate text-2xs text-(--color-text-muted)">
         {subtitle}
       </p>
     </div>
@@ -235,7 +237,8 @@
     <!-- Remove button -->
     {#if !isCurrent && onremove}
       <button
-        class="shrink-0 cursor-pointer border-none bg-transparent p-0 text-xs text-red-500 transition-colors duration-150 hover:text-red-600"
+        class="shrink-0 cursor-pointer border-none bg-transparent p-0 text-xs text-(--color-error) transition-opacity duration-150 hover:opacity-80"
+        aria-label={t('settings.connectedDevices.removeLabel', { name: device.name })}
         onclick={onremove}
       >
         {t('settings.connectedDevices.remove')}

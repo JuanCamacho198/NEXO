@@ -1,7 +1,6 @@
 <script lang="ts">
   import { GoogleLoginButton } from '$lib/features/library';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
-  import Check from 'lucide-svelte/icons/check';
   import { Button } from '$lib/shared/ui';
   import ProfileCard from './ProfileCard.svelte';
   import ConnectedDevices from './ConnectedDevices.svelte';
@@ -10,7 +9,7 @@
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ProfileSessionViewModel } from '../profileSession';
   import type { DeviceViewModel } from '$lib/services/devices';
-  import type { createSettingsProfile, DailyGoalIcon } from '../useSettingsProfile.svelte';
+  import type { createSettingsProfile } from '../useSettingsProfile.svelte';
   import type { createSettingsLocale } from '../useSettingsLocale.svelte';
   import { setTheme, theme } from '$lib/shared/stores/theme';
 
@@ -39,8 +38,6 @@
     dailyGoalCards?: {
       value: number;
       labelKey: MessageKey;
-      shortLabel: string;
-      icon: DailyGoalIcon;
       minutesLabel: string;
     }[];
     isSavingDailyGoal?: boolean;
@@ -101,11 +98,32 @@
   );
   const settingsError = $derived(localeState?.settingsError ?? legacyError ?? null);
 
+  // Daily goal — collapsed row + inline chips. The row always reports the
+  // persisted value; the chips highlight the pending selection.
+  const canPersistDailyGoal = $derived(profileState?.canPersistDailyGoal ?? true);
+  const savedDailyGoalMinutes = $derived(settingsState.dailyGoalMinutes);
+  let isGoalEditorOpen = $state(false);
+  let goalTriggerEl = $state<HTMLButtonElement | null>(null);
+
+  const saveStatusMessage = $derived(
+    isSavingDailyGoal
+      ? t('settings.saving')
+      : profileState?.dailyGoalSaveState === 'success'
+        ? t('settings.daily_goal_saved')
+        : profileState?.dailyGoalSaveState === 'error'
+          ? t('settings.daily_goal_save_error')
+          : '',
+  );
+  const isSaveStatusError = $derived(
+    !isSavingDailyGoal && profileState?.dailyGoalSaveState === 'error',
+  );
+
   function handleLocaleChange(value: string): void {
     if (localeState) void localeState.handleLocaleSelect(value);
     else legacyOnLocaleChange?.(value);
   }
   function handleSignOut(): void {
+    if (!confirm(t('settings.signOutConfirm'))) return;
     if (profileState) void profileState.handleSignOut();
     else legacyOnSignOut?.();
   }
@@ -120,6 +138,31 @@
   function handleSaveDailyGoal(): void {
     if (profileState) void profileState.handleSaveDailyGoal();
     else legacyOnSaveGoal?.();
+  }
+
+  function toggleGoalEditor(): void {
+    isGoalEditorOpen = !isGoalEditorOpen;
+  }
+
+  async function chooseGoal(value: number): Promise<void> {
+    if (!canPersistDailyGoal) return;
+    // Collapse first so focus is never lost with the removed chips.
+    isGoalEditorOpen = false;
+    goalTriggerEl?.focus();
+    if (profileState) {
+      await profileState.applyDailyGoal(value);
+    } else {
+      handleSelectDailyGoal(value);
+      handleSaveDailyGoal();
+    }
+  }
+
+  function handleGoalOptionsKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      isGoalEditorOpen = false;
+      goalTriggerEl?.focus();
+    }
   }
 </script>
 
@@ -150,13 +193,15 @@
       {/if}
       {#if settingsUnavailable}
         <p
-          class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900"
+          class="mb-2 rounded border border-(--color-warning)/40 bg-(--color-warning)/10 px-2 py-1 text-xs text-(--color-primary)"
         >
           {settingsUnavailable}
         </p>
       {/if}
       {#if settingsError}
-        <p class="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-900">
+        <p
+          class="mb-2 rounded border border-(--color-error)/40 bg-(--color-error-soft) px-2 py-1 text-xs text-(--color-primary)"
+        >
           {settingsError}
         </p>
       {/if}
@@ -219,70 +264,67 @@
   </section>
 
   <section
-    class="mx-auto flex w-full max-w-[896px] flex-col gap-10 rounded-[24px] border border-[#1c2744] bg-[#161f335c] p-12 backdrop-blur-[10.5px]"
-    aria-label={t('settings.daily_goal_title')}
+    class="rounded-xl border border-(--color-border) bg-(--color-surface)"
+    aria-label={t('settings.daily_goal_label')}
   >
-    <div class="flex flex-col items-center gap-2 text-center">
-      <h3 class="text-[32px] font-bold leading-none text-[#d8e2ff]">
-        {t('settings.daily_goal_title')}
+    <div class="flex items-center justify-between gap-3 p-4">
+      <h3 class="m-0 min-w-0 text-sm font-medium text-(--color-primary)">
+        {t('settings.daily_goal_label')}
+        <span class="font-normal text-(--color-text-muted)"> · {savedDailyGoalMinutes} min</span>
       </h3>
-      <p class="text-sm text-[#d8e2ff]/70">
-        {t('settings.daily_goal_description')}
-      </p>
-      <p class="text-xs text-[#d8e2ff]/60">
-        {t('stats.goalProgress', {
-          current: String(settingsState.dailyGoalMinutes),
-          goal: String(settingsState.dailyGoalMinutes),
-          percent: '100',
-        })} · {settingsState.dailyGoalMinutes} min
-      </p>
-    </div>
-
-    <div class="grid grid-cols-2 gap-6">
-      {#each dailyGoalCards as card}
-        {@const CardIcon = card.icon}
-        <button
-          type="button"
-          class="relative flex flex-col gap-3 rounded-xl border-2 p-8 text-left transition-all duration-200 {selectedDailyGoal ===
-          card.value
-            ? 'border-[#d8e2ff] bg-[#d8e2ff]/12'
-            : 'border-[#2a3655] bg-[#161f33]'}"
-          onclick={() => handleSelectDailyGoal(card.value)}
-          aria-pressed={selectedDailyGoal === card.value}
-          aria-label={`${card.shortLabel} ${card.minutesLabel}`}
-        >
-          {#if selectedDailyGoal === card.value}
-            <span
-              class="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#d8e2ff] text-[#161f33]"
-            >
-              <Check size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
-            </span>
-          {/if}
-          <span
-            class="flex h-10 w-10 items-center justify-center rounded-full bg-[#d8e2ff]/10 text-[#d8e2ff]"
-          >
-            <CardIcon size={20} strokeWidth={1.8} class="h-5 w-5" aria-hidden="true" />
-          </span>
-          <span class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-[#d8e2ff]">{t(card.labelKey)}</span>
-            <span class="text-xs text-[#d8e2ff]/60">{card.minutesLabel}</span>
-          </span>
-        </button>
-      {/each}
-    </div>
-
-    <div class="flex flex-col items-center gap-3">
       <button
         type="button"
-        class="rounded-full bg-[#d8e2ff] px-10 py-4 text-sm font-semibold text-[#161f33] transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-        onclick={handleSaveDailyGoal}
-        disabled={isSavingDailyGoal}
+        bind:this={goalTriggerEl}
+        class="shrink-0 cursor-pointer rounded-lg border border-(--color-border) px-3 py-1.5 text-sm text-(--color-primary) transition-colors duration-200 hover:border-(--color-primary) disabled:cursor-not-allowed disabled:opacity-50"
+        aria-expanded={isGoalEditorOpen}
+        aria-controls="daily-goal-options"
+        disabled={!canPersistDailyGoal}
+        onclick={toggleGoalEditor}
       >
-        {isSavingDailyGoal ? t('settings.saving') : t('settings.daily_goal_set')}
+        {isGoalEditorOpen ? t('settings.daily_goal_close') : t('settings.daily_goal_change')}
       </button>
-      <p class="text-xs text-[#d8e2ff]/50">
-        {settingsState.dailyGoalMinutes} min · {t('settings.daily_goal_description')}
-      </p>
     </div>
+
+    {#if !canPersistDailyGoal}
+      <p class="m-0 px-4 pb-4 text-xs text-(--color-text-muted)">
+        {t('settings.daily_goal_sign_in_required')}
+      </p>
+    {/if}
+
+    {#if isGoalEditorOpen}
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+      <div
+        id="daily-goal-options"
+        class="flex flex-wrap gap-2 border-t border-(--color-border) p-4"
+        role="group"
+        aria-label={t('settings.daily_goal_label')}
+        onkeydown={handleGoalOptionsKeydown}
+      >
+        {#each dailyGoalCards as card}
+          <button
+            type="button"
+            class="cursor-pointer rounded-full border px-3 py-1.5 text-sm transition-all duration-200 {selectedDailyGoal ===
+            card.value
+              ? 'border-(--color-primary) bg-(--color-accent-soft) text-(--color-primary)'
+              : 'border-(--color-border) text-(--color-text-muted) hover:text-(--color-primary)'}"
+            aria-pressed={selectedDailyGoal === card.value}
+            onclick={() => void chooseGoal(card.value)}
+          >
+            {t(card.labelKey)}
+            <span class="text-(--color-text-muted)"> · {card.minutesLabel}</span>
+          </button>
+        {/each}
+      </div>
+    {/if}
+
+    <p
+      role="status"
+      aria-live="polite"
+      class="m-0 text-xs {saveStatusMessage ? 'px-4 pb-4' : 'sr-only'}"
+      class:text-(--color-error)={isSaveStatusError}
+      class:text-(--color-text-muted)={!isSaveStatusError}
+    >
+      {saveStatusMessage}
+    </p>
   </section>
 </div>

@@ -18,6 +18,8 @@ import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
 
 export type DailyGoalIcon = typeof LucideIcon;
 
+export type DailyGoalSaveState = 'idle' | 'success' | 'error';
+
 export type ProfileDeps = {
   authState?: typeof defaultAuthState;
   createDevicesState?: typeof defaultCreateDevicesState;
@@ -37,13 +39,15 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
   dailyGoalCards: {
     value: DailyGoalOption;
     labelKey: MessageKey;
-    shortLabel: string;
     icon: DailyGoalIcon;
     minutesLabel: string;
   }[];
   isDirty: boolean;
   isSaving: boolean;
+  canPersistDailyGoal: boolean;
+  dailyGoalSaveState: DailyGoalSaveState;
   handleSaveDailyGoal: () => Promise<void>;
+  applyDailyGoal: (value: number) => Promise<void>;
   handleSignOut: () => Promise<void>;
   loadProfileData: () => Promise<void>;
   handleSelectDailyGoal: (value: number) => void;
@@ -55,8 +59,8 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
   const createDevices = deps.createDevicesState ?? defaultCreateDevicesState;
   const app = deps.appState ?? defaultAppState;
   const sState = deps.settingsState ?? defaultSettingsState;
+  const auth = deps.authState ?? defaultAuthState;
   const t = deps.t ?? ((k: MessageKey) => k as string);
-  void deps.authState;
 
   let isProfileLoading = $state(false);
   let profileError = $state<string | null>(null);
@@ -67,12 +71,12 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
   );
   let isSavingDailyGoal = $state(false);
   let isSigningOut = $state(false);
+  let dailyGoalSaveState = $state<DailyGoalSaveState>('idle');
 
   const dailyGoalCards = $derived<
     {
       value: DailyGoalOption;
       labelKey: MessageKey;
-      shortLabel: string;
       icon: DailyGoalIcon;
       minutesLabel: string;
     }[]
@@ -80,28 +84,24 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
     {
       value: 10,
       labelKey: 'settings.daily_goal_relaxed',
-      shortLabel: 'Relajado',
       icon: Hand,
       minutesLabel: '10 min',
     },
     {
       value: 20,
       labelKey: 'settings.daily_goal_regular',
-      shortLabel: 'Regular',
       icon: Book,
       minutesLabel: '20 min',
     },
     {
       value: 30,
       labelKey: 'settings.daily_goal_serious',
-      shortLabel: 'Serio',
       icon: ChartColumn,
       minutesLabel: '30 min',
     },
     {
       value: 45,
       labelKey: 'settings.daily_goal_intense',
-      shortLabel: 'Intenso',
       icon: Flame,
       minutesLabel: '45 min',
     },
@@ -109,6 +109,16 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
 
   const isDirty = $derived(selectedDailyGoal !== (sState.dailyGoalMinutes as number));
   const isSaving = $derived(isSavingDailyGoal || isSigningOut || isProfileLoading);
+  /**
+   * Whether the daily goal can actually reach persistence. The daily goal is
+   * stored per authenticated user (`reading.dailyGoalMinutes_<userId>`); the
+   * backend's `saveDailyGoalMinutes` is a no-op without a user id, and local
+   * users (`setLocalUser`) have `userId === null`. Without this guard the UI
+   * would show a "Saving…" state that never persists.
+   */
+  const canPersistDailyGoal = $derived(
+    typeof auth.userId === 'string' && auth.userId.trim().length > 0,
+  );
 
   async function handleSaveDailyGoal(): Promise<void> {
     if (isSavingDailyGoal) return;
@@ -122,6 +132,26 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
       throw error;
     } finally {
       isSavingDailyGoal = false;
+    }
+  }
+
+  /**
+   * Single entry point for the redesigned daily-goal row: select a value,
+   * auto-save it, and expose the outcome through `dailyGoalSaveState`. When the
+   * user cannot persist (local users and sessions without a user id) the state
+   * is `error` instead of a silent no-op, so the UI never claims a save.
+   */
+  async function applyDailyGoal(value: number): Promise<void> {
+    selectedDailyGoal = value;
+    if (!canPersistDailyGoal) {
+      dailyGoalSaveState = 'error';
+      return;
+    }
+    try {
+      await handleSaveDailyGoal();
+      dailyGoalSaveState = 'success';
+    } catch {
+      dailyGoalSaveState = 'error';
     }
   }
 
@@ -225,7 +255,14 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
     get isSaving() {
       return isSaving;
     },
+    get canPersistDailyGoal() {
+      return canPersistDailyGoal;
+    },
+    get dailyGoalSaveState() {
+      return dailyGoalSaveState;
+    },
     handleSaveDailyGoal,
+    applyDailyGoal,
     handleSignOut,
     loadProfileData,
     handleSelectDailyGoal,

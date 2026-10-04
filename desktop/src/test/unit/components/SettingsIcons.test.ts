@@ -51,7 +51,7 @@ describe('settings icon migration', () => {
     }
   });
 
-  it('renders the component-valued daily-goal cards as the producer glyphs', () => {
+  it('renders the daily goal as a collapsed row instead of the removed icon-card grid', () => {
     const { container } = render(SettingsCuentaTab, {
       t,
       profile: { name: 'Reader', email: 'reader@example.com', avatarUrl: null, isSignedIn: false },
@@ -59,17 +59,11 @@ describe('settings icon migration', () => {
       selectedDailyGoal: 20,
     });
 
-    const cardIcons = Array.from(container.querySelectorAll('svg.h-5.w-5'));
-    expect(cardIcons.map(glyphOf)).toEqual([
-      'lucide-hand',
-      'lucide-book',
-      'lucide-chart-column',
-      'lucide-flame',
-    ]);
-    for (const icon of cardIcons) {
-      expectShimContract(icon);
-      expect(icon.getAttribute('width')).toBe('20');
-    }
-    expect(container.querySelectorAll('svg.lucide-check')).toHaveLength(1);
+    // The 4-card producer glyph grid and its check badge were removed by the
+    // daily-goal redesign (collapsed row + inline chips).
+    expect(container.querySelectorAll('svg.h-5.w-5')).toHaveLength(0);
+    expect(container.querySelectorAll('svg.lucide-check')).toHaveLength(0);
+    // The collapsed row still exposes its disclosure trigger.
+    expect(screen.getByRole('button', { name: 'settings.daily_goal_change' })).toBeInTheDocument();
   });
 });

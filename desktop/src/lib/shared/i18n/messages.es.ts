@@ -173,6 +173,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.profile.nameLabel': 'Nombre',
   'settings.profile.emailLabel': 'Correo',
   'settings.profile.loading': 'Cargando...',
+  'settings.profile.localMode': 'Modo local',
   'settings.profile.signInPrompt':
     'Inicia sesion con Google desde la pestana Cuenta para personalizar este perfil.',
   'settings.shortcuts.title': 'Atajos de teclado',
@@ -194,6 +195,13 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.daily_goal_serious': 'Serio',
   'settings.daily_goal_intense': 'Intenso',
   'settings.daily_goal_set': 'Establecer meta →',
+  'settings.daily_goal_label': 'Meta diaria',
+  'settings.daily_goal_change': 'Cambiar',
+  'settings.daily_goal_close': 'Cerrar',
+  'settings.daily_goal_saved': 'Meta diaria guardada',
+  'settings.daily_goal_save_error': 'No se pudo guardar tu meta. Inténtalo de nuevo.',
+  'settings.daily_goal_sign_in_required': 'Inicia sesión para guardar tu meta',
+  'settings.signOutConfirm': '¿Cerrar sesión de tu cuenta en este dispositivo?',
   'stats.goalProgress': 'Meta diaria {{current}}/{{goal}} min {{percent}}%',
   'stats.goalProgressHint': '{{percent}}% de tu meta diaria',
   onboarding_goal_title: 'Establece tu meta diaria',
@@ -994,6 +1002,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.connectedDevices.remove': 'Cerrar sesión',
   'settings.connectedDevices.removeConfirm':
     '¿Cerrar sesión en {{name}}? Se eliminará de tus dispositivos.',
+  'settings.connectedDevices.removeLabel': 'Cerrar sesión en {{name}}',
   'settings.connectedDevices.error':
     'No se pudieron cargar los dispositivos. Verificá tu conexión.',
   'settings.connectedDevices.count': '{{count}} dispositivos conectados',

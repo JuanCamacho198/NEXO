@@ -64,7 +64,7 @@
       tabindex={activeTab === tab.id ? 0 : -1}
       class="flex-1 px-2 py-3 border-none cursor-pointer text-2sm text-(--color-text-muted,var(--color-secondary)) border-b-2 border-transparent hover:text-(--color-primary) transition-all duration-200 flex items-center justify-center gap-1.5"
       class:bg-(--color-accent-soft)={activeTab === tab.id}
-      class:text-(--color-accent-start)={activeTab === tab.id}
+      class:text-(--color-primary)={activeTab === tab.id}
       class:border-(--color-accent-start)={activeTab === tab.id}
       class:font-semibold={activeTab === tab.id}
       onclick={() => onTabChange(tab.id)}

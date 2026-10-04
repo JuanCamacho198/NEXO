@@ -36,6 +36,58 @@ describe('useSettingsProfile', () => {
     expect(saveDailyGoalMinutes).toHaveBeenCalledWith(45);
   });
 
+  it('reports the daily goal as non-persistable without a user id', () => {
+    const p = createSettingsProfile({ authState: { userId: null } as never, t: (k) => k as never });
+    expect(p.canPersistDailyGoal).toBe(false);
+  });
+
+  it('applyDailyGoal does not save and reports an error for a local user', async () => {
+    const saveDailyGoalMinutes = vi.fn().mockResolvedValue(undefined);
+    const appState = { saveDailyGoalMinutes } as never;
+    const settingsState = { dailyGoalMinutes: 20 } as never;
+    const p = createSettingsProfile({
+      appState,
+      settingsState,
+      authState: { userId: null } as never,
+      t: (k) => k as never,
+    });
+    await p.applyDailyGoal(30);
+    expect(saveDailyGoalMinutes).not.toHaveBeenCalled();
+    expect(p.dailyGoalSaveState).toBe('error');
+  });
+
+  it('applyDailyGoal persists and reports success for a signed-in user', async () => {
+    const saveDailyGoalMinutes = vi.fn().mockResolvedValue(undefined);
+    const appState = { saveDailyGoalMinutes } as never;
+    const settingsState = { dailyGoalMinutes: 20 } as never;
+    const p = createSettingsProfile({
+      appState,
+      settingsState,
+      authState: { userId: 'user-1' } as never,
+      t: (k) => k as never,
+    });
+    expect(p.canPersistDailyGoal).toBe(true);
+    await p.applyDailyGoal(45);
+    expect(saveDailyGoalMinutes).toHaveBeenCalledWith(45);
+    expect(p.selectedDailyGoal).toBe(45);
+    expect(p.dailyGoalSaveState).toBe('success');
+  });
+
+  it('applyDailyGoal reports an error when persistence throws', async () => {
+    const saveDailyGoalMinutes = vi.fn().mockRejectedValue(new Error('boom'));
+    const appState = { saveDailyGoalMinutes } as never;
+    const settingsState = { dailyGoalMinutes: 20 } as never;
+    const p = createSettingsProfile({
+      appState,
+      settingsState,
+      authState: { userId: 'user-1' } as never,
+      t: (k) => k as never,
+    });
+    await p.applyDailyGoal(30);
+    expect(saveDailyGoalMinutes).toHaveBeenCalledWith(30);
+    expect(p.dailyGoalSaveState).toBe('error');
+  });
+
   it('handleSignOut calls appState.signOutAndReturnToWelcome', async () => {
     const signOutAndReturnToWelcome = vi.fn().mockResolvedValue(undefined);
     const appState = { signOutAndReturnToWelcome } as never;
