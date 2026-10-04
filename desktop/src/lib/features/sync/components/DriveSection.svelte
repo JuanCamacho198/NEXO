@@ -44,7 +44,9 @@
 <Panel title={t('settings.sync.drive.title')} subtitle={t('settings.sync.drive.description')}>
   {#if isConnecting}
     <div class="flex items-center gap-3">
-      <span class="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-zinc-400" aria-hidden="true"
+      <span
+        class="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-(--color-text-muted)"
+        aria-hidden="true"
       ></span>
       <span class="flex-1 text-xs text-(--color-primary)"
         >{t('settings.sync.drive.connecting')}</span
@@ -52,8 +54,8 @@
     </div>
   {:else if showError}
     <div class="flex items-center gap-3">
-      <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" aria-hidden="true"></span>
-      <span class="flex-1 text-xs text-red-500">{lastError}</span>
+      <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-(--color-error)" aria-hidden="true"></span>
+      <span class="flex-1 text-xs text-(--color-error)">{lastError}</span>
       <button
         type="button"
         class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-(--color-primary) bg-(--color-primary) cursor-pointer transition-all duration-200 text-xs font-medium text-(--color-background) hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -65,7 +67,9 @@
   {:else}
     <div class="flex items-center gap-3">
       <span
-        class="h-2.5 w-2.5 shrink-0 rounded-full {isAuthorized ? 'bg-emerald-500' : 'bg-zinc-400'}"
+        class="h-2.5 w-2.5 shrink-0 rounded-full {isAuthorized
+          ? 'bg-(--color-success)'
+          : 'bg-(--color-text-muted)'}"
         aria-hidden="true"
       ></span>
       <span class="flex-1 text-xs text-(--color-primary)">

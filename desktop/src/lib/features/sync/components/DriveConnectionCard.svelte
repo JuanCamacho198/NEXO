@@ -34,7 +34,9 @@
 <Panel title={t('settings.sync.drive.title')} subtitle={t('settings.sync.drive.description')}>
   <div class="flex items-center gap-3">
     <span
-      class="h-2.5 w-2.5 shrink-0 rounded-full {isAuthorized ? 'bg-emerald-500' : 'bg-zinc-400'}"
+      class="h-2.5 w-2.5 shrink-0 rounded-full {isAuthorized
+        ? 'bg-(--color-success)'
+        : 'bg-(--color-text-muted)'}"
       aria-hidden="true"
     ></span>
     <span class="flex-1 text-xs text-(--color-primary)">
@@ -65,6 +67,6 @@
     {/if}
   </div>
   {#if driveState.lastError}
-    <p class="mt-2 text-xs text-red-500">{driveState.lastError}</p>
+    <p class="mt-2 text-xs text-(--color-error)">{driveState.lastError}</p>
   {/if}
 </Panel>

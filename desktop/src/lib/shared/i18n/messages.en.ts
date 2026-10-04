@@ -286,7 +286,7 @@ export const messagesEn = {
   // Sync Tab — Drive connection card (login-drive-separation)
   'settings.sync.drive.title': 'Google Drive',
   'settings.sync.drive.description':
-    'Connect Google Drive for cold backup and cross-device downloads. Sign-in stays separate — disconnecting Drive never signs you out.',
+    'Connect Google Drive for cloud backup and cross-device downloads. Sign-in stays separate — disconnecting Drive never signs you out.',
   'settings.sync.drive.connected': 'Connected',
   'settings.sync.drive.notConnected': 'Not connected',
   'settings.sync.drive.connect': 'Connect Drive',
@@ -294,6 +294,34 @@ export const messagesEn = {
   'settings.sync.drive.connecting': 'Connecting...',
   'settings.sync.drive.connectFailed': 'Drive connect failed',
   'settings.sync.drive.disconnected': 'Drive disconnected',
+
+  // Sync surface simplification — one human status line + advanced disclosure.
+  'sync.status.syncing': 'Syncing…',
+  'sync.status.failed': "Couldn't sync",
+  'sync.status.pending': 'Something is waiting to upload',
+  'sync.status.upToDate': 'All up to date',
+  'sync.status.upToDateAt': 'All up to date · {{when}}',
+  'sync.relative.now': 'just now',
+  'sync.relative.minutes': '{{count}} min ago',
+  'sync.relative.hours': '{{count}}h ago',
+  'sync.relative.days': '{{count}}d ago',
+  'sync.advanced.title': 'Advanced',
+  'sync.scope.title': 'What gets synced',
+  'sync.scope.hint': 'Disabled scopes stay queued until you turn them back on.',
+  'sync.scope.group.annotations': 'Highlights & notes',
+  'sync.scope.progress': 'Reading progress',
+  'sync.scope.bookmarks': 'Bookmarks',
+  'sync.scope.highlights': 'Highlights',
+  'sync.scope.sessions': 'Reading sessions',
+  'sync.scope.catalog': 'Catalog',
+  'sync.scope.dictionary': 'Dictionary',
+  'sync.raw.title': 'Technical details',
+  'sync.raw.lastSync': 'Last sync',
+  'sync.raw.pending': 'Items waiting',
+  'sync.raw.realtime': 'Realtime',
+  'sync.raw.lastError': 'Last error',
+  'sync.raw.never': 'Never',
+  'sync.raw.none': 'None',
 
   // Data Tab
   'settings.data.description': 'Manage storage and configuration.',
