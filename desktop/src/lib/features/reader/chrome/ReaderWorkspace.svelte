@@ -29,6 +29,7 @@
   import { createSpineResolver } from './useSpineResolver.svelte';
   import { createHighlights } from './useHighlights.svelte';
   import { createImmersiveChrome } from './useImmersiveChrome.svelte';
+  import { createReaderShortcuts } from './useReaderShortcuts.svelte';
   import { createReaderZoom } from './useReaderZoom.svelte';
   import { createHighlightMenu } from '../highlight/useHighlightMenu.svelte';
   import { createBookmarksPanel } from './useBookmarksPanel.svelte';
@@ -250,6 +251,9 @@
   );
 
   const chrome = createImmersiveChrome({ getPanelOpen: () => panelOpen });
+  // Ctrl+F / ⌘F opens the in-book search. Kept separate from the chrome hook
+  // because it is reader-scoped and reads its binding from the shared registry.
+  const readerShortcuts = createReaderShortcuts({ onToggleSearch: () => toggleSearch() });
   let isFullscreen = $derived(chrome.isFullscreen);
   let headerVisible = $derived(chrome.headerVisible);
   let edgeNavVisible = $derived(chrome.edgeNavVisible);
@@ -280,6 +284,7 @@
     });
     window.addEventListener('keydown', chrome.handleGlobalKeydown as EventListener);
     window.addEventListener('keydown', zoom.handleGlobalKeydown as EventListener);
+    window.addEventListener('keydown', readerShortcuts.handleGlobalKeydown as EventListener);
     return () => {
       root.removeEventListener('mousemove', chrome.handleWorkspaceMouseMove);
       window.removeEventListener(
@@ -289,6 +294,7 @@
       );
       window.removeEventListener('keydown', chrome.handleGlobalKeydown as EventListener);
       window.removeEventListener('keydown', zoom.handleGlobalKeydown as EventListener);
+      window.removeEventListener('keydown', readerShortcuts.handleGlobalKeydown as EventListener);
       chrome.cleanup();
       zoom.cleanup();
     };

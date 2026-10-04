@@ -14,6 +14,7 @@
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import { titlebarState } from '$lib/stores/titlebarState.svelte';
   import { isCustomTitlebarPlatform } from '$lib/shared/utils/platform';
+  import { installGlobalShortcuts, ShortcutHelpModal } from '$lib/shared/shortcuts';
   import { type as osType } from '@tauri-apps/plugin-os';
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
 
@@ -47,10 +48,12 @@
 
     window.addEventListener('error', handleError);
     window.addEventListener('unhandledrejection', handleError);
+    const uninstallShortcuts = installGlobalShortcuts();
 
     return () => {
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleError);
+      uninstallShortcuts();
     };
   });
 
@@ -91,5 +94,6 @@
     <SyncAuthBanner />
     <DebugToggle />
     <DebugPanel />
+    <ShortcutHelpModal t={appState.t} />
   </main>
 </div>

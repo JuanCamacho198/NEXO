@@ -181,6 +181,11 @@
   /* Borders */
   --color-border: rgba(148, 173, 206, 0.18);
   --color-border-strong: rgba(148, 173, 206, 0.3);
+  /* Keycap relief (Atajos de teclado). A real cap edge is DARKER than the cap
+     face in both themes. Using --color-background made it invisible in light
+     mode, where the page sits nearly as light as the white cap face. */
+  --color-keycap-edge: #050b14;
+  --color-keycap-highlight: rgba(255, 255, 255, 0.07);
   --color-border-deep: #17263a;
 
   /* Diccionario screen — pen `nuevo diseño.pen` `$--np-*` variables that have no
@@ -318,6 +323,8 @@
   /* Borders */
   --color-border: rgba(30, 58, 95, 0.15);
   --color-border-strong: rgba(30, 58, 95, 0.28);
+  --color-keycap-edge: #c2cbd9;
+  --color-keycap-highlight: rgba(255, 255, 255, 0.9);
   --color-border-deep: #b0c0d4;
 
   /* Diccionario screen — LIGHT values of the same pen `$--np-*` variables

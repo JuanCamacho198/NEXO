@@ -140,6 +140,19 @@
     }
   });
 
+  // Overlay mode is a dialog-like surface: Escape closes it. Page mode is a
+  // route and keeps its own navigation, so it is not affected.
+  $effect(() => {
+    if (!isOpen || mode !== 'overlay') return;
+    const handleEscape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      closePanel();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  });
+
   $effect(() => {
     const handleBeforeUnload = (): void => profile.stopHeartbeat();
     window.addEventListener('beforeunload', handleBeforeUnload);
