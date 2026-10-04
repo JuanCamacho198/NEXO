@@ -32,7 +32,6 @@ export type UpdateCheckState =
       installedVersion: string;
       feedVersion: string;
       notes: string;
-      assetUrl: string | null;
     }
   | { status: 'error'; kind: UpdateErrorKind };
 
@@ -171,11 +170,6 @@ export const defaultUpdateCheckDeps = (feedUrl: string): UpdateCheckDeps => ({
   nowEpochMs: () => Date.now(),
 });
 
-const firstAssetUrl = (feed: DesktopUpdateFeed): string | null => {
-  const first = Object.values(feed.platforms)[0];
-  return first ? first.url : null;
-};
-
 export async function checkForUpdates(
   deps: UpdateCheckDeps,
   options: { manual: boolean },
@@ -219,7 +213,6 @@ export async function checkForUpdates(
     installedVersion,
     feedVersion: feed.version,
     notes: feed.notes,
-    assetUrl: firstAssetUrl(feed),
   };
 }
 

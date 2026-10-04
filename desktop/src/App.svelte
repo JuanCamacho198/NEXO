@@ -17,6 +17,11 @@
   import { installGlobalShortcuts, ShortcutHelpModal, CommandPalette } from '$lib/shared/shortcuts';
   import { type as osType } from '@tauri-apps/plugin-os';
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
+  import {
+    defaultUpdateCheckDeps,
+    resolveUpdateFeedUrl,
+    runStartupUpdateCheck,
+  } from '$lib/features/settings/update/updateChecker';
 
   onMount(() => {
     try {
@@ -59,6 +64,22 @@
 
   $effect(() => {
     debugState.currentRoute = navigationState.route;
+  });
+
+  // Startup update check: runs once per launch, whether or not the user ever
+  // opens Settings → About. A verified newer version surfaces a toast so the
+  // notice is actually delivered; the actionable update flow stays in About.
+  // The module guard inside runStartupUpdateCheck keeps it to one check.
+  onMount(() => {
+    const settleTimer = setTimeout(() => {
+      void (async () => {
+        const state = await runStartupUpdateCheck(defaultUpdateCheckDeps(resolveUpdateFeedUrl()));
+        if (state?.status === 'available') {
+          pushToast('info', appState.t('update.availableToast', { version: state.feedVersion }));
+        }
+      })();
+    }, 1500);
+    return () => clearTimeout(settleTimer);
   });
 
   // Track viewport for debug panel

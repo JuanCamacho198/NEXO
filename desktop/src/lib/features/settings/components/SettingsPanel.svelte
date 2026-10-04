@@ -277,7 +277,7 @@
           aria-labelledby="tab-acerca"
           class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 [&>*]:shrink-0"
         >
-          <SettingsAboutTab {t} />
+          <SettingsAboutTab {t} {locale} />
         </div>
       {/if}
     </form>

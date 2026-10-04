@@ -70,6 +70,7 @@ const baseDictionaryEntries: Array<[string, string]> = [
   ['settings.data.clearing', 'Clearing...'],
   ['settings.data.cleared', 'Cache cleared'],
   ['settings.about', 'About Nexo'],
+  ['settings.about.appName', 'Nexo'],
   ['errors.commandFailure', 'Command failed'],
   ['settings.unknownBook', 'Unknown'],
   ['settings.color.yellow', 'Yellow'],
