@@ -22,7 +22,6 @@ export function createStorageState() {
   let isLoading = $state(false);
   let error = $state<string | null>(null);
   let isClearing = $state(false);
-  let clearProgress = $state<number | null>(null);
   let driveUsage = $state<DriveUsage | null>(null);
   let isLoadingDriveUsage = $state(false);
 
@@ -55,11 +54,9 @@ export function createStorageState() {
     deep = false,
   ): Promise<{ freedBytes: number }> {
     isClearing = true;
-    clearProgress = 0;
     error = null;
     try {
       const res = await invoke<{ freedBytes: number }>('clearCache', { kind, deep });
-      clearProgress = 100;
       await loadStats();
       return res;
     } catch (e) {
@@ -68,7 +65,6 @@ export function createStorageState() {
       throw e;
     } finally {
       isClearing = false;
-      setTimeout(() => (clearProgress = null), 800);
     }
   }
 
@@ -109,9 +105,6 @@ export function createStorageState() {
     },
     get isClearing() {
       return isClearing;
-    },
-    get clearProgress() {
-      return clearProgress;
     },
     get driveUsage() {
       return driveUsage;

@@ -171,7 +171,7 @@ export function createSettingsData(deps: DataDeps = {}): {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes('storage.permission_denied')) {
-        pushToast('error', 'storage.permission_denied');
+        pushToast('error', t('storage.permissionDenied'));
       } else {
         pushToast('error', msg);
       }

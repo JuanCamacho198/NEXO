@@ -68,7 +68,7 @@ describe('useSettingsData', () => {
     expect(pushToast).toHaveBeenCalledWith('success', expect.any(String));
   });
 
-  it('handleClearCache toasts permission_denied on that error', async () => {
+  it('handleClearCache toasts the translated permission-denied message on that error', async () => {
     const clearCache = vi.fn().mockRejectedValue(new Error('storage.permission_denied'));
     const pushToast = vi.fn();
     const d = createSettingsData({
@@ -76,7 +76,9 @@ describe('useSettingsData', () => {
       pushToast: pushToast as never,
     });
     await d.handleClearCache();
-    expect(pushToast).toHaveBeenCalledWith('error', 'storage.permission_denied');
+    // BUG-2: the raw backend code used to be pushed straight to the toast, so
+    // the user saw the untranslated literal. It is resolved through `t` now.
+    expect(pushToast).toHaveBeenCalledWith('error', 'storage.permissionDenied');
   });
 
   it('handleExportColdBackup calls Drive service when userId present and Drive authorized', async () => {

@@ -127,6 +127,28 @@ function createInternals(): Record<string, unknown> {
     avgProgressPercentage: 34,
   };
 
+  // Storage: the Almacenamiento screen renders nothing at all when these
+  // answer null (unknown commands fall through to null below), so seed them to
+  // keep the screen reviewable in the browser. In-memory only, like the rest.
+  const perBookSizes = libraryRows.map((book, index) => ({
+    id: book.id,
+    title: book.title,
+    bytes: 180_000_000 - index * 40_000_000,
+  }));
+  const coversBytes = 2_400_000;
+  let tempBytes = 86_000_000;
+  const readStorageStats = (): Record<string, number> => {
+    const dbBytes = perBookSizes.reduce((sum, row) => sum + row.bytes, 0);
+    return {
+      totalBytes: dbBytes + coversBytes + tempBytes,
+      dbBytes,
+      coversBytes,
+      tempBytes,
+      cacheBytes: 12_500_000,
+      coverBytes: coversBytes,
+    };
+  };
+
   const channelResults: Record<string, unknown> = {
     listBooks: sourceRows,
     listLibraryBooks: libraryRows,
@@ -213,6 +235,23 @@ function createInternals(): Record<string, unknown> {
         }
         if (cmd === 'plugin:fs|read_dir') return [];
         if (cmd === 'plugin:fs|mkdir' || cmd === 'plugin:fs|copy_file') return null;
+        return null;
+      }
+
+      // Storage commands mutate in-memory state, so they run before the
+      // read-only channel lookup (which cannot express clearCache's effect).
+      if (cmd === 'getStorageStats') return readStorageStats();
+      if (cmd === 'getPerBookSizes') return perBookSizes;
+      if (cmd === 'cleanupOrphans') return { removed: 0 };
+      if (cmd === 'clearCache') {
+        const freedBytes = tempBytes;
+        tempBytes = 0;
+        return { freedBytes };
+      }
+      if (cmd === 'deleteBookData') {
+        const bookId = (args as unknown as { bookId?: string } | undefined)?.bookId;
+        const index = perBookSizes.findIndex((row) => row.id === bookId);
+        if (index >= 0) perBookSizes.splice(index, 1);
         return null;
       }
 
