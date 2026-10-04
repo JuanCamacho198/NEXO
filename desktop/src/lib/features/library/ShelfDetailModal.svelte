@@ -383,6 +383,7 @@
         ><Button
           size="sm"
           onclick={() => {
+            open = false;
             void onStartReading(shelfDetail);
           }}>{t('app.read' as MessageKey)}</Button
         >{/if}

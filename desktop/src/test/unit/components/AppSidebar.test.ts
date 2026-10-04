@@ -207,25 +207,38 @@ describe('AppSidebar', () => {
     expect(container.querySelector('aside')).toBeInTheDocument();
   });
 
-  it('describes the focused nav trigger with the portalled tooltip content (D3)', async () => {
+  it('does not duplicate the visible destination label with a tooltip when expanded (D5)', async () => {
     render(AppSidebar, defaultProps);
     const trigger = findNavButton('Estantería');
     expect(trigger).not.toBeNull();
 
-    // The tooltip content is portalled to `document.body`, so the jsdom
-    // read goes through the a11y tree rather than the render target.
+    trigger!.focus();
+    // The label is already on screen, so the portalled tooltip never mounts.
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
+    expect(trigger!.getAttribute('aria-label')).toBe('Estantería');
+  });
+
+  it('describes the collapsed nav trigger with the portalled tooltip content (D5)', async () => {
+    const user = userEvent.setup();
+    render(AppSidebar, defaultProps);
+
+    await user.click(screen.getByLabelText('Colapsar sidebar'));
+
+    const trigger = screen.getByRole('button', { name: 'Estantería' });
     expect(screen.queryByRole('tooltip')).toBeNull();
 
-    trigger!.focus();
+    // The tooltip content is portalled to `document.body`, so the jsdom
+    // read goes through the a11y tree rather than the render target.
+    trigger.focus();
     const tooltip = await waitFor(() => screen.getByRole('tooltip'));
     expect(tooltip.textContent?.trim()).toBe('Estantería');
-    expect(trigger!.getAttribute('aria-describedby')).toBe(tooltip.id);
+    expect(trigger.getAttribute('aria-describedby')).toBe(tooltip.id);
     // The trigger is still the nav button itself: `Tooltip.Root` and
     // `Tooltip.Provider` render no wrapper element, which is what keeps
     // `aside nav > button` (the visual gate's locator) valid.
-    expect(trigger!.tagName).toBe('BUTTON');
+    expect(trigger.tagName).toBe('BUTTON');
 
-    trigger!.blur();
+    trigger.blur();
     // Pointer/focus close is asynchronous and the content unmounts.
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
   });

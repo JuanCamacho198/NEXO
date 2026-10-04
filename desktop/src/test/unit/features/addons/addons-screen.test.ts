@@ -251,7 +251,12 @@ describe('addons installed list (presentational)', () => {
     expect(container.textContent).toContain(INSTALL_URL);
     await user.click(screen.getByRole('button', { name: 'settings.addons.disable' }));
     expect(onToggle).toHaveBeenCalledWith('addon-1', false);
+    // ADD-01 B: uninstall is destructive and now requires an explicit
+    // confirmation that names the addon; the first click only arms it.
     await user.click(screen.getByRole('button', { name: 'settings.addons.uninstall' }));
+    expect(onUninstall).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('addons.uninstall.confirm');
+    await user.click(screen.getByRole('button', { name: 'addons.uninstall.confirmAction' }));
     expect(onUninstall).toHaveBeenCalledWith('addon-1');
     await user.click(screen.getByRole('button', { name: 'settings.addons.install' }));
     expect(onInstall).toHaveBeenCalledTimes(1);

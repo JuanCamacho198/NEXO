@@ -8,9 +8,11 @@
   } from './useAddonReadSheet.svelte';
   import AddonsInstalledList from './components/AddonsInstalledList.svelte';
   import AddonsFirstPartySection from './components/AddonsFirstPartySection.svelte';
+  import AddonInstallForm from './components/AddonInstallForm.svelte';
   import AddonConsentToggle from './components/AddonConsentToggle.svelte';
   import AddonCapabilityBadges from './components/AddonCapabilityBadges.svelte';
   import AddonReadSheet from './components/AddonReadSheet.svelte';
+  import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import type { CatalogBook } from '$lib/shared/services/catalog/CatalogProvider';
   import { addonSourceIdOf } from '$lib/shared/services/catalog/CatalogProvider';
@@ -29,9 +31,28 @@
   // here because it is shell-global (AppModals), not route-gated.
   const consentState = createAddonConsentState();
 
+  // ADD-02 H: the shared store's feedback now reaches the global toast host.
+  // Install failures are already shown by the inline role="alert" block inside
+  // AddonInstallForm, so the store's matching error toast is dropped on this
+  // surface to avoid a duplicate notice; install success, refresh failures, and
+  // uninstall success/failure are forwarded.
+  const surfaceToast: typeof pushToast = (kind, message) => {
+    const outcome = addonsState.installOutcome;
+    const isInlineInstallProblem = outcome.kind === 'error' || outcome.kind === 'offline';
+    if (kind === 'error' && isInlineInstallProblem) return;
+    pushToast(kind, message);
+  };
+
+  // ADD-02 G: the initial registry read drives the installed list's loading
+  // state so an empty registry never flashes as "no addons installed".
+  let isLoading = $state(true);
+
   $effect(() => {
-    bindAddonsNotifier({ t });
-    void addonsState.refresh();
+    bindAddonsNotifier({ t, pushToast: surfaceToast });
+    isLoading = true;
+    void addonsState.refresh().finally(() => {
+      isLoading = false;
+    });
   });
 
   // The consent snapshot follows the visible rows: whenever the installed
@@ -95,10 +116,13 @@
 -->
 <section aria-labelledby="addons-heading" class="flex h-auto flex-col gap-6">
   <div class="flex max-w-2xl flex-col gap-1">
-    <h2 id="addons-heading" class="m-0 text-lg font-semibold text-(--color-primary)">
+    <h1
+      id="addons-heading"
+      class="m-0 text-2xl font-semibold tracking-tight text-(--color-primary)"
+    >
       {t('addons.title')}
-    </h2>
-    <p class="m-0 text-sm opacity-70">{t('addons.subtitle')}</p>
+    </h1>
+    <p class="m-0 text-sm text-(--color-text-muted)">{t('addons.subtitle')}</p>
   </div>
 
   <AddonsInstalledList
@@ -107,6 +131,8 @@
     installed={addonsState.installed}
     isBusy={addonsState.isBusy}
     installOutcome={addonsState.installOutcome}
+    {isLoading}
+    showInstallForm={false}
     consentById={consentState.consentById}
     onUrlChange={(v: string) => (addonsState.url = v)}
     onInstall={() => void addonsState.handleInstall()}
@@ -129,6 +155,16 @@
   </AddonsInstalledList>
 
   <AddonsFirstPartySection {t} />
+
+  <!-- ADD-01 A: install-by-URL is the secondary affordance, presented last. -->
+  <AddonInstallForm
+    {t}
+    url={addonsState.url}
+    isBusy={addonsState.isBusy}
+    installOutcome={addonsState.installOutcome}
+    onUrlChange={(v: string) => (addonsState.url = v)}
+    onInstall={() => void addonsState.handleInstall()}
+  />
 
   <AddonReadSheet
     state={readSheet.state}

@@ -3,8 +3,18 @@ import {
   periodWindow,
   previousWindow,
   computeDelta,
+  formatDelta,
   periodDeltaLabels,
 } from '$lib/features/stats/components/readingStatsState.svelte';
+import type { MessageKey } from '$lib/shared/i18n';
+
+const deltaDictionary: Partial<Record<MessageKey, string>> = {
+  'stats.noChange': 'Sin cambios',
+  'stats.firstPeriod': 'Nuevo',
+  'stats.deltaMonth': 'vs. mes anterior',
+};
+
+const deltaT = (key: MessageKey): string => deltaDictionary[key] ?? key;
 
 describe('periodWindow', () => {
   const freeze = '2026-06-30T12:00:00.000Z';
@@ -151,6 +161,46 @@ describe('computeDelta', () => {
     const result = computeDelta(125, 200);
     // (125 - 200) / 200 * 100 = -37.5
     expect(result).toBe(-37.5);
+  });
+});
+
+describe('formatDelta', () => {
+  it('is neutral and unsinged when the change is exactly zero', () => {
+    const result = formatDelta(50, 50, 'month', deltaT);
+    expect(result.tone).toBe('neutral');
+    expect(result.text.startsWith('+')).toBe(false);
+    expect(result.text.startsWith('-')).toBe(false);
+    expect(result.text).toContain('Sin cambios');
+  });
+
+  it('reports a first period instead of inventing a comparison when there is no baseline', () => {
+    const result = formatDelta(120, 0, 'month', deltaT);
+    expect(result.tone).toBe('none');
+    expect(result.text).toBe('Nuevo');
+    expect(result.text).not.toContain('%');
+  });
+
+  it('emits nothing when neither the current nor the previous period has activity', () => {
+    expect(formatDelta(0, 0, 'month', deltaT)).toEqual({ text: '', tone: 'none' });
+    expect(formatDelta(undefined, undefined, 'month', deltaT)).toEqual({ text: '', tone: 'none' });
+  });
+
+  it('shows a signed positive delta with a growth tone', () => {
+    const result = formatDelta(150, 100, 'month', deltaT);
+    expect(result.tone).toBe('positive');
+    expect(result.text).toBe('+50% vs. mes anterior');
+  });
+
+  it('shows a signed negative delta with a decline tone', () => {
+    const result = formatDelta(80, 100, 'month', deltaT);
+    expect(result.tone).toBe('negative');
+    expect(result.text).toBe('-20% vs. mes anterior');
+  });
+
+  it('does not hide a drop to zero behind a dash', () => {
+    const result = formatDelta(0, 100, 'month', deltaT);
+    expect(result.tone).toBe('negative');
+    expect(result.text).toBe('-100% vs. mes anterior');
   });
 });
 

@@ -567,7 +567,7 @@ describe('App desktop home redesign QA scenarios', () => {
     expect(await screen.findByTestId('home-desktop-view-stub')).toBeInTheDocument();
   });
 
-  it('applies shelf tabs, smart-query search, and token warnings', async () => {
+  it('applies smart-query search and token warnings on Library', async () => {
     configureLibrary([
       makeShelfBook({
         id: 'fav-1',
@@ -589,32 +589,34 @@ describe('App desktop home redesign QA scenarios', () => {
     render(App);
     const user = userEvent.setup();
 
-    const shelfSection = await screen.findByTestId('shelf-section');
-    await waitFor(() => {
-      expect(shelfSection).toHaveTextContent('Favorites Book');
-      expect(shelfSection).toHaveTextContent('Todo Book');
-      expect(shelfSection).toHaveTextContent('Plan Book');
-    });
+    await user.click(await screen.findByRole('button', { name: /Estantería/ }));
 
-    await user.click(screen.getByTestId('shelf-tab-favorites'));
     await waitFor(() => {
-      expect(shelfSection).toHaveTextContent('Favorites Book');
-      expect(shelfSection).not.toHaveTextContent('Todo Book');
-      expect(shelfSection).not.toHaveTextContent('Plan Book');
+      expect(screen.getByText('Favorites Book')).toBeInTheDocument();
+      expect(screen.getByText('Todo Book')).toBeInTheDocument();
+      expect(screen.getByText('Plan Book')).toBeInTheDocument();
     });
 
     const searchInput = screen.getByTestId('shelf-search');
+    await user.type(searchInput, 'status:favoritos author:asimov');
+
+    await waitFor(() => {
+      expect(screen.getByText('Favorites Book')).toBeInTheDocument();
+      expect(screen.queryByText('Todo Book')).toBeNull();
+      expect(screen.queryByText('Plan Book')).toBeNull();
+    });
+
     await user.clear(searchInput);
     await user.type(searchInput, 'author:asimov foo:bar');
 
     await waitFor(() => {
-      expect(shelfSection).toHaveTextContent('Favorites Book');
-      expect(shelfSection).toHaveTextContent('Ignored tokens: foo:bar');
+      expect(screen.getByText('Favorites Book')).toBeInTheDocument();
       expect(screen.getByTestId('shelf-warnings')).toBeInTheDocument();
+      expect(screen.getByTestId('shelf-warnings')).toHaveTextContent('Ignored tokens: foo:bar');
     });
   });
 
-  it('switches shelf between grid and list modes', async () => {
+  it('switches Library between grid and list modes', async () => {
     configureLibrary([
       makeShelfBook({ id: 'a-1', title: 'Alpha', author: 'Author A', progressPercentage: 0 }),
       makeShelfBook({ id: 'b-1', title: 'Beta', author: 'Author B', progressPercentage: 0 }),
@@ -623,20 +625,21 @@ describe('App desktop home redesign QA scenarios', () => {
     render(App);
     const user = userEvent.setup();
 
-    const shelfSection = await screen.findByTestId('shelf-section');
+    await user.click(await screen.findByRole('button', { name: /Estantería/ }));
+
     await waitFor(() => {
-      expect(shelfSection.querySelector('ul.grid')).not.toBeNull();
+      expect(document.querySelector('ul.grid')).not.toBeNull();
     });
 
     const viewToggle = screen.getByTestId('shelf-view-toggle');
-    await user.click(within(viewToggle).getByRole('button', { name: 'Vista en lista' }));
+    await user.click(within(viewToggle).getByRole('button', { name: 'shelf.listView' }));
 
     await waitFor(() => {
-      expect(shelfSection.querySelector('ul.space-y-2')).not.toBeNull();
+      expect(document.querySelector('ul.space-y-3')).not.toBeNull();
     });
   });
 
-  it('applies shelf sort control to the current filtered results', async () => {
+  it('applies the Library sort control to the filtered results', async () => {
     configureLibrary([
       makeShelfBook({ id: 'book-c', title: 'Gamma', author: 'Carlos', progressPercentage: 0 }),
       makeShelfBook({ id: 'book-a', title: 'Alpha', author: 'Ana', progressPercentage: 0 }),
@@ -646,21 +649,26 @@ describe('App desktop home redesign QA scenarios', () => {
     render(App);
     const user = userEvent.setup();
 
-    const shelfSection = await screen.findByTestId('shelf-section');
+    await user.click(await screen.findByRole('button', { name: /Estantería/ }));
+
+    await waitFor(() => {
+      expect(document.querySelectorAll('article h2')).toHaveLength(3);
+    });
+
     const sortContainer = screen.getByTestId('shelf-sort');
     const trigger = sortContainer.querySelector('button')!;
     // The sort options are bits-ui `Select` items now, so the popup is
     // portalled and floating-ui hides it while the trigger reports no geometry
-    // (jsdom has no layout engine). Both lines below are what make the options
-    // real to the a11y tree; the assertion after them is unchanged.
+    // (jsdom has no layout engine). Stubbing the trigger rect is what makes the
+    // options real to the a11y tree; the assertion after them is unchanged.
     stubElementRect(trigger, { left: 100, top: 100, width: 130, height: 40 });
     await user.click(trigger);
-    const authorOption = screen.getByRole('option', { name: 'Author' });
-    await user.click(authorOption);
+    const titleOption = screen.getByRole('option', { name: 'Titulo' });
+    await user.click(titleOption);
 
     await waitFor(() => {
-      const titles = Array.from(shelfSection.querySelectorAll('li button p:first-child')).map(
-        (node) => node.textContent?.trim(),
+      const titles = Array.from(document.querySelectorAll('article h2')).map((node) =>
+        node.textContent?.trim(),
       );
       expect(titles).toEqual(['Alpha', 'Beta', 'Gamma']);
     });

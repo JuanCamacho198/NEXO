@@ -1,6 +1,7 @@
 import type { LibraryBookDto } from '$lib/shared/types';
 import { UNCLASSIFIED_GENRE, type CanonicalGenre } from '$lib/shared/services/genreHeuristic';
 import type { AppState } from '$lib/shared/stores/AppState.svelte';
+import type { MessageKey } from '$lib/shared/i18n';
 
 export type StatsBook = LibraryBookDto;
 
@@ -19,19 +20,15 @@ export const periodLabels: Record<PeriodKey, string> = {
   all: 'Todo el tiempo',
 };
 
+// Token-backed ramp (see tokens.css). Theme-aware by construction, so the same
+// series is legible in light and dark without a hardcoded hex in the component.
 export const GENRE_COLORS = [
-  '#4e8cff',
-  '#43d3c4',
-  '#f4b942',
-  '#ff6b6b',
-  '#9d59ff',
-  '#ff9f43',
-  '#2ed573',
-  '#a29bfe',
-  '#fd79a8',
-  '#00cec9',
-  '#e17055',
-  '#6c5ce7',
+  'var(--color-chart-1)',
+  'var(--color-chart-2)',
+  'var(--color-chart-3)',
+  'var(--color-chart-4)',
+  'var(--color-chart-5)',
+  'var(--color-chart-6)',
 ] as const;
 
 export function hashNumber(value: string): number {
@@ -105,6 +102,52 @@ export function previousWindow(period: PeriodKey): { from: string; to: string } 
 export function computeDelta(current: number, previous: number): number | null {
   if (previous <= 0) return null;
   return Math.round(((current - previous) / previous) * 100 * 10) / 10;
+}
+
+export type DeltaTone = 'positive' | 'negative' | 'neutral' | 'none';
+
+export type DeltaResult = { text: string; tone: DeltaTone };
+
+const DELTA_LABEL_KEYS: Record<PeriodKey, MessageKey> = {
+  week: 'stats.deltaWeek',
+  month: 'stats.deltaMonth',
+  year: 'stats.deltaYear',
+  all: 'stats.deltaAll',
+};
+
+/**
+ * Builds an honest delta label.
+ *
+ * - No current and no previous activity → nothing to compare, empty result.
+ * - Previous period with real data (previous > 0) → signed delta; a zero
+ *   change is neutral (no sign, no success colour) and a drop to zero is a
+ *   real -100%, never hidden.
+ * - First period with activity but no previous baseline → an explicit
+ *   "first period" note instead of an invented percentage.
+ */
+export function formatDelta(
+  current: number | undefined,
+  previous: number | undefined,
+  period: PeriodKey,
+  t: (key: MessageKey) => string,
+): DeltaResult {
+  const cur = current ?? 0;
+  const prev = previous ?? 0;
+  if (cur === 0 && prev === 0) return { text: '', tone: 'none' };
+
+  const delta = computeDelta(cur, prev);
+  if (delta === null) {
+    return cur > 0 ? { text: t('stats.firstPeriod'), tone: 'none' } : { text: '', tone: 'none' };
+  }
+
+  const label = t(DELTA_LABEL_KEYS[period]);
+  if (delta === 0) return { text: `${t('stats.noChange')} ${label}`, tone: 'neutral' };
+
+  const sign = delta > 0 ? '+' : '';
+  return {
+    text: `${sign}${delta}% ${label}`,
+    tone: delta > 0 ? 'positive' : 'negative',
+  };
 }
 
 export const periodDeltaLabels: Record<PeriodKey, string> = {

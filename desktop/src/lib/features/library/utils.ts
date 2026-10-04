@@ -70,7 +70,7 @@ export function getBulkImportStatusClass(status: string): string {
     importing: 'text-blue-700',
     cancelled: 'text-amber-700',
   };
-  return map[status] || 'text-[var(--color-text-muted)]';
+  return map[status] || 'text-(--color-text-muted)';
 }
 
 // ─── Shelf helpers ───
@@ -80,7 +80,9 @@ export type ShelfBook = LibraryBookDto & {
 };
 
 export type ShelfFilter = 'all' | 'reading' | 'pending' | 'completed' | 'favorites';
-export type ShelfSort = 'date_added' | 'last_read' | 'progress' | 'title';
+// `author` and `file_size` are not offered by the visible sort control; they
+// exist so a `sort:` token can reach the same engine (see useLibraryShelf).
+export type ShelfSort = 'date_added' | 'last_read' | 'progress' | 'title' | 'author' | 'file_size';
 export type ShelfView = 'grid' | 'list';
 
 export const FILTER_OPTIONS: Array<{ key: ShelfFilter; label: string }> = [

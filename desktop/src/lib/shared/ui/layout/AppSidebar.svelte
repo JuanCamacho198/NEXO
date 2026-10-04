@@ -84,16 +84,23 @@
         {t(item.messageKey)}
       {/if}
     </Tooltip.Trigger>
-    <Tooltip.Portal>
-      <Tooltip.Content
-        role="tooltip"
-        side="right"
-        sideOffset={8}
-        class="z-50 whitespace-nowrap rounded bg-(--color-surface) p-1 text-xs text-(--color-primary) shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
-      >
-        {t(item.messageKey)}
-      </Tooltip.Content>
-    </Tooltip.Portal>
+    <!--
+      The label is already visible while expanded, so the tooltip would only
+      duplicate it. It is mounted only in the icon rail, where it carries the
+      destination name; `aria-label` on the trigger covers both states.
+    -->
+    {#if collapsed}
+      <Tooltip.Portal>
+        <Tooltip.Content
+          role="tooltip"
+          side="right"
+          sideOffset={8}
+          class="z-50 whitespace-nowrap rounded bg-(--color-surface) p-1 text-xs text-(--color-primary) shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
+        >
+          {t(item.messageKey)}
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    {/if}
   </Tooltip.Root>
 {/snippet}
 
@@ -191,7 +198,7 @@
       class:justify-center={collapsed}
       role="button"
       tabindex="0"
-      aria-label={`${profile.name}, ${profile.email}`}
+      aria-label={`${getProfileInitials(profile.name)} ${profile.name}, ${profile.email}`}
       onclick={onNavigateSettings}
       onkeydown={handleUserBlockKeydown}
     >

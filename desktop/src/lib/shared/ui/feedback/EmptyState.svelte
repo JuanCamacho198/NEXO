@@ -25,7 +25,7 @@
       class="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-(--color-surface) to-(--color-border) ring-1 ring-inset ring-(--color-border)"
     >
       <svg
-        class="h-6 w-6 text-(--color-muted)"
+        class="h-6 w-6 text-(--color-text-muted)"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -43,7 +43,7 @@
   <h3 class="text-lg font-semibold tracking-tight text-(--color-primary)">{title}</h3>
 
   {#if description}
-    <p class="mt-2 max-w-xs text-sm leading-relaxed text-(--color-muted)">{description}</p>
+    <p class="mt-2 max-w-xs text-sm leading-relaxed text-(--color-text-muted)">{description}</p>
   {/if}
 
   {#if action}

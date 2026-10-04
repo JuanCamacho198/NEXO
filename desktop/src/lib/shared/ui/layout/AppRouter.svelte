@@ -159,22 +159,13 @@
 
                 {#snippet shelfSection()}
                   <ShelfSection
-                    shelfQueryState={libraryState.shelfQueryState}
-                    shelfBooks={libraryState.shelfBooks}
                     myShelfBooks={libraryState.myShelfBooks}
                     collections={libraryState.collections}
                     previewBookId={navigationState.previewBookId}
                     selectedShelfBook={libraryState.books.find(
                       (b) => b.id === navigationState.shelfDetailsBookId,
                     ) ?? null}
-                    shelfTabOptions={libraryState.SHELF_TAB_OPTIONS}
-                    shelfSortOptions={libraryState.SHELF_SORT_OPTIONS}
                     t={appState.t}
-                    onSetTab={(key) => libraryState.setShelfTab(key as never)}
-                    onSetSort={(key) => libraryState.setShelfSort(key as never)}
-                    onSetViewMode={(mode) => libraryState.setShelfViewMode(mode)}
-                    onShelfQueryInput={(event) => libraryState.handleShelfQueryInput(event)}
-                    onClearShelfQuery={() => libraryState.clearShelfQuery()}
                     onOpenDetails={(book) => navigationState.openShelfDetails(book.id)}
                     onStartReading={(book) => void appState.startReading(book)}
                     onEditBook={(book) => libraryState.handleEditBook(book)}

@@ -165,6 +165,10 @@
 
   /* Surface hierarchy */
   --color-surface-hover: rgba(148, 173, 206, 0.18);
+  /* Recessed, read-only surface (Panel/Card `variant="surface"`): slightly
+     darker than --color-surface so the block recedes while its foreground text
+     keeps AA contrast. */
+  --color-surface-dim: rgba(9, 17, 29, 0.6);
 
   /* Borders */
   --color-border: rgba(148, 173, 206, 0.18);
@@ -213,6 +217,34 @@
   --color-accent-nav-bg: rgba(78, 140, 255, 0.14);
   --color-accent-nav-fg: #8fb8ff;
   --color-accent-nav-bar: #4e8cff;
+
+  /* Stats surface — sticky chrome, hero and chart (NEXO blue family).
+     The chart ramp stays inside the product's blue→cyan range so the donut
+     and line read on both themes without turning into a rainbow. */
+  --color-surface-overlay: rgba(10, 18, 31, 0.97);
+  --gradient-hero: linear-gradient(180deg, rgba(17, 30, 48, 0.94), rgba(10, 18, 31, 0.94));
+  --gradient-chart-bg: linear-gradient(180deg, rgba(6, 14, 24, 0.86), rgba(10, 18, 30, 0.94));
+  --gradient-cover-fallback: linear-gradient(
+    135deg,
+    rgba(78, 140, 255, 0.16),
+    rgba(255, 196, 77, 0.12)
+  );
+  --color-chart-center: rgba(9, 17, 29, 0.96);
+  --color-chart-grid: rgba(148, 173, 206, 0.12);
+  --color-chart-fill-top: rgba(78, 140, 255, 0.35);
+  --color-chart-fill-bottom: rgba(78, 140, 255, 0.02);
+  --color-chart-1: #4e8cff;
+  --color-chart-2: #49d4ff;
+  --color-chart-3: #6ea0ff;
+  --color-chart-4: #38bdf8;
+  --color-chart-5: #8b7bff;
+  --color-chart-6: #7dd3fc;
+
+  /* Reading streak — warm accent that stays distinct from --color-warning */
+  --color-streak-border: rgba(251, 191, 36, 0.22);
+  --color-streak-text: #fbbf24;
+  --gradient-streak: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(249, 115, 22, 0.12));
+  --gradient-streak-icon: linear-gradient(135deg, #fbbf24, #f97316);
 
   /* Welcome screen — dark glassmorphism (login-redesign change) */
   --welcome-card-bg: rgba(21, 29, 44, 0.64);
@@ -267,6 +299,8 @@
 
   /* Surface hierarchy */
   --color-surface-hover: rgba(30, 58, 95, 0.15);
+  /* Recessed, read-only surface (mirror of the dark value). */
+  --color-surface-dim: rgba(232, 238, 246, 0.72);
 
   /* Borders */
   --color-border: rgba(30, 58, 95, 0.15);
@@ -305,14 +339,47 @@
     linear-gradient(180deg, #e8eef6 0%, #eef2f8 50%, #f0f4fa 100%);
   --gradient-accent: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
   --gradient-accent-h: linear-gradient(90deg, var(--color-accent-start), var(--color-accent-end));
-  /* HOME-04 semantic roles (light). `--color-import: #be123c` passes AA on the
-     light background (≈5.6:1); selection stays a quiet NEXO-blue tint. */
-  --color-import: #be123c;
-  --color-import-bg: rgba(190, 18, 60, 0.08);
+  /* HOME-04 semantic roles (light). `--color-import: #9a3412` is a deep warm
+     terracotta that stays clearly secondary — distinct from `--color-error`
+     (#c0392b) and `--color-danger` (#dc2626) — and clears AA at ~6.3:1 on the
+     light surface. Selection stays a quiet NEXO-blue tint. */
+  --color-import: #9a3412;
+  --color-import-bg: rgba(154, 52, 18, 0.08);
   --color-sidebar-bg: #ffffff;
   --color-accent-nav-bg: rgba(0, 110, 200, 0.1);
   --color-accent-nav-fg: #006ec8;
   --color-accent-nav-bar: #006ec8;
+
+  /* Stats surface — light theme counterparts of the dark block above. Surfaces
+     stay white-tinted (not a lightened dark) and the chart ramp deepens so it
+     holds contrast on the light ground. */
+  --color-surface-overlay: rgba(238, 242, 247, 0.97);
+  --gradient-hero: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(232, 238, 246, 0.96));
+  --gradient-chart-bg: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.92),
+    rgba(232, 238, 246, 0.94)
+  );
+  --gradient-cover-fallback: linear-gradient(
+    135deg,
+    rgba(0, 110, 200, 0.14),
+    rgba(217, 119, 6, 0.12)
+  );
+  --color-chart-center: rgba(255, 255, 255, 0.96);
+  --color-chart-grid: rgba(30, 58, 95, 0.1);
+  --color-chart-fill-top: rgba(0, 110, 200, 0.28);
+  --color-chart-fill-bottom: rgba(0, 110, 200, 0.02);
+  --color-chart-1: #006ec8;
+  --color-chart-2: #0284c7;
+  --color-chart-3: #3b6fd4;
+  --color-chart-4: #0891b2;
+  --color-chart-5: #6366f1;
+  --color-chart-6: #0ea5e9;
+
+  --color-streak-border: rgba(217, 119, 6, 0.28);
+  --color-streak-text: #b45309;
+  --gradient-streak: linear-gradient(135deg, rgba(217, 119, 6, 0.1), rgba(234, 88, 12, 0.1));
+  --gradient-streak-icon: linear-gradient(135deg, #f59e0b, #ea580c);
 }
 
 /* ============================================

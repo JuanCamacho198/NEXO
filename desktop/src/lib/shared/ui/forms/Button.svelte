@@ -24,7 +24,7 @@
   let isPressed = $state(false);
 
   const baseClasses =
-    'inline-flex items-center justify-center font-sans font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-(--color-bg-app) disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center font-sans font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-(--color-background) disabled:opacity-50 disabled:cursor-not-allowed';
 
   const pressStyles = $derived(isPressed ? 'scale-[0.96] shadow-inner' : 'scale-100 shadow-sm');
 

@@ -23,14 +23,16 @@ describe('ThemeToggle (HOME-04)', () => {
     render(ThemeToggle, { props: { t } });
 
     expect(screen.getByText('Tema oscuro')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cambiar a tema claro' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Tema oscuro. Cambiar a tema claro' }),
+    ).toBeInTheDocument();
   });
 
   it('toggles the theme when clicked', async () => {
     const user = userEvent.setup();
     render(ThemeToggle, { props: { t } });
 
-    await user.click(screen.getByRole('button', { name: 'Cambiar a tema claro' }));
+    await user.click(screen.getByRole('button', { name: 'Tema oscuro. Cambiar a tema claro' }));
 
     expect(get(theme)).toBe('light');
     expect(screen.getByText('Tema claro')).toBeInTheDocument();

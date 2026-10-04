@@ -105,6 +105,9 @@ export function createSettingsAddons(deps: AddonsDeps = {}): {
     try {
       await registry.uninstall(id);
       await refresh();
+      notify('success', translate('addons.uninstall.removedToast'));
+    } catch (e) {
+      notify('error', e instanceof Error ? e.message : translate('settings.addons.installFailed'));
     } finally {
       isBusy = false;
     }

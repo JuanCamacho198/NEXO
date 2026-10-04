@@ -1,23 +1,24 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import ShelfSection from '$lib/features/library/ShelfSection.svelte';
 import ShelfDetailModal from '$lib/features/library/ShelfDetailModal.svelte';
 import LibraryShelfScreen from '$lib/features/library/components/LibraryShelfScreen.svelte';
 import HighlightsView from '$lib/features/highlights/components/HighlightsView.svelte';
-import { createShelfQueryState } from '$lib/shared/stores/HomeState';
 import type { HighlightDto, LibraryBookDto } from '$lib/shared/types';
 import type { ViewerPort } from '$lib/shared/ports';
 import type { HighlightsViewDeps } from '$lib/features/highlights/highlightsViewDeps';
 
 /**
  * Library and highlights icon migration (slice 13, closed by the slice-14
- * batch). These four files held the remaining static `<Icon` call sites outside
- * the home/welcome/sidebar group: `ShelfSection` (2), `LibraryShelfScreen` (2),
- * `HighlightsView` (7) and `ShelfDetailModal` (6). The last one was migrated
- * only after the constraint-8/2 exception was authorized: the compact shape
- * costs a measured **+5 lines** (386 -> 391 by newline count), attributed to
- * +3 deep lucide imports and +2 for the one glyph whose trailing
- * `{t('shelf.added' as MessageKey)}` exceeds the 100-column budget at indent 16.
+ * batch). These three files hold the remaining static `<Icon` call sites
+ * outside the home/welcome/sidebar group: `LibraryShelfScreen` (2),
+ * `HighlightsView` (7) and `ShelfDetailModal` (6). `ShelfSection`'s toggle
+ * glyphs moved to `LibraryShelfScreen` when Home's toolbar was retired
+ * (single Estantería toolbar), so this suite no longer renders `ShelfSection`.
+ * The last file was migrated only after the constraint-8/2 exception was
+ * authorized: the compact shape costs a measured **+5 lines** (386 -> 391 by
+ * newline count), attributed to +3 deep lucide imports and +2 for the one
+ * glyph whose trailing `{t('shelf.added' as MessageKey)}` exceeds the
+ * 100-column budget at indent 16.
  *
  * The shim resolved a name to a lucide component; these call sites resolve the
  * same components directly, so the assertions are per-glyph identity against
@@ -74,34 +75,6 @@ const HIGHLIGHT: HighlightDto = {
 
 const noop = vi.fn();
 
-function renderShelfSection() {
-  return render(ShelfSection, {
-    shelfQueryState: createShelfQueryState(),
-    shelfBooks: [],
-    myShelfBooks: [],
-    collections: [],
-    previewBookId: null,
-    selectedShelfBook: null,
-    shelfTabOptions: [],
-    shelfSortOptions: [],
-    t,
-    onSetTab: noop,
-    onSetSort: noop,
-    onSetViewMode: noop,
-    onShelfQueryInput: noop,
-    onClearShelfQuery: noop,
-    onOpenDetails: noop,
-    onStartReading: noop,
-    onEditBook: noop,
-    onRemoveBook: noop,
-    onToggleFavorite: noop,
-    onStatusChange: noop,
-    onDeleteCover: noop,
-    onSaveEdit: noop,
-    onCloseDetails: noop,
-  });
-}
-
 function highlightsDeps(): HighlightsViewDeps {
   return {
     listHighlights: async () => [HIGHLIGHT],
@@ -124,15 +97,6 @@ async function renderHighlights() {
 }
 
 describe('library and highlights icon migration', () => {
-  it('renders the ShelfSection view-toggle glyphs from direct lucide components', () => {
-    const { container } = renderShelfSection();
-
-    expect(glyphs(container)).toEqual(['lucide-list', 'lucide-layout-grid']);
-    for (const icon of container.querySelectorAll('svg.lucide-icon')) {
-      expectGlyphContract(icon, '14');
-    }
-  });
-
   it('renders the LibraryShelfScreen toggle glyphs without the shim tooltip wrapper', () => {
     const { container } = render(LibraryShelfScreen, { books: [], t });
 

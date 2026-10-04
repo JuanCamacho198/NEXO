@@ -1,3 +1,27 @@
+<script module lang="ts">
+  /**
+   * Dialogs currently open through this facade. Used to release bits-ui's body
+   * scroll lock as soon as the last one disappears.
+   *
+   * bits-ui keeps `pointer-events: none` on `<body>` while a dialog is open and
+   * only restores it ~24ms after the lock is destroyed (`body-scroll-lock`
+   * `scheduleCleanupIfNoNewLocks`). When a dialog is unmounted while still open
+   * — a route change tearing down the screen that owns it, for instance — the
+   * whole page stays unclickable for that window. Releasing the lock once no
+   * dialog is left makes that unmount safe.
+   */
+  let openDialogCount = 0;
+
+  function releaseBodyLockIfUnused(): void {
+    if (typeof document === 'undefined') return;
+    // Another bits-ui dialog (including ones not built on this facade) may
+    // still own the lock.
+    if (document.querySelector('[data-dialog-content][data-state="open"]')) return;
+    if (document.body.style.pointerEvents === 'none') document.body.style.pointerEvents = '';
+    if (document.body.style.overflow === 'hidden') document.body.style.overflow = '';
+  }
+</script>
+
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -35,6 +59,17 @@
     noCloseButton = false,
     class: className = '',
   }: Props = $props();
+
+  // Track open dialogs so an unmount-while-open releases the body lock
+  // synchronously instead of waiting for bits-ui's delayed cleanup.
+  $effect(() => {
+    if (!open) return;
+    openDialogCount += 1;
+    return () => {
+      openDialogCount -= 1;
+      if (openDialogCount === 0) queueMicrotask(releaseBodyLockIfUnused);
+    };
+  });
 
   const sizeClass = $derived(
     size === 'sm'
