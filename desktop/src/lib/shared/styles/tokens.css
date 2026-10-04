@@ -125,6 +125,14 @@
   --color-avatar-5: #fb7185;
   --color-avatar-6: #34d399;
   --color-avatar-7: #e879f9;
+  /*
+   * Ink for the avatar initials. Declared once with the fills because the
+   * measured fills do not change between themes, so a theme-dependent ink
+   * (e.g. --color-accent-on, white in LIGHT) would be wrong. The previous
+   * `text-white` failed AA on 5 of the 7 fills (1.33:1 on --color-avatar-4).
+   * #061222 clears AA on all seven (min 6.91:1 on --color-avatar-2).
+   */
+  --color-avatar-ink: #061222;
 }
 
 /* ============================================
@@ -182,7 +190,12 @@
   --color-panel-input: #162844; /* $--np-input */
   --color-accent-fill: #153040; /* $--np-accent-soft */
   --color-panel-border: #1c324d; /* $--np-border */
-  --color-text-tertiary: #64748b; /* $--np-text-tertiary */
+  /* $--np-text-tertiary. The pen measured #64748b, which failed WCAG AA on
+     every dark surface this token is used on (3.34:1 on --color-panel, 3.97:1
+     on --color-background, 3.11:1 on --color-panel-input, 2.89:1 on
+     --color-accent-fill). Raised to #8b9fba for accessibility; it now clears
+     AA everywhere (5.08:1 on --color-accent-fill, 5.89:1 on --color-panel). */
+  --color-text-tertiary: #8b9fba;
   --color-error-soft: #2a1a22; /* $--np-error-soft — destructive button fill */
 
   /* Shadows */
@@ -314,7 +327,12 @@
   --color-panel-input: #f1f5f9; /* $--np-input */
   --color-accent-fill: #dbeafe; /* $--np-accent-soft */
   --color-panel-border: #cbd5e1; /* $--np-border */
-  --color-text-tertiary: #94a3b8; /* $--np-text-tertiary */
+  /* $--np-text-tertiary. The pen value #94a3b8 failed WCAG AA on the light
+     surfaces (2.28:1 on --color-background, 2.34:1 on --color-panel-input,
+     2.10:1 on --color-accent-fill). Raised to #556377 for accessibility; it now
+     clears AA everywhere (5.01:1 on --color-accent-fill, 5.43:1 on
+     --color-background). */
+  --color-text-tertiary: #556377;
   --color-error-soft: #fee2e2; /* $--np-error-soft — destructive button fill */
 
   /* Shadows */

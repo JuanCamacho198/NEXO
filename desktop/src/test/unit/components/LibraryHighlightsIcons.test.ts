@@ -118,12 +118,18 @@ describe('library and highlights icon migration', () => {
     const { container } = await renderHighlights();
 
     // `note` and `edit` both resolved to `square-pen` in the shim map; the
-    // trailing glyph is the action-menu trigger (`more-dot`).
+    // trailing glyph is the action-menu trigger (`more-dot`). The refresh
+    // control and the search field are direct lucide components now (they used
+    // to be hand-rolled inline SVGs), so they lead the list in DOM order.
     expect(glyphs(container)).toEqual([
+      'lucide-refresh-cw',
+      'lucide-search',
       'lucide-square-pen',
       'lucide-book',
       'lucide-ellipsis-vertical',
     ]);
+    expectGlyphContract(container.querySelector('svg.lucide-refresh-cw') as Element, '20');
+    expectGlyphContract(container.querySelector('svg.lucide-search') as Element, '20');
     expectGlyphContract(container.querySelector('svg.lucide-square-pen') as Element, '14');
     expectGlyphContract(container.querySelector('svg.lucide-book') as Element, '20');
     expectGlyphContract(container.querySelector('svg.lucide-ellipsis-vertical') as Element, '14');

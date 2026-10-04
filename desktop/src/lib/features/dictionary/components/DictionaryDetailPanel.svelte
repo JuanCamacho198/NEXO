@@ -148,7 +148,7 @@
           <button
             type="button"
             class="flex h-8.5 w-8.5 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-(--color-error-soft) text-(--color-error) transition-opacity hover:opacity-90"
-            aria-label={t('dictionary.deleteConfirm')}
+            aria-label={t('dictionary.delete')}
             data-testid="dictionary-detail-delete"
             onclick={() => onDelete?.(word.id)}
           >
@@ -245,7 +245,7 @@
     {#if showReference}
       <div class="flex items-center gap-2.5" data-testid="dictionary-reference">
         <span
-          class="flex h-12.5 w-9 shrink-0 items-center justify-center rounded-[4px] bg-(--color-accent-blue) text-2xs font-semibold text-white"
+          class="flex h-12.5 w-9 shrink-0 items-center justify-center rounded-[4px] bg-(--color-accent-blue) text-2xs font-semibold text-(--color-accent-on)"
           aria-hidden="true"
           data-testid="dictionary-reference-initials"
         >

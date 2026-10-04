@@ -39,7 +39,7 @@
     onclick={() => onselect(word.id)}
   >
     <span
-      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-sm font-semibold text-white"
+      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-sm font-semibold text-(--color-avatar-ink)"
       style={`background-color: ${avatarColorVariable(index)}`}
       data-testid="dictionary-row-initial"
       aria-hidden="true"

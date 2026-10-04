@@ -13,6 +13,7 @@
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
   import Plus from 'lucide-svelte/icons/plus';
   import Search from 'lucide-svelte/icons/search';
+  import X from 'lucide-svelte/icons/x';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import DictionaryKpiRow from './DictionaryKpiRow.svelte';
   import DictionaryRow from './DictionaryRow.svelte';
@@ -87,7 +88,20 @@
   let isAdding = $state(false);
   let errorMsg = $state<string | null>(null);
   let duplicateWord = $state<string | null>(null);
+  /** Polite live-region text announced after add/save/delete succeed. */
+  let announcement = $state('');
+  /** Error from a failed save/delete, surfaced in a visible alert. */
+  let actionError = $state<string | null>(null);
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Keyboard focus indicator for the text fields. The `!` important modifier is
+   * required: tokens.css paints an unlayered `:focus-visible` box-shadow that
+   * beats layered Tailwind utilities, so a plain ring would be overridden. It
+   * mirrors the shared Button's ring-2 + ring-offset-2 accent structure.
+   */
+  const fieldFocus =
+    'focus:outline-none focus-visible:ring-2! focus-visible:ring-offset-2! focus-visible:ring-offset-(--color-background)! focus-visible:ring-(--color-accent-blue)!';
 
   const tabs: { id: Tab; label: MessageKey }[] = [
     { id: 'all', label: 'dictionary.tabAll' },
@@ -143,12 +157,14 @@
     isAdding = true;
     errorMsg = null;
     duplicateWord = null;
+    actionError = null;
     try {
       const created = await dictionary.add(trimmed, { tags });
       newWord = '';
       newTags = '';
       showAddForm = false;
       selectedId = created.id;
+      announcement = t('dictionary.added', { word: created.word ?? trimmed });
     } catch (e) {
       const msg = e instanceof Error ? e.message : t('errors.commandFailure');
       if (msg.includes('dictionary.duplicate') || msg.includes('duplicate')) {
@@ -163,9 +179,30 @@
   }
 
   async function handleDelete(id: string): Promise<void> {
-    await dictionary.remove(id);
-    if (selectedId === id) selectedId = null;
-    if (editingId === id) closeEdit();
+    const entry = dictionary.words.find((w) => w.id === id);
+    if (!confirm(t('dictionary.deleteConfirm', { word: entry?.word ?? '' }))) return;
+    actionError = null;
+    try {
+      await dictionary.remove(id);
+      if (selectedId === id) selectedId = null;
+      if (editingId === id) closeEdit();
+      announcement = t('dictionary.deleted', { word: entry?.word ?? '' });
+    } catch (e) {
+      actionError = e instanceof Error ? e.message : t('errors.commandFailure');
+    }
+  }
+
+  /**
+   * Opens or closes the add form and clears any stale validation or action
+   * error, so reopening never shows a previous failed attempt.
+   */
+  function toggleAddForm(): void {
+    showAddForm = !showAddForm;
+    if (showAddForm) {
+      errorMsg = null;
+      duplicateWord = null;
+      actionError = null;
+    }
   }
 
   function handleSelect(id: string): void {
@@ -199,8 +236,14 @@
   async function handleSaveEdit(): Promise<void> {
     const id = editingId;
     if (!id) return;
-    await dictionary.update(id, userFieldPatchFrom(editDraft));
-    closeEdit();
+    actionError = null;
+    try {
+      await dictionary.update(id, userFieldPatchFrom(editDraft));
+      closeEdit();
+      announcement = t('dictionary.saved');
+    } catch (e) {
+      actionError = e instanceof Error ? e.message : t('errors.commandFailure');
+    }
   }
 </script>
 
@@ -214,21 +257,42 @@
     </div>
     <button
       type="button"
-      class="flex shrink-0 cursor-pointer items-center gap-2 rounded-[10px] bg-(--color-accent-blue) px-4 py-2.5 text-2sm font-bold text-white transition-opacity hover:opacity-90"
-      onclick={() => (showAddForm = !showAddForm)}
+      class="flex shrink-0 cursor-pointer items-center gap-2 rounded-[10px] bg-(--color-accent-blue) px-4 py-2.5 text-2sm font-bold text-(--color-accent-on) transition-opacity hover:opacity-90"
+      aria-expanded={showAddForm}
+      aria-controls="dictionary-add-form"
+      onclick={toggleAddForm}
     >
-      <Plus size={16} strokeWidth={1.8} class="h-4 w-4" aria-hidden="true" />
+      {#if showAddForm}
+        <X size={16} strokeWidth={1.8} class="h-4 w-4" aria-hidden="true" />
+      {:else}
+        <Plus size={16} strokeWidth={1.8} class="h-4 w-4" aria-hidden="true" />
+      {/if}
       <span>{t('dictionary.newWord')}</span>
     </button>
   </header>
 
-  <DictionaryKpiRow {t} {kpis} />
+  <p class="sr-only" role="status" aria-live="polite">{announcement}</p>
+
+  {#if actionError}
+    <p
+      class="rounded-md bg-(--color-error-soft) px-3 py-2 text-xs text-(--color-error)"
+      role="alert"
+      data-testid="dictionary-action-error"
+    >
+      {actionError}
+    </p>
+  {/if}
+
+  {#if dictionary.words.length > 0}
+    <DictionaryKpiRow {t} {kpis} />
+  {/if}
 
   <div class="flex gap-3">
     <div
       class="flex w-110 shrink-0 flex-col gap-3.5 rounded-lg border border-(--color-panel-border) bg-(--color-panel) p-4"
       data-testid="dictionary-words-panel"
     >
+      <label for="dictionary-search" class="sr-only">{t('dictionary.searchLabel')}</label>
       <div
         class="flex items-center gap-2.5 rounded-[10px] border border-(--color-panel-border) bg-(--color-panel-input) px-3 py-2.5"
       >
@@ -239,8 +303,9 @@
           aria-hidden="true"
         />
         <input
+          id="dictionary-search"
           type="text"
-          class="w-full bg-transparent text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary) focus:outline-none"
+          class="w-full border-none! bg-transparent! text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary) {fieldFocus}"
           placeholder={t('dictionary.searchPlaceholder')}
           bind:value={searchQuery}
         />
@@ -265,6 +330,7 @@
 
       {#if showAddForm}
         <form
+          id="dictionary-add-form"
           class="flex flex-col gap-2 rounded-md border border-(--color-panel-border) bg-(--color-panel-input) p-3"
           onsubmit={(event) => {
             event.preventDefault();
@@ -274,15 +340,15 @@
           <div class="flex gap-2">
             <input
               type="text"
-              class="h-10 min-w-0 flex-1 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-3 text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary) focus:outline-none"
+              class="h-10 min-w-0 flex-1 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-3 text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary) {fieldFocus}"
               placeholder={t('dictionary.wordPlaceholder')}
               bind:value={newWord}
               disabled={isAdding}
             />
             <input
               type="text"
-              class="h-10 w-32 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-2 text-xs text-(--color-primary) placeholder:text-(--color-text-tertiary) focus:outline-none"
-              placeholder="tags, comma"
+              class="h-10 w-32 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-2 text-xs text-(--color-primary) placeholder:text-(--color-text-tertiary) {fieldFocus}"
+              placeholder={t('dictionary.tagsPlaceholder')}
               bind:value={newTags}
               disabled={isAdding}
             />
@@ -295,7 +361,9 @@
             </Button>
           </div>
           {#if errorMsg}
-            <p class="text-xs {duplicateWord ? 'text-amber-600' : 'text-red-500'}">{errorMsg}</p>
+            <p class="text-xs {duplicateWord ? 'text-(--color-warning)' : 'text-(--color-error)'}">
+              {errorMsg}
+            </p>
           {/if}
         </form>
       {/if}
@@ -306,16 +374,33 @@
         >
           {t('stats.loading')}
         </div>
+      {:else if dictionary.error}
+        <div
+          class="flex min-h-[24vh] items-center justify-center"
+          data-testid="dictionary-load-error"
+        >
+          <EmptyState
+            icon="error"
+            title={t('dictionary.loadErrorTitle')}
+            description={t('dictionary.loadErrorDescription')}
+          >
+            {#snippet action()}
+              <Button type="button" size="sm" onclick={() => void dictionary.load()}>
+                {t('dictionary.retry')}
+              </Button>
+            {/snippet}
+          </EmptyState>
+        </div>
       {:else if filteredWords.length === 0}
         <div class="flex min-h-[24vh] items-center justify-center">
           <EmptyState
             icon="search"
             title={dictionary.words.length === 0
               ? t('dictionary.emptyTitle')
-              : t('home.highlightsEmptyTitle')}
+              : t('dictionary.noResultsTitle')}
             description={dictionary.words.length === 0
               ? t('dictionary.emptyDescription')
-              : t('home.highlightsEmptyDescription')}
+              : t('dictionary.noResultsDescription')}
           />
         </div>
       {:else}

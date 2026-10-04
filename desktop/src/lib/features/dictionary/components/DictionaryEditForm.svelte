@@ -32,6 +32,15 @@
     event.preventDefault();
     onSave();
   }
+
+  /**
+   * Keyboard focus indicator. The `!` important modifier is required: tokens.css
+   * paints an unlayered `:focus-visible` box-shadow that beats layered Tailwind
+   * utilities in the cascade, so a plain ring would be overridden. Mirrors the
+   * shared Button's ring-2 + ring-offset-2 + accent ring color.
+   */
+  const fieldFocus =
+    'focus:outline-none focus-visible:ring-2! focus-visible:ring-offset-2! focus-visible:ring-offset-(--color-background)! focus-visible:ring-(--color-accent-blue)!';
 </script>
 
 <form class="flex flex-col gap-4" data-testid="dictionary-edit-form" onsubmit={handleSubmit}>
@@ -41,14 +50,14 @@
       {#if field.multiline}
         <textarea
           rows="2"
-          class="resize-y rounded-[10px] border border-(--color-panel-border) bg-(--color-panel-input) px-3 py-2.5 text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary) focus:outline-none"
+          class="resize-y rounded-[10px] border border-(--color-panel-border) bg-(--color-panel-input) px-3 py-2.5 text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary) {fieldFocus}"
           value={draft[field.key]}
           data-testid={`dictionary-edit-${field.key}`}
           oninput={(event) => update(field.key, event.currentTarget.value)}></textarea>
       {:else}
         <input
           type="text"
-          class="rounded-[10px] border border-(--color-panel-border) bg-(--color-panel-input) px-3 py-2.5 text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary) focus:outline-none"
+          class="rounded-[10px] border border-(--color-panel-border) bg-(--color-panel-input) px-3 py-2.5 text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary) {fieldFocus}"
           value={draft[field.key]}
           data-testid={`dictionary-edit-${field.key}`}
           oninput={(event) => update(field.key, event.currentTarget.value)}
@@ -68,7 +77,7 @@
     </button>
     <button
       type="submit"
-      class="cursor-pointer rounded-[10px] bg-(--color-accent-blue) px-4 py-2.5 text-2sm font-bold text-white transition-opacity hover:opacity-90"
+      class="cursor-pointer rounded-[10px] bg-(--color-accent-blue) px-4 py-2.5 text-2sm font-bold text-(--color-accent-on) transition-opacity hover:opacity-90"
       data-testid="dictionary-edit-save"
     >
       {t('dictionary.save')}
