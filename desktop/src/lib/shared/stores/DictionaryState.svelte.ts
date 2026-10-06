@@ -78,7 +78,43 @@ function levenshtein(a: string, b: string): number {
   return prev[b.length];
 }
 
-export function createDictionaryState() {
+export function createDictionaryState(): {
+  readonly words: DictionaryWordDto[];
+  readonly isLoading: boolean;
+  readonly error: string | null;
+  syncEnabled: boolean;
+  load(): Promise<void>;
+  add(
+    word: string,
+    opts?: {
+      tags?: string[];
+      srsStage?: number;
+      evidence?: DictionaryEvidence | null;
+    },
+  ): Promise<DictionaryWordDto>;
+  capture(entryId: string, evidence: DictionaryEvidence): Promise<DictionaryWordDto>;
+  update(
+    id: string,
+    patch: {
+      word?: string;
+      tags?: string[];
+      srsStage?: number;
+      definition?: string | null;
+      partOfSpeech?: string | null;
+      phonetic?: string | null;
+      example?: string | null;
+    },
+  ): Promise<DictionaryWordDto>;
+  remove(id: string): Promise<void>;
+  search(query: string, limit?: number): DictionaryWordDto[];
+  exportData(format: 'json' | 'csv'): Promise<string>;
+  importData(
+    payload: string,
+    format: 'json' | 'csv',
+  ): Promise<{ imported: number; errors: { row: number; reason: string }[] }>;
+  subscribeToRemoteChanges(): void;
+  unsubscribe(): void;
+} {
   let words = $state<DictionaryWordDto[]>([]);
   let isLoading = $state(false);
   let error = $state<string | null>(null);

@@ -84,7 +84,23 @@ export type UseShelfEditOptions = {
   libraryPort?: LibraryPort;
 };
 
-export function useShelfEdit(options: UseShelfEditOptions) {
+export function useShelfEdit(options: UseShelfEditOptions): {
+  isEditing: boolean;
+  editTitle: string;
+  editAuthor: string;
+  selectedGenre: string | null;
+  customGenre: string;
+  editError: string | null;
+  readonly isSaving: boolean;
+  readonly genreOptions: { value: string; label: string }[];
+  readonly maxGenreLength: number;
+  startEditing(book: LibraryBookDto): void;
+  cancelEditing(): void;
+  resolveGenre(): string;
+  saveEditing(): Promise<void>;
+  handleCoverImport(book: LibraryBookDto): Promise<void>;
+  resetOnClose(isOpen: boolean): void;
+} {
   const libraryPort: LibraryPort = options.libraryPort ?? new TauriLibraryAdapter();
   let isEditing = $state(false);
   let editTitle = $state('');

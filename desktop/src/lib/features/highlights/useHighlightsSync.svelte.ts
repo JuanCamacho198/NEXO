@@ -26,7 +26,19 @@ export function createHighlightsSync(opts: {
   setHighlights: (v: HighlightDto[]) => void;
   getSupabaseSync?: (userId: string) => SupabaseProgressSync;
   outbox?: SyncOutboxDao;
-}) {
+}): {
+  readonly syncState: 'idle' | 'syncing' | 'synced';
+  syncHighlightsInBackground(force?: boolean): Promise<void>;
+  handleDelete(
+    highlight: HighlightDto,
+    currentHighlights: HighlightDto[],
+    setHl: (v: HighlightDto[]) => void,
+  ): Promise<void>;
+  cleanup(): void;
+  sortByUpdatedAtDesc(list: HighlightDto[]): HighlightDto[];
+  chunkRows<T>(rows: T[], chunkSize?: number): T[][];
+  isSameHighlights(a: HighlightDto[], b: HighlightDto[]): boolean;
+} {
   const outboxDao = opts.outbox ?? new SyncOutboxDao();
   let syncState = $state<'idle' | 'syncing' | 'synced'>('idle');
   let syncTimeout: ReturnType<typeof setTimeout> | null = null;

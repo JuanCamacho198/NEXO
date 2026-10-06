@@ -23,7 +23,23 @@ export function createHighlightsFilters(opts: {
   getHighlights: () => HighlightDto[];
   getBooks: () => LibraryBookDto[];
   deps: HighlightsViewDeps;
-}) {
+}): {
+  searchQuery: string;
+  selectedColors: Set<string>;
+  selectedBookId: string | null;
+  selectedDateRange: string | null;
+  selectedType: SelectedType;
+  selectedTagId: string;
+  currentPage: number;
+  allTags: TagDto[];
+  highlightTagMap: Map<string, string[]>;
+  readonly filteredHighlights: HighlightDto[];
+  readonly paginatedHighlights: HighlightDto[];
+  readonly totalPages: number;
+  toggleColor(key: string): void;
+  clearFilters(): void;
+  loadTagsAndMap(): Promise<void>;
+} {
   let searchQuery = $state('');
   let selectedColors = $state<Set<string>>(new Set());
   let selectedBookId = $state<string | null>('');

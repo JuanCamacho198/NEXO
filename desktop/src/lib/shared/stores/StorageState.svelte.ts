@@ -16,7 +16,21 @@ export type PerBookSize = {
   bytes: number;
 };
 
-export function createStorageState() {
+export function createStorageState(): {
+  readonly stats: StorageStats | null;
+  readonly perBookSizes: PerBookSize[];
+  readonly isLoading: boolean;
+  readonly error: string | null;
+  readonly isClearing: boolean;
+  readonly driveUsage: DriveUsage | null;
+  readonly isLoadingDriveUsage: boolean;
+  loadStats(): Promise<void>;
+  loadDriveUsage(force?: boolean): Promise<void>;
+  clearCache(kind: 'covers' | 'temp' | 'all', deep?: boolean): Promise<{ freedBytes: number }>;
+  getPerBookSizes(): Promise<PerBookSize[]>;
+  deleteBookData(bookId: string): Promise<void>;
+  cleanupOrphans(): Promise<{ removed: number }>;
+} {
   let stats = $state<StorageStats | null>(null);
   let perBookSizes = $state<PerBookSize[]>([]);
   let isLoading = $state(false);

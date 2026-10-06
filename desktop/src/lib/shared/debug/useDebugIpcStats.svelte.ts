@@ -1,6 +1,26 @@
 import { metricsStore } from '$lib/shared/logger/MetricsStore';
+import type { MetricEvent } from '$lib/shared/logger/metricTypes';
 
-export function createDebugIpcStats() {
+export function createDebugIpcStats(): {
+  readonly ipcCalls: MetricEvent[];
+  readonly ipcSummary: {
+    totalCalls: number;
+    avgDuration: number;
+    maxDuration: number;
+    successRate: number;
+  };
+  readonly recentCalls: MetricEvent[];
+  readonly ipcCommands: Array<{
+    feature: string;
+    count: number;
+    avgDuration: number;
+    minDuration: number;
+    p50Duration: number;
+    maxDuration: number;
+    successRate: number;
+  }>;
+  readonly refreshTick: number;
+} {
   let refreshTick = $state(0);
 
   $effect(() => {
