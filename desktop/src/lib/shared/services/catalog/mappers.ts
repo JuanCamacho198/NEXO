@@ -138,7 +138,7 @@ export function resolveDownloadUrl(formats: Record<string, string>, preferEpub: 
   throw catalogError('UNAVAILABLE_DOWNLOAD', 'no usable format');
 }
 
-/** Normalized title+author key used to pair OL docs with Gutendex records. */
+/** Normalized title+author key used to pair an enrichment doc with a primary book. */
 export function normalizeMatchKey(title: string, authors: string[]): string {
   const norm = (s: string): string =>
     s
@@ -154,18 +154,26 @@ export function normalizeMatchKey(title: string, authors: string[]): string {
 }
 
 /**
- * Merge sources: every Gutendex field wins; an empty Gutendex `coverUrl`
- * is filled from the matching OL doc. Identity gaps (isbn13/isbn10/work
- * key/IA id) are filled from the same match — no parallel identity model.
+ * Merge sources: the left-hand (primary) provider wins every field it
+ * supplies; an empty primary `coverUrl` is filled from the matching
+ * enrichment doc. Identity gaps (isbn13/isbn10/work key/IA id) are filled from
+ * the same match — no parallel identity model. Under the default composite
+ * fan-out the primary is Google Books (or Gutendex in a keyless build) and the
+ * enrichment list is what remains of Open Library.
  */
-export function mergeResults(gutendexBooks: CatalogBook[], olBooks: CatalogBook[]): CatalogBook[] {
-  const olByKey = new Map(olBooks.map((b) => [normalizeMatchKey(b.title, b.authors), b]));
-  const usedOlKeys = new Set<string>();
-  const merged = gutendexBooks.map((g) => {
+export function mergeResults(
+  primaryBooks: CatalogBook[],
+  enrichmentBooks: CatalogBook[],
+): CatalogBook[] {
+  const enrichmentByKey = new Map(
+    enrichmentBooks.map((b) => [normalizeMatchKey(b.title, b.authors), b]),
+  );
+  const usedKeys = new Set<string>();
+  const merged = primaryBooks.map((g) => {
     const key = normalizeMatchKey(g.title, g.authors);
-    const match = olByKey.get(key);
+    const match = enrichmentByKey.get(key);
     if (!match) return g;
-    usedOlKeys.add(key);
+    usedKeys.add(key);
     return {
       ...g,
       coverUrl: g.coverUrl ?? match.coverUrl,
@@ -175,16 +183,16 @@ export function mergeResults(gutendexBooks: CatalogBook[], olBooks: CatalogBook[
       internetArchiveId: g.internetArchiveId ?? match.internetArchiveId ?? null,
     };
   });
-  for (const ol of olBooks) {
-    if (!usedOlKeys.has(normalizeMatchKey(ol.title, ol.authors))) merged.push(ol);
+  for (const book of enrichmentBooks) {
+    if (!usedKeys.has(normalizeMatchKey(book.title, book.authors))) merged.push(book);
   }
   return merged;
 }
 
-/** Gutendex `count` wins when present, else OL `numFound`. */
-export function resolveTotalCount(gutendexCount: number | null, olNumFound: number): number {
-  if (typeof gutendexCount === 'number' && gutendexCount >= 0) return gutendexCount;
-  return Math.max(0, olNumFound);
+/** Primary provider's count wins when present, else the enrichment source's. */
+export function resolveTotalCount(primaryCount: number | null, enrichmentCount: number): number {
+  if (typeof primaryCount === 'number' && primaryCount >= 0) return primaryCount;
+  return Math.max(0, enrichmentCount);
 }
 
 /** Next 1-based page, or null when `offset + pageLength` reached `totalCount`. */

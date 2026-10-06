@@ -261,6 +261,7 @@ describe('search/getDetails stay ungated (regression)', () => {
     // network: the fan-out is served locally and deterministically.
     expect(builtInFetchCalls.length).toBeGreaterThan(builtInCallsBefore);
     expect(builtInFetchCalls.some((url) => url.includes('gutendex.com'))).toBe(true);
-    expect(builtInFetchCalls.some((url) => url.includes('openlibrary.org'))).toBe(true);
+    // Open Library opted out of the composite fan-out, so it is never called here.
+    expect(builtInFetchCalls.some((url) => url.includes('openlibrary.org'))).toBe(false);
   });
 });

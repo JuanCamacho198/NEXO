@@ -133,7 +133,9 @@ describe('DiscoverDomainState (PR2 RED)', () => {
     let attempt = 0;
     const { state } = stateWith((url) => {
       attempt += 1;
-      if (attempt <= 2) throw new TypeError('fetch failed');
+      // One provider per search now (Open Library opted out of the fan-out),
+      // so a single failed fetch is enough to surface the offline state.
+      if (attempt <= 1) throw new TypeError('fetch failed');
       return searchBodies()(url);
     });
     state.setQuery('pride');

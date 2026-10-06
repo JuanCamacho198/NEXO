@@ -164,6 +164,15 @@ export interface CatalogProvider {
    * rejects INVALID_PAGE before any I/O.
    */
   searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult>;
+
+  /**
+   * Fail-closed capability probe: false ⇒ the composite's fan-out `search()`
+   * skips this provider. Absent ⇒ true (backward compatible). Only the
+   * composite keyword-search fan-out is gated: detail routing, per-source
+   * `searchSource`, featured rails and download resolution still see every
+   * registered provider.
+   */
+  supportsCompositeSearch?(): boolean;
 }
 
 export type { CatalogErrorCode };

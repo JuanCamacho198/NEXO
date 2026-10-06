@@ -1,10 +1,10 @@
 /**
  * Built-in CatalogProvider adapters over the raw datasources.
- * Gutendex is metadata/download authority; Open Library enriches + cover
- * fallback at the composite level; Google Books is a key-gated metadata
- * enrichment source (never a download source). Book-id formats stay
- * byte-for-byte: `gutendex:<numericId>` / `openlibrary:<key>` /
- * `googlebooks:<volumeId>`.
+ * Open Library enriches + cover fallback; Google Books is a key-gated metadata
+ * enrichment source (never a download source). Gutendex is the download/metadata
+ * authority and the composite-search fallback when Google Books is absent.
+ * Book-id formats stay byte-for-byte: `gutendex:<numericId>` /
+ * `openlibrary:<key>` / `googlebooks:<volumeId>`.
  */
 import { catalogError } from './errors';
 import { BUILTIN_GUTENDEX, BUILTIN_GOOGLEBOOKS, BUILTIN_OPENLIBRARY } from './CatalogProvider';
@@ -26,7 +26,22 @@ const GUTENDEX_ID_PREFIX = 'gutendex:';
 const GOOGLEBOOKS_ID_PREFIX = 'googlebooks:';
 
 export class GutendexCatalogProvider implements CatalogProvider {
-  constructor(private readonly ds: GutendexDataSource = new GutendexDataSource()) {}
+  constructor(
+    private readonly ds: GutendexDataSource = new GutendexDataSource(),
+    /**
+     * Composite-search fallback flag. `defaultCatalogProviders` passes `true`
+     * only when Google Books is not registered (keyless build): Gutendex then
+     * stays in the fan-out so a keyless search still returns results. When
+     * Google Books is registered this is `false`, and the slow Gutendex search
+     * leaves the fan-out entirely (its detail routing, `searchSource` and
+     * download resolution are untouched).
+     */
+    private readonly compositeSearchFallback = true,
+  ) {}
+
+  supportsCompositeSearch(): boolean {
+    return this.compositeSearchFallback;
+  }
 
   async search(query: string, page: number): Promise<PagedResult> {
     const { books, totalCount } = await this.ds.search(query, page);
@@ -107,6 +122,16 @@ export class OpenLibraryCatalogProvider implements CatalogProvider {
   }
 
   supportsFeatured(_sort: CatalogFeaturedSort): boolean {
+    return false;
+  }
+
+  /**
+   * Open Library leaves the composite keyword-search fan-out: its
+   * `search.json` latency (measured 0.7–8 s) makes it a poor primary source.
+   * It stays registered so `searchSource('builtin:openlibrary', …)` and any
+   * enrichment that consumes its docs keep working.
+   */
+  supportsCompositeSearch(): boolean {
     return false;
   }
 

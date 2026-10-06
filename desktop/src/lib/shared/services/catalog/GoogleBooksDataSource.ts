@@ -36,6 +36,13 @@ export const GOOGLE_BOOKS_BASE_URL = 'https://www.googleapis.com/books/v1';
 export const GOOGLE_BOOKS_VOLUME_FIELDS =
   'id,volumeInfo(title,authors,description,language,categories,imageLinks,industryIdentifiers)';
 
+/**
+ * `fields` whitelist for the search endpoint. Wraps the volume whitelist in the
+ * list-response envelope: `totalItems` must be requested explicitly or the
+ * partial response omits it and pagination degrades to a per-page count.
+ */
+export const GOOGLE_BOOKS_SEARCH_FIELDS = `totalItems,items(${GOOGLE_BOOKS_VOLUME_FIELDS})`;
+
 /** A bare `isbn:`-eligible identifier: 9 digits + digit/X check digit, or 13 digits. */
 const ISBN10_RE = /^\d{9}[\dX]$/;
 const ISBN13_RE = /^\d{13}$/;
@@ -88,7 +95,7 @@ export class GoogleBooksDataSource {
     }
   }
 
-  /** Search volumes; ISBN queries use the `isbn:` operator, all else raw. */
+  /** Search volumes; a bare ISBN is sent as plain digits (never a colon operator). */
   async search(
     query: string,
     page: number,
@@ -100,7 +107,7 @@ export class GoogleBooksDataSource {
     const size = clampPageSize(pageSize);
     const startIndex = (page - 1) * size;
     const q = encodeURIComponent(buildGoogleBooksQuery(query));
-    const url = `${GOOGLE_BOOKS_BASE_URL}/volumes?q=${q}&startIndex=${startIndex}&maxResults=${size}${this.keyParam()}`;
+    const url = `${GOOGLE_BOOKS_BASE_URL}/volumes?q=${q}&startIndex=${startIndex}&maxResults=${size}&fields=${GOOGLE_BOOKS_SEARCH_FIELDS}${this.keyParam()}`;
     const data = (await this.getJson(url, SEARCH_DEADLINE_MS)) as GoogleBooksSearchResponse;
     const books = (data.items ?? [])
       .map(mapGoogleBooksVolume)

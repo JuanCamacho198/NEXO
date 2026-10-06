@@ -2,10 +2,13 @@
  * CompositeCatalogProvider — ordered dynamic composite behind the port.
  * Providers are searched in construction order (built-ins first, curated,
  * then enabled addons in install order); results concat-merge in that order.
- * Page/details caching is per-source with v2 keys carrying the full source
- * string, and reads enforce the existence check (design A1): entries whose
- * source id is not in the active source set at read time are never served.
- * Burst searches are trailing-edge debounced; page < 1 rejects before I/O.
+ * The keyword-search fan-out only includes providers that do not opt out via
+ * `supportsCompositeSearch` (details, per-source search, rails and download
+ * resolution still see every provider). Page/details caching is per-source
+ * with v2 keys carrying the full source string, and reads enforce the
+ * existence check (design A1): entries whose source id is not in the active
+ * source set at read time are never served. Burst searches are trailing-edge
+ * debounced; page < 1 rejects before I/O.
  */
 import { catalogError } from './errors';
 import type {
@@ -100,7 +103,9 @@ import type { AddonTransport, InstalledAddonRow } from '../addons/AddonRegistry'
  * `googleBooksKey` defaults to blank, which omits Google Books entirely
  * (fail-closed); the app composition root passes
  * `googleBooksKeyFromEnv()` so the ambient environment never leaks into
- * provider construction made by tests.
+ * provider construction made by tests. When Google Books is absent, Gutendex
+ * is left in the composite keyword-search fan-out as the fail-safe source, so
+ * a keyless build never fans out to nothing.
  *
  * `consent` is the per-addon network-consent gate handed to every addon
  * provider (resolve-only gating; search/getDetails stay ungated). Omitted ⇒
@@ -119,7 +124,10 @@ export function defaultCatalogProviders(
     );
   const googleBooks: GoogleBooksCatalogProvider | null = googleBooksProviderOrNull(googleBooksKey);
   return [
-    new GutendexCatalogProvider(),
+    // Gutendex only joins the composite search fan-out when Google Books is
+    // absent (keyless build): it is then the sole keyword-search source, so
+    // search still returns results instead of fanning out to nothing.
+    new GutendexCatalogProvider(undefined, googleBooks === null),
     new OpenLibraryCatalogProvider(),
     ...(googleBooks ? [googleBooks] : []),
     new CuratedCatalogProvider(),
@@ -363,7 +371,7 @@ export class CompositeCatalogProvider implements CatalogProvider {
       return Promise.reject(catalogError('INVALID_PAGE', `page must be >= 1, got ${page}`));
     }
     const active = this.activeSourceIds();
-    const parts = this.searchableProviders().map((provider) => {
+    const parts = this.compositeSearchProviders().map((provider) => {
       const cached = this.readPageHit(provider, query, page, active);
       return cached !== null
         ? { cached: true as const, value: cached }
@@ -389,7 +397,7 @@ export class CompositeCatalogProvider implements CatalogProvider {
     // Re-check inside the debounce window: a concurrent caller may have filled it.
     const active = this.activeSourceIds();
     const pages = await Promise.all(
-      this.searchableProviders().map(async (provider) => {
+      this.compositeSearchProviders().map(async (provider) => {
         const cached = this.readPageHit(provider, query, page, active);
         if (cached !== null) return cached;
         const result = await provider.search(query, page);
@@ -403,6 +411,19 @@ export class CompositeCatalogProvider implements CatalogProvider {
   /** Providers without sources (disabled) contribute nothing and are never called. */
   private searchableProviders(): CatalogProvider[] {
     return this.providers.filter((p) => p.listSources().length > 0);
+  }
+
+  /**
+   * Composite keyword-search fan-out set: providers that do not opt out via
+   * the fail-closed `supportsCompositeSearch` probe (absent ⇒ participating).
+   * `defaultCatalogProviders` keeps the slow Gutendex and Open Library
+   * searches out when Google Books is registered, but leaves Gutendex in when
+   * it is not, so a keyless build always has a search source. Details,
+   * `searchSource`, featured rails and download resolution still see every
+   * provider through `searchableProviders`.
+   */
+  private compositeSearchProviders(): CatalogProvider[] {
+    return this.searchableProviders().filter((p) => p.supportsCompositeSearch?.() ?? true);
   }
 
   private activeSourceIds(): Set<string> {
@@ -514,8 +535,9 @@ export class CompositeCatalogProvider implements CatalogProvider {
 
   /**
    * Ordered merge: left-fold the provider pages — earlier providers win fields,
-   * later ones fill cover gaps and append unmatched books (the [Gutendex,
-   * OpenLibrary] fold reproduces the legacy hardcoded-pair merge exactly).
+   * later ones fill cover gaps and append unmatched books. Under the default
+   * list the first fan-out page is Google Books (or Gutendex in a keyless
+   * build), followed by curated/addon pages.
    */
   private mergePaged(pages: PagedResult[], page: number): PagedResult {
     if (pages.length === 0) return toPagedResult([], page, 0);
