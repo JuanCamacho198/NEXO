@@ -1,7 +1,16 @@
 <script lang="ts">
   import type { CatalogBook } from '$lib/shared/services/catalog';
 
-  let { book, onOpen }: { book: CatalogBook; onOpen: (book: CatalogBook) => void } = $props();
+  let {
+    book,
+    onOpen,
+    onPrefetch,
+  }: {
+    book: CatalogBook;
+    onOpen: (book: CatalogBook) => void;
+    /** Optional cache warm on pointer/keyboard intent; never runs on render. */
+    onPrefetch?: (book: CatalogBook) => void;
+  } = $props();
 
   let coverFailed = $state(false);
   const showCover = $derived(book.coverUrl !== null && !coverFailed);
@@ -20,6 +29,8 @@
   type="button"
   class="group flex flex-col gap-2 rounded-lg border border-(--color-border) bg-(--color-surface-subtle) p-2 text-left transition-colors hover:border-(--color-primary)/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)/50"
   onclick={() => onOpen(book)}
+  onpointerenter={() => onPrefetch?.(book)}
+  onfocus={() => onPrefetch?.(book)}
 >
   <div
     class="relative aspect-2/3 w-full overflow-hidden rounded-md bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3"

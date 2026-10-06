@@ -221,7 +221,11 @@
           style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))"
         >
           {#each discoverState.books as book (book.id)}
-            <DiscoverCard {book} onOpen={(book) => void discoverState.openDetail(book)} />
+            <DiscoverCard
+              {book}
+              onOpen={(book) => void discoverState.openDetail(book)}
+              onPrefetch={(book) => discoverState.prefetchDetail(book)}
+            />
           {/each}
         </div>
         {#if discoverState.status === 'loadingMore'}
@@ -268,7 +272,11 @@
           style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))"
         >
           {#each scopeView.books as book (book.id)}
-            <DiscoverCard {book} onOpen={(book) => void discoverState.openDetail(book)} />
+            <DiscoverCard
+              {book}
+              onOpen={(book) => void discoverState.openDetail(book)}
+              onPrefetch={(book) => discoverState.prefetchDetail(book)}
+            />
           {/each}
         </div>
         {#if scopeView.kind === 'featured'}
@@ -288,6 +296,7 @@
         books={railBooks(rail)}
         {t}
         onOpen={(book) => void discoverState.openDetail(book)}
+        onPrefetch={(book) => discoverState.prefetchDetail(book)}
         onRetry={() => void discoverState.retryRail(index)}
         onViewAll={() => openRailScope(index)}
       />

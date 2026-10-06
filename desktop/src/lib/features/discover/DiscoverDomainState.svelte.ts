@@ -41,6 +41,14 @@ export type { DiscoverBrowseScope, DiscoverRailState } from './DiscoverRailsDoma
 /** Single production transfer port; the Rust command owns the actual transfer. */
 const defaultDownloadTransfer: DownloadTransferPort = createTauriDownloadTransfer();
 
+/**
+ * Cap on concurrent detail prefetches. A rail shows ~6-7 cards and a pointer
+ * sweep crosses them in quick succession, so an uncapped prefetch would issue
+ * one request per card. Three bounds the burst to the near-term intent window
+ * (a user pausing on a card or two) while extra intent is dropped, never queued.
+ */
+export const DISCOVER_PREFETCH_CONCURRENCY = 3;
+
 function messageOf(err: unknown): string {
   if (typeof err === 'string') return err;
   if (err instanceof Error) return err.message;
@@ -86,6 +94,8 @@ class DiscoverDomainState {
   private lastDetailSeed: CatalogBook | null = null;
   /** Bumped per open/close so a superseded enrichment cannot touch the sheet. */
   private detailGeneration = 0;
+  /** Book ids with a prefetch in flight, so repeated intent issues one request. */
+  private readonly prefetchInFlight = new Set<string>();
   /** Transfer id of the in-flight backend download, or null. */
   private activeTransferId: string | null = null;
   /** Set by `cancelDownload` so a late settle becomes `cancelled`, never `imported`. */
@@ -211,6 +221,32 @@ class DiscoverDomainState {
     if (this.detailGeneration !== generation) return;
     this.detail = enriched;
     this.detailStatus = 'loaded';
+  }
+
+  /**
+   * Warm the detail cache from card intent (hover/focus). Fire-and-forget: it
+   * never touches visible state — `detail`, `detailStatus` and `errorCode` are
+   * left alone and every failure is swallowed. It skips an id whose detail is
+   * already open or loading, dedupes ids already in flight, and drops new
+   * intent once `DISCOVER_PREFETCH_CONCURRENCY` requests are running so a rail
+   * sweep cannot issue one request per card. A late result is inert: nothing is
+   * written, so a superseded prefetch cannot mutate the sheet.
+   */
+  prefetchDetail(book: CatalogBook): void {
+    const id = book.id;
+    // A real open is already fetching this id; never race it.
+    if (this.detailStatus !== 'closed' && (this.detail?.id === id || this.lastDetailId === id)) {
+      return;
+    }
+    if (this.prefetchInFlight.has(id)) return;
+    if (this.prefetchInFlight.size >= DISCOVER_PREFETCH_CONCURRENCY) return;
+    this.prefetchInFlight.add(id);
+    void this.provider
+      .getDetails(id)
+      .catch(() => undefined)
+      .finally(() => {
+        this.prefetchInFlight.delete(id);
+      });
   }
 
   /** Re-open the last requested detail (the offline/error retry affordance). */

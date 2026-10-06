@@ -20,6 +20,7 @@
     books = [],
     t,
     onOpen,
+    onPrefetch,
     onRetry,
     onViewAll,
   }: {
@@ -29,6 +30,8 @@
     books?: CatalogBook[];
     t: Translate;
     onOpen: (book: CatalogBook) => void;
+    /** Optional cache warm on pointer/keyboard intent; threaded to the cards. */
+    onPrefetch?: (book: CatalogBook) => void;
     onRetry: () => void;
     onViewAll: () => void;
   } = $props();
@@ -89,7 +92,7 @@
     </div>
     <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
       {#each visible as book (book.id)}
-        <DiscoverCard {book} {onOpen} />
+        <DiscoverCard {book} {onOpen} {onPrefetch} />
       {/each}
     </div>
   </section>
