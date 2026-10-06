@@ -17,7 +17,29 @@ export type ReaderNavigationDeps = {
   getDebugState?: () => { readerInfo: unknown; enabled: boolean } | null;
 };
 
-export function createReaderNavigation(deps: ReaderNavigationDeps) {
+export function createReaderNavigation(deps: ReaderNavigationDeps): {
+  currentPdfPage: number;
+  totalPdfPages: number;
+  currentEpubChapter: number;
+  tocEntries: TocEntry[];
+  tocNavigate: TocEntry | null;
+  showTocPanel: boolean;
+  readonly bookProgress: number;
+  readonly headerCurrentPage: number;
+  readonly headerTotalPages: number;
+  readonly showHeaderReadingControls: boolean;
+  readonly prevDisabled: boolean;
+  readonly nextDisabled: boolean;
+  handlePdfPageChange(page: number, total: number): void;
+  handleEpubLocationChange(cfi: string, pct: number): void;
+  handleTocReady(entries: TocEntry[]): void;
+  handleTocNavigate(entry: TocEntry): void;
+  toggleTocPanel(): void;
+  goPrev(): boolean;
+  goNext(): boolean;
+  handleHeaderGoToPage(page: number): Promise<boolean>;
+  cleanup(): void;
+} {
   let currentPdfPage = $state(0);
   let totalPdfPages = $state(0);
   let currentEpubChapter = $state(0);

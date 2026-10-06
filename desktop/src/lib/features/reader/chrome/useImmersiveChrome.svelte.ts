@@ -10,7 +10,24 @@ export type ImmersiveChromeDeps = {
   };
 };
 
-export function createImmersiveChrome(deps: ImmersiveChromeDeps) {
+export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
+  isFullscreen: boolean;
+  readonly headerVisible: boolean;
+  readonly edgeNavVisible: boolean;
+  readonly hoverTop: boolean;
+  readonly mouseX: number;
+  readonly mouseY: number;
+  readonly _idleTimer: ReturnType<typeof setTimeout> | null;
+  readonly _pendingFrame: number | null;
+  resetIdleTimer(): void;
+  updateEdgeNav(x: number): void;
+  handleWorkspaceMouseMove(e: MouseEvent): void;
+  handleWorkspaceMouseLeave(): void;
+  handleGlobalKeydown(e: KeyboardEvent): void;
+  toggleFullscreen(): void;
+  toggleWindowFullscreen(): Promise<void>;
+  cleanup(): void;
+} {
   const appWindow =
     deps.appWindow ?? (getCurrentWebviewWindow() as unknown as ImmersiveChromeDeps['appWindow']);
 

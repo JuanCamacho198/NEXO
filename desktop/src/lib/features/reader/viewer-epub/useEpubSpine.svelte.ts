@@ -32,7 +32,18 @@ export type EpubSpineDeps = {
   parseEpub?: ParseEpubFn;
 };
 
-export function createEpubSpine(deps: EpubSpineDeps) {
+export function createEpubSpine(deps: EpubSpineDeps): {
+  getToc(): EpubChapterMeta[];
+  getSpineHrefs(): string[];
+  spineIndexForToc(tocIndex: number): number;
+  tocIndexForSpine(spineIndex: number, spineHref?: string): number | null;
+  ensureSpineHrefs(bookId: string, filePath: string): Promise<void>;
+  readonly spineHrefs: string[];
+  readonly spineLoadedFor: string | null;
+  getSpineIndexForHref(href: string, spine: string[]): number | null;
+  normalizeHref: typeof normalizeHref;
+  stripFragment: typeof stripFragment;
+} {
   const resolver = createSpineResolver({ parseEpub: deps.parseEpub });
 
   function getToc(): EpubChapterMeta[] {

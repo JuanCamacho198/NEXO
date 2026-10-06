@@ -141,7 +141,13 @@ export function mapIframeMessageToError(
   });
 }
 
-export function createEpubBridge(deps: EpubBridgeDeps) {
+export function createEpubBridge(deps: EpubBridgeDeps): {
+  scrollToFragment(fragment: string | null): void;
+  scrollToCfi(cfi: string): void;
+  emitPreciseLocation(): void;
+  handleIframeMessage(event: MessageEvent): void;
+  initReader(): Promise<void>;
+} {
   /** Scroll iframe to fragment anchor (preserved #frag in toc.href). 3×rAF ensures layout. */
   function scrollToFragment(fragment: string | null): void {
     const iframeEl = deps.getIframeEl();

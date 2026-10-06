@@ -7,7 +7,18 @@ export type BookmarksPanelDeps = {
   viewerPort?: ViewerPort;
 };
 
-export function createBookmarksPanel(deps: BookmarksPanelDeps = {}) {
+export function createBookmarksPanel(deps: BookmarksPanelDeps = {}): {
+  readonly bookmarksState: ReturnType<typeof createBookmarksState>;
+  showBookmarks: boolean;
+  showBookmarkRibbon: boolean;
+  bookmarksPanelEl: HTMLElement | undefined;
+  readonly _ribbonTimer: ReturnType<typeof setTimeout> | null;
+  triggerBookmarkRibbon(): void;
+  toggleBookmarks(): void;
+  closeBookmarks(): void;
+  openBookmarks(): void;
+  cleanup(): void;
+} {
   const outboxDao = deps.outboxDao ?? new SyncOutboxDao();
   const bookmarksState = createBookmarksState({ outboxDao, viewerPort: deps.viewerPort });
 

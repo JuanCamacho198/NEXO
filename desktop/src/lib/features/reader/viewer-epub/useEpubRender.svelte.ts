@@ -614,7 +614,25 @@ export type EpubRenderDeps = {
   setError: (msg: string) => void;
 };
 
-export function createEpubRender(deps: EpubRenderDeps) {
+export function createEpubRender(deps: EpubRenderDeps): {
+  iframeContentHeight: number;
+  getEpoch(): number;
+  getCurrentRenderIndex(): number | null;
+  syncIframeHeight(): void;
+  iframeContentHeightValue(): number;
+  buildReaderOverrideCss(): string;
+  refreshReaderStyles(): void;
+  renderChapter(index: number): Promise<void>;
+  resolveResourcePath: typeof resolveResourcePath;
+  toAssetUrl: typeof toAssetUrl;
+  collectFontFaceAssetUrls: typeof collectFontFaceAssetUrls;
+  probeMissingFontUrls: typeof probeMissingFontUrls;
+  stripMissingFontFaces: typeof stripMissingFontFaces;
+  getThemeStyles: typeof getThemeStyles;
+  getThemeBgColor: typeof getThemeBgColor;
+  buildChapterSrcdoc: typeof buildChapterSrcdoc;
+  buildReaderOverrideCssPure: typeof buildReaderOverrideCss;
+} {
   // Epoch guard — plain vars NOT $state (prevents ping-pong BUILD v4)
   let renderEpoch = 0;
   let currentRenderIndex: number | null = null;

@@ -34,7 +34,19 @@ export type PdfZoomThemeDeps = {
   getPdfDoc: () => unknown | null;
 };
 
-export function createPdfZoomThemeState(deps: PdfZoomThemeDeps) {
+export function createPdfZoomThemeState(deps: PdfZoomThemeDeps): {
+  readonly readerThemePalette: ReaderThemePalette;
+  readonly visualFilterStyle: string;
+  readonly pendingWheelFrame: number | null;
+  readonly pendingWheelDelta: number;
+  clampPdfScale: typeof navClampPdfScale;
+  clampPdfScaleRaw: typeof clampPdfScaleRaw;
+  resolveThemePalette: typeof resolveThemePalette;
+  handleViewerWheel(event: WheelEvent): void;
+  handleKeyZoom(event: KeyboardEvent): boolean;
+  cleanup(): void;
+  attachWheelListener(): () => void;
+} {
   let pendingWheelFrame: number | null = null;
   let pendingWheelDelta = 0;
 

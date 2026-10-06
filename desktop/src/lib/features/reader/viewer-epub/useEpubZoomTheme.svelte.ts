@@ -41,7 +41,18 @@ export type EpubZoomThemeDeps = {
   getThemeMode: () => ReaderThemeMode;
 };
 
-export function createEpubZoomTheme(deps: EpubZoomThemeDeps) {
+export function createEpubZoomTheme(deps: EpubZoomThemeDeps): {
+  zoomLevel: number;
+  readonly pendingWheelDelta: number;
+  readonly pendingWheelFrame: number | null;
+  clampZoomPercent: typeof clampZoomPercent;
+  getThemeStyles: typeof getThemeStyles;
+  getThemeBgColor(): string;
+  setZoom(percent: number): void;
+  changeZoom(delta: number): void;
+  handleWheel(e: WheelEvent): void;
+  cleanup(): void;
+} {
   let zoomLevel = $state(100);
   let persistTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingWheelDelta = 0;

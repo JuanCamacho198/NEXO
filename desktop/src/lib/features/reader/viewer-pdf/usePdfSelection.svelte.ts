@@ -37,7 +37,17 @@ export type PdfSelectionDeps = {
   ) => void;
 };
 
-export function createPdfSelectionState(deps: PdfSelectionDeps) {
+export function createPdfSelectionState(deps: PdfSelectionDeps): {
+  selectionPlacement: 'above' | 'below';
+  activeHighlightId: string | null;
+  clearSelectionUi(): void;
+  hideToolbar(): void;
+  dismissHighlightManager(): void;
+  handleHighlightClick(hl: { id: string; color: string; text?: string }, event: MouseEvent): void;
+  handleTextSelection(): void;
+  updateSelectionState(): void;
+  buildSelectionOverlayRects: typeof pureBuildSelectionOverlayRects;
+} {
   let selectionPlacement = $state<'above' | 'below'>('above');
   let activeHighlightId = $state<string | null>(null);
 

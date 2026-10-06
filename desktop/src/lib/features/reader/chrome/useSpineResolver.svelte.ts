@@ -19,7 +19,12 @@ const defaultParseEpub: ParseEpubFn = async (filePath, bookId) => {
   return { spineHrefs: [] };
 };
 
-export function createSpineResolver(deps: { parseEpub?: ParseEpubFn } = {}) {
+export function createSpineResolver(deps: { parseEpub?: ParseEpubFn } = {}): {
+  readonly epubSpineHrefs: string[];
+  readonly epubSpineLoadedFor: string | null;
+  getSpineIndexForHref(href: string, spine: string[]): number | null;
+  ensureSpineHrefs(bookId: string, filePath: string): Promise<void>;
+} {
   const parseEpub = deps.parseEpub ?? defaultParseEpub;
 
   let epubSpineHrefs = $state<string[]>([]);

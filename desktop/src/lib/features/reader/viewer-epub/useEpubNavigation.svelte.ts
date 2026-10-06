@@ -9,7 +9,23 @@ export type EpubNavigationDeps = {
   tocIndexForSpine: (spineIndex: number, spineHref?: string) => number | null;
 };
 
-export function createEpubNavigation(deps: EpubNavigationDeps) {
+export function createEpubNavigation(deps: EpubNavigationDeps): {
+  currentChapterIndex: number;
+  pendingCfiScroll: string | null;
+  pendingFragment: string | null;
+  readonly currentSpineIndex: number;
+  goToPrev(): void;
+  goToNext(): void;
+  goToChapter(index: number): void;
+  handleGoToPage(page: number): Promise<boolean>;
+  handleExternalTocNavigate(targetId: string | null): boolean;
+  handleSearchTargetLocator(
+    target: string | null,
+    options: { currentChapterIndex: number; totalChapters: number; tocLength: number },
+  ): { navigated: boolean; needsScroll: boolean; chapterIdx: number | null } | null;
+  clearPendingCfiScroll(): void;
+  clearPendingFragment(): void;
+} {
   let currentChapterIndex = $state(0);
   let pendingCfiScroll = $state<string | null>(null);
   let pendingFragment = $state<string | null>(null);

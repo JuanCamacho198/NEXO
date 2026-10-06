@@ -13,7 +13,19 @@ export type ReaderZoomDeps = {
   settingsPort?: SettingsPort;
 };
 
-export function createReaderZoom(deps: ReaderZoomDeps) {
+export function createReaderZoom(deps: ReaderZoomDeps): {
+  localReaderSettings: ReaderSettings;
+  readonly _persistTimer: ReturnType<typeof setTimeout> | null;
+  readonly _pendingWheelFrame: number | null;
+  readonly _pendingWheelDelta: number;
+  handleTextSettingsChange(updated: ReaderSettings): void;
+  syncFromProps(next: ReaderSettings | undefined): void;
+  adjustZoom(delta: number): void;
+  handleHeaderFontSizeChange(size: number): void;
+  handleGlobalWheel(e: WheelEvent): void;
+  handleGlobalKeydown(e: KeyboardEvent): void;
+  cleanup(): void;
+} {
   const settingsPort = deps.settingsPort ?? new TauriSettingsAdapter();
   const persist = deps.persist ?? ((s: ReaderSettings) => settingsPort.upsertReaderSettings(s));
   const resolveViewer = (): ViewerHandle => {

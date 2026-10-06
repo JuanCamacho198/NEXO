@@ -52,7 +52,25 @@ export type EpubHighlightsDeps = {
   viewerPort?: ViewerPort;
 };
 
-export function createEpubHighlights(deps: EpubHighlightsDeps) {
+export function createEpubHighlights(deps: EpubHighlightsDeps): {
+  lastHighlightRenderKey: string;
+  handleEpubHighlightClick(msg: {
+    id: string;
+    x: number;
+    y: number;
+    color: string;
+    text?: string;
+    pageNumber: number;
+  }): void;
+  handleEpubHighlightFailed(msg: {
+    id: string;
+    reason: string;
+    pageNumber: number;
+    cfi?: string;
+    color?: string;
+  }): void;
+  handleEpubHighlightPlaced(msg: { id: string; pageNumber: number }): void;
+} {
   const viewerPort = deps.viewerPort ?? new TauriViewerAdapter();
   let lastHighlightRenderKey = $state('');
 

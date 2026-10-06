@@ -46,7 +46,20 @@ export type HighlightsDeps = {
   getDebugState?: () => typeof debugState | null;
 };
 
-export function createHighlights(deps: HighlightsDeps) {
+export function createHighlights(deps: HighlightsDeps): {
+  persistedHighlights: PersistedHighlight[];
+  reloadHighlights(): void;
+  runReloadHighlights(): Promise<void>;
+  handleColorSelect(color: string, data: SelectionData): Promise<void>;
+  updateHighlightColor(id: string, color: string): void;
+  updateHighlightNote(id: string, note: string | null): void;
+  deleteHighlightById(id: string): void;
+  enqueueHighlightUpdate(id: string, changes: { color?: string; note?: string | null }): void;
+  cleanup(): void;
+  readonly _timer: ReturnType<typeof setTimeout> | null;
+  readonly _inFlight: boolean;
+  readonly _queued: boolean;
+} {
   const { getBook, spine, outbox } = deps;
   const viewerPort = deps.viewerPort ?? new TauriViewerAdapter();
   const getUserId = deps.getUserId ?? (() => authState.userId);
