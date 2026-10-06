@@ -3,7 +3,14 @@
  * Plain `fetch` + identified UA; `connect-src` allowlisted in tauri.conf.json.
  */
 import { catalogError, isCatalogError } from './errors';
-import { DESKTOP_USER_AGENT, clampPageSize, fetchWithRetry, toCatalogError } from './policy';
+import {
+  DESKTOP_USER_AGENT,
+  DETAIL_DEADLINE_MS,
+  SEARCH_DEADLINE_MS,
+  clampPageSize,
+  fetchWithRetry,
+  toCatalogError,
+} from './policy';
 import { mapGutendexBook, type GutendexRecord } from './mappers';
 import type { CatalogBook, CatalogFeaturedSort } from './CatalogProvider';
 
@@ -20,12 +27,13 @@ export class GutendexDataSource {
     private readonly userAgent: string = DESKTOP_USER_AGENT,
   ) {}
 
-  private async getJson(path: string): Promise<unknown> {
+  private async getJson(path: string, deadlineMs: number): Promise<unknown> {
     try {
       const res = await fetchWithRetry(
         `${GUTENDEX_BASE_URL}${path}`,
         { headers: { 'User-Agent': this.userAgent, Accept: 'application/json' } },
         this.fetchFn,
+        deadlineMs,
       );
       return await res.json();
     } catch (err) {
@@ -45,7 +53,10 @@ export class GutendexDataSource {
   }> {
     const size = clampPageSize(pageSize);
     const params = new URLSearchParams({ search: query, page: String(page) });
-    const data = (await this.getJson(`/books/?${params.toString()}`)) as GutendexSearchResponse;
+    const data = (await this.getJson(
+      `/books/?${params.toString()}`,
+      SEARCH_DEADLINE_MS,
+    )) as GutendexSearchResponse;
     const books = (data.results ?? [])
       .map(mapGutendexBook)
       .filter((b): b is CatalogBook => b !== null)
@@ -55,7 +66,7 @@ export class GutendexDataSource {
 
   /** Fetch one book by numeric id; unknown ids surface NOT_FOUND. */
   async getById(numericId: number): Promise<CatalogBook> {
-    const data = (await this.getJson(`/books/${numericId}/`)) as GutendexRecord;
+    const data = (await this.getJson(`/books/${numericId}/`, DETAIL_DEADLINE_MS)) as GutendexRecord;
     const book = mapGutendexBook(data);
     if (!book) throw catalogError('NOT_FOUND', `gutendex book ${numericId} unavailable`);
     return book;
@@ -78,6 +89,7 @@ export class GutendexDataSource {
     const sortParam = sort === 'POPULAR' ? 'sort=popular' : 'sort=descending';
     const data = (await this.getJson(
       `/books/?${sortParam}&page=${page}`,
+      SEARCH_DEADLINE_MS,
     )) as GutendexSearchResponse;
     const books = (data.results ?? [])
       .map(mapGutendexBook)

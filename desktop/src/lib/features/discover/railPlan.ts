@@ -83,7 +83,8 @@ export function loadRail(
 /**
  * Bound a rail attempt by `ms` so a hung request settles instead of staying
  * `Loading` forever. Deliberately a manual timer (not `AbortSignal.timeout`) so
- * fake timers can drive it under jsdom; expiry maps to the shared NETWORK_ERROR.
+ * fake timers can drive it under jsdom; expiry is a slow-upstream timeout and
+ * maps to UPSTREAM_TIMEOUT (retryable, never reported as offline).
  */
 export async function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
   let handle: ReturnType<typeof setTimeout> | undefined;
@@ -92,7 +93,7 @@ export async function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> 
       work,
       new Promise<never>((_, reject) => {
         handle = setTimeout(
-          () => reject(catalogError('NETWORK_ERROR', `rail deadline of ${ms}ms elapsed`)),
+          () => reject(catalogError('UPSTREAM_TIMEOUT', `rail deadline of ${ms}ms elapsed`)),
           ms,
         );
       }),

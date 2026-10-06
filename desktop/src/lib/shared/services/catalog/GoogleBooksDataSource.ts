@@ -10,7 +10,14 @@
  * logged, never echoed into an error message.
  */
 import { catalogError, isCatalogError } from './errors';
-import { DESKTOP_USER_AGENT, clampPageSize, fetchWithRetry, toCatalogError } from './policy';
+import {
+  DESKTOP_USER_AGENT,
+  DETAIL_DEADLINE_MS,
+  SEARCH_DEADLINE_MS,
+  clampPageSize,
+  fetchWithRetry,
+  toCatalogError,
+} from './policy';
 import {
   mapGoogleBooksVolume,
   type GoogleBooksSearchResponse,
@@ -58,12 +65,13 @@ export class GoogleBooksDataSource {
     return trimmed === '' ? '' : `&key=${encodeURIComponent(trimmed)}`;
   }
 
-  private async getJson(url: string): Promise<unknown> {
+  private async getJson(url: string, deadlineMs: number): Promise<unknown> {
     try {
       const res = await fetchWithRetry(
         url,
         { headers: { 'User-Agent': this.userAgent, Accept: 'application/json' } },
         this.fetchFn,
+        deadlineMs,
       );
       return await res.json();
     } catch (err) {
@@ -85,7 +93,7 @@ export class GoogleBooksDataSource {
     const startIndex = (page - 1) * size;
     const q = encodeURIComponent(buildGoogleBooksQuery(query));
     const url = `${GOOGLE_BOOKS_BASE_URL}/volumes?q=${q}&startIndex=${startIndex}&maxResults=${size}${this.keyParam()}`;
-    const data = (await this.getJson(url)) as GoogleBooksSearchResponse;
+    const data = (await this.getJson(url, SEARCH_DEADLINE_MS)) as GoogleBooksSearchResponse;
     const books = (data.items ?? [])
       .map(mapGoogleBooksVolume)
       .filter((b): b is CatalogBook => b !== null)
@@ -99,7 +107,7 @@ export class GoogleBooksDataSource {
   /** Fetch one volume by id; unknown ids surface NOT_FOUND. */
   async getById(volumeId: string): Promise<CatalogBook> {
     const url = `${GOOGLE_BOOKS_BASE_URL}/volumes/${encodeURIComponent(volumeId)}?fields=${GOOGLE_BOOKS_VOLUME_FIELDS}${this.keyParam()}`;
-    const data = (await this.getJson(url)) as GoogleBooksVolumeItem;
+    const data = (await this.getJson(url, DETAIL_DEADLINE_MS)) as GoogleBooksVolumeItem;
     const book = mapGoogleBooksVolume(data);
     if (!book) throw catalogError('NOT_FOUND', 'googlebooks volume unavailable');
     return book;

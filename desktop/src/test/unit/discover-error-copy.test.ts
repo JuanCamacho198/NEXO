@@ -16,21 +16,24 @@ const t = (key: MessageKey): string => key;
 describe('discover error copy split (G3)', () => {
   it('treats only NETWORK_ERROR as offline', () => {
     expect(isOfflineCatalogCode('NETWORK_ERROR')).toBe(true);
+    expect(isOfflineCatalogCode('UPSTREAM_TIMEOUT')).toBe(false);
     expect(isOfflineCatalogCode('RATE_LIMITED')).toBe(false);
     expect(isOfflineCatalogCode('UPSTREAM_ERROR')).toBe(false);
     expect(isOfflineCatalogCode('NOT_FOUND')).toBe(false);
   });
 
-  it('selects offline, rate-limited and upstream keys', () => {
+  it('selects offline, slow, rate-limited and upstream keys', () => {
     expect(discoverErrorKey('NETWORK_ERROR')).toBe('discover.offline');
+    expect(discoverErrorKey('UPSTREAM_TIMEOUT')).toBe('discover.errorSlow');
     expect(discoverErrorKey('RATE_LIMITED')).toBe('discover.rateLimited');
     expect(discoverErrorKey('UPSTREAM_ERROR')).toBe('discover.errorUpstream');
     expect(discoverErrorKey(null)).toBe('discover.errorUpstream');
   });
 
-  it('renders the three distinct rail error states', async () => {
+  it('renders the four distinct rail error states', async () => {
     const cases: [CatalogErrorCode, string][] = [
       ['NETWORK_ERROR', 'discover.offline'],
+      ['UPSTREAM_TIMEOUT', 'discover.errorSlow'],
       ['RATE_LIMITED', 'discover.rateLimited'],
       ['UPSTREAM_ERROR', 'discover.errorUpstream'],
     ];

@@ -551,11 +551,11 @@ describe('discover rails — bounded rail attempt helper', () => {
     await expect(withDeadline(Promise.resolve('ready'), 1_000)).resolves.toBe('ready');
   });
 
-  it('rejects a hung attempt at the deadline with NETWORK_ERROR', async () => {
+  it('rejects a hung attempt at the deadline with UPSTREAM_TIMEOUT', async () => {
     vi.useFakeTimers();
     const hung = new Promise<string>(() => undefined);
     const assertion = expect(withDeadline(hung, 15_000)).rejects.toMatchObject({
-      code: 'NETWORK_ERROR',
+      code: 'UPSTREAM_TIMEOUT',
     });
     await vi.advanceTimersByTimeAsync(15_000);
     await assertion;
@@ -618,9 +618,15 @@ describe('discover rails — progressive per-rail publish', () => {
 
     await vi.advanceTimersByTimeAsync(REQUEST_DEADLINE_MS);
     await pending;
-    expect(state.rails[1]).toEqual({ kind: 'Error', code: 'NETWORK_ERROR', offline: true });
+    // A slow source is a timeout, not a connectivity failure: the rail errors
+    // with the retryable UPSTREAM_TIMEOUT code and the hero pill stays online.
+    expect(state.rails[1]).toEqual({
+      kind: 'Error',
+      code: 'UPSTREAM_TIMEOUT',
+      offline: false,
+    });
     expect(state.rails.some((rail) => rail.kind === 'Loading')).toBe(false);
-    expect(state.isOnline).toBe(false);
+    expect(state.isOnline).toBe(true);
     state.dispose();
   });
 
@@ -737,13 +743,14 @@ describe('discover rails — rail-scoped "Ver todo"', () => {
 });
 
 describe('discover rails — per-rail error presentation', () => {
-  it('exposes an inline rail error component reusing the shared three-state copy', () => {
+  it('exposes an inline rail error component reusing the shared split copy', () => {
     const component = readSource('DiscoverRailError.svelte');
     expect(component).toContain('discoverErrorKey');
     expect(component).toContain("t('discover.retry')");
-    // The three-state split lives in one place and now covers rate limiting.
+    // The split lives in one place and covers slow sources and rate limiting.
     const copy = readSource('discoverErrorCopy.ts');
     expect(copy).toContain("'discover.offline'");
+    expect(copy).toContain("'discover.errorSlow'");
     expect(copy).toContain("'discover.rateLimited'");
     expect(copy).toContain("'discover.errorUpstream'");
   });

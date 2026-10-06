@@ -519,6 +519,7 @@ export const messagesEn = {
   'discover.loadingMore': 'Loading more…',
   'discover.offline': 'You appear to be offline. Check your connection and retry.',
   'discover.rateLimited': 'The catalog is throttling requests. Try again in a moment.',
+  'discover.errorSlow': 'The source is taking too long to respond. Try again.',
   'discover.errorUpstream': 'The catalog is unavailable right now. Try again later.',
   'discover.errorInvalidPage': 'Invalid page request.',
   'discover.errorNotFound': 'No catalog results for this search.',

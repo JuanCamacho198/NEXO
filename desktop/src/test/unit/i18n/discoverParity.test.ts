@@ -19,6 +19,7 @@ describe('discover i18n EN+ES parity (PR4)', () => {
       'discover.loadingMore',
       'discover.offline',
       'discover.rateLimited',
+      'discover.errorSlow',
       'discover.errorUpstream',
       'discover.errorInvalidPage',
       'discover.errorNotFound',

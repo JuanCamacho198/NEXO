@@ -67,12 +67,14 @@ export {
   DEBOUNCE_MS,
   DEFAULT_PAGE_SIZE,
   DESKTOP_USER_AGENT,
+  DETAIL_DEADLINE_MS,
   MAX_DELAYED_RETRIES,
   MAX_PAGE_SIZE,
   MIN_PAGE_SIZE,
   OL_MIN_GAP_MS,
   REQUEST_DEADLINE_MS,
   RETRY_BASE_DELAY_MS,
+  SEARCH_DEADLINE_MS,
 } from './policy';
 export type { ComposedDeadline } from './policy';
 export {

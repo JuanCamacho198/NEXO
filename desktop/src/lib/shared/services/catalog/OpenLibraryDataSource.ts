@@ -6,6 +6,7 @@ import { isCatalogError } from './errors';
 import {
   DESKTOP_USER_AGENT,
   OL_MIN_GAP_MS,
+  SEARCH_DEADLINE_MS,
   clampPageSize,
   createRateLimiter,
   fetchWithRetry,
@@ -46,6 +47,7 @@ export class OpenLibraryDataSource {
         `${OPEN_LIBRARY_BASE_URL}/search.json?${params.toString()}`,
         { headers: { 'User-Agent': this.userAgent, Accept: 'application/json' } },
         this.fetchFn,
+        SEARCH_DEADLINE_MS,
       );
       const data = (await res.json()) as OpenLibrarySearchResponse;
       const books = (data.docs ?? [])
