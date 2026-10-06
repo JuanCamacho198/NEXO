@@ -1,11 +1,11 @@
 /**
  * Overlay-pattern freeze (perf-stability-cleanup P3).
  *
- * Decision: the ten hand-rolled overlay roots below stay hand-rolled.
+ * Decision: the six hand-rolled overlay roots below stay hand-rolled.
  * Migrating them to bits-ui is weeks of work and was explicitly deferred;
  * what ends today is the ambiguity, not the migration. New overlay roots
  * must either reuse Modal/Dialog (preferred) or update this allowlist
- * with a recorded reason — never silently add an eleventh `fixed inset-0`.
+ * with a recorded reason — never silently add a seventh `fixed inset-0`.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
@@ -21,24 +21,24 @@ const BITS_UI_IMPORT = /from\s+['"]bits-ui['"]/;
 
 /**
  * Exact known set, relative to src/lib with forward slashes. Sorted.
- * Removing an entry (migration) or adding one (new overlay) fails loudly
- * so the freeze decision is revisited on purpose, never by drift.
- * bits-ui overlays (Modal, NoteEditorModal, FeedbackDialog) carry
+ * Removing an entry (migration or deletion) or adding one (new overlay)
+ * fails loudly so the freeze decision is revisited on purpose, never by
+ * drift. bits-ui overlays (Modal, NoteEditorModal, FeedbackDialog) carry
  * `fixed inset-0` on their Overlay element but are excluded by the scanner:
- * this list pins hand-rolled roots only. Six remain after the
- * NoteEditorModal and FeedbackDialog migrations (perf-stability-cleanup M1/M2).
+ * this list pins hand-rolled roots only. Five remain: the NoteEditorModal and
+ * FeedbackDialog migrations (perf-stability-cleanup M1/M2), the
+ * CollectionManager deletion (dead code — no trigger ever opened it), and the
+ * SettingsPanel overlay-mode deletion (dead code — page mode was the only mode used).
  */
 const KNOWN_OVERLAY_ROOTS = [
-  'features/library/components/CollectionManager.svelte',
   'features/reader/chrome/BookmarkSidebar.svelte',
   'features/reader/chrome/ReaderTextSettings.svelte',
   'features/reader/chrome/ReaderTocPanel.svelte',
   'features/reader/chrome/ReaderWorkspace.svelte',
-  'features/settings/components/SettingsPanel.svelte',
   'shared/ui/feedback/ErrorFallback.svelte',
 ];
 
-/** Surfaces migrated to bits-ui Dialog; they must not slide back. */
+/** Surfaces migrated off hand-rolled overlays; they must not slide back. */
 const MIGRATED_DIALOGS = [
   'shared/ui/layout/Modal.svelte',
   'features/reader/highlight/NoteEditorModal.svelte',
@@ -96,7 +96,13 @@ describe('overlay pattern freeze', () => {
     const lib = resolveLibPath();
     for (const relativePath of MIGRATED_DIALOGS) {
       const source = readFileSync(join(lib, ...relativePath.split('/')), 'utf8');
-      expect(source.includes('bits-ui'), `${relativePath} left bits-ui`).toBe(true);
+      // A migrated surface reaches bits-ui directly OR through the shared Modal
+      // facade (its own file is checked above and stays on bits-ui). The
+      // NoteEditorModal/FeedbackDialog migrations moved them to the facade, so
+      // "on bits-ui" must accept the facade import as well as a direct one.
+      const onBitsUi =
+        source.includes('bits-ui') || /from\s+['"][^'"]*layout\/Modal\.svelte['"]/.test(source);
+      expect(onBitsUi, `${relativePath} left bits-ui`).toBe(true);
     }
   });
 });

@@ -2,12 +2,7 @@
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
   import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
-  import {
-    EditMetadataModal,
-    CollectionManager,
-    BulkImportModal,
-    RemoveBookModal,
-  } from '$lib/features/library';
+  import { EditMetadataModal, BulkImportModal, RemoveBookModal } from '$lib/features/library';
   import ErrorToast from '$lib/shared/ui/feedback/ErrorToast.svelte';
   import ErrorFallback from '$lib/shared/ui/feedback/ErrorFallback.svelte';
   import ToastHost from '$lib/shared/ui/feedback/ToastHost.svelte';
@@ -112,14 +107,6 @@
     libraryState.editingBook = null;
   }}
   onSave={libraryState.handleSaveEditedBook}
-  t={appState.t}
-/>
-
-<CollectionManager
-  open={libraryState.isCollectionManagerOpen}
-  onClose={() => {
-    libraryState.isCollectionManagerOpen = false;
-  }}
   t={appState.t}
 />
 

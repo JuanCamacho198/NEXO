@@ -83,7 +83,7 @@
          became the anchor width for the same reason: inside the floating wrapper
          `100%` would resolve against the wrapper's own `max-content` box. -->
     <Select.Content
-      class="z-[60] w-(--bits-select-anchor-width) min-w-[160px] rounded-md bg-(--color-elevated) py-1 shadow-lg ring-1 ring-(--color-border)"
+      class="z-(--layer-popover) w-(--bits-select-anchor-width) min-w-[160px] rounded-md bg-(--color-elevated) py-1 shadow-lg ring-1 ring-(--color-border)"
       side="bottom"
       align="start"
       sideOffset={4}

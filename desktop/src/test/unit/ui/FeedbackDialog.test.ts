@@ -35,7 +35,6 @@ import {
   FEEDBACK_QUEUE_CAP,
 } from '$lib/shared/feedback/feedbackStore';
 import {
-  FEEDBACK_EYEBROW,
   FEEDBACK_TITLE,
   FEEDBACK_SUBTITLE,
   FEEDBACK_INPUT_LABEL,
@@ -81,11 +80,6 @@ describe('FeedbackDialog (sdd/sentry-observability-v2 PR3)', () => {
   });
 
   describe('D1 — copy audit (HYNft verbatim, #2460)', () => {
-    it('renders the eyebrow verbatim', () => {
-      renderDialog();
-      expect(screen.getByText(FEEDBACK_EYEBROW)).toBeInTheDocument();
-    });
-
     it('renders the title verbatim', () => {
       renderDialog();
       expect(screen.getByText(FEEDBACK_TITLE)).toBeInTheDocument();
@@ -257,7 +251,9 @@ describe('FeedbackDialog (sdd/sentry-observability-v2 PR3)', () => {
       await fireEvent.keyDown(document, { key: 'Escape' });
       await waitFor(() => expect(onDismiss).toHaveBeenCalledTimes(1));
       expect(isDismissed('evt-esc-1')).toBe(true);
-      expect(screen.queryByRole('dialog')).toBeNull();
+      // The exit transition defers unmount, so wait for removal rather than
+      // asserting it synchronously.
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     });
 
     it('an outside pointerdown dismisses once through the same bookkeeping', async () => {
@@ -286,7 +282,9 @@ describe('FeedbackDialog (sdd/sentry-observability-v2 PR3)', () => {
 
       await waitFor(() => expect(onDismiss).toHaveBeenCalledTimes(1));
       expect(isDismissed('evt-out-1')).toBe(true);
-      expect(screen.queryByRole('dialog')).toBeNull();
+      // The exit transition defers unmount, so wait for removal rather than
+      // asserting it synchronously.
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     });
   });
 

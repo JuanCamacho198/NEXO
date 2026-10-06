@@ -6,12 +6,22 @@
  * which lives outside AppRouter (it stays mounted across route changes,
  * including the welcome branch).
  */
+import type { NotificationTarget } from '$lib/shared/types/notification';
+
 export type ToastType = 'success' | 'info' | 'error';
+
+/** Deep-link action carried by toasts dispatched from a notification (NOTIF-04). */
+export interface ToastAction {
+  label: string;
+  notificationId: string;
+  target?: NotificationTarget;
+}
 
 export interface ToastItem {
   id: number;
   type: ToastType;
   message: string;
+  action?: ToastAction;
 }
 
 // ─── Reactive State ───────────────────────────────────────────────────
@@ -21,8 +31,8 @@ let nextId = 1;
 
 // ─── Public API ───────────────────────────────────────────────────────
 
-export function pushToast(type: ToastType, message: string): void {
-  queue.push({ id: nextId++, type, message });
+export function pushToast(type: ToastType, message: string, action?: ToastAction): void {
+  queue.push(action ? { id: nextId++, type, message, action } : { id: nextId++, type, message });
 }
 
 export function dismiss(id: number): void {

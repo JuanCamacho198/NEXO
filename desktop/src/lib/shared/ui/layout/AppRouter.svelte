@@ -126,7 +126,6 @@
             {@const previewBook = libraryState.getBookById(navigationState.previewBookId)}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
               <HomeDesktopView
-                stats={statsState.stats}
                 isLoadingStats={statsState.isLoadingStats}
                 statsUnavailableReason={navigationState.statsUnavailableReason}
                 streakDays={statsState.streakDays}
@@ -256,7 +255,6 @@
               <section class="w-full h-full flex-1 flex flex-col min-h-0">
                 <SettingsPanel
                   isOpen={true}
-                  mode="page"
                   initialTab={navigationState.route === 'storage'
                     ? 'almacenamiento'
                     : 'sincronizacion'}
@@ -277,7 +275,6 @@
               <section class="w-full h-full flex-1 flex flex-col min-h-0">
                 <SettingsPanel
                   isOpen={true}
-                  mode="page"
                   onRequestClose={() => navigationState.navigateToHome()}
                   t={appState.t}
                   locale={settingsState.locale}

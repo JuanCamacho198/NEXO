@@ -75,7 +75,13 @@
 </script>
 
 {#if open && book}
-  <Modal bind:open title={t('library.editMetadata.title')}>
+  <Modal
+    bind:open
+    title={t('library.editMetadata.title')}
+    onOpenChange={(v) => {
+      if (!v) onClose();
+    }}
+  >
     {#snippet children()}
       <div class="space-y-4">
         <div>
@@ -116,7 +122,7 @@
         </div>
 
         {#if error}
-          <p class="text-sm text-red-600">{error}</p>
+          <p class="text-sm text-(--color-error)">{error}</p>
         {/if}
       </div>
     {/snippet}

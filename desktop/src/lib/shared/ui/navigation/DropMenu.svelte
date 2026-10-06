@@ -29,7 +29,7 @@
 
   <DropdownMenu.Portal>
     <DropdownMenu.Content
-      class="z-[60] w-56 rounded-md bg-(--color-elevated) shadow-lg ring-1 ring-(--color-border) focus:outline-none"
+      class="z-(--layer-popover) w-56 rounded-md bg-(--color-elevated) shadow-lg ring-1 ring-(--color-border) focus:outline-none"
       side="bottom"
       {align}
       sideOffset={8}

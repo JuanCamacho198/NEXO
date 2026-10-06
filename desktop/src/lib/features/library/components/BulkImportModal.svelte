@@ -58,9 +58,15 @@
   });
 </script>
 
-<Modal bind:open title={t('library.bulkImport.title')}>
+<Modal
+  bind:open
+  title={t('library.bulkImport.title')}
+  onOpenChange={(v) => {
+    if (!v) onClose();
+  }}
+>
   {#snippet children()}
-    <div class="mb-4 rounded-lg border border-(--color-border) bg-(--color-background) p-3">
+    <div class="mb-4 rounded-xl bg-(--color-surface-dim) p-3">
       <div class="mb-2 flex flex-wrap items-center gap-2">
         <Button
           variant="secondary"
@@ -78,7 +84,12 @@
         >
           {isScanning ? t('library.bulkImport.scanning') : t('library.bulkImport.scan')}
         </Button>
-        <Button onclick={onStartImport} size="sm" disabled={!canStartImport}>
+        <Button
+          onclick={onStartImport}
+          size="sm"
+          disabled={!canStartImport}
+          variant={canStartImport ? 'primary' : 'secondary'}
+        >
           {isImporting ? t('library.bulkImport.importing') : t('library.bulkImport.confirm')}
         </Button>
         {#if isImporting}
@@ -112,15 +123,13 @@
     </div>
 
     {#if scanError}
-      <p class="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+      <p class="mb-3 rounded-xl bg-(--color-error-soft) px-3 py-2 text-sm text-(--color-error)">
         {scanError}
       </p>
     {/if}
 
     {#if effectiveSummary}
-      <div
-        class="mb-3 rounded-lg border border-(--color-border) bg-(--color-background) p-3 text-xs text-(--color-text-muted)"
-      >
+      <div class="mb-3 rounded-xl bg-(--color-surface-dim) p-3 text-xs text-(--color-text-muted)">
         <div class="mb-2 flex flex-wrap gap-2">
           <span>{t('library.bulkImport.summary.total', { count: effectiveSummary.total })}</span>
           <span>{t('library.bulkImport.summary.queued', { count: effectiveSummary.queued })}</span>
@@ -146,9 +155,7 @@
       </div>
     {/if}
 
-    <div
-      class="min-h-0 flex-1 overflow-y-auto rounded-lg border border-(--color-border) bg-(--color-background)"
-    >
+    <div>
       {#if (effectiveSummary?.results.length ?? 0) > 0}
         <ul class="divide-y divide-(--color-border)">
           {#each effectiveSummary?.results ?? [] as row}
@@ -166,7 +173,7 @@
               <p class="text-xs text-(--color-text-muted)">{row.file.format.toUpperCase()}</p>
               {#if row.message}
                 <p
-                  class={`mt-1 text-xs ${row.status === BULK_IMPORT_STATUS.FAILED ? 'text-red-700' : 'text-(--color-text-muted)'}`}
+                  class={`mt-1 text-xs ${row.status === BULK_IMPORT_STATUS.FAILED ? 'text-(--color-error)' : 'text-(--color-text-muted)'}`}
                 >
                   {row.message}
                 </p>

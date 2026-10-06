@@ -5,24 +5,28 @@
   type Props = {
     initialOpen?: boolean;
     title?: string;
+    description?: string;
     size?: 'sm' | 'md' | 'lg' | 'xl';
     noCloseButton?: boolean;
     class?: string;
     withFooter?: boolean;
     footerText?: string;
     onopen?: (open: boolean) => void;
+    onOpenChange?: (open: boolean) => void;
     children?: Snippet;
   };
 
   let {
     initialOpen = false,
     title = 'Test Modal',
+    description,
     size,
     noCloseButton = false,
     class: className,
     withFooter = false,
     footerText = 'Footer action',
     onopen,
+    onOpenChange,
     children,
   }: Props = $props();
 
@@ -46,10 +50,12 @@
 <Modal
   bind:open
   {title}
+  {description}
   {size}
   {noCloseButton}
   class={className}
   footer={withFooter ? footerContent : undefined}
+  {onOpenChange}
 >
   <p>body content</p>
   {#if children}

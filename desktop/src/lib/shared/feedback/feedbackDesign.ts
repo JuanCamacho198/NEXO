@@ -10,9 +10,6 @@
  * dialogs, ES copy verbatim).
  */
 
-/** Eyebrow over the dialog title. */
-export const FEEDBACK_EYEBROW = 'SE CERRÓ SIN AVISO';
-
 /** Modal headline. */
 export const FEEDBACK_TITLE = 'Nexo se cerró de repente';
 
@@ -51,10 +48,6 @@ export const FEEDBACK_SEND_LABEL = 'Enviar reporte';
 /** Hard character cap (desktop). Mobile is 240. */
 export const FEEDBACK_MAX_CHARS = 500;
 
-/** Mini book cover gradient (HYNft spec). */
-export const FEEDBACK_COVER_GRADIENT =
-  'linear-gradient(135deg, #1A3A4F 0%, #0F2A36 50%, #2A4A6B 100%)';
-
 /** Sample context values (HYNft placeholder book). Real values come from active reader state. */
 export const FEEDBACK_SAMPLE_BOOK = {
   title: 'La Odisea',
@@ -63,18 +56,3 @@ export const FEEDBACK_SAMPLE_BOOK = {
   page: 32,
   totalPages: 412,
 };
-
-/**
- * Color tokens (HYNft, NP tokens). The dialog intentionally uses the existing
- * --color-* tokens so it respects theme switching. The only HYNft-specific
- * colors are the cover gradient (above) and the header icon background
- * (--color-error-soft + book-dashed).
- */
-export const FEEDBACK_TOKENS = {
-  panel: 'var(--color-panel, var(--color-elevated))',
-  border: 'var(--color-border)',
-  errorSoft: 'var(--color-error-soft)',
-  accent: 'var(--color-primary)',
-  error: 'var(--color-error)',
-  fontFamily: 'Manrope, Inter, system-ui, sans-serif',
-} as const;

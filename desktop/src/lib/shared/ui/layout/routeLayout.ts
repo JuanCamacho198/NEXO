@@ -19,7 +19,7 @@ export const FULL_LAYOUT_ROUTES = ['discover', 'addons', 'settings', 'storage', 
  * Explicit policy per route. The `contained` entries document the intended
  * layout for the current screens; the default still covers anything missing.
  */
-export const ROUTE_LAYOUTS: Readonly<Partial<Record<AppRoute, RouteLayout>>> = {
+const ROUTE_LAYOUTS: Readonly<Partial<Record<AppRoute, RouteLayout>>> = {
   home: 'contained',
   library: 'contained',
   stats: 'contained',

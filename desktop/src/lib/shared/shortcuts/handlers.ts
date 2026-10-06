@@ -34,7 +34,7 @@ export const WIRED_HANDLER_SOURCES = {
   'reader.scrollUp': 'features/reader/viewer-pdf/PdfViewer.svelte:336',
   'reader.scrollDown': 'features/reader/viewer-pdf/PdfViewer.svelte:341',
   // Dialogs and menus — bits-ui Dialog (shared/ui/layout/Modal.svelte) plus the
-  // local handlers; the settings overlay closes on Escape at SettingsPanel.
+  // local handlers.
   'dialog.close': 'shared/ui/layout/Modal.svelte',
 } as const;
 

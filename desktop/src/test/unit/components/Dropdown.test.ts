@@ -235,7 +235,7 @@ describe('Dropdown — portalled popup', () => {
     );
     expect(content.className).toContain('w-(--bits-select-anchor-width)');
     expect(content.className).not.toContain('w-full');
-    expect(content.className).toContain('z-[60]');
+    expect(content.className).toContain('z-(--layer-popover)');
     expect(content).toHaveAttribute('data-side', 'bottom');
     expect(content).toHaveAttribute('data-align', 'start');
   });

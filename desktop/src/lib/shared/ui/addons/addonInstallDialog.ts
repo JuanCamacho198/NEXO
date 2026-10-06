@@ -3,6 +3,8 @@
  * FeedbackDialog / feedbackDesign precedent (desktop-only dialog copy). */
 
 export const ADDON_INSTALL_CONFIRM_TITLE = 'Install addon';
+export const ADDON_INSTALL_CONFIRM_DESCRIPTION =
+  'Installing adds this addon to NEXO. You can remove it later from Addons.';
 export const ADDON_INSTALL_CONFIRM_INSTALL_LABEL = 'Install';
 export const ADDON_INSTALL_CONFIRM_INSTALLING_LABEL = 'Installing…';
 export const ADDON_INSTALL_CONFIRM_CANCEL_LABEL = 'Cancel';

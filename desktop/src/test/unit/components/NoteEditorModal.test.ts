@@ -25,7 +25,6 @@ const t = (key: string, _params?: Record<string, string | number>): string => {
     'highlight.cancel': 'Cancel',
     'highlight.noteReference': 'Reference',
     'highlight.notePlaceholder': 'Write a note…',
-    'highlight.noteColor': 'Color',
     'highlight.save': 'Save',
   };
   return translations[key] ?? key;

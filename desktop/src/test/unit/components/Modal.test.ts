@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import { stubElementRect } from '../../harness/jsdomHarness';
 import ModalBoundStub from '../../stubs/ModalBoundStub.svelte';
+import ModalContractHost from '../../stubs/ModalContractHost.svelte';
 import ModalNestedStub from '../../stubs/ModalNestedStub.svelte';
 
 /**
@@ -142,11 +143,25 @@ describe('Modal — rendered contract', () => {
 
     const found = screen.getByRole('dialog', { name: 'Edit metadata' });
     expect(found.getAttribute('aria-modal')).toBe('true');
-    expect(found.getAttribute('aria-labelledby')).toBe('modal-title');
-    const heading = document.getElementById('modal-title');
+    // The title id is per-instance now; the dialog must point at its own title.
+    const labelledBy = found.getAttribute('aria-labelledby');
+    expect(labelledBy).toBeTruthy();
+    const heading = document.getElementById(labelledBy as string);
     expect(heading?.tagName).toBe('H2');
     expect(heading?.textContent).toBe('Edit metadata');
     expect(document.querySelector('[data-dialog-content]')).toBe(found);
+  });
+
+  it('links an optional description through aria-describedby with its own id', () => {
+    openStub({ title: 'Edit metadata', description: 'Explains the consequence.' });
+
+    const found = dialog();
+    const describedBy = found.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(describedBy).not.toBe(found.getAttribute('aria-labelledby'));
+    const description = document.getElementById(describedBy as string);
+    expect(description?.tagName).toBe('P');
+    expect(description?.textContent?.trim()).toBe('Explains the consequence.');
   });
 
   it('renders the caller children inside the body scroll region', () => {
@@ -181,7 +196,7 @@ describe('Modal — rendered contract', () => {
     }
   });
 
-  it('keeps the header, body and scroll contract byte-identical', () => {
+  it('keeps the header, body and scroll contract, with the panel elevation carried by its border', () => {
     openStub();
 
     const content = dialog();
@@ -189,7 +204,10 @@ describe('Modal — rendered contract', () => {
       'flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden',
     );
     expect(content.className).toContain('rounded-xl border border-(--color-border)');
-    expect(content.className).toContain('bg-(--color-elevated) shadow-xl');
+    expect(content.className).toContain('bg-(--color-elevated)');
+    // One elevation: the modal sits on a dimmed scrim, so its hairline border is
+    // the only elevation it declares — no shadow (the scrim is the depth).
+    expect(content.className).not.toContain('shadow');
 
     const header = content.querySelector('[class*="border-b"]') as HTMLElement;
     expect(header.className).toBe(
@@ -197,7 +215,7 @@ describe('Modal — rendered contract', () => {
     );
 
     const body = content.querySelector('[role="region"]') as HTMLElement;
-    expect(body.className).toBe('min-h-0 flex-1 overflow-y-auto px-6 py-4');
+    expect(body.className).toBe('modal-scroll-region min-h-0 flex-1 overflow-y-auto px-6 py-4');
     expect(body.getAttribute('tabindex')).toBe('0');
     expect(body.getAttribute('aria-label')).toBe('Test Modal');
   });
@@ -258,6 +276,19 @@ describe('Modal — stacking and scroll lock', () => {
     await waitFor(() => expect(document.querySelectorAll('[data-dialog-content]').length).toBe(1));
     await fireEvent.click(document.querySelector('#open-inner') as HTMLElement);
     await waitFor(() => expect(document.querySelectorAll('[data-dialog-content]').length).toBe(2));
+
+    // The fix: each simultaneous dialog must expose its OWN title as its
+    // accessible name, not both resolving to a shared `modal-title` id.
+    const openContents = Array.from(document.querySelectorAll('[data-dialog-content]'));
+    const labelledByIds = openContents.map((content) => content.getAttribute('aria-labelledby'));
+    expect(labelledByIds.every(Boolean)).toBe(true);
+    expect(new Set(labelledByIds).size).toBe(2);
+    const names = openContents.map(
+      (content) =>
+        document.getElementById(content.getAttribute('aria-labelledby') as string)?.textContent,
+    );
+    expect(names.sort()).toEqual(['Inner dialog', 'Outer dialog']);
+
     await settle();
 
     await clickBackdrop();
@@ -266,8 +297,9 @@ describe('Modal — stacking and scroll lock', () => {
     expect(onouter.mock.calls.flat()).toEqual([false, true]);
 
     const outerDialog = document.querySelector('[data-dialog-content]') as HTMLElement;
-    expect(outerDialog.getAttribute('aria-labelledby')).toBe('modal-title');
-    expect(document.getElementById('modal-title')?.textContent).toBe('Outer dialog');
+    const outerLabelledBy = outerDialog.getAttribute('aria-labelledby');
+    expect(outerLabelledBy).toBeTruthy();
+    expect(document.getElementById(outerLabelledBy as string)?.textContent).toBe('Outer dialog');
 
     await escape();
     await waitFor(() => expect(document.querySelectorAll('[data-dialog-content]').length).toBe(0));
@@ -291,5 +323,68 @@ describe('Modal — stacking and scroll lock', () => {
     await escape();
     await waitFor(() => expect(document.querySelectorAll('[data-dialog-content]').length).toBe(0));
     await waitFor(() => expect(document.activeElement).toBe(outerOpener));
+  });
+});
+
+describe('Modal — onOpenChange close contract', () => {
+  it('reports onOpenChange(false) exactly once when the close button is used', async () => {
+    const onOpenChange = vi.fn();
+    openStub({ onOpenChange });
+
+    await fireEvent.click(dialog().querySelector('button') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-dialog-content]')).toBeNull());
+
+    expect(onOpenChange.mock.calls).toEqual([[false]]);
+  });
+
+  it('reports onOpenChange(false) exactly once on Escape', async () => {
+    const onOpenChange = vi.fn();
+    openStub({ onOpenChange });
+
+    await escape();
+    await waitFor(() => expect(document.querySelector('[data-dialog-content]')).toBeNull());
+
+    expect(onOpenChange.mock.calls).toEqual([[false]]);
+  });
+
+  it('reports onOpenChange(false) exactly once on a backdrop pointerdown', async () => {
+    const onOpenChange = vi.fn();
+    openStub({ onOpenChange });
+    await settle();
+
+    await clickBackdrop();
+    await waitFor(() => expect(document.querySelector('[data-dialog-content]')).toBeNull());
+
+    expect(onOpenChange.mock.calls).toEqual([[false]]);
+  });
+});
+
+describe('Modal — caller clears a one-way flag and reopens', () => {
+  it('clears the flag on the close button and reopens on demand', async () => {
+    const onclose = vi.fn();
+    const { container } = render(ModalContractHost, { props: { onclose } });
+    await waitFor(() => expect(document.querySelector('[data-dialog-content]')).not.toBeNull());
+
+    await fireEvent.click(dialog().querySelector('button') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-dialog-content]')).toBeNull());
+    expect(onclose).toHaveBeenCalledTimes(1);
+
+    await fireEvent.click(container.querySelector('#reopen') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-dialog-content]')).not.toBeNull());
+    expect(onclose).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the flag on Escape and reopens on demand', async () => {
+    const onclose = vi.fn();
+    const { container } = render(ModalContractHost, { props: { onclose } });
+    await waitFor(() => expect(document.querySelector('[data-dialog-content]')).not.toBeNull());
+
+    await escape();
+    await waitFor(() => expect(document.querySelector('[data-dialog-content]')).toBeNull());
+    expect(onclose).toHaveBeenCalledTimes(1);
+
+    await fireEvent.click(container.querySelector('#reopen') as HTMLElement);
+    await waitFor(() => expect(document.querySelector('[data-dialog-content]')).not.toBeNull());
+    expect(onclose).toHaveBeenCalledTimes(1);
   });
 });
