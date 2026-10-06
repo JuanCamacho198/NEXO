@@ -46,7 +46,6 @@
     onSaveEdit,
     onCoverUpdated,
   }: Props = $props();
-  // svelte-ignore state_referenced_locally
   const shelfEdit = useShelfEdit({
     getSelectedBook: () => book,
     onSaveEdit: (dto) => onSaveEdit(dto),

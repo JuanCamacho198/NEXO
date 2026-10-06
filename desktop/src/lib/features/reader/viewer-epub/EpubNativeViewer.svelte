@@ -167,10 +167,10 @@
     displayTotal <= 0 ? 0 : ((displayCurrentPage - 0.5) / displayTotal) * 100,
   );
 
-  function getToc() {
+  function getToc(): EpubChapterMeta[] {
     return spine.getToc();
   }
-  function getSpineHrefs() {
+  function getSpineHrefs(): string[] {
     return spine.getSpineHrefs();
   }
   void getToc;
@@ -187,13 +187,13 @@
     setPersistedHighlights: (v) => (persistedHighlights = v),
     getIsLoading: () => isLoading,
     getLastRenderedChapter: () => lastRenderedChapter,
-    onHighlightAction,
+    onHighlightAction: (action, id, opts) => onHighlightAction?.(action, id, opts),
   });
 
   const zoomTheme = createEpubZoomTheme({
     getZoomContainerEl: () => zoomContainerEl,
     getReaderSettings: () => readerSettings,
-    onSettingsChange,
+    onSettingsChange: (s) => onSettingsChange?.(s),
     getFontSize: () => fontSize,
     setFontSize: (v) => {
       const updated: ReaderSettings = {
@@ -274,10 +274,10 @@
     getLastContinueLocation: () => lastContinueLocation,
     setLastContinueLocation: (v) => (lastContinueLocation = v),
     getOnTocReady: () => onTocReady,
-    onLocationChange,
-    onLocationContext,
-    onselection,
-    onselectionclear,
+    onLocationChange: (cfi, pct) => onLocationChange?.(cfi, pct),
+    onLocationContext: (ctx) => onLocationContext?.(ctx),
+    onselection: (event) => onselection?.(event),
+    onselectionclear: () => onselectionclear?.(),
     handleEpubHighlightClick: (m) => highlights.handleEpubHighlightClick(m),
     handleEpubHighlightFailed: (m) => highlights.handleEpubHighlightFailed(m),
     handleEpubHighlightPlaced: (m) => highlights.handleEpubHighlightPlaced(m),

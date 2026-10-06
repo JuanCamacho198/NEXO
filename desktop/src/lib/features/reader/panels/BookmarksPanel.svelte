@@ -12,7 +12,7 @@
   type Props = BookmarksPanelProps;
 
   let { bookId, onNavigate, viewerPort: viewerPortProp }: Props = $props();
-  const viewerPort = viewerPortProp ?? new TauriViewerAdapter();
+  const viewerPort = $derived(viewerPortProp ?? new TauriViewerAdapter());
 
   let bookmarks: Array<{
     id: string;

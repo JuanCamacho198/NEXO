@@ -30,7 +30,7 @@
   import { HIGHLIGHT_COLORS, formatDate, resolveHighlightHex, type Props } from '../state.svelte';
   import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
   let { books, t, viewerPort: viewerPortProp, deps: depsProp }: Props = $props();
-  const viewerPort: ViewerPort = viewerPortProp ?? new TauriViewerAdapter();
+  const viewerPort: ViewerPort = $derived(viewerPortProp ?? new TauriViewerAdapter());
   // svelte-ignore state_referenced_locally
   const deps: HighlightsViewDeps = depsProp ?? createHighlightsViewDeps(viewerPort);
   let highlights = $state<HighlightDto[]>([]);

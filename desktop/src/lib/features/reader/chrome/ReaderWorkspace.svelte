@@ -161,13 +161,10 @@
     zoom.handleTextSettingsChange(updated);
   }
 
-  // svelte-ignore state_referenced_locally
   const nav = createReaderNavigation({
     getViewer: () => viewer,
-    // svelte-ignore state_referenced_locally
-    onPdfPageChange: onPdfPageChange as unknown as never,
-    // svelte-ignore state_referenced_locally
-    onEpubLocationChange: onEpubLocationChange as unknown as never,
+    onPdfPageChange: (page, total) => onPdfPageChange?.(page, total),
+    onEpubLocationChange: (cfi, pct) => onEpubLocationChange?.(cfi, pct),
   });
 
   let selectedText = $state('');
