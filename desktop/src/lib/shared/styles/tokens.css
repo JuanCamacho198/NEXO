@@ -557,6 +557,18 @@ body {
 }
 
 /*
+ * Search fields carry their own focus affordance: the unified SearchBar
+ * container reacts to `:focus-within` (accent border + soft ring), so the
+ * global outline above must not render inside the field or focusing draws two
+ * rings. This rule is unlayered like the floor above; the descendant class in
+ * the selector (specificity 0,2,0 vs 0,1,0) makes it win. Scoped to
+ * `.search-field` only — no other `focus-within` container is affected.
+ */
+.search-field :focus-visible {
+  outline: none;
+}
+
+/*
  * Dialog body scroll region: it is keyboard-focusable and sits inside the
  * dialog panel's `overflow-hidden` rounded box, so a 2px ring at +2px offset
  * would be clipped on its left/right edges. Draw it inset instead.

@@ -5,7 +5,6 @@ export { default as SafeCover } from './components/SafeCover.svelte';
 export { default as BulkImportModal } from './components/BulkImportModal.svelte';
 export { default as CollectionPicker } from './components/CollectionPicker.svelte';
 export { default as EditMetadataModal } from './components/EditMetadataModal.svelte';
-export { default as LibraryView } from './components/LibraryView.svelte';
 export { default as RemoveBookModal } from './components/RemoveBookModal.svelte';
 export { default as ShelfActionMenu } from './components/ShelfActionMenu.svelte';
 

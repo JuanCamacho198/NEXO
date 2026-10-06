@@ -30,10 +30,10 @@
   }: Props = $props();
 
   // Measured: `Select.Value`'s own label resolution treats `""` as "nothing
-  // selected" and prints the placeholder, but `LibraryView` and `HighlightsView`
-  // both ship a real "All" option whose value is `""`. The label is derived from
-  // the caller's list so that option still reads back into the trigger, exactly
-  // as this component did before the swap.
+  // selected" and prints the placeholder, but `HighlightsView` ships real "All"
+  // options whose value is `""`. The label is derived from the caller's list so
+  // those options still read back into the trigger, exactly as this component
+  // did before the swap.
   const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? placeholder);
 
   // `onValueChange` is the single writer of the bound value: measured to fire

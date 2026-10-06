@@ -9,6 +9,8 @@ describe('discover i18n EN+ES parity (PR4)', () => {
       'discover.search',
       'discover.searchPlaceholder',
       'discover.searchAriaLabel',
+      'discover.searchShortcut',
+      'discover.searchShortcutAria',
       'discover.idle',
       'discover.empty',
       'discover.endOfResults',

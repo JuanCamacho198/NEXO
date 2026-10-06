@@ -208,6 +208,22 @@ describe('DictionaryView shell (4A)', () => {
     expect(input).toHaveAttribute('id', 'dictionary-search');
   });
 
+  it('shows the `/` keycap and focuses the search from the shortcut', async () => {
+    render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([word({ id: '1', word: 'Efímero' })]) },
+    });
+
+    expect(
+      screen.getByRole('button', { name: messagesEs['dictionary.searchShortcutAria'] }),
+    ).toBeInTheDocument();
+
+    const input = screen.getByLabelText(messagesEs['dictionary.searchLabel']);
+    expect(document.activeElement).not.toBe(input);
+
+    await fireEvent.keyDown(window, { key: '/' });
+    expect(document.activeElement).toBe(input);
+  });
+
   it('exposes a polite live region for add/save/delete announcements (P3-J)', () => {
     render(DictionaryView, {
       props: { t: tEs, dictionary: makeState([word({ id: '1', word: 'Efímero' })]) },

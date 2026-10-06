@@ -137,15 +137,19 @@ describe('dictionary icon migration', () => {
     });
 
     // The view composes the KPI row, so the three KPI glyphs sit between the
-    // header action and the search box.
+    // header action and the search field.
     expect(glyphs(container)).toEqual([
       'lucide-plus',
       'lucide-book-open',
       'lucide-calendar-plus',
       'lucide-library',
-      'lucide-search',
     ]);
     expectGlyphContract(container.querySelector('svg.lucide-plus') as Element, '16');
-    expectGlyphContract(container.querySelector('svg.lucide-search') as Element, '16');
+
+    // The magnifier now belongs to the unified SearchBar, which draws its own
+    // inline glyph instead of a lucide component.
+    const searchField = container.querySelector('[role="search"]');
+    expect(searchField).not.toBeNull();
+    expect(searchField?.querySelector('svg.lucide-icon')).toBeNull();
   });
 });

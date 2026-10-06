@@ -112,4 +112,43 @@ describe('LibraryShelfScreen states (LIB-02)', () => {
     expect(document.activeElement).not.toBe(search);
     external.remove();
   });
+
+  it('renders the unified search field with its own container focus and `/` keycap', async () => {
+    const user = userEvent.setup();
+    const { container } = render(LibraryShelfScreen, {
+      props: { books: [book], isLoading: false, t },
+    });
+
+    const root = container.querySelector('[role="search"]')!;
+    expect(root).toHaveClass('search-field');
+    expect(root).toHaveClass('focus-within:ring-2');
+
+    const search = screen.getByTestId('shelf-search');
+    expect(search).toHaveAttribute('type', 'search');
+
+    await user.click(screen.getByRole('button', { name: 'library.searchShortcutAria' }));
+    expect(document.activeElement).toBe(search);
+  });
+
+  it('lays the filter chips left and the sort/view controls right in the same row', () => {
+    const { container } = render(LibraryShelfScreen, {
+      props: { books: [book], isLoading: false, t },
+    });
+
+    const row = container.querySelector<HTMLElement>('[class*="lg:justify-between"]');
+    expect(row).not.toBeNull();
+    expect(container.querySelector('[class*="lg:justify-end"]')).toBeNull();
+    expect(container.querySelector('[class*="xl:ml-auto"]')).toBeNull();
+
+    const chips = screen.getByTestId('shelf-tab-all');
+    const sort = screen.getByTestId('shelf-sort');
+    const toggle = screen.getByTestId('shelf-view-toggle');
+
+    // Chips are the row's first child; the sort + view controls are the last,
+    // and stay pushed right even when they wrap to their own line.
+    expect(row!.firstElementChild!.contains(chips)).toBe(true);
+    expect(row!.lastElementChild!.contains(sort)).toBe(true);
+    expect(row!.lastElementChild!.contains(toggle)).toBe(true);
+    expect(row!.lastElementChild!.className).toContain('lg:ml-auto');
+  });
 });

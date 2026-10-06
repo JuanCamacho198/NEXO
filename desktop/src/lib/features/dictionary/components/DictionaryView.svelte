@@ -11,8 +11,8 @@
   import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
+  import SearchBar from '$lib/shared/ui/navigation/SearchBar.svelte';
   import Plus from 'lucide-svelte/icons/plus';
-  import Search from 'lucide-svelte/icons/search';
   import X from 'lucide-svelte/icons/x';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import DictionaryKpiRow from './DictionaryKpiRow.svelte';
@@ -284,23 +284,14 @@
       data-testid="dictionary-words-panel"
     >
       <label for="dictionary-search" class="sr-only">{t('dictionary.searchLabel')}</label>
-      <div
-        class="flex items-center gap-2.5 rounded-[10px] border border-(--color-panel-border) bg-(--color-panel-input) px-3 py-2.5"
-      >
-        <Search
-          size={16}
-          strokeWidth={1.8}
-          class="h-4 w-4 shrink-0 text-(--color-text-tertiary)"
-          aria-hidden="true"
-        />
-        <input
-          id="dictionary-search"
-          type="text"
-          class="w-full border-none! bg-transparent! text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary)"
-          placeholder={t('dictionary.searchPlaceholder')}
-          bind:value={searchQuery}
-        />
-      </div>
+      <SearchBar
+        id="dictionary-search"
+        bind:value={searchQuery}
+        placeholder={t('dictionary.searchPlaceholder')}
+        shortcutKey="/"
+        shortcutLabel={t('dictionary.searchShortcut')}
+        shortcutAriaLabel={t('dictionary.searchShortcutAria')}
+      />
 
       <div class="flex items-center gap-2" data-testid="dictionary-tabs">
         {#each tabs as tab (tab.id)}

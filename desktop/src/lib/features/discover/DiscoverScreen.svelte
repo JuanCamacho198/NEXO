@@ -154,7 +154,6 @@
     {selectedChip}
     onSelectChip={(chip) => (selectedChip = chip)}
     onSearchSubmit={submitSearch}
-    onNavigateHome={() => navigationState.navigateToHome()}
   />
 
   {#if discoverState.detailStatus !== 'closed'}

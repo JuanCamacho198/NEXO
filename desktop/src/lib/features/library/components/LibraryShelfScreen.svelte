@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
+  import SearchBar from '$lib/shared/ui/navigation/SearchBar.svelte';
   import Toast from '$lib/shared/ui/feedback/Toast.svelte';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
   import LayoutGrid from 'lucide-svelte/icons/layout-grid';
@@ -16,7 +17,6 @@
     getSafeProgressPercentage,
     type ShelfBook,
   } from '$lib/features/library/utils';
-  import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -57,24 +57,6 @@
   const shelf = useLibraryShelf(() => books);
 
   let downloadSuccessVisible = $state(false);
-
-  let searchInput = $state<HTMLInputElement | null>(null);
-
-  function focusSearch(): void {
-    searchInput?.focus();
-    searchInput?.select();
-  }
-
-  // `/` focuses the shelf search (the chip advertises it). Ctrl+K belongs to
-  // the global command palette, so the field no longer claims that combo. The
-  // guard keeps `/` from swallowing a slash typed into a field.
-  function handleSearchShortcut(event: KeyboardEvent): void {
-    if (event.key !== '/') return;
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
-    if (hasEditableContext(event.target as Element | null)) return;
-    event.preventDefault();
-    focusSearch();
-  }
 
   function handleDownloaded(): void {
     downloadSuccessVisible = true;
@@ -121,8 +103,6 @@
   </button>
 {/snippet}
 
-<svelte:window onkeydown={handleSearchShortcut} />
-
 <section class="space-y-4">
   <header class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
     <div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
@@ -141,48 +121,20 @@
 
   <section class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-3">
     <div class="flex flex-col gap-3 xl:flex-row xl:flex-wrap xl:items-center xl:gap-x-5 xl:gap-y-3">
-      <!--
-        The magnifier is a flow sibling, not an absolutely positioned overlay:
-        the text is laid out after it and can never sit under it, even if the
-        unlayered global `input[type='text']` rule in styles.css wins on
-        padding. `type="search"` additionally keeps this input out of that rule
-        without touching the padding of every other text input.
-      -->
-      <div
-        class="group flex h-11 w-full min-w-0 flex-1 items-center gap-2 rounded-2xl border border-(--color-border) bg-(--color-background) px-3.5 transition-colors focus-within:border-(--color-accent) focus-within:ring-2 focus-within:ring-(--color-accent-soft) xl:min-w-80 xl:max-w-md"
-      >
-        <svg
-          class="h-4 w-4 shrink-0 text-(--color-text-muted)"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          aria-hidden="true"
-        >
-          <circle cx="11" cy="11" r="7"></circle>
-          <path d="M20 20L17 17"></path>
-        </svg>
-        <input
-          type="search"
-          data-testid="shelf-search"
-          bind:this={searchInput}
-          aria-label={t('library.searchAriaLabel')}
-          class="h-full min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 text-sm text-(--color-primary) outline-none placeholder:text-(--color-text-muted)"
-          placeholder={t('library.searchPlaceholder')}
-          bind:value={shelf.searchQuery}
-        />
-        <button
-          type="button"
-          class="shrink-0 rounded-md border border-(--color-border) px-1.5 py-0.5 text-micro text-(--color-text-muted) transition-colors hover:border-(--color-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent)"
-          aria-label={t('library.searchShortcutAria')}
-          onclick={focusSearch}
-        >
-          {t('library.searchShortcut')}
-        </button>
-      </div>
+      <SearchBar
+        bind:value={shelf.searchQuery}
+        class="flex-1 xl:min-w-80 xl:max-w-md"
+        data-testid="shelf-search"
+        placeholder={t('library.searchPlaceholder')}
+        ariaLabel={t('library.searchAriaLabel')}
+        clearLabel={t('home.shelfClearSearch')}
+        shortcutKey="/"
+        shortcutLabel={t('library.searchShortcut')}
+        shortcutAriaLabel={t('library.searchShortcutAria')}
+      />
 
       <div
-        class="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-end lg:gap-x-5 lg:gap-y-3 xl:gap-x-6"
+        class="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-x-5 lg:gap-y-3 xl:flex-1 xl:gap-x-6"
       >
         <fieldset class="border-0 p-0 m-0">
           <legend class="sr-only">{t('shelf.filterAria')}</legend>
@@ -201,7 +153,7 @@
             {/each}
           </div>
         </fieldset>
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 lg:ml-auto">
           <span class="whitespace-nowrap text-xs text-(--color-text-muted)"
             >{t('shelf.sortBy')}</span
           >

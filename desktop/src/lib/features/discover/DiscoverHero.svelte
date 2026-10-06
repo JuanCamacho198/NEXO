@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
+  import SearchBar from '$lib/shared/ui/navigation/SearchBar.svelte';
   import { TRENDING_CHIPS } from './DiscoverDomainState.svelte';
 
   type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -11,7 +12,6 @@
     selectedChip,
     onSelectChip,
     onSearchSubmit,
-    onNavigateHome,
   }: {
     t: Translate;
     sourceCount: number;
@@ -19,7 +19,6 @@
     selectedChip: string | null;
     onSelectChip: (chip: string | null) => void;
     onSearchSubmit: (query: string) => void;
-    onNavigateHome: () => void;
   } = $props();
 
   let searchInput = $state('');
@@ -35,20 +34,6 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <nav aria-label="Breadcrumb" class="flex items-center gap-1.5 text-sm">
-    <button
-      type="button"
-      class="text-(--color-text-muted) transition-colors hover:text-(--color-primary) hover:underline"
-      onclick={onNavigateHome}
-    >
-      {t('sidebar.home')}
-    </button>
-    <span aria-hidden="true" class="text-(--color-text-muted)">/</span>
-    <span aria-current="page" class="font-medium text-(--color-primary)">
-      {t('sidebar.discover')}
-    </span>
-  </nav>
-
   <div class="flex flex-wrap items-start justify-between gap-3">
     <div class="flex min-w-0 flex-col gap-1">
       <h1 id="discover-heading" class="m-0 text-xl font-semibold text-(--color-primary)">
@@ -74,12 +59,15 @@
   </div>
 
   <form class="flex max-w-2xl gap-2" onsubmit={submit}>
-    <input
-      type="search"
+    <SearchBar
       bind:value={searchInput}
+      class="flex-1"
       placeholder={t('discover.searchPlaceholder')}
-      aria-label={t('discover.searchAriaLabel')}
-      class="flex-1 rounded-md border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary) focus:border-(--color-primary) focus:outline-none"
+      ariaLabel={t('discover.searchAriaLabel')}
+      shortcutKey="/"
+      shortcutLabel={t('discover.searchShortcut')}
+      shortcutAriaLabel={t('discover.searchShortcutAria')}
+      onsubmit={onSearchSubmit}
     />
     <button
       type="submit"
