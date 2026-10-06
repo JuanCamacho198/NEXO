@@ -11,6 +11,8 @@ import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
 import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
+import { loadNotifications } from '$lib/shared/stores/notificationCenter.svelte';
+import { loadNotificationPreferences } from '$lib/shared/services/notificationPreferences';
 import {
   clearPersistedAuth,
   loadPersistedAuth,
@@ -269,6 +271,8 @@ export class AppState {
         this.settings.loadReaderSettings(),
         this.loadLibrary(),
         this.statsDomain.loadStats(undefined),
+        loadNotifications(),
+        loadNotificationPreferences(),
       ]);
       this.settings.locale = nextLocale;
     } catch (error) {
@@ -329,7 +333,11 @@ export class AppState {
   private async loadDailyGoalForCurrentUser(): Promise<void> {
     const uid = authState.userId;
     if (!uid || uid.trim().length === 0) {
-      this.settings.clearDailyGoal();
+      // No session: read the global key so a goal saved on this device is
+      // shown again on the next launch instead of being reset to the default.
+      try {
+        await this.settings.loadDailyGoalMinutes();
+      } catch {}
       this.statsDomain.clearTodayMinutes();
       this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
       return;
@@ -345,7 +353,13 @@ export class AppState {
 
   async saveDailyGoalMinutes(minutes: number): Promise<void> {
     const uid = authState.userId;
-    if (!uid || uid.trim().length === 0) return;
+    if (!uid || uid.trim().length === 0) {
+      // Session-less save: the backend persists the goal to the global key so
+      // it survives restarts and carries over if the user signs in later.
+      await this.settings.saveDailyGoalMinutes(minutes);
+      this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
+      return;
+    }
     await this.settings.saveDailyGoalMinutes(minutes, uid);
     this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);
     try {

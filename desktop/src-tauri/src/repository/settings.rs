@@ -48,25 +48,23 @@ pub fn get_daily_goal_minutes_for_user(
     user_id: Option<&str>,
 ) -> AppResult<i64> {
     let uid = user_id.map(|s| s.trim()).filter(|s| !s.is_empty());
-    if uid.is_none() {
-        return Ok(DEFAULT_DAILY_GOAL_MINUTES);
-    }
-    let uid = uid.unwrap();
 
-    // per-user key
-    let per_key = per_user_daily_goal_key(uid);
-    let per_val: Option<String> = repo
-        .connection
-        .prepare("SELECT value_json FROM app_settings WHERE key = ?1")?
-        .query_row(params![per_key], |row| row.get(0))
-        .optional()?;
-    if let Some(json) = per_val {
-        if let Some(n) = parse_goal_value(&json) {
-            return Ok(sanitize_daily_goal(n));
+    // per-user key (signed-in values take precedence over the global key)
+    if let Some(uid) = uid {
+        let per_key = per_user_daily_goal_key(uid);
+        let per_val: Option<String> = repo
+            .connection
+            .prepare("SELECT value_json FROM app_settings WHERE key = ?1")?
+            .query_row(params![per_key], |row| row.get(0))
+            .optional()?;
+        if let Some(json) = per_val {
+            if let Some(n) = parse_goal_value(&json) {
+                return Ok(sanitize_daily_goal(n));
+            }
         }
     }
 
-    // fallback global
+    // fallback global — also the only source for anonymous (no user id) reads
     let global_val: Option<String> = repo
         .connection
         .prepare("SELECT value_json FROM app_settings WHERE key = ?1")?
@@ -87,13 +85,14 @@ pub fn save_daily_goal_minutes(
     user_id: Option<&str>,
 ) -> AppResult<()> {
     let uid = user_id.map(|s| s.trim()).filter(|s| !s.is_empty());
-    if uid.is_none() {
-        // anon no row
-        return Ok(());
-    }
-    let uid = uid.unwrap();
     let sanitized = sanitize_daily_goal(minutes);
-    let key = per_user_daily_goal_key(uid);
+    // Anonymous saves go to the global key so they can carry over to a
+    // signed-in read (which falls back to the global key when no per-user
+    // value exists). Signed-in saves keep writing the per-user key.
+    let key = match uid {
+        Some(uid) => per_user_daily_goal_key(uid),
+        None => READING_DAILY_GOAL_KEY.to_string(),
+    };
     let value_json = sanitized.to_string();
     let dto = AppSettingDto {
         key: key.clone(),
@@ -218,5 +217,43 @@ mod tests {
         assert_eq!(settings.len(), 1);
         assert_eq!(settings[0].key, "ui.theme");
         assert_eq!(settings[0].value_json, "\"light\"");
+    }
+
+    #[test]
+    fn anonymous_daily_goal_round_trips_via_global_key() {
+        let mut repository = new_repository();
+
+        assert_eq!(repository.get_daily_goal_minutes(None).unwrap(), DEFAULT_DAILY_GOAL_MINUTES);
+
+        repository.save_daily_goal_minutes(30, None).unwrap();
+
+        assert_eq!(repository.get_daily_goal_minutes(None).unwrap(), 30);
+    }
+
+    #[test]
+    fn anonymous_daily_goal_carries_over_to_signed_in_read() {
+        let mut repository = new_repository();
+        repository.save_daily_goal_minutes(30, None).unwrap();
+
+        assert_eq!(repository.get_daily_goal_minutes(Some("user-1")).unwrap(), 30);
+    }
+
+    #[test]
+    fn signed_in_daily_goal_wins_over_global_fallback() {
+        let mut repository = new_repository();
+        repository.save_daily_goal_minutes(30, None).unwrap();
+        repository.save_daily_goal_minutes(45, Some("user-1")).unwrap();
+
+        assert_eq!(repository.get_daily_goal_minutes(Some("user-1")).unwrap(), 45);
+        // a different signed-in user still falls back to the anonymous global value
+        assert_eq!(repository.get_daily_goal_minutes(Some("user-2")).unwrap(), 30);
+    }
+
+    #[test]
+    fn blank_user_id_is_treated_as_anonymous() {
+        let mut repository = new_repository();
+        repository.save_daily_goal_minutes(10, Some("   ")).unwrap();
+
+        assert_eq!(repository.get_daily_goal_minutes(None).unwrap(), 10);
     }
 }

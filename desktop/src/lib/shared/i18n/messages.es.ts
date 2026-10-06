@@ -147,6 +147,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.tab.data': 'Datos',
   'settings.theme': 'Tema',
   'settings.authDescription': 'Inicia sesión para sincronizar tus datos',
+  'settings.account.subtitle': 'Gestiona tu cuenta, el idioma y el tema de la app.',
   'settings.theme.light': 'Claro',
   'settings.theme.dark': 'Oscuro',
   'settings.readerFontScale': 'Escala de fuente del lector',
@@ -156,6 +157,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.highlights': 'Resaltados',
   'settings.bookmarks': 'Marcadores',
   'settings.about': 'Acerca de Nexo',
+  'settings.about.subtitle': 'Versión, licencia y enlaces útiles.',
   'settings.about.appName': 'Nexo',
   'settings.about.version': 'Versión {{version}}',
   'settings.about.versionUnknown': 'Versión no disponible',
@@ -201,6 +203,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.shortcuts.title': 'Atajos de teclado',
   'settings.shortcuts.helpTitle': 'Atajos de teclado',
   'settings.shortcuts.description': 'Estos atajos están disponibles actualmente en Nexo.',
+  'settings.shortcuts.subtitle': 'Todos los atajos disponibles actualmente en Nexo.',
   'settings.shortcuts.readerPrev': 'Ir a la página/ubicación anterior en el lector',
   'settings.shortcuts.readerNext': 'Ir a la siguiente página/ubicación en el lector',
   'settings.shortcuts.readerScrollUp': 'Desplazarse hacia arriba en la vista actual del lector',
@@ -245,7 +248,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.daily_goal_close': 'Cerrar',
   'settings.daily_goal_saved': 'Meta diaria guardada',
   'settings.daily_goal_save_error': 'No se pudo guardar tu meta. Inténtalo de nuevo.',
-  'settings.daily_goal_sign_in_required': 'Inicia sesión para guardar tu meta',
+  'settings.daily_goal_local_hint':
+    'Guardado en este dispositivo. Inicia sesión para sincronizarlo entre dispositivos.',
   'settings.signOutConfirm': '¿Cerrar sesión de tu cuenta en este dispositivo?',
   'stats.goalProgress': 'Meta diaria {{current}}/{{goal}} min {{percent}}%',
   'stats.goalProgressHint': '{{percent}}% de tu meta diaria',
@@ -313,6 +317,34 @@ export const messagesEs: Record<MessageKey, string> = {
   'notifications.kind.importFailure': 'Importacion fallida',
   'notifications.kind.syncSuccess': 'Sincronizacion completada',
   'notifications.kind.syncFailure': 'Sincronizacion fallida',
+  'notifications.state.success': 'Éxito',
+  'notifications.state.failure': 'Fallo',
+  'notifications.auth.required': 'Se requiere iniciar sesion para sincronizar',
+  'notifications.auth.expired': 'La sesion de sincronizacion expiro',
+  'notifications.catalog.failed': 'Un libro no se pudo sincronizar',
+  'notifications.action.view': 'Ver',
+
+  // Agrupación y anuncios de notificaciones (NOTIF-06)
+  'notifications.center.groupCount': '{{count}} similares',
+  'notifications.center.expand': 'Mostrar {{count}} notificaciones',
+  'notifications.center.collapse': 'Ocultar notificaciones agrupadas',
+  'notifications.center.newArrival': 'Nueva notificación: {{message}}',
+  'notifications.bell.unread': 'Abrir notificaciones, {{count}} sin leer',
+
+  // Notification delivery preferences (NOTIF-05)
+  'settings.notifications.delivery.title': 'Notificaciones',
+  'settings.notifications.delivery.description':
+    'Elige que notificaciones pueden interrumpirte. Todo queda registrado en el centro de notificaciones.',
+  'settings.notifications.delivery.system': 'Notificaciones del sistema',
+  'settings.notifications.delivery.systemHint':
+    'Importaciones, sincronizacion, complementos y actualizaciones.',
+  'settings.notifications.delivery.nudges': 'Avisos',
+  'settings.notifications.delivery.nudgesHint':
+    'Recordatorios de racha y objetivos. Desactivarlos mantiene las notificaciones del sistema.',
+  'settings.notifications.delivery.quietHours': 'Horas de silencio',
+  'settings.notifications.delivery.quietHoursHint': 'Durante las horas de silencio nada suena.',
+  'settings.notifications.delivery.quietStart': 'Inicio',
+  'settings.notifications.delivery.quietEnd': 'Fin',
 
   // Sync Tab
   'settings.sync.description': 'Configura la sincronizacion con Google Drive.',
@@ -373,6 +405,7 @@ export const messagesEs: Record<MessageKey, string> = {
 
   // Data Tab
   'settings.data.description': 'Gestiona el almacenamiento y la configuracion.',
+  'settings.data.subtitle': 'Exporta tus datos o borra los archivos en caché.',
   'settings.data.storage': 'Almacenamiento',
   'settings.data.cacheSize': 'Cache',
   'settings.data.downloadedBooks': 'Libros descargados',
@@ -412,10 +445,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'addons.subtitle': 'Gestiona los catálogos instalados y explora las fuentes propias',
   'addons.firstParty.title': 'Fuentes propias',
   'addons.firstParty.builtinTitle': 'Integradas',
-  'addons.firstParty.curatedTitle': 'Curadas',
   'addons.firstParty.readOnly': 'Solo lectura: siempre disponibles, nunca se instalan.',
   'addons.firstParty.builtinBadge': 'Integrada',
-  'addons.firstParty.curatedBadge': 'Curada',
   'addons.install.description':
     '¿Tienes una URL de manifiesto? Instala un catálogo desde ella (solo HTTPS).',
   'addons.install.errorInline':
@@ -932,6 +963,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'home.viewAll': 'Ver todo',
   'home.greetingImport': 'Importar',
   'home.continue.progress': 'Progreso',
+  'home.continue.position': 'pág. {{current}} / {{total}}',
   'home.continue.liveBadge': 'EN CURSO',
   'home.continue.countAria': '{{count}} en curso',
   'home.continue.nextBook': 'Siguiente',
@@ -1005,6 +1037,9 @@ export const messagesEs: Record<MessageKey, string> = {
   // Modal (PR4)
   'modal.closeAria': 'Cerrar',
 
+  // Crash feedback dialog
+  'feedback.sending': 'Enviando…',
+
   // PdfSelectionOverlay (PR3b)
   'pdf.highlightAria': 'Resaltado',
 
@@ -1013,6 +1048,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.data.group.export': 'Exportar',
   'settings.data.group.maintenance': 'Mantenimiento',
   'settings.data.group.privacyAddons': 'Privacidad y avanzado',
+  'settings.data.group.notifications': 'Notificaciones',
   'settings.data.exportLibraryTitle': 'Exportar tu biblioteca',
   'settings.data.exportLibraryButton': 'Exportar biblioteca',
   'settings.data.libraryExported': 'Biblioteca exportada',
@@ -1215,6 +1251,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.formato_no_soportado': 'Formato no soportado',
   'reader.no_book_loaded': 'No hay libro cargado',
   'reader.error_cargar_libro': 'Error al cargar el libro',
+  'reader.readingStatusNotSaved': 'No se pudo guardar el estado de lectura',
   'reader.tabla_contenidos': 'Tabla de contenidos',
   'reader.toc_empty': 'Aún no hay capítulos',
   'reader.ajustes_texto': 'Ajustes de texto',

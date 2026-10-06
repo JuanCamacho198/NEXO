@@ -32,7 +32,7 @@ import {
   recordCatalogSyncFailure,
   recordCatalogSyncSuccess,
 } from '$lib/shared/stores/catalogSyncStatus.svelte';
-import { reportSyncOutcome } from '$lib/shared/stores/notificationCenter.svelte';
+import { notify } from '$lib/shared/stores/notificationCenter.svelte';
 import { SyncOutboxService } from '../outbox/SyncOutboxService';
 import { SyncOutboxDao } from '../outbox/SyncOutboxDao';
 import type { SyncHealth, RealtimeStatus } from '$lib/shared/types/book';
@@ -679,12 +679,23 @@ export class SyncService {
 
     const syncPromise = Promise.all([this.syncBooks(), this.syncState(), this.syncBookCatalog()])
       .then(() => {
-        // FR-DN1 feed: one tray entry per sync-run outcome (feed-only).
-        reportSyncOutcome(true, 'Sync', 'Completed');
+        // One tray entry per sync-run outcome (feed-only; no OS for sync).
+        notify({
+          source: 'sync',
+          severity: 'success',
+          i18nKey: 'notifications.kind.syncSuccess',
+          target: { kind: 'route', route: 'sync' },
+        });
         return undefined;
       })
       .catch((error: unknown) => {
-        reportSyncOutcome(false, 'Sync', error instanceof Error ? error.message : 'Failed');
+        notify({
+          source: 'sync',
+          severity: 'error',
+          i18nKey: 'notifications.kind.syncFailure',
+          i18nParams: { detail: error instanceof Error ? error.message : 'Failed' },
+          target: { kind: 'route', route: 'sync' },
+        });
         reportAuthError(error);
         console.error('Failed to sync startup metadata:', error);
       })

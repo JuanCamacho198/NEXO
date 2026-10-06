@@ -20,6 +20,7 @@ pub mod epub_reader;
 pub mod files;
 pub mod highlights;
 pub mod library;
+pub mod notifications;
 pub mod outbox;
 pub mod progress;
 pub mod reading_stats;
@@ -57,6 +58,8 @@ pub use files::*;
 pub use highlights::*;
 #[allow(unused_imports)]
 pub use library::*;
+#[allow(unused_imports)]
+pub use notifications::*;
 #[allow(unused_imports)]
 pub use outbox::*;
 #[allow(unused_imports)]

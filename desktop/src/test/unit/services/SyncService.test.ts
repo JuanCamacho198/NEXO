@@ -120,6 +120,14 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   saveBookFile: (id: string, data: number[]) => mockSaveBookFile(id, data),
   getFileBytes: (path: string) => mockGetFileBytes(path),
   listLibraryBooks: () => mockListLibraryBooks(),
+  // NOTIF-02: the notificationCenter persists through these. No-op here; this
+  // suite only asserts sync behaviour, not tray history.
+  listNotifications: async () => [],
+  saveNotification: async () => {},
+  markNotificationRead: async () => false,
+  markAllNotificationsRead: async () => 0,
+  clearAllNotifications: async () => 0,
+  pruneNotifications: async () => 0,
 }));
 
 vi.mock('$lib/shared/sync/SupabaseBookCatalogSync', async () => {

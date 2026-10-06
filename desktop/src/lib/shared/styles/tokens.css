@@ -112,6 +112,29 @@
 }
 
 /* ============================================
+ * STACKING ORDER — dialog and popover layers
+ * One documented scale so a dialog always outranks the page chrome and menus
+ * it is opened over, while a popover opened FROM INSIDE a dialog outranks the
+ * dialog that spawned it. Sparse on purpose to leave room between layers:
+ *   999   in-flow menus (ShelfActionMenu; reader highlight popovers 99–110) —
+ *         below dialogs on purpose: a reader dialog is opened on top of an
+ *         already-open highlight menu, which must stay underneath it
+ *   1000  SettingsPanel overlay — backdrop and drawer panel; the panel is last
+ *         in the DOM so it paints above its own backdrop
+ *   1100  app dialogs — above every menu, below the debug overlay
+ *   1200  reader dialogs — above the reader chrome they overlay
+ *   1300  portalled popovers opened from inside a dialog (Select/DropdownMenu
+ *         content) — must outrank --layer-dialog and --layer-dialog-reader
+ *   9999  debug overlay (DebugPanel/DebugToggle — above every dialog)
+ * ============================================ */
+:root {
+  --layer-drawer: 1000;
+  --layer-dialog: 1100;
+  --layer-dialog-reader: 1200;
+  --layer-popover: 1300;
+}
+
+/* ============================================
  * DICCIONARIO SCREEN — PER-ENTRY AVATAR ROTATION
  * The frame lists these seven colours for the DARK frame (ZPZb7); they are hue
  * accents applied on a saturated fill, so the same measured set holds in both
@@ -215,7 +238,6 @@
   /* Highlight menu tokens */
   --color-highlight-menu-bg: #161f33;
   --color-highlight-menu-border: rgba(255, 255, 255, 0.1);
-  --color-note-modal-bg: rgba(16, 28, 44, 0.71);
   --color-color-picker-bg: #ffffff;
 
   /* Gradients */
@@ -354,7 +376,6 @@
   /* Highlight menu tokens */
   --color-highlight-menu-bg: #e8edf4;
   --color-highlight-menu-border: rgba(30, 58, 95, 0.12);
-  --color-note-modal-bg: rgba(238, 242, 247, 0.9);
   --color-color-picker-bg: #ffffff;
 
   /* Gradients */
@@ -512,9 +533,36 @@ body {
   color: var(--color-primary);
 }
 
+/*
+ * Global focus ring floor. The previous `box-shadow: 0 0 0 3px
+ * var(--color-accent-soft)` was a ~10% alpha glow: below the DESIGN floor and
+ * effectively invisible on dark. This is a 2px solid ring at the signal hue
+ * with a 2px offset (DESIGN: "focus draws a 2px ring at 2px offset").
+ *
+ * Implemented as an `outline`, not a box-shadow, because this rule is
+ * unlayered and therefore beats every layered Tailwind `focus:*` utility: an
+ * outline keeps the ring independent of each control's own box-shadow, while
+ * the explicit `box-shadow: none` keeps the previous single-ring behavior
+ * (many controls carry a now-vestigial `focus-visible:ring-*` box-shadow that
+ * this unlayered rule has always overridden).
+ *
+ * `outline-offset` is overridden per control only where an `overflow-hidden`
+ * ancestor would clip the ring; the dialog body below is the one such case in
+ * the files this wave touches.
+ */
 :focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/*
+ * Dialog body scroll region: it is keyboard-focusable and sits inside the
+ * dialog panel's `overflow-hidden` rounded box, so a 2px ring at +2px offset
+ * would be clipped on its left/right edges. Draw it inset instead.
+ */
+.modal-scroll-region:focus-visible {
+  outline-offset: -2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -599,16 +647,6 @@ body {
  * SETTINGS PANEL — non-migrable CSS
  * These can't be expressed in Tailwind utility classes
  * ============================================ */
-
-/* Slide-in animation for overlay mode */
-@keyframes slide-in {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
 
 /* Range input slider thumb styling */
 .slider-thumb::-webkit-slider-thumb {

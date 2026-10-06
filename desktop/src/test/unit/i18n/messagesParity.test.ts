@@ -171,7 +171,6 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
       'addons.subtitle',
       'addons.firstParty.title',
       'addons.firstParty.builtinTitle',
-      'addons.firstParty.curatedTitle',
       'addons.firstParty.readOnly',
       'addons.firstParty.builtinBadge',
       'addons.install.errorInline',

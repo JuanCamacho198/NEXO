@@ -156,6 +156,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let state = build_state(app.handle()).map_err(std::io::Error::other)?;
             app.manage(state);
@@ -179,6 +180,12 @@ fn main() {
             commands::upsertBook,
             commands::getSettings,
             commands::upsertSettings,
+            commands::listNotifications,
+            commands::saveNotification,
+            commands::markNotificationRead,
+            commands::markAllNotificationsRead,
+            commands::clearNotifications,
+            commands::pruneNotifications,
             commands::listLibraryBooks,
             commands::scanFolder,
             commands::getProgress,

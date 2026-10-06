@@ -341,6 +341,29 @@ pub struct AppSettingDto {
     pub updated_at: String,
 }
 
+/// One persisted notification (NOTIF-02). Mirrors the frontend `Notification`
+/// model; `i18n_params` and `target` travel as opaque JSON text so the backend
+/// never has to understand the localization or navigation contract.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotificationDto {
+    pub id: String,
+    /// Epoch milliseconds.
+    pub created_at: i64,
+    pub source: String,
+    pub category: String,
+    pub severity: String,
+    pub interruption: String,
+    pub i18n_key: String,
+    /// JSON object text, or None.
+    pub i18n_params: Option<String>,
+    /// JSON object text, or None.
+    pub target: Option<String>,
+    /// Epoch milliseconds while unread is null.
+    pub read_at: Option<i64>,
+    pub dedup_key: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BookCoverDto {

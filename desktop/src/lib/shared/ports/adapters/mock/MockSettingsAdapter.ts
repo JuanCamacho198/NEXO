@@ -29,6 +29,7 @@ export class MockSettingsAdapter implements SettingsPort {
   };
   #locale: string | null = null;
   #goals = new Map<string, number>();
+  #anonymousGoal: number | null = null;
   #minutes = new Map<string, number>();
   #app = new Map<string, AppSettingDto>();
   async getReaderSettings(): Promise<ReaderSettings> {
@@ -54,11 +55,16 @@ export class MockSettingsAdapter implements SettingsPort {
     this.#locale = l;
   }
   async getDailyGoal(u?: string): Promise<number> {
-    return u ? (this.#goals.get(u) ?? 20) : 20;
+    const uid = u?.trim();
+    // Mirrors the backend: a signed-in read falls back to the anonymous global
+    // value when no per-user value exists.
+    if (uid) return this.#goals.get(uid) ?? this.#anonymousGoal ?? 20;
+    return this.#anonymousGoal ?? 20;
   }
   async saveDailyGoal(m: number, u?: string): Promise<void> {
-    if (!u) return;
-    this.#goals.set(u, m);
+    const uid = u?.trim();
+    if (uid) this.#goals.set(uid, m);
+    else this.#anonymousGoal = m;
   }
   async getTodayMinutes(u: string, b?: string): Promise<number> {
     return this.#minutes.get(b ? `${u}:${b}` : u) ?? 0;

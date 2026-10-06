@@ -144,6 +144,7 @@ export const messagesEn = {
   'settings.tab.data': 'Data',
   'settings.theme': 'Theme',
   'settings.authDescription': 'Sign in to sync your data',
+  'settings.account.subtitle': 'Manage your account, language and app theme.',
   'settings.theme.light': 'Light',
   'settings.theme.dark': 'Dark',
   'settings.readerFontScale': 'Reader font scale',
@@ -153,6 +154,7 @@ export const messagesEn = {
   'settings.highlights': 'Highlights',
   'settings.bookmarks': 'Bookmarks',
   'settings.about': 'About Nexo',
+  'settings.about.subtitle': 'Version, license and useful links.',
   'settings.about.appName': 'Nexo',
   'settings.about.version': 'Version {{version}}',
   'settings.about.versionUnknown': 'Version unavailable',
@@ -203,6 +205,7 @@ export const messagesEn = {
   'settings.shortcuts.title': 'Keyboard Shortcuts',
   'settings.shortcuts.helpTitle': 'Keyboard shortcuts',
   'settings.shortcuts.description': 'These shortcuts are currently available in Nexo.',
+  'settings.shortcuts.subtitle': 'All the shortcuts currently available in Nexo.',
   'settings.shortcuts.readerPrev': 'Go to previous page/location in reader',
   'settings.shortcuts.readerNext': 'Go to next page/location in reader',
   'settings.shortcuts.readerScrollUp': 'Scroll up in the current reader view',
@@ -247,7 +250,7 @@ export const messagesEn = {
   'settings.daily_goal_close': 'Close',
   'settings.daily_goal_saved': 'Daily goal saved',
   'settings.daily_goal_save_error': "Couldn't save your daily goal. Try again.",
-  'settings.daily_goal_sign_in_required': 'Sign in to save your daily goal',
+  'settings.daily_goal_local_hint': 'Saved on this device. Sign in to sync across devices.',
   'settings.signOutConfirm': 'Sign out of your account on this device?',
   'stats.goalProgress': 'Daily goal {{current}}/{{goal}} min {{percent}}%',
   'stats.goalProgressHint': '{{percent}}% of your daily goal',
@@ -310,6 +313,33 @@ export const messagesEn = {
   'notifications.kind.importFailure': 'Import failed',
   'notifications.kind.syncSuccess': 'Sync completed',
   'notifications.kind.syncFailure': 'Sync failed',
+  'notifications.state.success': 'Success',
+  'notifications.state.failure': 'Failure',
+  'notifications.auth.required': 'Sign-in required to sync',
+  'notifications.auth.expired': 'Sync sign-in expired',
+  'notifications.catalog.failed': 'A book could not be synced',
+  'notifications.action.view': 'View',
+
+  // Notification grouping and arrival announcements (NOTIF-06)
+  'notifications.center.groupCount': '{{count}} similar',
+  'notifications.center.expand': 'Show {{count}} notifications',
+  'notifications.center.collapse': 'Hide grouped notifications',
+  'notifications.center.newArrival': 'New notification: {{message}}',
+  'notifications.bell.unread': 'Open notifications, {{count}} unread',
+
+  // Notification delivery preferences (NOTIF-05)
+  'settings.notifications.delivery.title': 'Notifications',
+  'settings.notifications.delivery.description':
+    'Choose which notifications can interrupt you. Everything is still recorded in the notification center.',
+  'settings.notifications.delivery.system': 'System notifications',
+  'settings.notifications.delivery.systemHint': 'Imports, sync, addons and updates.',
+  'settings.notifications.delivery.nudges': 'Nudges',
+  'settings.notifications.delivery.nudgesHint':
+    'Streak and goal reminders. Turning these off keeps system notifications.',
+  'settings.notifications.delivery.quietHours': 'Quiet hours',
+  'settings.notifications.delivery.quietHoursHint': 'During quiet hours nothing sounds.',
+  'settings.notifications.delivery.quietStart': 'Start',
+  'settings.notifications.delivery.quietEnd': 'End',
 
   // Sync Tab
   'settings.sync.description': 'Configure Google Drive synchronization.',
@@ -370,6 +400,7 @@ export const messagesEn = {
 
   // Data Tab
   'settings.data.description': 'Manage storage and configuration.',
+  'settings.data.subtitle': 'Export your data or clear cached files.',
   'settings.data.storage': 'Storage',
   'settings.data.cacheSize': 'Cache',
   'settings.data.downloadedBooks': 'Downloaded books',
@@ -409,10 +440,8 @@ export const messagesEn = {
   'addons.subtitle': 'Manage installed catalogs and browse first-party sources',
   'addons.firstParty.title': 'First-party sources',
   'addons.firstParty.builtinTitle': 'Built-in',
-  'addons.firstParty.curatedTitle': 'Curated',
   'addons.firstParty.readOnly': 'Read-only: always available, never installed.',
   'addons.firstParty.builtinBadge': 'Built-in',
-  'addons.firstParty.curatedBadge': 'Curated',
   'addons.install.description': 'Have a manifest URL? Install a catalog from it (HTTPS only).',
   'addons.install.errorInline': 'Could not install the addon. Check the URL and try again.',
   'addons.install.offline': 'You are offline. Reconnect and try again.',
@@ -784,6 +813,7 @@ export const messagesEn = {
   'reader.formato_no_soportado': 'Unsupported format',
   'reader.no_book_loaded': 'No book loaded',
   'reader.error_cargar_libro': 'Error loading book',
+  'reader.readingStatusNotSaved': 'Reading status could not be saved',
   'reader.tabla_contenidos': 'Table of Contents',
   'reader.toc_empty': 'No chapters yet',
   'reader.ajustes_texto': 'Text Settings',
@@ -971,6 +1001,7 @@ export const messagesEn = {
   'home.viewAll': 'View all',
   'home.greetingImport': 'Import',
   'home.continue.progress': 'Progress',
+  'home.continue.position': 'p. {{current}} / {{total}}',
   'home.continue.liveBadge': 'IN PROGRESS',
   'home.continue.countAria': '{{count}} in progress',
   'home.continue.nextBook': 'Next',
@@ -1044,6 +1075,9 @@ export const messagesEn = {
   // Modal (PR4)
   'modal.closeAria': 'Close',
 
+  // Crash feedback dialog
+  'feedback.sending': 'Sending…',
+
   // PdfSelectionOverlay (PR3b)
   'pdf.highlightAria': 'Highlight',
 
@@ -1052,6 +1086,7 @@ export const messagesEn = {
   'settings.data.group.export': 'Export',
   'settings.data.group.maintenance': 'Maintenance',
   'settings.data.group.privacyAddons': 'Privacy & advanced',
+  'settings.data.group.notifications': 'Notifications',
   'settings.data.exportLibraryTitle': 'Export your library',
   'settings.data.exportLibraryButton': 'Export library',
   'settings.data.libraryExported': 'Library exported',

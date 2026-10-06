@@ -248,7 +248,6 @@ function resetAppState(): void {
   appState.editingBook = null;
   appState.pendingRemoveBook = null;
   appState.collections = [];
-  appState.isCollectionManagerOpen = false;
   appState.isBulkImportOpen = false;
   appState.isBulkScanning = false;
   appState.isBulkImporting = false;
