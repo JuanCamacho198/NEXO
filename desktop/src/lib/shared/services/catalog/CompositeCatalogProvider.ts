@@ -11,13 +11,14 @@
  * debounced; page < 1 rejects before I/O.
  */
 import { catalogError } from './errors';
-import type {
-  CatalogBook,
-  CatalogFeaturedSort,
-  CatalogProvider,
-  CatalogSource,
-  CatalogSourceInfo,
-  PagedResult,
+import {
+  BUILTIN_GUTENDEX,
+  type CatalogBook,
+  type CatalogFeaturedSort,
+  type CatalogProvider,
+  type CatalogSource,
+  type CatalogSourceInfo,
+  type PagedResult,
 } from './CatalogProvider';
 import {
   DETAIL_TTL_S,
@@ -35,6 +36,11 @@ import { GoogleBooksCatalogProvider, googleBooksProviderOrNull } from './BuiltIn
 import { OpenLibraryCatalogProvider } from './BuiltInCatalogProviders';
 import { mergeResults, resolveDownloadUrl, resolveTotalCount, toPagedResult } from './mappers';
 import { DEBOUNCE_MS, createSearchDebouncer } from './policy';
+import {
+  hasResolvedAuthorities,
+  resolveBookAuthorities as resolveBookAuthorityFields,
+  type OpenLibraryIdentity,
+} from './bookAuthorityResolver';
 
 export interface CompositeOptions {
   debounceMs?: number;
@@ -645,5 +651,56 @@ export class CompositeCatalogProvider implements CatalogProvider {
       return { ...EMPTY_ADDON_ACCESS, options: [] };
     }
     return resolve.call(route.provider, book);
+  }
+
+  /**
+   * DISC-04c lazy authority resolve, cached under the existing detail key so it
+   * runs once per book. A fresh resident detail that already carries an
+   * authority is served with zero I/O; otherwise Gutendex is reached through
+   * `searchSource` (never the composite fan-out, which Gutendex now opts out
+   * of) and Open Library through its ISBN lookup (skipped, not failed, when the
+   * book has no ISBN). The merged book replaces the detail-key entry, so the
+   * next open serves the resolved payload from cache without re-resolving.
+   */
+  async resolveBookAuthorities(book: CatalogBook): Promise<CatalogBook> {
+    const route = this.routeDetails(book.id);
+    if (!route) return book;
+    const key = detailCacheKey(route.source.sourceId, book.id);
+    const now = this.nowEpochSecs();
+    const resident = this.readResolvedDetail(key, now);
+    if (resident) return resident;
+
+    const resolved = await resolveBookAuthorityFields(book, {
+      gutendex: (query) =>
+        this.searchSource(BUILTIN_GUTENDEX, query, 1).then((page) => page.results),
+      openLibraryByIsbn: (isbn) => this.openLibraryIdentity(isbn),
+    });
+
+    if (resolved !== book && this.cache) {
+      this.cache.put(key, JSON.stringify(resolved), now, DETAIL_TTL_S);
+    }
+    return resolved;
+  }
+
+  /** A fresh resident detail that already carries an authority, else null. */
+  private readResolvedDetail(key: string, now: number): CatalogBook | null {
+    const hit = this.cache?.get(key, now) ?? null;
+    if (!hit) return null;
+    try {
+      const book = JSON.parse(hit) as CatalogBook;
+      return hasResolvedAuthorities(book) ? book : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Open Library identity lookup through the registered OL provider, if any. */
+  private async openLibraryIdentity(isbn: string): Promise<OpenLibraryIdentity | null> {
+    const provider = this.providers.find(
+      (candidate): candidate is OpenLibraryCatalogProvider =>
+        candidate instanceof OpenLibraryCatalogProvider,
+    );
+    if (!provider) return null;
+    return provider.enrichByIsbn(isbn);
   }
 }

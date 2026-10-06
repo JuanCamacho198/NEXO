@@ -20,6 +20,7 @@ import { GutendexDataSource } from './GutendexDataSource';
 import { GoogleBooksDataSource } from './GoogleBooksDataSource';
 import { OpenLibraryDataSource } from './OpenLibraryDataSource';
 import { resolveDownloadUrl, toPagedResult } from './mappers';
+import type { OpenLibraryIdentity } from './bookAuthorityResolver';
 import { MIN_PAGE_SIZE } from './policy';
 
 const GUTENDEX_ID_PREFIX = 'gutendex:';
@@ -104,9 +105,26 @@ export class OpenLibraryCatalogProvider implements CatalogProvider {
     return toPagedResult(books, page, totalCount);
   }
 
-  /** OL ids are not detail-resolvable (NOT_FOUND — preserved contract). */
+  /** Open Library ids are not detail-resolvable (NOT_FOUND — preserved contract). */
   async getDetails(id: string): Promise<CatalogBook> {
     throw catalogError('NOT_FOUND', `openlibrary ids are not detail-resolvable: ${id}`);
+  }
+
+  /**
+   * DISC-04c lazy identity enrichment: work + Internet Archive id for an ISBN,
+   * read from a `fields`-projected `search.json` lookup. Returns null when the
+   * lookup yields no identity — a no-match is not an error.
+   */
+  async enrichByIsbn(isbn: string): Promise<OpenLibraryIdentity | null> {
+    const doc = (await this.ds.searchByIsbn(isbn))[0];
+    if (!doc) return null;
+    const workId = (doc.key ?? '').trim();
+    const archiveId = ((doc.ia ?? [])[0] ?? '').trim();
+    if (workId === '' && archiveId === '') return null;
+    return {
+      workId: workId === '' ? null : workId,
+      archiveId: archiveId === '' ? null : archiveId,
+    };
   }
 
   // `featured` / `supportsFeatured` are deliberately left fail-closed.

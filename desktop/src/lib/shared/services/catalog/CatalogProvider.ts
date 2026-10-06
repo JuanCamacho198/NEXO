@@ -173,6 +173,16 @@ export interface CatalogProvider {
    * registered provider.
    */
   supportsCompositeSearch?(): boolean;
+
+  /**
+   * Lazy per-book authority resolve (DISC-04c, additive + optional): resolve a
+   * book's Gutendex download/public-domain and Open Library work/Internet
+   * Archive identity, caching the merged result under the existing detail key
+   * so it runs once per book. Absent ⇒ the caller skips the enrichment. The
+   * resolve is best-effort: a rejection or an empty result never replaces the
+   * seeded detail and is never surfaced as an error.
+   */
+  resolveBookAuthorities?(book: CatalogBook): Promise<CatalogBook>;
 }
 
 export type { CatalogErrorCode };

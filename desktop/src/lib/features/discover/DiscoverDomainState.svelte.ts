@@ -221,6 +221,11 @@ class DiscoverDomainState {
     if (this.detailGeneration !== generation) return;
     this.detail = enriched;
     this.detailStatus = 'loaded';
+    // DISC-04c: additionally resolve the book's Gutendex download/PD and Open
+    // Library work/IA authorities, once per book. This runs after the seed and
+    // the enrichment are already painted, so it never delays or replaces them;
+    // a failure or a superseded generation leaves the sheet exactly as it is.
+    await this.resolveAuthorities(enriched, generation);
   }
 
   /**
@@ -425,6 +430,25 @@ class DiscoverDomainState {
    */
   dispose(): void {
     this.railsState.dispose();
+  }
+
+  /**
+   * DISC-04c additional enrichment: resolve the open book's authorities on the
+   * provider (best-effort, once per book — the provider caches under the detail
+   * key). Never blocks the painted sheet: it runs after the seed and the
+   * enrichment are already on screen, and a rejection or a superseded open
+   * leaves `detail` and `detailStatus` alone.
+   */
+  private async resolveAuthorities(book: CatalogBook, generation: number): Promise<void> {
+    const resolve = this.provider.resolveBookAuthorities;
+    if (typeof resolve !== 'function') return;
+    try {
+      const resolved = await resolve.call(this.provider, book);
+      if (this.detailGeneration !== generation) return;
+      if (resolved !== book) this.detail = resolved;
+    } catch {
+      // Best-effort: the seeded/enriched detail stays exactly as painted.
+    }
   }
 
   private resetToIdle(): void {

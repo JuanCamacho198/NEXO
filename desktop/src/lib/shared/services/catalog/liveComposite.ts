@@ -99,6 +99,10 @@ class LiveCatalogProvider implements CatalogProvider {
     return supplier.current().then((c) => c.resolveAddonAccess(book));
   }
 
+  resolveBookAuthorities(book: CatalogBook): Promise<CatalogBook> {
+    return supplier.current().then((c) => c.resolveBookAuthorities(book));
+  }
+
   listSources(): CatalogSourceInfo[] {
     return supplier.peek()?.listSources() ?? [];
   }

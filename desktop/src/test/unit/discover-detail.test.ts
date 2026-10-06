@@ -789,3 +789,115 @@ describe('DiscoverDomainState optimistic detail (DISC-01)', () => {
     expect(state.detail?.id).toBe(book.id);
   });
 });
+
+describe('DiscoverDomainState lazy authority resolve (DISC-04c)', () => {
+  const flushPromises = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('paints the seed first, then applies the resolve as additional enrichment', async () => {
+    const seed = fakeBook({
+      id: 'googlebooks:abc123',
+      provider: 'builtin:googlebooks',
+      downloadUrl: null,
+      isPublicDomain: null,
+      isbn13: '9780141439518',
+    });
+    let settleResolve!: (book: CatalogBook) => void;
+    const resolveBookAuthorities = vi.fn(
+      () =>
+        new Promise<CatalogBook>((resolve) => {
+          settleResolve = resolve;
+        }),
+    );
+    const provider: CatalogProvider = {
+      ...fakeProvider({ [seed.id]: seed }),
+      resolveBookAuthorities,
+    };
+    const state = new DiscoverDomainState(provider);
+
+    const opening = state.openDetail(seed);
+    // Synchronous first paint: the card payload is on screen before any
+    // enrichment — including the authority resolve — has settled.
+    expect(state.detail).toEqual(seed);
+    expect(state.detailStatus).toBe('loaded');
+
+    await flushPromises();
+    expect(resolveBookAuthorities).toHaveBeenCalledOnce();
+    expect(resolveBookAuthorities).toHaveBeenCalledWith(seed);
+
+    const resolved: CatalogBook = {
+      ...seed,
+      downloadUrl: 'https://www.gutenberg.org/ebooks/1342.epub3.images',
+      isPublicDomain: true,
+      openLibraryWorkId: '/works/OL66554W',
+      internetArchiveId: 'prideandprejudice0000aust',
+    };
+    settleResolve(resolved);
+    await opening;
+
+    expect(state.detail).toEqual(resolved);
+    expect(state.detailStatus).toBe('loaded');
+  });
+
+  it('does not write a superseded resolve for book A onto an open book B', async () => {
+    const first = fakeBook({
+      id: 'googlebooks:a',
+      provider: 'builtin:googlebooks',
+      downloadUrl: null,
+      isPublicDomain: null,
+    });
+    const second = fakeBook({
+      id: 'googlebooks:b',
+      provider: 'builtin:googlebooks',
+      downloadUrl: null,
+      isPublicDomain: null,
+    });
+    let settleFirst!: (book: CatalogBook) => void;
+    const resolveBookAuthorities = vi.fn((book: CatalogBook) =>
+      book.id === first.id
+        ? new Promise<CatalogBook>((resolve) => {
+            settleFirst = resolve;
+          })
+        : Promise.resolve(book),
+    );
+    const provider: CatalogProvider = {
+      ...fakeProvider({ [first.id]: first, [second.id]: second }),
+      resolveBookAuthorities,
+    };
+    const state = new DiscoverDomainState(provider);
+
+    const openingFirst = state.openDetail(first);
+    await flushPromises();
+    const openingSecond = state.openDetail(second);
+    await openingSecond;
+    expect(state.detail?.id).toBe(second.id);
+
+    settleFirst({ ...first, openLibraryWorkId: '/works/OL_A' });
+    await openingFirst;
+
+    expect(state.detail?.id).toBe(second.id);
+    expect(state.detail?.openLibraryWorkId ?? null).toBeNull();
+    expect(state.detailStatus).toBe('loaded');
+  });
+
+  it('keeps the seeded detail and status when the resolve rejects', async () => {
+    const seed = fakeBook({
+      id: 'googlebooks:fail',
+      provider: 'builtin:googlebooks',
+      downloadUrl: null,
+      isPublicDomain: null,
+    });
+    const provider: CatalogProvider = {
+      ...fakeProvider({ [seed.id]: seed }),
+      async resolveBookAuthorities() {
+        throw catalogError('NETWORK_ERROR', 'down');
+      },
+    };
+    const state = new DiscoverDomainState(provider);
+
+    await state.openDetail(seed);
+
+    expect(state.detail).toEqual(seed);
+    expect(state.detailStatus).toBe('loaded');
+    expect(state.errorCode).toBeNull();
+  });
+});

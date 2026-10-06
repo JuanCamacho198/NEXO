@@ -17,6 +17,14 @@ import type { CatalogBook } from './CatalogProvider';
 
 export const OPEN_LIBRARY_BASE_URL = 'https://openlibrary.org';
 
+/**
+ * `fields` projection for the ISBN-scoped identity lookup (DISC-04c). The
+ * unprojected `search.json` response measured 23–386 KB; request only the
+ * fields the lazy resolver reads. `ebook_access` is requested alongside the
+ * identity fields as the documented minimum projection.
+ */
+export const OPEN_LIBRARY_ISBN_FIELDS = 'key,ia,ebook_access';
+
 export interface OpenLibrarySearchResponse {
   numFound: number;
   docs: OpenLibraryDoc[];
@@ -58,6 +66,35 @@ export class OpenLibraryDataSource {
         books,
         totalCount: typeof data.numFound === 'number' ? data.numFound : books.length,
       };
+    } catch (err) {
+      if (isCatalogError(err)) throw err;
+      toCatalogError(err, 'openlibrary request failed');
+    }
+  }
+
+  /**
+   * ISBN-scoped identity lookup (DISC-04c): a single `search.json` doc under
+   * the `isbn:<isbn>` query, with a `fields` projection. The percent-encoded
+   * colon `URLSearchParams` produces is accepted by Open Library (`isbn%3A…`
+   * and `isbn:…` return the same `ia` list) — the opposite of Google Books,
+   * where every colon operator answers `totalItems: 0`.
+   */
+  async searchByIsbn(isbn: string): Promise<OpenLibraryDoc[]> {
+    await this.limiter.waitForSlot();
+    try {
+      const params = new URLSearchParams({
+        q: `isbn:${isbn}`,
+        limit: '1',
+        fields: OPEN_LIBRARY_ISBN_FIELDS,
+      });
+      const res = await fetchWithRetry(
+        `${OPEN_LIBRARY_BASE_URL}/search.json?${params.toString()}`,
+        { headers: { 'User-Agent': this.userAgent, Accept: 'application/json' } },
+        this.fetchFn,
+        SEARCH_DEADLINE_MS,
+      );
+      const data = (await res.json()) as OpenLibrarySearchResponse;
+      return data.docs ?? [];
     } catch (err) {
       if (isCatalogError(err)) throw err;
       toCatalogError(err, 'openlibrary request failed');

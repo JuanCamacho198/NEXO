@@ -38,7 +38,18 @@ export {
 } from './BuiltInCatalogProviders';
 export { resolveAccess, isHttpsUrl } from './accessResolver';
 export type { AccessGroup, AccessOption, LegalAccess } from './accessResolver';
-export { OpenLibraryDataSource, OPEN_LIBRARY_BASE_URL } from './OpenLibraryDataSource';
+export {
+  OpenLibraryDataSource,
+  OPEN_LIBRARY_BASE_URL,
+  OPEN_LIBRARY_ISBN_FIELDS,
+} from './OpenLibraryDataSource';
+export {
+  authorityQuery,
+  hasResolvedAuthorities,
+  isbnOf,
+  resolveBookAuthorities,
+} from './bookAuthorityResolver';
+export type { BookAuthorityLookups, OpenLibraryIdentity } from './bookAuthorityResolver';
 export {
   CompositeCatalogProvider,
   createRebuildingCatalogProvider,
