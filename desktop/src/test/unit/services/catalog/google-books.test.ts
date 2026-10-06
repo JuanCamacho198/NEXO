@@ -81,11 +81,18 @@ function volumePayload(): GoogleBooksSearchResponse {
 }
 
 describe('buildGoogleBooksQuery', () => {
-  it('uses the isbn operator for bare ISBN-10/13 (dashes, spaces, X check digit)', () => {
-    expect(buildGoogleBooksQuery('9780140449136')).toBe('isbn:9780140449136');
-    expect(buildGoogleBooksQuery('978-0-14-044913-6')).toBe('isbn:9780140449136');
-    expect(buildGoogleBooksQuery(' 0141439513 ')).toBe('isbn:0141439513');
-    expect(buildGoogleBooksQuery('043942089X')).toBe('isbn:043942089X');
+  it('compacts a bare ISBN-10/13 to plain digits (dashes, spaces, X check digit)', () => {
+    expect(buildGoogleBooksQuery('9780140449136')).toBe('9780140449136');
+    expect(buildGoogleBooksQuery('978-0-14-044913-6')).toBe('9780140449136');
+    expect(buildGoogleBooksQuery(' 0141439513 ')).toBe('0141439513');
+    expect(buildGoogleBooksQuery('043942089X')).toBe('043942089X');
+  });
+
+  it('never emits a colon operator, which the live API answers with zero results', () => {
+    const queries = ['9780140449136', '978-0-14-044913-6', '043942089X', 'Jane Austen Pride'];
+    for (const query of queries) {
+      expect(buildGoogleBooksQuery(query)).not.toContain(':');
+    }
   });
 
   it('passes title/author queries through trimmed', () => {
@@ -184,10 +191,14 @@ describe('GoogleBooksDataSource', () => {
     expect(whitespace.urls[0]).not.toContain('key=');
   });
 
-  it('maps an ISBN query through the isbn operator', async () => {
+  it('sends a bare ISBN as plain digits, never as a colon operator', async () => {
     const { fetchFn, urls } = recordingFetch(volumePayload());
     await new GoogleBooksDataSource(fetchFn, KEY).search('9780140449136', 1);
-    expect(urls[0]).toContain('q=isbn%3A9780140449136');
+    // Regression pin. The previous shape was `q=isbn%3A9780140449136`, which the
+    // live API answers with `totalItems: 0`; plain digits answer with volumes.
+    expect(urls[0]).toContain('q=9780140449136');
+    expect(urls[0]).not.toContain('isbn');
+    expect(urls[0]).not.toContain('%3A');
   });
 
   it('detail request carries the fields whitelist and the key when configured', async () => {

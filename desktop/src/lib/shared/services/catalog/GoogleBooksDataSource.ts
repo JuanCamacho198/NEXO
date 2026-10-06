@@ -42,14 +42,22 @@ const ISBN13_RE = /^\d{13}$/;
 
 /**
  * Build the `q` param: a bare ISBN-10/13 (digits, optional `X` check digit,
- * dashes/spaces tolerated) uses the `isbn:` operator so an ISBN search resolves
- * to the exact edition; everything else passes through as a title/author query
- * the API ranks itself.
+ * dashes/spaces tolerated) is compacted to its plain digits; everything else
+ * passes through as a title/author query the API ranks itself.
+ *
+ * The `isbn:` operator is deliberately NOT used. Measured against the live API
+ * with the app's own key, sending the URL verbatim: `isbn:9780141439518` and
+ * `isbn%3A9780141439518` both answer `totalItems: 0`, while the plain digits
+ * `9780141439518` answer with real volumes. Every colon operator (`isbn:`,
+ * `subject:`, `intitle:`, `inauthor:`) behaved the same way, while quoted
+ * phrases worked, so the operator — not the encoding — is what fails here. The
+ * root cause is unexplained (a key restriction or endpoint behaviour); do not
+ * "restore" the operator without re-measuring it against the live API.
  */
 export function buildGoogleBooksQuery(rawQuery: string): string {
   const trimmed = rawQuery.trim();
   const compact = trimmed.replace(/[-\s]/g, '').toUpperCase();
-  return ISBN10_RE.test(compact) || ISBN13_RE.test(compact) ? `isbn:${compact}` : trimmed;
+  return ISBN10_RE.test(compact) || ISBN13_RE.test(compact) ? compact : trimmed;
 }
 
 export class GoogleBooksDataSource {
