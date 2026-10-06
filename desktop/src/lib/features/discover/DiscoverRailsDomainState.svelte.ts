@@ -1,12 +1,11 @@
 import {
-  BUILTIN_GUTENDEX,
+  BUILTIN_GOOGLEBOOKS,
   isCatalogError,
   isRetryableCatalogCode,
   liveCatalogProvider,
   REQUEST_DEADLINE_MS,
   type CatalogBook,
   type CatalogErrorCode,
-  type CatalogFeaturedSort,
   type CatalogProvider,
 } from '$lib/shared/services/catalog';
 import type { MessageKey } from '$lib/shared/i18n/messages.en';
@@ -14,7 +13,6 @@ import {
   buildRailSpecs,
   DISCOVER_RAIL_FETCH_LIMIT,
   loadRail,
-  RAIL_SCOPE_LIMIT,
   withDeadline,
   type DiscoverRailSpec,
 } from './railPlan';
@@ -30,10 +28,15 @@ export type DiscoverRailState =
   | { kind: 'Loaded'; books: CatalogBook[]; totalCount: number }
   | { kind: 'Error'; code: CatalogErrorCode; offline: boolean };
 
-/** Rail-scoped browse target opened from a rail header ("Ver todo"). */
-export type DiscoverBrowseScope =
-  | { kind: 'term'; term: string; titleKey: MessageKey }
-  | { kind: 'featured'; sort: CatalogFeaturedSort; titleKey: MessageKey };
+/**
+ * Rail-scoped browse target opened from a rail header ("Ver todo"): the
+ * shelf's author term, browsed against Google Books.
+ */
+export interface DiscoverBrowseScope {
+  kind: 'term';
+  term: string;
+  titleKey: MessageKey;
+}
 
 /**
  * Automatic retry backoff for a failed rail: attempt 1 at 2s, attempt 2 at 5s,
@@ -213,9 +216,9 @@ export class DiscoverRailsDomainState {
   }
 
   /**
-   * Open a rail-scoped browse view: term scopes page through a source search,
-   * featured scopes resolve a single first page (the port is first-page-only).
-   * A failure lands in `scopeError` instead of throwing at the caller.
+   * Open a rail-scoped browse view: term scopes page through the Google Books
+   * source search. A failure lands in `scopeError` instead of throwing at the
+   * caller.
    */
   async openScope(scope: DiscoverBrowseScope): Promise<void> {
     this.scope = scope;
@@ -227,28 +230,17 @@ export class DiscoverRailsDomainState {
   }
 
   /**
-   * Append the scope's next page. A term scope stops once a page reports no next
-   * page; a featured scope is single-page by contract (≤ `RAIL_SCOPE_LIMIT`).
+   * Append the scope's next page through the Google Books source. The scope
+   * stops once a page reports no next page.
    */
   async loadScopeNextPage(): Promise<void> {
     const scope = this.scope;
     if (!scope) return;
     this.scopeError = null;
     try {
-      if (scope.kind === 'featured') {
-        if (this.scopeBooks.length > 0) return;
-        const page = await withDeadline(
-          this.provider.featured(scope.sort, RAIL_SCOPE_LIMIT),
-          this.timeoutMs,
-        );
-        if (this.scope !== scope) return;
-        this.scopeBooks = page.results.slice(0, RAIL_SCOPE_LIMIT);
-        this.scopeExhausted = true;
-        return;
-      }
       if (this.scopeExhausted) return;
       const page = await withDeadline(
-        this.provider.searchSource(BUILTIN_GUTENDEX, scope.term, this.scopePage + 1),
+        this.provider.searchSource(BUILTIN_GOOGLEBOOKS, scope.term, this.scopePage + 1),
         this.timeoutMs,
       );
       if (this.scope !== scope) return;

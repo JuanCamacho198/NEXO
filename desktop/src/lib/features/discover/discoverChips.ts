@@ -1,9 +1,10 @@
 /**
  * Discover trending-chip taxonomy + client-side chip filtering.
  *
- * Extracted from `DiscoverDomainState.svelte.ts` so the thematic rail rotation
- * derives its term set from these very tables: `CHIP_KEYWORDS` stays the single
- * source of truth for label -> English search-term mapping.
+ * `CHIP_KEYWORDS` is the single source of truth for the label -> English
+ * search-term mapping used by client-side chip filtering. The rail rotation no
+ * longer derives from these tables (DISC-04b): rails are curated author shelves
+ * with their own terms, and chips filter loaded books by subject substring.
  */
 import type { CatalogBook } from '$lib/shared/services/catalog';
 

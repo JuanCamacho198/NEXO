@@ -156,7 +156,7 @@ export interface RebuildingCatalogProviderOptions {
   consent?: AddonConsentGate;
   /**
    * Extra deterministic preload keys owned by the feature layer (e.g. today's
-   * thematic rail page). Called once per composite build; the returned list
+   * author rail pages). Called once per composite build; the returned list
    * MUST stay bounded. A throw degrades to no extra keys.
    */
   preloadPageKeys?: () => readonly string[];
@@ -176,20 +176,21 @@ function safePreloadPageKeys(provider?: () => readonly string[]): readonly strin
 }
 
 /**
- * Seeds the durable cache mirror once per composite build, bounded to the
- * featured keys of the sources that actually support featured plus the
- * caller's explicit extra keys. Absent or non-preloadable caches are a no-op,
- * and a failed preload degrades to an unseeded mirror (the first rail simply
+ * Seeds the durable cache mirror once per composite build with the caller's
+ * explicit feature-owned keys (today's three author rail pages). The featured
+ * keyspace is deliberately NOT preloaded any more: the rails stopped reading
+ * `f:v2:` keys in DISC-04b, so warming them would read durable rows nothing in
+ * the shipping app consumes. Absent or non-preloadable caches are a no-op, and
+ * a failed preload degrades to an unseeded mirror (the first rail simply
  * refetches) — never a build failure.
  */
 async function preloadDiscoverCache(
   cache: DiscoverCacheStore | null,
-  composite: CompositeCatalogProvider,
   extraKeys: readonly string[],
 ): Promise<void> {
   if (!isPreloadable(cache)) return;
   try {
-    await cache.preload(composite.featuredSourceIds(), extraKeys);
+    await cache.preload([], extraKeys);
   } catch {
     // Best-effort: an unseeded mirror is an empty cache, not an error.
   }
@@ -218,7 +219,7 @@ export function createRebuildingCatalogProvider(
         // The supplier's current() is already async, so the preload stays off
         // the composite's synchronous read path. Every invalidate() rebuild
         // re-preloads, so addon install/enable/disable/uninstall re-seed it.
-        await preloadDiscoverCache(cache, composite, safePreloadPageKeys(options.preloadPageKeys));
+        await preloadDiscoverCache(cache, safePreloadPageKeys(options.preloadPageKeys));
         return composite;
       }));
     },
@@ -284,8 +285,10 @@ export class CompositeCatalogProvider implements CatalogProvider {
    * Source ids whose owning provider opts into featured for at least one sort.
    * Evaluated from the live provider list, never a hardcoded provider list, so
    * an addon that declares featured support is included the moment it installs.
-   * Used to bound the durable preload: sources that can never have a featured
-   * row (the curated bundle, Open Library, Google Books) are skipped.
+   *
+   * Retained as a capability query for the `featured` port path (Android
+   * parity); DISC-04b removed its only production caller, the durable preload,
+   * because the rails no longer read `f:v2:` keys.
    */
   featuredSourceIds(): CatalogSource[] {
     const ids: CatalogSource[] = [];
@@ -310,8 +313,7 @@ export class CompositeCatalogProvider implements CatalogProvider {
    * Sources that are not active at read time are never served (design A1).
    * A provider that does not opt in is never called, so its rail can only ever
    * come back empty (fail-closed) and be hidden. A provider failure PROPAGATES:
-   * the rail settles `Error` (consistent with the thematic rail) instead of
-   * silently degrading to `Hidden`. A genuinely empty successful response still
+   * the rail settles `Error` instead of silently degrading to `Hidden`. A genuinely empty successful response still
    * merges to an empty page, which the rail renders as `Hidden`.
    */
   async featured(sort: CatalogFeaturedSort, limit: number): Promise<PagedResult> {
@@ -339,8 +341,8 @@ export class CompositeCatalogProvider implements CatalogProvider {
   /**
    * Per-source search: exact match over the active source set, routed to the
    * single provider that owns `sourceId`, with the same page-cache read-through
-   * as `search` (the thematic rail resolves through here, so its page is cached
-   * too). An unknown or inactive source fails closed with an empty page — never
+   * as `search` (the author rails resolve through here, so their pages are
+   * cached too). An unknown or inactive source fails closed with an empty page — never
    * a crash, never a silent composite search. Mirrors Android.
    */
   async searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {

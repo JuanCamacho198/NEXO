@@ -1,8 +1,8 @@
 /**
  * Featured rail caching (Domain A, slice 3): the production composite must be
  * built with a NON-NULL cache, featured reads must honor the 6h TTL with
- * stale-while-revalidate, an inactive source must never be served, and the
- * thematic rail's `searchSource` page must be cached too.
+ * stale-while-revalidate, an inactive source must never be served, and an
+ * author rail's `searchSource` page must be cached too.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -137,7 +137,7 @@ async function flushAsync(): Promise<void> {
 }
 
 describe('production composite wiring', () => {
-  it('gives the rebuilt composite a non-null cache and preloads the featured keyspace', async () => {
+  it('gives the rebuilt composite a non-null cache and preloads no featured key', async () => {
     const port = new RecordingDurablePort();
     const cache = new PersistentDiscoverCache(port);
     const supplier = createRebuildingCatalogProvider(async () => [], undefined, '', { cache });
@@ -145,22 +145,14 @@ describe('production composite wiring', () => {
     const composite = await supplier.current();
     const sourceIds = composite.listSources().map((source) => source.sourceId);
 
-    // Real built-in sources are present, and preload ran bounded to the
-    // featured keys of the sources that actually support featured: with the
-    // default source set only Gutendex opts in, so Open Library and the curated
-    // bundle contribute zero durable reads (they can never have a featured row).
+    // Real built-in sources are present, but the featured keyspace is no longer
+    // preloaded (DISC-04b: the rails read page keys now), so a build with no
+    // feature-owned extra keys performs zero durable reads.
     expect(sourceIds).toContain('builtin:gutendex');
     expect(sourceIds).toContain('builtin:openlibrary');
     expect(composite.featuredSourceIds()).toEqual(['builtin:gutendex']);
-    expect(port.reads.sort()).toEqual(
-      [
-        featuredCacheKey('builtin:gutendex', 'NEWEST'),
-        featuredCacheKey('builtin:gutendex', 'POPULAR'),
-      ].sort(),
-    );
-    expect(port.reads).not.toContain(featuredCacheKey('builtin:openlibrary', 'NEWEST'));
-    expect(port.reads).not.toContain(featuredCacheKey('builtin:openlibrary', 'POPULAR'));
-    expect(port.reads.every((key) => key.startsWith('f:v2:'))).toBe(true);
+    expect(port.reads).toEqual([]);
+    expect(port.reads.some((key) => key.startsWith('f:v2:'))).toBe(false);
 
     // The cache is reachable from the composite's synchronous read path: a
     // seeded detail entry is served with ZERO provider I/O (a null cache would
@@ -179,7 +171,7 @@ describe('production composite wiring', () => {
   it('preloads the feature-owned page keys supplied by the composition root', async () => {
     const port = new RecordingDurablePort();
     const cache = new PersistentDiscoverCache(port);
-    const thematicKey = pageCacheKey('builtin:gutendex', 'fiction', 1);
+    const thematicKey = pageCacheKey('builtin:googlebooks', 'oscar wilde', 1);
     const supplier = createRebuildingCatalogProvider(async () => [], undefined, '', {
       cache,
       preloadPageKeys: () => [thematicKey],
@@ -189,10 +181,10 @@ describe('production composite wiring', () => {
     const sourceIds = composite.listSources().map((source) => source.sourceId);
 
     expect(port.reads).toContain(thematicKey);
-    // Two featured keys (Gutendex only) plus the feature-owned thematic key.
-    expect(port.reads).toHaveLength(3);
+    // Exactly the feature-owned page key; the retired featured keys are gone.
+    expect(port.reads).toHaveLength(1);
+    expect(port.reads.every((key) => key.startsWith('p:v2:'))).toBe(true);
     expect(sourceIds).toContain('builtin:openlibrary');
-    expect(port.reads).not.toContain(featuredCacheKey('builtin:openlibrary', 'NEWEST'));
   });
 
   it('does not preload when the cache is absent', async () => {

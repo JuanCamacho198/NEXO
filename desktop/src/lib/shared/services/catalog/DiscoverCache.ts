@@ -89,7 +89,7 @@ export interface PreloadableCache {
   /**
    * Seed the mirror from durable storage. `sourceIds` bounds the featured keys
    * (two per source); `extraKeys` carries explicit deterministic keys the
-   * feature layer owns (e.g. today's thematic rail page). `extraKeys` MUST stay
+   * feature layer owns (e.g. today's author rail pages). `extraKeys` MUST stay
    * bounded — preload must never enumerate arbitrary page keys.
    */
   preload(sourceIds: readonly string[], extraKeys?: readonly string[]): Promise<void>;

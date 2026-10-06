@@ -11,7 +11,7 @@ import {
 } from './CompositeCatalogProvider';
 import { PersistentDiscoverCache, TauriDiscoverCachePort, pageCacheKey } from './DiscoverCache';
 import {
-  BUILTIN_GUTENDEX,
+  BUILTIN_GOOGLEBOOKS,
   type CatalogBook,
   type CatalogFeaturedSort,
   type CatalogProvider,
@@ -24,7 +24,7 @@ import { googleBooksKeyFromEnv } from './BuiltInCatalogProviders';
 import { resolveDownloadUrl } from './mappers';
 import { AddonRegistry, getAddonRegistry } from '../addons/AddonRegistry';
 import { addonConsent } from '../addons/AddonConsent';
-import { thematicEntryFor } from '$lib/features/discover/railRotation';
+import { authorEntriesFor } from '$lib/features/discover/railRotation';
 
 // Slice 7 single-state-source: the live composite listens on the SHARED
 // registry instance (the same one the addons singleton mutates), so screen
@@ -33,20 +33,22 @@ const registry: AddonRegistry = getAddonRegistry();
 
 /**
  * Production Discover cache: an in-memory mirror over the durable
- * `discover_cache` table (best-effort write-through, bounded featured preload).
- * Constructed once so every composite rebuild shares one mirror — this is what
- * makes rail caching real in production instead of test-only.
+ * `discover_cache` table (best-effort write-through; preload is bounded to the
+ * feature-owned keys below). Constructed once so every composite rebuild shares
+ * one mirror — this is what makes rail caching real in production instead of
+ * test-only.
  */
 export const discoverCache = new PersistentDiscoverCache(new TauriDiscoverCachePort());
 
 /**
- * Deterministic startup preload for the thematic rail: exactly the current
- * day's page-1 key. The rotation term is the only enumerable non-featured rail
- * query, so this stays one key and disk growth remains bounded. Reads stay
- * fresh-only — preloading only makes an already-valid page reachable sooner.
+ * Deterministic startup preload for the author rails: exactly the current day's
+ * three page-1 keys, one per rail, all under Google Books. The rotation terms
+ * are the only enumerable rail queries, so this stays three keys and disk
+ * growth remains bounded. Reads stay fresh-only — preloading only makes an
+ * already-valid page reachable sooner.
  */
 export function discoverPreloadPageKeys(now: Date = new Date()): readonly string[] {
-  return [pageCacheKey(BUILTIN_GUTENDEX, thematicEntryFor(now).term, 1)];
+  return authorEntriesFor(now).map((entry) => pageCacheKey(BUILTIN_GOOGLEBOOKS, entry.term, 1));
 }
 
 // Google Books is registered only when `VITE_GOOGLE_BOOKS_KEY` is non-blank;

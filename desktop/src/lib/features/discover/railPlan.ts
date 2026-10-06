@@ -1,21 +1,22 @@
 import {
-  BUILTIN_GUTENDEX,
+  BUILTIN_GOOGLEBOOKS,
   catalogError,
-  type CatalogFeaturedSort,
   type CatalogProvider,
   type PagedResult,
 } from '$lib/shared/services/catalog';
 import type { MessageKey } from '$lib/shared/i18n/messages.en';
-import { thematicEntryFor } from './railRotation';
+import { authorEntriesFor } from './railRotation';
 
 /**
- * The rail set is exactly three rails: two featured orderings plus one
- * term-based thematic rail. Every spec carries an ordering or a non-empty term,
- * so no rail can ever issue an unsorted catalog query.
+ * The rail set is exactly three curated author shelves. Every spec carries a
+ * non-empty Google Books term, so no rail can ever issue an unsorted query and
+ * no rail depends on an upstream ordering Google Books does not expose.
  */
-export type DiscoverRailSpec =
-  | { kind: 'featured'; sort: CatalogFeaturedSort; titleKey: MessageKey }
-  | { kind: 'thematic'; term: string; titleKey: MessageKey };
+export interface DiscoverRailSpec {
+  kind: 'author';
+  term: string;
+  titleKey: MessageKey;
+}
 
 export const DISCOVER_RAIL_COUNT = 3;
 /**
@@ -24,7 +25,10 @@ export const DISCOVER_RAIL_COUNT = 3;
  * `deriveVisibleRailCount(containerWidth)` so the row is filled at any width.
  */
 export const DISCOVER_RAIL_LIMIT = 6;
-/** "Ver todo" featured scope: one first page of the featured ordering. */
+/**
+ * "Ver todo" scope page size. Kept as the historical first-page bound; the
+ * Google Books datasource already clamps its own page to `MIN_PAGE_SIZE`.
+ */
 export const RAIL_SCOPE_LIMIT = 24;
 
 /**
@@ -58,26 +62,32 @@ export function deriveVisibleRailCount(containerWidth: number): number {
 }
 
 /**
- * Index-stable rail plan: [NEWEST featured, POPULAR featured, thematic(day)].
- * Rebuilt per refresh, so crossing local midnight rolls the theme forward.
+ * Index-stable rail plan: the day's three curated author shelves, best-vetted
+ * first. Rebuilt per refresh, so crossing local midnight rolls the window
+ * forward one author; the selection formula lives in `railRotation.ts`.
  */
 export function buildRailSpecs(now: Date = new Date()): readonly DiscoverRailSpec[] {
-  const thematic = thematicEntryFor(now);
-  return [
-    { kind: 'featured', sort: 'NEWEST', titleKey: 'discover.rail.newest' },
-    { kind: 'featured', sort: 'POPULAR', titleKey: 'discover.rail.popular' },
-    { kind: 'thematic', term: thematic.term, titleKey: thematic.titleKey },
-  ];
+  return authorEntriesFor(now, DISCOVER_RAIL_COUNT).map((entry) => ({
+    kind: 'author',
+    term: entry.term,
+    titleKey: entry.titleKey,
+  }));
 }
 
-/** Resolve one rail: an explicit featured ordering or a non-empty term search. */
+/**
+ * Resolve one rail through Google Books. Rails are non-ordering author shelves,
+ * so this is always a per-source search of a non-empty term; `searchSource`
+ * read-through-caches the page, so a cold fan-out of three rails stays within
+ * the shared page cache and never gratuitously multiplies quota pressure.
+ * The `limit` parameter is retained for call-site/compatibility stability: the
+ * Google Books datasource owns its own page size and the state layer slices.
+ */
 export function loadRail(
   provider: CatalogProvider,
   spec: DiscoverRailSpec,
-  limit: number = DISCOVER_RAIL_FETCH_LIMIT,
+  _limit: number = DISCOVER_RAIL_FETCH_LIMIT,
 ): Promise<PagedResult> {
-  if (spec.kind === 'featured') return provider.featured(spec.sort, limit);
-  return provider.searchSource(BUILTIN_GUTENDEX, spec.term, 1);
+  return provider.searchSource(BUILTIN_GOOGLEBOOKS, spec.term, 1);
 }
 
 /**

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { discoverState, filterBooksByChip } from './DiscoverDomainState.svelte';
   import { discoverErrorKey } from './discoverErrorCopy';
-  import { DISCOVER_RAIL_LIMIT, RAIL_SCOPE_LIMIT } from './railPlan';
+  import { DISCOVER_RAIL_LIMIT } from './railPlan';
   import type { DiscoverRailState } from './DiscoverRailsDomainState.svelte';
   import type { CatalogBook, CatalogErrorCode } from '$lib/shared/services/catalog';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
@@ -21,7 +21,7 @@
   /** Read model of the rail-scoped browse view (`DiscoverRailState` re-exported). */
   type ScopeView = {
     titleKey: MessageKey;
-    kind: 'term' | 'featured';
+    kind: 'term';
     books: CatalogBook[];
     error: CatalogErrorCode | null;
   };
@@ -104,15 +104,15 @@
     return rail.kind === 'Loaded' ? filterBooksByChip(rail.books, selectedChip) : [];
   }
 
-  /** "Ver todo": scope the browse view to this rail's term or featured ordering. */
+  /** "Ver todo": scope the browse view to this author shelf's term. */
   function openRailScope(index: number): void {
     const spec = discoverState.railsState.specs[index];
     if (!spec) return;
-    void discoverState.openRailScope(
-      spec.kind === 'featured'
-        ? { kind: 'featured', sort: spec.sort, titleKey: spec.titleKey }
-        : { kind: 'term', term: spec.term, titleKey: spec.titleKey },
-    );
+    void discoverState.openRailScope({
+      kind: 'term',
+      term: spec.term,
+      titleKey: spec.titleKey,
+    });
   }
 
   const scopeView = $derived.by<ScopeView | null>(() => {
@@ -279,11 +279,6 @@
             />
           {/each}
         </div>
-        {#if scopeView.kind === 'featured'}
-          <p class="mt-3 text-xs text-(--color-text-muted)">
-            {t('discover.railScope.singlePage', { count: RAIL_SCOPE_LIMIT })}
-          </p>
-        {/if}
       {/if}
     </div>
   {:else if showOffline}
