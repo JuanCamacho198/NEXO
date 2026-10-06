@@ -44,7 +44,7 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
   }[];
   isDirty: boolean;
   isSaving: boolean;
-  canPersistDailyGoal: boolean;
+  isDailyGoalLocal: boolean;
   dailyGoalSaveState: DailyGoalSaveState;
   handleSaveDailyGoal: () => Promise<void>;
   applyDailyGoal: (value: number) => Promise<void>;
@@ -110,14 +110,14 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
   const isDirty = $derived(selectedDailyGoal !== (sState.dailyGoalMinutes as number));
   const isSaving = $derived(isSavingDailyGoal || isSigningOut || isProfileLoading);
   /**
-   * Whether the daily goal can actually reach persistence. The daily goal is
-   * stored per authenticated user (`reading.dailyGoalMinutes_<userId>`); the
-   * backend's `saveDailyGoalMinutes` is a no-op without a user id, and local
-   * users (`setLocalUser`) have `userId === null`. Without this guard the UI
-   * would show a "Saving…" state that never persists.
+   * The daily goal is always persistable: with a session it is written to the
+   * per-user key, without one it is written to the global `reading.dailyGoalMinutes`
+   * key on this device (and carries over on a later signed-in read). This flag
+   * only tells the UI that the value is local-only, so it can show the
+   * "saved on this device" hint instead of disabling the control.
    */
-  const canPersistDailyGoal = $derived(
-    typeof auth.userId === 'string' && auth.userId.trim().length > 0,
+  const isDailyGoalLocal = $derived(
+    !(typeof auth.userId === 'string' && auth.userId.trim().length > 0),
   );
 
   async function handleSaveDailyGoal(): Promise<void> {
@@ -137,16 +137,12 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
 
   /**
    * Single entry point for the redesigned daily-goal row: select a value,
-   * auto-save it, and expose the outcome through `dailyGoalSaveState`. When the
-   * user cannot persist (local users and sessions without a user id) the state
-   * is `error` instead of a silent no-op, so the UI never claims a save.
+   * auto-save it, and expose the outcome through `dailyGoalSaveState`. The save
+   * is always attempted — session-less saves persist to the local global key —
+   * so a successful write reports `success` rather than a fake error.
    */
   async function applyDailyGoal(value: number): Promise<void> {
     selectedDailyGoal = value;
-    if (!canPersistDailyGoal) {
-      dailyGoalSaveState = 'error';
-      return;
-    }
     try {
       await handleSaveDailyGoal();
       dailyGoalSaveState = 'success';
@@ -255,8 +251,8 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
     get isSaving() {
       return isSaving;
     },
-    get canPersistDailyGoal() {
-      return canPersistDailyGoal;
+    get isDailyGoalLocal() {
+      return isDailyGoalLocal;
     },
     get dailyGoalSaveState() {
       return dailyGoalSaveState;

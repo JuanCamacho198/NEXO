@@ -235,114 +235,15 @@ describe('ContinueReadingSection (5.3)', () => {
     const assertion = toHaveNoViolations(results);
     expect(assertion.pass, assertion.message()).toBe(true);
   });
-});
-
-describe('ContinueReadingSection auto-rotation (WCAG 2.2.2)', () => {
-  let matchMediaMock: ReturnType<typeof vi.fn>;
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    matchMediaMock = vi.fn();
-    matchMediaMock.mockReturnValue(makeMq(false));
-    vi.stubGlobal('matchMedia', matchMediaMock);
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-  });
-
-  it('auto-advances every 8s and wraps to the first card', async () => {
-    setContinueReadingBooks([makeBook('b1'), makeBook('b2')]);
-    const { container } = render(ContinueReadingSection);
-    await Promise.resolve();
-    const ul = container.querySelector('ul')!;
-
-    expect(ul.getAttribute('data-active-index')).toBe('0');
-
-    await vi.advanceTimersByTimeAsync(8000);
-    expect(ul.getAttribute('data-active-index')).toBe('1');
-
-    await vi.advanceTimersByTimeAsync(8000);
-    expect(ul.getAttribute('data-active-index')).toBe('0');
-  });
-
-  it('pauses on hover and resumes without resetting the index', async () => {
-    setContinueReadingBooks([makeBook('b1'), makeBook('b2')]);
-    const { container } = render(ContinueReadingSection);
-    await Promise.resolve();
-    const carousel = container.querySelector('[data-testid="continue-carousel"]')!;
-    const ul = container.querySelector('ul')!;
-
-    await vi.advanceTimersByTimeAsync(8000);
-    expect(ul.getAttribute('data-active-index')).toBe('1');
-
-    fireEvent.mouseEnter(carousel);
-    await vi.advanceTimersByTimeAsync(16000);
-    expect(ul.getAttribute('data-active-index')).toBe('1');
-
-    fireEvent.mouseLeave(carousel);
-    await vi.advanceTimersByTimeAsync(8000);
-    // resumes from where it paused and wraps
-    expect(ul.getAttribute('data-active-index')).toBe('0');
-  });
-
-  it('pauses on focus and resumes without resetting the index', async () => {
-    setContinueReadingBooks([makeBook('b1'), makeBook('b2')]);
-    const { container } = render(ContinueReadingSection);
-    await Promise.resolve();
-    const carousel = container.querySelector('[data-testid="continue-carousel"]')!;
-    const ul = container.querySelector('ul')!;
-
-    await vi.advanceTimersByTimeAsync(8000);
-    expect(ul.getAttribute('data-active-index')).toBe('1');
-
-    fireEvent.focusIn(carousel);
-    await vi.advanceTimersByTimeAsync(16000);
-    expect(ul.getAttribute('data-active-index')).toBe('1');
-
-    fireEvent.focusOut(carousel);
-    await vi.advanceTimersByTimeAsync(8000);
-    expect(ul.getAttribute('data-active-index')).toBe('0');
-  });
-
-  it('restarts the timer after a manual arrow press', async () => {
-    setContinueReadingBooks([makeBook('b1'), makeBook('b2')]);
-    const { container } = render(ContinueReadingSection);
-    await Promise.resolve();
-    const ul = container.querySelector('ul')!;
-
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    await Promise.resolve();
-    expect(ul.getAttribute('data-active-index')).toBe('1');
-
-    // The 8s window restarted: nothing advances before the full 8s elapses
-    await vi.advanceTimersByTimeAsync(7999);
-    expect(ul.getAttribute('data-active-index')).toBe('1');
-
-    await vi.advanceTimersByTimeAsync(1);
-    expect(ul.getAttribute('data-active-index')).toBe('0');
-  });
-
-  it('never auto-advances when prefers-reduced-motion is reduce', async () => {
-    matchMediaMock.mockReturnValue(makeMq(true));
-    setContinueReadingBooks([makeBook('b1'), makeBook('b2')]);
-    const { container } = render(ContinueReadingSection);
-    await Promise.resolve();
-    const ul = container.querySelector('ul')!;
-
-    await vi.advanceTimersByTimeAsync(30000);
-    expect(ul.getAttribute('data-active-index')).toBe('0');
-  });
 
   it('clamps an out-of-range index when the list shrinks', async () => {
+    const user = userEvent.setup();
     setContinueReadingBooks([makeBook('b1'), makeBook('b2'), makeBook('b3')]);
     const { container } = render(ContinueReadingSection);
-    await Promise.resolve();
     const ul = container.querySelector('ul')!;
 
-    await vi.advanceTimersByTimeAsync(8000);
-    await vi.advanceTimersByTimeAsync(8000);
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(ul.getAttribute('data-active-index')).toBe('2');
 
     setContinueReadingBooks([makeBook('b1')]);
@@ -350,46 +251,37 @@ describe('ContinueReadingSection auto-rotation (WCAG 2.2.2)', () => {
     expect(ul.getAttribute('data-active-index')).toBe('0');
   });
 
-  it('stops rotating without index errors when the list drops to one book', async () => {
+  it('re-syncs the active index after a manual scrollend', async () => {
+    const user = userEvent.setup();
     setContinueReadingBooks([makeBook('b1'), makeBook('b2')]);
     const { container } = render(ContinueReadingSection);
-    await Promise.resolve();
     const ul = container.querySelector('ul')!;
 
-    await vi.advanceTimersByTimeAsync(8000);
+    // Move to the second card with the arrows first.
+    await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(ul.getAttribute('data-active-index')).toBe('1');
 
-    setContinueReadingBooks([makeBook('b1')]);
-    await Promise.resolve();
-    expect(ul.getAttribute('data-active-index')).toBe('0');
-
-    await vi.advanceTimersByTimeAsync(24000);
-    expect(ul.getAttribute('data-active-index')).toBe('0');
-  });
-
-  it('re-syncs the active index after a manual scrollend', async () => {
-    setContinueReadingBooks([makeBook('b1'), makeBook('b2')]);
-    const { container } = render(ContinueReadingSection);
-    await Promise.resolve();
-    const ul = container.querySelector('ul')!;
-
-    // Simulate a manual scroll that snapped to the second card (w-full snap)
+    // A manual scroll that snapped back to the first card re-syncs the index.
     Object.defineProperty(ul, 'clientWidth', { value: 300, configurable: true });
-    Object.defineProperty(ul, 'scrollLeft', { value: 300, configurable: true });
+    Object.defineProperty(ul, 'scrollLeft', { value: 0, configurable: true });
     fireEvent(ul, new Event('scrollend'));
     await Promise.resolve();
 
-    expect(ul.getAttribute('data-active-index')).toBe('1');
+    expect(ul.getAttribute('data-active-index')).toBe('0');
   });
 
-  it('clears the rotation timer on unmount', async () => {
-    setContinueReadingBooks([makeBook('b1'), makeBook('b2')]);
-    const { unmount } = render(ContinueReadingSection);
-    await Promise.resolve();
+  it('renders the reading position when totalPages is positive', () => {
+    setContinueReadingBooks([makeBook('b1', { currentPage: 3, totalPages: 42 })]);
+    render(ContinueReadingSection);
 
-    expect(vi.getTimerCount()).toBeGreaterThan(0);
-    unmount();
-    await Promise.resolve();
-    expect(vi.getTimerCount()).toBe(0);
+    expect(screen.getByText('p. 3 / 42')).toBeInTheDocument();
+  });
+
+  it('omits the reading position when totalPages is zero', () => {
+    setContinueReadingBooks([makeBook('b1', { currentPage: 1, totalPages: 0 })]);
+    render(ContinueReadingSection);
+
+    expect(screen.queryByText(/^p\. /)).toBeNull();
+    expect(screen.getByText(/Progress/)).toBeInTheDocument();
   });
 });

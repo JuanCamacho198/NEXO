@@ -1,16 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { Snippet } from 'svelte';
-  import HomeHero from './HomeHero.svelte';
   import HomeStatsGrid from './HomeStatsGrid.svelte';
   import HomeMainContent from './HomeMainContent.svelte';
-  import type { ReadingStatsSummaryDto } from '$lib/shared/types';
   import type { MessageKey } from '$lib/i18n';
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
 
   type Props = {
-    stats: ReadingStatsSummaryDto | null;
     isLoadingStats?: boolean;
     statsUnavailableReason?: string | null;
     streakDays?: number;
@@ -32,7 +29,6 @@
   };
 
   let {
-    stats,
     isLoadingStats = false,
     statsUnavailableReason = null,
     streakDays = 0,
@@ -50,14 +46,15 @@
 </script>
 
 <div class="space-y-5">
-  <h1 class="sr-only">{t('home.pageTitle')}</h1>
+  <h1 class="sr-only text-2xl">{t('home.pageTitle')}</h1>
 
-  <HomeHero actions={navbarActions} {t} />
+  {#if navbarActions}
+    <div class="flex items-center justify-end">
+      {@render navbarActions()}
+    </div>
+  {/if}
 
-  <section
-    class="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start"
-    aria-labelledby="home-active-reading-heading"
-  >
+  <section aria-labelledby="home-active-reading-heading">
     <h2 id="home-active-reading-heading" class="sr-only">{t('home.activeReading')}</h2>
 
     <div
@@ -69,16 +66,15 @@
         <p class="text-sm text-(--color-text-muted)">{t('home.continueReadingPlaceholder')}</p>
       {/if}
     </div>
-
-    <HomeStatsGrid
-      {stats}
-      isLoading={isLoadingStats}
-      disabledReason={statsUnavailableReason}
-      {streakDays}
-      {isLoadingStreak}
-      {t}
-    />
   </section>
+
+  <HomeStatsGrid
+    isLoading={isLoadingStats}
+    disabledReason={statsUnavailableReason}
+    {streakDays}
+    {isLoadingStreak}
+    {t}
+  />
 
   <HomeMainContent {t} {shelfSection} {onNavigateLibrary} />
 </div>

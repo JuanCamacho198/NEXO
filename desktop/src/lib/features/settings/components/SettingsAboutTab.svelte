@@ -3,7 +3,6 @@
   import Info from 'lucide-svelte/icons/info';
   import Star from 'lucide-svelte/icons/star';
   import { openUrl } from '@tauri-apps/plugin-opener';
-  import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { UiLocale } from '$lib/shared/types';
@@ -178,7 +177,14 @@
   });
 </script>
 
-<Panel title={t('settings.about')}>
+<section class="space-y-5 w-full max-w-none">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
+      {t('settings.tab.about')}
+    </h1>
+    <p class="text-sm text-(--color-text-muted)">{t('settings.about.subtitle')}</p>
+  </header>
+
   <!-- Identity: icon, name, real version (copyable), channel. -->
   <section class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4">
     <div class="flex items-center gap-3">
@@ -241,7 +247,7 @@
   {#if dialog}
     <section
       aria-labelledby="update-available-title"
-      class="mt-4 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4"
+      class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4"
     >
       <h3
         id="update-available-title"
@@ -311,7 +317,7 @@
     {@const quote = dailyQuote}
     {@const display = quoteDisplayText(quote, locale)}
     <figure
-      class="mt-4 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface-dim) p-4"
+      class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface-dim) p-4"
     >
       <blockquote class="m-0">
         <p class="whitespace-pre-line text-sm italic text-(--color-primary)">{display.text}</p>
@@ -354,7 +360,7 @@
        Third-party library notices no longer live in the UI; their obligation
        is preserved in THIRD-PARTY-NOTICES.md at the repository root. -->
   <section
-    class="mt-4 flex items-center justify-between gap-3 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) px-4 py-3"
+    class="flex items-center justify-between gap-3 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) px-4 py-3"
   >
     <span class="text-xs text-(--color-text-muted)">
       {t('settings.about.license')}:
@@ -366,21 +372,15 @@
   </section>
 
   <!-- Support: real repository URLs, opened through the Tauri opener. -->
-  <section
-    class="mt-4 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4"
-  >
+  <section class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4">
     <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
       {t('settings.about.links')}
     </h3>
-    <div
-      class="rounded-(--radius-lg) border border-(--color-accent)/30 bg-(--color-accent-soft) p-3"
-    >
-      <p class="m-0 text-xs text-(--color-primary)">{t('settings.about.starBody')}</p>
-      <Button class="mt-2" onclick={() => void openUrl(REPOSITORY_URL)} variant="accent" size="sm">
-        <Star size={14} strokeWidth={1.8} aria-hidden="true" />
-        <span class="ml-1.5">{t('settings.about.starCta')}</span>
-      </Button>
-    </div>
+    <p class="mt-2 text-xs text-(--color-primary)">{t('settings.about.starBody')}</p>
+    <Button class="mt-2" onclick={() => void openUrl(REPOSITORY_URL)} variant="accent" size="sm">
+      <Star size={14} strokeWidth={1.8} aria-hidden="true" />
+      <span class="ml-1.5">{t('settings.about.starCta')}</span>
+    </Button>
     <div class="mt-2 flex gap-2">
       <Button onclick={() => void openUrl(REPOSITORY_URL)} variant="ghost" size="sm">
         {t('settings.about.github')}
@@ -390,4 +390,4 @@
       </Button>
     </div>
   </section>
-</Panel>
+</section>

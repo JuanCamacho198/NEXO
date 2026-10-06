@@ -64,7 +64,7 @@ export async function getDeviceInfo(): Promise<DeviceInfo> {
   };
 }
 
-export function formatRelativeTime(dateStr: string): {
+function formatRelativeTime(dateStr: string): {
   value: number;
   unit: 'now' | 'min' | 'hour' | 'day';
 } {

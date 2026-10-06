@@ -36,12 +36,12 @@ describe('useSettingsProfile', () => {
     expect(saveDailyGoalMinutes).toHaveBeenCalledWith(45);
   });
 
-  it('reports the daily goal as non-persistable without a user id', () => {
+  it('marks the daily goal as local-only without a user id', () => {
     const p = createSettingsProfile({ authState: { userId: null } as never, t: (k) => k as never });
-    expect(p.canPersistDailyGoal).toBe(false);
+    expect(p.isDailyGoalLocal).toBe(true);
   });
 
-  it('applyDailyGoal does not save and reports an error for a local user', async () => {
+  it('applyDailyGoal persists locally and reports success without a user id', async () => {
     const saveDailyGoalMinutes = vi.fn().mockResolvedValue(undefined);
     const appState = { saveDailyGoalMinutes } as never;
     const settingsState = { dailyGoalMinutes: 20 } as never;
@@ -52,8 +52,9 @@ describe('useSettingsProfile', () => {
       t: (k) => k as never,
     });
     await p.applyDailyGoal(30);
-    expect(saveDailyGoalMinutes).not.toHaveBeenCalled();
-    expect(p.dailyGoalSaveState).toBe('error');
+    expect(saveDailyGoalMinutes).toHaveBeenCalledWith(30);
+    expect(p.selectedDailyGoal).toBe(30);
+    expect(p.dailyGoalSaveState).toBe('success');
   });
 
   it('applyDailyGoal persists and reports success for a signed-in user', async () => {
@@ -66,7 +67,7 @@ describe('useSettingsProfile', () => {
       authState: { userId: 'user-1' } as never,
       t: (k) => k as never,
     });
-    expect(p.canPersistDailyGoal).toBe(true);
+    expect(p.isDailyGoalLocal).toBe(false);
     await p.applyDailyGoal(45);
     expect(saveDailyGoalMinutes).toHaveBeenCalledWith(45);
     expect(p.selectedDailyGoal).toBe(45);

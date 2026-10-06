@@ -20,20 +20,6 @@ export const BULK_IMPORT_STATUS = {
   CANCELLED: 'cancelled',
 } as const;
 
-// ─── Collection colors ───
-
-export const COLLECTION_COLOR_OPTIONS = [
-  '#6366f1',
-  '#8b5cf6',
-  '#ec4899',
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#22c55e',
-  '#14b8a6',
-  '#0ea5e9',
-] as const;
-
 // ─── Shelf menu ID generator ───
 
 export function getShelfMenuId(bookId: string): string {
@@ -65,10 +51,10 @@ export function getBulkImportStatusKey(status: string): string {
 
 export function getBulkImportStatusClass(status: string): string {
   const map: Record<string, string> = {
-    success: 'text-emerald-700',
-    failed: 'text-red-700',
-    importing: 'text-blue-700',
-    cancelled: 'text-amber-700',
+    success: 'text-(--color-success)',
+    failed: 'text-(--color-error)',
+    importing: 'text-(--color-accent)',
+    cancelled: 'text-(--color-warning)',
   };
   return map[status] || 'text-(--color-text-muted)';
 }
@@ -105,14 +91,6 @@ export function getSafeProgressPercentage(book: LibraryBookDto): number {
 }
 
 export const FAVORITES_COLLECTION_ID = 1;
-
-export function getBookState(book: ShelfBook): ShelfFilter {
-  const progress = getSafeProgressPercentage(book);
-  if (book.readingStatus === 'completed' || progress >= 100) return 'completed';
-  if (progress > 0) return 'reading';
-  if (book.collectionIds?.includes(FAVORITES_COLLECTION_ID)) return 'favorites';
-  return 'pending';
-}
 
 export function getStateLabel(book: ShelfBook): string {
   const progress = getSafeProgressPercentage(book);

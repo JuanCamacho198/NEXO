@@ -1,13 +1,10 @@
 <script lang="ts">
-  import type { ReadingStatsSummaryDto } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
-  import Clock from 'lucide-svelte/icons/clock';
   import Flame from 'lucide-svelte/icons/flame';
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
 
   type Props = {
-    stats: ReadingStatsSummaryDto | null;
     isLoading?: boolean;
     disabledReason?: string | null;
     streakDays?: number;
@@ -19,7 +16,6 @@
   };
 
   let {
-    stats,
     isLoading = false,
     disabledReason = null,
     streakDays = 0,
@@ -52,10 +48,6 @@
   const progressTitle = $derived(_t ? _t('home.progressTitle') : 'Reading progress');
   const goalLabel = $derived(_t ? _t('home.metrics.dailyGoalLabel') : 'Daily goal');
   const progressGoalAria = $derived(_t ? _t('home.progressGoalAria') : 'Daily goal progress');
-  const streakLabel = $derived(_t ? _t('stats.streakLabel') : 'Streak');
-  const sessionsLabel = $derived(_t ? _t('stats.sessionsLabel') : 'Sessions');
-  const startedLabel = $derived(_t ? _t('stats.booksStartedLabel') : 'Started');
-  const completedLabel = $derived(_t ? _t('stats.booksCompletedLabel') : 'Completed');
 
   const streakValue = $derived(
     isLoadingStreak
@@ -64,77 +56,56 @@
         ? _t('stats.days', { count: streakDays })
         : `${streakDays} ${streakDays === 1 ? 'day' : 'days'}`,
   );
-
-  type ActivityItem = { label: string; value: number };
-
-  const activityItems = $derived<ActivityItem[]>([
-    { label: sessionsLabel, value: stats?.totalSessions ?? 0 },
-    { label: startedLabel, value: stats?.booksStarted ?? 0 },
-    { label: completedLabel, value: stats?.booksCompleted ?? 0 },
-  ]);
 </script>
 
 <aside
-  class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4 shadow-(--shadow-soft)"
+  class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) px-4 py-3"
   data-testid="stats-summary"
+  aria-label={progressTitle}
   aria-busy={isLoading || undefined}
 >
   {#if disabledReason}
     <p class="text-sm text-(--color-text-muted)">{disabledReason}</p>
   {:else}
-    <div class="flex items-center gap-2">
-      <Clock size={14} strokeWidth={1.8} class="text-(--color-text-muted)" aria-hidden="true" />
-      <h2 class="text-sm font-semibold tracking-tight text-(--color-primary)">{progressTitle}</h2>
-    </div>
+    <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+      <div class="min-w-50 flex-1">
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-xs font-medium text-(--color-text-muted)">{goalLabel}</span>
+          {#if isLoading}
+            <span class="h-5 w-20 animate-pulse rounded bg-(--color-border)" aria-hidden="true"
+            ></span>
+          {:else}
+            <span class="text-sm font-semibold text-(--color-primary)">{goalValue}</span>
+          {/if}
+        </div>
+        <div
+          class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-(--color-border)"
+          role="progressbar"
+          aria-label={progressGoalAria}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={isLoading ? undefined : goalPct}
+        >
+          {#if !isLoading}
+            <div
+              class="h-full w-full origin-left rounded-full bg-(--color-accent) transition-transform duration-(--duration-slow) ease-(--ease-smooth)"
+              style="transform: scaleX({goalPct / 100})"
+            ></div>
+          {/if}
+        </div>
+      </div>
 
-    <div class="mt-3">
-      <div class="flex items-baseline justify-between gap-3">
-        <span class="text-xs font-medium text-(--color-text-muted)">{goalLabel}</span>
+      <div class="flex items-center gap-1.5">
+        <Flame size={14} strokeWidth={1.8} class="text-(--color-streak-text)" aria-hidden="true" />
         {#if isLoading}
-          <span class="h-5 w-20 animate-pulse rounded bg-(--color-border)" aria-hidden="true"
+          <span
+            class="inline-block h-4 w-12 animate-pulse rounded bg-(--color-border)"
+            aria-hidden="true"
           ></span>
         {:else}
-          <span class="text-base font-semibold text-(--color-primary)">{goalValue}</span>
-        {/if}
-      </div>
-      <div
-        class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-(--color-border)"
-        role="progressbar"
-        aria-label={progressGoalAria}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={isLoading ? undefined : goalPct}
-      >
-        {#if !isLoading}
-          <div class="h-full rounded-full bg-(--color-accent)" style="width: {goalPct}%"></div>
+          <span class="text-sm font-semibold text-(--color-streak-text)">{streakValue}</span>
         {/if}
       </div>
     </div>
-
-    <dl class="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 border-t border-(--color-border) pt-3">
-      <div class="min-w-0">
-        <dt
-          class="flex items-center gap-1 text-2xs uppercase tracking-wider text-(--color-text-muted)"
-        >
-          <Flame size={12} strokeWidth={1.8} aria-hidden="true" />
-          {streakLabel}
-        </dt>
-        <dd class="mt-1 truncate text-sm font-semibold text-(--color-primary)">{streakValue}</dd>
-      </div>
-      {#each activityItems as item (item.label)}
-        <div class="min-w-0">
-          <dt class="truncate text-2xs uppercase tracking-wider text-(--color-text-muted)">
-            {item.label}
-          </dt>
-          <dd class="mt-1 text-sm font-semibold text-(--color-primary)">
-            {#if isLoading}
-              <span class="inline-block h-4 w-8 animate-pulse rounded bg-(--color-border)"></span>
-            {:else}
-              {item.value}
-            {/if}
-          </dd>
-        </div>
-      {/each}
-    </dl>
   {/if}
 </aside>

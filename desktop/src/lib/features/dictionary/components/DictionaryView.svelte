@@ -94,15 +94,6 @@
   let actionError = $state<string | null>(null);
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  /**
-   * Keyboard focus indicator for the text fields. The `!` important modifier is
-   * required: tokens.css paints an unlayered `:focus-visible` box-shadow that
-   * beats layered Tailwind utilities, so a plain ring would be overridden. It
-   * mirrors the shared Button's ring-2 + ring-offset-2 accent structure.
-   */
-  const fieldFocus =
-    'focus:outline-none focus-visible:ring-2! focus-visible:ring-offset-2! focus-visible:ring-offset-(--color-background)! focus-visible:ring-(--color-accent-blue)!';
-
   const tabs: { id: Tab; label: MessageKey }[] = [
     { id: 'all', label: 'dictionary.tabAll' },
     { id: 'recent', label: 'dictionary.tabRecent' },
@@ -305,7 +296,7 @@
         <input
           id="dictionary-search"
           type="text"
-          class="w-full border-none! bg-transparent! text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary) {fieldFocus}"
+          class="w-full border-none! bg-transparent! text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary)"
           placeholder={t('dictionary.searchPlaceholder')}
           bind:value={searchQuery}
         />
@@ -340,14 +331,14 @@
           <div class="flex gap-2">
             <input
               type="text"
-              class="h-10 min-w-0 flex-1 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-3 text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary) {fieldFocus}"
+              class="h-10 min-w-0 flex-1 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-3 text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary)"
               placeholder={t('dictionary.wordPlaceholder')}
               bind:value={newWord}
               disabled={isAdding}
             />
             <input
               type="text"
-              class="h-10 w-32 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-2 text-xs text-(--color-primary) placeholder:text-(--color-text-tertiary) {fieldFocus}"
+              class="h-10 w-32 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-2 text-xs text-(--color-primary) placeholder:text-(--color-text-tertiary)"
               placeholder={t('dictionary.tagsPlaceholder')}
               bind:value={newTags}
               disabled={isAdding}

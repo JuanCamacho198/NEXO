@@ -33,6 +33,7 @@ const mockUpsertProgress = vi.hoisted(() => vi.fn().mockResolvedValue(undefined)
 const mockAuthState = vi.hoisted(() => ({ userId: null as string | null }));
 const mockOutboxAddCoalesced = vi.hoisted(() => vi.fn().mockResolvedValue('row-id'));
 const mockOutboxAdd = vi.hoisted(() => vi.fn().mockResolvedValue('row-id'));
+const mockPushToast = vi.hoisted(() => vi.fn());
 
 // ─── Module mocks ───
 
@@ -70,6 +71,8 @@ vi.mock('$lib/shared/outbox/SyncOutboxDao', () => ({
     add = mockOutboxAdd;
   },
 }));
+
+vi.mock('$lib/shared/stores/ToastQueue.svelte', () => ({ pushToast: mockPushToast }));
 
 // Mock pdfStreaming for startReading PDF path
 vi.mock('$lib/features/reader/viewer-pdf/pdfStreaming', () => ({
@@ -356,6 +359,29 @@ describe('ReaderDomainState', () => {
     const book = makeBook({ id: 'b1', format: 'pdf', filePath: '/test.pdf' });
     await readerState.startReading(book);
     expect(mockGetProgress).not.toHaveBeenCalled();
+  });
+
+  // ─── startReading — reading-status persistence (DF-01) ───
+
+  it('startReading surfaces a recoverable notice when the reading status cannot be saved', async () => {
+    mockSetReadingStatus.mockRejectedValueOnce(new Error('status write failed'));
+    const book = makeBook({ id: 'b1', format: 'pdf', filePath: '/test.pdf' });
+
+    await expect(readerState.startReading(book)).resolves.toBeUndefined();
+
+    // The reader still opens — the failure is recoverable, never blocking.
+    expect(readerState.activeReadingBookId).toBe('b1');
+    expect(readerState.readerError).toBeTruthy();
+    expect(mockPushToast).toHaveBeenCalledWith('error', expect.any(String));
+  });
+
+  it('startReading raises no notice when the reading status saves', async () => {
+    mockSetReadingStatus.mockResolvedValueOnce(undefined);
+
+    await readerState.startReading(makeBook({ id: 'b1' }));
+
+    expect(mockPushToast).not.toHaveBeenCalled();
+    expect(readerState.readerError).toBeNull();
   });
 
   // ─── handleEpubLocationChange ───

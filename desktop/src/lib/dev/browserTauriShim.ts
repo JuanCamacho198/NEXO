@@ -77,6 +77,62 @@ function resolveKey(path: string): string {
   return normalized.slice(normalized.lastIndexOf('/') + 1);
 }
 
+type ReadingStatus = SeedBook['readingStatus'];
+
+type LibraryRow = {
+  id: string;
+  title: string;
+  author: string;
+  format: SeedBook['format'];
+  currentPage: number;
+  totalPages: number;
+  progressPercentage: number;
+  coverPath: null;
+  minutesRead: number;
+  updatedAt: string;
+  createdAt: string;
+  collectionIds: never[];
+  readingStatus: ReadingStatus;
+};
+
+/**
+ * In-memory status overrides written by `setReadingStatus`. The row builder
+ * consults this map first (override wins over the seed) so a promotion made
+ * through the shim survives a library re-read within the session.
+ */
+const readingStatusOverrides = new Map<string, ReadingStatus>();
+
+/** Builds the library rows, applying any status override over the seed. */
+function buildLibraryRows(): LibraryRow[] {
+  return SEED_BOOKS.map((book) => ({
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    format: book.format,
+    currentPage: book.currentPage,
+    totalPages: book.totalPages,
+    progressPercentage: book.progressPercentage,
+    coverPath: null,
+    minutesRead: book.minutesRead,
+    updatedAt: TIMESTAMP,
+    createdAt: TIMESTAMP,
+    collectionIds: [],
+    readingStatus: readingStatusOverrides.get(book.id) ?? book.readingStatus,
+  }));
+}
+
+/** Reading stats derived from the current statuses (override-aware). */
+function buildReadingStats(): Record<string, number> {
+  const rows = buildLibraryRows();
+  return {
+    totalMinutesRead: SEED_BOOKS.reduce((sum, book) => sum + book.minutesRead, 0),
+    totalSessions: 7,
+    booksStarted: rows.filter((book) => book.readingStatus !== 'to_read').length,
+    booksCompleted: rows.filter((book) => book.readingStatus === 'completed').length,
+    avgProgressPercentage: 34,
+  };
+}
+
 function createInternals(): Record<string, unknown> {
   const files = new Map<string, string>();
 
@@ -90,21 +146,7 @@ function createInternals(): Record<string, unknown> {
     }),
   );
 
-  const libraryRows = SEED_BOOKS.map((book) => ({
-    id: book.id,
-    title: book.title,
-    author: book.author,
-    format: book.format,
-    currentPage: book.currentPage,
-    totalPages: book.totalPages,
-    progressPercentage: book.progressPercentage,
-    coverPath: null,
-    minutesRead: book.minutesRead,
-    updatedAt: TIMESTAMP,
-    createdAt: TIMESTAMP,
-    collectionIds: [],
-    readingStatus: book.readingStatus,
-  }));
+  const libraryRows = buildLibraryRows();
 
   const sourceRows = SEED_BOOKS.map((book) => ({
     id: book.id,
@@ -118,14 +160,6 @@ function createInternals(): Record<string, unknown> {
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
   }));
-
-  const stats = {
-    totalMinutesRead: SEED_BOOKS.reduce((sum, book) => sum + book.minutesRead, 0),
-    totalSessions: 7,
-    booksStarted: SEED_BOOKS.filter((book) => book.readingStatus !== 'to_read').length,
-    booksCompleted: SEED_BOOKS.filter((book) => book.readingStatus === 'completed').length,
-    avgProgressPercentage: 34,
-  };
 
   // Storage: the Almacenamiento screen renders nothing at all when these
   // answer null (unknown commands fall through to null below), so seed them to
@@ -151,11 +185,8 @@ function createInternals(): Record<string, unknown> {
 
   const channelResults: Record<string, unknown> = {
     listBooks: sourceRows,
-    listLibraryBooks: libraryRows,
     listCollections: [],
     getSettings: [],
-    getReadingStats: stats,
-    getReadingStatsForRange: stats,
     getReadingActivity: [],
     getReadingStreak: 4,
     listSyncOutboxReady: [],
@@ -253,6 +284,26 @@ function createInternals(): Record<string, unknown> {
         const index = perBookSizes.findIndex((row) => row.id === bookId);
         if (index >= 0) perBookSizes.splice(index, 1);
         return null;
+      }
+
+      // Reading status mutates the override map, so it also runs before the
+      // read-only channel lookup; the derived reads below re-consult that map.
+      if (cmd === 'setReadingStatus') {
+        const raw = args as unknown as { bookId?: unknown; status?: unknown } | undefined;
+        const bookId = typeof raw?.bookId === 'string' ? raw.bookId : '';
+        const status = typeof raw?.status === 'string' ? raw.status : null;
+        if (bookId) {
+          if (status === 'to_read' || status === 'reading' || status === 'completed') {
+            readingStatusOverrides.set(bookId, status);
+          } else {
+            readingStatusOverrides.delete(bookId);
+          }
+        }
+        return null;
+      }
+      if (cmd === 'listLibraryBooks') return buildLibraryRows();
+      if (cmd === 'getReadingStats' || cmd === 'getReadingStatsForRange') {
+        return buildReadingStats();
       }
 
       if (Object.prototype.hasOwnProperty.call(channelResults, cmd)) {

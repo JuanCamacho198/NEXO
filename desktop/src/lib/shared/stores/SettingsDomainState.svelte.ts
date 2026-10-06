@@ -88,7 +88,9 @@ class SettingsDomainState {
   }
 
   async saveDailyGoalMinutes(minutes: number, userId?: string): Promise<void> {
-    if (!userId || userId.trim().length === 0) return;
+    // Persist for both cases: with a user id the backend writes the per-user
+    // key; without one it writes the global key. Either way the port is called
+    // so a local (session-less) goal is actually stored.
     await this.settingsPort.saveDailyGoal(minutes, userId);
     // reflect sanitized value (normalize 60→45 etc.)
     try {

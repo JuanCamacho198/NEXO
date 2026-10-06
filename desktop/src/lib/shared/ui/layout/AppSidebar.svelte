@@ -4,6 +4,7 @@
   import type { MessageKey } from '../../i18n';
   import ThemeToggle from '$lib/shared/ui/navigation/ThemeToggle.svelte';
   import NotificationCenter from '$lib/shared/ui/feedback/NotificationCenter.svelte';
+  import NotificationArrivalAnnouncer from '$lib/shared/ui/feedback/NotificationArrivalAnnouncer.svelte';
   import { notificationCenter, markAllRead } from '$lib/shared/stores/notificationCenter.svelte';
   import { Tooltip } from 'bits-ui';
   import Bell from 'lucide-svelte/icons/bell';
@@ -31,6 +32,23 @@
   let collapsed = $state(false);
 
   let notificationOpen = $state(false);
+
+  /**
+   * Collapsing the rail used to remove every label in the first frame while the
+   * width still animated over 350ms, so the text popped against a moving edge.
+   * The labels and wordmark stay mounted and fade with opacity, using the CSS
+   * token timing (a Svelte transition cannot read `--ease-smooth`). The global
+   * `prefers-reduced-motion` block zeroes the transition.
+   *
+   * The collapse is an IN-FLOW box (`max-w-0` + `overflow-hidden` + `opacity-0`),
+   * never `position: absolute`. An absolutely positioned label paints over the
+   * expand button and swallows the click, and inside a `relative` button its
+   * content widens the button's scrollWidth until the rail grows a horizontal
+   * scrollbar. A zero-width clipped box stays in flow, so it can neither overlay
+   * a control nor widen its parent; `max-w-full` restores the natural width.
+   */
+  const labelFadeClass =
+    'overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-(--duration-fast) ease-(--ease-smooth)';
 
   let profile = $derived(profileSessionFromAuthState());
 
@@ -80,9 +98,16 @@
         ></span>
       {/if}
       <ItemIcon size={16} strokeWidth={1.8} aria-hidden="true" />
-      {#if !collapsed}
+      <span
+        class={labelFadeClass}
+        class:max-w-0={collapsed}
+        class:opacity-0={collapsed}
+        class:max-w-full={!collapsed}
+        class:opacity-100={!collapsed}
+        aria-hidden={collapsed ? 'true' : undefined}
+      >
         {t(item.messageKey)}
-      {/if}
+      </span>
     </Tooltip.Trigger>
     <!--
       The label is already visible while expanded, so the tooltip would only
@@ -105,11 +130,21 @@
 {/snippet}
 
 <aside
-  class="sticky top-0 flex h-full shrink-0 flex-col overflow-hidden border-r border-(--color-border) bg-(--color-sidebar-bg) transition-[width] duration-300 max-lg:hidden"
+  class="sticky top-0 flex h-full shrink-0 flex-col overflow-hidden border-r border-(--color-border) bg-(--color-sidebar-bg) transition-[width] duration-(--duration-slow) max-lg:hidden"
   class:w-64={!collapsed}
   class:w-18={collapsed}
 >
   <div class="flex items-center p-3 {collapsed ? 'justify-center' : ''}">
+    <span
+      class="shrink-0 overflow-hidden transition-[max-width,opacity] duration-(--duration-fast) ease-(--ease-smooth)"
+      class:max-w-0={collapsed}
+      class:opacity-0={collapsed}
+      class:max-w-full={!collapsed}
+      class:opacity-100={!collapsed}
+      aria-hidden={collapsed ? 'true' : undefined}
+    >
+      <img src={wordmarkSrc} alt="NEXO" class="h-10 w-auto shrink-0" />
+    </span>
     {#if collapsed}
       <button
         type="button"
@@ -120,17 +155,14 @@
         <ChevronRight size={14} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     {:else}
-      <div class="flex w-full items-center gap-2">
-        <img src={wordmarkSrc} alt="NEXO" class="h-10 w-auto shrink-0" />
-        <button
-          type="button"
-          onclick={() => (collapsed = !collapsed)}
-          class="ml-auto flex shrink-0 items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
-          aria-label={t('sidebar.collapse')}
-        >
-          <ChevronLeft size={14} class="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
-      </div>
+      <button
+        type="button"
+        onclick={() => (collapsed = !collapsed)}
+        class="ml-auto flex shrink-0 items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
+        aria-label={t('sidebar.collapse')}
+      >
+        <ChevronLeft size={14} class="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
     {/if}
   </div>
 
@@ -173,9 +205,12 @@
     <button
       type="button"
       onclick={openNotificationCenter}
-      class="relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
+      class="relative flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
       class:justify-center={collapsed}
-      aria-label={t('notifications.bell.label')}
+      class:gap-3={!collapsed}
+      aria-label={notificationCenter.unreadCount > 0
+        ? t('notifications.bell.unread', { count: notificationCenter.unreadCount })
+        : t('notifications.bell.label')}
     >
       <span class="relative shrink-0">
         <Bell size={16} strokeWidth={1.8} aria-hidden="true" />
@@ -188,14 +223,22 @@
           </span>
         {/if}
       </span>
-      {#if !collapsed}
+      <span
+        class={labelFadeClass}
+        class:max-w-0={collapsed}
+        class:opacity-0={collapsed}
+        class:max-w-full={!collapsed}
+        class:opacity-100={!collapsed}
+        aria-hidden={collapsed ? 'true' : undefined}
+      >
         {t('notifications.center.title')}
-      {/if}
+      </span>
     </button>
 
     <div
-      class="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 transition-colors hover:bg-(--color-panel-accent) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
+      class="relative flex w-full cursor-pointer items-center rounded-lg p-2 transition-colors hover:bg-(--color-panel-accent) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
       class:justify-center={collapsed}
+      class:gap-3={!collapsed}
       role="button"
       tabindex="0"
       aria-label={`${getProfileInitials(profile.name)} ${profile.name} · ${profile.email}`}
@@ -217,14 +260,20 @@
           {getProfileInitials(profile.name)}
         </div>
       {/if}
-      {#if !collapsed}
-        <p class="min-w-0 truncate text-xs">
-          <span class="font-medium text-(--color-primary)">{profile.name}</span>
-          <span class="text-(--color-text-muted)"> · {profile.email}</span>
-        </p>
-      {/if}
+      <p
+        class="min-w-0 truncate text-xs {labelFadeClass}"
+        class:max-w-0={collapsed}
+        class:opacity-0={collapsed}
+        class:max-w-full={!collapsed}
+        class:opacity-100={!collapsed}
+        aria-hidden={collapsed ? 'true' : undefined}
+      >
+        <span class="font-medium text-(--color-primary)">{profile.name}</span>
+        <span class="text-(--color-text-muted)"> · {profile.email}</span>
+      </p>
     </div>
   </div>
 </aside>
 
+<NotificationArrivalAnnouncer {t} />
 <NotificationCenter bind:open={notificationOpen} {t} />

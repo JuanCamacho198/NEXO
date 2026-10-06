@@ -20,7 +20,7 @@ const baseDictionaryEntries: Array<[string, string]> = [
   ['settings.profile.signInPrompt', 'Sign in with Google'],
   ['settings.profile.avatarAlt', 'Avatar for {{name}}'],
   ['settings.shortcuts.title', 'Keyboard Shortcuts'],
-  ['settings.shortcuts.description', 'Available shortcuts'],
+  ['settings.shortcuts.subtitle', 'Available shortcuts'],
   ['settings.shortcuts.readerPrev', 'Previous page'],
   ['settings.shortcuts.readerNext', 'Next page'],
   ['settings.shortcuts.readerScrollUp', 'Scroll up'],
@@ -249,7 +249,6 @@ vi.mock('$lib/shared/api/tauriClient', () => {
 describe('SettingsPanel', () => {
   const defaultProps = {
     isOpen: true,
-    mode: 'page' as const,
     locale: 'es' as const,
     onRequestClose: vi.fn(),
     onLocaleChange: vi.fn(),
@@ -297,22 +296,21 @@ describe('SettingsPanel', () => {
     expect(screen.getByText('Nexo')).toBeInTheDocument();
   });
 
-  it('closes panel when close button clicked in overlay mode', async () => {
+  it('calls onRequestClose when the close button is clicked', async () => {
     const onRequestClose = vi.fn();
     const user = userEvent.setup();
     render(SettingsPanel, {
       ...defaultProps,
-      mode: 'overlay',
       isOpen: true,
       onRequestClose,
     });
     const closeButton = screen.getByLabelText('Close settings');
     await user.click(closeButton);
-    expect(onRequestClose).not.toHaveBeenCalled();
+    expect(onRequestClose).toHaveBeenCalled();
   });
 
-  it('does not render when isOpen is false and mode is overlay', () => {
-    render(SettingsPanel, { ...defaultProps, isOpen: false, mode: 'overlay' });
+  it('does not render when isOpen is false', () => {
+    render(SettingsPanel, { ...defaultProps, isOpen: false });
     expect(screen.queryByText('Settings')).not.toBeInTheDocument();
   });
 

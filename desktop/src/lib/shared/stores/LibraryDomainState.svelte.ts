@@ -32,7 +32,6 @@ class LibraryDomainState {
   isLoadingLibrary = $state(false);
   readerError = $state<string | null>(null);
   editingBook = $state<ReaderBook | null>(null);
-  isCollectionManagerOpen = $state(false);
   pendingRemoveBook = $state<ReaderBook | null>(null);
   thumbnailGenerationInFlight = new Set<string>();
   thumbnailGenerationAttempted = new Set<string>();
@@ -255,7 +254,7 @@ class LibraryDomainState {
     recordMetric(METRIC_NAMES.READER_OPEN, { feature: format.toLowerCase() });
   }
   // ─── Facade notes ───
-  // 8 state: books, shelfQueryState, collections, isLoadingLibrary, readerError, editingBook, isCollectionManagerOpen, pendingRemoveBook
+  // 7 state: books, shelfQueryState, collections, isLoadingLibrary, readerError, editingBook, pendingRemoveBook
   // 5 derived: continueReadingBooks, myShelfBooks, shelfBooks, shelfWarnings, shelfSortToken
 }
 export const libraryState = new LibraryDomainState();

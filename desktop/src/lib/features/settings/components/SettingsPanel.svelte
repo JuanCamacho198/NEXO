@@ -22,8 +22,7 @@
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
 
   let {
-    isOpen = $bindable(false),
-    mode = 'overlay',
+    isOpen = false,
     onRequestClose,
     locale,
     onLocaleChange,
@@ -33,7 +32,6 @@
     initialTab,
   } = $props<{
     isOpen: boolean;
-    mode?: 'overlay' | 'page';
     onRequestClose?: () => void;
     locale: UiLocale;
     onLocaleChange?: (locale: UiLocale) => void;
@@ -83,11 +81,7 @@
   });
 
   function closePanel(): void {
-    if (mode === 'page') {
-      onRequestClose?.();
-      return;
-    }
-    isOpen = false;
+    onRequestClose?.();
   }
 
   async function handleConnectDrive(): Promise<void> {
@@ -140,19 +134,6 @@
     }
   });
 
-  // Overlay mode is a dialog-like surface: Escape closes it. Page mode is a
-  // route and keeps its own navigation, so it is not affected.
-  $effect(() => {
-    if (!isOpen || mode !== 'overlay') return;
-    const handleEscape = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      closePanel();
-    };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  });
-
   $effect(() => {
     const handleBeforeUnload = (): void => profile.stopHeartbeat();
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -162,16 +143,8 @@
   onDestroy(() => profile.destroy());
 </script>
 
-{#if mode === 'page' || isOpen}
-  {#if mode === 'overlay'}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="fixed inset-0 w-screen h-screen bg-black/40 z-[999]" onclick={closePanel}></div>
-  {/if}
-  <aside
-    class={mode === 'overlay'
-      ? 'fixed top-0 right-0 w-[350px] h-screen bg-(--color-surface) border-l border-(--color-border) shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]'
-      : 'w-full h-full flex-1 flex flex-col bg-(--color-background) overflow-hidden min-h-0'}
-  >
+{#if isOpen}
+  <aside class="w-full h-full flex-1 flex flex-col bg-(--color-background) overflow-hidden min-h-0">
     <div class="flex items-center p-3 border-b border-(--color-border)">
       <button
         class="inline-flex items-center justify-center size-8 rounded-lg bg-(--color-surface) border border-(--color-border) text-(--color-text-muted) cursor-pointer hover:text-(--color-primary) hover:border-(--color-primary) transition-all duration-200"
@@ -209,7 +182,7 @@
           role="tabpanel"
           id="tabpanel-datos"
           aria-labelledby="tab-datos"
-          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 [&>*]:shrink-0"
+          class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4 [&>*]:shrink-0"
         >
           <SettingsDataTab
             {t}
@@ -275,7 +248,7 @@
           role="tabpanel"
           id="tabpanel-acerca"
           aria-labelledby="tab-acerca"
-          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 [&>*]:shrink-0"
+          class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4 [&>*]:shrink-0"
         >
           <SettingsAboutTab {t} {locale} />
         </div>

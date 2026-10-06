@@ -59,7 +59,7 @@ export function formatDate(iso: string): string {
   );
 }
 
-export function getDateCutoff(selectedDateRange: string | null): Date {
+function getDateCutoff(selectedDateRange: string | null): Date {
   const now = new Date();
   if (selectedDateRange === '7d') return new Date(now.getTime() - 7 * 86400000);
   if (selectedDateRange === '30d') return new Date(now.getTime() - 30 * 86400000);

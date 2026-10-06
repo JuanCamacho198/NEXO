@@ -262,6 +262,7 @@ const dictionary: Record<string, string> = {
   'sidebar.expand': 'Expandir sidebar',
   'sidebar.collapse': 'Colapsar sidebar',
   'settings.close': 'Close',
+  'common.close': 'Close',
   'settings.title': 'Settings',
   'errors.commandFailure': 'Command failed',
   'shelf.lessThanMinute': '< 1 min',

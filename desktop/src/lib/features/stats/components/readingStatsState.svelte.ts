@@ -22,7 +22,7 @@ export const periodLabels: Record<PeriodKey, string> = {
 
 // Token-backed ramp (see tokens.css). Theme-aware by construction, so the same
 // series is legible in light and dark without a hardcoded hex in the component.
-export const GENRE_COLORS = [
+const GENRE_COLORS = [
   'var(--color-chart-1)',
   'var(--color-chart-2)',
   'var(--color-chart-3)',
@@ -30,14 +30,6 @@ export const GENRE_COLORS = [
   'var(--color-chart-5)',
   'var(--color-chart-6)',
 ] as const;
-
-export function hashNumber(value: string): number {
-  let hash = 0;
-  for (const char of value) {
-    hash = (hash * 31 + char.charCodeAt(0)) % 997;
-  }
-  return hash;
-}
 
 const resolveGenre = (book: StatsBook): string => {
   const value = book.genre;
@@ -47,7 +39,7 @@ const resolveGenre = (book: StatsBook): string => {
   return UNCLASSIFIED_GENRE;
 };
 
-export function groupBooksByGenre(books: StatsBook[]): Map<string, number> {
+function groupBooksByGenre(books: StatsBook[]): Map<string, number> {
   const groups = new Map<string, number>();
   for (const book of books) {
     const minutes = Math.max(book.minutesRead, 10);
@@ -174,9 +166,9 @@ export function calculateGenreDistribution(
 }
 
 // ─── Chart helpers (PR-P4-1) ─────────────────────────────────────────
-export const CHART_WIDTH = 800;
-export const CHART_HEIGHT = 240;
-export const MIN_LABEL_SPACING = 46;
+const CHART_WIDTH = 800;
+const CHART_HEIGHT = 240;
+const MIN_LABEL_SPACING = 46;
 
 export type ChartPoint = { label: string; value: number; x: number; y: number };
 
@@ -192,7 +184,7 @@ export type ChartMeta = {
   step: number;
 };
 
-export function getShortMonthName(monthIndex: number, locale: string): string {
+function getShortMonthName(monthIndex: number, locale: string): string {
   const date = new Date(2026, monthIndex, 1);
   try {
     const name = new Intl.DateTimeFormat(locale, { month: 'short' }).format(date);

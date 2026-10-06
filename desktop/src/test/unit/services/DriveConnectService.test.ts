@@ -256,9 +256,10 @@ describe('beginDriveConnect', () => {
     expect(mockOpenUrl).toHaveBeenCalledTimes(1);
   });
 
-  it('missing OAuth config fails fast without starting loopback', async () => {
+  it('missing client ID fails fast without starting loopback (secret presence is irrelevant)', async () => {
+    // Only the client ID is required; the secret stays configured via
+    // beforeEach to prove it cannot satisfy the client-ID requirement.
     vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', '');
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', '');
 
     const result = await beginDriveConnect();
 
@@ -266,6 +267,40 @@ describe('beginDriveConnect', () => {
     expect(result.kind === 'failure' && result.code).toBe('DRIVE_CONFIG_MISSING');
     expect(mockPluginStart).not.toHaveBeenCalled();
     expect(mockOpenUrl).not.toHaveBeenCalled();
+  });
+
+  it('client ID alone is enough and the token exchange omits client_secret', async () => {
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', '');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ access_token: 'access-1', refresh_token: 'refresh-1' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pending = beginDriveConnect();
+    await waitForConnectStarted();
+    fireCallback(`code=auth-code&state=${authorizeStateFromOpenUrl()}`);
+    const result = await pending;
+
+    expect(result).toEqual({ kind: 'success', accessToken: 'access-1' });
+    const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
+    expect(body).toContain('client_id=test-client-id');
+    expect(body).not.toContain('client_secret');
+  });
+
+  it('includes client_secret in the token exchange when one is configured', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ access_token: 'access-1', refresh_token: 'refresh-1' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pending = beginDriveConnect();
+    await waitForConnectStarted();
+    fireCallback(`code=auth-code&state=${authorizeStateFromOpenUrl()}`);
+    const result = await pending;
+
+    expect(result.kind).toBe('success');
+    const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
+    expect(body).toContain('client_secret=test-client-secret');
   });
 });
 
@@ -324,10 +359,11 @@ describe('getDriveAccessToken', () => {
     expect(driveState.lastError).toBe('AUTH_REQUIRED');
   });
 
-  it('missing OAuth config throws DRIVE_CONFIG_MISSING', async () => {
+  it('missing client ID throws DRIVE_CONFIG_MISSING (secret presence is irrelevant)', async () => {
     memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
+    // Only the client ID is required; the secret stays configured via
+    // beforeEach to prove it cannot satisfy the client-ID requirement.
     vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', '');
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', '');
 
     try {
       await getDriveAccessToken();
@@ -336,6 +372,28 @@ describe('getDriveAccessToken', () => {
       expect(error).toBeInstanceOf(DriveConfigError);
       expect((error as DriveConfigError).code).toBe('DRIVE_CONFIG_MISSING');
     }
+  });
+
+  it('refreshes without client_secret when the secret is empty', async () => {
+    memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', '');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ access_token: 'fresh-access' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(getDriveAccessToken()).resolves.toBe('fresh-access');
+    const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
+    expect(body).toContain('client_id=test-client-id');
+    expect(body).not.toContain('client_secret');
+  });
+
+  it('includes client_secret in the refresh when one is configured', async () => {
+    memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ access_token: 'fresh-access' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(getDriveAccessToken()).resolves.toBe('fresh-access');
+    const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
+    expect(body).toContain('client_secret=test-client-secret');
   });
 });
 

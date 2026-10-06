@@ -9,6 +9,7 @@
     type CommandEntry,
     type CommandPaletteActions,
   } from './commands';
+  import { rankMatches } from './commandSearch';
   import { commandPaletteState } from './commandPaletteState.svelte';
 
   type Props = {
@@ -24,23 +25,37 @@
   let query = $state('');
   let activeIndex = $state(0);
   let inputEl = $state<HTMLInputElement | null>(null);
+  // Non-reactive on purpose: only read back when the palette closes.
+  let previouslyFocused: HTMLElement | null = null;
 
-  const filtered = $derived.by(() => {
+  // Ranked, group-major view. Within each command group the rows whose own
+  // label matches the query come first, followed by the rows that only matched
+  // the group's descriptive name; ties keep the registry order. The listbox
+  // renders this exact order, so the flat list the keyboard walks (`filtered`)
+  // and the grouped DOM never disagree.
+  const rankedGroups = $derived.by(() => {
     const needle = query.trim().toLowerCase();
-    if (needle.length === 0) return COMMAND_REGISTRY;
-    return COMMAND_REGISTRY.filter((entry) =>
-      t(entry.descriptionKey).toLowerCase().includes(needle),
-    );
+    return COMMAND_GROUPS.map((group) => {
+      const groupLabel = t(group.labelKey);
+      const candidates = COMMAND_REGISTRY.filter((entry) => entry.group === group.id);
+      const entries =
+        needle.length === 0
+          ? candidates
+          : rankMatches(
+              candidates,
+              needle,
+              (entry) => t(entry.descriptionKey),
+              () => groupLabel,
+            );
+      return { ...group, entries };
+    }).filter((group) => group.entries.length > 0);
   });
+
+  const filtered = $derived(rankedGroups.flatMap((group) => group.entries));
 
   const activeEntry = $derived(filtered[activeIndex] as CommandEntry | undefined);
 
-  const groups = $derived(
-    COMMAND_GROUPS.map((group) => ({
-      ...group,
-      entries: filtered.filter((entry) => entry.group === group.id),
-    })).filter((group) => group.entries.length > 0),
-  );
+  const groups = $derived(rankedGroups);
 
   function optionId(entry: CommandEntry): string {
     return `command-option-${entry.id}`;
@@ -123,8 +138,40 @@
   // open but untypeable.
   function handleOpenAutoFocus(event: Event): void {
     event.preventDefault();
+    // Remember where focus was before the palette opened. Ctrl+K can be pressed
+    // with nothing focused (`document.activeElement === document.body`), in
+    // which case bits-ui has no opener to return to and closing would dump the
+    // user at the top of the page.
+    previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     inputEl?.focus();
   }
+
+  function isRestorable(el: HTMLElement | null): el is HTMLElement {
+    if (!el || el === document.body || !el.isConnected) return false;
+    if (el.hasAttribute('disabled')) return false;
+    return el.tabIndex >= 0 || el.isContentEditable;
+  }
+
+  // Return focus to the remembered element, or to the main content region when
+  // it has been removed or is no longer focusable.
+  function restoreFocus(): void {
+    if (isRestorable(previouslyFocused)) {
+      previouslyFocused.focus();
+      return;
+    }
+    const fallback = document.getElementById('main-content');
+    if (fallback instanceof HTMLElement) fallback.focus();
+  }
+
+  // Runs after bits-ui's own close-focus restore (which no-ops when the opener
+  // was removed), so the fallback actually lands.
+  let wasOpen = false;
+  $effect(() => {
+    const isOpen = commandPaletteState.open;
+    if (wasOpen && !isOpen) restoreFocus();
+    wasOpen = isOpen;
+  });
 </script>
 
 <!--
@@ -155,7 +202,7 @@
       bind:this={inputEl}
       bind:value={query}
       onkeydown={handleInputKeydown}
-      class="w-full rounded-lg border border-(--color-border) bg-(--color-background) px-3 py-2.5 text-sm text-(--color-primary) outline-none transition-colors placeholder:text-(--color-text-muted) focus-visible:border-(--color-accent) focus-visible:ring-2 focus-visible:ring-(--color-accent-soft)"
+      class="w-full rounded-lg border border-(--color-border) bg-(--color-background) px-3 py-2.5 text-sm text-(--color-primary) transition-colors placeholder:text-(--color-text-muted) focus-visible:border-(--color-accent)"
     />
 
     <p class="sr-only" role="status" aria-live="polite">

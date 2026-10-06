@@ -37,6 +37,17 @@ const messages: Record<string, string> = {
   'settings.data.group.export': 'Export',
   'settings.data.group.maintenance': 'Maintenance',
   'settings.data.group.privacyAddons': 'Privacy & advanced',
+  'settings.data.group.notifications': 'Notifications',
+  'settings.notifications.delivery.title': 'Notifications',
+  'settings.notifications.delivery.description': 'Choose which notifications can interrupt you.',
+  'settings.notifications.delivery.system': 'System notifications',
+  'settings.notifications.delivery.systemHint': 'Imports, sync, addons and updates.',
+  'settings.notifications.delivery.nudges': 'Nudges',
+  'settings.notifications.delivery.nudgesHint': 'Streak and goal reminders.',
+  'settings.notifications.delivery.quietHours': 'Quiet hours',
+  'settings.notifications.delivery.quietHoursHint': 'During quiet hours nothing sounds.',
+  'settings.notifications.delivery.quietStart': 'Start',
+  'settings.notifications.delivery.quietEnd': 'End',
   'settings.data.libraryExported': 'Library exported',
   'settings.data.libraryExportEmpty': 'No books to export',
   'settings.data.libraryExportFailed': 'Could not export the library',
@@ -181,13 +192,19 @@ describe('SettingsDataTab dictionary transfer group', () => {
 });
 
 describe('SettingsDataTab grouping and order', () => {
-  it('renders the four group headings in safe-to-dangerous order', () => {
+  it('renders the five group headings in safe-to-dangerous order', () => {
     renderTab();
 
     const headings = screen
       .getAllByRole('heading', { level: 3 })
       .map((heading) => heading.textContent?.trim());
-    expect(headings).toEqual(['Backup', 'Export', 'Maintenance', 'Privacy & advanced']);
+    expect(headings).toEqual([
+      'Backup',
+      'Export',
+      'Maintenance',
+      'Privacy & advanced',
+      'Notifications',
+    ]);
   });
 
   it('places the cold backup before the export group and clear cache last', () => {
@@ -200,6 +217,7 @@ describe('SettingsDataTab grouping and order', () => {
       'settings-group-export',
       'settings-group-maintenance',
       'settings-group-privacy-addons',
+      'settings-group-notifications',
     ]);
   });
 });

@@ -52,7 +52,7 @@ async function defaultReadFile(filePath: string): Promise<Uint8Array> {
 }
 
 /** Synthetic entry so the verified import pipeline can be reused as-is. */
-export function buildDiscoverImportRow(book: CatalogBook, nowIso?: string): SupabaseUserBookRow {
+function buildDiscoverImportRow(book: CatalogBook, nowIso?: string): SupabaseUserBookRow {
   const now = nowIso ?? new Date().toISOString();
   return {
     id: book.id,

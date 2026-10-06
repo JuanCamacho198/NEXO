@@ -1,5 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { scale } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
+  import Star from 'lucide-svelte/icons/star';
+  import BookOpen from 'lucide-svelte/icons/book-open';
+  import SquarePen from 'lucide-svelte/icons/square-pen';
+  import Eye from 'lucide-svelte/icons/eye';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
   import { getShelfMenuId } from '../utils';
 
   const {
@@ -39,6 +46,20 @@
   let triggerEl = $state<HTMLButtonElement | null>(null);
   let menuEl = $state<HTMLDivElement | null>(null);
   let menuPos = $state<{ top: number; left: number } | null>(null);
+
+  // Svelte JS transitions ignore the global `prefers-reduced-motion` CSS block,
+  // so the menu reads the query itself and zeroes its own duration.
+  let reducedMotion = $state(false);
+  $effect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const apply = (): void => {
+      reducedMotion = mq.matches;
+    };
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  });
 
   function updateMenuPosition(): void {
     if (!triggerEl) return;
@@ -195,11 +216,20 @@
       }
     };
 
+    // The dialog layer now paints above this menu, so a menu left open under a
+    // dialog is already non-interactable; dismissing it keeps it from coming
+    // back into view if the dialog closes. The facade announces every open as
+    // `np:dialog-open` (see shared/ui/layout/Modal.svelte); a menu action
+    // already closes on its own, this covers programmatic opens.
+    const handleDialogOpen = (): void => closeMenu(false);
+
     document.addEventListener('pointerdown', handleDocumentPointerDown, true);
     document.addEventListener('keydown', handleDocumentKeyDown, true);
+    window.addEventListener('np:dialog-open', handleDialogOpen);
     return () => {
       document.removeEventListener('pointerdown', handleDocumentPointerDown, true);
       document.removeEventListener('keydown', handleDocumentKeyDown, true);
+      window.removeEventListener('np:dialog-open', handleDialogOpen);
     };
   });
 
@@ -239,8 +269,14 @@
       role="menu"
       tabindex="-1"
       aria-label={triggerLabel}
-      class="fixed z-[999] w-56 rounded-md bg-(--color-elevated) shadow-xl ring-1 ring-(--color-border)"
+      class="fixed z-[999] w-56 origin-top-right rounded-md bg-(--color-elevated) shadow-xl ring-1 ring-(--color-border)"
       style={menuPos ? `top:${menuPos.top}px; left:${menuPos.left}px` : ''}
+      transition:scale={{
+        start: 0.96,
+        opacity: 0,
+        duration: reducedMotion ? 0 : 150,
+        easing: cubicOut,
+      }}
       onkeydown={handleMenuKeyDown}
     >
       <div class="py-1">
@@ -249,12 +285,13 @@
           role="menuitem"
           tabindex="0"
           data-menu-item="true"
-          class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
+          class="inline-flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
           onclick={() => {
             handleAction(onToggleFavorite);
           }}
         >
-          {isFavorite ? favoriteRemoveLabel : favoriteAddLabel}
+          <Star size={16} strokeWidth={1.8} aria-hidden="true" />
+          <span>{isFavorite ? favoriteRemoveLabel : favoriteAddLabel}</span>
         </button>
 
         {#if onRead}
@@ -263,12 +300,13 @@
             role="menuitem"
             tabindex="0"
             data-menu-item="true"
-            class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
+            class="inline-flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
             onclick={() => {
               handleAction(onRead);
             }}
           >
-            {readLabel}
+            <BookOpen size={16} strokeWidth={1.8} aria-hidden="true" />
+            <span>{readLabel}</span>
           </button>
         {/if}
 
@@ -277,12 +315,13 @@
           role="menuitem"
           tabindex="0"
           data-menu-item="true"
-          class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
+          class="inline-flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
           onclick={() => {
             handleAction(onEdit);
           }}
         >
-          {editLabel}
+          <SquarePen size={16} strokeWidth={1.8} aria-hidden="true" />
+          <span>{editLabel}</span>
         </button>
 
         {#if onViewDetails}
@@ -291,26 +330,30 @@
             role="menuitem"
             tabindex="0"
             data-menu-item="true"
-            class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
+            class="inline-flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
             onclick={() => {
               handleAction(onViewDetails);
             }}
           >
-            {viewDetailsLabel}
+            <Eye size={16} strokeWidth={1.8} aria-hidden="true" />
+            <span>{viewDetailsLabel}</span>
           </button>
         {/if}
+
+        <div role="separator" class="my-1 h-px bg-(--color-border)"></div>
 
         <button
           type="button"
           role="menuitem"
           tabindex="0"
           data-menu-item="true"
-          class="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-(--color-surface-hover)"
+          class="inline-flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-(--color-error) hover:bg-(--color-error-soft)"
           onclick={() => {
             handleAction(onRemove);
           }}
         >
-          {removeLabel}
+          <Trash2 size={16} strokeWidth={1.8} aria-hidden="true" />
+          <span>{removeLabel}</span>
         </button>
       </div>
     </div>

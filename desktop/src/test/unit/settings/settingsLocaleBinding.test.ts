@@ -108,7 +108,6 @@ describe('SettingsPanel locale binding regression', () => {
 
     const props = {
       isOpen: true,
-      mode: 'page' as const,
       t,
       books: [] as LibraryBookDto[],
       // Production wiring: an unbound class method forwarded straight through.

@@ -3,7 +3,6 @@
   import type { MessageKey } from '../../lib/i18n';
 
   type Props = {
-    stats?: unknown;
     isLoadingStats?: boolean;
     statsUnavailableReason?: string | null;
     selectedBookTitle?: string | null;

@@ -1,4 +1,7 @@
+import { get } from 'svelte/store';
 import type { ReaderBook, ReadingSessionInput, SaveProgressInput } from '$lib/shared/types';
+import { i18n } from '$lib/shared/i18n';
+import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
@@ -75,9 +78,16 @@ class ReaderDomainState {
     const epoch = ++this.openEpoch;
     this.activeReadingBookId = book.id;
     this.preloadedBytes = null;
-    await this.libraryPort.setReadingStatus(book.id, 'reading').catch(() => {});
+    try {
+      await this.libraryPort.setReadingStatus(book.id, 'reading');
+    } catch {
+      // Recoverable: the reader still opens. Surface the unsaved status instead of
+      // silently showing the book under "Continuar leyendo" with nothing persisted.
+      const message = i18n.t(get(i18n.locale), 'reader.readingStatusNotSaved');
+      this.readerError = message;
+      pushToast('error', message);
+    }
     const format = book.format.toLowerCase();
-    console.warn('[continue] startReading book', book.id, 'epoch', epoch, 'format', format);
     if (format === 'epub' || format === 'pdf') {
       this.libraryPort
         .getFileBytes(book.filePath)
@@ -93,36 +103,14 @@ class ReaderDomainState {
       try {
         const progress = await this.viewerPort.getProgress(book.id);
         if (epoch !== this.openEpoch) {
-          console.warn(
-            '[continue] startReading local progress stale epoch',
-            epoch,
-            'current',
-            this.openEpoch,
-          );
           return;
         }
-        console.warn(
-          '[continue] startReading book',
-          book.id,
-          'local progress',
-          progress?.cfiLocation?.slice(0, 60) ?? '(empty)',
-          progress?.percentage ?? 0,
-          'epoch',
-          epoch,
-        );
         this.cfiLocation = progress?.cfiLocation ?? '';
         this.percentage = progress?.percentage ?? 0;
       } catch {
         if (epoch !== this.openEpoch) {
-          console.warn('[continue] startReading local progress error stale epoch', epoch);
           return;
         }
-        console.warn(
-          '[continue] startReading book',
-          book.id,
-          'local progress error, fallback to empty epoch',
-          epoch,
-        );
         this.cfiLocation = '';
         this.percentage = 0;
       }
@@ -134,14 +122,6 @@ class ReaderDomainState {
           .getProgress(book.id)
           .then((value) => value?.updatedAt ?? null)
           .catch(() => null);
-        console.warn(
-          '[continue] fetchAndApplyBookState queued book',
-          book.id,
-          'epoch',
-          epoch,
-          'localUpdatedAt',
-          localUpdatedAt,
-        );
         void readerSyncState.fetchAndApplyBookState(
           sync,
           book.id,
@@ -154,14 +134,6 @@ class ReaderDomainState {
   }
 
   private applyRemoteProgress(progress: SupabaseProgressRow): void {
-    console.warn(
-      '[continue] applyRemoteProgress book',
-      progress.bookId,
-      'cfi',
-      progress.cfiLocation.slice(0, 60),
-      'pct',
-      progress.percentage,
-    );
     this.cfiLocation = progress.cfiLocation;
     this.percentage = progress.percentage;
     this.locatorJson = progress.locatorJson ?? null;

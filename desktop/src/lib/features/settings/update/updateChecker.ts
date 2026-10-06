@@ -35,14 +35,14 @@ export type UpdateCheckState =
     }
   | { status: 'error'; kind: UpdateErrorKind };
 
-export class FeedUnreachableError extends Error {
+class FeedUnreachableError extends Error {
   constructor(message = 'Update feed unreachable') {
     super(message);
     this.name = 'FeedUnreachableError';
   }
 }
 
-export class FeedMalformedError extends Error {
+class FeedMalformedError extends Error {
   constructor(message = 'Update feed malformed') {
     super(message);
     this.name = 'FeedMalformedError';

@@ -107,6 +107,37 @@ describe('CommandPalette', () => {
     expect(screen.getByText('No matching commands')).toBeInTheDocument();
   });
 
+  it('finds commands through a fuzzy subsequence match', async () => {
+    const actions = makeActions();
+    const input = await openPalette(actions);
+
+    await fireEvent.input(input, { target: { value: 'librry' } });
+    await tick();
+
+    const options = screen.getAllByRole('option');
+    expect(options.length).toBe(1);
+    expect(options[0].textContent).toBe('Library');
+  });
+
+  it('orders label matches above description-only matches, stable within a rank', async () => {
+    const actions = makeActions();
+    const input = await openPalette(actions);
+
+    // "a" hits several navigation labels and also the group name "Navigation",
+    // so the label matches must surface before the group-only matches.
+    await fireEvent.input(input, { target: { value: 'a' } });
+    await tick();
+
+    const texts = screen.getAllByRole('option').map((option) => option.textContent?.trim());
+    const libraryIndex = texts.indexOf('Library');
+    const homeIndex = texts.indexOf('Home');
+    expect(libraryIndex).toBeGreaterThanOrEqual(0);
+    expect(homeIndex).toBeGreaterThan(libraryIndex);
+
+    // Registry order is preserved inside the label-match rank.
+    expect(texts.slice(0, 5)).toEqual(['Library', 'Addons', 'Stats', 'Dictionary', 'Storage']);
+  });
+
   it('moves the active option with arrows, Home and End', async () => {
     const actions = makeActions();
     const input = await openPalette(actions);
@@ -175,6 +206,33 @@ describe('CommandPalette', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(opener));
     opener.remove();
+  });
+
+  it('falls back to the main content region when the opener is gone', async () => {
+    const actions = makeActions();
+    const main = document.createElement('main');
+    main.id = 'main-content';
+    main.tabIndex = -1;
+    document.body.appendChild(main);
+
+    const opener = document.createElement('button');
+    opener.textContent = 'opener';
+    document.body.appendChild(opener);
+    opener.focus();
+
+    await openPalette(actions);
+    expect(document.activeElement).not.toBe(opener);
+
+    // The element that opened the palette disappears while it is open: bits-ui
+    // has nothing to restore to, so the palette must fall back to main content
+    // instead of leaving focus on <body>.
+    opener.remove();
+
+    await fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(main));
+    main.remove();
   });
 
   it('announces the result count through a live region', async () => {

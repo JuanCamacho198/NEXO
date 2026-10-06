@@ -6,20 +6,16 @@
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
 
-  const AUTO_ROTATE_MS = 8000;
-
   let scrollEl = $state<HTMLUListElement | null>(null);
   let activeIndex = $state(0);
-  let paused = $state(false);
   let reducedMotion = $state(false);
-  let rotationTicks = $state(0);
 
   const books = $derived(libraryState.continueReadingBooks);
   const activeBook = $derived(books[activeIndex] ?? null);
   const showArrows = $derived(books.length > 1);
 
-  // 1) React to the user's reduced-motion preference (WCAG 2.2.2 kill-switch):
-  //    with `reduce`, the rotation timer never starts.
+  // React to the user's reduced-motion preference; it only decides whether the
+  // carousel scrolls smoothly or jumps.
   $effect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const apply = (): void => {
@@ -30,21 +26,8 @@
     return () => mq.removeEventListener('change', apply);
   });
 
-  // 2) Index-based auto-rotation timer (AD-4). Cleanup is automatic on
-  //    unmount or when any dependency changes. Manual arrows bump
-  //    rotationTicks to restart the 8s window without touching the index.
-  $effect(() => {
-    const n = books.length;
-    void rotationTicks;
-    if (n <= 1 || reducedMotion || paused) return;
-    const id = setInterval(() => {
-      activeIndex = (activeIndex + 1) % n;
-    }, AUTO_ROTATE_MS);
-    return () => clearInterval(id);
-  });
-
-  // 3) Scroll to the active card and clamp an out-of-range index when the
-  //    list shrinks (e.g. a book leaves the continue-reading partition).
+  // Scroll to the active card and clamp an out-of-range index when the
+  // list shrinks (e.g. a book leaves the continue-reading partition).
   $effect(() => {
     const n = books.length;
     if (n === 0) return;
@@ -57,7 +40,7 @@
     scrollEl?.scrollTo({ left: li.offsetLeft, behavior: reducedMotion ? 'auto' : 'smooth' });
   });
 
-  // 4) Re-sync the active index after a manual scroll snaps to a card.
+  // Re-sync the active index after a manual scroll snaps to a card.
   function onScrollEnd(): void {
     if (!scrollEl) return;
     const page = Math.round(scrollEl.scrollLeft / scrollEl.clientWidth);
@@ -68,41 +51,19 @@
     const n = books.length;
     if (!n) return;
     activeIndex = (activeIndex - 1 + n) % n;
-    rotationTicks += 1;
   }
 
   function handleNext(): void {
     const n = books.length;
     if (!n) return;
     activeIndex = (activeIndex + 1) % n;
-    rotationTicks += 1;
   }
 </script>
 
 {#if books.length === 0}
   <p class="text-sm text-(--color-text-muted)">{appState.t('home.continueReadingPlaceholder')}</p>
 {:else}
-  <!--
-    Pause on hover/focus and resume on leave (WCAG 2.2.2). Focus pause
-    covers keyboard users tabbing into the arrows or the card actions.
-  -->
-  <div
-    data-testid="continue-carousel"
-    role="group"
-    class="space-y-3"
-    onmouseenter={() => {
-      paused = true;
-    }}
-    onmouseleave={() => {
-      paused = false;
-    }}
-    onfocusin={() => {
-      paused = true;
-    }}
-    onfocusout={() => {
-      paused = false;
-    }}
-  >
+  <div data-testid="continue-carousel" role="group" class="space-y-3">
     <div class="flex items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-2">
         <h3 class="text-base font-semibold tracking-tight text-(--color-primary)">
@@ -147,13 +108,6 @@
       >
         {#each books as book (book.id)}
           <li class="relative snap-start shrink-0 w-full">
-            {#if book.readingStatus === 'reading'}
-              <span
-                class="pointer-events-none absolute left-2 top-2 z-10 rounded-full bg-(--color-accent-soft) px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-(--color-primary)"
-              >
-                {appState.t('home.continue.liveBadge')}
-              </span>
-            {/if}
             <BookCard
               {book}
               variant="continue-reading"
@@ -168,6 +122,13 @@
               t={appState.t}
             >
               {#snippet actions()}
+                {#if book.readingStatus === 'reading'}
+                  <span
+                    class="rounded-full bg-(--color-accent-soft) px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-(--color-primary)"
+                  >
+                    {appState.t('home.continue.liveBadge')}
+                  </span>
+                {/if}
                 <ShelfActionMenu
                   bookId={book.id}
                   isFavorite={Boolean(book.collectionIds?.includes(1))}
@@ -196,7 +157,7 @@
       </ul>
     </div>
 
-    <!-- Screen-reader announcement of the active book (manual and auto) -->
+    <!-- Screen-reader announcement of the active book -->
     <p class="sr-only" aria-live="polite" aria-atomic="true">
       {activeBook?.title ?? ''}
     </p>

@@ -129,7 +129,7 @@ export type { AddonAccessResolution };
 export type { AccessOption };
 
 /** The only known v2 capability id: the addon may resolve reading access. */
-export const RESOLVE_CAPABILITY = 'resolve';
+const RESOLVE_CAPABILITY = 'resolve';
 
 /** Per-item `accessType` wire values (open set on the wire; unknown ⇒ null). */
 export type AddonAccessType = 'free' | 'buy' | 'subscribe';
@@ -140,7 +140,7 @@ export type AddonAccessType = 'free' | 'buy' | 'subscribe';
  * Unknown or missing values return null so resolve callers fail closed
  * (never free).
  */
-export function parseAccessType(raw: unknown): AddonAccessType | null {
+function parseAccessType(raw: unknown): AddonAccessType | null {
   if (typeof raw !== 'string') return null;
   switch (raw.trim().toLowerCase()) {
     case 'free':
@@ -164,7 +164,7 @@ const LICENSE_CLEARED_TOKENS: ReadonlySet<string> = new Set([
 ]);
 
 /** True only for license tokens in the closed cleared set (case-insensitive). */
-export function isLicenseCleared(license: string | null): boolean {
+function isLicenseCleared(license: string | null): boolean {
   return license !== null && LICENSE_CLEARED_TOKENS.has(license.trim().toLowerCase());
 }
 

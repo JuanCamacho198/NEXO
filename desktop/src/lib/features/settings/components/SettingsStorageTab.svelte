@@ -14,7 +14,7 @@
   role="tabpanel"
   id="tabpanel-almacenamiento"
   aria-labelledby="tab-almacenamiento"
-  class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+  class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4"
 >
   <StorageView {t} books={libraryState.books} />
 </div>

@@ -31,17 +31,6 @@ export type ViewerHandle = {
   getTotalForHeader(): number;
 };
 
-export function isEpubFormat(book: { format?: string } | null | undefined): boolean {
-  return book?.format?.toLowerCase() === 'epub';
-}
-
-export function getViewerKind(book: { format?: string } | null | undefined): ViewerKind {
-  const fmt = book?.format?.toLowerCase();
-  if (fmt === 'pdf') return 'pdf';
-  if (fmt === 'epub') return 'epub';
-  return 'pdf';
-}
-
 export function createViewerSelection(
   getRefs: () => { pdf: PdfViewer | null; epub: EpubNativeViewer | null },
   getBook: () => ActiveBook | null,

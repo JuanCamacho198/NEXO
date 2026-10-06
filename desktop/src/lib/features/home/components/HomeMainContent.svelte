@@ -18,7 +18,7 @@
     <div class="min-w-0">
       <h2
         id="home-recent-books-heading"
-        class="text-base font-semibold tracking-tight text-(--color-primary)"
+        class="text-xl font-semibold tracking-tight text-(--color-primary)"
       >
         {t('home.recentBooksTitle')}
       </h2>

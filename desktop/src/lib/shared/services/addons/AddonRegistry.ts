@@ -47,7 +47,7 @@ export interface AddonRegistryStore {
 }
 
 /** Default store: the thin Rust CRUD commands (desktop only). */
-export class TauriAddonRegistryStore implements AddonRegistryStore {
+class TauriAddonRegistryStore implements AddonRegistryStore {
   async listInstalled(): Promise<RegistryStoreRow[]> {
     return invoke<RegistryStoreRow[]>('listInstalledAddons');
   }

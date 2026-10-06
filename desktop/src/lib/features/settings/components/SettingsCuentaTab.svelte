@@ -99,8 +99,10 @@
   const settingsError = $derived(localeState?.settingsError ?? legacyError ?? null);
 
   // Daily goal — collapsed row + inline chips. The row always reports the
-  // persisted value; the chips highlight the pending selection.
-  const canPersistDailyGoal = $derived(profileState?.canPersistDailyGoal ?? true);
+  // persisted value; the chips highlight the pending selection. Without a
+  // session the goal is still editable and is stored on this device, so the
+  // control is never disabled; `isDailyGoalLocal` only drives the hint.
+  const isDailyGoalLocal = $derived(profileState?.isDailyGoalLocal ?? false);
   const savedDailyGoalMinutes = $derived(settingsState.dailyGoalMinutes);
   let isGoalEditorOpen = $state(false);
   let goalTriggerEl = $state<HTMLButtonElement | null>(null);
@@ -145,7 +147,6 @@
   }
 
   async function chooseGoal(value: number): Promise<void> {
-    if (!canPersistDailyGoal) return;
     // Collapse first so focus is never lost with the removed chips.
     isGoalEditorOpen = false;
     goalTriggerEl?.focus();
@@ -170,10 +171,17 @@
   role="tabpanel"
   id="tabpanel-cuenta"
   aria-labelledby="tab-cuenta"
-  class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+  class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4"
 >
-  <section class="rounded-xl border border-(--color-border) bg-(--color-surface) overflow-visible">
-    <div class="p-4 border-b border-(--color-border) last:border-b-0">
+  <section class="space-y-5 w-full max-w-none">
+    <header class="flex flex-col gap-1">
+      <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
+        {t('settings.tab.account')}
+      </h1>
+      <p class="text-sm text-(--color-text-muted)">{t('settings.account.subtitle')}</p>
+    </header>
+
+    <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-5">
       <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
         {t('settings.authentication')}
       </h3>
@@ -206,11 +214,14 @@
         </p>
       {/if}
     </div>
-    <div class="p-4 border-b border-(--color-border) last:border-b-0">
+
+    <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-5">
       <ProfileCard {profile} {isProfileLoading} {profileError} {t} />
     </div>
+
     {#if authState.isAuthenticated && authState.userId}
-      <div class="p-4 border-b border-(--color-border) last:border-b-0">
+      <!-- Device rows are self-bordered cards, so this group stays borderless to keep one border level. -->
+      <div class="space-y-3">
         <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
           {t('settings.connectedDevices.title')}
         </h3>
@@ -223,7 +234,10 @@
         />
       </div>
     {/if}
-    <div class="p-4 flex flex-col gap-4">
+
+    <div
+      class="flex flex-col gap-4 rounded-xl border border-(--color-border) bg-(--color-surface) p-5"
+    >
       <div>
         <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.language')}</span>
         <Dropdown
@@ -261,70 +275,69 @@
         </div>
       </div>
     </div>
-  </section>
 
-  <section
-    class="rounded-xl border border-(--color-border) bg-(--color-surface)"
-    aria-label={t('settings.daily_goal_label')}
-  >
-    <div class="flex items-center justify-between gap-3 p-4">
-      <h3 class="m-0 min-w-0 text-sm font-medium text-(--color-primary)">
-        {t('settings.daily_goal_label')}
-        <span class="font-normal text-(--color-text-muted)"> · {savedDailyGoalMinutes} min</span>
-      </h3>
-      <button
-        type="button"
-        bind:this={goalTriggerEl}
-        class="shrink-0 cursor-pointer rounded-lg border border-(--color-border) px-3 py-1.5 text-sm text-(--color-primary) transition-colors duration-200 hover:border-(--color-primary) disabled:cursor-not-allowed disabled:opacity-50"
-        aria-expanded={isGoalEditorOpen}
-        aria-controls="daily-goal-options"
-        disabled={!canPersistDailyGoal}
-        onclick={toggleGoalEditor}
-      >
-        {isGoalEditorOpen ? t('settings.daily_goal_close') : t('settings.daily_goal_change')}
-      </button>
-    </div>
-
-    {#if !canPersistDailyGoal}
-      <p class="m-0 px-4 pb-4 text-xs text-(--color-text-muted)">
-        {t('settings.daily_goal_sign_in_required')}
-      </p>
-    {/if}
-
-    {#if isGoalEditorOpen}
-      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-      <div
-        id="daily-goal-options"
-        class="flex flex-wrap gap-2 border-t border-(--color-border) p-4"
-        role="group"
-        aria-label={t('settings.daily_goal_label')}
-        onkeydown={handleGoalOptionsKeydown}
-      >
-        {#each dailyGoalCards as card}
-          <button
-            type="button"
-            class="cursor-pointer rounded-full border px-3 py-1.5 text-sm transition-all duration-200 {selectedDailyGoal ===
-            card.value
-              ? 'border-(--color-primary) bg-(--color-accent-soft) text-(--color-primary)'
-              : 'border-(--color-border) text-(--color-text-muted) hover:text-(--color-primary)'}"
-            aria-pressed={selectedDailyGoal === card.value}
-            onclick={() => void chooseGoal(card.value)}
-          >
-            {t(card.labelKey)}
-            <span class="text-(--color-text-muted)"> · {card.minutesLabel}</span>
-          </button>
-        {/each}
-      </div>
-    {/if}
-
-    <p
-      role="status"
-      aria-live="polite"
-      class="m-0 text-xs {saveStatusMessage ? 'px-4 pb-4' : 'sr-only'}"
-      class:text-(--color-error)={isSaveStatusError}
-      class:text-(--color-text-muted)={!isSaveStatusError}
+    <section
+      class="rounded-xl border border-(--color-border) bg-(--color-surface)"
+      aria-label={t('settings.daily_goal_label')}
     >
-      {saveStatusMessage}
-    </p>
+      <div class="flex items-center justify-between gap-3 p-4">
+        <h3 class="m-0 min-w-0 text-sm font-medium text-(--color-primary)">
+          {t('settings.daily_goal_label')}
+          <span class="font-normal text-(--color-text-muted)"> · {savedDailyGoalMinutes} min</span>
+        </h3>
+        <button
+          type="button"
+          bind:this={goalTriggerEl}
+          class="shrink-0 cursor-pointer rounded-lg border border-(--color-border) px-3 py-1.5 text-sm text-(--color-primary) transition-colors duration-200 hover:border-(--color-primary)"
+          aria-expanded={isGoalEditorOpen}
+          aria-controls="daily-goal-options"
+          onclick={toggleGoalEditor}
+        >
+          {isGoalEditorOpen ? t('settings.daily_goal_close') : t('settings.daily_goal_change')}
+        </button>
+      </div>
+
+      {#if isDailyGoalLocal}
+        <p class="m-0 px-4 pb-4 text-xs text-(--color-text-muted)">
+          {t('settings.daily_goal_local_hint')}
+        </p>
+      {/if}
+
+      {#if isGoalEditorOpen}
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+        <div
+          id="daily-goal-options"
+          class="flex flex-wrap gap-2 border-t border-(--color-border) p-4"
+          role="group"
+          aria-label={t('settings.daily_goal_label')}
+          onkeydown={handleGoalOptionsKeydown}
+        >
+          {#each dailyGoalCards as card}
+            <button
+              type="button"
+              class="cursor-pointer rounded-full border px-3 py-1.5 text-sm transition-all duration-200 {selectedDailyGoal ===
+              card.value
+                ? 'border-(--color-primary) bg-(--color-accent-soft) text-(--color-primary)'
+                : 'border-(--color-border) text-(--color-text-muted) hover:text-(--color-primary)'}"
+              aria-pressed={selectedDailyGoal === card.value}
+              onclick={() => void chooseGoal(card.value)}
+            >
+              {t(card.labelKey)}
+              <span class="text-(--color-text-muted)"> · {card.minutesLabel}</span>
+            </button>
+          {/each}
+        </div>
+      {/if}
+
+      <p
+        role="status"
+        aria-live="polite"
+        class="m-0 text-xs {saveStatusMessage ? 'px-4 pb-4' : 'sr-only'}"
+        class:text-(--color-error)={isSaveStatusError}
+        class:text-(--color-text-muted)={!isSaveStatusError}
+      >
+        {saveStatusMessage}
+      </p>
+    </section>
   </section>
 </div>

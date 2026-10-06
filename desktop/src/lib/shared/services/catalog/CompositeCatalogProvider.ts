@@ -44,7 +44,7 @@ export interface CompositeOptions {
  * (`builtin:gutendex` -> `gutendex:`); addons use the source id itself
  * (`addon:<id>` -> `addon:<id>:`).
  */
-export function bookIdPrefixForSource(sourceId: string): string | null {
+function bookIdPrefixForSource(sourceId: string): string | null {
   if (sourceId.startsWith('builtin:')) return `${sourceId.slice('builtin:'.length)}:`;
   if (sourceId.startsWith('addon:')) return `${sourceId}:`;
   return null;

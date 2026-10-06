@@ -26,7 +26,7 @@ export const FEATURED_TTL_S = 21_600;
  * Discover cache format version (design A7): prefixed into every key.
  * v2 — keys carry the full source id; v1 rows age out unread.
  */
-export const DISCOVER_CACHE_VERSION = 'v2';
+const DISCOVER_CACHE_VERSION = 'v2';
 
 const PAGE_KEY_PREFIX = `p:${DISCOVER_CACHE_VERSION}:`;
 const DETAIL_KEY_PREFIX = `d:${DISCOVER_CACHE_VERSION}:`;

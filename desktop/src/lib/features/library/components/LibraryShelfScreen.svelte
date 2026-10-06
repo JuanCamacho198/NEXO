@@ -113,7 +113,7 @@
 {#snippet importAction(extraClass: string, label: string)}
   <button
     type="button"
-    class={`inline-flex items-center justify-center rounded-2xl border border-(--color-import) bg-transparent text-(--color-import) transition-colors hover:bg-(--color-import-bg) focus-visible:ring-2 ring-(--color-import) disabled:cursor-not-allowed disabled:opacity-50 ${extraClass}`}
+    class={`inline-flex items-center justify-center rounded-2xl border border-(--color-import) bg-transparent text-(--color-import) transition-colors hover:bg-(--color-import-bg) focus-visible:ring-2 ring-(--color-import) active:scale-96 disabled:cursor-not-allowed disabled:opacity-50 ${extraClass}`}
     disabled={isImporting}
     onclick={onImportBook}
   >

@@ -30,7 +30,7 @@ const dictionary: Record<string, string> = {
   'settings.daily_goal_close': 'Close',
   'settings.daily_goal_saved': 'Daily goal saved',
   'settings.daily_goal_save_error': "Couldn't save your daily goal. Try again.",
-  'settings.daily_goal_sign_in_required': 'Sign in to save your daily goal',
+  'settings.daily_goal_local_hint': 'Saved on this device. Sign in to sync across devices.',
   'settings.daily_goal_relaxed': 'Relaxed',
   'settings.daily_goal_regular': 'Regular',
   'settings.daily_goal_serious': 'Serious',
@@ -145,29 +145,39 @@ describe('SettingsCuentaTab daily goal', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Daily goal saved');
   });
 
-  it('never fakes a save for a local user: the control is disabled and explains why', async () => {
+  it('lets a local user set the goal, saves it and shows the local-only hint', async () => {
     const user = userEvent.setup();
     const { profileState, appState } = makeProfileState(null);
     render(SettingsCuentaTab, { t, profileState });
 
     const trigger = screen.getByRole('button', { name: 'Change' });
-    expect(trigger).toBeDisabled();
-    expect(screen.getByText('Sign in to save your daily goal')).toBeInTheDocument();
+    expect(trigger).not.toBeDisabled();
+    expect(
+      screen.getByText('Saved on this device. Sign in to sync across devices.'),
+    ).toBeInTheDocument();
 
     await user.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
 
-    expect(appState.saveDailyGoalMinutes).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: /Relaxed/ }));
+
+    expect(appState.saveDailyGoalMinutes).toHaveBeenCalledWith(10);
+    expect(await screen.findByRole('status')).toHaveTextContent('Daily goal saved');
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('renders the row label as a level-3 heading', () => {
+  it('renders the row label as a level-3 heading under the page header', () => {
     const { profileState } = makeProfileState('user-1');
     render(SettingsCuentaTab, { t, profileState });
 
     const heading = screen.getByRole('heading', { level: 3, name: /Daily goal/ });
     expect(heading).toBeInTheDocument();
-    for (const h of screen.getAllByRole('heading')) {
-      expect(h.tagName).toBe('H3');
-    }
+
+    // The tab now follows the Storage/Sync page pattern: one h1 page header and
+    // flat blocks whose titles are h3. The old "every heading is an H3" pin is
+    // obsolete once the page header exists; assert the header is the sole h1.
+    const levels = screen.getAllByRole('heading').map((h) => Number(h.tagName.slice(1)));
+    expect(levels[0]).toBe(1);
+    expect(levels.filter((level) => level === 1)).toHaveLength(1);
   });
 });

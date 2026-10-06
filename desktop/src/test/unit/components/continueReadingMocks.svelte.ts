@@ -13,6 +13,7 @@ const dictionary: Record<string, string> = {
   'home.continueReading': 'Continue Reading',
   'home.continueReadingPlaceholder': 'No in-progress books yet',
   'home.continue.progress': 'Progress',
+  'home.continue.position': 'p. {{current}} / {{total}}',
   'home.continue.liveBadge': 'IN PROGRESS',
   'home.continue.countAria': '{{count}} in progress',
   'home.continue.nextBook': 'Next',

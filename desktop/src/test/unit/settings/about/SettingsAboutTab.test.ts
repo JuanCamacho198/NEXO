@@ -144,12 +144,16 @@ describe('SettingsAboutTab', () => {
 
   it('keeps descending heading levels (no H4 before an H3)', () => {
     const { container } = renderAbout();
-    const headings = Array.from(container.querySelectorAll('h2, h3, h4, h5, h6')).map((node) => ({
-      level: Number(node.tagName.slice(1)),
-      text: node.textContent?.trim() ?? '',
-    }));
-    expect(headings[0]?.level).toBe(2);
-    const firstNonTwo = headings.find((heading) => heading.level !== 2);
-    expect(firstNonTwo?.level).toBe(3);
+    // The Panel container (its h2 title) is gone: the page header is now the h1
+    // and the first sub-heading is the h3 "Enlaces" section, so include h1.
+    const headings = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6')).map(
+      (node) => ({
+        level: Number(node.tagName.slice(1)),
+        text: node.textContent?.trim() ?? '',
+      }),
+    );
+    expect(headings[0]?.level).toBe(1);
+    const firstNonOne = headings.find((heading) => heading.level !== 1);
+    expect(firstNonOne?.level).toBe(3);
   });
 });
