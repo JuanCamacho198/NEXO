@@ -28,7 +28,7 @@
     /** Already chip-filtered books; used only while the rail is `Loaded`. */
     books?: CatalogBook[];
     t: Translate;
-    onOpen: (id: string) => void;
+    onOpen: (book: CatalogBook) => void;
     onRetry: () => void;
     onViewAll: () => void;
   } = $props();

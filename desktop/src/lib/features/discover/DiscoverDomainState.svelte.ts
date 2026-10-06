@@ -82,6 +82,10 @@ class DiscoverDomainState {
   private lastAttemptedPage = 0;
   /** Id of the last requested detail, so a failed load can be retried. */
   private lastDetailId: string | null = null;
+  /** Card payload of the last open, re-seeded by `retryDetail` when present. */
+  private lastDetailSeed: CatalogBook | null = null;
+  /** Bumped per open/close so a superseded enrichment cannot touch the sheet. */
+  private detailGeneration = 0;
   /** Transfer id of the in-flight backend download, or null. */
   private activeTransferId: string | null = null;
   /** Set by `cancelDownload` so a late settle becomes `cancelled`, never `imported`. */
@@ -164,36 +168,64 @@ class DiscoverDomainState {
     }
   }
 
-  async openDetail(id: string): Promise<void> {
+  /**
+   * Open a detail sheet. A `CatalogBook` seeds the sheet synchronously from the
+   * card's full payload and paints `loaded` with no round-trip; the provider
+   * call then runs as background enrichment whose success replaces the seed and
+   * whose failure leaves it in place. A bare id (direct callers, retries) keeps
+   * the original loading → fetch path.
+   */
+  async openDetail(bookOrId: CatalogBook | string): Promise<void> {
     // Opening a book supersedes any transfer in flight for the previous one.
     this.cancelDownload();
     this.resetDownload();
+    const seed = typeof bookOrId === 'string' ? null : bookOrId;
+    const id = typeof bookOrId === 'string' ? bookOrId : bookOrId.id;
     this.lastDetailId = id;
-    this.detailStatus = 'loading';
-    this.detail = null;
-    try {
-      this.detail = await this.provider.getDetails(id);
+    this.lastDetailSeed = seed;
+    // Supersede any enrichment still in flight for a previously opened book.
+    const generation = (this.detailGeneration += 1);
+    if (seed) {
+      this.detail = seed;
       this.detailStatus = 'loaded';
+    } else {
+      this.detail = null;
+      this.detailStatus = 'loading';
+    }
+    let enriched: CatalogBook;
+    try {
+      enriched = await this.provider.getDetails(id);
     } catch (err) {
+      // A superseded open must never touch the current sheet.
+      if (this.detailGeneration !== generation) return;
+      // With a seed, enrichment is best-effort: the card's payload stays on
+      // screen instead of blanking the sheet the user is already reading.
+      if (seed) return;
       const code = catalogCodeOf(err);
       // Offline is its own state: the detail sheet shows connectivity copy plus
       // a retry, not the generic "catalog unavailable" message.
       this.detailStatus =
         code === 'NOT_FOUND' ? 'notFound' : isOfflineCatalogCode(code) ? 'offline' : 'error';
+      return;
     }
+    if (this.detailGeneration !== generation) return;
+    this.detail = enriched;
+    this.detailStatus = 'loaded';
   }
 
   /** Re-open the last requested detail (the offline/error retry affordance). */
   async retryDetail(): Promise<void> {
-    const id = this.lastDetailId;
-    if (id === null) return;
-    await this.openDetail(id);
+    if (this.lastDetailId === null) return;
+    await this.openDetail(this.lastDetailSeed ?? this.lastDetailId);
   }
 
   dismissDetail(): void {
     this.cancelDownload();
+    // Supersede an in-flight enrichment so a closed sheet cannot reopen itself.
+    this.detailGeneration += 1;
     this.detail = null;
     this.detailStatus = 'closed';
+    this.lastDetailSeed = null;
     this.resetDownload();
   }
 

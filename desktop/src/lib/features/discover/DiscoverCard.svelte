@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { CatalogBook } from '$lib/shared/services/catalog';
 
-  let { book, onOpen }: { book: CatalogBook; onOpen: (id: string) => void } = $props();
+  let { book, onOpen }: { book: CatalogBook; onOpen: (book: CatalogBook) => void } = $props();
 
   let coverFailed = $state(false);
   const showCover = $derived(book.coverUrl !== null && !coverFailed);
@@ -19,7 +19,7 @@
 <button
   type="button"
   class="group flex flex-col gap-2 rounded-lg border border-(--color-border) bg-(--color-surface-subtle) p-2 text-left transition-colors hover:border-(--color-primary)/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)/50"
-  onclick={() => onOpen(book.id)}
+  onclick={() => onOpen(book)}
 >
   <div
     class="relative aspect-2/3 w-full overflow-hidden rounded-md bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3"

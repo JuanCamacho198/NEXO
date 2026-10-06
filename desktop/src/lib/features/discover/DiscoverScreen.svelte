@@ -221,7 +221,7 @@
           style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))"
         >
           {#each discoverState.books as book (book.id)}
-            <DiscoverCard {book} onOpen={(id) => void discoverState.openDetail(id)} />
+            <DiscoverCard {book} onOpen={(book) => void discoverState.openDetail(book)} />
           {/each}
         </div>
         {#if discoverState.status === 'loadingMore'}
@@ -268,7 +268,7 @@
           style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))"
         >
           {#each scopeView.books as book (book.id)}
-            <DiscoverCard {book} onOpen={(id) => void discoverState.openDetail(id)} />
+            <DiscoverCard {book} onOpen={(book) => void discoverState.openDetail(book)} />
           {/each}
         </div>
         {#if scopeView.kind === 'featured'}
@@ -287,7 +287,7 @@
         state={rail}
         books={railBooks(rail)}
         {t}
-        onOpen={(id) => void discoverState.openDetail(id)}
+        onOpen={(book) => void discoverState.openDetail(book)}
         onRetry={() => void discoverState.retryRail(index)}
         onViewAll={() => openRailScope(index)}
       />
