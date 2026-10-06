@@ -73,3 +73,6 @@ odd/
 *.keystore
 .nexo-keys/
 .playwright-mcp/
+
+# License attributions are kept locally, not versioned.
+THIRD-PARTY-NOTICES.md
