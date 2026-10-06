@@ -333,6 +333,18 @@ pub fn discover_cache_read(
         .optional()?;
     Ok(row.map(|(payload, fetched_at, ttl_s)| DiscoverCacheRow { payload, fetched_at, ttl_s }))
 }
+
+/// Prune catalog cache rows whose TTL has elapsed. Expiry is judged per row
+/// (`fetched_at + ttl_s < now_epoch_secs`), so a live row is never removed —
+/// the boundary is inclusive: `fetched_at + ttl_s == now_epoch_secs` survives,
+/// matching [`discover_cache_get`]. Returns the number of rows deleted.
+pub fn discover_cache_prune(connection: &Connection, now_epoch_secs: i64) -> AppResult<u64> {
+    let deleted = connection
+        .execute("DELETE FROM discover_cache WHERE fetched_at + ttl_s < ?1", [now_epoch_secs])
+        .map_err(AppError::Database)?;
+    Ok(deleted as u64)
+}
+
 fn has_column(connection: &Connection, table_name: &str, column_name: &str) -> AppResult<bool> {
     let mut statement = connection.prepare(&format!("PRAGMA table_info({})", table_name))?;
     let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
@@ -606,6 +618,72 @@ mod tests {
         let connection = memory_db_with_cache_table();
         let miss = discover_cache_read(&connection, "p:v2:missing:1").expect("read succeeds");
         assert_eq!(miss, None);
+    }
+
+    #[test]
+    fn test_discover_cache_prune_deletes_expired_rows() {
+        let connection = memory_db_with_cache_table();
+        discover_cache_put(&connection, "d:dead", "{}", 1_000, 10).expect("put succeeds");
+        discover_cache_put(&connection, "d:live", "{}", 1_000, 86_400).expect("put succeeds");
+
+        let pruned = discover_cache_prune(&connection, 1_011).expect("prune succeeds");
+
+        assert_eq!(pruned, 1);
+        let remaining: i64 = connection
+            .query_row("SELECT COUNT(*) FROM discover_cache", [], |row| row.get(0))
+            .expect("count succeeds");
+        assert_eq!(remaining, 1);
+        assert!(discover_cache_read(&connection, "d:live").expect("read succeeds").is_some());
+    }
+
+    #[test]
+    fn test_discover_cache_prune_keeps_live_row_at_boundary() {
+        let connection = memory_db_with_cache_table();
+        // fetched_at + ttl_s == now is LIVE: the boundary is inclusive.
+        discover_cache_put(&connection, "d:boundary", "{}", 1_000, 10).expect("put succeeds");
+
+        let pruned = discover_cache_prune(&connection, 1_010).expect("prune succeeds");
+
+        assert_eq!(pruned, 0);
+        assert!(discover_cache_read(&connection, "d:boundary").expect("read succeeds").is_some());
+    }
+
+    #[test]
+    fn test_discover_cache_prune_removes_row_past_boundary() {
+        let connection = memory_db_with_cache_table();
+        // One second past the boundary the row is expired.
+        discover_cache_put(&connection, "d:boundary", "{}", 1_000, 10).expect("put succeeds");
+
+        let pruned = discover_cache_prune(&connection, 1_011).expect("prune succeeds");
+
+        assert_eq!(pruned, 1);
+        assert!(discover_cache_read(&connection, "d:boundary").expect("read succeeds").is_none());
+    }
+
+    #[test]
+    fn test_discover_cache_prune_judges_each_row_by_its_own_ttl() {
+        let connection = memory_db_with_cache_table();
+        // Same fetched_at, different ttl_s: the predicate is per row, not per table.
+        discover_cache_put(&connection, "d:short", "{}", 1_000, 10).expect("put succeeds");
+        discover_cache_put(&connection, "d:long", "{}", 1_000, 10_000).expect("put succeeds");
+
+        let pruned = discover_cache_prune(&connection, 1_500).expect("prune succeeds");
+
+        assert_eq!(pruned, 1);
+        assert!(discover_cache_read(&connection, "d:short").expect("read succeeds").is_none());
+        assert!(discover_cache_read(&connection, "d:long").expect("read succeeds").is_some());
+    }
+
+    #[test]
+    fn test_discover_cache_prune_is_idempotent() {
+        let connection = memory_db_with_cache_table();
+        discover_cache_put(&connection, "d:dead", "{}", 1_000, 10).expect("put succeeds");
+
+        let first = discover_cache_prune(&connection, 2_000).expect("prune succeeds");
+        let second = discover_cache_prune(&connection, 2_000).expect("prune succeeds");
+
+        assert_eq!(first, 1);
+        assert_eq!(second, 0);
     }
 
     #[test]

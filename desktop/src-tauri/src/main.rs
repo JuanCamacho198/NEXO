@@ -35,6 +35,17 @@ fn build_state(app: &AppHandle) -> Result<AppState, String> {
     let retention_db_path = db_path.clone();
     std::thread::spawn(move || {
         if let Ok(connection) = Connection::open(&retention_db_path) {
+            // DISC-06: bound the TTL-based discover_cache table. Pruned before
+            // the retention pass so its existing VACUUM reclaims the freed
+            // pages and no second VACUUM is added. Best-effort, like FR-14.
+            if let Ok(since_epoch) =
+                std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+            {
+                let _ = nexo_desktop::db::discover_cache_prune(
+                    &connection,
+                    since_epoch.as_secs() as i64,
+                );
+            }
             let _ = nexo_desktop::retention::run_retention(
                 &connection,
                 nexo_desktop::retention::RETENTION_DAYS,
