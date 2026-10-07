@@ -130,13 +130,25 @@ describe('LibraryShelfScreen states (LIB-02)', () => {
     expect(document.activeElement).toBe(search);
   });
 
-  it('lays the filter chips left and the sort/view controls right in the same row', () => {
+  it('gives the search its own row and splits chips left from sort/view right', () => {
     const { container } = render(LibraryShelfScreen, {
       props: { books: [book], isLoading: false, t },
     });
 
-    const row = container.querySelector<HTMLElement>('[class*="lg:justify-between"]');
-    expect(row).not.toBeNull();
+    const search = screen.getByTestId('shelf-search');
+    const band = search.closest('section')!.firstElementChild as HTMLElement;
+    expect(band.children).toHaveLength(2);
+
+    const [searchRow, controlsRow] = Array.from(band.children) as HTMLElement[];
+
+    // The search line carries nothing else.
+    expect(searchRow.contains(search)).toBe(true);
+    expect(searchRow.querySelector('[data-testid^="shelf-tab-"]')).toBeNull();
+    expect(searchRow.querySelector('[data-testid="shelf-sort"]')).toBeNull();
+
+    // The second row splits the filter chips (left) from the sort and view
+    // controls (right).
+    expect(controlsRow.className).toContain('justify-between');
     expect(container.querySelector('[class*="lg:justify-end"]')).toBeNull();
     expect(container.querySelector('[class*="xl:ml-auto"]')).toBeNull();
 
@@ -144,11 +156,9 @@ describe('LibraryShelfScreen states (LIB-02)', () => {
     const sort = screen.getByTestId('shelf-sort');
     const toggle = screen.getByTestId('shelf-view-toggle');
 
-    // Chips are the row's first child; the sort + view controls are the last,
-    // and stay pushed right even when they wrap to their own line.
-    expect(row!.firstElementChild!.contains(chips)).toBe(true);
-    expect(row!.lastElementChild!.contains(sort)).toBe(true);
-    expect(row!.lastElementChild!.contains(toggle)).toBe(true);
-    expect(row!.lastElementChild!.className).toContain('lg:ml-auto');
+    expect(controlsRow.firstElementChild!.contains(chips)).toBe(true);
+    expect(controlsRow.lastElementChild!.contains(sort)).toBe(true);
+    expect(controlsRow.lastElementChild!.contains(toggle)).toBe(true);
+    expect(controlsRow.lastElementChild!.className).toContain('ml-auto');
   });
 });
