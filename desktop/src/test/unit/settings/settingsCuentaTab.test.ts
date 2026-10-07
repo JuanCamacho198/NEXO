@@ -113,6 +113,44 @@ function makeProfileState(userId: string | null) {
   return { profileState, appState, settingsState };
 }
 
+describe('SettingsCuentaTab atom migration (UI-04)', () => {
+  it('renders the theme pair through the Button atom with pressed state', async () => {
+    const user = userEvent.setup();
+    renderCuenta();
+
+    const light = screen.getByRole('button', { name: 'Light' });
+    const dark = screen.getByRole('button', { name: 'Dark' });
+    for (const control of [light, dark]) {
+      expect(control).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+      expect(control).not.toHaveClass('text-xs');
+    }
+
+    await user.click(light);
+    expect(light).toHaveAttribute('aria-pressed', 'true');
+    expect(dark).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('renders the daily-goal trigger and chips through the Button atom', async () => {
+    const user = userEvent.setup();
+    const { profileState } = makeProfileState('user-1');
+    render(SettingsCuentaTab, { t, profileState });
+
+    const trigger = screen.getByRole('button', { name: 'Change' });
+    expect(trigger).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+    expect(trigger).toHaveAttribute('aria-controls', 'daily-goal-options');
+    expect(trigger).toHaveAttribute('id', 'daily-goal-trigger');
+
+    await user.click(trigger);
+    const chip = screen.getByRole('button', { name: /Relaxed/ });
+    expect(chip).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+    expect(chip).toHaveAttribute('aria-pressed');
+  });
+
+  it('folds the account blocks into Panel sections, not hand-rolled divs', () => {
+    const { container } = renderCuenta();
+    expect(container.querySelector('div.rounded-xl')).toBeNull();
+  });
+});
 describe('SettingsCuentaTab daily goal', () => {
   it('collapses the options by default and toggles aria-expanded', async () => {
     const user = userEvent.setup();

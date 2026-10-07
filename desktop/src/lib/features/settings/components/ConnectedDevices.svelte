@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Button from '$lib/shared/ui/forms/Button.svelte';
   import type { DeviceViewModel } from '$lib/services/devices';
   import type { MessageKey } from '$lib/shared/i18n';
 
@@ -234,15 +235,18 @@
       </p>
     </div>
 
-    <!-- Remove button -->
+    <!-- Remove button: ghost trigger, following the StorageView per-book
+         delete-trigger precedent. The old text-error tint has no outline/text
+         atom, so the control intentionally renders in the primary tone. -->
     {#if !isCurrent && onremove}
-      <button
-        class="shrink-0 cursor-pointer border-none bg-transparent p-0 text-xs text-(--color-error) transition-opacity duration-150 hover:opacity-80"
+      <Button
+        variant="ghost"
+        size="sm"
         aria-label={t('settings.connectedDevices.removeLabel', { name: device.name })}
         onclick={onremove}
       >
         {t('settings.connectedDevices.remove')}
-      </button>
+      </Button>
     {/if}
   </div>
 {/snippet}

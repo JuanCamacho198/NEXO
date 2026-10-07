@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as Sentry from '@sentry/browser';
+  import Button from '$lib/shared/ui/forms/Button.svelte';
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import { getSentrySettings } from '$lib/shared/logger/sentryConfig';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -43,24 +44,26 @@
 <Panel title={t('settings.privacy.title')}>
   <div class="flex flex-col gap-3">
     <p class="text-xs text-(--color-text-muted)">{t('settings.privacy.description')}</p>
-    <button
-      type="button"
+    <Button
+      variant="secondary"
+      size="sm"
       role="switch"
       aria-checked={telemetryEnabled}
-      class="self-start flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all duration-200 text-xs disabled:opacity-60 disabled:cursor-not-allowed border-(--color-border) bg-(--color-background) hover:bg-(--color-surface-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent)"
-      onclick={onToggle}
+      data-testid="privacy-telemetry-switch"
+      class="self-start gap-2.5"
+      onclick={() => void onToggle()}
     >
       <span
-        class={`w-9 h-5 rounded-full relative transition-colors ${telemetryEnabled ? 'bg-green-500' : 'bg-(--color-border)'}`}
+        class={`w-9 h-5 rounded-full relative transition-colors ${telemetryEnabled ? 'bg-(--color-success)' : 'bg-(--color-border)'}`}
       >
         <span
           class={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${telemetryEnabled ? 'left-4.5' : 'left-0.5'}`}
         ></span>
       </span>
       <span>{t('settings.privacy.sendTelemetry')}</span>
-      <span class="text-(--color-text-muted)">
+      <span class="text-xs text-(--color-text-muted)">
         {telemetryEnabled ? t('settings.privacy.telemetryOn') : t('settings.privacy.telemetryOff')}
       </span>
-    </button>
+    </Button>
   </div>
 </Panel>

@@ -2,6 +2,7 @@
   import { GoogleLoginButton } from '$lib/features/library';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import { Button } from '$lib/shared/ui';
+  import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import ProfileCard from './ProfileCard.svelte';
   import ConnectedDevices from './ConnectedDevices.svelte';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
@@ -105,7 +106,6 @@
   const isDailyGoalLocal = $derived(profileState?.isDailyGoalLocal ?? false);
   const savedDailyGoalMinutes = $derived(settingsState.dailyGoalMinutes);
   let isGoalEditorOpen = $state(false);
-  let goalTriggerEl = $state<HTMLButtonElement | null>(null);
 
   const saveStatusMessage = $derived(
     isSavingDailyGoal
@@ -119,6 +119,13 @@
   const isSaveStatusError = $derived(
     !isSavingDailyGoal && profileState?.dailyGoalSaveState === 'error',
   );
+
+  // The goal trigger is an atom (a component instance cannot take
+  // `bind:this` as an element), so focus moves through its forwarded id.
+  const GOAL_TRIGGER_ID = 'daily-goal-trigger';
+  function focusGoalTrigger(): void {
+    document.getElementById(GOAL_TRIGGER_ID)?.focus();
+  }
 
   function handleLocaleChange(value: string): void {
     if (localeState) void localeState.handleLocaleSelect(value);
@@ -149,7 +156,7 @@
   async function chooseGoal(value: number): Promise<void> {
     // Collapse first so focus is never lost with the removed chips.
     isGoalEditorOpen = false;
-    goalTriggerEl?.focus();
+    focusGoalTrigger();
     if (profileState) {
       await profileState.applyDailyGoal(value);
     } else {
@@ -162,7 +169,7 @@
     if (event.key === 'Escape') {
       event.preventDefault();
       isGoalEditorOpen = false;
-      goalTriggerEl?.focus();
+      focusGoalTrigger();
     }
   }
 </script>
@@ -181,20 +188,16 @@
       <p class="text-sm text-(--color-text-muted)">{t('settings.account.subtitle')}</p>
     </header>
 
-    <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-5">
-      <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
-        {t('settings.authentication')}
-      </h3>
-      <p class="text-2xs text-(--color-text-muted) mb-3">
-        {t('settings.authDescription')}
-      </p>
+    <Panel title={t('settings.authentication')} subtitle={t('settings.authDescription')}>
       <GoogleLoginButton {t} />
       {#if authState.isAuthenticated}
         <Button
           variant="danger"
+          size="md"
+          fullWidth
+          class="mt-4"
           disabled={isSigningOut}
           onclick={handleSignOut}
-          class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm mt-4"
         >
           {isSigningOut ? t('welcome.signingOut') : t('welcome.signOut')}
         </Button>
@@ -213,11 +216,11 @@
           {settingsError}
         </p>
       {/if}
-    </div>
+    </Panel>
 
-    <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-5">
+    <Panel>
       <ProfileCard {profile} {isProfileLoading} {profileError} {t} />
-    </div>
+    </Panel>
 
     {#if authState.isAuthenticated && authState.userId}
       <!-- Device rows are self-bordered cards, so this group stays borderless to keep one border level. -->
@@ -235,66 +238,63 @@
       </div>
     {/if}
 
-    <div
-      class="flex flex-col gap-4 rounded-xl border border-(--color-border) bg-(--color-surface) p-5"
-    >
-      <div>
-        <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.language')}</span>
-        <Dropdown
-          options={localeOptions}
-          value={locale}
-          class="w-full"
-          onchange={({ value }) => handleLocaleChange(value)}
-        />
-      </div>
-      <div>
-        <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.theme')}</span>
-        <div class="flex gap-2" role="group" aria-label={t('settings.theme')}>
-          <button
-            type="button"
-            class="flex-1 cursor-pointer rounded-lg border px-3 py-2 text-sm transition-all duration-200 {$theme ===
-            'light'
-              ? 'border-(--color-primary) text-(--color-primary)'
-              : 'border-(--color-border) text-(--color-text-muted)'}"
-            aria-pressed={$theme === 'light'}
-            onclick={() => setTheme('light')}
-          >
-            {t('settings.theme.light')}
-          </button>
-          <button
-            type="button"
-            class="flex-1 cursor-pointer rounded-lg border px-3 py-2 text-sm transition-all duration-200 {$theme ===
-            'dark'
-              ? 'border-(--color-primary) text-(--color-primary)'
-              : 'border-(--color-border) text-(--color-text-muted)'}"
-            aria-pressed={$theme === 'dark'}
-            onclick={() => setTheme('dark')}
-          >
-            {t('settings.theme.dark')}
-          </button>
+    <Panel>
+      <div class="flex flex-col gap-4">
+        <div>
+          <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.language')}</span>
+          <Dropdown
+            options={localeOptions}
+            value={locale}
+            class="w-full"
+            onchange={({ value }) => handleLocaleChange(value)}
+          />
+        </div>
+        <div>
+          <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.theme')}</span>
+          <!-- Segmented pair: the active side takes the filled primary tone,
+               the other stays secondary. Selection is also in `aria-pressed`. -->
+          <div class="flex gap-2" role="group" aria-label={t('settings.theme')}>
+            <Button
+              variant={$theme === 'light' ? 'primary' : 'secondary'}
+              size="sm"
+              class="flex-1"
+              aria-pressed={$theme === 'light'}
+              onclick={() => setTheme('light')}
+            >
+              {t('settings.theme.light')}
+            </Button>
+            <Button
+              variant={$theme === 'dark' ? 'primary' : 'secondary'}
+              size="sm"
+              class="flex-1"
+              aria-pressed={$theme === 'dark'}
+              onclick={() => setTheme('dark')}
+            >
+              {t('settings.theme.dark')}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </Panel>
 
-    <section
-      class="rounded-xl border border-(--color-border) bg-(--color-surface)"
-      aria-label={t('settings.daily_goal_label')}
-    >
+    <!-- No Panel title: the h3 below must stay an h3 (heading-order test).
+         Padding is none because the row keeps its own inner spacing. -->
+    <Panel aria-label={t('settings.daily_goal_label')} padding="none">
       <div class="flex items-center justify-between gap-3 p-4">
         <h3 class="m-0 min-w-0 text-sm font-medium text-(--color-primary)">
           {t('settings.daily_goal_label')}
           <span class="font-normal text-(--color-text-muted)"> · {savedDailyGoalMinutes} min</span>
         </h3>
-        <button
-          type="button"
-          bind:this={goalTriggerEl}
-          class="shrink-0 cursor-pointer rounded-lg border border-(--color-border) px-3 py-1.5 text-sm text-(--color-primary) transition-colors duration-200 hover:border-(--color-primary)"
+        <Button
+          variant="secondary"
+          size="sm"
+          id={GOAL_TRIGGER_ID}
           aria-expanded={isGoalEditorOpen}
           aria-controls="daily-goal-options"
           onclick={toggleGoalEditor}
         >
           {isGoalEditorOpen ? t('settings.daily_goal_close') : t('settings.daily_goal_change')}
-        </button>
+        </Button>
       </div>
 
       {#if isDailyGoalLocal}
@@ -313,18 +313,18 @@
           onkeydown={handleGoalOptionsKeydown}
         >
           {#each dailyGoalCards as card}
-            <button
-              type="button"
-              class="cursor-pointer rounded-full border px-3 py-1.5 text-sm transition-all duration-200 {selectedDailyGoal ===
-              card.value
-                ? 'border-(--color-primary) bg-(--color-accent-soft) text-(--color-primary)'
-                : 'border-(--color-border) text-(--color-text-muted) hover:text-(--color-primary)'}"
+            <!-- The pending pick takes the filled primary tone; the rest stay
+                 secondary. The old pill shape has no atom equivalent, so the
+                 chips intentionally render at the atom's radius. -->
+            <Button
+              variant={selectedDailyGoal === card.value ? 'primary' : 'secondary'}
+              size="sm"
               aria-pressed={selectedDailyGoal === card.value}
               onclick={() => void chooseGoal(card.value)}
             >
               {t(card.labelKey)}
-              <span class="text-(--color-text-muted)"> · {card.minutesLabel}</span>
-            </button>
+              <span> · {card.minutesLabel}</span>
+            </Button>
           {/each}
         </div>
       {/if}
@@ -338,6 +338,6 @@
       >
         {saveStatusMessage}
       </p>
-    </section>
+    </Panel>
   </section>
 </div>

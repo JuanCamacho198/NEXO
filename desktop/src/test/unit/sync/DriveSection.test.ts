@@ -95,3 +95,41 @@ describe('DriveSection three states (FR-DD1)', () => {
     expect(await screen.findByText('settings.sync.drive.notConnected')).toBeInTheDocument();
   });
 });
+
+describe('DriveSection atom migration (UI-04)', () => {
+  it('renders Connect through the Button atom with its testid', async () => {
+    render(DriveSection, { props: { t } });
+
+    const connect = await screen.findByTestId('drive-connect');
+    expect(connect.tagName).toBe('BUTTON');
+    expect(connect).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+  });
+
+  it('renders Disconnect through the Button atom with its testid', async () => {
+    driveState.setDriveAuthorized(true);
+    render(DriveSection, { props: { t } });
+
+    const disconnect = await screen.findByTestId('drive-disconnect');
+    expect(disconnect.tagName).toBe('BUTTON');
+    expect(disconnect).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+  });
+
+  it('renders Retry through the Button atom with its testid', async () => {
+    driveState.setDriveError('LOOPBACK_UNAVAILABLE');
+    render(DriveSection, { props: { t } });
+
+    const retry = await screen.findByTestId('drive-retry');
+    expect(retry.tagName).toBe('BUTTON');
+    expect(retry).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+  });
+
+  it('renders no raw buttons in the connected state', async () => {
+    driveState.setDriveAuthorized(true);
+    const { container } = render(DriveSection, { props: { t } });
+    await screen.findByTestId('drive-disconnect');
+
+    for (const button of container.querySelectorAll('button')) {
+      expect(button.classList.contains('font-medium')).toBe(true);
+    }
+  });
+});

@@ -20,6 +20,7 @@
   import { driveState } from '$lib/shared/stores/driveState.svelte';
   import { beginDriveConnect } from '$lib/shared/services/DriveConnectService';
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
+  import Button from '$lib/shared/ui/forms/Button.svelte';
 
   let {
     isOpen = false,
@@ -146,11 +147,7 @@
 {#if isOpen}
   <aside class="w-full h-full flex-1 flex flex-col bg-(--color-background) overflow-hidden min-h-0">
     <div class="flex items-center p-3 border-b border-(--color-border)">
-      <button
-        class="inline-flex items-center justify-center size-8 rounded-lg bg-(--color-surface) border border-(--color-border) text-(--color-text-muted) cursor-pointer hover:text-(--color-primary) hover:border-(--color-primary) transition-all duration-200"
-        onclick={closePanel}
-        aria-label={t('app.backToHome')}
-      >
+      <Button variant="secondary" size="sm" onclick={closePanel} aria-label={t('app.backToHome')}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="16"
@@ -164,7 +161,7 @@
         >
           <path d="M19 12H5m7-7l-7 7 7 7" />
         </svg>
-      </button>
+      </Button>
     </div>
 
     <SettingsTabs

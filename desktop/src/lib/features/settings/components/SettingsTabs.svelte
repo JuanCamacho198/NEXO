@@ -5,6 +5,7 @@
   import Info from 'lucide-svelte/icons/info';
   import User from 'lucide-svelte/icons/user';
   import type { Icon as LucideIcon } from 'lucide-svelte';
+  import Button from '$lib/shared/ui/forms/Button.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { SettingsTab } from '../useSettingsRouter.svelte';
 
@@ -55,22 +56,26 @@
 >
   {#each tabs as tab (tab.id)}
     {@const TabIcon = tab.icon}
-    <button
-      type="button"
+    <!-- The atom owns the control chrome; the selected tab takes the filled
+         secondary tone and the rest stay ghost. The old accent-soft wash with
+         an accent-start underline has no atom equivalent, so the selected
+         state is intentionally quieter — selection is still exposed through
+         `aria-selected`. -->
+    <Button
+      variant={activeTab === tab.id ? 'secondary' : 'ghost'}
+      size="sm"
       role="tab"
       aria-selected={activeTab === tab.id}
       aria-controls="tabpanel-{tab.id}"
       id="tab-{tab.id}"
       tabindex={activeTab === tab.id ? 0 : -1}
-      class={`flex-1 px-2 py-3 border-none cursor-pointer text-2sm border-b-2 transition-all duration-200 flex items-center justify-center gap-1.5 ${
-        activeTab === tab.id
-          ? 'bg-(--color-accent-soft) text-(--color-primary) border-(--color-accent-start) font-semibold'
-          : 'border-transparent text-(--color-text-muted,var(--color-secondary)) hover:text-(--color-primary)'
-      }`}
+      class="flex-1"
       onclick={() => onTabChange(tab.id)}
     >
-      <TabIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
+      {#snippet leadingIcon()}
+        <TabIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
+      {/snippet}
       <span>{t(tab.labelKey as MessageKey) || tab.fallback}</span>
-    </button>
+    </Button>
   {/each}
 </div>

@@ -142,6 +142,28 @@ describe('SettingsAboutTab', () => {
     expect(container.querySelector('blockquote')).not.toBeNull();
   });
 
+  it('renders the version-copy and source controls through the Button atom', async () => {
+    renderAbout();
+
+    const copy = await screen.findByRole('button', { name: 'Copiar versión' });
+    expect(copy).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+    expect(copy).toHaveAttribute('aria-label', 'Copiar versión');
+
+    const source = screen.getByRole('button', { name: 'Fuente' });
+    expect(source).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+  });
+
+  it('renders no raw buttons and folds the quote figure into a Panel', async () => {
+    const { container } = renderAbout();
+    await screen.findByText('Versión 1.2.3');
+
+    for (const button of container.querySelectorAll('button')) {
+      expect(button.classList.contains('font-medium')).toBe(true);
+    }
+    expect(container.querySelector('figure')).toBeNull();
+    expect(container.querySelector('blockquote')).not.toBeNull();
+  });
+
   it('keeps descending heading levels (no H4 before an H3)', () => {
     const { container } = renderAbout();
     // The Panel container (its h2 title) is gone: the page header is now the h1

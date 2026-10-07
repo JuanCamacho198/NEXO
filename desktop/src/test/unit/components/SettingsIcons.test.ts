@@ -51,6 +51,26 @@ describe('settings icon migration', () => {
     }
   });
 
+  it('renders the tab controls through the Button atom with selection intact', () => {
+    render(SettingsTabs, {
+      activeTab: 'cuenta',
+      onTabChange: () => {},
+      onKeydown: () => {},
+      t,
+    });
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(6);
+    for (const tab of tabs) {
+      expect(tab.tagName).toBe('BUTTON');
+      expect(tab).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+    }
+
+    const selected = screen.getByRole('tab', { selected: true });
+    expect(selected).toHaveAttribute('aria-selected', 'true');
+    expect(selected).toHaveAttribute('id', 'tab-cuenta');
+    expect(selected).toHaveClass('bg-(--color-surface)');
+  });
   it('renders the daily goal as a collapsed row instead of the removed icon-card grid', () => {
     const { container } = render(SettingsCuentaTab, {
       t,

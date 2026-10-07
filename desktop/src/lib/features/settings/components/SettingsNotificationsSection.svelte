@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Button from '$lib/shared/ui/forms/Button.svelte';
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import {
     getCachedNotificationPreferences,
@@ -51,24 +52,25 @@
   hint: string,
   ontoggle: () => void,
 )}
-  <button
-    type="button"
+  <Button
+    variant="secondary"
+    size="sm"
     role="switch"
     aria-checked={checked}
     data-testid={testId}
-    class="self-start flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all duration-200 text-xs border-(--color-border) bg-(--color-background) hover:bg-(--color-surface-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent)"
+    class="self-start gap-2.5"
     onclick={ontoggle}
   >
     <span
-      class={`w-9 h-5 rounded-full relative transition-colors ${checked ? 'bg-green-500' : 'bg-(--color-border)'}`}
+      class={`w-9 h-5 rounded-full relative transition-colors ${checked ? 'bg-(--color-success)' : 'bg-(--color-border)'}`}
     >
       <span
         class={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${checked ? 'left-4.5' : 'left-0.5'}`}
       ></span>
     </span>
     <span>{label}</span>
-    <span class="text-(--color-text-muted)">{hint}</span>
-  </button>
+    <span class="text-xs text-(--color-text-muted)">{hint}</span>
+  </Button>
 {/snippet}
 
 <Panel title={t('settings.notifications.delivery.title')}>

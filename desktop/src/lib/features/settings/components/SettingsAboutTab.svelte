@@ -4,6 +4,7 @@
   import Star from 'lucide-svelte/icons/star';
   import { openUrl } from '@tauri-apps/plugin-opener';
   import Button from '$lib/shared/ui/forms/Button.svelte';
+  import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { UiLocale } from '$lib/shared/types';
   import {
@@ -185,8 +186,10 @@
     <p class="text-sm text-(--color-text-muted)">{t('settings.about.subtitle')}</p>
   </header>
 
-  <!-- Identity: icon, name, real version (copyable), channel. -->
-  <section class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4">
+  <!-- Identity: icon, name, real version (copyable), channel. The Panel
+       carries no title so the app name keeps its existing span (not a
+       heading) and the page h1 stays the sole top heading. -->
+  <Panel>
     <div class="flex items-center gap-3">
       <Info size={32} strokeWidth={2} class="text-(--color-primary)" aria-hidden="true" />
       <div class="flex min-w-0 flex-col">
@@ -194,9 +197,9 @@
           >{t('settings.about.appName')}</span
         >
         {#if installedVersion}
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 self-start rounded-lg px-1.5 py-0.5 text-xs text-(--color-text-muted) transition-colors hover:bg-(--color-surface-hover) hover:text-(--color-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent-blue)"
+          <Button
+            variant="ghost"
+            size="sm"
             onclick={() => void copyVersion()}
             aria-label={t('settings.about.copyVersion')}
           >
@@ -204,7 +207,7 @@
             <span aria-live="polite">
               {versionCopied ? t('settings.about.versionCopied') : t('settings.about.copyVersion')}
             </span>
-          </button>
+          </Button>
         {:else if versionFailed}
           <span class="text-xs text-(--color-text-muted)">{t('settings.about.versionUnknown')}</span
           >
@@ -239,16 +242,14 @@
         {/if}
       </div>
     {/if}
-  </section>
+  </Panel>
 
   <!-- Update notice: a status region, not a modal. It needs neither
        interruption nor protected focus, and the Settings overlay already owns
        Escape and focus, so a nested dialog would be a false aria-modal. -->
   {#if dialog}
-    <section
-      aria-labelledby="update-available-title"
-      class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4"
-    >
+    <!-- No Panel title: the h3 below must stay an h3 (heading-order test). -->
+    <Panel aria-labelledby="update-available-title">
       <h3
         id="update-available-title"
         class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)"
@@ -308,21 +309,21 @@
           </p>
         {/if}
       {/if}
-    </section>
+    </Panel>
   {/if}
 
   <!-- Daily quote: discrete, factual, verifiable. No protagonist heading, and
-       it never displaces version, update or support. -->
+       it never displaces version, update or support. The recessed Panel
+       variant replaces the hand-rolled surface-dim figure; the caption uses
+       a div because figcaption requires a figure parent. -->
   {#if dailyQuote}
     {@const quote = dailyQuote}
     {@const display = quoteDisplayText(quote, locale)}
-    <figure
-      class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface-dim) p-4"
-    >
+    <Panel variant="surface">
       <blockquote class="m-0">
         <p class="whitespace-pre-line text-sm italic text-(--color-primary)">{display.text}</p>
       </blockquote>
-      <figcaption
+      <div
         class="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs text-(--color-text-muted)"
       >
         <span class="font-medium text-(--color-primary)">{quote.author}</span>
@@ -335,13 +336,16 @@
             {t('settings.about.quoteTranslated')}
           </span>
         {/if}
-        <button
-          type="button"
-          class="rounded-sm underline decoration-dotted underline-offset-2 hover:text-(--color-primary) focus:outline-none focus:ring-2 focus:ring-(--color-accent-blue)"
+        <!-- Ghost keeps the link quiet; underline styling does not clash
+             with the atom's own chrome so it travels in `class`. -->
+        <Button
+          variant="ghost"
+          size="sm"
+          class="underline decoration-dotted underline-offset-2"
           onclick={() => void openUrl(quote.sourceUrl)}
         >
           {t('settings.about.quoteSource')}
-        </button>
+        </Button>
         {#if display.isTranslation}
           <details class="w-full text-xs text-(--color-text-muted)">
             <summary class="cursor-pointer">
@@ -352,27 +356,29 @@
             </p>
           </details>
         {/if}
-      </figcaption>
-    </figure>
+      </div>
+    </Panel>
   {/if}
 
   <!-- Product license: NEXO's own license, kept as a discrete, small block.
        Third-party library notices no longer live in the UI; their obligation
-       is preserved in THIRD-PARTY-NOTICES.md at the repository root. -->
-  <section
-    class="flex items-center justify-between gap-3 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) px-4 py-3"
-  >
-    <span class="text-xs text-(--color-text-muted)">
-      {t('settings.about.license')}:
-      <span class="font-medium text-(--color-primary)">{t('settings.about.licenseName')}</span>
-    </span>
-    <Button variant="ghost" size="sm" onclick={() => void openUrl(LICENSE_URL)}>
-      {t('settings.about.viewLicense')}
-    </Button>
-  </section>
+       is preserved in THIRD-PARTY-NOTICES.md at the repository root. No
+       Panel title: the license line is a span, not a heading. -->
+  <Panel>
+    <div class="flex items-center justify-between gap-3">
+      <span class="text-xs text-(--color-text-muted)">
+        {t('settings.about.license')}:
+        <span class="font-medium text-(--color-primary)">{t('settings.about.licenseName')}</span>
+      </span>
+      <Button variant="ghost" size="sm" onclick={() => void openUrl(LICENSE_URL)}>
+        {t('settings.about.viewLicense')}
+      </Button>
+    </div>
+  </Panel>
 
-  <!-- Support: real repository URLs, opened through the Tauri opener. -->
-  <section class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4">
+  <!-- Support: real repository URLs, opened through the Tauri opener.
+       No Panel title: the h3 below must stay an h3 (heading-order test). -->
+  <Panel>
     <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
       {t('settings.about.links')}
     </h3>
@@ -389,5 +395,5 @@
         {t('settings.about.reportIssue')}
       </Button>
     </div>
-  </section>
+  </Panel>
 </section>
