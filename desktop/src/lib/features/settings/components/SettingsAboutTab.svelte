@@ -193,7 +193,7 @@
     <div class="flex items-center gap-3">
       <Info size={32} strokeWidth={2} class="text-(--color-primary)" aria-hidden="true" />
       <div class="flex min-w-0 flex-col">
-        <span class="text-lg font-semibold text-(--color-primary)"
+        <span class="text-xl font-semibold text-(--color-primary)"
           >{t('settings.about.appName')}</span
         >
         {#if installedVersion}
