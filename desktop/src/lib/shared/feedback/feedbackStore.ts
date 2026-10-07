@@ -16,6 +16,16 @@ const DISMISSED_KEY = 'np.feedback.dismissed';
 const LAST_EVENT_ID_KEY = 'np.feedback.lastEventId';
 const QUEUE_CAP = 25;
 
+/**
+ * Per-entry size ceiling, measured on the serialized entry. A queued entry
+ * that carries a diagnostics bundle above this ceiling is delivered
+ * bundle-free instead of truncated or failed (spec: oversized bundle is
+ * dropped explicitly and the submission survives). Sized so a realistic
+ * bundle (capped log tail + scrubbed diagnose) still fits while a single
+ * entry cannot blow the localStorage quota shared by the whole queue.
+ */
+export const FEEDBACK_ENTRY_MAX_BYTES = 128 * 1024;
+
 export interface BookContext {
   bookId: string;
   chapterIndex: number;
@@ -30,6 +40,12 @@ export interface QueuedFeedback {
   /** Book context; this is the only channel through which bookTitle/chapterLabel are allowed egress. */
   contexts: { book: BookContext };
   enqueuedAt: number; // epoch ms
+  /**
+   * Optional, consent-gated diagnostics bundle text (from
+   * `collectDiagnosticsBundle`). Absent for bundle-free submissions. Only ever
+   * sent in full or dropped in full — never truncated.
+   */
+  bundle?: string;
 }
 
 export interface FlushTransport {
@@ -38,16 +54,23 @@ export interface FlushTransport {
 
 /** Default transport — sends via Sentry.captureFeedback. The browser
  *  Sentry SDK does not accept a `contexts` field on captureFeedback, so the
- *  book context travels via the `QueuedFeedback.contexts.book` payload and
- *  is injected by callers that need it (see AppModals transport — it uses
- *  `scope.setContext('book', entry.contexts.book)`).
+ *  book context and the optional diagnostics bundle travel via
+ *  `scope.setContext` (same pattern the AppModals transport uses). A bundle
+ *  present on the entry is attached in full; the flush layer has already
+ *  dropped oversized bundles before calling `send`.
  */
 const defaultTransport: FlushTransport = {
   send: async (entry) => {
     try {
-      await Sentry.captureFeedback({
-        message: entry.message,
-        associatedEventId: entry.eventId ?? undefined,
+      Sentry.withScope((scope) => {
+        scope.setContext('book', entry.contexts.book as unknown as Record<string, unknown>);
+        if (entry.bundle) {
+          scope.setContext('diagnostics', { bundle: entry.bundle });
+        }
+        Sentry.captureFeedback({
+          message: entry.message,
+          associatedEventId: entry.eventId ?? undefined,
+        });
       });
       return true;
     } catch {
@@ -74,6 +97,33 @@ function writeJSON(key: string, value: unknown): void {
   } catch {
     // quota or privacy mode: drop quietly; egress is best-effort
   }
+}
+
+/** Serialized byte size of a queue entry (bundle text included). */
+function entryByteLength(entry: QueuedFeedback): number {
+  const json = JSON.stringify(entry);
+  if (typeof json !== 'string') return 0;
+  if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(json).length;
+  return json.length; // ASCII fallback; jsdom/Node always provide TextEncoder
+}
+
+/**
+ * Whether a queue entry fits the per-entry ceiling. Bundle-free entries always
+ * fit: their message and book context are themselves bounded by the dialog.
+ */
+export function feedbackEntryFits(entry: QueuedFeedback): boolean {
+  if (entry.bundle === undefined) return true;
+  return entryByteLength(entry) <= FEEDBACK_ENTRY_MAX_BYTES;
+}
+
+/**
+ * Explicit drop: returns a copy of the entry with the bundle removed. The
+ * submission payload is otherwise untouched — never a partial bundle.
+ */
+function withoutBundle(entry: QueuedFeedback): QueuedFeedback {
+  const clone: QueuedFeedback = { ...entry };
+  delete clone.bundle;
+  return clone;
 }
 
 /** Read the last captured Sentry event id (or null). */
@@ -105,7 +155,9 @@ export function clearDismissed(): void {
 
 export function enqueueFeedback(entry: QueuedFeedback): void {
   const queue = readJSON<QueuedFeedback[]>(QUEUE_KEY, []);
-  queue.push(entry);
+  // Oversized bundles are dropped explicitly at enqueue time so a single entry
+  // can never blow the localStorage quota and silently lose the submission.
+  queue.push(feedbackEntryFits(entry) ? entry : withoutBundle(entry));
   // FIFO cap: drop oldest beyond QUEUE_CAP
   while (queue.length > QUEUE_CAP) queue.shift();
   writeJSON(QUEUE_KEY, queue);
@@ -119,7 +171,12 @@ export function clearFeedbackQueue(): void {
   if (typeof localStorage !== 'undefined') localStorage.removeItem(QUEUE_KEY);
 }
 
-/** Attempt to flush the queue using the provided transport. Stops on first failure. */
+/** Attempt to flush the queue using the provided transport. Stops on first failure.
+ *
+ *  Carry-or-explicit-drop: an entry that fits is sent with its full bundle; one
+ *  whose bundle pushes it past {@link FEEDBACK_ENTRY_MAX_BYTES} is sent
+ *  bundle-free. The submission itself is never failed or partially sent.
+ */
 export async function flushFeedbackQueue(
   transport: FlushTransport = defaultTransport,
 ): Promise<{ sent: number; failed: QueuedFeedback[] }> {
@@ -128,7 +185,8 @@ export async function flushFeedbackQueue(
   const sent: QueuedFeedback[] = [];
   const failed: QueuedFeedback[] = [];
   for (const entry of queue) {
-    const ok = await transport.send(entry);
+    const deliverable = feedbackEntryFits(entry) ? entry : withoutBundle(entry);
+    const ok = await transport.send(deliverable);
     if (ok) sent.push(entry);
     else failed.push(entry);
     if (!ok) break; // stop on first failure; remaining items are kept

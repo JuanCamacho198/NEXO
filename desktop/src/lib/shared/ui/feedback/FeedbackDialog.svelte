@@ -31,8 +31,10 @@
     truncateMessage,
     buildBookContext,
     type BookContext,
+    type QueuedFeedback,
   } from '$lib/shared/feedback/feedbackStore';
   import * as Sentry from '@sentry/browser';
+  import { invoke } from '@tauri-apps/api/core';
   import Modal from '$lib/shared/ui/layout/Modal.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -60,6 +62,9 @@
 
   let message = $state('');
   let dialogState: DialogState = $state('idle');
+  // Opt-in diagnostics attachment. Never persisted: reset to false on every
+  // dialog open so consent is strictly per-submission (spec feedback delta).
+  let attachBundle = $state(false);
   let context: BookContext = $state(
     buildBookContext({
       bookId: 'sample',
@@ -79,6 +84,7 @@
     }
     dialogState = 'editing';
     message = '';
+    attachBundle = false;
   });
 
   const counter = $derived(`${message.length} / ${FEEDBACK_MAX_CHARS}`);
@@ -96,7 +102,13 @@
   }
 
   async function doSend(): Promise<void> {
-    const entry = { eventId, message, contexts: { book: context }, enqueuedAt: Date.now() };
+    const entry: QueuedFeedback = {
+      eventId,
+      message,
+      contexts: { book: context },
+      enqueuedAt: Date.now(),
+      ...(attachBundle ? await consentBundle() : {}),
+    };
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       enqueueFeedback(entry);
       finish('sent', true);
@@ -105,10 +117,14 @@
     try {
       // The browser Sentry SDK does not accept `contexts` on captureFeedback,
       // so the book context is attached via withScope → setContext (same
-      // pattern AppModals transport uses). captureFeedback only supports
-      // message + associatedEventId at the call site.
+      // pattern AppModals transport uses). The opt-in diagnostics bundle is
+      // attached the same way, only for this submission. captureFeedback only
+      // supports message + associatedEventId at the call site.
       Sentry.withScope((scope) => {
         scope.setContext('book', entry.contexts.book as unknown as Record<string, unknown>);
+        if (entry.bundle) {
+          scope.setContext('diagnostics', { bundle: entry.bundle });
+        }
         Sentry.captureFeedback({
           message: entry.message,
           associatedEventId: eventId ?? undefined,
@@ -119,6 +135,21 @@
       // Offline mid-flight: queue and resolve as sent (eventually delivered).
       enqueueFeedback(entry);
       finish('error', true);
+    }
+  }
+
+  /**
+   * Fetch the diagnostics bundle text for an explicitly opted-in submission.
+   * Any collection failure degrades to a bundle-free send: the submission must
+   * never fail because diagnostics could not be assembled.
+   */
+  async function consentBundle(): Promise<{ bundle?: string }> {
+    try {
+      const bundle = await invoke<unknown>('collectDiagnosticsBundle');
+      const text = JSON.stringify(bundle);
+      return typeof text === 'string' && text.length > 0 ? { bundle: text } : {};
+    } catch {
+      return {};
     }
   }
 
@@ -238,6 +269,25 @@
             </span>
           </div>
         </div>
+
+        <!-- Diagnostics bundle opt-in (spec feedback delta): unchecked by
+             default, consent applies to this submission only. -->
+        <label class="flex cursor-pointer items-start gap-2 text-xs text-(--color-secondary)">
+          <input
+            type="checkbox"
+            class="mt-0.5 size-3.5 shrink-0 cursor-pointer accent-(--color-primary)"
+            checked={attachBundle}
+            disabled={dialogState === 'sending' || dialogState === 'sent'}
+            onchange={(event) => {
+              attachBundle = (event.currentTarget as HTMLInputElement).checked;
+            }}
+            data-testid="feedback-attach-bundle"
+          />
+          <span class="flex flex-col gap-0.5">
+            <span class="font-medium">{tFn('feedback.attachBundle')}</span>
+            <span class="text-(--color-text-muted)">{tFn('feedback.attachBundleHint')}</span>
+          </span>
+        </label>
       </div>
     {/snippet}
 

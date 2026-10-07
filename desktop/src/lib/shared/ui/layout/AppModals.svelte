@@ -72,6 +72,11 @@
         try {
           Sentry.withScope((scope) => {
             scope.setContext('book', item.contexts.book as unknown as Record<string, unknown>);
+            // Consent-gated diagnostics bundle carried by the queued entry.
+            // Oversized bundles were already dropped by flushFeedbackQueue.
+            if (item.bundle) {
+              scope.setContext('diagnostics', { bundle: item.bundle });
+            }
             scope.setTag('feedback.source', 'desktop-modal-flush');
             Sentry.captureFeedback({
               message: item.message,

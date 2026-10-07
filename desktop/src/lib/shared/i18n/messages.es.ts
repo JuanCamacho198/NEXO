@@ -1055,6 +1055,9 @@ export const messagesEs: Record<MessageKey, string> = {
 
   // Crash feedback dialog
   'feedback.sending': 'Enviando…',
+  'feedback.attachBundle': 'Adjuntar diagnóstico técnico',
+  'feedback.attachBundleHint':
+    'Incluye versión, registros recientes y estado del sistema (anonimizado).',
 
   // PdfSelectionOverlay (PR3b)
   'pdf.highlightAria': 'Resaltado',

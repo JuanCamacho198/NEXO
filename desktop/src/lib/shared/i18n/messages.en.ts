@@ -1093,6 +1093,8 @@ export const messagesEn = {
 
   // Crash feedback dialog
   'feedback.sending': 'Sending…',
+  'feedback.attachBundle': 'Attach technical diagnostics',
+  'feedback.attachBundleHint': 'Includes app version, recent logs and system status (redacted).',
 
   // PdfSelectionOverlay (PR3b)
   'pdf.highlightAria': 'Highlight',

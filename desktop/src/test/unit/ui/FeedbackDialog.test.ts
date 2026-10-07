@@ -17,14 +17,21 @@ import { stubElementRect } from '../../harness/jsdomHarness';
 
 // Mock Sentry BEFORE importing the dialog (which transitively imports Sentry).
 const captureFeedback = vi.fn();
-const withScope = vi.fn((cb: (scope: unknown) => void) => {
-  cb({ setContext: vi.fn(), setTag: vi.fn() });
+type ScopeLike = { setContext: ReturnType<typeof vi.fn>; setTag: ReturnType<typeof vi.fn> };
+let lastScope: ScopeLike | null = null;
+const withScope = vi.fn((cb: (scope: ScopeLike) => void) => {
+  lastScope = { setContext: vi.fn(), setTag: vi.fn() };
+  cb(lastScope);
 });
 
 vi.mock('@sentry/browser', () => ({
   captureFeedback: (...args: unknown[]) => captureFeedback(...args),
-  withScope: (cb: (scope: unknown) => void) => withScope(cb),
+  withScope: (cb: (scope: ScopeLike) => void) => withScope(cb),
 }));
+
+import { invoke } from '@tauri-apps/api/core';
+
+const invokeMock = vi.mocked(invoke);
 
 import FeedbackDialog from '$lib/shared/ui/feedback/FeedbackDialog.svelte';
 import {
@@ -70,6 +77,8 @@ describe('FeedbackDialog (sdd/sentry-observability-v2 PR3)', () => {
     captureFeedback.mockReset();
     withScope.mockClear();
     captureFeedback.mockReturnValue(undefined);
+    lastScope = null;
+    invokeMock.mockReset();
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
     localStorage.clear();
   });
@@ -329,6 +338,80 @@ describe('FeedbackDialog (sdd/sentry-observability-v2 PR3)', () => {
       // The scope callback receives setContext; verify it was called with 'book'
       const scopeArg = withScope.mock.calls[0]?.[0];
       expect(typeof scopeArg).toBe('function');
+    });
+  });
+
+  describe('opt-in bundle attachment (spec feedback delta)', () => {
+    const BUNDLE = { appVersion: '9.9.9', logTail: ['line-1', 'line-2'] };
+
+    it('renders the attach checkbox unchecked by default', () => {
+      renderDialog();
+      expect(screen.getByTestId('feedback-attach-bundle')).not.toBeChecked();
+    });
+
+    it('default submission neither invokes the bundle command nor adds a diagnostics context', async () => {
+      renderDialog({ eventId: 'evt-default-bundle' });
+      const ta = screen.getByLabelText(FEEDBACK_INPUT_LABEL) as HTMLTextAreaElement;
+      await fireEvent.input(ta, { target: { value: 'sin bundle' } });
+      await tick();
+      await fireEvent.click(screen.getByRole('button', { name: FEEDBACK_SEND_LABEL }));
+      await waitFor(() => expect(captureFeedback).toHaveBeenCalledTimes(1));
+
+      expect(invokeMock).not.toHaveBeenCalledWith('collectDiagnosticsBundle');
+      // Byte-identical bundle-free shape: only the book context is attached.
+      const contextKeys = (lastScope?.setContext.mock.calls ?? []).map((c) => c[0]);
+      expect(contextKeys).toEqual(['book']);
+    });
+
+    it('opt-in submission invokes the command and attaches the bundle text to the feedback context', async () => {
+      invokeMock.mockResolvedValue(BUNDLE);
+      renderDialog({ eventId: 'evt-optin-bundle' });
+      const box = screen.getByTestId('feedback-attach-bundle') as HTMLInputElement;
+      await fireEvent.click(box);
+      expect(box).toBeChecked();
+
+      const ta = screen.getByLabelText(FEEDBACK_INPUT_LABEL) as HTMLTextAreaElement;
+      await fireEvent.input(ta, { target: { value: 'con bundle' } });
+      await tick();
+      await fireEvent.click(screen.getByRole('button', { name: FEEDBACK_SEND_LABEL }));
+      await waitFor(() => expect(captureFeedback).toHaveBeenCalledTimes(1));
+
+      expect(invokeMock).toHaveBeenCalledWith('collectDiagnosticsBundle');
+      const diagCall = (lastScope?.setContext.mock.calls ?? []).find((c) => c[0] === 'diagnostics');
+      expect(diagCall?.[1]).toEqual({ bundle: JSON.stringify(BUNDLE) });
+    });
+
+    it('resets the checkbox to unchecked on the next dialog open', async () => {
+      const { rerender } = renderDialog({ eventId: 'evt-first-open' });
+      const box = screen.getByTestId('feedback-attach-bundle') as HTMLInputElement;
+      await fireEvent.click(box);
+      expect(box).toBeChecked();
+
+      const onDismiss = vi.fn();
+      await rerender({ open: false, eventId: 'evt-first-open', onDismiss });
+      await tick();
+      // Fresh, non-dismissed eventId so the reopen prompt path does not bail.
+      await rerender({ open: true, eventId: 'evt-second-open', onDismiss });
+      await tick();
+
+      const reopened = screen.getByTestId('feedback-attach-bundle') as HTMLInputElement;
+      expect(reopened).not.toBeChecked();
+    });
+
+    it('offline opt-in queues the entry WITH the bundle text (carried on flush)', async () => {
+      invokeMock.mockResolvedValue(BUNDLE);
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+      renderDialog({ eventId: 'evt-offline-bundle' });
+      await fireEvent.click(screen.getByTestId('feedback-attach-bundle'));
+
+      const ta = screen.getByLabelText(FEEDBACK_INPUT_LABEL) as HTMLTextAreaElement;
+      await fireEvent.input(ta, { target: { value: 'offline con bundle' } });
+      await tick();
+      await fireEvent.click(screen.getByRole('button', { name: FEEDBACK_SEND_LABEL }));
+      await waitFor(() => expect(readFeedbackQueue().length).toBe(1));
+
+      expect(readFeedbackQueue()[0]?.bundle).toBe(JSON.stringify(BUNDLE));
+      expect(captureFeedback).not.toHaveBeenCalled();
     });
   });
 });

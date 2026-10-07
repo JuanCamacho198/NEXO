@@ -24,10 +24,12 @@ import {
   stopAutoFlush,
   truncateMessage,
   buildBookContext,
+  feedbackEntryFits,
   type BookContext,
   type QueuedFeedback,
   type FlushTransport,
   FEEDBACK_QUEUE_CAP,
+  FEEDBACK_ENTRY_MAX_BYTES,
 } from '$lib/shared/feedback/feedbackStore';
 
 const QUEUE_KEY = 'np.feedback.queue';
@@ -46,6 +48,10 @@ function ctx(): BookContext {
 
 function entry(eventId: string | null = null, message = 'feedback message'): QueuedFeedback {
   return { eventId, message, contexts: { book: ctx() }, enqueuedAt: Date.now() };
+}
+
+function bundleEntry(bundle: string, eventId = 'b1'): QueuedFeedback {
+  return { ...entry(eventId), bundle };
 }
 
 describe('feedbackStore', () => {
@@ -269,6 +275,87 @@ describe('feedbackStore', () => {
       const t: FlushTransport = { send: async () => true };
       const r = await flushFeedbackQueue(t);
       expect(r).toMatchObject({ sent: 0, failed: [] });
+    });
+  });
+
+  describe('carry-or-explicit-drop (bundle queue, spec feedback delta)', () => {
+    it('feedbackEntryFits: bundle-free always fits, in-size bundle fits, oversized does not', () => {
+      expect(feedbackEntryFits(entry('e1'))).toBe(true);
+      expect(feedbackEntryFits(bundleEntry('small bundle'))).toBe(true);
+      const oversized = 'x'.repeat(FEEDBACK_ENTRY_MAX_BYTES + 1);
+      expect(feedbackEntryFits(bundleEntry(oversized))).toBe(false);
+    });
+
+    it('carries the full bundle on flush when it fits', async () => {
+      const bundle = 'diagnostics-bundle-text';
+      enqueueFeedback(bundleEntry(bundle, 'e-carried'));
+      const received: QueuedFeedback[] = [];
+      const send = vi.fn(async (e: QueuedFeedback) => {
+        received.push(e);
+        return true;
+      });
+
+      const result = await flushFeedbackQueue({ send });
+
+      expect(result.sent).toBe(1);
+      expect(result.failed).toEqual([]);
+      expect(received).toHaveLength(1);
+      expect(received[0]?.bundle).toBe(bundle);
+      expect(readFeedbackQueue()).toEqual([]);
+    });
+
+    it('drops an oversized bundle at enqueue and still sends the submission bundle-free', async () => {
+      const oversized = 'x'.repeat(FEEDBACK_ENTRY_MAX_BYTES + 1024);
+      enqueueFeedback(bundleEntry(oversized, 'e-big'));
+
+      // enqueue guard: the stored entry is bundle-free (submission survives)
+      const stored = readFeedbackQueue();
+      expect(stored).toHaveLength(1);
+      expect(stored[0]?.eventId).toBe('e-big');
+      expect(stored[0]?.bundle).toBeUndefined();
+
+      const received: QueuedFeedback[] = [];
+      const send = vi.fn(async (e: QueuedFeedback) => {
+        received.push(e);
+        return true;
+      });
+      const result = await flushFeedbackQueue({ send });
+
+      expect(result.sent).toBe(1);
+      expect(received[0]?.bundle).toBeUndefined();
+      expect(received[0]?.message).toBe('feedback message');
+    });
+
+    it('drops an oversized bundle at flush time too (defense-in-depth)', async () => {
+      // Simulate a queue written before the enqueue guard existed.
+      const oversized = 'x'.repeat(FEEDBACK_ENTRY_MAX_BYTES + 1024);
+      localStorage.setItem(QUEUE_KEY, JSON.stringify([bundleEntry(oversized, 'e-old')]));
+
+      const received: QueuedFeedback[] = [];
+      const send = vi.fn(async (e: QueuedFeedback) => {
+        received.push(e);
+        return true;
+      });
+      const result = await flushFeedbackQueue({ send });
+
+      expect(result.sent).toBe(1);
+      expect(received).toHaveLength(1);
+      expect(received[0]?.bundle).toBeUndefined();
+      expect(readFeedbackQueue()).toEqual([]);
+    });
+
+    it('keeps bundle-free entries bundle-free through the queue', async () => {
+      enqueueFeedback(entry('e-free'));
+      const received: QueuedFeedback[] = [];
+      const send = vi.fn(async (e: QueuedFeedback) => {
+        received.push(e);
+        return true;
+      });
+
+      await flushFeedbackQueue({ send });
+
+      expect(received[0]?.bundle).toBeUndefined();
+      expect(received[0]?.contexts.book.title).toBe('La Odisea');
     });
   });
 });
