@@ -4,16 +4,21 @@
   import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
   import { epubCache } from '$lib/features/reader/viewer-epub/epubCache';
   import { documentCache } from '$lib/features/reader/viewer-pdf/pdfStreaming';
-  import { metricsStore } from '$lib/shared/logger/MetricsStore';
+  import { metricsStore, summarizeTimings } from '$lib/shared/logger/MetricsStore';
   import { createDebugIpcStats } from './useDebugIpcStats.svelte';
   import { openDevTools } from './devtoolsClient';
   import { type as osType } from '@tauri-apps/plugin-os';
   import type { DiagnoseResult } from '$lib/shared/types';
+  import { logger } from '$lib/shared/logger/Logger';
   const viewerPort = new TauriViewerAdapter();
   let logsLoading = $state(false);
   let diagnoseResult = $state<DiagnoseResult | null>(null);
   let diagnoseLoading = $state(false);
   const ipc = createDebugIpcStats();
+  const operationTimings = $derived.by(() => {
+    void ipc.refreshTick;
+    return summarizeTimings();
+  });
   const CHART_W = 340;
   const handleOpenDevTools = async (): Promise<void> => {
     await openDevTools();
@@ -53,7 +58,11 @@
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      console.error('Failed to export logs:', e);
+      logger.error(
+        'Failed to export logs:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'app_shell',
+      );
     } finally {
       logsLoading = false;
     }
@@ -63,7 +72,11 @@
     try {
       diagnoseResult = await viewerPort.diagnose();
     } catch (e) {
-      console.error('Diagnose failed:', e);
+      logger.error(
+        'Diagnose failed:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'app_shell',
+      );
     } finally {
       diagnoseLoading = false;
     }
@@ -217,6 +230,26 @@
               </div>{/each}
           </div>
         </div>
+        {#if operationTimings.length > 0}
+          <div class="mt-2">
+            <p class="mb-1 text-[9px] text-(--color-text-muted)">By operation (bucketed p50/p95)</p>
+            <div class="space-y-1">
+              {#each operationTimings as timing (timing.operation)}
+                <div
+                  class="flex items-center justify-between gap-1 rounded bg-(--color-surface-subtle) p-1.5"
+                >
+                  <span class="truncate text-micro" title={timing.operation}
+                    >{timing.operation}</span
+                  ><span class="shrink-0 text-[9px] text-(--color-text-muted)"
+                    >p50 <span class="font-semibold text-(--color-primary)">{timing.p50Ms}ms</span>
+                    · p95
+                    {timing.p95Ms}ms</span
+                  >
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
       {/if}
     </div>
     <div class="border-b border-(--color-border) p-3">

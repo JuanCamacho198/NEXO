@@ -129,3 +129,53 @@ export const recordMetric = (
   }
   return metricsStore.recordSuccess(name, options?.durationMs, options?.feature);
 };
+
+/**
+ * Aggregate timing for one catalog operation. `operation` is a member of the
+ * shared metric vocabulary (`metricTypes.ts`) — no parallel naming scheme.
+ */
+export interface OperationTiming {
+  operation: MetricName;
+  p50Ms: number;
+  p95Ms: number;
+}
+
+/** Nearest-rank quantile over an ascending-sorted sample. */
+function quantile(sortedAsc: readonly number[], q: number): number {
+  const index = Math.min(sortedAsc.length - 1, Math.max(0, Math.ceil(q * sortedAsc.length) - 1));
+  return sortedAsc[index]!;
+}
+
+/**
+ * p50/p95 per catalog operation across the local ring. Samples are the
+ * bucketed durations only (`bucketedDurationMs`), never the exact `durationMs`
+ * — so the summary is safe to egress and can never surface a per-request
+ * duration. There is no trace/span payload: an entry carries only operation,
+ * p50, and p95. Operations with no bucketed sample are omitted.
+ */
+export function summarizeTimings(): OperationTiming[] {
+  const byOperation = new Map<MetricName, number[]>();
+  for (const metric of metricsStore.getAll()) {
+    const duration = metric.bucketedDurationMs;
+    if (typeof duration !== 'number') continue;
+    const samples = byOperation.get(metric.name);
+    if (samples) {
+      samples.push(duration);
+    } else {
+      byOperation.set(metric.name, [duration]);
+    }
+  }
+
+  const summary: OperationTiming[] = [];
+  for (const [operation, durations] of byOperation) {
+    const sorted = [...durations].sort((a, b) => a - b);
+    summary.push({
+      operation,
+      p50Ms: quantile(sorted, 0.5),
+      p95Ms: quantile(sorted, 0.95),
+    });
+  }
+
+  summary.sort((a, b) => a.operation.localeCompare(b.operation));
+  return summary;
+}
