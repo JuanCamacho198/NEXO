@@ -208,6 +208,34 @@ describe('discover rails — fixed three-rail author shelves', () => {
     expect(shortRail.kind === 'Loaded' ? shortRail.books.length : -1).toBe(1);
   });
 
+  it('keeps only the rail author and hides a rail whose page has none', async () => {
+    const { provider } = recordingProvider({
+      searching: (query) => {
+        if (query === PINNED_TERMS[0]) {
+          return [
+            book('googlebooks:owned', ['Arthur Conan Doyle']),
+            // The title mentions the author but `authors` does not: the old
+            // free-text ranking would have surfaced it on the shelf.
+            { ...book('googlebooks:critic', ['Some Critic']), title: 'Arthur Conan Doyle: A Life' },
+            book('googlebooks:authorless', []),
+          ];
+        }
+        // No book by the rail author: the rail hides outright, never an empty
+        // row and never a fallback to the unfiltered page.
+        return [book('googlebooks:foreign', ['Herman Melville'])];
+      },
+    });
+    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+    await state.refreshRails();
+
+    const owned = state.rails[0];
+    expect(owned.kind === 'Loaded' ? owned.books.map((entry) => entry.id) : []).toEqual([
+      'googlebooks:owned',
+    ]);
+    expect(state.rails[1]).toEqual({ kind: 'Hidden' });
+    expect(state.rails[2]).toEqual({ kind: 'Hidden' });
+  });
+
   it('gives every rail a distinct query signature so no two shelves share a request', async () => {
     const { provider, requests } = recordingProvider({
       searching: (query) => [book('googlebooks:1', [railAuthor(query)])],

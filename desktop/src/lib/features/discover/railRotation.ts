@@ -14,9 +14,15 @@ export interface AuthorRailEntry {
  * Vetting metric: share of the top 20 live Google Books hits whose
  * `volumeInfo.authors` contains the queried surname. Measured by-author share,
  * best first: doyle 100%, poe 95%, wilde 90%, verne 85%, kafka 70%, dickens
- * 65%, london 65%, wells 60%, twain 55%, melville 55%. Public-domain-era
- * authors are deliberate: DISC-04c resolves downloads from Gutendex, and every
- * one of these ten has Project Gutenberg editions.
+ * 65%, london 65%, wells 60%, twain 55%, melville 55%. These shares are the
+ * vetting input for this list; since the author-filter feature they are no
+ * longer a user-visible defect, because attribution is now ENFORCED on the rail
+ * load path: `matchesAuthorQuery` (railPlan.ts) drops every book whose authors
+ * miss the queried surname, and an all-foreign page hides the rail. Keep using
+ * these numbers to vet author candidates — the filter removes the visible junk,
+ * not the reason to measure. Public-domain-era authors are deliberate:
+ * DISC-04c resolves downloads from Gutendex, and every one of these ten has
+ * Project Gutenberg editions.
  *
  * The former plain-word subject rails (`fiction`, `adventure`, `science`, …)
  * are NOT used here: measured on the live API, `fiction` returned only 10%
