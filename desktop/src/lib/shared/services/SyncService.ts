@@ -8,6 +8,7 @@
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { getSessionClient, hasLiveSession, recheckLiveSession } from '$lib/services/supabase';
 import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
+import { logger } from '$lib/shared/logger/Logger';
 import { GDriveProvider } from './storage/GDriveProvider';
 import { GoogleDriveStateSync } from './GoogleDriveStateSync';
 import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
@@ -317,7 +318,11 @@ export class SyncService {
         try {
           await this.flushManifest();
         } catch (e) {
-          console.error('Failed to persist Drive manifest:', e);
+          logger.error(
+            'Failed to persist Drive manifest:',
+            { error: e instanceof Error ? e.message : String(e) },
+            'sync',
+          );
         }
       } else if (entityType === 'BOOK' && operation === 'DELETE') {
         const bookSync = new SupabaseBookCatalogSync(userId);
@@ -636,7 +641,11 @@ export class SyncService {
               this.rememberManifestObject(guarded.objectName, guarded.marker);
               remoteRefs = buildRemoteRefs(book.id, format, guarded.fileId);
             } catch (e) {
-              console.error(`Failed to upload book file for ${book.id}:`, e);
+              logger.error(
+                'Failed to upload book file',
+                { bookId: book.id, error: e instanceof Error ? e.message : String(e) },
+                'sync',
+              );
             }
           }
 
@@ -660,13 +669,21 @@ export class SyncService {
           // Aggregate, never a toast: a background cycle surfaces the typed
           // per-book failure in the Data/Storage panel status line instead.
           recordCatalogSyncFailure(book.id, toSyncError(e, book.id).code);
-          console.error(`Failed to push local book ${book.id} to catalog:`, e);
+          logger.error(
+            'Failed to push local book to catalog',
+            { bookId: book.id, error: e instanceof Error ? e.message : String(e) },
+            'sync',
+          );
         }
       }
     } catch (e) {
       // SR-3: typed AUTH_REQUIRED/AUTH_EXPIRED must surface, never console.error-only.
       reportAuthError(e);
-      console.error('Failed to sync book catalog:', e);
+      logger.error(
+        'Failed to sync book catalog:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'sync',
+      );
     }
   }
 
@@ -697,7 +714,11 @@ export class SyncService {
           target: { kind: 'route', route: 'sync' },
         });
         reportAuthError(error);
-        console.error('Failed to sync startup metadata:', error);
+        logger.error(
+          'Failed to sync startup metadata:',
+          { error: error instanceof Error ? error.message : String(error) },
+          'sync',
+        );
       })
       .finally(() => {
         if (this.metadataSyncPromise === syncPromise) {
@@ -850,7 +871,11 @@ export class SyncService {
 
       this.supabaseImportDone = true;
     } catch (e) {
-      console.error('Failed to import data to Supabase:', e);
+      logger.error(
+        'Failed to import data to Supabase:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'sync',
+      );
       // Non-blocking — retry on next sync
     }
   }
@@ -876,7 +901,11 @@ export class SyncService {
 
     for (const action of actions) {
       if (action.kind === 'flag-mismatch') {
-        console.warn(`Drive reconcile: canonical/legacy twin mismatch for ${action.canonicalName}`);
+        logger.warn(
+          'Drive reconcile: canonical/legacy twin mismatch',
+          { canonicalName: action.canonicalName },
+          'sync',
+        );
         continue;
       }
       if (action.kind !== 'copy-to-canonical') continue;
@@ -893,13 +922,19 @@ export class SyncService {
         this.rememberManifestObject(guarded.objectName, guarded.marker);
         const verifyBytes = await this.gdrive.download(guarded.objectName);
         if (verifyBytes.length !== sourceBytes.length) {
-          console.error(
-            `Drive reconcile: verification failed for ${action.canonicalName}; source kept`,
+          logger.error(
+            'Drive reconcile: verification failed; source kept',
+            { canonicalName: action.canonicalName },
+            'sync',
           );
         }
       } catch (e) {
         reportAuthError(e);
-        console.error(`Drive reconcile failed for ${action.sourceName}:`, e);
+        logger.error(
+          'Drive reconcile failed',
+          { sourceName: action.sourceName, error: e instanceof Error ? e.message : String(e) },
+          'sync',
+        );
       }
     }
   }
@@ -936,12 +971,16 @@ export class SyncService {
         const existsLocally = await this.libraryPort.fileExists(localBook.filePath);
         if (!existsLocally) {
           try {
-            console.log(`Syncing missing file for book: ${localBook.id}`);
+            logger.debug('Syncing missing file for book', { bookId: localBook.id }, 'sync');
             const fileData = await this.gdrive.download(remoteFile);
             await this.libraryPort.saveBookFile(localBook.id, Array.from(fileData));
           } catch (e) {
             reportAuthError(e);
-            console.error(`Failed to sync book file for ${localBook.id}:`, e);
+            logger.error(
+              'Failed to sync book file',
+              { bookId: localBook.id, error: e instanceof Error ? e.message : String(e) },
+              'sync',
+            );
           }
         }
       }
@@ -985,12 +1024,24 @@ export class SyncService {
                 updatedAt: new Date().toISOString(),
               });
             } catch (persistError) {
-              console.error(`Failed to persist Drive refs for book ${localBook.id}:`, persistError);
+              logger.error(
+                'Failed to persist Drive refs for book',
+                {
+                  bookId: localBook.id,
+                  error:
+                    persistError instanceof Error ? persistError.message : String(persistError),
+                },
+                'sync',
+              );
             }
           }
         } catch (e) {
           reportAuthError(e);
-          console.error(`Failed to upload book file for ${localBook.id}:`, e);
+          logger.error(
+            'Failed to upload book file',
+            { bookId: localBook.id, error: e instanceof Error ? e.message : String(e) },
+            'sync',
+          );
         }
       }
     }
@@ -998,7 +1049,11 @@ export class SyncService {
     try {
       await this.flushManifest();
     } catch (e) {
-      console.error('Failed to persist Drive manifest:', e);
+      logger.error(
+        'Failed to persist Drive manifest:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'sync',
+      );
     }
   }
 

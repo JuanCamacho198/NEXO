@@ -15,6 +15,7 @@ import {
 import { DEFAULT_DAILY_GOAL, type DailyGoalOption } from '$lib/shared/types/settings';
 import type { MessageKey } from '$lib/shared/i18n';
 import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type DailyGoalIcon = typeof LucideIcon;
 
@@ -174,7 +175,11 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
     try {
       await app.signOutAndReturnToWelcome();
     } catch (error) {
-      console.error('Sign out failed:', error);
+      logger.error(
+        'Sign out failed:',
+        { error: error instanceof Error ? error.message : String(error) },
+        'settings',
+      );
     } finally {
       isSigningOut = false;
     }

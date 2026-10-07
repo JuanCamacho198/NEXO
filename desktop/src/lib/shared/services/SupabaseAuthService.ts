@@ -303,7 +303,7 @@ export async function signOut(): Promise<void> {
   const supabase = getSessionClient();
   const { error } = await supabase.auth.signOut();
   if (error) {
-    console.warn('Supabase signOut error:', error.message);
+    logger.warn('Supabase signOut error:', { error: error.message }, 'app_shell');
   }
 
   authState.clearSupabaseSession();
@@ -325,7 +325,7 @@ export async function signInAnonymously(): Promise<void> {
   const { data, error } = await supabase.auth.signInAnonymously();
 
   if (error) {
-    console.warn('Anon sign-in failed:', error.message);
+    logger.warn('Anon sign-in failed:', { error: error.message }, 'app_shell');
     return;
   }
 

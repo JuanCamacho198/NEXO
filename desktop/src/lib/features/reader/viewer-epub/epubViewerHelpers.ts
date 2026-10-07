@@ -3,6 +3,8 @@
  * Extracted for Strict TDD: unit-testable without Svelte/DOM.
  */
 
+import { logger } from '$lib/shared/logger/Logger';
+
 export interface EpubChapterMeta {
   index: number;
   id: string;
@@ -31,26 +33,28 @@ export function extractFragment(href: string): string | null {
  */
 export function spineIndexForToc(toc: EpubChapterMeta[], tocIndex: number): number {
   if (tocIndex < 0 || tocIndex >= toc.length) {
-    console.warn(
+    logger.warn(
       'epub-toc: spineIndexForToc tocIndex out-of-bounds',
-      tocIndex,
-      'tocLen',
-      toc.length,
+      { tocIndex, tocLen: toc.length },
+      'reader',
     );
     return tocIndex;
   }
   const entry = toc[tocIndex];
   if (!entry || typeof entry.index !== 'number') {
-    console.warn(
+    logger.warn(
       'epub-toc: spineIndexForToc missing entry for tocIndex',
-      tocIndex,
-      'fallback to',
-      tocIndex,
+      { tocIndex, fallback: tocIndex },
+      'reader',
     );
     return tocIndex;
   }
   if (entry.index < 0 || !Number.isFinite(entry.index)) {
-    console.warn('epub-toc: spineIndexForToc invalid index', entry.index, 'for tocIndex', tocIndex);
+    logger.warn(
+      'epub-toc: spineIndexForToc invalid index',
+      { index: entry.index, tocIndex },
+      'reader',
+    );
     return tocIndex;
   }
   return entry.index;
@@ -67,7 +71,7 @@ export function tocIndexForSpine(
   spineHref?: string,
 ): number | null {
   if (spineIndex < 0 || !Number.isFinite(spineIndex)) {
-    console.warn('epub-toc: tocIndexForSpine invalid spineIndex', spineIndex);
+    logger.warn('epub-toc: tocIndexForSpine invalid spineIndex', { spineIndex }, 'reader');
     return null;
   }
   const byIndex = toc.findIndex((c) => c.index === spineIndex);
@@ -83,13 +87,10 @@ export function tocIndexForSpine(
     if (byFile !== -1) return byFile;
   }
   if (spineHref) {
-    console.warn(
+    logger.warn(
       'epub-toc: tocIndexForSpine no TOC entry for spineIndex',
-      spineIndex,
-      'spineHref',
-      spineHref,
-      'tocLen',
-      toc.length,
+      { spineIndex, spineHref, tocLen: toc.length },
+      'reader',
     );
   }
   return null;

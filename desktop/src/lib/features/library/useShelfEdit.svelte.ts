@@ -4,6 +4,7 @@ import type { LibraryBookDto } from '$lib/shared/types';
 import type { MessageKey } from '$lib/shared/i18n';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+import { logger } from '$lib/shared/logger/Logger';
 
 export const MAX_GENRE_LENGTH = 80;
 export const CONTROL_CHAR_REGEX = /[\u0000-\u001f\u007f]/;
@@ -189,7 +190,11 @@ export function useShelfEdit(options: UseShelfEditOptions): {
         (book as unknown as { coverPath: string | null }).coverPath = result.path;
       }
     } catch (e) {
-      console.error('Failed to import cover:', e);
+      logger.error(
+        'Failed to import cover:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'library',
+      );
     }
   }
 

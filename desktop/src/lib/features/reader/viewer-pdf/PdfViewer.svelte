@@ -28,6 +28,7 @@
   import { createPdfOutlineState } from '$lib/features/reader/viewer-pdf/usePdfOutline.svelte';
   import { createPdfZoomThemeState } from '$lib/features/reader/viewer-pdf/usePdfZoomTheme.svelte';
   import PdfControls from './PdfControls.svelte';
+  import { logger } from '$lib/shared/logger/Logger';
   import PdfSelectionOverlay from './PdfSelectionOverlay.svelte';
   import PdfLoadingOverlay from './PdfLoadingOverlay.svelte';
   import PdfTocSidebar from './PdfTocSidebar.svelte';
@@ -406,7 +407,11 @@
           restoreScrollAnchor(anchor, canvasContainer ?? null);
       }
     } catch (err) {
-      console.error('Error setting scale:', err);
+      logger.error(
+        'Error setting scale',
+        { error: err instanceof Error ? err.message : String(err) },
+        'reader',
+      );
       navigationError = t('pdf.navigationFailed');
     }
   }

@@ -21,6 +21,7 @@ import {
   type DiscoverRailState,
   type DiscoverRailsDeps,
 } from './DiscoverRailsDomainState.svelte';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type DiscoverStatus =
   'idle' | 'loading' | 'loadingMore' | 'loaded' | 'empty' | 'error' | 'offline';
@@ -476,7 +477,11 @@ class DiscoverDomainState {
     try {
       await this.onLibraryRefreshNeeded();
     } catch (err) {
-      console.error('[Discover] library refresh after import failed (non-fatal):', err);
+      logger.error(
+        '[Discover] library refresh after import failed (non-fatal):',
+        { error: err instanceof Error ? err.message : String(err) },
+        'import',
+      );
     }
   }
 

@@ -1,5 +1,6 @@
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { extractPdfMetadata } from '$lib/shared/services/pdfThumbnail';
+import { logger } from '$lib/shared/logger/Logger';
 import type { ReaderBook } from '$lib/shared/types';
 export const THUMBNAIL_CONCURRENCY = 3;
 export async function ensureEpubCover(
@@ -12,7 +13,11 @@ export async function ensureEpubCover(
     const found = await ctx.libraryPort.extractEpubCover(book.id, book.filePath);
     if (found) await ctx.loadLibrary();
   } catch (e) {
-    console.error('[Library] ensureEpubCover failed:', e);
+    logger.error(
+      '[Library] ensureEpubCover failed:',
+      { error: e instanceof Error ? e.message : String(e) },
+      'library',
+    );
   } finally {
     ctx.inFlight.delete(book.id);
   }
@@ -48,7 +53,11 @@ export async function ensurePdfCover(
       });
     await ctx.loadLibrary();
   } catch (e) {
-    console.error('[Library] ensurePdfCover failed:', e);
+    logger.error(
+      '[Library] ensurePdfCover failed:',
+      { error: e instanceof Error ? e.message : String(e) },
+      'library',
+    );
   } finally {
     ctx.inFlight.delete(book.id);
   }

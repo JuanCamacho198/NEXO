@@ -11,6 +11,7 @@ import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewer
 import { handleError } from '$lib/shared/utils/errors';
 import { captureBreadcrumb } from '$lib/shared/logger/BreadcrumbsStore';
 import { BREADCRUMB_LABELS } from '$lib/shared/logger/breadcrumbTypes';
+import { logger } from '$lib/shared/logger/Logger';
 
 type ActiveBook = LibraryBookDto & { filePath: string };
 
@@ -96,15 +97,21 @@ export function createHighlights(deps: HighlightsDeps): {
         try {
           const rows: HighlightDto[] = await viewerPort.listHighlights(bookId);
           if (untrack(() => getBook()?.id) !== bookId) {
-            console.debug('RW: listHighlights stale bookId ignored', bookId.slice(0, 4));
+            logger.debug(
+              'RW: listHighlights stale bookId ignored',
+              { bookId: bookId.slice(0, 4) },
+              'reader',
+            );
             continue;
           }
-          console.warn(
+          logger.warn(
             'RW: listHighlights loaded',
-            rows.length,
-            rows.map((r) => `${r.pageNumber}:${r.id.slice(0, 4)}`).join(','),
-            'bookId',
-            bookId.slice(0, 4),
+            {
+              count: rows.length,
+              rows: rows.map((r) => `${r.pageNumber}:${r.id.slice(0, 4)}`).join(','),
+              bookId: bookId.slice(0, 4),
+            },
+            'reader',
           );
           const rowIds = new Set(rows.map((r) => r.id));
           const optimistic = untrack(() => persistedHighlights).filter((h) => !rowIds.has(h.id));
@@ -119,10 +126,10 @@ export function createHighlights(deps: HighlightsDeps): {
               if (m) {
                 const idx = parseInt(m[1], 10) - 1;
                 if (idx >= 0 && idx !== pageNumber) {
-                  console.warn(
+                  logger.warn(
                     'RW: fixing page mismatch',
-                    r.id.slice(0, 4),
-                    `page ${r.pageNumber} -> ${idx}`,
+                    { id: r.id.slice(0, 4), from: r.pageNumber, to: idx },
+                    'reader',
                   );
                   pageNumber = idx;
                   void viewerPort.updateHighlight({ id: r.id, pageNumber }).catch(() => {});
@@ -130,21 +137,27 @@ export function createHighlights(deps: HighlightsDeps): {
               } else if (cfiTrim.startsWith('readium:')) {
                 const spineIdx = spine.getSpineIndexForHref(cfiTrim, spine.epubSpineHrefs);
                 if (spineIdx !== null && spineIdx >= 0 && spineIdx !== pageNumber) {
-                  console.warn(
+                  logger.warn(
                     'RW: fixing page mismatch (readium)',
-                    r.id.slice(0, 4),
-                    `page ${r.pageNumber} -> ${spineIdx}`,
-                    `href ${cfiTrim.slice(0, 40)}`,
+                    {
+                      id: r.id.slice(0, 4),
+                      from: r.pageNumber,
+                      to: spineIdx,
+                      href: cfiTrim.slice(0, 40),
+                    },
+                    'reader',
                   );
                   pageNumber = spineIdx;
                   void viewerPort.updateHighlight({ id: r.id, pageNumber }).catch(() => {});
                 } else if (spineIdx === null) {
-                  console.warn(
+                  logger.warn(
                     'RW: readium href not in spine',
-                    r.id.slice(0, 4),
-                    cfiTrim.slice(0, 60),
-                    'spineLen',
-                    spine.epubSpineHrefs.length,
+                    {
+                      id: r.id.slice(0, 4),
+                      href: cfiTrim.slice(0, 60),
+                      spineLen: spine.epubSpineHrefs.length,
+                    },
+                    'reader',
                   );
                 }
               }
@@ -160,11 +173,13 @@ export function createHighlights(deps: HighlightsDeps): {
             };
           });
           if (optimistic.length > 0) {
-            console.warn(
-              'RW: preserving',
-              optimistic.length,
-              'optimistic highlights not yet in DB',
-              optimistic.map((o) => `${o.pageNumber}:${o.id.slice(0, 4)}`).join(','),
+            logger.warn(
+              'RW: preserving optimistic highlights not yet in DB',
+              {
+                count: optimistic.length,
+                entries: optimistic.map((o) => `${o.pageNumber}:${o.id.slice(0, 4)}`).join(','),
+              },
+              'reader',
             );
             merged = [...merged, ...optimistic];
           }
@@ -195,13 +210,14 @@ export function createHighlights(deps: HighlightsDeps): {
       dbg.epub.colorPickCount++;
       dbg.epub.lastPickedColor = color;
     }
-    console.warn(
-      'RW: handleColorSelect data.pageNumber',
-      data.pageNumber,
-      'cfi',
-      data.cfi?.slice(0, 40) ?? '(null)',
-      'text',
-      data.text.slice(0, 30),
+    logger.warn(
+      'RW: handleColorSelect',
+      {
+        pageNumber: data.pageNumber,
+        cfi: data.cfi?.slice(0, 40) ?? '(null)',
+        text: data.text.slice(0, 30),
+      },
+      'reader',
     );
 
     const book = untrack(getBook);
@@ -210,15 +226,15 @@ export function createHighlights(deps: HighlightsDeps): {
       const bounds = data.bounds;
       const pageNumber = data.pageNumber ?? (book.format?.toLowerCase() === 'epub' ? 0 : 1);
       const cfi = data.cfi ?? null;
-      console.warn(
-        'RW: push highlight pageNumber=',
-        pageNumber,
-        'cfi',
-        cfi?.slice(0, 60) ?? '(null)',
-        'id',
-        highlightId.slice(0, 4),
-        'text',
-        data.text.slice(0, 30),
+      logger.warn(
+        'RW: push highlight',
+        {
+          pageNumber,
+          cfi: cfi?.slice(0, 60) ?? '(null)',
+          id: highlightId.slice(0, 4),
+          text: data.text.slice(0, 30),
+        },
+        'reader',
       );
 
       persistedHighlights = [

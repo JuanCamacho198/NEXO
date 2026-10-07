@@ -16,6 +16,7 @@ import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 import { createPdfDocument } from '$lib/features/reader/viewer-pdf/pdfStreaming';
+import { logger } from '$lib/shared/logger/Logger';
 
 const outboxDao = new SyncOutboxDao();
 
@@ -233,7 +234,11 @@ class ReaderDomainState {
       try {
         await outboxDao.add('READING_SESSION', bookId, 'UPSERT', JSON.stringify(outboxPayload));
       } catch (enqueueError) {
-        console.error('Failed to enqueue reading session for sync:', enqueueError);
+        logger.error(
+          'Failed to enqueue reading session for sync:',
+          { error: enqueueError instanceof Error ? enqueueError.message : String(enqueueError) },
+          'reader',
+        );
       }
     } catch {}
   }

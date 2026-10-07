@@ -8,6 +8,7 @@
     ReaderDirection,
   } from '$lib/shared/types';
   import EpubControls from './EpubControls.svelte';
+  import { logger } from '$lib/shared/logger/Logger';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
   import { createEpubSpine } from '$lib/features/reader/viewer-epub/useEpubSpine.svelte';
@@ -332,13 +333,14 @@
     (debugState.epub as unknown as Record<string, unknown>).currentSpineIndex = currentSpineIndex;
   });
   onDestroy(() => {
-    console.warn(
-      'epub-hl: onDestroy bookId=',
-      bookId.slice(0, 8),
-      'chapter',
-      untrack(() => navigation.currentChapterIndex),
-      'lastRendered',
-      untrack(() => lastRenderedChapter),
+    logger.warn(
+      'epub-hl: onDestroy',
+      {
+        bookId: bookId.slice(0, 8),
+        chapter: untrack(() => navigation.currentChapterIndex),
+        lastRendered: untrack(() => lastRenderedChapter),
+      },
+      'reader',
     );
     zoomTheme.cleanup();
   });

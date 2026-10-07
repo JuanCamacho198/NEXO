@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { normalizeHref } from '$lib/shared/sync/LocatorCodec';
 import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type ParseEpubFn = (filePath: string, bookId: string) => Promise<{ spineHrefs: string[] }>;
 
@@ -63,16 +64,22 @@ export function createSpineResolver(deps: { parseEpub?: ParseEpubFn } = {}): {
       if (spineHrefs.length > 0) {
         epubSpineHrefs = spineHrefs;
         epubSpineLoadedFor = bookId;
-        console.warn(
+        logger.warn(
           'RW: spine loaded',
-          epubSpineHrefs.length,
-          'for',
-          bookId.slice(0, 4),
-          epubSpineHrefs.slice(0, 3).join(','),
+          {
+            spineHrefCount: epubSpineHrefs.length,
+            bookId: bookId.slice(0, 4),
+            firstHrefs: epubSpineHrefs.slice(0, 3),
+          },
+          'reader',
         );
       }
     } catch (e) {
-      console.warn('RW: failed to load spine for readium fix', e);
+      logger.warn(
+        'RW: failed to load spine for readium fix',
+        { error: e instanceof Error ? e.message : String(e) },
+        'reader',
+      );
     }
   }
 

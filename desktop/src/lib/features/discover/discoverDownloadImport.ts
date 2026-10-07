@@ -18,6 +18,7 @@ import { importRecoveredBook, type ImportDeps } from '$lib/shared/recovery/deskt
 import type { SupabaseUserBookRow } from '$lib/shared/sync/SupabaseBookCatalogSync';
 import { SupabaseBookCatalogSync } from '$lib/shared/sync/SupabaseBookCatalogSync';
 import { extractEpubMetadataFromBytes } from '$lib/shared/services/epubImportMetadata';
+import { logger } from '$lib/shared/logger/Logger';
 import type { DownloadTransferPort } from './downloadTransfer';
 
 export type { DiscoverProgressFn } from './downloadTransfer';
@@ -82,7 +83,11 @@ async function persistDiscoverCover(bookId: string, sourceFilePath: string): Pro
   try {
     await discoverLibraryPort.extractEpubCover(bookId, sourceFilePath);
   } catch (err) {
-    console.error('[Discover] cover extraction failed (non-fatal):', err);
+    logger.error(
+      '[Discover] cover extraction failed (non-fatal):',
+      { error: err instanceof Error ? err.message : String(err) },
+      'import',
+    );
   }
 }
 

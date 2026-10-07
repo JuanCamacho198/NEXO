@@ -41,6 +41,7 @@ import { BREADCRUMB_LABELS } from '$lib/shared/logger/breadcrumbTypes';
 import { metricsStore } from '$lib/shared/logger/MetricsStore';
 import { METRIC_NAMES } from '$lib/shared/logger/metricTypes';
 import { bucketDepth, bucketDurationMs } from '$lib/shared/logger/metricBuckets';
+import { logger } from '$lib/shared/logger/Logger';
 
 /** Max breaker pause in seconds (D4): pause = min(300, 60·2^(streak−1)). */
 const BREAKER_MAX_PAUSE_SECONDS = 300;
@@ -238,7 +239,7 @@ export class SyncOutboxService {
       try {
         const pruned = await this.dao.prune();
         if (pruned > 0) {
-          console.debug(`SyncOutbox: pruned ${pruned} stale failed items`);
+          logger.debug('SyncOutbox: pruned stale failed items', { pruned }, 'sync');
         }
       } catch {
         // Prune is best-effort

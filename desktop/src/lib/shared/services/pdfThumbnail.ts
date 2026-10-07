@@ -1,6 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+import { logger } from '$lib/shared/logger/Logger';
 
 let libraryPort: LibraryPort = new TauriLibraryAdapter();
 export function setPdfThumbnailLibraryPort(port: LibraryPort): void {
@@ -57,7 +58,7 @@ export const extractPdfMetadata = async (
 ): Promise<PdfMetadata> => {
   configureWorker();
 
-  console.log(`[PdfMetadata] Analyzing file: ${filePath}`);
+  logger.debug('[PdfMetadata] Analyzing file:', { filePath }, 'import');
   const fileData = await libraryPort.getFileBytes(filePath);
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(fileData),
@@ -75,7 +76,7 @@ export const extractPdfMetadata = async (
       const meta = await pdfDoc.getMetadata();
       const info = meta?.info as Record<string, unknown> | null | undefined;
 
-      console.log(`[PdfMetadata] Raw Info:`, info);
+      logger.debug('[PdfMetadata] Raw Info:', { info }, 'import');
 
       if (info) {
         const rawAuthor = info['Author'] ?? info['author'] ?? info['Creator'] ?? info['creator'];
@@ -99,7 +100,11 @@ export const extractPdfMetadata = async (
         }
       }
     } catch (e) {
-      console.error(`[PdfMetadata] Meta extraction error:`, e);
+      logger.error(
+        '[PdfMetadata] Meta extraction error:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'import',
+      );
     }
 
     // Render first page thumbnail
@@ -122,11 +127,19 @@ export const extractPdfMetadata = async (
         });
         if (blob) {
           thumbnailBytes = await blobToBytes(blob);
-          console.log(`[PdfMetadata] Thumbnail generated: ${thumbnailBytes.length} bytes`);
+          logger.debug(
+            '[PdfMetadata] Thumbnail generated:',
+            { bytes: thumbnailBytes.length },
+            'import',
+          );
         }
       }
     } catch (e) {
-      console.error(`[PdfMetadata] Thumbnail render error:`, e);
+      logger.error(
+        '[PdfMetadata] Thumbnail render error:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'import',
+      );
     }
 
     return { author, title, subject, totalPages: numPages, thumbnailBytes };

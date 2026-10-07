@@ -13,6 +13,7 @@ import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
 import { loadNotifications } from '$lib/shared/stores/notificationCenter.svelte';
 import { loadNotificationPreferences } from '$lib/shared/services/notificationPreferences';
+import { logger } from '$lib/shared/logger/Logger';
 import {
   clearPersistedAuth,
   loadPersistedAuth,
@@ -187,7 +188,11 @@ export class AppState {
         }
       }
     } catch (error) {
-      console.error('Failed to read auth cache during init:', error);
+      logger.error(
+        'Failed to read auth cache during init:',
+        { error: error instanceof Error ? error.message : String(error) },
+        'app_shell',
+      );
       if (getLiveSession() === null && authState.userId === null) {
         try {
           await signInAnonymously();
@@ -276,7 +281,11 @@ export class AppState {
       ]);
       this.settings.locale = nextLocale;
     } catch (error) {
-      console.error('Initialization error:', error);
+      logger.error(
+        'Initialization error:',
+        { error: error instanceof Error ? error.message : String(error) },
+        'app_shell',
+      );
       try {
         this.settings.locale = await i18n.initializeLocale();
       } catch {}
@@ -326,7 +335,11 @@ export class AppState {
       dictionaryState.subscribeToRemoteChanges();
     } catch {}
     void SyncService.syncMetadata().catch((error: unknown) => {
-      console.error('Startup sync failed; continuing offline:', error);
+      logger.error(
+        'Startup sync failed; continuing offline:',
+        { error: error instanceof Error ? error.message : String(error) },
+        'sync',
+      );
     });
   }
 

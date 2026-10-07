@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { hostname, type as osTypeFn, version } from '@tauri-apps/plugin-os';
+import { logger } from '$lib/shared/logger/Logger';
 
 // --- Types ---
 export interface DeviceRow {
@@ -151,7 +152,7 @@ export async function updateHeartbeat(client: SupabaseClient, deviceId: string):
     .update({ last_active: new Date().toISOString() })
     .eq('id', deviceId);
 
-  if (error) console.warn('Heartbeat failed:', error.message);
+  if (error) logger.warn('Heartbeat failed:', { error: error.message }, 'sync');
 }
 
 export async function removeDevice(

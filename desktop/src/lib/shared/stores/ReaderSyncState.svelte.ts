@@ -14,6 +14,7 @@ import type { ReadingProgressDto } from '$lib/shared/types';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
 import type { SupabaseProgressRow } from '$lib/shared/sync/SupabaseProgressSync';
+import { logger } from '$lib/shared/logger/Logger';
 
 function isScopeEnabled(scope: string): boolean {
   try {
@@ -82,50 +83,49 @@ export class ReaderSyncState {
     try {
       const remote = await sync.fetchBookState(bookId);
       if (isStale()) {
-        console.warn(
+        logger.warn(
           '[continue] remote progress stale epoch',
-          epoch,
-          'activeBook',
-          this.getActiveReadingBookId?.() ?? null,
-          'bookId',
-          bookId,
+          {
+            epoch,
+            activeBook: this.getActiveReadingBookId?.() ?? null,
+            bookId,
+          },
+          'sync',
         );
         return;
       }
-      console.warn(
+      logger.warn(
         '[continue] remote progress fetched book',
-        bookId,
-        'remote',
-        remote.progress?.cfiLocation?.slice(0, 60) ?? '(null)',
-        remote.progress?.percentage ?? '(null)',
-        'updatedAt',
-        remote.progress?.updatedAt ?? '(null)',
-        'localUpdatedAt',
-        localUpdatedAt,
-        'epoch',
-        epoch,
+        {
+          bookId,
+          remote: remote.progress?.cfiLocation?.slice(0, 60) ?? '(null)',
+          percentage: remote.progress?.percentage ?? '(null)',
+          updatedAt: remote.progress?.updatedAt ?? '(null)',
+          localUpdatedAt,
+          epoch,
+        },
+        'sync',
       );
       if (
         remote.progress &&
         (!localUpdatedAt || Date.parse(remote.progress.updatedAt) > Date.parse(localUpdatedAt))
       ) {
-        console.warn(
+        logger.warn(
           '[continue] remote progress applied book',
-          bookId,
-          'cfi',
-          remote.progress.cfiLocation.slice(0, 60),
-          'pct',
-          remote.progress.percentage,
-          'epoch',
-          epoch,
+          {
+            bookId,
+            cfi: remote.progress.cfiLocation.slice(0, 60),
+            pct: remote.progress.percentage,
+            epoch,
+          },
+          'sync',
         );
         this.applyRemoteProgressInternal(remote.progress);
       } else if (remote.progress) {
-        console.warn(
+        logger.warn(
           '[continue] remote progress ignored (older than local)',
-          bookId,
-          'epoch',
-          epoch,
+          { bookId, epoch },
+          'sync',
         );
       }
       for (const bookmark of remote.bookmarks) {
@@ -172,16 +172,21 @@ export class ReaderSyncState {
             });
           }
         } catch (err) {
-          console.warn('Failed to apply remote highlight locally:', err);
+          logger.warn(
+            'Failed to apply remote highlight locally:',
+            { error: err instanceof Error ? err.message : String(err) },
+            'sync',
+          );
         }
       }
       if (remote.highlights.length > 0) {
-        console.warn(
+        logger.warn(
           '[highlights] fetchAndApplyBookState applied',
-          remote.highlights.length,
-          'highlights for book',
-          bookId.slice(0, 4),
-          'bumping highlightsVersion',
+          {
+            count: remote.highlights.length,
+            bookId: bookId.slice(0, 4),
+          },
+          'sync',
         );
         this.highlightsVersion++;
         if (typeof window !== 'undefined') {
@@ -194,13 +199,14 @@ export class ReaderSyncState {
   }
 
   private applyRemoteProgressInternal(progress: SupabaseProgressRow): void {
-    console.warn(
+    logger.warn(
       '[continue] applyRemoteProgress book',
-      progress.bookId,
-      'cfi',
-      progress.cfiLocation.slice(0, 60),
-      'pct',
-      progress.percentage,
+      {
+        bookId: progress.bookId,
+        cfi: progress.cfiLocation.slice(0, 60),
+        pct: progress.percentage,
+      },
+      'sync',
     );
     if (this.applyRemoteProgressHook) {
       this.applyRemoteProgressHook(progress);
@@ -241,14 +247,22 @@ export class ReaderSyncState {
           updatedAt: updatedAt,
         };
         this.viewerPort.upsertProgress(progressInput).catch((e) => {
-          console.error('Failed to apply remote progress locally:', e);
+          logger.error(
+            'Failed to apply remote progress locally:',
+            { error: e instanceof Error ? e.message : String(e) },
+            'sync',
+          );
         });
         if (this.getActiveReadingBookId?.() === bookId) {
           this.applyRemoteProgressRealtime(payload);
         }
       });
     } catch (e) {
-      console.error('Failed to subscribe to remote progress:', e);
+      logger.error(
+        'Failed to subscribe to remote progress:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'sync',
+      );
     }
   }
 
@@ -267,7 +281,11 @@ export class ReaderSyncState {
         this.appliedRemote.set(key, updatedAt);
         if (deletedAt) {
           this.viewerPort.deleteBookmark(id ?? '').catch((e) => {
-            console.error('Failed to apply remote bookmark delete locally:', e);
+            logger.error(
+              'Failed to apply remote bookmark delete locally:',
+              { error: e instanceof Error ? e.message : String(e) },
+              'sync',
+            );
           });
         } else {
           this.viewerPort
@@ -279,12 +297,20 @@ export class ReaderSyncState {
               createdAt: updatedAt,
             })
             .catch((e) => {
-              console.error('Failed to apply remote bookmark locally:', e);
+              logger.error(
+                'Failed to apply remote bookmark locally:',
+                { error: e instanceof Error ? e.message : String(e) },
+                'sync',
+              );
             });
         }
       });
     } catch (e) {
-      console.error('Failed to subscribe to remote bookmarks:', e);
+      logger.error(
+        'Failed to subscribe to remote bookmarks:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'sync',
+      );
     }
   }
 
@@ -301,7 +327,7 @@ export class ReaderSyncState {
           .fetchAllHighlightsForPull()
           .then((rows) => {
             if (rows.length > 0) {
-              console.warn('[highlights] initial pull fetched', rows.length, 'rows');
+              logger.warn('[highlights] initial pull fetched', { count: rows.length }, 'sync');
             }
             const chunkSize = 500;
             for (let i = 0; i < rows.length; i += chunkSize) {
@@ -323,12 +349,20 @@ export class ReaderSyncState {
                   }
                 })
                 .catch((e) => {
-                  console.error('Failed to apply remote highlights locally:', e);
+                  logger.error(
+                    'Failed to apply remote highlights locally:',
+                    { error: e instanceof Error ? e.message : String(e) },
+                    'sync',
+                  );
                 });
             }
           })
           .catch((e) => {
-            console.error('Failed to fetch remote highlights:', e);
+            logger.error(
+              'Failed to fetch remote highlights:',
+              { error: e instanceof Error ? e.message : String(e) },
+              'sync',
+            );
           });
       }
       this.unsubscribeRemoteHighlights = this.supabaseSync.subscribeToHighlights((payload) => {
@@ -348,7 +382,11 @@ export class ReaderSyncState {
             .deleteHighlight(id ?? '')
             .then(bump)
             .catch((e) => {
-              console.error('Failed to apply remote highlight delete locally:', e);
+              logger.error(
+                'Failed to apply remote highlight delete locally:',
+                { error: e instanceof Error ? e.message : String(e) },
+                'sync',
+              );
             });
         } else {
           const pageNumber =
@@ -369,12 +407,20 @@ export class ReaderSyncState {
             })
             .then(bump)
             .catch((e) => {
-              console.error('Failed to apply remote highlight locally:', e);
+              logger.error(
+                'Failed to apply remote highlight locally:',
+                { error: e instanceof Error ? e.message : String(e) },
+                'sync',
+              );
             });
         }
       });
     } catch (e) {
-      console.error('Failed to subscribe to remote highlights:', e);
+      logger.error(
+        'Failed to subscribe to remote highlights:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'sync',
+      );
     }
   }
 
@@ -392,12 +438,20 @@ export class ReaderSyncState {
           for (let i = 0; i < rows.length; i += chunkSize) {
             const chunk = rows.slice(i, i + chunkSize);
             void this.viewerPort.upsertRemoteReadingSessions(chunk).catch((e) => {
-              console.error('Failed to apply remote reading sessions locally:', e);
+              logger.error(
+                'Failed to apply remote reading sessions locally:',
+                { error: e instanceof Error ? e.message : String(e) },
+                'sync',
+              );
             });
           }
         })
         .catch((e) => {
-          console.error('Failed to fetch remote reading sessions:', e);
+          logger.error(
+            'Failed to fetch remote reading sessions:',
+            { error: e instanceof Error ? e.message : String(e) },
+            'sync',
+          );
         });
       this.unsubscribeRemoteSessions = this.supabaseSync.subscribeToReadingSessions((row) => {
         void this.viewerPort
@@ -408,11 +462,19 @@ export class ReaderSyncState {
             void cb?.(row.bookId);
           })
           .catch((e) => {
-            console.error('Failed to apply remote reading session locally:', e);
+            logger.error(
+              'Failed to apply remote reading session locally:',
+              { error: e instanceof Error ? e.message : String(e) },
+              'sync',
+            );
           });
       });
     } catch (e) {
-      console.error('Failed to subscribe to remote reading sessions:', e);
+      logger.error(
+        'Failed to subscribe to remote reading sessions:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'sync',
+      );
     }
   }
 

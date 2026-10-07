@@ -8,6 +8,7 @@ import type { BulkImportSummary, ScanFolderResult } from '$lib/shared/types';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 import { notify } from '$lib/shared/stores/notificationCenter.svelte';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type ImportNoticeStatus = 'importing' | 'success' | 'error';
 
@@ -171,22 +172,30 @@ class BulkImportDomainState {
         }
       } catch (err) {
         // best-effort: fall through to filename-based title
-        console.debug('[import] metadata extraction threw, falling back to filename', err);
+        logger.debug(
+          '[import] metadata extraction threw, falling back to filename',
+          { error: err instanceof Error ? err.message : String(err) },
+          'import',
+        );
       }
       // Observability: log what we're about to commit to the backend so
       // "I imported a book and the title is still the filename" has a
       // paper trail in the dev console.
-      console.debug('[import] resolved metadata', {
-        format,
-        file: file.name,
-        titleSource:
-          title && title !== fileStem ? 'metadata' : title ? 'filename-fallback' : 'none',
-        authorSource: author ? 'metadata' : 'none',
-        subjectSource: subject ? 'metadata' : 'none',
-        title,
-        author,
-        subject,
-      });
+      logger.debug(
+        '[import] resolved metadata',
+        {
+          format,
+          file: file.name,
+          titleSource:
+            title && title !== fileStem ? 'metadata' : title ? 'filename-fallback' : 'none',
+          authorSource: author ? 'metadata' : 'none',
+          subjectSource: subject ? 'metadata' : 'none',
+          title,
+          author,
+          subject,
+        },
+        'import',
+      );
       if (!title) title = fileStem;
 
       // Genre resolution: prefer the embedded subject (EPUB <dc:subject>

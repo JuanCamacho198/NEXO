@@ -10,6 +10,7 @@
   import { syncAlertStore } from '$lib/shared/stores/syncAlert.svelte';
   import { signInWithGoogle } from '$lib/shared/services';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
+  import { logger } from '$lib/shared/logger/Logger';
 
   const alert = $derived(syncAlertStore.current);
 
@@ -30,7 +31,11 @@
     try {
       await signInWithGoogle();
     } catch (e) {
-      console.error('Sync re-auth failed:', e);
+      logger.error(
+        'Sync re-auth failed:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'sync',
+      );
     } finally {
       isSigningIn = false;
     }

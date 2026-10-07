@@ -11,6 +11,7 @@ import { getSessionClient, hasLiveSession } from '$lib/services/supabase';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import type { SupabaseClient, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { RemoteHighlightRow, RemoteReadingSessionRow } from '$lib/shared/types';
+import { logger } from '$lib/shared/logger/Logger';
 
 export interface SupabaseProgressRow {
   id?: string;
@@ -170,7 +171,7 @@ export class SupabaseProgressSync {
 
   async fetchBookState(bookId: string): Promise<SupabaseBookState> {
     if (this.isGated()) {
-      console.warn(
+      logger.warn(
         '[SupabaseProgressSync] fetchBookState gated: no live session or user mismatch',
         {
           userId: this.userId,
@@ -178,6 +179,7 @@ export class SupabaseProgressSync {
           hasLiveSession: hasLiveSession(),
           authUserId: authState.userId?.slice(0, 4) ?? null,
         },
+        'sync',
       );
       return { progress: null, bookmarks: [], highlights: [] };
     }
@@ -444,7 +446,7 @@ export class SupabaseProgressSync {
    */
   async fetchHighlights(bookId?: string): Promise<SupabaseHighlightRow[]> {
     if (this.isGated()) {
-      console.warn(
+      logger.warn(
         '[SupabaseProgressSync] fetchHighlights gated: no live session or user mismatch',
         {
           userId: this.userId,
@@ -452,6 +454,7 @@ export class SupabaseProgressSync {
           hasLiveSession: hasLiveSession(),
           authUserId: authState.userId?.slice(0, 4) ?? null,
         },
+        'sync',
       );
       return [];
     }
@@ -477,13 +480,14 @@ export class SupabaseProgressSync {
    */
   async fetchAllHighlightsForPull(): Promise<RemoteHighlightRow[]> {
     if (this.isGated()) {
-      console.warn(
+      logger.warn(
         '[SupabaseProgressSync] fetchAllHighlightsForPull gated: no live session or user mismatch',
         {
           userId: this.userId,
           hasLiveSession: hasLiveSession(),
           authUserId: authState.userId?.slice(0, 4) ?? null,
         },
+        'sync',
       );
       return [];
     }

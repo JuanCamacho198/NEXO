@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { i18n } from '$lib/shared/i18n';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import { ValidationError, validateBookImportInput } from '$lib/shared/validation/importSchemas';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type BookImportInput = {
   sourcePath: string;
@@ -145,7 +146,11 @@ export async function importBook(
       // write fails, the metadata would only reach Supabase via the
       // syncBookCatalog() reconciliation pass — and that pass needs to know the
       // gap exists. Logging here keeps the failure observable.
-      console.error('Failed to enqueue BOOK outbox entry; syncBookCatalog will reconcile', e);
+      logger.error(
+        'Failed to enqueue BOOK outbox entry; syncBookCatalog will reconcile',
+        { error: e instanceof Error ? e.message : String(e) },
+        'import',
+      );
     }
 
     onProgress?.({

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { readFile } from '@tauri-apps/plugin-fs';
   import { onDestroy } from 'svelte';
+  import { logger } from '$lib/shared/logger/Logger';
 
   let {
     path,
@@ -58,7 +59,11 @@
       objectUrl = URL.createObjectURL(blob);
       error = false;
     } catch (e) {
-      console.error('[SafeCover] Failed to read cover file:', path, e);
+      logger.error(
+        '[SafeCover] Failed to read cover file:',
+        { path, error: e instanceof Error ? e.message : String(e) },
+        'library',
+      );
       releaseObjectUrl();
       error = true;
     }

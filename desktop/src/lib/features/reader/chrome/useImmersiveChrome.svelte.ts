@@ -1,6 +1,7 @@
 import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type ImmersiveChromeDeps = {
   getPanelOpen: () => boolean;
@@ -107,7 +108,7 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
       const cur = await appWindow!.isFullscreen();
       await appWindow!.setFullscreen(!cur);
     } catch {
-      console.warn('Tauri window fullscreen API not available');
+      logger.warn('Tauri window fullscreen API not available', {}, 'reader');
     }
   }
 

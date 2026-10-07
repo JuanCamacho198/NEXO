@@ -1,5 +1,6 @@
 import { extractFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import type { EpubChapterMeta } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type EpubNavigationDeps = {
   getToc: () => EpubChapterMeta[];
@@ -128,15 +129,15 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
     const mapped = deps.tocIndexForSpine(spineIdx);
     const chapterIdx = mapped !== null ? mapped : spineIdx;
     if (mapped === null) {
-      console.warn(
-        'epub-toc: searchTargetLocator spine',
-        spineIdx,
-        'not in TOC, fallback to',
-        chapterIdx,
-        'totalChapters',
-        options.totalChapters,
-        'tocLen',
-        options.tocLength,
+      logger.warn(
+        'epub-toc: searchTargetLocator spine not in TOC, fallback',
+        {
+          spineIdx,
+          fallback: chapterIdx,
+          totalChapters: options.totalChapters,
+          tocLen: options.tocLength,
+        },
+        'reader',
       );
     }
     if (mapped !== null) {
