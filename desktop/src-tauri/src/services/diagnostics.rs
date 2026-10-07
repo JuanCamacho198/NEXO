@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::db::verify_queue_health;
+use crate::logger::Logger;
 use crate::state::AppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -122,11 +123,63 @@ pub fn run_diagnose(state: &AppState) -> DiagnoseResult {
         Err(e) => ("unhealthy".to_string(), format!("Logger lock failed: {e}")),
     };
 
+    // L2 bundle privacy: `details` can carry absolute filesystem paths (e.g.
+    // `log_path`). Scrub them through the shared redaction boundary before the
+    // result can reach the bundle.
+    scrub_details_paths(&mut details);
+
     DiagnoseResult {
         database: database_status,
         queue: queue_status,
         filesystem: fs_status,
         log_file: log_status,
         details,
+    }
+}
+
+/// Scrub absolute filesystem paths (and any other redaction-pattern values)
+/// out of `diagnose.details` through the single Rust redaction boundary.
+///
+/// `log_path` is the main offender today; walking every value keeps the
+/// service honest as new detail keys are added. Book data is counts-only by
+/// construction (`total_books` / `missing_files`), so no book path is ever
+/// inserted here. This is defense-in-depth: the bundle command also re-applies
+/// redaction over every section at assembly.
+pub(crate) fn scrub_details_paths(details: &mut HashMap<String, serde_json::Value>) {
+    for value in details.values_mut() {
+        Logger::redact_json_value(value);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn scrub_details_paths_redacts_absolute_windows_log_path() {
+        let mut details: HashMap<String, serde_json::Value> = HashMap::new();
+        details.insert("log_size_bytes".to_string(), json!(1234));
+        details.insert(
+            "log_path".to_string(),
+            json!("C:\\Users\\juan\\AppData\\nexo\\app-log.0.jsonl"),
+        );
+
+        scrub_details_paths(&mut details);
+
+        assert_eq!(details["log_path"], json!("[REDACTED_PATH]"));
+        assert_eq!(details["log_size_bytes"], json!(1234));
+    }
+
+    #[test]
+    fn scrub_details_paths_redacts_unix_home_log_path() {
+        let mut details: HashMap<String, serde_json::Value> = HashMap::new();
+        details
+            .insert("log_path".to_string(), json!("/home/juan/.local/share/nexo/app-log.0.jsonl"));
+
+        scrub_details_paths(&mut details);
+
+        let path = details["log_path"].as_str().unwrap_or_default();
+        assert!(!path.contains("/home/juan"), "path leak: {path}");
     }
 }

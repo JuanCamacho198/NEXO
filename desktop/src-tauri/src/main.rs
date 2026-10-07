@@ -33,6 +33,7 @@ fn build_state(app: &AppHandle) -> Result<AppState, String> {
     // vacuums. There is no pg_cron in this repo, so desktop is the executor for
     // both the local SQLite store (here) and the documented Supabase function.
     let retention_db_path = db_path.clone();
+    let log_prune_dir = app_data_dir.clone();
     std::thread::spawn(move || {
         if let Ok(connection) = Connection::open(&retention_db_path) {
             // DISC-06: bound the TTL-based discover_cache table. Pruned before
@@ -51,6 +52,9 @@ fn build_state(app: &AppHandle) -> Result<AppState, String> {
                 nexo_desktop::retention::RETENTION_DAYS,
             );
         }
+        // L1 observability: prune over-cap log files back to the 2-file /
+        // 200 KB rotation caps. Rides this same FR-14 thread — no new thread.
+        let _ = nexo_desktop::retention::prune_log_files(&log_prune_dir);
     });
 
     Ok(AppState::new(repository, queue_repository, app_data_dir, db_path))
@@ -259,6 +263,7 @@ fn main() {
             commands::logEvent,
             commands::open_devtools,
             commands::diagnose,
+            commands::collectDiagnosticsBundle,
             commands::getLogs,
             commands::parse_epub,
             commands::get_epub_chapter,

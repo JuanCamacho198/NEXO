@@ -3,6 +3,7 @@ use rusqlite::Connection;
 
 use crate::db::vacuum;
 use crate::error::AppResult;
+use crate::logger::Logger;
 
 /// FR-14: soft-deleted rows older than this many days are pruned.
 pub const RETENTION_DAYS: i64 = 30;
@@ -44,6 +45,15 @@ pub fn run_retention(connection: &Connection, older_than_days: i64) -> AppResult
     Ok(RetentionReport { pruned })
 }
 
+/// Log-file half of the FR-14 startup maintenance pass. Reuses the same
+/// cap/prune thinking as tombstone retention: delegates to
+/// [`Logger::prune_to_caps`] to reclaim over-cap `app-log.*.jsonl` state
+/// (extra rotated files, oversize files) written by an older version. Runs on
+/// the existing startup background thread — no new thread is introduced.
+pub fn prune_log_files(app_data_dir: &std::path::Path) -> Result<(), String> {
+    Logger::new(app_data_dir.to_path_buf()).prune_to_caps()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -73,5 +83,28 @@ mod tests {
         assert_eq!(report.pruned, 1);
         assert_eq!(count(&connection, "SELECT COUNT(*) FROM books"), 2);
         assert_eq!(count(&connection, "SELECT COUNT(*) FROM books WHERE id = 'old'"), 0);
+    }
+
+    /// Task 2.3: the FR-14 startup entry point reclaims over-cap rotated log
+    /// files written by an older version (extra `app-log.<n>.jsonl`), while the
+    /// active file survives. Exercises the exact function `main.rs` calls.
+    #[test]
+    fn prune_log_files_removes_over_cap_rotated_files() {
+        let dir = std::env::temp_dir().join(format!(
+            "nexo-retention-log-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock")
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("app-log.2.jsonl"), "stale\n").unwrap();
+        std::fs::write(dir.join("app-log.0.jsonl"), "active\n").unwrap();
+
+        prune_log_files(&dir).expect("prunes");
+
+        assert!(!dir.join("app-log.2.jsonl").exists(), "over-cap file must be removed");
+        assert!(dir.join("app-log.0.jsonl").exists(), "active file must survive");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
