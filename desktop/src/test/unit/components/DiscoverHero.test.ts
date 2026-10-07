@@ -5,19 +5,28 @@ import DiscoverHero from '$lib/features/discover/DiscoverHero.svelte';
 
 const t = (key: string): string => key;
 
-function renderHero(): ReturnType<typeof vi.fn> {
+type HeroProps = {
+  selectedChip?: string | null;
+  isOnline?: boolean;
+};
+
+function renderHero(props: HeroProps = {}): {
+  onSearchSubmit: ReturnType<typeof vi.fn>;
+  onSelectChip: ReturnType<typeof vi.fn>;
+} {
   const onSearchSubmit = vi.fn();
+  const onSelectChip = vi.fn();
   render(DiscoverHero, {
     props: {
       t,
       sourceCount: 3,
-      isOnline: true,
-      selectedChip: null,
-      onSelectChip: vi.fn(),
+      isOnline: props.isOnline ?? true,
+      selectedChip: props.selectedChip ?? null,
+      onSelectChip,
       onSearchSubmit,
     },
   });
-  return onSearchSubmit;
+  return { onSearchSubmit, onSelectChip };
 }
 
 describe('DiscoverHero search field', () => {
@@ -46,7 +55,7 @@ describe('DiscoverHero search field', () => {
   });
 
   it('submits the typed query through the form', async () => {
-    const onSearchSubmit = renderHero();
+    const { onSearchSubmit } = renderHero();
     const user = userEvent.setup();
     const input = screen.getByLabelText('discover.searchAriaLabel');
 
@@ -57,12 +66,41 @@ describe('DiscoverHero search field', () => {
   });
 
   it('submits the typed query on Enter through the unified field', async () => {
-    const onSearchSubmit = renderHero();
+    const { onSearchSubmit } = renderHero();
     const input = screen.getByLabelText('discover.searchAriaLabel');
 
     await fireEvent.input(input, { target: { value: 'dune' } });
     await fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(onSearchSubmit).toHaveBeenCalledWith('dune');
+  });
+});
+
+describe('DiscoverHero genre chips', () => {
+  it('marks the leading "All" chip pressed while no genre is active', () => {
+    renderHero();
+
+    expect(screen.getByRole('button', { name: 'home.shelfTab.all' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('leaves the "All" chip unpressed while a genre is active', () => {
+    renderHero({ selectedChip: 'Ficción' });
+
+    expect(screen.getByRole('button', { name: 'home.shelfTab.all' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  it('clears the genre selection when the "All" chip is pressed', async () => {
+    const { onSelectChip } = renderHero({ selectedChip: 'Ficción' });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'home.shelfTab.all' }));
+
+    expect(onSelectChip).toHaveBeenCalledWith(null);
   });
 });

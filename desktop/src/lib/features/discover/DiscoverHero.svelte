@@ -74,6 +74,17 @@
   </form>
 
   <div role="group" aria-label={t('discover.trending')} class="flex flex-wrap gap-2">
+    <button
+      type="button"
+      aria-pressed={selectedChip === null}
+      onclick={() => onSelectChip(null)}
+      class="rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)/50 {selectedChip ===
+      null
+        ? 'border-(--color-primary)/40 bg-(--color-primary)/12 text-(--color-primary)'
+        : 'border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted) hover:border-(--color-primary)/40 hover:text-(--color-primary)'}"
+    >
+      {t('home.shelfTab.all')}
+    </button>
     {#each TRENDING_CHIPS as chip (chip)}
       <button
         type="button"
