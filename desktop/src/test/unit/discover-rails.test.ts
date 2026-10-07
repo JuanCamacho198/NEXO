@@ -7,6 +7,7 @@ import {
   DiscoverDomainState,
   TRENDING_CHIPS,
 } from '$lib/features/discover/DiscoverDomainState.svelte';
+import { CHIP_TAXONOMY } from '$lib/features/discover/discoverChips';
 import { DiscoverRailsDomainState } from '$lib/features/discover/DiscoverRailsDomainState.svelte';
 import {
   buildRailSpecs,
@@ -437,9 +438,18 @@ describe('discover rails — curated author rotation', () => {
     expect(source).not.toContain('CHIP_KEYWORDS');
     expect(source).not.toContain('TRENDING_CHIPS');
     // The chip taxonomy itself is untouched — its subject substrings stay as-is.
-    expect(CHIP_KEYWORDS['Ciencia ficción']).toEqual(['science']);
+    expect(CHIP_KEYWORDS['science']).toEqual(['science']);
+    expect(CHIP_KEYWORDS['mystery']).toEqual(['mystery', 'detective']);
     expect(TRENDING_CHIPS).toHaveLength(7);
     expect(AUTHOR_ROTATION.map((entry) => entry.term)).not.toContain('science');
+  });
+
+  it('resolves each chip label from i18n while its ES fallback stays unchanged', () => {
+    expect(CHIP_TAXONOMY).toHaveLength(7);
+    for (const chip of CHIP_TAXONOMY) {
+      expect(messagesEs[chip.labelKey]).toBe(chip.fallback);
+      expect(messagesEn[chip.labelKey]).toBeTruthy();
+    }
   });
 
   it('selects a deterministic window: stable within a day and sliding across days', () => {

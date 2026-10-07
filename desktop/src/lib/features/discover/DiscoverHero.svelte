@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import SearchBar from '$lib/shared/ui/navigation/SearchBar.svelte';
-  import { TRENDING_CHIPS } from './DiscoverDomainState.svelte';
+  import { CHIP_TAXONOMY } from './discoverChips';
 
   type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
 
@@ -85,17 +85,17 @@
     >
       {t('home.shelfTab.all')}
     </button>
-    {#each TRENDING_CHIPS as chip (chip)}
+    {#each CHIP_TAXONOMY as chip (chip.id)}
       <button
         type="button"
-        aria-pressed={selectedChip === chip}
-        onclick={() => toggleChip(chip)}
+        aria-pressed={selectedChip === chip.id}
+        onclick={() => toggleChip(chip.id)}
         class="rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)/50 {selectedChip ===
-        chip
+        chip.id
           ? 'border-(--color-primary)/40 bg-(--color-primary)/12 text-(--color-primary)'
           : 'border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted) hover:border-(--color-primary)/40 hover:text-(--color-primary)'}"
       >
-        {chip}
+        {t(chip.labelKey) || chip.fallback}
       </button>
     {/each}
   </div>

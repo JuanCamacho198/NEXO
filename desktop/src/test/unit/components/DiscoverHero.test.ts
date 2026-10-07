@@ -103,4 +103,22 @@ describe('DiscoverHero genre chips', () => {
 
     expect(onSelectChip).toHaveBeenCalledWith(null);
   });
+
+  it('emits the stable chip id from a genre chip', async () => {
+    const { onSelectChip } = renderHero();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'discover.rail.thematic.fiction' }));
+
+    expect(onSelectChip).toHaveBeenCalledWith('fiction');
+  });
+
+  it('marks the active genre chip pressed by its stable id', () => {
+    renderHero({ selectedChip: 'fiction' });
+
+    expect(screen.getByRole('button', { name: 'discover.rail.thematic.fiction' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
 });

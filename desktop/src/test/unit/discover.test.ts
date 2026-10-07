@@ -8,6 +8,7 @@ import {
   filterBooksByChip,
   matchesChip,
 } from '$lib/features/discover/DiscoverDomainState.svelte';
+import { CHIP_TAXONOMY } from '$lib/features/discover/discoverChips';
 import { DISCOVER_RAIL_FETCH_LIMIT } from '$lib/features/discover/railPlan';
 import { homeState } from '$lib/features/home/state.svelte';
 import { CompositeCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
@@ -528,18 +529,36 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
     expect(loaded?.kind).toBe('Loaded');
     const books = loaded?.kind === 'Loaded' ? loaded.books : [];
     expect(books.length).toBeGreaterThan(0);
-    const filtered = filterBooksByChip(books, 'Ficción');
+    const filtered = filterBooksByChip(books, 'fiction');
     expect(filtered.length).toBeGreaterThan(0);
     expect(filtered.length).toBeLessThanOrEqual(books.length);
     expect(provider.calls.searchSource).toBe(afterRails);
-    // Spanish label bridges to English catalog subjects.
-    expect(matchesChip(fakeBook('x:1', ['Classic fiction']), 'Ficción')).toBe(true);
-    expect(matchesChip(fakeBook('x:2', ['Science fiction']), 'Ciencia ficción')).toBe(true);
+    // The stable id bridges to English catalog subjects exactly like the ES label did.
+    expect(matchesChip(fakeBook('x:1', ['Classic fiction']), 'fiction')).toBe(true);
+    expect(matchesChip(fakeBook('x:2', ['Science fiction']), 'science')).toBe(true);
     expect(filterBooksByChip(books, null)).toBe(books);
   });
 
   it('exposes 7 static trending chips', () => {
     expect(TRENDING_CHIPS).toHaveLength(7);
+    expect(CHIP_TAXONOMY).toHaveLength(7);
+  });
+
+  it('keys the taxonomy by a stable id without changing the filtered result', () => {
+    const books = [
+      fakeBook('x:1', ['Classic fiction']),
+      fakeBook('x:2', ['Science fiction']),
+      fakeBook('x:3', ['Mystery and detective stories']),
+      fakeBook('x:4', ['History of Rome']),
+      fakeBook('x:5', ['Romance love story']),
+      fakeBook('x:6', ['Adventure tales']),
+      fakeBook('x:7', ['Cooking and baking']),
+    ];
+    const ids = CHIP_TAXONOMY.map((chip) => chip.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const chip of CHIP_TAXONOMY) {
+      expect(filterBooksByChip(books, chip.id)).toEqual(filterBooksByChip(books, chip.fallback));
+    }
   });
 
   it('per-rail fail-closed: a failing author shelf fails only that rail', async () => {
