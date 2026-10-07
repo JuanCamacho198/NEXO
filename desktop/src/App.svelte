@@ -17,6 +17,7 @@
   import { installGlobalShortcuts, ShortcutHelpModal, CommandPalette } from '$lib/shared/shortcuts';
   import { type as osType } from '@tauri-apps/plugin-os';
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
+  import { logger } from '$lib/shared/logger/Logger';
   import {
     defaultUpdateCheckDeps,
     resolveUpdateFeedUrl,
@@ -34,17 +35,36 @@
   onMount(() => {
     appState.init();
 
-    // Global error handler (replaces Svelte 5's missing ErrorBoundary)
+    // Global error handler (replaces Svelte 5's missing ErrorBoundary).
+    // Uncaught errors and unhandled rejections route through the leveled
+    // logger so universal redaction, levels, and caps apply to them.
     const handleError = (event: ErrorEvent | PromiseRejectionEvent): void => {
-      const message =
-        event instanceof PromiseRejectionEvent
-          ? (event.reason?.message ?? event.reason?.toString() ?? 'Unhandled Promise rejection')
-          : event.message;
-      console.error('[App] Uncaught error:', event);
+      const isRejection = event instanceof PromiseRejectionEvent;
+      const message = isRejection
+        ? (event.reason?.message ?? event.reason?.toString() ?? 'Unhandled Promise rejection')
+        : event.message;
+      logger.error(
+        message,
+        isRejection
+          ? {
+              kind: 'unhandledrejection',
+              reason:
+                event.reason instanceof Error
+                  ? { name: event.reason.name, stack: event.reason.stack }
+                  : String(event.reason),
+            }
+          : {
+              kind: 'uncaught_error',
+              filename: event.filename,
+              lineno: event.lineno,
+              colno: event.colno,
+            },
+        'app_shell',
+      );
       try {
         pushToast('error', message);
       } catch {}
-      if (event instanceof PromiseRejectionEvent && typeof event.preventDefault === 'function') {
+      if (isRejection && typeof event.preventDefault === 'function') {
         try {
           event.preventDefault();
         } catch {}
