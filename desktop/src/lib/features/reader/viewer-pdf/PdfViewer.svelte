@@ -31,7 +31,6 @@
   import { logger } from '$lib/shared/logger/Logger';
   import PdfSelectionOverlay from './PdfSelectionOverlay.svelte';
   import PdfLoadingOverlay from './PdfLoadingOverlay.svelte';
-  import PdfTocSidebar from './PdfTocSidebar.svelte';
   import type { TocEntry } from '../chrome/ReaderTocPanel.svelte';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
   import { setReaderError, clearReaderError } from '$lib/stores/readerErrorState.svelte';
@@ -58,7 +57,7 @@
     }) => void;
     readerSettings?: ReaderSettings;
     isFullscreen?: boolean;
-    onToggleFullscreen?: () => void;
+    tocOpen?: boolean;
     onselection?: (event: {
       text: string;
       bounds: { left: number; top: number; right: number; bottom: number };
@@ -107,7 +106,7 @@
     onSessionProgress,
     readerSettings = DEFAULT_READER_SETTINGS,
     isFullscreen = false,
-    onToggleFullscreen,
+    tocOpen = false,
     onselection,
     onselectionclear,
     onHighlightAction,
@@ -128,7 +127,6 @@
   let lastPercent = 0;
   let scale = $state(DEFAULT_PDF_SCALE);
   let navigationError = $state<string | null>(null);
-  let showToc = $state(false);
   let isViewerFocused = $state(false);
 
   const docState = createPdfDocumentState({
@@ -150,7 +148,7 @@
     getCanvasContainer: () => canvasContainer,
     getCurrentPage: () => currentPage,
     getTotalPages: () => docState.totalPages,
-    getShowToc: () => showToc,
+    getShowToc: () => tocOpen,
     getIsFullscreen: () => isFullscreen,
   });
   // svelte-ignore state_referenced_locally
@@ -195,10 +193,6 @@
     }
   });
 
-  const canUseFullscreenApi = (): boolean =>
-    typeof document !== 'undefined' &&
-    typeof viewerRoot?.requestFullscreen === 'function' &&
-    typeof document.exitFullscreen === 'function';
   const emitSessionProgress = (nextPage: number, nextTotal: number): void => {
     const now = new Date();
     const nextPercent = readProgressPercent(nextPage, nextTotal);
@@ -227,8 +221,6 @@
     }
     const ok = await navigateToPage(page);
     if (!ok) navigationError = t('pdf.tocNavigationFailed');
-    else if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches)
-      showToc = false;
   }
 
   async function loadPdf(): Promise<void> {
@@ -301,23 +293,6 @@
   }
   function goToNextPage(): void {
     void navigateToPage(currentPage + 1);
-  }
-  async function toggleFullscreen(): Promise<void> {
-    if (onToggleFullscreen) {
-      onToggleFullscreen();
-      return;
-    }
-    if (!canUseFullscreenApi()) {
-      navigationError = t('pdf.fullscreenUnsupported');
-      return;
-    }
-    try {
-      navigationError = null;
-      if (document.fullscreenElement === viewerRoot) await document.exitFullscreen();
-      else await viewerRoot?.requestFullscreen();
-    } catch {
-      navigationError = t('pdf.fullscreenUnsupported');
-    }
   }
   function handleViewerKeydown(event: KeyboardEvent): void {
     if (zoomState.handleKeyZoom(event)) return;
@@ -430,20 +405,15 @@
       'pdfjs-dist/build/pdf.worker.min.mjs',
       import.meta.url,
     ).toString();
-    const handleFullscreenError = (): void => {
-      navigationError = t('pdf.fullscreenUnsupported');
-    };
     const handleSelectionChange = (): void => {
       const sel = window.getSelection();
       if (!sel || !sel.toString().trim()) selectionState.clearSelectionUi();
     };
-    document.addEventListener('fullscreenerror', handleFullscreenError);
     document.addEventListener('selectionchange', handleSelectionChange);
     return () => {
       docState.cleanup();
       renderState.cleanup();
       zoomState.cleanup();
-      document.removeEventListener('fullscreenerror', handleFullscreenError);
       document.removeEventListener('selectionchange', handleSelectionChange);
     };
   });
@@ -454,8 +424,7 @@
     }
   });
   $effect(() => {
-    void showToc;
-    if (showToc) void outlineState.ensureOutlineLoaded(showToc);
+    if (tocOpen) void outlineState.ensureOutlineLoaded(tocOpen);
   });
   $effect(() => {
     const tp = parseLocatorPage(searchTargetLocator);
@@ -487,8 +456,6 @@
     {currentPage}
     totalPages={docState.totalPages}
     {scale}
-    {isFullscreen}
-    {showToc}
     isLoading={docState.isLoading}
     error={docState.error}
     {t}
@@ -496,8 +463,6 @@
     onNextPage={goToNextPage}
     onGoToPage={navigateToPage}
     onSetScale={(s) => setScale(s)}
-    onToggleFullscreen={toggleFullscreen}
-    onToggleToc={() => (showToc = !showToc)}
   />
 {/snippet}
 
@@ -553,13 +518,6 @@
     class="flex flex-1 overflow-hidden"
     style:visibility={docState.isLoading || docState.error ? 'hidden' : 'visible'}
   >
-    {#if showToc}<PdfTocSidebar
-        {flatOutline}
-        tocLoading={outlineState.tocLoading}
-        tocError={outlineState.tocError}
-        {t}
-        onNavigate={(item) => navigateToOutlineItem(item)}
-      />{/if}
     <div
       class="flex-1 min-h-0 overflow-auto bg-(--pdf-reader-root-bg,var(--color-background))"
       bind:this={canvasContainer}

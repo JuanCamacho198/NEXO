@@ -77,11 +77,8 @@
     ) => void;
     onselectionclear?: () => void;
     isFullscreen?: boolean;
-    onToggleFullscreen?: () => void;
     onTocReady?: (entries: Array<{ id: string; title: string; depth: number }>) => void;
     externalTocNavigate?: { id: string } | null;
-    showToc?: boolean;
-    onToggleToc?: () => void;
     onSettingsChange?: (settings: ReaderSettings) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
@@ -119,8 +116,6 @@
     isFullscreen = false,
     onTocReady,
     externalTocNavigate = null,
-    onToggleFullscreen,
-    onToggleToc,
     onSettingsChange,
     t,
   }: Props = $props();
@@ -411,7 +406,6 @@
         totalPages={displayTotal}
         currentPercentage={displayPercentage}
         {fontSize}
-        {isFullscreen}
         {t}
         onPrev={goToPrev}
         onNext={goToNext}
@@ -423,8 +417,6 @@
           };
           onSettingsChange?.(updated);
         }}
-        onToggleFullscreen={() => onToggleFullscreen?.()}
-        onToggleToc={() => onToggleToc?.()}
       />
     {/if}
     <div

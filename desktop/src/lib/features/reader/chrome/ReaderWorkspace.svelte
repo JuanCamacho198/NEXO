@@ -564,7 +564,7 @@
           onTocReady={nav.handleTocReady}
           externalTocNavigate={nav.tocNavigate}
           {isFullscreen}
-          onToggleFullscreen={toggleFullscreen}
+          tocOpen={nav.showTocPanel}
           persistedHighlights={highlightsState.persistedHighlights}
           {t}
         />
@@ -592,9 +592,6 @@
           onselection={handleViewerSelection}
           onselectionclear={dismissToolbar}
           {isFullscreen}
-          onToggleFullscreen={toggleFullscreen}
-          showToc={nav.showTocPanel}
-          onToggleToc={toggleTocPanel}
           onSettingsChange={handleTextSettingsChange}
           persistedHighlights={highlightsState.persistedHighlights}
           onHighlightAction={handleHighlightAction}

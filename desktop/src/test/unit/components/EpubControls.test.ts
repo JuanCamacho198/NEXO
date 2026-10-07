@@ -10,25 +10,20 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     totalPages: 10,
     currentPercentage: 15,
     fontSize: 100,
-    isFullscreen: false,
-    showToc: false,
     t,
     onPrev: vi.fn(),
     onNext: vi.fn(),
     onGoToPage: vi.fn().mockResolvedValue(true),
     onFontSizeChange: vi.fn(),
-    onToggleFullscreen: vi.fn(),
-    onToggleToc: vi.fn(),
     ...overrides,
   };
 }
 
-describe('EpubControls (5.1) — Button structure matching PdfControls', () => {
-  it('renders TOC button with the lucide menu glyph', () => {
+describe('EpubControls (U1.1) — toolbar owns paging and zoom only', () => {
+  it('does NOT render TOC or fullscreen controls (the header owns them)', () => {
     render(EpubControls, makeProps());
-    const btn = screen.getByTestId('epub-toc');
-    expect(btn).toBeInTheDocument();
-    expect(btn).toHaveAttribute('type', 'button');
+    expect(screen.queryByTestId('epub-toc')).toBeNull();
+    expect(screen.queryByTestId('epub-fullscreen')).toBeNull();
   });
 
   it('renders prev/next navigation buttons', () => {
@@ -43,11 +38,6 @@ describe('EpubControls (5.1) — Button structure matching PdfControls', () => {
     expect(input).toBeInTheDocument();
     expect(input.value).toBe('3');
     expect(screen.getByTestId('epub-total-pages')).toHaveTextContent('/ 15');
-  });
-
-  it('renders fullscreen toggle button', () => {
-    render(EpubControls, makeProps());
-    expect(screen.getByTestId('epub-fullscreen')).toBeInTheDocument();
   });
 
   it('renders ZoomDropdown with current fontSize (pill)', () => {
@@ -77,7 +67,7 @@ describe('EpubControls (5.1) — Button structure matching PdfControls', () => {
   });
 });
 
-describe('EpubControls (5.1) — Callback behavior', () => {
+describe('EpubControls (U1.1) — Callback behavior', () => {
   it('calls onPrev when prev button clicked', async () => {
     const onPrev = vi.fn();
     render(EpubControls, makeProps({ currentPage: 5, totalPages: 10, onPrev }));
@@ -90,20 +80,6 @@ describe('EpubControls (5.1) — Callback behavior', () => {
     render(EpubControls, makeProps({ currentPage: 5, totalPages: 10, onNext }));
     await fireEvent.click(screen.getByTestId('epub-next'));
     expect(onNext).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls onToggleToc when TOC button clicked', async () => {
-    const onToggleToc = vi.fn();
-    render(EpubControls, makeProps({ onToggleToc }));
-    await fireEvent.click(screen.getByTestId('epub-toc'));
-    expect(onToggleToc).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls onToggleFullscreen when fullscreen button clicked', async () => {
-    const onToggleFullscreen = vi.fn();
-    render(EpubControls, makeProps({ onToggleFullscreen }));
-    await fireEvent.click(screen.getByTestId('epub-fullscreen'));
-    expect(onToggleFullscreen).toHaveBeenCalledTimes(1);
   });
 
   it('calls onFontSizeChange when ZoomDropdown option selected', async () => {
@@ -135,7 +111,7 @@ describe('EpubControls (5.1) — Callback behavior', () => {
   });
 });
 
-describe('EpubControls (5.1) — Page input validation', () => {
+describe('EpubControls (U1.1) — Page input validation', () => {
   it('calls onGoToPage with valid page and resets on failure', async () => {
     const onGoToPage = vi.fn().mockResolvedValue(false);
     render(EpubControls, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
@@ -162,19 +138,5 @@ describe('EpubControls (5.1) — Page input validation', () => {
     await fireEvent.blur(input);
     expect(input.value).toBe('3');
     expect(onGoToPage).not.toHaveBeenCalled();
-  });
-});
-
-describe('EpubControls (5.1) — Fullscreen reflects state', () => {
-  it('shows fullscreen-enter title when not fullscreen', () => {
-    render(EpubControls, makeProps({ isFullscreen: false }));
-    const btn = screen.getByTestId('epub-fullscreen');
-    expect(btn).toHaveAttribute('title', 'pdf.fullscreenEnter');
-  });
-
-  it('shows fullscreen-exit title when fullscreen', () => {
-    render(EpubControls, makeProps({ isFullscreen: true }));
-    const btn = screen.getByTestId('epub-fullscreen');
-    expect(btn).toHaveAttribute('title', 'pdf.fullscreenExit');
   });
 });

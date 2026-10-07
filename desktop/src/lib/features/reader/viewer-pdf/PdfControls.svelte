@@ -8,8 +8,6 @@
     currentPage: number;
     totalPages: number;
     scale: number;
-    isFullscreen: boolean;
-    showToc: boolean;
     isLoading: boolean;
     error: string | null;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -17,15 +15,12 @@
     onNextPage: () => void;
     onGoToPage: (page: number) => Promise<boolean>;
     onSetScale: (scale: number) => void;
-    onToggleFullscreen: () => void;
-    onToggleToc: () => void;
   };
 
   let {
     currentPage,
     totalPages,
     scale,
-    isFullscreen,
     isLoading,
     error,
     t,
@@ -33,8 +28,6 @@
     onNextPage,
     onGoToPage,
     onSetScale,
-    onToggleFullscreen,
-    onToggleToc,
   }: Props = $props();
 
   const zoomPercent = $derived(Math.round(scale * 100));
@@ -44,13 +37,10 @@
   <ReaderControls
     {currentPage}
     {totalPages}
-    {isFullscreen}
     {t}
     onPrev={onPrevPage}
     onNext={onNextPage}
     {onGoToPage}
-    {onToggleFullscreen}
-    {onToggleToc}
   >
     {#snippet right()}
       {#if debugState.enabled}

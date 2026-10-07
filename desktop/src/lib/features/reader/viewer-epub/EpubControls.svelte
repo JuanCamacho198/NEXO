@@ -8,14 +8,11 @@
     totalPages: number;
     currentPercentage: number;
     fontSize: number;
-    isFullscreen: boolean;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onPrev: () => void;
     onNext: () => void;
     onGoToPage: (page: number) => Promise<boolean>;
     onFontSizeChange: (size: number) => void;
-    onToggleFullscreen: () => void;
-    onToggleToc: () => void;
   };
 
   let {
@@ -23,31 +20,23 @@
     totalPages,
     currentPercentage,
     fontSize,
-    isFullscreen,
     t,
     onPrev,
     onNext,
     onGoToPage,
     onFontSizeChange,
-    onToggleFullscreen,
-    onToggleToc,
   }: Props = $props();
 </script>
 
 <ReaderControls
   {currentPage}
   {totalPages}
-  {isFullscreen}
   {t}
   {onPrev}
   {onNext}
   {onGoToPage}
-  {onToggleFullscreen}
-  {onToggleToc}
-  tocTestId="epub-toc"
   prevTestId="epub-prev"
   nextTestId="epub-next"
-  fullscreenTestId="epub-fullscreen"
   pageInputTestId="epub-page-input"
   totalPagesTestId="epub-total-pages"
 >

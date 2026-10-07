@@ -276,7 +276,7 @@ describe('EpubNativeViewer', () => {
       expect(pillContainer).toBeFalsy();
     });
 
-    it('renders EpubControls with TOC button in the viewer', async () => {
+    it('renders EpubControls without TOC/fullscreen (the header owns them)', async () => {
       render(EpubNativeViewer, {
         filePath: '/test/book.epub',
         bookId: 'test-book',
@@ -285,9 +285,8 @@ describe('EpubNativeViewer', () => {
 
       await screen.findByTitle('chapter');
 
-      // EpubControls renders a TOC button with data-testid="epub-toc"
-      const tocBtn = await screen.findByTestId('epub-toc');
-      expect(tocBtn).toBeInTheDocument();
+      expect(screen.queryByTestId('epub-toc')).toBeNull();
+      expect(screen.queryByTestId('epub-fullscreen')).toBeNull();
     });
 
     it('renders EpubControls with prev/next/font-size controls', async () => {
@@ -302,21 +301,6 @@ describe('EpubNativeViewer', () => {
       expect(screen.getByTestId('epub-prev')).toBeInTheDocument();
       expect(screen.getByTestId('epub-next')).toBeInTheDocument();
       expect(screen.getByTestId('zoom-dropdown-trigger')).toBeInTheDocument();
-    });
-
-    it('renders EpubControls with fullscreen toggle', async () => {
-      render(EpubNativeViewer, {
-        filePath: '/test/book.epub',
-        bookId: 'test-book',
-        t,
-        isFullscreen: false,
-        onToggleFullscreen: vi.fn(),
-      });
-
-      await screen.findByTitle('chapter');
-
-      const fsBtn = screen.getByTestId('epub-fullscreen');
-      expect(fsBtn).toBeInTheDocument();
     });
   });
 
