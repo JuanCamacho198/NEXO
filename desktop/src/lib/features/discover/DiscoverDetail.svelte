@@ -9,6 +9,7 @@
     discoverExternalLink,
     discoverFormatLabels,
   } from './discoverDetailFormat';
+  import { providerLabel } from './discoverProviderLabel';
 
   type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
 
@@ -84,15 +85,6 @@
       coverFailed = false;
     }
   });
-
-  /** Short source attribution for the cover badge (mirrors DiscoverCard). */
-  function badgeLabel(provider: string): string {
-    if (provider === 'builtin:gutendex') return 'Gutenberg';
-    if (provider === 'builtin:openlibrary') return 'Open Library';
-    if (provider === 'curated') return 'Curated';
-    if (provider.startsWith('addon:')) return 'Add-on';
-    return provider;
-  }
 
   const showCover = $derived(
     detail !== null && detail.coverUrl !== null && detail.coverUrl !== undefined && !coverFailed,
@@ -183,7 +175,7 @@
             <span
               class="absolute top-1.5 left-1.5 rounded-full border border-(--color-border) bg-(--color-background)/85 px-2 py-0.5 text-xs font-medium text-(--color-secondary)"
             >
-              {badgeLabel(detail.provider)}
+              {providerLabel(detail.provider)}
             </span>
           {/if}
         </div>

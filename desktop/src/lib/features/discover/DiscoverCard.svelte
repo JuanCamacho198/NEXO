@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { CatalogBook } from '$lib/shared/services/catalog';
+  import { providerLabel } from './discoverProviderLabel';
 
   let {
     book,
@@ -14,15 +15,6 @@
 
   let coverFailed = $state(false);
   const showCover = $derived(book.coverUrl !== null && !coverFailed);
-
-  /** Short source attribution for the cover badge (design m8I21w). */
-  function badgeLabel(provider: string): string {
-    if (provider === 'builtin:gutendex') return 'Gutenberg';
-    if (provider === 'builtin:openlibrary') return 'Open Library';
-    if (provider === 'curated') return 'Curated';
-    if (provider.startsWith('addon:')) return 'Add-on';
-    return provider;
-  }
 </script>
 
 <button
@@ -54,7 +46,7 @@
     <span
       class="absolute top-2 left-2 rounded-full border border-(--color-border) bg-(--color-background)/85 px-2 py-0.5 text-xs font-medium text-(--color-secondary)"
     >
-      {badgeLabel(book.provider)}
+      {providerLabel(book.provider)}
     </span>
   </div>
   <div class="min-w-0">
