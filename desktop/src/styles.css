@@ -63,7 +63,14 @@
   margin: 6px 0;
 }
 
-label {
+/*
+ * Exclude utility-driven labels: `Button as="label"` is a real control that
+ * draws its own box with `inline-flex` + padding. This rule is unlayered, so
+ * in Tailwind v4 it beats those layered utilities and would otherwise force
+ * the control to `display:block` with form-field margins. Scoping it keeps
+ * the form-field default for every other (plain) label.
+ */
+label:not(.inline-flex) {
   display: block;
   margin-top: 14px;
   margin-bottom: 6px;

@@ -40,3 +40,20 @@ describe('Panel title uses the Title role', () => {
     );
   });
 });
+
+describe('Panel forwards HTML attributes to its root element', () => {
+  it('places data-testid and aria-* on the rendered <section>', () => {
+    const { container } = render(Panel, {
+      props: {
+        title: 'Section',
+        'data-testid': 'panel-root',
+        'aria-label': 'Data section',
+        children: textSnippet('body'),
+      },
+    });
+    const section = container.querySelector('section') as HTMLElement;
+
+    expect(section).toHaveAttribute('data-testid', 'panel-root');
+    expect(section).toHaveAttribute('aria-label', 'Data section');
+  });
+});

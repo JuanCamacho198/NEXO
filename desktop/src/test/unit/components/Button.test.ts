@@ -158,3 +158,34 @@ describe('Button as="label" file-input render', () => {
     expect(label.classList.contains('opacity-50')).toBe(true);
   });
 });
+
+describe('Button forwards HTML attributes to its root element', () => {
+  it('places data-testid and aria-* on the rendered <button>', () => {
+    const { container } = render(Button, {
+      props: {
+        'data-testid': 'save-button',
+        'aria-label': 'Save the draft',
+        title: 'Save',
+        children: textSnippet('Save'),
+      },
+    });
+    const button = container.querySelector('button') as HTMLButtonElement;
+
+    expect(button).toHaveAttribute('data-testid', 'save-button');
+    expect(button).toHaveAttribute('aria-label', 'Save the draft');
+    expect(button).toHaveAttribute('title', 'Save');
+  });
+
+  it('places data-testid on the rendered <label> in as="label" mode', () => {
+    const { container } = render(Button, {
+      props: {
+        as: 'label',
+        'data-testid': 'import-control',
+        children: htmlSnippet('<input type="file" class="hidden" />'),
+      },
+    });
+    const label = container.querySelector('label') as HTMLLabelElement;
+
+    expect(label).toHaveAttribute('data-testid', 'import-control');
+  });
+});

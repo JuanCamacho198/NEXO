@@ -134,6 +134,36 @@ describe('SettingsDataTab dictionary transfer group', () => {
     expect(group.contains(screen.getByText('Import from Drive'))).toBe(false);
   });
 
+  it('renders the three dictionary controls at one weight and one height', () => {
+    renderTab();
+
+    // The reported defect: Export JSON carried Label weight while Export CSV
+    // did not, and Import was a hand-rolled flex label. All three now go
+    // through the Button atom, so they share one type role and one size.
+    const json = screen.getByText('Export JSON').closest('button') as HTMLElement;
+    const csv = screen.getByText('Export CSV').closest('button') as HTMLElement;
+    const importControl = screen.getByText('Import').closest('label') as HTMLElement;
+    const controls = [json, csv, importControl];
+
+    for (const control of controls) {
+      expect(control).not.toBeNull();
+      expect(control).toHaveClass('text-sm', 'font-medium', 'inline-flex', 'px-4', 'py-2');
+      expect(control).not.toHaveClass('text-xs');
+    }
+
+    const weights = controls.map((control) =>
+      Array.from(control.classList).find((token) =>
+        /^font-(normal|medium|semibold|bold)$/.test(token),
+      ),
+    );
+    expect(weights).toEqual(['font-medium', 'font-medium', 'font-medium']);
+
+    const verticalPadding = controls.map((control) =>
+      Array.from(control.classList).find((token) => token.startsWith('py-')),
+    );
+    expect(verticalPadding).toEqual(['py-2', 'py-2', 'py-2']);
+  });
+
   it('forwards each export format to the same handler', async () => {
     const { props } = renderTab();
 

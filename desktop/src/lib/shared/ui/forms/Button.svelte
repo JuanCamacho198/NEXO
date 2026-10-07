@@ -1,7 +1,13 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import type { HTMLAttributes } from 'svelte/elements';
 
-  type ButtonProps = {
+  // Global HTML attributes are accepted and forwarded to the root element, so
+  // a consumer can pass `data-testid`, `aria-*`, `id`, `title` and the like
+  // without the atom inventing a prop for each. `HTMLElement` (not
+  // `HTMLButtonElement`) keeps the handler signatures assignable to both the
+  // `<button>` and the `<label>` root.
+  type ButtonProps = Omit<HTMLAttributes<HTMLElement>, 'onclick' | 'class'> & {
     children?: Snippet;
     /** Optional icon rendered before the label. */
     leadingIcon?: Snippet;
@@ -34,6 +40,7 @@
     loadingLabel,
     disabled = false,
     class: className = '',
+    ...rest
   }: ButtonProps = $props();
 
   let isPressed = $state(false);
@@ -122,11 +129,17 @@
 {/snippet}
 
 {#if as === 'label'}
-  <label class={labelClasses} aria-disabled={isInactive} aria-busy={loading ? 'true' : undefined}>
+  <label
+    {...rest}
+    class={labelClasses}
+    aria-disabled={isInactive}
+    aria-busy={loading ? 'true' : undefined}
+  >
     {@render content()}
   </label>
 {:else}
   <button
+    {...rest}
     {type}
     class={buttonClasses}
     disabled={isInactive}
