@@ -1,6 +1,7 @@
 import {
   BUILTIN_GOOGLEBOOKS,
   catalogError,
+  type CatalogBook,
   type CatalogProvider,
   type PagedResult,
 } from '$lib/shared/services/catalog';
@@ -88,6 +89,43 @@ export function loadRail(
   _limit: number = DISCOVER_RAIL_FETCH_LIMIT,
 ): Promise<PagedResult> {
   return provider.searchSource(BUILTIN_GOOGLEBOOKS, spec.term, 1);
+}
+
+/**
+ * Accent- and case-insensitive fold used for author comparison. NFD splits a
+ * precomposed character into base + combining mark, and the `\u0300`–`\u036f`
+ * block is exactly Unicode's combining diacritical marks, so stripping it
+ * degrades "Pérez" to "perez" without touching ASCII letters.
+ */
+function foldAuthorText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+/** Whole words of an author string, so "melvilles" never matches "melville". */
+function authorWords(author: string): readonly string[] {
+  return foldAuthorText(author)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+/**
+ * True iff `book` is attributed to the rail term's author. The surname is the
+ * LAST whitespace-separated token of the term (`herman melville` → `melville`,
+ * `arthur conan doyle` → `doyle`, `h g wells` → `wells`), and it must appear as
+ * a whole word in one of the book's authors after case folding and accent
+ * stripping. Free-text rail search ranks criticism, study guides and
+ * biographies above the works themselves; this is the client-side guarantee
+ * that a `Loaded` rail never carries a foreign book. A book with no authors, or
+ * a term with no surname, never passes. Pure: no I/O, total over any input.
+ */
+export function matchesAuthorQuery(book: CatalogBook, term: string): boolean {
+  const surname = term.trim().split(/\s+/).pop();
+  if (surname === undefined || surname === '') return false;
+  const needle = foldAuthorText(surname);
+  return book.authors.some((author) => authorWords(author).includes(needle));
 }
 
 /**
