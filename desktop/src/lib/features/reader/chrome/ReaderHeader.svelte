@@ -1,5 +1,4 @@
 <script lang="ts">
-  import ArrowRight from 'lucide-svelte/icons/arrow-right';
   import Bookmark from 'lucide-svelte/icons/bookmark';
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import Expand from 'lucide-svelte/icons/expand';
@@ -30,8 +29,6 @@
     totalPages?: number;
     currentPercentage?: number;
     fontSizePercent?: number;
-    onPrev?: () => void;
-    onNext?: () => void;
     onGoToPage?: (page: number) => Promise<boolean>;
     onFontSizeChange?: (size: number) => void;
   };
@@ -59,20 +56,13 @@
     totalPages,
     currentPercentage,
     fontSizePercent,
-    onPrev,
-    onNext,
     onGoToPage,
     onFontSizeChange,
   }: Props & HeaderVisibleProps = $props();
 
   const headerTransform = $derived(headerVisible ? 'translate-y-0' : '-translate-y-full');
   const showReadingControls = $derived(
-    isFullscreen &&
-      onPrev !== undefined &&
-      onNext !== undefined &&
-      currentPage !== undefined &&
-      totalPages !== undefined &&
-      totalPages > 0,
+    isFullscreen && currentPage !== undefined && totalPages !== undefined && totalPages > 0,
   );
 
   const TocIcon = $derived(showTocPanel ? X : Menu);
@@ -185,30 +175,10 @@
   </div>
 
   {#if showReadingControls}
-    <!-- Bottom row: reading controls (unified immersive bar) -->
+    <!-- Bottom row: status/zoom strip (paging lives in the toolbar or the edge chevrons) -->
     <div
       class="flex h-12 shrink-0 items-center justify-center gap-3 border-t border-(--color-surface-strong)/20 px-4 bg-(--color-bg-deep)"
     >
-      <button
-        type="button"
-        onclick={onPrev}
-        disabled={currentPage !== undefined && currentPage <= 1}
-        class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-surface-strong) rounded bg-transparent text-(--color-text-auxiliary) hover:text-(--color-text-inverse) hover:bg-(--color-surface-strong)/20 cursor-pointer text-xs min-w-8 min-h-8 disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label={t('reader.prev_page')}
-      >
-        <ChevronLeft size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        onclick={onNext}
-        disabled={totalPages !== undefined &&
-          currentPage !== undefined &&
-          currentPage >= totalPages}
-        class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-surface-strong) rounded bg-transparent text-(--color-text-auxiliary) hover:text-(--color-text-inverse) hover:bg-(--color-surface-strong)/20 cursor-pointer text-xs min-w-8 min-h-8 disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label={t('reader.next_page')}
-      >
-        <ArrowRight size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
       <span class="flex items-center gap-1 text-xs text-(--color-text-auxiliary)">
         <input
           type="number"

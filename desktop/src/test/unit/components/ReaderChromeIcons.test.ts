@@ -147,13 +147,11 @@ describe('reader chrome icon migration', () => {
     ]);
   });
 
-  it('renders the immersive reading row with chevron and arrow glyphs', () => {
+  it('renders the immersive status strip without its own paging chevrons', () => {
     const { container } = renderHeader({
       isFullscreen: true,
       currentPage: 3,
       totalPages: 10,
-      onPrev: () => {},
-      onNext: () => {},
       onGoToPage: async () => true,
     });
 
@@ -164,8 +162,6 @@ describe('reader chrome icon migration', () => {
       'lucide-settings',
       'lucide-bookmark',
       'lucide-shrink',
-      'lucide-chevron-left',
-      'lucide-arrow-right',
     ]);
   });
 

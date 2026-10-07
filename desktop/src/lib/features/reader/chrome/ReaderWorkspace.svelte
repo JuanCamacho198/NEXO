@@ -517,8 +517,6 @@
     totalPages={headerTotalPages}
     currentPercentage={bookProgress}
     fontSizePercent={headerFontSize}
-    onPrev={goPrevPage}
-    onNext={goNextPage}
     onGoToPage={handleHeaderGoToPage}
     onFontSizeChange={handleHeaderFontSizeChange}
   />
