@@ -113,7 +113,7 @@
           >
             <span class="text-xs font-medium text-zinc-700">Page {bookmark.pageNumber}</span>
             {#if bookmark.title}
-              <span class="text-2xs text-zinc-500">{bookmark.title}</span>
+              <span class="text-micro text-zinc-500">{bookmark.title}</span>
             {/if}
           </button>
           <button

@@ -1,11 +1,11 @@
 /**
- * Guardrail rule test for `local-rules/legacy-type-size` (WARN).
+ * Guardrail rule test for `local-rules/legacy-type-size` (ERROR).
  *
- * UI-06: `text-2sm` / `text-2xs` are excluded from the ratified scale but
- * load-bearing until UI-07 retires them, so they warn instead of erroring.
+ * UI-07: `text-2sm` / `text-2xs` are retired — no consumer references them —
+ * so any reintroduction errors instead of warning.
  * One positive case per size plus a ratified-scale negative; severity is
- * asserted through Linter — both diagnostics must report at warn (1), which
- * keeps `bun run lint` green while the ~27 legacy files still use them.
+ * asserted through Linter — the diagnostic must report at error (2), which
+ * keeps `bun run lint` red on any regression.
  */
 import { describe, expect, it } from 'vitest';
 import { Linter, RuleTester } from 'eslint';
@@ -57,7 +57,7 @@ ruleTester.run('legacy-type-size', legacyTypeSize, {
 const linter = new Linter();
 
 describe('legacy-type-size severity', () => {
-  it('reports at warn severity so the build stays green', () => {
+  it('reports at error severity so regressions fail the build', () => {
     const messages = linter.verify(
       `<span class="text-2xs">meta</span>`,
       {
@@ -69,12 +69,12 @@ describe('legacy-type-size severity', () => {
           parser: svelteParser,
           parserOptions: { parser: tsParser },
         },
-        rules: { 'local-rules/legacy-type-size': 'warn' },
+        rules: { 'local-rules/legacy-type-size': 'error' },
       },
       'LegacyComponent.svelte',
     );
     expect(messages).toHaveLength(1);
-    expect(messages[0]?.severity).toBe(1);
+    expect(messages[0]?.severity).toBe(2);
     expect(messages[0]?.ruleId).toBe('local-rules/legacy-type-size');
   });
 });

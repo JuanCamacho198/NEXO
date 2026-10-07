@@ -124,7 +124,7 @@
               {#snippet actions()}
                 {#if book.readingStatus === 'reading'}
                   <span
-                    class="rounded-full bg-(--color-accent-soft) px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-(--color-primary)"
+                    class="rounded-full bg-(--color-accent-soft) px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-(--color-primary)"
                   >
                     {appState.t('home.continue.liveBadge')}
                   </span>

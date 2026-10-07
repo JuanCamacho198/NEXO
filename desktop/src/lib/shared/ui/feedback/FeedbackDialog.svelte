@@ -192,7 +192,7 @@
             ></div>
             <div class="flex flex-1 flex-col">
               <p class="text-sm font-bold">{context.title}</p>
-              <p class="text-2xs text-(--color-text-muted)">
+              <p class="text-micro text-(--color-text-muted)">
                 {FEEDBACK_SAMPLE_BOOK.author} · {context.chapterLabel} · p. {context.page} /
                 {FEEDBACK_SAMPLE_BOOK.totalPages}
               </p>
@@ -202,7 +202,7 @@
           <div class="flex flex-wrap gap-2">
             {#each FEEDBACK_PILLS as pill (pill.label)}
               <span
-                class="flex items-center gap-1 rounded-full border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-2xs font-semibold text-(--color-secondary)"
+                class="flex items-center gap-1 rounded-full border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-xs font-semibold text-(--color-secondary)"
               >
                 {pill.label}
               </span>
@@ -213,24 +213,24 @@
         <!-- Input section -->
         <div class="flex flex-col gap-2">
           <div class="flex items-center justify-between">
-            <label for="feedback-text" class="text-2sm font-semibold">
+            <label for="feedback-text" class="text-sm font-semibold">
               {FEEDBACK_INPUT_LABEL}
             </label>
-            <span class="text-2xs text-(--color-text-muted)">{FEEDBACK_INPUT_HINT}</span>
+            <span class="text-micro text-(--color-text-muted)">{FEEDBACK_INPUT_HINT}</span>
           </div>
           <div
             class="flex min-h-27.5 flex-col gap-1.5 rounded-lg border border-(--color-border) bg-(--color-background) p-3"
           >
             <textarea
               id="feedback-text"
-              class="min-h-16 flex-1 resize-none bg-transparent text-2sm leading-normal text-(--color-primary) outline-none placeholder:text-(--color-text-muted)"
+              class="min-h-16 flex-1 resize-none bg-transparent text-sm leading-normal text-(--color-primary) outline-none placeholder:text-(--color-text-muted)"
               placeholder=""
               value={message}
               oninput={handleInput}
               maxlength={FEEDBACK_MAX_CHARS}
               disabled={dialogState === 'sending' || dialogState === 'sent'}></textarea>
             <span
-              class="self-end text-2xs {message.length > FEEDBACK_MAX_CHARS
+              class="self-end text-micro {message.length > FEEDBACK_MAX_CHARS
                 ? 'text-(--color-error)'
                 : 'text-(--color-text-muted)'}"
             >
@@ -243,7 +243,7 @@
 
     {#snippet footer()}
       <div class="flex w-full items-center justify-between">
-        <p class="flex items-center gap-1.5 text-2xs text-(--color-text-muted)">
+        <p class="flex items-center gap-1.5 text-micro text-(--color-text-muted)">
           <svg
             class="h-3 w-3"
             viewBox="0 0 24 24"

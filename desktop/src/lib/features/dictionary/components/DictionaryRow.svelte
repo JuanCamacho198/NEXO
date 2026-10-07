@@ -48,12 +48,12 @@
     </span>
 
     <span class="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span class="truncate text-2sm text-(--color-primary)" data-testid="dictionary-row-term">
+      <span class="truncate text-sm text-(--color-primary)" data-testid="dictionary-row-term">
         {word.word}
       </span>
       {#if bookTitle}
         <span
-          class="truncate text-2xs text-(--color-text-tertiary)"
+          class="truncate text-micro text-(--color-text-tertiary)"
           data-testid="dictionary-row-book"
         >
           {bookTitle}

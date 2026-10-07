@@ -181,7 +181,7 @@
           {/if}
           {#if detail !== null}
             <span
-              class="absolute top-1.5 left-1.5 rounded-full border border-(--color-border) bg-(--color-background)/85 px-2 py-0.5 text-2xs font-medium text-(--color-secondary)"
+              class="absolute top-1.5 left-1.5 rounded-full border border-(--color-border) bg-(--color-background)/85 px-2 py-0.5 text-xs font-medium text-(--color-secondary)"
             >
               {badgeLabel(detail.provider)}
             </span>
@@ -235,7 +235,7 @@
           <span class="text-xs font-medium text-(--color-primary)">{t('discover.formats')}</span>
           {#each formatLabels as label (label)}
             <span
-              class="inline-flex items-center rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-2 py-0.5 text-2xs font-medium text-(--color-secondary)"
+              class="inline-flex items-center rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-2 py-0.5 text-xs font-medium text-(--color-secondary)"
             >
               {label}
             </span>

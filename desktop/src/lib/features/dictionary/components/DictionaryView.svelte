@@ -244,11 +244,11 @@
       <h1 class="truncate text-2xl font-extrabold text-(--color-primary)">
         {t('dictionary.title')}
       </h1>
-      <p class="truncate text-2sm text-(--color-text-tertiary)">{t('dictionary.subtitle')}</p>
+      <p class="truncate text-sm text-(--color-text-tertiary)">{t('dictionary.subtitle')}</p>
     </div>
     <button
       type="button"
-      class="flex shrink-0 cursor-pointer items-center gap-2 rounded-[10px] bg-(--color-accent-blue) px-4 py-2.5 text-2sm font-bold text-(--color-accent-on) transition-opacity hover:opacity-90"
+      class="flex shrink-0 cursor-pointer items-center gap-2 rounded-[10px] bg-(--color-accent-blue) px-4 py-2.5 text-sm font-bold text-(--color-accent-on) transition-opacity hover:opacity-90"
       aria-expanded={showAddForm}
       aria-controls="dictionary-add-form"
       onclick={toggleAddForm}
@@ -322,7 +322,7 @@
           <div class="flex gap-2">
             <input
               type="text"
-              class="h-10 min-w-0 flex-1 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-3 text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary)"
+              class="h-10 min-w-0 flex-1 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-3 text-sm text-(--color-primary) placeholder:text-(--color-text-tertiary)"
               placeholder={t('dictionary.wordPlaceholder')}
               bind:value={newWord}
               disabled={isAdding}

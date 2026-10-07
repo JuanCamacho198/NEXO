@@ -83,7 +83,7 @@
             </SafeCover>
 
             <span
-              class="absolute left-2 top-2 rounded-full border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-2xs font-medium uppercase tracking-wider text-(--color-text-muted)"
+              class="absolute left-2 top-2 rounded-full border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-xs font-medium uppercase tracking-wider text-(--color-text-muted)"
             >
               {getStateLabel(book)}
             </span>

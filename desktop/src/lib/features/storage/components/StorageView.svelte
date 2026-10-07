@@ -244,7 +244,7 @@
               >
                 <div class="min-w-0">
                   <p class="text-xs font-medium text-(--color-primary) truncate">{b.title}</p>
-                  <p class="text-2xs tabular-nums text-(--color-text-muted)">
+                  <p class="text-micro tabular-nums text-(--color-text-muted)">
                     {formatBytes(b.bytes)}
                   </p>
                 </div>

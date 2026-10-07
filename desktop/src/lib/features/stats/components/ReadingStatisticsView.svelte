@@ -481,7 +481,7 @@
           <div class="mt-5 flex flex-wrap gap-2">
             {#each streakCalendar as day}<div class="flex flex-col items-center gap-2">
                 <div
-                  class={`flex h-8 w-8 items-center justify-center rounded-full text-2xs ${day.active ? 'bg-(image:--gradient-accent) text-(--color-accent-on)' : 'border border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted)'}`}
+                  class={`flex h-8 w-8 items-center justify-center rounded-full text-xs ${day.active ? 'bg-(image:--gradient-accent) text-(--color-accent-on)' : 'border border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted)'}`}
                 >
                   {day.label}
                 </div>

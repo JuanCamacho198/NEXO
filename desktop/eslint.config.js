@@ -78,7 +78,7 @@ export default [
       'local-rules/tailwind-v4-canonical': 'warn',
       'local-rules/svelte-runes-only': 'error',
       // UI-07 FLIP: legacy-type-size goes from 'warn' to 'error' once text-2sm/text-2xs are retired.
-      'local-rules/legacy-type-size': 'warn',
+      'local-rules/legacy-type-size': 'error',
     },
   },
   {

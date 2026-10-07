@@ -187,7 +187,7 @@
               </label>
             {:else}
               <div class="py-2">
-                <p class="text-2xs uppercase tracking-wider text-(--color-text-muted)">
+                <p class="text-xs uppercase tracking-wider text-(--color-text-muted)">
                   {t(entry.label)}
                 </p>
                 <div class="mt-1 divide-y divide-(--color-border)">

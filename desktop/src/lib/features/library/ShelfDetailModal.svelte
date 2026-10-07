@@ -290,7 +290,7 @@
               )}
             </h3>
             {#if progressPct > 0}<div class="space-y-1">
-                <div class="flex items-center gap-1 text-2xs text-(--color-text-muted)">
+                <div class="flex items-center gap-1 text-micro text-(--color-text-muted)">
                   <span>{t('shelf.progress' as MessageKey)} {progressPct}%</span>
                 </div>
                 <div class="h-1.5 w-full rounded-full bg-(--color-border)">
@@ -299,7 +299,7 @@
                     style="width: {progressPct}%"
                   ></div>
                 </div>
-                {#if shelfDetail.totalPages > 0}<p class="text-2xs text-(--color-text-muted)">
+                {#if shelfDetail.totalPages > 0}<p class="text-micro text-(--color-text-muted)">
                     {t('shelf.pageOf' as MessageKey, {
                       current: shelfDetail.currentPage,
                       total: shelfDetail.totalPages,

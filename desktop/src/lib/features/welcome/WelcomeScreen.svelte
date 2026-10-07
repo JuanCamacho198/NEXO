@@ -110,7 +110,7 @@
     >
       <img src="./nexo-horizontal-dark.svg" alt="NEXO" class="h-14 w-auto mr-auto ml-0" />
 
-      <p class="m-0 text-2xs font-semibold uppercase tracking-wider text-(--color-accent-blue)">
+      <p class="m-0 text-xs font-semibold uppercase tracking-wider text-(--color-accent-blue)">
         {t('welcome.eyebrow')}
       </p>
       <h1
@@ -282,7 +282,7 @@
             >
               {t('welcome.continueLocal')}
             </Button>
-            <p class="m-0 text-center text-2xs text-(--color-text-muted)">
+            <p class="m-0 text-center text-micro text-(--color-text-muted)">
               {t('welcome.devSkipHint')}
             </p>
           </div>

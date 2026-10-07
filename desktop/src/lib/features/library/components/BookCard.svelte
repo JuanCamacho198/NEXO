@@ -124,7 +124,7 @@
           </p>
           {#if showProgress}
             <div class="mt-2">
-              <div class="mb-1 flex items-center gap-1 text-2xs text-(--color-text-muted)">
+              <div class="mb-1 flex items-center gap-1 text-micro text-(--color-text-muted)">
                 <span>{progressLabel} {progress}%</span>
                 {#if variant === 'continue-reading' && book.totalPages > 0 && book.currentPage > 0}
                   <span aria-hidden="true">·</span>

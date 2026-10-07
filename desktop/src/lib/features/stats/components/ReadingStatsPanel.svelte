@@ -43,25 +43,25 @@
     {:else}
       <div class="grid grid-cols-2 gap-2">
         <div class="rounded-lg bg-(--color-background) p-2">
-          <p class="text-2xs uppercase tracking-wide text-(--color-text-muted)">
+          <p class="text-xs uppercase tracking-wide text-(--color-text-muted)">
             {t('stats.minutes')}
           </p>
           <p class="text-base font-semibold text-(--color-primary)">{stats.totalMinutesRead}</p>
         </div>
         <div class="rounded-lg bg-(--color-background) p-2">
-          <p class="text-2xs uppercase tracking-wide text-(--color-text-muted)">
+          <p class="text-xs uppercase tracking-wide text-(--color-text-muted)">
             {t('stats.sessions')}
           </p>
           <p class="text-base font-semibold text-(--color-primary)">{stats.totalSessions}</p>
         </div>
         <div class="rounded-lg bg-(--color-background) p-2">
-          <p class="text-2xs uppercase tracking-wide text-(--color-text-muted)">
+          <p class="text-xs uppercase tracking-wide text-(--color-text-muted)">
             {t('stats.started')}
           </p>
           <p class="text-base font-semibold text-(--color-primary)">{stats.booksStarted}</p>
         </div>
         <div class="rounded-lg bg-(--color-background) p-2">
-          <p class="text-2xs uppercase tracking-wide text-(--color-text-muted)">
+          <p class="text-xs uppercase tracking-wide text-(--color-text-muted)">
             {t('stats.completed')}
           </p>
           <p class="text-base font-semibold text-(--color-primary)">{stats.booksCompleted}</p>

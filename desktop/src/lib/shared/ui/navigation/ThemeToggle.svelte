@@ -23,7 +23,7 @@
 <button
   id="theme-toggle-btn"
   type="button"
-  class="flex w-full items-center gap-2.5 rounded-lg border border-(--color-border) px-3 py-2 text-2sm font-medium text-(--color-text-muted) transition-colors hover:border-(--color-border-strong) hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
+  class="flex w-full items-center gap-2.5 rounded-lg border border-(--color-border) px-3 py-2 text-sm font-medium text-(--color-text-muted) transition-colors hover:border-(--color-border-strong) hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
   style="font-family: var(--font-sans);"
   onclick={toggleTheme}
   aria-label={`${label}. ${actionLabel}`}
