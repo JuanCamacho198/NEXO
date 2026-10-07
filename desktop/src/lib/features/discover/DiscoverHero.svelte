@@ -58,10 +58,12 @@
     {/if}
   </div>
 
-  <form class="flex max-w-2xl gap-2" onsubmit={submit}>
+  <!-- Enter (or the implicit form submit) is the only trigger. A second submit
+       button read as a duplicate control and broke the field's pill silhouette. -->
+  <form class="max-w-2xl" onsubmit={submit}>
     <SearchBar
       bind:value={searchInput}
-      class="flex-1"
+      class="w-full"
       placeholder={t('discover.searchPlaceholder')}
       ariaLabel={t('discover.searchAriaLabel')}
       shortcutKey="/"
@@ -69,12 +71,6 @@
       shortcutAriaLabel={t('discover.searchShortcutAria')}
       onsubmit={onSearchSubmit}
     />
-    <button
-      type="submit"
-      class="rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-2 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-    >
-      {t('discover.search')}
-    </button>
   </form>
 
   <div role="group" aria-label={t('discover.trending')} class="flex flex-wrap gap-2">

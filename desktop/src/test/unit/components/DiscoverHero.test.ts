@@ -39,12 +39,19 @@ describe('DiscoverHero search field', () => {
     expect(document.activeElement).toBe(input);
   });
 
-  it('submits the typed query through the submit button', async () => {
+  it('no longer renders a separate submit button', () => {
+    renderHero();
+
+    expect(screen.queryByRole('button', { name: 'discover.search' })).toBeNull();
+  });
+
+  it('submits the typed query through the form', async () => {
     const onSearchSubmit = renderHero();
     const user = userEvent.setup();
+    const input = screen.getByLabelText('discover.searchAriaLabel');
 
-    await user.type(screen.getByLabelText('discover.searchAriaLabel'), 'dune');
-    await user.click(screen.getByRole('button', { name: 'discover.search' }));
+    await user.type(input, 'dune');
+    await fireEvent.submit(input.closest('form')!);
 
     expect(onSearchSubmit).toHaveBeenCalledWith('dune');
   });
