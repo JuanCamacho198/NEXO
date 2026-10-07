@@ -108,14 +108,6 @@ input[type='text'] {
   border-radius: 8px;
 }
 
-.btn-secondary:hover:not(:disabled) {
-  background: rgba(25, 41, 62, 0.96);
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background: var(--color-surface);
-}
-
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;

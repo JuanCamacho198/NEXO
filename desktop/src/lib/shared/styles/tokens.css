@@ -486,55 +486,6 @@ body {
 }
 
 /* ============================================
- * COMPONENT TOKENS
- * ============================================ */
-.btn {
-  font-family: var(--font-sans);
-  border: none;
-  border-radius: var(--radius-lg);
-  padding: var(--space-sm) var(--space-lg);
-  cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--color-primary);
-  color: var(--color-background);
-}
-
-.btn-primary:hover:not(:disabled) {
-  box-shadow: 0 16px 28px rgba(73, 212, 255, 0.18);
-}
-
-.btn-secondary {
-  background: var(--color-surface);
-  color: var(--color-primary);
-  border: 1px solid var(--color-border);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--color-secondary);
-}
-
-.card {
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  padding: var(--space-md);
-  box-shadow: var(--shadow-soft);
-}
-
-/* ============================================
  * UTILITIES
  * ============================================ */
 .text-muted {
