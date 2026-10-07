@@ -13,9 +13,11 @@
     leadingIcon?: Snippet;
     onclick?: () => void;
     type?: 'button' | 'submit' | 'reset';
-    variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent';
+    variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent' | 'tab';
     /** Padding only — the type role is always Label (0.875rem/500). */
     size?: 'sm' | 'md' | 'lg';
+    /** Only meaningful with `variant="tab"`: paints the selected tab treatment. */
+    selected?: boolean;
     /** Render a <label> so the control can wrap a hidden file input. */
     as?: 'button' | 'label';
     fullWidth?: boolean;
@@ -34,6 +36,7 @@
     type = 'button',
     variant = 'primary',
     size = 'md',
+    selected = false,
     as = 'button',
     fullWidth = false,
     loading = false,
@@ -48,10 +51,20 @@
   const isInactive = $derived(disabled || loading);
 
   // Every button is the Label role (0.875rem / 500). `size` sets padding only.
-  const baseClasses =
-    'inline-flex items-center justify-center font-sans text-sm font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-(--color-background) disabled:opacity-50 disabled:cursor-not-allowed';
+  const isTab = $derived(variant === 'tab');
 
-  const pressStyles = $derived(isPressed ? 'scale-[0.96] shadow-inner' : 'scale-100 shadow-sm');
+  // The tab variant rides a bare track as a border-bottom indicator, so it drops
+  // the rounded chrome, the press shadow and the size padding the other
+  // variants share.
+  const baseClasses = $derived(
+    isTab
+      ? 'inline-flex items-center justify-center gap-1.5 px-2 py-3 text-sm font-medium rounded-none border-b-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-(--color-primary)'
+      : 'inline-flex items-center justify-center font-sans text-sm font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-(--color-background) disabled:opacity-50 disabled:cursor-not-allowed',
+  );
+
+  const pressStyles = $derived(
+    isTab ? '' : isPressed ? 'scale-[0.96] shadow-inner' : 'scale-100 shadow-sm',
+  );
 
   const variants = {
     primary:
@@ -76,6 +89,19 @@
 
   const widthClasses = $derived(fullWidth ? 'w-full' : '');
 
+  // Selected/idle treatment of the tab variant: the accent-soft wash with the
+  // accent-start underline the strip used before the atoms migration. Keeping it
+  // in the atom is what lets the settings tree stay free of a raw <button>.
+  const tabClasses = $derived(
+    selected
+      ? 'border-(--color-accent-start) bg-(--color-accent-soft) text-(--color-primary) font-semibold'
+      : 'border-transparent text-(--color-text-muted,var(--color-secondary)) hover:text-(--color-primary)',
+  );
+
+  const variantClasses = $derived(variant === 'tab' ? tabClasses : variants[variant]);
+
+  const sizeClasses = $derived(isTab ? '' : sizes[size]);
+
   // A <label> has no :disabled state, so the disabled affordance is applied
   // through classes instead; focus moves to the wrapped control, so the ring
   // is drawn with focus-within. The press affordance is CSS `active:` because a
@@ -95,11 +121,11 @@
   }
 
   const buttonClasses = $derived(
-    `${baseClasses} ${pressStyles} ${variants[variant]} ${sizes[size]} ${widthClasses} ${className}`,
+    `${baseClasses} ${pressStyles} ${variantClasses} ${sizeClasses} ${widthClasses} ${className}`,
   );
 
   const labelClasses = $derived(
-    `${baseClasses} ${variants[variant]} ${sizes[size]} ${widthClasses} ${labelStateClasses} ${className}`,
+    `${baseClasses} ${variantClasses} ${sizeClasses} ${widthClasses} ${labelStateClasses} ${className}`,
   );
 </script>
 

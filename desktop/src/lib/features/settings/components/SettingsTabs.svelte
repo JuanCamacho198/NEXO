@@ -56,14 +56,12 @@
 >
   {#each tabs as tab (tab.id)}
     {@const TabIcon = tab.icon}
-    <!-- The atom owns the control chrome; the selected tab takes the filled
-         secondary tone and the rest stay ghost. The old accent-soft wash with
-         an accent-start underline has no atom equivalent, so the selected
-         state is intentionally quieter — selection is still exposed through
-         `aria-selected`. -->
+    <!-- The Button atom's `tab` variant carries the strip chrome: the selected
+         tab keeps the accent-soft wash with the accent-start underline, the rest
+         stay transparent. `aria-selected` mirrors the same state. -->
     <Button
-      variant={activeTab === tab.id ? 'secondary' : 'ghost'}
-      size="sm"
+      variant="tab"
+      selected={activeTab === tab.id}
       role="tab"
       aria-selected={activeTab === tab.id}
       aria-controls="tabpanel-{tab.id}"

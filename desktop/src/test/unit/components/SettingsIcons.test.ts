@@ -63,13 +63,19 @@ describe('settings icon migration', () => {
     expect(tabs).toHaveLength(6);
     for (const tab of tabs) {
       expect(tab.tagName).toBe('BUTTON');
-      expect(tab).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+      expect(tab).toHaveClass('text-sm', 'font-medium', 'rounded-none', 'inline-flex');
     }
 
     const selected = screen.getByRole('tab', { selected: true });
     expect(selected).toHaveAttribute('aria-selected', 'true');
     expect(selected).toHaveAttribute('id', 'tab-cuenta');
-    expect(selected).toHaveClass('bg-(--color-surface)');
+    expect(selected).toHaveClass('bg-(--color-accent-soft)', 'border-(--color-accent-start)');
+
+    const idle = tabs.filter((tab) => tab.getAttribute('aria-selected') === 'false');
+    expect(idle).toHaveLength(5);
+    for (const tab of idle) {
+      expect(tab).toHaveClass('border-transparent');
+    }
   });
   it('renders the daily goal as a collapsed row instead of the removed icon-card grid', () => {
     const { container } = render(SettingsCuentaTab, {
