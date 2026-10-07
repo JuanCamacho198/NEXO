@@ -23,12 +23,21 @@ const PINNED_DAY = new Date(2026, 5, 10, 12);
 const pinnedNow = (): Date => PINNED_DAY;
 const TERM = ['arthur conan doyle', 'edgar allan poe', 'oscar wilde'] as const;
 
-function book(id: string): CatalogBook {
+/**
+ * Title-cased surname of a rail term: the author credit a fake returns so the
+ * rail author filter keeps its books (`edgar allan poe` → `Poe`).
+ */
+function railAuthor(term: string): string {
+  const surname = term.trim().split(/\s+/).pop() ?? term;
+  return surname.charAt(0).toUpperCase() + surname.slice(1);
+}
+
+function book(id: string, authors: string[] = ['Author']): CatalogBook {
   return {
     id,
     provider: 'googlebooks',
     title: `Title ${id}`,
-    authors: ['Author'],
+    authors,
     coverUrl: null,
     languages: ['en'],
     subjects: ['Fiction'],
@@ -142,7 +151,7 @@ describe('discover rails — bounded automatic retry (G1)', () => {
     let failing = true;
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider } = recordingProvider({
-      searchSource: () => (failing ? offline : [book('googlebooks:ok')]),
+      searchSource: (query) => (failing ? offline : [book('googlebooks:ok', [railAuthor(query)])]),
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -159,7 +168,8 @@ describe('discover rails — bounded automatic retry (G1)', () => {
     vi.useFakeTimers();
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider, requests } = recordingProvider({
-      searchSource: (query) => (query === TERM[1] ? offline : [book('googlebooks:ok')]),
+      searchSource: (query) =>
+        query === TERM[1] ? offline : [book('googlebooks:ok', [railAuthor(query)])],
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -205,7 +215,8 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
   it('re-triggers only rails in Error on the online event, exactly once', async () => {
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider, requests } = recordingProvider({
-      searchSource: (query) => (query === TERM[1] ? offline : [book('googlebooks:ok')]),
+      searchSource: (query) =>
+        query === TERM[1] ? offline : [book('googlebooks:ok', [railAuthor(query)])],
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -225,7 +236,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     let failing = true;
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider } = recordingProvider({
-      searchSource: () => (failing ? offline : [book('googlebooks:ok')]),
+      searchSource: (query) => (failing ? offline : [book('googlebooks:ok', [railAuthor(query)])]),
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -250,7 +261,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
       searchSource: (query) => {
         if (query === TERM[1]) return gated;
         if (query === TERM[2]) return offline;
-        return [book('googlebooks:ok')];
+        return [book('googlebooks:ok', [railAuthor(query)])];
       },
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
@@ -264,7 +275,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
 
     expect(requests.slice(before)).toEqual([{ kind: 'searchSource', query: TERM[2] }]);
 
-    release([book('googlebooks:2')]);
+    release([book('googlebooks:2', [railAuthor(TERM[1])])]);
     await pending;
     state.dispose();
   });
@@ -273,7 +284,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     let failing = true;
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider } = recordingProvider({
-      searchSource: () => (failing ? offline : [book('googlebooks:ok')]),
+      searchSource: (query) => (failing ? offline : [book('googlebooks:ok', [railAuthor(query)])]),
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -303,7 +314,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
       searchSource: (query) => {
         if (query === TERM[1]) return gated;
         if (query === TERM[0]) return offline;
-        return [book('googlebooks:ok')];
+        return [book('googlebooks:ok', [railAuthor(query)])];
       },
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
@@ -315,7 +326,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     expect(state.isOnline).toBe(false);
 
     // A later Loaded settle must not clear the pill while rail 0 is offline.
-    releasePopular([book('googlebooks:loaded')]);
+    releasePopular([book('googlebooks:loaded', [railAuthor(TERM[1])])]);
     await pending;
     expect(state.rails[1]?.kind).toBe('Loaded');
     expect(state.rails[2]?.kind).toBe('Loaded');
@@ -329,7 +340,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     const upstream = catalogError('UPSTREAM_ERROR', 'boom');
     const { provider } = recordingProvider({
       searchSource: (query) => {
-        if (query !== TERM[1]) return [book('googlebooks:ok')];
+        if (query !== TERM[1]) return [book('googlebooks:ok', [railAuthor(query)])];
         return firstAttempt ? offline : upstream;
       },
     });
@@ -348,7 +359,9 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
   });
 
   it('exposes the dispose path through the DiscoverDomainState facade', async () => {
-    const { provider } = recordingProvider({ searchSource: () => [book('googlebooks:ok')] });
+    const { provider } = recordingProvider({
+      searchSource: (query) => [book('googlebooks:ok', [railAuthor(query)])],
+    });
     const state = new DiscoverDomainState(provider, {}, { now: pinnedNow });
     await state.refreshRails();
     expect(() => state.dispose()).not.toThrow();

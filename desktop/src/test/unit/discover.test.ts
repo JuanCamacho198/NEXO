@@ -292,12 +292,25 @@ describe('DiscoverDomainState (PR4 hardening)', () => {
   });
 });
 
-function fakeBook(id: string, subjects: string[] = ['Fiction']): CatalogBook {
+/**
+ * Title-cased surname of a rail term: the author credit a fake returns so the
+ * rail author filter keeps its books (`arthur conan doyle` → `Doyle`).
+ */
+function railAuthor(term: string): string {
+  const surname = term.trim().split(/\s+/).pop() ?? term;
+  return surname.charAt(0).toUpperCase() + surname.slice(1);
+}
+
+function fakeBook(
+  id: string,
+  subjects: string[] = ['Fiction'],
+  authors: string[] = ['Author'],
+): CatalogBook {
   return {
     id,
     provider: 'gutendex',
     title: `Title ${id}`,
-    authors: ['Author'],
+    authors,
     coverUrl: null,
     languages: ['en'],
     subjects,
@@ -520,7 +533,9 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
   });
 
   it('chip filter is client-side with zero catalog calls', async () => {
-    const provider = fakeProvider({ searchSourceBooks: [fakeBook('googlebooks:1')] });
+    const provider = fakeProvider({
+      searchSourceBooks: [fakeBook('googlebooks:1', ['Fiction'], ['Arthur Conan Doyle'])],
+    });
     const state = new DiscoverDomainState(provider, {}, { now: () => new Date(2026, 5, 10) });
     await state.refreshRails();
     const afterRails = provider.calls.searchSource;
@@ -566,7 +581,7 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
       searchSourceByQuery: (query) =>
         query === 'edgar allan poe'
           ? catalogError('UPSTREAM_ERROR', 'boom')
-          : [fakeBook('googlebooks:ok')],
+          : [fakeBook('googlebooks:ok', ['Fiction'], [railAuthor(query)])],
     });
     const state = new DiscoverDomainState(provider, {}, { now: () => new Date(2026, 5, 10) });
     await state.refreshRails();
@@ -582,7 +597,7 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
       searchSourceByQuery: (query) =>
         query === 'oscar wilde'
           ? catalogError('UPSTREAM_ERROR', 'term search down')
-          : [fakeBook('googlebooks:ok')],
+          : [fakeBook('googlebooks:ok', ['Fiction'], [railAuthor(query)])],
     });
     const state = new DiscoverDomainState(provider, {}, { now: () => new Date(2026, 5, 10) });
     await state.refreshRails();
@@ -593,12 +608,18 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
   });
 
   it('short rails render as-is and long rails truncate to the fetch limit', async () => {
-    const many = Array.from({ length: 30 }, (_, i) => fakeBook(`googlebooks:${100 + i}`));
+    const many = Array.from({ length: 30 }, (_, i) =>
+      fakeBook(`googlebooks:${100 + i}`, ['Fiction'], [railAuthor('arthur conan doyle')]),
+    );
     const provider = fakeProvider({
       searchSourceByQuery: (query) =>
         query === 'arthur conan doyle'
           ? many
-          : [fakeBook('googlebooks:1'), fakeBook('googlebooks:2'), fakeBook('googlebooks:3')],
+          : [
+              fakeBook('googlebooks:1', ['Fiction'], [railAuthor(query)]),
+              fakeBook('googlebooks:2', ['Fiction'], [railAuthor(query)]),
+              fakeBook('googlebooks:3', ['Fiction'], [railAuthor(query)]),
+            ],
     });
     const state = new DiscoverDomainState(provider, {}, { now: () => new Date(2026, 5, 10) });
     await state.refreshRails();
@@ -625,14 +646,19 @@ describe('desktop-descubrir Phase 3.3 — skeleton, offline retry, discover rout
     expect(state.rails.every((rail) => rail.kind === 'Hidden')).toBe(true);
     const pending = state.refreshRails();
     expect(state.rails.every((rail) => rail.kind === 'Loading')).toBe(true);
-    release([fakeBook('googlebooks:1'), fakeBook('googlebooks:2')]);
+    release([
+      fakeBook('googlebooks:1', ['Fiction'], ['Arthur Conan Doyle']),
+      fakeBook('googlebooks:2', ['Fiction'], ['Arthur Conan Doyle']),
+    ]);
     await pending;
     expect(state.rails.filter((rail) => rail.kind === 'Loaded').length).toBeGreaterThan(0);
   });
 
   it('offline then retry: connectivity failure flips isOnline false and retry recovers', async () => {
     let failing = true;
-    const base = fakeProvider({ searchSourceBooks: [fakeBook('googlebooks:3')] });
+    const base = fakeProvider({
+      searchSourceBooks: [fakeBook('googlebooks:3', ['Fiction'], ['Arthur Conan Doyle'])],
+    });
     const flaky: CatalogProvider = {
       ...base,
       searchSource: async (sourceId, query, page) => {

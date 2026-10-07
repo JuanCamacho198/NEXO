@@ -53,12 +53,21 @@ const PINNED_KEYS = [
   'discover.rail.author.wilde',
 ] as const;
 
-function book(id: string): CatalogBook {
+/**
+ * Title-cased surname of a rail term: the author credit a fake returns so the
+ * rail author filter keeps its books (`arthur conan doyle` → `Doyle`).
+ */
+function railAuthor(term: string): string {
+  const surname = term.trim().split(/\s+/).pop() ?? term;
+  return surname.charAt(0).toUpperCase() + surname.slice(1);
+}
+
+function book(id: string, authors: string[] = ['Author']): CatalogBook {
   return {
     id,
     provider: 'googlebooks',
     title: `Title ${id}`,
-    authors: ['Author'],
+    authors,
     coverUrl: null,
     languages: ['en'],
     subjects: ['Fiction'],
@@ -147,7 +156,9 @@ describe('discover rails — fixed three-rail author shelves', () => {
   });
 
   it('refreshRails issues one Google Books source search per rail and never featured', async () => {
-    const { provider, requests } = recordingProvider({ searching: () => [book('googlebooks:1')] });
+    const { provider, requests } = recordingProvider({
+      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
+    });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
 
@@ -170,7 +181,7 @@ describe('discover rails — fixed three-rail author shelves', () => {
 
   it('keeps rail positions index-stable and publishes the whole plan', async () => {
     const { provider } = recordingProvider({
-      searching: (query) => [book(`googlebooks:${query}`)],
+      searching: (query) => [book(`googlebooks:${query}`, [railAuthor(query)])],
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -181,9 +192,12 @@ describe('discover rails — fixed three-rail author shelves', () => {
   });
 
   it('truncates a long rail to the fetch limit while short rails render as-is', async () => {
-    const many = Array.from({ length: 30 }, (_, i) => book(`googlebooks:${100 + i}`));
+    const many = Array.from({ length: 30 }, (_, i) =>
+      book(`googlebooks:${100 + i}`, [railAuthor(PINNED_TERMS[0])]),
+    );
     const { provider } = recordingProvider({
-      searching: (query) => (query === PINNED_TERMS[0] ? many : [book('googlebooks:one')]),
+      searching: (query) =>
+        query === PINNED_TERMS[0] ? many : [book('googlebooks:one', [railAuthor(query)])],
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -195,7 +209,9 @@ describe('discover rails — fixed three-rail author shelves', () => {
   });
 
   it('gives every rail a distinct query signature so no two shelves share a request', async () => {
-    const { provider, requests } = recordingProvider({ searching: () => [book('googlebooks:1')] });
+    const { provider, requests } = recordingProvider({
+      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
+    });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
 
@@ -209,7 +225,9 @@ describe('discover rails — fixed three-rail author shelves', () => {
   });
 
   it('exposes the three-shelf set through the DiscoverDomainState facade', async () => {
-    const { provider } = recordingProvider({ searching: () => [book('googlebooks:1')] });
+    const { provider } = recordingProvider({
+      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
+    });
     const state = new DiscoverDomainState(provider, {}, { now: pinnedNow });
     await state.ensureRailsLoaded();
 
@@ -223,7 +241,9 @@ describe('discover rails — fixed three-rail author shelves', () => {
 describe('discover rails — isolated error and retry', () => {
   it('isolates a failing rail: the other rails keep their books', async () => {
     const failingTerm = PINNED_TERMS[1];
-    const base = recordingProvider({ searching: () => [book('googlebooks:1')] });
+    const base = recordingProvider({
+      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
+    });
     const requests = base.requests;
     const flaky: CatalogProvider = {
       ...base.provider,
@@ -273,7 +293,9 @@ describe('discover rails — isolated error and retry', () => {
   });
 
   it('does not refetch a settled rail set on remount', async () => {
-    const { provider, requests } = recordingProvider({ searching: () => [book('googlebooks:1')] });
+    const { provider, requests } = recordingProvider({
+      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
+    });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.ensureLoaded();
     const afterFirstMount = requests.length;
@@ -286,7 +308,9 @@ describe('discover rails — isolated error and retry', () => {
 
 describe('discover rails — remount dedup (spec: "Remount does not refetch resolved rails")', () => {
   it('issues no additional provider request when a resolved rail set is mounted again', async () => {
-    const { provider, requests } = recordingProvider({ searching: () => [book('googlebooks:1')] });
+    const { provider, requests } = recordingProvider({
+      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
+    });
     // The screen shares one `DiscoverDomainState` singleton, so a remount runs
     // this same load path again; requests are counted, not just state observed.
     const state = new DiscoverDomainState(provider, {}, { now: pinnedNow });
@@ -334,7 +358,7 @@ describe('discover rails — remount dedup (spec: "Remount does not refetch reso
       async searchSource(sourceId, query, page): Promise<PagedResult> {
         requests.push({ kind: 'searchSource', sourceId, query, page });
         await gate;
-        return paged([book(`googlebooks:${query}`)]);
+        return paged([book(`googlebooks:${query}`, [railAuthor(query)])]);
       },
       resolveDownloadUrl(): string {
         throw catalogError('UNAVAILABLE_DOWNLOAD', 'no usable url');
@@ -368,7 +392,8 @@ describe('discover rails — remount dedup (spec: "Remount does not refetch reso
 describe('discover rails — curated author rotation', () => {
   it('never degrades to an unsorted query across empty, error and retry', async () => {
     const behaviour: FakeBehaviour = {
-      searching: (query) => (query === PINNED_TERMS[2] ? [] : [book('googlebooks:1')]),
+      searching: (query) =>
+        query === PINNED_TERMS[2] ? [] : [book('googlebooks:1', [railAuthor(query)])],
     };
     const { provider, requests } = recordingProvider(behaviour);
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
@@ -378,12 +403,14 @@ describe('discover rails — curated author rotation', () => {
     expect(state.rails[0].kind).toBe('Loaded');
 
     behaviour.searching = (query) =>
-      query === PINNED_TERMS[2] ? catalogError('UPSTREAM_ERROR', 'boom') : [book('googlebooks:1')];
+      query === PINNED_TERMS[2]
+        ? catalogError('UPSTREAM_ERROR', 'boom')
+        : [book('googlebooks:1', [railAuthor(query)])];
     await state.refreshRails();
     expect(state.rails[2].kind).toBe('Error');
     expect(state.rails[0].kind).toBe('Loaded');
 
-    behaviour.searching = () => [book('googlebooks:9')];
+    behaviour.searching = (query) => [book('googlebooks:9', [railAuthor(query)])];
     await state.retryRail(2);
     expect(state.rails[2].kind).toBe('Loaded');
 
@@ -467,7 +494,9 @@ describe('discover rails — curated author rotation', () => {
   });
 
   it('reuses the same shelves across refresh, retry and a fresh mount', async () => {
-    const { provider, requests } = recordingProvider({ searching: () => [book('googlebooks:1')] });
+    const { provider, requests } = recordingProvider({
+      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
+    });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
     await state.refreshRails();
@@ -561,7 +590,9 @@ describe('discover rails — progressive per-rail publish', () => {
     const slow = new Promise<CatalogBook[]>((resolve) => {
       releaseSlow = resolve;
     });
-    const base = recordingProvider({ searching: () => [book('googlebooks:1')] }).provider;
+    const base = recordingProvider({
+      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
+    }).provider;
     const provider: CatalogProvider = {
       ...base,
       searchSource: async (sourceId, query, page) =>
@@ -577,7 +608,7 @@ describe('discover rails — progressive per-rail publish', () => {
     expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loading', 'Loaded']);
     expect(state.settled).toBe(false);
 
-    releaseSlow([book('googlebooks:slow')]);
+    releaseSlow([book('googlebooks:slow', [railAuthor(PINNED_TERMS[1])])]);
     await pending;
     expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded']);
     expect(state.rails[1].kind === 'Loaded' ? state.rails[1].books[0]?.id : '').toBe(
@@ -589,7 +620,9 @@ describe('discover rails — progressive per-rail publish', () => {
   it('settles a hung rail to Error at the deadline and never leaves it Loading', async () => {
     vi.useFakeTimers();
     const hung = new Promise<PagedResult>(() => undefined);
-    const base = recordingProvider({ searching: () => [book('googlebooks:1')] }).provider;
+    const base = recordingProvider({
+      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
+    }).provider;
     const provider: CatalogProvider = {
       ...base,
       searchSource: (sourceId, query, page) =>
@@ -632,7 +665,7 @@ describe('discover rails — rail-scoped "Ver todo"', () => {
 
   it('opens an author term scope and pages the Google Books source search', async () => {
     const { provider, requests } = recordingProvider({
-      searching: (query) => [book(`googlebooks:${query}`)],
+      searching: (query) => [book(`googlebooks:${query}`, [railAuthor(query)])],
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();

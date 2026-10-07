@@ -13,6 +13,7 @@ import {
   buildRailSpecs,
   DISCOVER_RAIL_FETCH_LIMIT,
   loadRail,
+  matchesAuthorQuery,
   withDeadline,
   type DiscoverRailSpec,
 } from './railPlan';
@@ -357,7 +358,12 @@ export class DiscoverRailsDomainState {
         loadRail(this.provider, spec, DISCOVER_RAIL_FETCH_LIMIT),
         this.timeoutMs,
       );
-      const books = page.results.slice(0, DISCOVER_RAIL_FETCH_LIMIT);
+      // Free-text rail search ranks criticism and biographies above the works,
+      // so the shelf is the authored subset, bounded to the fetch limit. An
+      // all-foreign page hides the rail instead of rendering a mislabelled row.
+      const books = page.results
+        .filter((book) => matchesAuthorQuery(book, spec.term))
+        .slice(0, DISCOVER_RAIL_FETCH_LIMIT);
       if (books.length === 0) return { kind: 'Hidden' };
       return { kind: 'Loaded', books, totalCount: page.totalCount };
     } catch (err) {
