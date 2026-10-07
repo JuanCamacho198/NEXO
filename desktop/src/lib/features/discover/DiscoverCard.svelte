@@ -44,7 +44,7 @@
       </div>
     {/if}
     <span
-      class="absolute top-2 left-2 rounded-full border border-(--color-border) bg-(--color-background)/85 px-2 py-0.5 text-xs font-medium text-(--color-secondary)"
+      class="absolute bottom-2 left-2 rounded-full border border-(--color-border) bg-(--color-background)/95 px-2 py-0.5 text-micro font-medium uppercase tracking-wider text-(--color-secondary)"
     >
       {providerLabel(book.provider)}
     </span>
