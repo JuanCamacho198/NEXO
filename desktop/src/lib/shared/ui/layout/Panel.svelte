@@ -44,7 +44,7 @@
       <div class="flex items-center justify-between gap-3">
         <div class="min-w-0">
           {#if title}
-            <h2 class="text-lg font-semibold tracking-tight text-(--color-primary)">{title}</h2>
+            <h2 class="text-xl font-semibold tracking-tight text-(--color-primary)">{title}</h2>
           {/if}
           {#if subtitle}
             <p class="mt-1 text-sm text-(--color-secondary)">{subtitle}</p>

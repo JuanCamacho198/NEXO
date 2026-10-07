@@ -34,10 +34,24 @@
   --font-sans: 'Manrope', 'Segoe UI', Arial, sans-serif;
   --font-serif: 'Newsreader', 'Times New Roman', serif;
 
-  /* Font sizes */
-  --text-2xs: 0.6875rem;
-  --text-micro: 0.625rem;
+  /* ============================================
+   * TYPE SCALE — the seven documented roles
+   * Ratified in DESIGN.md § Typography › Hierarchy. These are the only font
+   * sizes the interface may use; any other size in a component is a defect.
+   * ============================================ */
+  --text-4xl: 2.5rem; /* Display  — hero and welcome screen only */
+  --text-3xl: 1.875rem; /* Page     — route and tab titles */
+  --text-xl: 1.25rem; /* Title    — section and panel headings */
+  --text-lg: 1.125rem; /* Reading  — reader content only */
+  --text-base: 1rem; /* Body     — default interface text */
+  --text-sm: 0.875rem; /* Label    — control text and every button */
+  --text-xs: 0.75rem; /* Micro    — uppercase micro-labels */
+  --text-micro: 0.625rem; /* Micro    — helper and status copy */
+
+  /* Legacy sizes. NOT part of the documented scale; retained only while
+     existing consumers still reference them. Do not use in new work. */
   --text-2sm: 0.8125rem;
+  --text-2xs: 0.6875rem;
 
   /* Spacing */
   --space-xs: 4px;
@@ -70,7 +84,8 @@
   --font-sans: 'Manrope', 'Segoe UI', Arial, sans-serif;
   --font-serif: 'Newsreader', 'Times New Roman', serif;
 
-  /* Font sizes — del diseño anterior */
+  /* Font sizes — mirror of the @theme scale above, declared here so var()
+     resolves even outside Tailwind's theme layer. */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -79,8 +94,10 @@
   --text-2xl: 1.5rem;
   --text-3xl: 1.875rem;
   --text-4xl: 2.5rem;
-  --text-2xs: 0.6875rem;
   --text-micro: 0.625rem;
+
+  /* Legacy — not part of the documented scale. */
+  --text-2xs: 0.6875rem;
   --text-2sm: 0.8125rem;
 
   /* Font weights */

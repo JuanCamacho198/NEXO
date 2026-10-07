@@ -3,28 +3,46 @@
 
   type ButtonProps = {
     children?: Snippet;
+    /** Optional icon rendered before the label. */
+    leadingIcon?: Snippet;
     onclick?: () => void;
     type?: 'button' | 'submit' | 'reset';
     variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent';
+    /** Padding only — the type role is always Label (0.875rem/500). */
     size?: 'sm' | 'md' | 'lg';
+    /** Render a <label> so the control can wrap a hidden file input. */
+    as?: 'button' | 'label';
+    fullWidth?: boolean;
+    /** Disables the button and shows a spinner until the action settles. */
+    loading?: boolean;
+    /** Replaces the label while `loading` is set. */
+    loadingLabel?: string;
     disabled?: boolean;
     class?: string;
   };
 
   let {
     children,
+    leadingIcon,
     onclick,
     type = 'button',
     variant = 'primary',
     size = 'md',
+    as = 'button',
+    fullWidth = false,
+    loading = false,
+    loadingLabel,
     disabled = false,
     class: className = '',
   }: ButtonProps = $props();
 
   let isPressed = $state(false);
 
+  const isInactive = $derived(disabled || loading);
+
+  // Every button is the Label role (0.875rem / 500). `size` sets padding only.
   const baseClasses =
-    'inline-flex items-center justify-center font-sans font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-(--color-background) disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center font-sans text-sm font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-(--color-background) disabled:opacity-50 disabled:cursor-not-allowed';
 
   const pressStyles = $derived(isPressed ? 'scale-[0.96] shadow-inner' : 'scale-100 shadow-sm');
 
@@ -44,20 +62,80 @@
   };
 
   const sizes = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+    sm: 'px-3 py-1.5',
+    md: 'px-4 py-2',
+    lg: 'px-6 py-3',
   };
+
+  const widthClasses = $derived(fullWidth ? 'w-full' : '');
+
+  // A <label> has no :disabled state, so the disabled affordance is applied
+  // through classes instead; focus moves to the wrapped control, so the ring
+  // is drawn with focus-within. The press affordance is CSS `active:` because a
+  // non-interactive element must not take mouse listeners.
+  const labelStateClasses = $derived(
+    as === 'label'
+      ? `scale-100 shadow-sm transition-transform active:scale-[0.96] active:shadow-inner focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-(--color-background) ${isInactive ? 'pointer-events-none cursor-not-allowed opacity-50' : ''}`
+      : '',
+  );
+
+  function handlePressStart(): void {
+    isPressed = true;
+  }
+
+  function handlePressEnd(): void {
+    isPressed = false;
+  }
+
+  const buttonClasses = $derived(
+    `${baseClasses} ${pressStyles} ${variants[variant]} ${sizes[size]} ${widthClasses} ${className}`,
+  );
+
+  const labelClasses = $derived(
+    `${baseClasses} ${variants[variant]} ${sizes[size]} ${widthClasses} ${labelStateClasses} ${className}`,
+  );
 </script>
 
-<button
-  {type}
-  class="{baseClasses} {pressStyles} {variants[variant]} {sizes[size]} {className}"
-  {disabled}
-  {onclick}
-  onmousedown={() => (isPressed = true)}
-  onmouseup={() => (isPressed = false)}
-  onmouseleave={() => (isPressed = false)}
->
-  {@render children?.()}
-</button>
+{#snippet content()}
+  {#if loading}
+    <svg
+      class="mr-1.5 h-3.5 w-3.5 shrink-0 animate-spin"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+      <path
+        class="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"
+      />
+    </svg>
+  {:else if leadingIcon}
+    <span class="mr-1.5 inline-flex shrink-0 items-center">{@render leadingIcon()}</span>
+  {/if}
+  {#if loading && loadingLabel}
+    <span>{loadingLabel}</span>
+  {:else}
+    {@render children?.()}
+  {/if}
+{/snippet}
+
+{#if as === 'label'}
+  <label class={labelClasses} aria-disabled={isInactive} aria-busy={loading ? 'true' : undefined}>
+    {@render content()}
+  </label>
+{:else}
+  <button
+    {type}
+    class={buttonClasses}
+    disabled={isInactive}
+    aria-busy={loading ? 'true' : undefined}
+    {onclick}
+    onmousedown={handlePressStart}
+    onmouseup={handlePressEnd}
+    onmouseleave={handlePressEnd}
+  >
+    {@render content()}
+  </button>
+{/if}

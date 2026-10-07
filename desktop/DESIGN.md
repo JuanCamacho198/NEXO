@@ -28,6 +28,11 @@ typography:
     fontSize: "2.5rem"
     fontWeight: 700
     lineHeight: 1.2
+  page:
+    fontFamily: "Manrope, Segoe UI, Arial, sans-serif"
+    fontSize: "1.875rem"
+    fontWeight: 600
+    lineHeight: 1.4
   title:
     fontFamily: "Manrope, Segoe UI, Arial, sans-serif"
     fontSize: "1.25rem"
@@ -43,6 +48,12 @@ typography:
     fontSize: "0.875rem"
     fontWeight: 500
     lineHeight: 1.5
+  micro:
+    fontFamily: "Manrope, Segoe UI, Arial, sans-serif"
+    fontSize: "0.75rem"
+    fontWeight: 600
+    lineHeight: 1.5
+    letterSpacing: "0.18em"
   reading:
     fontFamily: "Newsreader, Times New Roman, serif"
     fontSize: "1.125rem"
@@ -174,10 +185,12 @@ The same roles invert on `[data-theme='light']`: ground becomes `#eef2f7`, surfa
 ### Hierarchy
 
 - **Display** (700, 2.5rem / `--text-4xl`, 1.2): Rare hero headings and the welcome screen only.
+- **Page** (600, 1.875rem / `--text-3xl`, 1.4): Route and tab titles.
 - **Title** (600, 1.25rem / `--text-xl`, 1.4): Section and panel headings (`SectionHeader`, `Panel`).
-- **Body** (400, 1rem, 1.5): Default interface text. Keep reading-width prose to a comfortable measure.
-- **Label** (500, 0.875rem, 1.5): Field labels, control text, and metadata; uppercase micro-labels use `--text-xs` with wide `letter-spacing` (0.18em).
-- **Reading** (400, 1.125rem Newsreader, 1.7): Book content inside the reader. The reader's own text settings override size and family at runtime.
+- **Body** (400, 1rem / `--text-base`, 1.5): Default interface text. Keep reading-width prose to a comfortable measure.
+- **Label** (500, 0.875rem / `--text-sm`, 1.5): Field labels, control text, metadata, and every button. A button is always Label; its `size` changes padding, never the type.
+- **Micro** (600, 0.75rem uppercase + 0.18em tracking / `--text-xs`, and 0.625rem / `--text-micro`): Uppercase micro-labels and helper or status copy only — never body text and never button labels.
+- **Reading** (400, 1.125rem Newsreader / `--text-lg`, 1.7): Book content inside the reader. The reader's own text settings override size and family at runtime.
 
 ### Named Rules
 
@@ -216,9 +229,12 @@ The form language is consistently rounded with no sharp corners. Radii scale wit
 ### Buttons
 
 - **Shape:** Consistent rounded `16px` (`--radius-lg`), no border on filled variants, hairline border on secondary.
-- **Primary:** Inverts the ink — `{colors.ink}` fill with `{colors.ground}` text; padding `8px 16px` (`sm` `6px 12px`, `lg` `12px 24px`).
+- **Type:** Every button is the Label role (`--text-sm`, 500). `size` sets padding only and never changes the type — `lg` is not the Reading serif and no size is Body.
+- **Sizes:** `sm` `6px 12px` (`px-3 py-1.5`), `md` `8px 16px` (`px-4 py-2`, default), `lg` `12px 24px` (`px-6 py-3`).
+- **Primary:** Inverts the ink — `{colors.ink}` fill with `{colors.ground}` text.
 - **Accent:** `{colors.nexo-blue}` fill with `{colors.signal-ink}` text; the reading CTA ("Reanudar"). The global primary is left untouched so unrelated screens do not shift.
 - **Secondary / Ghost / Danger:** Secondary is a `{colors.surface}` fill with a hairline border; Ghost is transparent and gains a surface-hover fill on hover; Danger is an `{colors.error}` fill and is the only destructive action color.
+- **Modifiers:** `fullWidth` stretches to the container; `leadingIcon` places a single icon before the label; `loading` disables the button and shows a spinner, optionally swapping in a `loadingLabel`; `as="label"` renders a `<label>` so a hidden file input can be the control instead of a `<label>` faking a button.
 - **Hover / Focus / Active:** Hover drops opacity to 90%; active presses to `scale(0.96)` with an inner shadow; focus draws a 2px ring at 2px offset. Transitions use `--duration-fast` with `--ease-smooth`, and the press uses `--ease-bounce`.
 
 ### Chips & Badges
