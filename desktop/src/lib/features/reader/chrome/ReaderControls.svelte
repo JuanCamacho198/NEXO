@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import ArrowRight from 'lucide-svelte/icons/arrow-right';
+  import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import PageInput from './PageInput.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -96,7 +96,7 @@
     disabled={currentPage <= 1}
     tabindex={rovingTabindex.prev}
     onfocus={() => (focusedControl = 'prev')}
-    class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-11 min-h-11 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
+    class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded-full bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-11 min-h-11 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
     aria-label={t('reader.prev_page')}
     data-testid={prevTestId}
     {...restProps}
@@ -110,11 +110,11 @@
     disabled={currentPage >= totalPages}
     tabindex={rovingTabindex.next}
     onfocus={() => (focusedControl = 'next')}
-    class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-11 min-h-11 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
+    class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-border) rounded-full bg-(--color-surface) text-(--color-primary) cursor-pointer text-xs min-w-11 min-h-11 hover:not-disabled:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] disabled:opacity-50 disabled:cursor-not-allowed"
     aria-label={t('reader.next_page')}
     data-testid={nextTestId}
   >
-    <ArrowRight size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
+    <ChevronRight size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
   </button>
   <PageInput
     variant="toolbar"

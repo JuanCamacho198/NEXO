@@ -49,8 +49,8 @@
   );
   const inputClass = $derived(
     variant === 'header'
-      ? 'w-[50px] min-h-11 p-1 border border-(--color-surface-strong) rounded text-center bg-(--color-bg-deep) text-(--color-text-auxiliary)'
-      : 'w-[50px] min-h-11 p-1 border border-(--color-border) rounded text-center bg-(--color-surface) text-(--color-primary)',
+      ? 'w-[50px] min-h-11 p-1 border border-(--color-surface-strong) rounded-full text-center bg-(--color-bg-deep) text-(--color-text-auxiliary)'
+      : 'w-[50px] min-h-11 p-1 border border-(--color-border) rounded-full text-center bg-(--color-surface) text-(--color-primary)',
   );
   const totalClass = $derived(
     variant === 'header'

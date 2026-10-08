@@ -92,7 +92,7 @@ describe('reader chrome icon migration', () => {
     };
 
     const { container } = render(ReaderControls, props);
-    expect(glyphs(container)).toEqual(['lucide-chevron-left', 'lucide-arrow-right']);
+    expect(glyphs(container)).toEqual(['lucide-chevron-left', 'lucide-chevron-right']);
     for (const icon of container.querySelectorAll('svg.lucide-icon')) expectGlyphContract(icon);
   });
 
