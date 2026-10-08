@@ -7,7 +7,6 @@
   import {
     DEFAULT_PDF_SCALE,
     isPageWithinBounds,
-    PDF_SCALE_STEP,
   } from '$lib/features/reader/viewer-pdf/pdfNavigation';
   import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
   import {
@@ -162,10 +161,6 @@
   });
   const zoomState = createPdfZoomThemeState({
     getReaderSettings: () => readerSettings,
-    getScale: () => scale,
-    setScale: (v) => setScale(v),
-    getCanvasContainer: () => canvasContainer,
-    getPdfDoc: () => docState.pdfDoc,
   });
 
   const isStaleNavigation = (id: number): boolean => renderState.isStaleNavigation(id);
@@ -295,7 +290,6 @@
     void navigateToPage(currentPage + 1);
   }
   function handleViewerKeydown(event: KeyboardEvent): void {
-    if (zoomState.handleKeyZoom(event)) return;
     if (!isViewerFocused) return;
     const intent = resolveReaderArrowIntent(event);
     if (!intent) return;
@@ -393,6 +387,9 @@
   export function getCurrentPage(): number {
     return currentPage;
   }
+  export function getScale(): number {
+    return scale;
+  }
   export function getTotalPages(): number {
     return docState.totalPages;
   }
@@ -413,7 +410,6 @@
     return () => {
       docState.cleanup();
       renderState.cleanup();
-      zoomState.cleanup();
       document.removeEventListener('selectionchange', handleSelectionChange);
     };
   });
@@ -437,13 +433,6 @@
     )
       return;
     void navigateToPage(tp, { flash: true });
-  });
-  $effect(() => {
-    const el = canvasContainer;
-    if (!el) return;
-    const h: EventListener = (e) => zoomState.handleViewerWheel(e as WheelEvent);
-    el.addEventListener('wheel', h, { passive: false });
-    return () => el.removeEventListener('wheel', h);
   });
   const handleViewerKeydown_ = (event: KeyboardEvent): void => {
     if (event.key === 'ArrowLeft') goToPrevPage();

@@ -187,7 +187,6 @@
   });
 
   const zoomTheme = createEpubZoomTheme({
-    getZoomContainerEl: () => zoomContainerEl,
     getReaderSettings: () => readerSettings,
     onSettingsChange: (s) => onSettingsChange?.(s),
     getFontSize: () => fontSize,
@@ -307,6 +306,9 @@
   export function setZoom(percent: number): void {
     zoomTheme.setZoom(percent);
   }
+  export function getZoomPercent(): number {
+    return fontSize;
+  }
   export function getCurrentPage(): number {
     return displayCurrentPage;
   }
@@ -315,9 +317,6 @@
   }
   export function getTotalPages(): number {
     return displayTotal;
-  }
-  function changeZoom(delta: number): void {
-    zoomTheme.changeZoom(delta);
   }
   function getThemeBgColor(): string {
     return zoomTheme.getThemeBgColor();
@@ -371,11 +370,6 @@
   function handleKeydown(e: KeyboardEvent): void {
     if (e.key === 'ArrowLeft') goToPrev();
     if (e.key === 'ArrowRight') goToNext();
-    if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-')) {
-      e.preventDefault();
-      const step = e.key === '-' ? -10 : 10;
-      changeZoom(step);
-    }
   }
 </script>
 

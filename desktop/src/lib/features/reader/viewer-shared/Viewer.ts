@@ -27,6 +27,7 @@ export type ViewerHandle = {
   navigateNext(): boolean | Promise<boolean>;
   goToPage(n: number): Promise<boolean>;
   setScaleOrZoom(pct: number): void;
+  getScaleOrZoom(): number;
   getCurrentPage(): number;
   getTotalForHeader(): number;
 };
@@ -118,6 +119,16 @@ export function createViewerSelection(
       }
       const epub = refs.epub as unknown as { setZoom?: (v: number) => void } | null;
       epub?.setZoom?.(pct);
+    },
+    getScaleOrZoom(): number {
+      const kind = getKind();
+      const refs = getRefs();
+      if (kind === 'pdf') {
+        const pdf = refs.pdf as unknown as { getScale?: () => number } | null;
+        return Math.round((pdf?.getScale?.() ?? 1) * 100);
+      }
+      const epub = refs.epub as unknown as { getZoomPercent?: () => number } | null;
+      return epub?.getZoomPercent?.() ?? 100;
     },
     getCurrentPage(): number {
       const kind = getKind();

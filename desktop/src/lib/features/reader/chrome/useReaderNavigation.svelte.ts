@@ -97,6 +97,9 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
         return epub?.handleGoToPage?.(n) ?? Promise.resolve(false);
       },
       setScaleOrZoom(_pct: number) {},
+      getScaleOrZoom() {
+        return 100;
+      },
       getCurrentPage() {
         if (kind === 'pdf') return pdf?.getCurrentPage?.() ?? (currentPdfPage || 1);
         return epub?.getCurrentPage?.() ?? (currentEpubChapter + 1 || 1);

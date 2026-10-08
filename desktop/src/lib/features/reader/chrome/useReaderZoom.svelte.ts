@@ -5,6 +5,13 @@ import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav
 import type { ReaderSettings } from '$lib/shared/types';
 import type { ViewerHandle } from '../viewer-shared/Viewer';
 
+/**
+ * The single zoom step (percentage points) for every zoom gesture.
+ * Wheel (ctrl+wheel) and keyboard (ctrl+=/ctrl+-) both funnel through
+ * `adjustZoom`, so one gesture changes the scale exactly once by this amount.
+ */
+export const READER_ZOOM_STEP_PERCENT = 10;
+
 export type ReaderZoomDeps = {
   getViewer?: () => ViewerHandle;
   getActiveBook?: () => unknown;
@@ -54,6 +61,14 @@ export function createReaderZoom(deps: ReaderZoomDeps): {
       setScaleOrZoom(pct: number) {
         if (kind === 'pdf') refs.pdf?.setScale?.(pct / 100);
         else refs.epub?.setZoom?.(pct);
+      },
+      getScaleOrZoom() {
+        if (kind === 'pdf')
+          return Math.round(((refs.pdf as { getScale?: () => number } | null)?.getScale?.() ?? 1) * 100);
+        return (
+          (refs.epub as { getZoomPercent?: () => number } | null)?.getZoomPercent?.() ??
+          clampZoomPercent(localReaderSettings.epub.fontSize ?? 100)
+        );
       },
       getCurrentPage() {
         return 1;
@@ -131,7 +146,7 @@ export function createReaderZoom(deps: ReaderZoomDeps): {
     if (pendingWheelFrame !== null) return;
     pendingWheelFrame = requestAnimationFrame(() => {
       pendingWheelFrame = null;
-      const delta = pendingWheelDelta > 0 ? -10 : 10;
+      const delta = pendingWheelDelta > 0 ? -READER_ZOOM_STEP_PERCENT : READER_ZOOM_STEP_PERCENT;
       pendingWheelDelta = 0;
       adjustZoom(delta);
     });
@@ -144,7 +159,7 @@ export function createReaderZoom(deps: ReaderZoomDeps): {
     ) {
       if (hasEditableContext(e.target as Element | null)) return;
       e.preventDefault();
-      const step = e.key === '-' || e.key === '_' ? -10 : 10;
+      const step = e.key === '-' || e.key === '_' ? -READER_ZOOM_STEP_PERCENT : READER_ZOOM_STEP_PERCENT;
       adjustZoom(step);
     }
   }
