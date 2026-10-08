@@ -539,12 +539,9 @@
       <p class="font-inter text-sm text-(--color-text-inverse)">{t('reader.no_book_loaded')}</p>
     {:else if viewer.kind === 'pdf'}
       <div
-        class="relative bg-white flex flex-col min-h-0 h-full"
+        class="relative bg-white flex flex-col min-h-0 h-full w-full"
         class:rounded-xl={!isFullscreen}
         class:shadow-lg={!isFullscreen}
-        class:w-200={!isFullscreen}
-        class:w-full={isFullscreen}
-        class:h-full={isFullscreen}
       >
         <PdfViewer
           bind:this={pdfRef}
@@ -571,11 +568,9 @@
       </div>
     {:else if viewer.kind === 'epub'}
       <div
-        class="relative overflow-hidden bg-white flex flex-col h-full min-h-0"
+        class="relative overflow-hidden bg-white flex flex-col h-full min-h-0 w-full"
         class:rounded-xl={!isFullscreen}
         class:shadow-lg={!isFullscreen}
-        class:w-200={!isFullscreen}
-        class:w-full={isFullscreen}
       >
         <EpubNativeViewer
           bind:this={epubRef}
