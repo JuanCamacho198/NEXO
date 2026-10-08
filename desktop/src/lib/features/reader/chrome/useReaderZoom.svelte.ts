@@ -64,7 +64,9 @@ export function createReaderZoom(deps: ReaderZoomDeps): {
       },
       getScaleOrZoom() {
         if (kind === 'pdf')
-          return Math.round(((refs.pdf as { getScale?: () => number } | null)?.getScale?.() ?? 1) * 100);
+          return Math.round(
+            ((refs.pdf as { getScale?: () => number } | null)?.getScale?.() ?? 1) * 100,
+          );
         return (
           (refs.epub as { getZoomPercent?: () => number } | null)?.getZoomPercent?.() ??
           clampZoomPercent(localReaderSettings.epub.fontSize ?? 100)
@@ -174,7 +176,8 @@ export function createReaderZoom(deps: ReaderZoomDeps): {
     ) {
       if (hasEditableContext(e.target as Element | null)) return;
       e.preventDefault();
-      const step = e.key === '-' || e.key === '_' ? -READER_ZOOM_STEP_PERCENT : READER_ZOOM_STEP_PERCENT;
+      const step =
+        e.key === '-' || e.key === '_' ? -READER_ZOOM_STEP_PERCENT : READER_ZOOM_STEP_PERCENT;
       adjustZoom(step);
     }
   }
