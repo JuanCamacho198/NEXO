@@ -152,6 +152,9 @@ export function stripMissingFontFaces(cssText: string, missingFonts: Set<string>
   });
 }
 
+// NOTE (U5.4): the hex literals below are intentional. They style HTML
+// injected into the EPUB iframe, where the app's CSS tokens do not exist,
+// so var(--color-*) references would resolve to nothing.
 export function getThemeStyles(themeMode: string): string {
   const themes: Record<string, string> = {
     paper: `

@@ -559,12 +559,12 @@
     display: block;
     position: relative;
     z-index: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    background: var(--pdf-reader-surface-bg, #fff);
+    box-shadow: var(--shadow-soft);
+    background: var(--pdf-reader-surface-bg, var(--color-color-picker-bg));
   }
   .search-hit {
     outline: 3px solid var(--color-accent-blue);
     outline-offset: 6px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
   }
 </style>

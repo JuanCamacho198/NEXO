@@ -14,6 +14,9 @@ import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation'
 
 export { clampZoomPercent };
 
+// NOTE (U5.4): the hex literals below are intentional. They style HTML
+// injected into the EPUB iframe, where the app's CSS tokens do not exist,
+// so var(--color-*) references would resolve to nothing.
 export function getThemeStyles(themeMode: string): string {
   const themes: Record<string, string> = {
     paper: `\n        body { background: #faf8f5; color: #333; }\n        a { color: #3366cc; }\n      `,

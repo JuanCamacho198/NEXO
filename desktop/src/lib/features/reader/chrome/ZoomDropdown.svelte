@@ -95,7 +95,7 @@
               {/if}
             </span>
             {#if selected}
-              <span class="text-[10px] opacity-60">✓</span>
+              <span class="text-micro opacity-60">✓</span>
             {/if}
           </button>
         </li>
