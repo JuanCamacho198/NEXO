@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  resolveFitScalePercent,
-  type FitViewport,
-} from '$lib/features/reader/chrome/fitZoom.js';
-import {
-  clampZoomPercent,
-  ZOOM_OPTIONS,
-} from '$lib/features/reader/viewer-pdf/pdfNavigation.js';
+import { resolveFitScalePercent, type FitViewport } from '$lib/features/reader/chrome/fitZoom.js';
+import { clampZoomPercent, ZOOM_OPTIONS } from '$lib/features/reader/viewer-pdf/pdfNavigation.js';
 
 const page = (containerWidth: number, containerHeight: number): FitViewport => ({
   containerWidth,

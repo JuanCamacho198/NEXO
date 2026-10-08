@@ -25,7 +25,5 @@ export function resolveFitScalePercent(mode: FitMode, viewport: FitViewport): nu
   if (!isUsableSize(containerWidth) || !isUsableSize(pageWidth)) return 100;
   if (mode === 'width') return clampZoomPercent((containerWidth / pageWidth) * 100);
   if (!isUsableSize(containerHeight) || !isUsableSize(pageHeight)) return 100;
-  return (
-    clampZoomPercent(Math.min(containerWidth / pageWidth, containerHeight / pageHeight) * 100)
-  );
+  return clampZoomPercent(Math.min(containerWidth / pageWidth, containerHeight / pageHeight) * 100);
 }
