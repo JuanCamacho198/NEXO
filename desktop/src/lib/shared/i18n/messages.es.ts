@@ -1305,6 +1305,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.fitWidth': 'Ajustar al ancho',
   'reader.fitPage': 'Ajustar a la página',
   'reader.fullscreenHint': 'Pulsa F para pantalla completa',
+  'reader.toolbar': 'Barra de herramientas del lector',
   'settings.privacy.title': 'Privacidad y telemetría',
   'settings.privacy.description':
     'Recopilamos informes de fallos, tiempos de rendimiento agrupados y versión/plataforma de la app vía Sentry. Nunca recopilamos contenido de libros, títulos, resaltados ni tus búsquedas.',
