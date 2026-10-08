@@ -1,4 +1,5 @@
 import { getVersion } from '@tauri-apps/api/app';
+import { invoke } from '@tauri-apps/api/core';
 import { check as checkPluginUpdate } from '@tauri-apps/plugin-updater';
 import { relaunch as relaunchPluginApp } from '@tauri-apps/plugin-process';
 import {
@@ -121,15 +122,16 @@ export type UpdateCheckDeps = {
 };
 
 export const defaultFetchFeed = async (url: string): Promise<unknown> => {
-  let response: Response;
+  let body: string;
   try {
-    response = await fetch(url);
-  } catch {
-    throw new FeedUnreachableError();
+    body = await invoke<string>('fetchUpdateFeed', { url });
+  } catch (error) {
+    throw new FeedUnreachableError(
+      typeof error === 'string' && error.length > 0 ? error : 'Update feed unreachable',
+    );
   }
-  if (!response.ok) throw new FeedUnreachableError(`Feed responded ${response.status}`);
   try {
-    return (await response.json()) as unknown;
+    return JSON.parse(body) as unknown;
   } catch {
     throw new FeedMalformedError('Feed body is not valid JSON');
   }

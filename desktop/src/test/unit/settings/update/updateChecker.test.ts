@@ -1,8 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { invoke } from '@tauri-apps/api/core';
 import {
   checkForUpdates,
   compareDesktopVersions,
@@ -174,24 +173,26 @@ describe('desktop check state mapping', () => {
   });
 });
 
-describe('desktop mock-feed fetch over MSW', () => {
-  const server = setupServer(
-    http.get(FEED_URL, () => HttpResponse.json(fixture)),
-    http.get('https://updates.example.com/broken.json', () => HttpResponse.json({ bogus: true })),
-  );
+describe('desktop feed fetch through the fetchUpdateFeed command', () => {
+  beforeEach(() => {
+    vi.mocked(invoke).mockReset();
+  });
 
-  beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-  afterEach(() => server.resetHandlers());
-  afterAll(() => server.close());
+  afterEach(() => {
+    vi.mocked(invoke).mockReset();
+  });
 
-  it('drives the available flow through the real fetch path', async () => {
+  it('drives the available flow through the invoke path', async () => {
+    vi.mocked(invoke).mockResolvedValue(fixtureText);
     const state = await checkForUpdates(baseDeps({ fetchFeed: (url) => defaultFetchFeed(url) }), {
       manual: true,
     });
     expect(availableOf(state).feedVersion).toBe('0.5.0');
+    expect(invoke).toHaveBeenCalledWith('fetchUpdateFeed', { url: FEED_URL });
   });
 
   it('maps a schema-invalid body to malformed', async () => {
+    vi.mocked(invoke).mockResolvedValue(JSON.stringify({ bogus: true }));
     const state = await checkForUpdates(
       baseDeps({
         feedUrl: 'https://updates.example.com/broken.json',
@@ -200,6 +201,25 @@ describe('desktop mock-feed fetch over MSW', () => {
       { manual: true },
     );
     expect(state).toEqual({ status: 'error', kind: 'MALFORMED' });
+    expect(invoke).toHaveBeenCalledWith('fetchUpdateFeed', {
+      url: 'https://updates.example.com/broken.json',
+    });
+  });
+
+  it('maps non-JSON text to malformed', async () => {
+    vi.mocked(invoke).mockResolvedValue('not json{{{');
+    const state = await checkForUpdates(baseDeps({ fetchFeed: (url) => defaultFetchFeed(url) }), {
+      manual: true,
+    });
+    expect(state).toEqual({ status: 'error', kind: 'MALFORMED' });
+  });
+
+  it('maps a rejected invoke to unreachable', async () => {
+    vi.mocked(invoke).mockRejectedValue(new Error('UPDATE_FEED_HTTP_503: feed responded 503'));
+    const state = await checkForUpdates(baseDeps({ fetchFeed: (url) => defaultFetchFeed(url) }), {
+      manual: true,
+    });
+    expect(state).toEqual({ status: 'error', kind: 'UNREACHABLE' });
   });
 });
 

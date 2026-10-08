@@ -29,6 +29,7 @@ pub mod search;
 pub mod secrets;
 pub mod settings;
 pub mod storage;
+pub mod update_feed;
 
 #[allow(unused_imports)]
 pub use addon_consent::*;
@@ -76,6 +77,8 @@ pub use secrets::*;
 pub use settings::*;
 #[allow(unused_imports)]
 pub use storage::*;
+#[allow(unused_imports)]
+pub use update_feed::*;
 
 use crate::error::AppError;
 use crate::models::{CommandErrorDto, LibraryBookDto, ListLibraryBooksInput};
