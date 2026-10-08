@@ -1294,6 +1294,12 @@ export const messagesEn = {
   'settings.privacy.sendTelemetry': 'Send telemetry',
   'settings.privacy.telemetryOn': 'Telemetry is being sent.',
   'settings.privacy.telemetryOff': 'Telemetry sending is stopped.',
+  'settings.debug.title': 'Debug tools',
+  'settings.debug.description':
+    'Show the floating debug toggle and the reader diagnostics. Off by default.',
+  'settings.debug.showDebug': 'Show debug tools',
+  'settings.debug.debugOn': 'Debug tools are visible.',
+  'settings.debug.debugOff': 'Debug tools are hidden.',
 
   // App auto-update (release-update-feed contract, desktop slice)
   'update.check': 'Check for updates',

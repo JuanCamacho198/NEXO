@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { debugState } from './lib/shared/debug/debugState.svelte';
   import DebugToggle from '$lib/shared/debug/DebugToggle.svelte';
+  import { loadDebugEnabled } from '$lib/shared/services/debugPreferences';
   import DebugPanel from '$lib/shared/debug/DebugPanel.svelte';
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import AppRouter from '$lib/shared/ui/layout/AppRouter.svelte';
@@ -34,6 +35,12 @@
 
   onMount(() => {
     appState.init();
+
+    // Restore the persisted debug flag so the toggle survives a restart.
+    // Default off: no debug chrome renders until Settings turns it on.
+    void loadDebugEnabled().then((enabled) => {
+      debugState.enabled = enabled;
+    });
 
     // Global error handler (replaces Svelte 5's missing ErrorBoundary).
     // Uncaught errors and unhandled rejections route through the leveled
@@ -133,7 +140,9 @@
     <AppModals />
     <ImportProgressBanner />
     <SyncAuthBanner />
-    <DebugToggle />
+    {#if debugState.enabled}
+      <DebugToggle />
+    {/if}
     <DebugPanel />
     <ShortcutHelpModal t={appState.t} />
     <CommandPalette t={appState.t} />

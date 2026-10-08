@@ -1,5 +1,6 @@
 <script lang="ts">
   import SettingsPrivacySection from './SettingsPrivacySection.svelte';
+  import SettingsDebugSection from './SettingsDebugSection.svelte';
   import SettingsNotificationsSection from './SettingsNotificationsSection.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
@@ -529,6 +530,7 @@
 
   {@render groupHeading('settings-group-privacy-addons', t('settings.data.group.privacyAddons'))}
   <SettingsPrivacySection {t} />
+  <SettingsDebugSection {t} />
   {@render groupHeading('settings-group-notifications', t('settings.data.group.notifications'))}
   <SettingsNotificationsSection {t} />
 </section>

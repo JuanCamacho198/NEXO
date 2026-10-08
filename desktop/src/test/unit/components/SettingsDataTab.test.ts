@@ -413,11 +413,11 @@ describe('SettingsDataTab privacy switch', () => {
 });
 
 describe('SettingsDataTab atom switches (UI-04)', () => {
-  it('renders the telemetry and notification switches through the Button atom', () => {
+  it('renders the telemetry, notification and debug switches through the Button atom', () => {
     renderTab();
 
     const switches = screen.getAllByRole('switch');
-    expect(switches).toHaveLength(4);
+    expect(switches).toHaveLength(5);
     for (const control of switches) {
       expect(control.tagName).toBe('BUTTON');
       expect(control).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
@@ -426,6 +426,7 @@ describe('SettingsDataTab atom switches (UI-04)', () => {
     expect(screen.getByTestId('notification-pref-nudge')).toBeInTheDocument();
     expect(screen.getByTestId('notification-quiet-enabled')).toBeInTheDocument();
     expect(screen.getByTestId('privacy-telemetry-switch')).toBeInTheDocument();
+    expect(screen.getByTestId('debug-enabled-switch')).toBeInTheDocument();
   });
 
   it('sweeps raw palette fills off the switch tracks', () => {

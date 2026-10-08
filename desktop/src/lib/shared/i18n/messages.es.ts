@@ -1312,6 +1312,12 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.privacy.sendTelemetry': 'Enviar telemetría',
   'settings.privacy.telemetryOn': 'Se está enviando telemetría.',
   'settings.privacy.telemetryOff': 'El envío de telemetría está detenido.',
+  'settings.debug.title': 'Herramientas de depuración',
+  'settings.debug.description':
+    'Muestra el botón flotante de depuración y el diagnóstico del lector. Apagado por defecto.',
+  'settings.debug.showDebug': 'Mostrar herramientas de depuración',
+  'settings.debug.debugOn': 'Las herramientas de depuración están visibles.',
+  'settings.debug.debugOff': 'Las herramientas de depuración están ocultas.',
 
   // App auto-update (release-update-feed contract, desktop slice)
   'update.check': 'Buscar actualizaciones',

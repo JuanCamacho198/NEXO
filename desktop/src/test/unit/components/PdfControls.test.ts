@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import PdfControls from '$lib/features/reader/viewer-pdf/PdfControls.svelte';
+import { debugState } from '$lib/shared/debug/debugState.svelte';
 
 const t = (key: string) => key;
 
@@ -62,5 +63,27 @@ describe('PdfControls fit control (U2.2)', () => {
     await fireEvent.click(screen.getByTestId('zoom-dropdown-trigger'));
     await fireEvent.click(screen.getByTestId('zoom-option-125'));
     expect(onSetScale).toHaveBeenCalledWith(1.25);
+  });
+});
+
+describe('PdfControls debug span (U4.2)', () => {
+  afterEach(() => {
+    debugState.enabled = false;
+  });
+
+  it('renders zero debug chrome by default', () => {
+    debugState.enabled = false;
+    const { container } = render(PdfControls, makeProps());
+    expect(container.textContent).not.toContain('p3/10');
+  });
+
+  it('shows the page/scale readout only while the debug setting is on', () => {
+    debugState.enabled = true;
+    const { container, unmount } = render(PdfControls, makeProps());
+    expect(container.textContent).toContain('p3/10');
+    unmount();
+    debugState.enabled = false;
+    const hidden = render(PdfControls, makeProps());
+    expect(hidden.container.textContent).not.toContain('p3/10');
   });
 });
