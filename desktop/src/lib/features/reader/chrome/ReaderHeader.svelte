@@ -78,7 +78,7 @@
   class:shadow-md={isFullscreen}
 >
   <!-- Top row: Biblioteca + title + tools -->
-  <div class="flex h-16 shrink-0 items-center justify-between px-8">
+  <div class="flex h-16 shrink-0 items-center justify-between px-4 sm:px-8">
     <!-- Left: back + biblioteca -->
     <div class="flex items-center gap-2">
       <button
@@ -94,12 +94,14 @@
     </div>
 
     <!-- Center: book title -->
-    <span class="font-inter text-sm font-medium text-(--color-text-auxiliary)">
+    <span
+      class="font-inter text-sm font-medium text-(--color-text-auxiliary) min-w-0 flex-1 truncate px-2 text-center max-[480px]:hidden"
+    >
       {title}
     </span>
 
     <!-- Right: tools -->
-    <div class="flex items-center gap-6 text-(--color-text-auxiliary)">
+    <div class="flex items-center gap-3 sm:gap-6 text-(--color-text-auxiliary)">
       <button
         type="button"
         onclick={onToggleToc}
@@ -162,7 +164,7 @@
   {#if showReadingControls}
     <!-- Bottom row: status/zoom strip (paging lives in the toolbar or the edge chevrons) -->
     <div
-      class="flex h-12 shrink-0 items-center justify-center gap-3 border-t border-(--color-surface-strong)/20 px-4 bg-(--color-bg-deep)"
+      class="flex h-12 shrink-0 items-center justify-center gap-2 border-t border-(--color-surface-strong)/20 px-2 bg-(--color-bg-deep) sm:gap-3 sm:px-4"
     >
       <PageInput
         variant="header"

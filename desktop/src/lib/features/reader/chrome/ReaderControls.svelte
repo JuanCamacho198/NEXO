@@ -40,7 +40,7 @@
 </script>
 
 <div
-  class="flex items-center gap-3 px-3 py-2 bg-(--color-surface) border-b border-(--color-border) flex-wrap"
+  class="flex items-center gap-2 px-2 py-2 bg-(--color-surface) border-b border-(--color-border) flex-wrap sm:gap-3 sm:px-3"
 >
   <button
     type="button"
