@@ -84,7 +84,7 @@
       <button
         type="button"
         onclick={onBackToHome}
-        class="flex cursor-pointer items-center gap-2 text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
+        class="flex min-h-11 cursor-pointer items-center gap-2 text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
       >
         <ChevronLeft size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
         <span class="font-inter text-sm font-medium text-(--color-text-auxiliary)"
@@ -105,7 +105,7 @@
       <button
         type="button"
         onclick={onToggleToc}
-        class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors"
+        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
         class:text-(--color-accent-blue)={showTocPanel}
         class:text-(--color-text-auxiliary)={!showTocPanel}
         class:hover:text-(--color-text-inverse)={!showTocPanel}
@@ -117,7 +117,7 @@
       <button
         type="button"
         onclick={onToggleSearch}
-        class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors"
+        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
         class:text-(--color-accent-blue)={searchPanelOpen}
         class:text-(--color-text-auxiliary)={!searchPanelOpen}
         class:hover:text-(--color-text-inverse)={!searchPanelOpen}
@@ -129,7 +129,7 @@
       <button
         type="button"
         onclick={onToggleTextSettings}
-        class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors"
+        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
         class:text-(--color-accent-blue)={showTextSettings}
         class:text-(--color-text-auxiliary)={!showTextSettings}
         class:hover:text-(--color-text-inverse)={!showTextSettings}
@@ -141,7 +141,7 @@
       <button
         type="button"
         onclick={onToggleBookmarks}
-        class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors"
+        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
         class:text-(--color-accent-blue)={showBookmarks}
         class:text-(--color-text-auxiliary)={!showBookmarks}
         class:hover:text-(--color-text-inverse)={!showBookmarks}
@@ -153,7 +153,7 @@
       <button
         type="button"
         onclick={onToggleFullscreen}
-        class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
+        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
         aria-label={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
       >
         <FullscreenIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />

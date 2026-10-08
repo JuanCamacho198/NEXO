@@ -37,7 +37,7 @@
   <button
     type="button"
     onclick={() => (open = !open)}
-    class="inline-flex items-center gap-1 rounded-full border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-xs font-medium text-(--color-primary) hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] cursor-pointer min-w-18 justify-center"
+    class="inline-flex items-center gap-1 rounded-full border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-xs font-medium text-(--color-primary) hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] cursor-pointer min-w-18 min-h-11 justify-center"
     aria-haspopup="listbox"
     aria-expanded={open}
     aria-label="Zoom {clampedValue}%"

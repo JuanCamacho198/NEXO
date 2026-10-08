@@ -1,6 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 import ReaderControls from '$lib/features/reader/chrome/ReaderControls.svelte';
+import ReaderHeader from '$lib/features/reader/chrome/ReaderHeader.svelte';
+import FitControls from '$lib/features/reader/chrome/FitControls.svelte';
+import ZoomDropdown from '$lib/features/reader/chrome/ZoomDropdown.svelte';
 import type { MessageKey } from '$lib/shared/i18n';
 
 const t = (key: MessageKey, _params?: Record<string, string | number>): string => key;
@@ -61,5 +64,58 @@ describe('reader toolbar accessibility (U3.1)', () => {
     await fireEvent.keyDown(input, { key: 'ArrowRight' });
     expect(document.activeElement).toBe(input);
     expect(next.getAttribute('tabindex')).toBe('-1');
+  });
+});
+
+function renderHeader(overrides: Record<string, unknown> = {}) {
+  return render(ReaderHeader, {
+    title: 'Book',
+    showTocPanel: false,
+    searchPanelOpen: false,
+    showTextSettings: false,
+    showBookmarks: false,
+    isFullscreen: false,
+    t,
+    onBackToHome: () => {},
+    onToggleToc: () => {},
+    onToggleSearch: () => {},
+    onToggleTextSettings: () => {},
+    onToggleBookmarks: () => {},
+    onToggleFullscreen: () => {},
+    ...overrides,
+  });
+}
+
+describe('reader chrome target sizes (U3.2)', () => {
+  it('toolbar paging buttons reach 44px', () => {
+    renderToolbar();
+    for (const label of ['reader.prev_page', 'reader.next_page']) {
+      const button = screen.getByLabelText(label);
+      expect(button.className).toContain('min-w-11');
+      expect(button.className).toContain('min-h-11');
+    }
+  });
+
+  it('header tool buttons and back control reach 44px', () => {
+    const { container } = renderHeader();
+    const buttons = container.querySelectorAll('header button');
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const button of buttons) {
+      expect(button.className).toContain('min-h-11');
+    }
+  });
+
+  it('page input reaches 44px height', () => {
+    renderToolbar();
+    expect(screen.getByLabelText('reader.page_input').className).toContain('min-h-11');
+  });
+
+  it('fit controls and zoom trigger reach 44px', () => {
+    const { container } = render(FitControls, { t, onFit: () => {} });
+    for (const button of container.querySelectorAll('button')) {
+      expect(button.className).toContain('min-h-11');
+    }
+    const zoom = render(ZoomDropdown, { value: 100, onSelect: () => {} });
+    expect(zoom.getByTestId('zoom-dropdown-trigger').className).toContain('min-h-11');
   });
 });
