@@ -31,6 +31,8 @@
   },
   "dependencies": {
     "@fabianlars/tauri-plugin-oauth": "^2.1.0",
+    "@fontsource-variable/newsreader": "^5.3.0",
+    "@fontsource/manrope": "^5.3.0",
     "@internationalized/date": "^3.8.1",
     "@nexo/manifest-validator": "workspace:*",
     "@sentry/browser": "^10.53.1",

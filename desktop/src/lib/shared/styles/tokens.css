@@ -32,7 +32,7 @@
  * ============================================ */
 @theme {
   --font-sans: 'Manrope', 'Segoe UI', Arial, sans-serif;
-  --font-serif: 'Newsreader', 'Times New Roman', serif;
+  --font-serif: 'Newsreader Variable', 'Newsreader', 'Times New Roman', serif;
 
   /* ============================================
    * TYPE SCALE — the seven documented roles
@@ -77,7 +77,7 @@
 :root {
   /* Font families — duplicado de @theme para var() */
   --font-sans: 'Manrope', 'Segoe UI', Arial, sans-serif;
-  --font-serif: 'Newsreader', 'Times New Roman', serif;
+  --font-serif: 'Newsreader Variable', 'Newsreader', 'Times New Roman', serif;
 
   /* Font sizes — mirror of the @theme scale above, declared here so var()
      resolves even outside Tailwind's theme layer. */

@@ -1,6 +1,16 @@
 /* ============================================
  * MAIN STYLES — Import tokens and add app-specific styles
  * ============================================ */
+/* Self-hosted fonts (bundled via @fontsource — no Google Fonts request,
+ * so the prod CSP needs no font-src/style-src widening). Manrope covers the
+ * exact weights of the old Google URL; Newsreader Variable (opsz slice)
+ * carries the full font: opsz 6..72 + wght 200..800. */
+@import '@fontsource/manrope/400.css';
+@import '@fontsource/manrope/500.css';
+@import '@fontsource/manrope/600.css';
+@import '@fontsource/manrope/700.css';
+@import '@fontsource/manrope/800.css';
+@import '@fontsource-variable/newsreader/opsz.css';
 @import './lib/shared/styles/tokens.css';
 
 /* ============================================

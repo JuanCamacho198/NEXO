@@ -90,7 +90,7 @@ export const radius = {
  * ============================================ */
 export const font = {
   sans: '"Manrope", "Segoe UI", Arial, sans-serif',
-  serif: '"Newsreader", "Times New Roman", serif',
+  serif: '"Newsreader Variable", "Newsreader", "Times New Roman", serif',
 } as const;
 
 /* ============================================
