@@ -26,6 +26,7 @@
   import { createPdfSelectionState } from '$lib/features/reader/viewer-pdf/usePdfSelection.svelte';
   import { createPdfOutlineState } from '$lib/features/reader/viewer-pdf/usePdfOutline.svelte';
   import { createPdfZoomThemeState } from '$lib/features/reader/viewer-pdf/usePdfZoomTheme.svelte';
+  import { resolveFitScalePercent, type FitMode } from '$lib/features/reader/chrome/fitZoom';
   import PdfControls from './PdfControls.svelte';
   import { logger } from '$lib/shared/logger/Logger';
   import PdfSelectionOverlay from './PdfSelectionOverlay.svelte';
@@ -390,6 +391,19 @@
   export function getScale(): number {
     return scale;
   }
+  export async function applyFit(mode: FitMode): Promise<void> {
+    const page = renderState.currentPageObj;
+    if (!page) return;
+    const natural = page.getViewport({ scale: 1 });
+    await setScale(
+      resolveFitScalePercent(mode, {
+        containerWidth: canvasContainer?.clientWidth ?? 0,
+        containerHeight: canvasContainer?.clientHeight ?? 0,
+        pageWidth: natural.width,
+        pageHeight: natural.height,
+      }) / 100,
+    );
+  }
   export function getTotalPages(): number {
     return docState.totalPages;
   }
@@ -452,6 +466,7 @@
     onNextPage={goToNextPage}
     onGoToPage={navigateToPage}
     onSetScale={(s) => setScale(s)}
+    onFit={applyFit}
   />
 {/snippet}
 

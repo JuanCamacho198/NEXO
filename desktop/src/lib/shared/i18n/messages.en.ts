@@ -861,6 +861,8 @@ export const messagesEn = {
   'reader.saved_settings': 'Saved settings',
   'reader.zoom': 'Zoom',
   'reader.zoomLevel': 'Zoom: {{level}}%',
+  'reader.fitWidth': 'Fit to width',
+  'reader.fitPage': 'Fit to page',
   'reader.fullscreenHint': 'Press F to toggle fullscreen',
 
   'settings.localPreferences': 'Local preferences',

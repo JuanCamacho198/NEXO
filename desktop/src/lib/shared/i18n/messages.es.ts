@@ -1302,6 +1302,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.saved_settings': 'Ajustes guardados',
   'reader.zoom': 'Zoom',
   'reader.zoomLevel': 'Zoom: {{level}}%',
+  'reader.fitWidth': 'Ajustar al ancho',
+  'reader.fitPage': 'Ajustar a la página',
   'reader.fullscreenHint': 'Pulsa F para pantalla completa',
   'settings.privacy.title': 'Privacidad y telemetría',
   'settings.privacy.description':

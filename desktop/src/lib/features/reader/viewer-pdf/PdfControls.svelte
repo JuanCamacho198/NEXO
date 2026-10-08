@@ -1,6 +1,8 @@
 <script lang="ts">
   import ReaderControls from '../chrome/ReaderControls.svelte';
   import ZoomDropdown from '../chrome/ZoomDropdown.svelte';
+  import FitControls from '../chrome/FitControls.svelte';
+  import type { FitMode } from '../chrome/fitZoom';
   import type { MessageKey } from '$lib/shared/i18n';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
 
@@ -15,6 +17,7 @@
     onNextPage: () => void;
     onGoToPage: (page: number) => Promise<boolean>;
     onSetScale: (scale: number) => void;
+    onFit: (mode: FitMode) => void;
   };
 
   let {
@@ -28,6 +31,7 @@
     onNextPage,
     onGoToPage,
     onSetScale,
+    onFit,
   }: Props = $props();
 
   const zoomPercent = $derived(Math.round(scale * 100));
@@ -49,6 +53,7 @@
           >p{currentPage}/{totalPages} | {zoomPercent}%</span
         >
       {/if}
+      <FitControls {t} {onFit} />
       <ZoomDropdown value={zoomPercent} onSelect={(v) => onSetScale(v / 100)} />
     {/snippet}
   </ReaderControls>
