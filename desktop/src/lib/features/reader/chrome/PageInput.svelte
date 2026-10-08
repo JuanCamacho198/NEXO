@@ -70,5 +70,5 @@
     aria-label={t('reader.page_input')}
     data-testid={pageInputTestId}
   />
-  <span class={totalClass} data-testid={totalPagesTestId}>/ {totalPages}</span>
+  <span class={totalClass} data-testid={totalPagesTestId} aria-hidden="true">/ {totalPages}</span>
 </span>

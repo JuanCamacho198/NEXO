@@ -122,7 +122,7 @@
         class:text-(--color-text-auxiliary)={!searchPanelOpen}
         class:hover:text-(--color-text-inverse)={!searchPanelOpen}
         class:hover:brightness-125={searchPanelOpen}
-        aria-label={searchPanelOpen ? t('settings.close') : t('epub.search')}
+        aria-label={searchPanelOpen ? t('settings.close') : t('search.title')}
       >
         <SearchIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>

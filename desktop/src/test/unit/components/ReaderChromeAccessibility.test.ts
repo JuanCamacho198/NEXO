@@ -119,3 +119,42 @@ describe('reader chrome target sizes (U3.2)', () => {
     expect(zoom.getByTestId('zoom-dropdown-trigger').className).toContain('min-h-11');
   });
 });
+
+describe('reader chrome labels and surfaces (U3.3/U3.4)', () => {
+  it('announces search with the format-agnostic key in any viewer', () => {
+    renderHeader();
+    expect(screen.getByLabelText('search.title')).toBeInTheDocument();
+    expect(screen.queryByLabelText('epub.search')).toBeNull();
+  });
+
+  it('paints the toolbar over a fixed opaque surface', () => {
+    const { container } = renderToolbar();
+    const toolbar = container.firstElementChild;
+    expect(toolbar?.className).toContain('bg-(--color-bg-deep)');
+    expect(toolbar?.className).not.toContain('bg-(--color-surface)');
+  });
+
+  it('hides the decorative page total from assistive tech', () => {
+    const toolbarTree = renderToolbar();
+    const toolbarTotals = Array.from(toolbarTree.container.querySelectorAll('span')).filter(
+      (node) => node.children.length === 0 && (node.textContent?.trim().startsWith('/') ?? false),
+    );
+    expect(toolbarTotals.length).toBeGreaterThan(0);
+    for (const node of toolbarTotals) {
+      expect(node.getAttribute('aria-hidden')).toBe('true');
+    }
+    const headerTree = renderHeader({
+      isFullscreen: true,
+      currentPage: 3,
+      totalPages: 10,
+      onGoToPage: async () => true,
+    });
+    const headerTotals = Array.from(headerTree.container.querySelectorAll('span')).filter(
+      (node) => node.children.length === 0 && (node.textContent?.trim().startsWith('/') ?? false),
+    );
+    expect(headerTotals.length).toBeGreaterThan(0);
+    for (const node of headerTotals) {
+      expect(node.getAttribute('aria-hidden')).toBe('true');
+    }
+  });
+});

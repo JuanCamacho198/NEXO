@@ -83,7 +83,7 @@
 </script>
 
 <div
-  class="flex items-center gap-2 px-2 py-2 bg-(--color-surface) border-b border-(--color-border) flex-wrap sm:gap-3 sm:px-3"
+  class="flex items-center gap-2 px-2 py-2 bg-(--color-bg-deep) border-b border-(--color-border) flex-wrap sm:gap-3 sm:px-3"
   role="toolbar"
   aria-label={t('reader.toolbar')}
   tabindex={-1}
