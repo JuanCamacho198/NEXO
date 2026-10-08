@@ -19,7 +19,7 @@ foreach ($asset in $a.assets) {
   Check ($asset.size -gt 0) 'android asset size required'
 }
 
-Check ($d.version -eq '0.4.0') 'desktop version must be 0.4.0'
+Check ($d.version -eq '0.5.0') 'desktop version must be 0.5.0'
 Check ($d.channel -eq 'stable') 'desktop channel must be stable'
 Check ($null -ne $d.notes -and $d.notes.Length -gt 0) 'desktop notes required'
 Check ($null -ne $d.pub_date) 'desktop pub_date required'
@@ -29,9 +29,9 @@ Check ($names.Count -ge 1) 'desktop needs at least one platform'
 # version; GitHub replaces the space in the local bundle name with a dot, so
 # the released names read `Nexo.Desktop_<version>_<target>.<ext>`.
 $expectedDesktopAsset = @{
-  'linux-x86_64'    = 'Nexo\.Desktop_0\.4\.0_amd64\.AppImage$'
-  'macos-universal' = 'Nexo\.Desktop_0\.4\.0_universal\.dmg$'
-  'windows-x86_64'  = 'Nexo\.Desktop_0\.4\.0_x64-setup\.exe$'
+  'linux-x86_64'    = 'Nexo\.Desktop_0\.5\.0_amd64\.AppImage$'
+  'macos-universal' = 'Nexo\.Desktop_0\.5\.0_universal\.dmg$'
+  'windows-x86_64'  = 'Nexo\.Desktop_0\.5\.0_x64-setup\.exe$'
 }
 foreach ($k in $names) {
   $e = $d.platforms.$k
