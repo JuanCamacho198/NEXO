@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0](https://github.com/JuanCamacho198/NEXO/compare/android-v0.4.0...android-v0.5.0) (2026-10-08)
+
+
+### Features
+
+* **android:** add debug toolkit extras ([57c829f](https://github.com/JuanCamacho198/NEXO/commit/57c829f11bf52b57b7e39aba5ae6062838d5deb6))
+* **android:** debug toolkit behind a settings toggle (WU5) ([b5764ca](https://github.com/JuanCamacho198/NEXO/commit/b5764caad3939bb7d1d231ee9b0f349f3232057e))
+* **android:** make debug toggle the sole FAB gate ([c9a9fc8](https://github.com/JuanCamacho198/NEXO/commit/c9a9fc8af171613b892752ff3627d996e54cf2f0))
+* **desktop:** Drive settings section with three honest states (WU4) ([0e82289](https://github.com/JuanCamacho198/NEXO/commit/0e8228932c5f5c388c3bb1f7944b08268b784f65))
+
+
+### Bug Fixes
+
+* **debug:** order recentErrors by parsed timestamp, not file mtime ([bbd23d5](https://github.com/JuanCamacho198/NEXO/commit/bbd23d506387bbd9d04cd1d69ca05b39ff484899))
+* **desktop:** bind import handlers and auto-dismiss error banner (WU1) ([ce75ca8](https://github.com/JuanCamacho198/NEXO/commit/ce75ca8355bc7fce2c158e039caf1e9ae5e9fd9e))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXO/compare/android-v0.2.0...android-v0.3.0) (2026-09-17)
 
 
