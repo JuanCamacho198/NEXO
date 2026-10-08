@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte';
   import ArrowRight from 'lucide-svelte/icons/arrow-right';
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
+  import PageInput from './PageInput.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -36,25 +37,6 @@
     totalPagesTestId,
     ...restProps
   }: Props = $props();
-
-  let pageValue = $state(1);
-
-  $effect(() => {
-    pageValue = currentPage;
-  });
-
-  async function handlePageInput(event: Event): Promise<void> {
-    const target = event.target as HTMLInputElement;
-    const page = Number.parseInt(target.value, 10);
-    if (Number.isFinite(page) && page >= 1 && page <= totalPages) {
-      const success = await onGoToPage(page);
-      if (!success) {
-        target.value = String(currentPage);
-      }
-    } else {
-      target.value = String(currentPage);
-    }
-  }
 </script>
 
 <div
@@ -81,21 +63,15 @@
   >
     <ArrowRight size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
   </button>
-  <span class="flex items-center gap-1 text-xs text-(--color-primary)">
-    <input
-      type="number"
-      min="1"
-      max={totalPages}
-      value={pageValue}
-      onchange={handlePageInput}
-      class="w-[50px] p-1 border border-(--color-border) rounded text-center bg-(--color-surface) text-(--color-primary)"
-      aria-label={t('reader.page_input')}
-      data-testid={pageInputTestId}
-    />
-    <span class="text-xs text-(--color-text-muted) opacity-70" data-testid={totalPagesTestId}
-      >/ {totalPages}</span
-    >
-  </span>
+  <PageInput
+    variant="toolbar"
+    {currentPage}
+    {totalPages}
+    {t}
+    {onGoToPage}
+    {pageInputTestId}
+    {totalPagesTestId}
+  />
   {#if right}
     {@render right()}
   {/if}

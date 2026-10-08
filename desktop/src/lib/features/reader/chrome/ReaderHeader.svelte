@@ -8,6 +8,7 @@
   import Shrink from 'lucide-svelte/icons/shrink';
   import X from 'lucide-svelte/icons/x';
   import ZoomDropdown from './ZoomDropdown.svelte';
+  import PageInput from './PageInput.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -70,22 +71,6 @@
   const TextSettingsIcon = $derived(showTextSettings ? X : Settings);
   const BookmarksIcon = $derived(showBookmarks ? X : Bookmark);
   const FullscreenIcon = $derived(isFullscreen ? Shrink : Expand);
-
-  let pageInputValue = $state(1);
-  $effect(() => {
-    if (currentPage !== undefined) pageInputValue = currentPage;
-  });
-
-  async function handlePageInput(e: Event): Promise<void> {
-    const target = e.target as HTMLInputElement;
-    const page = Number.parseInt(target.value, 10);
-    if (Number.isFinite(page) && totalPages !== undefined && page >= 1 && page <= totalPages) {
-      const ok = await onGoToPage?.(page);
-      if (!ok) target.value = String(currentPage);
-    } else {
-      target.value = String(currentPage);
-    }
-  }
 </script>
 
 <header
@@ -179,18 +164,13 @@
     <div
       class="flex h-12 shrink-0 items-center justify-center gap-3 border-t border-(--color-surface-strong)/20 px-4 bg-(--color-bg-deep)"
     >
-      <span class="flex items-center gap-1 text-xs text-(--color-text-auxiliary)">
-        <input
-          type="number"
-          min="1"
-          max={totalPages}
-          value={pageInputValue}
-          onchange={handlePageInput}
-          class="w-[50px] p-1 border border-(--color-surface-strong) rounded text-center bg-(--color-bg-deep) text-(--color-text-auxiliary)"
-          aria-label={t('reader.page_input')}
-        />
-        <span class="text-xs text-(--color-text-auxiliary) opacity-70">/ {totalPages}</span>
-      </span>
+      <PageInput
+        variant="header"
+        currentPage={currentPage ?? 1}
+        totalPages={totalPages ?? 1}
+        {t}
+        {onGoToPage}
+      />
       {#if currentPercentage !== undefined}
         <span class="text-xs text-(--color-text-auxiliary) min-w-10 text-center"
           >{Math.round(currentPercentage)}%</span

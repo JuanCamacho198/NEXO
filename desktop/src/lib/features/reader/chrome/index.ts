@@ -1,3 +1,4 @@
+export { default as PageInput } from './PageInput.svelte';
 export { default as ReaderControls } from './ReaderControls.svelte';
 export { default as ReaderFooter } from './ReaderFooter.svelte';
 export { default as ReaderHeader } from './ReaderHeader.svelte';

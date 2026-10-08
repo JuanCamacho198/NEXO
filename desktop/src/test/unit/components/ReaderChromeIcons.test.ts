@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReaderControls from '$lib/features/reader/chrome/ReaderControls.svelte';
 import ReaderHeader from '$lib/features/reader/chrome/ReaderHeader.svelte';
 import ReaderTextSettings from '$lib/features/reader/chrome/ReaderTextSettings.svelte';
@@ -184,5 +184,24 @@ describe('reader chrome icon migration', () => {
     expect(toastIcon?.getAttribute('class')).toContain('shrink-0');
     if (!toastIcon) throw new Error('the saved toast did not render its check glyph');
     expectGlyphContract(toastIcon);
+  });
+});
+
+describe('one page input implementation (U1.5)', () => {
+  it('header strip input commits through onGoToPage like the toolbar', async () => {
+    const onGoToPage = vi.fn().mockResolvedValue(true);
+    renderHeader({ isFullscreen: true, currentPage: 3, totalPages: 10, onGoToPage });
+    const input = screen.getByLabelText('reader.page_input');
+    await fireEvent.change(input, { target: { value: '7' } });
+    expect(onGoToPage).toHaveBeenCalledWith(7);
+  });
+
+  it('header strip input reverts out-of-range values to the current page', async () => {
+    const onGoToPage = vi.fn();
+    renderHeader({ isFullscreen: true, currentPage: 3, totalPages: 10, onGoToPage });
+    const input = screen.getByLabelText('reader.page_input') as HTMLInputElement;
+    await fireEvent.change(input, { target: { value: '20' } });
+    expect(onGoToPage).not.toHaveBeenCalled();
+    expect(input.value).toBe('3');
   });
 });
