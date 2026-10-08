@@ -25,7 +25,6 @@
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
-  import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation';
   import { createSpineResolver } from './useSpineResolver.svelte';
   import { createHighlights } from './useHighlights.svelte';
   import { createImmersiveChrome } from './useImmersiveChrome.svelte';
@@ -325,7 +324,10 @@
   const bookProgress = $derived(nav.bookProgress || Math.round(percentage));
   const headerCurrentPage = $derived(nav.headerCurrentPage);
   const headerTotalPages = $derived(nav.headerTotalPages);
-  const headerFontSize = $derived(clampZoomPercent(localReaderSettings.epub.fontSize ?? 100));
+  // The fullscreen `%` reads the viewer scale (PDF) or viewer zoom (EPUB),
+  // never `epub.fontSize` for a PDF. `getScaleOrZoom` subscribes to the
+  // viewer's own state, so wheel/keys/dropdown all flow into this readout.
+  const headerZoomPercent = $derived(viewer.getScaleOrZoom());
   const showHeaderReadingControls = $derived(
     isFullscreen && headerTotalPages > 0 && activeReadingBook !== null,
   );
@@ -516,7 +518,7 @@
     currentPage={headerCurrentPage}
     totalPages={headerTotalPages}
     currentPercentage={bookProgress}
-    fontSizePercent={headerFontSize}
+    fontSizePercent={headerZoomPercent}
     onGoToPage={handleHeaderGoToPage}
     onFontSizeChange={handleHeaderFontSizeChange}
   />

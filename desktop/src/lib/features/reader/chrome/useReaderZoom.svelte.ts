@@ -118,7 +118,16 @@ export function createReaderZoom(deps: ReaderZoomDeps): {
   }
 
   function adjustZoom(delta: number): void {
-    const current = clampZoomPercent(localReaderSettings.epub.fontSize ?? 100);
+    const viewer = resolveViewer();
+    const current = viewer.getScaleOrZoom();
+    if (viewer.kind === 'pdf') {
+      // The PDF scale is the viewer's own state: route the step to it and
+      // never touch `epub.fontSize`. `setScale` clamps to the PDF interval.
+      const next = current + delta;
+      if (next === current) return;
+      viewer.setScaleOrZoom(next);
+      return;
+    }
     const next = clampZoomPercent(current + delta);
     if (next === current) return;
     const updated: ReaderSettings = {
@@ -126,17 +135,23 @@ export function createReaderZoom(deps: ReaderZoomDeps): {
       epub: { ...localReaderSettings.epub, fontSize: next },
     };
     handleTextSettingsChange(updated);
-    resolveViewer().setScaleOrZoom(next);
+    viewer.setScaleOrZoom(next);
   }
 
   function handleHeaderFontSizeChange(size: number): void {
+    const viewer = resolveViewer();
+    if (viewer.kind === 'pdf') {
+      // Fullscreen PDF zoom writes the viewer scale, not `epub.fontSize`.
+      viewer.setScaleOrZoom(clampZoomPercent(size));
+      return;
+    }
     const clamped = clampZoomPercent(size);
     const updated: ReaderSettings = {
       ...localReaderSettings,
       epub: { ...localReaderSettings.epub, fontSize: clamped },
     };
     handleTextSettingsChange(updated);
-    resolveViewer().setScaleOrZoom(clamped);
+    viewer.setScaleOrZoom(clamped);
   }
 
   function handleGlobalWheel(e: WheelEvent): void {
