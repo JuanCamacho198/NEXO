@@ -60,7 +60,7 @@ describe('useReaderZoom', () => {
     vi.restoreAllMocks();
   });
 
-  it('clamp 75-200 and adjustZoom persists via 500ms debounce', async () => {
+  it('clamp 50-300 and adjustZoom persists via 500ms debounce', async () => {
     const persistMock = vi.fn().mockResolvedValue({});
     const pdfMock = {
       setScale: vi.fn().mockResolvedValue(undefined),
@@ -82,10 +82,10 @@ describe('useReaderZoom', () => {
     // clamp upper
     zoom.localReaderSettings = {
       ...zoom.localReaderSettings,
-      epub: { ...zoom.localReaderSettings.epub, fontSize: 200 },
+      epub: { ...zoom.localReaderSettings.epub, fontSize: 300 },
     };
     zoom.adjustZoom(10);
-    expect(zoom.localReaderSettings.epub.fontSize).toBe(200);
+    expect(zoom.localReaderSettings.epub.fontSize).toBe(300);
     // debounce not yet
     expect(persistMock).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(500);
@@ -94,15 +94,15 @@ describe('useReaderZoom', () => {
     // clamp lower
     zoom.localReaderSettings = {
       ...zoom.localReaderSettings,
-      epub: { ...zoom.localReaderSettings.epub, fontSize: 75 },
+      epub: { ...zoom.localReaderSettings.epub, fontSize: 50 },
     };
     zoom.adjustZoom(-10);
-    expect(zoom.localReaderSettings.epub.fontSize).toBe(75);
+    expect(zoom.localReaderSettings.epub.fontSize).toBe(50);
     vi.advanceTimersByTime(500);
     expect(persistMock).toHaveBeenCalledTimes(1);
     // pure clamp helper
-    expect(clampZoomPercent(300)).toBe(200);
-    expect(clampZoomPercent(10)).toBe(75);
+    expect(clampZoomPercent(400)).toBe(300);
+    expect(clampZoomPercent(10)).toBe(50);
     zoom.cleanup();
   });
 

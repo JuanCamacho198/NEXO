@@ -91,13 +91,13 @@ describe('EpubControls (U1.1) — Callback behavior', () => {
     expect(onFontSizeChange).toHaveBeenCalledWith(125);
   });
 
-  it('ZoomDropdown clamps selection to 75-200 via onFontSizeChange', async () => {
+  it('ZoomDropdown clamps selection to 50-300 via onFontSizeChange', async () => {
     const onFontSizeChange = vi.fn();
     render(EpubControls, makeProps({ fontSize: 100, onFontSizeChange }));
     await fireEvent.click(screen.getByTestId('zoom-dropdown-trigger'));
-    const opt75 = screen.getByTestId('zoom-option-75');
-    await fireEvent.click(opt75);
-    expect(onFontSizeChange).toHaveBeenCalledWith(75);
+    const opt50 = screen.getByTestId('zoom-option-50');
+    await fireEvent.click(opt50);
+    expect(onFontSizeChange).toHaveBeenCalledWith(50);
   });
 
   it('calls onGoToPage when valid page entered in input', async () => {

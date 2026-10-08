@@ -1,7 +1,8 @@
 /**
  * useEpubZoomTheme — zoom + theme for EpubNativeViewer (PR5).
- * Extracts clampZoomPercent 75..200, setZoom with 500ms persist debounce, and
- * theme helpers from EpubNativeViewer while preserving byte-identical behavior.
+ * Extracts the shared clampZoomPercent 50..300, setZoom with 500ms persist
+ * debounce, and theme helpers from EpubNativeViewer while preserving
+ * byte-identical behavior.
  *
  * Wheel and keyboard zoom are NOT owned here: the single zoom pipeline lives
  * in `chrome/useReaderZoom` (one step for wheel and keys, applied once per
@@ -9,11 +10,9 @@
  * viewer and derives the theme visuals.
  */
 import type { ReaderSettings, ReaderThemeMode } from '$lib/shared/types';
+import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation';
 
-export function clampZoomPercent(value: number): number {
-  if (!Number.isFinite(value)) return 100;
-  return Math.min(200, Math.max(75, Math.round(value)));
-}
+export { clampZoomPercent };
 
 export function getThemeStyles(themeMode: string): string {
   const themes: Record<string, string> = {
