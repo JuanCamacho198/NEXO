@@ -19,12 +19,11 @@ import gutendexFixture from '$lib/shared/services/catalog/fixtures/gutendex-sear
 import { discoverCache, liveCatalogProvider } from '$lib/shared/services/catalog/liveComposite';
 import { PAGE_TTL_S, pageCacheKey } from '$lib/shared/services/catalog/DiscoverCache';
 import { getAddonRegistry } from '$lib/shared/services/addons/AddonRegistry';
-import { BUILTIN_GUTENDEX } from '$lib/shared/services/catalog/CatalogProvider';
-import type {
-  CatalogBook,
-  CatalogSource,
-  PagedResult,
+import {
+  BUILTIN_GOOGLEBOOKS,
+  BUILTIN_GUTENDEX,
 } from '$lib/shared/services/catalog/CatalogProvider';
+import type { CatalogBook, CatalogSource } from '$lib/shared/services/catalog/CatalogProvider';
 
 const builtInFetchCalls: string[] = [];
 
@@ -45,7 +44,10 @@ function offlineBuiltInFetch(url: string): Promise<Response> {
   const payload = url.includes('openlibrary.org')
     ? { numFound: 0, docs: [] }
     : url.includes('googleapis.com')
-      ? { totalItems: 0, items: [] }
+      ? {
+          totalItems: 1,
+          items: [{ id: 'gbs-1', volumeInfo: { title: 'Google Book One', authors: ['A'] } }],
+        }
       : gutendexFixture;
   return Promise.resolve({
     ok: true,
@@ -73,10 +75,10 @@ beforeEach(() => {
   });
 });
 
-function seededBook(): CatalogBook {
+function seededBook(id: string, provider: CatalogSource): CatalogBook {
   return {
-    id: 'gutendex:4242',
-    provider: BUILTIN_GUTENDEX as CatalogSource,
+    id,
+    provider,
     title: 'Seeded From The Durable Cache',
     authors: ['Cache, Ada'],
     coverUrl: null,
@@ -90,25 +92,26 @@ describe('production discover cache wiring (liveComposite path)', () => {
   it('serves a seeded production cache entry with zero provider I/O', async () => {
     const query = 'seeded-cache-read';
     const nowEpochSecs = Math.floor(Date.now() / 1000);
-    const seeded: PagedResult = { results: [seededBook()], nexoPage: null, totalCount: 1 };
-    // Seed the PRODUCTION cache instance with the page the composite would have
-    // written on a first read; both I/O-capable single-source built-ins are
-    // seeded so a correctly wired composite needs no provider call at all.
+    // Seed both possible primary sources; the composite fan-out serves whichever
+    // is registered (Google Books when the ambient key is set, else Gutendex)
+    // with zero provider I/O either way. Open Library is out of the fan-out.
     discoverCache.put(
       pageCacheKey(BUILTIN_GUTENDEX, query, 1),
-      JSON.stringify(seeded),
+      JSON.stringify({
+        results: [seededBook('gutendex:4242', BUILTIN_GUTENDEX)],
+        nexoPage: null,
+        totalCount: 1,
+      }),
       nowEpochSecs,
       PAGE_TTL_S,
     );
     discoverCache.put(
-      pageCacheKey('builtin:openlibrary', query, 1),
-      JSON.stringify({ results: [], nexoPage: null, totalCount: 0 }),
-      nowEpochSecs,
-      PAGE_TTL_S,
-    );
-    discoverCache.put(
-      pageCacheKey('builtin:googlebooks', query, 1),
-      JSON.stringify({ results: [], nexoPage: null, totalCount: 0 }),
+      pageCacheKey(BUILTIN_GOOGLEBOOKS, query, 1),
+      JSON.stringify({
+        results: [seededBook('googlebooks:4242', BUILTIN_GOOGLEBOOKS)],
+        nexoPage: null,
+        totalCount: 1,
+      }),
       nowEpochSecs,
       PAGE_TTL_S,
     );
@@ -117,32 +120,34 @@ describe('production discover cache wiring (liveComposite path)', () => {
     const page = await liveCatalogProvider.search(query, 1);
 
     // The seeded payload came back through the production provider…
-    expect(page.results.map((book) => book.id)).toContain('gutendex:4242');
+    expect(page.results.some((book) => book.id.endsWith(':4242'))).toBe(true);
     // …with zero provider I/O: a null-cache composite would have refetched.
     expect(builtInFetchCalls.slice(callsBefore)).toEqual([]);
   });
 
   it('a rebuilt production composite still serves the cached page with zero new I/O', async () => {
     const query = 'live-cache-roundtrip';
+    const nowEpochSecs = Math.floor(Date.now() / 1000);
 
     const first = await liveCatalogProvider.search(query, 1);
-    expect(first.results.map((book) => book.id)).toContain('gutendex:1342');
+    expect(first.results.length).toBeGreaterThan(0);
+    const primaryId = first.results[0]!.id;
+    const primarySource = primaryId.startsWith('googlebooks:')
+      ? BUILTIN_GOOGLEBOOKS
+      : BUILTIN_GUTENDEX;
     const callsAfterFirstRead = builtInFetchCalls.length;
     expect(callsAfterFirstRead).toBeGreaterThan(0);
 
     // The production composite wrote the fetched page into `discoverCache`.
-    const cached = discoverCache.get(
-      pageCacheKey(BUILTIN_GUTENDEX, query, 1),
-      Math.floor(Date.now() / 1000),
-    );
-    expect(cached).toContain('gutendex:1342');
+    const cached = discoverCache.get(pageCacheKey(primarySource, query, 1), nowEpochSecs);
+    expect(cached).toContain(primaryId);
 
     // Production rebuild trigger: a registry mutation invalidates the shared
     // supplier (`liveComposite` subscribes through `registry.onChanged`).
     await getAddonRegistry().setEnabled('0000000000000000', true);
 
     const rebuilt = await liveCatalogProvider.search(query, 1);
-    expect(rebuilt.results.map((book) => book.id)).toContain('gutendex:1342');
+    expect(rebuilt.results.map((book) => book.id)).toContain(primaryId);
     // The rebuilt composite received the same non-null production cache.
     expect(builtInFetchCalls.length).toBe(callsAfterFirstRead);
   });

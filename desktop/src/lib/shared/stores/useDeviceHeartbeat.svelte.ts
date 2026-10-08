@@ -9,7 +9,11 @@ import { updateHeartbeat } from '$lib/services/devices';
 export function createDeviceHeartbeat(options?: {
   getClient?: () => ReturnType<typeof getSessionClient>;
   intervalMs?: number;
-}) {
+}): {
+  start(id: string): void;
+  stop(): void;
+  destroy(): void;
+} {
   const getClient = options?.getClient ?? getSessionClient;
   const intervalMs = options?.intervalMs ?? 120_000;
   let timer: ReturnType<typeof setInterval> | null = null;

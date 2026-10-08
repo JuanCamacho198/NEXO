@@ -1,6 +1,8 @@
 /**
  * G1 — bounded automatic retry for failed rails, and G2 — the connectivity pill
  * reflects reality again (a successful retry or the `online` event clears it).
+ * DISC-04b: the rails are Google Books author shelves, so every rail is one
+ * `searchSource` call keyed by its day's term.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -9,24 +11,33 @@ import {
 } from '$lib/features/discover/DiscoverRailsDomainState.svelte';
 import { DiscoverDomainState } from '$lib/features/discover/DiscoverDomainState.svelte';
 import {
-  BUILTIN_GUTENDEX,
+  BUILTIN_GOOGLEBOOKS,
   catalogError,
   type CatalogBook,
-  type CatalogFeaturedSort,
   type CatalogProvider,
   type PagedResult,
 } from '$lib/shared/services/catalog';
 
-/** 2026-06-10 ⇒ the Ficción (term `fiction`) thematic rail. */
+/** 2026-06-10 ⇒ the doyle / poe / wilde author shelves. */
 const PINNED_DAY = new Date(2026, 5, 10, 12);
 const pinnedNow = (): Date => PINNED_DAY;
+const TERM = ['arthur conan doyle', 'edgar allan poe', 'oscar wilde'] as const;
 
-function book(id: string): CatalogBook {
+/**
+ * Title-cased surname of a rail term: the author credit a fake returns so the
+ * rail author filter keeps its books (`edgar allan poe` → `Poe`).
+ */
+function railAuthor(term: string): string {
+  const surname = term.trim().split(/\s+/).pop() ?? term;
+  return surname.charAt(0).toUpperCase() + surname.slice(1);
+}
+
+function book(id: string, authors: string[] = ['Author']): CatalogBook {
   return {
     id,
-    provider: 'gutendex',
+    provider: 'googlebooks',
     title: `Title ${id}`,
-    authors: ['Author'],
+    authors,
     coverUrl: null,
     languages: ['en'],
     subjects: ['Fiction'],
@@ -44,14 +55,10 @@ const flushMicrotasks = (): Promise<void> => new Promise((resolve) => setTimeout
 type Outcome = CatalogBook[] | Error | Promise<CatalogBook[]>;
 
 interface Behaviour {
-  featured?: (sort: CatalogFeaturedSort) => Outcome;
   searchSource?: (query: string) => Outcome;
 }
 
-type RailRequest =
-  | { kind: 'featured'; sort: CatalogFeaturedSort }
-  | { kind: 'searchSource'; query: string }
-  | { kind: 'search'; query: string };
+type RailRequest = { kind: 'searchSource'; query: string };
 
 /** Recording fake provider: outcomes are per-call, so tests can flip failure on. */
 function recordingProvider(behaviour: Behaviour = {}): {
@@ -60,21 +67,17 @@ function recordingProvider(behaviour: Behaviour = {}): {
 } {
   const requests: RailRequest[] = [];
   const provider: CatalogProvider = {
-    async search(query, page): Promise<PagedResult> {
-      requests.push({ kind: 'search', query });
+    async search(): Promise<PagedResult> {
       return paged([]);
     },
     async getDetails(id: string): Promise<CatalogBook> {
       throw catalogError('NOT_FOUND', `unknown catalog id ${id}`);
     },
-    async featured(sort, _limit): Promise<PagedResult> {
-      requests.push({ kind: 'featured', sort });
-      const outcome = behaviour.featured?.(sort) ?? [];
-      if (outcome instanceof Error) throw outcome;
-      return paged(await outcome);
+    async featured(): Promise<PagedResult> {
+      return paged([]);
     },
     supportsFeatured(): boolean {
-      return true;
+      return false;
     },
     async searchSource(_sourceId, query, _page): Promise<PagedResult> {
       requests.push({ kind: 'searchSource', query });
@@ -86,7 +89,7 @@ function recordingProvider(behaviour: Behaviour = {}): {
       throw catalogError('UNAVAILABLE_DOWNLOAD', 'no usable url');
     },
     listSources() {
-      return [{ sourceId: BUILTIN_GUTENDEX, name: 'Gutendex', kind: 'builtin' as const }];
+      return [{ sourceId: BUILTIN_GOOGLEBOOKS, name: 'Google Books', kind: 'builtin' as const }];
     },
   };
   return { provider, requests };
@@ -100,10 +103,7 @@ describe('discover rails — bounded automatic retry (G1)', () => {
   it('retries a retryable failure at 2s, 5s and 15s, then stops permanently', async () => {
     vi.useFakeTimers();
     const offline = catalogError('NETWORK_ERROR', 'offline');
-    const { provider, requests } = recordingProvider({
-      featured: () => offline,
-      searchSource: () => offline,
-    });
+    const { provider, requests } = recordingProvider({ searchSource: () => offline });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
     expect(requests).toHaveLength(3);
@@ -124,10 +124,7 @@ describe('discover rails — bounded automatic retry (G1)', () => {
   it('never auto-retries a non-retryable failure', async () => {
     vi.useFakeTimers();
     const upstream = catalogError('UPSTREAM_ERROR', 'boom');
-    const { provider, requests } = recordingProvider({
-      featured: () => upstream,
-      searchSource: () => upstream,
-    });
+    const { provider, requests } = recordingProvider({ searchSource: () => upstream });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
 
@@ -140,10 +137,7 @@ describe('discover rails — bounded automatic retry (G1)', () => {
   it('treats RATE_LIMITED as retryable (the errors.ts classification)', async () => {
     vi.useFakeTimers();
     const limited = catalogError('RATE_LIMITED', 'slow down');
-    const { provider, requests } = recordingProvider({
-      featured: () => limited,
-      searchSource: () => limited,
-    });
+    const { provider, requests } = recordingProvider({ searchSource: () => limited });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
 
@@ -157,8 +151,7 @@ describe('discover rails — bounded automatic retry (G1)', () => {
     let failing = true;
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider } = recordingProvider({
-      featured: (sort) => (failing ? offline : [book(`gutendex:${sort}`)]),
-      searchSource: () => (failing ? offline : [book('gutendex:term')]),
+      searchSource: (query) => (failing ? offline : [book('googlebooks:ok', [railAuthor(query)])]),
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -175,8 +168,8 @@ describe('discover rails — bounded automatic retry (G1)', () => {
     vi.useFakeTimers();
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider, requests } = recordingProvider({
-      featured: (sort) => (sort === 'POPULAR' ? offline : [book('gutendex:newest')]),
-      searchSource: () => [book('gutendex:term')],
+      searchSource: (query) =>
+        query === TERM[1] ? offline : [book('googlebooks:ok', [railAuthor(query)])],
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -199,10 +192,7 @@ describe('discover rails — bounded automatic retry (G1)', () => {
   it('dispose cancels pending timers and detaches the online listener', async () => {
     vi.useFakeTimers();
     const offline = catalogError('NETWORK_ERROR', 'offline');
-    const { provider, requests } = recordingProvider({
-      featured: () => offline,
-      searchSource: () => offline,
-    });
+    const { provider, requests } = recordingProvider({ searchSource: () => offline });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
     expect(requests).toHaveLength(3);
@@ -225,8 +215,8 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
   it('re-triggers only rails in Error on the online event, exactly once', async () => {
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider, requests } = recordingProvider({
-      featured: (sort) => (sort === 'POPULAR' ? offline : [book(`gutendex:${sort}`)]),
-      searchSource: () => [book('gutendex:term')],
+      searchSource: (query) =>
+        query === TERM[1] ? offline : [book('googlebooks:ok', [railAuthor(query)])],
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -238,7 +228,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
 
     // One event → exactly one request, for the only Error rail (no duplicate
     // listeners); the Loaded rails are never re-fetched.
-    expect(requests.slice(before)).toEqual([{ kind: 'featured', sort: 'POPULAR' }]);
+    expect(requests.slice(before)).toEqual([{ kind: 'searchSource', query: TERM[1] }]);
     state.dispose();
   });
 
@@ -246,8 +236,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     let failing = true;
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider } = recordingProvider({
-      featured: (sort) => (failing ? offline : [book(`gutendex:${sort}`)]),
-      searchSource: () => (failing ? offline : [book('gutendex:term')]),
+      searchSource: (query) => (failing ? offline : [book('googlebooks:ok', [railAuthor(query)])]),
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -269,8 +258,11 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     });
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider, requests } = recordingProvider({
-      featured: (sort) => (sort === 'POPULAR' ? gated : [book(`gutendex:${sort}`)]),
-      searchSource: () => offline,
+      searchSource: (query) => {
+        if (query === TERM[1]) return gated;
+        if (query === TERM[2]) return offline;
+        return [book('googlebooks:ok', [railAuthor(query)])];
+      },
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     const pending = state.refreshRails();
@@ -281,9 +273,9 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     window.dispatchEvent(new Event('online'));
     await flushMicrotasks();
 
-    expect(requests.slice(before)).toEqual([{ kind: 'searchSource', query: 'fiction' }]);
+    expect(requests.slice(before)).toEqual([{ kind: 'searchSource', query: TERM[2] }]);
 
-    release([book('gutendex:2')]);
+    release([book('googlebooks:2', [railAuthor(TERM[1])])]);
     await pending;
     state.dispose();
   });
@@ -292,8 +284,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     let failing = true;
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider } = recordingProvider({
-      featured: (sort) => (failing ? offline : [book(`gutendex:${sort}`)]),
-      searchSource: () => (failing ? offline : [book('gutendex:term')]),
+      searchSource: (query) => (failing ? offline : [book('googlebooks:ok', [railAuthor(query)])]),
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -320,8 +311,11 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     });
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider } = recordingProvider({
-      featured: (sort) => (sort === 'POPULAR' ? gated : offline),
-      searchSource: () => [book('gutendex:term')],
+      searchSource: (query) => {
+        if (query === TERM[1]) return gated;
+        if (query === TERM[0]) return offline;
+        return [book('googlebooks:ok', [railAuthor(query)])];
+      },
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     const pending = state.refreshRails();
@@ -332,7 +326,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     expect(state.isOnline).toBe(false);
 
     // A later Loaded settle must not clear the pill while rail 0 is offline.
-    releasePopular([book('gutendex:popular')]);
+    releasePopular([book('googlebooks:loaded', [railAuthor(TERM[1])])]);
     await pending;
     expect(state.rails[1]?.kind).toBe('Loaded');
     expect(state.rails[2]?.kind).toBe('Loaded');
@@ -345,11 +339,10 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const upstream = catalogError('UPSTREAM_ERROR', 'boom');
     const { provider } = recordingProvider({
-      featured: (sort) => {
-        if (sort !== 'POPULAR') return [book(`gutendex:${sort}`)];
+      searchSource: (query) => {
+        if (query !== TERM[1]) return [book('googlebooks:ok', [railAuthor(query)])];
         return firstAttempt ? offline : upstream;
       },
-      searchSource: () => [book('gutendex:term')],
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
@@ -367,8 +360,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
 
   it('exposes the dispose path through the DiscoverDomainState facade', async () => {
     const { provider } = recordingProvider({
-      featured: (sort) => [book(`gutendex:${sort}`)],
-      searchSource: () => [book('gutendex:term')],
+      searchSource: (query) => [book('googlebooks:ok', [railAuthor(query)])],
     });
     const state = new DiscoverDomainState(provider, {}, { now: pinnedNow });
     await state.refreshRails();

@@ -674,3 +674,230 @@ describe('DiscoverDetail offline retry (G4)', () => {
     expect(screen.queryByText('discover.offline')).not.toBeInTheDocument();
   });
 });
+
+describe('DiscoverDomainState optimistic detail (DISC-01)', () => {
+  it('seeds the detail from the card and paints loaded before enrichment settles', async () => {
+    const book = fakeBook();
+    let resolveDetails!: (value: CatalogBook) => void;
+    const getDetails = vi.fn(
+      () =>
+        new Promise<CatalogBook>((resolve) => {
+          resolveDetails = resolve;
+        }),
+    );
+    const state = new DiscoverDomainState({ ...fakeProvider({}), getDetails });
+
+    const opening = state.openDetail(book);
+
+    // First paint is synchronous: the provider call was issued but no promise
+    // has settled, yet the sheet already shows the card's full payload.
+    expect(getDetails).toHaveBeenCalledOnce();
+    expect(state.detailStatus).toBe('loaded');
+    expect(state.detail).toEqual(book);
+
+    resolveDetails(book);
+    await opening;
+    expect(state.detailStatus).toBe('loaded');
+    expect(state.detail).toEqual(book);
+  });
+
+  it('keeps the seeded detail when background enrichment rejects', async () => {
+    const book = fakeBook();
+    const provider: CatalogProvider = {
+      ...fakeProvider({ [book.id]: book }),
+      async getDetails() {
+        throw catalogError('NETWORK_ERROR', 'offline');
+      },
+    };
+    const state = new DiscoverDomainState(provider);
+
+    await state.openDetail(book);
+
+    expect(state.detailStatus).toBe('loaded');
+    expect(state.detail).toEqual(book);
+  });
+
+  it('a superseded open wins over a late enrichment for the previous book', async () => {
+    const first = fakeBook();
+    const second = fakeBook({ id: 'gutendex:11', title: 'Second' });
+    let resolveFirst!: (value: CatalogBook) => void;
+    let resolveSecond!: (value: CatalogBook) => void;
+    const getDetails = vi.fn((id: string) =>
+      id === first.id
+        ? new Promise<CatalogBook>((resolve) => {
+            resolveFirst = resolve;
+          })
+        : new Promise<CatalogBook>((resolve) => {
+            resolveSecond = resolve;
+          }),
+    );
+    const state = new DiscoverDomainState({ ...fakeProvider({}), getDetails });
+
+    const openingFirst = state.openDetail(first);
+    const openingSecond = state.openDetail(second);
+    expect(state.detail?.id).toBe(second.id);
+
+    // The superseded enrichment lands late and must be ignored.
+    resolveFirst(first);
+    await openingFirst;
+    expect(state.detail?.id).toBe(second.id);
+
+    resolveSecond(second);
+    await openingSecond;
+    expect(state.detail?.id).toBe(second.id);
+  });
+
+  it('dismissDetail clears the seed so a late enrichment cannot reopen the sheet', async () => {
+    const book = fakeBook();
+    let resolveDetails!: (value: CatalogBook) => void;
+    const getDetails = vi.fn(
+      () =>
+        new Promise<CatalogBook>((resolve) => {
+          resolveDetails = resolve;
+        }),
+    );
+    const state = new DiscoverDomainState({ ...fakeProvider({}), getDetails });
+
+    const opening = state.openDetail(book);
+    state.dismissDetail();
+    expect(state.detailStatus).toBe('closed');
+    expect(state.detail).toBeNull();
+
+    resolveDetails(book);
+    await opening;
+    expect(state.detailStatus).toBe('closed');
+    expect(state.detail).toBeNull();
+  });
+
+  it('retryDetail recovers an id-only offline failure', async () => {
+    const book = fakeBook();
+    let failing = true;
+    const provider: CatalogProvider = {
+      ...fakeProvider({ [book.id]: book }),
+      async getDetails() {
+        if (failing) throw catalogError('NETWORK_ERROR', 'offline');
+        return book;
+      },
+    };
+    const state = new DiscoverDomainState(provider);
+    await state.openDetail(book.id);
+    expect(state.detailStatus).toBe('offline');
+
+    failing = false;
+    await state.retryDetail();
+    expect(state.detailStatus).toBe('loaded');
+    expect(state.detail?.id).toBe(book.id);
+  });
+});
+
+describe('DiscoverDomainState lazy authority resolve (DISC-04c)', () => {
+  const flushPromises = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('paints the seed first, then applies the resolve as additional enrichment', async () => {
+    const seed = fakeBook({
+      id: 'googlebooks:abc123',
+      provider: 'builtin:googlebooks',
+      downloadUrl: null,
+      isPublicDomain: null,
+      isbn13: '9780141439518',
+    });
+    let settleResolve!: (book: CatalogBook) => void;
+    const resolveBookAuthorities = vi.fn(
+      () =>
+        new Promise<CatalogBook>((resolve) => {
+          settleResolve = resolve;
+        }),
+    );
+    const provider: CatalogProvider = {
+      ...fakeProvider({ [seed.id]: seed }),
+      resolveBookAuthorities,
+    };
+    const state = new DiscoverDomainState(provider);
+
+    const opening = state.openDetail(seed);
+    // Synchronous first paint: the card payload is on screen before any
+    // enrichment — including the authority resolve — has settled.
+    expect(state.detail).toEqual(seed);
+    expect(state.detailStatus).toBe('loaded');
+
+    await flushPromises();
+    expect(resolveBookAuthorities).toHaveBeenCalledOnce();
+    expect(resolveBookAuthorities).toHaveBeenCalledWith(seed);
+
+    const resolved: CatalogBook = {
+      ...seed,
+      downloadUrl: 'https://www.gutenberg.org/ebooks/1342.epub3.images',
+      isPublicDomain: true,
+      openLibraryWorkId: '/works/OL66554W',
+      internetArchiveId: 'prideandprejudice0000aust',
+    };
+    settleResolve(resolved);
+    await opening;
+
+    expect(state.detail).toEqual(resolved);
+    expect(state.detailStatus).toBe('loaded');
+  });
+
+  it('does not write a superseded resolve for book A onto an open book B', async () => {
+    const first = fakeBook({
+      id: 'googlebooks:a',
+      provider: 'builtin:googlebooks',
+      downloadUrl: null,
+      isPublicDomain: null,
+    });
+    const second = fakeBook({
+      id: 'googlebooks:b',
+      provider: 'builtin:googlebooks',
+      downloadUrl: null,
+      isPublicDomain: null,
+    });
+    let settleFirst!: (book: CatalogBook) => void;
+    const resolveBookAuthorities = vi.fn((book: CatalogBook) =>
+      book.id === first.id
+        ? new Promise<CatalogBook>((resolve) => {
+            settleFirst = resolve;
+          })
+        : Promise.resolve(book),
+    );
+    const provider: CatalogProvider = {
+      ...fakeProvider({ [first.id]: first, [second.id]: second }),
+      resolveBookAuthorities,
+    };
+    const state = new DiscoverDomainState(provider);
+
+    const openingFirst = state.openDetail(first);
+    await flushPromises();
+    const openingSecond = state.openDetail(second);
+    await openingSecond;
+    expect(state.detail?.id).toBe(second.id);
+
+    settleFirst({ ...first, openLibraryWorkId: '/works/OL_A' });
+    await openingFirst;
+
+    expect(state.detail?.id).toBe(second.id);
+    expect(state.detail?.openLibraryWorkId ?? null).toBeNull();
+    expect(state.detailStatus).toBe('loaded');
+  });
+
+  it('keeps the seeded detail and status when the resolve rejects', async () => {
+    const seed = fakeBook({
+      id: 'googlebooks:fail',
+      provider: 'builtin:googlebooks',
+      downloadUrl: null,
+      isPublicDomain: null,
+    });
+    const provider: CatalogProvider = {
+      ...fakeProvider({ [seed.id]: seed }),
+      async resolveBookAuthorities() {
+        throw catalogError('NETWORK_ERROR', 'down');
+      },
+    };
+    const state = new DiscoverDomainState(provider);
+
+    await state.openDetail(seed);
+
+    expect(state.detail).toEqual(seed);
+    expect(state.detailStatus).toBe('loaded');
+    expect(state.errorCode).toBeNull();
+  });
+});

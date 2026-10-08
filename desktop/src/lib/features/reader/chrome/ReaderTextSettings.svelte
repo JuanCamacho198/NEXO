@@ -4,6 +4,7 @@
   import type { ReaderSettings, ReaderTextAlign } from '$lib/shared/types';
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
   import { fly } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
   import ThemeSwatches from './ThemeSwatches.svelte';
   import {
     READER_BRIGHTNESS_MAX,
@@ -27,6 +28,20 @@
   const textSettings = useReaderTextSettings({
     getSettings: () => readerSettings,
     onSettingsChange: (s) => onSettingsChange(s),
+  });
+
+  // Svelte JS transitions ignore the global `prefers-reduced-motion` CSS block,
+  // so the panel reads the query itself and zeroes its own duration.
+  let reducedMotion = $state(false);
+  $effect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const apply = (): void => {
+      reducedMotion = mq.matches;
+    };
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
   });
 
   function handleBackdropClick(e: MouseEvent): void {
@@ -125,7 +140,7 @@
 {#if open}
   <div class="fixed inset-0 z-40" onclick={handleBackdropClick} onkeydown={(e) => e.key === 'Escape' && onClose()} role="presentation">
     <div class="absolute inset-0 bg-(--color-surface)/70"></div>
-    <div bind:this={sidebarEl} class="absolute right-0 top-0 flex h-full w-65 flex-col overflow-y-auto border-l border-(--color-border-deep) bg-(--color-surface)/70 pt-15 text-(--color-text-muted) backdrop-blur-sm" onkeydown={(e) => e.key === 'Escape' && onClose()} role="dialog" aria-label={t('reader.ajustes_texto')} tabindex="0">
+    <div bind:this={sidebarEl} class="absolute right-0 top-0 flex h-full w-65 flex-col overflow-y-auto border-l border-(--color-border-deep) bg-(--color-surface)/70 pt-15 text-(--color-text-muted) backdrop-blur-sm" transition:fly={{ x: reducedMotion ? 0 : 260, opacity: 0, duration: reducedMotion ? 0 : 250, easing: cubicOut }} onkeydown={(e) => e.key === 'Escape' && onClose()} role="dialog" aria-label={t('reader.ajustes_texto')} tabindex="0">
       <header class="relative flex items-center justify-between border-b border-(--color-border)/5 px-4 py-4">
         {#if textSettings.showSavedToast}
           <span class="absolute -top-2 right-4 flex items-center gap-1 rounded-full bg-(--color-accent-blue)/20 px-2.5 py-0.5 text-xs text-(--color-accent-blue)" transition:fly={{ y: -4, duration: 150 }}><Check size={14} strokeWidth={1.8} class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{t('reader.saved')}</span>

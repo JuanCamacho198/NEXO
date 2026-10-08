@@ -9,6 +9,7 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import AddonInstallConfirmDialog from '$lib/shared/ui/addons/AddonInstallConfirmDialog.svelte';
 import {
   ADDON_INSTALL_CONFIRM_TITLE,
+  ADDON_INSTALL_CONFIRM_DESCRIPTION,
   ADDON_INSTALL_CONFIRM_INSTALL_LABEL,
   ADDON_INSTALL_CONFIRM_INSTALLING_LABEL,
   ADDON_INSTALL_CONFIRM_CANCEL_LABEL,
@@ -57,6 +58,16 @@ describe('AddonInstallConfirmDialog', () => {
     expect(screen.getByText('My Addon')).toBeInTheDocument();
     expect(screen.getByText('1.0.0')).toBeInTheDocument();
     expect(screen.getByText('my-addon')).toBeInTheDocument();
+  });
+
+  it('explains the install consequence through the linked description', () => {
+    renderDialog();
+    const content = document.querySelector('[data-dialog-content]') as HTMLElement;
+    const describedBy = content.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy as string)?.textContent).toContain(
+      ADDON_INSTALL_CONFIRM_DESCRIPTION,
+    );
   });
 
   it('labels version and publisher with i18n keys', () => {

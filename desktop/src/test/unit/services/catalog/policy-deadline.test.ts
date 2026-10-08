@@ -4,10 +4,13 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   composeDeadline,
+  DETAIL_DEADLINE_MS,
   fetchWithRetry,
   REQUEST_DEADLINE_MS,
   RETRY_BASE_DELAY_MS,
+  SEARCH_DEADLINE_MS,
 } from '$lib/shared/services/catalog/policy';
+import { catalogError, isRetryableCatalogCode } from '$lib/shared/services/catalog';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const POLICY_SOURCE = resolve(HERE, '../../../../lib/shared/services/catalog/policy.ts');
@@ -41,12 +44,20 @@ describe('catalog transport — bounded request deadline', () => {
     expect(source.match(/15_000/g)).toHaveLength(1);
   });
 
-  it('aborts a hung attempt at the deadline and surfaces NETWORK_ERROR', async () => {
+  it('externalizes a dedicated budget per call shape', () => {
+    expect(SEARCH_DEADLINE_MS).toBe(6_000);
+    expect(DETAIL_DEADLINE_MS).toBe(5_000);
+    const source = readFileSync(POLICY_SOURCE, 'utf8');
+    expect(source).toContain('export const SEARCH_DEADLINE_MS = 6_000;');
+    expect(source).toContain('export const DETAIL_DEADLINE_MS = 5_000;');
+  });
+
+  it('classifies a fired deadline as UPSTREAM_TIMEOUT, not NETWORK_ERROR', async () => {
     vi.useFakeTimers();
     const { fetchFn, signals } = hangingFetch();
     const assertion = expect(
       fetchWithRetry('https://example.test/hang', {}, fetchFn),
-    ).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
+    ).rejects.toMatchObject({ code: 'UPSTREAM_TIMEOUT' });
 
     await vi.advanceTimersByTimeAsync(REQUEST_DEADLINE_MS - 1);
     expect(signals[0]?.aborted).toBe(false);
@@ -54,6 +65,33 @@ describe('catalog transport — bounded request deadline', () => {
     await vi.advanceTimersByTimeAsync(1);
     await assertion;
     expect(signals[0]?.aborted).toBe(true);
+  });
+
+  it('honors a per-call deadline budget instead of the 15s default', async () => {
+    vi.useFakeTimers();
+    const { fetchFn, signals } = hangingFetch();
+    const assertion = expect(
+      fetchWithRetry('https://example.test/budget', {}, fetchFn, SEARCH_DEADLINE_MS),
+    ).rejects.toMatchObject({ code: 'UPSTREAM_TIMEOUT' });
+
+    await vi.advanceTimersByTimeAsync(SEARCH_DEADLINE_MS - 1);
+    expect(signals[0]?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await assertion;
+    expect(signals[0]?.aborted).toBe(true);
+  });
+
+  it('marks UPSTREAM_TIMEOUT retryable', () => {
+    expect(isRetryableCatalogCode('UPSTREAM_TIMEOUT')).toBe(true);
+    expect(catalogError('UPSTREAM_TIMEOUT').code).toBe('UPSTREAM_TIMEOUT');
+  });
+
+  it('still reports a genuine fetch rejection as NETWORK_ERROR', async () => {
+    const fetchFn = (() =>
+      Promise.reject(new TypeError('network down'))) as unknown as typeof fetch;
+    await expect(fetchWithRetry('https://example.test/reject', {}, fetchFn)).rejects.toMatchObject({
+      code: 'NETWORK_ERROR',
+    });
   });
 
   it('composes a caller signal with the deadline', async () => {

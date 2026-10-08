@@ -7,6 +7,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { logger } from '$lib/shared/logger/Logger';
 import {
   handleDeepLinkUrls,
   parseInstallDeepLink,
@@ -93,7 +94,7 @@ describe('handleDeepLinkUrls', () => {
   });
 
   it('is a no-op without a handler and logs ignored urls', async () => {
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const log = vi.spyOn(logger, 'debug').mockImplementation(() => {});
     await expect(
       handleDeepLinkUrls(['nextpage://install?url=https://example.com/m.json']),
     ).resolves.toBeUndefined();

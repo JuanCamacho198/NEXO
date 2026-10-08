@@ -6,7 +6,13 @@ export function createDeviceRealtime(opts: {
   getHardwareId: () => string;
   getDevices: () => DeviceViewModel[];
   setDevices: (v: DeviceViewModel[]) => void;
-}) {
+}): {
+  subscribe(userId: string): void;
+  unsubscribe(): void;
+  destroy(): void;
+  readonly isSubscribed: boolean;
+  readonly channel: RealtimeChannel | null;
+} {
   let channel: RealtimeChannel | null = null;
   let currentUserId: string | null = null;
   let isSubscribed = $state(false);

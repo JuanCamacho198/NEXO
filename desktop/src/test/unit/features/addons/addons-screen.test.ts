@@ -1,6 +1,6 @@
 /**
  * Addons screen content (slice 7, unit 7b): the read-only first-party section
- * lists exactly the two built-ins plus all six curated entries with no
+ * lists exactly the two built-ins with no
  * install/uninstall affordance and no registry row; the installed list
  * reflects the shared registry (install-by-URL creates exactly one entry,
  * enable/disable persist, uninstall removes the entry and its sources stop
@@ -21,7 +21,7 @@ import userEvent from '@testing-library/user-event';
 
 import AddonsInstalledList from '$lib/features/addons/components/AddonsInstalledList.svelte';
 import AddonsFirstPartySection from '$lib/features/addons/components/AddonsFirstPartySection.svelte';
-import { FIRST_PARTY_BUILTINS, FIRST_PARTY_CURATED } from '$lib/features/addons/firstPartySources';
+import { FIRST_PARTY_BUILTINS } from '$lib/features/addons/firstPartySources';
 import { createSettingsAddons } from '$lib/features/settings/useSettingsAddons.svelte';
 import { createInstallDeepLink } from '$lib/features/settings/useInstallDeepLink.svelte';
 import { createRebuildingCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
@@ -141,40 +141,17 @@ function manifestTransport(manifest: unknown): AddonTransport {
 }
 
 describe('addons first-party section (read-only)', () => {
-  it('lists exactly the two built-ins plus all six curated entries', () => {
+  it('lists exactly the two built-ins', () => {
     expect(FIRST_PARTY_BUILTINS.map((s) => s.sourceId)).toEqual([
       'builtin:gutendex',
       'builtin:openlibrary',
     ]);
-    expect(FIRST_PARTY_CURATED).toHaveLength(6);
-    expect(FIRST_PARTY_CURATED.map((s) => s.sourceId)).toEqual([
-      'builtin:gutendex',
-      'builtin:openlibrary',
-      'builtin:standard-ebooks',
-      'builtin:librivox',
-      'builtin:wikisource',
-      'builtin:faded-page',
-    ]);
-    expect(FIRST_PARTY_CURATED.map((s) => s.name)).toEqual([
-      'Gutendex',
-      'Open Library',
-      'Standard Ebooks',
-      'LibriVox',
-      'Wikisource',
-      'Faded Page',
-    ]);
+    expect(FIRST_PARTY_BUILTINS.map((s) => s.name)).toEqual(['Gutendex', 'Open Library']);
   });
 
   it('renders every first-party name with no install/uninstall affordance', () => {
     const { container } = render(AddonsFirstPartySection, { t });
-    for (const name of [
-      'Gutendex',
-      'Open Library',
-      'Standard Ebooks',
-      'LibriVox',
-      'Wikisource',
-      'Faded Page',
-    ]) {
+    for (const name of ['Gutendex', 'Open Library']) {
       expect(container.textContent).toContain(name);
     }
     // No install/uninstall/enable affordance anywhere in the section.
@@ -192,7 +169,7 @@ describe('addons first-party section (read-only)', () => {
       '../../../../lib/features/addons/components/AddonsFirstPartySection.svelte',
     );
     expect(section).toContain('FIRST_PARTY_BUILTINS');
-    expect(section).toContain('FIRST_PARTY_CURATED');
+    expect(section).not.toContain('FIRST_PARTY_CURATED');
     expect(section).not.toContain('onInstall');
     expect(section).not.toContain('onUninstall');
     expect(section).not.toContain('onToggle');
@@ -251,7 +228,12 @@ describe('addons installed list (presentational)', () => {
     expect(container.textContent).toContain(INSTALL_URL);
     await user.click(screen.getByRole('button', { name: 'settings.addons.disable' }));
     expect(onToggle).toHaveBeenCalledWith('addon-1', false);
+    // ADD-01 B: uninstall is destructive and now requires an explicit
+    // confirmation that names the addon; the first click only arms it.
     await user.click(screen.getByRole('button', { name: 'settings.addons.uninstall' }));
+    expect(onUninstall).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('addons.uninstall.confirm');
+    await user.click(screen.getByRole('button', { name: 'addons.uninstall.confirmAction' }));
     expect(onUninstall).toHaveBeenCalledWith('addon-1');
     await user.click(screen.getByRole('button', { name: 'settings.addons.install' }));
     expect(onInstall).toHaveBeenCalledTimes(1);

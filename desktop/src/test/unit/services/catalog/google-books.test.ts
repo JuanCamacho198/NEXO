@@ -5,26 +5,37 @@ import {
   BUILTIN_OPENLIBRARY,
   parseCatalogSource,
 } from '$lib/shared/services/catalog/CatalogProvider';
-import type { CatalogSource } from '$lib/shared/services/catalog/CatalogProvider';
+import type {
+  CatalogBook,
+  CatalogProvider,
+  CatalogSource,
+} from '$lib/shared/services/catalog/CatalogProvider';
 import { CompositeCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
 import { defaultCatalogProviders } from '$lib/shared/services/catalog/CompositeCatalogProvider';
 import {
   GoogleBooksCatalogProvider,
+  GutendexCatalogProvider,
+  OpenLibraryCatalogProvider,
   googleBooksKeyFromEnv,
   googleBooksProviderOrNull,
 } from '$lib/shared/services/catalog/BuiltInCatalogProviders';
+import { CuratedCatalogProvider } from '$lib/shared/services/addons/CuratedCatalogProvider';
+import { GutendexDataSource } from '$lib/shared/services/catalog/GutendexDataSource';
+import { OpenLibraryDataSource } from '$lib/shared/services/catalog/OpenLibraryDataSource';
 import {
   GOOGLE_BOOKS_BASE_URL,
+  GOOGLE_BOOKS_SEARCH_FIELDS,
   GOOGLE_BOOKS_VOLUME_FIELDS,
   GoogleBooksDataSource,
   buildGoogleBooksQuery,
 } from '$lib/shared/services/catalog/GoogleBooksDataSource';
 import { CatalogError } from '$lib/shared/services/catalog/errors';
-import { mapGoogleBooksVolume } from '$lib/shared/services/catalog/mappers';
+import { mapGoogleBooksVolume, mergeResults } from '$lib/shared/services/catalog/mappers';
 import type {
   GoogleBooksVolumeItem,
   GoogleBooksSearchResponse,
 } from '$lib/shared/services/catalog/mappers';
+import gutendexFixture from '$lib/shared/services/catalog/fixtures/gutendex-search.json';
 
 const KEY = 'test-key-123';
 
@@ -81,11 +92,18 @@ function volumePayload(): GoogleBooksSearchResponse {
 }
 
 describe('buildGoogleBooksQuery', () => {
-  it('uses the isbn operator for bare ISBN-10/13 (dashes, spaces, X check digit)', () => {
-    expect(buildGoogleBooksQuery('9780140449136')).toBe('isbn:9780140449136');
-    expect(buildGoogleBooksQuery('978-0-14-044913-6')).toBe('isbn:9780140449136');
-    expect(buildGoogleBooksQuery(' 0141439513 ')).toBe('isbn:0141439513');
-    expect(buildGoogleBooksQuery('043942089X')).toBe('isbn:043942089X');
+  it('compacts a bare ISBN-10/13 to plain digits (dashes, spaces, X check digit)', () => {
+    expect(buildGoogleBooksQuery('9780140449136')).toBe('9780140449136');
+    expect(buildGoogleBooksQuery('978-0-14-044913-6')).toBe('9780140449136');
+    expect(buildGoogleBooksQuery(' 0141439513 ')).toBe('0141439513');
+    expect(buildGoogleBooksQuery('043942089X')).toBe('043942089X');
+  });
+
+  it('never emits a colon operator, which the live API answers with zero results', () => {
+    const queries = ['9780140449136', '978-0-14-044913-6', '043942089X', 'Jane Austen Pride'];
+    for (const query of queries) {
+      expect(buildGoogleBooksQuery(query)).not.toContain(':');
+    }
   });
 
   it('passes title/author queries through trimmed', () => {
@@ -184,10 +202,22 @@ describe('GoogleBooksDataSource', () => {
     expect(whitespace.urls[0]).not.toContain('key=');
   });
 
-  it('maps an ISBN query through the isbn operator', async () => {
+  it('sends a bare ISBN as plain digits, never as a colon operator', async () => {
     const { fetchFn, urls } = recordingFetch(volumePayload());
     await new GoogleBooksDataSource(fetchFn, KEY).search('9780140449136', 1);
-    expect(urls[0]).toContain('q=isbn%3A9780140449136');
+    // Regression pin. The previous shape was `q=isbn%3A9780140449136`, which the
+    // live API answers with `totalItems: 0`; plain digits answer with volumes.
+    expect(urls[0]).toContain('q=9780140449136');
+    expect(urls[0]).not.toContain('isbn');
+    expect(urls[0]).not.toContain('%3A');
+  });
+
+  it('search request carries the fields whitelist (including totalItems)', async () => {
+    const { fetchFn, urls } = recordingFetch(volumePayload());
+    await new GoogleBooksDataSource(fetchFn, KEY).search('pride', 1);
+    expect(urls[0]).toContain(`fields=${GOOGLE_BOOKS_SEARCH_FIELDS}`);
+    expect(urls[0]).toContain('totalItems');
+    expect(urls[0]).toContain('industryIdentifiers');
   });
 
   it('detail request carries the fields whitelist and the key when configured', async () => {
@@ -331,5 +361,97 @@ describe('composite fan-out with the key-gated Google Books provider', () => {
     }
     // Routing failures never trigger I/O: only the one successful detail call.
     expect(urls).toHaveLength(1);
+  });
+});
+
+describe('composite keyword fan-out (supportsCompositeSearch)', () => {
+  function volumeProvider(): { provider: GoogleBooksCatalogProvider; urls: string[] } {
+    const { fetchFn, urls } = recordingFetch(volumePayload());
+    return { provider: googleBooksProviderOrNull(KEY, fetchFn)!, urls };
+  }
+
+  it('default list: Gutendex joins the fan-out only when Google Books is absent', () => {
+    const gutendexOf = (key: string): CatalogProvider | undefined =>
+      defaultCatalogProviders([], undefined, key).find((p) => p instanceof GutendexCatalogProvider);
+    expect(gutendexOf('')?.supportsCompositeSearch?.()).toBe(true);
+    expect(gutendexOf(KEY)?.supportsCompositeSearch?.()).toBe(false);
+  });
+
+  it('with Google Books registered: exactly one provider request; Gutendex is never searched', async () => {
+    const gutendexFetch = vi.fn(noIoFetch());
+    const openLibraryFetch = vi.fn(noIoFetch());
+    const { provider: googleBooks, urls } = volumeProvider();
+    const composite = new CompositeCatalogProvider(
+      [
+        new GutendexCatalogProvider(new GutendexDataSource(gutendexFetch), false),
+        new OpenLibraryCatalogProvider(new OpenLibraryDataSource(openLibraryFetch)),
+        googleBooks,
+        new CuratedCatalogProvider(),
+      ],
+      { debounceMs: 0 },
+    );
+    const page = await composite.search('pride', 1);
+    expect(page.results[0]?.id).toBe('googlebooks:abc123');
+    expect(urls).toHaveLength(1);
+    expect(gutendexFetch).not.toHaveBeenCalled();
+    expect(openLibraryFetch).not.toHaveBeenCalled();
+  });
+
+  it('with Google Books absent: the Gutendex fail-safe keeps search non-empty', async () => {
+    const { fetchFn, urls } = recordingFetch(gutendexFixture);
+    const openLibraryFetch = vi.fn(noIoFetch());
+    const composite = new CompositeCatalogProvider(
+      [
+        new GutendexCatalogProvider(new GutendexDataSource(fetchFn), true),
+        new OpenLibraryCatalogProvider(new OpenLibraryDataSource(openLibraryFetch)),
+        new CuratedCatalogProvider(),
+      ],
+      { debounceMs: 0 },
+    );
+    const page = await composite.search('pride', 1);
+    expect(page.results.length).toBeGreaterThan(0);
+    expect(urls).toHaveLength(1);
+    expect(openLibraryFetch).not.toHaveBeenCalled();
+  });
+
+  it('mergeResults: Google Books is primary and Open Library identity still lands', () => {
+    const gb: CatalogBook = {
+      id: 'googlebooks:abc123',
+      provider: BUILTIN_GOOGLEBOOKS,
+      title: 'Pride and Prejudice',
+      authors: ['Jane Austen'],
+      coverUrl: 'https://books.google.com/x.jpg',
+      languages: ['en'],
+      subjects: ['Fiction'],
+      downloadUrl: null,
+      isbn13: null,
+      isbn10: null,
+      googleBooksId: 'abc123',
+    };
+    const ol: CatalogBook = {
+      id: 'openlibrary:/works/OL66554W',
+      provider: BUILTIN_OPENLIBRARY,
+      title: 'Pride and Prejudice',
+      authors: ['Austen, Jane'],
+      coverUrl: null,
+      languages: ['eng'],
+      subjects: [],
+      downloadUrl: null,
+      isbn13: '9780141439518',
+      isbn10: '0141439513',
+      openLibraryWorkId: '/works/OL66554W',
+      internetArchiveId: 'prideandprejudice0000aust',
+    };
+    const merged = mergeResults([gb], [ol]);
+    expect(merged).toHaveLength(1);
+    const book = merged[0]!;
+    // Google Books wins the metadata it supplies.
+    expect(book.provider).toBe(BUILTIN_GOOGLEBOOKS);
+    expect(book.coverUrl).toBe('https://books.google.com/x.jpg');
+    // Open Library identity fills the gaps, keeping the access links alive.
+    expect(book.isbn13).toBe('9780141439518');
+    expect(book.isbn10).toBe('0141439513');
+    expect(book.openLibraryWorkId).toBe('/works/OL66554W');
+    expect(book.internetArchiveId).toBe('prideandprejudice0000aust');
   });
 });

@@ -32,10 +32,12 @@ export const adjustPdfScaleForWheel = (currentScale: number, deltaY: number): nu
 
 export const clampZoomPercent = (value: number): number => {
   if (!Number.isFinite(value)) return 100;
-  return Math.min(200, Math.max(75, Math.round(value)));
+  return Math.min(ZOOM_MAX_PERCENT, Math.max(ZOOM_MIN_PERCENT, Math.round(value)));
 };
 
-export const ZOOM_OPTIONS = [75, 90, 100, 110, 125, 150, 175, 200] as const;
+export const ZOOM_MIN_PERCENT = 50;
+export const ZOOM_MAX_PERCENT = 300;
+export const ZOOM_OPTIONS = [50, 75, 90, 100, 110, 125, 150, 175, 200, 250, 300] as const;
 export const DEFAULT_ZOOM_PERCENT = 100;
 
 export const resolveNavigationTransaction = ({

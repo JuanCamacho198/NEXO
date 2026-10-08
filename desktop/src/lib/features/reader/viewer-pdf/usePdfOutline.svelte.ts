@@ -22,7 +22,18 @@ export type PdfOutlineDeps = {
   t: (key: string, params?: Record<string, string | number>) => string;
 };
 
-export function createPdfOutlineState(deps: PdfOutlineDeps) {
+export function createPdfOutlineState(deps: PdfOutlineDeps): {
+  outline: PdfOutlineItem[];
+  tocLoading: boolean;
+  tocError: string | null;
+  outlineDeferred: boolean;
+  readonly flatOutline: Array<{ item: PdfOutlineItem; depth: number }>;
+  outlinePageCache: Map<string, number>;
+  resolveDestinationPage(dest: string | unknown[] | null): Promise<number | null>;
+  ensureOutlineLoaded(showToc: boolean): Promise<void>;
+  clearOutlineCache(): void;
+  flattenOutline: typeof pureFlattenOutline;
+} {
   let outline = $state<PdfOutlineItem[]>([]);
   let tocLoading = $state(false);
   let tocError = $state<string | null>(null);

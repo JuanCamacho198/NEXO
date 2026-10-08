@@ -102,7 +102,8 @@ export type ShelfBookLike = ProgressLike & {
 const removeAccents = (value: string): string =>
   value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-const normalizeSearchValue = (value: string): string => removeAccents(value).toLowerCase().trim();
+export const normalizeSearchValue = (value: string): string =>
+  removeAccents(value).toLowerCase().trim();
 
 const getSearchTerms = (value: string): string[] =>
   normalizeSearchValue(value)

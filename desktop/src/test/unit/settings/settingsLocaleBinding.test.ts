@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount, unmount } from 'svelte';
 import SettingsPanel from '$lib/features/settings/components/SettingsPanel.svelte';
 import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
+import type { LibraryBookDto } from '$lib/shared/types';
 
 /**
  * Regression: opening Settings -> Cuenta must not crash the locale wiring.
@@ -107,9 +108,8 @@ describe('SettingsPanel locale binding regression', () => {
 
     const props = {
       isOpen: true,
-      mode: 'page' as const,
       t,
-      books: [] as { id: string; title: string }[],
+      books: [] as LibraryBookDto[],
       // Production wiring: an unbound class method forwarded straight through.
       onLocaleChange: settingsState.handleLocaleChange,
       onRequestClose: () => {},

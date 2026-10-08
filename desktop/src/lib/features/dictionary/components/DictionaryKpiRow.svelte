@@ -28,7 +28,7 @@
     >
       <div class="flex min-w-0 flex-col gap-1">
         <span
-          class="truncate text-2xs font-semibold tracking-wide text-(--color-text-tertiary)"
+          class="truncate text-xs font-semibold tracking-wide text-(--color-text-tertiary)"
           data-testid="dictionary-kpi-label"
         >
           {t(card.key)}

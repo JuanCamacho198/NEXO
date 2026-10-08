@@ -1,5 +1,4 @@
 <script lang="ts">
-  import ArrowRight from 'lucide-svelte/icons/arrow-right';
   import Bookmark from 'lucide-svelte/icons/bookmark';
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import Expand from 'lucide-svelte/icons/expand';
@@ -9,6 +8,7 @@
   import Shrink from 'lucide-svelte/icons/shrink';
   import X from 'lucide-svelte/icons/x';
   import ZoomDropdown from './ZoomDropdown.svelte';
+  import PageInput from './PageInput.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -30,8 +30,6 @@
     totalPages?: number;
     currentPercentage?: number;
     fontSizePercent?: number;
-    onPrev?: () => void;
-    onNext?: () => void;
     onGoToPage?: (page: number) => Promise<boolean>;
     onFontSizeChange?: (size: number) => void;
   };
@@ -59,20 +57,13 @@
     totalPages,
     currentPercentage,
     fontSizePercent,
-    onPrev,
-    onNext,
     onGoToPage,
     onFontSizeChange,
   }: Props & HeaderVisibleProps = $props();
 
   const headerTransform = $derived(headerVisible ? 'translate-y-0' : '-translate-y-full');
   const showReadingControls = $derived(
-    isFullscreen &&
-      onPrev !== undefined &&
-      onNext !== undefined &&
-      currentPage !== undefined &&
-      totalPages !== undefined &&
-      totalPages > 0,
+    isFullscreen && currentPage !== undefined && totalPages !== undefined && totalPages > 0,
   );
 
   const TocIcon = $derived(showTocPanel ? X : Menu);
@@ -80,22 +71,6 @@
   const TextSettingsIcon = $derived(showTextSettings ? X : Settings);
   const BookmarksIcon = $derived(showBookmarks ? X : Bookmark);
   const FullscreenIcon = $derived(isFullscreen ? Shrink : Expand);
-
-  let pageInputValue = $state(1);
-  $effect(() => {
-    if (currentPage !== undefined) pageInputValue = currentPage;
-  });
-
-  async function handlePageInput(e: Event): Promise<void> {
-    const target = e.target as HTMLInputElement;
-    const page = Number.parseInt(target.value, 10);
-    if (Number.isFinite(page) && totalPages !== undefined && page >= 1 && page <= totalPages) {
-      const ok = await onGoToPage?.(page);
-      if (!ok) target.value = String(currentPage);
-    } else {
-      target.value = String(currentPage);
-    }
-  }
 </script>
 
 <header
@@ -103,13 +78,13 @@
   class:shadow-md={isFullscreen}
 >
   <!-- Top row: Biblioteca + title + tools -->
-  <div class="flex h-16 shrink-0 items-center justify-between px-8">
+  <div class="flex h-16 shrink-0 items-center justify-between px-4 sm:px-8">
     <!-- Left: back + biblioteca -->
     <div class="flex items-center gap-2">
       <button
         type="button"
         onclick={onBackToHome}
-        class="flex cursor-pointer items-center gap-2 text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
+        class="flex min-h-11 cursor-pointer items-center gap-2 text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
       >
         <ChevronLeft size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
         <span class="font-inter text-sm font-medium text-(--color-text-auxiliary)"
@@ -119,16 +94,18 @@
     </div>
 
     <!-- Center: book title -->
-    <span class="font-inter text-sm font-medium text-(--color-text-auxiliary)">
+    <span
+      class="font-inter text-sm font-medium text-(--color-text-auxiliary) min-w-0 flex-1 truncate px-2 text-center max-[480px]:hidden"
+    >
       {title}
     </span>
 
     <!-- Right: tools -->
-    <div class="flex items-center gap-6 text-(--color-text-auxiliary)">
+    <div class="flex items-center gap-3 sm:gap-6 text-(--color-text-auxiliary)">
       <button
         type="button"
         onclick={onToggleToc}
-        class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors"
+        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
         class:text-(--color-accent-blue)={showTocPanel}
         class:text-(--color-text-auxiliary)={!showTocPanel}
         class:hover:text-(--color-text-inverse)={!showTocPanel}
@@ -140,19 +117,19 @@
       <button
         type="button"
         onclick={onToggleSearch}
-        class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors"
+        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
         class:text-(--color-accent-blue)={searchPanelOpen}
         class:text-(--color-text-auxiliary)={!searchPanelOpen}
         class:hover:text-(--color-text-inverse)={!searchPanelOpen}
         class:hover:brightness-125={searchPanelOpen}
-        aria-label={searchPanelOpen ? t('settings.close') : t('epub.search')}
+        aria-label={searchPanelOpen ? t('settings.close') : t('search.title')}
       >
         <SearchIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <button
         type="button"
         onclick={onToggleTextSettings}
-        class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors"
+        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
         class:text-(--color-accent-blue)={showTextSettings}
         class:text-(--color-text-auxiliary)={!showTextSettings}
         class:hover:text-(--color-text-inverse)={!showTextSettings}
@@ -164,7 +141,7 @@
       <button
         type="button"
         onclick={onToggleBookmarks}
-        class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors"
+        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
         class:text-(--color-accent-blue)={showBookmarks}
         class:text-(--color-text-auxiliary)={!showBookmarks}
         class:hover:text-(--color-text-inverse)={!showBookmarks}
@@ -176,7 +153,7 @@
       <button
         type="button"
         onclick={onToggleFullscreen}
-        class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
+        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
         aria-label={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
       >
         <FullscreenIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
@@ -185,42 +162,17 @@
   </div>
 
   {#if showReadingControls}
-    <!-- Bottom row: reading controls (unified immersive bar) -->
+    <!-- Bottom row: status/zoom strip (paging lives in the toolbar or the edge chevrons) -->
     <div
-      class="flex h-12 shrink-0 items-center justify-center gap-3 border-t border-(--color-surface-strong)/20 px-4 bg-(--color-bg-deep)"
+      class="flex h-12 shrink-0 items-center justify-center gap-2 border-t border-(--color-surface-strong)/20 px-2 bg-(--color-bg-deep) sm:gap-3 sm:px-4"
     >
-      <button
-        type="button"
-        onclick={onPrev}
-        disabled={currentPage !== undefined && currentPage <= 1}
-        class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-surface-strong) rounded bg-transparent text-(--color-text-auxiliary) hover:text-(--color-text-inverse) hover:bg-(--color-surface-strong)/20 cursor-pointer text-xs min-w-8 min-h-8 disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label={t('reader.prev_page')}
-      >
-        <ChevronLeft size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        onclick={onNext}
-        disabled={totalPages !== undefined &&
-          currentPage !== undefined &&
-          currentPage >= totalPages}
-        class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-surface-strong) rounded bg-transparent text-(--color-text-auxiliary) hover:text-(--color-text-inverse) hover:bg-(--color-surface-strong)/20 cursor-pointer text-xs min-w-8 min-h-8 disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label={t('reader.next_page')}
-      >
-        <ArrowRight size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-      <span class="flex items-center gap-1 text-xs text-(--color-text-auxiliary)">
-        <input
-          type="number"
-          min="1"
-          max={totalPages}
-          value={pageInputValue}
-          onchange={handlePageInput}
-          class="w-[50px] p-1 border border-(--color-surface-strong) rounded text-center bg-(--color-bg-deep) text-(--color-text-auxiliary)"
-          aria-label={t('reader.page_input')}
-        />
-        <span class="text-xs text-(--color-text-auxiliary) opacity-70">/ {totalPages}</span>
-      </span>
+      <PageInput
+        variant="header"
+        currentPage={currentPage ?? 1}
+        totalPages={totalPages ?? 1}
+        {t}
+        {onGoToPage}
+      />
       {#if currentPercentage !== undefined}
         <span class="text-xs text-(--color-text-auxiliary) min-w-10 text-center"
           >{Math.round(currentPercentage)}%</span

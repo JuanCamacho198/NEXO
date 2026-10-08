@@ -40,16 +40,16 @@
         class:z-3={activeHighlightId === hl.id}
         style="left: {rect.left * scale}px; top: {rect.top * scale}px; width: {rect.width *
           scale}px; height: {rect.height *
-          scale}px; --highlight-color: {resolvedColor}; background: color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--highlight-color, #FACC15) 25%, transparent);"
+          scale}px; --highlight-color: {resolvedColor}; background: color-mix(in srgb, var(--highlight-color, var(--color-warning)) 48%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--highlight-color, var(--color-warning)) 25%, transparent);"
         onmouseenter={(e) => {
           (e.currentTarget as HTMLElement).style.background =
-            `color-mix(in srgb, var(--highlight-color, #FACC15) 60%, transparent)`;
+            `color-mix(in srgb, var(--highlight-color, var(--color-warning)) 60%, transparent)`;
         }}
         onmouseleave={(e) => {
           const isActive = activeHighlightId === hl.id;
           (e.currentTarget as HTMLElement).style.background = isActive
-            ? `color-mix(in srgb, var(--highlight-color, #FACC15) 72%, transparent)`
-            : `color-mix(in srgb, var(--highlight-color, #FACC15) 48%, transparent)`;
+            ? `color-mix(in srgb, var(--highlight-color, var(--color-warning)) 72%, transparent)`
+            : `color-mix(in srgb, var(--highlight-color, var(--color-warning)) 48%, transparent)`;
         }}
         role="button"
         tabindex="0"

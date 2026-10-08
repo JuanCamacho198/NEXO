@@ -8,6 +8,7 @@ export type CatalogErrorCode =
   | 'NOT_FOUND'
   | 'RATE_LIMITED'
   | 'UPSTREAM_ERROR'
+  | 'UPSTREAM_TIMEOUT'
   | 'NETWORK_ERROR'
   | 'CONSENT_REQUIRED';
 
@@ -25,7 +26,11 @@ export class CatalogError extends Error {
 
 /** Build a typed catalog error without leaking upstream details. */
 export function catalogError(code: CatalogErrorCode, detail?: string): CatalogError {
-  const retryable = code === 'RATE_LIMITED' || code === 'NETWORK_ERROR';
+  // UPSTREAM_TIMEOUT is retryable (the source was slow, not unreachable), but it
+  // is deliberately NOT the offline code: `isOfflineCatalogCode` keys on
+  // NETWORK_ERROR alone, so a timeout renders as a slow-source error.
+  const retryable =
+    code === 'RATE_LIMITED' || code === 'NETWORK_ERROR' || code === 'UPSTREAM_TIMEOUT';
   return new CatalogError(code, detail ? `${code}: ${detail}` : code, retryable);
 }
 

@@ -164,6 +164,25 @@ export interface CatalogProvider {
    * rejects INVALID_PAGE before any I/O.
    */
   searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult>;
+
+  /**
+   * Fail-closed capability probe: false ⇒ the composite's fan-out `search()`
+   * skips this provider. Absent ⇒ true (backward compatible). Only the
+   * composite keyword-search fan-out is gated: detail routing, per-source
+   * `searchSource`, featured rails and download resolution still see every
+   * registered provider.
+   */
+  supportsCompositeSearch?(): boolean;
+
+  /**
+   * Lazy per-book authority resolve (DISC-04c, additive + optional): resolve a
+   * book's Gutendex download/public-domain and Open Library work/Internet
+   * Archive identity, caching the merged result under the existing detail key
+   * so it runs once per book. Absent ⇒ the caller skips the enrichment. The
+   * resolve is best-effort: a rejection or an empty result never replaces the
+   * seeded detail and is never surfaced as an error.
+   */
+  resolveBookAuthorities?(book: CatalogBook): Promise<CatalogBook>;
 }
 
 export type { CatalogErrorCode };

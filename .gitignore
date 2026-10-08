@@ -63,6 +63,9 @@ odd/
 # Local scratch (not part of the repo)
 .trabajo/
 
+#impeccable skill
+.impeccable/
+
 # Release signing — key material lives OUTSIDE the repo (~/.nexo-keys/).
 # Belt-and-braces: never commit keys, keystores, or password files.
 *.key
@@ -70,3 +73,6 @@ odd/
 *.keystore
 .nexo-keys/
 .playwright-mcp/
+
+# License attributions are kept locally, not versioned.
+THIRD-PARTY-NOTICES.md

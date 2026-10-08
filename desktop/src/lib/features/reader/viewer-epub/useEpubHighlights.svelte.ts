@@ -13,6 +13,7 @@ import { normalizeHref } from '$lib/shared/sync/LocatorCodec';
 import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
 import type { EpubChapterMeta } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+import { logger } from '$lib/shared/logger/Logger';
 
 export interface EpubMetadataExtract {
   title: string;
@@ -52,7 +53,25 @@ export type EpubHighlightsDeps = {
   viewerPort?: ViewerPort;
 };
 
-export function createEpubHighlights(deps: EpubHighlightsDeps) {
+export function createEpubHighlights(deps: EpubHighlightsDeps): {
+  lastHighlightRenderKey: string;
+  handleEpubHighlightClick(msg: {
+    id: string;
+    x: number;
+    y: number;
+    color: string;
+    text?: string;
+    pageNumber: number;
+  }): void;
+  handleEpubHighlightFailed(msg: {
+    id: string;
+    reason: string;
+    pageNumber: number;
+    cfi?: string;
+    color?: string;
+  }): void;
+  handleEpubHighlightPlaced(msg: { id: string; pageNumber: number }): void;
+} {
   const viewerPort = deps.viewerPort ?? new TauriViewerAdapter();
   let lastHighlightRenderKey = $state('');
 
@@ -86,11 +105,11 @@ export function createEpubHighlights(deps: EpubHighlightsDeps) {
     if (msg.id && !debugState.epub.failedHighlightIds.includes(msg.id)) {
       debugState.epub.failedHighlightIds.push(msg.id);
     }
-    console.warn('epub-hl: highlight failed to apply', {
-      id: msg.id,
-      reason: msg.reason,
-      pageNumber: msg.pageNumber,
-    });
+    logger.warn(
+      'epub-hl: highlight failed to apply',
+      { id: msg.id, reason: msg.reason, pageNumber: msg.pageNumber },
+      'reader',
+    );
   }
 
   function handleEpubHighlightPlaced(msg: { id: string; pageNumber: number }): void {
@@ -120,26 +139,29 @@ export function createEpubHighlights(deps: EpubHighlightsDeps) {
     const highlightsSnapshot = deps.getPersistedHighlights();
     const lastRenderedSnapshot = untrack(() => deps.getLastRenderedChapter());
 
-    console.warn(
-      'epub-hl: effect triggered with',
-      highlightsSnapshot.length,
-      'highlights, toc',
-      currentIdx,
-      'spine',
-      deps.getCurrentSpineIndex(),
-      'lastRendered',
-      lastRenderedSnapshot,
-      'highlightsMap',
-      highlightsSnapshot.map((h) => `${h.pageNumber}:${h.id.slice(0, 4)}`).join(','),
-      'chapterHref',
-      chapterHref,
-      'metaHref',
-      metaHref,
+    logger.warn(
+      'epub-hl: effect triggered',
+      {
+        highlightCount: highlightsSnapshot.length,
+        toc: currentIdx,
+        spine: deps.getCurrentSpineIndex(),
+        lastRendered: lastRenderedSnapshot,
+        highlightsMap: highlightsSnapshot
+          .map((h) => `${h.pageNumber}:${h.id.slice(0, 4)}`)
+          .join(','),
+        chapterHref,
+        metaHref,
+      },
+      'reader',
     );
 
     const renderKey = `${currentIdx}|${deps.getCurrentSpineIndex()}|${chapterHref}|${highlightsSnapshot.map((h) => h.id + ':' + h.pageNumber).join(',')}`;
     if (renderKey === untrack(() => lastHighlightRenderKey)) {
-      console.warn('epub-hl: skip duplicate render', renderKey.slice(0, 120));
+      logger.warn(
+        'epub-hl: skip duplicate render',
+        { renderKey: renderKey.slice(0, 120) },
+        'reader',
+      );
       return;
     }
 
@@ -166,23 +188,17 @@ export function createEpubHighlights(deps: EpubHighlightsDeps) {
         if (retries++ < MAX_RETRIES) {
           timer = setTimeout(attemptRender, RETRY_INTERVAL);
           if (retries === 1) {
-            console.warn(
-              'epub-hl: render deferred (lastRenderedChapter',
-              currentLastRendered,
-              '!== current',
-              currentIdx,
-              ') - retrying',
+            logger.warn(
+              'epub-hl: render deferred (lastRenderedChapter !== current) - retrying',
+              { lastRendered: currentLastRendered, current: currentIdx },
+              'reader',
             );
           }
         } else {
-          console.warn(
-            'epub-hl: render aborted (lastRenderedChapter',
-            currentLastRendered,
-            '!== current',
-            currentIdx,
-            ') after',
-            MAX_RETRIES,
-            'retries',
+          logger.warn(
+            'epub-hl: render aborted (lastRenderedChapter !== current) after retries',
+            { lastRendered: currentLastRendered, current: currentIdx, retries: MAX_RETRIES },
+            'reader',
           );
         }
         return;
@@ -192,29 +208,31 @@ export function createEpubHighlights(deps: EpubHighlightsDeps) {
         if (retries++ < MAX_RETRIES) {
           timer = setTimeout(attemptRender, RETRY_INTERVAL);
           if (retries === 1) {
-            console.warn(
+            logger.warn(
               'epub-hl: render deferred (overlay not mounted on iframe window) - retrying',
+              {},
+              'reader',
             );
           }
         } else {
-          console.warn(
-            'epub-hl: render aborted (overlay not mounted on iframe window) after',
-            MAX_RETRIES,
-            'retries',
+          logger.warn(
+            'epub-hl: render aborted (overlay not mounted on iframe window)',
+            { retries: MAX_RETRIES },
+            'reader',
           );
         }
         return;
       }
 
-      console.warn(
-        'epub-hl: render called with',
-        highlightsSnapshot.length,
-        'highlights, toc',
-        currentIdx,
-        'spine',
-        deps.getCurrentSpineIndex(),
-        'chapterHref',
-        chapterHref,
+      logger.warn(
+        'epub-hl: render called',
+        {
+          highlightCount: highlightsSnapshot.length,
+          toc: currentIdx,
+          spine: deps.getCurrentSpineIndex(),
+          chapterHref,
+        },
+        'reader',
       );
       try {
         win.__epubHighlightOverlay.render(
@@ -224,7 +242,11 @@ export function createEpubHighlights(deps: EpubHighlightsDeps) {
         );
         lastHighlightRenderKey = renderKey;
       } catch (err) {
-        console.warn('epub-hl: render failed', err);
+        logger.warn(
+          'epub-hl: render failed',
+          { error: err instanceof Error ? err.message : String(err) },
+          'reader',
+        );
       }
     }
 

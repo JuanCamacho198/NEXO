@@ -7,7 +7,6 @@
   import {
     DEFAULT_PDF_SCALE,
     isPageWithinBounds,
-    PDF_SCALE_STEP,
   } from '$lib/features/reader/viewer-pdf/pdfNavigation';
   import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
   import {
@@ -27,10 +26,11 @@
   import { createPdfSelectionState } from '$lib/features/reader/viewer-pdf/usePdfSelection.svelte';
   import { createPdfOutlineState } from '$lib/features/reader/viewer-pdf/usePdfOutline.svelte';
   import { createPdfZoomThemeState } from '$lib/features/reader/viewer-pdf/usePdfZoomTheme.svelte';
+  import { resolveFitScalePercent, type FitMode } from '$lib/features/reader/chrome/fitZoom';
   import PdfControls from './PdfControls.svelte';
+  import { logger } from '$lib/shared/logger/Logger';
   import PdfSelectionOverlay from './PdfSelectionOverlay.svelte';
   import PdfLoadingOverlay from './PdfLoadingOverlay.svelte';
-  import PdfTocSidebar from './PdfTocSidebar.svelte';
   import type { TocEntry } from '../chrome/ReaderTocPanel.svelte';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
   import { setReaderError, clearReaderError } from '$lib/stores/readerErrorState.svelte';
@@ -57,7 +57,7 @@
     }) => void;
     readerSettings?: ReaderSettings;
     isFullscreen?: boolean;
-    onToggleFullscreen?: () => void;
+    tocOpen?: boolean;
     onselection?: (event: {
       text: string;
       bounds: { left: number; top: number; right: number; bottom: number };
@@ -106,7 +106,7 @@
     onSessionProgress,
     readerSettings = DEFAULT_READER_SETTINGS,
     isFullscreen = false,
-    onToggleFullscreen,
+    tocOpen = false,
     onselection,
     onselectionclear,
     onHighlightAction,
@@ -127,7 +127,6 @@
   let lastPercent = 0;
   let scale = $state(DEFAULT_PDF_SCALE);
   let navigationError = $state<string | null>(null);
-  let showToc = $state(false);
   let isViewerFocused = $state(false);
 
   const docState = createPdfDocumentState({
@@ -149,7 +148,7 @@
     getCanvasContainer: () => canvasContainer,
     getCurrentPage: () => currentPage,
     getTotalPages: () => docState.totalPages,
-    getShowToc: () => showToc,
+    getShowToc: () => tocOpen,
     getIsFullscreen: () => isFullscreen,
   });
   // svelte-ignore state_referenced_locally
@@ -163,10 +162,6 @@
   });
   const zoomState = createPdfZoomThemeState({
     getReaderSettings: () => readerSettings,
-    getScale: () => scale,
-    setScale: (v) => setScale(v),
-    getCanvasContainer: () => canvasContainer,
-    getPdfDoc: () => docState.pdfDoc,
   });
 
   const isStaleNavigation = (id: number): boolean => renderState.isStaleNavigation(id);
@@ -194,10 +189,6 @@
     }
   });
 
-  const canUseFullscreenApi = (): boolean =>
-    typeof document !== 'undefined' &&
-    typeof viewerRoot?.requestFullscreen === 'function' &&
-    typeof document.exitFullscreen === 'function';
   const emitSessionProgress = (nextPage: number, nextTotal: number): void => {
     const now = new Date();
     const nextPercent = readProgressPercent(nextPage, nextTotal);
@@ -226,8 +217,6 @@
     }
     const ok = await navigateToPage(page);
     if (!ok) navigationError = t('pdf.tocNavigationFailed');
-    else if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches)
-      showToc = false;
   }
 
   async function loadPdf(): Promise<void> {
@@ -301,25 +290,7 @@
   function goToNextPage(): void {
     void navigateToPage(currentPage + 1);
   }
-  async function toggleFullscreen(): Promise<void> {
-    if (onToggleFullscreen) {
-      onToggleFullscreen();
-      return;
-    }
-    if (!canUseFullscreenApi()) {
-      navigationError = t('pdf.fullscreenUnsupported');
-      return;
-    }
-    try {
-      navigationError = null;
-      if (document.fullscreenElement === viewerRoot) await document.exitFullscreen();
-      else await viewerRoot?.requestFullscreen();
-    } catch {
-      navigationError = t('pdf.fullscreenUnsupported');
-    }
-  }
   function handleViewerKeydown(event: KeyboardEvent): void {
-    if (zoomState.handleKeyZoom(event)) return;
     if (!isViewerFocused) return;
     const intent = resolveReaderArrowIntent(event);
     if (!intent) return;
@@ -406,12 +377,32 @@
           restoreScrollAnchor(anchor, canvasContainer ?? null);
       }
     } catch (err) {
-      console.error('Error setting scale:', err);
+      logger.error(
+        'Error setting scale',
+        { error: err instanceof Error ? err.message : String(err) },
+        'reader',
+      );
       navigationError = t('pdf.navigationFailed');
     }
   }
   export function getCurrentPage(): number {
     return currentPage;
+  }
+  export function getScale(): number {
+    return scale;
+  }
+  export async function applyFit(mode: FitMode): Promise<void> {
+    const page = renderState.currentPageObj;
+    if (!page) return;
+    const natural = page.getViewport({ scale: 1 });
+    await setScale(
+      resolveFitScalePercent(mode, {
+        containerWidth: canvasContainer?.clientWidth ?? 0,
+        containerHeight: canvasContainer?.clientHeight ?? 0,
+        pageWidth: natural.width,
+        pageHeight: natural.height,
+      }) / 100,
+    );
   }
   export function getTotalPages(): number {
     return docState.totalPages;
@@ -425,20 +416,14 @@
       'pdfjs-dist/build/pdf.worker.min.mjs',
       import.meta.url,
     ).toString();
-    const handleFullscreenError = (): void => {
-      navigationError = t('pdf.fullscreenUnsupported');
-    };
     const handleSelectionChange = (): void => {
       const sel = window.getSelection();
       if (!sel || !sel.toString().trim()) selectionState.clearSelectionUi();
     };
-    document.addEventListener('fullscreenerror', handleFullscreenError);
     document.addEventListener('selectionchange', handleSelectionChange);
     return () => {
       docState.cleanup();
       renderState.cleanup();
-      zoomState.cleanup();
-      document.removeEventListener('fullscreenerror', handleFullscreenError);
       document.removeEventListener('selectionchange', handleSelectionChange);
     };
   });
@@ -449,8 +434,7 @@
     }
   });
   $effect(() => {
-    void showToc;
-    if (showToc) void outlineState.ensureOutlineLoaded(showToc);
+    if (tocOpen) void outlineState.ensureOutlineLoaded(tocOpen);
   });
   $effect(() => {
     const tp = parseLocatorPage(searchTargetLocator);
@@ -464,13 +448,6 @@
       return;
     void navigateToPage(tp, { flash: true });
   });
-  $effect(() => {
-    const el = canvasContainer;
-    if (!el) return;
-    const h: EventListener = (e) => zoomState.handleViewerWheel(e as WheelEvent);
-    el.addEventListener('wheel', h, { passive: false });
-    return () => el.removeEventListener('wheel', h);
-  });
   const handleViewerKeydown_ = (event: KeyboardEvent): void => {
     if (event.key === 'ArrowLeft') goToPrevPage();
     else if (event.key === 'ArrowRight') goToNextPage();
@@ -482,8 +459,6 @@
     {currentPage}
     totalPages={docState.totalPages}
     {scale}
-    {isFullscreen}
-    {showToc}
     isLoading={docState.isLoading}
     error={docState.error}
     {t}
@@ -491,8 +466,7 @@
     onNextPage={goToNextPage}
     onGoToPage={navigateToPage}
     onSetScale={(s) => setScale(s)}
-    onToggleFullscreen={toggleFullscreen}
-    onToggleToc={() => (showToc = !showToc)}
+    onFit={applyFit}
   />
 {/snippet}
 
@@ -548,13 +522,6 @@
     class="flex flex-1 overflow-hidden"
     style:visibility={docState.isLoading || docState.error ? 'hidden' : 'visible'}
   >
-    {#if showToc}<PdfTocSidebar
-        {flatOutline}
-        tocLoading={outlineState.tocLoading}
-        tocError={outlineState.tocError}
-        {t}
-        onNavigate={(item) => navigateToOutlineItem(item)}
-      />{/if}
     <div
       class="flex-1 min-h-0 overflow-auto bg-(--pdf-reader-root-bg,var(--color-background))"
       bind:this={canvasContainer}
@@ -592,12 +559,12 @@
     display: block;
     position: relative;
     z-index: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    background: var(--pdf-reader-surface-bg, #fff);
+    box-shadow: var(--shadow-soft);
+    background: var(--pdf-reader-surface-bg, var(--color-color-picker-bg));
   }
   .search-hit {
     outline: 3px solid var(--color-accent-blue);
     outline-offset: 6px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
   }
 </style>

@@ -41,13 +41,14 @@ describe('GradientImportButton', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('uses the --gradient-import token without hardcoded hex', () => {
+  it('renders a secondary outline using the --color-import token without hex', () => {
     const { container } = render(GradientImportButton, {
       props: { label: 'Import', onclick: () => undefined },
     });
 
     const html = container.innerHTML;
-    expect(html).toContain('var(--gradient-import)');
+    expect(html).toContain('--color-import');
+    expect(html).not.toContain('gradient');
     expect(html).not.toMatch(hexPattern);
   });
 

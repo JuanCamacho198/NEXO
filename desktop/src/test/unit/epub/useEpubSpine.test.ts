@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createEpubSpine } from '$lib/features/reader/viewer-epub/useEpubSpine.svelte';
 import { normalizeHref, stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+import { logger } from '$lib/shared/logger/Logger';
 
 describe('useEpubSpine — spine authority + cache guard', () => {
   function metaWithToc(spineHrefs: string[], toc: any[], totalChapters = spineHrefs.length) {
@@ -38,7 +39,7 @@ describe('useEpubSpine — spine authority + cache guard', () => {
       { index: 3, id: 'b', label: 'B', href: 'OEBPS/Text/b.xhtml' },
     ];
     const spine = createEpubSpine({ getMetadata: () => metaWithToc([], toc) });
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const hrefs = spine.getSpineHrefs();
     expect(hrefs).toEqual(['OEBPS/Text/a.xhtml', 'OEBPS/Text/b.xhtml']);
     expect(warn).toHaveBeenCalled();

@@ -40,7 +40,7 @@ const formatSchema = z.preprocess(
   z.enum(['epub', 'pdf']),
 );
 
-export const bookImportInputSchema = z.object({
+const bookImportInputSchema = z.object({
   sourcePath: z.string().trim().min(1),
   title: z.string().trim().min(1).optional(),
   author: z.string().trim().min(1).optional(),
@@ -50,9 +50,7 @@ export const bookImportInputSchema = z.object({
 
 export type BookImportInputData = z.infer<typeof bookImportInputSchema>;
 
-export const bulkImportBatchSchema = z.array(bookImportInputSchema).min(1);
-
-export type BulkImportBatchData = z.infer<typeof bulkImportBatchSchema>;
+export type BulkImportBatchData = BookImportInputData[];
 
 const optionalDateString = z
   .string()
@@ -62,7 +60,7 @@ const optionalDateString = z
     message: 'Invalid date string',
   });
 
-export const epubMetadataSchema = z
+const epubMetadataSchema = z
   .object({
     title: z.string().trim().min(1).nullable().optional(),
     author: z.string().trim().min(1).nullable().optional(),
@@ -156,8 +154,4 @@ export function validateEpubMetadata(dto: unknown): ValidationResult<EpubMetadat
     key: 'import.validation.invalidMetadata',
     fallback: 'Book metadata is incomplete and was skipped.',
   };
-}
-
-export function toValidationError(result: ValidationFailure, index?: number): ValidationError {
-  return new ValidationError(result.key, result.fallback, index);
 }

@@ -16,7 +16,9 @@ import {
 import {
   clampPageSize,
   createSearchDebouncer,
+  DETAIL_DEADLINE_MS,
   fetchWithRetry,
+  SEARCH_DEADLINE_MS,
   shouldRetryStatus,
 } from '$lib/shared/services/catalog/policy';
 import { GutendexDataSource } from '$lib/shared/services/catalog/GutendexDataSource';
@@ -323,5 +325,46 @@ describe('CompositeCatalogProvider', () => {
     expect(provider.resolveDownloadUrl({ 'text/plain': 'https://example.com/b.txt' }, true)).toBe(
       'https://example.com/b.txt',
     );
+  });
+});
+
+describe('datasource deadline budgets (DISC-02)', () => {
+  /** Fetch stub that only settles when its composed signal aborts. */
+  function hangingFetch(): typeof fetch {
+    return ((_input: unknown, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        const signal = init?.signal;
+        const fail = (): void => reject(signal?.reason ?? new Error('aborted'));
+        if (signal?.aborted) fail();
+        else signal?.addEventListener('abort', fail);
+      })) as unknown as typeof fetch;
+  }
+
+  it('bounds a Gutendex search at the search budget with UPSTREAM_TIMEOUT', async () => {
+    vi.useFakeTimers();
+    try {
+      const ds = new GutendexDataSource(hangingFetch());
+      const assertion = expect(ds.search('cold-term', 1)).rejects.toMatchObject({
+        code: 'UPSTREAM_TIMEOUT',
+      });
+      await vi.advanceTimersByTimeAsync(SEARCH_DEADLINE_MS);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('bounds a Gutendex detail at the detail budget with UPSTREAM_TIMEOUT', async () => {
+    vi.useFakeTimers();
+    try {
+      const ds = new GutendexDataSource(hangingFetch());
+      const assertion = expect(ds.getById(1342)).rejects.toMatchObject({
+        code: 'UPSTREAM_TIMEOUT',
+      });
+      await vi.advanceTimersByTimeAsync(DETAIL_DEADLINE_MS);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

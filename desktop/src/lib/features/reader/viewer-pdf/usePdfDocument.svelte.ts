@@ -18,7 +18,28 @@ export type PdfDocumentDeps = {
   onProgress?: (loaded: number, total: number) => void;
 };
 
-export function createPdfDocumentState(deps: PdfDocumentDeps) {
+export function createPdfDocumentState(deps: PdfDocumentDeps): {
+  pdfDoc: pdfjsLib.PDFDocumentProxy | null;
+  totalPages: number;
+  isLoading: boolean;
+  loadProgress: number;
+  loadProgressMax: number;
+  error: string | null;
+  lastLoadedFilePath: string | null;
+  readonly activeLoadRequestId: number;
+  isStaleLoad: (requestId: number) => boolean;
+  loadPdf(): Promise<{
+    pdfDoc: pdfjsLib.PDFDocumentProxy | null;
+    loadRequestId: number;
+    totalPages: number;
+    error: string | null;
+  }>;
+  destroyCurrentDocument(): Promise<void>;
+  destroyActiveLoadingTask(): void;
+  cleanup(): void;
+  clearDocumentCache: typeof clearDocumentCache;
+  removeCachedDocument: typeof removeCachedDocument;
+} {
   let pdfDoc = $state<pdfjsLib.PDFDocumentProxy | null>(null);
   let totalPages = $state(0);
   let isLoading = $state(true);

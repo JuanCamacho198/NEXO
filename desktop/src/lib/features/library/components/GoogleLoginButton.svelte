@@ -4,6 +4,7 @@
   import Toast from '$lib/shared/ui/feedback/Toast.svelte';
   import { signInWithGoogle } from '$lib/shared/services';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
+  import { logger } from '$lib/shared/logger/Logger';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Translator = (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -45,11 +46,11 @@
   async function handleLogin(): Promise<void> {
     try {
       isLoggingIn = true;
-      console.log('Initiating Supabase Google login...');
+      logger.debug('Initiating Supabase Google login...', undefined, 'app_shell');
       await signInWithGoogle();
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error('Login Error:', msg);
+      logger.error('Login Error:', { error: msg }, 'app_shell');
       alert(t('errors.commandFailure') + ': ' + msg);
     } finally {
       isLoggingIn = false;

@@ -16,8 +16,28 @@ vi.mock('$lib/features/reader/viewer-epub/keyboardNav', () => ({
 }));
 
 import { createReaderZoom } from '$lib/features/reader/chrome/useReaderZoom.svelte';
+import { READER_ZOOM_STEP_PERCENT } from '$lib/features/reader/chrome/useReaderZoom.svelte';
 import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation';
 import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
+import type { ViewerHandle } from '$lib/features/reader/viewer-shared/Viewer';
+
+function makeViewerMock(
+  kind: 'pdf' | 'epub',
+  scaleOrZoom: number,
+): { viewer: ViewerHandle; setScaleOrZoom: ReturnType<typeof vi.fn> } {
+  const setScaleOrZoom = vi.fn();
+  const viewer: ViewerHandle = {
+    kind,
+    navigatePrev: () => false,
+    navigateNext: () => false,
+    goToPage: () => Promise.resolve(false),
+    setScaleOrZoom,
+    getScaleOrZoom: () => scaleOrZoom,
+    getCurrentPage: () => 1,
+    getTotalForHeader: () => 10,
+  };
+  return { viewer, setScaleOrZoom };
+}
 
 describe('useReaderZoom', () => {
   let rafSpy: ReturnType<typeof vi.spyOn>;
@@ -40,7 +60,7 @@ describe('useReaderZoom', () => {
     vi.restoreAllMocks();
   });
 
-  it('clamp 75-200 and adjustZoom persists via 500ms debounce', async () => {
+  it('clamp 50-300 and adjustZoom persists via 500ms debounce', async () => {
     const persistMock = vi.fn().mockResolvedValue({});
     const pdfMock = {
       setScale: vi.fn().mockResolvedValue(undefined),
@@ -49,7 +69,7 @@ describe('useReaderZoom', () => {
       setZoom: vi.fn().mockResolvedValue(undefined),
     } as unknown as import('$lib/features/reader/viewer-epub/EpubNativeViewer.svelte').default;
     const zoom = createReaderZoom({
-      getActiveBook: () => ({ format: 'pdf', filePath: 'a.pdf', id: 'b1' }) as never,
+      getActiveBook: () => ({ format: 'epub', filePath: 'a.epub', id: 'b1' }) as never,
       getRefs: () => ({ pdf: pdfMock as never, epub: epubMock as never }),
       persist: persistMock,
     });
@@ -62,10 +82,10 @@ describe('useReaderZoom', () => {
     // clamp upper
     zoom.localReaderSettings = {
       ...zoom.localReaderSettings,
-      epub: { ...zoom.localReaderSettings.epub, fontSize: 200 },
+      epub: { ...zoom.localReaderSettings.epub, fontSize: 300 },
     };
     zoom.adjustZoom(10);
-    expect(zoom.localReaderSettings.epub.fontSize).toBe(200);
+    expect(zoom.localReaderSettings.epub.fontSize).toBe(300);
     // debounce not yet
     expect(persistMock).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(500);
@@ -74,24 +94,26 @@ describe('useReaderZoom', () => {
     // clamp lower
     zoom.localReaderSettings = {
       ...zoom.localReaderSettings,
-      epub: { ...zoom.localReaderSettings.epub, fontSize: 75 },
+      epub: { ...zoom.localReaderSettings.epub, fontSize: 50 },
     };
     zoom.adjustZoom(-10);
-    expect(zoom.localReaderSettings.epub.fontSize).toBe(75);
+    expect(zoom.localReaderSettings.epub.fontSize).toBe(50);
     vi.advanceTimersByTime(500);
     expect(persistMock).toHaveBeenCalledTimes(1);
     // pure clamp helper
-    expect(clampZoomPercent(300)).toBe(200);
-    expect(clampZoomPercent(10)).toBe(75);
+    expect(clampZoomPercent(400)).toBe(300);
+    expect(clampZoomPercent(10)).toBe(50);
     zoom.cleanup();
   });
 
-  it('wheel rAF coalesces pendingWheelDelta', () => {
-    const pdfMock = { setScale: vi.fn().mockResolvedValue(undefined) } as unknown as never;
+  it('wheel rAF coalesces pendingWheelDelta and routes PDF through the viewer scale', () => {
+    const setScale = vi.fn().mockResolvedValue(undefined);
+    const pdfMock = { setScale };
+    const persistMock = vi.fn().mockResolvedValue({});
     const zoom = createReaderZoom({
       getActiveBook: () => ({ format: 'pdf', filePath: 'a.pdf', id: 'b1' }) as never,
-      getRefs: () => ({ pdf: pdfMock, epub: null }),
-      persist: vi.fn().mockResolvedValue({}),
+      getRefs: () => ({ pdf: pdfMock, epub: null }) as never,
+      persist: persistMock,
     });
     const start = zoom.localReaderSettings.epub.fontSize;
     // ctrl+wheel down (deltaY positive => zoom out -10)
@@ -118,7 +140,13 @@ describe('useReaderZoom', () => {
     vi.advanceTimersByTime(16);
     expect(zoom._pendingWheelFrame).toBeNull();
     expect(zoom._pendingWheelDelta).toBe(0);
-    expect(zoom.localReaderSettings.epub.fontSize).toBe(start - 10);
+    // single pipeline, single step: the viewer scale moves exactly one step…
+    expect(setScale).toHaveBeenCalledTimes(1);
+    expect(setScale).toHaveBeenCalledWith((start - READER_ZOOM_STEP_PERCENT) / 100);
+    // …and the EPUB setting is untouched for a PDF.
+    expect(zoom.localReaderSettings.epub.fontSize).toBe(start);
+    vi.advanceTimersByTime(500);
+    expect(persistMock).not.toHaveBeenCalled();
     // wheel without ctrl ignored
     const e3 = {
       ctrlKey: false,
@@ -148,7 +176,7 @@ describe('useReaderZoom', () => {
     } as unknown as KeyboardEvent;
     zoom.handleGlobalKeydown(ePlus);
     expect(ePlus.preventDefault).toHaveBeenCalled();
-    expect(zoom.localReaderSettings.epub.fontSize).toBe(start + 10);
+    expect(zoom.localReaderSettings.epub.fontSize).toBe(start + READER_ZOOM_STEP_PERCENT);
     const eMinus = {
       key: '-',
       ctrlKey: true,
@@ -224,6 +252,34 @@ describe('useReaderZoom', () => {
     expect(zoom._pendingWheelDelta).toBe(0);
     vi.advanceTimersByTime(500);
     expect(persistMock).not.toHaveBeenCalled();
+  });
+
+  it('PDF zoom reads and writes the viewer scale, never epub.fontSize', () => {
+    const persistMock = vi.fn().mockResolvedValue({});
+    const { viewer, setScaleOrZoom } = makeViewerMock('pdf', 150);
+    const zoom = createReaderZoom({ getViewer: () => viewer, persist: persistMock });
+    zoom.adjustZoom(READER_ZOOM_STEP_PERCENT);
+    expect(setScaleOrZoom).toHaveBeenCalledTimes(1);
+    expect(setScaleOrZoom).toHaveBeenCalledWith(150 + READER_ZOOM_STEP_PERCENT);
+    expect(zoom.localReaderSettings.epub.fontSize).toBe(100);
+    zoom.handleHeaderFontSizeChange(125);
+    expect(setScaleOrZoom).toHaveBeenCalledWith(125);
+    expect(zoom.localReaderSettings.epub.fontSize).toBe(100);
+    vi.advanceTimersByTime(500);
+    expect(persistMock).not.toHaveBeenCalled();
+    zoom.cleanup();
+  });
+
+  it('EPUB zoom reads the viewer scale and persists fontSize', () => {
+    const persistMock = vi.fn().mockResolvedValue({});
+    const { viewer, setScaleOrZoom } = makeViewerMock('epub', 120);
+    const zoom = createReaderZoom({ getViewer: () => viewer, persist: persistMock });
+    zoom.adjustZoom(READER_ZOOM_STEP_PERCENT);
+    expect(zoom.localReaderSettings.epub.fontSize).toBe(120 + READER_ZOOM_STEP_PERCENT);
+    expect(setScaleOrZoom).toHaveBeenCalledWith(120 + READER_ZOOM_STEP_PERCENT);
+    vi.advanceTimersByTime(500);
+    expect(persistMock).toHaveBeenCalledTimes(1);
+    zoom.cleanup();
   });
 
   it('syncFromProps copies settings via JSON', () => {

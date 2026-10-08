@@ -62,6 +62,20 @@ describe('ReaderWorkspace', () => {
     await fireEvent.click(screen.getByTestId('mock-pdfviewer-toggle'));
     expect(requestFullscreen).toHaveBeenCalled();
   });
+  it('renders a fluid page container instead of the fixed 800px card (U2.1)', () => {
+    render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    expect(document.querySelector('.w-200')).toBeNull();
+    const card = screen.getByTestId('mock-pdfviewer-toggle').closest('div.rounded-xl');
+    expect(card).not.toBeNull();
+    expect(card?.className).toContain('w-full');
+    expect(card?.className).toContain('shadow-lg');
+    expect(card?.className).toContain('bg-white');
+  });
   it('renders selection toolbar using viewerSpace payload', async () => {
     render(ReaderWorkspace, {
       activeReadingBook: makeBook(),

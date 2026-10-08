@@ -49,7 +49,7 @@
   {#if confirming && !granted}
     <div role="dialog" aria-label={t('addons.consent.title')} class="flex flex-col gap-1 text-sm">
       <p class="m-0 font-medium">{t('addons.consent.title')}</p>
-      <p class="m-0 opacity-70">{t('addons.consent.body', { name: addonName })}</p>
+      <p class="m-0 text-(--color-text-muted)">{t('addons.consent.body', { name: addonName })}</p>
       <div class="flex gap-2">
         <button
           type="button"

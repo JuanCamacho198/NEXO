@@ -65,6 +65,7 @@ import {
 } from '$lib/shared/types';
 
 import type { ReaderTextAlign, ReaderDirection, ReaderProgressIndicator } from '$lib/shared/types';
+import type { Notification } from '$lib/shared/types/notification';
 
 type MaybeCommandError = Error & { commandError?: CommandErrorDto };
 
@@ -352,6 +353,113 @@ export const upsertSettings = async (settings: AppSettingDto[]): Promise<void> =
     await invoke('upsertSettings', { settings });
   } catch (error) {
     attachCommandError(error);
+  }
+};
+
+// ─── Notification history (NOTIF-02) ──────────────────────────────────
+
+/** Wire shape of `NotificationDto` in `src-tauri/src/models/mod.rs`. */
+type NotificationRecord = {
+  id: string;
+  createdAt: number;
+  source: string;
+  category: string;
+  severity: string;
+  interruption: string;
+  i18nKey: string;
+  i18nParams: string | null;
+  target: string | null;
+  readAt: number | null;
+  dedupKey: string | null;
+};
+
+const parseJsonObject = <T>(raw: string | null): T | undefined => {
+  if (raw === null) return undefined;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return undefined;
+  }
+};
+
+const toNotification = (record: NotificationRecord): Notification => {
+  const i18nParams = parseJsonObject<Record<string, string | number>>(record.i18nParams);
+  const target = parseJsonObject<NonNullable<Notification['target']>>(record.target);
+  return {
+    id: record.id,
+    createdAt: record.createdAt,
+    source: record.source as Notification['source'],
+    category: record.category as Notification['category'],
+    severity: record.severity as Notification['severity'],
+    interruption: record.interruption as Notification['interruption'],
+    i18nKey: record.i18nKey as Notification['i18nKey'],
+    readAt: record.readAt,
+    ...(i18nParams ? { i18nParams } : {}),
+    ...(target ? { target } : {}),
+    ...(record.dedupKey !== null ? { dedupKey: record.dedupKey } : {}),
+  };
+};
+
+const toNotificationRecord = (notification: Notification): NotificationRecord => ({
+  id: notification.id,
+  createdAt: notification.createdAt,
+  source: notification.source,
+  category: notification.category,
+  severity: notification.severity,
+  interruption: notification.interruption,
+  i18nKey: notification.i18nKey,
+  i18nParams: notification.i18nParams ? JSON.stringify(notification.i18nParams) : null,
+  target: notification.target ? JSON.stringify(notification.target) : null,
+  readAt: notification.readAt,
+  dedupKey: notification.dedupKey ?? null,
+});
+
+export const listNotifications = async (): Promise<Notification[]> => {
+  try {
+    const records = await invoke<NotificationRecord[]>('listNotifications');
+    return records.map(toNotification);
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const saveNotification = async (notification: Notification): Promise<void> => {
+  try {
+    await invoke('saveNotification', { notification: toNotificationRecord(notification) });
+  } catch (error) {
+    attachCommandError(error);
+  }
+};
+
+export const markNotificationRead = async (id: string, readAt: number): Promise<boolean> => {
+  try {
+    return await invoke<boolean>('markNotificationRead', { id, readAt });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const markAllNotificationsRead = async (readAt: number): Promise<number> => {
+  try {
+    return await invoke<number>('markAllNotificationsRead', { readAt });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const clearAllNotifications = async (): Promise<number> => {
+  try {
+    return await invoke<number>('clearNotifications');
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const pruneNotifications = async (nowEpochMs: number): Promise<number> => {
+  try {
+    return await invoke<number>('pruneNotifications', { nowEpochMs });
+  } catch (error) {
+    return attachCommandError(error);
   }
 };
 
@@ -1168,9 +1276,14 @@ export const getDailyGoal = async (userId?: string): Promise<number> => {
 
 export const saveDailyGoal = async (minutes: number, userId?: string): Promise<void> => {
   const sanitized = sanitizeDailyGoal(minutes);
-  if (!userId || userId.trim().length === 0) return;
+  const uid = userId?.trim();
   try {
-    await invoke('saveDailyGoalMinutes', { minutes: sanitized, userId });
+    // A null userId makes the backend persist the global key, so a goal set
+    // without a session is stored locally instead of being dropped.
+    await invoke('saveDailyGoalMinutes', {
+      minutes: sanitized,
+      userId: uid && uid.length > 0 ? uid : null,
+    });
   } catch (error) {
     return attachCommandError(error);
   }

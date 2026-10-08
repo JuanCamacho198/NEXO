@@ -219,7 +219,6 @@ async function removeStaleTmp(): Promise<void> {
 
 // ─── Client instances ─────────────────────────────────────────────
 
-let anonClient: SupabaseClient | null = null;
 let sessionClient: SupabaseClient | null = null;
 
 function getSupabaseUrl(): string {
@@ -232,25 +231,6 @@ function getSupabaseAnonKey(): string {
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
   if (!key) throw new Error('VITE_SUPABASE_ANON_KEY is not set');
   return key;
-}
-
-/**
- * Get the anonymous Supabase client (legacy, no auth session).
- * Used for unauthenticated reads where RLS permits anon access.
- */
-export function getSupabaseClient(): SupabaseClient {
-  if (!anonClient) {
-    const url = getSupabaseUrl();
-    const anonKey = getSupabaseAnonKey();
-    anonClient = createClient(url, anonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
-  }
-  return anonClient;
 }
 
 /**

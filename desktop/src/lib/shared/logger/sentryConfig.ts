@@ -43,7 +43,7 @@ export const getSentryDsn = (): string | undefined => {
   return undefined;
 };
 
-export const getSentryRelease = (): string => {
+const getSentryRelease = (): string => {
   // The `__SENTRY_RELEASE__` define is set in `vite.config.ts` from
   // `package.json@<git-sha>`. Falls back to `SENTRY_RELEASE` env var so
   // tests / non-Vite contexts (e.g. Node scripts) still work.
@@ -58,7 +58,7 @@ export const getSentryRelease = (): string => {
   return DEFAULT_RELEASE;
 };
 
-export const getSentryEnvironment = (): SentrySettings['environment'] => {
+const getSentryEnvironment = (): SentrySettings['environment'] => {
   const raw = (import.meta.env as Record<string, string | undefined>).MODE;
   if (raw === 'production' || raw === 'test') {
     return raw;

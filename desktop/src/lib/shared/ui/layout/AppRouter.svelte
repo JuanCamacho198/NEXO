@@ -126,7 +126,6 @@
             {@const previewBook = libraryState.getBookById(navigationState.previewBookId)}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
               <HomeDesktopView
-                stats={statsState.stats}
                 isLoadingStats={statsState.isLoadingStats}
                 statsUnavailableReason={navigationState.statsUnavailableReason}
                 streakDays={statsState.streakDays}
@@ -139,6 +138,7 @@
                 onNavigateHome={() => navigationState.navigateToHome()}
                 onNavigateHighlights={() => navigationState.navigateToHighlights()}
                 onNavigateSettings={() => navigationState.navigateToSettings()}
+                onNavigateLibrary={() => navigationState.navigateToLibrary()}
                 onRefreshStats={() => {
                   void statsState.loadStats(navigationState.previewBookId ?? undefined);
                   void statsState.loadStreak();
@@ -158,22 +158,13 @@
 
                 {#snippet shelfSection()}
                   <ShelfSection
-                    shelfQueryState={libraryState.shelfQueryState}
-                    shelfBooks={libraryState.shelfBooks}
                     myShelfBooks={libraryState.myShelfBooks}
                     collections={libraryState.collections}
                     previewBookId={navigationState.previewBookId}
                     selectedShelfBook={libraryState.books.find(
                       (b) => b.id === navigationState.shelfDetailsBookId,
                     ) ?? null}
-                    shelfTabOptions={libraryState.SHELF_TAB_OPTIONS}
-                    shelfSortOptions={libraryState.SHELF_SORT_OPTIONS}
                     t={appState.t}
-                    onSetTab={(key) => libraryState.setShelfTab(key as never)}
-                    onSetSort={(key) => libraryState.setShelfSort(key as never)}
-                    onSetViewMode={(mode) => libraryState.setShelfViewMode(mode)}
-                    onShelfQueryInput={(event) => libraryState.handleShelfQueryInput(event)}
-                    onClearShelfQuery={() => libraryState.clearShelfQuery()}
                     onOpenDetails={(book) => navigationState.openShelfDetails(book.id)}
                     onStartReading={(book) => void appState.startReading(book)}
                     onEditBook={(book) => libraryState.handleEditBook(book)}
@@ -264,7 +255,6 @@
               <section class="w-full h-full flex-1 flex flex-col min-h-0">
                 <SettingsPanel
                   isOpen={true}
-                  mode="page"
                   initialTab={navigationState.route === 'storage'
                     ? 'almacenamiento'
                     : 'sincronizacion'}
@@ -272,7 +262,8 @@
                   t={appState.t}
                   locale={settingsState.locale}
                   onLocaleChange={settingsState.handleLocaleChange}
-                  books={libraryState.books.map((b) => ({ id: b.id, title: b.title }))}
+                  books={libraryState.books}
+                  collections={libraryState.collections}
                 />
               </section>
             </div>
@@ -284,12 +275,12 @@
               <section class="w-full h-full flex-1 flex flex-col min-h-0">
                 <SettingsPanel
                   isOpen={true}
-                  mode="page"
                   onRequestClose={() => navigationState.navigateToHome()}
                   t={appState.t}
                   locale={settingsState.locale}
                   onLocaleChange={settingsState.handleLocaleChange}
-                  books={libraryState.books.map((b) => ({ id: b.id, title: b.title }))}
+                  books={libraryState.books}
+                  collections={libraryState.collections}
                 />
               </section>
             </div>

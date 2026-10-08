@@ -21,6 +21,7 @@ import {
   type DiscoverRailState,
   type DiscoverRailsDeps,
 } from './DiscoverRailsDomainState.svelte';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type DiscoverStatus =
   'idle' | 'loading' | 'loadingMore' | 'loaded' | 'empty' | 'error' | 'offline';
@@ -40,6 +41,14 @@ export type { DiscoverBrowseScope, DiscoverRailState } from './DiscoverRailsDoma
 
 /** Single production transfer port; the Rust command owns the actual transfer. */
 const defaultDownloadTransfer: DownloadTransferPort = createTauriDownloadTransfer();
+
+/**
+ * Cap on concurrent detail prefetches. A rail shows ~6-7 cards and a pointer
+ * sweep crosses them in quick succession, so an uncapped prefetch would issue
+ * one request per card. Three bounds the burst to the near-term intent window
+ * (a user pausing on a card or two) while extra intent is dropped, never queued.
+ */
+export const DISCOVER_PREFETCH_CONCURRENCY = 3;
 
 function messageOf(err: unknown): string {
   if (typeof err === 'string') return err;
@@ -82,6 +91,12 @@ class DiscoverDomainState {
   private lastAttemptedPage = 0;
   /** Id of the last requested detail, so a failed load can be retried. */
   private lastDetailId: string | null = null;
+  /** Card payload of the last open, re-seeded by `retryDetail` when present. */
+  private lastDetailSeed: CatalogBook | null = null;
+  /** Bumped per open/close so a superseded enrichment cannot touch the sheet. */
+  private detailGeneration = 0;
+  /** Book ids with a prefetch in flight, so repeated intent issues one request. */
+  private readonly prefetchInFlight = new Set<string>();
   /** Transfer id of the in-flight backend download, or null. */
   private activeTransferId: string | null = null;
   /** Set by `cancelDownload` so a late settle becomes `cancelled`, never `imported`. */
@@ -164,36 +179,95 @@ class DiscoverDomainState {
     }
   }
 
-  async openDetail(id: string): Promise<void> {
+  /**
+   * Open a detail sheet. A `CatalogBook` seeds the sheet synchronously from the
+   * card's full payload and paints `loaded` with no round-trip; the provider
+   * call then runs as background enrichment whose success replaces the seed and
+   * whose failure leaves it in place. A bare id (direct callers, retries) keeps
+   * the original loading → fetch path.
+   */
+  async openDetail(bookOrId: CatalogBook | string): Promise<void> {
     // Opening a book supersedes any transfer in flight for the previous one.
     this.cancelDownload();
     this.resetDownload();
+    const seed = typeof bookOrId === 'string' ? null : bookOrId;
+    const id = typeof bookOrId === 'string' ? bookOrId : bookOrId.id;
     this.lastDetailId = id;
-    this.detailStatus = 'loading';
-    this.detail = null;
-    try {
-      this.detail = await this.provider.getDetails(id);
+    this.lastDetailSeed = seed;
+    // Supersede any enrichment still in flight for a previously opened book.
+    const generation = (this.detailGeneration += 1);
+    if (seed) {
+      this.detail = seed;
       this.detailStatus = 'loaded';
+    } else {
+      this.detail = null;
+      this.detailStatus = 'loading';
+    }
+    let enriched: CatalogBook;
+    try {
+      enriched = await this.provider.getDetails(id);
     } catch (err) {
+      // A superseded open must never touch the current sheet.
+      if (this.detailGeneration !== generation) return;
+      // With a seed, enrichment is best-effort: the card's payload stays on
+      // screen instead of blanking the sheet the user is already reading.
+      if (seed) return;
       const code = catalogCodeOf(err);
       // Offline is its own state: the detail sheet shows connectivity copy plus
       // a retry, not the generic "catalog unavailable" message.
       this.detailStatus =
         code === 'NOT_FOUND' ? 'notFound' : isOfflineCatalogCode(code) ? 'offline' : 'error';
+      return;
     }
+    if (this.detailGeneration !== generation) return;
+    this.detail = enriched;
+    this.detailStatus = 'loaded';
+    // DISC-04c: additionally resolve the book's Gutendex download/PD and Open
+    // Library work/IA authorities, once per book. This runs after the seed and
+    // the enrichment are already painted, so it never delays or replaces them;
+    // a failure or a superseded generation leaves the sheet exactly as it is.
+    await this.resolveAuthorities(enriched, generation);
+  }
+
+  /**
+   * Warm the detail cache from card intent (hover/focus). Fire-and-forget: it
+   * never touches visible state — `detail`, `detailStatus` and `errorCode` are
+   * left alone and every failure is swallowed. It skips an id whose detail is
+   * already open or loading, dedupes ids already in flight, and drops new
+   * intent once `DISCOVER_PREFETCH_CONCURRENCY` requests are running so a rail
+   * sweep cannot issue one request per card. A late result is inert: nothing is
+   * written, so a superseded prefetch cannot mutate the sheet.
+   */
+  prefetchDetail(book: CatalogBook): void {
+    const id = book.id;
+    // A real open is already fetching this id; never race it.
+    if (this.detailStatus !== 'closed' && (this.detail?.id === id || this.lastDetailId === id)) {
+      return;
+    }
+    if (this.prefetchInFlight.has(id)) return;
+    if (this.prefetchInFlight.size >= DISCOVER_PREFETCH_CONCURRENCY) return;
+    this.prefetchInFlight.add(id);
+    void this.provider
+      .getDetails(id)
+      .catch(() => undefined)
+      .finally(() => {
+        this.prefetchInFlight.delete(id);
+      });
   }
 
   /** Re-open the last requested detail (the offline/error retry affordance). */
   async retryDetail(): Promise<void> {
-    const id = this.lastDetailId;
-    if (id === null) return;
-    await this.openDetail(id);
+    if (this.lastDetailId === null) return;
+    await this.openDetail(this.lastDetailSeed ?? this.lastDetailId);
   }
 
   dismissDetail(): void {
     this.cancelDownload();
+    // Supersede an in-flight enrichment so a closed sheet cannot reopen itself.
+    this.detailGeneration += 1;
     this.detail = null;
     this.detailStatus = 'closed';
+    this.lastDetailSeed = null;
     this.resetDownload();
   }
 
@@ -359,6 +433,25 @@ class DiscoverDomainState {
     this.railsState.dispose();
   }
 
+  /**
+   * DISC-04c additional enrichment: resolve the open book's authorities on the
+   * provider (best-effort, once per book — the provider caches under the detail
+   * key). Never blocks the painted sheet: it runs after the seed and the
+   * enrichment are already on screen, and a rejection or a superseded open
+   * leaves `detail` and `detailStatus` alone.
+   */
+  private async resolveAuthorities(book: CatalogBook, generation: number): Promise<void> {
+    const resolve = this.provider.resolveBookAuthorities;
+    if (typeof resolve !== 'function') return;
+    try {
+      const resolved = await resolve.call(this.provider, book);
+      if (this.detailGeneration !== generation) return;
+      if (resolved !== book) this.detail = resolved;
+    } catch {
+      // Best-effort: the seeded/enriched detail stays exactly as painted.
+    }
+  }
+
   private resetToIdle(): void {
     this.books = [];
     this.totalCount = 0;
@@ -384,7 +477,11 @@ class DiscoverDomainState {
     try {
       await this.onLibraryRefreshNeeded();
     } catch (err) {
-      console.error('[Discover] library refresh after import failed (non-fatal):', err);
+      logger.error(
+        '[Discover] library refresh after import failed (non-fatal):',
+        { error: err instanceof Error ? err.message : String(err) },
+        'import',
+      );
     }
   }
 

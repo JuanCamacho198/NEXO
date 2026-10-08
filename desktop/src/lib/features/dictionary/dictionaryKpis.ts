@@ -13,15 +13,12 @@ export type DictionaryKpis = {
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-export function countWords(words: readonly DictionaryWordDto[]): number {
+function countWords(words: readonly DictionaryWordDto[]): number {
   return words.length;
 }
 
 /** Entries whose `created_at` falls inside the last seven days. */
-export function countWordsThisWeek(
-  words: readonly DictionaryWordDto[],
-  now: Date = new Date(),
-): number {
+function countWordsThisWeek(words: readonly DictionaryWordDto[], now: Date = new Date()): number {
   const cutoff = now.getTime() - WEEK_MS;
   return words.filter((word) => {
     const created = Date.parse(word.createdAt ?? '');
@@ -30,7 +27,7 @@ export function countWordsThisWeek(
 }
 
 /** Distinct books referenced by evidence; entries without `sourceBookId` count for none. */
-export function countReferencedBooks(words: readonly DictionaryWordDto[]): number {
+function countReferencedBooks(words: readonly DictionaryWordDto[]): number {
   const ids = new Set<string>();
   for (const word of words) {
     if (word.sourceBookId) ids.add(word.sourceBookId);

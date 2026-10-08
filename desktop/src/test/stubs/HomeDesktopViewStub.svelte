@@ -3,7 +3,6 @@
   import type { MessageKey } from '../../lib/i18n';
 
   type Props = {
-    stats?: unknown;
     isLoadingStats?: boolean;
     statsUnavailableReason?: string | null;
     selectedBookTitle?: string | null;
@@ -11,6 +10,7 @@
     onNavigateHome?: () => void;
     onNavigateHighlights?: () => void;
     onNavigateSettings?: () => void;
+    onNavigateLibrary?: () => void;
     onRefreshStats?: () => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     navbarActions?: Snippet;
@@ -23,10 +23,14 @@
     onNavigateHome,
     onNavigateHighlights,
     onNavigateSettings,
+    onNavigateLibrary,
     navbarActions,
     continueSection,
     shelfSection,
   }: Props = $props();
+
+  // svelte-ignore state_referenced_locally
+  void onNavigateLibrary;
 </script>
 
 <section data-testid="home-desktop-view-stub">

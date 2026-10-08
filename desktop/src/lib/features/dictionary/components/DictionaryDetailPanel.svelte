@@ -102,7 +102,7 @@
       {#if !editing}
         {#if tag}
           <span
-            class="shrink-0 rounded-full bg-(--color-accent-fill) px-2.5 py-1 text-2xs font-semibold text-(--color-accent-blue)"
+            class="shrink-0 rounded-full bg-(--color-accent-fill) px-2.5 py-1 text-xs font-semibold text-(--color-accent-blue)"
             data-testid="dictionary-detail-tag"
           >
             {tag}
@@ -111,7 +111,7 @@
 
         {#if phonetic}
           <span
-            class="min-w-0 truncate text-2sm text-(--color-text-tertiary)"
+            class="min-w-0 truncate text-sm text-(--color-text-tertiary)"
             data-testid="dictionary-detail-phonetic"
           >
             {phonetic}
@@ -148,7 +148,7 @@
           <button
             type="button"
             class="flex h-8.5 w-8.5 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-(--color-error-soft) text-(--color-error) transition-opacity hover:opacity-90"
-            aria-label={t('dictionary.deleteConfirm')}
+            aria-label={t('dictionary.delete')}
             data-testid="dictionary-detail-delete"
             onclick={() => onDelete?.(word.id)}
           >
@@ -234,7 +234,7 @@
   >
     {#if showQuote}
       <p
-        class="text-2sm text-(--color-secondary)"
+        class="text-base text-(--color-secondary)"
         style="font-family: var(--font-serif)"
         data-testid="dictionary-quote"
       >
@@ -245,7 +245,7 @@
     {#if showReference}
       <div class="flex items-center gap-2.5" data-testid="dictionary-reference">
         <span
-          class="flex h-12.5 w-9 shrink-0 items-center justify-center rounded-[4px] bg-(--color-accent-blue) text-2xs font-semibold text-white"
+          class="flex h-12.5 w-9 shrink-0 items-center justify-center rounded-[4px] bg-(--color-accent-blue) text-xs font-semibold text-(--color-accent-on)"
           aria-hidden="true"
           data-testid="dictionary-reference-initials"
         >
@@ -262,7 +262,7 @@
           </span>
           {#if bookTitle}
             <span
-              class="truncate text-2sm text-(--color-primary)"
+              class="truncate text-sm text-(--color-primary)"
               data-testid="dictionary-reference-title"
             >
               {bookTitle}
@@ -270,7 +270,7 @@
           {/if}
           {#if referenceLine}
             <span
-              class="truncate text-2xs text-(--color-text-tertiary)"
+              class="truncate text-micro text-(--color-text-tertiary)"
               data-testid="dictionary-reference-author"
             >
               {referenceLine}
@@ -281,7 +281,7 @@
     {/if}
 
     <p
-      class="flex items-start gap-1.5 text-2xs text-(--color-text-tertiary)"
+      class="flex items-start gap-1.5 text-micro text-(--color-text-tertiary)"
       data-testid="dictionary-evidence-note"
     >
       <Info size={14} strokeWidth={1.8} class="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />

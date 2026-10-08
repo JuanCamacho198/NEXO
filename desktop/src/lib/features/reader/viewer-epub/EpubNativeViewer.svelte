@@ -8,6 +8,7 @@
     ReaderDirection,
   } from '$lib/shared/types';
   import EpubControls from './EpubControls.svelte';
+  import { logger } from '$lib/shared/logger/Logger';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
   import { createEpubSpine } from '$lib/features/reader/viewer-epub/useEpubSpine.svelte';
@@ -76,11 +77,8 @@
     ) => void;
     onselectionclear?: () => void;
     isFullscreen?: boolean;
-    onToggleFullscreen?: () => void;
     onTocReady?: (entries: Array<{ id: string; title: string; depth: number }>) => void;
     externalTocNavigate?: { id: string } | null;
-    showToc?: boolean;
-    onToggleToc?: () => void;
     onSettingsChange?: (settings: ReaderSettings) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
@@ -118,8 +116,6 @@
     isFullscreen = false,
     onTocReady,
     externalTocNavigate = null,
-    onToggleFullscreen,
-    onToggleToc,
     onSettingsChange,
     t,
   }: Props = $props();
@@ -167,10 +163,10 @@
     displayTotal <= 0 ? 0 : ((displayCurrentPage - 0.5) / displayTotal) * 100,
   );
 
-  function getToc() {
+  function getToc(): EpubChapterMeta[] {
     return spine.getToc();
   }
-  function getSpineHrefs() {
+  function getSpineHrefs(): string[] {
     return spine.getSpineHrefs();
   }
   void getToc;
@@ -187,13 +183,12 @@
     setPersistedHighlights: (v) => (persistedHighlights = v),
     getIsLoading: () => isLoading,
     getLastRenderedChapter: () => lastRenderedChapter,
-    onHighlightAction,
+    onHighlightAction: (action, id, opts) => onHighlightAction?.(action, id, opts),
   });
 
   const zoomTheme = createEpubZoomTheme({
-    getZoomContainerEl: () => zoomContainerEl,
     getReaderSettings: () => readerSettings,
-    onSettingsChange,
+    onSettingsChange: (s) => onSettingsChange?.(s),
     getFontSize: () => fontSize,
     setFontSize: (v) => {
       const updated: ReaderSettings = {
@@ -274,10 +269,10 @@
     getLastContinueLocation: () => lastContinueLocation,
     setLastContinueLocation: (v) => (lastContinueLocation = v),
     getOnTocReady: () => onTocReady,
-    onLocationChange,
-    onLocationContext,
-    onselection,
-    onselectionclear,
+    onLocationChange: (cfi, pct) => onLocationChange?.(cfi, pct),
+    onLocationContext: (ctx) => onLocationContext?.(ctx),
+    onselection: (event) => onselection?.(event),
+    onselectionclear: () => onselectionclear?.(),
     handleEpubHighlightClick: (m) => highlights.handleEpubHighlightClick(m),
     handleEpubHighlightFailed: (m) => highlights.handleEpubHighlightFailed(m),
     handleEpubHighlightPlaced: (m) => highlights.handleEpubHighlightPlaced(m),
@@ -311,6 +306,9 @@
   export function setZoom(percent: number): void {
     zoomTheme.setZoom(percent);
   }
+  export function getZoomPercent(): number {
+    return fontSize;
+  }
   export function getCurrentPage(): number {
     return displayCurrentPage;
   }
@@ -319,9 +317,6 @@
   }
   export function getTotalPages(): number {
     return displayTotal;
-  }
-  function changeZoom(delta: number): void {
-    zoomTheme.changeZoom(delta);
   }
   function getThemeBgColor(): string {
     return zoomTheme.getThemeBgColor();
@@ -332,13 +327,14 @@
     (debugState.epub as unknown as Record<string, unknown>).currentSpineIndex = currentSpineIndex;
   });
   onDestroy(() => {
-    console.warn(
-      'epub-hl: onDestroy bookId=',
-      bookId.slice(0, 8),
-      'chapter',
-      untrack(() => navigation.currentChapterIndex),
-      'lastRendered',
-      untrack(() => lastRenderedChapter),
+    logger.warn(
+      'epub-hl: onDestroy',
+      {
+        bookId: bookId.slice(0, 8),
+        chapter: untrack(() => navigation.currentChapterIndex),
+        lastRendered: untrack(() => lastRenderedChapter),
+      },
+      'reader',
     );
     zoomTheme.cleanup();
   });
@@ -374,11 +370,6 @@
   function handleKeydown(e: KeyboardEvent): void {
     if (e.key === 'ArrowLeft') goToPrev();
     if (e.key === 'ArrowRight') goToNext();
-    if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-')) {
-      e.preventDefault();
-      const step = e.key === '-' ? -10 : 10;
-      changeZoom(step);
-    }
   }
 </script>
 
@@ -409,7 +400,6 @@
         totalPages={displayTotal}
         currentPercentage={displayPercentage}
         {fontSize}
-        {isFullscreen}
         {t}
         onPrev={goToPrev}
         onNext={goToNext}
@@ -421,8 +411,6 @@
           };
           onSettingsChange?.(updated);
         }}
-        onToggleFullscreen={() => onToggleFullscreen?.()}
-        onToggleToc={() => onToggleToc?.()}
       />
     {/if}
     <div

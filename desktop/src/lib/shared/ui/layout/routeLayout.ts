@@ -19,7 +19,7 @@ export const FULL_LAYOUT_ROUTES = ['discover', 'addons', 'settings', 'storage', 
  * Explicit policy per route. The `contained` entries document the intended
  * layout for the current screens; the default still covers anything missing.
  */
-export const ROUTE_LAYOUTS: Readonly<Partial<Record<AppRoute, RouteLayout>>> = {
+const ROUTE_LAYOUTS: Readonly<Partial<Record<AppRoute, RouteLayout>>> = {
   home: 'contained',
   library: 'contained',
   stats: 'contained',
@@ -58,7 +58,13 @@ export function routeUsesPadding(route: AppRoute): boolean {
 
 const LAYOUT_CLASSES: Record<RouteLayout, string> = {
   full: 'w-full h-full flex-1 flex flex-col min-h-0 max-w-none',
-  contained: 'mx-auto max-w-7xl',
+  // `w-full` is load-bearing: this item sits in `#main-content`'s column flex,
+  // where an auto cross-axis margin (`mx-auto`) suppresses `align-self: stretch`
+  // and makes the item shrink-to-fit its child. Without an explicit width the
+  // container would resize whenever a screen swaps its content (e.g. the
+  // library grid vs list), so `w-full` pins it to the available width and only
+  // `max-w-7xl` limits it.
+  contained: 'mx-auto w-full max-w-7xl',
 };
 
 /** Tailwind classes for a resolved policy, so the router maps policy, not routes. */

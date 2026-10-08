@@ -13,6 +13,7 @@ import {
 } from '$lib/features/reader/viewer-pdf/pdfState.svelte';
 import { debugState } from '$lib/shared/debug/debugState.svelte';
 import { handleError } from '$lib/shared/utils/errors';
+import { logger } from '$lib/shared/logger/Logger';
 
 export { pureBuildSelectionOverlayRects as buildSelectionOverlayRects };
 export type { SelectionOverlayRect };
@@ -37,7 +38,17 @@ export type PdfSelectionDeps = {
   ) => void;
 };
 
-export function createPdfSelectionState(deps: PdfSelectionDeps) {
+export function createPdfSelectionState(deps: PdfSelectionDeps): {
+  selectionPlacement: 'above' | 'below';
+  activeHighlightId: string | null;
+  clearSelectionUi(): void;
+  hideToolbar(): void;
+  dismissHighlightManager(): void;
+  handleHighlightClick(hl: { id: string; color: string; text?: string }, event: MouseEvent): void;
+  handleTextSelection(): void;
+  updateSelectionState(): void;
+  buildSelectionOverlayRects: typeof pureBuildSelectionOverlayRects;
+} {
   let selectionPlacement = $state<'above' | 'below'>('above');
   let activeHighlightId = $state<string | null>(null);
 
@@ -79,7 +90,13 @@ export function createPdfSelectionState(deps: PdfSelectionDeps) {
   function updateSelectionState(): void {
     const selection = window.getSelection();
     if (debugState.enabled) {
-      console.debug('PDF Selection Update:', selection?.toString().trim());
+      // Length only: the selected text is book content and MUST NOT reach the
+      // file sink through the logger.
+      logger.debug(
+        'PDF Selection Update',
+        { selectionLength: selection?.toString().trim().length ?? 0 },
+        'reader',
+      );
     }
 
     if (!selection || selection.rangeCount === 0) {

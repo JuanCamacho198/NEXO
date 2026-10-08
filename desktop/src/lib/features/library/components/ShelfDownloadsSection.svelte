@@ -35,13 +35,13 @@
 
 {#if downloadableCatalog.books.length > 0}
   <section
-    class="mt-6 rounded-(--radius-2xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(78,140,255,0.08),rgba(12,20,33,0.94))] p-4 shadow-(--shadow-section)"
+    class="mt-6 rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-section)"
   >
     <header class="mb-3 flex items-center justify-between">
       <h2 class="text-sm font-semibold text-(--color-primary)">
         {t('shelf.availableDevices')}
         <span
-          class="ml-2 rounded-full bg-(--color-primary)/20 px-2 py-0.5 text-micro text-(--color-primary)"
+          class="ml-2 rounded-full bg-(--color-accent-soft) px-2 py-0.5 text-micro text-(--color-accent)"
         >
           {downloadableCatalog.count}
         </span>
@@ -50,12 +50,12 @@
 
     {#if downloadableCatalog.error && !downloadErrorDismissed}
       <div
-        class="mb-3 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400"
+        class="mb-3 flex items-start gap-2 rounded-lg border border-(--color-error)/30 bg-(--color-error)/10 px-3 py-2 text-xs text-(--color-error)"
       >
         <span class="flex-1">{downloadableCatalog.error}</span>
         <button
           type="button"
-          class="shrink-0 text-red-400 hover:text-red-300"
+          class="shrink-0 text-(--color-error) transition-opacity hover:opacity-80"
           onclick={() => {
             downloadErrorDismissed = true;
             downloadableCatalog.clearDownloadError();
@@ -79,10 +79,10 @@
       {#each downloadableCatalog.books as row}
         <li>
           <article
-            class="flex items-start gap-3 rounded-(--radius-xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-3 shadow-(--shadow-panel)"
+            class="flex items-start gap-3 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-3 shadow-(--shadow-panel)"
           >
             <div
-              class="h-20 w-14 shrink-0 overflow-hidden rounded-[18px] bg-(--color-surface-subtle)"
+              class="h-20 w-14 shrink-0 overflow-hidden rounded-(--radius-lg) bg-(--color-surface-subtle)"
             >
               <SafeCover
                 path={row.coverUrl ?? ''}
@@ -91,7 +91,7 @@
               >
                 {#snippet fallback()}
                   <div
-                    class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] text-micro uppercase tracking-[0.16em] text-(--color-primary)"
+                    class="flex h-full w-full items-center justify-center bg-(--color-surface-subtle) text-micro uppercase tracking-[0.16em] text-(--color-text-muted)"
                   >
                     {row.ext.toUpperCase()}
                   </div>
@@ -119,7 +119,7 @@
               {#if downloadableCatalog.isDownloading.has(row.id)}
                 <div class="flex items-center gap-2">
                   <svg
-                    class="h-4 w-4 animate-spin text-(--color-primary)"
+                    class="h-4 w-4 animate-spin text-(--color-accent)"
                     viewBox="0 0 24 24"
                     fill="none"
                   >
@@ -141,8 +141,9 @@
                 </div>
               {:else}
                 <Button
+                  variant="accent"
                   size="sm"
-                  class="rounded-xl bg-(--color-primary) !text-(--color-background) whitespace-nowrap"
+                  class="rounded-xl whitespace-nowrap"
                   onclick={() => handleDownload(row.id)}
                 >
                   {t('shelf.download')}

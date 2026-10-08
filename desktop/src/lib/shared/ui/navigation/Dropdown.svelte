@@ -30,10 +30,10 @@
   }: Props = $props();
 
   // Measured: `Select.Value`'s own label resolution treats `""` as "nothing
-  // selected" and prints the placeholder, but `LibraryView` and `HighlightsView`
-  // both ship a real "All" option whose value is `""`. The label is derived from
-  // the caller's list so that option still reads back into the trigger, exactly
-  // as this component did before the swap.
+  // selected" and prints the placeholder, but `HighlightsView` ships real "All"
+  // options whose value is `""`. The label is derived from the caller's list so
+  // those options still read back into the trigger, exactly as this component
+  // did before the swap.
   const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? placeholder);
 
   // `onValueChange` is the single writer of the bound value: measured to fire
@@ -83,7 +83,7 @@
          became the anchor width for the same reason: inside the floating wrapper
          `100%` would resolve against the wrapper's own `max-content` box. -->
     <Select.Content
-      class="z-[60] w-(--bits-select-anchor-width) min-w-[160px] rounded-md bg-(--color-elevated) py-1 shadow-lg ring-1 ring-(--color-border)"
+      class="z-(--layer-popover) w-(--bits-select-anchor-width) min-w-[160px] rounded-md bg-(--color-elevated) py-1 shadow-lg ring-1 ring-(--color-border)"
       side="bottom"
       align="start"
       sideOffset={4}

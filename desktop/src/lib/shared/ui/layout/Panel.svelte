@@ -1,7 +1,11 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import type { HTMLAttributes } from 'svelte/elements';
 
-  type Props = {
+  // Global HTML attributes are accepted and forwarded to the root <section>,
+  // so a consumer can pass `data-testid`, `aria-*`, `id` and the like without
+  // the atom inventing a prop for each.
+  type Props = Omit<HTMLAttributes<HTMLElement>, 'title' | 'class'> & {
     title?: string;
     subtitle?: string;
     hint?: string;
@@ -21,6 +25,7 @@
     actions,
     children,
     class: className = '',
+    ...rest
   }: Props = $props();
 
   const paddingClasses = {
@@ -37,14 +42,15 @@
 </script>
 
 <section
-  class={`overflow-hidden rounded-(--radius-xl) border border-(--color-border) ${variantClasses[variant]} shadow-(--shadow-soft) backdrop-blur-xl ${className}`}
+  {...rest}
+  class={`shrink-0 overflow-hidden rounded-(--radius-xl) border border-(--color-border) ${variantClasses[variant]} shadow-(--shadow-soft) backdrop-blur-xl ${className}`}
 >
   {#if title || subtitle || hint || actions}
     <div class="border-b border-(--color-border)/80 px-5 py-4">
       <div class="flex items-center justify-between gap-3">
         <div class="min-w-0">
           {#if title}
-            <h2 class="text-lg font-semibold tracking-tight text-(--color-primary)">{title}</h2>
+            <h2 class="text-xl font-semibold tracking-tight text-(--color-primary)">{title}</h2>
           {/if}
           {#if subtitle}
             <p class="mt-1 text-sm text-(--color-secondary)">{subtitle}</p>

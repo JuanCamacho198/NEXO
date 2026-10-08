@@ -2,12 +2,7 @@
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
   import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
-  import {
-    EditMetadataModal,
-    CollectionManager,
-    BulkImportModal,
-    RemoveBookModal,
-  } from '$lib/features/library';
+  import { EditMetadataModal, BulkImportModal, RemoveBookModal } from '$lib/features/library';
   import ErrorToast from '$lib/shared/ui/feedback/ErrorToast.svelte';
   import ErrorFallback from '$lib/shared/ui/feedback/ErrorFallback.svelte';
   import ToastHost from '$lib/shared/ui/feedback/ToastHost.svelte';
@@ -77,6 +72,11 @@
         try {
           Sentry.withScope((scope) => {
             scope.setContext('book', item.contexts.book as unknown as Record<string, unknown>);
+            // Consent-gated diagnostics bundle carried by the queued entry.
+            // Oversized bundles were already dropped by flushFeedbackQueue.
+            if (item.bundle) {
+              scope.setContext('diagnostics', { bundle: item.bundle });
+            }
             scope.setTag('feedback.source', 'desktop-modal-flush');
             Sentry.captureFeedback({
               message: item.message,
@@ -112,14 +112,6 @@
     libraryState.editingBook = null;
   }}
   onSave={libraryState.handleSaveEditedBook}
-  t={appState.t}
-/>
-
-<CollectionManager
-  open={libraryState.isCollectionManagerOpen}
-  onClose={() => {
-    libraryState.isCollectionManagerOpen = false;
-  }}
   t={appState.t}
 />
 

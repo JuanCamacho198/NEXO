@@ -59,7 +59,7 @@
         {@const options = state.access.options.filter((option) => option.group === group)}
         {#if options.length > 0}
           <div class="mt-1">
-            <p class="m-0 text-2xs font-medium text-(--color-text-muted)">
+            <p class="m-0 text-micro font-medium text-(--color-text-muted)">
               {t(GROUP_LABEL[group])}
             </p>
             <ul class="m-0 mt-1 flex list-none flex-col gap-0.5 p-0">

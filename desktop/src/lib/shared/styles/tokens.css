@@ -21,7 +21,8 @@
  *   $--np-border-strong → --color-border-strong
  *   card shadow         → --shadow-soft
  *   card radius 24px    → --radius-xl
- *   Import gradient     → --gradient-import (PR #2)
+ *   Import action       → --color-import / --color-import-bg (HOME-04)
+ *   Sidebar chrome      → --color-sidebar-bg, --color-accent-nav-* (HOME-04)
  * ============================================ */
 
 @import 'tailwindcss';
@@ -33,10 +34,19 @@
   --font-sans: 'Manrope', 'Segoe UI', Arial, sans-serif;
   --font-serif: 'Newsreader', 'Times New Roman', serif;
 
-  /* Font sizes */
-  --text-2xs: 0.6875rem;
-  --text-micro: 0.625rem;
-  --text-2sm: 0.8125rem;
+  /* ============================================
+   * TYPE SCALE — the seven documented roles
+   * Ratified in DESIGN.md § Typography › Hierarchy. These are the only font
+   * sizes the interface may use; any other size in a component is a defect.
+   * ============================================ */
+  --text-4xl: 2.5rem; /* Display  — hero and welcome screen only */
+  --text-3xl: 1.875rem; /* Page     — route and tab titles */
+  --text-xl: 1.25rem; /* Title    — section and panel headings */
+  --text-lg: 1.125rem; /* Reading  — reader content only */
+  --text-base: 1rem; /* Body     — default interface text */
+  --text-sm: 0.875rem; /* Label    — control text and every button */
+  --text-xs: 0.75rem; /* Micro    — uppercase micro-labels */
+  --text-micro: 0.625rem; /* Micro    — helper and status copy */
 
   /* Spacing */
   --space-xs: 4px;
@@ -69,7 +79,8 @@
   --font-sans: 'Manrope', 'Segoe UI', Arial, sans-serif;
   --font-serif: 'Newsreader', 'Times New Roman', serif;
 
-  /* Font sizes — del diseño anterior */
+  /* Font sizes — mirror of the @theme scale above, declared here so var()
+     resolves even outside Tailwind's theme layer. */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -78,9 +89,7 @@
   --text-2xl: 1.5rem;
   --text-3xl: 1.875rem;
   --text-4xl: 2.5rem;
-  --text-2xs: 0.6875rem;
   --text-micro: 0.625rem;
-  --text-2sm: 0.8125rem;
 
   /* Font weights */
   --font-weight-regular: 400;
@@ -111,6 +120,29 @@
 }
 
 /* ============================================
+ * STACKING ORDER — dialog and popover layers
+ * One documented scale so a dialog always outranks the page chrome and menus
+ * it is opened over, while a popover opened FROM INSIDE a dialog outranks the
+ * dialog that spawned it. Sparse on purpose to leave room between layers:
+ *   999   in-flow menus (ShelfActionMenu; reader highlight popovers 99–110) —
+ *         below dialogs on purpose: a reader dialog is opened on top of an
+ *         already-open highlight menu, which must stay underneath it
+ *   1000  SettingsPanel overlay — backdrop and drawer panel; the panel is last
+ *         in the DOM so it paints above its own backdrop
+ *   1100  app dialogs — above every menu, below the debug overlay
+ *   1200  reader dialogs — above the reader chrome they overlay
+ *   1300  portalled popovers opened from inside a dialog (Select/DropdownMenu
+ *         content) — must outrank --layer-dialog and --layer-dialog-reader
+ *   9999  debug overlay (DebugPanel/DebugToggle — above every dialog)
+ * ============================================ */
+:root {
+  --layer-drawer: 1000;
+  --layer-dialog: 1100;
+  --layer-dialog-reader: 1200;
+  --layer-popover: 1300;
+}
+
+/* ============================================
  * DICCIONARIO SCREEN — PER-ENTRY AVATAR ROTATION
  * The frame lists these seven colours for the DARK frame (ZPZb7); they are hue
  * accents applied on a saturated fill, so the same measured set holds in both
@@ -124,6 +156,14 @@
   --color-avatar-5: #fb7185;
   --color-avatar-6: #34d399;
   --color-avatar-7: #e879f9;
+  /*
+   * Ink for the avatar initials. Declared once with the fills because the
+   * measured fills do not change between themes, so a theme-dependent ink
+   * (e.g. --color-accent-on, white in LIGHT) would be wrong. The previous
+   * `text-white` failed AA on 5 of the 7 fills (1.33:1 on --color-avatar-4).
+   * #061222 clears AA on all seven (min 6.91:1 on --color-avatar-2).
+   */
+  --color-avatar-ink: #061222;
 }
 
 /* ============================================
@@ -159,14 +199,24 @@
   --color-accent-sky: #38bdf8;
   --color-accent-soft: rgba(73, 212, 255, 0.1);
   --color-accent: var(--color-accent-start);
+  --color-accent-on: #061222;
   --color-bg-deep: #0b1120;
 
   /* Surface hierarchy */
   --color-surface-hover: rgba(148, 173, 206, 0.18);
+  /* Recessed, read-only surface (Panel/Card `variant="surface"`): slightly
+     darker than --color-surface so the block recedes while its foreground text
+     keeps AA contrast. */
+  --color-surface-dim: rgba(9, 17, 29, 0.6);
 
   /* Borders */
   --color-border: rgba(148, 173, 206, 0.18);
   --color-border-strong: rgba(148, 173, 206, 0.3);
+  /* Keycap relief (Atajos de teclado). A real cap edge is DARKER than the cap
+     face in both themes. Using --color-background made it invisible in light
+     mode, where the page sits nearly as light as the white cap face. */
+  --color-keycap-edge: #050b14;
+  --color-keycap-highlight: rgba(255, 255, 255, 0.07);
   --color-border-deep: #17263a;
 
   /* Diccionario screen — pen `nuevo diseño.pen` `$--np-*` variables that have no
@@ -176,7 +226,12 @@
   --color-panel-input: #162844; /* $--np-input */
   --color-accent-fill: #153040; /* $--np-accent-soft */
   --color-panel-border: #1c324d; /* $--np-border */
-  --color-text-tertiary: #64748b; /* $--np-text-tertiary */
+  /* $--np-text-tertiary. The pen measured #64748b, which failed WCAG AA on
+     every dark surface this token is used on (3.34:1 on --color-panel, 3.97:1
+     on --color-background, 3.11:1 on --color-panel-input, 2.89:1 on
+     --color-accent-fill). Raised to #8b9fba for accessibility; it now clears
+     AA everywhere (5.08:1 on --color-accent-fill, 5.89:1 on --color-panel). */
+  --color-text-tertiary: #8b9fba;
   --color-error-soft: #2a1a22; /* $--np-error-soft — destructive button fill */
 
   /* Shadows */
@@ -191,7 +246,6 @@
   /* Highlight menu tokens */
   --color-highlight-menu-bg: #161f33;
   --color-highlight-menu-border: rgba(255, 255, 255, 0.1);
-  --color-note-modal-bg: rgba(16, 28, 44, 0.71);
   --color-color-picker-bg: #ffffff;
 
   /* Gradients */
@@ -201,11 +255,44 @@
     linear-gradient(180deg, #07111d 0%, #09111d 45%, #08101a 100%);
   --gradient-accent: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
   --gradient-accent-h: linear-gradient(90deg, var(--color-accent-start), var(--color-accent-end));
-  /* Import button gradient (SD-5, PR #2 — Pen `#FFA94D→#FB7185`).
-     Consumed via inline `style="background-image: var(--gradient-import)"`:
-     Tailwind v4 `bg-(--var)` maps to background-color, which rejects
-     gradient images, so the image has to be set as background-image. */
-  --gradient-import: linear-gradient(135deg, #ffa94d, #fb7185);
+  /* HOME-04 semantic roles. Import is a secondary warm action (solid coral,
+     no gradient) so the reading/resume CTA can own the NEXO-blue primary.
+     Selection is a quiet tinted field with a light-blue label and a thin
+     accent bar, replacing the oversized cyan active block. */
+  --color-import: #ffb59a;
+  --color-import-bg: rgba(255, 181, 154, 0.12);
+  --color-sidebar-bg: #0b1626;
+  --color-accent-nav-bg: rgba(78, 140, 255, 0.14);
+  --color-accent-nav-fg: #8fb8ff;
+  --color-accent-nav-bar: #4e8cff;
+
+  /* Stats surface — sticky chrome, hero and chart (NEXO blue family).
+     The chart ramp stays inside the product's blue→cyan range so the donut
+     and line read on both themes without turning into a rainbow. */
+  --color-surface-overlay: rgba(10, 18, 31, 0.97);
+  --gradient-hero: linear-gradient(180deg, rgba(17, 30, 48, 0.94), rgba(10, 18, 31, 0.94));
+  --gradient-chart-bg: linear-gradient(180deg, rgba(6, 14, 24, 0.86), rgba(10, 18, 30, 0.94));
+  --gradient-cover-fallback: linear-gradient(
+    135deg,
+    rgba(78, 140, 255, 0.16),
+    rgba(255, 196, 77, 0.12)
+  );
+  --color-chart-center: rgba(9, 17, 29, 0.96);
+  --color-chart-grid: rgba(148, 173, 206, 0.12);
+  --color-chart-fill-top: rgba(78, 140, 255, 0.35);
+  --color-chart-fill-bottom: rgba(78, 140, 255, 0.02);
+  --color-chart-1: #4e8cff;
+  --color-chart-2: #49d4ff;
+  --color-chart-3: #6ea0ff;
+  --color-chart-4: #38bdf8;
+  --color-chart-5: #8b7bff;
+  --color-chart-6: #7dd3fc;
+
+  /* Reading streak — warm accent that stays distinct from --color-warning */
+  --color-streak-border: rgba(251, 191, 36, 0.22);
+  --color-streak-text: #fbbf24;
+  --gradient-streak: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(249, 115, 22, 0.12));
+  --gradient-streak-icon: linear-gradient(135deg, #fbbf24, #f97316);
 
   /* Welcome screen — dark glassmorphism (login-redesign change) */
   --welcome-card-bg: rgba(21, 29, 44, 0.64);
@@ -255,14 +342,19 @@
   --color-accent-sky: #0284c7;
   --color-accent-soft: rgba(0, 110, 200, 0.12);
   --color-accent: var(--color-accent-start);
+  --color-accent-on: #ffffff;
   --color-bg-deep: #dbe4ed;
 
   /* Surface hierarchy */
   --color-surface-hover: rgba(30, 58, 95, 0.15);
+  /* Recessed, read-only surface (mirror of the dark value). */
+  --color-surface-dim: rgba(232, 238, 246, 0.72);
 
   /* Borders */
   --color-border: rgba(30, 58, 95, 0.15);
   --color-border-strong: rgba(30, 58, 95, 0.28);
+  --color-keycap-edge: #c2cbd9;
+  --color-keycap-highlight: rgba(255, 255, 255, 0.9);
   --color-border-deep: #b0c0d4;
 
   /* Diccionario screen — LIGHT values of the same pen `$--np-*` variables
@@ -272,7 +364,12 @@
   --color-panel-input: #f1f5f9; /* $--np-input */
   --color-accent-fill: #dbeafe; /* $--np-accent-soft */
   --color-panel-border: #cbd5e1; /* $--np-border */
-  --color-text-tertiary: #94a3b8; /* $--np-text-tertiary */
+  /* $--np-text-tertiary. The pen value #94a3b8 failed WCAG AA on the light
+     surfaces (2.28:1 on --color-background, 2.34:1 on --color-panel-input,
+     2.10:1 on --color-accent-fill). Raised to #556377 for accessibility; it now
+     clears AA everywhere (5.01:1 on --color-accent-fill, 5.43:1 on
+     --color-background). */
+  --color-text-tertiary: #556377;
   --color-error-soft: #fee2e2; /* $--np-error-soft — destructive button fill */
 
   /* Shadows */
@@ -287,7 +384,6 @@
   /* Highlight menu tokens */
   --color-highlight-menu-bg: #e8edf4;
   --color-highlight-menu-border: rgba(30, 58, 95, 0.12);
-  --color-note-modal-bg: rgba(238, 242, 247, 0.9);
   --color-color-picker-bg: #ffffff;
 
   /* Gradients */
@@ -297,10 +393,47 @@
     linear-gradient(180deg, #e8eef6 0%, #eef2f8 50%, #f0f4fa 100%);
   --gradient-accent: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
   --gradient-accent-h: linear-gradient(90deg, var(--color-accent-start), var(--color-accent-end));
-  /* Import button gradient — light variant darkened from the proposed
-     `#b45309→#e11d48` (4.21–4.44:1 vs --color-background, below WCAG 2.1 AA
-     4.5:1 for normal text) to `#92400e→#be123c` (6.3:1 / 5.6:1, AA pass). */
-  --gradient-import: linear-gradient(135deg, #92400e, #be123c);
+  /* HOME-04 semantic roles (light). `--color-import: #9a3412` is a deep warm
+     terracotta that stays clearly secondary — distinct from `--color-error`
+     (#c0392b) and `--color-danger` (#dc2626) — and clears AA at ~6.3:1 on the
+     light surface. Selection stays a quiet NEXO-blue tint. */
+  --color-import: #9a3412;
+  --color-import-bg: rgba(154, 52, 18, 0.08);
+  --color-sidebar-bg: #ffffff;
+  --color-accent-nav-bg: rgba(0, 110, 200, 0.1);
+  --color-accent-nav-fg: #006ec8;
+  --color-accent-nav-bar: #006ec8;
+
+  /* Stats surface — light theme counterparts of the dark block above. Surfaces
+     stay white-tinted (not a lightened dark) and the chart ramp deepens so it
+     holds contrast on the light ground. */
+  --color-surface-overlay: rgba(238, 242, 247, 0.97);
+  --gradient-hero: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(232, 238, 246, 0.96));
+  --gradient-chart-bg: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.92),
+    rgba(232, 238, 246, 0.94)
+  );
+  --gradient-cover-fallback: linear-gradient(
+    135deg,
+    rgba(0, 110, 200, 0.14),
+    rgba(217, 119, 6, 0.12)
+  );
+  --color-chart-center: rgba(255, 255, 255, 0.96);
+  --color-chart-grid: rgba(30, 58, 95, 0.1);
+  --color-chart-fill-top: rgba(0, 110, 200, 0.28);
+  --color-chart-fill-bottom: rgba(0, 110, 200, 0.02);
+  --color-chart-1: #006ec8;
+  --color-chart-2: #0284c7;
+  --color-chart-3: #3b6fd4;
+  --color-chart-4: #0891b2;
+  --color-chart-5: #6366f1;
+  --color-chart-6: #0ea5e9;
+
+  --color-streak-border: rgba(217, 119, 6, 0.28);
+  --color-streak-text: #b45309;
+  --gradient-streak: linear-gradient(135deg, rgba(217, 119, 6, 0.1), rgba(234, 88, 12, 0.1));
+  --gradient-streak-icon: linear-gradient(135deg, #f59e0b, #ea580c);
 }
 
 /* ============================================
@@ -344,55 +477,6 @@ body {
 }
 
 /* ============================================
- * COMPONENT TOKENS
- * ============================================ */
-.btn {
-  font-family: var(--font-sans);
-  border: none;
-  border-radius: var(--radius-lg);
-  padding: var(--space-sm) var(--space-lg);
-  cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--color-primary);
-  color: var(--color-background);
-}
-
-.btn-primary:hover:not(:disabled) {
-  box-shadow: 0 16px 28px rgba(73, 212, 255, 0.18);
-}
-
-.btn-secondary {
-  background: var(--color-surface);
-  color: var(--color-primary);
-  border: 1px solid var(--color-border);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--color-secondary);
-}
-
-.card {
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  padding: var(--space-md);
-  box-shadow: var(--shadow-soft);
-}
-
-/* ============================================
  * UTILITIES
  * ============================================ */
 .text-muted {
@@ -408,9 +492,48 @@ body {
   color: var(--color-primary);
 }
 
+/*
+ * Global focus ring floor. The previous `box-shadow: 0 0 0 3px
+ * var(--color-accent-soft)` was a ~10% alpha glow: below the DESIGN floor and
+ * effectively invisible on dark. This is a 2px solid ring at the signal hue
+ * with a 2px offset (DESIGN: "focus draws a 2px ring at 2px offset").
+ *
+ * Implemented as an `outline`, not a box-shadow, because this rule is
+ * unlayered and therefore beats every layered Tailwind `focus:*` utility: an
+ * outline keeps the ring independent of each control's own box-shadow, while
+ * the explicit `box-shadow: none` keeps the previous single-ring behavior
+ * (many controls carry a now-vestigial `focus-visible:ring-*` box-shadow that
+ * this unlayered rule has always overridden).
+ *
+ * `outline-offset` is overridden per control only where an `overflow-hidden`
+ * ancestor would clip the ring; the dialog body below is the one such case in
+ * the files this wave touches.
+ */
 :focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/*
+ * Search fields carry their own focus affordance: the unified SearchBar
+ * container reacts to `:focus-within` (accent border + soft ring), so the
+ * global outline above must not render inside the field or focusing draws two
+ * rings. This rule is unlayered like the floor above; the descendant class in
+ * the selector (specificity 0,2,0 vs 0,1,0) makes it win. Scoped to
+ * `.search-field` only — no other `focus-within` container is affected.
+ */
+.search-field :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+/*
+ * Dialog body scroll region: it is keyboard-focusable and sits inside the
+ * dialog panel's `overflow-hidden` rounded box, so a 2px ring at +2px offset
+ * would be clipped on its left/right edges. Draw it inset instead.
+ */
+.modal-scroll-region:focus-visible {
+  outline-offset: -2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -495,16 +618,6 @@ body {
  * SETTINGS PANEL — non-migrable CSS
  * These can't be expressed in Tailwind utility classes
  * ============================================ */
-
-/* Slide-in animation for overlay mode */
-@keyframes slide-in {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
 
 /* Range input slider thumb styling */
 .slider-thumb::-webkit-slider-thumb {

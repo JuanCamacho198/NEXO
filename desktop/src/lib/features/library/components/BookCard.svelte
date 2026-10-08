@@ -56,7 +56,7 @@
     const selectedClass = selected
       ? 'border-(--color-primary) bg-[color:color-mix(in_srgb,var(--color-primary)_10%,var(--color-surface))]'
       : 'border-(--color-border) bg-(--color-background)';
-    const base = compact ? 'rounded-lg border p-3' : 'rounded-xl border p-4';
+    const base = compact ? 'h-full min-h-30 rounded-lg border p-3' : 'rounded-xl border p-4';
     return `${base} ${selectedClass}`;
   });
 </script>
@@ -80,7 +80,7 @@
               ? 'h-32 w-[108px] rounded-lg object-cover shadow-md'
               : 'h-36 w-[120px] rounded-lg object-cover shadow-md'
             : compact
-              ? 'h-14 w-10 rounded object-cover shadow-sm'
+              ? 'h-20 w-14 rounded object-cover shadow-sm'
               : 'h-16 w-12 rounded object-cover shadow-sm'}
         >
           {#snippet fallback()}
@@ -91,7 +91,7 @@
                     ? 'h-32 w-[108px]'
                     : 'h-36 w-[120px]'
                   : compact
-                    ? 'h-14 w-10'
+                    ? 'h-20 w-14'
                     : 'h-16 w-12'
               } flex items-center justify-center rounded-lg bg-(--color-surface) text-micro uppercase tracking-widest text-(--color-text-muted)`}
             >
@@ -110,7 +110,9 @@
                 : compact
                   ? 'text-sm'
                   : 'text-base'
-            } font-semibold leading-tight text-(--color-primary) line-clamp-2`}
+            } font-semibold leading-tight text-(--color-primary) ${
+              compact ? 'line-clamp-1' : 'line-clamp-2'
+            }`}
           >
             {book.title}
           </p>
@@ -122,12 +124,21 @@
           </p>
           {#if showProgress}
             <div class="mt-2">
-              <div class="mb-1 flex items-center gap-1 text-2xs text-(--color-text-muted)">
+              <div class="mb-1 flex items-center gap-1 text-micro text-(--color-text-muted)">
                 <span>{progressLabel} {progress}%</span>
+                {#if variant === 'continue-reading' && book.totalPages > 0 && book.currentPage > 0}
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    {t('home.continue.position', {
+                      current: book.currentPage,
+                      total: book.totalPages,
+                    })}
+                  </span>
+                {/if}
               </div>
               <div class="h-1.5 w-full overflow-hidden rounded bg-(--color-border)">
                 <div
-                  class="h-full rounded bg-(--color-primary)"
+                  class="h-full rounded bg-(--color-accent)"
                   style={`width:${progress}%`}
                   role="progressbar"
                   aria-valuemin="0"
@@ -148,7 +159,12 @@
         : 'flex shrink-0 items-start gap-2'}
     >
       {#if showReadButton}
-        <Button size="sm" class="shrink-0 whitespace-nowrap" onclick={onRead}>
+        <Button
+          size="sm"
+          variant={variant === 'continue-reading' ? 'accent' : 'secondary'}
+          class="shrink-0 whitespace-nowrap"
+          onclick={onRead}
+        >
           {readLabel}
         </Button>
       {/if}

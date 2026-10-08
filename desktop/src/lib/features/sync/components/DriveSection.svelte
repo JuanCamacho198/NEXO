@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Button from '$lib/shared/ui/forms/Button.svelte';
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import { driveState } from '$lib/shared/stores/driveState.svelte';
   import {
@@ -44,7 +45,9 @@
 <Panel title={t('settings.sync.drive.title')} subtitle={t('settings.sync.drive.description')}>
   {#if isConnecting}
     <div class="flex items-center gap-3">
-      <span class="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-zinc-400" aria-hidden="true"
+      <span
+        class="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-(--color-text-muted)"
+        aria-hidden="true"
       ></span>
       <span class="flex-1 text-xs text-(--color-primary)"
         >{t('settings.sync.drive.connecting')}</span
@@ -52,41 +55,35 @@
     </div>
   {:else if showError}
     <div class="flex items-center gap-3">
-      <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" aria-hidden="true"></span>
-      <span class="flex-1 text-xs text-red-500">{lastError}</span>
-      <button
-        type="button"
-        class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-(--color-primary) bg-(--color-primary) cursor-pointer transition-all duration-200 text-xs font-medium text-(--color-background) hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-        onclick={() => void handleConnect()}
-      >
+      <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-(--color-error)" aria-hidden="true"></span>
+      <span class="flex-1 text-xs text-(--color-error)">{lastError}</span>
+      <Button variant="primary" data-testid="drive-retry" onclick={() => void handleConnect()}>
         <span>{t('error.retry')}</span>
-      </button>
+      </Button>
     </div>
   {:else}
     <div class="flex items-center gap-3">
       <span
-        class="h-2.5 w-2.5 shrink-0 rounded-full {isAuthorized ? 'bg-emerald-500' : 'bg-zinc-400'}"
+        class="h-2.5 w-2.5 shrink-0 rounded-full {isAuthorized
+          ? 'bg-(--color-success)'
+          : 'bg-(--color-text-muted)'}"
         aria-hidden="true"
       ></span>
       <span class="flex-1 text-xs text-(--color-primary)">
         {isAuthorized ? t('settings.sync.drive.connected') : t('settings.sync.drive.notConnected')}
       </span>
       {#if isAuthorized}
-        <button
-          type="button"
-          class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-(--color-border) bg-(--color-background) cursor-pointer transition-all duration-200 text-xs font-medium text-(--color-primary) hover:bg-(--color-surface) disabled:opacity-60 disabled:cursor-not-allowed"
+        <Button
+          variant="secondary"
+          data-testid="drive-disconnect"
           onclick={() => void handleDisconnect()}
         >
           <span>{t('settings.sync.drive.disconnect')}</span>
-        </button>
+        </Button>
       {:else}
-        <button
-          type="button"
-          class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-(--color-primary) bg-(--color-primary) cursor-pointer transition-all duration-200 text-xs font-medium text-(--color-background) hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-          onclick={() => void handleConnect()}
-        >
+        <Button variant="primary" data-testid="drive-connect" onclick={() => void handleConnect()}>
           <span>{t('settings.sync.drive.connect')}</span>
-        </button>
+        </Button>
       {/if}
     </div>
   {/if}

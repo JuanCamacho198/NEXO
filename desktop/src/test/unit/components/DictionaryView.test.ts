@@ -74,12 +74,16 @@ function rowFor(container: HTMLElement, term: string): HTMLElement {
   return row;
 }
 
-function makeState(words: DictionaryWordDto[]): DictionaryStateApi {
+function makeState(
+  words: DictionaryWordDto[],
+  overrides: { error?: string | null; isLoading?: boolean } = {},
+): DictionaryStateApi {
   const state = {
     get words() {
       return words;
     },
-    isLoading: false,
+    isLoading: overrides.isLoading ?? false,
+    error: overrides.error ?? null,
     load: vi.fn(async () => {}),
     search: vi.fn((query: string, limit = 20) =>
       words
@@ -169,7 +173,9 @@ describe('DictionaryView shell (4A)', () => {
   });
 
   it('renders faithful English equivalents and the header/search/tabs copy', () => {
-    render(DictionaryView, { props: { t: tEn, dictionary: makeState([]) } });
+    render(DictionaryView, {
+      props: { t: tEn, dictionary: makeState([word({ id: '1', word: 'Efímero' })]) },
+    });
 
     expect(screen.getByText('Saved words')).toBeInTheDocument();
     expect(screen.getByText('This week')).toBeInTheDocument();
@@ -180,6 +186,51 @@ describe('DictionaryView shell (4A)', () => {
     expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Recent' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'A-Z' })).toBeInTheDocument();
+  });
+
+  it('hides the zeroed KPI row when the dictionary is empty and keeps it with data (P2-G)', () => {
+    const empty = render(DictionaryView, { props: { t: tEs, dictionary: makeState([]) } });
+    expect(screen.queryByTestId('dictionary-kpi-row')).not.toBeInTheDocument();
+    empty.unmount();
+
+    render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([word({ id: '1', word: 'Efímero' })]) },
+    });
+    expect(screen.getByTestId('dictionary-kpi-row')).toBeInTheDocument();
+  });
+
+  it('gives the search field an accessible label beyond its placeholder (P3-J)', () => {
+    render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([word({ id: '1', word: 'Efímero' })]) },
+    });
+
+    const input = screen.getByLabelText(messagesEs['dictionary.searchLabel']);
+    expect(input).toHaveAttribute('id', 'dictionary-search');
+  });
+
+  it('shows the `/` keycap and focuses the search from the shortcut', async () => {
+    render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([word({ id: '1', word: 'Efímero' })]) },
+    });
+
+    expect(
+      screen.getByRole('button', { name: messagesEs['dictionary.searchShortcutAria'] }),
+    ).toBeInTheDocument();
+
+    const input = screen.getByLabelText(messagesEs['dictionary.searchLabel']);
+    expect(document.activeElement).not.toBe(input);
+
+    await fireEvent.keyDown(window, { key: '/' });
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('exposes a polite live region for add/save/delete announcements (P3-J)', () => {
+    render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([word({ id: '1', word: 'Efímero' })]) },
+    });
+
+    const region = screen.getByRole('status');
+    expect(region).toHaveAttribute('aria-live', 'polite');
   });
 
   it('contains no hardcoded hex colors', () => {
@@ -254,7 +305,93 @@ describe('DictionaryView shell (4A)', () => {
     await vi.advanceTimersByTimeAsync(300);
 
     expect(screen.queryByTestId('dictionary-list')).not.toBeInTheDocument();
-    expect(screen.getByText(dictEs['home.highlightsEmptyTitle'])).toBeInTheDocument();
+    expect(screen.getByText(dictEs['dictionary.noResultsTitle'])).toBeInTheDocument();
+    expect(screen.queryByText(dictEs['home.highlightsEmptyTitle'])).not.toBeInTheDocument();
+  });
+});
+
+describe('DictionaryView load error and delete confirmation (P1-A / P1-B)', () => {
+  it('shows the error state with a retry that calls load when the load failed (P1-A)', async () => {
+    const state = makeState([], { error: 'boom' });
+    render(DictionaryView, { props: { t: tEs, dictionary: state } });
+
+    expect(screen.getByTestId('dictionary-load-error')).toBeInTheDocument();
+    expect(screen.getByText(messagesEs['dictionary.loadErrorTitle'])).toBeInTheDocument();
+    // Never the false empty state: a user with words must not think they lost them.
+    expect(screen.queryByText(messagesEs['dictionary.emptyTitle'])).not.toBeInTheDocument();
+
+    const callsBefore = vi.mocked(state.load).mock.calls.length;
+    await fireEvent.click(screen.getByRole('button', { name: messagesEs['dictionary.retry'] }));
+    expect(vi.mocked(state.load).mock.calls.length).toBe(callsBefore + 1);
+  });
+
+  it('keeps the real empty state when the load succeeded with no words (P1-A)', () => {
+    render(DictionaryView, { props: { t: tEs, dictionary: makeState([]) } });
+
+    expect(screen.queryByTestId('dictionary-load-error')).not.toBeInTheDocument();
+    expect(screen.getByText(messagesEs['dictionary.emptyTitle'])).toBeInTheDocument();
+  });
+
+  it('names the destructive control as an action, not a question (P1-B)', async () => {
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([word({ id: '1', word: 'Efímero' })]) },
+    });
+
+    await fireEvent.click(rowFor(container, 'Efímero'));
+
+    expect(screen.getByTestId('dictionary-detail-delete')).toHaveAttribute(
+      'aria-label',
+      messagesEs['dictionary.delete'],
+    );
+    expect(messagesEs['dictionary.delete']).toBe('Eliminar');
+    expect(messagesEs['dictionary.deleteConfirm']).toContain('{{word}}');
+  });
+
+  it('does not delete when the confirmation is dismissed, and deletes when accepted (P1-B)', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const state = makeState([word({ id: '1', word: 'Efímero' })]);
+    const { container } = render(DictionaryView, { props: { t: tEs, dictionary: state } });
+
+    await fireEvent.click(rowFor(container, 'Efímero'));
+    await fireEvent.click(screen.getByTestId('dictionary-detail-delete'));
+
+    expect(confirmSpy).toHaveBeenCalledWith('¿Eliminar "Efímero" de tu diccionario?');
+    expect(state.remove).not.toHaveBeenCalled();
+
+    confirmSpy.mockReturnValue(true);
+    await fireEvent.click(screen.getByTestId('dictionary-detail-delete'));
+    expect(state.remove).toHaveBeenCalledWith('1');
+    confirmSpy.mockRestore();
+  });
+});
+
+describe('DictionaryView heading order (P3-J)', () => {
+  it('keeps a valid outline: one h1, then the selected term as h2, no skipped level', async () => {
+    const entry = word({
+      id: '1',
+      word: 'Efímero',
+      definition: 'Breve.',
+      partOfSpeech: 'Adjetivo',
+      phonetic: 'efimero',
+      example: 'Fue efímero.',
+      quote: 'Una cita.',
+    });
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([entry]) },
+    });
+
+    await fireEvent.click(rowFor(container, 'Efímero'));
+
+    const headings = [...container.querySelectorAll('h1, h2, h3, h4, h5, h6')].map((node) =>
+      Number(node.tagName.slice(1)),
+    );
+    expect(headings).toEqual([1, 2]);
+
+    let previous = 0;
+    for (const level of headings) {
+      expect(level).toBeLessThanOrEqual(previous + 1);
+      previous = level;
+    }
   });
 });
 
@@ -672,6 +809,7 @@ describe('DictionaryView detail panel (4C)', () => {
   });
 
   it('closes the selection through the store when the destructive action is used', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const state = makeState([FULL_ENTRY]);
     const { container } = render(DictionaryView, { props: { t: tEs, dictionary: state } });
 
@@ -680,6 +818,7 @@ describe('DictionaryView detail panel (4C)', () => {
 
     expect(state.remove).toHaveBeenCalledWith('efimero');
     expect(screen.queryByTestId('dictionary-detail-header')).not.toBeInTheDocument();
+    confirmSpy.mockRestore();
   });
 
   it('opens the source book at the captured locator through the navigation deps', async () => {
@@ -1157,6 +1296,17 @@ describe('dictionary screen i18n parity', () => {
     'dictionary.selectWordDescription',
     'dictionary.noDetailTitle',
     'dictionary.noDetailDescription',
+    'dictionary.delete',
+    'dictionary.deleteConfirm',
+    'dictionary.deleted',
+    'dictionary.saved',
+    'dictionary.searchLabel',
+    'dictionary.tagsPlaceholder',
+    'dictionary.noResultsTitle',
+    'dictionary.noResultsDescription',
+    'dictionary.loadErrorTitle',
+    'dictionary.loadErrorDescription',
+    'dictionary.retry',
   ] as const;
 
   it('defines every screen key in both locales with an English KPI equivalent', () => {

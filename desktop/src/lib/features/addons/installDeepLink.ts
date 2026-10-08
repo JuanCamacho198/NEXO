@@ -5,6 +5,8 @@
  * which delegates install URLs to the useInstallDeepLink store via a setter
  * — keeping this module free of store/Tauri imports for testability.
  */
+import { logger } from '$lib/shared/logger/Logger';
+
 // `nexo` is the canonical NEXO scheme; the `nextpage*` schemes are legacy and
 // stay accepted during the transition so shared addon links keep resolving.
 const INSTALL_SCHEMES = new Set(['nexo', 'nextpage', 'nextpage-desktop']);
@@ -55,11 +57,11 @@ export async function handleDeepLinkUrls(urls: string[]): Promise<void> {
   for (const raw of urls) {
     const parsed = parseInstallDeepLink(raw);
     if (!parsed) {
-      console.log(`deep link ignored (non-install): ${raw}`);
+      logger.debug('deep link ignored (non-install):', { raw }, 'app_shell');
       continue;
     }
     if (!onInstallUrl) {
-      console.warn('install deep link received before handler registration');
+      logger.warn('install deep link received before handler registration', undefined, 'app_shell');
       continue;
     }
     onInstallUrl(parsed.installUrl);

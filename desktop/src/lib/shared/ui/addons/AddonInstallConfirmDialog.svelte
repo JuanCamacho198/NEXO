@@ -10,6 +10,7 @@
   import type { AddonManifest } from '@nexo/manifest-validator';
   import {
     ADDON_INSTALL_CONFIRM_TITLE,
+    ADDON_INSTALL_CONFIRM_DESCRIPTION,
     ADDON_INSTALL_CONFIRM_INSTALL_LABEL,
     ADDON_INSTALL_CONFIRM_INSTALLING_LABEL,
     ADDON_INSTALL_CONFIRM_CANCEL_LABEL,
@@ -41,7 +42,15 @@
 </script>
 
 {#if open && manifest}
-  <Modal bind:open size="sm" title={ADDON_INSTALL_CONFIRM_TITLE}>
+  <Modal
+    bind:open
+    size="sm"
+    title={ADDON_INSTALL_CONFIRM_TITLE}
+    description={ADDON_INSTALL_CONFIRM_DESCRIPTION}
+    onOpenChange={(v) => {
+      if (!v) oncancel();
+    }}
+  >
     {#snippet children()}
       <div class="flex flex-col gap-2 text-sm text-(--color-text-muted)">
         <p class="text-base font-bold text-(--color-text-primary)">{manifest.name}</p>

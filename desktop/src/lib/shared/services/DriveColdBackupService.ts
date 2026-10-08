@@ -27,6 +27,7 @@ import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
+import { logger } from '$lib/shared/logger/Logger';
 
 export interface ColdBackupJson {
   version: number;
@@ -273,7 +274,11 @@ export class DriveColdBackupService {
     } catch (error) {
       // The legacy write already succeeded, so a new-path failure never loses
       // the backup; surface it for observability only.
-      console.error('Cold-backup new-path dual-write failed:', error);
+      logger.error(
+        'Cold-backup new-path dual-write failed:',
+        { error: error instanceof Error ? error.message : String(error) },
+        'sync',
+      );
     }
   }
 

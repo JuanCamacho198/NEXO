@@ -7,6 +7,7 @@
  * live network and no Tauri invocation.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { logger } from '$lib/shared/logger/Logger';
 import type { CatalogBook } from '$lib/shared/services/catalog/CatalogProvider';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
@@ -71,7 +72,7 @@ describe('Discover import cover wiring', () => {
 
   it('keeps the book when cover extraction fails (non-fatal)', async () => {
     extractEpubCover.mockRejectedValueOnce(new Error('no cover in epub'));
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
 
     const result = await runImport();
 

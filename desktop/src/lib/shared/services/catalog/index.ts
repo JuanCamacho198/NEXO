@@ -38,7 +38,18 @@ export {
 } from './BuiltInCatalogProviders';
 export { resolveAccess, isHttpsUrl } from './accessResolver';
 export type { AccessGroup, AccessOption, LegalAccess } from './accessResolver';
-export { OpenLibraryDataSource, OPEN_LIBRARY_BASE_URL } from './OpenLibraryDataSource';
+export {
+  OpenLibraryDataSource,
+  OPEN_LIBRARY_BASE_URL,
+  OPEN_LIBRARY_ISBN_FIELDS,
+} from './OpenLibraryDataSource';
+export {
+  authorityQuery,
+  hasResolvedAuthorities,
+  isbnOf,
+  resolveBookAuthorities,
+} from './bookAuthorityResolver';
+export type { BookAuthorityLookups, OpenLibraryIdentity } from './bookAuthorityResolver';
 export {
   CompositeCatalogProvider,
   createRebuildingCatalogProvider,
@@ -67,12 +78,14 @@ export {
   DEBOUNCE_MS,
   DEFAULT_PAGE_SIZE,
   DESKTOP_USER_AGENT,
+  DETAIL_DEADLINE_MS,
   MAX_DELAYED_RETRIES,
   MAX_PAGE_SIZE,
   MIN_PAGE_SIZE,
   OL_MIN_GAP_MS,
   REQUEST_DEADLINE_MS,
   RETRY_BASE_DELAY_MS,
+  SEARCH_DEADLINE_MS,
 } from './policy';
 export type { ComposedDeadline } from './policy';
 export {

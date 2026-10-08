@@ -1,8 +1,8 @@
 <script lang="ts">
   import { GoogleLoginButton } from '$lib/features/library';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
-  import Check from 'lucide-svelte/icons/check';
   import { Button } from '$lib/shared/ui';
+  import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import ProfileCard from './ProfileCard.svelte';
   import ConnectedDevices from './ConnectedDevices.svelte';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
@@ -10,7 +10,7 @@
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ProfileSessionViewModel } from '../profileSession';
   import type { DeviceViewModel } from '$lib/services/devices';
-  import type { createSettingsProfile, DailyGoalIcon } from '../useSettingsProfile.svelte';
+  import type { createSettingsProfile } from '../useSettingsProfile.svelte';
   import type { createSettingsLocale } from '../useSettingsLocale.svelte';
   import { setTheme, theme } from '$lib/shared/stores/theme';
 
@@ -39,8 +39,6 @@
     dailyGoalCards?: {
       value: number;
       labelKey: MessageKey;
-      shortLabel: string;
-      icon: DailyGoalIcon;
       minutesLabel: string;
     }[];
     isSavingDailyGoal?: boolean;
@@ -101,11 +99,40 @@
   );
   const settingsError = $derived(localeState?.settingsError ?? legacyError ?? null);
 
+  // Daily goal — collapsed row + inline chips. The row always reports the
+  // persisted value; the chips highlight the pending selection. Without a
+  // session the goal is still editable and is stored on this device, so the
+  // control is never disabled; `isDailyGoalLocal` only drives the hint.
+  const isDailyGoalLocal = $derived(profileState?.isDailyGoalLocal ?? false);
+  const savedDailyGoalMinutes = $derived(settingsState.dailyGoalMinutes);
+  let isGoalEditorOpen = $state(false);
+
+  const saveStatusMessage = $derived(
+    isSavingDailyGoal
+      ? t('settings.saving')
+      : profileState?.dailyGoalSaveState === 'success'
+        ? t('settings.daily_goal_saved')
+        : profileState?.dailyGoalSaveState === 'error'
+          ? t('settings.daily_goal_save_error')
+          : '',
+  );
+  const isSaveStatusError = $derived(
+    !isSavingDailyGoal && profileState?.dailyGoalSaveState === 'error',
+  );
+
+  // The goal trigger is an atom (a component instance cannot take
+  // `bind:this` as an element), so focus moves through its forwarded id.
+  const GOAL_TRIGGER_ID = 'daily-goal-trigger';
+  function focusGoalTrigger(): void {
+    document.getElementById(GOAL_TRIGGER_ID)?.focus();
+  }
+
   function handleLocaleChange(value: string): void {
     if (localeState) void localeState.handleLocaleSelect(value);
     else legacyOnLocaleChange?.(value);
   }
   function handleSignOut(): void {
+    if (!confirm(t('settings.signOutConfirm'))) return;
     if (profileState) void profileState.handleSignOut();
     else legacyOnSignOut?.();
   }
@@ -121,51 +148,83 @@
     if (profileState) void profileState.handleSaveDailyGoal();
     else legacyOnSaveGoal?.();
   }
+
+  function toggleGoalEditor(): void {
+    isGoalEditorOpen = !isGoalEditorOpen;
+  }
+
+  async function chooseGoal(value: number): Promise<void> {
+    // Collapse first so focus is never lost with the removed chips.
+    isGoalEditorOpen = false;
+    focusGoalTrigger();
+    if (profileState) {
+      await profileState.applyDailyGoal(value);
+    } else {
+      handleSelectDailyGoal(value);
+      handleSaveDailyGoal();
+    }
+  }
+
+  function handleGoalOptionsKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      isGoalEditorOpen = false;
+      focusGoalTrigger();
+    }
+  }
 </script>
 
 <div
   role="tabpanel"
   id="tabpanel-cuenta"
   aria-labelledby="tab-cuenta"
-  class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+  class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4"
 >
-  <section class="rounded-xl border border-(--color-border) bg-(--color-surface) overflow-visible">
-    <div class="p-4 border-b border-(--color-border) last:border-b-0">
-      <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
-        {t('settings.authentication')}
-      </h3>
-      <p class="text-2xs text-(--color-text-muted) mb-3">
-        {t('settings.authDescription')}
-      </p>
+  <section class="space-y-5 w-full max-w-none">
+    <header class="flex flex-col gap-1">
+      <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
+        {t('settings.tab.account')}
+      </h1>
+      <p class="text-sm text-(--color-text-muted)">{t('settings.account.subtitle')}</p>
+    </header>
+
+    <Panel title={t('settings.authentication')} subtitle={t('settings.authDescription')}>
       <GoogleLoginButton {t} />
       {#if authState.isAuthenticated}
         <Button
           variant="danger"
+          size="md"
+          fullWidth
+          class="mt-4"
           disabled={isSigningOut}
           onclick={handleSignOut}
-          class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm mt-4"
         >
           {isSigningOut ? t('welcome.signingOut') : t('welcome.signOut')}
         </Button>
       {/if}
       {#if settingsUnavailable}
         <p
-          class="mb-2 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900"
+          class="mb-2 rounded border border-(--color-warning)/40 bg-(--color-warning)/10 px-2 py-1 text-xs text-(--color-primary)"
         >
           {settingsUnavailable}
         </p>
       {/if}
       {#if settingsError}
-        <p class="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-900">
+        <p
+          class="mb-2 rounded border border-(--color-error)/40 bg-(--color-error-soft) px-2 py-1 text-xs text-(--color-primary)"
+        >
           {settingsError}
         </p>
       {/if}
-    </div>
-    <div class="p-4 border-b border-(--color-border) last:border-b-0">
+    </Panel>
+
+    <Panel>
       <ProfileCard {profile} {isProfileLoading} {profileError} {t} />
-    </div>
+    </Panel>
+
     {#if authState.isAuthenticated && authState.userId}
-      <div class="p-4 border-b border-(--color-border) last:border-b-0">
+      <!-- Device rows are self-bordered cards, so this group stays borderless to keep one border level. -->
+      <div class="space-y-3">
         <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
           {t('settings.connectedDevices.title')}
         </h3>
@@ -178,111 +237,107 @@
         />
       </div>
     {/if}
-    <div class="p-4 flex flex-col gap-4">
-      <div>
-        <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.language')}</span>
-        <Dropdown
-          options={localeOptions}
-          value={locale}
-          class="w-full"
-          onchange={({ value }) => handleLocaleChange(value)}
-        />
-      </div>
-      <div>
-        <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.theme')}</span>
-        <div class="flex gap-2" role="group" aria-label={t('settings.theme')}>
-          <button
-            type="button"
-            class="flex-1 cursor-pointer rounded-lg border px-3 py-2 text-sm transition-all duration-200 {$theme ===
-            'light'
-              ? 'border-(--color-primary) text-(--color-primary)'
-              : 'border-(--color-border) text-(--color-text-muted)'}"
-            aria-pressed={$theme === 'light'}
-            onclick={() => setTheme('light')}
-          >
-            {t('settings.theme.light')}
-          </button>
-          <button
-            type="button"
-            class="flex-1 cursor-pointer rounded-lg border px-3 py-2 text-sm transition-all duration-200 {$theme ===
-            'dark'
-              ? 'border-(--color-primary) text-(--color-primary)'
-              : 'border-(--color-border) text-(--color-text-muted)'}"
-            aria-pressed={$theme === 'dark'}
-            onclick={() => setTheme('dark')}
-          >
-            {t('settings.theme.dark')}
-          </button>
+
+    <Panel>
+      <div class="flex flex-col gap-4">
+        <div>
+          <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.language')}</span>
+          <Dropdown
+            options={localeOptions}
+            value={locale}
+            class="w-full"
+            onchange={({ value }) => handleLocaleChange(value)}
+          />
+        </div>
+        <div>
+          <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.theme')}</span>
+          <!-- Segmented pair: the active side takes the filled primary tone,
+               the other stays secondary. Selection is also in `aria-pressed`. -->
+          <div class="flex gap-2" role="group" aria-label={t('settings.theme')}>
+            <Button
+              variant={$theme === 'light' ? 'primary' : 'secondary'}
+              size="sm"
+              class="flex-1"
+              aria-pressed={$theme === 'light'}
+              onclick={() => setTheme('light')}
+            >
+              {t('settings.theme.light')}
+            </Button>
+            <Button
+              variant={$theme === 'dark' ? 'primary' : 'secondary'}
+              size="sm"
+              class="flex-1"
+              aria-pressed={$theme === 'dark'}
+              onclick={() => setTheme('dark')}
+            >
+              {t('settings.theme.dark')}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </Panel>
 
-  <section
-    class="mx-auto flex w-full max-w-[896px] flex-col gap-10 rounded-[24px] border border-[#1c2744] bg-[#161f335c] p-12 backdrop-blur-[10.5px]"
-    aria-label={t('settings.daily_goal_title')}
-  >
-    <div class="flex flex-col items-center gap-2 text-center">
-      <h3 class="text-[32px] font-bold leading-none text-[#d8e2ff]">
-        {t('settings.daily_goal_title')}
-      </h3>
-      <p class="text-sm text-[#d8e2ff]/70">
-        {t('settings.daily_goal_description')}
-      </p>
-      <p class="text-xs text-[#d8e2ff]/60">
-        {t('stats.goalProgress', {
-          current: String(settingsState.dailyGoalMinutes),
-          goal: String(settingsState.dailyGoalMinutes),
-          percent: '100',
-        })} · {settingsState.dailyGoalMinutes} min
-      </p>
-    </div>
-
-    <div class="grid grid-cols-2 gap-6">
-      {#each dailyGoalCards as card}
-        {@const CardIcon = card.icon}
-        <button
-          type="button"
-          class="relative flex flex-col gap-3 rounded-xl border-2 p-8 text-left transition-all duration-200 {selectedDailyGoal ===
-          card.value
-            ? 'border-[#d8e2ff] bg-[#d8e2ff]/12'
-            : 'border-[#2a3655] bg-[#161f33]'}"
-          onclick={() => handleSelectDailyGoal(card.value)}
-          aria-pressed={selectedDailyGoal === card.value}
-          aria-label={`${card.shortLabel} ${card.minutesLabel}`}
+    <!-- No Panel title: the h3 below must stay an h3 (heading-order test).
+         Padding is none because the row keeps its own inner spacing. -->
+    <Panel aria-label={t('settings.daily_goal_label')} padding="none">
+      <div class="flex items-center justify-between gap-3 p-4">
+        <h3 class="m-0 min-w-0 text-sm font-medium text-(--color-primary)">
+          {t('settings.daily_goal_label')}
+          <span class="font-normal text-(--color-text-muted)"> · {savedDailyGoalMinutes} min</span>
+        </h3>
+        <Button
+          variant="secondary"
+          size="sm"
+          id={GOAL_TRIGGER_ID}
+          aria-expanded={isGoalEditorOpen}
+          aria-controls="daily-goal-options"
+          onclick={toggleGoalEditor}
         >
-          {#if selectedDailyGoal === card.value}
-            <span
-              class="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#d8e2ff] text-[#161f33]"
-            >
-              <Check size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
-            </span>
-          {/if}
-          <span
-            class="flex h-10 w-10 items-center justify-center rounded-full bg-[#d8e2ff]/10 text-[#d8e2ff]"
-          >
-            <CardIcon size={20} strokeWidth={1.8} class="h-5 w-5" aria-hidden="true" />
-          </span>
-          <span class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-[#d8e2ff]">{t(card.labelKey)}</span>
-            <span class="text-xs text-[#d8e2ff]/60">{card.minutesLabel}</span>
-          </span>
-        </button>
-      {/each}
-    </div>
+          {isGoalEditorOpen ? t('settings.daily_goal_close') : t('settings.daily_goal_change')}
+        </Button>
+      </div>
 
-    <div class="flex flex-col items-center gap-3">
-      <button
-        type="button"
-        class="rounded-full bg-[#d8e2ff] px-10 py-4 text-sm font-semibold text-[#161f33] transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-        onclick={handleSaveDailyGoal}
-        disabled={isSavingDailyGoal}
+      {#if isDailyGoalLocal}
+        <p class="m-0 px-4 pb-4 text-xs text-(--color-text-muted)">
+          {t('settings.daily_goal_local_hint')}
+        </p>
+      {/if}
+
+      {#if isGoalEditorOpen}
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+        <div
+          id="daily-goal-options"
+          class="flex flex-wrap gap-2 border-t border-(--color-border) p-4"
+          role="group"
+          aria-label={t('settings.daily_goal_label')}
+          onkeydown={handleGoalOptionsKeydown}
+        >
+          {#each dailyGoalCards as card}
+            <!-- The pending pick takes the filled primary tone; the rest stay
+                 secondary. The old pill shape has no atom equivalent, so the
+                 chips intentionally render at the atom's radius. -->
+            <Button
+              variant={selectedDailyGoal === card.value ? 'primary' : 'secondary'}
+              size="sm"
+              aria-pressed={selectedDailyGoal === card.value}
+              onclick={() => void chooseGoal(card.value)}
+            >
+              {t(card.labelKey)}
+              <span> · {card.minutesLabel}</span>
+            </Button>
+          {/each}
+        </div>
+      {/if}
+
+      <p
+        role="status"
+        aria-live="polite"
+        class="m-0 text-xs {saveStatusMessage ? 'px-4 pb-4' : 'sr-only'}"
+        class:text-(--color-error)={isSaveStatusError}
+        class:text-(--color-text-muted)={!isSaveStatusError}
       >
-        {isSavingDailyGoal ? t('settings.saving') : t('settings.daily_goal_set')}
-      </button>
-      <p class="text-xs text-[#d8e2ff]/50">
-        {settingsState.dailyGoalMinutes} min · {t('settings.daily_goal_description')}
+        {saveStatusMessage}
       </p>
-    </div>
+    </Panel>
   </section>
 </div>

@@ -1,15 +1,22 @@
 /**
  * useEpubZoomTheme — zoom + theme for EpubNativeViewer (PR5).
- * Extracts clampZoomPercent 75..200, wheel RAF, debounce 500ms onSettingsChange,
- * and theme helpers from EpubNativeViewer while preserving byte-identical behavior.
+ * Extracts the shared clampZoomPercent 50..300, setZoom with 500ms persist
+ * debounce, and theme helpers from EpubNativeViewer while preserving
+ * byte-identical behavior.
+ *
+ * Wheel and keyboard zoom are NOT owned here: the single zoom pipeline lives
+ * in `chrome/useReaderZoom` (one step for wheel and keys, applied once per
+ * gesture). This module only applies the zoom the pipeline routes to the
+ * viewer and derives the theme visuals.
  */
 import type { ReaderSettings, ReaderThemeMode } from '$lib/shared/types';
+import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation';
 
-export function clampZoomPercent(value: number): number {
-  if (!Number.isFinite(value)) return 100;
-  return Math.min(200, Math.max(75, Math.round(value)));
-}
+export { clampZoomPercent };
 
+// NOTE (U5.4): the hex literals below are intentional. They style HTML
+// injected into the EPUB iframe, where the app's CSS tokens do not exist,
+// so var(--color-*) references would resolve to nothing.
 export function getThemeStyles(themeMode: string): string {
   const themes: Record<string, string> = {
     paper: `\n        body { background: #faf8f5; color: #333; }\n        a { color: #3366cc; }\n      `,
@@ -33,7 +40,6 @@ export function getThemeBgColor(themeMode: string): string {
 }
 
 export type EpubZoomThemeDeps = {
-  getZoomContainerEl: () => HTMLDivElement | null;
   getReaderSettings: () => ReaderSettings;
   onSettingsChange?: (settings: ReaderSettings) => void;
   getFontSize: () => number;
@@ -41,11 +47,16 @@ export type EpubZoomThemeDeps = {
   getThemeMode: () => ReaderThemeMode;
 };
 
-export function createEpubZoomTheme(deps: EpubZoomThemeDeps) {
+export function createEpubZoomTheme(deps: EpubZoomThemeDeps): {
+  zoomLevel: number;
+  clampZoomPercent: typeof clampZoomPercent;
+  getThemeStyles: typeof getThemeStyles;
+  getThemeBgColor(): string;
+  setZoom(percent: number): void;
+  cleanup(): void;
+} {
   let zoomLevel = $state(100);
   let persistTimer: ReturnType<typeof setTimeout> | null = null;
-  let pendingWheelDelta = 0;
-  let pendingWheelFrame: number | null = null;
 
   function setZoom(percent: number): void {
     const clamped = clampZoomPercent(percent);
@@ -61,47 +72,12 @@ export function createEpubZoomTheme(deps: EpubZoomThemeDeps) {
     }, 500);
   }
 
-  function changeZoom(delta: number): void {
-    const newZoom = Math.max(50, Math.min(200, zoomLevel + delta));
-    if (newZoom !== zoomLevel) {
-      zoomLevel = newZoom;
-    }
-  }
-
-  function handleWheel(e: WheelEvent): void {
-    if (!e.ctrlKey && !e.metaKey) return;
-    e.preventDefault();
-    pendingWheelDelta += e.deltaY;
-    if (pendingWheelFrame !== null) return;
-    pendingWheelFrame = requestAnimationFrame(() => {
-      pendingWheelFrame = null;
-      const delta = pendingWheelDelta > 0 ? -10 : 10;
-      pendingWheelDelta = 0;
-      const current = clampZoomPercent(deps.getFontSize());
-      setZoom(current + delta);
-    });
-  }
-
   function cleanup(): void {
     if (persistTimer) {
       clearTimeout(persistTimer);
       persistTimer = null;
     }
-    if (pendingWheelFrame !== null) {
-      cancelAnimationFrame(pendingWheelFrame);
-      pendingWheelFrame = null;
-    }
-    pendingWheelDelta = 0;
   }
-
-  // Attach wheel listener to zoom container (passive:false)
-  $effect(() => {
-    const el = deps.getZoomContainerEl();
-    if (!el) return;
-    const handler = (ev: Event): void => handleWheel(ev as WheelEvent);
-    el.addEventListener('wheel', handler, { passive: false });
-    return () => el.removeEventListener('wheel', handler);
-  });
 
   return {
     get zoomLevel(): number {
@@ -110,20 +86,12 @@ export function createEpubZoomTheme(deps: EpubZoomThemeDeps) {
     set zoomLevel(v: number) {
       zoomLevel = v;
     },
-    get pendingWheelDelta(): number {
-      return pendingWheelDelta;
-    },
-    get pendingWheelFrame(): number | null {
-      return pendingWheelFrame;
-    },
     clampZoomPercent,
     getThemeStyles,
     getThemeBgColor(): string {
       return getThemeBgColor(deps.getThemeMode());
     },
     setZoom,
-    changeZoom,
-    handleWheel,
     cleanup,
   };
 }

@@ -1,6 +1,8 @@
 <script lang="ts">
   import ReaderControls from '../chrome/ReaderControls.svelte';
   import ZoomDropdown from '../chrome/ZoomDropdown.svelte';
+  import FitControls from '../chrome/FitControls.svelte';
+  import type { FitMode } from '../chrome/fitZoom';
   import type { MessageKey } from '$lib/shared/i18n';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
 
@@ -8,8 +10,6 @@
     currentPage: number;
     totalPages: number;
     scale: number;
-    isFullscreen: boolean;
-    showToc: boolean;
     isLoading: boolean;
     error: string | null;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -17,15 +17,13 @@
     onNextPage: () => void;
     onGoToPage: (page: number) => Promise<boolean>;
     onSetScale: (scale: number) => void;
-    onToggleFullscreen: () => void;
-    onToggleToc: () => void;
+    onFit: (mode: FitMode) => void;
   };
 
   let {
     currentPage,
     totalPages,
     scale,
-    isFullscreen,
     isLoading,
     error,
     t,
@@ -33,8 +31,7 @@
     onNextPage,
     onGoToPage,
     onSetScale,
-    onToggleFullscreen,
-    onToggleToc,
+    onFit,
   }: Props = $props();
 
   const zoomPercent = $derived(Math.round(scale * 100));
@@ -44,21 +41,19 @@
   <ReaderControls
     {currentPage}
     {totalPages}
-    {isFullscreen}
     {t}
     onPrev={onPrevPage}
     onNext={onNextPage}
     {onGoToPage}
-    {onToggleFullscreen}
-    {onToggleToc}
   >
     {#snippet right()}
       {#if debugState.enabled}
         <span
-          class="text-2xs text-(--pdf-reader-text,var(--color-text-auxiliary)) opacity-60 font-mono"
+          class="text-micro text-(--pdf-reader-text,var(--color-text-auxiliary)) opacity-60 font-mono"
           >p{currentPage}/{totalPages} | {zoomPercent}%</span
         >
       {/if}
+      <FitControls {t} {onFit} />
       <ZoomDropdown value={zoomPercent} onSelect={(v) => onSetScale(v / 100)} />
     {/snippet}
   </ReaderControls>

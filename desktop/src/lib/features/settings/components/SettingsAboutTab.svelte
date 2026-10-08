@@ -1,8 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import Panel from '$lib/shared/ui/layout/Panel.svelte';
+  import Info from 'lucide-svelte/icons/info';
+  import Star from 'lucide-svelte/icons/star';
+  import { openUrl } from '@tauri-apps/plugin-opener';
   import Button from '$lib/shared/ui/forms/Button.svelte';
+  import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
+  import type { UiLocale } from '$lib/shared/types';
   import {
     checkForUpdates,
     defaultPluginUpdatePorts,
@@ -10,7 +14,6 @@
     getInstalledAppVersion,
     performPluginUpdateNow,
     resolveUpdateFeedUrl,
-    runStartupUpdateCheck,
     type PluginUpdatePorts,
     type UpdateCheckDeps,
     type UpdateCheckState,
@@ -20,20 +23,30 @@
     defaultSuppressionStorage,
     recordRemindLater,
   } from '$lib/features/settings/update/updateSuppression';
+  import {
+    READING_QUOTES,
+    quoteDisplayText,
+    selectDailyQuote,
+  } from '$lib/features/settings/about/readingQuotes';
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
+    locale: UiLocale;
     updateDeps?: Partial<UpdateCheckDeps>;
     pluginPorts?: PluginUpdatePorts;
   };
 
-  let { t, updateDeps, pluginPorts }: Props = $props();
+  let { t, locale, updateDeps, pluginPorts }: Props = $props();
 
   type DialogModel = {
     installedVersion: string;
     feedVersion: string;
     notes: string;
   };
+
+  const REPOSITORY_URL = 'https://github.com/JuanCamacho198/NEXO';
+  const ISSUES_URL = 'https://github.com/JuanCamacho198/NEXO/issues';
+  const LICENSE_URL = `${REPOSITORY_URL}/blob/main/LICENSE`;
 
   let installedVersion = $state<string | null>(null);
   let versionFailed = $state(false);
@@ -43,6 +56,12 @@
   let dialog = $state<DialogModel | null>(null);
   let installPhase = $state<'idle' | 'downloading' | 'installed' | 'failed'>('idle');
   let downloadProgress = $state<string | null>(null);
+  let versionCopied = $state(false);
+  let copyResetTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Rotation is deterministic: same day of year, same quote. Never localized
+  // away — a quote is a factual attribution.
+  const dailyQuote = $derived(selectDailyQuote(READING_QUOTES, new Date()));
 
   const buildDeps = (): UpdateCheckDeps => ({
     ...defaultUpdateCheckDeps(resolveUpdateFeedUrl()),
@@ -80,6 +99,21 @@
     } finally {
       checking = false;
     }
+  };
+
+  const copyVersion = async (): Promise<void> => {
+    if (!installedVersion) return;
+    try {
+      await navigator.clipboard.writeText(installedVersion);
+    } catch {
+      return;
+    }
+    versionCopied = true;
+    if (copyResetTimer) clearTimeout(copyResetTimer);
+    copyResetTimer = setTimeout(() => {
+      versionCopied = false;
+      copyResetTimer = null;
+    }, 2000);
   };
 
   const handleRemindLater = (): void => {
@@ -134,56 +168,59 @@
       feedEnabled = feedUrl.trim().length > 0;
     })();
 
-    // Startup check, deferred until the launch settles. At most one automatic
-    // check runs per launch (module guard); the dialog opens only for a
-    // verified newer version with no active remind-later suppression.
-    const settleTimer = setTimeout(() => {
-      void (async () => {
-        if (cancelled) return;
-        const state = await runStartupUpdateCheck(buildDeps());
-        if (cancelled) return;
-        if (state?.status === 'available') openDialogForAvailable(state);
-      })();
-    }, 1500);
-
+    // The automatic startup check now runs once at app launch (see App.svelte),
+    // so this tab owns only the manual check. The feed gate stays: a feed that
+    // cannot answer is never promised.
     return () => {
       cancelled = true;
-      clearTimeout(settleTimer);
+      if (copyResetTimer) clearTimeout(copyResetTimer);
     };
   });
 </script>
 
-<Panel title={t('settings.about')}>
-  <section class="rounded-lg border border-(--color-border) bg-(--color-surface) p-4">
+<section class="space-y-5 w-full max-w-none">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
+      {t('settings.tab.about')}
+    </h1>
+    <p class="text-sm text-(--color-text-muted)">{t('settings.about.subtitle')}</p>
+  </header>
+
+  <!-- Identity: icon, name, real version (copyable), channel. The Panel
+       carries no title so the app name keeps its existing span (not a
+       heading) and the page h1 stays the sole top heading. -->
+  <Panel>
     <div class="flex items-center gap-3">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="32"
-        height="32"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        class="text-(--color-primary)"
-        ><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path
-          d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
-        /></svg
-      >
-      <div class="flex flex-col">
-        <span class="text-lg font-semibold text-(--color-primary)">Nexo</span>
+      <Info size={32} strokeWidth={2} class="text-(--color-primary)" aria-hidden="true" />
+      <div class="flex min-w-0 flex-col">
+        <span class="text-xl font-semibold text-(--color-primary)"
+          >{t('settings.about.appName')}</span
+        >
         {#if installedVersion}
-          <span class="text-xs text-(--color-text-muted)">Version {installedVersion}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onclick={() => void copyVersion()}
+            aria-label={t('settings.about.copyVersion')}
+          >
+            <span>{t('settings.about.version', { version: installedVersion })}</span>
+            <span aria-live="polite">
+              {versionCopied ? t('settings.about.versionCopied') : t('settings.about.copyVersion')}
+            </span>
+          </Button>
         {:else if versionFailed}
-          <span class="text-xs text-(--color-text-muted)">Version —</span>
+          <span class="text-xs text-(--color-text-muted)">{t('settings.about.versionUnknown')}</span
+          >
         {:else}
-          <span class="text-xs text-(--color-text-muted)">Version …</span>
+          <span class="text-xs text-(--color-text-muted)">{t('settings.about.versionLoading')}</span
+          >
         {/if}
+        <span class="text-xs text-(--color-text-muted)">
+          {t('settings.about.channel', { channel: t('settings.about.channelStable') })}
+        </span>
       </div>
     </div>
-    <p class="text-sm text-(--color-text-muted) mt-3">
-      A modern e-reader application for enjoying your EPUB collection with a clean, customizable
-      reading experience.
-    </p>
+    <p class="mt-3 text-sm text-(--color-text-muted)">{t('settings.about.tagline')}</p>
     {#if feedEnabled}
       <div class="mt-3 flex flex-col gap-2">
         <Button
@@ -195,35 +232,43 @@
           {checking ? t('update.checking') : t('update.check')}
         </Button>
         {#if manualOutcome?.status === 'upToDate'}
-          <p class="text-xs text-(--color-text-muted)">{t('update.upToDate')}</p>
+          <p class="text-xs text-(--color-text-muted)" role="status">
+            {t('update.upToDate')}
+          </p>
         {:else if manualOutcome?.status === 'error'}
-          <p class="text-xs text-(--color-text-muted)">{t(errorKeyFor(manualOutcome.kind))}</p>
+          <p class="text-xs text-(--color-text-muted)" role="status">
+            {t(errorKeyFor(manualOutcome.kind))}
+          </p>
         {/if}
       </div>
     {/if}
-  </section>
+  </Panel>
 
+  <!-- Update notice: a status region, not a modal. It needs neither
+       interruption nor protected focus, and the Settings overlay already owns
+       Escape and focus, so a nested dialog would be a false aria-modal. -->
   {#if dialog}
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={t('update.availableTitle')}
-      class="rounded-lg border border-(--color-border) bg-(--color-surface) p-4 mt-4"
-    >
-      <h4 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+    <!-- No Panel title: the h3 below must stay an h3 (heading-order test). -->
+    <Panel aria-labelledby="update-available-title">
+      <h3
+        id="update-available-title"
+        class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)"
+      >
         {t('update.availableTitle')}
-      </h4>
-      <p class="text-sm text-(--color-text-muted)">
+      </h3>
+      <p class="text-sm text-(--color-text-muted)" role="status">
         {t('update.availableBody', {
           version: dialog.feedVersion,
           current: dialog.installedVersion,
         })}
       </p>
-      <h5 class="mt-3 mb-1 text-xs font-semibold text-(--color-primary)">{t('update.notes')}</h5>
+      <h4 class="mt-3 mb-1 text-xs font-semibold text-(--color-primary)">{t('update.notes')}</h4>
       <p class="text-sm text-(--color-text-muted)">{dialog.notes}</p>
       {#if installPhase === 'installed'}
-        <p class="text-sm text-(--color-text-muted) mt-3">{t('update.relaunchConfirm')}</p>
-        <div class="flex gap-2 mt-2">
+        <p class="mt-3 text-sm text-(--color-text-muted)" role="status">
+          {t('update.relaunchConfirm')}
+        </p>
+        <div class="mt-2 flex gap-2">
           <Button onclick={() => void handleRelaunch()} variant="primary" size="sm">
             {t('update.now')}
           </Button>
@@ -238,7 +283,7 @@
           </Button>
         </div>
       {:else}
-        <div class="flex gap-2 mt-3">
+        <div class="mt-3 flex gap-2">
           <Button
             onclick={() => void handleUpdateNow()}
             variant="primary"
@@ -253,50 +298,102 @@
             {t('update.later')}
           </Button>
         </div>
+        {#if installPhase === 'downloading'}
+          <p class="sr-only" role="status">
+            {t('update.downloading')}{downloadProgress ? ` ${downloadProgress}` : ''}
+          </p>
+        {/if}
         {#if installPhase === 'failed' && manualOutcome?.status === 'error'}
-          <p class="text-xs text-(--color-text-muted) mt-2">
+          <p class="mt-2 text-xs text-(--color-text-muted)" role="status">
             {t(errorKeyFor(manualOutcome.kind))}
           </p>
         {/if}
       {/if}
-    </div>
+    </Panel>
   {/if}
 
-  <section class="rounded-lg border border-(--color-border) bg-(--color-surface) p-4 mt-4">
-    <h4 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">Credits</h4>
-    <ul class="m-0 p-0 list-none">
-      <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
-        <span class="text-xs text-(--color-text-muted)">Core Team</span>
-        <span class="text-xs text-(--color-primary) font-medium">Nexo Contributors</span>
-      </li>
-      <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
-        <span class="text-xs text-(--color-text-muted)">EPUB Parsing</span>
-        <span class="text-xs text-(--color-primary) font-medium">epub.js</span>
-      </li>
-      <li class="flex justify-between py-1 border-b border-(--color-border) last:border-b-0">
-        <span class="text-xs text-(--color-text-muted)">Framework</span>
-        <span class="text-xs text-(--color-primary) font-medium">Svelte / Tauri</span>
-      </li>
-    </ul>
-  </section>
+  <!-- Daily quote: discrete, factual, verifiable. No protagonist heading, and
+       it never displaces version, update or support. The recessed Panel
+       variant replaces the hand-rolled surface-dim figure; the caption uses
+       a div because figcaption requires a figure parent. -->
+  {#if dailyQuote}
+    {@const quote = dailyQuote}
+    {@const display = quoteDisplayText(quote, locale)}
+    <Panel variant="surface">
+      <blockquote class="m-0">
+        <p class="whitespace-pre-line text-sm italic text-(--color-primary)">{display.text}</p>
+      </blockquote>
+      <div
+        class="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs text-(--color-text-muted)"
+      >
+        <span class="font-medium text-(--color-primary)">{quote.author}</span>
+        <span aria-hidden="true">·</span>
+        <span>{quote.work}</span>
+        <span aria-hidden="true">·</span>
+        <span>{quote.year}</span>
+        {#if display.isTranslation}
+          <span class="rounded-full border border-(--color-border) px-1.5 py-0.5">
+            {t('settings.about.quoteTranslated')}
+          </span>
+        {/if}
+        <!-- Ghost keeps the link quiet; underline styling does not clash
+             with the atom's own chrome so it travels in `class`. -->
+        <Button
+          variant="ghost"
+          size="sm"
+          class="underline decoration-dotted underline-offset-2"
+          onclick={() => void openUrl(quote.sourceUrl)}
+        >
+          {t('settings.about.quoteSource')}
+        </Button>
+        {#if display.isTranslation}
+          <details class="w-full text-xs text-(--color-text-muted)">
+            <summary class="cursor-pointer">
+              {t('settings.about.quoteOriginal', { lang: quote.lang })}
+            </summary>
+            <p lang={quote.lang} class="mt-1 whitespace-pre-line italic text-(--color-primary)">
+              {quote.original}
+            </p>
+          </details>
+        {/if}
+      </div>
+    </Panel>
+  {/if}
 
-  <section class="rounded-lg border border-(--color-border) bg-(--color-surface) p-4 mt-4">
-    <h4 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">Links</h4>
-    <div class="flex gap-2">
-      <Button
-        onclick={() => window.open('https://github.com/JuanCamacho198/NEXO', '_blank')}
-        variant="ghost"
-        size="sm"
-      >
-        GitHub
-      </Button>
-      <Button
-        onclick={() => window.open('https://github.com/JuanCamacho198/NEXO/issues', '_blank')}
-        variant="ghost"
-        size="sm"
-      >
-        Report Issue
+  <!-- Product license: NEXO's own license, kept as a discrete, small block.
+       Third-party library notices no longer live in the UI; their obligation
+       is preserved in THIRD-PARTY-NOTICES.md at the repository root. No
+       Panel title: the license line is a span, not a heading. -->
+  <Panel>
+    <div class="flex items-center justify-between gap-3">
+      <span class="text-xs text-(--color-text-muted)">
+        {t('settings.about.license')}:
+        <span class="font-medium text-(--color-primary)">{t('settings.about.licenseName')}</span>
+      </span>
+      <Button variant="ghost" size="sm" onclick={() => void openUrl(LICENSE_URL)}>
+        {t('settings.about.viewLicense')}
       </Button>
     </div>
-  </section>
-</Panel>
+  </Panel>
+
+  <!-- Support: real repository URLs, opened through the Tauri opener.
+       No Panel title: the h3 below must stay an h3 (heading-order test). -->
+  <Panel>
+    <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+      {t('settings.about.links')}
+    </h3>
+    <p class="mt-2 text-xs text-(--color-primary)">{t('settings.about.starBody')}</p>
+    <Button class="mt-2" onclick={() => void openUrl(REPOSITORY_URL)} variant="accent" size="sm">
+      <Star size={14} strokeWidth={1.8} aria-hidden="true" />
+      <span class="ml-1.5">{t('settings.about.starCta')}</span>
+    </Button>
+    <div class="mt-2 flex gap-2">
+      <Button onclick={() => void openUrl(REPOSITORY_URL)} variant="ghost" size="sm">
+        {t('settings.about.github')}
+      </Button>
+      <Button onclick={() => void openUrl(ISSUES_URL)} variant="ghost" size="sm">
+        {t('settings.about.reportIssue')}
+      </Button>
+    </div>
+  </Panel>
+</section>

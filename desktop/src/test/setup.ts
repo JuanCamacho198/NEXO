@@ -33,21 +33,47 @@ if (typeof globalThis.matchMedia === 'undefined') {
   })) as unknown as typeof window.matchMedia;
 }
 
-// Polyfill Element.animate for jsdom (used by Svelte transitions in Modal.svelte)
+// Polyfill Element.animate for jsdom (used by Svelte transitions in the app).
+// jsdom does not run Web Animations, and Svelte sequences its JS transitions
+// through the animation's `finish` event: without a real finish, an outro's
+// node is never removed and any exit transition is untestable. Honour the
+// requested duration and fire `onfinish` ourselves.
 if (typeof globalThis.Element !== 'undefined' && !globalThis.Element.prototype.animate) {
-  globalThis.Element.prototype.animate = function () {
-    return {
+  globalThis.Element.prototype.animate = function (
+    _keyframes?: unknown,
+    options?: number | { duration?: number },
+  ) {
+    const duration = typeof options === 'number' ? options : Number(options?.duration ?? 0);
+    let finishHandler: (() => void) | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let playState = 'idle';
+
+    const complete = (): void => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      playState = 'finished';
+      finishHandler?.();
+    };
+
+    const animation = {
       play() {
         /* noop */
       },
       pause() {
-        /* noop */
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
       },
-      finish() {
-        /* noop */
-      },
+      finish: complete,
       cancel() {
-        /* noop */
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        playState = 'idle';
       },
       reverse() {
         /* noop */
@@ -60,10 +86,25 @@ if (typeof globalThis.Element !== 'undefined' && !globalThis.Element.prototype.a
       },
       currentTime: null,
       playbackRate: 1,
-      playState: 'finished',
+      get playState() {
+        return playState;
+      },
+      set playState(value: string) {
+        playState = value;
+      },
       finished: Promise.resolve(),
       ready: Promise.resolve(),
+      get onfinish(): (() => void) | null {
+        return finishHandler;
+      },
+      set onfinish(handler: (() => void) | null) {
+        finishHandler = handler;
+      },
     } as unknown as globalThis.Animation;
+
+    timer = setTimeout(complete, Number.isFinite(duration) ? duration : 0);
+
+    return animation;
   };
 }
 

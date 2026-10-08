@@ -35,13 +35,19 @@
 
 {#if open && libraryState.pendingRemoveBook}
   {@const pendingBook = libraryState.pendingRemoveBook}
-  <Modal bind:open title={t('shelf.removeConfirmTitle')} size="sm">
+  <Modal
+    bind:open
+    title={t('shelf.removeConfirmTitle')}
+    description={step === 'confirm'
+      ? t('shelf.removeConfirmBody', { title: pendingBook.title })
+      : undefined}
+    size="sm"
+    onOpenChange={(v) => {
+      if (!v) onClose();
+    }}
+  >
     {#snippet children()}
-      {#if step === 'confirm'}
-        <p class="text-sm text-(--color-primary)">
-          {t('shelf.removeConfirmBody', { title: pendingBook.title })}
-        </p>
-      {:else}
+      {#if step === 'choose'}
         <div class="space-y-3">
           <button
             type="button"
@@ -57,10 +63,10 @@
           </button>
           <button
             type="button"
-            class="w-full rounded-lg border border-(--color-error)/40 bg-(--color-surface) p-3 text-left transition-colors hover:bg-(--color-surface-hover)"
+            class="w-full rounded-lg border border-(--color-error)/40 bg-(--color-surface) p-3 text-left transition-colors hover:border-(--color-error) hover:bg-(--color-error-soft)"
             onclick={handleLocalAndDrive}
           >
-            <span class="block text-sm font-medium text-red-700"
+            <span class="block text-sm font-medium text-(--color-error)"
               >{t('shelf.removeLocalAndDrive')}</span
             >
             <span class="block text-xs text-(--color-text-muted)"

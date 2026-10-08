@@ -2,6 +2,7 @@
   import type { CollectionDto } from '$lib/shared/types';
   import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
   import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+  import { logger } from '$lib/shared/logger/Logger';
 
   type Props = {
     bookId: string;
@@ -38,7 +39,11 @@
         : collectionIds.filter((id) => id !== collectionId);
       onUpdate(newIds);
     } catch (e) {
-      console.error('Failed to update collection:', e);
+      logger.error(
+        'Failed to update collection:',
+        { error: e instanceof Error ? e.message : String(e) },
+        'library',
+      );
     } finally {
       loading = false;
     }

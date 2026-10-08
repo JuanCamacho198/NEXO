@@ -46,7 +46,6 @@
     onSaveEdit,
     onCoverUpdated,
   }: Props = $props();
-  // svelte-ignore state_referenced_locally
   const shelfEdit = useShelfEdit({
     getSelectedBook: () => book,
     onSaveEdit: (dto) => onSaveEdit(dto),
@@ -115,7 +114,7 @@
           {:else}
             <div class="relative w-48">
               <div
-                class="w-36 h-52 rounded-lg bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3 flex items-center justify-center border border-(--color-border) shadow-md"
+                class="w-48 h-64 rounded-lg bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3 flex items-center justify-center border border-(--color-border) shadow-md"
               >
                 <span class="text-4xl font-bold text-(--color-primary)/30"
                   >{shelfDetail.title.trim()[0]?.toUpperCase() || '?'}</span
@@ -142,9 +141,9 @@
             </div>
           {/if}
         </div>
-        <div class="flex-1 min-w-0 space-y-4">
+        <div class="flex-1 min-w-0 divide-y divide-(--color-border)">
           {#if shelfEdit.isEditing}
-            <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
+            <section class="space-y-3 pb-4">
               <div>
                 <label
                   for="edit-title"
@@ -188,12 +187,12 @@
                     class="mt-2 w-full rounded-md border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary) focus:border-(--color-primary) focus:outline-none"
                   />{/if}
               </div>
-              {#if shelfEdit.editError}<p class="text-sm text-red-600">
+              {#if shelfEdit.editError}<p class="text-sm text-(--color-error)">
                   {shelfEdit.editError}
                 </p>{/if}
-            </div>
+            </section>
           {:else}
-            <div class="rounded-lg border border-(--color-border) p-4">
+            <section class="pb-4">
               <div class="grid grid-cols-2 gap-x-6 gap-y-2">
                 <p class="text-xs text-(--color-text-muted)">
                   <span class="font-medium text-(--color-primary)"
@@ -209,7 +208,7 @@
                     class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border uppercase {shelfDetail.format ===
                     'epub'
                       ? 'bg-(--color-primary)/8 text-(--color-primary) border-(--color-primary)/25'
-                      : 'bg-amber-500/8 text-amber-600 border-amber-500/25'}"
+                      : 'bg-(--color-warning)/8 text-(--color-warning) border-(--color-warning)/25'}"
                     >{shelfDetail.format}</span
                   >
                 </p>
@@ -245,16 +244,16 @@
                     shelfDetail.collectionIds.includes(FAVORITES_COLLECTION_ID)}<button
                     type="button"
                     class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors {fav
-                      ? 'bg-amber-500/15 text-amber-500 border-amber-500/25'
-                      : 'bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border) hover:border-amber-500/25'}"
+                      ? 'bg-(--color-warning)/15 text-(--color-warning) border-(--color-warning)/25'
+                      : 'bg-(--color-surface-subtle) text-(--color-text-muted) border-(--color-border) hover:border-(--color-warning)/25'}"
                     onclick={() => void onToggleFavorite(shelfDetail)}
                     aria-label={fav
                       ? t('shelf.removeFavorite' as MessageKey)
                       : t('shelf.markFavorite' as MessageKey)}
                     ><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" stroke-width="1.5"
                       >{#if fav}<path
-                          fill="#f59e0b"
-                          stroke="#f59e0b"
+                          fill="currentColor"
+                          stroke="currentColor"
                           stroke-linecap="round"
                           stroke-linejoin="round"
                           d="M11.048 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
@@ -267,7 +266,7 @@
                         />{/if}</svg
                     >{t('shelf.favorite' as MessageKey)}</button
                   >{/if}{#if shelfDetail.readingStatus === 'completed'}<span
-                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-green-500/10 text-green-500 border-green-500/25"
+                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-(--color-success)/10 text-(--color-success) border-(--color-success)/25"
                     ><svg
                       class="h-3 w-3"
                       fill="none"
@@ -282,16 +281,16 @@
                     >{t('shelf.completed' as MessageKey)}</span
                   >{/if}
               </div>
-            </div>
+            </section>
           {/if}
-          <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
+          <section class="space-y-3 py-4">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
               <Clock size={14} strokeWidth={1.8} class="inline -mt-0.5 mr-1" />{t(
                 'shelf.readingLabel' as MessageKey,
               )}
-            </h4>
+            </h3>
             {#if progressPct > 0}<div class="space-y-1">
-                <div class="flex items-center gap-1 text-2xs text-(--color-text-muted)">
+                <div class="flex items-center gap-1 text-micro text-(--color-text-muted)">
                   <span>{t('shelf.progress' as MessageKey)} {progressPct}%</span>
                 </div>
                 <div class="h-1.5 w-full rounded-full bg-(--color-border)">
@@ -300,7 +299,7 @@
                     style="width: {progressPct}%"
                   ></div>
                 </div>
-                {#if shelfDetail.totalPages > 0}<p class="text-2xs text-(--color-text-muted)">
+                {#if shelfDetail.totalPages > 0}<p class="text-micro text-(--color-text-muted)">
                     {t('shelf.pageOf' as MessageKey, {
                       current: shelfDetail.currentPage,
                       total: shelfDetail.totalPages,
@@ -326,13 +325,13 @@
               >
                 {t('shelf.noReadingData' as MessageKey)}
               </p>{/if}
-          </div>
-          <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
+          </section>
+          <section class="space-y-3 pt-4">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
               <Info size={14} strokeWidth={1.8} class="inline -mt-0.5 mr-1" />{t(
                 'shelf.details' as MessageKey,
               )}
-            </h4>
+            </h3>
             {#if shelfDetail.publicationDate}<p
                 class="flex items-center gap-1.5 text-xs text-(--color-text-muted)"
               >
@@ -359,7 +358,7 @@
                       >{name}</span
                     >{/each}
                 </div>{/if}{/if}
-          </div>
+          </section>
         </div>
       </div>
     {/snippet}
@@ -379,10 +378,11 @@
           onclick={() => shelfEdit.startEditing(shelfDetail)}
           ><SquarePen size={14} strokeWidth={1.8} /> {t('shelf.editMetadata' as MessageKey)}</Button
         ><Button size="sm" variant="ghost" onclick={onClose}
-          >{t('settings.close' as MessageKey)}</Button
+          >{t('common.close' as MessageKey)}</Button
         ><Button
           size="sm"
           onclick={() => {
+            open = false;
             void onStartReading(shelfDetail);
           }}>{t('app.read' as MessageKey)}</Button
         >{/if}

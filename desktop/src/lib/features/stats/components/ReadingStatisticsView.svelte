@@ -14,8 +14,9 @@
     calculateGenreDistribution,
     periodWindow,
     previousWindow,
-    computeDelta,
+    formatDelta,
     buildChartMeta,
+    type DeltaResult,
     type PeriodKey,
     type Granularity,
     type Props,
@@ -24,6 +25,8 @@
   import GenreDonut from './GenreDonut.svelte';
   import { useReadingChart } from './useReadingChart.svelte';
   import Book from 'lucide-svelte/icons/book';
+  import Clock from 'lucide-svelte/icons/clock';
+  import Flame from 'lucide-svelte/icons/flame';
   import type { MessageKey } from '$lib/shared/i18n';
   let {
     appState,
@@ -82,6 +85,12 @@
   });
   const sd = $derived(statsState);
   const genreDistribution = $derived(calculateGenreDistribution(libraryState.books));
+  const classifiedGenres = $derived(
+    genreDistribution.filter((entry) => entry.genre !== UNCLASSIFIED_GENRE),
+  );
+  const unclassifiedEntry = $derived(
+    genreDistribution.find((entry) => entry.genre === UNCLASSIFIED_GENRE),
+  );
   const totalMinutes = $derived(
     sd.currentStats?.totalMinutesRead ?? libraryState.books.reduce((s, b) => s + b.minutesRead, 0),
   );
@@ -107,45 +116,33 @@
   );
   const _t = (k: MessageKey, p?: Record<string, string | number>): string =>
     tProp ? tProp(k, p) : k;
-  function deltaText(c: number | undefined, pr: number | undefined): string {
-    const cur = c ?? 0,
-      prev = pr ?? 0;
-    if (cur === 0 && prev === 0) return '';
-    if (cur > 0 && prev === 0) return _t('stats.firstPeriod');
-    if (cur === 0 && prev > 0) return '—';
-    const d = computeDelta(cur, prev);
-    if (d === null) return _t('stats.noPriorData');
-    const s = d >= 0 ? '+' : '';
-    return `${s}${d}% ${_t(`stats.delta${activePeriod.charAt(0).toUpperCase() + activePeriod.slice(1)}` as MessageKey)}`;
-  }
-  const metricCards = $derived([
-    {
-      label: _t('stats.minutesRead'),
-      value: totalMinutes.toLocaleString('es-CO'),
-      delta: deltaText(sd.currentStats?.totalMinutesRead, sd.previousStats?.totalMinutesRead),
-    },
+  const delta = (current: number | undefined, previous: number | undefined): DeltaResult =>
+    formatDelta(current, previous, activePeriod, _t);
+  const primaryMetric = $derived({
+    label: _t('stats.minutesRead'),
+    value: totalMinutes.toLocaleString('es-CO'),
+    delta: delta(sd.currentStats?.totalMinutesRead, sd.previousStats?.totalMinutesRead),
+  });
+  const secondaryMetrics = $derived([
     {
       label: _t('stats.sessions'),
       value: totalSessions.toLocaleString('es-CO'),
-      delta: deltaText(sd.currentStats?.totalSessions, sd.previousStats?.totalSessions),
+      delta: delta(sd.currentStats?.totalSessions, sd.previousStats?.totalSessions),
     },
     {
       label: _t('stats.booksStarted'),
       value: booksStarted.toLocaleString('es-CO'),
-      delta: deltaText(sd.currentStats?.booksStarted, sd.previousStats?.booksStarted),
+      delta: delta(sd.currentStats?.booksStarted, sd.previousStats?.booksStarted),
     },
     {
       label: _t('stats.booksCompleted'),
       value: booksCompleted.toLocaleString('es-CO'),
-      delta: deltaText(sd.currentStats?.booksCompleted, sd.previousStats?.booksCompleted),
+      delta: delta(sd.currentStats?.booksCompleted, sd.previousStats?.booksCompleted),
     },
     {
       label: _t('stats.averageProgress'),
       value: `${Math.round(averageProgress)}%`,
-      delta: deltaText(
-        sd.currentStats?.avgProgressPercentage,
-        sd.previousStats?.avgProgressPercentage,
-      ),
+      delta: delta(sd.currentStats?.avgProgressPercentage, sd.previousStats?.avgProgressPercentage),
     },
   ]);
   const activitySeries = $derived(
@@ -182,7 +179,7 @@
 </script>
 
 {#if !heroVisible}<div
-    class="sticky top-0 z-20 border-b border-(--color-border) bg-[rgba(10,18,31,0.97)] px-4 py-3 shadow-(--shadow-panel) md:px-6"
+    class="sticky top-0 z-20 border-b border-(--color-border) bg-(--color-surface-overlay) px-4 py-3 shadow-(--shadow-panel) md:px-6"
   >
     <div class="mx-auto flex max-w-7xl items-center justify-between">
       <span class="text-sm font-semibold text-(--color-primary)">{_t('stats.title')}</span><Dropdown
@@ -195,7 +192,7 @@
 <section class="space-y-5">
   <div
     bind:this={heroEl}
-    class="rounded-(--radius-2xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(17,30,48,0.94),rgba(10,18,31,0.94))] p-5 shadow-(--shadow-hero)"
+    class="rounded-(--radius-2xl) border border-(--color-border) bg-(image:--gradient-hero) p-5 shadow-(--shadow-hero)"
   >
     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div class="flex-1">
@@ -205,19 +202,19 @@
         <p class="mt-1 text-sm text-(--color-text-muted)">{_t('stats.subtitle')}</p>
       </div>
       <div
-        class="flex items-center gap-4 rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-orange-500/10 px-5 py-3"
+        class="flex items-center gap-4 rounded-xl border border-(--color-streak-border) bg-(image:--gradient-streak) px-5 py-3"
       >
         <div
-          class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white text-xl"
+          class="flex h-12 w-12 items-center justify-center rounded-full bg-(image:--gradient-streak-icon) text-white"
           aria-hidden="true"
         >
-          🔥
+          <Flame size={22} strokeWidth={2} />
         </div>
         <div>
           <p
             class="text-3xl font-bold tracking-tight {streakDays === 0
               ? 'text-(--color-text-muted)'
-              : 'text-amber-500'}"
+              : 'text-(--color-streak-text)'}"
           >
             {_t('stats.days', { count: streakDays })}
           </p>
@@ -241,10 +238,12 @@
             <span class="text-[9px] text-(--color-text-muted)">{point.value}m</span>
           </div>{/each}
       </div>{/if}
-    {#if genreDistribution.length > 0}<div class="mt-3 flex flex-wrap gap-2">
-        {#each genreDistribution.slice(0, 5) as g}<span
+    {#if classifiedGenres.length > 0}<div class="mt-3 flex flex-wrap gap-2">
+        {#each classifiedGenres.slice(0, 5) as g}<span
             class="inline-flex items-center gap-1.5 rounded-full border border-(--color-border) bg-(--color-surface) px-2.5 py-1 text-xs"
-            style="border-left: 3px solid {g.color}">{g.genre} {g.percent}%</span
+            ><span class="h-2 w-2 rounded-full" style={`background:${g.color};`} aria-hidden="true"
+            ></span>{g.genre}
+            {g.percent}%</span
           >{/each}
       </div>{:else}<p class="mt-3 text-xs text-(--color-text-muted)">
         {_t('stats.noGenres')} — {_t('stats.noGenresHint')}
@@ -259,22 +258,46 @@
     >
       {_t('stats.loading')}
     </div>{:else}
-    <div class="grid grid-cols-1 gap-4 xl:grid-cols-5">
-      {#each metricCards as metric}<article
-          class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
-        >
-          <p class="text-xs text-(--color-text-muted)">{metric.label}</p>
-          <p class="mt-3 text-3xl font-semibold tracking-tight text-(--color-primary)">
-            {metric.value}
-          </p>
-          {#if metric.delta}<p
-              class="mt-2 text-xs"
-              class:text-(--color-success)={!metric.delta.startsWith('—') &&
-                !metric.delta.startsWith('-')}
-            >
-              {metric.delta}
-            </p>{/if}
-        </article>{/each}
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <article
+        class="flex flex-col justify-between rounded-(--radius-xl) border border-(--color-border) bg-(--color-panel-accent) p-5 shadow-(--shadow-panel)"
+      >
+        <div class="flex items-center gap-2 text-(--color-text-muted)">
+          <Clock size={16} strokeWidth={1.8} aria-hidden="true" />
+          <p class="text-xs">{primaryMetric.label}</p>
+        </div>
+        <p class="mt-4 text-5xl font-semibold tracking-tight text-(--color-primary)">
+          {primaryMetric.value}
+        </p>
+        {#if primaryMetric.delta.text}<p
+            class="mt-2 text-xs"
+            class:text-(--color-success)={primaryMetric.delta.tone === 'positive'}
+            class:text-(--color-error)={primaryMetric.delta.tone === 'negative'}
+            class:text-(--color-text-muted)={primaryMetric.delta.tone === 'neutral' ||
+              primaryMetric.delta.tone === 'none'}
+          >
+            {primaryMetric.delta.text}
+          </p>{/if}
+      </article>
+      <div class="grid grid-cols-2 gap-4 lg:col-span-2">
+        {#each secondaryMetrics as metric}<article
+            class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-bg-panel) p-4 shadow-(--shadow-panel)"
+          >
+            <p class="text-xs text-(--color-text-muted)">{metric.label}</p>
+            <p class="mt-3 text-2xl font-semibold tracking-tight text-(--color-secondary)">
+              {metric.value}
+            </p>
+            {#if metric.delta.text}<p
+                class="mt-2 text-xs"
+                class:text-(--color-success)={metric.delta.tone === 'positive'}
+                class:text-(--color-error)={metric.delta.tone === 'negative'}
+                class:text-(--color-text-muted)={metric.delta.tone === 'neutral' ||
+                  metric.delta.tone === 'none'}
+              >
+                {metric.delta.text}
+              </p>{/if}
+          </article>{/each}
+      </div>
     </div>
     <div class="grid grid-cols-1 gap-4 2xl:grid-cols-[2.2fr_1fr]">
       <article
@@ -332,6 +355,8 @@
           size="inline"
           containerRef={chartContainer}
           {chart}
+          emptyLabel={_t('stats.noActivity')}
+          emptyHint={_t('stats.noActivityHint')}
         />
       </article>
       <Modal bind:open={chart.chartModalOpen} title={_t('stats.minutesReadChart')} size="xl"
@@ -349,6 +374,8 @@
               size="modal"
               containerRef={chartContainer}
               {chart}
+              emptyLabel={_t('stats.noActivity')}
+              emptyHint={_t('stats.noActivityHint')}
             />
           </div>{/snippet}</Modal
       >
@@ -389,6 +416,8 @@
           containerRef={genreContainer}
           {chart}
           minutesLabel={_t('stats.minutes')}
+          emptyLabel={_t('stats.noGenres')}
+          emptyHint={_t('stats.noGenresHint')}
         />
       </article>
     </div>
@@ -415,7 +444,7 @@
                   alt={_t('stats.bookCover', { title: book.title })}
                   className="h-full w-full object-cover"
                   >{#snippet fallback()}<div
-                      class="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(78,140,255,0.16),rgba(255,196,77,0.12))] text-[9px] uppercase tracking-[0.16em] text-(--color-primary)"
+                      class="flex h-full w-full items-center justify-center bg-(image:--gradient-cover-fallback) text-[9px] uppercase tracking-[0.16em] text-(--color-primary)"
                     >
                       {_t('stats.bookPlaceholder')}
                     </div>{/snippet}</SafeCover
@@ -423,9 +452,9 @@
               </div>
               <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-medium text-(--color-primary)">{book.title}</p>
-                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
+                <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-(--color-border)">
                   <div
-                    class="h-full rounded-full bg-[var(--gradient-accent-h)]"
+                    class="h-full rounded-full bg-(image:--gradient-accent-h)"
                     style={`width: ${Math.max(12, Math.round((book.minutesRead / Math.max(mostReadBooks[0]?.minutesRead || 1, 1)) * 100))}%;`}
                   ></div>
                 </div>
@@ -452,7 +481,7 @@
           <div class="mt-5 flex flex-wrap gap-2">
             {#each streakCalendar as day}<div class="flex flex-col items-center gap-2">
                 <div
-                  class={`flex h-8 w-8 items-center justify-center rounded-full text-2xs ${day.active ? 'bg-(--gradient-accent) text-[#07111d]' : 'border border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted)'}`}
+                  class={`flex h-8 w-8 items-center justify-center rounded-full text-xs ${day.active ? 'bg-(image:--gradient-accent) text-(--color-accent-on)' : 'border border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted)'}`}
                 >
                   {day.label}
                 </div>
@@ -494,6 +523,11 @@
               </p>
             </div>
           </div>
+          {#if unclassifiedEntry && unclassifiedEntry.percent > 0}
+            <p class="mt-3 border-t border-(--color-border) pt-3 text-xs text-(--color-text-muted)">
+              {_t('stats.unclassifiedNote', { percent: unclassifiedEntry.percent })}
+            </p>
+          {/if}
         </div>
       </article>
     </div>

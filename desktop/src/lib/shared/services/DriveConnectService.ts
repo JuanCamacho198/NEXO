@@ -71,7 +71,12 @@ export class DriveConfigError extends Error {
 
 export interface DriveOAuthConfig {
   clientId: string;
-  clientSecret: string;
+  /**
+   * Optional on purpose. Desktop-app OAuth clients are public clients that use
+   * PKCE with no secret; Web-app clients still need one. Omit it (undefined or
+   * empty) to send a secret-less, PKCE-only token request.
+   */
+  clientSecret?: string;
 }
 
 export function getDriveOAuthConfig(): DriveOAuthConfig {
@@ -83,9 +88,9 @@ export function getDriveOAuthConfig(): DriveOAuthConfig {
 
 function requireDriveOAuthConfig(): DriveOAuthConfig {
   const config = getDriveOAuthConfig();
-  if (!config.clientId || !config.clientSecret) {
+  if (!config.clientId) {
     throw new DriveConfigError(
-      'Google OAuth client is not configured. Set VITE_GOOGLE_OAUTH_CLIENT_ID and VITE_GOOGLE_OAUTH_CLIENT_SECRET.',
+      'Google OAuth client ID is not configured. Set VITE_GOOGLE_OAUTH_CLIENT_ID to a Desktop app OAuth client ID. VITE_GOOGLE_OAUTH_CLIENT_SECRET is optional and only needed for Web-type clients.',
     );
   }
   return config;
@@ -255,11 +260,13 @@ async function exchangeCodeForGrant(
   const body = new URLSearchParams({
     code,
     client_id: config.clientId,
-    client_secret: config.clientSecret,
     redirect_uri: redirectUri,
     code_verifier: verifier,
     grant_type: 'authorization_code',
   });
+  if (config.clientSecret) {
+    body.set('client_secret', config.clientSecret);
+  }
   const response = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -318,17 +325,20 @@ async function doRefreshDriveAccessToken(): Promise<string> {
     throw driveNotConnected();
   }
   const config = requireDriveOAuthConfig();
+  const refreshBody = new URLSearchParams({
+    grant_type: 'refresh_token',
+    client_id: config.clientId,
+    refresh_token: grant.refreshToken,
+  });
+  if (config.clientSecret) {
+    refreshBody.set('client_secret', config.clientSecret);
+  }
   let response: Response;
   try {
     response = await fetch(TOKEN_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        refresh_token: grant.refreshToken,
-      }).toString(),
+      body: refreshBody.toString(),
     });
   } catch (error) {
     throw new Error(

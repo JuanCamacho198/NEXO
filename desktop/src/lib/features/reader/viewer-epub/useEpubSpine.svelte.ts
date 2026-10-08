@@ -8,6 +8,7 @@ import {
   tocIndexForSpine as pureTocIndexForSpine,
   type EpubChapterMeta,
 } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type { EpubChapterMeta };
 export { normalizeHref, stripFragment };
@@ -32,7 +33,18 @@ export type EpubSpineDeps = {
   parseEpub?: ParseEpubFn;
 };
 
-export function createEpubSpine(deps: EpubSpineDeps) {
+export function createEpubSpine(deps: EpubSpineDeps): {
+  getToc(): EpubChapterMeta[];
+  getSpineHrefs(): string[];
+  spineIndexForToc(tocIndex: number): number;
+  tocIndexForSpine(spineIndex: number, spineHref?: string): number | null;
+  ensureSpineHrefs(bookId: string, filePath: string): Promise<void>;
+  readonly spineHrefs: string[];
+  readonly spineLoadedFor: string | null;
+  getSpineIndexForHref(href: string, spine: string[]): number | null;
+  normalizeHref: typeof normalizeHref;
+  stripFragment: typeof stripFragment;
+} {
   const resolver = createSpineResolver({ parseEpub: deps.parseEpub });
 
   function getToc(): EpubChapterMeta[] {
@@ -59,10 +71,10 @@ export function createEpubSpine(deps: EpubSpineDeps) {
     // Fallback: derive from toc hrefs — spine authority preferred. May be misaligned offset-2.
     const toc = getToc();
     if (toc.length > 0) {
-      console.warn(
-        'epub-spine: falling back to TOC-derived hrefs (spine empty, tocLen',
-        toc.length,
-        ') — may be misaligned if offset-2',
+      logger.warn(
+        'epub-spine: falling back to TOC-derived hrefs (spine empty) — may be misaligned if offset-2',
+        { tocLen: toc.length },
+        'reader',
       );
       return toc.map((c) => normalizeHref(stripFragment(c.href)));
     }
@@ -76,26 +88,20 @@ export function createEpubSpine(deps: EpubSpineDeps) {
     const toc = getToc();
     const entry = toc[tocIndex];
     if (!entry || typeof entry.index !== 'number') {
-      console.warn(
+      logger.warn(
         'epub-toc: spineIndexForToc missing entry for tocIndex',
-        tocIndex,
-        'fallback to',
-        tocIndex,
-        'tocLen',
-        toc.length,
+        { tocIndex, fallback: tocIndex, tocLen: toc.length },
+        'reader',
       );
       return tocIndex;
     }
     const spineLen = getSpineHrefs().length;
     const resolved = pureSpineIndexForToc(toc, tocIndex);
     if (spineLen > 0 && (resolved < 0 || resolved >= spineLen)) {
-      console.warn(
+      logger.warn(
         'epub-toc: spineIndexForToc resolved index out-of-bounds',
-        resolved,
-        'spineLen',
-        spineLen,
-        'tocIndex',
-        tocIndex,
+        { resolved, spineLen, tocIndex },
+        'reader',
       );
     }
     return resolved;
@@ -107,12 +113,10 @@ export function createEpubSpine(deps: EpubSpineDeps) {
     const toc = getToc();
     const res = pureTocIndexForSpine(toc, spineIndex, spineHref);
     if (res !== null) return res;
-    console.warn(
+    logger.warn(
       'epub-toc: tocIndexForSpine no TOC entry for spineIndex',
-      spineIndex,
-      'spineHref',
-      spineHref ?? '(none)',
-      'fallback will use spineIndex',
+      { spineIndex, spineHref: spineHref ?? '(none)' },
+      'reader',
     );
     return null;
   }

@@ -1,6 +1,7 @@
 import type { LibraryBookDto } from '$lib/shared/types';
 import { UNCLASSIFIED_GENRE, type CanonicalGenre } from '$lib/shared/services/genreHeuristic';
 import type { AppState } from '$lib/shared/stores/AppState.svelte';
+import type { MessageKey } from '$lib/shared/i18n';
 
 export type StatsBook = LibraryBookDto;
 
@@ -19,28 +20,16 @@ export const periodLabels: Record<PeriodKey, string> = {
   all: 'Todo el tiempo',
 };
 
-export const GENRE_COLORS = [
-  '#4e8cff',
-  '#43d3c4',
-  '#f4b942',
-  '#ff6b6b',
-  '#9d59ff',
-  '#ff9f43',
-  '#2ed573',
-  '#a29bfe',
-  '#fd79a8',
-  '#00cec9',
-  '#e17055',
-  '#6c5ce7',
+// Token-backed ramp (see tokens.css). Theme-aware by construction, so the same
+// series is legible in light and dark without a hardcoded hex in the component.
+const GENRE_COLORS = [
+  'var(--color-chart-1)',
+  'var(--color-chart-2)',
+  'var(--color-chart-3)',
+  'var(--color-chart-4)',
+  'var(--color-chart-5)',
+  'var(--color-chart-6)',
 ] as const;
-
-export function hashNumber(value: string): number {
-  let hash = 0;
-  for (const char of value) {
-    hash = (hash * 31 + char.charCodeAt(0)) % 997;
-  }
-  return hash;
-}
 
 const resolveGenre = (book: StatsBook): string => {
   const value = book.genre;
@@ -50,7 +39,7 @@ const resolveGenre = (book: StatsBook): string => {
   return UNCLASSIFIED_GENRE;
 };
 
-export function groupBooksByGenre(books: StatsBook[]): Map<string, number> {
+function groupBooksByGenre(books: StatsBook[]): Map<string, number> {
   const groups = new Map<string, number>();
   for (const book of books) {
     const minutes = Math.max(book.minutesRead, 10);
@@ -107,6 +96,52 @@ export function computeDelta(current: number, previous: number): number | null {
   return Math.round(((current - previous) / previous) * 100 * 10) / 10;
 }
 
+export type DeltaTone = 'positive' | 'negative' | 'neutral' | 'none';
+
+export type DeltaResult = { text: string; tone: DeltaTone };
+
+const DELTA_LABEL_KEYS: Record<PeriodKey, MessageKey> = {
+  week: 'stats.deltaWeek',
+  month: 'stats.deltaMonth',
+  year: 'stats.deltaYear',
+  all: 'stats.deltaAll',
+};
+
+/**
+ * Builds an honest delta label.
+ *
+ * - No current and no previous activity → nothing to compare, empty result.
+ * - Previous period with real data (previous > 0) → signed delta; a zero
+ *   change is neutral (no sign, no success colour) and a drop to zero is a
+ *   real -100%, never hidden.
+ * - First period with activity but no previous baseline → an explicit
+ *   "first period" note instead of an invented percentage.
+ */
+export function formatDelta(
+  current: number | undefined,
+  previous: number | undefined,
+  period: PeriodKey,
+  t: (key: MessageKey) => string,
+): DeltaResult {
+  const cur = current ?? 0;
+  const prev = previous ?? 0;
+  if (cur === 0 && prev === 0) return { text: '', tone: 'none' };
+
+  const delta = computeDelta(cur, prev);
+  if (delta === null) {
+    return cur > 0 ? { text: t('stats.firstPeriod'), tone: 'none' } : { text: '', tone: 'none' };
+  }
+
+  const label = t(DELTA_LABEL_KEYS[period]);
+  if (delta === 0) return { text: `${t('stats.noChange')} ${label}`, tone: 'neutral' };
+
+  const sign = delta > 0 ? '+' : '';
+  return {
+    text: `${sign}${delta}% ${label}`,
+    tone: delta > 0 ? 'positive' : 'negative',
+  };
+}
+
 export const periodDeltaLabels: Record<PeriodKey, string> = {
   week: 'vs. semana anterior',
   month: 'vs. mes anterior',
@@ -131,9 +166,9 @@ export function calculateGenreDistribution(
 }
 
 // ─── Chart helpers (PR-P4-1) ─────────────────────────────────────────
-export const CHART_WIDTH = 800;
-export const CHART_HEIGHT = 240;
-export const MIN_LABEL_SPACING = 46;
+const CHART_WIDTH = 800;
+const CHART_HEIGHT = 240;
+const MIN_LABEL_SPACING = 46;
 
 export type ChartPoint = { label: string; value: number; x: number; y: number };
 
@@ -149,7 +184,7 @@ export type ChartMeta = {
   step: number;
 };
 
-export function getShortMonthName(monthIndex: number, locale: string): string {
+function getShortMonthName(monthIndex: number, locale: string): string {
   const date = new Date(2026, monthIndex, 1);
   try {
     const name = new Intl.DateTimeFormat(locale, { month: 'short' }).format(date);

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { debugState } from './lib/shared/debug/debugState.svelte';
   import DebugToggle from '$lib/shared/debug/DebugToggle.svelte';
+  import { loadDebugEnabled } from '$lib/shared/services/debugPreferences';
   import DebugPanel from '$lib/shared/debug/DebugPanel.svelte';
   import { appState } from '$lib/shared/stores/AppState.svelte';
   import AppRouter from '$lib/shared/ui/layout/AppRouter.svelte';
@@ -14,8 +15,15 @@
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import { titlebarState } from '$lib/stores/titlebarState.svelte';
   import { isCustomTitlebarPlatform } from '$lib/shared/utils/platform';
+  import { installGlobalShortcuts, ShortcutHelpModal, CommandPalette } from '$lib/shared/shortcuts';
   import { type as osType } from '@tauri-apps/plugin-os';
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
+  import { logger } from '$lib/shared/logger/Logger';
+  import {
+    defaultUpdateCheckDeps,
+    resolveUpdateFeedUrl,
+    runStartupUpdateCheck,
+  } from '$lib/features/settings/update/updateChecker';
 
   onMount(() => {
     try {
@@ -28,17 +36,42 @@
   onMount(() => {
     appState.init();
 
-    // Global error handler (replaces Svelte 5's missing ErrorBoundary)
+    // Restore the persisted debug flag so the toggle survives a restart.
+    // Default off: no debug chrome renders until Settings turns it on.
+    void loadDebugEnabled().then((enabled) => {
+      debugState.enabled = enabled;
+    });
+
+    // Global error handler (replaces Svelte 5's missing ErrorBoundary).
+    // Uncaught errors and unhandled rejections route through the leveled
+    // logger so universal redaction, levels, and caps apply to them.
     const handleError = (event: ErrorEvent | PromiseRejectionEvent): void => {
-      const message =
-        event instanceof PromiseRejectionEvent
-          ? (event.reason?.message ?? event.reason?.toString() ?? 'Unhandled Promise rejection')
-          : event.message;
-      console.error('[App] Uncaught error:', event);
+      const isRejection = event instanceof PromiseRejectionEvent;
+      const message = isRejection
+        ? (event.reason?.message ?? event.reason?.toString() ?? 'Unhandled Promise rejection')
+        : event.message;
+      logger.error(
+        message,
+        isRejection
+          ? {
+              kind: 'unhandledrejection',
+              reason:
+                event.reason instanceof Error
+                  ? { name: event.reason.name, stack: event.reason.stack }
+                  : String(event.reason),
+            }
+          : {
+              kind: 'uncaught_error',
+              filename: event.filename,
+              lineno: event.lineno,
+              colno: event.colno,
+            },
+        'app_shell',
+      );
       try {
         pushToast('error', message);
       } catch {}
-      if (event instanceof PromiseRejectionEvent && typeof event.preventDefault === 'function') {
+      if (isRejection && typeof event.preventDefault === 'function') {
         try {
           event.preventDefault();
         } catch {}
@@ -47,15 +80,33 @@
 
     window.addEventListener('error', handleError);
     window.addEventListener('unhandledrejection', handleError);
+    const uninstallShortcuts = installGlobalShortcuts();
 
     return () => {
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleError);
+      uninstallShortcuts();
     };
   });
 
   $effect(() => {
     debugState.currentRoute = navigationState.route;
+  });
+
+  // Startup update check: runs once per launch, whether or not the user ever
+  // opens Settings → About. A verified newer version surfaces a toast so the
+  // notice is actually delivered; the actionable update flow stays in About.
+  // The module guard inside runStartupUpdateCheck keeps it to one check.
+  onMount(() => {
+    const settleTimer = setTimeout(() => {
+      void (async () => {
+        const state = await runStartupUpdateCheck(defaultUpdateCheckDeps(resolveUpdateFeedUrl()));
+        if (state?.status === 'available') {
+          pushToast('info', appState.t('update.availableToast', { version: state.feedVersion }));
+        }
+      })();
+    }, 1500);
+    return () => clearTimeout(settleTimer);
   });
 
   // Track viewport for debug panel
@@ -89,7 +140,11 @@
     <AppModals />
     <ImportProgressBanner />
     <SyncAuthBanner />
-    <DebugToggle />
+    {#if debugState.enabled}
+      <DebugToggle />
+    {/if}
     <DebugPanel />
+    <ShortcutHelpModal t={appState.t} />
+    <CommandPalette t={appState.t} />
   </main>
 </div>

@@ -1,5 +1,6 @@
 import { extractFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import type { EpubChapterMeta } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type EpubNavigationDeps = {
   getToc: () => EpubChapterMeta[];
@@ -9,7 +10,23 @@ export type EpubNavigationDeps = {
   tocIndexForSpine: (spineIndex: number, spineHref?: string) => number | null;
 };
 
-export function createEpubNavigation(deps: EpubNavigationDeps) {
+export function createEpubNavigation(deps: EpubNavigationDeps): {
+  currentChapterIndex: number;
+  pendingCfiScroll: string | null;
+  pendingFragment: string | null;
+  readonly currentSpineIndex: number;
+  goToPrev(): void;
+  goToNext(): void;
+  goToChapter(index: number): void;
+  handleGoToPage(page: number): Promise<boolean>;
+  handleExternalTocNavigate(targetId: string | null): boolean;
+  handleSearchTargetLocator(
+    target: string | null,
+    options: { currentChapterIndex: number; totalChapters: number; tocLength: number },
+  ): { navigated: boolean; needsScroll: boolean; chapterIdx: number | null } | null;
+  clearPendingCfiScroll(): void;
+  clearPendingFragment(): void;
+} {
   let currentChapterIndex = $state(0);
   let pendingCfiScroll = $state<string | null>(null);
   let pendingFragment = $state<string | null>(null);
@@ -112,15 +129,15 @@ export function createEpubNavigation(deps: EpubNavigationDeps) {
     const mapped = deps.tocIndexForSpine(spineIdx);
     const chapterIdx = mapped !== null ? mapped : spineIdx;
     if (mapped === null) {
-      console.warn(
-        'epub-toc: searchTargetLocator spine',
-        spineIdx,
-        'not in TOC, fallback to',
-        chapterIdx,
-        'totalChapters',
-        options.totalChapters,
-        'tocLen',
-        options.tocLength,
+      logger.warn(
+        'epub-toc: searchTargetLocator spine not in TOC, fallback',
+        {
+          spineIdx,
+          fallback: chapterIdx,
+          totalChapters: options.totalChapters,
+          tocLen: options.tocLength,
+        },
+        'reader',
       );
     }
     if (mapped !== null) {

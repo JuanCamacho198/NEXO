@@ -32,18 +32,17 @@ export type UpdateCheckState =
       installedVersion: string;
       feedVersion: string;
       notes: string;
-      assetUrl: string | null;
     }
   | { status: 'error'; kind: UpdateErrorKind };
 
-export class FeedUnreachableError extends Error {
+class FeedUnreachableError extends Error {
   constructor(message = 'Update feed unreachable') {
     super(message);
     this.name = 'FeedUnreachableError';
   }
 }
 
-export class FeedMalformedError extends Error {
+class FeedMalformedError extends Error {
   constructor(message = 'Update feed malformed') {
     super(message);
     this.name = 'FeedMalformedError';
@@ -171,11 +170,6 @@ export const defaultUpdateCheckDeps = (feedUrl: string): UpdateCheckDeps => ({
   nowEpochMs: () => Date.now(),
 });
 
-const firstAssetUrl = (feed: DesktopUpdateFeed): string | null => {
-  const first = Object.values(feed.platforms)[0];
-  return first ? first.url : null;
-};
-
 export async function checkForUpdates(
   deps: UpdateCheckDeps,
   options: { manual: boolean },
@@ -219,7 +213,6 @@ export async function checkForUpdates(
     installedVersion,
     feedVersion: feed.version,
     notes: feed.notes,
-    assetUrl: firstAssetUrl(feed),
   };
 }
 

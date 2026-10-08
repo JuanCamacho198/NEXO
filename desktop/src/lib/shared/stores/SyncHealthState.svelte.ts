@@ -28,7 +28,20 @@ function persistScopes(map: Record<string, boolean>): void {
   } catch {}
 }
 
-export function createSyncHealthState() {
+export function createSyncHealthState(): {
+  readonly health: SyncHealth | null;
+  readonly scopes: Record<string, boolean>;
+  readonly conflicts: SyncConflict[];
+  readonly isLoading: boolean;
+  readonly error: string | null;
+  refresh(): Promise<void>;
+  setScopeEnabled(scope: SyncScope, enabled: boolean): void;
+  isScopeEnabled(scope: SyncScope): boolean;
+  resolveConflict(conflictId: string, resolution: 'keep_local' | 'keep_remote'): Promise<void>;
+  pushConflict(c: SyncConflict): void;
+  startPoll(intervalMs?: number): void;
+  stopPoll(): void;
+} {
   let health = $state<SyncHealth | null>(null);
   let scopes = $state<Record<string, boolean>>(loadScopes());
   let conflicts = $state<SyncConflict[]>([]);

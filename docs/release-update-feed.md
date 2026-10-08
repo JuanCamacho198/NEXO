@@ -63,13 +63,13 @@ each entry carries a download `url` and a cryptographic `signature`.
 
 ```json
 {
-  "version": "0.4.0",
+  "version": "0.5.0",
   "notes": "Example release notes.",
   "pub_date": "2026-09-28T12:00:00Z",
   "channel": "stable",
   "platforms": {
     "windows-x86_64": {
-      "url": "https://github.com/<owner>/<repo>/releases/download/desktop-v0.4.0/Nexo.Desktop_0.4.0_x64-setup.exe",
+      "url": "https://github.com/<owner>/<repo>/releases/download/desktop-v0.5.0/Nexo.Desktop_0.5.0_x64-setup.exe",
       "signature": "<tauri-action signature>"
     }
   }
@@ -130,11 +130,11 @@ reference exactly these names.
   `productName` (`Nexo Desktop`) and the version. The released asset name
   replaces the space in the local bundle name with a dot (the release asset's
   `label` keeps the space), so a bundle built as
-  `Nexo Desktop_0.4.0_amd64.AppImage` is published as
-  `Nexo.Desktop_0.4.0_amd64.AppImage`. Published shapes:
-  `Nexo.Desktop_0.4.0_x64_en-US.msi`, `Nexo.Desktop_0.4.0_x64-setup.exe`,
-  `Nexo.Desktop_0.4.0_universal.dmg`, `Nexo.Desktop_0.4.0_amd64.AppImage`,
-  `Nexo.Desktop_0.4.0_amd64.deb`, `Nexo.Desktop-0.4.0-1.x86_64.rpm`.
+  `Nexo Desktop_0.5.0_amd64.AppImage` is published as
+  `Nexo.Desktop_0.5.0_amd64.AppImage`. Published shapes:
+  `Nexo.Desktop_0.5.0_x64_en-US.msi`, `Nexo.Desktop_0.5.0_x64-setup.exe`,
+  `Nexo.Desktop_0.5.0_universal.dmg`, `Nexo.Desktop_0.5.0_amd64.AppImage`,
+  `Nexo.Desktop_0.5.0_amd64.deb`, `Nexo.Desktop-0.5.0-1.x86_64.rpm`.
   The desktop feed (`latest.json`) is authoritative for desktop download URLs —
   clients MUST follow the feed's per-platform `url` fields, not a filename
   convention.

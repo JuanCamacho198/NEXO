@@ -1,3 +1,5 @@
+import { logger } from '$lib/shared/logger/Logger';
+
 type DebugReaderInfo = {
   format: 'pdf' | 'epub' | null;
   isTocOpen: boolean;
@@ -144,7 +146,7 @@ class DebugState {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      console.warn('Failed to copy debug snapshot');
+      logger.warn('Failed to copy debug snapshot', undefined, 'app_shell');
     }
   }
 

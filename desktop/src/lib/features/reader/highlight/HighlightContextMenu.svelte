@@ -109,7 +109,7 @@
           class="max-w-full truncate rounded-full px-2 py-0.5 text-micro font-medium text-(--color-text-inverse)"
           style={tag.color
             ? `background-color: ${tag.color}33; border: 1px solid ${tag.color}66;`
-            : 'background-color: rgba(255,255,255,0.1);'}
+            : 'background-color: var(--color-highlight-menu-border);'}
         >
           {tag.name}
         </span>
@@ -128,7 +128,7 @@
         type="button"
         bind:this={paletteBtn}
         class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full ring-2 ring-(--color-text-inverse) transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-(--color-accent-sky)"
-        style="background-image: linear-gradient(135deg, #f87171 0%, #4ade80 50%, #60a5fa 100%);"
+        style="background-image: linear-gradient(135deg, var(--color-error) 0%, var(--color-success) 50%, var(--color-accent-start) 100%);"
         onclick={onCustomColor}
         aria-label={t('highlight.changeColor')}
         title={t('highlight.changeColor')}

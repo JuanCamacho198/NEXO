@@ -95,10 +95,10 @@ describe('CompositeCatalogProvider cache read-through', () => {
       },
     );
     const first = await provider.search('pride', 1);
-    expect(calls).toEqual({ g: 1, o: 1 });
+    expect(calls).toEqual({ g: 1, o: 0 });
     const second = await provider.search('pride', 1);
     expect(second).toEqual(first);
-    expect(calls).toEqual({ g: 1, o: 1 });
+    expect(calls).toEqual({ g: 1, o: 0 });
   });
 
   it('refetches expired pages and replaces the entry', async () => {
@@ -117,7 +117,7 @@ describe('CompositeCatalogProvider cache read-through', () => {
     await provider.search('pride', 1);
     now += PAGE_TTL_S + 1;
     await provider.search('pride', 1);
-    expect(calls).toEqual({ g: 2, o: 2 });
+    expect(calls).toEqual({ g: 2, o: 0 });
   });
 
   it('caches details 7d and keeps the pure download path I/O-free', async () => {

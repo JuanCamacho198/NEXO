@@ -47,7 +47,7 @@ export class InMemoryAddonConsentStore implements AddonConsentStore {
  * commands (migration 0018). Withdrawal keeps the row with `granted = 0`,
  * so the denial itself survives a restart.
  */
-export class TauriAddonConsentStore implements AddonConsentStore {
+class TauriAddonConsentStore implements AddonConsentStore {
   async list(): Promise<{ addonId: string; granted: boolean }[]> {
     return invoke<{ addonId: string; granted: boolean }[]>('listAddonConsents');
   }

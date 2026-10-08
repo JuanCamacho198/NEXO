@@ -1,3 +1,6 @@
+// Must evaluate before any Tauri plugin call: in a plain `bun run dev` browser
+// there is no IPC bridge, so without it the shell stalls on the welcome screen.
+import './lib/dev/browserTauriShim';
 import './styles.css';
 import App from './App.svelte';
 import { mount } from 'svelte';
@@ -12,7 +15,6 @@ import { SentrySink } from './lib/shared/logger/SentrySink';
 import { SentryMetricsSink } from './lib/shared/logger/SentryMetricsSink';
 import { metricsStore } from './lib/shared/logger/MetricsStore';
 import { getSentrySettings } from './lib/shared/logger/sentryConfig';
-import { createErrorEvent, type ErrorEvent } from './lib/shared/events/ErrorEvent';
 import { METRIC_NAMES } from './lib/shared/logger/metricTypes';
 import { bucketDurationMs } from './lib/shared/logger/metricBuckets';
 import * as Sentry from '@sentry/browser';
@@ -46,76 +48,19 @@ const initLogger = async (): Promise<void> => {
 const flushOnce = (): void => {
   void Sentry.flush(2000);
   metricsStore.flush();
+  void logger.flush();
   window.removeEventListener('pagehide', flushOnce);
   window.removeEventListener('beforeunload', flushOnce);
 };
 window.addEventListener('pagehide', flushOnce);
 window.addEventListener('beforeunload', flushOnce);
 
-const handleGlobalError = (event: ErrorEvent): void => {
-  const errorEvent = createErrorEvent({
-    severity: 'high',
-    category: 'runtime',
-    code: 'UNCAUGHT_ERROR',
-    message: event.message,
-    context: {
-      filename: (event as unknown as { filename?: string }).filename,
-      lineno: (event as unknown as { lineno?: number }).lineno,
-      colno: (event as unknown as { colno?: number }).colno,
-    },
-    source: 'app_shell',
-    recoverable: false,
-  });
-
-  logger.error(errorEvent);
-};
-
-const handleUnhandledRejection = (event: PromiseRejectionEvent): void => {
-  const errorMessage = event.reason instanceof Error ? event.reason.message : String(event.reason);
-
-  const errorEvent = createErrorEvent({
-    severity: 'high',
-    category: 'promise_rejection',
-    code: 'UNHANDLED_REJECTION',
-    message: errorMessage,
-    context: {
-      reason:
-        event.reason instanceof Error
-          ? { name: event.reason.name, stack: event.reason.stack }
-          : String(event.reason),
-    },
-    source: 'app_shell',
-    recoverable: false,
-  });
-
-  logger.error(errorEvent);
-};
-
-const registerGlobalHandlers = async (): Promise<void> => {
+const initLoggerOnce = async (): Promise<void> => {
   if (handlersRegistered) {
     return;
   }
 
   await initLogger();
-
-  window.onerror = (message, source, lineno, colno, error) => {
-    const errorEvent = createErrorEvent({
-      severity: 'high',
-      category: 'runtime',
-      code: 'UNCAUGHT_ERROR',
-      message: typeof message === 'string' ? message : 'Unknown error',
-      context: { source, lineno, colno, error: error?.stack },
-      source: 'app_shell',
-      recoverable: false,
-    });
-    handleGlobalError(errorEvent);
-    return false;
-  };
-
-  window.onunhandledrejection = (event) => {
-    handleUnhandledRejection(event);
-  };
-
   handlersRegistered = true;
 };
 
@@ -157,6 +102,6 @@ requestAnimationFrame(() => {
   });
 });
 
-registerGlobalHandlers();
+initLoggerOnce();
 
 export default app;

@@ -105,7 +105,7 @@ describe('FR-BI1 — call sites bind the store receiver', () => {
   it('detached single-file import closure runs without a receiver TypeError', async () => {
     const state = freshState();
     mockPickedFile();
-    importBookMock.mockResolvedValue(undefined as never);
+    importBookMock.mockResolvedValue({ id: 'book-1' } as never);
     const onImportBook = () => state.handleImportFile();
     await expect(onImportBook()).resolves.toBeUndefined();
     expect(state.importNotice?.status).toBe('success');
@@ -208,7 +208,7 @@ describe('FR-BI2 — error banner auto-dismiss and dedup', () => {
   it('success behavior is unchanged (auto-dismiss at 3500ms)', async () => {
     const state = freshState();
     mockPickedFile();
-    importBookMock.mockResolvedValue(undefined as never);
+    importBookMock.mockResolvedValue({ id: 'book-1' } as never);
     await state.handleImportFile();
     expect(state.importNotice?.status).toBe('success');
     vi.advanceTimersByTime(3499);

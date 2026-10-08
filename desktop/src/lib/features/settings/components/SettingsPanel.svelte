@@ -12,7 +12,7 @@
   import SettingsSyncTab from './SettingsSyncTab.svelte';
   import SettingsShortcutsTab from './SettingsShortcutsTab.svelte';
   import SettingsAboutTab from './SettingsAboutTab.svelte';
-  import type { UiLocale } from '$lib/shared/types';
+  import type { LibraryBookDto, CollectionDto, UiLocale } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
   import { onDestroy } from 'svelte';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
@@ -20,23 +20,24 @@
   import { driveState } from '$lib/shared/stores/driveState.svelte';
   import { beginDriveConnect } from '$lib/shared/services/DriveConnectService';
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
+  import Button from '$lib/shared/ui/forms/Button.svelte';
 
   let {
-    isOpen = $bindable(false),
-    mode = 'overlay',
+    isOpen = false,
     onRequestClose,
     locale,
     onLocaleChange,
     t,
     books = [],
+    collections = [],
     initialTab,
   } = $props<{
     isOpen: boolean;
-    mode?: 'overlay' | 'page';
     onRequestClose?: () => void;
     locale: UiLocale;
     onLocaleChange?: (locale: UiLocale) => void;
-    books?: { id: string; title: string }[];
+    books?: LibraryBookDto[];
+    collections?: CollectionDto[];
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     initialTab?: SettingsTab;
   }>();
@@ -81,11 +82,7 @@
   });
 
   function closePanel(): void {
-    if (mode === 'page') {
-      onRequestClose?.();
-      return;
-    }
-    isOpen = false;
+    onRequestClose?.();
   }
 
   async function handleConnectDrive(): Promise<void> {
@@ -147,22 +144,10 @@
   onDestroy(() => profile.destroy());
 </script>
 
-{#if mode === 'page' || isOpen}
-  {#if mode === 'overlay'}
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <div class="fixed inset-0 w-screen h-screen bg-black/40 z-[999]" onclick={closePanel}></div>
-  {/if}
-  <aside
-    class={mode === 'overlay'
-      ? 'fixed top-0 right-0 w-[350px] h-screen bg-(--color-surface) border-l border-(--color-border) shadow-xl z-[1000] flex flex-col animate-[slide-in_0.3s_ease-out]'
-      : 'w-full h-full flex-1 flex flex-col bg-(--color-background) overflow-hidden min-h-0'}
-  >
+{#if isOpen}
+  <aside class="w-full h-full flex-1 flex flex-col bg-(--color-background) overflow-hidden min-h-0">
     <div class="flex items-center p-3 border-b border-(--color-border)">
-      <button
-        class="inline-flex items-center justify-center size-8 rounded-lg bg-(--color-surface) border border-(--color-border) text-(--color-text-muted) cursor-pointer hover:text-(--color-primary) hover:border-(--color-primary) transition-all duration-200"
-        onclick={closePanel}
-        aria-label={t('app.backToHome')}
-      >
+      <Button variant="secondary" size="sm" onclick={closePanel} aria-label={t('app.backToHome')}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="16"
@@ -176,7 +161,7 @@
         >
           <path d="M19 12H5m7-7l-7 7 7 7" />
         </svg>
-      </button>
+      </Button>
     </div>
 
     <SettingsTabs
@@ -194,16 +179,22 @@
           role="tabpanel"
           id="tabpanel-datos"
           aria-labelledby="tab-datos"
-          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4 [&>*]:shrink-0"
         >
           <SettingsDataTab
             {t}
             {books}
+            {collections}
             isClearingCache={data.isClearingCache}
             cacheCleared={data.cacheCleared}
             selectedExportBook={data.selectedExportBook}
             selectedExportFormat={data.selectedExportFormat}
+            annotationsOnlyWithNote={data.annotationsOnlyWithNote}
+            isExportingLibrary={data.isExportingLibrary}
             isExportingHighlights={data.isExportingHighlights}
+            isExportingCollections={data.isExportingCollections}
+            isExportingBook={data.isExportingBook}
+            isExportingEverything={data.isExportingEverything}
             isExportingColdBackup={data.isExportingColdBackup}
             isImportingColdBackup={data.isImportingColdBackup}
             isExportingDictionary={data.isExportingDictionary}
@@ -215,15 +206,21 @@
             isConnectingDrive={driveState.isConnecting}
             onConnectDrive={() => void handleConnectDrive()}
             onClearCache={() => void data.handleClearCache()}
-            onExportLibrary={() => {}}
-            onExportHighlights={() => void data.handleExportHighlights()}
+            onExportLibrary={() => void data.handleExportLibrary(books)}
+            onExportHighlights={() => void data.handleExportHighlights(books)}
+            onExportCollections={() => void data.handleExportCollections(collections)}
+            onExportBook={(bookId: string) => void data.handleExportBook(bookId, books)}
+            onExportEverything={() => void data.handleExportEverything(books, collections)}
             onExportColdBackup={() => void data.handleExportColdBackup()}
             onImportColdBackup={() => void data.handleImportColdBackup()}
             onExportDictionary={(format) => void data.handleExportDictionary(format)}
             onImportDictionary={(file) => void data.handleImportDictionary(file)}
+            onNavigateToStorage={() => void handleTabChange('almacenamiento')}
             onSelectedExportBookChange={(v: string) => data.handleSelectedExportBookChange(v)}
             onSelectedExportFormatChange={(v: 'json' | 'markdown') =>
               data.handleSelectedExportFormatChange(v)}
+            onAnnotationsOnlyWithNoteChange={(v: boolean) =>
+              data.handleAnnotationsOnlyWithNoteChange(v)}
           />
           <SettingsAddonsSection
             {t}
@@ -248,9 +245,9 @@
           role="tabpanel"
           id="tabpanel-acerca"
           aria-labelledby="tab-acerca"
-          class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+          class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4 [&>*]:shrink-0"
         >
-          <SettingsAboutTab {t} />
+          <SettingsAboutTab {t} {locale} />
         </div>
       {/if}
     </form>

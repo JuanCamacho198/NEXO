@@ -1,5 +1,34 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createSettingsData } from '$lib/features/settings/useSettingsData.svelte';
+import { parseExportEnvelope } from '$lib/features/settings/exportEnvelope';
+import type { CollectionDto, LibraryBookDto } from '$lib/shared/types';
+
+function makeBook(overrides: Partial<LibraryBookDto> = {}): LibraryBookDto {
+  return {
+    id: 'b1',
+    title: 'Dune',
+    author: 'Frank Herbert',
+    format: 'epub',
+    currentPage: 42,
+    totalPages: 412,
+    progressPercentage: 10.2,
+    coverPath: '/covers/dune.jpg',
+    minutesRead: 120,
+    updatedAt: '2026-09-01T10:00:00Z',
+    createdAt: '2026-08-01T10:00:00Z',
+    collectionIds: [1, 2],
+    genre: 'sci-fi',
+    publicationDate: '1965-08-01',
+    language: 'en',
+    coverUserDeleted: false,
+    readingStatus: 'reading',
+    startedAt: '2026-08-02T10:00:00Z',
+    completedAt: null,
+    progressUpdatedAt: '2026-09-01T10:00:00Z',
+    stateVersion: 3,
+    ...overrides,
+  };
+}
 
 describe('useSettingsData', () => {
   it('defaults and isDirty false', () => {
@@ -39,7 +68,7 @@ describe('useSettingsData', () => {
     expect(pushToast).toHaveBeenCalledWith('success', expect.any(String));
   });
 
-  it('handleClearCache toasts permission_denied on that error', async () => {
+  it('handleClearCache toasts the translated permission-denied message on that error', async () => {
     const clearCache = vi.fn().mockRejectedValue(new Error('storage.permission_denied'));
     const pushToast = vi.fn();
     const d = createSettingsData({
@@ -47,7 +76,9 @@ describe('useSettingsData', () => {
       pushToast: pushToast as never,
     });
     await d.handleClearCache();
-    expect(pushToast).toHaveBeenCalledWith('error', 'storage.permission_denied');
+    // BUG-2: the raw backend code used to be pushed straight to the toast, so
+    // the user saw the untranslated literal. It is resolved through `t` now.
+    expect(pushToast).toHaveBeenCalledWith('error', 'storage.permissionDenied');
   });
 
   it('handleExportColdBackup calls Drive service when userId present and Drive authorized', async () => {
@@ -296,5 +327,413 @@ describe('useSettingsData dictionary transfer', () => {
 
     expect(d.dictionaryImportError).toBe('bad payload');
     expect(d.dictionaryImportResult).toBeNull();
+  });
+});
+
+describe('useSettingsData real library and highlight exports', () => {
+  let capturedBlob: Blob | null;
+  let downloaded: string | null;
+
+  beforeEach(() => {
+    capturedBlob = null;
+    downloaded = null;
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn((blob: Blob) => {
+      capturedBlob = blob;
+      return 'blob:mock';
+    });
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloaded = this.download;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('serializes the real books to a dated JSON envelope and downloads it', async () => {
+    const pushToast = vi.fn();
+    const d = createSettingsData({ pushToast: pushToast as never });
+
+    await d.handleExportLibrary([
+      makeBook(),
+      makeBook({ id: 'b2', title: 'Neuromancer', author: 'William Gibson' }),
+    ]);
+
+    expect(downloaded).toMatch(/^nexo-library-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(capturedBlob).not.toBeNull();
+    const parsed = parseExportEnvelope(await capturedBlob!.text());
+    expect(parsed.manifest.schema).toBe(1);
+    expect(parsed.manifest.modules).toEqual(['books']);
+    expect(parsed.books).toHaveLength(2);
+
+    const first = parsed.books![0];
+    // The rich, portable fields survive — no more lossy { id, title }.
+    expect(first).toMatchObject({
+      id: 'b1',
+      title: 'Dune',
+      author: 'Frank Herbert',
+      format: 'epub',
+      currentPage: 42,
+      totalPages: 412,
+      progressPercentage: 10.2,
+      minutesRead: 120,
+      createdAt: '2026-08-01T10:00:00Z',
+      updatedAt: '2026-09-01T10:00:00Z',
+      collectionIds: [1, 2],
+      genre: 'sci-fi',
+      language: 'en',
+      readingStatus: 'reading',
+      stateVersion: 3,
+    });
+    // Decision 3: the local path and the presentation flag never leave.
+    expect(first).not.toHaveProperty('coverPath');
+    expect(first).not.toHaveProperty('coverUserDeleted');
+    // The local file path of ReaderBook is not a DTO field and is not exported.
+    expect(first).not.toHaveProperty('filePath');
+
+    expect(pushToast).toHaveBeenCalledWith('success', 'settings.data.libraryExported');
+    expect(d.isExportingLibrary).toBe(false);
+  });
+
+  it('surfaces a clear message instead of an empty file when there are no books', async () => {
+    const pushToast = vi.fn();
+    const d = createSettingsData({ pushToast: pushToast as never });
+
+    await d.handleExportLibrary([]);
+
+    expect(capturedBlob).toBeNull();
+    expect(downloaded).toBeNull();
+    expect(pushToast).toHaveBeenCalledWith('error', 'settings.data.libraryExportEmpty');
+  });
+
+  it('keeps the full HighlightDto in the annotations module, filtered by book', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([
+      {
+        id: 'h1',
+        bookId: 'b1',
+        text: 'A line',
+        note: 'my note',
+        color: 'yellow',
+        pageNumber: 3,
+        createdAt: '2026-10-03T00:00:00Z',
+        updatedAt: '2026-10-04T00:00:00Z',
+        cfi: '/6/4!/4/2:0',
+      },
+    ]);
+    const pushToast = vi.fn();
+    const d = createSettingsData({
+      listHighlights: listHighlights as never,
+      pushToast: pushToast as never,
+    });
+    d.handleSelectedExportBookChange('b1');
+
+    await d.handleExportHighlights([makeBook()]);
+
+    expect(listHighlights).toHaveBeenCalledWith('b1');
+    expect(downloaded).toMatch(/^nexo-highlights-\d{4}-\d{2}-\d{2}\.json$/);
+    const parsed = parseExportEnvelope(await capturedBlob!.text());
+    expect(parsed.manifest.schema).toBe(1);
+    expect(parsed.manifest.modules).toEqual(['annotations']);
+    expect(parsed.books).toBeUndefined();
+    expect(parsed.annotations).toEqual([
+      {
+        id: 'h1',
+        bookId: 'b1',
+        text: 'A line',
+        note: 'my note',
+        color: 'yellow',
+        pageNumber: 3,
+        createdAt: '2026-10-03T00:00:00Z',
+        updatedAt: '2026-10-04T00:00:00Z',
+        cfi: '/6/4!/4/2:0',
+      },
+    ]);
+    expect(pushToast).toHaveBeenCalledWith('success', 'settings.data.highlightsExported');
+  });
+
+  it('reads all highlights when "all" is selected', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([
+      {
+        id: 'h1',
+        bookId: 'b1',
+        text: 'A line',
+        color: 'yellow',
+        pageNumber: 3,
+        createdAt: '2026-10-03T00:00:00Z',
+        updatedAt: '2026-10-03T00:00:00Z',
+      },
+    ]);
+    const d = createSettingsData({ listHighlights: listHighlights as never });
+
+    await d.handleExportHighlights([]);
+
+    expect(listHighlights).toHaveBeenCalledWith(undefined);
+  });
+
+  it('renders markdown highlights grouped by title and author with note, page and date', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([
+      {
+        id: 'h1',
+        bookId: 'b1',
+        text: 'A line',
+        note: 'my note',
+        color: 'yellow',
+        pageNumber: 3,
+        createdAt: '2026-10-03T00:00:00Z',
+        updatedAt: '2026-10-03T00:00:00Z',
+      },
+    ]);
+    const d = createSettingsData({ listHighlights: listHighlights as never });
+    d.handleSelectedExportFormatChange('markdown');
+
+    await d.handleExportHighlights([makeBook()]);
+
+    expect(downloaded).toMatch(/^nexo-highlights-\d{4}-\d{2}-\d{2}\.md$/);
+    const markdown = await capturedBlob!.text();
+    expect(markdown).toContain('# Highlights');
+    expect(markdown).toContain('## Dune — Frank Herbert');
+    expect(markdown).toContain('> A line');
+    expect(markdown).toContain('Note: my note');
+    expect(markdown).toContain('Page 3 · yellow · 2026-10-03T00:00:00Z');
+  });
+
+  it('falls back to a labelled raw id when a highlight book is missing from the list', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([
+      {
+        id: 'h9',
+        bookId: 'b9',
+        text: 'Orphan line',
+        color: 'blue',
+        pageNumber: 1,
+        createdAt: '2026-10-03T00:00:00Z',
+        updatedAt: '2026-10-03T00:00:00Z',
+      },
+    ]);
+    const d = createSettingsData({ listHighlights: listHighlights as never });
+    d.handleSelectedExportFormatChange('markdown');
+
+    await d.handleExportHighlights([makeBook()]);
+
+    const markdown = await capturedBlob!.text();
+    expect(markdown).toContain('## settings.unknownBook (b9)');
+    expect(markdown).toContain('> Orphan line');
+  });
+
+  it('surfaces a clear message instead of an empty file when there are no highlights', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([]);
+    const pushToast = vi.fn();
+    const d = createSettingsData({
+      listHighlights: listHighlights as never,
+      pushToast: pushToast as never,
+    });
+
+    await d.handleExportHighlights([makeBook()]);
+
+    expect(capturedBlob).toBeNull();
+    expect(downloaded).toBeNull();
+    expect(pushToast).toHaveBeenCalledWith('error', 'settings.data.highlightsExportEmpty');
+  });
+
+  it('surfaces a highlight read failure as an error instead of failing silently', async () => {
+    const listHighlights = vi.fn().mockRejectedValue(new Error('db offline'));
+    const pushToast = vi.fn();
+    const d = createSettingsData({
+      listHighlights: listHighlights as never,
+      pushToast: pushToast as never,
+    });
+
+    await d.handleExportHighlights([]);
+
+    expect(pushToast).toHaveBeenCalledWith('error', 'db offline');
+    expect(capturedBlob).toBeNull();
+    expect(d.isExportingHighlights).toBe(false);
+  });
+});
+
+describe('useSettingsData export modules and scopes (EXP-04/06/07)', () => {
+  let capturedBlob: Blob | null;
+  let downloaded: string | null;
+
+  const collections: CollectionDto[] = [
+    { id: 1, name: 'Favorites', color: null, isSystem: true, createdAt: '2026-01-01T00:00:00Z' },
+    { id: 2, name: 'Sci-fi', color: 'yellow', isSystem: false, createdAt: '2026-02-01T00:00:00Z' },
+  ];
+
+  const highlighted = {
+    id: 'h1',
+    bookId: 'b1',
+    text: 'A line',
+    note: 'my note',
+    color: 'yellow',
+    pageNumber: 3,
+    createdAt: '2026-10-03T00:00:00Z',
+    updatedAt: '2026-10-04T00:00:00Z',
+    cfi: '/6/4!/4/2:0',
+  };
+  const bareHighlight = { ...highlighted, id: 'h2', note: null, text: 'No note here' };
+
+  beforeEach(() => {
+    capturedBlob = null;
+    downloaded = null;
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn((blob: Blob) => {
+      capturedBlob = blob;
+      return 'blob:mock';
+    });
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloaded = this.download;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('exports the collections module and round-trips every field', async () => {
+    const pushToast = vi.fn();
+    const d = createSettingsData({ pushToast: pushToast as never });
+
+    await d.handleExportCollections(collections);
+
+    expect(downloaded).toMatch(/^nexo-collections-\d{4}-\d{2}-\d{2}\.json$/);
+    const parsed = parseExportEnvelope(await capturedBlob!.text());
+    expect(parsed.manifest.schema).toBe(1);
+    expect(parsed.manifest.modules).toEqual(['collections']);
+    expect(parsed.collections).toEqual(collections);
+    expect(parsed.books).toBeUndefined();
+    expect(parsed.annotations).toBeUndefined();
+    expect(pushToast).toHaveBeenCalledWith('success', 'settings.data.collectionsExported');
+  });
+
+  it('refuses the collections export with no collections and writes no file', async () => {
+    const pushToast = vi.fn();
+    const d = createSettingsData({ pushToast: pushToast as never });
+
+    await d.handleExportCollections([]);
+
+    expect(capturedBlob).toBeNull();
+    expect(downloaded).toBeNull();
+    expect(pushToast).toHaveBeenCalledWith('error', 'settings.data.collectionsExportEmpty');
+  });
+
+  it('exports every highlight by default and only annotated ones when the filter is on', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([highlighted, bareHighlight]);
+    const d = createSettingsData({ listHighlights: listHighlights as never });
+
+    await d.handleExportHighlights([]);
+    const withAll = parseExportEnvelope(await capturedBlob!.text());
+    expect(withAll.annotations).toHaveLength(2);
+
+    capturedBlob = null;
+    d.handleAnnotationsOnlyWithNoteChange(true);
+    await d.handleExportHighlights([]);
+    const withNote = parseExportEnvelope(await capturedBlob!.text());
+    expect(withNote.manifest.modules).toEqual(['annotations']);
+    expect(withNote.annotations).toEqual([highlighted]);
+  });
+
+  it('refuses the annotations export when the only-with-note filter empties it', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([bareHighlight]);
+    const pushToast = vi.fn();
+    const d = createSettingsData({
+      listHighlights: listHighlights as never,
+      pushToast: pushToast as never,
+    });
+    d.handleAnnotationsOnlyWithNoteChange(true);
+
+    await d.handleExportHighlights([]);
+
+    expect(capturedBlob).toBeNull();
+    expect(downloaded).toBeNull();
+    expect(pushToast).toHaveBeenCalledWith('error', 'settings.data.highlightsExportEmpty');
+  });
+
+  it('exports one book with its annotations, and only that book', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([highlighted]);
+    const pushToast = vi.fn();
+    const d = createSettingsData({
+      listHighlights: listHighlights as never,
+      pushToast: pushToast as never,
+    });
+
+    await d.handleExportBook('b1', [makeBook(), makeBook({ id: 'b2', title: 'Other' })]);
+
+    expect(listHighlights).toHaveBeenCalledWith('b1');
+    expect(downloaded).toMatch(/^nexo-book-b1-\d{4}-\d{2}-\d{2}\.json$/);
+    const parsed = parseExportEnvelope(await capturedBlob!.text());
+    expect(parsed.manifest.modules).toEqual(['books', 'annotations']);
+    expect(parsed.books).toHaveLength(1);
+    expect(parsed.books![0].id).toBe('b1');
+    expect(parsed.annotations).toEqual([highlighted]);
+    expect(parsed.collections).toBeUndefined();
+    expect(pushToast).toHaveBeenCalledWith('success', 'settings.data.bookExported');
+  });
+
+  it('refuses the per-book export when the book is gone and writes no file', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([]);
+    const pushToast = vi.fn();
+    const d = createSettingsData({
+      listHighlights: listHighlights as never,
+      pushToast: pushToast as never,
+    });
+
+    await d.handleExportBook('missing', [makeBook()]);
+
+    expect(listHighlights).not.toHaveBeenCalled();
+    expect(capturedBlob).toBeNull();
+    expect(pushToast).toHaveBeenCalledWith('error', 'settings.data.bookExportNone');
+  });
+
+  it('exports everything as one envelope with every module in canonical order', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([highlighted]);
+    const pushToast = vi.fn();
+    const d = createSettingsData({
+      listHighlights: listHighlights as never,
+      pushToast: pushToast as never,
+    });
+
+    await d.handleExportEverything([makeBook()], collections);
+
+    expect(downloaded).toMatch(/^nexo-export-\d{4}-\d{2}-\d{2}\.json$/);
+    const parsed = parseExportEnvelope(await capturedBlob!.text());
+    expect(parsed.manifest.schema).toBe(1);
+    expect(parsed.manifest.modules).toEqual(['books', 'annotations', 'collections']);
+    expect(parsed.books).toHaveLength(1);
+    expect(parsed.books![0]).not.toHaveProperty('coverPath');
+    expect(parsed.annotations).toEqual([highlighted]);
+    expect(parsed.collections).toEqual(collections);
+    expect(pushToast).toHaveBeenCalledWith('success', 'settings.data.exportedEverything');
+  });
+
+  it('keeps every selected module in the manifest even when one array is empty', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([]);
+    const d = createSettingsData({ listHighlights: listHighlights as never });
+
+    await d.handleExportEverything([makeBook()], []);
+
+    const parsed = parseExportEnvelope(await capturedBlob!.text());
+    expect(parsed.manifest.modules).toEqual(['books', 'annotations', 'collections']);
+    expect(parsed.annotations).toEqual([]);
+    expect(parsed.collections).toEqual([]);
+  });
+
+  it('refuses the everything export when no module has anything and writes no file', async () => {
+    const listHighlights = vi.fn().mockResolvedValue([]);
+    const pushToast = vi.fn();
+    const d = createSettingsData({
+      listHighlights: listHighlights as never,
+      pushToast: pushToast as never,
+    });
+
+    await d.handleExportEverything([], []);
+
+    expect(capturedBlob).toBeNull();
+    expect(downloaded).toBeNull();
+    expect(pushToast).toHaveBeenCalledWith('error', 'settings.data.exportEverythingEmpty');
   });
 });

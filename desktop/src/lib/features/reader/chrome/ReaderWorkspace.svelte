@@ -25,10 +25,10 @@
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
-  import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation';
   import { createSpineResolver } from './useSpineResolver.svelte';
   import { createHighlights } from './useHighlights.svelte';
   import { createImmersiveChrome } from './useImmersiveChrome.svelte';
+  import { createReaderShortcuts } from './useReaderShortcuts.svelte';
   import { createReaderZoom } from './useReaderZoom.svelte';
   import { createHighlightMenu } from '../highlight/useHighlightMenu.svelte';
   import { createBookmarksPanel } from './useBookmarksPanel.svelte';
@@ -160,13 +160,10 @@
     zoom.handleTextSettingsChange(updated);
   }
 
-  // svelte-ignore state_referenced_locally
   const nav = createReaderNavigation({
     getViewer: () => viewer,
-    // svelte-ignore state_referenced_locally
-    onPdfPageChange: onPdfPageChange as unknown as never,
-    // svelte-ignore state_referenced_locally
-    onEpubLocationChange: onEpubLocationChange as unknown as never,
+    onPdfPageChange: (page, total) => onPdfPageChange?.(page, total),
+    onEpubLocationChange: (cfi, pct) => onEpubLocationChange?.(cfi, pct),
   });
 
   let selectedText = $state('');
@@ -250,6 +247,9 @@
   );
 
   const chrome = createImmersiveChrome({ getPanelOpen: () => panelOpen });
+  // Ctrl+F / ⌘F opens the in-book search. Kept separate from the chrome hook
+  // because it is reader-scoped and reads its binding from the shared registry.
+  const readerShortcuts = createReaderShortcuts({ onToggleSearch: () => toggleSearch() });
   let isFullscreen = $derived(chrome.isFullscreen);
   let headerVisible = $derived(chrome.headerVisible);
   let edgeNavVisible = $derived(chrome.edgeNavVisible);
@@ -280,6 +280,7 @@
     });
     window.addEventListener('keydown', chrome.handleGlobalKeydown as EventListener);
     window.addEventListener('keydown', zoom.handleGlobalKeydown as EventListener);
+    window.addEventListener('keydown', readerShortcuts.handleGlobalKeydown as EventListener);
     return () => {
       root.removeEventListener('mousemove', chrome.handleWorkspaceMouseMove);
       window.removeEventListener(
@@ -289,6 +290,7 @@
       );
       window.removeEventListener('keydown', chrome.handleGlobalKeydown as EventListener);
       window.removeEventListener('keydown', zoom.handleGlobalKeydown as EventListener);
+      window.removeEventListener('keydown', readerShortcuts.handleGlobalKeydown as EventListener);
       chrome.cleanup();
       zoom.cleanup();
     };
@@ -322,7 +324,10 @@
   const bookProgress = $derived(nav.bookProgress || Math.round(percentage));
   const headerCurrentPage = $derived(nav.headerCurrentPage);
   const headerTotalPages = $derived(nav.headerTotalPages);
-  const headerFontSize = $derived(clampZoomPercent(localReaderSettings.epub.fontSize ?? 100));
+  // The fullscreen `%` reads the viewer scale (PDF) or viewer zoom (EPUB),
+  // never `epub.fontSize` for a PDF. `getScaleOrZoom` subscribes to the
+  // viewer's own state, so wheel/keys/dropdown all flow into this readout.
+  const headerZoomPercent = $derived(viewer.getScaleOrZoom());
   const showHeaderReadingControls = $derived(
     isFullscreen && headerTotalPages > 0 && activeReadingBook !== null,
   );
@@ -513,9 +518,7 @@
     currentPage={headerCurrentPage}
     totalPages={headerTotalPages}
     currentPercentage={bookProgress}
-    fontSizePercent={headerFontSize}
-    onPrev={goPrevPage}
-    onNext={goNextPage}
+    fontSizePercent={headerZoomPercent}
     onGoToPage={handleHeaderGoToPage}
     onFontSizeChange={handleHeaderFontSizeChange}
   />
@@ -536,12 +539,9 @@
       <p class="font-inter text-sm text-(--color-text-inverse)">{t('reader.no_book_loaded')}</p>
     {:else if viewer.kind === 'pdf'}
       <div
-        class="relative bg-white flex flex-col min-h-0 h-full"
+        class="relative bg-white flex flex-col min-h-0 h-full w-full"
         class:rounded-xl={!isFullscreen}
         class:shadow-lg={!isFullscreen}
-        class:w-200={!isFullscreen}
-        class:w-full={isFullscreen}
-        class:h-full={isFullscreen}
       >
         <PdfViewer
           bind:this={pdfRef}
@@ -561,18 +561,16 @@
           onTocReady={nav.handleTocReady}
           externalTocNavigate={nav.tocNavigate}
           {isFullscreen}
-          onToggleFullscreen={toggleFullscreen}
+          tocOpen={nav.showTocPanel}
           persistedHighlights={highlightsState.persistedHighlights}
           {t}
         />
       </div>
     {:else if viewer.kind === 'epub'}
       <div
-        class="relative overflow-hidden bg-white flex flex-col h-full min-h-0"
+        class="relative overflow-hidden bg-white flex flex-col h-full min-h-0 w-full"
         class:rounded-xl={!isFullscreen}
         class:shadow-lg={!isFullscreen}
-        class:w-200={!isFullscreen}
-        class:w-full={isFullscreen}
       >
         <EpubNativeViewer
           bind:this={epubRef}
@@ -589,9 +587,6 @@
           onselection={handleViewerSelection}
           onselectionclear={dismissToolbar}
           {isFullscreen}
-          onToggleFullscreen={toggleFullscreen}
-          showToc={nav.showTocPanel}
-          onToggleToc={toggleTocPanel}
           onSettingsChange={handleTextSettingsChange}
           persistedHighlights={highlightsState.persistedHighlights}
           onHighlightAction={handleHighlightAction}
@@ -718,7 +713,7 @@
     {@const nextDisabled = nav.nextDisabled}
     <button
       type="button"
-      class="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
+      class="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-(--color-bg-deep)/40 text-(--color-text-inverse) backdrop-blur hover:bg-(--color-bg-deep)/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
         ? 'opacity-100'
         : 'opacity-0 pointer-events-none'} {prevDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
       aria-label={t('reader.prev_page')}
@@ -736,7 +731,7 @@
     >
     <button
       type="button"
-      class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
+      class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-(--color-bg-deep)/40 text-(--color-text-inverse) backdrop-blur hover:bg-(--color-bg-deep)/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
         ? 'opacity-100'
         : 'opacity-0 pointer-events-none'} {nextDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
       aria-label={t('reader.next_page')}
@@ -755,7 +750,7 @@
     {#if selectedText}
       <button
         type="button"
-        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full bg-(--color-accent-blue) px-4 py-2 text-sm font-medium text-white shadow-lg hover:opacity-90 cursor-pointer"
+        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full bg-(--color-accent-blue) px-4 py-2 text-sm font-medium text-(--color-accent-on) shadow-lg hover:opacity-90 cursor-pointer"
         onclick={() => void handleShareText()}
         ><svg
           width="16"

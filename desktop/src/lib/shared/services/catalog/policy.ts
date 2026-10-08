@@ -16,10 +16,25 @@ export const MAX_DELAYED_RETRIES = 1;
 export const RETRY_BASE_DELAY_MS = 800;
 /**
  * Hard ceiling for a single catalog attempt (15s reference parity).
- * Single externalized constant: the transport deadline below and the rail-level
- * total bound (`DiscoverRailsDomainState`) both read it, never a duplicated literal.
+ * Single externalized constant: it is the rail-level total bound
+ * (`DiscoverRailsDomainState`) and the transport fallback for callers that pass
+ * no dedicated budget; the per-shape budgets below are what the datasources use.
  */
 export const REQUEST_DEADLINE_MS = 15_000;
+/**
+ * Per-attempt budget for a search/featured call. Derived from the measured
+ * cold Gutendex `?search=<term>` stall (>45s — unsalvageable at any budget) and
+ * the measured lukewarm repeat (~200ms): 6s fails fast well under both the 45s
+ * stall and the 15s rail bound, and the single delayed retry (6 + 0.8 + 6 =
+ * 12.8s) still fits inside the rail bound.
+ */
+export const SEARCH_DEADLINE_MS = 6_000;
+/**
+ * Per-attempt budget for a detail call. Derived from the measured Gutendex
+ * `/books/{id}/` latency (209–533ms): 5s is ~9x the worst observed case, so a
+ * genuinely slow detail is still allowed to answer.
+ */
+export const DETAIL_DEADLINE_MS = 5_000;
 
 export function buildUserAgent(platform: 'Desktop' | 'Android'): string {
   return `Nexo/${platform} (contact: TBD)`;
@@ -46,6 +61,13 @@ export function backoffDelayMs(attempt: number): number {
 export interface ComposedDeadline {
   /** Aborts when either the caller signal aborts or the deadline elapses. */
   signal: AbortSignal;
+  /**
+   * True once the deadline's OWN timer fired — never for a caller abort or a
+   * real network rejection. Lets `fetchWithRetry` tell a slow upstream (a
+   * timeout) from a genuine connectivity failure without inspecting the abort
+   * reason object.
+   */
+  timedOut: () => boolean;
   /** Clear the timer and detach the listener once the attempt settles. */
   dispose: () => void;
 }
@@ -60,17 +82,19 @@ export function composeDeadline(
   ms: number = REQUEST_DEADLINE_MS,
 ): ComposedDeadline {
   const controller = new AbortController();
+  let timedOut = false;
   const abortFromCaller = (): void => controller.abort(signal?.reason);
   if (signal) {
     if (signal.aborted) abortFromCaller();
     else signal.addEventListener('abort', abortFromCaller, { once: true });
   }
-  const handle = setTimeout(
-    () => controller.abort(new Error(`catalog deadline of ${ms}ms elapsed`)),
-    ms,
-  );
+  const handle = setTimeout(() => {
+    timedOut = true;
+    controller.abort(new Error(`catalog deadline of ${ms}ms elapsed`));
+  }, ms);
   return {
     signal: controller.signal,
+    timedOut: () => timedOut,
     dispose: () => {
       clearTimeout(handle);
       signal?.removeEventListener('abort', abortFromCaller);
@@ -80,19 +104,30 @@ export function composeDeadline(
 
 /**
  * Fetch with exactly one delayed retry on 429/5xx, each attempt bounded by
- * `REQUEST_DEADLINE_MS` through `composeDeadline`.
- * Network failures (including deadline expiry and caller aborts) surface as
- * NETWORK_ERROR; HTTP failures as mapped codes.
+ * `deadlineMs` through `composeDeadline`.
+ *
+ * Failure classification separates a slow upstream from a connectivity failure:
+ * when the deadline's own timer fires the attempt rejects with
+ * `UPSTREAM_TIMEOUT` (retryable, NOT the offline code); a caller abort or a
+ * genuine fetch rejection keeps `NETWORK_ERROR`. HTTP failures map as before.
  */
 export async function fetchWithRetry(
   url: string,
   init: RequestInit,
   fetchFn: typeof fetch = fetch,
+  deadlineMs: number = REQUEST_DEADLINE_MS,
 ): Promise<Response> {
   const attempt = async (): Promise<Response> => {
-    const deadline = composeDeadline(init.signal, REQUEST_DEADLINE_MS);
+    const deadline = composeDeadline(init.signal, deadlineMs);
     try {
       return await fetchFn(url, { ...init, signal: deadline.signal });
+    } catch (err) {
+      // Only the deadline's own timer means "the source is slow"; the caller
+      // abort and a real fetch rejection fall through to NETWORK_ERROR below.
+      if (deadline.timedOut()) {
+        throw catalogError('UPSTREAM_TIMEOUT', `catalog deadline of ${deadlineMs}ms elapsed`);
+      }
+      throw err;
     } finally {
       deadline.dispose();
     }
@@ -101,7 +136,8 @@ export async function fetchWithRetry(
   let response: Response;
   try {
     response = await attempt();
-  } catch {
+  } catch (err) {
+    if (isCatalogError(err)) throw err;
     throw catalogError('NETWORK_ERROR', 'catalog request failed');
   }
   if (response.ok) return response;
@@ -111,7 +147,8 @@ export async function fetchWithRetry(
   await new Promise((resolve) => setTimeout(resolve, backoffDelayMs(0)));
   try {
     response = await attempt();
-  } catch {
+  } catch (err) {
+    if (isCatalogError(err)) throw err;
     throw catalogError('NETWORK_ERROR', 'catalog retry failed');
   }
   if (!response.ok) {

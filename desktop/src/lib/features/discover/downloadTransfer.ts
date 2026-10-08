@@ -16,7 +16,7 @@ import {
 } from '$lib/shared/api/downloadApi';
 
 /** Event name emitted by the Rust download command. */
-export const DOWNLOAD_PROGRESS_EVENT = 'discover-download-progress';
+const DOWNLOAD_PROGRESS_EVENT = 'discover-download-progress';
 
 /** Byte progress callback; `totalBytes` is `null` when the host omits the length. */
 export type DiscoverProgressFn = (doneBytes: number, totalBytes: number | null) => void;

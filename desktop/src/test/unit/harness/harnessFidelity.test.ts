@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { describe, expect, it } from 'vitest';
 import DiscoverRailSection from '$lib/features/discover/DiscoverRailSection.svelte';
@@ -190,7 +190,9 @@ describe('harness fidelity — PointerEvent', () => {
     expect(seen[0]).toBeInstanceOf(MouseEvent);
 
     // ...and the production document-level pointerdown handler reacted to it.
-    expect(screen.queryByRole('menu')).toBeNull();
+    // The menu exits with a 150ms transition, so its node leaves the DOM just
+    // after the close rather than in the same tick.
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
 
     document.removeEventListener('pointerdown', spy, true);
   });

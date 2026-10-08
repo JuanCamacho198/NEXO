@@ -1,38 +1,43 @@
 <script lang="ts">
+  import type { MessageKey } from '$lib/shared/i18n';
   import { theme, toggleTheme } from '$lib/shared/stores/theme';
 
-  let animating = $state(false);
+  type Props = {
+    t?: (key: MessageKey, params?: Record<string, string | number>) => string;
+  };
 
-  function handleToggle(): void {
-    if (animating) return;
-    animating = true;
-    toggleTheme();
-    setTimeout(() => {
-      animating = false;
-    }, 420);
-  }
+  let { t }: Props = $props();
+
+  const label = $derived(
+    $theme === 'dark'
+      ? (t?.('theme.currentDark') ?? 'Tema oscuro')
+      : (t?.('theme.currentLight') ?? 'Tema claro'),
+  );
+  const actionLabel = $derived(
+    $theme === 'dark'
+      ? (t?.('theme.switchToLight') ?? 'Cambiar a tema claro')
+      : (t?.('theme.switchToDark') ?? 'Cambiar a tema oscuro'),
+  );
 </script>
 
 <button
   id="theme-toggle-btn"
-  class="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 bg-transparent border border-(--color-border) text-(--color-text-muted) cursor-pointer transition-all duration-200 text-[0.8125rem] font-medium select-none [-webkit-tap-highlight-color:transparent] hover:bg-(--color-panel-accent) hover:border-(--color-border-strong) hover:text-(--color-primary) hover:shadow-(--shadow-glow) active:scale-[0.98]"
+  type="button"
+  class="flex w-full items-center gap-2.5 rounded-lg border border-(--color-border) px-3 py-2 text-sm font-medium text-(--color-text-muted) transition-colors hover:border-(--color-border-strong) hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
   style="font-family: var(--font-sans);"
-  class:animating
-  onclick={handleToggle}
-  aria-label={$theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
-  title={$theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+  onclick={toggleTheme}
+  aria-label={`${label}. ${actionLabel}`}
+  title={actionLabel}
 >
-  <div class="w-5 h-5 flex items-center justify-center shrink-0 relative">
-    <!-- Sun icon (visible in light mode) -->
+  <span class="relative flex size-5 shrink-0 items-center justify-center">
     <svg
-      class="absolute transition-[opacity,transform] duration-420 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] origin-center"
+      class="absolute transition-[opacity,transform] duration-300 ease-out"
       class:opacity-100={$theme === 'light'}
       class:opacity-0={$theme === 'dark'}
       class:scale-100={$theme === 'light'}
       class:scale-[0.4]={$theme === 'dark'}
       class:rotate-0={$theme === 'light'}
       class:rotate-90={$theme === 'dark'}
-      class:pointer-events-none={$theme === 'dark'}
       width="18"
       height="18"
       viewBox="0 0 24 24"
@@ -49,16 +54,14 @@
       />
     </svg>
 
-    <!-- Moon icon (visible in dark mode) -->
     <svg
-      class="absolute transition-[opacity,transform] duration-420 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] origin-center"
+      class="absolute transition-[opacity,transform] duration-300 ease-out"
       class:opacity-100={$theme === 'dark'}
       class:opacity-0={$theme === 'light'}
       class:scale-100={$theme === 'dark'}
       class:scale-[0.4]={$theme === 'light'}
       class:rotate-0={$theme === 'dark'}
       class:rotate-90={$theme === 'light'}
-      class:pointer-events-none={$theme === 'light'}
       width="18"
       height="18"
       viewBox="0 0 24 24"
@@ -75,31 +78,7 @@
         stroke-linejoin="round"
       />
     </svg>
-  </div>
-
-  <span class="flex-1 text-left">
-    {$theme === 'dark' ? 'Tema oscuro' : 'Tema claro'}
   </span>
+
+  <span class="flex-1 text-left">{label}</span>
 </button>
-
-<style>
-  /* Spin animation on click */
-  .animating .opacity-100,
-  .animating .scale-100 {
-    animation: icon-spin-in 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  }
-
-  @keyframes icon-spin-in {
-    0% {
-      transform: scale(0.3) rotate(-180deg);
-      opacity: 0;
-    }
-    60% {
-      opacity: 0.8;
-    }
-    100% {
-      transform: scale(1) rotate(0deg);
-      opacity: 1;
-    }
-  }
-</style>

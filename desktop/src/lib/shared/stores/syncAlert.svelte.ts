@@ -9,7 +9,12 @@
  *
  * The store never schedules retries: it is a pure state holder, so repeated
  * auth-class reports just refresh the banner (no hot retry loop — SR-2).
+ *
+ * Classification (NOTIF-01): this is a domain status store, not a notification
+ * store — the banner keeps its own state and UI. It ALSO emits one deduped
+ * `notify` so the same user-visible event reaches the unified tray.
  */
+import { notify } from './notificationCenter.svelte';
 
 export type SyncAlertType = 'auth_required' | 'auth_expired';
 
@@ -48,5 +53,14 @@ export function reportAuthError(error: unknown): boolean {
     type,
     message: error instanceof Error && error.message ? error.message : fallback,
   };
+  // Unified tray entry, deduped per auth state so a retry loop cannot spam it.
+  notify({
+    source: 'sync',
+    severity: 'error',
+    i18nKey:
+      type === 'auth_required' ? 'notifications.auth.required' : 'notifications.auth.expired',
+    dedupKey: `sync-auth:${type}`,
+    target: { kind: 'route', route: 'sync' },
+  });
   return true;
 }

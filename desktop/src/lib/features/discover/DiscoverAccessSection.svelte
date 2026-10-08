@@ -35,7 +35,7 @@
     </h4>
     {#each groups as entry (entry.group)}
       <div class="mt-2">
-        <p class="m-0 text-2xs font-medium text-(--color-text-muted)">{t(entry.labelKey)}</p>
+        <p class="m-0 text-micro font-medium text-(--color-text-muted)">{t(entry.labelKey)}</p>
         <ul class="m-0 mt-1 flex list-none flex-col gap-0.5 p-0">
           {#each entry.options as option (option.url)}
             <li>

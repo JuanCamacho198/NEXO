@@ -5,6 +5,8 @@ import svelteParser from 'svelte-eslint-parser';
 import prettier from 'eslint-config-prettier';
 import tailwindV4Canonical from './eslint-local-rules/tailwind-v4-canonical.js';
 import svelteRunesOnly from './eslint-local-rules/svelte-runes-only.js';
+import settingsAtomDrift from './eslint-local-rules/settings-atom-drift.js';
+import legacyTypeSize from './eslint-local-rules/legacy-type-size.js';
 
 export default [
   {
@@ -55,6 +57,8 @@ export default [
         rules: {
           'tailwind-v4-canonical': tailwindV4Canonical,
           'svelte-runes-only': svelteRunesOnly,
+          'settings-atom-drift': settingsAtomDrift,
+          'legacy-type-size': legacyTypeSize,
         },
       },
     },
@@ -73,6 +77,18 @@ export default [
       '@typescript-eslint/no-explicit-any': 'warn',
       'local-rules/tailwind-v4-canonical': 'warn',
       'local-rules/svelte-runes-only': 'error',
+      // UI-07 FLIP: legacy-type-size goes from 'warn' to 'error' once text-2sm/text-2xs are retired.
+      'local-rules/legacy-type-size': 'error',
+    },
+  },
+  {
+    // UI-06 guard: raw <button> and text-lg fail the build inside the settings tree.
+    // ('local-rules' plugin object is registered once in the **/*.svelte block
+    // above; redefining it here is a flat-config error, so this block only sets
+    // the severity. The rule also self-gates on the settings path.)
+    files: ['src/lib/features/settings/**/*.svelte'],
+    rules: {
+      'local-rules/settings-atom-drift': 'error',
     },
   },
   {

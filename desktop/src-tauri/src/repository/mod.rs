@@ -9,6 +9,7 @@ pub mod files;
 pub mod highlights;
 pub mod library;
 pub mod metrics;
+pub mod notifications;
 pub mod progress;
 pub mod reading_stats;
 pub mod reading_status;
@@ -26,7 +27,7 @@ use crate::error::{AppError, AppResult};
 use crate::models::{
     ActivityPoint, AddDictionaryWordInput, AppSettingDto, BookCoverDto, BookDeleteInput, BookDto,
     BookImportInput, BookmarkDto, CollectionDto, CreateTagInput, DictionaryWordDto, HighlightDto,
-    IndexBookTextInput, LibraryBookDto, ReadingProgressDto, ReadingSessionInput,
+    IndexBookTextInput, LibraryBookDto, NotificationDto, ReadingProgressDto, ReadingSessionInput,
     ReadingSessionSavedDto, ReadingStatsSummaryDto, RemoteHighlightRow, RemoteReadingSessionRow,
     SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput, SaveProgressInput,
     ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse, TagDto, UpdateHighlightInput,
@@ -61,7 +62,6 @@ impl LibraryRepository {
     pub fn get_settings(&self) -> AppResult<Vec<AppSettingDto>> {
         settings::get_settings(self)
     }
-
     pub fn upsert_settings(&mut self, settings: Vec<AppSettingDto>) -> AppResult<()> {
         self::settings::upsert_settings(self, settings)
     }
@@ -76,6 +76,38 @@ impl LibraryRepository {
         user_id: Option<&str>,
     ) -> AppResult<()> {
         settings::save_daily_goal_minutes(self, minutes, user_id)
+    }
+
+    // ─── Notification history (NOTIF-02) ───
+
+    pub fn list_notifications(&self) -> AppResult<Vec<NotificationDto>> {
+        notifications::list_notifications(self)
+    }
+
+    pub fn save_notification(&self, notification: NotificationDto) -> AppResult<()> {
+        notifications::insert_notification(self, &notification)
+    }
+
+    pub fn mark_notification_read(&self, id: &str, read_at: i64) -> AppResult<bool> {
+        notifications::mark_notification_read(self, id, read_at)
+    }
+
+    pub fn mark_all_notifications_read(&self, read_at: i64) -> AppResult<i64> {
+        notifications::mark_all_notifications_read(self, read_at)
+    }
+
+    pub fn clear_notifications(&self) -> AppResult<i64> {
+        notifications::delete_all_notifications(self)
+    }
+
+    /// Sweep both durable retention bounds using the documented defaults.
+    pub fn apply_notification_retention(&self, now_ms: i64) -> AppResult<i64> {
+        notifications::apply_notification_retention(
+            self,
+            now_ms,
+            notifications::MAX_NOTIFICATION_COUNT,
+            notifications::MAX_NOTIFICATION_AGE_MS,
+        )
     }
 
     pub fn get_today_minutes(
@@ -486,6 +518,7 @@ mod tests {
         connection
             .execute_batch(include_str!("../../migrations/0020_drop_dictionary_favorite.sql"))
             .unwrap();
+        connection.execute_batch(include_str!("../../migrations/0021_notifications.sql")).unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {

@@ -2,19 +2,23 @@
  * CompositeCatalogProvider — ordered dynamic composite behind the port.
  * Providers are searched in construction order (built-ins first, curated,
  * then enabled addons in install order); results concat-merge in that order.
- * Page/details caching is per-source with v2 keys carrying the full source
- * string, and reads enforce the existence check (design A1): entries whose
- * source id is not in the active source set at read time are never served.
- * Burst searches are trailing-edge debounced; page < 1 rejects before I/O.
+ * The keyword-search fan-out only includes providers that do not opt out via
+ * `supportsCompositeSearch` (details, per-source search, rails and download
+ * resolution still see every provider). Page/details caching is per-source
+ * with v2 keys carrying the full source string, and reads enforce the
+ * existence check (design A1): entries whose source id is not in the active
+ * source set at read time are never served. Burst searches are trailing-edge
+ * debounced; page < 1 rejects before I/O.
  */
 import { catalogError } from './errors';
-import type {
-  CatalogBook,
-  CatalogFeaturedSort,
-  CatalogProvider,
-  CatalogSource,
-  CatalogSourceInfo,
-  PagedResult,
+import {
+  BUILTIN_GUTENDEX,
+  type CatalogBook,
+  type CatalogFeaturedSort,
+  type CatalogProvider,
+  type CatalogSource,
+  type CatalogSourceInfo,
+  type PagedResult,
 } from './CatalogProvider';
 import {
   DETAIL_TTL_S,
@@ -32,6 +36,11 @@ import { GoogleBooksCatalogProvider, googleBooksProviderOrNull } from './BuiltIn
 import { OpenLibraryCatalogProvider } from './BuiltInCatalogProviders';
 import { mergeResults, resolveDownloadUrl, resolveTotalCount, toPagedResult } from './mappers';
 import { DEBOUNCE_MS, createSearchDebouncer } from './policy';
+import {
+  hasResolvedAuthorities,
+  resolveBookAuthorities as resolveBookAuthorityFields,
+  type OpenLibraryIdentity,
+} from './bookAuthorityResolver';
 
 export interface CompositeOptions {
   debounceMs?: number;
@@ -44,7 +53,7 @@ export interface CompositeOptions {
  * (`builtin:gutendex` -> `gutendex:`); addons use the source id itself
  * (`addon:<id>` -> `addon:<id>:`).
  */
-export function bookIdPrefixForSource(sourceId: string): string | null {
+function bookIdPrefixForSource(sourceId: string): string | null {
   if (sourceId.startsWith('builtin:')) return `${sourceId.slice('builtin:'.length)}:`;
   if (sourceId.startsWith('addon:')) return `${sourceId}:`;
   return null;
@@ -100,7 +109,9 @@ import type { AddonTransport, InstalledAddonRow } from '../addons/AddonRegistry'
  * `googleBooksKey` defaults to blank, which omits Google Books entirely
  * (fail-closed); the app composition root passes
  * `googleBooksKeyFromEnv()` so the ambient environment never leaks into
- * provider construction made by tests.
+ * provider construction made by tests. When Google Books is absent, Gutendex
+ * is left in the composite keyword-search fan-out as the fail-safe source, so
+ * a keyless build never fans out to nothing.
  *
  * `consent` is the per-addon network-consent gate handed to every addon
  * provider (resolve-only gating; search/getDetails stay ungated). Omitted ⇒
@@ -119,7 +130,10 @@ export function defaultCatalogProviders(
     );
   const googleBooks: GoogleBooksCatalogProvider | null = googleBooksProviderOrNull(googleBooksKey);
   return [
-    new GutendexCatalogProvider(),
+    // Gutendex only joins the composite search fan-out when Google Books is
+    // absent (keyless build): it is then the sole keyword-search source, so
+    // search still returns results instead of fanning out to nothing.
+    new GutendexCatalogProvider(undefined, googleBooks === null),
     new OpenLibraryCatalogProvider(),
     ...(googleBooks ? [googleBooks] : []),
     new CuratedCatalogProvider(),
@@ -148,7 +162,7 @@ export interface RebuildingCatalogProviderOptions {
   consent?: AddonConsentGate;
   /**
    * Extra deterministic preload keys owned by the feature layer (e.g. today's
-   * thematic rail page). Called once per composite build; the returned list
+   * author rail pages). Called once per composite build; the returned list
    * MUST stay bounded. A throw degrades to no extra keys.
    */
   preloadPageKeys?: () => readonly string[];
@@ -168,20 +182,21 @@ function safePreloadPageKeys(provider?: () => readonly string[]): readonly strin
 }
 
 /**
- * Seeds the durable cache mirror once per composite build, bounded to the
- * featured keys of the sources that actually support featured plus the
- * caller's explicit extra keys. Absent or non-preloadable caches are a no-op,
- * and a failed preload degrades to an unseeded mirror (the first rail simply
+ * Seeds the durable cache mirror once per composite build with the caller's
+ * explicit feature-owned keys (today's three author rail pages). The featured
+ * keyspace is deliberately NOT preloaded any more: the rails stopped reading
+ * `f:v2:` keys in DISC-04b, so warming them would read durable rows nothing in
+ * the shipping app consumes. Absent or non-preloadable caches are a no-op, and
+ * a failed preload degrades to an unseeded mirror (the first rail simply
  * refetches) — never a build failure.
  */
 async function preloadDiscoverCache(
   cache: DiscoverCacheStore | null,
-  composite: CompositeCatalogProvider,
   extraKeys: readonly string[],
 ): Promise<void> {
   if (!isPreloadable(cache)) return;
   try {
-    await cache.preload(composite.featuredSourceIds(), extraKeys);
+    await cache.preload([], extraKeys);
   } catch {
     // Best-effort: an unseeded mirror is an empty cache, not an error.
   }
@@ -210,7 +225,7 @@ export function createRebuildingCatalogProvider(
         // The supplier's current() is already async, so the preload stays off
         // the composite's synchronous read path. Every invalidate() rebuild
         // re-preloads, so addon install/enable/disable/uninstall re-seed it.
-        await preloadDiscoverCache(cache, composite, safePreloadPageKeys(options.preloadPageKeys));
+        await preloadDiscoverCache(cache, safePreloadPageKeys(options.preloadPageKeys));
         return composite;
       }));
     },
@@ -276,8 +291,10 @@ export class CompositeCatalogProvider implements CatalogProvider {
    * Source ids whose owning provider opts into featured for at least one sort.
    * Evaluated from the live provider list, never a hardcoded provider list, so
    * an addon that declares featured support is included the moment it installs.
-   * Used to bound the durable preload: sources that can never have a featured
-   * row (the curated bundle, Open Library, Google Books) are skipped.
+   *
+   * Retained as a capability query for the `featured` port path (Android
+   * parity); DISC-04b removed its only production caller, the durable preload,
+   * because the rails no longer read `f:v2:` keys.
    */
   featuredSourceIds(): CatalogSource[] {
     const ids: CatalogSource[] = [];
@@ -302,8 +319,7 @@ export class CompositeCatalogProvider implements CatalogProvider {
    * Sources that are not active at read time are never served (design A1).
    * A provider that does not opt in is never called, so its rail can only ever
    * come back empty (fail-closed) and be hidden. A provider failure PROPAGATES:
-   * the rail settles `Error` (consistent with the thematic rail) instead of
-   * silently degrading to `Hidden`. A genuinely empty successful response still
+   * the rail settles `Error` instead of silently degrading to `Hidden`. A genuinely empty successful response still
    * merges to an empty page, which the rail renders as `Hidden`.
    */
   async featured(sort: CatalogFeaturedSort, limit: number): Promise<PagedResult> {
@@ -331,8 +347,8 @@ export class CompositeCatalogProvider implements CatalogProvider {
   /**
    * Per-source search: exact match over the active source set, routed to the
    * single provider that owns `sourceId`, with the same page-cache read-through
-   * as `search` (the thematic rail resolves through here, so its page is cached
-   * too). An unknown or inactive source fails closed with an empty page — never
+   * as `search` (the author rails resolve through here, so their pages are
+   * cached too). An unknown or inactive source fails closed with an empty page — never
    * a crash, never a silent composite search. Mirrors Android.
    */
   async searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {
@@ -363,7 +379,7 @@ export class CompositeCatalogProvider implements CatalogProvider {
       return Promise.reject(catalogError('INVALID_PAGE', `page must be >= 1, got ${page}`));
     }
     const active = this.activeSourceIds();
-    const parts = this.searchableProviders().map((provider) => {
+    const parts = this.compositeSearchProviders().map((provider) => {
       const cached = this.readPageHit(provider, query, page, active);
       return cached !== null
         ? { cached: true as const, value: cached }
@@ -389,7 +405,7 @@ export class CompositeCatalogProvider implements CatalogProvider {
     // Re-check inside the debounce window: a concurrent caller may have filled it.
     const active = this.activeSourceIds();
     const pages = await Promise.all(
-      this.searchableProviders().map(async (provider) => {
+      this.compositeSearchProviders().map(async (provider) => {
         const cached = this.readPageHit(provider, query, page, active);
         if (cached !== null) return cached;
         const result = await provider.search(query, page);
@@ -403,6 +419,19 @@ export class CompositeCatalogProvider implements CatalogProvider {
   /** Providers without sources (disabled) contribute nothing and are never called. */
   private searchableProviders(): CatalogProvider[] {
     return this.providers.filter((p) => p.listSources().length > 0);
+  }
+
+  /**
+   * Composite keyword-search fan-out set: providers that do not opt out via
+   * the fail-closed `supportsCompositeSearch` probe (absent ⇒ participating).
+   * `defaultCatalogProviders` keeps the slow Gutendex and Open Library
+   * searches out when Google Books is registered, but leaves Gutendex in when
+   * it is not, so a keyless build always has a search source. Details,
+   * `searchSource`, featured rails and download resolution still see every
+   * provider through `searchableProviders`.
+   */
+  private compositeSearchProviders(): CatalogProvider[] {
+    return this.searchableProviders().filter((p) => p.supportsCompositeSearch?.() ?? true);
   }
 
   private activeSourceIds(): Set<string> {
@@ -514,8 +543,9 @@ export class CompositeCatalogProvider implements CatalogProvider {
 
   /**
    * Ordered merge: left-fold the provider pages — earlier providers win fields,
-   * later ones fill cover gaps and append unmatched books (the [Gutendex,
-   * OpenLibrary] fold reproduces the legacy hardcoded-pair merge exactly).
+   * later ones fill cover gaps and append unmatched books. Under the default
+   * list the first fan-out page is Google Books (or Gutendex in a keyless
+   * build), followed by curated/addon pages.
    */
   private mergePaged(pages: PagedResult[], page: number): PagedResult {
     if (pages.length === 0) return toPagedResult([], page, 0);
@@ -621,5 +651,56 @@ export class CompositeCatalogProvider implements CatalogProvider {
       return { ...EMPTY_ADDON_ACCESS, options: [] };
     }
     return resolve.call(route.provider, book);
+  }
+
+  /**
+   * DISC-04c lazy authority resolve, cached under the existing detail key so it
+   * runs once per book. A fresh resident detail that already carries an
+   * authority is served with zero I/O; otherwise Gutendex is reached through
+   * `searchSource` (never the composite fan-out, which Gutendex now opts out
+   * of) and Open Library through its ISBN lookup (skipped, not failed, when the
+   * book has no ISBN). The merged book replaces the detail-key entry, so the
+   * next open serves the resolved payload from cache without re-resolving.
+   */
+  async resolveBookAuthorities(book: CatalogBook): Promise<CatalogBook> {
+    const route = this.routeDetails(book.id);
+    if (!route) return book;
+    const key = detailCacheKey(route.source.sourceId, book.id);
+    const now = this.nowEpochSecs();
+    const resident = this.readResolvedDetail(key, now);
+    if (resident) return resident;
+
+    const resolved = await resolveBookAuthorityFields(book, {
+      gutendex: (query) =>
+        this.searchSource(BUILTIN_GUTENDEX, query, 1).then((page) => page.results),
+      openLibraryByIsbn: (isbn) => this.openLibraryIdentity(isbn),
+    });
+
+    if (resolved !== book && this.cache) {
+      this.cache.put(key, JSON.stringify(resolved), now, DETAIL_TTL_S);
+    }
+    return resolved;
+  }
+
+  /** A fresh resident detail that already carries an authority, else null. */
+  private readResolvedDetail(key: string, now: number): CatalogBook | null {
+    const hit = this.cache?.get(key, now) ?? null;
+    if (!hit) return null;
+    try {
+      const book = JSON.parse(hit) as CatalogBook;
+      return hasResolvedAuthorities(book) ? book : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Open Library identity lookup through the registered OL provider, if any. */
+  private async openLibraryIdentity(isbn: string): Promise<OpenLibraryIdentity | null> {
+    const provider = this.providers.find(
+      (candidate): candidate is OpenLibraryCatalogProvider =>
+        candidate instanceof OpenLibraryCatalogProvider,
+    );
+    if (!provider) return null;
+    return provider.enrichByIsbn(isbn);
   }
 }

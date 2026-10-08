@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { MessageKey } from '$lib/shared/i18n';
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
+  import { fly } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
 
   export interface TocEntry {
     id: string;
@@ -22,6 +24,20 @@
   let { open, entries, activeId, t, onNavigate, onClose }: Props = $props();
 
   let sidebarEl: HTMLElement | undefined = $state();
+
+  // Svelte JS transitions ignore the global `prefers-reduced-motion` CSS block,
+  // so the panel reads the query itself and zeroes its own duration.
+  let reducedMotion = $state(false);
+  $effect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const apply = (): void => {
+      reducedMotion = mq.matches;
+    };
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  });
 
   function handleBackdropClick(e: MouseEvent): void {
     if (e.target === e.currentTarget) onClose();
@@ -51,6 +67,12 @@
     <div
       bind:this={sidebarEl}
       class="absolute right-0 top-0 flex h-full w-65 flex-col overflow-y-auto border-l border-(--color-border-deep) bg-(--color-surface)/70 pt-15 text-(--color-text-muted) backdrop-blur-sm"
+      transition:fly={{
+        x: reducedMotion ? 0 : 260,
+        opacity: 0,
+        duration: reducedMotion ? 0 : 250,
+        easing: cubicOut,
+      }}
       onkeydown={(e) => e.key === 'Escape' && onClose()}
       role="dialog"
       aria-label={t('reader.tabla_contenidos')}

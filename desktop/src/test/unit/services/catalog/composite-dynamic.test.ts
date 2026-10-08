@@ -63,11 +63,7 @@ const prideGolden: CatalogBook = {
     'text/plain': 'https://www.gutenberg.org/ebooks/1342.txt.utf8',
     'text/html': 'https://www.gutenberg.org/ebooks/1342.html.images',
   },
-  isbn13: '9780141439518',
-  isbn10: '0141439513',
   isPublicDomain: true,
-  openLibraryWorkId: '/works/OL66554W',
-  internetArchiveId: 'prideandprejudice0000aust',
 };
 
 const aliceGolden: CatalogBook = {
@@ -81,11 +77,7 @@ const aliceGolden: CatalogBook = {
   downloadUrl: null,
   description: undefined,
   formats: {},
-  isbn13: null,
-  isbn10: null,
   isPublicDomain: true,
-  openLibraryWorkId: '/works/OL11W',
-  internetArchiveId: null,
 };
 
 class FakeAddonProvider implements CatalogProvider {
@@ -197,14 +189,15 @@ function builtinPair(calls: { g: number; o: number }, fetchCounters = true): Cat
 }
 
 describe('CompositeCatalogProvider (ordered dynamic providers)', () => {
-  it('zero-addons golden parity: byte-for-byte identical to the hardcoded pair', async () => {
+  it('zero-addons: the Gutendex-only fan-out maps the page byte-for-byte', async () => {
     const calls = { g: 0, o: 0 };
     const provider = new CompositeCatalogProvider(builtinPair(calls), { debounceMs: 0 });
     const page = await provider.search('pride', 1);
     expect(page.results).toEqual([prideGolden, aliceGolden]);
     expect(page.totalCount).toBe(3);
     expect(page.nexoPage).toBe(2);
-    expect(calls).toEqual({ g: 1, o: 1 });
+    // Open Library opts out of the composite fan-out: it is never called.
+    expect(calls).toEqual({ g: 1, o: 0 });
   });
 
   it('concat merges in provider order: addon books append after built-ins', async () => {
@@ -276,7 +269,7 @@ describe('CompositeCatalogProvider (ordered dynamic providers)', () => {
       nowEpochSecs: () => 2_000,
     });
     const page = await provider.search('pride', 1);
-    expect(calls).toEqual({ g: 1, o: 1 });
+    expect(calls).toEqual({ g: 1, o: 0 });
     expect(page.results).toEqual([prideGolden, aliceGolden]);
   });
 
@@ -290,7 +283,8 @@ describe('CompositeCatalogProvider (ordered dynamic providers)', () => {
     });
     await provider.search('pride', 1);
     expect(cache.get(pageCacheKey('builtin:gutendex', 'pride', 1), 1_000)).not.toBeNull();
-    expect(cache.get(pageCacheKey('builtin:openlibrary', 'pride', 1), 1_000)).not.toBeNull();
+    // Open Library opted out of the composite fan-out, so it never caches a page.
+    expect(cache.get(pageCacheKey('builtin:openlibrary', 'pride', 1), 1_000)).toBeNull();
   });
 
   it('serves repeated searches from cache without network I/O', async () => {
@@ -304,7 +298,7 @@ describe('CompositeCatalogProvider (ordered dynamic providers)', () => {
     const first = await provider.search('pride', 1);
     const second = await provider.search('pride', 1);
     expect(second).toEqual(first);
-    expect(calls).toEqual({ g: 1, o: 1 });
+    expect(calls).toEqual({ g: 1, o: 0 });
   });
 
   it('entries for uninstalled sources are never served (existence check)', async () => {

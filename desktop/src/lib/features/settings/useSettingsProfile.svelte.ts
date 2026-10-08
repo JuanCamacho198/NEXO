@@ -15,8 +15,11 @@ import {
 import { DEFAULT_DAILY_GOAL, type DailyGoalOption } from '$lib/shared/types/settings';
 import type { MessageKey } from '$lib/shared/i18n';
 import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type DailyGoalIcon = typeof LucideIcon;
+
+export type DailyGoalSaveState = 'idle' | 'success' | 'error';
 
 export type ProfileDeps = {
   authState?: typeof defaultAuthState;
@@ -37,13 +40,15 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
   dailyGoalCards: {
     value: DailyGoalOption;
     labelKey: MessageKey;
-    shortLabel: string;
     icon: DailyGoalIcon;
     minutesLabel: string;
   }[];
   isDirty: boolean;
   isSaving: boolean;
+  isDailyGoalLocal: boolean;
+  dailyGoalSaveState: DailyGoalSaveState;
   handleSaveDailyGoal: () => Promise<void>;
+  applyDailyGoal: (value: number) => Promise<void>;
   handleSignOut: () => Promise<void>;
   loadProfileData: () => Promise<void>;
   handleSelectDailyGoal: (value: number) => void;
@@ -55,8 +60,8 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
   const createDevices = deps.createDevicesState ?? defaultCreateDevicesState;
   const app = deps.appState ?? defaultAppState;
   const sState = deps.settingsState ?? defaultSettingsState;
+  const auth = deps.authState ?? defaultAuthState;
   const t = deps.t ?? ((k: MessageKey) => k as string);
-  void deps.authState;
 
   let isProfileLoading = $state(false);
   let profileError = $state<string | null>(null);
@@ -67,12 +72,12 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
   );
   let isSavingDailyGoal = $state(false);
   let isSigningOut = $state(false);
+  let dailyGoalSaveState = $state<DailyGoalSaveState>('idle');
 
   const dailyGoalCards = $derived<
     {
       value: DailyGoalOption;
       labelKey: MessageKey;
-      shortLabel: string;
       icon: DailyGoalIcon;
       minutesLabel: string;
     }[]
@@ -80,28 +85,24 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
     {
       value: 10,
       labelKey: 'settings.daily_goal_relaxed',
-      shortLabel: 'Relajado',
       icon: Hand,
       minutesLabel: '10 min',
     },
     {
       value: 20,
       labelKey: 'settings.daily_goal_regular',
-      shortLabel: 'Regular',
       icon: Book,
       minutesLabel: '20 min',
     },
     {
       value: 30,
       labelKey: 'settings.daily_goal_serious',
-      shortLabel: 'Serio',
       icon: ChartColumn,
       minutesLabel: '30 min',
     },
     {
       value: 45,
       labelKey: 'settings.daily_goal_intense',
-      shortLabel: 'Intenso',
       icon: Flame,
       minutesLabel: '45 min',
     },
@@ -109,6 +110,16 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
 
   const isDirty = $derived(selectedDailyGoal !== (sState.dailyGoalMinutes as number));
   const isSaving = $derived(isSavingDailyGoal || isSigningOut || isProfileLoading);
+  /**
+   * The daily goal is always persistable: with a session it is written to the
+   * per-user key, without one it is written to the global `reading.dailyGoalMinutes`
+   * key on this device (and carries over on a later signed-in read). This flag
+   * only tells the UI that the value is local-only, so it can show the
+   * "saved on this device" hint instead of disabling the control.
+   */
+  const isDailyGoalLocal = $derived(
+    !(typeof auth.userId === 'string' && auth.userId.trim().length > 0),
+  );
 
   async function handleSaveDailyGoal(): Promise<void> {
     if (isSavingDailyGoal) return;
@@ -122,6 +133,22 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
       throw error;
     } finally {
       isSavingDailyGoal = false;
+    }
+  }
+
+  /**
+   * Single entry point for the redesigned daily-goal row: select a value,
+   * auto-save it, and expose the outcome through `dailyGoalSaveState`. The save
+   * is always attempted — session-less saves persist to the local global key —
+   * so a successful write reports `success` rather than a fake error.
+   */
+  async function applyDailyGoal(value: number): Promise<void> {
+    selectedDailyGoal = value;
+    try {
+      await handleSaveDailyGoal();
+      dailyGoalSaveState = 'success';
+    } catch {
+      dailyGoalSaveState = 'error';
     }
   }
 
@@ -148,7 +175,11 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
     try {
       await app.signOutAndReturnToWelcome();
     } catch (error) {
-      console.error('Sign out failed:', error);
+      logger.error(
+        'Sign out failed:',
+        { error: error instanceof Error ? error.message : String(error) },
+        'settings',
+      );
     } finally {
       isSigningOut = false;
     }
@@ -225,7 +256,14 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
     get isSaving() {
       return isSaving;
     },
+    get isDailyGoalLocal() {
+      return isDailyGoalLocal;
+    },
+    get dailyGoalSaveState() {
+      return dailyGoalSaveState;
+    },
     handleSaveDailyGoal,
+    applyDailyGoal,
     handleSignOut,
     loadProfileData,
     handleSelectDailyGoal,

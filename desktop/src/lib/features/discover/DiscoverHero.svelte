@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
-  import { TRENDING_CHIPS } from './DiscoverDomainState.svelte';
+  import SearchBar from '$lib/shared/ui/navigation/SearchBar.svelte';
+  import { CHIP_TAXONOMY } from './discoverChips';
 
   type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
 
@@ -11,7 +12,6 @@
     selectedChip,
     onSelectChip,
     onSearchSubmit,
-    onNavigateHome,
   }: {
     t: Translate;
     sourceCount: number;
@@ -19,7 +19,6 @@
     selectedChip: string | null;
     onSelectChip: (chip: string | null) => void;
     onSearchSubmit: (query: string) => void;
-    onNavigateHome: () => void;
   } = $props();
 
   let searchInput = $state('');
@@ -35,20 +34,6 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <nav aria-label="Breadcrumb" class="flex items-center gap-1.5 text-sm">
-    <button
-      type="button"
-      class="text-(--color-text-muted) transition-colors hover:text-(--color-primary) hover:underline"
-      onclick={onNavigateHome}
-    >
-      {t('sidebar.home')}
-    </button>
-    <span aria-hidden="true" class="text-(--color-text-muted)">/</span>
-    <span aria-current="page" class="font-medium text-(--color-primary)">
-      {t('sidebar.discover')}
-    </span>
-  </nav>
-
   <div class="flex flex-wrap items-start justify-between gap-3">
     <div class="flex min-w-0 flex-col gap-1">
       <h1 id="discover-heading" class="m-0 text-xl font-semibold text-(--color-primary)">
@@ -73,34 +58,44 @@
     {/if}
   </div>
 
-  <form class="flex max-w-2xl gap-2" onsubmit={submit}>
-    <input
-      type="search"
+  <!-- Enter (or the implicit form submit) is the only trigger. A second submit
+       button read as a duplicate control and broke the field's pill silhouette. -->
+  <form class="max-w-2xl" onsubmit={submit}>
+    <SearchBar
       bind:value={searchInput}
+      class="w-full"
       placeholder={t('discover.searchPlaceholder')}
-      aria-label={t('discover.searchAriaLabel')}
-      class="flex-1 rounded-md border border-(--color-border) bg-(--color-background) px-3 py-2 text-sm text-(--color-primary) focus:border-(--color-primary) focus:outline-none"
+      ariaLabel={t('discover.searchAriaLabel')}
+      shortcutKey="/"
+      shortcutLabel={t('discover.searchShortcut')}
+      shortcutAriaLabel={t('discover.searchShortcutAria')}
+      onsubmit={onSearchSubmit}
     />
-    <button
-      type="submit"
-      class="rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-2 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-    >
-      {t('discover.search')}
-    </button>
   </form>
 
   <div role="group" aria-label={t('discover.trending')} class="flex flex-wrap gap-2">
-    {#each TRENDING_CHIPS as chip (chip)}
+    <button
+      type="button"
+      aria-pressed={selectedChip === null}
+      onclick={() => onSelectChip(null)}
+      class="rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)/50 {selectedChip ===
+      null
+        ? 'border-(--color-primary)/40 bg-(--color-primary)/12 text-(--color-primary)'
+        : 'border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted) hover:border-(--color-primary)/40 hover:text-(--color-primary)'}"
+    >
+      {t('home.shelfTab.all')}
+    </button>
+    {#each CHIP_TAXONOMY as chip (chip.id)}
       <button
         type="button"
-        aria-pressed={selectedChip === chip}
-        onclick={() => toggleChip(chip)}
+        aria-pressed={selectedChip === chip.id}
+        onclick={() => toggleChip(chip.id)}
         class="rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)/50 {selectedChip ===
-        chip
+        chip.id
           ? 'border-(--color-primary)/40 bg-(--color-primary)/12 text-(--color-primary)'
           : 'border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted) hover:border-(--color-primary)/40 hover:text-(--color-primary)'}"
       >
-        {chip}
+        {t(chip.labelKey) || chip.fallback}
       </button>
     {/each}
   </div>

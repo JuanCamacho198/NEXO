@@ -24,7 +24,36 @@ export type HighlightMenuDeps = {
   saveHighlightTagsFn?: (args: { highlightId: string; tagIds: string[] }) => Promise<TagDto[]>;
 };
 
-export function createHighlightMenu(deps: HighlightMenuDeps) {
+export function createHighlightMenu(deps: HighlightMenuDeps): {
+  highlightMenu: HighlightMenuState;
+  allTags: TagDto[];
+  showColorPicker: boolean;
+  showTagPopover: boolean;
+  showNoteModal: boolean;
+  colorPickerAnchor: HTMLElement | null;
+  tagPopoverAnchor: HTMLElement | null;
+  readonly _dismissTimer: ReturnType<typeof setTimeout> | null;
+  refreshTags(): Promise<void>;
+  refreshHighlightTags(highlightId: string): Promise<void>;
+  openHighlightMenu(id: string, opts?: HighlightActionOpts): void;
+  closeHighlightMenu(): void;
+  handleHighlightAction(action: HighlightActionKind, id: string, opts?: HighlightActionOpts): void;
+  updateHighlightColor(id: string, color: string): void;
+  updateHighlightNote(id: string, note: string | null): void;
+  deleteHighlightById(id: string): void;
+  enqueueHighlightUpdate(id: string, changes: { color?: string; note?: string | null }): void;
+  handleMenuCustomColor(): void;
+  handleMenuCopy(): void;
+  handleMenuTag(): void;
+  handleMenuNote(): void;
+  handleMenuDelete(): void;
+  handleNoteSave(note: string | null): void;
+  handleTagCreate(name: string, color?: string): Promise<void>;
+  handleTagToggle(tagId: string): Promise<void>;
+  handleColorPickerSelect(color: string): void;
+  scheduleToolbarDismiss(dismiss: () => void): void;
+  cleanup(): void;
+} {
   const highlights = deps.highlights;
   const viewerPort = deps.viewerPort ?? new TauriViewerAdapter();
   const listTagsFn = deps.listTagsFn ?? (() => viewerPort.listTags());

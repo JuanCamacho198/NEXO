@@ -20,7 +20,29 @@ export type PdfRenderDeps = {
   getIsFullscreen: () => boolean;
 };
 
-export function createPdfRenderState(deps: PdfRenderDeps) {
+export function createPdfRenderState(deps: PdfRenderDeps): {
+  currentPageObj: pdfjsLib.PDFPageProxy | null;
+  readonly activeNavigationRequestId: number;
+  activeRenderTask: pdfjsLib.RenderTask | null;
+  readonly textLayerInstance: SafeTextLayer | null;
+  isStaleNavigation(requestId: number): boolean;
+  nextNavigationRequestId(): number;
+  bumpNavigationId(): number;
+  cancelTextLayer(): void;
+  cancelActiveRenderTask(): Promise<void>;
+  renderPage(
+    pageNum: number,
+    options?: { requestId?: number; renderScale?: number },
+  ): Promise<boolean | void>;
+  renderTextLayer(
+    textContent: {
+      items: Array<{ str: string; transform: number[]; width: number; height: number }>;
+    },
+    viewport: pdfjsLib.PageViewport,
+    requestId?: number,
+  ): Promise<void>;
+  cleanup(): void;
+} {
   let currentPageObj: pdfjsLib.PDFPageProxy | null = null;
   let activeRenderTask: pdfjsLib.RenderTask | null = null;
   let textLayerInstance: SafeTextLayer | null = null;

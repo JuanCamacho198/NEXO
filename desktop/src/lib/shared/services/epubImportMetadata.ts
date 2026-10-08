@@ -24,7 +24,7 @@
  *  5. Always release the epubjs instance in a `finally`.
  *
  * Failures are swallowed at every step — the caller falls back to the
- * filename. A short `console.debug` is logged so the user can see why
+ * filename. A short `logger.debug` is logged so the user can see why
  * a particular file came up empty (most often: the EPUB genuinely has
  * no `<dc:title>` / `<dc:creator>`).
  */
@@ -32,6 +32,7 @@ import ePub from 'epubjs';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 import { validateEpubMetadata } from '$lib/shared/validation/importSchemas';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type ImportEpubMetadata = {
   title: string | null;
@@ -140,7 +141,11 @@ const parseEpubJsBytes = async (buffer: ArrayBuffer): Promise<ImportEpubMetadata
       subjects: subjectsTrimmed,
     };
   } catch (err) {
-    console.debug('[epub-import-meta] epubjs parse failed, will try OPF fallback', err);
+    logger.debug(
+      '[epub-import-meta] epubjs parse failed, will try OPF fallback',
+      { error: err instanceof Error ? err.message : String(err) },
+      'import',
+    );
     return EMPTY_METADATA;
   } finally {
     if (book) {
@@ -206,18 +211,19 @@ export const extractEpubMetadataFromBytes = async (
   const combined = combineMetadata(epubResult, opfResult);
 
   if (!combined.title && !combined.author) {
-    console.debug(
-      '[epub-import-meta] no metadata found in OPF for in-memory bytes',
-      '— caller will fall back to filename / unknown author',
+    logger.debug(
+      '[epub-import-meta] no metadata found in OPF for in-memory bytes — caller will fall back to filename / unknown author',
+      undefined,
+      'import',
     );
   }
 
   const validation = validateEpubMetadata(combined);
   if (!validation.ok) {
-    console.debug(
-      '[epub-import-meta] metadata DTO failed validation',
-      validation.key,
-      '— caller will fall back to filename / unknown author',
+    logger.debug(
+      '[epub-import-meta] metadata DTO failed validation — caller will fall back to filename / unknown author',
+      { key: validation.key },
+      'import',
     );
     return { ...EMPTY_METADATA };
   }

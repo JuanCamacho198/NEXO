@@ -36,12 +36,13 @@
  * interleave.
  *
  * All public functions are total: they NEVER throw on invalid input.
- * On failure they `console.warn` and return `null`.
+ * On failure they `logger.warn` and return `null`.
  *
  * @module $lib/features/reader/viewer-epub/cfiBridge
  */
 
 import { IFRAME_CFI_BRIDGE_SCRIPT } from './cfiBridgeIframe';
+import { logger } from '$lib/shared/logger/Logger';
 
 const BLACKLIST_TAGS = new Set(['audio', 'video', 'script', 'link', 'style', 'object', 'embed']);
 
@@ -291,7 +292,7 @@ export function rangeToCFI(
 
     const base = getChapterBasePrefix(chapterHref);
     if (!base) {
-      console.warn('epub-cfi: chapter not in spine registry', { chapterHref });
+      logger.warn('epub-cfi: chapter not in spine registry', { chapterHref }, 'reader');
       return null;
     }
 
@@ -308,13 +309,13 @@ export function rangeToCFI(
     let commonAncestor: Node = rawAncestor;
     if (commonAncestor.nodeType === 3 /* TEXT_NODE */) {
       if (!commonAncestor.parentNode) {
-        console.warn('epub-cfi: common ancestor has no parent', { chapterHref });
+        logger.warn('epub-cfi: common ancestor has no parent', { chapterHref }, 'reader');
         return null;
       }
       commonAncestor = commonAncestor.parentNode;
     }
     if (commonAncestor.nodeType !== 1 /* ELEMENT_NODE */) {
-      console.warn('epub-cfi: common ancestor is not an element', { chapterHref });
+      logger.warn('epub-cfi: common ancestor is not an element', { chapterHref }, 'reader');
       return null;
     }
 
@@ -332,17 +333,21 @@ export function rangeToCFI(
         cursor = cursor.parentNode;
         depth += 1;
       }
-      console.warn('epub-cfi: failed to build local path for range', {
-        chapterHref,
-        ancestorTag: el?.tagName.toLowerCase() ?? String(commonAncestor),
-        ancestorId: el?.id ?? '',
-        ancestorIsRoot: commonAncestor === doc.documentElement,
-        ancestorIsBody: commonAncestor === doc.body,
-        depthToRoot: depth,
-        startTag: startEl?.tagName.toLowerCase() ?? 'text',
-        startParentTag: startParentEl?.tagName.toLowerCase() ?? 'none',
-        startOffset,
-      });
+      logger.warn(
+        'epub-cfi: failed to build local path for range',
+        {
+          chapterHref,
+          ancestorTag: el?.tagName.toLowerCase() ?? String(commonAncestor),
+          ancestorId: el?.id ?? '',
+          ancestorIsRoot: commonAncestor === doc.documentElement,
+          ancestorIsBody: commonAncestor === doc.body,
+          depthToRoot: depth,
+          startTag: startEl?.tagName.toLowerCase() ?? 'text',
+          startParentTag: startParentEl?.tagName.toLowerCase() ?? 'none',
+          startOffset,
+        },
+        'reader',
+      );
       return null;
     }
 
@@ -350,19 +355,23 @@ export function rangeToCFI(
     //   `epubcfi(/6/N!` + `/A/B/C` + `,/S:Os,/E:Oe` + `)`
     const startTerminus = textTerminusStep(startContainer, startOffset, commonAncestor);
     if (startTerminus === null) {
-      console.warn('epub-cfi: failed to compute start terminus', { chapterHref });
+      logger.warn('epub-cfi: failed to compute start terminus', { chapterHref }, 'reader');
       return null;
     }
 
     const endTerminus = textTerminusStep(endContainer, endOffset, commonAncestor);
     if (endTerminus === null) {
-      console.warn('epub-cfi: failed to compute end terminus', { chapterHref });
+      logger.warn('epub-cfi: failed to compute end terminus', { chapterHref }, 'reader');
       return null;
     }
 
     return `${base}${localPath},${startTerminus},${endTerminus})`;
   } catch (err) {
-    console.warn('epub-cfi: rangeToCFI failed', err);
+    logger.warn(
+      'epub-cfi: rangeToCFI failed',
+      { error: err instanceof Error ? err.message : String(err) },
+      'reader',
+    );
     return null;
   }
 }
@@ -530,19 +539,23 @@ export function cfiToRange(
 
     const parsed = parseCFI(cfi);
     if (!parsed) {
-      console.warn('epub-cfi: failed to parse cfi', { cfi });
+      logger.warn('epub-cfi: failed to parse cfi', { cfi }, 'reader');
       return null;
     }
 
     // Sanity-check the spine index matches the registered chapter.
     const registeredIdx = getSpineIndex(chapterHref);
     if (registeredIdx === null || registeredIdx !== parsed.spineIndex) {
-      console.warn('epub-cfi: spine index mismatch', {
-        cfi,
-        chapterHref,
-        cfiSpineIndex: parsed.spineIndex,
-        registeredSpineIndex: registeredIdx,
-      });
+      logger.warn(
+        'epub-cfi: spine index mismatch',
+        {
+          cfi,
+          chapterHref,
+          cfiSpineIndex: parsed.spineIndex,
+          registeredSpineIndex: registeredIdx,
+        },
+        'reader',
+      );
       return null;
     }
 
@@ -552,14 +565,14 @@ export function cfiToRange(
     if (!root) return null;
     const commonAncestor = walkLocalPath(root, parsed.localPath);
     if (!commonAncestor) {
-      console.warn('epub-cfi: local path did not resolve', { cfi });
+      logger.warn('epub-cfi: local path did not resolve', { cfi }, 'reader');
       return null;
     }
 
     const startText = resolveTextTerminus(commonAncestor, parsed.startChain, parsed.startOffset);
     const endText = resolveTextTerminus(commonAncestor, parsed.endChain, parsed.endOffset);
     if (!startText || !endText) {
-      console.warn('epub-cfi: text terminus did not resolve', { cfi });
+      logger.warn('epub-cfi: text terminus did not resolve', { cfi }, 'reader');
       return null;
     }
 
@@ -568,7 +581,11 @@ export function cfiToRange(
     range.setEnd(endText.node, endText.offset);
     return range;
   } catch (err) {
-    console.warn('epub-cfi: cfiToRange failed', err);
+    logger.warn(
+      'epub-cfi: cfiToRange failed',
+      { error: err instanceof Error ? err.message : String(err) },
+      'reader',
+    );
     return null;
   }
 }

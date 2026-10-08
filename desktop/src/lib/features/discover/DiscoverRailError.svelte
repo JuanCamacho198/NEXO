@@ -7,8 +7,8 @@
 
   /**
    * Inline per-rail failure: a stable message plus a retry that re-resolves only
-   * its own rail. Copy is the shared three-state split (offline / rate-limited /
-   * upstream), so a 429 never reads as "sin conexión".
+   * its own rail. Copy is the shared split (offline / slow / rate-limited /
+   * upstream), so a timeout or a 429 never reads as "sin conexión".
    */
   let {
     code,

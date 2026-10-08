@@ -9,6 +9,7 @@
     discoverExternalLink,
     discoverFormatLabels,
   } from './discoverDetailFormat';
+  import { providerLabel } from './discoverProviderLabel';
 
   type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
 
@@ -84,15 +85,6 @@
       coverFailed = false;
     }
   });
-
-  /** Short source attribution for the cover badge (mirrors DiscoverCard). */
-  function badgeLabel(provider: string): string {
-    if (provider === 'builtin:gutendex') return 'Gutenberg';
-    if (provider === 'builtin:openlibrary') return 'Open Library';
-    if (provider === 'curated') return 'Curated';
-    if (provider.startsWith('addon:')) return 'Add-on';
-    return provider;
-  }
 
   const showCover = $derived(
     detail !== null && detail.coverUrl !== null && detail.coverUrl !== undefined && !coverFailed,
@@ -181,9 +173,9 @@
           {/if}
           {#if detail !== null}
             <span
-              class="absolute top-1.5 left-1.5 rounded-full border border-(--color-border) bg-(--color-background)/85 px-2 py-0.5 text-2xs font-medium text-(--color-secondary)"
+              class="absolute top-1.5 left-1.5 rounded-full border border-(--color-border) bg-(--color-background)/85 px-2 py-0.5 text-xs font-medium text-(--color-secondary)"
             >
-              {badgeLabel(detail.provider)}
+              {providerLabel(detail.provider)}
             </span>
           {/if}
         </div>
@@ -235,7 +227,7 @@
           <span class="text-xs font-medium text-(--color-primary)">{t('discover.formats')}</span>
           {#each formatLabels as label (label)}
             <span
-              class="inline-flex items-center rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-2 py-0.5 text-2xs font-medium text-(--color-secondary)"
+              class="inline-flex items-center rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-2 py-0.5 text-xs font-medium text-(--color-secondary)"
             >
               {label}
             </span>

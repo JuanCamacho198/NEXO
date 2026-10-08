@@ -25,6 +25,7 @@ import {
   extractFragment,
 } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import { setReaderError } from '$lib/stores/readerErrorState.svelte';
+import { logger } from '$lib/shared/logger/Logger';
 
 // ─── Types ─────────────────────────────────────────────────────
 export interface EpubChapterContent {
@@ -151,6 +152,9 @@ export function stripMissingFontFaces(cssText: string, missingFonts: Set<string>
   });
 }
 
+// NOTE (U5.4): the hex literals below are intentional. They style HTML
+// injected into the EPUB iframe, where the app's CSS tokens do not exist,
+// so var(--color-*) references would resolve to nothing.
 export function getThemeStyles(themeMode: string): string {
   const themes: Record<string, string> = {
     paper: `
@@ -260,7 +264,7 @@ export function buildChapterSrcdoc(
   },
   chapterTitle?: string | null,
 ): string {
-  console.warn('build srcdoc CHAPTER_INDEX', chapterIndex, 'href', currentChapterHref);
+  logger.warn('build srcdoc CHAPTER_INDEX', { chapterIndex, href: currentChapterHref }, 'reader');
   const sanitizedHtml = sanitizeEpubHtml(chapterData.html);
   const parser = new DOMParser();
   const doc = parser.parseFromString(sanitizedHtml, 'text/html');
@@ -568,9 +572,13 @@ export function buildChapterSrcdoc(
 
   const serialized = doc.documentElement.outerHTML;
   if (currentChapterHref.includes('HM-colombia-5')) {
-    console.warn('SERIALIZED SNIPPET HM5 START', serialized.slice(0, 6000));
-    console.warn('SERIALIZED SNIPPET HM5 END', serialized.slice(-8000));
-    console.warn('BRIDGE SNIPPET', IFRAME_CFI_BRIDGE_SCRIPT.slice(1800, 2400));
+    logger.warn('SERIALIZED SNIPPET HM5 START', { snippet: serialized.slice(0, 6000) }, 'reader');
+    logger.warn('SERIALIZED SNIPPET HM5 END', { snippet: serialized.slice(-8000) }, 'reader');
+    logger.warn(
+      'BRIDGE SNIPPET',
+      { snippet: IFRAME_CFI_BRIDGE_SCRIPT.slice(1800, 2400) },
+      'reader',
+    );
   }
   return `<!DOCTYPE html>\n${serialized}`;
 }
@@ -614,7 +622,25 @@ export type EpubRenderDeps = {
   setError: (msg: string) => void;
 };
 
-export function createEpubRender(deps: EpubRenderDeps) {
+export function createEpubRender(deps: EpubRenderDeps): {
+  iframeContentHeight: number;
+  getEpoch(): number;
+  getCurrentRenderIndex(): number | null;
+  syncIframeHeight(): void;
+  iframeContentHeightValue(): number;
+  buildReaderOverrideCss(): string;
+  refreshReaderStyles(): void;
+  renderChapter(index: number): Promise<void>;
+  resolveResourcePath: typeof resolveResourcePath;
+  toAssetUrl: typeof toAssetUrl;
+  collectFontFaceAssetUrls: typeof collectFontFaceAssetUrls;
+  probeMissingFontUrls: typeof probeMissingFontUrls;
+  stripMissingFontFaces: typeof stripMissingFontFaces;
+  getThemeStyles: typeof getThemeStyles;
+  getThemeBgColor: typeof getThemeBgColor;
+  buildChapterSrcdoc: typeof buildChapterSrcdoc;
+  buildReaderOverrideCssPure: typeof buildReaderOverrideCss;
+} {
   // Epoch guard — plain vars NOT $state (prevents ping-pong BUILD v4)
   let renderEpoch = 0;
   let currentRenderIndex: number | null = null;
@@ -703,32 +729,24 @@ export function createEpubRender(deps: EpubRenderDeps) {
     const spineHrefForLog = deps.getSpineHrefs()[spineIndex] ?? `(spine ${spineIndex})`;
     const frag = extractFragment(tocHrefForLog);
     if (frag) deps.setPendingFragment(frag);
-    console.warn(
-      'epub-hl: renderChapter called tocIndex=',
-      index,
-      'spineIndex=',
-      spineIndex,
-      'epoch=',
-      myEpoch,
-      'srcdoc CHAPTER_INDEX(spine)=',
-      spineIndex,
-      'spineHrefs',
-      deps.getSpineHrefs().length,
-      'chapterHref(toc)',
-      tocHrefForLog,
-      'spineHref',
-      spineHrefForLog,
-      'fragment',
-      frag ?? '(none)',
+    logger.warn(
+      'epub-hl: renderChapter called',
+      {
+        tocIndex: index,
+        spineIndex,
+        epoch: myEpoch,
+        spineHrefCount: deps.getSpineHrefs().length,
+        chapterHref: tocHrefForLog,
+        spineHref: spineHrefForLog,
+        fragment: frag ?? '(none)',
+      },
+      'reader',
     );
     if (spineIndex !== index) {
-      console.warn(
-        'epub-toc: renderChapter toc',
-        index,
-        '-> spine',
-        spineIndex,
-        'href',
-        tocHrefForLog,
+      logger.warn(
+        'epub-toc: renderChapter toc -> spine',
+        { tocIndex: index, spineIndex, href: tocHrefForLog },
+        'reader',
       );
     }
 
@@ -739,13 +757,10 @@ export function createEpubRender(deps: EpubRenderDeps) {
       });
 
       if (myEpoch !== renderEpoch || currentRenderIndex !== index) {
-        console.warn(
-          'epub-hl: renderChapter stale abort before srcdoc index',
-          index,
-          'epoch',
-          myEpoch,
-          'current',
-          renderEpoch,
+        logger.warn(
+          'epub-hl: renderChapter stale abort before srcdoc',
+          { index, epoch: myEpoch, current: renderEpoch },
+          'reader',
         );
         return;
       }
@@ -796,15 +811,15 @@ export function createEpubRender(deps: EpubRenderDeps) {
         let attempt = 0;
         function markReady(): void {
           if (myEpoch !== renderEpoch || currentRenderIndex !== index) {
-            console.warn(
+            logger.warn(
               'epub-hl: markReady stale epoch',
-              myEpoch,
-              'current',
-              renderEpoch,
-              'index',
-              index,
-              'currentRenderIndex',
-              currentRenderIndex,
+              {
+                epoch: myEpoch,
+                current: renderEpoch,
+                index,
+                currentRenderIndex,
+              },
+              'reader',
             );
             return;
           }
@@ -823,7 +838,11 @@ export function createEpubRender(deps: EpubRenderDeps) {
             try {
               win!.__cfiBridge!.setSpine(spineHrefs);
             } catch (e) {
-              console.warn('epub-cfi: failed to re-init iframe on load', e);
+              logger.warn(
+                'epub-cfi: failed to re-init iframe on load',
+                { error: e instanceof Error ? e.message : String(e) },
+                'reader',
+              );
             }
             deps.setLastRenderedChapter(index);
             requestAnimationFrame(deps.emitPreciseLocation);
@@ -840,11 +859,10 @@ export function createEpubRender(deps: EpubRenderDeps) {
           if (attempt++ < maxRetries) {
             setTimeout(markReady, interval);
           } else {
-            console.warn(
-              'epub-hl: onload markReady timed out bridgeReady=',
-              bridgeReady,
-              'overlayReady=',
-              overlayReady,
+            logger.warn(
+              'epub-hl: onload markReady timed out',
+              { bridgeReady, overlayReady },
+              'reader',
             );
             try {
               if (bridgeReady) win!.__cfiBridge!.setSpine(spineHrefs);

@@ -1,21 +1,23 @@
 import {
-  BUILTIN_GUTENDEX,
+  BUILTIN_GOOGLEBOOKS,
   catalogError,
-  type CatalogFeaturedSort,
+  type CatalogBook,
   type CatalogProvider,
   type PagedResult,
 } from '$lib/shared/services/catalog';
 import type { MessageKey } from '$lib/shared/i18n/messages.en';
-import { thematicEntryFor } from './railRotation';
+import { authorEntriesFor } from './railRotation';
 
 /**
- * The rail set is exactly three rails: two featured orderings plus one
- * term-based thematic rail. Every spec carries an ordering or a non-empty term,
- * so no rail can ever issue an unsorted catalog query.
+ * The rail set is exactly three curated author shelves. Every spec carries a
+ * non-empty Google Books term, so no rail can ever issue an unsorted query and
+ * no rail depends on an upstream ordering Google Books does not expose.
  */
-export type DiscoverRailSpec =
-  | { kind: 'featured'; sort: CatalogFeaturedSort; titleKey: MessageKey }
-  | { kind: 'thematic'; term: string; titleKey: MessageKey };
+export interface DiscoverRailSpec {
+  kind: 'author';
+  term: string;
+  titleKey: MessageKey;
+}
 
 export const DISCOVER_RAIL_COUNT = 3;
 /**
@@ -24,7 +26,10 @@ export const DISCOVER_RAIL_COUNT = 3;
  * `deriveVisibleRailCount(containerWidth)` so the row is filled at any width.
  */
 export const DISCOVER_RAIL_LIMIT = 6;
-/** "Ver todo" featured scope: one first page of the featured ordering. */
+/**
+ * "Ver todo" scope page size. Kept as the historical first-page bound; the
+ * Google Books datasource already clamps its own page to `MIN_PAGE_SIZE`.
+ */
 export const RAIL_SCOPE_LIMIT = 24;
 
 /**
@@ -58,32 +63,76 @@ export function deriveVisibleRailCount(containerWidth: number): number {
 }
 
 /**
- * Index-stable rail plan: [NEWEST featured, POPULAR featured, thematic(day)].
- * Rebuilt per refresh, so crossing local midnight rolls the theme forward.
+ * Index-stable rail plan: the day's three curated author shelves, best-vetted
+ * first. Rebuilt per refresh, so crossing local midnight rolls the window
+ * forward one author; the selection formula lives in `railRotation.ts`.
  */
 export function buildRailSpecs(now: Date = new Date()): readonly DiscoverRailSpec[] {
-  const thematic = thematicEntryFor(now);
-  return [
-    { kind: 'featured', sort: 'NEWEST', titleKey: 'discover.rail.newest' },
-    { kind: 'featured', sort: 'POPULAR', titleKey: 'discover.rail.popular' },
-    { kind: 'thematic', term: thematic.term, titleKey: thematic.titleKey },
-  ];
+  return authorEntriesFor(now, DISCOVER_RAIL_COUNT).map((entry) => ({
+    kind: 'author',
+    term: entry.term,
+    titleKey: entry.titleKey,
+  }));
 }
 
-/** Resolve one rail: an explicit featured ordering or a non-empty term search. */
+/**
+ * Resolve one rail through Google Books. Rails are non-ordering author shelves,
+ * so this is always a per-source search of a non-empty term; `searchSource`
+ * read-through-caches the page, so a cold fan-out of three rails stays within
+ * the shared page cache and never gratuitously multiplies quota pressure.
+ * The `limit` parameter is retained for call-site/compatibility stability: the
+ * Google Books datasource owns its own page size and the state layer slices.
+ */
 export function loadRail(
   provider: CatalogProvider,
   spec: DiscoverRailSpec,
-  limit: number = DISCOVER_RAIL_FETCH_LIMIT,
+  _limit: number = DISCOVER_RAIL_FETCH_LIMIT,
 ): Promise<PagedResult> {
-  if (spec.kind === 'featured') return provider.featured(spec.sort, limit);
-  return provider.searchSource(BUILTIN_GUTENDEX, spec.term, 1);
+  return provider.searchSource(BUILTIN_GOOGLEBOOKS, spec.term, 1);
+}
+
+/**
+ * Accent- and case-insensitive fold used for author comparison. NFD splits a
+ * precomposed character into base + combining mark, and the `\u0300`–`\u036f`
+ * block is exactly Unicode's combining diacritical marks, so stripping it
+ * degrades "Pérez" to "perez" without touching ASCII letters.
+ */
+function foldAuthorText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+/** Whole words of an author string, so "melvilles" never matches "melville". */
+function authorWords(author: string): readonly string[] {
+  return foldAuthorText(author)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+/**
+ * True iff `book` is attributed to the rail term's author. The surname is the
+ * LAST whitespace-separated token of the term (`herman melville` → `melville`,
+ * `arthur conan doyle` → `doyle`, `h g wells` → `wells`), and it must appear as
+ * a whole word in one of the book's authors after case folding and accent
+ * stripping. Free-text rail search ranks criticism, study guides and
+ * biographies above the works themselves; this is the client-side guarantee
+ * that a `Loaded` rail never carries a foreign book. A book with no authors, or
+ * a term with no surname, never passes. Pure: no I/O, total over any input.
+ */
+export function matchesAuthorQuery(book: CatalogBook, term: string): boolean {
+  const surname = term.trim().split(/\s+/).pop();
+  if (surname === undefined || surname === '') return false;
+  const needle = foldAuthorText(surname);
+  return book.authors.some((author) => authorWords(author).includes(needle));
 }
 
 /**
  * Bound a rail attempt by `ms` so a hung request settles instead of staying
  * `Loading` forever. Deliberately a manual timer (not `AbortSignal.timeout`) so
- * fake timers can drive it under jsdom; expiry maps to the shared NETWORK_ERROR.
+ * fake timers can drive it under jsdom; expiry is a slow-upstream timeout and
+ * maps to UPSTREAM_TIMEOUT (retryable, never reported as offline).
  */
 export async function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
   let handle: ReturnType<typeof setTimeout> | undefined;
@@ -92,7 +141,7 @@ export async function withDeadline<T>(work: Promise<T>, ms: number): Promise<T> 
       work,
       new Promise<never>((_, reject) => {
         handle = setTimeout(
-          () => reject(catalogError('NETWORK_ERROR', `rail deadline of ${ms}ms elapsed`)),
+          () => reject(catalogError('UPSTREAM_TIMEOUT', `rail deadline of ${ms}ms elapsed`)),
           ms,
         );
       }),

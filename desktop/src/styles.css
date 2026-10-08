@@ -63,7 +63,14 @@
   margin: 6px 0;
 }
 
-label {
+/*
+ * Exclude utility-driven labels: `Button as="label"` is a real control that
+ * draws its own box with `inline-flex` + padding. This rule is unlayered, so
+ * in Tailwind v4 it beats those layered utilities and would otherwise force
+ * the control to `display:block` with form-field margins. Scoping it keeps
+ * the form-field default for every other (plain) label.
+ */
+label:not(.inline-flex) {
   display: block;
   margin-top: 14px;
   margin-bottom: 6px;
@@ -74,20 +81,31 @@ input[type='range'] {
   width: 100%;
 }
 
+/*
+ * Padding lives in the base layer so Tailwind spacing utilities (pl-*, p-*)
+ * can govern it. In Tailwind v4 utilities are layered, and an UNLAYERED rule
+ * always beats a layered one, so the previous unlayered `padding` silently
+ * ignored e.g. `pl-14` on the highlights search (magnifier/placeholder
+ * overlap) and every `p-*` on a text input. Put in the base layer, it stays
+ * the default for inputs that declare no spacing of their own, while any
+ * spacing utility wins where one is declared.
+ *
+ * The remaining default chrome stays unlayered on purpose: moving it into a
+ * layer would let the redundant utilities on the existing text inputs
+ * suddenly take effect and restyle unrelated screens (library modals,
+ * dictionary, reader popovers). See the S1 audit note in the change report.
+ */
+@layer base {
+  input[type='text'] {
+    padding: 10px;
+  }
+}
+
 input[type='text'] {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-primary);
   border-radius: 8px;
-  padding: 10px;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: rgba(25, 41, 62, 0.96);
-}
-
-.btn-ghost:hover:not(:disabled) {
-  background: var(--color-surface);
 }
 
 @media (max-width: 900px) {
@@ -102,6 +120,7 @@ input[type='text'] {
 button {
   transition:
     transform var(--duration-fast) var(--ease-bounce),
+    scale var(--duration-fast) var(--ease-bounce),
     opacity var(--duration-fast) var(--ease-smooth),
     box-shadow var(--duration-normal) var(--ease-smooth);
 }

@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/browser';
-import type { LoggerSink } from './Logger';
+import type { LoggerSink, LogLevel } from './Logger';
 import type { ErrorEvent } from '../events/ErrorEvent';
 import type { SentrySettings } from './sentryConfig';
 import { scrubEvent, type SentryLikeEvent } from './sentryPiiScrubber';
@@ -95,7 +95,15 @@ export class SentrySink implements LoggerSink {
     }
   }
 
-  log(event: ErrorEvent): void {
+  log(event: ErrorEvent, level?: LogLevel): void {
+    // ERROR-only forwarding: when the logger supplies its authoritative level,
+    // WARN and below never reach the crash reporter (they stay ring-local and
+    // file-bound). Without an explicit level the legacy severity gate below
+    // still applies.
+    if (level !== undefined && level !== 'error') {
+      return;
+    }
+
     // Apply the reader-source severity floor BEFORE any gate/decision so
     // breadcrumbs, alert routing, and the Sentry send all see the same
     // effective severity. See `effectiveSeverity` JSDoc above.
@@ -115,10 +123,10 @@ export class SentrySink implements LoggerSink {
       return;
     }
 
-    const level = this.mapSeverity(effective);
+    const sentryLevel = this.mapSeverity(effective);
 
     Sentry.withScope((scope: Sentry.Scope) => {
-      scope.setLevel(level);
+      scope.setLevel(sentryLevel);
       // Journey breadcrumbs (cap 100 FIFO in BreadcrumbsStore): forward the
       // buffered ids-only crumbs into the Sentry scope so the crash event
       // carries the ordered open→chapter→highlight journey. Buffered while
@@ -143,12 +151,12 @@ export class SentrySink implements LoggerSink {
         }
       }
 
-      if (level === 'error' || level === 'fatal') {
+      if (sentryLevel === 'error' || sentryLevel === 'fatal') {
         const error = new Error(event.message);
         error.name = event.code;
         Sentry.captureException(error);
       } else {
-        Sentry.captureMessage(event.message, level);
+        Sentry.captureMessage(event.message, sentryLevel);
       }
     });
   }

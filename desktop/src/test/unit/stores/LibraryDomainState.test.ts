@@ -146,7 +146,6 @@ function resetLibraryState(): void {
   libraryState.isLoadingLibrary = false;
   libraryState.readerError = null;
   libraryState.editingBook = null;
-  libraryState.isCollectionManagerOpen = false;
   libraryState.pendingRemoveBook = null;
   libraryState.setShelfTab('all');
   libraryState.setShelfSort('date');
@@ -197,7 +196,6 @@ describe('LibraryDomainState', () => {
     expect(libraryState.isLoadingLibrary).toBe(false);
     expect(libraryState.readerError).toBeNull();
     expect(libraryState.editingBook).toBeNull();
-    expect(libraryState.isCollectionManagerOpen).toBe(false);
     expect(libraryState.pendingRemoveBook).toBeNull();
     expect(libraryState.thumbnailGenerationInFlight.size).toBe(0);
     expect(libraryState.thumbnailGenerationAttempted.size).toBe(0);

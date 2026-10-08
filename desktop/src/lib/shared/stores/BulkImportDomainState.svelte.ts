@@ -7,7 +7,8 @@ import { inferGenreFromText } from '$lib/shared/services/genreHeuristic';
 import type { BulkImportSummary, ScanFolderResult } from '$lib/shared/types';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
-import { reportImportOutcome } from '$lib/shared/stores/notificationCenter.svelte';
+import { notify } from '$lib/shared/stores/notificationCenter.svelte';
+import { logger } from '$lib/shared/logger/Logger';
 
 export type ImportNoticeStatus = 'importing' | 'success' | 'error';
 
@@ -100,7 +101,13 @@ class BulkImportDomainState {
    * banners). Feed-only: banner behavior below is unchanged.
    */
   private reportImportError(identity: string, message: string, label: string = identity): void {
-    reportImportOutcome(false, label, message);
+    notify({
+      source: 'import',
+      severity: 'error',
+      i18nKey: 'notifications.kind.importFailure',
+      i18nParams: { name: label, detail: message },
+      target: { kind: 'route', route: 'library' },
+    });
     const current = this.importNotice;
     if (
       current?.status === 'error' &&
@@ -165,22 +172,30 @@ class BulkImportDomainState {
         }
       } catch (err) {
         // best-effort: fall through to filename-based title
-        console.debug('[import] metadata extraction threw, falling back to filename', err);
+        logger.debug(
+          '[import] metadata extraction threw, falling back to filename',
+          { error: err instanceof Error ? err.message : String(err) },
+          'import',
+        );
       }
       // Observability: log what we're about to commit to the backend so
       // "I imported a book and the title is still the filename" has a
       // paper trail in the dev console.
-      console.debug('[import] resolved metadata', {
-        format,
-        file: file.name,
-        titleSource:
-          title && title !== fileStem ? 'metadata' : title ? 'filename-fallback' : 'none',
-        authorSource: author ? 'metadata' : 'none',
-        subjectSource: subject ? 'metadata' : 'none',
-        title,
-        author,
-        subject,
-      });
+      logger.debug(
+        '[import] resolved metadata',
+        {
+          format,
+          file: file.name,
+          titleSource:
+            title && title !== fileStem ? 'metadata' : title ? 'filename-fallback' : 'none',
+          authorSource: author ? 'metadata' : 'none',
+          subjectSource: subject ? 'metadata' : 'none',
+          title,
+          author,
+          subject,
+        },
+        'import',
+      );
       if (!title) title = fileStem;
 
       // Genre resolution: prefer the embedded subject (EPUB <dc:subject>
@@ -195,7 +210,7 @@ class BulkImportDomainState {
       // meaningful.
       const displayName = title;
 
-      await importBook(
+      const imported = await importBook(
         {
           sourcePath: file.path,
           title,
@@ -232,8 +247,14 @@ class BulkImportDomainState {
       // After successful import, ensure the banner shows a success state
       // for SUCCESS_DISMISS_MS. The progress callback already set it, but
       // (a) we re-confirm and (b) schedule the auto-dismiss here, where
-      // the import lifecycle is owned. FR-DN1 feed: record the tray entry.
-      reportImportOutcome(true, displayName, '');
+      // the import lifecycle is owned. Record the tray entry.
+      notify({
+        source: 'import',
+        severity: 'success',
+        i18nKey: 'notifications.kind.importSuccess',
+        i18nParams: { name: displayName },
+        target: { kind: 'book', bookId: imported.id },
+      });
       this.setImportNotice(
         {
           status: 'success',
@@ -331,12 +352,20 @@ class BulkImportDomainState {
 
       this.bulkImportSummary = summary;
 
-      // FR-DN1 feed: one tray entry per bulk-import outcome (feed-only).
-      reportImportOutcome(
-        summary.failed === 0,
-        this.bulkImportFolderName ?? this.bulkImportFolderPath ?? '',
-        `${summary.success} ok · ${summary.failed} failed · ${summary.skipped} skipped`,
-      );
+      // One tray entry per bulk-import outcome (feed-only).
+      notify({
+        source: 'import',
+        severity: summary.failed === 0 ? 'success' : 'error',
+        i18nKey:
+          summary.failed === 0
+            ? 'notifications.kind.importSuccess'
+            : 'notifications.kind.importFailure',
+        i18nParams: {
+          name: this.bulkImportFolderName ?? this.bulkImportFolderPath ?? '',
+          detail: `${summary.success} ok · ${summary.failed} failed · ${summary.skipped} skipped`,
+        },
+        target: { kind: 'route', route: 'library' },
+      });
 
       if (
         summary.success > 0 ||

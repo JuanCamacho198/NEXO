@@ -16,13 +16,26 @@ export type PerBookSize = {
   bytes: number;
 };
 
-export function createStorageState() {
+export function createStorageState(): {
+  readonly stats: StorageStats | null;
+  readonly perBookSizes: PerBookSize[];
+  readonly isLoading: boolean;
+  readonly error: string | null;
+  readonly isClearing: boolean;
+  readonly driveUsage: DriveUsage | null;
+  readonly isLoadingDriveUsage: boolean;
+  loadStats(): Promise<void>;
+  loadDriveUsage(force?: boolean): Promise<void>;
+  clearCache(kind: 'covers' | 'temp' | 'all', deep?: boolean): Promise<{ freedBytes: number }>;
+  getPerBookSizes(): Promise<PerBookSize[]>;
+  deleteBookData(bookId: string): Promise<void>;
+  cleanupOrphans(): Promise<{ removed: number }>;
+} {
   let stats = $state<StorageStats | null>(null);
   let perBookSizes = $state<PerBookSize[]>([]);
   let isLoading = $state(false);
   let error = $state<string | null>(null);
   let isClearing = $state(false);
-  let clearProgress = $state<number | null>(null);
   let driveUsage = $state<DriveUsage | null>(null);
   let isLoadingDriveUsage = $state(false);
 
@@ -55,11 +68,9 @@ export function createStorageState() {
     deep = false,
   ): Promise<{ freedBytes: number }> {
     isClearing = true;
-    clearProgress = 0;
     error = null;
     try {
       const res = await invoke<{ freedBytes: number }>('clearCache', { kind, deep });
-      clearProgress = 100;
       await loadStats();
       return res;
     } catch (e) {
@@ -68,7 +79,6 @@ export function createStorageState() {
       throw e;
     } finally {
       isClearing = false;
-      setTimeout(() => (clearProgress = null), 800);
     }
   }
 
@@ -109,9 +119,6 @@ export function createStorageState() {
     },
     get isClearing() {
       return isClearing;
-    },
-    get clearProgress() {
-      return clearProgress;
     },
     get driveUsage() {
       return driveUsage;
