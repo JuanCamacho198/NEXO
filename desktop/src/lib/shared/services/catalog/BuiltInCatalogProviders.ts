@@ -17,11 +17,11 @@ import type {
   PagedResult,
 } from './CatalogProvider';
 import { GutendexDataSource } from './GutendexDataSource';
-import { GoogleBooksDataSource } from './GoogleBooksDataSource';
+import { GOOGLE_BOOKS_MAX_START_INDEX, GoogleBooksDataSource } from './GoogleBooksDataSource';
 import { OpenLibraryDataSource } from './OpenLibraryDataSource';
 import { resolveDownloadUrl, toPagedResult } from './mappers';
 import type { OpenLibraryIdentity } from './bookAuthorityResolver';
-import { MIN_PAGE_SIZE } from './policy';
+import { DEFAULT_PAGE_SIZE, MIN_PAGE_SIZE } from './policy';
 
 const GUTENDEX_ID_PREFIX = 'gutendex:';
 const GOOGLEBOOKS_ID_PREFIX = 'googlebooks:';
@@ -176,7 +176,19 @@ export class OpenLibraryCatalogProvider implements CatalogProvider {
 export class GoogleBooksCatalogProvider implements CatalogProvider {
   constructor(private readonly ds: GoogleBooksDataSource = new GoogleBooksDataSource()) {}
 
+  /**
+   * Pages past `GOOGLE_BOOKS_MAX_START_INDEX` never reach the network: an empty
+   * page with `nexoPage: null` exhausts every consumer, and `totalCount` is the
+   * addressable window (cap + one page), never an invented result count.
+   */
   async search(query: string, page: number): Promise<PagedResult> {
+    if ((page - 1) * DEFAULT_PAGE_SIZE > GOOGLE_BOOKS_MAX_START_INDEX) {
+      return {
+        results: [],
+        nexoPage: null,
+        totalCount: GOOGLE_BOOKS_MAX_START_INDEX + DEFAULT_PAGE_SIZE,
+      };
+    }
     const { books, totalCount } = await this.ds.search(query, page);
     return toPagedResult(books, page, totalCount);
   }

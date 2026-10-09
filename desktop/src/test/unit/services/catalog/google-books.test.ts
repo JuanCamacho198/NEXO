@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import {
   BUILTIN_GOOGLEBOOKS,
@@ -24,6 +27,7 @@ import { GutendexDataSource } from '$lib/shared/services/catalog/GutendexDataSou
 import { OpenLibraryDataSource } from '$lib/shared/services/catalog/OpenLibraryDataSource';
 import {
   GOOGLE_BOOKS_BASE_URL,
+  GOOGLE_BOOKS_MAX_START_INDEX,
   GOOGLE_BOOKS_SEARCH_FIELDS,
   GOOGLE_BOOKS_VOLUME_FIELDS,
   GoogleBooksDataSource,
@@ -259,6 +263,64 @@ describe('GoogleBooksDataSource', () => {
     );
     const err = await ds.search('pride', 1).catch((e: unknown) => e);
     expect((err as CatalogError).code).toBe('RATE_LIMITED');
+  });
+
+  it('caps pagination depth: no startIndex past the cap, no I/O for deeper pages', async () => {
+    expect(GOOGLE_BOOKS_MAX_START_INDEX).toBe(120);
+    const { fetchFn, urls } = recordingFetch(volumePayload());
+    const ds = new GoogleBooksDataSource(fetchFn, KEY);
+    for (let page = 1; page <= 12; page += 1) {
+      await ds.search('melville', page);
+    }
+    const startIndexes = urls.map((url) => Number(/startIndex=(\d+)/.exec(url)?.[1] ?? NaN));
+    // Pages 1–6 (startIndex 0–120); pages 7–12 are refused without I/O.
+    expect(urls).toHaveLength(6);
+    expect(Math.max(...startIndexes)).toBeLessThanOrEqual(GOOGLE_BOOKS_MAX_START_INDEX);
+    expect(urls.some((url) => url.includes('startIndex=216'))).toBe(false);
+  });
+
+  it('exhausts providers at the cap instead of inventing results', async () => {
+    const provider = new GoogleBooksCatalogProvider(new GoogleBooksDataSource(noIoFetch(), KEY));
+    const page = await provider.searchSource(BUILTIN_GOOGLEBOOKS, 'melville', 10);
+    expect(page.results).toEqual([]);
+    expect(page.nexoPage).toBeNull();
+    expect(page.totalCount).toBe(GOOGLE_BOOKS_MAX_START_INDEX + 24);
+  });
+});
+
+describe('Google Books quota discipline — the key never reaches logs or errors', () => {
+  const HERE = dirname(fileURLToPath(import.meta.url));
+  const CATALOG_DIR = resolve(HERE, '../../../../lib/shared/services/catalog');
+
+  it('never surfaces the key when throttled twice (429 then 503)', async () => {
+    const urls: string[] = [];
+    const fetchFn = stubFetch((url) => {
+      urls.push(url);
+      return { status: urls.length === 1 ? 429 : 503, body: {} };
+    });
+    const ds = new GoogleBooksDataSource(fetchFn, KEY);
+    const err = await ds.search('pride', 1).catch((e: unknown) => e);
+    // Sanity: the refused requests really carried the key in the URL.
+    expect(urls[0]).toContain(`key=${KEY}`);
+    expect((err as Error).message).not.toContain(KEY);
+    expect(JSON.stringify(err)).not.toContain(KEY);
+  });
+
+  it('keeps the catalog camino free of logger/console output (redact at the log point)', () => {
+    const files = [
+      'GoogleBooksDataSource.ts',
+      'BuiltInCatalogProviders.ts',
+      'CompositeCatalogProvider.ts',
+      'DiscoverCache.ts',
+      'liveComposite.ts',
+      'mappers.ts',
+      'policy.ts',
+    ];
+    for (const file of files) {
+      const source = readFileSync(resolve(CATALOG_DIR, file), 'utf8');
+      expect(source).not.toContain('console.');
+      expect(source).not.toMatch(/logger\.(debug|info|warn|error)/);
+    }
   });
 });
 

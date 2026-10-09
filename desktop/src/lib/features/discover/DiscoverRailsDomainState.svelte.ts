@@ -1,5 +1,7 @@
 import {
   BUILTIN_GOOGLEBOOKS,
+  DEFAULT_PAGE_SIZE,
+  GOOGLE_BOOKS_MAX_START_INDEX,
   isCatalogError,
   isRetryableCatalogCode,
   liveCatalogProvider,
@@ -94,11 +96,23 @@ export class DiscoverRailsDomainState {
   scopeError = $state<CatalogErrorCode | null>(null);
   /** True once the open scope has no further page to offer. */
   scopeExhausted = $state(false);
+  /**
+   * True once the depth cap truncated the open scope while the provider still
+   * offered more: the UI says only the first titles are shown (never invented
+   * results). False on natural exhaustion.
+   */
+  scopeAtDepthCap = $state(false);
 
   private readonly provider: CatalogProvider;
   private readonly now: () => Date;
   private readonly timeoutMs: number;
   private scopePage = 0;
+  /**
+   * A scope page already in flight. The scroller fires per scroll event, so
+   * without this guard one threshold crossing issues one request per event
+   * and burns quota on duplicate pages.
+   */
+  private scopeLoading = false;
   /** Guards a stale refresh/retry from overwriting a newer publish. */
   private generation = 0;
   /**
@@ -226,20 +240,31 @@ export class DiscoverRailsDomainState {
     this.scopeBooks = [];
     this.scopePage = 0;
     this.scopeExhausted = false;
+    this.scopeAtDepthCap = false;
+    this.scopeLoading = false;
     this.scopeError = null;
     await this.loadScopeNextPage();
   }
 
   /**
    * Append the scope's next page through the Google Books source. The scope
-   * stops once a page reports no next page.
+   * stops once a page reports no next page, once the next page would start
+   * past `GOOGLE_BOOKS_MAX_START_INDEX` (no request is issued — the prod
+   * `startIndex=216` is unreachable), and concurrent calls join the page in
+   * flight instead of duplicating it. When the cap truncates a scope the
+   * provider would still extend, `scopeAtDepthCap` tells the UI to say so.
    */
   async loadScopeNextPage(): Promise<void> {
     const scope = this.scope;
-    if (!scope) return;
+    if (!scope || this.scopeExhausted || this.scopeLoading) return;
+    if (this.scopePage * DEFAULT_PAGE_SIZE > GOOGLE_BOOKS_MAX_START_INDEX) {
+      this.scopeExhausted = true;
+      this.scopeAtDepthCap = true;
+      return;
+    }
+    this.scopeLoading = true;
     this.scopeError = null;
     try {
-      if (this.scopeExhausted) return;
       const page = await withDeadline(
         this.provider.searchSource(BUILTIN_GOOGLEBOOKS, scope.term, this.scopePage + 1),
         this.timeoutMs,
@@ -253,9 +278,16 @@ export class DiscoverRailsDomainState {
         }
       }
       this.scopePage += 1;
-      this.scopeExhausted = page.nexoPage === null;
+      if (page.nexoPage === null) {
+        this.scopeExhausted = true;
+      } else if (this.scopePage * DEFAULT_PAGE_SIZE > GOOGLE_BOOKS_MAX_START_INDEX) {
+        this.scopeExhausted = true;
+        this.scopeAtDepthCap = true;
+      }
     } catch (err) {
       this.scopeError = catalogCodeOf(err);
+    } finally {
+      this.scopeLoading = false;
     }
   }
 
@@ -265,6 +297,8 @@ export class DiscoverRailsDomainState {
     this.scopeBooks = [];
     this.scopePage = 0;
     this.scopeExhausted = false;
+    this.scopeAtDepthCap = false;
+    this.scopeLoading = false;
     this.scopeError = null;
   }
 

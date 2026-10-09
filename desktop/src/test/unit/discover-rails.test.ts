@@ -750,6 +750,92 @@ describe('discover rails — rail-scoped "Ver todo"', () => {
     // Exhausted: a further page is a no-op.
     await state.loadScopeNextPage();
     expect(requests.length).toBe(before + 2);
+    // Natural exhaustion is not a cap truncation: no truncation note.
+    expect(state.scopeAtDepthCap).toBe(false);
+  });
+
+  it('stops the term scope at the depth cap and flags the truncation', async () => {
+    const requests: RailRequest[] = [];
+    const provider: CatalogProvider = {
+      ...recordingProvider().provider,
+      async searchSource(sourceId, query, page): Promise<PagedResult> {
+        requests.push({ kind: 'searchSource', sourceId, query, page });
+        return {
+          results: [book(`googlebooks:${query}:${page}`)],
+          nexoPage: page + 1,
+          totalCount: 1_000_000,
+        };
+      },
+    };
+    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+    await state.refreshRails();
+    const before = requests.length;
+
+    await state.openScope({ kind: 'term', term: PINNED_TERMS[2], titleKey: PINNED_KEYS[2] });
+    for (let i = 0; i < 20; i += 1) {
+      await state.loadScopeNextPage();
+    }
+    const pages = requests
+      .slice(before)
+      .filter((request) => request.kind === 'searchSource')
+      .map((request) => (request as { page: number }).page);
+    // Six 24-item pages (startIndex 0–120); the prod startIndex=216 is unreachable.
+    expect(pages).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(state.scopeBooks).toHaveLength(6);
+    expect(state.scopeExhausted).toBe(true);
+    expect(state.scopeAtDepthCap).toBe(true);
+
+    // Capped: a further page issues no request.
+    await state.loadScopeNextPage();
+    expect(requests.length).toBe(before + 6);
+
+    // A fresh scope starts unflagged; closing drops the flag too.
+    await state.openScope({ kind: 'term', term: PINNED_TERMS[0], titleKey: PINNED_KEYS[0] });
+    expect(state.scopeAtDepthCap).toBe(false);
+    state.closeScope();
+    expect(state.scopeAtDepthCap).toBe(false);
+  });
+
+  it('joins concurrent scope loads instead of duplicating the request', async () => {
+    const requests: RailRequest[] = [];
+    let releasePage2: (value: PagedResult) => void = () => undefined;
+    const provider: CatalogProvider = {
+      ...recordingProvider().provider,
+      async searchSource(sourceId, query, page): Promise<PagedResult> {
+        requests.push({ kind: 'searchSource', sourceId, query, page });
+        if (page === 1) {
+          return {
+            results: [book(`googlebooks:${query}:1`)],
+            nexoPage: 2,
+            totalCount: 3,
+          };
+        }
+        return new Promise<PagedResult>((resolve) => {
+          releasePage2 = resolve;
+        });
+      },
+    };
+    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+    await state.refreshRails();
+    await state.openScope({ kind: 'term', term: PINNED_TERMS[0], titleKey: PINNED_KEYS[0] });
+    const before = requests.length;
+
+    const first = state.loadScopeNextPage();
+    const second = state.loadScopeNextPage();
+    await flushMicrotasks();
+    // One threshold crossing, one request: the second call joins the in-flight page.
+    expect(requests.length).toBe(before + 1);
+
+    releasePage2({ results: [book('googlebooks:term:2')], nexoPage: null, totalCount: 2 });
+    await first;
+    await second;
+    expect(requests.length).toBe(before + 1);
+    expect(state.scopeBooks.map((scoped) => scoped.id)).toEqual([
+      `googlebooks:${PINNED_TERMS[0]}:1`,
+      'googlebooks:term:2',
+    ]);
+    expect(state.scopeExhausted).toBe(true);
+    expect(state.scopeAtDepthCap).toBe(false);
   });
 
   it('captures a scope failure instead of throwing and clears it on retry', async () => {
@@ -817,8 +903,10 @@ describe('discover rails — per-rail error presentation', () => {
     expect(source).toContain('discoverState.retryRail(index)');
     expect(source).toContain("t('discover.railScope.back')");
     expect(source).toContain("kind: 'term'");
-    // The retired featured scope's single-page copy is no longer rendered.
-    expect(source).not.toContain('discover.railScope.singlePage');
+    // The depth cap truncates the scope instead of inventing results, so the
+    // retired single-page copy is rendered again with the loaded count.
+    expect(source).toContain('discover.railScope.singlePage');
+    expect(source).toContain('scopeAtDepthCap');
     expect(source).not.toContain('railViews');
   });
 });

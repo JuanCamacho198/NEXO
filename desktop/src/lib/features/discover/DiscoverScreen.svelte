@@ -24,6 +24,7 @@
     kind: 'term';
     books: CatalogBook[];
     error: CatalogErrorCode | null;
+    atDepthCap: boolean;
   };
 
   let { t, onOpenBook }: { t: Translate; onOpenBook?: (book: ReaderBook) => void } = $props();
@@ -123,6 +124,7 @@
       kind: scope.kind,
       books: discoverState.railsState.scopeBooks,
       error: discoverState.railsState.scopeError,
+      atDepthCap: discoverState.railsState.scopeAtDepthCap,
     };
   });
 
@@ -279,6 +281,11 @@
             />
           {/each}
         </div>
+        {#if scopeView.atDepthCap}
+          <p class="max-w-2xl text-xs text-(--color-text-muted)">
+            {t('discover.railScope.singlePage', { count: scopeView.books.length })}
+          </p>
+        {/if}
       {/if}
     </div>
   {:else if showOffline}

@@ -28,6 +28,15 @@ import type { CatalogBook } from './CatalogProvider';
 export const GOOGLE_BOOKS_BASE_URL = 'https://www.googleapis.com/books/v1';
 
 /**
+ * Hard ceiling for a Google Books `startIndex`. The API degrades past the
+ * first pages (repeats/empties while still spending quota), and prod paging
+ * reached `startIndex=216` before this cap existed. At the 24/page scope size
+ * this admits pages 1–6 (`startIndex` 0–120); anything deeper is refused
+ * without I/O so the key's quota is never spent on it.
+ */
+export const GOOGLE_BOOKS_MAX_START_INDEX = 120;
+
+/**
  * `fields` whitelist for the detail endpoint: keeps the payload small while
  * carrying everything the mapper needs. `industryIdentifiers` is included so a
  * keyed detail can surface ISBN-10/13 enrichment (spec scenario "Keyed
@@ -95,7 +104,13 @@ export class GoogleBooksDataSource {
     }
   }
 
-  /** Search volumes; a bare ISBN is sent as plain digits (never a colon operator). */
+  /**
+   * Search volumes; a bare ISBN is sent as plain digits (never a colon operator).
+   * Pages past `GOOGLE_BOOKS_MAX_START_INDEX` return an empty page with no I/O
+   * and `totalCount: 0`, so `toPagedResult` yields no next page and every
+   * consumer exhausts instead of re-requesting. No results are invented; the
+   * caller sees the end.
+   */
   async search(
     query: string,
     page: number,
@@ -106,6 +121,9 @@ export class GoogleBooksDataSource {
   }> {
     const size = clampPageSize(pageSize);
     const startIndex = (page - 1) * size;
+    if (startIndex > GOOGLE_BOOKS_MAX_START_INDEX) {
+      return { books: [], totalCount: 0 };
+    }
     const q = encodeURIComponent(buildGoogleBooksQuery(query));
     const url = `${GOOGLE_BOOKS_BASE_URL}/volumes?q=${q}&startIndex=${startIndex}&maxResults=${size}&fields=${GOOGLE_BOOKS_SEARCH_FIELDS}${this.keyParam()}`;
     const data = (await this.getJson(url, SEARCH_DEADLINE_MS)) as GoogleBooksSearchResponse;

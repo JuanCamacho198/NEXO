@@ -14,6 +14,8 @@ export const OL_MIN_GAP_MS = 1000;
 /** Exactly one delayed retry on 429/5xx — never more without delay. */
 export const MAX_DELAYED_RETRIES = 1;
 export const RETRY_BASE_DELAY_MS = 800;
+/** Upper bound for a `Retry-After`-driven wait: the retry stays inside the rail bound. */
+export const MAX_RETRY_DELAY_MS = 10_000;
 /**
  * Hard ceiling for a single catalog attempt (15s reference parity).
  * Single externalized constant: it is the rail-level total bound
@@ -55,6 +57,27 @@ export function shouldRetryStatus(status: number): boolean {
 /** Exponential backoff delay for the single delayed retry. */
 export function backoffDelayMs(attempt: number): number {
   return RETRY_BASE_DELAY_MS * 2 ** Math.max(0, attempt);
+}
+
+/**
+ * Wait before the single delayed retry. Honors the upstream `Retry-After`
+ * (delta-seconds or an HTTP date) so a throttled source sets the pace, clamped
+ * to `MAX_RETRY_DELAY_MS` so the retry stays inside the rail bound. Absent or
+ * unparsable, falls back to `backoffDelayMs(0)`. Pure over the header value.
+ */
+export function retryAfterMs(response: Response, now: () => number = Date.now): number {
+  const raw = response.headers.get('retry-after')?.trim() ?? '';
+  if (raw !== '') {
+    const seconds = Number(raw);
+    if (Number.isFinite(seconds)) {
+      return Math.min(Math.max(0, seconds * 1000), MAX_RETRY_DELAY_MS);
+    }
+    const at = Date.parse(raw);
+    if (!Number.isNaN(at)) {
+      return Math.min(Math.max(0, at - now()), MAX_RETRY_DELAY_MS);
+    }
+  }
+  return backoffDelayMs(0);
 }
 
 /** A caller-deadline composed signal plus the disposer that releases its timer. */
@@ -104,7 +127,10 @@ export function composeDeadline(
 
 /**
  * Fetch with exactly one delayed retry on 429/5xx, each attempt bounded by
- * `deadlineMs` through `composeDeadline`.
+ * `deadlineMs` through `composeDeadline`. The retry waits `retryAfterMs` —
+ * the upstream `Retry-After` when present, exponential backoff otherwise — so
+ * a throttled source is never hit back immediately; attempts stay bounded at
+ * `MAX_DELAYED_RETRIES` no matter what the header asks for.
  *
  * Failure classification separates a slow upstream from a connectivity failure:
  * when the deadline's own timer fires the attempt rejects with
@@ -144,7 +170,7 @@ export async function fetchWithRetry(
   if (!shouldRetryStatus(response.status)) {
     throw catalogError(mapHttpStatusToCode(response.status), `upstream status ${response.status}`);
   }
-  await new Promise((resolve) => setTimeout(resolve, backoffDelayMs(0)));
+  await new Promise((resolve) => setTimeout(resolve, retryAfterMs(response)));
   try {
     response = await attempt();
   } catch (err) {

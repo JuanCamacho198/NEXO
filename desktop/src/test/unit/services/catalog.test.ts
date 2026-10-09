@@ -18,6 +18,9 @@ import {
   createSearchDebouncer,
   DETAIL_DEADLINE_MS,
   fetchWithRetry,
+  MAX_RETRY_DELAY_MS,
+  RETRY_BASE_DELAY_MS,
+  retryAfterMs,
   SEARCH_DEADLINE_MS,
   shouldRetryStatus,
 } from '$lib/shared/services/catalog/policy';
@@ -204,6 +207,75 @@ describe('policy', () => {
     const res = await fetchWithRetry('https://example.com', {}, fetchFn);
     expect(res.ok).toBe(true);
     expect(calls).toBe(2);
+  });
+
+  it('waits out Retry-After before the single retry', async () => {
+    vi.useFakeTimers();
+    try {
+      let calls = 0;
+      const fetchFn = (async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response('{}', { status: 503, headers: { 'Retry-After': '2' } });
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }) as typeof fetch;
+      const pending = fetchWithRetry('https://example.com', {}, fetchFn);
+      const assertion = expect(pending).resolves.toMatchObject({ ok: true });
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(calls).toBe(1);
+      await vi.advanceTimersByTimeAsync(1);
+      await assertion;
+      expect(calls).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('clamps Retry-After to the ceiling and keeps attempts bounded', async () => {
+    vi.useFakeTimers();
+    try {
+      let calls = 0;
+      const fetchFn = (async () => {
+        calls += 1;
+        return new Response('{}', { status: 503, headers: { 'Retry-After': '120' } });
+      }) as typeof fetch;
+      const pending = fetchWithRetry('https://example.com', {}, fetchFn);
+      const assertion = expect(pending).rejects.toMatchObject({ code: 'UPSTREAM_ERROR' });
+      await vi.advanceTimersByTimeAsync(MAX_RETRY_DELAY_MS - 1);
+      expect(calls).toBe(1);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await assertion;
+      expect(calls).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('parses Retry-After seconds, HTTP dates, and falls back otherwise', () => {
+    expect(retryAfterMs(new Response(null, { status: 503, headers: { 'Retry-After': '3' } }))).toBe(
+      3000,
+    );
+    const at = new Date(10_000).toUTCString();
+    expect(
+      retryAfterMs(new Response(null, { status: 429, headers: { 'Retry-After': at } }), () => 4000),
+    ).toBe(6000);
+    expect(retryAfterMs(new Response(null, { status: 503 }))).toBe(RETRY_BASE_DELAY_MS);
+    expect(
+      retryAfterMs(new Response(null, { status: 503, headers: { 'Retry-After': 'nonsense' } })),
+    ).toBe(RETRY_BASE_DELAY_MS);
+  });
+
+  it('never retries non-throttle errors (404 fires once)', async () => {
+    let calls = 0;
+    const fetchFn = stubFetch(() => {
+      calls += 1;
+      return { status: 404, body: {} };
+    });
+    await expect(fetchWithRetry('https://example.com', {}, fetchFn)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    expect(calls).toBe(1);
   });
 
   it('debounces bursts so only the latest query hits I/O', async () => {

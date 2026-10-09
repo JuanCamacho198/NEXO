@@ -28,6 +28,7 @@ export { GutendexDataSource, GUTENDEX_BASE_URL } from './GutendexDataSource';
 export {
   GoogleBooksDataSource,
   GOOGLE_BOOKS_BASE_URL,
+  GOOGLE_BOOKS_MAX_START_INDEX,
   GOOGLE_BOOKS_VOLUME_FIELDS,
   buildGoogleBooksQuery,
 } from './GoogleBooksDataSource';
@@ -72,6 +73,7 @@ export {
   createRateLimiter,
   createSearchDebouncer,
   fetchWithRetry,
+  retryAfterMs,
   shouldRetryStatus,
   toCatalogError,
   buildUserAgent,
@@ -81,6 +83,7 @@ export {
   DETAIL_DEADLINE_MS,
   MAX_DELAYED_RETRIES,
   MAX_PAGE_SIZE,
+  MAX_RETRY_DELAY_MS,
   MIN_PAGE_SIZE,
   OL_MIN_GAP_MS,
   REQUEST_DEADLINE_MS,
