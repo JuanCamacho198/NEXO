@@ -10,6 +10,10 @@ import { join } from 'node:path';
  * Exception (sdd/app-auto-update, desktop slice): `https://github.com` is the
  * release-feed host for the Tauri updater endpoints (tauri.conf
  * plugins.updater). It is a built-in allowlist entry, not an addon host.
+ *
+ * Exception (odd/desktop-prod-csp-fixes, U1): `http://ipc.localhost` is
+ * Tauri's own IPC origin. Without it every invoke falls back to postMessage
+ * in production builds. It is platform plumbing, not an addon host.
  */
 const CSP_CONNECT_SRC = [
   "'self'",
@@ -26,6 +30,8 @@ const CSP_CONNECT_SRC = [
   'https://*.archive.org',
   // sdd/app-auto-update: release-feed host for the Tauri updater endpoints.
   'https://github.com',
+  // odd/desktop-prod-csp-fixes U1: Tauri's own IPC origin.
+  'http://ipc.localhost',
 ].join(' ');
 
 describe('addon registry CSP guard', () => {
@@ -68,6 +74,8 @@ describe('addon registry CSP guard', () => {
         'https://*.archive.org',
         // sdd/app-auto-update: release-feed host for the Tauri updater endpoints.
         'https://github.com',
+        // odd/desktop-prod-csp-fixes U1: Tauri's own IPC origin.
+        'http://ipc.localhost',
       ]).toContain(entry);
     }
   });
