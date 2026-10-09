@@ -349,7 +349,13 @@ async function doRefreshDriveAccessToken(): Promise<string> {
   }
   if (!response.ok) {
     const errorText = await response.text();
-    if (/invalid_grant/i.test(errorText)) {
+    // U5 (desktop-prod-csp-fixes): a rejected refresh is a dead session, not a
+    // transient failure. Google answers a revoked/expired grant with 400
+    // `invalid_grant`, but a dead client auth (revoked project, rotated
+    // secret) comes back as 401 with any body — keeping that grant retries a
+    // dead token on every Drive op (the prod 401 storm). 429/5xx stay
+    // transient: the grant is kept and the caller sees a generic error.
+    if (response.status === 400 || response.status === 401 || /invalid_grant/i.test(errorText)) {
       await clearDriveGrant();
       driveState.setDriveAuthorized(false);
       driveState.setDriveError('AUTH_REQUIRED');

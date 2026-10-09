@@ -359,6 +359,64 @@ describe('getDriveAccessToken', () => {
     expect(driveState.lastError).toBe('AUTH_REQUIRED');
   });
 
+  it('401 invalid_client clears the store and throws AUTH_REQUIRED (U5 dead session)', async () => {
+    memoryGrant = { refreshToken: 'dead', scope: 'drive.file', obtainedAt: 1 };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ error: 'invalid_client', error_description: 'unauthorized' }, false, 401),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      await getDriveAccessToken();
+      expect.unreachable();
+    } catch (error) {
+      expect((error as { code?: string }).code).toBe('AUTH_REQUIRED');
+    }
+    expect(memoryGrant).toBeNull();
+    expect(driveState.isAuthorized).toBe(false);
+    expect(driveState.lastError).toBe('AUTH_REQUIRED');
+  });
+
+  it('401 with any body clears the store: no retry of a dead token (U5)', async () => {
+    memoryGrant = { refreshToken: 'dead', scope: 'drive.file', obtainedAt: 1 };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse('Unauthorized', false, 401));
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      await getDriveAccessToken();
+      expect.unreachable();
+    } catch (error) {
+      expect((error as { code?: string }).code).toBe('AUTH_REQUIRED');
+    }
+    expect(memoryGrant).toBeNull();
+    // A second call short-circuits on the missing grant: no more token
+    // endpoint hits, connect-route error instead of another 401.
+    try {
+      await getDriveAccessToken();
+      expect.unreachable();
+    } catch (error) {
+      expect((error as { code?: string }).code).toBe('DRIVE_NOT_CONNECTED');
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('transient 503 keeps the grant for the next attempt (U5)', async () => {
+    memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse('overloaded', false, 503));
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      await getDriveAccessToken();
+      expect.unreachable();
+    } catch (error) {
+      expect((error as { code?: string }).code).not.toBe('AUTH_REQUIRED');
+    }
+    expect(memoryGrant).not.toBeNull();
+    expect(driveState.lastError).not.toBe('AUTH_REQUIRED');
+  });
+
   it('missing client ID throws DRIVE_CONFIG_MISSING (secret presence is irrelevant)', async () => {
     memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
     // Only the client ID is required; the secret stays configured via
