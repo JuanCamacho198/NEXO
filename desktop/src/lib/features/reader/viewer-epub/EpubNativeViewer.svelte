@@ -284,6 +284,13 @@
   function emitPreciseLocation(): void {
     bridge.emitPreciseLocation();
   }
+
+  function handleContainerScroll(): void {
+    emitPreciseLocation();
+    // U2: scrolling invalidates the selection anchor bounds the menu is
+    // pinned to — the menu must not float over the new viewport.
+    onselectionclear?.();
+  }
   function refreshReaderStyles(): void {
     render.refreshReaderStyles();
   }
@@ -414,10 +421,11 @@
       />
     {/if}
     <div
+      data-testid="epub-scroll-container"
       class="flex-1 w-full min-h-0 overflow-y-auto pb-16"
       style="background: {getThemeBgColor()};"
       bind:this={zoomContainerEl}
-      onscroll={emitPreciseLocation}
+      onscroll={handleContainerScroll}
     >
       <iframe
         bind:this={iframeEl}

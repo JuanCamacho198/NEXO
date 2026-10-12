@@ -6,6 +6,7 @@
   import SelectionToolbar from '../highlight/SelectionToolbar.svelte';
   import ReaderTextSettings from './ReaderTextSettings.svelte';
   import ReaderTocPanel from './ReaderTocPanel.svelte';
+  import type { TocEntry } from './ReaderTocPanel.svelte';
   import ReaderHeader from './ReaderHeader.svelte';
   import ReaderFooter from './ReaderFooter.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -333,13 +334,22 @@
   );
 
   async function handleHeaderGoToPage(page: number): Promise<boolean> {
+    // U2: navigation invalidates the selection anchor — never carry the menu
+    // into the next chapter.
+    dismissToolbar();
     return nav.handleHeaderGoToPage(page);
   }
   function goPrevPage(): void {
+    dismissToolbar();
     nav.goPrev();
   }
   function goNextPage(): void {
+    dismissToolbar();
     nav.goNext();
+  }
+  function handleTocNavigate(entry: TocEntry): void {
+    dismissToolbar();
+    nav.handleTocNavigate(entry);
   }
 
   async function handleShareText(): Promise<void> {
@@ -792,7 +802,7 @@
   open={nav.showTocPanel}
   entries={nav.tocEntries}
   activeId={nav.tocNavigate?.id}
-  onNavigate={nav.handleTocNavigate}
+  onNavigate={handleTocNavigate}
   onClose={() => (nav.showTocPanel = false)}
   {t}
 />
