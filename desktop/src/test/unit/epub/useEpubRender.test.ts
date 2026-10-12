@@ -198,6 +198,23 @@ describe('useEpubRender — pure helpers', () => {
       });
       expect(css).toContain('hyphens: none');
     });
+    it('measure is ch-based and size-agnostic (U2)', () => {
+      const base = {
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      };
+      for (const fontSize of [80, 100, 150, 200]) {
+        const css = buildReaderOverrideCss({ ...base, fontSize, zoomLevel: 100 });
+        expect(css).toContain('max-width: min(65ch, 100%)');
+        expect(css).not.toContain('38rem');
+      }
+    });
   });
 
   describe('buildChapterSrcdoc — golden', () => {

@@ -232,7 +232,9 @@ export function buildReaderOverrideCss(opts: {
         hyphens: ${hyphensValue} !important;
         text-wrap: pretty !important;
         padding: ${opts.margins.top}rem ${opts.margins.right}rem ${opts.margins.bottom}rem ${opts.margins.left}rem !important;
-        max-width: 38rem !important;
+        /* U2: measure in ch, not rem — ch tracks the reader font-size, so the
+          line stays ~65 characters from 80% to 200%. */
+        max-width: min(65ch, 100%) !important;
         margin: 0 auto !important;
         box-sizing: border-box !important;
       }
