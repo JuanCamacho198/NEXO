@@ -223,6 +223,24 @@ describe('useEpubRender — pure helpers', () => {
         expect(css).not.toContain('38rem');
       }
     });
+    it('figures, covers and tables have intent (U4)', () => {
+      const css = buildReaderOverrideCss({
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      });
+      expect(css).toContain('body figure');
+      expect(css).toContain('body figcaption');
+      expect(css).toContain('max-height: 85vh');
+      expect(css).toContain('overflow-x: auto');
+    });
   });
 
   describe('buildChapterSrcdoc — golden', () => {

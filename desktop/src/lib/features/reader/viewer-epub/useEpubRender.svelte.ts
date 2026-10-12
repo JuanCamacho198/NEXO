@@ -286,6 +286,28 @@ export function buildReaderOverrideCss(opts: {
       body img {
         max-width: 100%;
         height: auto;
+        /* U4: covers never push text off-screen; small inline images unaffected. */
+        max-height: 85vh;
+      }
+      body svg {
+        max-width: 100% !important;
+        max-height: 85vh !important;
+      }
+      /* U4: figures read as intentional spreads; captions stay muted. */
+      body figure {
+        margin: 2em auto !important;
+        text-align: center !important;
+        max-width: 100% !important;
+      }
+      body figcaption {
+        font-size: 0.85em !important;
+        margin-top: 0.5em !important;
+      }
+      /* U4: wide tables scroll instead of breaking the measure. */
+      body table {
+        display: block !important;
+        overflow-x: auto !important;
+        max-width: 100% !important;
       }
     `;
 }
