@@ -95,11 +95,15 @@ describe('useImmersiveChrome', () => {
     chrome.cleanup();
   });
 
-  it('edge 80px shows edgeNavVisible near edges, hides in center', () => {
+  it('edge 120px shows edgeNavVisible near edges, hides in center', () => {
     const chrome = createImmersiveChrome({ getPanelOpen: () => false });
     chrome.toggleFullscreen();
     // left edge
     chrome.handleWorkspaceMouseMove({ clientX: 10, clientY: 100 } as MouseEvent);
+    vi.advanceTimersByTime(16);
+    expect(chrome.edgeNavVisible).toBe(true);
+    // 100px is inside the widened 120px zone (was center under 80px)
+    chrome.handleWorkspaceMouseMove({ clientX: 100, clientY: 100 } as MouseEvent);
     vi.advanceTimersByTime(16);
     expect(chrome.edgeNavVisible).toBe(true);
     // center
@@ -122,6 +126,9 @@ describe('useImmersiveChrome', () => {
     chrome.toggleFullscreen();
     expect(chrome.isFullscreen).toBe(true);
     expect((readerState as unknown as { isFullscreen: boolean }).isFullscreen).toBe(true);
+    // U6: entry always opens visible for discoverability, then idle fades
+    expect(chrome.headerVisible).toBe(true);
+    expect(chrome.edgeNavVisible).toBe(true);
     chrome.toggleFullscreen();
     expect(chrome.isFullscreen).toBe(false);
     expect((readerState as unknown as { isFullscreen: boolean }).isFullscreen).toBe(false);
@@ -159,6 +166,88 @@ describe('useImmersiveChrome', () => {
     chrome.handleWorkspaceMouseLeave();
     expect(chrome._pendingFrame).toBeNull();
     expect(chrome.edgeNavVisible).toBe(false);
+    chrome.cleanup();
+  });
+
+  it('handleForwardedMouse drives the same clock as workspace mousemove (iframe fix)', () => {
+    const chrome = createImmersiveChrome({ getPanelOpen: () => false });
+    chrome.toggleFullscreen();
+    chrome.handleForwardedMouse(10, 100);
+    expect(chrome._pendingFrame).not.toBeNull();
+    vi.advanceTimersByTime(16);
+    expect(chrome.mouseX).toBe(10);
+    expect(chrome.edgeNavVisible).toBe(true);
+    chrome.handleForwardedMouse(500, 200);
+    vi.advanceTimersByTime(16);
+    expect(chrome.mouseX).toBe(500);
+    expect(chrome.edgeNavVisible).toBe(false);
+    chrome.cleanup();
+  });
+
+  it('top-strip coords rescue a hidden header (U2)', () => {
+    const chrome = createImmersiveChrome({ getPanelOpen: () => false });
+    chrome.toggleFullscreen();
+    chrome.handleForwardedMouse(500, 200);
+    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(2500);
+    expect(chrome.headerVisible).toBe(false);
+    chrome.handleForwardedMouse(500, 4);
+    vi.advanceTimersByTime(16);
+    expect(chrome.headerVisible).toBe(true);
+    chrome.cleanup();
+  });
+
+  it('cursorHidden only at true rest, reshows on first move (U3)', () => {
+    const chrome = createImmersiveChrome({ getPanelOpen: () => false });
+    expect(chrome.cursorHidden).toBe(false);
+    chrome.toggleFullscreen();
+    chrome.handleForwardedMouse(500, 200);
+    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(2500);
+    expect(chrome.headerVisible).toBe(false);
+    expect(chrome.cursorHidden).toBe(true);
+    chrome.handleForwardedMouse(501, 200);
+    vi.advanceTimersByTime(16);
+    expect(chrome.cursorHidden).toBe(false);
+    chrome.cleanup();
+  });
+
+  it('one meaning per key: F immersive, Ctrl+Shift+F window, Esc exits (U5)', async () => {
+    const setFullscreen = vi.fn().mockResolvedValue(undefined);
+    const chrome = createImmersiveChrome({
+      getPanelOpen: () => false,
+      appWindow: {
+        isFullscreen: vi.fn().mockResolvedValue(false),
+        setFullscreen,
+      },
+    });
+    chrome.handleGlobalKeydown({
+      key: 'f',
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      target: document.body,
+    } as unknown as KeyboardEvent);
+    expect(chrome.isFullscreen).toBe(true);
+    chrome.handleGlobalKeydown({
+      key: 'Escape',
+      preventDefault: vi.fn(),
+      target: document.body,
+    } as unknown as KeyboardEvent);
+    expect(chrome.isFullscreen).toBe(false);
+    chrome.handleGlobalKeydown({
+      key: 'F',
+      ctrlKey: true,
+      metaKey: false,
+      altKey: false,
+      shiftKey: true,
+      preventDefault: vi.fn(),
+      target: document.body,
+    } as unknown as KeyboardEvent);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(setFullscreen).toHaveBeenCalledWith(true);
     chrome.cleanup();
   });
 });

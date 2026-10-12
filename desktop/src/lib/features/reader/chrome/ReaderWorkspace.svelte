@@ -341,6 +341,16 @@
   function goNextPage(): void {
     nav.goNext();
   }
+  // U4: lateral tercile paging as fallback when chevrons rest faded.
+  // Selection and links win; plain margin clicks turn pages.
+  function handleIframeTercileClick(x: number, isLink: boolean): void {
+    if (!isFullscreen) return;
+    if (isLink) return;
+    if (showToolbar || selectedText) return;
+    const w = typeof window !== 'undefined' ? window.innerWidth : 9999;
+    if (x < w / 3) goPrevPage();
+    else if (x > (2 * w) / 3) goNextPage();
+  }
 
   async function handleShareText(): Promise<void> {
     if (!selectedText) return;
@@ -496,7 +506,7 @@
 <section
   class="flex flex-col bg-(--color-bg-deep) {isFullscreen
     ? 'fixed inset-0 z-40 h-screen w-screen overflow-hidden bg-[#f8f5ec]'
-    : 'h-screen'}"
+    : 'h-screen'} {chrome.cursorHidden ? 'cursor-none' : ''}"
   bind:this={workspaceRoot}
   onmouseleave={handleWorkspaceMouseLeave}
 >
@@ -590,6 +600,10 @@
           onSettingsChange={handleTextSettingsChange}
           persistedHighlights={highlightsState.persistedHighlights}
           onHighlightAction={handleHighlightAction}
+          onIframeMouseMove={(x, y) => chrome.handleForwardedMouse(x, y)}
+          onIframeMouseLeave={() => chrome.handleWorkspaceMouseLeave()}
+          onIframeClick={(x, isLink) => handleIframeTercileClick(x, isLink)}
+          cursorHidden={chrome.cursorHidden}
           {t}
         />
       </div>
@@ -709,13 +723,33 @@
     {t}
   />
   {#if isFullscreen && activeReadingBook}
+    <!-- U2: persistent rescue strips. The chapter iframe swallows hover, so
+      these 1-2px DOM strips above it guarantee a mouse path back. -->
+    <div
+      role="presentation"
+      aria-hidden="true"
+      class="fixed inset-x-0 top-0 z-40 h-2"
+      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
+    ></div>
+    <div
+      role="presentation"
+      aria-hidden="true"
+      class="fixed bottom-0 left-0 top-0 z-40 w-2"
+      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
+    ></div>
+    <div
+      role="presentation"
+      aria-hidden="true"
+      class="fixed bottom-0 right-0 top-0 z-40 w-2"
+      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
+    ></div>
     {@const prevDisabled = nav.prevDisabled}
     {@const nextDisabled = nav.nextDisabled}
     <button
       type="button"
       class="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-(--color-bg-deep)/40 text-(--color-text-inverse) backdrop-blur hover:bg-(--color-bg-deep)/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
         ? 'opacity-100'
-        : 'opacity-0 pointer-events-none'} {prevDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
+        : 'opacity-40'} {prevDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
       aria-label={t('reader.prev_page')}
       onclick={goPrevPage}
       disabled={prevDisabled}
@@ -733,7 +767,7 @@
       type="button"
       class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-(--color-bg-deep)/40 text-(--color-text-inverse) backdrop-blur hover:bg-(--color-bg-deep)/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
         ? 'opacity-100'
-        : 'opacity-0 pointer-events-none'} {nextDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
+        : 'opacity-40'} {nextDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
       aria-label={t('reader.next_page')}
       onclick={goNextPage}
       disabled={nextDisabled}
@@ -766,6 +800,14 @@
           /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg
         >{t('reader.share')}</button
       >
+    {/if}
+    {#if headerVisible}
+      <p
+        class="pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 z-40 whitespace-nowrap text-xs text-(--color-text-inverse)/70"
+        aria-hidden="true"
+      >
+        {t('reader.fullscreenKeysHint')}
+      </p>
     {/if}
   {/if}
 </section>

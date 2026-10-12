@@ -77,6 +77,10 @@
     ) => void;
     onselectionclear?: () => void;
     isFullscreen?: boolean;
+    onIframeMouseMove?: (x: number, y: number) => void;
+    onIframeMouseLeave?: () => void;
+    onIframeClick?: (x: number, isLink: boolean) => void;
+    cursorHidden?: boolean;
     onTocReady?: (entries: Array<{ id: string; title: string; depth: number }>) => void;
     externalTocNavigate?: { id: string } | null;
     onSettingsChange?: (settings: ReaderSettings) => void;
@@ -114,6 +118,10 @@
     persistedHighlights = [],
     onHighlightAction,
     isFullscreen = false,
+    onIframeMouseMove,
+    onIframeMouseLeave,
+    onIframeClick,
+    cursorHidden = false,
     onTocReady,
     externalTocNavigate = null,
     onSettingsChange,
@@ -371,6 +379,63 @@
     if (e.key === 'ArrowLeft') goToPrev();
     if (e.key === 'ArrowRight') goToNext();
   }
+
+  // U1: the chapter iframe swallows mouse events, so the workspace-level
+  // mousemove never fires over book text. Forward viewport-space coords.
+  $effect(() => {
+    const frame = iframeEl;
+    // Track chapter + loading so listeners re-attach after each srcdoc swap.
+    void lastRenderedChapter;
+    void isLoading;
+    if (!frame) return;
+    const onMove = (e: MouseEvent): void => {
+      if (!onIframeMouseMove) return;
+      const rect = frame.getBoundingClientRect();
+      onIframeMouseMove(rect.left + e.clientX, rect.top + e.clientY);
+    };
+    const onLeave = (): void => {
+      onIframeMouseLeave?.();
+    };
+    const onClick = (e: MouseEvent): void => {
+      if (!onIframeClick) return;
+      const target = e.target as Element | null;
+      const isLink = !!target?.closest?.('a');
+      const rect = frame.getBoundingClientRect();
+      onIframeClick(rect.left + e.clientX, isLink);
+    };
+    const attach = (): void => {
+      const doc = frame.contentDocument;
+      if (!doc) return;
+      doc.addEventListener('mousemove', onMove as EventListener);
+      doc.addEventListener('mouseleave', onLeave);
+      doc.addEventListener('click', onClick as EventListener);
+    };
+    const detach = (): void => {
+      const doc = frame.contentDocument;
+      if (!doc) return;
+      doc.removeEventListener('mousemove', onMove as EventListener);
+      doc.removeEventListener('mouseleave', onLeave);
+      doc.removeEventListener('click', onClick as EventListener);
+    };
+    frame.addEventListener('load', attach);
+    attach();
+    return () => {
+      detach();
+      frame.removeEventListener('load', attach);
+    };
+  });
+
+  // U3 trick (iframe half): parent CSS never crosses the document boundary,
+  // so mirror cursorHidden onto the frame + its body. Interactive chrome lives
+  // outside the iframe and keeps cursor:pointer/auto.
+  $effect(() => {
+    const frame = iframeEl;
+    void lastRenderedChapter;
+    if (!frame) return;
+    frame.style.cursor = cursorHidden ? 'none' : '';
+    const body = frame.contentDocument?.body;
+    if (body) body.style.cursor = cursorHidden ? 'none' : '';
+  });
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

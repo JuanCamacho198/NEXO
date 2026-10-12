@@ -864,6 +864,7 @@ export const messagesEn = {
   'reader.fitWidth': 'Fit to width',
   'reader.fitPage': 'Fit to page',
   'reader.fullscreenHint': 'Press F to toggle fullscreen',
+  'reader.fullscreenKeysHint': 'F immersive · F11 window · Esc exit',
   'reader.toolbar': 'Reader toolbar',
 
   'settings.localPreferences': 'Local preferences',
