@@ -58,8 +58,7 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
     }
     idleTimer = setTimeout(() => {
       if (isFullscreen && !hoverTop && !deps.getPanelOpen()) headerVisible = false;
-      if (isFullscreen && !hoverTop && !edgeNavVisible && !deps.getPanelOpen())
-        cursorHidden = true;
+      if (isFullscreen && !hoverTop && !edgeNavVisible && !deps.getPanelOpen()) cursorHidden = true;
     }, 2500);
   }
 

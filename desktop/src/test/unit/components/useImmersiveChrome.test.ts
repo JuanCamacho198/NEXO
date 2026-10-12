@@ -221,11 +221,31 @@ describe('useImmersiveChrome', () => {
         setFullscreen,
       },
     });
-    chrome.handleGlobalKeydown({ key: 'f', ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, preventDefault: vi.fn(), target: document.body } as unknown as KeyboardEvent);
+    chrome.handleGlobalKeydown({
+      key: 'f',
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      target: document.body,
+    } as unknown as KeyboardEvent);
     expect(chrome.isFullscreen).toBe(true);
-    chrome.handleGlobalKeydown({ key: 'Escape', preventDefault: vi.fn(), target: document.body } as unknown as KeyboardEvent);
+    chrome.handleGlobalKeydown({
+      key: 'Escape',
+      preventDefault: vi.fn(),
+      target: document.body,
+    } as unknown as KeyboardEvent);
     expect(chrome.isFullscreen).toBe(false);
-    chrome.handleGlobalKeydown({ key: 'F', ctrlKey: true, metaKey: false, altKey: false, shiftKey: true, preventDefault: vi.fn(), target: document.body } as unknown as KeyboardEvent);
+    chrome.handleGlobalKeydown({
+      key: 'F',
+      ctrlKey: true,
+      metaKey: false,
+      altKey: false,
+      shiftKey: true,
+      preventDefault: vi.fn(),
+      target: document.body,
+    } as unknown as KeyboardEvent);
     await vi.advanceTimersByTimeAsync(0);
     expect(setFullscreen).toHaveBeenCalledWith(true);
     chrome.cleanup();
