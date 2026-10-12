@@ -12,6 +12,10 @@
     useReaderTextSettings,
   } from './useReaderTextSettings.svelte';
   import { FONT_FAMILY_PRESETS, cyclePreset } from './readerTextPresets';
+import {
+  MARGIN_PRESETS,
+  PARAGRAPH_SPACING_PRESETS,
+} from './readerTextPresets';
 
   type Props = {
     open: boolean;
@@ -71,30 +75,23 @@
     const next = cyclePreset(cur, FONT_FAMILY_PRESETS);
     onSettingsChange({ ...readerSettings, epub: { ...readerSettings.epub, fontFamily: next } });
   }
-</script>
 
-{#snippet settingsRow(label: string, value: string, onclick: () => void)}
-  <div
-    class="flex cursor-pointer items-center justify-between"
-    {onclick}
-    role="button"
-    tabindex="0"
-    onkeydown={(e) => e.key === 'Enter' && onclick()}
-  >
-    <span class="text-sm text-(--color-text-muted)">{label}: {value}</span>
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="11"
-      height="11"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--color-accent-blue)"
-      stroke-width="3"
-      stroke-linecap="round"
-      stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg
-    >
-  </div>
-{/snippet}
+  const MARGIN_LABEL_KEYS: Array<MessageKey> = [
+    'reader.margin_compact',
+    'reader.margin_cozy',
+    'reader.margin_comfortable',
+    'reader.margin_roomy',
+    'reader.margin_expansive',
+  ];
+
+  function marginIndex(): number {
+    const m = readerSettings.margins;
+    const i = MARGIN_PRESETS.findIndex(
+      (p) => p.top === m.top && p.bottom === m.bottom && p.left === m.left && p.right === m.right,
+    );
+    return i < 0 ? 2 : i;
+  }
+</script>
 
 {#snippet toggleRow(label: string, checked: boolean, onclick: () => void, ariaLabel: string)}
   <div class="flex items-center justify-between">
@@ -115,6 +112,29 @@
       ></span>
     </button>
   </div>
+{/snippet}
+
+{#snippet selectRow(
+  label: string,
+  value: string,
+  options: Array<{ value: string; label: string }>,
+  onselect: (value: string) => void,
+  testid: string,
+)}
+  <!-- U4: a real select. Every option reachable directly, both directions,
+    with native keyboard support — the roulette row it replaces had none. -->
+  <label class="flex items-center justify-between gap-3">
+    <span class="text-sm text-(--color-text-muted)">{label}</span>
+    <select
+      data-testid={testid}
+      aria-label={label}
+      class="max-w-36 cursor-pointer truncate rounded-xl bg-(--color-border) px-3 py-2 text-sm text-(--color-accent-blue)"
+      {value}
+      onchange={(e) => onselect((e.currentTarget as HTMLSelectElement).value)}
+    >
+      {#each options as opt}<option value={opt.value}>{opt.label}</option>{/each}
+    </select>
+  </label>
 {/snippet}
 
 {#snippet sliderRow(label: string, value: number, oninput: (value: number) => void)}
@@ -186,11 +206,48 @@
           </div>
           <div class="h-px w-full bg-(--color-border)"></div>
           <div class="flex flex-col gap-4">
-            {@render settingsRow(`${t('reader.direction')}`, readerSettings.direction === 'ltr' ? t('reader.directionLtr') : t('reader.directionRtl'), textSettings.toggleDirection)}
-            {@render settingsRow(`${t('reader.alignment')}`, alignLabel(readerSettings.textAlign), textSettings.cycleAlignment)}
-            {@render settingsRow(`${t('reader.margins')}`, `${readerSettings.margins.left.toFixed(1)}rem`, textSettings.cycleMargins)}
-            {@render settingsRow(`${t('reader.paragraph_spacing')}`, `${readerSettings.paragraphSpacing}em`, textSettings.cycleParagraphSpacing)}
-            {@render settingsRow(`${t('reader.hyphenation')}`, readerSettings.hyphenation ? t('reader.hyphenationOn') : t('reader.hyphenationOff'), () => onSettingsChange({ ...readerSettings, hyphenation: !readerSettings.hyphenation }))}
+            {@render selectRow(
+              t('reader.direction'),
+              readerSettings.direction,
+              [
+                { value: 'ltr', label: t('reader.directionLtr') },
+                { value: 'rtl', label: t('reader.directionRtl') },
+              ],
+              (v) => onSettingsChange({ ...readerSettings, direction: v as ReaderSettings['direction'] }),
+              'direction-select',
+            )}
+            {@render selectRow(
+              t('reader.alignment'),
+              readerSettings.textAlign,
+              (['left', 'center', 'right', 'justify'] as const).map((a) => ({
+                value: a,
+                label: alignLabel(a),
+              })),
+              (v) => onSettingsChange({ ...readerSettings, textAlign: v as ReaderTextAlign }),
+              'alignment-select',
+            )}
+            {@render selectRow(
+              t('reader.margins'),
+              String(marginIndex()),
+              MARGIN_PRESETS.map((m, i) => ({
+                value: String(i),
+                label: t(MARGIN_LABEL_KEYS[i] ?? 'reader.margin_comfortable'),
+              })),
+              (v) =>
+                onSettingsChange({
+                  ...readerSettings,
+                  margins: { ...(MARGIN_PRESETS[Number(v)] ?? MARGIN_PRESETS[2]) },
+                }),
+              'margins-select',
+            )}
+            {@render selectRow(
+              t('reader.paragraph_spacing'),
+              String(readerSettings.paragraphSpacing),
+              PARAGRAPH_SPACING_PRESETS.map((p) => ({ value: String(p), label: `${p}em` })),
+              (v) => onSettingsChange({ ...readerSettings, paragraphSpacing: Number(v) }),
+              'spacing-select',
+            )}
+            {@render toggleRow(t('reader.hyphenation'), readerSettings.hyphenation, () => onSettingsChange({ ...readerSettings, hyphenation: !readerSettings.hyphenation }), t('reader.hyphenation'))}
           </div>
           <div class="h-px w-full bg-(--color-border)"></div>
         {/if}

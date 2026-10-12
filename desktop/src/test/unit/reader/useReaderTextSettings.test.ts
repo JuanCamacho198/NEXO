@@ -114,11 +114,11 @@ describe('useReaderTextSettings brightness/contrast setters', () => {
 });
 
 describe('ReaderTextSettings brightness/contrast controls', () => {
-  it('writes the slider value and clamps out-of-range input', async () => {
+  it('writes the slider value and clamps out-of-range input (PDF only — U1)', async () => {
     const onChange = vi.fn();
     render(ReaderTextSettings, {
       open: true,
-      format: 'epub',
+      format: 'pdf',
       readerSettings: baseSettings(),
       onSettingsChange: onChange,
       t,

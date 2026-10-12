@@ -150,3 +150,70 @@ describe('ReaderTextSettings (U3) — spacing reads at a glance', () => {
     expect(screen.getByTestId('letter-spacing-value')).toHaveTextContent('+2px');
   });
 });
+
+describe('ReaderTextSettings (U4) — selects and switches', () => {
+  function renderEpub() {
+    const props = {
+      open: true,
+      format: 'epub',
+      readerSettings: {
+        themeMode: 'paper',
+        brightness: 100,
+        contrast: 100,
+        selectionColor: '#3388ff',
+        epub: { fontSize: 100, fontFamily: 'serif' },
+        lineHeight: 1.8,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        verticalScrolling: false,
+        margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+        showHeader: true,
+        showFooter: true,
+        showPageNumbers: true,
+        progressIndicator: 'percentage',
+      },
+      onSettingsChange: vi.fn(),
+      t: (key: string) => key,
+      onClose: vi.fn(),
+    };
+    render(ReaderTextSettings, props as never);
+    return props;
+  }
+
+  it('jumps straight to justify through the alignment select', async () => {
+    const props = renderEpub();
+    await fireEvent.change(screen.getByTestId('alignment-select'), {
+      target: { value: 'justify' },
+    });
+    expect(props.onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ textAlign: 'justify' }),
+    );
+  });
+
+  it('offers named margin presets instead of a lone left value', () => {
+    renderEpub();
+    const select = screen.getByTestId('margins-select') as HTMLSelectElement;
+    expect(select.options.length).toBe(5);
+    expect(select.options[0]?.text).toBe('reader.margin_compact');
+    expect(select.value).toBe('2');
+  });
+
+  it('toggles hyphenation through a real switch', async () => {
+    const props = renderEpub();
+    await fireEvent.click(screen.getByLabelText('reader.hyphenation'));
+    expect(props.onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ hyphenation: true }),
+    );
+  });
+
+  it('exposes four native selects with full keyboard support', () => {
+    renderEpub();
+    expect(screen.getByTestId('direction-select').tagName).toBe('SELECT');
+    expect(screen.getByTestId('alignment-select').tagName).toBe('SELECT');
+    expect(screen.getByTestId('margins-select').tagName).toBe('SELECT');
+    expect(screen.getByTestId('spacing-select').tagName).toBe('SELECT');
+  });
+});
