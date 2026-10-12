@@ -14,10 +14,7 @@
     useReaderTextSettings,
   } from './useReaderTextSettings.svelte';
   import { FONT_FAMILY_PRESETS } from './readerTextPresets';
-import {
-  MARGIN_PRESETS,
-  PARAGRAPH_SPACING_PRESETS,
-} from './readerTextPresets';
+  import { MARGIN_PRESETS, PARAGRAPH_SPACING_PRESETS } from './readerTextPresets';
 
   type Props = {
     open: boolean;
