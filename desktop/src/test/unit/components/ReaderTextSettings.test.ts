@@ -99,3 +99,54 @@ describe('ReaderTextSettings (U2) — honest font-size stepper', () => {
     expect(screen.getByTestId('font-size-inc')).toBeInTheDocument();
   });
 });
+
+describe('ReaderTextSettings (U3) — spacing reads at a glance', () => {
+  function renderEpub(overrides: Record<string, unknown> = {}) {
+    const base = {
+      open: true,
+      format: 'epub',
+      readerSettings: {
+        themeMode: 'paper',
+        brightness: 100,
+        contrast: 100,
+        selectionColor: '#3388ff',
+        epub: { fontSize: 100, fontFamily: 'serif' },
+        lineHeight: 1.8,
+        letterSpacing: 2,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        verticalScrolling: false,
+        margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+        showHeader: true,
+        showFooter: true,
+        showPageNumbers: true,
+        progressIndicator: 'percentage',
+        ...overrides,
+      },
+      onSettingsChange: vi.fn(),
+      t: (key: string) => key,
+      onClose: vi.fn(),
+    };
+    render(ReaderTextSettings, base as never);
+    return base;
+  }
+
+  it('shows the live line-height value under the button', () => {
+    renderEpub({ lineHeight: 2 });
+    expect(screen.getByTestId('line-height-value')).toHaveTextContent('2.0×');
+  });
+
+  it('localizes the line-height title (no hardcoded English)', () => {
+    renderEpub({ lineHeight: 1.6 });
+    expect(screen.getByTestId('line-height-btn').getAttribute('title')).toBe(
+      'reader.line_spacing: 1.6×',
+    );
+  });
+
+  it('shows the live letter-spacing value with sign', () => {
+    renderEpub({ letterSpacing: 2 });
+    expect(screen.getByTestId('letter-spacing-value')).toHaveTextContent('+2px');
+  });
+});

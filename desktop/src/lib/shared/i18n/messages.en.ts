@@ -849,6 +849,7 @@ export const messagesEn = {
   'reader.font_decrease': 'Decrease font',
   'reader.spacing_increase': 'Increase spacing',
   'reader.spacing_decrease': 'Decrease spacing',
+  'reader.letter_spacing': 'Letter spacing',
   'reader.line_spacing': 'Line spacing',
   'reader.list_view': 'List view',
   'reader.align_left': 'Align left',

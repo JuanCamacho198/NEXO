@@ -1290,6 +1290,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.font_decrease': 'Disminuir fuente',
   'reader.spacing_increase': 'Aumentar espaciado',
   'reader.spacing_decrease': 'Disminuir espaciado',
+  'reader.letter_spacing': 'Interletraje',
   'reader.line_spacing': 'Espaciado de línea',
   'reader.list_view': 'Vista de lista',
   'reader.align_left': 'Alinear a la izquierda',
