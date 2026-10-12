@@ -131,6 +131,14 @@ describe('useEpubRender — pure helpers', () => {
       expect(getThemeStyles('dark')).toContain('#1a1a2e');
       expect(getThemeStyles('blue')).toContain('#1e3a5f');
     });
+    it('covers the full element set in every theme (U3)', () => {
+      for (const theme of ['paper', 'sepia', 'night', 'dark', 'blue']) {
+        const css = getThemeStyles(theme);
+        for (const sel of ['h1', 'blockquote', 'code', 'pre', 'hr', 'th', 'figcaption']) {
+          expect(css).toContain(sel);
+        }
+      }
+    });
   });
 
   describe('buildReaderOverrideCss', () => {

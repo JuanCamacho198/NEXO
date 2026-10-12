@@ -155,27 +155,69 @@ export function stripMissingFontFaces(cssText: string, missingFonts: Set<string>
 // NOTE (U5.4): the hex literals below are intentional. They style HTML
 // injected into the EPUB iframe, where the app's CSS tokens do not exist,
 // so var(--color-*) references would resolve to nothing.
+// U3: themes own the full element set (headings, quotes, code, rules,
+// tables, captions) — body+a alone left book colors bleeding into dark modes.
 export function getThemeStyles(themeMode: string): string {
   const themes: Record<string, string> = {
     paper: `
         body { background: #faf8f5; color: #333; }
         a { color: #3366cc; }
+        h1, h2, h3, h4, h5, h6 { color: #1a1a1a !important; }
+        blockquote { color: #5a544a !important; border-left: 3px solid #d8d0c4 !important; background: #f3efe8 !important; }
+        code { color: #7a3b2e !important; background: #efe9dd !important; }
+        pre { color: #333 !important; background: #f3efe8 !important; border: 1px solid #e2dacb !important; }
+        hr { border-color: #d8d0c4 !important; }
+        table, th, td { border-color: #d8d0c4 !important; }
+        th { background: #f3efe8 !important; }
+        figcaption { color: #8a8478 !important; }
       `,
     sepia: `
         body { background: #f5eedd; color: #5b4636; }
         a { color: #8b6914; }
+        h1, h2, h3, h4, h5, h6 { color: #3f2f22 !important; }
+        blockquote { color: #6b563d !important; border-left: 3px solid #d6c49a !important; background: #efe3cb !important; }
+        code { color: #6b3b1f !important; background: #e9dcc0 !important; }
+        pre { color: #5b4636 !important; background: #efe3cb !important; border: 1px solid #d6c49a !important; }
+        hr { border-color: #d6c49a !important; }
+        table, th, td { border-color: #d6c49a !important; }
+        th { background: #efe3cb !important; }
+        figcaption { color: #97805a !important; }
       `,
     night: `
         body { background: #0f1320; color: #c8ccd8; }
         a { color: #7bb8ff; }
+        h1, h2, h3, h4, h5, h6 { color: #eef1f8 !important; }
+        blockquote { color: #9aa3bd !important; border-left: 3px solid #2c3a55 !important; background: #151b2e !important; }
+        code { color: #ffb86b !important; background: #1a2238 !important; }
+        pre { color: #c8ccd8 !important; background: #151b2e !important; border: 1px solid #2c3a55 !important; }
+        hr { border-color: #2c3a55 !important; }
+        table, th, td { border-color: #2c3a55 !important; }
+        th { background: #151b2e !important; }
+        figcaption { color: #7d86a0 !important; }
       `,
     dark: `
         body { background: #1a1a2e; color: #e0e0e0; }
         a { color: #66bbff; }
+        h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
+        blockquote { color: #b0b0c8 !important; border-left: 3px solid #3d3d5c !important; background: #22223a !important; }
+        code { color: #ffb86b !important; background: #26263e !important; }
+        pre { color: #e0e0e0 !important; background: #22223a !important; border: 1px solid #3d3d5c !important; }
+        hr { border-color: #3d3d5c !important; }
+        table, th, td { border-color: #3d3d5c !important; }
+        th { background: #22223a !important; }
+        figcaption { color: #8e8ea8 !important; }
       `,
     blue: `
         body { background: #1e3a5f; color: #d6e4f0; }
         a { color: #88ccff; }
+        h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
+        blockquote { color: #a9c2da !important; border-left: 3px solid #3a5a85 !important; background: #24466f !important; }
+        code { color: #ffd479 !important; background: #26466e !important; }
+        pre { color: #d6e4f0 !important; background: #24466f !important; border: 1px solid #3a5a85 !important; }
+        hr { border-color: #3a5a85 !important; }
+        table, th, td { border-color: #3a5a85 !important; }
+        th { background: #24466f !important; }
+        figcaption { color: #8ba9c4 !important; }
       `,
   };
   return themes[themeMode] || themes.paper;
