@@ -158,11 +158,16 @@
       <section class="flex flex-col gap-6 p-4">
         <ThemeSwatches {readerSettings} {onSettingsChange} {t} />
         <div class="h-px w-full bg-(--color-border)"></div>
-        <div class="flex flex-col gap-4">
-          {@render sliderRow(t('settings.reader.brightness'), readerSettings.brightness, textSettings.setBrightness)}
-          {@render sliderRow(t('settings.reader.contrast'), readerSettings.contrast, textSettings.setContrast)}
-        </div>
-        <div class="h-px w-full bg-(--color-border)"></div>
+        {#if format === 'pdf'}
+          <!-- U1: brightness/contrast only render in PDF, the one format whose
+            pipeline applies them. In EPUB they persisted + toasted with zero
+            visual effect. -->
+          <div class="flex flex-col gap-4">
+            {@render sliderRow(t('settings.reader.brightness'), readerSettings.brightness, textSettings.setBrightness)}
+            {@render sliderRow(t('settings.reader.contrast'), readerSettings.contrast, textSettings.setContrast)}
+          </div>
+          <div class="h-px w-full bg-(--color-border)"></div>
+        {/if}
         {#if format === 'epub'}
           <button type="button" class="flex w-full items-center justify-between rounded-xl bg-(--color-border) px-3 py-2" onclick={cycleFontFamily}><span class="text-sm font-normal text-(--color-accent-blue)">{readerSettings.epub.fontFamily || t('reader.fontDefault')}</span><svg xmlns="http://www.w3.org/2000/svg" width="9" height="6" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
           <div class="flex justify-between">
@@ -183,11 +188,9 @@
           </div>
           <div class="h-px w-full bg-(--color-border)"></div>
         {/if}
-        <section class="flex flex-col gap-4">
-          {@render toggleRow(t('settings.reading.showHeader'), readerSettings.showHeader, () => onSettingsChange({ ...readerSettings, showHeader: !readerSettings.showHeader }), t('settings.reading.showHeader'))}
-          {@render toggleRow(t('settings.reading.showFooter'), readerSettings.showFooter, () => onSettingsChange({ ...readerSettings, showFooter: !readerSettings.showFooter }), t('settings.reading.showFooter'))}
-          {#if format === 'epub'}{@render toggleRow(t('reader.vertical_scroll'), readerSettings.verticalScrolling, () => onSettingsChange({ ...readerSettings, verticalScrolling: !readerSettings.verticalScrolling }), t('reader.vertical_scroll'))}{/if}
-        </section>
+        <!-- U1: the showHeader/showFooter/verticalScrolling switches lived here.
+          Removed: they persisted but no viewer reads them, so every toggle
+          was fake feedback. Restore them only with a wired reader. -->
         <button type="button" class="flex w-full cursor-pointer items-center justify-between rounded-xl bg-(--color-border) px-3 py-2 hover:bg-(--color-surface-hover)" onclick={textSettings.resetToDefaults}><span class="text-sm text-(--color-accent-blue)">{t('reader.saved_settings')}</span><svg xmlns="http://www.w3.org/2000/svg" width="9" height="6" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
       </section>
     </div>
