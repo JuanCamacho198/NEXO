@@ -217,3 +217,57 @@ describe('ReaderTextSettings (U4) — selects and switches', () => {
     expect(screen.getByTestId('spacing-select').tagName).toBe('SELECT');
   });
 });
+
+describe('ReaderTextSettings (U5) — font preview and book exit', () => {
+  function renderEpub(fontFamily = 'serif') {
+    const props = {
+      open: true,
+      format: 'epub',
+      readerSettings: {
+        themeMode: 'paper',
+        brightness: 100,
+        contrast: 100,
+        selectionColor: '#3388ff',
+        epub: { fontSize: 100, fontFamily },
+        lineHeight: 1.8,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        verticalScrolling: false,
+        margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+        showHeader: true,
+        showFooter: true,
+        showPageNumbers: true,
+        progressIndicator: 'percentage',
+      },
+      onSettingsChange: vi.fn(),
+      t: (key: string) => key,
+      onClose: vi.fn(),
+    };
+    render(ReaderTextSettings, props as never);
+    return props;
+  }
+
+  it('offers the publisher font as the first option', () => {
+    renderEpub();
+    const select = screen.getByTestId('font-select') as HTMLSelectElement;
+    expect(select.options[0]?.value).toBe('');
+    expect(select.options[0]?.text).toBe('reader.fontDefault');
+    expect(select.options.length).toBe(6);
+  });
+
+  it('previews the current face on the closed select', () => {
+    renderEpub('Georgia');
+    expect(screen.getByTestId('font-select').getAttribute('style')).toContain('Georgia');
+  });
+
+  it('returns to the publisher font on demand', async () => {
+    const props = renderEpub('monospace');
+    await fireEvent.change(screen.getByTestId('font-select'), { target: { value: '' } });
+    expect(props.onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ epub: expect.objectContaining({ fontFamily: '' }) }),
+    );
+  });
+});

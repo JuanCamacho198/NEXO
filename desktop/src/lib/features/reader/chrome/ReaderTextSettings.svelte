@@ -11,7 +11,7 @@
     READER_BRIGHTNESS_MIN,
     useReaderTextSettings,
   } from './useReaderTextSettings.svelte';
-  import { FONT_FAMILY_PRESETS, cyclePreset } from './readerTextPresets';
+  import { FONT_FAMILY_PRESETS } from './readerTextPresets';
 import {
   MARGIN_PRESETS,
   PARAGRAPH_SPACING_PRESETS,
@@ -70,10 +70,11 @@ import {
     return labels[al] ?? t('reader.alignLeft');
   }
 
-  function cycleFontFamily(): void {
+  // U5: '' is the publisher font — the render pipeline already treats a
+  // falsy family as "no override". It just never had a visible exit until now.
+  function fontPreviewStyle(): string {
     const cur = readerSettings.epub.fontFamily;
-    const next = cyclePreset(cur, FONT_FAMILY_PRESETS);
-    onSettingsChange({ ...readerSettings, epub: { ...readerSettings.epub, fontFamily: next } });
+    return cur ? `font-family: ${cur}, serif;` : '';
   }
 
   const MARGIN_LABEL_KEYS: Array<MessageKey> = [
@@ -120,6 +121,7 @@ import {
   options: Array<{ value: string; label: string }>,
   onselect: (value: string) => void,
   testid: string,
+  style = '',
 )}
   <!-- U4: a real select. Every option reachable directly, both directions,
     with native keyboard support — the roulette row it replaces had none. -->
@@ -130,6 +132,7 @@ import {
       aria-label={label}
       class="max-w-36 cursor-pointer truncate rounded-xl bg-(--color-border) px-3 py-2 text-sm text-(--color-accent-blue)"
       {value}
+      {style}
       onchange={(e) => onselect((e.currentTarget as HTMLSelectElement).value)}
     >
       {#each options as opt}<option value={opt.value}>{opt.label}</option>{/each}
@@ -188,7 +191,17 @@ import {
           <div class="h-px w-full bg-(--color-border)"></div>
         {/if}
         {#if format === 'epub'}
-          <button type="button" class="flex w-full items-center justify-between rounded-xl bg-(--color-border) px-3 py-2" onclick={cycleFontFamily}><span class="text-sm font-normal text-(--color-accent-blue)">{readerSettings.epub.fontFamily || t('reader.fontDefault')}</span><svg xmlns="http://www.w3.org/2000/svg" width="9" height="6" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+          {@render selectRow(
+            t('reader.font'),
+            readerSettings.epub.fontFamily,
+            [
+              { value: '', label: t('reader.fontDefault') },
+              ...FONT_FAMILY_PRESETS.map((f) => ({ value: f, label: f })),
+            ],
+            (v) => onSettingsChange({ ...readerSettings, epub: { ...readerSettings.epub, fontFamily: v } }),
+            'font-select',
+            fontPreviewStyle(),
+          )}
           <div class="flex items-center justify-between">
             <!-- U2: one stepper, both directions, live value, honest limits. -->
             <div class="flex items-center gap-1" role="group" aria-label={t('reader.font')}>
