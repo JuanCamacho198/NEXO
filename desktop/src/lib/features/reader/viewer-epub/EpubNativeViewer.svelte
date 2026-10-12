@@ -325,6 +325,18 @@
   export function getTotalPages(): number {
     return displayTotal;
   }
+  /**
+   * U3: collapse the chapter selection from the parent. Clicks inside the
+   * iframe document never reach the parent, so parent-chrome clicks would
+   * otherwise leave the menu stranded with no event to clear it.
+   */
+  export function clearIframeSelection(): void {
+    try {
+      iframeEl?.contentDocument?.getSelection()?.removeAllRanges();
+    } catch {
+      // Torn-down or unreadable frame: the parent dismiss covers it.
+    }
+  }
   function getThemeBgColor(): string {
     return zoomTheme.getThemeBgColor();
   }

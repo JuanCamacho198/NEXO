@@ -257,6 +257,20 @@
   function handleWorkspaceMouseLeave(): void {
     chrome.handleWorkspaceMouseLeave();
   }
+  // U3: parent-chrome clicks never reach the iframe document, so its
+  // selection (and menu) would survive them. Collapse from the parent; the
+  // toolbar owns its own clicks and the iframe its own flow.
+  function handleWorkspacePointerDown(e: PointerEvent): void {
+    if (viewer.kind !== 'epub') return;
+    const target = e.target as Element | null;
+    if (target?.closest?.('.selection-toolbar')) return;
+    // typeof-guard: bind:this may hold a viewer without this export (mocks,
+    // torn-down chapters). The parent dismiss below always runs.
+    if (typeof epubRef?.clearIframeSelection === 'function') {
+      epubRef.clearIframeSelection();
+    }
+    dismissToolbar();
+  }
   function toggleFullscreen(): void {
     chrome.toggleFullscreen();
     syncDebugReaderInfo();
@@ -275,6 +289,7 @@
     const root = workspaceRoot;
     if (!root) return;
     root.addEventListener('mousemove', chrome.handleWorkspaceMouseMove);
+    window.addEventListener('pointerdown', handleWorkspacePointerDown, { capture: true });
     window.addEventListener('wheel', zoom.handleGlobalWheel as EventListener, {
       capture: true,
       passive: false,
@@ -284,6 +299,9 @@
     window.addEventListener('keydown', readerShortcuts.handleGlobalKeydown as EventListener);
     return () => {
       root.removeEventListener('mousemove', chrome.handleWorkspaceMouseMove);
+      window.removeEventListener('pointerdown', handleWorkspacePointerDown, {
+        capture: true,
+      } as AddEventListenerOptions);
       window.removeEventListener(
         'wheel',
         zoom.handleGlobalWheel as EventListener,
