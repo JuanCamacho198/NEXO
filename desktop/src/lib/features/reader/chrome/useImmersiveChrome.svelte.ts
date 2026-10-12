@@ -107,8 +107,10 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
     readerState.isFullscreen = next;
     cursorHidden = false;
     if (next) {
-      headerVisible = hoverTop;
-      updateEdgeNav(mouseX);
+      // U6 discoverability: always open visible. The 2.5s idle clock fades
+      // header + cursor; edges fade on the first move back to center.
+      headerVisible = true;
+      edgeNavVisible = true;
       resetIdleTimer();
     } else {
       headerVisible = true;

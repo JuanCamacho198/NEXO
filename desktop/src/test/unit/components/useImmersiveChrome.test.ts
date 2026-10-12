@@ -126,6 +126,9 @@ describe('useImmersiveChrome', () => {
     chrome.toggleFullscreen();
     expect(chrome.isFullscreen).toBe(true);
     expect((readerState as unknown as { isFullscreen: boolean }).isFullscreen).toBe(true);
+    // U6: entry always opens visible for discoverability, then idle fades
+    expect(chrome.headerVisible).toBe(true);
+    expect(chrome.edgeNavVisible).toBe(true);
     chrome.toggleFullscreen();
     expect(chrome.isFullscreen).toBe(false);
     expect((readerState as unknown as { isFullscreen: boolean }).isFullscreen).toBe(false);
