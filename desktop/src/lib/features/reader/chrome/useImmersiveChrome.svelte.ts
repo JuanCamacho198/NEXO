@@ -69,7 +69,7 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
       return;
     }
     const w = typeof window !== 'undefined' ? window.innerWidth : 9999;
-    const nearEdge = x < 80 || x > w - 80;
+    const nearEdge = x < 120 || x > w - 120;
     edgeNavVisible = nearEdge;
   }
 

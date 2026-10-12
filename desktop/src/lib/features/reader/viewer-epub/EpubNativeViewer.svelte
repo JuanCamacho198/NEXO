@@ -79,6 +79,7 @@
     isFullscreen?: boolean;
     onIframeMouseMove?: (x: number, y: number) => void;
     onIframeMouseLeave?: () => void;
+    onIframeClick?: (x: number, isLink: boolean) => void;
     cursorHidden?: boolean;
     onTocReady?: (entries: Array<{ id: string; title: string; depth: number }>) => void;
     externalTocNavigate?: { id: string } | null;
@@ -119,6 +120,7 @@
     isFullscreen = false,
     onIframeMouseMove,
     onIframeMouseLeave,
+    onIframeClick,
     cursorHidden = false,
     onTocReady,
     externalTocNavigate = null,
@@ -394,17 +396,26 @@
     const onLeave = (): void => {
       onIframeMouseLeave?.();
     };
+    const onClick = (e: MouseEvent): void => {
+      if (!onIframeClick) return;
+      const target = e.target as Element | null;
+      const isLink = !!target?.closest?.('a');
+      const rect = frame.getBoundingClientRect();
+      onIframeClick(rect.left + e.clientX, isLink);
+    };
     const attach = (): void => {
       const doc = frame.contentDocument;
       if (!doc) return;
       doc.addEventListener('mousemove', onMove as EventListener);
       doc.addEventListener('mouseleave', onLeave);
+      doc.addEventListener('click', onClick as EventListener);
     };
     const detach = (): void => {
       const doc = frame.contentDocument;
       if (!doc) return;
       doc.removeEventListener('mousemove', onMove as EventListener);
       doc.removeEventListener('mouseleave', onLeave);
+      doc.removeEventListener('click', onClick as EventListener);
     };
     frame.addEventListener('load', attach);
     attach();

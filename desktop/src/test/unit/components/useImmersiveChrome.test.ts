@@ -95,11 +95,15 @@ describe('useImmersiveChrome', () => {
     chrome.cleanup();
   });
 
-  it('edge 80px shows edgeNavVisible near edges, hides in center', () => {
+  it('edge 120px shows edgeNavVisible near edges, hides in center', () => {
     const chrome = createImmersiveChrome({ getPanelOpen: () => false });
     chrome.toggleFullscreen();
     // left edge
     chrome.handleWorkspaceMouseMove({ clientX: 10, clientY: 100 } as MouseEvent);
+    vi.advanceTimersByTime(16);
+    expect(chrome.edgeNavVisible).toBe(true);
+    // 100px is inside the widened 120px zone (was center under 80px)
+    chrome.handleWorkspaceMouseMove({ clientX: 100, clientY: 100 } as MouseEvent);
     vi.advanceTimersByTime(16);
     expect(chrome.edgeNavVisible).toBe(true);
     // center

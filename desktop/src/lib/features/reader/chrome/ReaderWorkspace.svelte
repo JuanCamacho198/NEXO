@@ -341,6 +341,16 @@
   function goNextPage(): void {
     nav.goNext();
   }
+  // U4: lateral tercile paging as fallback when chevrons rest faded.
+  // Selection and links win; plain margin clicks turn pages.
+  function handleIframeTercileClick(x: number, isLink: boolean): void {
+    if (!isFullscreen) return;
+    if (isLink) return;
+    if (showToolbar || selectedText) return;
+    const w = typeof window !== 'undefined' ? window.innerWidth : 9999;
+    if (x < w / 3) goPrevPage();
+    else if (x > (2 * w) / 3) goNextPage();
+  }
 
   async function handleShareText(): Promise<void> {
     if (!selectedText) return;
@@ -592,6 +602,7 @@
           onHighlightAction={handleHighlightAction}
           onIframeMouseMove={(x, y) => chrome.handleForwardedMouse(x, y)}
           onIframeMouseLeave={() => chrome.handleWorkspaceMouseLeave()}
+          onIframeClick={(x, isLink) => handleIframeTercileClick(x, isLink)}
           cursorHidden={chrome.cursorHidden}
           {t}
         />
@@ -738,7 +749,7 @@
       type="button"
       class="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-(--color-bg-deep)/40 text-(--color-text-inverse) backdrop-blur hover:bg-(--color-bg-deep)/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
         ? 'opacity-100'
-        : 'opacity-0 pointer-events-none'} {prevDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
+        : 'opacity-40'} {prevDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
       aria-label={t('reader.prev_page')}
       onclick={goPrevPage}
       disabled={prevDisabled}
@@ -756,7 +767,7 @@
       type="button"
       class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-(--color-bg-deep)/40 text-(--color-text-inverse) backdrop-blur hover:bg-(--color-bg-deep)/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
         ? 'opacity-100'
-        : 'opacity-0 pointer-events-none'} {nextDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
+        : 'opacity-40'} {nextDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
       aria-label={t('reader.next_page')}
       onclick={goNextPage}
       disabled={nextDisabled}
