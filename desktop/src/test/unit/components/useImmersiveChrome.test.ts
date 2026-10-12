@@ -176,4 +176,17 @@ describe('useImmersiveChrome', () => {
     expect(chrome.edgeNavVisible).toBe(false);
     chrome.cleanup();
   });
+
+  it('top-strip coords rescue a hidden header (U2)', () => {
+    const chrome = createImmersiveChrome({ getPanelOpen: () => false });
+    chrome.toggleFullscreen();
+    chrome.handleForwardedMouse(500, 200);
+    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(2500);
+    expect(chrome.headerVisible).toBe(false);
+    chrome.handleForwardedMouse(500, 4);
+    vi.advanceTimersByTime(16);
+    expect(chrome.headerVisible).toBe(true);
+    chrome.cleanup();
+  });
 });

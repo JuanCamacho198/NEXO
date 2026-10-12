@@ -711,6 +711,26 @@
     {t}
   />
   {#if isFullscreen && activeReadingBook}
+    <!-- U2: persistent rescue strips. The chapter iframe swallows hover, so
+      these 1-2px DOM strips above it guarantee a mouse path back. -->
+    <div
+      role="presentation"
+      aria-hidden="true"
+      class="fixed inset-x-0 top-0 z-40 h-2"
+      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
+    ></div>
+    <div
+      role="presentation"
+      aria-hidden="true"
+      class="fixed bottom-0 left-0 top-0 z-40 w-2"
+      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
+    ></div>
+    <div
+      role="presentation"
+      aria-hidden="true"
+      class="fixed bottom-0 right-0 top-0 z-40 w-2"
+      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
+    ></div>
     {@const prevDisabled = nav.prevDisabled}
     {@const nextDisabled = nav.nextDisabled}
     <button
