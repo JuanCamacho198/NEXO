@@ -141,9 +141,7 @@
   let lastRenderedChapter = $state(-1);
   let lastContinueLocation = $state<string | null>(null);
   // U5: footnote popover. Viewport-space anchor + parent scroll to restore.
-  let footnote = $state<{ x: number; y: number; text: string; returnScroll: number } | null>(
-    null,
-  );
+  let footnote = $state<{ x: number; y: number; text: string; returnScroll: number } | null>(null);
 
   const spine = createEpubSpine({ getMetadata: () => metadata });
   const navigation = createEpubNavigation({
@@ -576,7 +574,10 @@
         role="dialog"
         aria-label={t('reader.footnoteBack')}
         class="fixed z-50 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-(--color-border) bg-(--color-surface) p-4 shadow-xl"
-        style="left: {Math.max(16, Math.min(footnote.x, vw - 336))}px; top: {Math.max(16, Math.min(footnote.y + 12, vh - 220))}px;"
+        style="left: {Math.max(16, Math.min(footnote.x, vw - 336))}px; top: {Math.max(
+          16,
+          Math.min(footnote.y + 12, vh - 220),
+        )}px;"
       >
         <p class="text-sm leading-relaxed text-(--color-text)">{footnote.text}</p>
         <button
