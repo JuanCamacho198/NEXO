@@ -1,5 +1,7 @@
 <script lang="ts">
   import Check from 'lucide-svelte/icons/check';
+  import RotateCcw from 'lucide-svelte/icons/rotate-ccw';
+  import { onDestroy } from 'svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, ReaderTextAlign } from '$lib/shared/types';
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
@@ -75,6 +77,25 @@ import {
   function fontPreviewStyle(): string {
     const cur = readerSettings.epub.fontFamily;
     return cur ? `font-family: ${cur}, serif;` : '';
+  }
+
+  // U6: destructive actions look destructive and never fire one-tap.
+  let resetArmed = $state(false);
+  let resetTimer: ReturnType<typeof setTimeout> | undefined;
+  onDestroy(() => clearTimeout(resetTimer));
+
+  function handleReset(): void {
+    if (!resetArmed) {
+      resetArmed = true;
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        resetArmed = false;
+      }, 3000);
+      return;
+    }
+    clearTimeout(resetTimer);
+    resetArmed = false;
+    textSettings.resetToDefaults();
   }
 
   const MARGIN_LABEL_KEYS: Array<MessageKey> = [
@@ -267,7 +288,22 @@ import {
         <!-- U1: the showHeader/showFooter/verticalScrolling switches lived here.
           Removed: they persisted but no viewer reads them, so every toggle
           was fake feedback. Restore them only with a wired reader. -->
-        <button type="button" class="flex w-full cursor-pointer items-center justify-between rounded-xl bg-(--color-border) px-3 py-2 hover:bg-(--color-surface-hover)" onclick={textSettings.resetToDefaults}><span class="text-sm text-(--color-accent-blue)">{t('reader.saved_settings')}</span><svg xmlns="http://www.w3.org/2000/svg" width="9" height="6" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+        <div class="h-px w-full bg-(--color-border)"></div>
+        <section aria-label={t('reader.reset_defaults')} class="rounded-xl border border-(--color-error)/40 p-2">
+          <button
+            type="button"
+            data-testid="reset-defaults"
+            onclick={handleReset}
+            class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 hover:bg-(--color-surface-hover)"
+            class:text-(--color-error)={resetArmed}
+            class:text-(--color-text-muted)={!resetArmed}
+          >
+            <RotateCcw size={14} strokeWidth={2} class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span class="text-sm font-medium"
+              >{resetArmed ? t('reader.reset_confirm') : t('reader.reset_defaults')}</span
+            >
+          </button>
+        </section>
       </section>
     </div>
   </div>

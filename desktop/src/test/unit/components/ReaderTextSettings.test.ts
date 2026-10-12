@@ -271,3 +271,55 @@ describe('ReaderTextSettings (U5) — font preview and book exit', () => {
     );
   });
 });
+
+describe('ReaderTextSettings (U6) — guarded reset', () => {
+  function renderEpub() {
+    const props = {
+      open: true,
+      format: 'epub',
+      readerSettings: {
+        themeMode: 'paper',
+        brightness: 100,
+        contrast: 100,
+        selectionColor: '#3388ff',
+        epub: { fontSize: 100, fontFamily: 'serif' },
+        lineHeight: 1.8,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        verticalScrolling: false,
+        margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+        showHeader: true,
+        showFooter: true,
+        showPageNumbers: true,
+        progressIndicator: 'percentage',
+      },
+      onSettingsChange: vi.fn(),
+      t: (key: string) => key,
+      onClose: vi.fn(),
+    };
+    render(ReaderTextSettings, props as never);
+    return props;
+  }
+
+  it('labels the action as reset, not saved settings', () => {
+    renderEpub();
+    const btn = screen.getByTestId('reset-defaults');
+    expect(btn).toHaveTextContent('reader.reset_defaults');
+    expect(btn).not.toHaveTextContent('reader.saved_settings');
+  });
+
+  it('arms on first tap and resets only on the second', async () => {
+    const props = renderEpub();
+    const btn = screen.getByTestId('reset-defaults');
+    await fireEvent.click(btn);
+    expect(props.onSettingsChange).not.toHaveBeenCalled();
+    expect(btn).toHaveTextContent('reader.reset_confirm');
+    await fireEvent.click(btn);
+    expect(props.onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ themeMode: 'paper' }),
+    );
+  });
+});

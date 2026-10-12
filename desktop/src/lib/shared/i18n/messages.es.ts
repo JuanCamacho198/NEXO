@@ -1306,6 +1306,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.next_page': 'Página siguiente',
   'reader.page_input': 'Ir a la página',
   'reader.saved_settings': 'Ajustes guardados',
+  'reader.reset_defaults': 'Restablecer valores',
+  'reader.reset_confirm': 'Toca de nuevo para confirmar',
   'reader.zoom': 'Zoom',
   'reader.zoomLevel': 'Zoom: {{level}}%',
   'reader.fitWidth': 'Ajustar al ancho',

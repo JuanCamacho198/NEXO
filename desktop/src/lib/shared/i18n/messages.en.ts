@@ -865,6 +865,8 @@ export const messagesEn = {
   'reader.next_page': 'Next page',
   'reader.page_input': 'Go to page',
   'reader.saved_settings': 'Saved settings',
+  'reader.reset_defaults': 'Reset to defaults',
+  'reader.reset_confirm': 'Tap again to confirm reset',
   'reader.zoom': 'Zoom',
   'reader.zoomLevel': 'Zoom: {{level}}%',
   'reader.fitWidth': 'Fit to width',
