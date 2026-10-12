@@ -77,6 +77,7 @@
     ) => void;
     onselectionclear?: () => void;
     isFullscreen?: boolean;
+    hasSelectionMenu?: boolean;
     onTocReady?: (entries: Array<{ id: string; title: string; depth: number }>) => void;
     externalTocNavigate?: { id: string } | null;
     onSettingsChange?: (settings: ReaderSettings) => void;
@@ -114,6 +115,7 @@
     persistedHighlights = [],
     onHighlightAction,
     isFullscreen = false,
+    hasSelectionMenu = false,
     onTocReady,
     externalTocNavigate = null,
     onSettingsChange,
@@ -390,9 +392,20 @@
     if (e.key === 'ArrowLeft') goToPrev();
     if (e.key === 'ArrowRight') goToNext();
   }
+
+  function handleWindowKeydown(e: KeyboardEvent): void {
+    // U4: one Esc, one layer. Selection menu first; the immersive chrome
+    // exits on the next Esc via its own global handler.
+    if (e.key === 'Escape' && hasSelectionMenu) {
+      e.stopImmediatePropagation();
+      onselectionclear?.();
+      return;
+    }
+    handleKeydown(e);
+  }
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <div
   class="flex flex-col h-full w-full min-h-0 outline-none relative"

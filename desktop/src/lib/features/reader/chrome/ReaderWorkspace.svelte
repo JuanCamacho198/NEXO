@@ -615,6 +615,7 @@
           onselection={handleViewerSelection}
           onselectionclear={dismissToolbar}
           {isFullscreen}
+          hasSelectionMenu={showToolbar}
           onSettingsChange={handleTextSettingsChange}
           persistedHighlights={highlightsState.persistedHighlights}
           onHighlightAction={handleHighlightAction}

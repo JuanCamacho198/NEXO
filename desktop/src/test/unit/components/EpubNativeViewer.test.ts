@@ -516,4 +516,40 @@ describe('EpubNativeViewer', () => {
       expect(onselectionclear).toHaveBeenCalled();
     });
   });
+
+  // ─── U4: Escape consumes one layer ──────────────
+  describe('Selection menu Escape (U4)', () => {
+    function pressEscape(): void {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    }
+
+    it('clears the selection menu on Escape when open', async () => {
+      const onselectionclear = vi.fn();
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+        onselectionclear,
+        hasSelectionMenu: true,
+      });
+
+      await screen.findByTitle('chapter');
+      pressEscape();
+      expect(onselectionclear).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores Escape without an open menu', async () => {
+      const onselectionclear = vi.fn();
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+        onselectionclear,
+      });
+
+      await screen.findByTitle('chapter');
+      pressEscape();
+      expect(onselectionclear).not.toHaveBeenCalled();
+    });
+  });
 });
