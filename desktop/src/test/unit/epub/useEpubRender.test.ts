@@ -241,6 +241,38 @@ describe('useEpubRender — pure helpers', () => {
       expect(css).toContain('max-height: 85vh');
       expect(css).toContain('overflow-x: auto');
     });
+    it('type details: orphans, wrapping, spacing-xor-indent (U6)', () => {
+      const spaced = buildReaderOverrideCss({
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      });
+      expect(spaced).toContain('orphans: 3');
+      expect(spaced).toContain('widows: 3');
+      expect(spaced).toContain('overflow-wrap: break-word');
+      expect(spaced).toContain('text-indent: 0');
+      expect(spaced).toContain('white-space: pre-wrap');
+      const tight = buildReaderOverrideCss({
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 0,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      });
+      expect(tight).not.toContain('text-indent: 0');
+    });
   });
 
   describe('buildChapterSrcdoc — golden', () => {

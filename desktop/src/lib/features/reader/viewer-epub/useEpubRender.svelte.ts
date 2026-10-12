@@ -273,6 +273,10 @@ export function buildReaderOverrideCss(opts: {
         direction: ${opts.direction} !important;
         hyphens: ${hyphensValue} !important;
         text-wrap: pretty !important;
+        /* U6: long-session legibility. */
+        orphans: 3 !important;
+        widows: 3 !important;
+        overflow-wrap: break-word !important;
         padding: ${opts.margins.top}rem ${opts.margins.right}rem ${opts.margins.bottom}rem ${opts.margins.left}rem !important;
         /* U2: measure in ch, not rem — ch tracks the reader font-size, so the
           line stays ~65 characters from 80% to 200%. */
@@ -282,6 +286,19 @@ export function buildReaderOverrideCss(opts: {
       }
       body p {
         margin-bottom: ${opts.paragraphSpacing}em;
+        ${
+          // U6: spacing XOR indent. Book stylesheets that indent would double
+          // up with our paragraph spacing, so indent loses when spacing is on.
+          opts.paragraphSpacing > 0 ? 'text-indent: 0 !important;' : ''
+        }
+      }
+      body pre {
+        white-space: pre-wrap !important;
+        overflow-x: auto !important;
+        overflow-wrap: break-word !important;
+      }
+      body code {
+        overflow-wrap: break-word !important;
       }
       body img {
         max-width: 100%;
