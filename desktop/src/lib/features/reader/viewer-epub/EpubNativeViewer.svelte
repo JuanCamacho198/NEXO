@@ -17,6 +17,7 @@
   import { createEpubHighlights } from '$lib/features/reader/viewer-epub/useEpubHighlights.svelte';
   import { createEpubZoomTheme } from '$lib/features/reader/viewer-epub/useEpubZoomTheme.svelte';
   import { createEpubBridge } from '$lib/features/reader/viewer-epub/useEpubBridge.svelte';
+  import { resolveFootnoteNote } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 
   interface EpubChapterMeta {
     index: number;
@@ -137,6 +138,10 @@
   let iframeContentHeight = $state(0);
   let lastRenderedChapter = $state(-1);
   let lastContinueLocation = $state<string | null>(null);
+  // U5: footnote popover. Viewport-space anchor + parent scroll to restore.
+  let footnote = $state<{ x: number; y: number; text: string; returnScroll: number } | null>(
+    null,
+  );
 
   const spine = createEpubSpine({ getMetadata: () => metadata });
   const navigation = createEpubNavigation({
@@ -369,6 +374,7 @@
         render.getEpoch() > 0
       )
         return;
+      footnote = null;
       renderChapter(navigation.currentChapterIndex);
       return;
     }
@@ -376,12 +382,29 @@
   });
 
   function handleKeydown(e: KeyboardEvent): void {
+    if (e.key === 'Escape' && footnote) {
+      // First Esc closes the note; the immersive chrome exits on the next one.
+      e.stopImmediatePropagation();
+      closeFootnote();
+      return;
+    }
     if (e.key === 'ArrowLeft') goToPrev();
     if (e.key === 'ArrowRight') goToNext();
   }
 
-  // U1: the chapter iframe swallows mouse events, so the workspace-level
-  // mousemove never fires over book text. Forward viewport-space coords.
+  // U1 (fullscreen): the chapter iframe swallows mouse events, so the
+  // workspace-level mousemove never fires over book text. Forward
+  // viewport-space coords. U5 (reading-quality): footnote `#` links open
+  // inline instead of jumping chapters. One effect, one click pipeline:
+  // highlights win, then footnotes, then tercile paging.
+  function closeFootnote(restoreScroll = true): void {
+    const returnScroll = footnote?.returnScroll;
+    footnote = null;
+    if (restoreScroll && returnScroll !== undefined && zoomContainerEl) {
+      zoomContainerEl.scrollTop = returnScroll;
+    }
+  }
+
   $effect(() => {
     const frame = iframeEl;
     // Track chapter + loading so listeners re-attach after each srcdoc swap.
@@ -397,8 +420,31 @@
       onIframeMouseLeave?.();
     };
     const onClick = (e: MouseEvent): void => {
-      if (!onIframeClick) return;
       const target = e.target as Element | null;
+      const win = frame.contentWindow as
+        | (Window & { __epubHighlightOverlay?: { hitTest?: (x: number, y: number) => unknown } })
+        | null;
+      try {
+        if (win?.__epubHighlightOverlay?.hitTest?.(e.clientX, e.clientY)) return;
+      } catch {
+        return;
+      }
+      const anchor = target?.closest?.('a[href^="#"]') as HTMLAnchorElement | null;
+      if (anchor && frame.contentDocument) {
+        const note = resolveFootnoteNote(anchor.getAttribute('href'), frame.contentDocument);
+        if (note) {
+          e.preventDefault();
+          const rect = frame.getBoundingClientRect();
+          footnote = {
+            x: rect.left + e.clientX,
+            y: rect.top + e.clientY,
+            text: note.text,
+            returnScroll: zoomContainerEl?.scrollTop ?? 0,
+          };
+          return;
+        }
+      }
+      if (!onIframeClick) return;
       const isLink = !!target?.closest?.('a');
       const rect = frame.getBoundingClientRect();
       onIframeClick(rect.left + e.clientX, isLink);
@@ -494,5 +540,24 @@
         title="chapter"
       ></iframe>
     </div>
+    {#if footnote}
+      {@const vw = typeof window !== 'undefined' ? window.innerWidth : 1024}
+      {@const vh = typeof window !== 'undefined' ? window.innerHeight : 768}
+      <div
+        role="dialog"
+        aria-label={t('reader.footnoteBack')}
+        class="fixed z-50 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-(--color-border) bg-(--color-surface) p-4 shadow-xl"
+        style="left: {Math.max(16, Math.min(footnote.x, vw - 336))}px; top: {Math.max(16, Math.min(footnote.y + 12, vh - 220))}px;"
+      >
+        <p class="text-sm leading-relaxed text-(--color-text)">{footnote.text}</p>
+        <button
+          type="button"
+          class="mt-3 cursor-pointer rounded-full bg-(--color-accent-blue) px-3 py-1.5 text-xs font-medium text-(--color-accent-on) hover:opacity-90"
+          onclick={() => closeFootnote()}
+        >
+          {t('reader.footnoteBack')}
+        </button>
+      </div>
+    {/if}
   {/if}
 </div>

@@ -865,6 +865,7 @@ export const messagesEn = {
   'reader.fitPage': 'Fit to page',
   'reader.fullscreenHint': 'Press F to toggle fullscreen',
   'reader.fullscreenKeysHint': 'F immersive · F11 window · Esc exit',
+  'reader.footnoteBack': 'Back to text',
   'reader.toolbar': 'Reader toolbar',
 
   'settings.localPreferences': 'Local preferences',

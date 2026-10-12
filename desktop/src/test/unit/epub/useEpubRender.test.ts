@@ -131,6 +131,14 @@ describe('useEpubRender — pure helpers', () => {
       expect(getThemeStyles('dark')).toContain('#1a1a2e');
       expect(getThemeStyles('blue')).toContain('#1e3a5f');
     });
+    it('covers the full element set in every theme (U3)', () => {
+      for (const theme of ['paper', 'sepia', 'night', 'dark', 'blue']) {
+        const css = getThemeStyles(theme);
+        for (const sel of ['h1', 'blockquote', 'code', 'pre', 'hr', 'th', 'figcaption']) {
+          expect(css).toContain(sel);
+        }
+      }
+    });
   });
 
   describe('buildReaderOverrideCss', () => {
@@ -166,6 +174,104 @@ describe('useEpubRender — pure helpers', () => {
       });
       expect(css).toContain('font-size: 200%');
       expect(css).toContain('hyphens: auto');
+    });
+    it('justify forces hyphenation + pretty wrap even when the setting is off (U1)', () => {
+      const css = buildReaderOverrideCss({
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'justify',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      });
+      expect(css).toContain('hyphens: auto');
+      expect(css).toContain('text-wrap: pretty');
+    });
+    it('left path keeps explicit hyphenation control (U1)', () => {
+      const css = buildReaderOverrideCss({
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      });
+      expect(css).toContain('hyphens: none');
+    });
+    it('measure is ch-based and size-agnostic (U2)', () => {
+      const base = {
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      };
+      for (const fontSize of [80, 100, 150, 200]) {
+        const css = buildReaderOverrideCss({ ...base, fontSize, zoomLevel: 100 });
+        expect(css).toContain('max-width: min(65ch, 100%)');
+        expect(css).not.toContain('38rem');
+      }
+    });
+    it('figures, covers and tables have intent (U4)', () => {
+      const css = buildReaderOverrideCss({
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      });
+      expect(css).toContain('body figure');
+      expect(css).toContain('body figcaption');
+      expect(css).toContain('max-height: 85vh');
+      expect(css).toContain('overflow-x: auto');
+    });
+    it('type details: orphans, wrapping, spacing-xor-indent (U6)', () => {
+      const spaced = buildReaderOverrideCss({
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      });
+      expect(spaced).toContain('orphans: 3');
+      expect(spaced).toContain('widows: 3');
+      expect(spaced).toContain('overflow-wrap: break-word');
+      expect(spaced).toContain('text-indent: 0');
+      expect(spaced).toContain('white-space: pre-wrap');
+      const tight = buildReaderOverrideCss({
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 0,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      });
+      expect(tight).not.toContain('text-indent: 0');
     });
   });
 
@@ -206,6 +312,41 @@ describe('useEpubRender — pure helpers', () => {
       );
       expect(srcdoc).not.toContain('chrome-extension://');
       expect(srcdoc).not.toContain('floatBarImgId');
+    });
+
+    it('falls back to the book language when the chapter has no lang (U1)', () => {
+      const srcdoc = buildChapterSrcdoc(
+        chapterData as any,
+        RESOURCES,
+        ['OEBPS/Text/chapter1.xhtml'],
+        'OEBPS/Text/chapter1.xhtml',
+        2,
+        new Set(),
+        undefined,
+        null,
+        'es',
+      );
+      expect(srcdoc).toContain('lang="es"');
+    });
+
+    it('keeps the chapter lang over the book fallback (U1)', () => {
+      const langChapter = {
+        ...chapterData,
+        html: fixtureHtml.replace('<html>', '<html lang="en">'),
+      };
+      const srcdoc = buildChapterSrcdoc(
+        langChapter as any,
+        RESOURCES,
+        ['OEBPS/Text/chapter1.xhtml'],
+        'OEBPS/Text/chapter1.xhtml',
+        2,
+        new Set(),
+        undefined,
+        null,
+        'es',
+      );
+      expect(srcdoc).toContain('lang="en"');
+      expect(srcdoc).not.toContain('lang="es"');
     });
 
     it('injects <base href> and rewrites asset URLs via convertFileSrc', () => {

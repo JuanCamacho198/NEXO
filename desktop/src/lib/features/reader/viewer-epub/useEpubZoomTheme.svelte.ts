@@ -14,30 +14,15 @@ import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation'
 
 export { clampZoomPercent };
 
-// NOTE (U5.4): the hex literals below are intentional. They style HTML
-// injected into the EPUB iframe, where the app's CSS tokens do not exist,
-// so var(--color-*) references would resolve to nothing.
-export function getThemeStyles(themeMode: string): string {
-  const themes: Record<string, string> = {
-    paper: `\n        body { background: #faf8f5; color: #333; }\n        a { color: #3366cc; }\n      `,
-    sepia: `\n        body { background: #f5eedd; color: #5b4636; }\n        a { color: #8b6914; }\n      `,
-    night: `\n        body { background: #0f1320; color: #c8ccd8; }\n        a { color: #7bb8ff; }\n      `,
-    dark: `\n        body { background: #1a1a2e; color: #e0e0e0; }\n        a { color: #66bbff; }\n      `,
-    blue: `\n        body { background: #1e3a5f; color: #d6e4f0; }\n        a { color: #88ccff; }\n      `,
-  };
-  return themes[themeMode] || themes.paper;
-}
+// U3: single theme owner. The canonical styles live in useEpubRender (the
+// only consumer that injects them); this module re-exports them so the
+// zoom/theme API stays byte-compatible without a second copy to drift.
+import {
+  getThemeStyles,
+  getThemeBgColor,
+} from '$lib/features/reader/viewer-epub/useEpubRender.svelte';
 
-export function getThemeBgColor(themeMode: string): string {
-  const bgs: Record<string, string> = {
-    paper: '#faf8f5',
-    sepia: '#f5eedd',
-    night: '#0f1320',
-    dark: '#1a1a2e',
-    blue: '#1e3a5f',
-  };
-  return bgs[themeMode] || bgs.paper;
-}
+export { getThemeStyles, getThemeBgColor };
 
 export type EpubZoomThemeDeps = {
   getReaderSettings: () => ReaderSettings;

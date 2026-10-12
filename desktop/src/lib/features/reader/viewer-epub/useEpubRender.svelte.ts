@@ -155,27 +155,69 @@ export function stripMissingFontFaces(cssText: string, missingFonts: Set<string>
 // NOTE (U5.4): the hex literals below are intentional. They style HTML
 // injected into the EPUB iframe, where the app's CSS tokens do not exist,
 // so var(--color-*) references would resolve to nothing.
+// U3: themes own the full element set (headings, quotes, code, rules,
+// tables, captions) — body+a alone left book colors bleeding into dark modes.
 export function getThemeStyles(themeMode: string): string {
   const themes: Record<string, string> = {
     paper: `
         body { background: #faf8f5; color: #333; }
         a { color: #3366cc; }
+        h1, h2, h3, h4, h5, h6 { color: #1a1a1a !important; }
+        blockquote { color: #5a544a !important; border-left: 3px solid #d8d0c4 !important; background: #f3efe8 !important; }
+        code { color: #7a3b2e !important; background: #efe9dd !important; }
+        pre { color: #333 !important; background: #f3efe8 !important; border: 1px solid #e2dacb !important; }
+        hr { border-color: #d8d0c4 !important; }
+        table, th, td { border-color: #d8d0c4 !important; }
+        th { background: #f3efe8 !important; }
+        figcaption { color: #8a8478 !important; }
       `,
     sepia: `
         body { background: #f5eedd; color: #5b4636; }
         a { color: #8b6914; }
+        h1, h2, h3, h4, h5, h6 { color: #3f2f22 !important; }
+        blockquote { color: #6b563d !important; border-left: 3px solid #d6c49a !important; background: #efe3cb !important; }
+        code { color: #6b3b1f !important; background: #e9dcc0 !important; }
+        pre { color: #5b4636 !important; background: #efe3cb !important; border: 1px solid #d6c49a !important; }
+        hr { border-color: #d6c49a !important; }
+        table, th, td { border-color: #d6c49a !important; }
+        th { background: #efe3cb !important; }
+        figcaption { color: #97805a !important; }
       `,
     night: `
         body { background: #0f1320; color: #c8ccd8; }
         a { color: #7bb8ff; }
+        h1, h2, h3, h4, h5, h6 { color: #eef1f8 !important; }
+        blockquote { color: #9aa3bd !important; border-left: 3px solid #2c3a55 !important; background: #151b2e !important; }
+        code { color: #ffb86b !important; background: #1a2238 !important; }
+        pre { color: #c8ccd8 !important; background: #151b2e !important; border: 1px solid #2c3a55 !important; }
+        hr { border-color: #2c3a55 !important; }
+        table, th, td { border-color: #2c3a55 !important; }
+        th { background: #151b2e !important; }
+        figcaption { color: #7d86a0 !important; }
       `,
     dark: `
         body { background: #1a1a2e; color: #e0e0e0; }
         a { color: #66bbff; }
+        h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
+        blockquote { color: #b0b0c8 !important; border-left: 3px solid #3d3d5c !important; background: #22223a !important; }
+        code { color: #ffb86b !important; background: #26263e !important; }
+        pre { color: #e0e0e0 !important; background: #22223a !important; border: 1px solid #3d3d5c !important; }
+        hr { border-color: #3d3d5c !important; }
+        table, th, td { border-color: #3d3d5c !important; }
+        th { background: #22223a !important; }
+        figcaption { color: #8e8ea8 !important; }
       `,
     blue: `
         body { background: #1e3a5f; color: #d6e4f0; }
         a { color: #88ccff; }
+        h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
+        blockquote { color: #a9c2da !important; border-left: 3px solid #3a5a85 !important; background: #24466f !important; }
+        code { color: #ffd479 !important; background: #26466e !important; }
+        pre { color: #d6e4f0 !important; background: #24466f !important; border: 1px solid #3a5a85 !important; }
+        hr { border-color: #3a5a85 !important; }
+        table, th, td { border-color: #3a5a85 !important; }
+        th { background: #24466f !important; }
+        figcaption { color: #8ba9c4 !important; }
       `,
   };
   return themes[themeMode] || themes.paper;
@@ -204,7 +246,10 @@ export function buildReaderOverrideCss(opts: {
   hyphenation: boolean;
   margins: { top: number; bottom: number; left: number; right: number };
 }): string {
-  const hyphensValue = opts.hyphenation ? 'auto' : 'none';
+  const justify = opts.textAlign.toLowerCase() === 'justify';
+  // U1: justification without hyphenation rivers. Justify always hyphenates;
+  // explicit hyphenation still controls the left/center paths.
+  const hyphensValue = opts.hyphenation || justify ? 'auto' : 'none';
   const effectiveFontSize = (opts.fontSize * opts.zoomLevel) / 100;
   const themeCss = getThemeStyles(opts.themeMode);
 
@@ -227,17 +272,59 @@ export function buildReaderOverrideCss(opts: {
         text-align: ${opts.textAlign} !important;
         direction: ${opts.direction} !important;
         hyphens: ${hyphensValue} !important;
+        text-wrap: pretty !important;
+        /* U6: long-session legibility. */
+        orphans: 3 !important;
+        widows: 3 !important;
+        overflow-wrap: break-word !important;
         padding: ${opts.margins.top}rem ${opts.margins.right}rem ${opts.margins.bottom}rem ${opts.margins.left}rem !important;
-        max-width: 38rem !important;
+        /* U2: measure in ch, not rem — ch tracks the reader font-size, so the
+          line stays ~65 characters from 80% to 200%. */
+        max-width: min(65ch, 100%) !important;
         margin: 0 auto !important;
         box-sizing: border-box !important;
       }
       body p {
         margin-bottom: ${opts.paragraphSpacing}em;
+        ${
+          // U6: spacing XOR indent. Book stylesheets that indent would double
+          // up with our paragraph spacing, so indent loses when spacing is on.
+          opts.paragraphSpacing > 0 ? 'text-indent: 0 !important;' : ''
+        }
+      }
+      body pre {
+        white-space: pre-wrap !important;
+        overflow-x: auto !important;
+        overflow-wrap: break-word !important;
+      }
+      body code {
+        overflow-wrap: break-word !important;
       }
       body img {
         max-width: 100%;
         height: auto;
+        /* U4: covers never push text off-screen; small inline images unaffected. */
+        max-height: 85vh;
+      }
+      body svg {
+        max-width: 100% !important;
+        max-height: 85vh !important;
+      }
+      /* U4: figures read as intentional spreads; captions stay muted. */
+      body figure {
+        margin: 2em auto !important;
+        text-align: center !important;
+        max-width: 100% !important;
+      }
+      body figcaption {
+        font-size: 0.85em !important;
+        margin-top: 0.5em !important;
+      }
+      /* U4: wide tables scroll instead of breaking the measure. */
+      body table {
+        display: block !important;
+        overflow-x: auto !important;
+        max-width: 100% !important;
       }
     `;
 }
@@ -263,11 +350,17 @@ export function buildChapterSrcdoc(
     fontFamily: string;
   },
   chapterTitle?: string | null,
+  bookLanguage?: string | null,
 ): string {
   logger.warn('build srcdoc CHAPTER_INDEX', { chapterIndex, href: currentChapterHref }, 'reader');
   const sanitizedHtml = sanitizeEpubHtml(chapterData.html);
   const parser = new DOMParser();
   const doc = parser.parseFromString(sanitizedHtml, 'text/html');
+  // U1: hyphens:auto needs a language. Chapters usually carry their own
+  // lang; fall back to the OPF language so justification never hyphenates blind.
+  if (!doc.documentElement.getAttribute('lang') && bookLanguage) {
+    doc.documentElement.setAttribute('lang', bookLanguage);
+  }
   for (const el of doc.querySelectorAll('[id="floatBarImgId"]')) el.remove();
   for (const el of doc.querySelectorAll('[src^="chrome-extension://"]')) el.remove();
   const chapterPath = chapterData.chapterPath.replace(/\\/g, '/');
@@ -800,6 +893,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
         missingFonts,
         readerCssOpts,
         deps.getToc()[index]?.label ?? null,
+        metadata.language ?? null,
       );
 
       iframeEl.onload = () => {

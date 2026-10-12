@@ -1306,6 +1306,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.fitPage': 'Ajustar a la página',
   'reader.fullscreenHint': 'Pulsa F para pantalla completa',
   'reader.fullscreenKeysHint': 'F inmersivo · F11 ventana · Esc salir',
+  'reader.footnoteBack': 'Volver al texto',
   'reader.toolbar': 'Barra de herramientas del lector',
   'settings.privacy.title': 'Privacidad y telemetría',
   'settings.privacy.description':
