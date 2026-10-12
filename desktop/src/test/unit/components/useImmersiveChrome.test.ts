@@ -208,4 +208,23 @@ describe('useImmersiveChrome', () => {
     expect(chrome.cursorHidden).toBe(false);
     chrome.cleanup();
   });
+
+  it('one meaning per key: F immersive, Ctrl+Shift+F window, Esc exits (U5)', async () => {
+    const setFullscreen = vi.fn().mockResolvedValue(undefined);
+    const chrome = createImmersiveChrome({
+      getPanelOpen: () => false,
+      appWindow: {
+        isFullscreen: vi.fn().mockResolvedValue(false),
+        setFullscreen,
+      },
+    });
+    chrome.handleGlobalKeydown({ key: 'f', ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, preventDefault: vi.fn(), target: document.body } as unknown as KeyboardEvent);
+    expect(chrome.isFullscreen).toBe(true);
+    chrome.handleGlobalKeydown({ key: 'Escape', preventDefault: vi.fn(), target: document.body } as unknown as KeyboardEvent);
+    expect(chrome.isFullscreen).toBe(false);
+    chrome.handleGlobalKeydown({ key: 'F', ctrlKey: true, metaKey: false, altKey: false, shiftKey: true, preventDefault: vi.fn(), target: document.body } as unknown as KeyboardEvent);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(setFullscreen).toHaveBeenCalledWith(true);
+    chrome.cleanup();
+  });
 });

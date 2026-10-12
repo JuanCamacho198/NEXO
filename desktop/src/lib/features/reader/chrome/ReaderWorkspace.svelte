@@ -801,6 +801,14 @@
         >{t('reader.share')}</button
       >
     {/if}
+    {#if headerVisible}
+      <p
+        class="pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 z-40 whitespace-nowrap text-xs text-(--color-text-inverse)/70"
+        aria-hidden="true"
+      >
+        {t('reader.fullscreenKeysHint')}
+      </p>
+    {/if}
   {/if}
 </section>
 {#if searchPanelOpen && activeReadingBook}
