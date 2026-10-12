@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import ReaderTextSettings from '$lib/features/reader/chrome/ReaderTextSettings.svelte';
 import type { ReaderSettings } from '$lib/shared/types';
@@ -57,5 +57,45 @@ describe('ReaderTextSettings (U1) — every visible control works', () => {
     expect(screen.queryByLabelText('settings.reading.showHeader')).toBeNull();
     expect(screen.queryByLabelText('settings.reading.showFooter')).toBeNull();
     expect(screen.queryByLabelText('reader.vertical_scroll')).toBeNull();
+  });
+});
+
+describe('ReaderTextSettings (U2) — honest font-size stepper', () => {
+  function renderEpub(fontSize = 100) {
+    const props = makeProps('epub');
+    props.readerSettings = makeSettings({ epub: { fontSize, fontFamily: 'serif' } });
+    render(ReaderTextSettings, props);
+    return props;
+  }
+
+  it('shows the live value between − and +', () => {
+    renderEpub(120);
+    expect(screen.getByTestId('font-size-value')).toHaveTextContent('120%');
+    expect(screen.getByTestId('font-size-dec')).toBeInTheDocument();
+    expect(screen.getByTestId('font-size-inc')).toBeInTheDocument();
+  });
+
+  it('steps ±10 through onSettingsChange', async () => {
+    const props = renderEpub(100);
+    await fireEvent.click(screen.getByTestId('font-size-inc'));
+    expect(props.onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ epub: expect.objectContaining({ fontSize: 110 }) }),
+    );
+    await fireEvent.click(screen.getByTestId('font-size-dec'));
+    expect(props.onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ epub: expect.objectContaining({ fontSize: 90 }) }),
+    );
+  });
+
+  it('disables at the 80/200 limits instead of silently doing nothing', () => {
+    renderEpub(200);
+    expect(screen.getByTestId('font-size-inc')).toBeDisabled();
+    expect(screen.getByTestId('font-size-dec')).not.toBeDisabled();
+  });
+
+  it('has no lone header + button anymore', () => {
+    renderEpub();
+    expect(screen.getByTestId('font-size-dec')).toBeInTheDocument();
+    expect(screen.getByTestId('font-size-inc')).toBeInTheDocument();
   });
 });
