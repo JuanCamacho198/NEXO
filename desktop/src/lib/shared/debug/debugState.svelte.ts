@@ -47,6 +47,7 @@ type EpubSelectionDebug = {
   emptyTextMessageCount: number;
   guardResult:
     | 'pass'
+    | 'pass-clear'
     | 'drop-chapter-mismatch'
     | 'drop-empty-text'
     | 'drop-no-handler'

@@ -6,6 +6,7 @@
   import SelectionToolbar from '../highlight/SelectionToolbar.svelte';
   import ReaderTextSettings from './ReaderTextSettings.svelte';
   import ReaderTocPanel from './ReaderTocPanel.svelte';
+  import type { TocEntry } from './ReaderTocPanel.svelte';
   import ReaderHeader from './ReaderHeader.svelte';
   import ReaderFooter from './ReaderFooter.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -256,6 +257,20 @@
   function handleWorkspaceMouseLeave(): void {
     chrome.handleWorkspaceMouseLeave();
   }
+  // U3: parent-chrome clicks never reach the iframe document, so its
+  // selection (and menu) would survive them. Collapse from the parent; the
+  // toolbar owns its own clicks and the iframe its own flow.
+  function handleWorkspacePointerDown(e: PointerEvent): void {
+    if (viewer.kind !== 'epub') return;
+    const target = e.target as Element | null;
+    if (target?.closest?.('.selection-toolbar')) return;
+    // typeof-guard: bind:this may hold a viewer without this export (mocks,
+    // torn-down chapters). The parent dismiss below always runs.
+    if (typeof epubRef?.clearIframeSelection === 'function') {
+      epubRef.clearIframeSelection();
+    }
+    dismissToolbar();
+  }
   function toggleFullscreen(): void {
     chrome.toggleFullscreen();
     syncDebugReaderInfo();
@@ -274,6 +289,7 @@
     const root = workspaceRoot;
     if (!root) return;
     root.addEventListener('mousemove', chrome.handleWorkspaceMouseMove);
+    window.addEventListener('pointerdown', handleWorkspacePointerDown, { capture: true });
     window.addEventListener('wheel', zoom.handleGlobalWheel as EventListener, {
       capture: true,
       passive: false,
@@ -283,6 +299,9 @@
     window.addEventListener('keydown', readerShortcuts.handleGlobalKeydown as EventListener);
     return () => {
       root.removeEventListener('mousemove', chrome.handleWorkspaceMouseMove);
+      window.removeEventListener('pointerdown', handleWorkspacePointerDown, {
+        capture: true,
+      } as AddEventListenerOptions);
       window.removeEventListener(
         'wheel',
         zoom.handleGlobalWheel as EventListener,
@@ -333,12 +352,17 @@
   );
 
   async function handleHeaderGoToPage(page: number): Promise<boolean> {
+    // U2: navigation invalidates the selection anchor — never carry the menu
+    // into the next chapter.
+    dismissToolbar();
     return nav.handleHeaderGoToPage(page);
   }
   function goPrevPage(): void {
+    dismissToolbar();
     nav.goPrev();
   }
   function goNextPage(): void {
+    dismissToolbar();
     nav.goNext();
   }
   // U4: lateral tercile paging as fallback when chevrons rest faded.
@@ -350,6 +374,10 @@
     const w = typeof window !== 'undefined' ? window.innerWidth : 9999;
     if (x < w / 3) goPrevPage();
     else if (x > (2 * w) / 3) goNextPage();
+  }
+  function handleTocNavigate(entry: TocEntry): void {
+    dismissToolbar();
+    nav.handleTocNavigate(entry);
   }
 
   async function handleShareText(): Promise<void> {
@@ -597,6 +625,7 @@
           onselection={handleViewerSelection}
           onselectionclear={dismissToolbar}
           {isFullscreen}
+          hasSelectionMenu={showToolbar}
           onSettingsChange={handleTextSettingsChange}
           persistedHighlights={highlightsState.persistedHighlights}
           onHighlightAction={handleHighlightAction}
@@ -834,7 +863,7 @@
   open={nav.showTocPanel}
   entries={nav.tocEntries}
   activeId={nav.tocNavigate?.id}
-  onNavigate={nav.handleTocNavigate}
+  onNavigate={handleTocNavigate}
   onClose={() => (nav.showTocPanel = false)}
   {t}
 />

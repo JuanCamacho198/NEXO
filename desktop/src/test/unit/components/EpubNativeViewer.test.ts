@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import EpubNativeViewer from '$lib/features/reader/viewer-epub/EpubNativeViewer.svelte';
 
@@ -498,5 +498,58 @@ describe('EpubNativeViewer', () => {
     it.todo(
       'iframe.contentWindow.frameElement is the iframe element and getBoundingClientRect returns finite numbers (Tauri webview smoke)',
     );
+  });
+
+  // ─── U2: scroll dismisses the selection menu ──────────────
+  describe('Selection menu dismissal (U2)', () => {
+    it('calls onselectionclear when the chapter container scrolls', async () => {
+      const onselectionclear = vi.fn();
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+        onselectionclear,
+      });
+
+      await screen.findByTitle('chapter');
+      await fireEvent.scroll(screen.getByTestId('epub-scroll-container'));
+      expect(onselectionclear).toHaveBeenCalled();
+    });
+  });
+
+  // ─── U4: Escape consumes one layer ──────────────
+  describe('Selection menu Escape (U4)', () => {
+    function pressEscape(): void {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    }
+
+    it('clears the selection menu on Escape when open', async () => {
+      const onselectionclear = vi.fn();
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+        onselectionclear,
+        hasSelectionMenu: true,
+      });
+
+      await screen.findByTitle('chapter');
+      pressEscape();
+      expect(onselectionclear).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores Escape without an open menu', async () => {
+      const onselectionclear = vi.fn();
+      render(EpubNativeViewer, {
+        filePath: '/test/book.epub',
+        bookId: 'test-book',
+        t,
+        onselectionclear,
+      });
+
+      await screen.findByTitle('chapter');
+      pressEscape();
+      expect(onselectionclear).not.toHaveBeenCalled();
+    });
   });
 });

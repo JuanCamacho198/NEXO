@@ -82,6 +82,7 @@
     onIframeMouseLeave?: () => void;
     onIframeClick?: (x: number, isLink: boolean) => void;
     cursorHidden?: boolean;
+    hasSelectionMenu?: boolean;
     onTocReady?: (entries: Array<{ id: string; title: string; depth: number }>) => void;
     externalTocNavigate?: { id: string } | null;
     onSettingsChange?: (settings: ReaderSettings) => void;
@@ -123,6 +124,7 @@
     onIframeMouseLeave,
     onIframeClick,
     cursorHidden = false,
+    hasSelectionMenu = false,
     onTocReady,
     externalTocNavigate = null,
     onSettingsChange,
@@ -297,6 +299,13 @@
   function emitPreciseLocation(): void {
     bridge.emitPreciseLocation();
   }
+
+  function handleContainerScroll(): void {
+    emitPreciseLocation();
+    // U2: scrolling invalidates the selection anchor bounds the menu is
+    // pinned to — the menu must not float over the new viewport.
+    onselectionclear?.();
+  }
   function refreshReaderStyles(): void {
     render.refreshReaderStyles();
   }
@@ -330,6 +339,18 @@
   }
   export function getTotalPages(): number {
     return displayTotal;
+  }
+  /**
+   * U3: collapse the chapter selection from the parent. Clicks inside the
+   * iframe document never reach the parent, so parent-chrome clicks would
+   * otherwise leave the menu stranded with no event to clear it.
+   */
+  export function clearIframeSelection(): void {
+    try {
+      iframeEl?.contentDocument?.getSelection()?.removeAllRanges();
+    } catch {
+      // Torn-down or unreadable frame: the parent dismiss covers it.
+    }
   }
   function getThemeBgColor(): string {
     return zoomTheme.getThemeBgColor();
@@ -386,6 +407,13 @@
       // First Esc closes the note; the immersive chrome exits on the next one.
       e.stopImmediatePropagation();
       closeFootnote();
+      return;
+    }
+    // U4 (selection-menu): one Esc, one layer. Selection menu before the
+    // immersive chrome, which exits on the next Esc via its own handler.
+    if (e.key === 'Escape' && hasSelectionMenu) {
+      e.stopImmediatePropagation();
+      onselectionclear?.();
       return;
     }
     if (e.key === 'ArrowLeft') goToPrev();
@@ -525,10 +553,11 @@
       />
     {/if}
     <div
+      data-testid="epub-scroll-container"
       class="flex-1 w-full min-h-0 overflow-y-auto pb-16"
       style="background: {getThemeBgColor()};"
       bind:this={zoomContainerEl}
-      onscroll={emitPreciseLocation}
+      onscroll={handleContainerScroll}
     >
       <iframe
         bind:this={iframeEl}

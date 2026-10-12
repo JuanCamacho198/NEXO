@@ -113,6 +113,20 @@ export function truncateIframeMsg(s: string, max = 200): string {
   return s.length > max ? s.slice(0, max) : s;
 }
 
+/**
+ * U1: pure verdict for an `epub-selection` payload. A clear beats a stale
+ * guard — empty text always clears, even with a late pageNumber; selections
+ * *with* text from other chapters are dropped.
+ */
+export function classifySelectionMessage(
+  data: { text?: unknown; pageNumber?: unknown },
+  currentSpine: number,
+): 'clear' | 'select' | 'drop' {
+  if (!data.text) return 'clear';
+  if (typeof data.pageNumber === 'number' && data.pageNumber !== currentSpine) return 'drop';
+  return 'select';
+}
+
 /** Reduce a path/URL to its basename (mirrors sentryPiiScrubber — no home dirs). */
 export function basename(p: string): string {
   const idx = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'));
@@ -339,21 +353,22 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
       );
     }
 
-    if (
-      typeof event.data.pageNumber === 'number' &&
-      event.data.pageNumber !== deps.getCurrentSpineIndex()
-    ) {
-      if (debugState.enabled) debugState.epub.guardResult = 'drop-chapter-mismatch';
-      return;
-    }
-
-    if (!event.data.text) {
+    // U1: a clear beats a stale guard. Empty-text messages close the menu
+    // even when they arrive late from the previous chapter; selections *with*
+    // text from old chapters are still dropped below.
+    const verdict = classifySelectionMessage(event.data, deps.getCurrentSpineIndex());
+    if (verdict === 'clear') {
       if (debugState.enabled) {
-        debugState.epub.guardResult = 'drop-empty-text';
+        debugState.epub.guardResult = 'pass-clear';
         debugState.epub.emptyTextMessageCount++;
       }
       debugState.epub.onselectionclearCalled++;
       deps.onselectionclear?.();
+      return;
+    }
+
+    if (verdict === 'drop') {
+      if (debugState.enabled) debugState.epub.guardResult = 'drop-chapter-mismatch';
       return;
     }
 

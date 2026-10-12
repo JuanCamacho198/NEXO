@@ -103,6 +103,40 @@ describe('ReaderWorkspace EPUB', () => {
     });
   });
 
+  // ─── U3: parent-chrome clicks collapse the menu ────────────
+  describe('EPUB parent dismiss (U3)', () => {
+    it('closes the menu on pointerdown outside the toolbar', async () => {
+      render(ReaderWorkspace, {
+        activeReadingBook: makeEpubBook(),
+        t,
+        onBackToHome: () => undefined,
+      });
+
+      await fireEvent.click(await screen.findByTestId('mock-pdfviewer-select'));
+      expect(document.querySelector('.selection-toolbar')).toBeTruthy();
+
+      await fireEvent.pointerDown(screen.getAllByText('EPUB Book')[0]);
+      await vi.waitFor(() => {
+        expect(document.querySelector('.selection-toolbar')).toBeFalsy();
+      });
+    });
+
+    it('keeps the menu on pointerdown inside the toolbar', async () => {
+      render(ReaderWorkspace, {
+        activeReadingBook: makeEpubBook(),
+        t,
+        onBackToHome: () => undefined,
+      });
+
+      await fireEvent.click(await screen.findByTestId('mock-pdfviewer-select'));
+      const toolbar = document.querySelector('.selection-toolbar');
+      expect(toolbar).toBeTruthy();
+
+      await fireEvent.pointerDown(toolbar!);
+      expect(document.querySelector('.selection-toolbar')).toBeTruthy();
+    });
+  });
+
   // ─── Task 1.2: Fullscreen prop wiring ───────────────────
   describe('EPUB Fullscreen (1.2)', () => {
     it('passes isFullscreen and onToggleFullscreen to EpubNativeViewer', async () => {
