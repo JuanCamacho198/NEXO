@@ -28,6 +28,39 @@ export function extractFragment(href: string): string | null {
 }
 
 /**
+ * U5: resolve a `#fragment` footnote anchor to its note element.
+ * Returns the target id + collapsed plain text (capped), or null when the
+ * href is not a same-document fragment, the target is missing, or it holds
+ * no text. Never throws on hostile ids.
+ */
+export function resolveFootnoteNote(
+  anchorHref: string | null | undefined,
+  doc: Document,
+): { id: string; text: string } | null {
+  if (!anchorHref || !anchorHref.startsWith('#') || anchorHref.length < 2) return null;
+  let id: string;
+  try {
+    id = decodeURIComponent(anchorHref.slice(1));
+  } catch {
+    return null;
+  }
+  if (!id) return null;
+  let target: Element | null = null;
+  try {
+    target = doc.getElementById(id);
+    if (!target && typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+      target = doc.querySelector(`[id="${CSS.escape(id)}"], [name="${CSS.escape(id)}"]`);
+    }
+  } catch {
+    return null;
+  }
+  if (!target) return null;
+  const text = (target.textContent ?? '').trim().replace(/\s+/g, ' ');
+  if (!text) return null;
+  return { id, text: text.length > 600 ? text.slice(0, 600) : text };
+}
+
+/**
  * Resolve spine index (0..spineLen-1) for a TOC position (0..tocLen-1).
  * Mirrors Rust EpubExtractor's TOC index contract: toc[tocIdx].index is the filtered spine position.
  */
