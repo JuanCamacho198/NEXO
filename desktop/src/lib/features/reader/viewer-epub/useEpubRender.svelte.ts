@@ -204,7 +204,10 @@ export function buildReaderOverrideCss(opts: {
   hyphenation: boolean;
   margins: { top: number; bottom: number; left: number; right: number };
 }): string {
-  const hyphensValue = opts.hyphenation ? 'auto' : 'none';
+  const justify = opts.textAlign.toLowerCase() === 'justify';
+  // U1: justification without hyphenation rivers. Justify always hyphenates;
+  // explicit hyphenation still controls the left/center paths.
+  const hyphensValue = opts.hyphenation || justify ? 'auto' : 'none';
   const effectiveFontSize = (opts.fontSize * opts.zoomLevel) / 100;
   const themeCss = getThemeStyles(opts.themeMode);
 
@@ -227,6 +230,7 @@ export function buildReaderOverrideCss(opts: {
         text-align: ${opts.textAlign} !important;
         direction: ${opts.direction} !important;
         hyphens: ${hyphensValue} !important;
+        text-wrap: pretty !important;
         padding: ${opts.margins.top}rem ${opts.margins.right}rem ${opts.margins.bottom}rem ${opts.margins.left}rem !important;
         max-width: 38rem !important;
         margin: 0 auto !important;
@@ -263,11 +267,17 @@ export function buildChapterSrcdoc(
     fontFamily: string;
   },
   chapterTitle?: string | null,
+  bookLanguage?: string | null,
 ): string {
   logger.warn('build srcdoc CHAPTER_INDEX', { chapterIndex, href: currentChapterHref }, 'reader');
   const sanitizedHtml = sanitizeEpubHtml(chapterData.html);
   const parser = new DOMParser();
   const doc = parser.parseFromString(sanitizedHtml, 'text/html');
+  // U1: hyphens:auto needs a language. Chapters usually carry their own
+  // lang; fall back to the OPF language so justification never hyphenates blind.
+  if (!doc.documentElement.getAttribute('lang') && bookLanguage) {
+    doc.documentElement.setAttribute('lang', bookLanguage);
+  }
   for (const el of doc.querySelectorAll('[id="floatBarImgId"]')) el.remove();
   for (const el of doc.querySelectorAll('[src^="chrome-extension://"]')) el.remove();
   const chapterPath = chapterData.chapterPath.replace(/\\/g, '/');
@@ -800,6 +810,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
         missingFonts,
         readerCssOpts,
         deps.getToc()[index]?.label ?? null,
+        metadata.language ?? null,
       );
 
       iframeEl.onload = () => {

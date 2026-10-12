@@ -167,6 +167,37 @@ describe('useEpubRender — pure helpers', () => {
       expect(css).toContain('font-size: 200%');
       expect(css).toContain('hyphens: auto');
     });
+    it('justify forces hyphenation + pretty wrap even when the setting is off (U1)', () => {
+      const css = buildReaderOverrideCss({
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'justify',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      });
+      expect(css).toContain('hyphens: auto');
+      expect(css).toContain('text-wrap: pretty');
+    });
+    it('left path keeps explicit hyphenation control (U1)', () => {
+      const css = buildReaderOverrideCss({
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      });
+      expect(css).toContain('hyphens: none');
+    });
   });
 
   describe('buildChapterSrcdoc — golden', () => {
@@ -206,6 +237,41 @@ describe('useEpubRender — pure helpers', () => {
       );
       expect(srcdoc).not.toContain('chrome-extension://');
       expect(srcdoc).not.toContain('floatBarImgId');
+    });
+
+    it('falls back to the book language when the chapter has no lang (U1)', () => {
+      const srcdoc = buildChapterSrcdoc(
+        chapterData as any,
+        RESOURCES,
+        ['OEBPS/Text/chapter1.xhtml'],
+        'OEBPS/Text/chapter1.xhtml',
+        2,
+        new Set(),
+        undefined,
+        null,
+        'es',
+      );
+      expect(srcdoc).toContain('lang="es"');
+    });
+
+    it('keeps the chapter lang over the book fallback (U1)', () => {
+      const langChapter = {
+        ...chapterData,
+        html: fixtureHtml.replace('<html>', '<html lang="en">'),
+      };
+      const srcdoc = buildChapterSrcdoc(
+        langChapter as any,
+        RESOURCES,
+        ['OEBPS/Text/chapter1.xhtml'],
+        'OEBPS/Text/chapter1.xhtml',
+        2,
+        new Set(),
+        undefined,
+        null,
+        'es',
+      );
+      expect(srcdoc).toContain('lang="en"');
+      expect(srcdoc).not.toContain('lang="es"');
     });
 
     it('injects <base href> and rewrites asset URLs via convertFileSrc', () => {
