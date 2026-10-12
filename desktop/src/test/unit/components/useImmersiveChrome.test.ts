@@ -189,4 +189,19 @@ describe('useImmersiveChrome', () => {
     expect(chrome.headerVisible).toBe(true);
     chrome.cleanup();
   });
+
+  it('cursorHidden only at true rest, reshows on first move (U3)', () => {
+    const chrome = createImmersiveChrome({ getPanelOpen: () => false });
+    expect(chrome.cursorHidden).toBe(false);
+    chrome.toggleFullscreen();
+    chrome.handleForwardedMouse(500, 200);
+    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(2500);
+    expect(chrome.headerVisible).toBe(false);
+    expect(chrome.cursorHidden).toBe(true);
+    chrome.handleForwardedMouse(501, 200);
+    vi.advanceTimersByTime(16);
+    expect(chrome.cursorHidden).toBe(false);
+    chrome.cleanup();
+  });
 });

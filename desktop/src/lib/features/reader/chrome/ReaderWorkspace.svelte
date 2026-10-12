@@ -496,7 +496,7 @@
 <section
   class="flex flex-col bg-(--color-bg-deep) {isFullscreen
     ? 'fixed inset-0 z-40 h-screen w-screen overflow-hidden bg-[#f8f5ec]'
-    : 'h-screen'}"
+    : 'h-screen'} {chrome.cursorHidden ? 'cursor-none' : ''}"
   bind:this={workspaceRoot}
   onmouseleave={handleWorkspaceMouseLeave}
 >
@@ -592,6 +592,7 @@
           onHighlightAction={handleHighlightAction}
           onIframeMouseMove={(x, y) => chrome.handleForwardedMouse(x, y)}
           onIframeMouseLeave={() => chrome.handleWorkspaceMouseLeave()}
+          cursorHidden={chrome.cursorHidden}
           {t}
         />
       </div>

@@ -16,6 +16,7 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
   readonly headerVisible: boolean;
   readonly edgeNavVisible: boolean;
   readonly hoverTop: boolean;
+  readonly cursorHidden: boolean;
   readonly mouseX: number;
   readonly mouseY: number;
   readonly _idleTimer: ReturnType<typeof setTimeout> | null;
@@ -41,16 +42,24 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
   let mouseX = $state(0);
   let mouseY = $state(0);
   const hoverTop = $derived(mouseY < 72);
+  // U3 trick: cursor is visible on every move, hidden only by the idle clock.
+  // Derived state alone would keep it hidden across content-area moves
+  // (header stays hidden there), so this is explicit state driven by the
+  // same 2.5s timer.
+  let cursorHidden = $state(false);
 
   function resetIdleTimer(): void {
     if (idleTimer) clearTimeout(idleTimer);
     idleTimer = null;
+    cursorHidden = false;
     if (!isFullscreen || hoverTop || deps.getPanelOpen()) {
       headerVisible = true;
       return;
     }
     idleTimer = setTimeout(() => {
       if (isFullscreen && !hoverTop && !deps.getPanelOpen()) headerVisible = false;
+      if (isFullscreen && !hoverTop && !edgeNavVisible && !deps.getPanelOpen())
+        cursorHidden = true;
     }, 2500);
   }
 
@@ -96,6 +105,7 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
     const next = !isFullscreen;
     isFullscreen = next;
     readerState.isFullscreen = next;
+    cursorHidden = false;
     if (next) {
       headerVisible = hoverTop;
       updateEdgeNav(mouseX);
@@ -170,6 +180,9 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
     },
     get hoverTop() {
       return hoverTop;
+    },
+    get cursorHidden() {
+      return cursorHidden;
     },
     get mouseX() {
       return mouseX;

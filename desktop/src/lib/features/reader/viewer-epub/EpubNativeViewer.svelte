@@ -79,6 +79,7 @@
     isFullscreen?: boolean;
     onIframeMouseMove?: (x: number, y: number) => void;
     onIframeMouseLeave?: () => void;
+    cursorHidden?: boolean;
     onTocReady?: (entries: Array<{ id: string; title: string; depth: number }>) => void;
     externalTocNavigate?: { id: string } | null;
     onSettingsChange?: (settings: ReaderSettings) => void;
@@ -118,6 +119,7 @@
     isFullscreen = false,
     onIframeMouseMove,
     onIframeMouseLeave,
+    cursorHidden = false,
     onTocReady,
     externalTocNavigate = null,
     onSettingsChange,
@@ -410,6 +412,18 @@
       detach();
       frame.removeEventListener('load', attach);
     };
+  });
+
+  // U3 trick (iframe half): parent CSS never crosses the document boundary,
+  // so mirror cursorHidden onto the frame + its body. Interactive chrome lives
+  // outside the iframe and keeps cursor:pointer/auto.
+  $effect(() => {
+    const frame = iframeEl;
+    void lastRenderedChapter;
+    if (!frame) return;
+    frame.style.cursor = cursorHidden ? 'none' : '';
+    const body = frame.contentDocument?.body;
+    if (body) body.style.cursor = cursorHidden ? 'none' : '';
   });
 </script>
 
