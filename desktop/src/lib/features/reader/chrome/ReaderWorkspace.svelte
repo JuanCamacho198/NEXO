@@ -590,6 +590,8 @@
           onSettingsChange={handleTextSettingsChange}
           persistedHighlights={highlightsState.persistedHighlights}
           onHighlightAction={handleHighlightAction}
+          onIframeMouseMove={(x, y) => chrome.handleForwardedMouse(x, y)}
+          onIframeMouseLeave={() => chrome.handleWorkspaceMouseLeave()}
           {t}
         />
       </div>

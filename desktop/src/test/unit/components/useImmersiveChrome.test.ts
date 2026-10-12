@@ -161,4 +161,19 @@ describe('useImmersiveChrome', () => {
     expect(chrome.edgeNavVisible).toBe(false);
     chrome.cleanup();
   });
+
+  it('handleForwardedMouse drives the same clock as workspace mousemove (iframe fix)', () => {
+    const chrome = createImmersiveChrome({ getPanelOpen: () => false });
+    chrome.toggleFullscreen();
+    chrome.handleForwardedMouse(10, 100);
+    expect(chrome._pendingFrame).not.toBeNull();
+    vi.advanceTimersByTime(16);
+    expect(chrome.mouseX).toBe(10);
+    expect(chrome.edgeNavVisible).toBe(true);
+    chrome.handleForwardedMouse(500, 200);
+    vi.advanceTimersByTime(16);
+    expect(chrome.mouseX).toBe(500);
+    expect(chrome.edgeNavVisible).toBe(false);
+    chrome.cleanup();
+  });
 });

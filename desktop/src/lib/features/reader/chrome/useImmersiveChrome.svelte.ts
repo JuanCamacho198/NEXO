@@ -23,6 +23,7 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
   resetIdleTimer(): void;
   updateEdgeNav(x: number): void;
   handleWorkspaceMouseMove(e: MouseEvent): void;
+  handleForwardedMouse(x: number, y: number): void;
   handleWorkspaceMouseLeave(): void;
   handleGlobalKeydown(e: KeyboardEvent): void;
   toggleFullscreen(): void;
@@ -63,10 +64,8 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
     edgeNavVisible = nearEdge;
   }
 
-  function handleWorkspaceMouseMove(e: MouseEvent): void {
+  function queueMove(x: number, y: number): void {
     if (pendingFrame !== null) return;
-    const x = e.clientX;
-    const y = e.clientY;
     pendingFrame = requestAnimationFrame(() => {
       pendingFrame = null;
       mouseX = x;
@@ -75,6 +74,14 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
       if (isFullscreen && y < 72) headerVisible = true;
       resetIdleTimer();
     });
+  }
+
+  function handleWorkspaceMouseMove(e: MouseEvent): void {
+    queueMove(e.clientX, e.clientY);
+  }
+
+  function handleForwardedMouse(x: number, y: number): void {
+    queueMove(x, y);
   }
 
   function handleWorkspaceMouseLeave(): void {
@@ -179,6 +186,7 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
     resetIdleTimer,
     updateEdgeNav,
     handleWorkspaceMouseMove,
+    handleForwardedMouse,
     handleWorkspaceMouseLeave,
     handleGlobalKeydown,
     toggleFullscreen,

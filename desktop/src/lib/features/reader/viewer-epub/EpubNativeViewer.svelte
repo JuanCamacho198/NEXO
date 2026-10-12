@@ -77,6 +77,8 @@
     ) => void;
     onselectionclear?: () => void;
     isFullscreen?: boolean;
+    onIframeMouseMove?: (x: number, y: number) => void;
+    onIframeMouseLeave?: () => void;
     onTocReady?: (entries: Array<{ id: string; title: string; depth: number }>) => void;
     externalTocNavigate?: { id: string } | null;
     onSettingsChange?: (settings: ReaderSettings) => void;
@@ -114,6 +116,8 @@
     persistedHighlights = [],
     onHighlightAction,
     isFullscreen = false,
+    onIframeMouseMove,
+    onIframeMouseLeave,
     onTocReady,
     externalTocNavigate = null,
     onSettingsChange,
@@ -371,6 +375,42 @@
     if (e.key === 'ArrowLeft') goToPrev();
     if (e.key === 'ArrowRight') goToNext();
   }
+
+  // U1: the chapter iframe swallows mouse events, so the workspace-level
+  // mousemove never fires over book text. Forward viewport-space coords.
+  $effect(() => {
+    const frame = iframeEl;
+    // Track chapter + loading so listeners re-attach after each srcdoc swap.
+    void lastRenderedChapter;
+    void isLoading;
+    if (!frame) return;
+    const onMove = (e: MouseEvent): void => {
+      if (!onIframeMouseMove) return;
+      const rect = frame.getBoundingClientRect();
+      onIframeMouseMove(rect.left + e.clientX, rect.top + e.clientY);
+    };
+    const onLeave = (): void => {
+      onIframeMouseLeave?.();
+    };
+    const attach = (): void => {
+      const doc = frame.contentDocument;
+      if (!doc) return;
+      doc.addEventListener('mousemove', onMove as EventListener);
+      doc.addEventListener('mouseleave', onLeave);
+    };
+    const detach = (): void => {
+      const doc = frame.contentDocument;
+      if (!doc) return;
+      doc.removeEventListener('mousemove', onMove as EventListener);
+      doc.removeEventListener('mouseleave', onLeave);
+    };
+    frame.addEventListener('load', attach);
+    attach();
+    return () => {
+      detach();
+      frame.removeEventListener('load', attach);
+    };
+  });
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
