@@ -893,6 +893,32 @@ class DiscoverViewModelTest {
         override fun listSources(): List<CatalogSourceInfo> = sources
     }
 
+    /** Featured provider whose rails are pinned per [CatalogFeaturedSort]. */
+    private class FakeFeaturedSourceCatalogProvider(
+        private val featured: Map<CatalogFeaturedSort, PagedResult>,
+    ) : CatalogProvider {
+        override suspend fun search(
+            query: String,
+            page: Int,
+        ): PagedResult = PagedResult(emptyList(), null, 0)
+
+        override suspend fun getDetails(id: String): CatalogBook = throw CatalogException(CatalogErrorCode.NOT_FOUND, "unused")
+
+        override fun resolveDownloadUrl(
+            formats: Map<String, String>,
+            preferEpub: Boolean,
+        ): String = "n/a"
+
+        override fun listSources(): List<CatalogSourceInfo> = emptyList()
+
+        override suspend fun featured(
+            sort: CatalogFeaturedSort,
+            page: Int,
+        ): PagedResult = featured[sort] ?: PagedResult(emptyList(), null, 0)
+
+        override fun supportsFeatured(): Boolean = true
+    }
+
     private fun catalogBook(
         id: String,
         provider: String,
@@ -948,7 +974,7 @@ class DiscoverViewModelTest {
                 FakeSourceCatalogProvider().apply {
                     sources =
                         listOf(
-                            CatalogSourceInfo(BUILTIN_GUTENDEX, "Gutendex", CatalogSourceKind.BUILTIN),
+                            CatalogSourceInfo(BUILTIN_GUTENDEX, "Gutenberg", CatalogSourceKind.BUILTIN),
                             CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON),
                         )
                 }
@@ -1104,6 +1130,124 @@ class DiscoverViewModelTest {
                     it is DiscoverRailState.Loaded && it.sourceId == addonSourceId
                 },
             )
+        }
+
+    // ── U1: source filter narrows the IDLE rails ─────────────────────────
+
+    @Test
+    fun sourceFilterNarrowsIdleRailsAndHidesFullyFilteredOnes() =
+        runTest {
+            val provider =
+                FakeSourceCatalogProvider().apply {
+                    sources = listOf(CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON))
+                    sourceResult = {
+                        PagedResult(
+                            listOf(
+                                catalogBook("a:1", addonSourceId, "Addon Book"),
+                                catalogBook("g:1", BUILTIN_GUTENDEX, "Builtin Book"),
+                                catalogBook("o:1", BUILTIN_OPENLIBRARY, "OL Book"),
+                            ),
+                            null,
+                            3,
+                        )
+                    }
+                }
+            val vm = DiscoverViewModel(provider)
+            advanceUntilIdle()
+
+            // "All" leaves every rail exactly as loaded.
+            assertEquals(vm.uiState.value.rails, vm.uiState.value.visibleRails)
+            val addonRailWidth = (vm.uiState.value.rails[2] as DiscoverRailState.Loaded).books.size
+            assertEquals(3, addonRailWidth)
+
+            vm.setSourceFilter(DiscoverSourceFilter.Source(addonSourceId))
+
+            val rails = vm.uiState.value.visibleRails
+            assertEquals(3, rails.size)
+            // The addon rail keeps only its own books; the two featured rails are
+            // Google Books sourced, so a non-Google-Books selection hides them.
+            val addonRail = rails[2] as DiscoverRailState.Loaded
+            assertEquals(listOf(addonSourceId), addonRail.books.map { it.provider })
+
+            // Narrowing is presentation-only: the loaded state keeps every book.
+            val sourceRails = vm.uiState.value.rails
+            assertEquals(addonRailWidth, (sourceRails[2] as DiscoverRailState.Loaded).books.size)
+            assertEquals(vm.uiState.value.rails, sourceRails)
+        }
+
+    @Test
+    fun aRailThatFiltersToZeroBooksBecomesHidden() =
+        runTest {
+            // One featured rail carries an addon book, the other does not: selecting
+            // the addon narrows the first and hides the second.
+            val otherSource = CatalogSourceInfo("addon:ffffffffffffffff", "Other Addon", CatalogSourceKind.ADDON)
+            val provider =
+                FakeFeaturedSourceCatalogProvider(
+                    featured =
+                        mapOf(
+                            CatalogFeaturedSort.NEWEST to
+                                PagedResult(listOf(catalogBook("a:1", addonSourceId, "Mine")), null, 1),
+                            CatalogFeaturedSort.POPULAR to
+                                PagedResult(listOf(catalogBook("a:2", otherSource.sourceId, "Theirs")), null, 1),
+                        ),
+                )
+
+            val vm = DiscoverViewModel(provider)
+            advanceUntilIdle()
+
+            val loaded = vm.uiState.value.visibleRails
+            assertTrue(loaded[0] is DiscoverRailState.Loaded)
+            assertTrue(loaded[1] is DiscoverRailState.Loaded)
+
+            vm.setSourceFilter(DiscoverSourceFilter.Source(addonSourceId))
+
+            val rails = vm.uiState.value.visibleRails
+            assertEquals(listOf(addonSourceId), (rails[0] as DiscoverRailState.Loaded).books.map { it.provider })
+            assertEquals(DiscoverRailState.Hidden, rails[1])
+        }
+
+    @Test
+    fun selectingASourceWithNoRailsHidesEveryRailAndAllRestoresThem() =
+        runTest {
+            val provider =
+                FakeSourceCatalogProvider().apply {
+                    sources = listOf(CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON))
+                    sourceResult = {
+                        PagedResult(listOf(catalogBook("a:1", addonSourceId, "Addon Book")), null, 1)
+                    }
+                }
+            val vm = DiscoverViewModel(provider)
+            advanceUntilIdle()
+
+            vm.setSourceFilter(DiscoverSourceFilter.Source(BUILTIN_GUTENDEX))
+
+            assertTrue(
+                vm.uiState.value.visibleRails
+                    .all { it is DiscoverRailState.Hidden },
+            )
+
+            vm.setSourceFilter(DiscoverSourceFilter.AllSources)
+
+            assertTrue(
+                vm.uiState.value.visibleRails
+                    .any { it is DiscoverRailState.Loaded },
+            )
+            assertEquals(vm.uiState.value.rails, vm.uiState.value.visibleRails)
+        }
+
+    @Test
+    fun loadingRailsStayLoadingUnderAnActiveSourceFilter() =
+        runTest {
+            val provider = GatedFeaturedProvider()
+            val vm = DiscoverViewModel(provider)
+
+            vm.setSourceFilter(DiscoverSourceFilter.Source(BUILTIN_GUTENDEX))
+
+            assertTrue(
+                vm.uiState.value.visibleRails
+                    .all { it is DiscoverRailState.Loading },
+            )
+            provider.gate.complete(Unit)
         }
 
     // ── U5: consent-gated access UI state ────────────────────────────────

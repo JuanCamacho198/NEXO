@@ -971,6 +971,7 @@
     <string name="discover_source_addon_fallback">Addon</string>
     <string name="discover_rail_from">From %1$s</string>
     <string name="discover_manage_addons">Manage addons</string>
+    <string name="discover_idle_source_empty">Nothing featured from %1$s. Pick another source to see the shelves.</string>
     <!-- U2: Google Books attribution (required where Google results render) + fail-closed key notice -->
     <string name="google_books_attribution">Powered by Google</string>
     <string name="discover_google_books_disabled">Google Books is disabled (missing API key). Showing Open Library + Gutenberg results.</string>

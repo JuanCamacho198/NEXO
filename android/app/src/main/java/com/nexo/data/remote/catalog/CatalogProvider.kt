@@ -51,6 +51,15 @@ const val BUILTIN_GUTENDEX = CatalogSources.GUTENDEX
 const val BUILTIN_OPENLIBRARY = CatalogSources.OPENLIBRARY
 const val BUILTIN_GOOGLEBOOKS = CatalogSources.GOOGLEBOOKS
 
+/**
+ * User-facing brand names for the first-party providers. Brand names are not
+ * translated copy, so they live in code (desktop `providerLabel()` documents
+ * the same decision). The upstream service is Gutendex; the catalog it serves
+ * is Project Gutenberg, which is what the user sees.
+ */
+const val PROVIDER_LABEL_GUTENDEX = "Gutenberg"
+const val PROVIDER_LABEL_OPENLIBRARY = "Open Library"
+
 fun addonSource(addonId: String): String = CatalogSources.addonSource(addonId)
 
 fun addonSourceIdOf(source: String): String? = CatalogSources.addonIdOf(source)

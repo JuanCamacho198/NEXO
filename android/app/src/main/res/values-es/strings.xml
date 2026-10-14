@@ -185,6 +185,7 @@
     <string name="discover_source_addon_fallback">Complemento</string>
     <string name="discover_rail_from">De %1$s</string>
     <string name="discover_manage_addons">Gestionar addons</string>
+    <string name="discover_idle_source_empty">No hay destacados de %1$s. Elegí otra fuente para ver las estanterías.</string>
     <!-- U2: atribución de Google Books + aviso de key ausente (voseo) -->
     <string name="google_books_attribution">Con tecnología de Google</string>
     <string name="discover_google_books_disabled">Google Books está deshabilitado (falta la API key). Mostrando resultados de Open Library + Gutenberg.</string>
