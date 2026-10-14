@@ -25,7 +25,7 @@ class BuiltInSourcesTest {
     @Test
     fun builtInSources_listsGutendexAndOpenLibrary() {
         assertEquals(2, builtInSources.size)
-        assertEquals("Gutendex", builtInSources[0].name)
+        assertEquals("Gutenberg", builtInSources[0].name)
         assertEquals("Open Library", builtInSources[1].name)
     }
 

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,12 +19,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
 import com.nexo.data.remote.catalog.CatalogSources
 import com.nexo.data.session.LegalDisclaimerPrefs
 import com.nexo.presentation.feature.legal.LegalNoticeDialog
+import com.nexo.presentation.theme.NexoColors
 import com.nexo.presentation.viewmodel.DiscoverSourceFilter
 import com.nexo.presentation.viewmodel.DiscoverStatus
 import com.nexo.presentation.viewmodel.DiscoverUiState
@@ -104,13 +108,15 @@ fun DiscoverScreen(
         }
 
         // Source narrowing applies to the merged result list, so the chips are
-        // only meaningful once a search has produced results.
+        // only meaningful once a search has produced results — plus IDLE, where
+        // the same selection narrows the featured rails instead.
         if (
             uiState.sources.isNotEmpty() &&
             (
                 uiState.status == DiscoverStatus.LOADED ||
                     uiState.status == DiscoverStatus.LOADING_MORE ||
-                    uiState.status == DiscoverStatus.EMPTY
+                    uiState.status == DiscoverStatus.EMPTY ||
+                    uiState.status == DiscoverStatus.IDLE
             )
         ) {
             DiscoverSourceFilterRow(
@@ -129,11 +135,12 @@ fun DiscoverScreen(
             when (uiState.status) {
                 DiscoverStatus.IDLE ->
                     DiscoverIdleRails(
-                        rails = uiState.rails,
+                        rails = uiState.visibleRails,
                         attributionNames = uiState.attributionNames,
                         onOpenBook = viewModel::openDetail,
                         onSeeAll = onOpenSection,
                         onNavigateToSettingsAddons = onNavigateToSettingsAddons,
+                        sourceName = idleSourceName(uiState),
                     )
                 DiscoverStatus.LOADING -> DiscoverSkeletonState()
                 DiscoverStatus.EMPTY ->
@@ -198,6 +205,9 @@ fun DiscoverScreen(
  * IDLE body: vertically scrollable stack of featured rails. A Hidden rail
  * composes nothing, so a partially servable IDLE shows only the rails that
  * actually resolved.
+ *
+ * @param sourceName Non-null when a source filter hid every rail: the column
+ *   then says so instead of rendering only the addons entry.
  */
 @Composable
 private fun DiscoverIdleRails(
@@ -206,6 +216,7 @@ private fun DiscoverIdleRails(
     onSeeAll: (DiscoverRailState.Loaded, String) -> Unit,
     onNavigateToSettingsAddons: () -> Unit,
     attributionNames: Map<String, String> = emptyMap(),
+    sourceName: String? = null,
 ) {
     Column(
         modifier =
@@ -220,6 +231,18 @@ private fun DiscoverIdleRails(
                 onBookClick = onOpenBook,
                 onSeeAll = onSeeAll,
                 attributionNames = attributionNames,
+            )
+        }
+        if (sourceName != null && rails.all { it is DiscoverRailState.Hidden }) {
+            Text(
+                text = stringResource(R.string.discover_idle_source_empty, sourceName),
+                style = MaterialTheme.typography.bodyMedium,
+                color = NexoColors.textSecondary,
+                textAlign = TextAlign.Center,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
             )
         }
         DiscoverManageAddonsEntry(onClick = onNavigateToSettingsAddons)
@@ -263,6 +286,13 @@ private fun legalEmptySourceName(uiState: DiscoverUiState): String? {
     val filter = uiState.sourceFilter as? DiscoverSourceFilter.Source ?: return null
     return uiState.sources.find { it.sourceId == filter.sourceId }?.name
 }
+
+/**
+ * Display name of the active source filter in IDLE, so the rail column can say
+ * why it is empty when a source narrows every rail to zero. Null under "All".
+ */
+@Composable
+private fun idleSourceName(uiState: DiscoverUiState): String? = legalEmptySourceName(uiState)
 
 /** Display name of the addon that sourced the open detail book, if any. */
 private fun detailAddonName(uiState: DiscoverUiState): String? {
