@@ -41,6 +41,7 @@ fun DrivePromptHost(
     importEvents: SharedFlow<LibraryImportEvent>,
     snackbarHostState: SnackbarHostState,
     syncService: com.nexo.data.remote.sync.SyncService,
+    notificationStore: com.nexo.domain.notification.NotificationStore,
     onAuthSuccessPostPush: suspend () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -48,7 +49,7 @@ fun DrivePromptHost(
     var showDriveConnectPrompt by rememberSaveable { mutableStateOf(false) }
     var drivePromptAuthInFlight by remember { mutableStateOf(false) }
 
-    // importEvents → snackbar + sync push + Gate prompt
+    // importEvents → snackbar + sync push + Gate prompt + notification tray
     LaunchedEffect(importEvents) {
         importEvents.collect { event ->
             when (event) {
@@ -56,6 +57,21 @@ fun DrivePromptHost(
                     snackbarHostState.showSnackbar(
                         context.getString(R.string.library_import_success, event.title),
                     )
+                    scope.launch {
+                        notificationStore.emit(
+                            com.nexo.domain.notification.NotifyDraft(
+                                source = com.nexo.domain.notification.NotificationSource.IMPORT,
+                                severity = com.nexo.domain.notification.Severity.SUCCESS,
+                                i18nKey = "notifications.event.import.success",
+                                i18nParams = mapOf("p1" to event.title),
+                                dedupKey = "import:success:${event.title}",
+                                target =
+                                    com.nexo.domain.notification.NotificationTarget.Route(
+                                        com.nexo.domain.notification.NotificationRouteTarget.LIBRARY,
+                                    ),
+                            ),
+                        )
+                    }
                     scope.launch { syncService.schedulePush() }
                     val shouldOfferPrompt =
                         DriveConnectPromptGate.shouldShow(
@@ -71,6 +87,20 @@ fun DrivePromptHost(
                     snackbarHostState.showSnackbar(
                         context.getString(R.string.library_import_failure, event.message),
                     )
+                    scope.launch {
+                        notificationStore.emit(
+                            com.nexo.domain.notification.NotifyDraft(
+                                source = com.nexo.domain.notification.NotificationSource.IMPORT,
+                                severity = com.nexo.domain.notification.Severity.ERROR,
+                                i18nKey = "notifications.event.import.error",
+                                i18nParams = mapOf("p1" to event.message),
+                                target =
+                                    com.nexo.domain.notification.NotificationTarget.Route(
+                                        com.nexo.domain.notification.NotificationRouteTarget.LIBRARY,
+                                    ),
+                            ),
+                        )
+                    }
                 }
             }
         }
@@ -112,12 +142,45 @@ fun DrivePromptHost(
         }
     }
 
-    // Sync error collector (previously inline in host; kept here to preserve single drive host ownership)
+    // Sync outcome collector (previously inline in host; kept here to preserve single drive host ownership).
+    // Notification boundary: a SYNC notification fires on a USER-MEANINGFUL outcome only —
+    // a definitive failure (`DriveSyncState.Error`) or a COMPLETED run (`Running` → `Idle`),
+    // never on every internal retry (the service flips through `Running` per push pass and
+    // only settles on a terminal state). The snackbar keeps its own behaviour.
     LaunchedEffect(syncService) {
+        var previous: com.nexo.data.remote.sync.DriveSyncState? = null
         syncService.syncState.collect { state ->
             if (state is com.nexo.data.remote.sync.DriveSyncState.Error) {
                 snackbarHostState.showSnackbar("Sync error: ${state.message}")
+                notificationStore.emit(
+                    com.nexo.domain.notification.NotifyDraft(
+                        source = com.nexo.domain.notification.NotificationSource.SYNC,
+                        severity = com.nexo.domain.notification.Severity.ERROR,
+                        i18nKey = "notifications.event.sync.error",
+                        i18nParams = mapOf("p1" to state.message),
+                        dedupKey = "sync:error:${state.message}",
+                        target =
+                            com.nexo.domain.notification.NotificationTarget.Route(
+                                com.nexo.domain.notification.NotificationRouteTarget.SYNC,
+                            ),
+                    ),
+                )
+            } else if (previous is com.nexo.data.remote.sync.DriveSyncState.Running &&
+                state is com.nexo.data.remote.sync.DriveSyncState.Idle
+            ) {
+                notificationStore.emit(
+                    com.nexo.domain.notification.NotifyDraft(
+                        source = com.nexo.domain.notification.NotificationSource.SYNC,
+                        severity = com.nexo.domain.notification.Severity.SUCCESS,
+                        i18nKey = "notifications.event.sync.success",
+                        target =
+                            com.nexo.domain.notification.NotificationTarget.Route(
+                                com.nexo.domain.notification.NotificationRouteTarget.SYNC,
+                            ),
+                    ),
+                )
             }
+            previous = state
         }
     }
 

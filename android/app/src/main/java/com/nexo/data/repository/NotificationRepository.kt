@@ -5,6 +5,7 @@ import com.nexo.data.local.entity.NotificationEntity
 import com.nexo.domain.notification.Category
 import com.nexo.domain.notification.Interruption
 import com.nexo.domain.notification.Notification
+import com.nexo.domain.notification.NotificationHistory
 import com.nexo.domain.notification.NotificationRetention
 import com.nexo.domain.notification.NotificationRouteTarget
 import com.nexo.domain.notification.NotificationSource
@@ -29,15 +30,15 @@ import kotlinx.coroutines.flow.update
 class NotificationRepository(
     private val dao: NotificationDao,
     private val clockMillis: () -> Long = System::currentTimeMillis,
-) {
+) : NotificationHistory {
     /**
      * The tray. Retained history oldest-first; newest-first storage order is
      * restored by [NotificationRetention.apply]. Capped at [MAX_NOTIFICATIONS].
      */
-    val items: Flow<List<Notification>> get() = _items
+    override val items: Flow<List<Notification>> get() = _items
 
     /** Live unread count over the retained history. */
-    val unreadCount: Flow<Int> get() = _unreadCount
+    override val unreadCount: Flow<Int> get() = _unreadCount
 
     private val _items = MutableStateFlow<List<Notification>>(emptyList())
     private val _unreadCount = MutableStateFlow(0)
@@ -47,7 +48,7 @@ class NotificationRepository(
      * then re-prunes the table (age + count). Failures leave the current
      * in-memory tray untouched.
      */
-    suspend fun load() {
+    override suspend fun load() {
         val persisted =
             runCatching { dao.listNewestFirst() }.getOrNull() ?: return
         val now = clockMillis()
@@ -58,7 +59,7 @@ class NotificationRepository(
     }
 
     /** Persists one notification, prunes the table, and folds it into the tray view. */
-    suspend fun save(notification: Notification) {
+    override suspend fun save(notification: Notification) {
         runCatching {
             dao.upsert(notification.toEntity())
             pruneTable(clockMillis())
@@ -67,9 +68,9 @@ class NotificationRepository(
     }
 
     /** Marks one entry read; a missing or already-read id is a no-op. */
-    suspend fun markRead(
+    override suspend fun markRead(
         id: String,
-        readAt: Long = clockMillis(),
+        readAt: Long,
     ) {
         runCatching { dao.markRead(id, readAt) }
         _items.update { current ->
@@ -79,7 +80,7 @@ class NotificationRepository(
     }
 
     /** Marks every unread entry read. */
-    suspend fun markAllRead(readAt: Long = clockMillis()) {
+    override suspend fun markAllRead(readAt: Long) {
         runCatching { dao.markAllRead(readAt) }
         _items.update { current -> current.map { if (it.readAt == null) it.copy(readAt = readAt) else it } }
         recomputeUnread()

@@ -20,6 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.nexo.BuildConfig
 import com.nexo.data.remote.drive.GoogleDriveAuthHelper
+import com.nexo.data.session.NotificationPreferencesStore
 import com.nexo.data.session.ReadingGoalPreferences
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.model.HighlightColor
@@ -69,6 +70,7 @@ fun SettingsScreen(
     dictionaryRepository: DictionaryRepository? = null,
     driveAuthHelper: GoogleDriveAuthHelper? = null,
     readingGoalPreferences: ReadingGoalPreferences? = null,
+    notificationPreferencesStore: NotificationPreferencesStore? = null,
     storageRepository: StorageRepository? = null,
     cacheRepository: CacheRepository? = null,
     libraryRepository: LibraryRepository? = null,
@@ -92,6 +94,7 @@ fun SettingsScreen(
         dictionaryRepository = dictionaryRepository,
         driveAuthHelper = driveAuthHelper,
         readingGoalPreferences = readingGoalPreferences,
+        notificationPreferencesStore = notificationPreferencesStore,
         storageRepository = storageRepository,
         cacheRepository = cacheRepository,
         libraryRepository = libraryRepository,
@@ -118,6 +121,7 @@ private fun SettingsScreenContent(
     dictionaryRepository: DictionaryRepository? = null,
     driveAuthHelper: GoogleDriveAuthHelper? = null,
     readingGoalPreferences: ReadingGoalPreferences? = null,
+    notificationPreferencesStore: NotificationPreferencesStore? = null,
     storageRepository: StorageRepository? = null,
     cacheRepository: CacheRepository? = null,
     libraryRepository: LibraryRepository? = null,
@@ -249,6 +253,7 @@ private fun SettingsScreenContent(
 
             composable(route = NexoDestination.SettingsNotifications.route) {
                 SettingsNotificationsScreen(
+                    preferencesStore = notificationPreferencesStore,
                     onBack = { nestedNavController.popBackStack() },
                 )
             }
