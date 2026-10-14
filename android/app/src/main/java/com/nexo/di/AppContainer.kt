@@ -9,6 +9,7 @@ import com.nexo.data.local.RetentionPruner
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.HighlightDao
+import com.nexo.data.local.dao.NotificationDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingSessionDao
 import com.nexo.data.remote.catalog.CatalogFileDownloader
@@ -26,6 +27,7 @@ import com.nexo.data.remote.sync.SyncOrchestrator
 import com.nexo.data.remote.sync.SyncService
 import com.nexo.data.remote.work.WorkManagerOutboxDrainScheduler
 import com.nexo.data.remote.work.WorkManagerRetentionPruneScheduler
+import com.nexo.data.repository.NotificationRepository
 import com.nexo.data.session.ReaderPreferences
 import com.nexo.data.session.ReadingGoalPreferences
 import com.nexo.data.session.SessionManager
@@ -104,6 +106,14 @@ class AppContainer(
 
     /** FR-14 prune implementation, shared by the worker (Hilt) and tests. */
     val retentionPruner: RetentionPruner by lazy { RetentionPruner(appDatabase) }
+
+    /**
+     * NOTIF-02: Room-backed notification history. Lazy — the tray loads it on
+     * first use, so container construction stays untouched.
+     */
+    val notificationRepository: NotificationRepository by lazy {
+        NotificationRepository(databaseModule.notificationDao)
+    }
 
     private val repositoryModule =
         RepositoryModule(
@@ -322,6 +332,7 @@ class AppContainer(
     val bookmarkDao: BookmarkDao get() = databaseModule.bookmarkDao
     val readingSessionDao: ReadingSessionDao get() = databaseModule.readingSessionDao
     val readingProgressDao: ReadingProgressDao get() = databaseModule.readingProgressDao
+    val notificationDao: NotificationDao get() = databaseModule.notificationDao
     val appDatabase: AppDatabase get() = databaseModule.appDatabase
 
     fun clearAllData() {

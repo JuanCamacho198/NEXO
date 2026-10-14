@@ -12,6 +12,7 @@ import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.DictionaryWordDao
 import com.nexo.data.local.dao.DiscoverCacheDao
 import com.nexo.data.local.dao.HighlightDao
+import com.nexo.data.local.dao.NotificationDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingSessionDao
 import com.nexo.data.local.dao.ReadingStatsDao
@@ -59,6 +60,7 @@ class DatabaseModule(
     val dictionaryWordDao: DictionaryWordDao get() = appDatabase.dictionaryWordDao()
     val discoverCacheDao: DiscoverCacheDao get() = appDatabase.discoverCacheDao()
     val installedAddonDao: AddonDao get() = appDatabase.addonDao()
+    val notificationDao: NotificationDao get() = appDatabase.notificationDao()
 
     fun clearAllTables() {
         appDatabase.clearAllTables()

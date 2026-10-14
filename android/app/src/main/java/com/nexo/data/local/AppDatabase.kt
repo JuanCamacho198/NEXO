@@ -2,12 +2,14 @@ package com.nexo.data.local
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.nexo.data.local.dao.AddonDao
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.DictionaryWordDao
 import com.nexo.data.local.dao.DiscoverCacheDao
 import com.nexo.data.local.dao.HighlightDao
+import com.nexo.data.local.dao.NotificationDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingSessionDao
 import com.nexo.data.local.dao.ReadingStatsDao
@@ -20,6 +22,7 @@ import com.nexo.data.local.entity.BookmarkEntity
 import com.nexo.data.local.entity.DictionaryWordEntity
 import com.nexo.data.local.entity.DiscoverCacheEntity
 import com.nexo.data.local.entity.HighlightEntity
+import com.nexo.data.local.entity.NotificationEntity
 import com.nexo.data.local.entity.ReadingProgressEntity
 import com.nexo.data.local.entity.ReadingSessionEntity
 import com.nexo.data.local.entity.ReadingStatsEntity
@@ -39,10 +42,12 @@ import com.nexo.data.local.entity.SyncOutboxEntity
         DictionaryWordEntity::class,
         DiscoverCacheEntity::class,
         AddonEntity::class,
+        NotificationEntity::class,
     ],
-    version = 31,
+    version = 32,
     exportSchema = true,
 )
+@TypeConverters(NotificationConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao
 
@@ -65,6 +70,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun discoverCacheDao(): DiscoverCacheDao
 
     abstract fun addonDao(): AddonDao
+
+    abstract fun notificationDao(): NotificationDao
 
     abstract fun retentionDao(): RetentionDao
 }

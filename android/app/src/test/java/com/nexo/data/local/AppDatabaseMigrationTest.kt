@@ -82,6 +82,13 @@ class AppDatabaseMigrationTest {
             .getDatabasePath("migration-30-31")
             .absolutePath
 
+    private fun testDbPath31To32(): String =
+        InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getDatabasePath("migration-31-32")
+            .absolutePath
+
     private fun columnNames(
         db: SupportSQLiteDatabase,
         table: String,
@@ -359,6 +366,56 @@ class AppDatabaseMigrationTest {
             indexes.contains("index_dictionary_words_word_normalized"),
         )
         assertTrue("expected index_books_reading_state, got $indexes", indexes.contains("index_books_reading_state"))
+        db.close()
+    }
+
+    @Test
+    fun `migration 31 to 32 creates the notifications table with its index`() {
+        val dbPath = testDbPath31To32()
+        helper.createDatabase(dbPath, 31).use { db ->
+            // Pre-existing data must survive the additive migration untouched.
+            db.execSQL(
+                "INSERT INTO installed_addons (id, url, manifest_json, enabled, added_at) " +
+                    "VALUES ('ad-1', 'https://a.example.com/m.json', '{}', 1, 1000)",
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(dbPath, 32, true, AppDatabaseMigrations.MIGRATION_31_32)
+
+        assertEquals(
+            listOf(
+                "id",
+                "created_at",
+                "source",
+                "category",
+                "severity",
+                "interruption",
+                "i18n_key",
+                "i18n_params",
+                "target_kind",
+                "target_id",
+                "read_at",
+                "dedup_key",
+            ),
+            columnNames(db, "notifications"),
+        )
+        assertEquals(0L, query(db, "SELECT COUNT(*) FROM notifications"))
+
+        db.execSQL(
+            "INSERT INTO notifications (id, created_at, source, category, severity, interruption, i18n_key, read_at) " +
+                "VALUES ('n-1', 5000, 'SYNC', 'SYSTEM', 'INFO', 'IN_APP', 'notifications.event.sync.success', NULL)",
+        )
+        assertEquals(1L, query(db, "SELECT COUNT(*) FROM notifications"))
+
+        val indexes = mutableListOf<String>()
+        db
+            .query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'notifications'")
+            .use { cursor ->
+                while (cursor.moveToNext()) indexes.add(cursor.getString(0))
+            }
+        assertTrue("expected index_notifications_created_at, got $indexes", indexes.contains("index_notifications_created_at"))
+
+        assertEquals(1L, query(db, "SELECT COUNT(*) FROM installed_addons"))
         db.close()
     }
 }
