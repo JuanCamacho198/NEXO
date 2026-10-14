@@ -195,6 +195,17 @@
     <string name="discover_back">Volver</string>
     <string name="discover_rail_newest">Recién agregados al catálogo</string>
     <string name="discover_rail_popular">Populares del catálogo</string>
+    <!-- S2: títulos de los estantes de autor (nombres propios, idénticos en ambos idiomas) -->
+    <string name="discover_rail_author_doyle">Arthur Conan Doyle</string>
+    <string name="discover_rail_author_poe">Edgar Allan Poe</string>
+    <string name="discover_rail_author_wilde">Oscar Wilde</string>
+    <string name="discover_rail_author_verne">Jules Verne</string>
+    <string name="discover_rail_author_kafka">Franz Kafka</string>
+    <string name="discover_rail_author_dickens">Charles Dickens</string>
+    <string name="discover_rail_author_london">Jack London</string>
+    <string name="discover_rail_author_wells">H. G. Wells</string>
+    <string name="discover_rail_author_twain">Mark Twain</string>
+    <string name="discover_rail_author_melville">Herman Melville</string>
     <string name="discover_section_subtitle">«%1$s» · %2$d resultados</string>
     <string name="discover_detail_subjects_label">TEMAS</string>
     <string name="discover_detail_description_label">DESCRIPCIÓN</string>
@@ -956,7 +967,7 @@
     <string name="settings_addons_uninstall_confirm_cancel">Cancelar</string>
     <!-- U4: Fuentes integradas (read-only built-in sources) -->
     <string name="settings_addons_builtin_title">Fuentes integradas</string>
-    <string name="settings_addons_builtin_gutendex_role">Alimenta los rieles Recién agregados y Populares</string>
+    <string name="settings_addons_builtin_gutendex_role">Habilita las descargas de títulos de dominio público</string>
     <string name="settings_addons_builtin_openlibrary_role">Solo búsqueda combinada — sin riel dedicado</string>
     <string name="performance_no_data">Sin datos aún</string>
     <string name="performance_no_data_hint">Este flujo aún no tiene instrumento: los datos aparecen al usarlo en esta sesión.</string>

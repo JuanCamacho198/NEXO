@@ -50,6 +50,12 @@ sealed interface DiscoverRailState {
         val totalCount: Int,
         /** Addon display name for a per-addon rail; null for featured rails. */
         val addonName: String? = null,
+        /**
+         * Author search term for an author shelf; null for featured and addon
+         * rails. Carried so "See all" can page the same Google Books query the
+         * shelf used.
+         */
+        val authorTerm: String? = null,
     ) : DiscoverRailState
 }
 

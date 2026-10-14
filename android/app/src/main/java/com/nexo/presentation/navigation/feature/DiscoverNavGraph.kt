@@ -54,6 +54,7 @@ fun NavGraphBuilder.discoverGraph(
                         sectionTitle = sectionTitle,
                         sort = rail.sort?.name.orEmpty(),
                         sourceId = rail.sourceId.orEmpty(),
+                        authorTerm = rail.authorTerm.orEmpty(),
                     ),
                 )
             },
@@ -75,6 +76,7 @@ fun NavGraphBuilder.discoverGraph(
         val route = entry.toRoute<DiscoverSectionRoute>()
         val sectionTitle = route.sectionTitle
         val sourceId = route.sourceId.ifBlank { null }
+        val authorTerm = route.authorTerm.ifBlank { null }
         val sort = CatalogFeaturedSort.entries.firstOrNull { it.name == route.sort }
 
         val sectionViewModel =
@@ -83,6 +85,7 @@ fun NavGraphBuilder.discoverGraph(
                 sectionTitle = sectionTitle,
                 sort = sort,
                 sourceId = sourceId,
+                authorTerm = authorTerm,
                 downloadAndImportBookUseCase = downloadAndImportBookUseCase,
             )
         DiscoverSectionScreen(

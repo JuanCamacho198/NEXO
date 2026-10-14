@@ -140,6 +140,55 @@ class DiscoverSectionViewModelTest {
         }
 
     @Test
+    fun authorSelectorRoutesToGoogleBooksSearchSource() =
+        runTest {
+            val provider =
+                FakeSectionProvider(
+                    firstPage = PagedResult(listOf(book("googlebooks:1", "One")), null, 1),
+                )
+            val vm =
+                DiscoverSectionViewModel(
+                    catalogProvider = provider,
+                    sectionTitle = "Herman Melville",
+                    sort = null,
+                    sourceId = null,
+                    authorTerm = "herman melville",
+                )
+
+            assertEquals(DiscoverStatus.LOADED, vm.uiState.value.status)
+            assertEquals(
+                listOf(Triple("builtin:googlebooks", "herman melville", 1)),
+                provider.searchSourceCalls,
+            )
+            assertTrue(provider.featuredCalls.isEmpty())
+        }
+
+    @Test
+    fun authorSelectorPaginatesAndStopsAtTheEnd() =
+        runTest {
+            val provider =
+                FakeSectionProvider(
+                    firstPage = PagedResult(listOf(book("googlebooks:1", "One")), nexoPage = 2, totalCount = 2),
+                    secondPage = PagedResult(listOf(book("googlebooks:2", "Two")), nexoPage = null, totalCount = 2),
+                )
+            val vm =
+                DiscoverSectionViewModel(
+                    catalogProvider = provider,
+                    sectionTitle = "Herman Melville",
+                    sort = null,
+                    sourceId = null,
+                    authorTerm = "herman melville",
+                )
+
+            assertEquals(2, vm.uiState.value.nextPage)
+            vm.loadNextPage()
+
+            assertEquals(2, vm.uiState.value.books.size)
+            assertNull(vm.uiState.value.nextPage)
+            assertEquals(listOf(1, 2), provider.searchSourceCalls.map { it.third })
+        }
+
+    @Test
     fun missingOrAmbiguousSelectorFailsClosedWithoutFetching() =
         runTest {
             val provider = FakeSectionProvider()
@@ -156,6 +205,17 @@ class DiscoverSectionViewModelTest {
                     sourceId = "builtin:gutendex",
                 )
             assertEquals(DiscoverStatus.EMPTY, both.uiState.value.status)
+
+            // Author selector plus a source selector is equally malformed.
+            val authorAndSource =
+                DiscoverSectionViewModel(
+                    provider,
+                    "Ambiguous",
+                    sort = null,
+                    sourceId = "builtin:gutendex",
+                    authorTerm = "herman melville",
+                )
+            assertEquals(DiscoverStatus.EMPTY, authorAndSource.uiState.value.status)
 
             assertTrue(provider.featuredCalls.isEmpty())
             assertTrue(provider.searchSourceCalls.isEmpty())

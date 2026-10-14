@@ -157,6 +157,7 @@ internal fun rememberDiscoverSectionViewModel(
     sectionTitle: String,
     sort: CatalogFeaturedSort?,
     sourceId: String?,
+    authorTerm: String? = null,
     downloadAndImportBookUseCase: DownloadAndImportBookUseCase?,
 ): DiscoverSectionViewModel =
     viewModel(
@@ -166,6 +167,7 @@ internal fun rememberDiscoverSectionViewModel(
                 sectionTitle = sectionTitle,
                 sort = sort,
                 sourceId = sourceId,
+                authorTerm = authorTerm,
                 downloadAndImportBookUseCase = downloadAndImportBookUseCase,
             ),
     )
