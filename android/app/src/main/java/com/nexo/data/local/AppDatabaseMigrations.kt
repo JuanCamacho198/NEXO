@@ -673,6 +673,39 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * Notification history (NOTIF-02): isolated `notifications` table mirroring
+     * desktop migration 0021. Additive only — nothing else is touched. Enums are
+     * stored as their names and the sealed target is flattened into
+     * `target_kind` + `target_id`; `i18n_params` is the escaped `k=v` encoding
+     * from [NotificationConverters]. The `created_at` index serves the
+     * newest-first history read and the retention cutoff delete.
+     */
+    val MIGRATION_31_32 =
+        object : Migration(31, 32) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS notifications (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        created_at INTEGER NOT NULL,
+                        source TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        severity TEXT NOT NULL,
+                        interruption TEXT NOT NULL,
+                        i18n_key TEXT NOT NULL,
+                        i18n_params TEXT,
+                        target_kind TEXT,
+                        target_id TEXT,
+                        read_at INTEGER,
+                        dedup_key TEXT
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_notifications_created_at ON notifications(created_at)")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -705,5 +738,6 @@ object AppDatabaseMigrations {
             MIGRATION_28_29,
             MIGRATION_29_30,
             MIGRATION_30_31,
+            MIGRATION_31_32,
         )
 }

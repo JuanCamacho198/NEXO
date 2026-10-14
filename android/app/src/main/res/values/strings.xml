@@ -332,6 +332,23 @@
     <string name="notifications_mock_library_body">Explore the books on your bookshelf.</string>
     <string name="notifications_badge_content_description">Unread notifications</string>
 
+    <!-- Notification event messages (rendered from the stored i18n key) -->
+    <string name="notifications_event_import_success">Import finished</string>
+    <string name="notifications_event_import_error">Import failed</string>
+    <string name="notifications_event_sync_success">Sync complete</string>
+    <string name="notifications_event_sync_error">Sync failed</string>
+    <string name="notifications_event_addons_success">Addon installed</string>
+    <string name="notifications_event_addons_error">Addon failed</string>
+    <string name="notifications_event_update_info">Update available</string>
+    <string name="notifications_event_library_success">Library updated</string>
+    <string name="notifications_event_streak_success">Streak kept</string>
+    <string name="notifications_event_streak_warning">Your streak is at risk</string>
+    <string name="notifications_event_streak_error">Streak lost</string>
+    <string name="notifications_event_goal_success">Daily goal reached</string>
+    <string name="notifications_event_goal_info">Reading goal</string>
+    <string name="notifications_event_goal_warning">Read to reach your goal</string>
+    <string name="notifications_event_goal_error">You missed your goal</string>
+
     <!-- Reader / Sleep Timer -->
     <string name="reader_sleep_timer">Sleep Timer</string>
     <string name="reader_sleep_timer_end_of_chapter">End of chapter</string>
