@@ -66,6 +66,7 @@ describe('discover i18n EN+ES parity (PR4)', () => {
       'discover.rail.viewAll',
       'discover.railScope.back',
       'discover.railScope.singlePage',
+      'discover.sourceFilter.all',
     ] as const;
 
     for (const key of discoverKeys) {
@@ -84,6 +85,8 @@ describe('discover i18n EN+ES parity (PR4)', () => {
     expect(messagesEn['discover.rail.viewAll']).toBe('View all');
     expect(messagesEs['discover.railScope.back']).toBeTruthy();
     expect(messagesEn['discover.railScope.back']).toBeTruthy();
+    expect(messagesEs['discover.sourceFilter.all']).toBeTruthy();
+    expect(messagesEn['discover.sourceFilter.all']).toBeTruthy();
     expect(messagesEs['discover.railScope.singlePage']).toContain('{{count}}');
     expect(messagesEn['discover.railScope.singlePage']).toContain('{{count}}');
     expect(messagesEn['discover.inLibrary']).toBe('Already in your library');
