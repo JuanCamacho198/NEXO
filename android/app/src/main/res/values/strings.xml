@@ -333,10 +333,10 @@
     <string name="notifications_badge_content_description">Unread notifications</string>
 
     <!-- Notification event messages (rendered from the stored i18n key) -->
-    <string name="notifications_event_import_success">Import finished</string>
-    <string name="notifications_event_import_error">Import failed</string>
+    <string name="notifications_event_import_success">Import finished: %1$s</string>
+    <string name="notifications_event_import_error">Import failed: %1$s</string>
     <string name="notifications_event_sync_success">Sync complete</string>
-    <string name="notifications_event_sync_error">Sync failed</string>
+    <string name="notifications_event_sync_error">Sync failed: %1$s</string>
     <string name="notifications_event_addons_success">Addon installed</string>
     <string name="notifications_event_addons_error">Addon failed</string>
     <string name="notifications_event_update_info">Update available</string>
@@ -348,6 +348,17 @@
     <string name="notifications_event_goal_info">Reading goal</string>
     <string name="notifications_event_goal_warning">Read to reach your goal</string>
     <string name="notifications_event_goal_error">You missed your goal</string>
+
+    <!-- Notification OS channel -->
+    <string name="notifications_channel_name">Notifications</string>
+    <string name="notifications_channel_description">Import, sync and reading activity updates</string>
+
+    <!-- Tray relative timestamps -->
+    <string name="notifications_time_now">Just now</string>
+    <string name="notifications_time_minutes">%1$d min ago</string>
+    <string name="notifications_time_hours">%1$d h ago</string>
+    <string name="notifications_time_days">%1$d d ago</string>
+    <string name="notifications_group_count">%1$d</string>
 
     <!-- Reader / Sleep Timer -->
     <string name="reader_sleep_timer">Sleep Timer</string>
@@ -513,6 +524,14 @@
     <string name="settings_account_title">Account</string>
     <string name="settings_data_storage_title">Data &amp; Storage</string>
     <string name="settings_notifications_title">Notifications</string>
+    <string name="settings_notifications_system_label">System notifications</string>
+    <string name="settings_notifications_system_description">Import, sync and library activity</string>
+    <string name="settings_notifications_nudge_label">Reading reminders</string>
+    <string name="settings_notifications_nudge_description">Streaks and daily goal nudges</string>
+    <string name="settings_notifications_quiet_hours_label">Quiet hours</string>
+    <string name="settings_notifications_quiet_hours_description">Silence alerts during a schedule</string>
+    <string name="settings_notifications_quiet_hours_start">Start</string>
+    <string name="settings_notifications_quiet_hours_end">End</string>
     <string name="settings_theme_title">Theme</string>
     <string name="settings_about_title">About</string>
     <string name="settings_statistics_title">Statistics</string>

@@ -73,6 +73,10 @@ fun HomeScreen(
     onBookSelected: (String, String, String) -> Unit,
     onContinueReading: (String, String?, String) -> Unit,
     onImportBook: () -> Unit,
+    notificationGroups: List<com.nexo.domain.notification.NotificationGroup> = emptyList(),
+    unreadNotificationCount: Int = 0,
+    onOpenNotification: (com.nexo.domain.notification.Notification) -> Unit = {},
+    onNotificationsOpened: () -> Unit = {},
     onEditBook: (Book) -> Unit = {},
     onMarkCompleted: (Book) -> Unit = {},
     onMarkPlanToRead: (Book) -> Unit = {},
@@ -80,7 +84,7 @@ fun HomeScreen(
     onRequestDeleteBook: (Book) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    HomeScreenContent(uiState = uiState, contentPadding = contentPadding, onNavigateToLibrary = onNavigateToLibrary, onNavigateToHighlights = onNavigateToHighlights, onNavigateToSettings = onNavigateToSettings, onOpenAccount = onOpenAccount, onNavigateToStatistics = onNavigateToStatistics, onBookSelected = onBookSelected, onContinueReading = onContinueReading, onImportBook = onImportBook, onSearchQueryChange = viewModel::onSearchQueryChanged, onToggleSearch = viewModel::onToggleSearch, onEditBook = onEditBook, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShareBook = onShareBook, onRequestDeleteBook = onRequestDeleteBook)
+    HomeScreenContent(uiState = uiState, contentPadding = contentPadding, onNavigateToLibrary = onNavigateToLibrary, onNavigateToHighlights = onNavigateToHighlights, onNavigateToSettings = onNavigateToSettings, onOpenAccount = onOpenAccount, onNavigateToStatistics = onNavigateToStatistics, onBookSelected = onBookSelected, onContinueReading = onContinueReading, onImportBook = onImportBook, onSearchQueryChange = viewModel::onSearchQueryChanged, onToggleSearch = viewModel::onToggleSearch, notificationGroups = notificationGroups, unreadNotificationCount = unreadNotificationCount, onOpenNotification = onOpenNotification, onNotificationsOpened = onNotificationsOpened, onEditBook = onEditBook, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShareBook = onShareBook, onRequestDeleteBook = onRequestDeleteBook)
 }
 
 @Composable
@@ -97,6 +101,10 @@ fun HomeScreenContent(
     onImportBook: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onToggleSearch: () -> Unit,
+    notificationGroups: List<com.nexo.domain.notification.NotificationGroup> = emptyList(),
+    unreadNotificationCount: Int = 0,
+    onOpenNotification: (com.nexo.domain.notification.Notification) -> Unit = {},
+    onNotificationsOpened: () -> Unit = {},
     onEditBook: (Book) -> Unit = {},
     onMarkCompleted: (Book) -> Unit = {},
     onMarkPlanToRead: (Book) -> Unit = {},
@@ -104,7 +112,13 @@ fun HomeScreenContent(
     onRequestDeleteBook: (Book) -> Unit = {},
 ) {
     var showNotifications by remember { mutableStateOf(false) }
-    if (showNotifications) NotificationSheet(onDismiss = { showNotifications = false })
+    if (showNotifications) {
+        NotificationSheet(
+            groups = notificationGroups,
+            onOpen = onOpenNotification,
+            onDismiss = { showNotifications = false },
+        )
+    }
     LazyColumn(
         modifier =
             Modifier
@@ -125,7 +139,7 @@ fun HomeScreenContent(
             }
         }
         if (!uiState.showSearch) {
-            item { NexoHeader(title = stringResource(R.string.home_nexo_title), avatarImageUrl = uiState.avatarUrl, avatarInitials = uiState.userName.take(1).uppercase(), onAvatarClick = onOpenAccount, avatarContentDescription = stringResource(R.string.home_avatar_content_description), onSearchClick = onToggleSearch, onNotificationsClick = { showNotifications = true }) }
+            item { NexoHeader(title = stringResource(R.string.home_nexo_title), avatarImageUrl = uiState.avatarUrl, avatarInitials = uiState.userName.take(1).uppercase(), onAvatarClick = onOpenAccount, avatarContentDescription = stringResource(R.string.home_avatar_content_description), onSearchClick = onToggleSearch, onNotificationsClick = { showNotifications = true; onNotificationsOpened() }, unreadNotificationsCount = unreadNotificationCount) }
             item { GreetingSection(userName = uiState.userName) }
             item { TodaySummarySection(minutesReadToday = uiState.minutesReadToday, sessionsToday = uiState.sessionsToday, currentStreak = uiState.currentStreak) }
             item {
