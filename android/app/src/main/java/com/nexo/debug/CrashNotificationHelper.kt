@@ -63,11 +63,16 @@ object CrashNotificationHelper {
         prefs.edit().remove(NexoApplication.KEY_LAST_CRASH).apply()
 
         val parsed = runCatching { JSONObject(raw) }.getOrNull() ?: return
+        // G1/G3 crash-export boundary: the persisted crash JSON predates the
+        // redaction boundary, so scrub the structured envelope before it rides
+        // an Intent. `redactValue` drops known-sensitive keys wholesale and
+        // scrubs strings (paths / `<pattern>:<value>`) everywhere else.
+        val scrubbed = redactJsonObject(parsed)
 
         val detailIntent =
             Intent(context, CrashDetailActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                putExtra(EXTRA_CRASH_JSON, parsed.toString())
+                putExtra(EXTRA_CRASH_JSON, scrubbed.toString())
             }
         val pendingIntent =
             PendingIntent.getActivity(
@@ -96,4 +101,19 @@ object CrashNotificationHelper {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
         }
     }
+
+    /**
+     * Applies [LogRedaction.redactValue] field-by-field onto a [JSONObject] so
+     * the scrubbed envelope can be re-serialized. `redactValue` returns a plain
+     * [Map], so each already-scrubbed entry is copied back into a fresh JSON
+     * object.
+     */
+    internal fun redactJsonObject(original: JSONObject): JSONObject {
+        val scrubbed = LogRedaction.redactValue(jsonObjectToMap(original)) as? Map<*, *> ?: return original
+        return JSONObject(scrubbed)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun jsonObjectToMap(obj: JSONObject): Map<String, Any?> =
+        obj.keys().asSequence().associateWith { key -> obj.opt(key) }
 }

@@ -16,9 +16,14 @@ import java.util.Collections
  * (PP-1 RealPerformanceDataSource). Aggregates live in memory only.
  */
 object SentryMetrics {
-    /** In-session per-key timing samples (ms, exact values — local debug UI only). */
+    /**
+     * In-session per-key timing aggregates. Values come from BUCKET EDGES
+     * ([DURATION_BUCKETS_MS]), never exact per-request durations; [samples] is
+     * the bucketed sparkline series (local debug UI only).
+     */
     data class Aggregate(
         val avgMs: Long,
+        val p50Ms: Long,
         val p95Ms: Long,
         val maxMs: Long,
         val samples: List<Float>,
@@ -26,12 +31,38 @@ object SentryMetrics {
     )
 
     private const val MAX_SAMPLES = 64
+    private const val P50_INDEX_FACTOR = 0.50
     private const val P95_INDEX_FACTOR = 0.95
 
     private val samplesByKey =
         Collections.synchronizedMap(
             mutableMapOf<String, MutableList<Long>>(),
         )
+
+    /**
+     * Cross-restart persistence for the bucketed aggregates. Null until the app
+     * installs one in onCreate (matches the [install] egress-supplier pattern);
+     * a null store keeps every path in-memory only.
+     */
+    @Volatile
+    private var aggregateStore: MetricAggregateStore? = null
+
+    /**
+     * Persisted aggregates from the previous process, hydrated by
+     * [installPersistence]. Read by [persistedAggregate] so the Performance
+     * screen can show last-session p50/p95 after a cold start.
+     */
+    @Volatile
+    private var persistedByKey: Map<String, MetricAggregateStore.PersistedAggregate> = emptyMap()
+
+    /**
+     * Points the aggregate persistence at [store] and hydrates the previous
+     * process's aggregates. Called once from Application.onCreate.
+     */
+    fun installPersistence(store: MetricAggregateStore) {
+        aggregateStore = store
+        persistedByKey = store.load()
+    }
 
     /**
      * PP-3 opt-out gate, consulted on EVERY emission.
@@ -60,6 +91,8 @@ object SentryMetrics {
         synchronized(samplesByKey) { samplesByKey.clear() }
         lastKnownPendingCount = 0
         egressEnabled = { true }
+        aggregateStore = null
+        persistedByKey = emptyMap()
     }
 
     /** Log-scale duration buckets (ms) — mirrors metricBuckets.ts. */
@@ -219,20 +252,69 @@ object SentryMetrics {
             list.add(bucketedValue)
             if (list.size > MAX_SAMPLES) list.removeAt(0)
         }
+        persistAggregates()
+    }
+
+    /**
+     * Writes the current bucketed aggregates to the installed store (no-op when
+     * none is installed). Only counts + bucket-derived aggregates are written —
+     * the sample list is never serialized.
+     */
+    private fun persistAggregates() {
+        val store = aggregateStore ?: return
+        val snapshot = synchronized(samplesByKey) { samplesByKey.toMap() }
+        val out = LinkedHashMap<String, MetricAggregateStore.PersistedAggregate>()
+        for ((name, list) in snapshot) {
+            val agg = aggregateOf(list) ?: continue
+            out[name] =
+                MetricAggregateStore.PersistedAggregate(
+                    count = agg.count,
+                    avgMs = agg.avgMs,
+                    p50Ms = agg.p50Ms,
+                    p95Ms = agg.p95Ms,
+                    maxMs = agg.maxMs,
+                )
+        }
+        store.save(out)
+        persistedByKey = store.load()
     }
 
     /** In-session aggregate for the Performance screen (debug builds only). */
     fun aggregate(name: String): Aggregate? {
         val list = synchronized(samplesByKey) { samplesByKey[name]?.toList() } ?: return null
+        return aggregateOf(list)
+    }
+
+    private fun aggregateOf(list: List<Long>): Aggregate? {
         if (list.isEmpty()) return null
         val sorted = list.sorted()
         val p95Index = ((sorted.size - 1) * P95_INDEX_FACTOR).toInt().coerceIn(0, sorted.size - 1)
+        val p50Index = ((sorted.size - 1) * P50_INDEX_FACTOR).toInt().coerceIn(0, sorted.size - 1)
         return Aggregate(
             avgMs = sorted.average().toLong(),
+            p50Ms = sorted[p50Index],
             p95Ms = sorted[p95Index],
             maxMs = sorted.last(),
             samples = list.map { it.toFloat() },
             count = list.size,
+        )
+    }
+
+    /**
+     * Aggregate carried over from the PREVIOUS process, or null when this
+     * session has already recorded samples for [name] (fresh data wins) or
+     * nothing was ever persisted.
+     */
+    fun persistedAggregate(name: String): Aggregate? {
+        val p = persistedByKey[name] ?: return null
+        if (p.count <= 0) return null
+        return Aggregate(
+            avgMs = p.avgMs,
+            p50Ms = p.p50Ms,
+            p95Ms = p.p95Ms,
+            maxMs = p.maxMs,
+            samples = emptyList(),
+            count = p.count,
         )
     }
 }
