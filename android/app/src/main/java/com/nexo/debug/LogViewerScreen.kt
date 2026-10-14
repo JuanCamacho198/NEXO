@@ -552,7 +552,7 @@ private fun LiveLogsTab(
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            listOf(DebugLog.Level.INFO, DebugLog.Level.WARN, DebugLog.Level.ERROR).forEach { level ->
+            listOf(DebugLog.Level.DEBUG, DebugLog.Level.INFO, DebugLog.Level.WARN, DebugLog.Level.ERROR).forEach { level ->
                 FilterChip(
                     selected = level in levelFilter,
                     onClick = { onLevelFilterChange(level) },
@@ -601,6 +601,7 @@ private fun LiveLogsTab(
 private fun LogEntryRow(event: DebugLog.DebugEvent) {
     val color =
         when (event.level) {
+            DebugLog.Level.DEBUG -> MaterialTheme.colorScheme.onSurfaceVariant
             DebugLog.Level.ERROR -> MaterialTheme.colorScheme.error
             DebugLog.Level.WARN -> MaterialTheme.colorScheme.tertiary
             DebugLog.Level.INFO -> MaterialTheme.colorScheme.primary
