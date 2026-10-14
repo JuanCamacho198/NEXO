@@ -3,18 +3,24 @@
   import { discoverErrorKey } from './discoverErrorCopy';
   import { DISCOVER_RAIL_LIMIT } from './railPlan';
   import type { DiscoverRailState } from './DiscoverRailsDomainState.svelte';
-  import type { CatalogBook, CatalogErrorCode } from '$lib/shared/services/catalog';
+  import type {
+    CatalogBook,
+    CatalogErrorCode,
+    CatalogSourceInfo,
+  } from '$lib/shared/services/catalog';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
   import type { ReaderBook } from '$lib/shared/types';
   import { openableLibraryBook } from './discoverLibraryMatch';
+  import { filterBooksBySource } from './discoverSourceFilter';
   import DiscoverCard from './DiscoverCard.svelte';
   import DiscoverDetail from './DiscoverDetail.svelte';
   import DiscoverHero from './DiscoverHero.svelte';
   import DiscoverOfflineState from './DiscoverOfflineState.svelte';
   import DiscoverRailSection from './DiscoverRailSection.svelte';
   import DiscoverSkeletonCard from './DiscoverSkeletonCard.svelte';
+  import DiscoverSourceRow from './DiscoverSourceRow.svelte';
 
   type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
 
@@ -31,6 +37,12 @@
 
   /** Live source count for the hero pill (`En línea · N fuentes`). */
   let sourceCount = $state(0);
+  /**
+   * Build-dependent source set (key-gated built-ins, runtime addons), read once
+   * here and shared by the hero pill count and the source filter row — the row
+   * never issues a second `listSources()`.
+   */
+  let sources = $state<CatalogSourceInfo[]>([]);
   /** Selected trending chip; filters loaded rails client-side only (no catalog call). */
   let selectedChip = $state<string | null>(null);
 
@@ -54,7 +66,8 @@
 
   async function loadRails(): Promise<void> {
     await discoverState.ensureRailsLoaded();
-    sourceCount = discoverState.refreshSources().length;
+    sources = discoverState.refreshSources();
+    sourceCount = sources.length;
   }
 
   // Browse-first load: every rail resolves through an explicit featured ordering
@@ -98,12 +111,25 @@
   /**
    * Per-rail render is never gated on an all-rails-settled condition: each index
    * hands its own state to `DiscoverRailSection`, so a fast rail renders while a
-   * slow one is still `Loading` and rail order never changes. Chip filtering is
-   * pure `$derived` work over already-loaded books — zero catalog calls.
+   * slow one is still `Loading` and rail order never changes. Chip + source
+   * filtering is pure `$derived` work over already-loaded books — zero catalog
+   * calls.
+   *
+   * Android-parity source narrowing: each rail is mapped through
+   * `filterBooksBySource`. A `Loaded` rail whose books all belong to other
+   * sources becomes `Hidden` (silent hide, no bare header), while `Hidden` /
+   * `Loading` / `Error` rails pass through untouched. Selecting "all" leaves
+   * every rail exactly as the rail plan published it.
    */
-  function railBooks(rail: DiscoverRailState): CatalogBook[] {
-    return rail.kind === 'Loaded' ? filterBooksByChip(rail.books, selectedChip) : [];
-  }
+  const visibleRails = $derived(
+    discoverState.rails.map((rail): { state: DiscoverRailState; books: CatalogBook[] } => {
+      if (rail.kind !== 'Loaded') return { state: rail, books: [] };
+      const chipFiltered = filterBooksByChip(rail.books, selectedChip);
+      const sourceFiltered = filterBooksBySource(chipFiltered, discoverState.selectedSource);
+      if (sourceFiltered.length === 0) return { state: { kind: 'Hidden' }, books: [] };
+      return { state: rail, books: sourceFiltered };
+    }),
+  );
 
   /** "Ver todo": scope the browse view to this author shelf's term. */
   function openRailScope(index: number): void {
@@ -291,11 +317,17 @@
   {:else if showOffline}
     <DiscoverOfflineState {t} onRetry={retryRails} />
   {:else}
-    {#each discoverState.rails as rail, index (index)}
+    <DiscoverSourceRow
+      {t}
+      {sources}
+      selected={discoverState.selectedSource}
+      onSelect={(source) => discoverState.selectSource(source)}
+    />
+    {#each visibleRails as rail, index (index)}
       <DiscoverRailSection
         title={railTitles[index] ?? ''}
-        state={rail}
-        books={railBooks(rail)}
+        state={rail.state}
+        books={rail.books}
         {t}
         onOpen={(book) => void discoverState.openDetail(book)}
         onPrefetch={(book) => discoverState.prefetchDetail(book)}

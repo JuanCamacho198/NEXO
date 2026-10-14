@@ -14,6 +14,11 @@ import {
 import { discardRemoteDownload } from '$lib/shared/api/downloadApi';
 import { TRENDING_CHIPS } from './discoverChips';
 import {
+  ALL_SOURCES,
+  reconcileSourceFilter,
+  type DiscoverSourceFilter,
+} from './discoverSourceFilter';
+import {
   catalogCodeOf,
   DiscoverRailsDomainState,
   isOfflineCatalogCode,
@@ -35,6 +40,14 @@ export type DiscoverDownloadState =
 
 /** Chip taxonomy + chip filtering live in `discoverChips.ts`; re-exported for consumers. */
 export { CHIP_KEYWORDS, TRENDING_CHIPS, filterBooksByChip, matchesChip } from './discoverChips';
+/** Source-filter predicate + narrowing helpers; re-exported for consumers. */
+export {
+  ALL_SOURCES,
+  filterBooksBySource,
+  matchesSource,
+  reconcileSourceFilter,
+  type DiscoverSourceFilter,
+} from './discoverSourceFilter';
 /** The 3-rail plan lives in `railPlan.ts`; re-exported so existing imports keep working. */
 export { DISCOVER_RAIL_COUNT, DISCOVER_RAIL_LIMIT, type DiscoverRailSpec } from './railPlan';
 export type { DiscoverBrowseScope, DiscoverRailState } from './DiscoverRailsDomainState.svelte';
@@ -76,6 +89,8 @@ class DiscoverDomainState {
   progressTotal = $state<number | null>(null);
   /** Static chip labels for client-side filtering over loaded rails. */
   trending = $state<string[]>([...TRENDING_CHIPS]);
+  /** Selected source filter; `null` = all sources. Derived client-side only. */
+  selectedSource = $state<DiscoverSourceFilter>(ALL_SOURCES);
 
   /**
    * Post-import refresh seam, mirroring `BulkImportDomainState`: the Discover
@@ -389,9 +404,21 @@ class DiscoverDomainState {
   /**
    * Live source list for the hero pill (`En línea · N fuentes` where
    * N = the returned length). Pure read-through, no I/O.
+   *
+   * The same list also feeds the source filter row, so the selection is
+   * reconciled here: a selected source that vanished from the build (a
+   * key-gated Google Books, an unregistered registry source) degrades to "all"
+   * rather than leaving the row stuck on a chip nobody can see.
    */
   refreshSources(): CatalogSourceInfo[] {
-    return this.provider.listSources();
+    const sources = this.provider.listSources();
+    this.selectedSource = reconcileSourceFilter(this.selectedSource, sources);
+    return sources;
+  }
+
+  /** Select a source (or `ALL_SOURCES`); pure state, no catalog call. */
+  selectSource(source: DiscoverSourceFilter): void {
+    this.selectedSource = source;
   }
 
   /** Load the rail set once per session; a settled set is reused on remount. */
