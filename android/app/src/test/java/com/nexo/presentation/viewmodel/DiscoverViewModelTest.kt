@@ -543,6 +543,38 @@ class DiscoverViewModelTest {
         }
     }
 
+    /**
+     * Gated rail provider: every IDLE shelf search blocks on [gate], so the
+     * published rails stay in [DiscoverRailState.Loading] until it completes.
+     * The gate sits on `searchSource` — the seam the IDLE author shelves use.
+     */
+    private class GatedFeaturedProvider : CatalogProvider {
+        val gate = CompletableDeferred<Unit>()
+
+        override suspend fun search(
+            query: String,
+            page: Int,
+        ): PagedResult = PagedResult(emptyList(), null, 0)
+
+        override suspend fun getDetails(id: String): CatalogBook = throw CatalogException(CatalogErrorCode.NOT_FOUND, "unused")
+
+        override fun resolveDownloadUrl(
+            formats: Map<String, String>,
+            preferEpub: Boolean,
+        ): String = "n/a"
+
+        override fun listSources(): List<CatalogSourceInfo> = emptyList()
+
+        override suspend fun searchSource(
+            sourceId: String,
+            query: String,
+            page: Int,
+        ): PagedResult {
+            gate.await()
+            return PagedResult(emptyList(), null, 0)
+        }
+    }
+
     /** Rail page for [term] with [credit]: one book credited to that author string. */
     private fun authoredPage(
         term: String,
@@ -877,6 +909,8 @@ class DiscoverViewModelTest {
     private class FakeSourceCatalogProvider : CatalogProvider {
         var sources: List<CatalogSourceInfo> = emptyList()
         var searchResults: List<CatalogBook> = emptyList()
+        var sourceResult: (String) -> PagedResult = { PagedResult(emptyList(), null, 0) }
+        val searchSourceCalls = mutableListOf<Pair<String, String>>()
 
         override suspend fun search(
             query: String,
@@ -891,32 +925,15 @@ class DiscoverViewModelTest {
         ): String = "n/a"
 
         override fun listSources(): List<CatalogSourceInfo> = sources
-    }
 
-    /** Featured provider whose rails are pinned per [CatalogFeaturedSort]. */
-    private class FakeFeaturedSourceCatalogProvider(
-        private val featured: Map<CatalogFeaturedSort, PagedResult>,
-    ) : CatalogProvider {
-        override suspend fun search(
+        override suspend fun searchSource(
+            sourceId: String,
             query: String,
             page: Int,
-        ): PagedResult = PagedResult(emptyList(), null, 0)
-
-        override suspend fun getDetails(id: String): CatalogBook = throw CatalogException(CatalogErrorCode.NOT_FOUND, "unused")
-
-        override fun resolveDownloadUrl(
-            formats: Map<String, String>,
-            preferEpub: Boolean,
-        ): String = "n/a"
-
-        override fun listSources(): List<CatalogSourceInfo> = emptyList()
-
-        override suspend fun featured(
-            sort: CatalogFeaturedSort,
-            page: Int,
-        ): PagedResult = featured[sort] ?: PagedResult(emptyList(), null, 0)
-
-        override fun supportsFeatured(): Boolean = true
+        ): PagedResult {
+            searchSourceCalls.add(sourceId to query)
+            return sourceResult(sourceId)
+        }
     }
 
     private fun catalogBook(
@@ -1137,73 +1154,94 @@ class DiscoverViewModelTest {
     @Test
     fun sourceFilterNarrowsIdleRailsAndHidesFullyFilteredOnes() =
         runTest {
+            val terms = todayTerms()
             val provider =
                 FakeSourceCatalogProvider().apply {
                     sources = listOf(CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON))
-                    sourceResult = {
-                        PagedResult(
-                            listOf(
-                                catalogBook("a:1", addonSourceId, "Addon Book"),
-                                catalogBook("g:1", BUILTIN_GUTENDEX, "Builtin Book"),
-                                catalogBook("o:1", BUILTIN_OPENLIBRARY, "OL Book"),
-                            ),
-                            null,
-                            3,
-                        )
+                    // Author shelves query BUILTIN_GOOGLEBOOKS with the day's terms;
+                    // each shelf keeps only the book credited to its own term. The
+                    // addon rail queries its own source id.
+                    sourceResult = { sourceId ->
+                        if (sourceId == BUILTIN_GOOGLEBOOKS) {
+                            PagedResult(
+                                terms.mapIndexed { index, term ->
+                                    catalogBook("g:$index", BUILTIN_GOOGLEBOOKS, "By $term")
+                                        .copy(authors = listOf(creditFor(term)))
+                                },
+                                null,
+                                terms.size,
+                            )
+                        } else {
+                            PagedResult(listOf(catalogBook("a:1", addonSourceId, "Addon Book")), null, 1)
+                        }
                     }
                 }
             val vm = DiscoverViewModel(provider)
             advanceUntilIdle()
 
+            // Three author shelves plus the addon rail, in design order.
+            val rails = vm.uiState.value.rails
+            assertEquals(4, rails.size)
+            assertTrue(rails.take(3).all { it is DiscoverRailState.Loaded })
             // "All" leaves every rail exactly as loaded.
             assertEquals(vm.uiState.value.rails, vm.uiState.value.visibleRails)
-            val addonRailWidth = (vm.uiState.value.rails[2] as DiscoverRailState.Loaded).books.size
-            assertEquals(3, addonRailWidth)
+            val addonRailWidth = (rails[3] as DiscoverRailState.Loaded).books.size
+            assertEquals(1, addonRailWidth)
 
             vm.setSourceFilter(DiscoverSourceFilter.Source(addonSourceId))
 
-            val rails = vm.uiState.value.visibleRails
-            assertEquals(3, rails.size)
-            // The addon rail keeps only its own books; the two featured rails are
+            val narrowed = vm.uiState.value.visibleRails
+            assertEquals(4, narrowed.size)
+            // The addon rail keeps only its own books; the three author shelves are
             // Google Books sourced, so a non-Google-Books selection hides them.
-            val addonRail = rails[2] as DiscoverRailState.Loaded
+            assertTrue(narrowed.take(3).all { it is DiscoverRailState.Hidden })
+            val addonRail = narrowed[3] as DiscoverRailState.Loaded
             assertEquals(listOf(addonSourceId), addonRail.books.map { it.provider })
 
             // Narrowing is presentation-only: the loaded state keeps every book.
             val sourceRails = vm.uiState.value.rails
-            assertEquals(addonRailWidth, (sourceRails[2] as DiscoverRailState.Loaded).books.size)
+            assertEquals(addonRailWidth, (sourceRails[3] as DiscoverRailState.Loaded).books.size)
             assertEquals(vm.uiState.value.rails, sourceRails)
         }
 
     @Test
     fun aRailThatFiltersToZeroBooksBecomesHidden() =
         runTest {
-            // One featured rail carries an addon book, the other does not: selecting
-            // the addon narrows the first and hides the second.
+            // Two addon rails, each carrying a book from its own addon source:
+            // selecting one narrows that rail and hides the other.
             val otherSource = CatalogSourceInfo("addon:ffffffffffffffff", "Other Addon", CatalogSourceKind.ADDON)
             val provider =
-                FakeFeaturedSourceCatalogProvider(
-                    featured =
-                        mapOf(
-                            CatalogFeaturedSort.NEWEST to
-                                PagedResult(listOf(catalogBook("a:1", addonSourceId, "Mine")), null, 1),
-                            CatalogFeaturedSort.POPULAR to
-                                PagedResult(listOf(catalogBook("a:2", otherSource.sourceId, "Theirs")), null, 1),
-                        ),
-                )
+                FakeSourceCatalogProvider().apply {
+                    sources =
+                        listOf(
+                            CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON),
+                            otherSource,
+                        )
+                    sourceResult = { sourceId ->
+                        when (sourceId) {
+                            addonSourceId -> PagedResult(listOf(catalogBook("a:1", addonSourceId, "Mine")), null, 1)
+                            otherSource.sourceId -> PagedResult(listOf(catalogBook("a:2", otherSource.sourceId, "Theirs")), null, 1)
+                            // Author shelves (BUILTIN_GOOGLEBOOKS) fail closed to Hidden.
+                            else -> PagedResult(emptyList(), null, 0)
+                        }
+                    }
+                }
 
             val vm = DiscoverViewModel(provider)
             advanceUntilIdle()
 
             val loaded = vm.uiState.value.visibleRails
-            assertTrue(loaded[0] is DiscoverRailState.Loaded)
-            assertTrue(loaded[1] is DiscoverRailState.Loaded)
+            // Three author shelves collapse to Hidden (no Google Books page), then
+            // the two addon rails.
+            assertEquals(5, loaded.size)
+            assertTrue(loaded[3] is DiscoverRailState.Loaded)
+            assertTrue(loaded[4] is DiscoverRailState.Loaded)
 
             vm.setSourceFilter(DiscoverSourceFilter.Source(addonSourceId))
 
             val rails = vm.uiState.value.visibleRails
-            assertEquals(listOf(addonSourceId), (rails[0] as DiscoverRailState.Loaded).books.map { it.provider })
-            assertEquals(DiscoverRailState.Hidden, rails[1])
+            assertEquals(listOf(addonSourceId), (rails[3] as DiscoverRailState.Loaded).books.map { it.provider })
+            assertEquals(DiscoverRailState.Hidden, rails[4])
         }
 
     @Test
