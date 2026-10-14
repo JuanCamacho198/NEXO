@@ -14,6 +14,8 @@ import com.nexo.data.sync.LayoutMigrationRunner
 import com.nexo.debug.CrashLogStore
 import com.nexo.debug.DebugLog
 import com.nexo.debug.FeedbackPersistence
+import com.nexo.debug.LogRedaction
+import com.nexo.debug.MetricAggregateStore
 import com.nexo.debug.SentryInitGuard
 import com.nexo.debug.SentryMetrics
 import com.nexo.debug.SentryPiiScrubber
@@ -170,6 +172,13 @@ class NexoApplication :
         // immediately, mid-session.
         SentryMetrics.install { SentryPrivacyPrefs.isEnabled(this@NexoApplication) }
 
+        // G4: persist the BUCKETED timing aggregates so p50/p95 survive a cold
+        // start. Only bucket edges + derived aggregates are written; exact
+        // per-request durations never leave memory (see MetricAggregateStore).
+        SentryMetrics.installPersistence(
+            MetricAggregateStore(File(filesDir, "metric_aggregates.json")),
+        )
+
         installCrashHandler()
 
         // WU6 (FR-02, INV-5): version-gated, idempotent layout migration. Move
@@ -219,12 +228,20 @@ class NexoApplication :
                 }
 
                 val stackTrace = Log.getStackTraceString(throwable)
+                // G1/G3: scrub the crash envelope AT THE SOURCE, before it reaches
+                // prefs, the crash file, the notification, or the detail screen.
+                // The exported stack can carry a request path or a `<key>:<value>`
+                // secret; LogRedaction is the single boundary for both. Idempotent,
+                // so the downstream boundary passes are safe no-ops on this text.
                 val crashJson =
                     JSONObject().apply {
                         put("timestamp", System.currentTimeMillis())
-                        put("threadName", thread.name)
-                        put("message", throwable.message ?: throwable::class.java.simpleName)
-                        put("stackTrace", stackTrace)
+                        put("threadName", LogRedaction.redactString(thread.name))
+                        put(
+                            "message",
+                            LogRedaction.redactString(throwable.message ?: throwable::class.java.simpleName),
+                        )
+                        put("stackTrace", LogRedaction.redactString(stackTrace))
                     }
                 // Save to SharedPreferences (existing — for notification)
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
