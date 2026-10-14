@@ -1,6 +1,7 @@
 package com.nexo.debug
 
 import android.util.Log
+import com.nexo.BuildConfig
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +25,7 @@ import kotlinx.coroutines.launch
  *   [MAX_ERROR_EVENTS].
  */
 object DebugLog {
-    enum class Level { INFO, WARN, ERROR, SUCCESS }
+    enum class Level { DEBUG, INFO, WARN, ERROR, SUCCESS }
 
     data class DebugEvent(
         val timestamp: Long,
@@ -35,6 +36,28 @@ object DebugLog {
 
     private const val MAX_EVENTS = 500
     private const val MAX_ERROR_EVENTS = 200
+
+    /**
+     * Severity threshold for gating. Events strictly below it are dropped
+     * before any side effect (ring, Logcat, Sentry, disk).
+     *
+     * Release builds must never emit DEBUG: the default is DEBUG only when
+     * [BuildConfig.DEBUG] is set, otherwise INFO. Exposed as [minLevel] /
+     * [setMinLevel] for tests and runtime tuning.
+     */
+    @Volatile
+    var minLevel: Level = if (BuildConfig.DEBUG) Level.DEBUG else Level.INFO
+        private set
+
+    fun setMinLevel(level: Level) {
+        minLevel = level
+    }
+
+    /**
+     * Gate severity, mapping [Level.SUCCESS] onto INFO (it is a positive
+     * signal, not a warning). Lower ordinal == less severe.
+     */
+    private fun gateRank(level: Level): Int = if (level == Level.SUCCESS) Level.INFO.ordinal else level.ordinal
 
     private val _events = MutableStateFlow<List<DebugEvent>>(emptyList())
     val events: StateFlow<List<DebugEvent>> = _events.asStateFlow()
@@ -65,6 +88,7 @@ object DebugLog {
     internal fun resetForTest() {
         writer = null
         scope = null
+        minLevel = if (BuildConfig.DEBUG) Level.DEBUG else Level.INFO
     }
 
     fun log(
@@ -72,12 +96,19 @@ object DebugLog {
         tag: String,
         message: String,
     ) {
+        // Level gate FIRST: a dropped event must have zero side effect.
+        if (gateRank(level) < gateRank(minLevel)) return
+
+        // Redact ONCE, before the message reaches any sink (ring, Logcat,
+        // Sentry, disk). Stored events are therefore already redacted and
+        // toText() must NOT re-run the boundary.
+        val safeMessage = LogRedaction.redactString(message)
         val event =
             DebugEvent(
                 timestamp = System.currentTimeMillis(),
                 level = level,
                 tag = tag,
-                message = message,
+                message = safeMessage,
             )
         _events.update { current ->
             val updated = ArrayList<DebugEvent>(minOf(current.size + 1, MAX_EVENTS))
@@ -100,10 +131,11 @@ object DebugLog {
             // captureMessage because DebugLog.log takes a pre-formatted message
             // string (not a Throwable). Callers that have a Throwable should call
             // Sentry.captureException directly at the call site.
-            runCatching { Sentry.captureMessage(message, SentryLevel.ERROR) }
+            runCatching { Sentry.captureMessage(safeMessage, SentryLevel.ERROR) }
         }
         val priority =
             when (level) {
+                Level.DEBUG -> Log.DEBUG
                 Level.INFO -> Log.INFO
                 Level.WARN -> Log.WARN
                 Level.ERROR -> Log.ERROR
@@ -112,16 +144,21 @@ object DebugLog {
         // android.util.Log is not mocked in JVM unit tests; swallow the failure so
         // the in-memory event log still works there (tests assert on events, not logcat).
         runCatching {
-            Log.println(priority, tag, message)
+            Log.println(priority, tag, safeMessage)
         }
 
         // Fire-and-forget disk write — never blocks the calling thread
         scope?.launch {
             runCatching {
-                writer?.write(level.name, tag, message, System.currentTimeMillis())
+                writer?.write(level.name, tag, safeMessage, System.currentTimeMillis())
             }
         }
     }
+
+    fun debug(
+        tag: String,
+        message: String,
+    ) = log(Level.DEBUG, tag, message)
 
     fun info(
         tag: String,

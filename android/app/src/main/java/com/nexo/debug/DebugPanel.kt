@@ -344,6 +344,7 @@ fun DebugPanel(
                         for (e in events.take(50)) {
                             val color =
                                 when (e.level) {
+                                    DebugLog.Level.DEBUG -> Color(0xFF8A8FA3)
                                     DebugLog.Level.INFO -> Color(0xFFDDE2F8)
                                     DebugLog.Level.WARN -> Color(0xFFFFB454)
                                     DebugLog.Level.ERROR -> Color(0xFFEF4444)
