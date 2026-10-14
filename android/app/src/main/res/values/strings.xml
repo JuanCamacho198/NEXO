@@ -154,6 +154,17 @@
     <string name="discover_back">Back</string>
     <string name="discover_rail_newest">Recently added to the catalog</string>
     <string name="discover_rail_popular">Popular in the catalog</string>
+    <!-- S2: author shelf titles (rotation roster; proper nouns, identical in both locales) -->
+    <string name="discover_rail_author_doyle">Arthur Conan Doyle</string>
+    <string name="discover_rail_author_poe">Edgar Allan Poe</string>
+    <string name="discover_rail_author_wilde">Oscar Wilde</string>
+    <string name="discover_rail_author_verne">Jules Verne</string>
+    <string name="discover_rail_author_kafka">Franz Kafka</string>
+    <string name="discover_rail_author_dickens">Charles Dickens</string>
+    <string name="discover_rail_author_london">Jack London</string>
+    <string name="discover_rail_author_wells">H. G. Wells</string>
+    <string name="discover_rail_author_twain">Mark Twain</string>
+    <string name="discover_rail_author_melville">Herman Melville</string>
     <string name="discover_section_subtitle">“%1$s” · %2$d results</string>
     <string name="discover_detail_subjects_label">SUBJECTS</string>
     <string name="discover_detail_description_label">DESCRIPTION</string>
@@ -954,7 +965,7 @@
     <string name="settings_addons_uninstall_confirm_cancel">Cancel</string>
     <!-- U4: Fuentes integradas (read-only built-in sources) -->
     <string name="settings_addons_builtin_title">Built-in sources</string>
-    <string name="settings_addons_builtin_gutendex_role">Powers the Recently added and Popular rails</string>
+    <string name="settings_addons_builtin_gutendex_role">Powers in-app downloads for public-domain titles</string>
     <string name="settings_addons_builtin_openlibrary_role">Combined search only — no dedicated rail</string>
     <string name="discover_source_filter_all">All</string>
     <string name="discover_source_addon_fallback">Addon</string>

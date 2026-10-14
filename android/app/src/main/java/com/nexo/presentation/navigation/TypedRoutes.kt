@@ -13,7 +13,7 @@ import kotlinx.serialization.Serializable
  * replace, which makes the destination route strings byte-for-byte:
  *
  * - `reader?bookId={bookId}&bookPath={bookPath}&bookFormat={bookFormat}`
- * - `discover/section?sectionTitle={sectionTitle}&sort={sort}&sourceId={sourceId}`
+ * - `discover/section?sectionTitle={sectionTitle}&sort={sort}&sourceId={sourceId}&authorTerm={authorTerm}`
  *
  * Percent-encoding is owned by Navigation itself (`NavType.StringType` encodes
  * every query value and decodes it back), which is what replaces the deleted
@@ -29,8 +29,9 @@ data class ReaderRoute(
 
 /**
  * "Ver todo" section list. `sectionTitle` is already-localized copy and exactly
- * one of `sort` / `sourceId` is non-blank so the screen knows which paging seam
- * to use; both selectors default to blank (the previous `""` query defaults).
+ * one of `sort` / `authorTerm` / `sourceId` is non-blank so the screen knows
+ * which paging seam to use; all selectors default to blank (the previous `""`
+ * query defaults).
  */
 @Serializable
 @SerialName("discover/section")
@@ -38,4 +39,5 @@ data class DiscoverSectionRoute(
     val sectionTitle: String = "",
     val sort: String = "",
     val sourceId: String = "",
+    val authorTerm: String = "",
 )

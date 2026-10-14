@@ -89,7 +89,7 @@ class TypedRoutesNavigationTest {
         val controller = controllerWith(DiscoverSectionRoute()) { composable<DiscoverSectionRoute> { } }
 
         assertEquals(
-            "discover/section?sectionTitle={sectionTitle}&sort={sort}&sourceId={sourceId}",
+            "discover/section?sectionTitle={sectionTitle}&sort={sort}&sourceId={sourceId}&authorTerm={authorTerm}",
             controller.currentDestination?.route,
         )
     }
@@ -117,6 +117,22 @@ class TypedRoutesNavigationTest {
         assertEquals("Nuevos", decoded.sectionTitle)
         assertEquals("NEWEST", decoded.sort)
         assertEquals("", decoded.sourceId)
+        assertEquals("", decoded.authorTerm)
+    }
+
+    @Test
+    fun `DiscoverSectionRoute author term round-trips as the third selector`() {
+        val controller = controllerWith(DiscoverSectionRoute()) { composable<DiscoverSectionRoute> { } }
+
+        controller.navigate(
+            DiscoverSectionRoute(sectionTitle = "Herman Melville", sort = "", sourceId = "", authorTerm = "herman melville"),
+        )
+
+        val decoded = controller.currentBackStackEntry!!.toRoute<DiscoverSectionRoute>()
+        assertEquals("Herman Melville", decoded.sectionTitle)
+        assertEquals("", decoded.sort)
+        assertEquals("", decoded.sourceId)
+        assertEquals("herman melville", decoded.authorTerm)
     }
 }
 
