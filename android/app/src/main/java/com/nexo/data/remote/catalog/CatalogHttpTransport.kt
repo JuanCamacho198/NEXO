@@ -15,7 +15,10 @@ data class CatalogHttpResponse(
 
 /** Narrow HTTP boundary so datasources stay fully testable offline with fakes. */
 interface CatalogHttpTransport {
-    suspend fun get(url: String): CatalogHttpResponse
+    suspend fun get(
+        url: String,
+        extraHeaders: Map<String, String> = emptyMap(),
+    ): CatalogHttpResponse
 }
 
 /** Search payload shared by both datasources (books + authority total). */
@@ -34,12 +37,16 @@ class KtorCatalogHttpTransport(
     private val client: HttpClient,
     private val userAgent: String = ANDROID_USER_AGENT,
 ) : CatalogHttpTransport {
-    override suspend fun get(url: String): CatalogHttpResponse {
+    override suspend fun get(
+        url: String,
+        extraHeaders: Map<String, String>,
+    ): CatalogHttpResponse {
         try {
             val response =
                 client.get(url) {
                     header(HttpHeaders.UserAgent, userAgent)
                     header(HttpHeaders.Accept, "application/json")
+                    extraHeaders.forEach { (name, value) -> header(name, value) }
                 }
             return CatalogHttpResponse(response.status.value, response.bodyAsText())
         } catch (err: Throwable) {
@@ -53,14 +60,17 @@ class KtorCatalogHttpTransport(
  * GET with exactly one delayed retry on 429/5xx (mirrors `fetchWithRetry`).
  * Network failures surface as NETWORK_ERROR; HTTP failures as mapped codes.
  */
-suspend fun CatalogHttpTransport.getWithRetry(url: String): CatalogHttpResponse {
-    val first = get(url)
+suspend fun CatalogHttpTransport.getWithRetry(
+    url: String,
+    extraHeaders: Map<String, String> = emptyMap(),
+): CatalogHttpResponse {
+    val first = get(url, extraHeaders)
     if (first.status.isSuccessLike()) return first
     if (!shouldRetryStatus(first.status)) {
         throw catalogError(mapHttpStatusToCode(first.status), "upstream status ${first.status}")
     }
     delay(backoffDelayMs(0))
-    val second = get(url)
+    val second = get(url, extraHeaders)
     if (!second.status.isSuccessLike()) {
         throw catalogError(mapHttpStatusToCode(second.status), "upstream status ${second.status}")
     }

@@ -42,6 +42,29 @@ class KtorCatalogHttpTransportTest {
             assertEquals("application/json", lastAccept)
         }
 
+    @Test fun get_sendsExtraHeadersWhenProvided() =
+        runTest {
+            var pkg: String? = null
+            var cert: String? = null
+            val engine =
+                MockEngine { request ->
+                    pkg = request.headers[HEADER_ANDROID_PACKAGE]
+                    cert = request.headers[HEADER_ANDROID_CERT]
+                    respond(
+                        ByteReadChannel("""{}"""),
+                        HttpStatusCode.OK,
+                        headersOf(HttpHeaders.ContentType, "application/json"),
+                    )
+                }
+            val transport = KtorCatalogHttpTransport(HttpClient(engine))
+            transport.get(
+                "https://www.googleapis.com/books/v1/volumes?q=x",
+                mapOf(HEADER_ANDROID_PACKAGE to "com.nexo", HEADER_ANDROID_CERT to "abc123"),
+            )
+            assertEquals("com.nexo", pkg)
+            assertEquals("abc123", cert)
+        }
+
     @Test fun get_mapsEngineFailureToNetworkError() =
         runTest {
             val engine = MockEngine { throw IOException("connection reset") }

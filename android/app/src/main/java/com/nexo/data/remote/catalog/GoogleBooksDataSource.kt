@@ -14,13 +14,35 @@ const val GOOGLE_BOOKS_BASE_URL = "https://www.googleapis.com/books/v1"
  * the key as a constructor arg so it stays fully testable offline with
  * [FakeCatalogHttpTransport]; the key is appended as `&key=` only when
  * non-blank and never logged.
+ *
+ * Android-restricted keys: when [androidPackage] and [androidCert] are both
+ * supplied, every request carries the `X-Android-Package`/`X-Android-Cert`
+ * headers so Google can match the key's Android application restriction
+ * (package + signing SHA-1). Without them a package-restricted key answers
+ * `403 API_KEY_ANDROID_APP_BLOCKED` because the API sees an empty package.
  */
 open class GoogleBooksDataSource(
     private val transport: CatalogHttpTransport,
     private val apiKey: String = "",
     private val baseUrl: String = GOOGLE_BOOKS_BASE_URL,
     private val json: Json = Json { ignoreUnknownKeys = true },
+    private val androidPackage: String? = null,
+    private val androidCert: String? = null,
 ) {
+    /**
+     * Android app-identity headers for a package-restricted key, or an empty
+     * map when either half is missing (unrestricted/server keys need none).
+     */
+    private val androidIdentityHeaders: Map<String, String> =
+        if (!androidPackage.isNullOrBlank() && !androidCert.isNullOrBlank()) {
+            mapOf(
+                HEADER_ANDROID_PACKAGE to androidPackage,
+                HEADER_ANDROID_CERT to androidCert,
+            )
+        } else {
+            emptyMap()
+        }
+
     /** Search volumes; ISBN queries use the `isbn:` operator, all else raw. */
     open suspend fun search(
         query: String,
@@ -33,7 +55,7 @@ open class GoogleBooksDataSource(
         val keyParam = apiKey.trim().takeIf { it.isNotEmpty() }?.let { "&key=${it.encode()}" } ?: ""
         val url = "$baseUrl/volumes?q=${q.encode()}&startIndex=$startIndex&maxResults=$size$keyParam"
         try {
-            val res = transport.getWithRetry(url)
+            val res = transport.getWithRetry(url, androidIdentityHeaders)
             val data = json.decodeFromString<GoogleBooksSearchResponse>(res.body)
             val books = data.items.mapNotNull(::mapGoogleBooksVolume).take(size)
             return CatalogSearchResult(books, data.totalItems ?: books.size)
@@ -49,7 +71,7 @@ open class GoogleBooksDataSource(
         // `fields=` keeps the payload small; unknown fields still decode leniently.
         val url = "$baseUrl/volumes/${volumeId.encode()}?fields=id,volumeInfo(title,authors,description,language,categories,imageLinks)$keyParam"
         try {
-            val res = transport.getWithRetry(url)
+            val res = transport.getWithRetry(url, androidIdentityHeaders)
             val item = json.decodeFromString<GoogleBooksVolumeItem>(res.body)
             return mapGoogleBooksVolume(item)
                 ?: throw catalogError(CatalogErrorCode.NOT_FOUND, "googlebooks volume unavailable")
@@ -61,6 +83,10 @@ open class GoogleBooksDataSource(
 
     private fun String.encode(): String = URLEncoder.encode(this, Charsets.UTF_8.name())
 }
+
+/** Headers Google reads to match an Android-restricted API key to its app. */
+const val HEADER_ANDROID_PACKAGE = "X-Android-Package"
+const val HEADER_ANDROID_CERT = "X-Android-Cert"
 
 /** ISBN-10 total length, ISBN-10 body length (without check digit), ISBN-13 length. */
 private const val ISBN10_LENGTH = 10

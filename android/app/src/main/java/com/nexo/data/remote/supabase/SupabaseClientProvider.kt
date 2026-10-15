@@ -6,7 +6,9 @@ import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.serializer.KotlinXSerializer
 import io.github.jan.supabase.storage.Storage
+import kotlinx.serialization.json.Json
 import io.github.jan.supabase.auth.SessionManager as SupabaseAuthSessionManager
 
 /**
@@ -81,6 +83,19 @@ object SupabaseClientProvider {
             install(Postgrest)
             install(Realtime)
             install(Storage)
+            // Coerce `null` from the DB into each field's default instead of
+            // throwing. Postgres columns are nullable while their Kotlin models
+            // declare non-null types with defaults (e.g. reading_progress
+            // `percentage: Double = 0.0`), so a single NULL row would otherwise
+            // crash Realtime deserialization — see NEXO-ANDROID-P/Q.
+            defaultSerializer =
+                KotlinXSerializer(
+                    json =
+                        Json {
+                            ignoreUnknownKeys = true
+                            coerceInputValues = true
+                        },
+                )
         }
     }
 

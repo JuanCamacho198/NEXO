@@ -219,6 +219,73 @@ class GoogleBooksU2Test {
         assertTrue(networkModule.contains("BuildConfig.GOOGLE_BOOKS_KEY"))
     }
 
+    // ── Android-restricted key: identity headers ────────────────────
+
+    @Test fun `android identity headers travel with search when package and cert set`() =
+        runTest {
+            val transport = FakeCatalogHttpTransport({ CatalogHttpResponse(200, googleBooksPayload()) })
+            val ds =
+                GoogleBooksDataSource(
+                    transport,
+                    apiKey = "k",
+                    androidPackage = "com.nexo",
+                    androidCert = "8b53523f",
+                )
+            ds.search("austen", 1)
+            assertEquals(
+                mapOf(HEADER_ANDROID_PACKAGE to "com.nexo", HEADER_ANDROID_CERT to "8b53523f"),
+                transport.requestedHeaders.first(),
+            )
+        }
+
+    @Test fun `no identity headers when package or cert missing`() =
+        runTest {
+            val transport = FakeCatalogHttpTransport({ CatalogHttpResponse(200, googleBooksPayload()) })
+            GoogleBooksDataSource(transport, apiKey = "k", androidPackage = "com.nexo").search("austen", 1)
+            GoogleBooksDataSource(transport, apiKey = "k", androidCert = "8b53523f").search("austen", 1)
+            assertTrue(transport.requestedHeaders.all { it.isEmpty() })
+        }
+
+    @Test fun `getById also carries android identity headers`() =
+        runTest {
+            val payload = """{"id":"abc123","volumeInfo":{"title":"T","authors":["A"]}}"""
+            val transport = FakeCatalogHttpTransport({ CatalogHttpResponse(200, payload) })
+            val ds =
+                GoogleBooksDataSource(
+                    transport,
+                    apiKey = "k",
+                    androidPackage = "com.nexo",
+                    androidCert = "cert1",
+                )
+            ds.getById("abc123")
+            assertEquals(mapOf(HEADER_ANDROID_PACKAGE to "com.nexo", HEADER_ANDROID_CERT to "cert1"), transport.requestedHeaders.first())
+        }
+
+    @Test fun `provider factory forwards android identity to the datasource`() =
+        runTest {
+            val transport = FakeCatalogHttpTransport({ CatalogHttpResponse(200, googleBooksPayload()) })
+            val provider =
+                googleBooksProviderOrNull(
+                    transport,
+                    "k",
+                    androidPackage = "com.nexo",
+                    androidCert = "cert1",
+                )
+            assertNotNull(provider)
+            provider!!.search("austen", 1)
+            assertEquals(mapOf(HEADER_ANDROID_PACKAGE to "com.nexo", HEADER_ANDROID_CERT to "cert1"), transport.requestedHeaders.first())
+        }
+
+    @Test fun `android identity resolver lives in its own file`() {
+        val src =
+            resFile(
+                "src/main/java/com/nexo/data/remote/catalog/AndroidAppIdentity.kt",
+                "app/src/main/java/com/nexo/data/remote/catalog/AndroidAppIdentity.kt",
+            ).readText()
+        assertTrue(src.contains("androidAppIdentityOrNull"))
+        assertTrue(src.contains("SHA-1"))
+    }
+
     // ── Gutenberg cover derivation + fallback ───────────────────────
 
     @Test fun `gutenberg cover derived from record id`() {

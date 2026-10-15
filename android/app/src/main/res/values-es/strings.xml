@@ -15,8 +15,7 @@
     <string name="auth_continue_local_dev">Continuar en local (Dev)</string>
     <string name="auth_failure_config_error_with_details">Error de configuracion: %1$s. Continua en modo local hasta corregir la configuracion.</string>
     <string name="auth_failure_wiring_error_with_details">Error de conexion: %1$s. Continua en modo local mientras se corrige la conexion.</string>
-    <string name="auth_welcome_back_prefix">¡Bienvenido</string>
-    <string name="auth_welcome_back_accent"> de nuevo!</string>
+    <string name="auth_welcome_title">¡Bienvenido!</string>
     <string name="auth_login_subtitle">Inicia sesión para mantener tu biblioteca sincronizada.</string>
     <string name="auth_forgot_password">Olvidé mi contraseña</string>
     <string name="auth_login_action">Iniciar sesión</string>
