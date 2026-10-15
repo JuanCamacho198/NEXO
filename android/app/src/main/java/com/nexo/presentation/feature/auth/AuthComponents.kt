@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,7 +28,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -130,6 +129,12 @@ fun AuthScreenScaffold(
 @Composable
 fun AuthLogo() {
     val glowColor = NexoTheme.colors.welcomeBrandBlue
+    // Same dark-background signal AuthScreenScaffold uses to pick its bookshelf
+    // art, so the lockup export always matches the surface behind it.
+    val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    // Each export has its own canvas; the ratio comes from the vector actually drawn
+    // so the lockup never gets stretched or letterboxed.
+    val vector = if (isDarkBackground) NexoBrandLockup.Dark else NexoBrandLockup.Light
     Box(
         modifier =
             Modifier
@@ -150,21 +155,15 @@ fun AuthLogo() {
                 },
         contentAlignment = Alignment.Center,
     ) {
-        Box(
+        Icon(
+            imageVector = vector,
+            contentDescription = stringResource(R.string.app_name),
             modifier =
                 Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(NexoTheme.colors.welcomeBrandBlue),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.app_logo_initials),
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary,
-            )
-        }
+                    .width(190.dp)
+                    .aspectRatio(vector.viewportWidth / vector.viewportHeight),
+            tint = Color.Unspecified,
+        )
     }
 }
 
