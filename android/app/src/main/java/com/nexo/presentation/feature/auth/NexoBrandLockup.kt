@@ -108,7 +108,8 @@ object NexoBrandLockup {
             "783 732.547 140.826 732.159 140.401V140.4C731.691 139.889 731.481 139.705 731.411 139.647C731.382 13" +
             "9.642 731.337 139.635 731.272 139.628C731.046 139.604 730.711 139.593 730.129 139.593Z"
 
-    /** "NEXO" wordmark, dark export (`#EDF0F6`). */    private const val WORDMARK_DARK_PATH =
+    /** "NEXO" wordmark, dark export (`#EDF0F6`). */
+    private const val WORDMARK_DARK_PATH =
         "M803.302 249V202.455H833.575V209.523H811.734V222.159H832.007V229.227H811.734V241.932H833.757V249H803.302Z" +
             "M873.543 202.455L883.793 219.5H884.156L894.452 202.455H904.065L889.724 225.727L904.293 249H894.52L884.156 " +
             "232.068H883.793L873.429 249H863.702L878.406 225.727L863.884 202.455H873.543Z" +
@@ -153,22 +154,23 @@ object NexoBrandLockup {
      * paths back to the origin. See the group in the builder.
      */
     val Light: ImageVector =
-        ImageVector.Builder(
-            name = "NexoBrandLockup.Light",
-            defaultWidth = 190.dp,
-            defaultHeight = 96.dp,
-            viewportWidth = 296.71f,
-            viewportHeight = 159.74f,
-        ).apply {
-            // The SVG viewBox is "659.2 95.2 296.71 159.74", but a Compose ImageVector
-            // viewport is always anchored at (0,0) and has no min-x/min-y. The paths keep
-            // their absolute userSpace coordinates, so the group cancels the viewBox origin;
-            // without it every path lands ~2.2 viewport widths off the right edge.
-            group(translationX = -659.2f, translationY = -95.2f) {
-                filledPath(Navy, MARK_PATH_LIGHT, evenOdd = true)
-                filledPath(Navy, WORDMARK_LIGHT_PATH)
-            }
-        }.build()
+        ImageVector
+            .Builder(
+                name = "NexoBrandLockup.Light",
+                defaultWidth = 190.dp,
+                defaultHeight = 96.dp,
+                viewportWidth = 296.71f,
+                viewportHeight = 159.74f,
+            ).apply {
+                // The SVG viewBox is "659.2 95.2 296.71 159.74", but a Compose ImageVector
+                // viewport is always anchored at (0,0) and has no min-x/min-y. The paths keep
+                // their absolute userSpace coordinates, so the group cancels the viewBox origin;
+                // without it every path lands ~2.2 viewport widths off the right edge.
+                group(translationX = -659.2f, translationY = -95.2f) {
+                    filledPath(Navy, MARK_PATH_LIGHT, evenOdd = true)
+                    filledPath(Navy, WORDMARK_LIGHT_PATH)
+                }
+            }.build()
 
     /**
      * Dark-background export: near-white ribbon + near-white wordmark.
@@ -179,20 +181,21 @@ object NexoBrandLockup {
      * carrying the dark export's own ribbon geometry.
      */
     val Dark: ImageVector =
-        ImageVector.Builder(
-            name = "NexoBrandLockup.Dark",
-            defaultWidth = 190.dp,
-            defaultHeight = 96.dp,
-            viewportWidth = 285.91f,
-            viewportHeight = 144.15f,
-        ).apply {
-            // Dark SVG viewBox is "689 160.99 285.91 144.15"; same viewBox-origin cancellation
-            // as the light export. See the Light builder.
-            group(translationX = -689f, translationY = -160.99f) {
-                filledPath(WordmarkOnDark, MARK_PATH_DARK, evenOdd = true)
-                filledPath(WordmarkOnDark, WORDMARK_DARK_PATH)
-            }
-        }.build()
+        ImageVector
+            .Builder(
+                name = "NexoBrandLockup.Dark",
+                defaultWidth = 190.dp,
+                defaultHeight = 96.dp,
+                viewportWidth = 285.91f,
+                viewportHeight = 144.15f,
+            ).apply {
+                // Dark SVG viewBox is "689 160.99 285.91 144.15"; same viewBox-origin cancellation
+                // as the light export. See the Light builder.
+                group(translationX = -689f, translationY = -160.99f) {
+                    filledPath(WordmarkOnDark, MARK_PATH_DARK, evenOdd = true)
+                    filledPath(WordmarkOnDark, WORDMARK_DARK_PATH)
+                }
+            }.build()
 
     /**
      * Filled path from a raw SVG `pathData` string, parsed via [PathParser] so the

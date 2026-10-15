@@ -15,7 +15,10 @@ data class CatalogHttpResponse(
 
 /** Narrow HTTP boundary so datasources stay fully testable offline with fakes. */
 interface CatalogHttpTransport {
-    suspend fun get(url: String, extraHeaders: Map<String, String> = emptyMap()): CatalogHttpResponse
+    suspend fun get(
+        url: String,
+        extraHeaders: Map<String, String> = emptyMap(),
+    ): CatalogHttpResponse
 }
 
 /** Search payload shared by both datasources (books + authority total). */
@@ -34,7 +37,10 @@ class KtorCatalogHttpTransport(
     private val client: HttpClient,
     private val userAgent: String = ANDROID_USER_AGENT,
 ) : CatalogHttpTransport {
-    override suspend fun get(url: String, extraHeaders: Map<String, String>): CatalogHttpResponse {
+    override suspend fun get(
+        url: String,
+        extraHeaders: Map<String, String>,
+    ): CatalogHttpResponse {
         try {
             val response =
                 client.get(url) {

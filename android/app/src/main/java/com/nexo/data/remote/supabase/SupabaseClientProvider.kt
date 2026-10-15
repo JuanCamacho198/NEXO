@@ -6,10 +6,10 @@ import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.realtime.Realtime
-import io.github.jan.supabase.storage.Storage
-import io.github.jan.supabase.auth.SessionManager as SupabaseAuthSessionManager
 import io.github.jan.supabase.serializer.KotlinXSerializer
+import io.github.jan.supabase.storage.Storage
 import kotlinx.serialization.json.Json
+import io.github.jan.supabase.auth.SessionManager as SupabaseAuthSessionManager
 
 /**
  * Singleton factory that provides the Supabase client for Android.

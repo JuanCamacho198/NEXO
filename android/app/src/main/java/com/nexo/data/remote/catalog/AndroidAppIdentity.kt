@@ -18,31 +18,36 @@ data class AndroidAppIdentity(
  * the identity headers, which is correct for unrestricted/server keys and
  * keeps the fail-closed catalog path intact.
  */
-fun androidAppIdentityOrNull(context: Context): AndroidAppIdentity? = try {
-    val packageName = context.packageName
-    val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        val info = context.packageManager.getPackageInfo(
-            packageName,
-            PackageManager.GET_SIGNING_CERTIFICATES,
-        )
-        info.signingInfo?.apkContentsSigners
-    } else {
-        @Suppress("DEPRECATION")
-        context.packageManager
-            .getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
-            .signatures
-    }
-    val cert = signatures?.firstOrNull()?.toByteArray()
-    if (packageName.isBlank() || cert == null) {
+fun androidAppIdentityOrNull(context: Context): AndroidAppIdentity? =
+    try {
+        val packageName = context.packageName
+        val signatures =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val info =
+                    context.packageManager.getPackageInfo(
+                        packageName,
+                        PackageManager.GET_SIGNING_CERTIFICATES,
+                    )
+                info.signingInfo?.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager
+                    .getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
+                    .signatures
+            }
+        val cert = signatures?.firstOrNull()?.toByteArray()
+        if (packageName.isBlank() || cert == null) {
+            null
+        } else {
+            AndroidAppIdentity(
+                packageName = packageName,
+                certSha1 =
+                    MessageDigest
+                        .getInstance("SHA-1")
+                        .digest(cert)
+                        .joinToString("") { "%02x".format(it) },
+            )
+        }
+    } catch (_: Throwable) {
         null
-    } else {
-        AndroidAppIdentity(
-            packageName = packageName,
-            certSha1 = MessageDigest.getInstance("SHA-1")
-                .digest(cert)
-                .joinToString("") { "%02x".format(it) },
-        )
     }
-} catch (_: Throwable) {
-    null
-}
