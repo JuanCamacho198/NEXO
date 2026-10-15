@@ -113,6 +113,10 @@
   }
 </script>
 
+{#snippet sectionTitle(label: string)}
+  <h3 class="text-xs font-semibold tracking-wide text-(--color-text-muted) uppercase">{label}</h3>
+{/snippet}
+
 {#snippet toggleRow(label: string, checked: boolean, onclick: () => void, ariaLabel: string)}
   <div class="flex items-center justify-between">
     <span class="text-sm text-(--color-text-muted)">{label}</span>
@@ -201,56 +205,48 @@
       </header>
       <section class="flex flex-col gap-6 p-4">
         <ThemeSwatches {readerSettings} {onSettingsChange} {t} />
-        <div class="h-px w-full bg-(--color-border)"></div>
         {#if format === 'pdf'}
           <!-- U1: brightness/contrast only render in PDF, the one format whose
             pipeline applies them. In EPUB they persisted + toasted with zero
             visual effect. -->
           <div class="flex flex-col gap-4">
+            {@render sectionTitle(t('reader.section_page'))}
             {@render sliderRow(t('settings.reader.brightness'), readerSettings.brightness, textSettings.setBrightness)}
             {@render sliderRow(t('settings.reader.contrast'), readerSettings.contrast, textSettings.setContrast)}
           </div>
-          <div class="h-px w-full bg-(--color-border)"></div>
         {/if}
         {#if format === 'epub'}
-          {@render selectRow(
-            t('reader.font'),
-            readerSettings.epub.fontFamily,
-            [
-              { value: '', label: t('reader.fontDefault') },
-              ...FONT_FAMILY_PRESETS.map((f) => ({ value: f, label: f })),
-            ],
-            (v) => onSettingsChange({ ...readerSettings, epub: { ...readerSettings.epub, fontFamily: v } }),
-            'font-select',
-            fontPreviewStyle(),
-          )}
-          <div class="flex items-center justify-between">
-            <!-- U2: one stepper, both directions, live value, honest limits. -->
-            <div class="flex items-center gap-1" role="group" aria-label={t('reader.font')}>
-              <button type="button" data-testid="font-size-dec" class="flex h-12 w-10 cursor-pointer items-center justify-center rounded p-2 text-(--color-text-muted) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30" onclick={() => textSettings.changeFontSize(-10)} aria-label={t('reader.font_decrease')} disabled={readerSettings.epub.fontSize <= 80}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-              <span data-testid="font-size-value" aria-live="polite" class="min-w-12 text-center text-sm font-medium text-(--color-text)">{readerSettings.epub.fontSize}%</span>
-              <button type="button" data-testid="font-size-inc" class="flex h-12 w-10 cursor-pointer items-center justify-center rounded p-2 text-(--color-text-muted) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30" onclick={() => textSettings.changeFontSize(10)} aria-label={t('reader.font_increase')} disabled={readerSettings.epub.fontSize >= 200}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-            </div>
-            <button type="button" data-testid="line-height-btn" class="flex h-12 w-26.25 cursor-pointer flex-col items-center justify-center gap-0.5 rounded p-2 hover:bg-(--color-surface-hover)" onclick={textSettings.cycleLineHeight} aria-label={t('reader.line_spacing')} title={`${t('reader.line_spacing')}: ${readerSettings.lineHeight.toFixed(1)}×`}><svg xmlns="http://www.w3.org/2000/svg" width="27" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-primary)"><line x1="5" y1="3" x2="19" y2="3"></line><line x1="5" y1="21" x2="19" y2="21"></line><polyline points="12 7 9 10 15 10"></polyline><polyline points="9 14 12 17 15 14"></polyline><line x1="12" y1="7" x2="12" y2="17"></line></svg><span data-testid="line-height-value" class="text-xs font-medium text-(--color-text)">{readerSettings.lineHeight.toFixed(1)}×</span></button>
-          </div>
-          <!-- U3: letter spacing reads as a stepper with a live value, not remove/add. -->
-          <div class="flex items-center justify-between" role="group" aria-label={t('reader.letter_spacing')}>
-            <button type="button" class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-surface-hover)" onclick={() => textSettings.changeLetterSpacing(-1)} aria-label={t('reader.spacing_decrease')}><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-            <span data-testid="letter-spacing-value" aria-live="polite" class="min-w-12 text-center text-sm font-medium text-(--color-text)">{readerSettings.letterSpacing > 0 ? `+${readerSettings.letterSpacing}px` : `${readerSettings.letterSpacing}px`}</span>
-            <button type="button" class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-surface-hover)" onclick={() => textSettings.changeLetterSpacing(1)} aria-label={t('reader.spacing_increase')}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-          </div>
-          <div class="h-px w-full bg-(--color-border)"></div>
           <div class="flex flex-col gap-4">
+            {@render sectionTitle(t('reader.section_typography'))}
             {@render selectRow(
-              t('reader.direction'),
-              readerSettings.direction,
+              t('reader.font'),
+              readerSettings.epub.fontFamily,
               [
-                { value: 'ltr', label: t('reader.directionLtr') },
-                { value: 'rtl', label: t('reader.directionRtl') },
+                { value: '', label: t('reader.fontDefault') },
+                ...FONT_FAMILY_PRESETS.map((f) => ({ value: f, label: f })),
               ],
-              (v) => onSettingsChange({ ...readerSettings, direction: v as ReaderSettings['direction'] }),
-              'direction-select',
+              (v) => onSettingsChange({ ...readerSettings, epub: { ...readerSettings.epub, fontFamily: v } }),
+              'font-select',
+              fontPreviewStyle(),
             )}
+            <div class="flex items-center justify-between">
+              <!-- U2: one stepper, both directions, live value, honest limits. -->
+              <div class="flex items-center gap-1" role="group" aria-label={t('reader.font')}>
+                <button type="button" data-testid="font-size-dec" class="flex h-12 w-10 cursor-pointer items-center justify-center rounded p-2 text-(--color-text-muted) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30" onclick={() => textSettings.changeFontSize(-10)} aria-label={t('reader.font_decrease')} disabled={readerSettings.epub.fontSize <= 80}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                <span data-testid="font-size-value" aria-live="polite" class="min-w-12 text-center text-sm font-medium text-(--color-text)">{readerSettings.epub.fontSize}%</span>
+                <button type="button" data-testid="font-size-inc" class="flex h-12 w-10 cursor-pointer items-center justify-center rounded p-2 text-(--color-text-muted) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30" onclick={() => textSettings.changeFontSize(10)} aria-label={t('reader.font_increase')} disabled={readerSettings.epub.fontSize >= 200}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+              </div>
+              <button type="button" data-testid="line-height-btn" class="flex h-12 w-26.25 cursor-pointer flex-col items-center justify-center gap-0.5 rounded p-2 hover:bg-(--color-surface-hover)" onclick={textSettings.cycleLineHeight} aria-label={t('reader.line_spacing')} title={`${t('reader.line_spacing')}: ${readerSettings.lineHeight.toFixed(1)}×`}><svg xmlns="http://www.w3.org/2000/svg" width="27" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-primary)"><line x1="5" y1="3" x2="19" y2="3"></line><line x1="5" y1="21" x2="19" y2="21"></line><polyline points="12 7 9 10 15 10"></polyline><polyline points="9 14 12 17 15 14"></polyline><line x1="12" y1="7" x2="12" y2="17"></line></svg><span data-testid="line-height-value" class="text-xs font-medium text-(--color-text)">{readerSettings.lineHeight.toFixed(1)}×</span></button>
+            </div>
+            <!-- U3: letter spacing reads as a stepper with a live value, not remove/add. -->
+            <div class="flex items-center justify-between" role="group" aria-label={t('reader.letter_spacing')}>
+              <button type="button" class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-surface-hover)" onclick={() => textSettings.changeLetterSpacing(-1)} aria-label={t('reader.spacing_decrease')}><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+              <span data-testid="letter-spacing-value" aria-live="polite" class="min-w-12 text-center text-sm font-medium text-(--color-text)">{readerSettings.letterSpacing > 0 ? `+${readerSettings.letterSpacing}px` : `${readerSettings.letterSpacing}px`}</span>
+              <button type="button" class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-surface-hover)" onclick={() => textSettings.changeLetterSpacing(1)} aria-label={t('reader.spacing_increase')}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+            </div>
+          </div>
+          <div class="flex flex-col gap-4">
+            {@render sectionTitle(t('reader.section_page'))}
             {@render selectRow(
               t('reader.alignment'),
               readerSettings.textAlign,
@@ -282,14 +278,25 @@
               (v) => onSettingsChange({ ...readerSettings, paragraphSpacing: Number(v) }),
               'spacing-select',
             )}
+          </div>
+          <div class="flex flex-col gap-4">
+            {@render sectionTitle(t('reader.section_language'))}
+            {@render selectRow(
+              t('reader.direction'),
+              readerSettings.direction,
+              [
+                { value: 'ltr', label: t('reader.directionLtr') },
+                { value: 'rtl', label: t('reader.directionRtl') },
+              ],
+              (v) => onSettingsChange({ ...readerSettings, direction: v as ReaderSettings['direction'] }),
+              'direction-select',
+            )}
             {@render toggleRow(t('reader.hyphenation'), readerSettings.hyphenation, () => onSettingsChange({ ...readerSettings, hyphenation: !readerSettings.hyphenation }), t('reader.hyphenation'))}
           </div>
-          <div class="h-px w-full bg-(--color-border)"></div>
         {/if}
         <!-- U1: the showHeader/showFooter/verticalScrolling switches lived here.
           Removed: they persisted but no viewer reads them, so every toggle
           was fake feedback. Restore them only with a wired reader. -->
-        <div class="h-px w-full bg-(--color-border)"></div>
         <section aria-label={t('reader.reset_defaults')} class="rounded-xl border border-(--color-error)/40 p-2">
           <button
             type="button"
