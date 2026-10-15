@@ -312,6 +312,23 @@
     <string name="notifications_mock_library_body">Explorá los libros en tu estantería.</string>
     <string name="notifications_badge_content_description">Notificaciones sin leer</string>
 
+    <!-- Mensajes de eventos de notificación (se renderizan desde la clave i18n almacenada) -->
+    <string name="notifications_event_import_success">Importación finalizada</string>
+    <string name="notifications_event_import_error">La importación falló</string>
+    <string name="notifications_event_sync_success">Sincronización completa</string>
+    <string name="notifications_event_sync_error">La sincronización falló</string>
+    <string name="notifications_event_addons_success">Complemento instalado</string>
+    <string name="notifications_event_addons_error">El complemento falló</string>
+    <string name="notifications_event_update_info">Actualización disponible</string>
+    <string name="notifications_event_library_success">Biblioteca actualizada</string>
+    <string name="notifications_event_streak_success">Racha mantenida</string>
+    <string name="notifications_event_streak_warning">Tu racha está en riesgo</string>
+    <string name="notifications_event_streak_error">Racha perdida</string>
+    <string name="notifications_event_goal_success">Meta diaria alcanzada</string>
+    <string name="notifications_event_goal_info">Meta de lectura</string>
+    <string name="notifications_event_goal_warning">Leé para alcanzar tu meta</string>
+    <string name="notifications_event_goal_error">No alcanzaste tu meta</string>
+
     <!-- Reader / Sleep Timer -->
     <string name="reader_sleep_timer">Temporizador</string>
     <string name="reader_sleep_timer_end_of_chapter">Fin de capítulo</string>

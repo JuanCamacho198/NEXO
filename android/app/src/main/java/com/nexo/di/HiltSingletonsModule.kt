@@ -6,6 +6,7 @@ import com.nexo.data.local.RetentionPruner
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.HighlightDao
+import com.nexo.data.local.dao.NotificationDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingSessionDao
 import com.nexo.data.local.dao.SyncOutboxDao
@@ -17,6 +18,7 @@ import com.nexo.data.remote.sync.SyncOrchestratorImpl
 import com.nexo.data.remote.sync.SyncOrchestratorSettleGate
 import com.nexo.data.remote.sync.SyncService
 import com.nexo.data.remote.work.WorkManagerRetentionPruneScheduler
+import com.nexo.data.repository.NotificationRepository
 import com.nexo.data.sync.DictionarySyncService
 import com.nexo.domain.repository.AuthRepository
 import com.nexo.domain.repository.HomeRepository
@@ -136,6 +138,13 @@ object HiltSingletonsModule {
 
     @Provides @Singleton
     fun provideReadingProgressDao(a: AppContainer): ReadingProgressDao = a.readingProgressDao
+
+    /** NOTIF-02: Room-backed notification history. */
+    @Provides @Singleton
+    fun provideNotificationDao(a: AppContainer): NotificationDao = a.notificationDao
+
+    @Provides @Singleton
+    fun provideNotificationRepository(a: AppContainer): NotificationRepository = a.notificationRepository
 
     @Provides fun provideProgressSyncProvider(a: AppContainer): @JvmSuppressWildcards () -> SupabaseProgressSync =
         {
