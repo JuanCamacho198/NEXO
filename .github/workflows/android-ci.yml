@@ -279,12 +279,19 @@ jobs:
         # key encodes every emulator shape input, so changing any of them (or
         # the API level) builds a fresh snapshot instead of reusing one from a
         # different system image.
+        #
+        # ONLY the AVD dir is cached. `~/.android/adb*` used to be cached too and
+        # that is what broke this job: those files are the runner's adb keypair,
+        # and every GitHub runner generates its own. Restoring a foreign keypair
+        # leaves adb unable to authenticate the freshly booted emulator, so
+        # `getprop sys.boot_completed` loops on `adb: device offline` until the
+        # timeout — and the stale snapshot then fails to load as well
+        # (`Failed to load snapshot 'default_boot'`). Emulator-runner's own
+        # guidance is to cache the AVD dir and let adb keys regenerate.
         uses: actions/cache@v6
         id: avd-cache
         with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
+          path: ~/.android/avd/*
           key: avd-${{ runner.os }}-api${{ env.EMULATOR_API_LEVEL }}-${{ env.EMULATOR_TARGET }}-${{ env.EMULATOR_ARCH }}-${{ env.EMULATOR_PROFILE }}
 
       - name: Create AVD and generate a snapshot for caching
