@@ -75,6 +75,7 @@ function renderHeader(overrides: Record<string, unknown> = {}) {
     showTextSettings: false,
     showBookmarks: false,
     isFullscreen: false,
+    format: 'epub' as const,
     t,
     onBackToHome: () => {},
     onToggleToc: () => {},

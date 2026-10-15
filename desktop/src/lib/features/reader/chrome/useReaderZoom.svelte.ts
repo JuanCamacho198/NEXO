@@ -94,7 +94,7 @@ export function createReaderZoom(deps: ReaderZoomDeps): {
     direction: 'ltr',
     hyphenation: false,
     verticalScrolling: false,
-    margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+    margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
     showHeader: true,
     showFooter: true,
     showPageNumbers: true,

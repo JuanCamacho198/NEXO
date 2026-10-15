@@ -26,19 +26,24 @@ const glyphOf = (icon: Element): string | undefined =>
 const SVG_CONTRACT = {
   viewBox: '0 0 24 24',
   stroke: 'currentColor',
-  'stroke-width': '1.8',
   'aria-hidden': 'true',
 } as const;
+
+/** Chrome glyphs were bumped from 1.8 with the contrast pass: a hairline on
+ * navy read as decoration rather than as a control. Panel glyphs keep 1.8. */
+const CHROME_STROKE_WIDTH = '2';
+const PANEL_STROKE_WIDTH = '1.8';
 
 const glyphs = (root: HTMLElement): (string | undefined)[] =>
   Array.from(root.querySelectorAll('svg.lucide-icon')).map(glyphOf);
 
-function expectGlyphContract(icon: Element): void {
+function expectGlyphContract(icon: Element, strokeWidth: string = CHROME_STROKE_WIDTH): void {
   expect(icon.getAttribute('class')).toContain('lucide-icon');
   for (const [attr, value] of Object.entries(SVG_CONTRACT)) {
     expect(icon.getAttribute(attr), attr).toBe(value);
   }
-  expect(icon.getAttribute('width')).toBe('14');
+  expect(icon.getAttribute('stroke-width')).toBe(strokeWidth);
+  expect(icon.getAttribute('width')).toBe(strokeWidth === CHROME_STROKE_WIDTH ? '16' : '14');
 }
 
 const readerSettings: ReaderSettings = {
@@ -69,6 +74,7 @@ function renderHeader(overrides: Record<string, unknown> = {}) {
     showTextSettings: false,
     showBookmarks: false,
     isFullscreen: false,
+    format: 'epub' as const,
     t,
     onBackToHome: () => {},
     onToggleToc: () => {},
@@ -183,7 +189,7 @@ describe('reader chrome icon migration', () => {
     expect(toastIcon).not.toBeNull();
     expect(toastIcon?.getAttribute('class')).toContain('shrink-0');
     if (!toastIcon) throw new Error('the saved toast did not render its check glyph');
-    expectGlyphContract(toastIcon);
+    expectGlyphContract(toastIcon, PANEL_STROKE_WIDTH);
   });
 });
 

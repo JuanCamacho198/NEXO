@@ -441,7 +441,7 @@ export function buildChapterSrcdoc(
     textAlign: 'left',
     direction: 'ltr',
     hyphenation: false,
-    margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+    margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
     fontFamily: 'serif',
   };
   let readerCss = buildReaderOverrideCss(cssOpts);

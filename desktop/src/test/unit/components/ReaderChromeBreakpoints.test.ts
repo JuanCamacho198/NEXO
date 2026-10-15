@@ -14,6 +14,7 @@ function renderHeader(overrides: Record<string, unknown> = {}) {
     showTextSettings: false,
     showBookmarks: false,
     isFullscreen: false,
+    format: 'epub' as const,
     t,
     onBackToHome: () => {},
     onToggleToc: () => {},
@@ -66,8 +67,7 @@ describe('reader chrome breakpoints (U2.3)', () => {
       onGoToPage: async () => true,
     });
     const strip = container.querySelector('header > div + div');
-    expect(strip?.className).toContain('gap-2');
-    expect(strip?.className).toContain('sm:gap-3');
+    expect(strip?.className).toContain('gap-3');
     expect(strip?.className).toContain('px-2');
     expect(strip?.className).toContain('sm:px-4');
   });

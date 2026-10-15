@@ -545,6 +545,7 @@
     {showTextSettings}
     showBookmarks={bookmarksPanel.showBookmarks}
     {isFullscreen}
+    format={viewer.kind === 'pdf' ? 'pdf' : 'epub'}
     headerVisible={isFullscreen ? headerVisible : true}
     {t}
     {onBackToHome}
@@ -555,7 +556,6 @@
     onToggleFullscreen={toggleFullscreen}
     currentPage={headerCurrentPage}
     totalPages={headerTotalPages}
-    currentPercentage={bookProgress}
     fontSizePercent={headerZoomPercent}
     onGoToPage={handleHeaderGoToPage}
     onFontSizeChange={handleHeaderFontSizeChange}

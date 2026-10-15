@@ -497,7 +497,7 @@ const DEFAULT_READER_SETTINGS: ReaderSettings = {
   direction: 'ltr',
   hyphenation: false,
   verticalScrolling: false,
-  margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+  margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
   showHeader: true,
   showFooter: true,
   showPageNumbers: true,
@@ -806,10 +806,21 @@ export const getReaderSettings = async (): Promise<ReaderSettings> => {
       settings,
       READER_MARGINS_SETTING_KEY,
     ) as ReaderSettings['margins']) || {
-      top: (readSettingValue(settings, READER_MARGIN_TOP_SETTING_KEY) as number) ?? 1.5,
-      bottom: (readSettingValue(settings, READER_MARGIN_BOTTOM_SETTING_KEY) as number) ?? 1.5,
-      left: (readSettingValue(settings, READER_MARGIN_LEFT_SETTING_KEY) as number) ?? 2,
-      right: (readSettingValue(settings, READER_MARGIN_RIGHT_SETTING_KEY) as number) ?? 2,
+      // Read the fallback from the one default, never literal copies: these
+      // used to hardcode 1.5/2 and silently diverged the moment the default
+      // moved to 2.5 for the vertical margin.
+      top:
+        (readSettingValue(settings, READER_MARGIN_TOP_SETTING_KEY) as number) ??
+        DEFAULT_READER_SETTINGS.margins.top,
+      bottom:
+        (readSettingValue(settings, READER_MARGIN_BOTTOM_SETTING_KEY) as number) ??
+        DEFAULT_READER_SETTINGS.margins.bottom,
+      left:
+        (readSettingValue(settings, READER_MARGIN_LEFT_SETTING_KEY) as number) ??
+        DEFAULT_READER_SETTINGS.margins.left,
+      right:
+        (readSettingValue(settings, READER_MARGIN_RIGHT_SETTING_KEY) as number) ??
+        DEFAULT_READER_SETTINGS.margins.right,
     },
     showHeader: readSettingValue(settings, READER_SHOW_HEADER_SETTING_KEY) as boolean,
     showFooter: readSettingValue(settings, READER_SHOW_FOOTER_SETTING_KEY) as boolean,

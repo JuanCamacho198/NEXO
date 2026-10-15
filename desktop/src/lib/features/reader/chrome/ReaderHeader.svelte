@@ -18,6 +18,7 @@
     showTextSettings: boolean;
     showBookmarks: boolean;
     isFullscreen: boolean;
+    format: 'pdf' | 'epub';
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onBackToHome: () => void;
     onToggleToc: () => void;
@@ -28,7 +29,6 @@
     // Reading controls (for immersive unified header)
     currentPage?: number;
     totalPages?: number;
-    currentPercentage?: number;
     fontSizePercent?: number;
     onGoToPage?: (page: number) => Promise<boolean>;
     onFontSizeChange?: (size: number) => void;
@@ -45,6 +45,7 @@
     showTextSettings,
     showBookmarks,
     isFullscreen,
+    format,
     t,
     onBackToHome,
     onToggleToc,
@@ -55,7 +56,6 @@
     headerVisible = true,
     currentPage,
     totalPages,
-    currentPercentage,
     fontSizePercent,
     onGoToPage,
     onFontSizeChange,
@@ -86,7 +86,7 @@
         onclick={onBackToHome}
         class="flex min-h-11 cursor-pointer items-center gap-2 text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
       >
-        <ChevronLeft size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
+        <ChevronLeft size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
         <span class="font-inter text-sm font-medium text-(--color-text-auxiliary)"
           >{t('reader.biblioteca')}</span
         >
@@ -100,71 +100,77 @@
       {title}
     </span>
 
-    <!-- Right: tools -->
-    <div class="flex items-center gap-3 sm:gap-6 text-(--color-text-auxiliary)">
-      <button
-        type="button"
-        onclick={onToggleToc}
-        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
-        class:text-(--color-accent-blue)={showTocPanel}
-        class:text-(--color-text-auxiliary)={!showTocPanel}
-        class:hover:text-(--color-text-inverse)={!showTocPanel}
-        class:hover:brightness-125={showTocPanel}
-        aria-label={showTocPanel ? t('settings.close') : t('reader.tabla_contenidos')}
-      >
-        <TocIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        onclick={onToggleSearch}
-        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
-        class:text-(--color-accent-blue)={searchPanelOpen}
-        class:text-(--color-text-auxiliary)={!searchPanelOpen}
-        class:hover:text-(--color-text-inverse)={!searchPanelOpen}
-        class:hover:brightness-125={searchPanelOpen}
-        aria-label={searchPanelOpen ? t('settings.close') : t('search.title')}
-      >
-        <SearchIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        onclick={onToggleTextSettings}
-        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
-        class:text-(--color-accent-blue)={showTextSettings}
-        class:text-(--color-text-auxiliary)={!showTextSettings}
-        class:hover:text-(--color-text-inverse)={!showTextSettings}
-        class:hover:brightness-125={showTextSettings}
-        aria-label={showTextSettings ? t('settings.close') : t('reader.ajustes_texto')}
-      >
-        <TextSettingsIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        onclick={onToggleBookmarks}
-        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors"
-        class:text-(--color-accent-blue)={showBookmarks}
-        class:text-(--color-text-auxiliary)={!showBookmarks}
-        class:hover:text-(--color-text-inverse)={!showBookmarks}
-        class:hover:brightness-125={showBookmarks}
-        aria-label={showBookmarks ? t('settings.close') : t('reader.bookmark')}
-      >
-        <BookmarksIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
+    <!-- Right: panels, then a quiet divider, then window mode.
+      Grouping is the signal: the four panel toggles act on the reader content,
+      the last one changes the window. Same shape for all five used to make them
+      read as one undifferentiated row of icons. -->
+    <div class="flex items-center gap-2 sm:gap-4">
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          onclick={onToggleToc}
+          class="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-(--color-surface-hover)"
+          class:text-(--color-accent-blue)={showTocPanel}
+          class:bg-(--color-surface-hover)={showTocPanel}
+          class:text-(--color-text-inverse)={!showTocPanel}
+          aria-label={showTocPanel ? t('settings.close') : t('reader.tabla_contenidos')}
+        >
+          <TocIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onclick={onToggleSearch}
+          class="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-(--color-surface-hover)"
+          class:text-(--color-accent-blue)={searchPanelOpen}
+          class:bg-(--color-surface-hover)={searchPanelOpen}
+          class:text-(--color-text-inverse)={!searchPanelOpen}
+          aria-label={searchPanelOpen ? t('settings.close') : t('search.title')}
+        >
+          <SearchIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onclick={onToggleTextSettings}
+          class="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-(--color-surface-hover)"
+          class:text-(--color-accent-blue)={showTextSettings}
+          class:bg-(--color-surface-hover)={showTextSettings}
+          class:text-(--color-text-inverse)={!showTextSettings}
+          aria-label={showTextSettings ? t('settings.close') : t('reader.ajustes_texto')}
+        >
+          <TextSettingsIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onclick={onToggleBookmarks}
+          class="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-(--color-surface-hover)"
+          class:text-(--color-accent-blue)={showBookmarks}
+          class:bg-(--color-surface-hover)={showBookmarks}
+          class:text-(--color-text-inverse)={!showBookmarks}
+          aria-label={showBookmarks ? t('settings.close') : t('reader.bookmark')}
+        >
+          <BookmarksIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+      <div class="h-5 w-px bg-(--color-surface-strong)" aria-hidden="true"></div>
       <button
         type="button"
         onclick={onToggleFullscreen}
-        class="flex items-center justify-center min-w-11 min-h-11 cursor-pointer transition-colors text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
+        class="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg text-(--color-text-inverse) transition-colors hover:bg-(--color-surface-hover)"
         aria-label={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
       >
-        <FullscreenIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
+        <FullscreenIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
   </div>
 
   {#if showReadingControls}
-    <!-- Bottom row: status/zoom strip (paging lives in the toolbar or the edge chevrons) -->
+    <!-- Bottom row: where you are, plus the one control this format needs.
+      The percentage is gone: it restates the page position and an on-screen
+      progress bar already carries it. The zoom dropdown is PDF-only, where it
+      is the scale of the page - in EPUB the same value is the font size, which
+      the text settings panel owns with proper context. -->
     <div
-      class="flex h-12 shrink-0 items-center justify-center gap-2 border-t border-(--color-surface-strong)/20 px-2 bg-(--color-bg-deep) sm:gap-3 sm:px-4"
+      class="flex h-12 shrink-0 items-center justify-center gap-3 border-t border-(--color-surface-strong)/20 px-2 bg-(--color-bg-deep) sm:px-4"
     >
       <PageInput
         variant="header"
@@ -173,12 +179,7 @@
         {t}
         {onGoToPage}
       />
-      {#if currentPercentage !== undefined}
-        <span class="text-xs text-(--color-text-auxiliary) min-w-10 text-center"
-          >{Math.round(currentPercentage)}%</span
-        >
-      {/if}
-      {#if fontSizePercent !== undefined && onFontSizeChange}
+      {#if format === 'pdf' && fontSizePercent !== undefined && onFontSizeChange}
         <ZoomDropdown value={fontSizePercent} onSelect={onFontSizeChange} />
       {/if}
     </div>

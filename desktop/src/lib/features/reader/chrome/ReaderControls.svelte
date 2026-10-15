@@ -101,7 +101,7 @@
     data-testid={prevTestId}
     {...restProps}
   >
-    <ChevronLeft size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
+    <ChevronLeft size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
   </button>
   <button
     type="button"
@@ -114,7 +114,7 @@
     aria-label={t('reader.next_page')}
     data-testid={nextTestId}
   >
-    <ChevronRight size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
+    <ChevronRight size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
   </button>
   <PageInput
     variant="toolbar"
