@@ -23,17 +23,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
 import com.nexo.presentation.screen.AuthTags
-import com.nexo.presentation.theme.NexoTheme
 import com.nexo.presentation.viewmodel.AuthFailureKind
 import com.nexo.presentation.viewmodel.AuthUiState
 import com.nexo.presentation.viewmodel.AuthViewModel
@@ -89,14 +85,7 @@ internal fun LoginScreenContent(
         AuthLogo()
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text =
-                buildAnnotatedString {
-                    append(stringResource(R.string.auth_welcome_back_prefix))
-                    withStyle(SpanStyle(color = NexoTheme.colors.welcomeBrandBlue)) {
-                        append(" ")
-                        append(stringResource(R.string.auth_welcome_back_accent))
-                    }
-                },
+            text = stringResource(R.string.auth_welcome_title),
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,

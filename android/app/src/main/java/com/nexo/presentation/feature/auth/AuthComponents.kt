@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -135,35 +136,57 @@ fun AuthLogo() {
     // Each export has its own canvas; the ratio comes from the vector actually drawn
     // so the lockup never gets stretched or letterboxed.
     val vector = if (isDarkBackground) NexoBrandLockup.Dark else NexoBrandLockup.Light
+    // The glow is a wide ellipse (~2.15:1), so it lives in a box wider than the icon's
+    // 176dp one and the icon keeps its own box centered on top of it.
+    val glowWidth = 430.dp
+    val glowHeight = 200.dp
     Box(
-        modifier =
-            Modifier
-                .size(176.dp)
-                .drawBehind {
-                    drawCircle(
-                        brush =
-                            Brush.radialGradient(
-                                colors =
-                                    listOf(
-                                        glowColor.copy(alpha = 0.30f),
-                                        glowColor.copy(alpha = 0f),
-                                    ),
-                                radius = size.minDimension / 2f,
-                            ),
-                        radius = size.minDimension / 2f,
-                    )
-                },
+        modifier = Modifier.size(glowWidth, glowHeight),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = vector,
-            contentDescription = stringResource(R.string.app_name),
+        Box(
             modifier =
                 Modifier
-                    .width(190.dp)
-                    .aspectRatio(vector.viewportWidth / vector.viewportHeight),
-            tint = Color.Unspecified,
+                    .size(glowWidth, glowHeight)
+                    .drawBehind {
+                        // A radial brush has one radius for both axes, so drawing it
+                        // unscaled would fall off as a circle. Scaling the canvas by the
+                        // box's aspect ratio stretches the falloff into the wide ellipse;
+                        // the circle is drawn at the inverse radius so the oval still
+                        // spans the full box.
+                        val aspect = size.width / size.height
+                        withTransform({ scale(scaleX = aspect, scaleY = 1f, pivot = center) }) {
+                            drawCircle(
+                                brush =
+                                    Brush.radialGradient(
+                                        colors =
+                                            listOf(
+                                                glowColor.copy(alpha = 0.30f),
+                                                glowColor.copy(alpha = 0f),
+                                            ),
+                                        center = center,
+                                        radius = size.height / 2f,
+                                    ),
+                                radius = size.height / 2f,
+                                center = center,
+                            )
+                        }
+                    },
         )
+        Box(
+            modifier = Modifier.size(176.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = vector,
+                contentDescription = stringResource(R.string.app_name),
+                modifier =
+                    Modifier
+                        .width(190.dp)
+                        .aspectRatio(vector.viewportWidth / vector.viewportHeight),
+                tint = Color.Unspecified,
+            )
+        }
     }
 }
 
