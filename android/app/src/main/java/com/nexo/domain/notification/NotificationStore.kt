@@ -108,8 +108,7 @@ class NotificationStore(
      * without suspending; a fake that only exposes a cold flow degrades to an
      * empty snapshot (no dedup, which is the safe default).
      */
-    private fun currentItems(): List<Notification> =
-        (history.items as? kotlinx.coroutines.flow.StateFlow<List<Notification>>)?.value ?: emptyList()
+    private fun currentItems(): List<Notification> = (history.items as? kotlinx.coroutines.flow.StateFlow<List<Notification>>)?.value ?: emptyList()
 
     private fun NotifyDraft.toNotification(timestamp: Long): Notification =
         Notification(

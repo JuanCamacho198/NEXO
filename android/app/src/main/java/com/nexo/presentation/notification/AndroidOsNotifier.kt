@@ -10,9 +10,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.nexo.MainActivity
 import com.nexo.R
-import com.nexo.domain.notification.Notification as NexoNotification
 import com.nexo.domain.notification.OsNotifier
 import com.nexo.domain.notification.Severity
+import com.nexo.domain.notification.Notification as NexoNotification
 
 /**
  * Android adapter for the OS notification surface (U7).

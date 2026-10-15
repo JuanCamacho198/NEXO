@@ -55,7 +55,9 @@ fun NavGraphBuilder.homeGraph(
         HomeScreen(
             contentPadding = contentPadding,
             viewModel = homeViewModel,
-            notificationGroups = com.nexo.domain.notification.groupNotifications(notifications),
+            notificationGroups =
+                com.nexo.domain.notification
+                    .groupNotifications(notifications),
             unreadNotificationCount = unreadCount,
             onOpenNotification = { notification ->
                 scope.launch { notificationHistory.markRead(notification.id) }

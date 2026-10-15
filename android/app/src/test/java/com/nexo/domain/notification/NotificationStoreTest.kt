@@ -37,7 +37,10 @@ class NotificationStoreTest {
             _unread.value = _items.value.count { it.readAt == null }
         }
 
-        override suspend fun markRead(id: String, readAt: Long) = Unit
+        override suspend fun markRead(
+            id: String,
+            readAt: Long,
+        ) = Unit
 
         override suspend fun markAllRead(readAt: Long) = Unit
     }

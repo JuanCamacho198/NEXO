@@ -56,7 +56,14 @@ class NotificationGroupingTest {
     @Test
     fun `members are retained for count and read-tracking`() {
         val groups = groupNotifications(listOf(notification("a", 1), notification("b", 2)))
-        assertEquals(setOf("a", "b"), groups.single().members.map { it.id }.toSet())
+        assertEquals(
+            setOf("a", "b"),
+            groups
+                .single()
+                .members
+                .map { it.id }
+                .toSet(),
+        )
     }
 
     @Test
