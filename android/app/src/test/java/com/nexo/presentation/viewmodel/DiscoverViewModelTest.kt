@@ -27,7 +27,6 @@ import com.nexo.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import java.time.LocalDate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,6 +42,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DiscoverViewModelTest {
@@ -587,8 +587,7 @@ class DiscoverViewModelTest {
      * (`H. G. Wells`) retain punctuation the raw term drops, which is exactly the
      * shape `matchesAuthor` must still match.
      */
-    private fun creditFor(term: String): String =
-        FakeCatalogProvider.AUTHOR_CREDITS.getValue(term)
+    private fun creditFor(term: String): String = FakeCatalogProvider.AUTHOR_CREDITS.getValue(term)
 
     @Test
     fun idleAuthorRailsLoadAsynchronouslyAndNeverBlockTheShell() =
@@ -657,7 +656,9 @@ class DiscoverViewModelTest {
             val vm = DiscoverViewModel(provider)
             advanceUntilIdle()
 
-            val shelf = vm.uiState.value.rails.first() as DiscoverRailState.Loaded
+            val shelf =
+                vm.uiState.value.rails
+                    .first() as DiscoverRailState.Loaded
             // The foreign credit is dropped; the shelf never carries criticism.
             assertEquals(listOf("googlebooks:own"), shelf.books.map { it.id })
             assertEquals(1, shelf.totalCount)
@@ -924,8 +925,7 @@ class DiscoverViewModelTest {
                 page: Int,
             ): PagedResult = PagedResult(emptyList(), null, 0)
 
-            override suspend fun getDetails(id: String): CatalogBook =
-                throw CatalogException(CatalogErrorCode.NOT_FOUND, "unused")
+            override suspend fun getDetails(id: String): CatalogBook = throw CatalogException(CatalogErrorCode.NOT_FOUND, "unused")
 
             override fun resolveDownloadUrl(
                 formats: Map<String, String>,

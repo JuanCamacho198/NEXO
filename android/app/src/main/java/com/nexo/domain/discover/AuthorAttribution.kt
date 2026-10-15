@@ -24,8 +24,7 @@ fun surnameOf(term: String): String = term.trim().split(TERM_WHITESPACE).last()
  * exactly Unicode's combining diacritical marks, so stripping it degrades
  * "Pérez" to "perez" without touching ASCII letters.
  */
-fun foldForMatch(value: String): String =
-    Normalizer.normalize(value, Normalizer.Form.NFD).replace(COMBINING_MARKS, "").lowercase()
+fun foldForMatch(value: String): String = Normalizer.normalize(value, Normalizer.Form.NFD).replace(COMBINING_MARKS, "").lowercase()
 
 /**
  * True iff one of `authors` credits the author of `term`, by whole-word
@@ -34,7 +33,10 @@ fun foldForMatch(value: String): String =
  * longer word. A book with no authors, or a term with no surname, never passes.
  * Pure: no I/O, total over any input.
  */
-fun matchesAuthor(authors: List<String>, term: String): Boolean {
+fun matchesAuthor(
+    authors: List<String>,
+    term: String,
+): Boolean {
     val surname = surnameOf(term)
     if (surname.isEmpty()) return false
     val needle = foldForMatch(surname)
