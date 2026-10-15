@@ -94,14 +94,14 @@ ABI/arch qualifier `abi`, and file `size` in bytes.
 
 ```json
 {
-  "version": "0.4.0",
-  "versionCode": 400,
+  "version": "0.4.1",
+  "versionCode": 401,
   "notes": "Example release notes.",
   "pubDate": "2026-09-28T12:00:00Z",
   "channel": "stable",
   "assets": [
     {
-      "url": "https://github.com/<owner>/<repo>/releases/download/android-v0.4.0/nexo-android-v0.4.0.apk",
+      "url": "https://github.com/<owner>/<repo>/releases/download/android-v0.4.1/nexo-android-v0.4.1.apk",
       "abi": "universal",
       "size": 12345678
     }
@@ -124,7 +124,7 @@ Release assets encode product, platform/target, and version. Feed URLs MUST
 reference exactly these names.
 
 - Android APK/AAB: `nexo-android-v{version}.apk` / `nexo-android-v{version}.aab`
-  (example: `nexo-android-v0.4.0.apk`). Enforced by the release workflow
+  (example: `nexo-android-v0.4.1.apk`). Enforced by the release workflow
   (`nexo-${GITHUB_REF_NAME}.apk/.aab`).
 - Desktop bundles: uploaded under tauri-action default names, derived from
   `productName` (`Nexo Desktop`) and the version. The released asset name

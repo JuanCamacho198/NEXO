@@ -24,10 +24,10 @@ import java.net.SocketTimeoutException
 private const val FEED_URL = "https://example.com/latest-android.json"
 
 private const val VALID_FEED_BODY =
-    "{\"version\":\"0.4.0\",\"versionCode\":400," +
+    "{\"version\":\"0.4.1\",\"versionCode\":401," +
         "\"notes\":\"Mock release notes.\",\"pubDate\":\"2026-09-28T12:00:00Z\"," +
         "\"channel\":\"stable\",\"assets\":[{\"url\":" +
-        "\"https://github.com/nexo/nexo/releases/download/v0.4.0/nexo-android-v0.4.0.apk\"," +
+        "\"https://github.com/nexo/nexo/releases/download/v0.4.1/nexo-android-v0.4.1.apk\"," +
         "\"abi\":\"universal\",\"size\":12345678}]}"
 
 class UpdateFeedServiceTest {
@@ -53,10 +53,10 @@ class UpdateFeedServiceTest {
 
             assertTrue(result is UpdateFeedFetch.Found)
             val found = result as UpdateFeedFetch.Found
-            assertEquals("0.4.0", found.version)
-            assertEquals(400, found.versionCode)
+            assertEquals("0.4.1", found.version)
+            assertEquals(401, found.versionCode)
             assertEquals("stable", found.channel)
-            assertTrue(found.assetUrl.endsWith("nexo-android-v0.4.0.apk"))
+            assertTrue(found.assetUrl.endsWith("nexo-android-v0.4.1.apk"))
         }
 
     @Test
@@ -65,18 +65,24 @@ class UpdateFeedServiceTest {
             val fixture =
                 File(System.getProperty("user.dir"), "../../mocks/update-feed/android-latest.json")
             Assume.assumeTrue(fixture.exists())
-            val result = service(okEngine(fixture.readText())).fetch()
+            val body = fixture.readText()
+            val result = service(okEngine(body)).fetch()
 
             assertTrue(result is UpdateFeedFetch.Found)
             val found = result as UpdateFeedFetch.Found
-            assertEquals("0.4.0", found.version)
-            assertEquals(400, found.versionCode)
+            // Derive the expectations from the fixture itself so a version bump
+            // updates its own data without editing this test (see
+            // nexo-releases/references/failure-modes.md #8).
+            val expectedVersion = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"").find(body)!!.groupValues[1]
+            val expectedCode = Regex("\"versionCode\"\\s*:\\s*(\\d+)").find(body)!!.groupValues[1].toInt()
+            assertEquals(expectedVersion, found.version)
+            assertEquals(expectedCode, found.versionCode)
         }
 
     @Test
     fun missingVersionCode_isMalformed(): Unit =
         runBlocking {
-            val body = "{\"version\":\"0.4.0\",\"notes\":\"x\",\"assets\":[{\"url\":\"https://example.com/a.apk\"}]}"
+            val body = "{\"version\":\"0.4.1\",\"notes\":\"x\",\"assets\":[{\"url\":\"https://example.com/a.apk\"}]}"
             val result = service(okEngine(body)).fetch()
 
             assertEquals(UpdateFeedFetch.Failed(UpdateFeedFailure.MALFORMED), result)
@@ -93,7 +99,7 @@ class UpdateFeedServiceTest {
     @Test
     fun emptyAssets_isMalformed(): Unit =
         runBlocking {
-            val body = "{\"version\":\"0.4.0\",\"versionCode\":400,\"assets\":[]}"
+            val body = "{\"version\":\"0.4.1\",\"versionCode\":401,\"assets\":[]}"
             val result = service(okEngine(body)).fetch()
 
             assertEquals(UpdateFeedFetch.Failed(UpdateFeedFailure.MALFORMED), result)

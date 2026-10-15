@@ -7,14 +7,14 @@ function Check($cond, $msg) {
 $a = Get-Content 'mocks/update-feed/android-latest.json' -Raw | ConvertFrom-Json
 $d = Get-Content 'mocks/update-feed/desktop-latest.json' -Raw | ConvertFrom-Json
 
-Check ($a.version -eq '0.4.0') 'android version must be 0.4.0'
+Check ($a.version -eq '0.4.1') 'android version must be 0.4.1'
 Check ($a.versionCode -gt 300) 'android versionCode must be above 300'
 Check ($a.channel -eq 'stable') 'android channel must be stable'
 Check ($null -ne $a.notes -and $a.notes.Length -gt 0) 'android notes required'
 Check ($null -ne $a.pubDate) 'android pubDate required'
 Check ($a.assets.Count -ge 1) 'android needs at least one asset'
 foreach ($asset in $a.assets) {
-  Check ($asset.url -match 'nexo-android-v0\.4\.0\.apk$') "android asset naming: $($asset.url)"
+  Check ($asset.url -match 'nexo-android-v0\.4\.1\.apk$') "android asset naming: $($asset.url)"
   Check ($null -ne $asset.abi) 'android asset abi required'
   Check ($asset.size -gt 0) 'android asset size required'
 }
