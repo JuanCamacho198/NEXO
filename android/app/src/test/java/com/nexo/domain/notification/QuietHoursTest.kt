@@ -16,10 +16,12 @@ class QuietHoursTest {
         hour: Int,
         minute: Int,
     ): Long =
-        Calendar.getInstance().apply {
-            clear()
-            set(year, month, day, hour, minute, 0)
-        }.timeInMillis
+        Calendar
+            .getInstance()
+            .apply {
+                clear()
+                set(year, month, day, hour, minute, 0)
+            }.timeInMillis
 
     private fun prefs(
         enabled: Boolean,

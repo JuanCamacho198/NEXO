@@ -16,10 +16,12 @@ class IsSameDayTest {
         minute: Int,
         second: Int,
     ): Long =
-        Calendar.getInstance().apply {
-            clear()
-            set(year, month, day, hour, minute, second)
-        }.timeInMillis
+        Calendar
+            .getInstance()
+            .apply {
+                clear()
+                set(year, month, day, hour, minute, second)
+            }.timeInMillis
 
     @Test
     fun `same calendar day is true`() {

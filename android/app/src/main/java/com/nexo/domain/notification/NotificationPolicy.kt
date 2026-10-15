@@ -6,8 +6,7 @@ import java.util.Calendar
 private val NUDGE_SOURCES = setOf(NotificationSource.STREAK, NotificationSource.GOAL)
 
 /** Sources whose notifications are about the reader's engagement, not the app. */
-fun defaultCategory(source: NotificationSource): Category =
-    if (source in NUDGE_SOURCES) Category.NUDGE else Category.SYSTEM
+fun defaultCategory(source: NotificationSource): Category = if (source in NUDGE_SOURCES) Category.NUDGE else Category.SYSTEM
 
 private val DEFAULT_INTERRUPTION: Map<String, Interruption> =
     mapOf(
