@@ -1,10 +1,10 @@
 package com.nexo.domain.discover
 
-import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 
 /**
  * S1: the author rail rotation is a pure function of the LOCAL calendar day.

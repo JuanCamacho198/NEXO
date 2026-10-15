@@ -57,7 +57,10 @@ fun startIndexFor(date: LocalDate): Int {
  * wrapping at the list end. Consecutive offsets are distinct while
  * `count <= AUTHOR_ROTATION.size`, so the rails of a day never repeat an author.
  */
-fun entriesFor(date: LocalDate, count: Int = DISCOVER_RAIL_COUNT): List<AuthorEntry> {
+fun entriesFor(
+    date: LocalDate,
+    count: Int = DISCOVER_RAIL_COUNT,
+): List<AuthorEntry> {
     val length = AUTHOR_ROTATION.size
     require(count in 1..length) { "invalid author rail count: $count for $length authors" }
     val start = startIndexFor(date)

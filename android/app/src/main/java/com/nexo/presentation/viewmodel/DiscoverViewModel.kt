@@ -24,7 +24,6 @@ import com.nexo.domain.discover.entriesFor
 import com.nexo.domain.discover.matchesAuthor
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.domain.usecase.DownloadImportState
-import java.time.LocalDate
 import com.nexo.presentation.feature.discover.AccessResolverState
 import com.nexo.presentation.feature.discover.AddonReadState
 import com.nexo.presentation.feature.discover.DiscoverRailState
@@ -42,6 +41,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 /** Screen-level status for the Discover search flow. */
 enum class DiscoverStatus {

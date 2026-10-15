@@ -12,7 +12,6 @@ import com.nexo.domain.discover.AUTHOR_ROTATION
 import com.nexo.domain.discover.entriesFor
 import com.nexo.presentation.feature.discover.DiscoverRailState
 import com.nexo.testutil.MainDispatcherRule
-import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -20,6 +19,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.time.LocalDate
 
 /**
  * S2: every curated `AuthorEntry.titleKey` must resolve to a real string
@@ -64,7 +64,9 @@ class AuthorRailTitlesTest {
             val vm = DiscoverViewModel(RepeatTermsRailProvider())
             advanceUntilIdle()
 
-            val shelves = vm.uiState.value.rails.filterIsInstance<DiscoverRailState.Loaded>()
+            val shelves =
+                vm.uiState.value.rails
+                    .filterIsInstance<DiscoverRailState.Loaded>()
             assertTrue("expected the day's shelves to load", shelves.isNotEmpty())
             for (shelf in shelves) {
                 val term = shelf.authorTerm
