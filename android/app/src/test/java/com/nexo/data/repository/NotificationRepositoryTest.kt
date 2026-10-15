@@ -161,6 +161,11 @@ class NotificationRepositoryTest {
                 ),
             )
             repository.load()
-            assertNull(repository.items.first().single().target)
+            assertNull(
+                repository.items
+                    .first()
+                    .single()
+                    .target,
+            )
         }
 }
