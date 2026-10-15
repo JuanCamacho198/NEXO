@@ -8,6 +8,7 @@
   import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import ThemeSwatches from './ThemeSwatches.svelte';
+  import Button from '$lib/shared/ui/forms/Button.svelte';
   import {
     READER_BRIGHTNESS_MAX,
     READER_BRIGHTNESS_MIN,
@@ -186,14 +187,17 @@
         {#if textSettings.showSavedToast}
           <span class="absolute -top-2 right-4 flex items-center gap-1 rounded-full bg-(--color-accent-blue)/20 px-2.5 py-0.5 text-xs text-(--color-accent-blue)" transition:fly={{ y: -4, duration: 150 }}><Check size={14} strokeWidth={1.8} class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{t('reader.saved')}</span>
         {/if}
-        <button type="button" onclick={onClose} class="flex cursor-pointer items-center gap-1 text-(--color-text-muted) hover:text-(--color-text-inverse)" aria-label={t('settings.close')}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          <span class="text-xs font-medium">{t('settings.close')}</span>
-        </button>
-        {#if format === 'epub'}
-          <button type="button" class="cursor-pointer rounded p-2 hover:bg-(--color-surface-hover)" onclick={textSettings.cycleAlignment} aria-label={t('reader.alignment')} title={alignLabel(readerSettings.textAlign)}><svg xmlns="http://www.w3.org/2000/svg" width="15" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)"><line x1="17" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg></button>
-          <button type="button" class="cursor-pointer rounded p-2 hover:bg-(--color-surface-hover)" onclick={textSettings.toggleDirection} aria-label={t('reader.direction')} title={readerSettings.direction === 'ltr' ? t('reader.directionLtr') : t('reader.directionRtl')}><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></button>
-        {/if}
+        <h2 class="text-sm font-semibold text-(--color-text-inverse)">{t('reader.ajustes_texto')}</h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onclick={onClose}
+          class="shrink-0 px-2 text-(--color-text-muted) hover:text-(--color-text-inverse)"
+          aria-label={t('settings.close')}
+          title={t('settings.close')}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </Button>
       </header>
       <section class="flex flex-col gap-6 p-4">
         <ThemeSwatches {readerSettings} {onSettingsChange} {t} />
