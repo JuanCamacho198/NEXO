@@ -150,16 +150,17 @@ object NexoBrandLockup {
      * full `296.71 x 159.74` and both paths sit where the light SVG places them.
      */
     val Light: ImageVector =
-        ImageVector.Builder(
-            name = "NexoBrandLockup.Light",
-            defaultWidth = 190.dp,
-            defaultHeight = 96.dp,
-            viewportWidth = 296.71f,
-            viewportHeight = 159.74f,
-        ).apply {
-            filledPath(Navy, MARK_PATH_LIGHT, evenOdd = true)
-            filledPath(Navy, WORDMARK_LIGHT_PATH)
-        }.build()
+        ImageVector
+            .Builder(
+                name = "NexoBrandLockup.Light",
+                defaultWidth = 190.dp,
+                defaultHeight = 96.dp,
+                viewportWidth = 296.71f,
+                viewportHeight = 159.74f,
+            ).apply {
+                filledPath(Navy, MARK_PATH_LIGHT, evenOdd = true)
+                filledPath(Navy, WORDMARK_LIGHT_PATH)
+            }.build()
 
     /**
      * Dark-background export: navy mark + near-white wordmark.
@@ -168,16 +169,17 @@ object NexoBrandLockup {
      * tile, carrying the dark export's own ribbon geometry.
      */
     val Dark: ImageVector =
-        ImageVector.Builder(
-            name = "NexoBrandLockup.Dark",
-            defaultWidth = 190.dp,
-            defaultHeight = 96.dp,
-            viewportWidth = 285.91f,
-            viewportHeight = 144.15f,
-        ).apply {
-            filledPath(Navy, MARK_PATH_DARK, evenOdd = true)
-            filledPath(WordmarkOnDark, WORDMARK_DARK_PATH)
-        }.build()
+        ImageVector
+            .Builder(
+                name = "NexoBrandLockup.Dark",
+                defaultWidth = 190.dp,
+                defaultHeight = 96.dp,
+                viewportWidth = 285.91f,
+                viewportHeight = 144.15f,
+            ).apply {
+                filledPath(Navy, MARK_PATH_DARK, evenOdd = true)
+                filledPath(WordmarkOnDark, WORDMARK_DARK_PATH)
+            }.build()
 
     /**
      * Filled path from a raw SVG `pathData` string, parsed via [PathParser] so the
