@@ -25,6 +25,7 @@ import com.nexo.data.remote.catalog.OpenLibraryCatalogProvider
 import com.nexo.data.remote.catalog.OpenLibraryDataSource
 import com.nexo.data.remote.catalog.RebuildingCatalogProvider
 import com.nexo.data.remote.catalog.RoomDiscoverCache
+import com.nexo.data.remote.catalog.androidAppIdentityOrNull
 import com.nexo.data.remote.catalog.googleBooksProviderOrNull
 import com.nexo.data.remote.drive.DriveCoordinator
 import com.nexo.data.remote.drive.DriveOAuthSession
@@ -308,15 +309,32 @@ class NetworkModule(
      * absent/blank (key not provided yet) so the composite fan-out — already
      * failure-isolated per provider (U1) — simply never sees the source and
      * the app keeps working on Open Library + Gutenberg.
+     *
+     * The key in `local.properties` is restricted to Android apps
+     * (package + signing SHA-1), so the app identity headers travel with every
+     * Google Books request; without them the API answers 403
+     * `API_KEY_ANDROID_APP_BLOCKED` for an empty package.
      */
     val googleBooksDataSource: GoogleBooksDataSource? by lazy {
         BuildConfig.GOOGLE_BOOKS_KEY.trim().takeIf { it.isNotEmpty() }?.let {
-            GoogleBooksDataSource(catalogTransport, it)
+            val identity = androidAppIdentityOrNull(context)
+            GoogleBooksDataSource(
+                catalogTransport,
+                it,
+                androidPackage = identity?.packageName,
+                androidCert = identity?.certSha1,
+            )
         }
     }
 
     val googleBooksCatalogProvider: GoogleBooksCatalogProvider? by lazy {
-        googleBooksProviderOrNull(catalogTransport, BuildConfig.GOOGLE_BOOKS_KEY)
+        val identity = androidAppIdentityOrNull(context)
+        googleBooksProviderOrNull(
+            catalogTransport,
+            BuildConfig.GOOGLE_BOOKS_KEY,
+            androidPackage = identity?.packageName,
+            androidCert = identity?.certSha1,
+        )
     }
 
     val addonRegistry: AddonRegistry by lazy {

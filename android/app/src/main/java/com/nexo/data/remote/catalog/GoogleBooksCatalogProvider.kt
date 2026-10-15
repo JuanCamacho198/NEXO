@@ -49,11 +49,23 @@ open class GoogleBooksCatalogProvider(
  * composite fan-out) instead of a broken provider that would 400/403 every
  * search. Trims surrounding whitespace so `local.properties` copy-paste with
  * a trailing newline still enables the source.
+ *
+ * [androidPackage]/[androidCert] are forwarded so an Android-restricted key
+ * matches its package + signing SHA-1 restriction (see [GoogleBooksDataSource]).
  */
 fun googleBooksProviderOrNull(
     transport: CatalogHttpTransport,
     apiKey: String,
+    androidPackage: String? = null,
+    androidCert: String? = null,
 ): GoogleBooksCatalogProvider? {
     if (apiKey.isBlank()) return null
-    return GoogleBooksCatalogProvider(GoogleBooksDataSource(transport, apiKey.trim()))
+    return GoogleBooksCatalogProvider(
+        GoogleBooksDataSource(
+            transport,
+            apiKey.trim(),
+            androidPackage = androidPackage,
+            androidCert = androidCert,
+        ),
+    )
 }
