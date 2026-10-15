@@ -120,12 +120,14 @@ class AppContainer(
      * hours), SharedPreferences-backed like the other app preferences.
      */
     val notificationPreferencesStore: com.nexo.data.session.NotificationPreferencesStore by lazy {
-        com.nexo.data.session.NotificationPreferencesStore(appContext)
+        com.nexo.data.session
+            .NotificationPreferencesStore(appContext)
     }
 
     /** U7: process-wide toast requests the nav host presents. */
     val notificationToastBus: com.nexo.presentation.notification.NotificationToastBus by lazy {
-        com.nexo.presentation.notification.NotificationToastBus()
+        com.nexo.presentation.notification
+            .NotificationToastBus()
     }
 
     private val notificationToastSink: com.nexo.domain.notification.ToastSink by lazy {
@@ -147,7 +149,8 @@ class AppContainer(
      * ProcessLifecycleOwner.
      */
     val appForegroundSignal: com.nexo.domain.notification.AppForegroundSignal by lazy {
-        com.nexo.presentation.notification.ProcessLifecycleAppForegroundSignal.install()
+        com.nexo.presentation.notification.ProcessLifecycleAppForegroundSignal
+            .install()
     }
 
     /**
@@ -161,7 +164,9 @@ class AppContainer(
             surfaces =
                 com.nexo.domain.notification.NotificationSurfaces(
                     toastSink = notificationToastSink,
-                    osNotifier = com.nexo.presentation.notification.AndroidOsNotifier(appContext),
+                    osNotifier =
+                        com.nexo.presentation.notification
+                            .AndroidOsNotifier(appContext),
                 ),
             foreground = appForegroundSignal,
             preferencesProvider = { notificationPreferencesStore.load() },

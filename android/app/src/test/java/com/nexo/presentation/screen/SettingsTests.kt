@@ -7,9 +7,9 @@ import com.nexo.domain.model.ReaderTheme
 import com.nexo.domain.notification.Category
 import com.nexo.domain.notification.Interruption
 import com.nexo.domain.notification.Notification
+import com.nexo.domain.notification.NotificationRouteTarget
 import com.nexo.domain.notification.NotificationSource
 import com.nexo.domain.notification.NotificationTarget
-import com.nexo.domain.notification.NotificationRouteTarget
 import com.nexo.domain.notification.Severity
 import com.nexo.domain.notification.groupNotifications
 import com.nexo.domain.notification.notificationGroupKey

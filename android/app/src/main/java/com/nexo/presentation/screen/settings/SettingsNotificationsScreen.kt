@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -181,7 +180,9 @@ private fun TimeField(
         onValueChange = { raw -> onValueChange(raw.filter { it.isDigit() || it == ':' }.take(MAX_TIME_LENGTH)) },
         label = { Text(text = label) },
         singleLine = true,
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+        keyboardOptions =
+            androidx.compose.foundation.text
+                .KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = modifier,
     )
 }

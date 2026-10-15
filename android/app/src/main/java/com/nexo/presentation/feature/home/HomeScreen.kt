@@ -139,7 +139,12 @@ fun HomeScreenContent(
             }
         }
         if (!uiState.showSearch) {
-            item { NexoHeader(title = stringResource(R.string.home_nexo_title), avatarImageUrl = uiState.avatarUrl, avatarInitials = uiState.userName.take(1).uppercase(), onAvatarClick = onOpenAccount, avatarContentDescription = stringResource(R.string.home_avatar_content_description), onSearchClick = onToggleSearch, onNotificationsClick = { showNotifications = true; onNotificationsOpened() }, unreadNotificationsCount = unreadNotificationCount) }
+            item {
+                NexoHeader(title = stringResource(R.string.home_nexo_title), avatarImageUrl = uiState.avatarUrl, avatarInitials = uiState.userName.take(1).uppercase(), onAvatarClick = onOpenAccount, avatarContentDescription = stringResource(R.string.home_avatar_content_description), onSearchClick = onToggleSearch, onNotificationsClick = {
+                    showNotifications = true
+                    onNotificationsOpened()
+                }, unreadNotificationsCount = unreadNotificationCount)
+            }
             item { GreetingSection(userName = uiState.userName) }
             item { TodaySummarySection(minutesReadToday = uiState.minutesReadToday, sessionsToday = uiState.sessionsToday, currentStreak = uiState.currentStreak) }
             item {

@@ -440,13 +440,15 @@ class ReaderLifecycleStateHolder(
     fun onReaderOpened() {
         // Notification policy rule 3: silence interruptive surfaces while the
         // reader is open. The reader's own open/close boundary is this pair.
-        com.nexo.domain.notification.ReadingActivity.setReading(true)
+        com.nexo.domain.notification.ReadingActivity
+            .setReading(true)
         sessionRecorder.onReaderOpened()
     }
 
     @Deprecated("Delegate to ReadingSessionRecorder — to be removed in PR #2")
     fun onReaderPaused() {
-        com.nexo.domain.notification.ReadingActivity.setReading(false)
+        com.nexo.domain.notification.ReadingActivity
+            .setReading(false)
         sessionRecorder.onReaderPaused()
     }
 
@@ -454,7 +456,8 @@ class ReaderLifecycleStateHolder(
     fun onReaderBackgrounded() = sessionRecorder.onReaderBackgrounded()
 
     fun onCleared() {
-        com.nexo.domain.notification.ReadingActivity.setReading(false)
+        com.nexo.domain.notification.ReadingActivity
+            .setReading(false)
         previewScope.cancel()
         sessionRecorder.onCleared()
         progressTracker.onCleared()
