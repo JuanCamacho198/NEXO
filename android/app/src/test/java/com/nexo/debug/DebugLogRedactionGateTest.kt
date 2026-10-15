@@ -71,7 +71,10 @@ class DebugLogRedactionGateTest {
         DebugLog.init(scope, fakeWriter)
         DebugLog.info("TestTag", secretFixture)
 
-        val stored = DebugLog.events.value.first().message
+        val stored =
+            DebugLog.events.value
+                .first()
+                .message
         assertEquals(stored, LogRedaction.redactString(stored))
     }
 
@@ -146,7 +149,12 @@ class DebugLogRedactionGateTest {
         DebugLog.success("TestTag", "all good")
 
         assertEquals(1, DebugLog.events.value.size)
-        assertEquals(DebugLog.Level.SUCCESS, DebugLog.events.value.first().level)
+        assertEquals(
+            DebugLog.Level.SUCCESS,
+            DebugLog.events.value
+                .first()
+                .level,
+        )
     }
 
     @Test
