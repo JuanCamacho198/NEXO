@@ -1,16 +1,17 @@
-import type { ReaderSettings, ReaderTextAlign, ReaderThemeMode } from '$lib/shared/types';
+import type { ReaderTextAlign, ReaderThemeMode } from '$lib/shared/types';
 
 export const LINE_HEIGHT_PRESETS: readonly number[] = [1.4, 1.6, 1.8, 2.0, 2.2, 2.4] as const;
 
 export const PARAGRAPH_SPACING_PRESETS: readonly number[] = [0, 0.5, 1, 1.5, 2, 3] as const;
 
-export const MARGIN_PRESETS: readonly ReaderSettings['margins'][] = [
-  { top: 0.5, bottom: 0.5, left: 0.75, right: 0.75 },
-  { top: 1, bottom: 1, left: 1.5, right: 1.5 },
-  { top: 1.5, bottom: 1.5, left: 2, right: 2 },
-  { top: 2, bottom: 2, left: 2.5, right: 2.5 },
-  { top: 2.5, bottom: 2.5, left: 3, right: 3 },
-] as const;
+/**
+ * Margin bounds for the two sliders. The old named bundles (compacto/cómodo/…)
+ * are gone: they moved four values at once and never said how much, so the
+ * control had to be tried to be understood.
+ */
+export const MARGIN_MIN_REM = 0;
+export const MARGIN_MAX_REM = 4;
+export const MARGIN_STEP_REM = 0.25;
 
 export const ALIGN_CYCLE: readonly ReaderTextAlign[] = [
   'left',

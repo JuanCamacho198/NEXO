@@ -11,12 +11,11 @@
 @import '@fontsource/manrope/700.css';
 @import '@fontsource/manrope/800.css';
 @import '@fontsource-variable/newsreader/opsz.css';
-/* Reader face options: Literata (designed for Play Books screen reading) and
- * Atkinson Hyperlegible (Braille Institute, low-vision legibility). Regular
- * plus italic so the reader override never falls back mid-paragraph. */
-@import '@fontsource-variable/literata';
-@import '@fontsource/atkinson-hyperlegible/400.css';
-@import '@fontsource/atkinson-hyperlegible/400-italic.css';
+/* Reader face options (Literata, Atkinson Hyperlegible) are NOT imported here.
+ * The chapter iframe is a separate `srcdoc` document that cannot inherit this
+ * stylesheet, so its faces are declared in `viewer-epub/readerFontFaces.ts`
+ * from files copied into `public/fonts/`. Importing them here too would ship
+ * each family twice. */
 @import './lib/shared/styles/tokens.css';
 
 /* ============================================

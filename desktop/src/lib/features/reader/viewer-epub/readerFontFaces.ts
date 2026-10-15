@@ -6,37 +6,55 @@
  * resolves to nothing and the browser silently falls back to serif. That is
  * exactly why picking a face used to "look like it changes but never change".
  *
- * Vite rewrites each `?url` import to the built asset URL (hashed, served
- * locally by Tauri), so the iframe can load the real file offline. The families
- * here must stay in sync with `FONT_FAMILY_PRESETS`; `readerFonts.test.ts`
- * guards that coupling.
+ * The files live in `public/fonts/` and are served from the app origin, so the
+ * iframe can load them offline. They are NOT imported through Vite's `?url`:
+ * that rewrites to `asset.localhost/@fs/<abs path>`, and the Tauri asset
+ * protocol is scoped to `$APPDATA` only, so every font came back 403. Serving
+ * from `public/` keeps them under `'self'`, identical in dev and production.
+ *
+ * The families here must stay in sync with `FONT_FAMILY_PRESETS`;
+ * `readerFontFaces.test.ts` guards that coupling.
  */
-import atkinson400 from '@fontsource/atkinson-hyperlegible/files/atkinson-hyperlegible-latin-400-normal.woff2?url';
-import atkinson700 from '@fontsource/atkinson-hyperlegible/files/atkinson-hyperlegible-latin-700-normal.woff2?url';
-import literata from '@fontsource-variable/literata/files/literata-latin-wght-normal.woff2?url';
-import manrope400 from '@fontsource/manrope/files/manrope-latin-400-normal.woff2?url';
-import manrope500 from '@fontsource/manrope/files/manrope-latin-500-normal.woff2?url';
-import manrope600 from '@fontsource/manrope/files/manrope-latin-600-normal.woff2?url';
-import manrope700 from '@fontsource/manrope/files/manrope-latin-700-normal.woff2?url';
-import newsreader from '@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2?url';
 
-/** One `@font-face` block: the family name and the asset URL Vite produced. */
+/** One `@font-face` block: the family name, its file and the weight it covers. */
 type ReaderFontFace = {
   family: string;
-  url: string;
+  file: string;
   weight: string;
 };
 
 const READER_FONT_FACES: readonly ReaderFontFace[] = [
-  { family: 'Newsreader', url: newsreader, weight: '200 800' },
-  { family: 'Literata', url: literata, weight: '200 900' },
-  { family: 'Manrope', url: manrope400, weight: '400' },
-  { family: 'Manrope', url: manrope500, weight: '500' },
-  { family: 'Manrope', url: manrope600, weight: '600' },
-  { family: 'Manrope', url: manrope700, weight: '700' },
-  { family: 'Atkinson Hyperlegible', url: atkinson400, weight: '400' },
-  { family: 'Atkinson Hyperlegible', url: atkinson700, weight: '700' },
+  { family: 'Newsreader', file: 'newsreader-latin-wght-normal.woff2', weight: '200 800' },
+  { family: 'Literata', file: 'literata-latin-wght-normal.woff2', weight: '200 900' },
+  { family: 'Manrope', file: 'manrope-latin-400-normal.woff2', weight: '400' },
+  { family: 'Manrope', file: 'manrope-latin-500-normal.woff2', weight: '500' },
+  { family: 'Manrope', file: 'manrope-latin-600-normal.woff2', weight: '600' },
+  { family: 'Manrope', file: 'manrope-latin-700-normal.woff2', weight: '700' },
+  {
+    family: 'Atkinson Hyperlegible',
+    file: 'atkinson-hyperlegible-latin-400-normal.woff2',
+    weight: '400',
+  },
+  {
+    family: 'Atkinson Hyperlegible',
+    file: 'atkinson-hyperlegible-latin-700-normal.woff2',
+    weight: '700',
+  },
 ];
+
+/** Public path prefix every face is served from, relative to the app origin. */
+export const READER_FONT_PUBLIC_DIR = './fonts';
+
+/**
+ * Absolute URL for a public asset, resolved against the app origin.
+ *
+ * The chapter iframe is `srcdoc`, so a relative `./fonts/x.woff2` there would
+ * resolve against `about:srcdoc` and fail. The faces need the real origin.
+ */
+function fontUrl(file: string): string {
+  const base = typeof window === 'undefined' ? 'http://localhost/' : window.location.href;
+  return new URL(`${READER_FONT_PUBLIC_DIR}/${file}`, base).href;
+}
 
 /**
  * `@font-face` CSS for the chapter iframe.
@@ -52,7 +70,7 @@ export function buildReaderFontFaceCss(): string {
         font-style: normal;
         font-weight: ${face.weight};
         font-display: swap;
-        src: url('${face.url}') format('woff2');
+        src: url('${fontUrl(face.file)}') format('woff2');
       }`,
   ).join('\n');
 }

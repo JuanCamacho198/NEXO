@@ -8,6 +8,7 @@
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
     "build": "bun run check:lockstep && vite build",
     "check:lockstep": "bun run scripts/check-cfi-lockstep.mjs",
+    "sync:reader-fonts": "bun run scripts/syncReaderFonts.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "tauri": "bunx tauri",
