@@ -15,7 +15,14 @@
     READER_BRIGHTNESS_MIN,
     useReaderTextSettings,
   } from './useReaderTextSettings.svelte';
-  import { FONT_FAMILY_PRESETS, PARAGRAPH_SPACING_PRESETS } from './readerTextPresets';
+  import {
+    FONT_FAMILY_PRESETS,
+    LINE_HEIGHT_PRESETS,
+    MARGIN_MAX_REM,
+    MARGIN_MIN_REM,
+    MARGIN_STEP_REM,
+    PARAGRAPH_SPACING_PRESETS,
+  } from './readerTextPresets';
 
   type Props = {
     open: boolean;
@@ -182,6 +189,72 @@
   </div>
 {/snippet}
 
+{#snippet stepperRow(
+  label: string,
+  value: string,
+  testid: string,
+  ondecrement: () => void,
+  onincrement: () => void,
+  decrementDisabled = false,
+  incrementDisabled = false,
+)}
+  <!-- One row shape for every numeric setting: a visible label, then −/value/+.
+    The label is what tells the two minus signs apart; the buttons share a fixed
+    width so the three rows align as a column instead of zig-zagging. -->
+  <div class="flex items-center justify-between gap-3">
+    <span class="text-sm text-(--color-text-muted)">{label}</span>
+    <div class="flex shrink-0 items-center gap-1" role="group" aria-label={label}>
+      <button
+        type="button"
+        data-testid={`${testid}-dec`}
+        class="flex h-10 w-10 cursor-pointer items-center justify-center rounded text-(--color-text-muted) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30"
+        onclick={ondecrement}
+        aria-label={`${label} −`}
+        disabled={decrementDisabled}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg
+        >
+      </button>
+      <span
+        data-testid={`${testid}-value`}
+        aria-live="polite"
+        class="min-w-14 text-center text-sm font-medium text-(--color-text)">{value}</span
+      >
+      <button
+        type="button"
+        data-testid={`${testid}-inc`}
+        class="flex h-10 w-10 cursor-pointer items-center justify-center rounded text-(--color-text-muted) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30"
+        onclick={onincrement}
+        aria-label={`${label} +`}
+        disabled={incrementDisabled}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+          ><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"
+          ></line></svg
+        >
+      </button>
+    </div>
+  </div>
+{/snippet}
+
 {#snippet marginSlider(
   label: string,
   value: number,
@@ -197,9 +270,9 @@
     </div>
     <input
       type="range"
-      min="0"
-      max="4"
-      step="0.25"
+      min={MARGIN_MIN_REM}
+      max={MARGIN_MAX_REM}
+      step={MARGIN_STEP_REM}
       {value}
       data-testid={testid}
       oninput={(e) => oninput(Number((e.currentTarget as HTMLInputElement).value))}
@@ -272,21 +345,35 @@
               'font-select',
               fontPreviewStyle(),
             )}
-            <div class="flex items-center justify-between">
-              <!-- U2: one stepper, both directions, live value, honest limits. -->
-              <div class="flex items-center gap-1" role="group" aria-label={t('reader.font')}>
-                <button type="button" data-testid="font-size-dec" class="flex h-12 w-10 cursor-pointer items-center justify-center rounded p-2 text-(--color-text-muted) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30" onclick={() => textSettings.changeFontSize(-10)} aria-label={t('reader.font_decrease')} disabled={readerSettings.epub.fontSize <= 80}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                <span data-testid="font-size-value" aria-live="polite" class="min-w-12 text-center text-sm font-medium text-(--color-text)">{readerSettings.epub.fontSize}%</span>
-                <button type="button" data-testid="font-size-inc" class="flex h-12 w-10 cursor-pointer items-center justify-center rounded p-2 text-(--color-text-muted) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30" onclick={() => textSettings.changeFontSize(10)} aria-label={t('reader.font_increase')} disabled={readerSettings.epub.fontSize >= 200}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-              </div>
-              <button type="button" data-testid="line-height-btn" class="flex h-12 w-26.25 cursor-pointer flex-col items-center justify-center gap-0.5 rounded p-2 hover:bg-(--color-surface-hover)" onclick={textSettings.cycleLineHeight} aria-label={t('reader.line_spacing')} title={`${t('reader.line_spacing')}: ${readerSettings.lineHeight.toFixed(1)}×`}><svg xmlns="http://www.w3.org/2000/svg" width="27" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-primary)"><line x1="5" y1="3" x2="19" y2="3"></line><line x1="5" y1="21" x2="19" y2="21"></line><polyline points="12 7 9 10 15 10"></polyline><polyline points="9 14 12 17 15 14"></polyline><line x1="12" y1="7" x2="12" y2="17"></line></svg><span data-testid="line-height-value" class="text-xs font-medium text-(--color-text)">{readerSettings.lineHeight.toFixed(1)}×</span></button>
-            </div>
-            <!-- U3: letter spacing reads as a stepper with a live value, not remove/add. -->
-            <div class="flex items-center justify-between" role="group" aria-label={t('reader.letter_spacing')}>
-              <button type="button" class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-surface-hover)" onclick={() => textSettings.changeLetterSpacing(-1)} aria-label={t('reader.spacing_decrease')}><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-              <span data-testid="letter-spacing-value" aria-live="polite" class="min-w-12 text-center text-sm font-medium text-(--color-text)">{readerSettings.letterSpacing > 0 ? `+${readerSettings.letterSpacing}px` : `${readerSettings.letterSpacing}px`}</span>
-              <button type="button" class="flex h-10 w-26.25 cursor-pointer items-center justify-center rounded p-2 hover:bg-(--color-surface-hover)" onclick={() => textSettings.changeLetterSpacing(1)} aria-label={t('reader.spacing_increase')}><svg xmlns="http://www.w3.org/2000/svg" width="20" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-(--color-text-muted)"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-            </div>
+            {@render stepperRow(
+              t('reader.font_size'),
+              `${readerSettings.epub.fontSize}%`,
+              'font-size',
+              () => textSettings.changeFontSize(-10),
+              () => textSettings.changeFontSize(10),
+              readerSettings.epub.fontSize <= 80,
+              readerSettings.epub.fontSize >= 200,
+            )}
+            {@render stepperRow(
+              t('reader.line_spacing'),
+              `${readerSettings.lineHeight.toFixed(1)}×`,
+              'line-height',
+              () => textSettings.changeLineHeight(-1),
+              () => textSettings.changeLineHeight(1),
+              readerSettings.lineHeight <= Math.min(...LINE_HEIGHT_PRESETS),
+              readerSettings.lineHeight >= Math.max(...LINE_HEIGHT_PRESETS),
+            )}
+            {@render stepperRow(
+              t('reader.letter_spacing'),
+              readerSettings.letterSpacing > 0
+                ? `+${readerSettings.letterSpacing}px`
+                : `${readerSettings.letterSpacing}px`,
+              'letter-spacing',
+              () => textSettings.changeLetterSpacing(-1),
+              () => textSettings.changeLetterSpacing(1),
+              readerSettings.letterSpacing <= -2,
+              readerSettings.letterSpacing >= 10,
+            )}
           </div>
           <div class="flex flex-col gap-4">
             {@render sectionTitle(t('reader.section_page'))}

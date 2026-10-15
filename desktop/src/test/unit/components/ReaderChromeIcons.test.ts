@@ -177,7 +177,7 @@ describe('reader chrome icon migration', () => {
 
     expect(container.querySelector('svg.lucide-check')).toBeNull();
 
-    await fireEvent.click(screen.getByLabelText('reader.font_increase'));
+    await fireEvent.click(screen.getByTestId('font-size-inc'));
 
     const toastIcon = container.querySelector('svg.lucide-check');
     expect(toastIcon).not.toBeNull();

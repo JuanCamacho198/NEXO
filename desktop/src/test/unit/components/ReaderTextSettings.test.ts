@@ -168,21 +168,41 @@ describe('ReaderTextSettings (U3) — spacing reads at a glance', () => {
     return base;
   }
 
-  it('shows the live line-height value under the button', () => {
+  it('shows the live line-height value in the stepper', () => {
     renderEpub({ lineHeight: 2 });
     expect(screen.getByTestId('line-height-value')).toHaveTextContent('2.0×');
   });
 
-  it('localizes the line-height title (no hardcoded English)', () => {
-    renderEpub({ lineHeight: 1.6 });
-    expect(screen.getByTestId('line-height-btn').getAttribute('title')).toBe(
-      'reader.line_spacing: 1.6×',
+  it('disables the increment at the top preset, never wrapping to the tightest', () => {
+    // The old cycle jumped from 2.4 back to 1.4, which reads as a bug behind a
+    // stepper. `+` must be disabled at the top instead.
+    renderEpub({ lineHeight: 2.4 });
+    expect(screen.getByTestId('line-height-inc')).toBeDisabled();
+    expect(screen.getByTestId('line-height-dec')).not.toBeDisabled();
+  });
+
+  it('disables the decrement at the bottom preset and steps up by one preset', async () => {
+    const props = renderEpub({ lineHeight: 1.4 });
+    expect(screen.getByTestId('line-height-dec')).toBeDisabled();
+    await fireEvent.click(screen.getByTestId('line-height-inc'));
+    expect(props.onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ lineHeight: 1.6 }),
     );
   });
 
-  it('shows the live letter-spacing value with sign', () => {
-    renderEpub({ letterSpacing: 2 });
-    expect(screen.getByTestId('letter-spacing-value')).toHaveTextContent('+2px');
+  it('localizes both line-height controls (no hardcoded English)', () => {
+    renderEpub({ lineHeight: 1.6 });
+    expect(screen.getByLabelText('reader.line_spacing −')).toBeInTheDocument();
+    expect(screen.getByLabelText('reader.line_spacing +')).toBeInTheDocument();
+  });
+
+  it('shows the live letter-spacing value with sign and disables at the limits', () => {
+    const atMax = renderEpub({ letterSpacing: 10 });
+    expect(screen.getByTestId('letter-spacing-value')).toHaveTextContent('+10px');
+    // The stepper used to keep looking pressable past the clamp, which was
+    // silent fake feedback.
+    expect(screen.getByTestId('letter-spacing-inc')).toBeDisabled();
+    expect(atMax.onSettingsChange).not.toHaveBeenCalled();
   });
 });
 

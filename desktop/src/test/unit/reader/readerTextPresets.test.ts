@@ -3,7 +3,9 @@ import {
   ALIGN_CYCLE,
   FONT_FAMILY_PRESETS,
   LINE_HEIGHT_PRESETS,
-  MARGIN_PRESETS,
+  MARGIN_MAX_REM,
+  MARGIN_MIN_REM,
+  MARGIN_STEP_REM,
   PARAGRAPH_SPACING_PRESETS,
   THEME_PRESETS,
   cyclePreset,
@@ -14,11 +16,9 @@ describe('readerTextPresets', () => {
   it('exports 5 preset groups with expected lengths', () => {
     expect(LINE_HEIGHT_PRESETS).toHaveLength(6);
     expect(PARAGRAPH_SPACING_PRESETS).toHaveLength(6);
-    expect(MARGIN_PRESETS).toHaveLength(5);
     expect(ALIGN_CYCLE).toHaveLength(4);
     expect(THEME_PRESETS).toHaveLength(4);
   });
-
   it('offers four themes, each with a distinct surface and a reason to exist', () => {
     expect(THEME_PRESETS.map((t) => t.name)).toEqual(['paper', 'sepia', 'night', 'oled']);
     // No two themes may share a background, or the swatch row is a lie.
@@ -50,9 +50,12 @@ describe('readerTextPresets', () => {
     expect([...LINE_HEIGHT_PRESETS]).toEqual([1.4, 1.6, 1.8, 2.0, 2.2, 2.4]);
   });
 
-  it('MARGIN_PRESETS top/left progression', () => {
-    expect(MARGIN_PRESETS[0]).toEqual({ top: 0.5, bottom: 0.5, left: 0.75, right: 0.75 });
-    expect(MARGIN_PRESETS[4]).toEqual({ top: 2.5, bottom: 2.5, left: 3, right: 3 });
+  it('margin slider bounds are sane and steppable', () => {
+    expect(MARGIN_MIN_REM).toBe(0);
+    expect(MARGIN_MAX_REM).toBeGreaterThan(MARGIN_MIN_REM);
+    expect(MARGIN_STEP_REM).toBeGreaterThan(0);
+    // The step must divide the range, or the slider cannot reach its own max.
+    expect((MARGIN_MAX_REM - MARGIN_MIN_REM) % MARGIN_STEP_REM).toBeCloseTo(0);
   });
 });
 
@@ -83,27 +86,29 @@ describe('cyclePreset generic', () => {
   it('works for theme names', () => {
     const themeNames = THEME_PRESETS.map((t) => t.name);
     expect(cyclePreset('paper', themeNames)).toBe('sepia');
-    expect(cyclePreset('blue', themeNames)).toBe('paper');
+    expect(cyclePreset('oled', themeNames)).toBe('paper');
   });
 
   it('cyclePresetBy handles object presets with deep equality', () => {
-    const first = MARGIN_PRESETS[0];
-    const last = MARGIN_PRESETS[4];
-    const equal = (
-      a: (typeof MARGIN_PRESETS)[number],
-      b: (typeof MARGIN_PRESETS)[number],
-    ): boolean =>
+    // A local object array: the margin bundles this used to lean on are gone
+    // (two sliders replaced them), but cyclePresetBy still serves object sets.
+    const presets = [
+      { top: 0.5, bottom: 0.5, left: 0.75, right: 0.75 },
+      { top: 1, bottom: 1, left: 1.5, right: 1.5 },
+      { top: 2, bottom: 2, left: 3, right: 3 },
+    ] as const;
+    const equal = (a: (typeof presets)[number], b: (typeof presets)[number]): boolean =>
       a.top === b.top && a.bottom === b.bottom && a.left === b.left && a.right === b.right;
 
     // copy with same values but different reference should cycle
-    const copyFirst = { ...first };
-    expect(cyclePresetBy(copyFirst, MARGIN_PRESETS, equal)).toEqual(MARGIN_PRESETS[1]);
+    const copyFirst = { ...presets[0] };
+    expect(cyclePresetBy(copyFirst, presets, equal)).toEqual(presets[1]);
 
-    const copyLast = { ...last };
-    expect(cyclePresetBy(copyLast, MARGIN_PRESETS, equal)).toEqual(MARGIN_PRESETS[0]);
+    const copyLast = { ...presets[2] };
+    expect(cyclePresetBy(copyLast, presets, equal)).toEqual(presets[0]);
 
     // not found → first
     const unknown = { top: 9, bottom: 9, left: 9, right: 9 } as never;
-    expect(cyclePresetBy(unknown, MARGIN_PRESETS, equal)).toEqual(MARGIN_PRESETS[0]);
+    expect(cyclePresetBy(unknown, presets, equal)).toEqual(presets[0]);
   });
 });

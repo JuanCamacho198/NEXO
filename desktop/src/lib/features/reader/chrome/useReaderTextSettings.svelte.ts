@@ -2,10 +2,8 @@ import type { ReaderSettings } from '$lib/shared/types';
 import {
   ALIGN_CYCLE,
   LINE_HEIGHT_PRESETS,
-  MARGIN_PRESETS,
   PARAGRAPH_SPACING_PRESETS,
   cyclePreset,
-  cyclePresetBy,
 } from './readerTextPresets';
 
 export const READER_BRIGHTNESS_MIN = 50;
@@ -22,10 +20,9 @@ export function useReaderTextSettings(deps: UseReaderTextSettingsDeps): {
   changeLetterSpacing: (delta: number) => void;
   setBrightness: (value: number) => void;
   setContrast: (value: number) => void;
-  cycleLineHeight: () => void;
+  changeLineHeight: (delta: number) => void;
   cycleAlignment: () => void;
   cycleParagraphSpacing: () => void;
-  cycleMargins: () => void;
   resetToDefaults: () => void;
   toggleDirection: () => void;
   cleanup: () => void;
@@ -89,9 +86,21 @@ export function useReaderTextSettings(deps: UseReaderTextSettingsDeps): {
     }
   }
 
-  function cycleLineHeight(): void {
+  /**
+   * Step through the line-height presets in one direction.
+   *
+   * This used to cycle (wrapping past the last preset back to the first), which
+   * reads wrong behind a `−`/`+` stepper: pressing `+` at 2.4 jumped the text
+   * back to its tightest setting. Clamping instead makes the control honest, and
+   * the caller disables the button at each end.
+   */
+  function changeLineHeight(delta: number): void {
     const s = deps.getSettings();
-    const next = cyclePreset(s.lineHeight, LINE_HEIGHT_PRESETS);
+    const idx = LINE_HEIGHT_PRESETS.indexOf(s.lineHeight);
+    const currentIndex = idx < 0 ? 0 : idx;
+    const nextIndex = Math.max(0, Math.min(LINE_HEIGHT_PRESETS.length - 1, currentIndex + delta));
+    const next = LINE_HEIGHT_PRESETS[nextIndex];
+    if (next === undefined || next === s.lineHeight) return;
     deps.onSettingsChange({ ...s, lineHeight: next });
     notifyChange();
   }
@@ -107,18 +116,6 @@ export function useReaderTextSettings(deps: UseReaderTextSettingsDeps): {
     const s = deps.getSettings();
     const next = cyclePreset(s.paragraphSpacing, PARAGRAPH_SPACING_PRESETS);
     deps.onSettingsChange({ ...s, paragraphSpacing: next });
-    notifyChange();
-  }
-
-  function cycleMargins(): void {
-    const s = deps.getSettings();
-    const next = cyclePresetBy(
-      s.margins,
-      MARGIN_PRESETS,
-      (a, b) =>
-        a.top === b.top && a.bottom === b.bottom && a.left === b.left && a.right === b.right,
-    );
-    deps.onSettingsChange({ ...s, margins: next });
     notifyChange();
   }
 
@@ -166,10 +163,9 @@ export function useReaderTextSettings(deps: UseReaderTextSettingsDeps): {
     changeLetterSpacing,
     setBrightness,
     setContrast,
-    cycleLineHeight,
+    changeLineHeight,
     cycleAlignment,
     cycleParagraphSpacing,
-    cycleMargins,
     resetToDefaults,
     toggleDirection,
     cleanup,
