@@ -9,6 +9,7 @@
   import { cubicOut } from 'svelte/easing';
   import ThemeSwatches from './ThemeSwatches.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
+  import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import {
     READER_BRIGHTNESS_MAX,
     READER_BRIGHTNESS_MIN,
@@ -146,21 +147,33 @@
   testid: string,
   style = '',
 )}
-  <!-- U4: a real select. Every option reachable directly, both directions,
-    with native keyboard support — the roulette row it replaces had none. -->
-  <label class="flex items-center justify-between gap-3">
+  <!-- Atom-backed select (bits-ui). The testid sits on a wrapper because the
+    atom renders a button trigger, not a native <select>. -->
+  <div class="flex items-center justify-between gap-3">
     <span class="text-sm text-(--color-text-muted)">{label}</span>
-    <select
-      data-testid={testid}
-      aria-label={label}
-      class="max-w-36 cursor-pointer truncate rounded-xl bg-(--color-border) px-3 py-2 text-sm text-(--color-accent-blue)"
-      {value}
-      {style}
-      onchange={(e) => onselect((e.currentTarget as HTMLSelectElement).value)}
-    >
-      {#each options as opt}<option value={opt.value}>{opt.label}</option>{/each}
-    </select>
-  </label>
+    <div class="shrink-0" data-testid={testid}>
+      <Dropdown
+        {options}
+        {value}
+        class="max-w-36 truncate rounded-xl border-transparent bg-(--color-border) px-3 py-2 text-(--color-accent-blue) hover:bg-(--color-border)"
+        onchange={(e) => onselect(e.value)}
+      >
+        {#snippet trigger()}
+          <span class="truncate text-sm" {style}>
+            {options.find((o) => o.value === value)?.label ?? label}
+          </span>
+          <svg class="ml-2 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        {/snippet}
+      </Dropdown>
+    </div>
+  </div>
 {/snippet}
 
 {#snippet sliderRow(label: string, value: number, oninput: (value: number) => void)}

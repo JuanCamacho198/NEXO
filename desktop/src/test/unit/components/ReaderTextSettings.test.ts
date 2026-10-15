@@ -1,9 +1,44 @@
-import { render, screen, fireEvent } from '@testing-library/svelte';
+import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import ReaderTextSettings from '$lib/features/reader/chrome/ReaderTextSettings.svelte';
 import type { ReaderSettings } from '$lib/shared/types';
 
 const t = (key: string) => key;
+
+/**
+ * The panel's selects are the `Dropdown` atom (bits-ui), so the DOM holds a
+ * button trigger with a portalled listbox rather than a native `<select>`.
+ * Opening goes through pointer events because bits-ui opens on `pointerdown`;
+ * picking dispatches pointer + click like `Dropdown.test.ts` does.
+ */
+function triggerOf(container: HTMLElement, testid: string): HTMLElement {
+  const wrapper = container.querySelector(`[data-testid="${testid}"]`);
+  expect(wrapper).toBeTruthy();
+  const trigger = wrapper!.querySelector('[aria-haspopup="listbox"]');
+  expect(trigger).toBeTruthy();
+  return trigger as HTMLElement;
+}
+
+async function openDropdown(trigger: HTMLElement): Promise<void> {
+  await fireEvent.pointerDown(trigger, { pointerId: 1, pointerType: 'mouse', button: 0 });
+  await fireEvent.pointerUp(trigger, { pointerId: 1, pointerType: 'mouse', button: 0 });
+  await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeNull());
+}
+
+async function pickOption(label: string): Promise<void> {
+  const item = screen.getAllByRole('option').find((o) => o.textContent?.trim() === label);
+  expect(item).toBeTruthy();
+  await fireEvent.pointerDown(item!, { pointerId: 1, pointerType: 'mouse', button: 0 });
+  await fireEvent.pointerUp(item!, { pointerId: 1, pointerType: 'mouse', button: 0 });
+  await fireEvent.click(item!);
+  await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
+}
+
+/** Selects one option end to end: open the atom, then pick by visible label. */
+async function chooseOption(container: HTMLElement, testid: string, label: string): Promise<void> {
+  await openDropdown(triggerOf(container, testid));
+  await pickOption(label);
+}
 
 function makeSettings(overrides: Partial<ReaderSettings> = {}): ReaderSettings {
   return {
@@ -185,20 +220,21 @@ describe('ReaderTextSettings (U4) — selects and switches', () => {
 
   it('jumps straight to justify through the alignment select', async () => {
     const props = renderEpub();
-    await fireEvent.change(screen.getByTestId('alignment-select'), {
-      target: { value: 'justify' },
-    });
+    const container = document.body;
+    await chooseOption(container, 'alignment-select', 'reader.alignJustify');
     expect(props.onSettingsChange).toHaveBeenCalledWith(
       expect.objectContaining({ textAlign: 'justify' }),
     );
   });
 
-  it('offers named margin presets instead of a lone left value', () => {
+  it('offers named margin presets instead of a lone left value', async () => {
     renderEpub();
-    const select = screen.getByTestId('margins-select') as HTMLSelectElement;
-    expect(select.options.length).toBe(5);
-    expect(select.options[0]?.text).toBe('reader.margin_compact');
-    expect(select.value).toBe('2');
+    const container = document.body;
+    await openDropdown(triggerOf(container, 'margins-select'));
+    const opts = screen.getAllByRole('option').map((o) => o.textContent?.trim());
+    expect(opts.length).toBe(5);
+    expect(opts[0]).toBe('reader.margin_compact');
+    await pickOption('reader.margin_compact');
   });
 
   it('toggles hyphenation through a real switch', async () => {
@@ -209,12 +245,12 @@ describe('ReaderTextSettings (U4) — selects and switches', () => {
     );
   });
 
-  it('exposes four native selects with full keyboard support', () => {
+  it('exposes four atom-backed selects with a listbox trigger', () => {
     renderEpub();
-    expect(screen.getByTestId('direction-select').tagName).toBe('SELECT');
-    expect(screen.getByTestId('alignment-select').tagName).toBe('SELECT');
-    expect(screen.getByTestId('margins-select').tagName).toBe('SELECT');
-    expect(screen.getByTestId('spacing-select').tagName).toBe('SELECT');
+    const container = document.body;
+    for (const id of ['direction-select', 'alignment-select', 'margins-select', 'spacing-select']) {
+      expect(triggerOf(container, id).getAttribute('aria-haspopup')).toBe('listbox');
+    }
   });
 });
 
@@ -250,22 +286,25 @@ describe('ReaderTextSettings (U5) — font preview and book exit', () => {
     return props;
   }
 
-  it('offers the publisher font as the first option', () => {
+  it('offers the publisher font as the first option', async () => {
     renderEpub();
-    const select = screen.getByTestId('font-select') as HTMLSelectElement;
-    expect(select.options[0]?.value).toBe('');
-    expect(select.options[0]?.text).toBe('reader.fontDefault');
-    expect(select.options.length).toBe(6);
+    const container = document.body;
+    await openDropdown(triggerOf(container, 'font-select'));
+    const opts = screen.getAllByRole('option');
+    expect(opts[0]?.textContent?.trim()).toBe('reader.fontDefault');
+    expect(opts.length).toBe(6);
+    await pickOption('reader.fontDefault');
   });
 
   it('previews the current face on the closed select', () => {
     renderEpub('Georgia');
-    expect(screen.getByTestId('font-select').getAttribute('style')).toContain('Georgia');
+    const trigger = triggerOf(document.body, 'font-select');
+    expect(trigger.innerHTML).toContain('Georgia');
   });
 
   it('returns to the publisher font on demand', async () => {
     const props = renderEpub('monospace');
-    await fireEvent.change(screen.getByTestId('font-select'), { target: { value: '' } });
+    await chooseOption(document.body, 'font-select', 'reader.fontDefault');
     expect(props.onSettingsChange).toHaveBeenCalledWith(
       expect.objectContaining({ epub: expect.objectContaining({ fontFamily: '' }) }),
     );
