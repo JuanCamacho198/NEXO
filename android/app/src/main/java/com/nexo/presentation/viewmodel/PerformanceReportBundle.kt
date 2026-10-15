@@ -101,9 +101,13 @@ object PerformanceReportBundle {
         val assembled =
             buildString {
                 for (e in tail) {
-                    append('[').append(e.level.name).append("] ")
-                        .append(e.tag).append(": ")
-                        .append(e.message).append('\n')
+                    append('[')
+                        .append(e.level.name)
+                        .append("] ")
+                        .append(e.tag)
+                        .append(": ")
+                        .append(e.message)
+                        .append('\n')
                 }
             }
         return LogRedaction.redactString(assembled)
@@ -115,7 +119,9 @@ object PerformanceReportBundle {
         return buildString {
             for (e in entries) {
                 append(DebugToolkit.formatTimestamp(e.timestampMs))
-                    .append("  ").append(e.message).append('\n')
+                    .append("  ")
+                    .append(e.message)
+                    .append('\n')
             }
         }
     }

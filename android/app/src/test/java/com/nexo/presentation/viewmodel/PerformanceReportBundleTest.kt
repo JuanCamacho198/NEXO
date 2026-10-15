@@ -122,8 +122,20 @@ class PerformanceReportBundleTest {
         val logs = buildZip(events, null).getValue("logs.txt")
         assertEquals(200, logs.trim().lines().size)
         // Newest-first: the ring is already newest-first, take() keeps the head.
-        assertTrue(logs.trim().lines().first().contains("line 1"))
-        assertTrue(logs.trim().lines().last().contains("line 200"))
+        assertTrue(
+            logs
+                .trim()
+                .lines()
+                .first()
+                .contains("line 1"),
+        )
+        assertTrue(
+            logs
+                .trim()
+                .lines()
+                .last()
+                .contains("line 200"),
+        )
     }
 
     @Test
