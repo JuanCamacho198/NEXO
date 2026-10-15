@@ -292,7 +292,7 @@ describe('ReaderTextSettings (U5) — font preview and book exit', () => {
     await openDropdown(triggerOf(container, 'font-select'));
     const opts = screen.getAllByRole('option');
     expect(opts[0]?.textContent?.trim()).toBe('reader.fontDefault');
-    expect(opts.length).toBe(6);
+    expect(opts.length).toBe(8);
     await pickOption('reader.fontDefault');
   });
 

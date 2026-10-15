@@ -234,10 +234,7 @@
             {@render selectRow(
               t('reader.font'),
               readerSettings.epub.fontFamily,
-              [
-                { value: '', label: t('reader.fontDefault') },
-                ...FONT_FAMILY_PRESETS.map((f) => ({ value: f, label: f })),
-              ],
+              FONT_FAMILY_PRESETS.map((f) => ({ value: f.value, label: t(f.labelKey as MessageKey) })),
               (v) => onSettingsChange({ ...readerSettings, epub: { ...readerSettings.epub, fontFamily: v } }),
               'font-select',
               fontPreviewStyle(),

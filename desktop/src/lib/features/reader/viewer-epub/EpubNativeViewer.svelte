@@ -153,7 +153,9 @@
   });
 
   let fontSize = $derived(readerSettings.epub.fontSize ?? 100);
-  let fontFamily = $derived(readerSettings.epub.fontFamily?.trim() || 'serif');
+  // `''` means the book's own face — never coerce it to 'serif', or the
+  // "Predeterminada" option stops being able to restore the publisher font.
+  let fontFamily = $derived(readerSettings.epub.fontFamily?.trim() ?? '');
   let themeMode: ReaderThemeMode = $derived(readerSettings.themeMode);
   let lineHeight = $derived(readerSettings.lineHeight);
   let letterSpacing = $derived(readerSettings.letterSpacing);

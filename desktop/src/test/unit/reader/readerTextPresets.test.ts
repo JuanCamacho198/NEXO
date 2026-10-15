@@ -19,8 +19,21 @@ describe('readerTextPresets', () => {
     expect(THEME_PRESETS).toHaveLength(5);
   });
 
-  it('FONT_FAMILY_PRESETS has 5 entries', () => {
-    expect(FONT_FAMILY_PRESETS).toHaveLength(5);
+  it('FONT_FAMILY_PRESETS has 8 entries with the book face first', () => {
+    expect(FONT_FAMILY_PRESETS).toHaveLength(8);
+    expect(FONT_FAMILY_PRESETS[0]?.value).toBe('');
+  });
+
+  it('every preset carries a label key, and only real faces are self-hosted', () => {
+    for (const preset of FONT_FAMILY_PRESETS) {
+      expect(preset.labelKey).toBeTruthy();
+      // Generic CSS families resolve through the OS; they must not claim a face.
+      if (['serif', 'sans-serif', 'monospace', ''].includes(preset.value)) {
+        expect(preset.selfHosted).toBeUndefined();
+      } else {
+        expect(preset.selfHosted).toBe(true);
+      }
+    }
   });
 
   it('LINE_HEIGHT_PRESETS values are sorted ascending 1.4..2.4', () => {
@@ -44,7 +57,12 @@ describe('cyclePreset generic', () => {
     expect(cyclePreset(2.4, LINE_HEIGHT_PRESETS)).toBe(1.4);
     expect(cyclePreset(3, PARAGRAPH_SPACING_PRESETS)).toBe(0);
     expect(cyclePreset('justify', ALIGN_CYCLE)).toBe('left');
-    expect(cyclePreset('Palatino', FONT_FAMILY_PRESETS)).toBe('serif');
+    expect(
+      cyclePreset(
+        'Newsreader',
+        FONT_FAMILY_PRESETS.map((f) => f.value),
+      ),
+    ).toBe('Literata');
   });
 
   it('returns first when current not in array', () => {

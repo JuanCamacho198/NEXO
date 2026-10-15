@@ -27,12 +27,37 @@ export const THEME_PRESETS: readonly { name: ReaderThemeMode; bg: string }[] = [
   { name: 'blue', bg: '#5b7fa3' },
 ] as const;
 
-export const FONT_FAMILY_PRESETS: readonly string[] = [
-  'serif',
-  'sans-serif',
-  'monospace',
-  'Georgia',
-  'Palatino',
+/**
+ * Reader face options.
+ *
+ * Every entry must render with certainty inside the chapter iframe:
+ *  - `''` is the book's own face (the override rule is simply not emitted).
+ *  - The self-hosted families (Newsreader, Literata, Manrope, Atkinson) are
+ *    bundled by `styles.css` and re-declared inside the iframe, which is a
+ *    separate document and does not inherit the app's @font-face set.
+ *  - The three CSS generics always resolve through the OS.
+ *
+ * Georgia and Palatino were removed on purpose: they are OS face names, so a
+ * pick either silently fell back to serif or rendered differently per machine.
+ */
+export type ReaderFontPreset = {
+  /** Stored value: the CSS font-family stack, or '' for the book's own face. */
+  value: string;
+  /** i18n key for the option label. */
+  labelKey: string;
+  /** Self-hosted families are re-declared inside the iframe. */
+  selfHosted?: true;
+};
+
+export const FONT_FAMILY_PRESETS: readonly ReaderFontPreset[] = [
+  { value: '', labelKey: 'reader.fontDefault' },
+  { value: 'Newsreader', labelKey: 'reader.fontNewsreader', selfHosted: true },
+  { value: 'Literata', labelKey: 'reader.fontLiterata', selfHosted: true },
+  { value: 'Manrope', labelKey: 'reader.fontManrope', selfHosted: true },
+  { value: 'Atkinson Hyperlegible', labelKey: 'reader.fontAtkinson', selfHosted: true },
+  { value: 'serif', labelKey: 'reader.fontSerifGeneric' },
+  { value: 'sans-serif', labelKey: 'reader.fontSansGeneric' },
+  { value: 'monospace', labelKey: 'reader.fontMonoGeneric' },
 ] as const;
 
 export function cyclePreset<T>(current: T, presets: readonly T[]): T {

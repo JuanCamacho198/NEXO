@@ -12,6 +12,7 @@ import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { IFRAME_CFI_BRIDGE_SCRIPT } from '$lib/features/reader/viewer-epub/cfiBridgeIframe';
 import { IFRAME_QUOTE_SCRIPT } from '$lib/features/reader/viewer-epub/epubQuoteIframe';
 import { IFRAME_HIGHLIGHT_OVERLAY_SCRIPT } from '$lib/features/reader/viewer-epub/epubHighlightOverlayIframe';
+import { buildReaderFontFaceCss } from '$lib/features/reader/viewer-epub/readerFontFaces';
 import {
   HIGHLIGHT_COLORS,
   highlightFillRgba,
@@ -245,6 +246,8 @@ export function buildReaderOverrideCss(opts: {
   direction: string;
   hyphenation: boolean;
   margins: { top: number; bottom: number; left: number; right: number };
+  /** The book's own face is `''`; the caller appends the override when set. */
+  fontFamily?: string;
 }): string {
   const justify = opts.textAlign.toLowerCase() === 'justify';
   // U1: justification without hyphenation rivers. Justify always hyphenates;
@@ -448,10 +451,17 @@ export function buildChapterSrcdoc(
     fontFamily: 'serif',
   };
   let readerCss = buildReaderOverrideCss(cssOpts);
-  const userFont = (cssOpts.fontFamily ?? 'serif').trim();
-  if (userFont && userFont !== 'serif') {
+  // Inject the self-hosted faces first: without them a pick like "Literata"
+  // resolves to nothing inside this document and silently falls back to serif.
+  readerCss = `${buildReaderFontFaceCss()}\n${readerCss}`;
+  // The book's own face is `''`; only an explicit pick emits an override, so
+  // "Predeterminada" truly means "do not touch the book". The old check
+  // (`!== 'serif'`) skipped every curated serif and also swallowed the empty
+  // value once the viewer coerced it to 'serif'.
+  const userFont = (cssOpts.fontFamily ?? '').trim();
+  if (userFont) {
     readerCss += `
-        body {
+        body, body p, body div, body span, body li, body h1, body h2, body h3, body h4, body h5, body h6 {
           font-family: ${userFont}, serif !important;
         }
       `;
@@ -782,7 +792,17 @@ export function createEpubRender(deps: EpubRenderDeps): {
       direction: deps.getDirection(),
       hyphenation: deps.getHyphenation(),
       margins: deps.getMargins(),
+      fontFamily: deps.getFontFamily(),
     });
+  }
+
+  /**
+   * Overrides plus the self-hosted `@font-face` set, for the refresh path.
+   * The faces must ride every write: this function replaces the whole
+   * `<style>` text, so omitting them would drop the fonts on any setting change.
+   */
+  function buildReaderOverridesWithFontFaces(): string {
+    return `${buildReaderFontFaceCss()}\n${buildReaderOverrideCssLocal()}`;
   }
 
   function refreshReaderStyles(): void {
@@ -797,11 +817,12 @@ export function createEpubRender(deps: EpubRenderDeps): {
       readerStyle.id = 'nexo-reader-overrides';
       head.appendChild(readerStyle);
     }
-    let css = buildReaderOverrideCssLocal();
+    let css = buildReaderOverridesWithFontFaces();
+    // Same contract as the srcdoc path: `''` leaves the book's face alone.
     const userFont = deps.getFontFamily().trim();
-    if (userFont && userFont !== 'serif') {
+    if (userFont) {
       css += `
-        body {
+        body, body p, body div, body span, body li, body h1, body h2, body h3, body h4, body h5, body h6 {
           font-family: ${userFont}, serif !important;
         }
       `;
