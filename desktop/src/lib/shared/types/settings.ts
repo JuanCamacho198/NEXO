@@ -35,7 +35,14 @@ export const READER_SHOW_FOOTER_SETTING_KEY = 'reader.showFooter' as const;
 export const READER_SHOW_PAGE_NUMBERS_SETTING_KEY = 'reader.showPageNumbers' as const;
 export const READER_PROGRESS_INDICATOR_SETTING_KEY = 'reader.progressIndicator' as const;
 
-export type ReaderThemeMode = 'paper' | 'sepia' | 'night' | 'dark' | 'blue';
+/**
+ * Reader themes, each with a reason to exist:
+ *  - `paper`  off-white, easier on the eye than pure white for long sessions
+ *  - `sepia`  warm paper, the classic low-contrast reading surface
+ *  - `night`  very dark grey; pure black causes halation against light text
+ *  - `oled`   true black, for OLED panels where it saves power
+ */
+export type ReaderThemeMode = 'paper' | 'sepia' | 'night' | 'oled';
 
 export type ReaderTextAlign = 'left' | 'center' | 'right' | 'justify';
 export type ReaderDirection = 'ltr' | 'rtl';

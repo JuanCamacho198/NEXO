@@ -19,12 +19,16 @@ export const ALIGN_CYCLE: readonly ReaderTextAlign[] = [
   'justify',
 ] as const;
 
+/**
+ * Reader themes. Four, each with a purpose — `dark` (#444444) was a UI grey
+ * with no reading case and `blue` (#5b7fa3) had no principle behind it.
+ * `bg` mirrors the surface `getThemeStyles` paints in the chapter iframe.
+ */
 export const THEME_PRESETS: readonly { name: ReaderThemeMode; bg: string }[] = [
-  { name: 'paper', bg: '#ffffff' },
-  { name: 'sepia', bg: '#f4ecd8' },
-  { name: 'night', bg: '#000000' },
-  { name: 'dark', bg: '#444444' },
-  { name: 'blue', bg: '#5b7fa3' },
+  { name: 'paper', bg: '#faf8f5' },
+  { name: 'sepia', bg: '#f5eedd' },
+  { name: 'night', bg: '#151b2e' },
+  { name: 'oled', bg: '#000000' },
 ] as const;
 
 /**

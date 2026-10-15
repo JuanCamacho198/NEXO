@@ -1030,9 +1030,8 @@ export const messagesEs: Record<MessageKey, string> = {
   // Reader Text Settings (PR3b)
   'reader.themePaper': 'Papel',
   'reader.themeSepia': 'Sepia',
-  'reader.themeNight': 'Noche',
-  'reader.themeDark': 'Oscuro',
-  'reader.themeBlue': 'Azul',
+  'reader.themeNight': 'Oscuro',
+  'reader.themeOled': 'OLED',
   'reader.alignLeft': 'Izquierda',
   'reader.alignCenter': 'Centro',
   'reader.alignRight': 'Derecha',

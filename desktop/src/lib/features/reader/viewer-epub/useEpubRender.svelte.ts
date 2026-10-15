@@ -196,29 +196,17 @@ export function getThemeStyles(themeMode: string): string {
         th { background: #151b2e !important; }
         figcaption { color: #7d86a0 !important; }
       `,
-    dark: `
-        body { background: #1a1a2e; color: #e0e0e0; }
-        a { color: #66bbff; }
-        h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
-        blockquote { color: #b0b0c8 !important; border-left: 3px solid #3d3d5c !important; background: #22223a !important; }
-        code { color: #ffb86b !important; background: #26263e !important; }
-        pre { color: #e0e0e0 !important; background: #22223a !important; border: 1px solid #3d3d5c !important; }
-        hr { border-color: #3d3d5c !important; }
-        table, th, td { border-color: #3d3d5c !important; }
-        th { background: #22223a !important; }
-        figcaption { color: #8e8ea8 !important; }
-      `,
-    blue: `
-        body { background: #1e3a5f; color: #d6e4f0; }
-        a { color: #88ccff; }
-        h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
-        blockquote { color: #a9c2da !important; border-left: 3px solid #3a5a85 !important; background: #24466f !important; }
-        code { color: #ffd479 !important; background: #26466e !important; }
-        pre { color: #d6e4f0 !important; background: #24466f !important; border: 1px solid #3a5a85 !important; }
-        hr { border-color: #3a5a85 !important; }
-        table, th, td { border-color: #3a5a85 !important; }
-        th { background: #24466f !important; }
-        figcaption { color: #8ba9c4 !important; }
+    oled: `
+        body { background: #000000; color: #b8bcc8; }
+        a { color: #7bb8ff; }
+        h1, h2, h3, h4, h5, h6 { color: #e8ebf4 !important; }
+        blockquote { color: #8f97ad !important; border-left: 3px solid #22262f !important; background: #0a0c10 !important; }
+        code { color: #ffb86b !important; background: #0d0f14 !important; }
+        pre { color: #b8bcc8 !important; background: #0a0c10 !important; border: 1px solid #22262f !important; }
+        hr { border-color: #22262f !important; }
+        table, th, td { border-color: #22262f !important; }
+        th { background: #0a0c10 !important; }
+        figcaption { color: #737a8c !important; }
       `,
   };
   return themes[themeMode] || themes.paper;
@@ -228,9 +216,8 @@ export function getThemeBgColor(themeMode: string): string {
   const bgs: Record<string, string> = {
     paper: '#faf8f5',
     sepia: '#f5eedd',
-    night: '#0f1320',
-    dark: '#1a1a2e',
-    blue: '#1e3a5f',
+    night: '#151b2e',
+    oled: '#000000',
   };
   return bgs[themeMode] || bgs.paper;
 }

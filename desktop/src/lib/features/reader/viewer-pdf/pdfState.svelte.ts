@@ -51,23 +51,16 @@ export function resolveThemePalette(themeMode: ReaderThemeMode): ReaderThemePale
   }
   if (themeMode === 'night') {
     return {
-      rootBackground: '#0f1320',
-      surfaceBackground: '#161c2d',
-      textColor: '#e8ecf7',
+      rootBackground: '#151b2e',
+      surfaceBackground: '#1b2236',
+      textColor: '#c8ccd8',
     };
   }
-  if (themeMode === 'dark') {
+  if (themeMode === 'oled') {
     return {
-      rootBackground: '#1a1a2e',
-      surfaceBackground: '#16213e',
-      textColor: '#e0e0e0',
-    };
-  }
-  if (themeMode === 'blue') {
-    return {
-      rootBackground: '#1e3a5f',
-      surfaceBackground: '#2b4d7a',
-      textColor: '#d6e4f0',
+      rootBackground: '#000000',
+      surfaceBackground: '#0a0c10',
+      textColor: '#b8bcc8',
     };
   }
   return {

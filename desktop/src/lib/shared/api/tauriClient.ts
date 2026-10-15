@@ -476,13 +476,7 @@ const readSettingValue = (settings: AppSettingDto[], key: string): unknown => {
   }
 };
 
-const READER_THEME_MODES: ReadonlyArray<ReaderThemeMode> = [
-  'paper',
-  'sepia',
-  'night',
-  'dark',
-  'blue',
-];
+const READER_THEME_MODES: ReadonlyArray<ReaderThemeMode> = ['paper', 'sepia', 'night', 'oled'];
 const TEXT_ALIGN_MODES: ReadonlyArray<ReaderTextAlign> = ['left', 'center', 'right', 'justify'];
 const DIRECTION_MODES: ReadonlyArray<ReaderDirection> = ['ltr', 'rtl'];
 const PROGRESS_MODES: ReadonlyArray<ReaderProgressIndicator> = ['percentage', 'chapter', 'time'];
@@ -792,7 +786,7 @@ export const getReaderSettings = async (): Promise<ReaderSettings> => {
   const settings = await getSettings();
 
   return sanitizeReaderSettings({
-    themeMode: readSettingValue(settings, READER_THEME_MODE_SETTING_KEY) as ReaderThemeMode,
+    themeMode: sanitizeThemeMode(readSettingValue(settings, READER_THEME_MODE_SETTING_KEY)),
     brightness: readSettingValue(settings, READER_BRIGHTNESS_SETTING_KEY) as number,
     contrast: readSettingValue(settings, READER_CONTRAST_SETTING_KEY) as number,
     selectionColor: readSettingValue(settings, READER_SELECTION_COLOR_SETTING_KEY) as string,

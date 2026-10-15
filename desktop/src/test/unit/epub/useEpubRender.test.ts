@@ -126,13 +126,14 @@ describe('useEpubRender — pure helpers', () => {
       expect(getThemeBgColor('unknown')).toBe('#faf8f5');
     });
     it('returns distinct css per theme', () => {
-      expect(getThemeStyles('night')).toContain('#0f1320');
+      expect(getThemeStyles('night')).toContain('#151b2e');
       expect(getThemeBgColor('sepia')).toBe('#f5eedd');
-      expect(getThemeStyles('dark')).toContain('#1a1a2e');
-      expect(getThemeStyles('blue')).toContain('#1e3a5f');
+      expect(getThemeStyles('oled')).toContain('#000000');
+      expect(getThemeBgColor('oled')).toBe('#000000');
+      expect(getThemeBgColor('night')).not.toBe('#000000');
     });
     it('covers the full element set in every theme (U3)', () => {
-      for (const theme of ['paper', 'sepia', 'night', 'dark', 'blue']) {
+      for (const theme of ['paper', 'sepia', 'night', 'oled']) {
         const css = getThemeStyles(theme);
         for (const sel of ['h1', 'blockquote', 'code', 'pre', 'hr', 'th', 'figcaption']) {
           expect(css).toContain(sel);

@@ -15,9 +15,11 @@
     paper: 'reader.themePaper',
     sepia: 'reader.themeSepia',
     night: 'reader.themeNight',
-    dark: 'reader.themeDark',
-    blue: 'reader.themeBlue',
+    oled: 'reader.themeOled',
   };
+
+  /** Light lettering on the dark surfaces, dark lettering on the light ones. */
+  const darkSwatch = (theme: ReaderThemeMode): boolean => theme === 'night' || theme === 'oled';
 </script>
 
 <div class="flex items-center justify-between px-1">
@@ -33,8 +35,8 @@
     >
       <span
         class="text-micro font-normal"
-        class:text-white={theme.name === 'night' || theme.name === 'dark' || theme.name === 'blue'}
-        class:text-black={theme.name === 'paper' || theme.name === 'sepia'}
+        class:text-white={darkSwatch(theme.name)}
+        class:text-black={!darkSwatch(theme.name)}
       >
         Aa
       </span>

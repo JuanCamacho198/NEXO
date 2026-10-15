@@ -1093,9 +1093,8 @@ export const messagesEn = {
   // Reader Text Settings (PR3b)
   'reader.themePaper': 'Paper',
   'reader.themeSepia': 'Sepia',
-  'reader.themeNight': 'Night',
-  'reader.themeDark': 'Dark',
-  'reader.themeBlue': 'Blue',
+  'reader.themeNight': 'Dark',
+  'reader.themeOled': 'OLED',
   'reader.alignLeft': 'Left',
   'reader.alignCenter': 'Center',
   'reader.alignRight': 'Right',

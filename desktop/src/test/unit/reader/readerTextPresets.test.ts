@@ -16,7 +16,17 @@ describe('readerTextPresets', () => {
     expect(PARAGRAPH_SPACING_PRESETS).toHaveLength(6);
     expect(MARGIN_PRESETS).toHaveLength(5);
     expect(ALIGN_CYCLE).toHaveLength(4);
-    expect(THEME_PRESETS).toHaveLength(5);
+    expect(THEME_PRESETS).toHaveLength(4);
+  });
+
+  it('offers four themes, each with a distinct surface and a reason to exist', () => {
+    expect(THEME_PRESETS.map((t) => t.name)).toEqual(['paper', 'sepia', 'night', 'oled']);
+    // No two themes may share a background, or the swatch row is a lie.
+    const bgs = THEME_PRESETS.map((t) => t.bg);
+    expect(new Set(bgs).size).toBe(bgs.length);
+    // OLED is the true-black surface; night must not be pure black.
+    expect(THEME_PRESETS.find((t) => t.name === 'oled')?.bg).toBe('#000000');
+    expect(THEME_PRESETS.find((t) => t.name === 'night')?.bg).not.toBe('#000000');
   });
 
   it('FONT_FAMILY_PRESETS has 8 entries with the book face first', () => {
