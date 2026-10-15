@@ -70,7 +70,10 @@ fun DiagnosticsCard(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ResourceRow(label = stringResource(R.string.performance_fps_scroll), value = diagnostics.fpsLabel)
-                    ResourceRow(label = stringResource(R.string.performance_anrs), value = diagnostics.anrCount.toString())
+                    ResourceRow(
+                        label = stringResource(R.string.performance_anrs),
+                        value = diagnostics.anrCount?.toString() ?: stringResource(R.string.performance_no_data),
+                    )
                     Text(
                         text = stringResource(R.string.performance_crashes_title),
                         style = MaterialTheme.typography.titleSmall,

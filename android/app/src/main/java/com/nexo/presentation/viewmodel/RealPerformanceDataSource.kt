@@ -2,6 +2,7 @@ package com.nexo.presentation.viewmodel
 
 import android.app.ActivityManager
 import android.content.Context
+import com.nexo.debug.DebugToolkit
 import com.nexo.debug.SentryMetrics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,15 +24,21 @@ class RealPerformanceDataSource(
     override fun generateTimings(): List<PerformanceTiming> {
         val timings = mutableListOf<PerformanceTiming>()
         for (spec in TIMING_SPECS) {
-            val aggregate = SentryMetrics.aggregate(spec.metricName) ?: continue
+            // In-session aggregate wins; otherwise fall back to the aggregate
+            // carried over from the previous process (no fresh samples this run).
+            val inSession = SentryMetrics.aggregate(spec.metricName)
+            val aggregate = inSession ?: SentryMetrics.persistedAggregate(spec.metricName) ?: continue
             timings.add(
                 PerformanceTiming(
                     key = spec.key,
                     labelFallback = spec.label,
                     avgMs = aggregate.avgMs,
+                    p50Ms = aggregate.p50Ms,
                     p95Ms = aggregate.p95Ms,
                     maxMs = aggregate.maxMs,
+                    count = aggregate.count,
                     samples = aggregate.samples,
+                    fromPreviousSession = inSession == null,
                 ),
             )
         }
@@ -94,13 +101,34 @@ class RealPerformanceDataSource(
             outboxPending = SentryMetrics.lastKnownPendingCount,
         )
 
-    override fun loadDiagnostics(): PerformanceDiagnostics =
-        PerformanceDiagnostics(
-            fpsScroll = 0f,
+    /**
+     * G3: honest diagnostics. No real FPS/ANR instrument exists in this app, so
+     * those fields are reported as `null` (unknown) rather than fake zeros.
+     * Crashes come from the real crash files on disk via [DebugToolkit].
+     */
+    override fun loadDiagnostics(): PerformanceDiagnostics {
+        val context = appContext
+        val crashes =
+            if (context == null) {
+                emptyList()
+            } else {
+                DebugToolkit
+                    .recentErrors(File(context.cacheDir, "crashes"))
+                    .map { entry ->
+                        PerformanceCrashEntry(
+                            timestamp = DebugToolkit.formatTimestamp(entry.timestampMs),
+                            name = entry.message.take(CRASH_NAME_MAX_CHARS),
+                            stackSnippet = entry.message,
+                        )
+                    }
+            }
+        return PerformanceDiagnostics(
+            fpsScroll = null,
             fpsLabel = "n/d",
-            anrCount = 0,
-            crashes = emptyList(),
+            anrCount = null,
+            crashes = crashes,
         )
+    }
 
     private fun formatBytes(bytes: Long): String =
         when {
@@ -126,6 +154,7 @@ class RealPerformanceDataSource(
 
     private companion object {
         const val BYTES_PER_KB_FLOAT = 1024f
+        const val CRASH_NAME_MAX_CHARS = 80
         val BYTES_PER_KB = 1024L
         val BYTES_PER_MB = 1024L * 1024L
         const val BYTES_PER_MB_FLOAT = 1024f * 1024f

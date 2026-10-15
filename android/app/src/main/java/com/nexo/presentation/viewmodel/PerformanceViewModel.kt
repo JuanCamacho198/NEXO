@@ -6,6 +6,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nexo.BuildConfig
+import com.nexo.debug.DebugErrorEntry
+import com.nexo.debug.DebugLog
+import com.nexo.debug.DebugToolkit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,8 +21,6 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 private const val MEASURE_DELAY_MS = 650L
 private const val SPARKLINE_SAMPLE_COUNT = 16
@@ -50,9 +52,14 @@ data class PerformanceTiming(
     val labelRes: Int? = null,
     val labelFallback: String,
     val avgMs: Long,
+    val p50Ms: Long,
     val p95Ms: Long,
     val maxMs: Long,
+    /** Number of samples backing the aggregates (survives a restart). */
+    val count: Int,
     val samples: List<Float>, // normalized sparkline values
+    /** True when this row is carried over from a previous process (aggregates only). */
+    val fromPreviousSession: Boolean = false,
 )
 
 data class PerformanceResources(
@@ -78,9 +85,9 @@ data class PerformanceCrashEntry(
 )
 
 data class PerformanceDiagnostics(
-    val fpsScroll: Float,
+    val fpsScroll: Float?,
     val fpsLabel: String,
-    val anrCount: Int,
+    val anrCount: Int?,
     val crashes: List<PerformanceCrashEntry>,
 )
 
@@ -203,58 +210,41 @@ class PerformanceViewModel(
             val state = _uiState.value
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             val outFile = File(appContext.cacheDir, "nexo_performance_$timestamp.zip")
-            ZipOutputStream(outFile.outputStream().buffered()).use { zos ->
-                fun entry(
-                    name: String,
-                    content: String,
-                ) {
-                    zos.putNextEntry(ZipEntry(name))
-                    zos.write(content.toByteArray())
-                    zos.closeEntry()
-                }
-                entry(
-                    "device.txt",
-                    buildString {
-                        appendLine("model=${android.os.Build.MODEL}")
-                        appendLine("manufacturer=${android.os.Build.MANUFACTURER}")
-                        appendLine("sdk=${android.os.Build.VERSION.SDK_INT}")
-                        appendLine("generated=$timestamp")
-                    },
+            val entries =
+                linkedMapOf(
+                    "device.txt" to
+                        PerformanceReportBundle.deviceTxt(
+                            PerformanceReportBundle.BuildInfo(
+                                model = android.os.Build.MODEL,
+                                manufacturer = android.os.Build.MANUFACTURER,
+                                sdk = android.os.Build.VERSION.SDK_INT,
+                                appVersion = BuildConfig.VERSION_NAME,
+                                versionCode = BuildConfig.VERSION_CODE,
+                                gitSha = BuildConfig.GIT_SHA,
+                                buildTime = BuildConfig.BUILD_TIME,
+                            ),
+                            timestamp,
+                        ),
+                    "timings.json" to PerformanceReportBundle.timingsJson(state.timings),
+                    "resources.json" to
+                        buildString {
+                            val r = state.resources
+                            appendLine("{ \"db\": \"${r?.dbSizeLabel}\", \"highlights\": ${r?.highlightsCount}, \"cache\": \"${r?.cacheSizeLabel}\", \"memUsedMb\": ${r?.memoryUsageMb} }")
+                        },
+                    "sync.json" to
+                        buildString {
+                            val s = state.syncStatus
+                            appendLine("{ \"realtime\": ${s?.realtimeConnected}, \"lastSync\": \"${s?.lastSyncLabel}\", \"outbox\": ${s?.outboxPending} }")
+                        },
+                    "diagnostics.json" to PerformanceReportBundle.diagnosticsJson(state.diagnostics),
+                    "logs.txt" to PerformanceReportBundle.logsTxt(DebugLog.events.value),
+                    "crashes.txt" to PerformanceReportBundle.crashesTxt(loadCrashEntries()),
                 )
-                entry(
-                    "timings.json",
-                    buildString {
-                        appendLine("{")
-                        state.timings.forEachIndexed { i, t ->
-                            appendLine("  \"${t.key}\": { \"avg\": ${t.avgMs}, \"p95\": ${t.p95Ms}, \"max\": ${t.maxMs} }${if (i < state.timings.lastIndex) "," else ""}")
-                        }
-                        appendLine("}")
-                    },
-                )
-                entry(
-                    "resources.json",
-                    buildString {
-                        val r = state.resources
-                        appendLine("{ \"db\": \"${r?.dbSizeLabel}\", \"highlights\": ${r?.highlightsCount}, \"cache\": \"${r?.cacheSizeLabel}\", \"memUsedMb\": ${r?.memoryUsageMb} }")
-                    },
-                )
-                entry(
-                    "sync.json",
-                    buildString {
-                        val s = state.syncStatus
-                        appendLine("{ \"realtime\": ${s?.realtimeConnected}, \"lastSync\": \"${s?.lastSyncLabel}\", \"outbox\": ${s?.outboxPending} }")
-                    },
-                )
-                entry(
-                    "diagnostics.json",
-                    buildString {
-                        val d = state.diagnostics
-                        appendLine("{ \"fps\": ${d?.fpsScroll}, \"anrs\": ${d?.anrCount}, \"crashes\": ${d?.crashes?.size} }")
-                    },
-                )
-            }
+            PerformanceReportBundle.writeZip(outFile, entries)
             outFile
         }.getOrNull()
+
+    private fun loadCrashEntries(): List<DebugErrorEntry> = DebugToolkit.recentErrors(File(appContext.cacheDir, "crashes"))
 
     private fun nowLabel(): String = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 

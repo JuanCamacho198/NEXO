@@ -58,9 +58,12 @@ class CrashDetailActivity : AppCompatActivity() {
         }
 
         val timestamp = parsed.optLong("timestamp", 0L)
-        val threadName = parsed.optString("threadName", "—")
-        val message = parsed.optString("message", "—")
-        val stackTrace = parsed.optString("stackTrace", "")
+        // G1/G3 crash-export boundary: the crash JSON on disk is RAW (written
+        // before any redaction existed), so the display/copy/share values are
+        // scrubbed here with the same boundary the log pipeline uses.
+        val threadName = LogRedaction.redactString(parsed.optString("threadName", "—"))
+        val message = LogRedaction.redactString(parsed.optString("message", "—"))
+        val stackTrace = LogRedaction.redactString(parsed.optString("stackTrace", ""))
 
         val timestampText =
             if (timestamp > 0L) {
