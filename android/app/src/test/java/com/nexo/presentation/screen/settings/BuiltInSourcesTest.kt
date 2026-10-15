@@ -10,8 +10,10 @@ import org.junit.Test
 /**
  * U4: Fuentes integradas read-only contract + addon toggle regression.
  *
- * Static list: Gutendex powers the IDLE rails (Recently added + Popular);
- * Open Library is combined search only (no dedicated rail, no IDLE branding).
+ * Static list: Gutendex is the download authority for public-domain titles and
+ * Open Library is combined search only. Neither owns an IDLE rail any more —
+ * after S2 the IDLE shelves are author shelves served from Google Books, so a
+ * source row makes no rail promise and the roster stays a free-text list.
  * Addon toggles still write through the ViewModel unchanged.
  *
  * Non-interactivity of the section (no clickable/toggle/onClick) is enforced

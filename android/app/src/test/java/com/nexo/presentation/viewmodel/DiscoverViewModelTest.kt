@@ -1,11 +1,12 @@
 package com.nexo.presentation.viewmodel
 
+import com.nexo.R
+import com.nexo.data.remote.catalog.BUILTIN_GOOGLEBOOKS
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
 import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogException
-import com.nexo.data.remote.catalog.CatalogFeaturedSort
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.CatalogSourceKind
@@ -15,6 +16,7 @@ import com.nexo.debug.SentryMetrics
 import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.connectivity.FakeConnectivityObserver
+import com.nexo.domain.discover.entriesFor
 import com.nexo.domain.model.Book
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.domain.usecase.DownloadImportState
@@ -28,6 +30,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -39,6 +42,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DiscoverViewModelTest {
@@ -106,6 +110,21 @@ class DiscoverViewModelTest {
                 subjects = emptyList(),
                 downloadUrl = "https://www.gutenberg.org/ebooks/1342",
             )
+
+            /** Real library credit per rotation term; see `creditFor`. */
+            val AUTHOR_CREDITS =
+                mapOf(
+                    "arthur conan doyle" to "Arthur Conan Doyle",
+                    "edgar allan poe" to "Edgar Allan Poe",
+                    "oscar wilde" to "Oscar Wilde",
+                    "jules verne" to "Jules Verne",
+                    "franz kafka" to "Franz Kafka",
+                    "charles dickens" to "Charles Dickens",
+                    "jack london" to "Jack London",
+                    "h g wells" to "H. G. Wells",
+                    "mark twain" to "Mark Twain",
+                    "herman melville" to "Herman Melville",
+                )
         }
     }
 
@@ -463,11 +482,11 @@ class DiscoverViewModelTest {
         assertEquals(kotlin.jvm.functions.Function3::class.java, ctor.parameterTypes[9])
     }
 
-    /** Opt-in featured provider; [featured] is the seam under test. */
-    private class FakeFeaturedCatalogProvider(
-        private val featured: (CatalogFeaturedSort) -> PagedResult = { PagedResult(emptyList(), null, 0) },
+    /** Rail provider: one Google Books page per author term. */
+    private class FakeRailProvider(
+        private val resultsFor: (String) -> PagedResult = { PagedResult(emptyList(), null, 0) },
     ) : CatalogProvider {
-        val featuredCalls = mutableListOf<Pair<CatalogFeaturedSort, Int>>()
+        val searchSourceCalls = mutableListOf<Pair<String, String>>()
 
         override suspend fun search(
             query: String,
@@ -483,22 +502,20 @@ class DiscoverViewModelTest {
 
         override fun listSources(): List<CatalogSourceInfo> = emptyList()
 
-        override suspend fun featured(
-            sort: CatalogFeaturedSort,
+        override suspend fun searchSource(
+            sourceId: String,
+            query: String,
             page: Int,
         ): PagedResult {
-            featuredCalls.add(sort to page)
-            return featured(sort)
+            searchSourceCalls.add(sourceId to query)
+            return if (sourceId == BUILTIN_GOOGLEBOOKS) resultsFor(query) else PagedResult(emptyList(), null, 0)
         }
-
-        override fun supportsFeatured(): Boolean = true
     }
 
-    /** Featured provider whose rails stay in flight until [gate] completes. */
-    private class GatedFeaturedProvider : CatalogProvider {
-        val gate = CompletableDeferred<Unit>()
-        val featuredCalls = mutableListOf<Pair<CatalogFeaturedSort, Int>>()
-
+    /** Rail provider stalled for `railTerm`: that shelf stays Loading, the rest fail closed. */
+    private class StallingRailProvider(
+        private val railTerm: String,
+    ) : CatalogProvider {
         override suspend fun search(
             query: String,
             page: Int,
@@ -513,103 +530,199 @@ class DiscoverViewModelTest {
 
         override fun listSources(): List<CatalogSourceInfo> = emptyList()
 
-        override suspend fun featured(
-            sort: CatalogFeaturedSort,
+        override suspend fun searchSource(
+            sourceId: String,
+            query: String,
             page: Int,
         ): PagedResult {
-            featuredCalls.add(sort to page)
-            gate.await()
-            return if (sort == CatalogFeaturedSort.NEWEST) {
-                PagedResult(
-                    listOf(FakeCatalogProvider.book("gutendex:1", "Newest Book")),
-                    2,
-                    30,
-                )
-            } else {
-                PagedResult(
-                    listOf(FakeCatalogProvider.book("gutendex:2", "Popular Book")),
-                    null,
-                    5,
-                )
+            if (sourceId == BUILTIN_GOOGLEBOOKS && query == railTerm) {
+                // A selected rail never emits: the shelf stays Loading forever.
+                awaitCancellation()
             }
+            throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "injected")
+        }
+    }
+
+    /** Rail page for [term] with [credit]: one book credited to that author string. */
+    private fun authoredPage(
+        term: String,
+        credit: String,
+    ) = PagedResult(
+        listOf(
+            CatalogBook(
+                id = "googlebooks:${term.replace(' ', '-')}",
+                provider = BUILTIN_GOOGLEBOOKS,
+                title = "A book by $credit",
+                authors = listOf(credit),
+                coverUrl = null,
+                languages = listOf("en"),
+                subjects = emptyList(),
+                downloadUrl = null,
+            ),
+        ),
+        nexoPage = null,
+        totalCount = 1,
+    )
+
+    /** Real resource id per rotation term — the same table the rail titles use. */
+    private fun authorTitleResFor(term: String): Int =
+        when (term) {
+            "arthur conan doyle" -> R.string.discover_rail_author_doyle
+            "edgar allan poe" -> R.string.discover_rail_author_poe
+            "oscar wilde" -> R.string.discover_rail_author_wilde
+            "jules verne" -> R.string.discover_rail_author_verne
+            "franz kafka" -> R.string.discover_rail_author_kafka
+            "charles dickens" -> R.string.discover_rail_author_dickens
+            "jack london" -> R.string.discover_rail_author_london
+            "h g wells" -> R.string.discover_rail_author_wells
+            "mark twain" -> R.string.discover_rail_author_twain
+            "herman melville" -> R.string.discover_rail_author_melville
+            else -> throw AssertionError("no title resource for term: $term")
         }
 
-        override fun supportsFeatured(): Boolean = true
-    }
+    private fun todayTerms(): List<String> = entriesFor(LocalDate.now()).map { it.term }
+
+    /**
+     * Realistic author credit for a rotation term: the rotation's real titles
+     * (`H. G. Wells`) retain punctuation the raw term drops, which is exactly the
+     * shape `matchesAuthor` must still match.
+     */
+    private fun creditFor(term: String): String = FakeCatalogProvider.AUTHOR_CREDITS.getValue(term)
 
     @Test
-    fun idleRailsLoadAsynchronouslyAndNeverBlockTheShell() =
+    fun idleAuthorRailsLoadAsynchronouslyAndNeverBlockTheShell() =
         runTest {
-            val provider = GatedFeaturedProvider()
+            val terms = todayTerms()
+            val provider = FakeRailProvider { term -> authoredPage(term, creditFor(term)) }
             val vm = DiscoverViewModel(provider)
 
-            // Both rails are published as Loading before anything resolves, and IDLE
-            // itself is already on screen: rails never gate the shell status.
+            // The three author shelves are published as Loading before anything
+            // resolves, and IDLE itself is already on screen: rails never gate
+            // the shell status.
             assertEquals(DiscoverStatus.IDLE, vm.uiState.value.status)
-            assertEquals(
-                listOf<DiscoverRailState>(DiscoverRailState.Loading, DiscoverRailState.Loading),
-                vm.uiState.value.rails,
-            )
-            assertEquals(2, provider.featuredCalls.size)
-            assertEquals(
-                listOf(CatalogFeaturedSort.NEWEST, CatalogFeaturedSort.POPULAR),
-                provider.featuredCalls.map { it.first },
-            )
-
-            provider.gate.complete(Unit)
+            advanceUntilIdle()
 
             val rails = vm.uiState.value.rails
+            assertEquals(3, rails.size)
             assertTrue(rails.all { it is DiscoverRailState.Loaded })
-            val newest = rails[0] as DiscoverRailState.Loaded
-            assertEquals(CatalogFeaturedSort.NEWEST, newest.sort)
-            assertEquals(30, newest.totalCount)
-            assertEquals(1, newest.books.size)
+            val shelves = rails.map { it as DiscoverRailState.Loaded }
+            assertEquals(terms, shelves.map { it.authorTerm })
+            assertTrue(shelves.all { it.sourceId == null && it.sort == null })
+            assertEquals(1, shelves.first().books.size)
+            // Every shelf is titled by its own author string resource.
+            assertEquals(authorTitleResFor(terms.first()), shelves.first().sectionTitleRes)
+            // One Google Books query per shelf, no featured call.
+            assertEquals(terms, provider.searchSourceCalls.map { it.second })
+            assertTrue(provider.searchSourceCalls.all { it.first == BUILTIN_GOOGLEBOOKS })
         }
 
     @Test
-    fun failingRailIsHiddenWhileTheOtherStillLoads() =
+    fun authorRailKeepsOnlyBooksCreditedToTheShelfAuthor() =
         runTest {
+            val term = todayTerms().first()
             val provider =
-                FakeFeaturedCatalogProvider { sort ->
-                    if (sort == CatalogFeaturedSort.NEWEST) {
-                        PagedResult(listOf(FakeCatalogProvider.book("gutendex:1", "Newest Book")), null, 1)
+                FakeRailProvider { query ->
+                    if (query != term) {
+                        PagedResult(emptyList(), null, 0)
                     } else {
-                        throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "injected")
+                        PagedResult(
+                            listOf(
+                                CatalogBook(
+                                    id = "googlebooks:own",
+                                    provider = BUILTIN_GOOGLEBOOKS,
+                                    title = "Sherlock Holmes",
+                                    authors = listOf(creditFor(term)),
+                                    coverUrl = null,
+                                    languages = listOf("en"),
+                                    subjects = emptyList(),
+                                    downloadUrl = null,
+                                ),
+                                CatalogBook(
+                                    id = "googlebooks:criticism",
+                                    provider = BUILTIN_GOOGLEBOOKS,
+                                    title = "On $term, a study",
+                                    authors = listOf("Ada Critic"),
+                                    coverUrl = null,
+                                    languages = listOf("en"),
+                                    subjects = emptyList(),
+                                    downloadUrl = null,
+                                ),
+                            ),
+                            nexoPage = null,
+                            totalCount = 2,
+                        )
                     }
                 }
             val vm = DiscoverViewModel(provider)
+            advanceUntilIdle()
+
+            val shelf =
+                vm.uiState.value.rails
+                    .first() as DiscoverRailState.Loaded
+            // The foreign credit is dropped; the shelf never carries criticism.
+            assertEquals(listOf("googlebooks:own"), shelf.books.map { it.id })
+            assertEquals(1, shelf.totalCount)
+        }
+
+    @Test
+    fun authorRailPageWithNoMatchingCreditIsHiddenWhileOtherShelvesLoad() =
+        runTest {
+            val terms = todayTerms()
+            val provider =
+                FakeRailProvider { query ->
+                    if (query == terms[1]) {
+                        authoredPage(terms[1], "Ada Critic")
+                    } else {
+                        authoredPage(query, creditFor(query))
+                    }
+                }
+            val vm = DiscoverViewModel(provider)
+            advanceUntilIdle()
 
             val rails = vm.uiState.value.rails
             assertTrue(rails[0] is DiscoverRailState.Loaded)
+            // Zero surviving books fails the shelf closed instead of rendering a
+            // shelf of somebody else's books.
             assertEquals(DiscoverRailState.Hidden, rails[1])
+            assertTrue(rails[2] is DiscoverRailState.Loaded)
             assertEquals(DiscoverStatus.IDLE, vm.uiState.value.status)
         }
 
     @Test
-    fun emptyFeaturedPageHidesRailAndProviderWithoutCapabilityHidesBoth() =
+    fun stallingAuthorRailStaysLoadingWhileOthersResolve() =
         runTest {
-            val emptyProvider = FakeFeaturedCatalogProvider { PagedResult(emptyList(), null, 0) }
-            val emptyVm = DiscoverViewModel(emptyProvider)
-            assertTrue(
-                emptyVm.uiState.value.rails
-                    .all { it is DiscoverRailState.Hidden },
-            )
+            val terms = todayTerms()
+            val provider = StallingRailProvider(terms[0])
+            val vm = DiscoverViewModel(provider)
+            advanceUntilIdle()
 
-            // Default (no featured override) -> fail-closed empty page -> hidden rails.
-            val plainVm = DiscoverViewModel(FakeCatalogProvider())
+            val rails = vm.uiState.value.rails
+            // The stalled shelf is still in flight — neither hidden nor failed —
+            // and the three shelves resolve independently of each other.
+            assertEquals(DiscoverRailState.Loading, rails[0])
+            assertTrue(rails.size >= 3)
             assertTrue(
-                plainVm.uiState.value.rails
+                "a stalled rail must never be rendered as an empty shelf",
+                rails.drop(1).none { it is DiscoverRailState.Loaded && it.books.isEmpty() },
+            )
+        }
+
+    @Test
+    fun emptyRailPageHidesEveryShelfWithoutFailingTheScreen() =
+        runTest {
+            val vm = DiscoverViewModel(FakeRailProvider())
+
+            assertTrue(
+                vm.uiState.value.rails
                     .all { it is DiscoverRailState.Hidden },
             )
+            assertEquals(DiscoverStatus.IDLE, vm.uiState.value.status)
         }
 
     @Test
     fun offlineIdleStartsNoRailsAtAll() =
         runTest {
-            val provider =
-                FakeFeaturedCatalogProvider {
-                    PagedResult(listOf(FakeCatalogProvider.book("gutendex:1", "Newest Book")), null, 1)
-                }
+            val provider = FakeRailProvider { term -> authoredPage(term, creditFor(term)) }
             val vm = DiscoverViewModel(provider, FakeConnectivityObserver(initiallyOnline = false))
 
             assertEquals(DiscoverStatus.OFFLINE, vm.uiState.value.status)
@@ -617,7 +730,7 @@ class DiscoverViewModelTest {
                 vm.uiState.value.rails
                     .isEmpty(),
             )
-            assertTrue(provider.featuredCalls.isEmpty())
+            assertTrue(provider.searchSourceCalls.isEmpty())
         }
 
     // ── discover-screen U3a: in-app download → import ─────────────────────
@@ -764,8 +877,6 @@ class DiscoverViewModelTest {
     private class FakeSourceCatalogProvider : CatalogProvider {
         var sources: List<CatalogSourceInfo> = emptyList()
         var searchResults: List<CatalogBook> = emptyList()
-        var sourceResult: (String) -> PagedResult = { PagedResult(emptyList(), null, 0) }
-        val searchSourceCalls = mutableListOf<Pair<String, String>>()
 
         override suspend fun search(
             query: String,
@@ -780,15 +891,6 @@ class DiscoverViewModelTest {
         ): String = "n/a"
 
         override fun listSources(): List<CatalogSourceInfo> = sources
-
-        override suspend fun searchSource(
-            sourceId: String,
-            query: String,
-            page: Int,
-        ): PagedResult {
-            searchSourceCalls.add(sourceId to query)
-            return sourceResult(sourceId)
-        }
     }
 
     private fun catalogBook(
@@ -807,6 +909,37 @@ class DiscoverViewModelTest {
     )
 
     private val addonSourceId = "addon:0123456789abcdef"
+
+    /** Rail provider whose only source (and whose only searchable page) is an addon. */
+    private interface AddonRailProvider : CatalogProvider {
+        var sources: List<CatalogSourceInfo>
+    }
+
+    private fun addonRailProvider(addonPage: (String) -> PagedResult): AddonRailProvider =
+        object : AddonRailProvider {
+            override var sources: List<CatalogSourceInfo> =
+                listOf(CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON))
+
+            override suspend fun search(
+                query: String,
+                page: Int,
+            ): PagedResult = PagedResult(emptyList(), null, 0)
+
+            override suspend fun getDetails(id: String): CatalogBook = throw CatalogException(CatalogErrorCode.NOT_FOUND, "unused")
+
+            override fun resolveDownloadUrl(
+                formats: Map<String, String>,
+                preferEpub: Boolean,
+            ): String = "n/a"
+
+            override fun listSources(): List<CatalogSourceInfo> = sources
+
+            override suspend fun searchSource(
+                sourceId: String,
+                query: String,
+                page: Int,
+            ): PagedResult = addonPage(sourceId)
+        }
 
     @Test
     fun sourceChipsComeFromListSourcesWithAllAsDefault() =
@@ -921,11 +1054,9 @@ class DiscoverViewModelTest {
     @Test
     fun addonRailIsHiddenOnEmptyAndError() =
         runTest {
-            val source = CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON)
-
-            val emptyVm = DiscoverViewModel(FakeSourceCatalogProvider().apply { sources = listOf(source) })
+            val emptyVm = DiscoverViewModel(addonRailProvider { PagedResult(emptyList(), null, 0) })
             advanceUntilIdle()
-            assertEquals(3, emptyVm.uiState.value.rails.size)
+            assertEquals(4, emptyVm.uiState.value.rails.size)
             assertTrue(
                 emptyVm.uiState.value.rails
                     .all { it is DiscoverRailState.Hidden },
@@ -933,10 +1064,7 @@ class DiscoverViewModelTest {
 
             val errorVm =
                 DiscoverViewModel(
-                    FakeSourceCatalogProvider().apply {
-                        sources = listOf(source)
-                        sourceResult = { throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "injected") }
-                    },
+                    addonRailProvider { throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "injected") },
                 )
             advanceUntilIdle()
             assertTrue(
@@ -950,11 +1078,8 @@ class DiscoverViewModelTest {
         runTest {
             var listener: ((Int) -> Unit)? = null
             val provider =
-                FakeSourceCatalogProvider().apply {
-                    sources = listOf(CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON))
-                    sourceResult = {
-                        PagedResult(listOf(catalogBook("a:1", addonSourceId, "Addon Book")), null, 1)
-                    }
+                addonRailProvider {
+                    PagedResult(listOf(catalogBook("a:1", addonSourceId, "Addon Book")), null, 1)
                 }
             val vm =
                 DiscoverViewModel(
@@ -968,7 +1093,6 @@ class DiscoverViewModelTest {
                     .filterIsInstance<DiscoverRailState.Loaded>()
                     .single { it.sourceId == addonSourceId }
             assertEquals("My Addon", addonRail.addonName)
-            assertEquals(DiscoverViewModel.ADDON_RAIL_TERM, provider.searchSourceCalls.single().second)
 
             // Uninstall: the source vanishes and the rail disappears on registry change.
             provider.sources = emptyList()

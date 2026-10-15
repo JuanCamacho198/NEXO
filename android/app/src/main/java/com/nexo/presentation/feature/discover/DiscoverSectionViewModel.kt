@@ -3,6 +3,7 @@ package com.nexo.presentation.feature.discover
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nexo.data.remote.catalog.BUILTIN_GOOGLEBOOKS
 import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogException
@@ -43,10 +44,11 @@ data class DiscoverSectionUiState(
 /**
  * Backing ViewModel for [DiscoverSectionScreen].
  *
- * Pages through exactly one selector: [sort] (featured rail) or [sourceId]
- * (per-source list). Neither present — or both present — fails closed with an
- * empty page, so a malformed route can never trigger a composite search or a
- * crash. [term] is the per-source query; U3b drives it, v1 passes nothing.
+ * Pages through exactly one selector: [sort] (featured rail), [authorTerm]
+ * (author shelf, `builtin:googlebooks` search) or [sourceId] (per-source list).
+ * Zero or more than one present fails closed with an empty page, so a malformed
+ * route can never trigger a composite search or a crash. [term] is the
+ * per-source query; U3b drives it, v1 passes nothing.
  */
 class DiscoverSectionViewModel(
     private val catalogProvider: CatalogProvider,
@@ -54,6 +56,7 @@ class DiscoverSectionViewModel(
     private val sort: CatalogFeaturedSort?,
     private val sourceId: String?,
     private val term: String = "",
+    private val authorTerm: String? = null,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null,
 ) : ViewModel() {
@@ -263,9 +266,11 @@ class DiscoverSectionViewModel(
 
     private suspend fun fetchPage(page: Int): PagedResult =
         when {
-            sourceId != null && sort == null -> catalogProvider.searchSource(sourceId, term, page)
-            sort != null && sourceId == null -> catalogProvider.featured(sort, page)
-            // Neither or both selectors: fail closed, never a composite-wide search.
+            sourceId != null && sort == null && authorTerm == null -> catalogProvider.searchSource(sourceId, term, page)
+            sort != null && sourceId == null && authorTerm == null -> catalogProvider.featured(sort, page)
+            authorTerm != null && sourceId == null && sort == null ->
+                catalogProvider.searchSource(BUILTIN_GOOGLEBOOKS, authorTerm, page)
+            // Zero or multiple selectors: fail closed, never a composite-wide search.
             else -> PagedResult(emptyList(), null, 0)
         }
 
@@ -281,6 +286,7 @@ class DiscoverSectionViewModelFactory(
     private val sort: CatalogFeaturedSort?,
     private val sourceId: String?,
     private val term: String = "",
+    private val authorTerm: String? = null,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null,
 ) : ViewModelProvider.Factory {
@@ -293,6 +299,7 @@ class DiscoverSectionViewModelFactory(
                 sort = sort,
                 sourceId = sourceId,
                 term = term,
+                authorTerm = authorTerm,
                 mainDispatcher = mainDispatcher,
                 downloadAndImportBookUseCase = downloadAndImportBookUseCase,
             ) as T

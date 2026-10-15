@@ -4,10 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nexo.R
+import com.nexo.data.remote.catalog.BUILTIN_GOOGLEBOOKS
 import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogException
-import com.nexo.data.remote.catalog.CatalogFeaturedSort
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.CatalogSourceKind
@@ -19,6 +19,9 @@ import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.access.resolveAccess
 import com.nexo.domain.connectivity.AlwaysOnlineConnectivityObserver
 import com.nexo.domain.connectivity.ConnectivityObserver
+import com.nexo.domain.discover.AuthorEntry
+import com.nexo.domain.discover.entriesFor
+import com.nexo.domain.discover.matchesAuthor
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.domain.usecase.DownloadImportState
 import com.nexo.presentation.feature.discover.AccessResolverState
@@ -38,6 +41,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 /** Screen-level status for the Discover search flow. */
 enum class DiscoverStatus {
@@ -99,9 +103,10 @@ data class DiscoverUiState(
     /** Display name of the addon owning [addonRead] (manifest name). */
     val addonReadName: String = "",
     /**
-     * IDLE featured rails, in design order (newest first, then popular).
-     * Empty while a search flow owns the screen; each rail independently resolves
-     * to Hidden so a failed rail never renders a placeholder section.
+     * IDLE author rails from the day's rotation, in design order, followed by
+     * any per-addon rails. Empty while a search flow owns the screen; each rail
+     * independently resolves to Hidden so a failed rail never renders a
+     * placeholder section.
      */
     val rails: List<DiscoverRailState> = emptyList(),
     /** Mirrors [ConnectivityObserver.isOnline]; drives the pre-emptive OFFLINE state. */
@@ -688,16 +693,15 @@ class DiscoverViewModel(
             }.toMap()
 
     /**
-     * Starts the IDLE rails without ever blocking the shell: both rails are
+     * Starts the IDLE rails without ever blocking the shell: every rail is
      * published as Loading right after IDLE renders, then resolved asynchronously
      * in parallel. Offline IDLE never starts rails at all - the OFFLINE state
      * governs the screen.
      *
-     * The capability decision lives in the provider layer (`featured` is
-     * asynchronous and fail-closed) rather than behind `supportsFeatured()` here:
-     * an adapter such as LiveCatalogProvider can only report that flag for an
-     * already-built composite, so gating on it here would permanently hide rails
-     * on a cold start.
+     * The author rotation is the only rail source: each shelf is a Google Books
+     * search for the day's author term, filtered client-side by [matchesAuthor].
+     * Per-addon rails are appended afterwards, once `listSources()` can report
+     * the installed set.
      */
     private fun refreshRails() {
         railsJob?.cancel()
@@ -707,14 +711,15 @@ class DiscoverViewModel(
             _uiState.update { it.copy(rails = emptyList()) }
             return
         }
-        _uiState.update { it.copy(rails = RAIL_SPECS.map { DiscoverRailState.Loading }) }
+        val specs = authorRailSpecs()
+        _uiState.update { it.copy(rails = specs.map { DiscoverRailState.Loading }) }
         railsJob =
             viewModelScope.launch(mainDispatcher) {
                 val loaded =
                     coroutineScope {
-                        RAIL_SPECS.map { spec -> async { loadRail(spec) } }.awaitAll()
+                        specs.map { spec -> async { loadRail(spec) } }.awaitAll()
                     }
-                // The composite is only inspectable after the first featured call
+                // The composite is only inspectable after the first rail call
                 // (LiveCatalogProvider.listSources() reads the already-built
                 // composite), so the source set is re-read here and per-addon rails
                 // are derived from it.
@@ -732,22 +737,39 @@ class DiscoverViewModel(
     }
 
     /**
-     * Fail-closed rail resolution: an upstream error or an empty page yields
+     * The day's author shelves. [LocalDate.now] is read here, at rail-refresh
+     * time, so a session that crosses local midnight picks up the new rotation on
+     * the next refresh — the rotation is never frozen at construction.
+     *
+     * The title mapping lives in this layer deliberately: `AuthorEntry.titleKey`
+     * is a stable string key because the domain layer must not carry Android
+     * resource ids, and [R.string] ids are resolved here.
+     */
+    private fun authorRailSpecs(date: LocalDate = LocalDate.now()): List<RailSpec> =
+        entriesFor(date).mapNotNull { entry ->
+            AUTHOR_TITLE_RES[entry.titleKey]?.let { RailSpec(it, entry.term) }
+        }
+
+    /**
+     * Fail-closed author rail resolution: an upstream error, an empty page, or a
+     * page whose every book is credited to somebody else yields
      * [DiscoverRailState.Hidden], so the section is skipped entirely instead of
-     * rendering an empty rail or a placeholder header.
+     * rendering an empty rail or a shelf full of criticism and biography.
      */
     private suspend fun loadRail(spec: RailSpec): DiscoverRailState =
         try {
-            val result = catalogProvider.featured(spec.sort, page = 1)
-            if (result.results.isEmpty()) {
+            val result = catalogProvider.searchSource(BUILTIN_GOOGLEBOOKS, spec.authorTerm, page = 1)
+            val authored = result.results.filter { book -> matchesAuthor(book.authors, spec.authorTerm) }
+            if (authored.isEmpty()) {
                 DiscoverRailState.Hidden
             } else {
                 DiscoverRailState.Loaded(
                     sectionTitleRes = spec.sectionTitleRes,
-                    sort = spec.sort,
+                    sort = null,
                     sourceId = null,
-                    books = result.results,
-                    totalCount = result.totalCount,
+                    books = authored,
+                    totalCount = authored.size,
+                    authorTerm = spec.authorTerm,
                 )
             }
         } catch (err: CancellationException) {
@@ -785,7 +807,7 @@ class DiscoverViewModel(
 
     private data class RailSpec(
         val sectionTitleRes: Int,
-        val sort: CatalogFeaturedSort,
+        val authorTerm: String,
     )
 
     /**
@@ -821,14 +843,23 @@ class DiscoverViewModel(
         const val ADDON_RAIL_TERM = "the"
 
         /**
-         * IDLE rail order. The titles name the real upstream semantics: a provider
-         * only exposes newest-by-id and all-time download count, never a
-         * week-scoped popularity window.
+         * Author rail title keys (S1's [AuthorEntry.titleKey] strings) to their
+         * string resources. Kept beside the rails so a key with no resource is
+         * caught by AuthorRailTitlesTest instead of surfacing an unresolved
+         * shelf.
          */
-        private val RAIL_SPECS =
-            listOf(
-                RailSpec(R.string.discover_rail_newest, CatalogFeaturedSort.NEWEST),
-                RailSpec(R.string.discover_rail_popular, CatalogFeaturedSort.POPULAR),
+        private val AUTHOR_TITLE_RES: Map<String, Int> =
+            mapOf(
+                "discover_rail_author_doyle" to R.string.discover_rail_author_doyle,
+                "discover_rail_author_poe" to R.string.discover_rail_author_poe,
+                "discover_rail_author_wilde" to R.string.discover_rail_author_wilde,
+                "discover_rail_author_verne" to R.string.discover_rail_author_verne,
+                "discover_rail_author_kafka" to R.string.discover_rail_author_kafka,
+                "discover_rail_author_dickens" to R.string.discover_rail_author_dickens,
+                "discover_rail_author_london" to R.string.discover_rail_author_london,
+                "discover_rail_author_wells" to R.string.discover_rail_author_wells,
+                "discover_rail_author_twain" to R.string.discover_rail_author_twain,
+                "discover_rail_author_melville" to R.string.discover_rail_author_melville,
             )
     }
 }
