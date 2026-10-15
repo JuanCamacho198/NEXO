@@ -554,12 +554,15 @@ class SupabaseProgressSync(
                     dataSource.subscribeToUserChanges(session.userId).collect { action ->
                         when (action) {
                             is PostgresAction.Insert -> {
-                                val row = action.decodeRecord<ReadingProgressRow>()
-                                applyRemoteProgress(row)
+                                // A single undecodable row must never crash the reader
+                                // or tear down the Realtime subscription (see
+                                // NEXO-ANDROID-P/Q). Skip it and keep the channel alive.
+                                val row = runCatching { action.decodeRecord<ReadingProgressRow>() }.getOrNull()
+                                if (row != null) applyRemoteProgress(row)
                             }
                             is PostgresAction.Update -> {
-                                val row = action.decodeRecord<ReadingProgressRow>()
-                                applyRemoteProgress(row)
+                                val row = runCatching { action.decodeRecord<ReadingProgressRow>() }.getOrNull()
+                                if (row != null) applyRemoteProgress(row)
                             }
                             is PostgresAction.Delete, is PostgresAction.Select -> { /* no-op */ }
                         }
@@ -571,12 +574,12 @@ class SupabaseProgressSync(
                     dataSource.subscribeToBookmarkChanges(session.userId).collect { action ->
                         when (action) {
                             is PostgresAction.Insert -> {
-                                val row = action.decodeRecord<BookmarkRow>()
-                                applyRemoteBookmark(row)
+                                val row = runCatching { action.decodeRecord<BookmarkRow>() }.getOrNull()
+                                if (row != null) applyRemoteBookmark(row)
                             }
                             is PostgresAction.Update -> {
-                                val row = action.decodeRecord<BookmarkRow>()
-                                applyRemoteBookmark(row)
+                                val row = runCatching { action.decodeRecord<BookmarkRow>() }.getOrNull()
+                                if (row != null) applyRemoteBookmark(row)
                             }
                             is PostgresAction.Delete, is PostgresAction.Select -> { /* no-op */ }
                         }
@@ -588,12 +591,12 @@ class SupabaseProgressSync(
                     dataSource.subscribeToHighlightChanges(session.userId).collect { action ->
                         when (action) {
                             is PostgresAction.Insert -> {
-                                val row = action.decodeRecord<HighlightRow>()
-                                applyRemoteHighlight(row)
+                                val row = runCatching { action.decodeRecord<HighlightRow>() }.getOrNull()
+                                if (row != null) applyRemoteHighlight(row)
                             }
                             is PostgresAction.Update -> {
-                                val row = action.decodeRecord<HighlightRow>()
-                                applyRemoteHighlight(row)
+                                val row = runCatching { action.decodeRecord<HighlightRow>() }.getOrNull()
+                                if (row != null) applyRemoteHighlight(row)
                             }
                             is PostgresAction.Delete, is PostgresAction.Select -> { /* no-op */ }
                         }
@@ -605,12 +608,12 @@ class SupabaseProgressSync(
                     dataSource.subscribeToReadingSessionChanges(session.userId).collect { action ->
                         when (action) {
                             is PostgresAction.Insert -> {
-                                val row = action.decodeRecord<ReadingSessionRow>()
-                                applyRemoteSession(row)
+                                val row = runCatching { action.decodeRecord<ReadingSessionRow>() }.getOrNull()
+                                if (row != null) applyRemoteSession(row)
                             }
                             is PostgresAction.Update -> {
-                                val row = action.decodeRecord<ReadingSessionRow>()
-                                applyRemoteSession(row)
+                                val row = runCatching { action.decodeRecord<ReadingSessionRow>() }.getOrNull()
+                                if (row != null) applyRemoteSession(row)
                             }
                             is PostgresAction.Delete, is PostgresAction.Select -> { /* no-op */ }
                         }
