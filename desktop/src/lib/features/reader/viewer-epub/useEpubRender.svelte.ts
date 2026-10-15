@@ -272,7 +272,6 @@ export function buildReaderOverrideCss(opts: {
         font-size: ${effectiveFontSize}% !important;
         line-height: ${opts.lineHeight} !important;
         letter-spacing: ${opts.letterSpacing}px !important;
-        text-align: ${opts.textAlign} !important;
         direction: ${opts.direction} !important;
         hyphens: ${hyphensValue} !important;
         text-wrap: pretty !important;
@@ -287,14 +286,22 @@ export function buildReaderOverrideCss(opts: {
         margin: 0 auto !important;
         box-sizing: border-box !important;
       }
-      body p {
-        margin-bottom: ${opts.paragraphSpacing}em;
-        ${
-          // U6: spacing XOR indent. Book stylesheets that indent would double
-          // up with our paragraph spacing, so indent loses when spacing is on.
-          opts.paragraphSpacing > 0 ? 'text-indent: 0 !important;' : ''
-        }
+      /* Alignment must reach the text elements, not just body: EPUB stylesheets
+        routinely set text-align on p/div/headings, and those descend from body,
+        so a body-only rule loses. */
+      body p, body div, body li, body dd, body dt, body blockquote,
+      body h1, body h2, body h3, body h4, body h5, body h6 {
+        text-align: ${opts.textAlign} !important;
       }
+      /* Paragraph spacing carried no !important and was the only rule in this
+        block without it, so the book's own stylesheet won and the control did
+        nothing. Covers div-wrapped paragraphs too, which many EPUBs use. */
+      body p, body div > p, body p + p {
+        margin-bottom: ${opts.paragraphSpacing}em !important;
+      }
+      /* U6: spacing XOR indent. Book stylesheets that indent would double
+        up with our paragraph spacing, so indent loses when spacing is on. */
+      ${opts.paragraphSpacing > 0 ? 'body p, body div { text-indent: 0 !important; }' : ''}
       body pre {
         white-space: pre-wrap !important;
         overflow-x: auto !important;

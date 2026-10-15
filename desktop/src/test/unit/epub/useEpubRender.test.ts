@@ -241,6 +241,56 @@ describe('useEpubRender — pure helpers', () => {
       expect(css).toContain('max-height: 85vh');
       expect(css).toContain('overflow-x: auto');
     });
+
+    // ── Effect guard (wiring ODD) ──
+    // These assert the rule actually emitted for each control. The panel tests
+    // only proved the stored value changed, which is how a broken override
+    // shipped unnoticed: the setting moved and the page never did.
+    describe('every control emits the rule that changes the book', () => {
+      const base = {
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      };
+
+      it('alignment reaches text elements, not only body', () => {
+        const css = buildReaderOverrideCss({ ...base, textAlign: 'center' });
+        // A body-only rule loses to any EPUB stylesheet that sets it on p/div.
+        expect(css).toMatch(/body p,\s*body div[^{]*\{[^}]*text-align: center !important/);
+      });
+
+      it('paragraph spacing carries !important or the book stylesheet wins', () => {
+        const css = buildReaderOverrideCss({ ...base, paragraphSpacing: 2 });
+        expect(css).toMatch(/margin-bottom: 2em !important/);
+      });
+
+      it('paragraph spacing of 0 still emits !important and skips the indent reset', () => {
+        const css = buildReaderOverrideCss({ ...base, paragraphSpacing: 0 });
+        expect(css).toMatch(/margin-bottom: 0em !important/);
+        expect(css).not.toContain('text-indent: 0');
+      });
+
+      it('margins feed both axes independently into the padding', () => {
+        const css = buildReaderOverrideCss({
+          ...base,
+          margins: { top: 3, bottom: 3, left: 1, right: 1 },
+        });
+        expect(css).toContain('padding: 3rem 1rem 3rem 1rem !important');
+      });
+
+      it('line height and letter spacing land on the body', () => {
+        const css = buildReaderOverrideCss({ ...base, lineHeight: 2.2, letterSpacing: 3 });
+        expect(css).toContain('line-height: 2.2 !important');
+        expect(css).toContain('letter-spacing: 3px !important');
+      });
+    });
     it('type details: orphans, wrapping, spacing-xor-indent (U6)', () => {
       const spaced = buildReaderOverrideCss({
         fontSize: 100,
