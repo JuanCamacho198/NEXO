@@ -129,7 +129,29 @@ data class DiscoverUiState(
                 DiscoverSourceFilter.AllSources -> books
                 is DiscoverSourceFilter.Source -> books.filter { it.provider == filter.sourceId }
             }
+
+    /**
+     * IDLE rails narrowed in memory by the active [sourceFilter]. A rail whose
+     * books all belong to other sources collapses to [DiscoverRailState.Hidden]
+     * so a shelf never renders a bare header — the same silent-hide the rails
+     * already apply to an empty page. "All" returns [rails] untouched.
+     */
+    val visibleRails: List<DiscoverRailState>
+        get() =
+            when (val filter = sourceFilter) {
+                DiscoverSourceFilter.AllSources -> rails
+                is DiscoverSourceFilter.Source -> rails.map { rail -> rail.narrowTo(filter.sourceId) }
+            }
 }
+
+/** Rails carry no source filter of their own, so narrowing is a presentation concern. */
+private fun DiscoverRailState.narrowTo(sourceId: String): DiscoverRailState =
+    if (this !is DiscoverRailState.Loaded) {
+        this
+    } else {
+        val matching = books.filter { it.provider == sourceId }
+        if (matching.isEmpty()) DiscoverRailState.Hidden else copy(books = matching)
+    }
 
 class DiscoverViewModel(
     private val catalogProvider: CatalogProvider,

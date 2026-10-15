@@ -50,7 +50,7 @@ open class GutendexCatalogProvider(
 
     override fun listSources(): List<CatalogSourceInfo> =
         listOf(
-            CatalogSourceInfo(BUILTIN_GUTENDEX, "Gutendex", CatalogSourceKind.BUILTIN),
+            CatalogSourceInfo(BUILTIN_GUTENDEX, PROVIDER_LABEL_GUTENDEX, CatalogSourceKind.BUILTIN),
         )
 }
 
@@ -83,6 +83,6 @@ open class OpenLibraryCatalogProvider(
 
     override fun listSources(): List<CatalogSourceInfo> =
         listOf(
-            CatalogSourceInfo(BUILTIN_OPENLIBRARY, "Open Library", CatalogSourceKind.BUILTIN),
+            CatalogSourceInfo(BUILTIN_OPENLIBRARY, PROVIDER_LABEL_OPENLIBRARY, CatalogSourceKind.BUILTIN),
         )
 }

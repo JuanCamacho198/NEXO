@@ -560,6 +560,7 @@ export const messagesEn = {
   'discover.onlineSources': 'Online · {{count}} sources',
   'discover.offlineLabel': 'Offline',
   'discover.trending': 'Trending topics',
+  'discover.sourceFilter.all': 'All sources',
   'discover.searchResults': 'Search results',
   'discover.rail.newest': 'Recently added',
   'discover.rail.popular': 'Popular',

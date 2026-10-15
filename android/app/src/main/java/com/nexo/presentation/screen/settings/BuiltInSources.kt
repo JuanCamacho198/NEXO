@@ -1,6 +1,8 @@
 package com.nexo.presentation.screen.settings
 
 import com.nexo.R
+import com.nexo.data.remote.catalog.PROVIDER_LABEL_GUTENDEX
+import com.nexo.data.remote.catalog.PROVIDER_LABEL_OPENLIBRARY
 
 /**
  * U4: static read-only built-in source entries (Fuentes integradas).
@@ -19,6 +21,6 @@ data class BuiltInSource(
 /** Static list rendered by [BuiltInSourcesSection]; no backend, no registry. */
 val builtInSources =
     listOf(
-        BuiltInSource("Gutendex", R.string.settings_addons_builtin_gutendex_role),
-        BuiltInSource("Open Library", R.string.settings_addons_builtin_openlibrary_role),
+        BuiltInSource(PROVIDER_LABEL_GUTENDEX, R.string.settings_addons_builtin_gutendex_role),
+        BuiltInSource(PROVIDER_LABEL_OPENLIBRARY, R.string.settings_addons_builtin_openlibrary_role),
     )

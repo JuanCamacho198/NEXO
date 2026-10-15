@@ -568,6 +568,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'discover.onlineSources': 'En línea · {{count}} fuentes',
   'discover.offlineLabel': 'Sin conexión',
   'discover.trending': 'Temas en tendencia',
+  'discover.sourceFilter.all': 'Todas las fuentes',
   'discover.searchResults': 'Resultados de búsqueda',
   'discover.rail.newest': 'Recién agregados',
   'discover.rail.popular': 'Populares',
