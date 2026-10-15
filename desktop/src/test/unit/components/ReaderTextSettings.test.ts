@@ -227,14 +227,21 @@ describe('ReaderTextSettings (U4) — selects and switches', () => {
     );
   });
 
-  it('offers named margin presets instead of a lone left value', async () => {
-    renderEpub();
-    const container = document.body;
-    await openDropdown(triggerOf(container, 'margins-select'));
-    const opts = screen.getAllByRole('option').map((o) => o.textContent?.trim());
-    expect(opts.length).toBe(5);
-    expect(opts[0]).toBe('reader.margin_compact');
-    await pickOption('reader.margin_compact');
+  it('adjusts horizontal and vertical margins independently', async () => {
+    const props = renderEpub();
+    const horizontal = screen.getByTestId('margins-horizontal') as HTMLInputElement;
+    const vertical = screen.getByTestId('margins-vertical') as HTMLInputElement;
+
+    await fireEvent.input(horizontal, { target: { value: '3' } });
+    expect(props.onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ margins: expect.objectContaining({ left: 3, right: 3 }) }),
+    );
+
+    props.onSettingsChange.mockClear();
+    await fireEvent.input(vertical, { target: { value: '0.5' } });
+    expect(props.onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ margins: expect.objectContaining({ top: 0.5, bottom: 0.5 }) }),
+    );
   });
 
   it('toggles hyphenation through a real switch', async () => {
@@ -245,10 +252,10 @@ describe('ReaderTextSettings (U4) — selects and switches', () => {
     );
   });
 
-  it('exposes four atom-backed selects with a listbox trigger', () => {
+  it('exposes three atom-backed selects with a listbox trigger', () => {
     renderEpub();
     const container = document.body;
-    for (const id of ['direction-select', 'alignment-select', 'margins-select', 'spacing-select']) {
+    for (const id of ['direction-select', 'alignment-select', 'spacing-select']) {
       expect(triggerOf(container, id).getAttribute('aria-haspopup')).toBe('listbox');
     }
   });

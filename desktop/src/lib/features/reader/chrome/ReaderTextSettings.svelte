@@ -15,8 +15,7 @@
     READER_BRIGHTNESS_MIN,
     useReaderTextSettings,
   } from './useReaderTextSettings.svelte';
-  import { FONT_FAMILY_PRESETS } from './readerTextPresets';
-  import { MARGIN_PRESETS, PARAGRAPH_SPACING_PRESETS } from './readerTextPresets';
+  import { FONT_FAMILY_PRESETS, PARAGRAPH_SPACING_PRESETS } from './readerTextPresets';
 
   type Props = {
     open: boolean;
@@ -97,20 +96,27 @@
     textSettings.resetToDefaults();
   }
 
-  const MARGIN_LABEL_KEYS: Array<MessageKey> = [
-    'reader.margin_compact',
-    'reader.margin_cozy',
-    'reader.margin_comfortable',
-    'reader.margin_roomy',
-    'reader.margin_expansive',
-  ];
+  /** Horizontal margin is the left/right pair; vertical is top/bottom. */
+  function horizontalMargin(): number {
+    return readerSettings.margins.left;
+  }
 
-  function marginIndex(): number {
-    const m = readerSettings.margins;
-    const i = MARGIN_PRESETS.findIndex(
-      (p) => p.top === m.top && p.bottom === m.bottom && p.left === m.left && p.right === m.right,
-    );
-    return i < 0 ? 2 : i;
+  function verticalMargin(): number {
+    return readerSettings.margins.top;
+  }
+
+  function setHorizontalMargin(value: number): void {
+    onSettingsChange({
+      ...readerSettings,
+      margins: { ...readerSettings.margins, left: value, right: value },
+    });
+  }
+
+  function setVerticalMargin(value: number): void {
+    onSettingsChange({
+      ...readerSettings,
+      margins: { ...readerSettings.margins, top: value, bottom: value },
+    });
   }
 </script>
 
@@ -173,6 +179,33 @@
         {/snippet}
       </Dropdown>
     </div>
+  </div>
+{/snippet}
+
+{#snippet marginSlider(
+  label: string,
+  value: number,
+  testid: string,
+  oninput: (value: number) => void,
+)}
+  <!-- Two axes instead of five named bundles: "Cómodo" never said how much, and
+    a reader who wants wide margins but tight leading had no way to say it. -->
+  <div class="flex flex-col gap-1.5">
+    <div class="flex items-center justify-between">
+      <span class="text-sm text-(--color-text-muted)">{label}</span>
+      <span class="text-xs text-(--color-accent-blue)">{value.toFixed(1)}rem</span>
+    </div>
+    <input
+      type="range"
+      min="0"
+      max="4"
+      step="0.25"
+      {value}
+      data-testid={testid}
+      oninput={(e) => oninput(Number((e.currentTarget as HTMLInputElement).value))}
+      class="slider-thumb w-full cursor-pointer accent-(--color-accent-blue)"
+      aria-label={label}
+    />
   </div>
 {/snippet}
 
@@ -267,19 +300,17 @@
               (v) => onSettingsChange({ ...readerSettings, textAlign: v as ReaderTextAlign }),
               'alignment-select',
             )}
-            {@render selectRow(
-              t('reader.margins'),
-              String(marginIndex()),
-              MARGIN_PRESETS.map((m, i) => ({
-                value: String(i),
-                label: t(MARGIN_LABEL_KEYS[i] ?? 'reader.margin_comfortable'),
-              })),
-              (v) =>
-                onSettingsChange({
-                  ...readerSettings,
-                  margins: { ...(MARGIN_PRESETS[Number(v)] ?? MARGIN_PRESETS[2]) },
-                }),
-              'margins-select',
+            {@render marginSlider(
+              t('reader.margin_horizontal'),
+              horizontalMargin(),
+              'margins-horizontal',
+              setHorizontalMargin,
+            )}
+            {@render marginSlider(
+              t('reader.margin_vertical'),
+              verticalMargin(),
+              'margins-vertical',
+              setVerticalMargin,
             )}
             {@render selectRow(
               t('reader.paragraph_spacing'),
@@ -290,7 +321,7 @@
             )}
           </div>
           <div class="flex flex-col gap-4">
-            {@render sectionTitle(t('reader.section_language'))}
+            {@render sectionTitle(t('reader.section_writing'))}
             {@render selectRow(
               t('reader.direction'),
               readerSettings.direction,
