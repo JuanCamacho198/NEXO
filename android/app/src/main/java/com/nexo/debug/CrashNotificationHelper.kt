@@ -114,6 +114,5 @@ object CrashNotificationHelper {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun jsonObjectToMap(obj: JSONObject): Map<String, Any?> =
-        obj.keys().asSequence().associateWith { key -> obj.opt(key) }
+    private fun jsonObjectToMap(obj: JSONObject): Map<String, Any?> = obj.keys().asSequence().associateWith { key -> obj.opt(key) }
 }

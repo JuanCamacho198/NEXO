@@ -244,8 +244,7 @@ class PerformanceViewModel(
             outFile
         }.getOrNull()
 
-    private fun loadCrashEntries(): List<DebugErrorEntry> =
-        DebugToolkit.recentErrors(File(appContext.cacheDir, "crashes"))
+    private fun loadCrashEntries(): List<DebugErrorEntry> = DebugToolkit.recentErrors(File(appContext.cacheDir, "crashes"))
 
     private fun nowLabel(): String = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 

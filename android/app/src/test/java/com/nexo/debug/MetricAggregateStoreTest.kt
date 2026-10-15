@@ -21,6 +21,7 @@ class MetricAggregateStoreTest {
     fun `p50 and p95 survive a simulated restart`() {
         val file = tempFolder.newFile("metric_aggregates.json")
         val tags = mapOf("platform" to "android", "source" to "app_shell")
+
         fun bucket(ms: Long) = SentryMetrics.bucketDurationMs(ms)
 
         // ── Process 1: record then flush via the installed store. ──
@@ -74,6 +75,7 @@ class MetricAggregateStoreTest {
     fun `a fresh session's samples win over the persisted aggregate`() {
         val file = tempFolder.newFile("metric_aggregates.json")
         val tags = mapOf("platform" to "android", "source" to "app_shell")
+
         fun bucket(ms: Long) = SentryMetrics.bucketDurationMs(ms)
 
         SentryMetrics.clearForTest()
