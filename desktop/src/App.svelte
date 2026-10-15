@@ -25,13 +25,23 @@
     runStartupUpdateCheck,
   } from '$lib/features/settings/update/updateChecker';
 
-  onMount(() => {
+  // Resolved at module load, not in onMount: `osType()` is synchronous, and
+  // waiting for the mount effect left a window where the `{#if}` was false. In
+  // that window the window has no OS chrome (`decorations: false`) and no
+  // controls of our own, so a slow or failed mount showed a window that could
+  // not be closed. Resolving first means the first paint is already correct.
+  function resolveCustomTitlebar(): boolean {
     try {
-      titlebarState.isCustomTitlebar = isCustomTitlebarPlatform(osType());
-    } catch {
-      titlebarState.isCustomTitlebar = false;
+      return isCustomTitlebarPlatform(osType());
+    } catch (err) {
+      // Never swallow this silently: without it the reason a user sees no
+      // window controls is invisible in the logs.
+      logger.warn('custom titlebar disabled: osType() failed', { error: String(err) }, 'app_shell');
+      return false;
     }
-  });
+  }
+
+  titlebarState.isCustomTitlebar = resolveCustomTitlebar();
 
   onMount(() => {
     appState.init();
