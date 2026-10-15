@@ -5,13 +5,15 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** NOTIF-03: exactly-once in-app toast dispatch, honoring the resolution. */
+/** NOTIF-03/04: exactly-once toast AND OS dispatch, honoring the resolution. */
 class NotificationSurfacesTest {
     private val notifications = mutableListOf<ToastRequest>()
+    private val postedOs = mutableListOf<Notification>()
 
     private fun surfaces() =
         NotificationSurfaces(
             ToastSink { notifications.add(it) },
+            OsNotifier { postedOs.add(it) },
         )
 
     private fun notification(
@@ -30,12 +32,13 @@ class NotificationSurfacesTest {
     private fun resolution(
         accepted: Boolean = true,
         toast: Boolean = true,
+        os: Boolean = false,
     ) = PolicyResolution(
         accepted = accepted,
         reason = null,
         category = Category.SYSTEM,
-        interruption = Interruption.IN_APP,
-        delivery = DeliveryDecision(tray = true, toast = toast, os = false),
+        interruption = if (os) Interruption.SYSTEM else Interruption.IN_APP,
+        delivery = DeliveryDecision(tray = true, toast = toast, os = os),
     )
 
     @Test
@@ -88,5 +91,62 @@ class NotificationSurfacesTest {
         assertEquals(ToastType.ERROR, NotificationSurfaces.toastTypeFor(Severity.ERROR))
         assertEquals(ToastType.INFO, NotificationSurfaces.toastTypeFor(Severity.INFO))
         assertEquals(ToastType.INFO, NotificationSurfaces.toastTypeFor(Severity.WARNING))
+    }
+
+    // ── OS surface (U7) ─────────────────────────────────────────────
+
+    @Test
+    fun `os and toast both fire exactly once when both are allowed`() {
+        val surfaces = surfaces()
+        assertTrue(surfaces.dispatch(notification(), resolution(toast = true, os = true)))
+        assertEquals(1, notifications.size)
+        assertEquals(1, postedOs.size)
+    }
+
+    @Test
+    fun `second dispatch of the same id fires neither surface`() {
+        val surfaces = surfaces()
+        surfaces.dispatch(notification(), resolution(toast = true, os = true))
+        assertFalse(surfaces.dispatch(notification(), resolution(toast = true, os = true)))
+        assertEquals(1, notifications.size)
+        assertEquals(1, postedOs.size)
+    }
+
+    @Test
+    fun `a resolution that forbids the os fires no os but may still toast`() {
+        val surfaces = surfaces()
+        assertTrue(surfaces.dispatch(notification(), resolution(toast = true, os = false)))
+        assertTrue(postedOs.isEmpty())
+        assertEquals(1, notifications.size)
+    }
+
+    @Test
+    fun `os-only fires no toast`() {
+        val surfaces = surfaces()
+        assertTrue(surfaces.dispatch(notification(), resolution(toast = false, os = true)))
+        assertTrue(notifications.isEmpty())
+        assertEquals(1, postedOs.size)
+    }
+
+    @Test
+    fun `a rejected resolution fires no os`() {
+        val surfaces = surfaces()
+        assertFalse(surfaces.dispatch(notification(), resolution(accepted = false, toast = false, os = false)))
+        assertTrue(postedOs.isEmpty())
+    }
+
+    @Test
+    fun `surfaces without an os notifier never post`() {
+        val surfaces = NotificationSurfaces(ToastSink { notifications.add(it) })
+        assertTrue(surfaces.dispatch(notification(), resolution(toast = true, os = true)))
+        assertTrue(postedOs.isEmpty())
+        assertEquals(1, notifications.size)
+    }
+
+    @Test
+    fun `os carries the notification verbatim so the adapter can render its key`() {
+        val surfaces = surfaces()
+        surfaces.dispatch(notification(), resolution(toast = false, os = true))
+        assertEquals("notifications.event.sync.success", postedOs.single().i18nKey)
     }
 }

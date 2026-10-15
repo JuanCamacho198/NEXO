@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.nexo.data.remote.supabase.SupabaseClientProvider
 import com.nexo.data.session.AppThemePreferences
+import com.nexo.data.session.NotificationPermissionPrefs
 import com.nexo.debug.CrashNotificationHelper
 import com.nexo.debug.DebugLog
 import com.nexo.debug.DebugPrefs
@@ -78,13 +79,19 @@ class MainActivity : AppCompatActivity() {
             authViewModel.uiState.value.isCheckingSession
         }
 
-        // Debug-only: capture pending crash from previous run, ensure the
-        // notification channel exists, and request POST_NOTIFICATIONS on 33+.
+        // Debug-only: capture pending crash from previous run + ensure the debug
+        // crash channel exists.
         if (BuildConfig.DEBUG && DebugPrefs.isEnabled(this)) {
             CrashNotificationHelper.ensureChannel(this)
             CrashNotificationHelper.showCrashNotificationIfAny(this)
-            maybeRequestNotificationPermission()
         }
+
+        // Real startup path: request POST_NOTIFICATIONS once on API 33+. Denial
+        // never blocks the app — the in-app tray and toasts keep working and
+        // only the OS surface is unavailable. The request is one-shot per
+        // install (a flag in NotificationPermissionPrefs), so a user who denied
+        // is not nagged on every launch.
+        maybeRequestNotificationPermission()
 
         // Next-launch prompt (PR4 / task 4.3b): if the previous run captured
         // a crash and persisted the Sentry eventId but the user never dismissed
@@ -206,15 +213,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun maybeRequestNotificationPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (NotificationPermissionPrefs.wasRequested(this)) return
         val granted =
             ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.POST_NOTIFICATIONS,
             ) == PackageManager.PERMISSION_GRANTED
-        if (!granted) {
-            runCatching {
-                requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+        if (granted) return
+        // Record BEFORE launching: a launch that the user dismisses without
+        // answering still counts as "asked", so we never re-prompt on the next
+        // cold start (no nagging).
+        NotificationPermissionPrefs.markRequested(this)
+        runCatching {
+            requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 

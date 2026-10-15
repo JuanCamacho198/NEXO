@@ -49,6 +49,7 @@ import com.nexo.ui.components.atoms.NexoSnackbar
 import com.nexo.ui.components.molecules.BottomNavItem
 import com.nexo.ui.components.molecules.NexoBottomNavBar
 import com.nexo.ui.icons.NexoIcons
+import kotlinx.coroutines.launch
 
 /**
  * Max time an import may stay non-Idle before the overlay watchdog force-
@@ -144,7 +145,21 @@ fun NexoNavHost(
         importEvents = libraryViewModel.importEvents,
         snackbarHostState = snackbarHostState,
         syncService = appContainer.syncService,
+        notificationStore = appContainer.notificationStore,
     )
+
+    // NOTIF: load persisted history once, then present store-delivered toasts
+    // through the shared snackbar host so the tray and toast share one surface.
+    LaunchedEffect(appContainer) {
+        appContainer.notificationStore.ensureLoaded()
+    }
+    LaunchedEffect(appContainer) {
+        appContainer.notificationToastBus.events.collect { event ->
+            if (event is com.nexo.presentation.UiEvent.ShowToast) {
+                snackbarHostState.showSnackbar(event.message)
+            }
+        }
+    }
 
     // ── Addon install deep-link dialog (nextpage://install) ─────────────
     AddonInstallDialogHost(controller = appContainer.installDeepLinkController)
@@ -262,11 +277,37 @@ fun NexoNavHost(
                             navController = navController,
                             homeViewModel = homeViewModel,
                             libraryViewModel = libraryViewModel,
+                            notificationHistory = appContainer.notificationRepository,
                             contentPadding = innerPadding,
                             onSelectBook = { id, path, format ->
                                 selectedBookId = id
                                 selectedBookFilePath = path
                                 selectedBookFormat = format
+                            },
+                            onOpenNotification = { notification ->
+                                resolveNotificationTarget(notification)?.let { destination ->
+                                    when (destination) {
+                                        is ResolvedNotificationTarget.Book -> {
+                                            scope.launch {
+                                                val book = appContainer.libraryRepository.getBookById(destination.bookId)
+                                                if (book != null) {
+                                                    selectedBookId = book.id
+                                                    selectedBookFilePath = book.filePath
+                                                    selectedBookFormat = book.format
+                                                    navController.navigate("book_detail/${book.id}") {
+                                                        launchSingleTop = true
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        is ResolvedNotificationTarget.Route -> {
+                                            destination.settingsInitialRoute?.let { settingsInitialRoute = it }
+                                            navController.navigate(destination.rootRoute.route) {
+                                                launchSingleTop = true
+                                            }
+                                        }
+                                    }
+                                }
                             },
                             onSettingsInitialRoute = { route -> settingsInitialRoute = route },
                         )

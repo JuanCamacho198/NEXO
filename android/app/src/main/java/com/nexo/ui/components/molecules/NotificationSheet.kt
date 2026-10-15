@@ -1,6 +1,7 @@
 package com.nexo.ui.components.molecules
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,88 +27,56 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
+import com.nexo.domain.notification.Category
+import com.nexo.domain.notification.Interruption
+import com.nexo.domain.notification.Notification
+import com.nexo.domain.notification.NotificationGroup
+import com.nexo.domain.notification.NotificationRouteTarget
+import com.nexo.domain.notification.NotificationSource
+import com.nexo.domain.notification.NotificationTarget
+import com.nexo.domain.notification.NotificationTimestamp
+import com.nexo.domain.notification.Severity
+import com.nexo.domain.notification.groupNotifications
+import com.nexo.presentation.notification.UiEventToastSink
 import com.nexo.presentation.theme.NexoTheme
 import com.nexo.ui.components.atoms.NexoDivider
 import com.nexo.ui.icons.NexoIcons
 
 /**
- * Plain-data model for a single row in [NotificationSheet].
+ * Modal bottom sheet showing the real notification tray.
  *
- * @property id Stable identifier (string) for the row. Currently
- *   used only as a key for the row's `Compose` identity.
- * @property icon Leading icon shown in a circular tinted badge.
- * @property title Notification headline. Rendered in
- *   `bodyLarge` semibold when [isUnread] is `true`, normal weight
- *   otherwise. Capped at 1 line with ellipsis.
- * @property body Notification body. Rendered in `bodyMedium`
- *   `onSurfaceVariant`, capped at 2 lines with ellipsis.
- * @property isUnread When `true`, an 8dp `colorScheme.primary` dot
- *   is rendered to the right of the body. Defaults to `true` (most
- *   notifications are unread when first shown).
- */
-data class NotificationItem(
-    val id: String,
-    val icon: ImageVector,
-    val title: String,
-    val body: String,
-    val isUnread: Boolean = true,
-)
-
-/**
- * Modal bottom sheet that shows a list of in-app notifications.
- * Currently uses three hard-coded "mock" notifications (welcome,
- * reading streak, library); the data list lives inside the
- * composable and is not parameterized.
+ * Rows are grouped by `source::i18nKey` (see [groupNotifications]); the newest
+ * entry of a group is the representative and the row shows the group's count.
+ * Tapping a row marks the whole group read and, when the target resolves,
+ * deep-links through [onOpen]; an unresolved target is a safe no-op that leaves
+ * the row read on the tray.
  *
- * @param onDismiss Invoked on swipe-down, scrim-tap, back-press, or
- *   when the user taps the close X in the header. The sheet does
- *   NOT auto-dismiss on item tap (rows are non-interactive in the
- *   current design).
+ * The message is rendered from the STORED `i18nKey` + `i18nParams` at display
+ * time (never a resolved string), so a language switch re-renders history.
  *
- * **Visual**: standard Material 3 `ModalBottomSheet` with
- *   `surface` background and 16dp top corners. Header: "Notifications"
- *   `titleLarge` bold + close X. Below: a `NexoDivider`, then
- *   3 rows of `NotificationRow` (icon badge + title + body + unread
- *   dot), separated by dividers (except after the last row).
- * **Behavior**: tap any row → no-op (rows are display-only).
- *   Tap the close X or swipe → [onDismiss].
- * **Recomposition**: recomposes when [onDismiss] changes. The
- *   mock notification list is rebuilt on every composition.
+ * @param groups Grouped tray entries, newest group first (the caller groups so
+ *   the composable stays a pure renderer).
+ * @param onOpen Invoked with the group's representative when its target
+ *   resolves; the caller decides how to navigate.
+ * @param onDismiss Invoked on swipe-down, scrim-tap, back-press or the close X.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationSheet(
+    groups: List<NotificationGroup>,
+    onOpen: (Notification) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    val mockNotifications =
-        listOf(
-            NotificationItem(
-                id = "1",
-                icon = NexoIcons.Trophy,
-                title = stringResource(R.string.notifications_mock_welcome_title),
-                body = stringResource(R.string.notifications_mock_welcome_body),
-            ),
-            NotificationItem(
-                id = "2",
-                icon = NexoIcons.ChartLine,
-                title = stringResource(R.string.notifications_mock_streak_title),
-                body = stringResource(R.string.notifications_mock_streak_body),
-            ),
-            NotificationItem(
-                id = "3",
-                icon = NexoIcons.LibraryBooks,
-                title = stringResource(R.string.notifications_mock_library_title),
-                body = stringResource(R.string.notifications_mock_library_body),
-            ),
-        )
+    val now = System.currentTimeMillis()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -123,7 +92,6 @@ fun NotificationSheet(
                     .padding(bottom = 32.dp)
                     .verticalScroll(rememberScrollState()),
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -146,7 +114,7 @@ fun NotificationSheet(
             NexoDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (mockNotifications.isEmpty()) {
+            if (groups.isEmpty()) {
                 Text(
                     text = stringResource(R.string.notifications_empty),
                     style = MaterialTheme.typography.bodyLarge,
@@ -154,12 +122,14 @@ fun NotificationSheet(
                     modifier = Modifier.padding(vertical = 24.dp),
                 )
             } else {
-                mockNotifications.forEach { notification ->
-                    NotificationRow(item = notification)
-                    if (notification != mockNotifications.last()) {
-                        NexoDivider(
-                            modifier = Modifier.padding(vertical = 4.dp),
-                        )
+                groups.forEachIndexed { index, group ->
+                    NotificationRow(
+                        group = group,
+                        nowMs = now,
+                        onClick = { if (group.representative.target != null) onOpen(group.representative) },
+                    )
+                    if (index != groups.lastIndex) {
+                        NexoDivider(modifier = Modifier.padding(vertical = 4.dp))
                     }
                 }
             }
@@ -169,17 +139,29 @@ fun NotificationSheet(
 
 @Composable
 private fun NotificationRow(
-    item: NotificationItem,
+    group: NotificationGroup,
+    nowMs: Long,
+    onClick: () -> Unit,
 ) {
+    val notification = group.representative
+    val context = LocalContext.current
+    val message =
+        UiEventToastSink.format(
+            context = context,
+            i18nKey = notification.i18nKey,
+            params = notification.i18nParams,
+        )
+    val interactive = notification.target != null
+
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .then(if (interactive) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
                 .padding(vertical = 12.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Icon circle
         Box(
             modifier =
                 Modifier
@@ -189,34 +171,38 @@ private fun NotificationRow(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = item.icon,
+                imageVector = iconFor(notification),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(22.dp),
             )
         }
 
-        // Title + body
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = item.title,
+                text = message,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (item.isUnread) FontWeight.SemiBold else FontWeight.Normal,
-                maxLines = 1,
+                fontWeight = if (group.isUnread) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = item.body,
-                style = MaterialTheme.typography.bodyMedium,
+                text = relativeLabel(notification.createdAt, nowMs),
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
             )
         }
 
-        // Unread dot
-        if (item.isUnread) {
+        if (group.count > 1) {
+            Text(
+                text = stringResource(R.string.notifications_group_count, group.count),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (group.isUnread) {
             Box(
                 modifier =
                     Modifier
@@ -229,18 +215,70 @@ private fun NotificationRow(
     }
 }
 
+@Composable
+private fun relativeLabel(
+    createdAt: Long,
+    nowMs: Long,
+): String {
+    val relative = NotificationTimestamp.relative(createdAt, nowMs)
+    return when (relative.bucket) {
+        NotificationTimestamp.Bucket.JUST_NOW -> stringResource(R.string.notifications_time_now)
+        NotificationTimestamp.Bucket.MINUTES -> stringResource(R.string.notifications_time_minutes, relative.amount.toInt())
+        NotificationTimestamp.Bucket.HOURS -> stringResource(R.string.notifications_time_hours, relative.amount.toInt())
+        NotificationTimestamp.Bucket.DAYS -> stringResource(R.string.notifications_time_days, relative.amount.toInt())
+    }
+}
+
+private fun iconFor(notification: Notification): ImageVector =
+    when (notification.source) {
+        NotificationSource.IMPORT -> NexoIcons.CloudDownload
+        NotificationSource.SYNC -> NexoIcons.Sync
+        NotificationSource.STREAK, NotificationSource.GOAL -> NexoIcons.Trophy
+        NotificationSource.LIBRARY, NotificationSource.ADDONS -> NexoIcons.LibraryBooks
+        NotificationSource.UPDATE -> NexoIcons.Info
+    }
+
 @Preview(showBackground = true)
 @Composable
 private fun NotificationSheetDarkPreview() {
     NexoTheme(darkTheme = true) {
-        NotificationSheet(onDismiss = {})
+        NotificationSheet(
+            groups =
+                groupNotifications(
+                    listOf(
+                        Notification(
+                            id = "1",
+                            createdAt = System.currentTimeMillis() - 120_000,
+                            source = NotificationSource.IMPORT,
+                            category = Category.SYSTEM,
+                            severity = Severity.SUCCESS,
+                            interruption = Interruption.SILENT,
+                            i18nKey = "notifications.event.import.success",
+                            i18nParams = mapOf("p1" to "La Odisea"),
+                        ),
+                        Notification(
+                            id = "2",
+                            createdAt = System.currentTimeMillis() - 3_600_000,
+                            source = NotificationSource.SYNC,
+                            category = Category.SYSTEM,
+                            severity = Severity.ERROR,
+                            interruption = Interruption.IN_APP,
+                            i18nKey = "notifications.event.sync.error",
+                            i18nParams = mapOf("p1" to "offline"),
+                            target = NotificationTarget.Route(NotificationRouteTarget.SYNC),
+                        ),
+                    ),
+                ),
+            onOpen = {},
+            onDismiss = {},
+        )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun NotificationSheetLightPreview() {
+private fun NotificationSheetEmptyPreview() {
     NexoTheme(darkTheme = false) {
-        NotificationSheet(onDismiss = {})
+        NotificationSheet(groups = emptyList(), onOpen = {}, onDismiss = {})
     }
 }

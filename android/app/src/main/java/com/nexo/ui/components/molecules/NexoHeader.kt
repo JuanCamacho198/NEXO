@@ -1,16 +1,21 @@
 package com.nexo.ui.components.molecules
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +48,10 @@ import com.nexo.ui.icons.NexoIcons
  *   the search icon is not rendered.
  * @param onNotificationsClick Optional notifications-button callback.
  *   When `null`, the bell icon is not rendered.
+ * @param unreadNotificationsCount When > 0, a small primary-coloured badge
+ *   with the count is drawn on the notifications bell and the bell's a11y
+ *   label switches to `notifications_badge_content_description`. Default `0`
+ *   (no badge).
  * @param trailingActions Additional icon buttons rendered after the
  *   built-in search/notifications buttons. Each pair is
  *   `(icon, onClick)`. The `contentDescription` for these is
@@ -68,6 +77,7 @@ fun NexoHeader(
     avatarContentDescription: String? = null,
     onSearchClick: (() -> Unit)? = null,
     onNotificationsClick: (() -> Unit)? = null,
+    unreadNotificationsCount: Int = 0,
     trailingActions: List<Pair<ImageVector, () -> Unit>> = emptyList(),
 ) {
     Row(
@@ -105,12 +115,30 @@ fun NexoHeader(
                 )
             }
             onNotificationsClick?.let {
-                NexoIconButton(
-                    icon = NexoIcons.Notifications,
-                    contentDescription = stringResource(R.string.notifications_title),
-                    onClick = it,
-                    size = 40.dp,
-                )
+                Box {
+                    NexoIconButton(
+                        icon = NexoIcons.Notifications,
+                        contentDescription =
+                            if (unreadNotificationsCount > 0) {
+                                stringResource(R.string.notifications_badge_content_description)
+                            } else {
+                                stringResource(R.string.notifications_title)
+                            },
+                        onClick = it,
+                        size = 40.dp,
+                    )
+                    if (unreadNotificationsCount > 0) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 4.dp, end = 4.dp)
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.error),
+                        )
+                    }
+                }
             }
             trailingActions.forEach { (icon, onClick) ->
                 NexoIconButton(

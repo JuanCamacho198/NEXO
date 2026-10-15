@@ -21,20 +21,34 @@ fun interface ToastSink {
 }
 
 /**
- * In-app notification surfaces with exactly-once dispatch (NOTIF-03).
+ * Injectable OS-notification sink (NOTIF-04). The Android adapter owns the
+ * channel + `NotificationManagerCompat`; the domain layer only decides WHEN to
+ * post and hands over the notification verbatim so the surface stays testable
+ * on the JVM.
+ */
+fun interface OsNotifier {
+    fun post(notification: Notification)
+}
+
+/**
+ * Notification surfaces with exactly-once dispatch per surface (NOTIF-03/04).
  *
  * Routes one accepted notification to exactly the surfaces its policy
- * resolution allows. This slice owns the toast path only; [dispatch] is shaped
- * so the OS surface (interruption `system` + app not foregrounded) slots in
- * later without rework — a second `markDelivered(id, "os")` guarded branch.
+ * resolution allows: at most one toast AND at most one OS notification, each
+ * only when the resolution permits it ([PolicyResolution.delivery]).
  *
  * A per-surface delivered set keyed by `"${id}:${surface}"` makes a
  * double-dispatch of the same event impossible even if [dispatch] is
- * re-entered, and a resolution with `delivery.toast == false` never fires.
- * The tray is the caller's job (the entry is already stored).
+ * re-entered, and a resolution with `delivery.toast == false` (respectively
+ * `delivery.os == false`) never fires that surface. The tray is the caller's
+ * job (the entry is already stored).
+ *
+ * [osNotifier] is optional so a JVM-only caller (or the toast-only slice) can
+ * construct the surfaces without an Android-backed poster.
  */
 class NotificationSurfaces(
     private val toastSink: ToastSink,
+    private val osNotifier: OsNotifier? = null,
 ) {
     /** Keys of already-delivered (notification id, surface) pairs. */
     private val delivered = mutableSetOf<String>()
@@ -49,14 +63,24 @@ class NotificationSurfaces(
     }
 
     /**
-     * Fires at most one toast per notification and never a surface the
-     * resolution forbids. Returns true when a toast was emitted.
+     * Fires at most one toast and at most one OS notification per notification,
+     * never a surface the resolution forbids. Returns true when ANY surface was
+     * emitted (so a caller can tell a delivery from a no-op).
      */
     fun dispatch(
         notification: Notification,
         resolution: PolicyResolution,
     ): Boolean {
         if (!resolution.accepted) return false
+        val toasted = dispatchToast(notification, resolution)
+        val posted = dispatchOs(notification, resolution)
+        return toasted || posted
+    }
+
+    private fun dispatchToast(
+        notification: Notification,
+        resolution: PolicyResolution,
+    ): Boolean {
         if (!resolution.delivery.toast) return false
         if (!markDelivered(notification.id, SURFACE_TOAST)) return false
         toastSink.push(
@@ -69,11 +93,23 @@ class NotificationSurfaces(
         return true
     }
 
+    private fun dispatchOs(
+        notification: Notification,
+        resolution: PolicyResolution,
+    ): Boolean {
+        val notifier = osNotifier ?: return false
+        if (!resolution.delivery.os) return false
+        if (!markDelivered(notification.id, SURFACE_OS)) return false
+        notifier.post(notification)
+        return true
+    }
+
     /** Test seam: forgets delivered keys so a fresh dispatch can fire. */
     fun reset() = delivered.clear()
 
     companion object {
         const val SURFACE_TOAST: String = "toast"
+        const val SURFACE_OS: String = "os"
 
         fun toastTypeFor(severity: Severity): ToastType =
             when (severity) {

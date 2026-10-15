@@ -115,6 +115,64 @@ class AppContainer(
         NotificationRepository(databaseModule.notificationDao)
     }
 
+    /**
+     * U9: persisted notification preferences (system/nudge switches + quiet
+     * hours), SharedPreferences-backed like the other app preferences.
+     */
+    val notificationPreferencesStore: com.nexo.data.session.NotificationPreferencesStore by lazy {
+        com.nexo.data.session
+            .NotificationPreferencesStore(appContext)
+    }
+
+    /** U7: process-wide toast requests the nav host presents. */
+    val notificationToastBus: com.nexo.presentation.notification.NotificationToastBus by lazy {
+        com.nexo.presentation.notification
+            .NotificationToastBus()
+    }
+
+    private val notificationToastSink: com.nexo.domain.notification.ToastSink by lazy {
+        com.nexo.presentation.notification.UiEventToastSink(
+            emit = { event -> notificationToastBus.publish(event) },
+            resolveMessage = { request ->
+                com.nexo.presentation.notification.UiEventToastSink.format(
+                    context = appContext,
+                    i18nKey = request.i18nKey,
+                    params = request.i18nParams,
+                )
+            },
+        )
+    }
+
+    /**
+     * U7: process-wide foreground signal (process lifecycle). The observer
+     * attaches on first access so container construction never touches
+     * ProcessLifecycleOwner.
+     */
+    val appForegroundSignal: com.nexo.domain.notification.AppForegroundSignal by lazy {
+        com.nexo.presentation.notification.ProcessLifecycleAppForegroundSignal
+            .install()
+    }
+
+    /**
+     * U7: the single entry point emit sites call. Composes the policy, the
+     * history repository and the notification surfaces so one accepted event
+     * reaches at most one toast AND at most one OS banner.
+     */
+    val notificationStore: com.nexo.domain.notification.NotificationStore by lazy {
+        com.nexo.domain.notification.NotificationStore(
+            history = notificationRepository,
+            surfaces =
+                com.nexo.domain.notification.NotificationSurfaces(
+                    toastSink = notificationToastSink,
+                    osNotifier =
+                        com.nexo.presentation.notification
+                            .AndroidOsNotifier(appContext),
+                ),
+            foreground = appForegroundSignal,
+            preferencesProvider = { notificationPreferencesStore.load() },
+        )
+    }
+
     private val repositoryModule =
         RepositoryModule(
             context = context.applicationContext,

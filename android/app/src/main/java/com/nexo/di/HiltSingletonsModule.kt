@@ -146,6 +146,18 @@ object HiltSingletonsModule {
     @Provides @Singleton
     fun provideNotificationRepository(a: AppContainer): NotificationRepository = a.notificationRepository
 
+    /** U9: persisted notification preferences (system/nudge switches + quiet hours). */
+    @Provides @Singleton
+    fun provideNotificationPreferencesStore(a: AppContainer): com.nexo.data.session.NotificationPreferencesStore = a.notificationPreferencesStore
+
+    /** U7: the single entry point emit sites call. */
+    @Provides @Singleton
+    fun provideNotificationStore(a: AppContainer): com.nexo.domain.notification.NotificationStore = a.notificationStore
+
+    /** U7: process-wide toast channel consumed by the nav host. */
+    @Provides @Singleton
+    fun provideNotificationToastBus(a: AppContainer): com.nexo.presentation.notification.NotificationToastBus = a.notificationToastBus
+
     @Provides fun provideProgressSyncProvider(a: AppContainer): @JvmSuppressWildcards () -> SupabaseProgressSync =
         {
             a.supabaseProgressSync

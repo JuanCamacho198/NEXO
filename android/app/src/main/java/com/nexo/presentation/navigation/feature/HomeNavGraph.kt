@@ -4,6 +4,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -15,6 +16,7 @@ import com.nexo.presentation.navigation.rememberImportLauncher
 import com.nexo.presentation.screen.library.RemoveBookDialog
 import com.nexo.presentation.viewmodel.HomeViewModel
 import com.nexo.presentation.viewmodel.LibraryViewModel
+import kotlinx.coroutines.launch
 
 /**
  * Feature NavGraph for Home.
@@ -26,8 +28,10 @@ fun NavGraphBuilder.homeGraph(
     navController: NavController,
     homeViewModel: HomeViewModel,
     libraryViewModel: LibraryViewModel,
+    notificationHistory: com.nexo.domain.notification.NotificationHistory,
     contentPadding: PaddingValues,
     onSelectBook: (String, String?, String) -> Unit,
+    onOpenNotification: (com.nexo.domain.notification.Notification) -> Unit,
     onSettingsInitialRoute: (String) -> Unit,
 ) {
     composable(
@@ -44,10 +48,24 @@ fun NavGraphBuilder.homeGraph(
         // extra host: NexoNavHost.GlobalEventCollector already collects
         // libraryViewModel.uiEvent globally.
         val libraryUiState by libraryViewModel.uiState.collectAsStateWithLifecycle()
+        val notifications by notificationHistory.items.collectAsStateWithLifecycle(initialValue = emptyList())
+        val unreadCount by notificationHistory.unreadCount.collectAsStateWithLifecycle(initialValue = 0)
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
 
         HomeScreen(
             contentPadding = contentPadding,
             viewModel = homeViewModel,
+            notificationGroups =
+                com.nexo.domain.notification
+                    .groupNotifications(notifications),
+            unreadNotificationCount = unreadCount,
+            onOpenNotification = { notification ->
+                scope.launch { notificationHistory.markRead(notification.id) }
+                onOpenNotification(notification)
+            },
+            onNotificationsOpened = {
+                scope.launch { notificationHistory.markAllRead() }
+            },
             onNavigateToLibrary = {
                 navController.navigate(NexoDestination.Library.route) { launchSingleTop = true }
             },
