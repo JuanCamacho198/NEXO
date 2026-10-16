@@ -74,5 +74,9 @@ odd/
 .nexo-keys/
 .playwright-mcp/
 
+# CDP debug harness scratch logs (written by the launcher, never committed).
+tauri-debug-out.log
+tauri-debug-err.log
+
 # License attributions are kept locally, not versioned.
 THIRD-PARTY-NOTICES.md
