@@ -601,6 +601,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'sidebar.storage': 'Almacenamiento',
   'sidebar.sync': 'Sincronización',
   'sidebar.addons': 'Addons',
+  'sidebar.beta': 'Beta',
   'sidebar.dataSection': 'Datos',
   'sidebar.expand': 'Expandir sidebar',
   'sidebar.collapse': 'Colapsar sidebar',

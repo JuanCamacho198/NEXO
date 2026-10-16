@@ -593,6 +593,7 @@ export const messagesEn = {
   'sidebar.storage': 'Storage',
   'sidebar.sync': 'Sync',
   'sidebar.addons': 'Addons',
+  'sidebar.beta': 'Beta',
   'sidebar.dataSection': 'Data',
   'sidebar.expand': 'Expand sidebar',
   'sidebar.collapse': 'Collapse sidebar',
