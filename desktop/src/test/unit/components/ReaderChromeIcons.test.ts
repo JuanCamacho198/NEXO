@@ -1,18 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import ReaderControls from '$lib/features/reader/chrome/ReaderControls.svelte';
-import ReaderHeader from '$lib/features/reader/chrome/ReaderHeader.svelte';
+import ReaderTopBar from '$lib/features/reader/chrome/ReaderTopBar.svelte';
+import ReaderBottomBar from '$lib/features/reader/chrome/ReaderBottomBar.svelte';
 import ReaderTextSettings from '$lib/features/reader/chrome/ReaderTextSettings.svelte';
 import type { MessageKey } from '$lib/shared/i18n';
 import type { ReaderSettings } from '$lib/shared/types';
 
 /**
- * Reader-chrome icon migration (slice 11). The three migrated files hold 13
- * `<Icon` call sites, five of them ternaries. The shim resolved a name to a
- * lucide component; these call sites resolve the same glyphs directly, so the
- * assertion here is per-branch glyph identity under the post-slice-9 map
- * (`fullscreen-exit` is `Shrink`, not the expand glyph the retired `paths`
- * record drew for both fullscreen states).
+ * Reader-chrome icon migration (slice 11), retargeted by the bar unification.
+ * The bookmarks glyph left the header for the bottom bar, so the header holds
+ * four icon-only controls instead of five and the bottom bar owns its own
+ * ordered glyph list. The arrays stay exact-equality: the glyphs are laid out
+ * in source order and a reorder is a UI change. Do NOT switch these to
+ * `.sort()` or `arrayContaining` — that keeps the test green while destroying
+ * the guarantee it exists for.
  */
 
 const t = (key: MessageKey, _params?: Record<string, string | number>): string => key;
@@ -66,53 +67,60 @@ const readerSettings: ReaderSettings = {
   progressIndicator: 'percentage',
 };
 
-function renderHeader(overrides: Record<string, unknown> = {}) {
-  return render(ReaderHeader, {
+function renderTopBar(overrides: Record<string, unknown> = {}) {
+  return render(ReaderTopBar, {
     title: 'Book',
     showTocPanel: false,
     searchPanelOpen: false,
     showTextSettings: false,
-    showBookmarks: false,
     isFullscreen: false,
-    format: 'epub' as const,
+    visible: true,
     t,
     onBackToHome: () => {},
     onToggleToc: () => {},
     onToggleSearch: () => {},
     onToggleTextSettings: () => {},
-    onToggleBookmarks: () => {},
     onToggleFullscreen: () => {},
     ...overrides,
   });
 }
 
-describe('reader chrome icon migration', () => {
-  it('renders ReaderControls with only the paging glyphs (header owns TOC/fullscreen)', () => {
-    const props = {
-      currentPage: 1,
-      totalPages: 10,
-      t,
-      onPrev: () => {},
-      onNext: () => {},
-      onGoToPage: async () => true,
-    };
+function renderBottomBar(overrides: Record<string, unknown> = {}) {
+  return render(ReaderBottomBar, {
+    title: 'Book',
+    bookProgress: 42,
+    currentPdfPage: 3,
+    totalPdfPages: 10,
+    viewerKind: 'epub' as 'pdf' | 'epub' | null,
+    isFullscreen: false,
+    visible: true,
+    currentPage: 5,
+    totalPages: 10,
+    zoomPercent: 100,
+    bookmarkCount: 0,
+    bookmarksLoading: false,
+    showBookmarks: false,
+    t,
+    onPrev: () => {},
+    onNext: () => {},
+    onGoToPage: async () => true,
+    onFit: () => {},
+    onZoomSelect: () => {},
+    onToggleBookmarks: () => {},
+    ...overrides,
+  });
+}
 
-    const { container } = render(ReaderControls, props);
-    expect(glyphs(container)).toEqual(['lucide-chevron-left', 'lucide-chevron-right']);
+describe('reader chrome icon migration', () => {
+  it('renders the bottom bar paging glyphs (the top bar owns TOC/fullscreen)', () => {
+    const { container } = renderBottomBar({ viewerKind: 'epub' });
     for (const icon of container.querySelectorAll('svg.lucide-icon')) expectGlyphContract(icon);
+    expect(glyphs(container)).toContain('lucide-chevron-left');
+    expect(glyphs(container)).toContain('lucide-chevron-right');
   });
 
-  it('does not render the TOC or fullscreen controls in ReaderControls', () => {
-    const props = {
-      currentPage: 1,
-      totalPages: 10,
-      t,
-      onPrev: () => {},
-      onNext: () => {},
-      onGoToPage: async () => true,
-    };
-
-    render(ReaderControls, props);
+  it('does not render the TOC or fullscreen controls in the bottom bar', () => {
+    renderBottomBar();
     expect(screen.queryByLabelText('reader.tabla_contenidos')).toBeNull();
     expect(screen.queryByLabelText('pdf.fullscreenEnter')).toBeNull();
     expect(screen.queryByLabelText('pdf.fullscreenExit')).toBeNull();
@@ -120,22 +128,21 @@ describe('reader chrome icon migration', () => {
     expect(screen.getByLabelText('reader.next_page')).toBeInTheDocument();
   });
 
-  it('renders the six header icons as components on the closed-tool branch', () => {
-    const { container } = renderHeader();
+  it('renders the four top bar icons as components on the closed-tool branch', () => {
+    const { container } = renderTopBar();
 
     expect(glyphs(container)).toEqual([
       'lucide-chevron-left',
       'lucide-menu',
       'lucide-search',
       'lucide-settings',
-      'lucide-bookmark',
       'lucide-expand',
     ]);
     for (const icon of container.querySelectorAll('svg.lucide-icon')) expectGlyphContract(icon);
   });
 
-  it('swaps all five header ternaries to the close glyph when their panel is open', () => {
-    const { container } = renderHeader({
+  it('swaps all four top bar ternaries to the close glyph when their panel is open', () => {
+    const { container } = renderTopBar({
       showTocPanel: true,
       searchPanelOpen: true,
       showTextSettings: true,
@@ -148,13 +155,14 @@ describe('reader chrome icon migration', () => {
       'lucide-x',
       'lucide-x',
       'lucide-x',
-      'lucide-x',
       'lucide-shrink',
     ]);
   });
 
-  it('renders the immersive status strip without its own paging chevrons', () => {
-    const { container } = renderHeader({
+  // There is no separate status strip anymore: fullscreen renders the same
+  // single top bar, so only the window-mode glyph differs.
+  it('renders the single top bar in fullscreen, without its own paging chevrons', () => {
+    const { container } = renderTopBar({
       isFullscreen: true,
       currentPage: 3,
       totalPages: 10,
@@ -166,9 +174,37 @@ describe('reader chrome icon migration', () => {
       'lucide-menu',
       'lucide-search',
       'lucide-settings',
-      'lucide-bookmark',
       'lucide-shrink',
     ]);
+  });
+
+  it('renders the bottom bar EPUB glyphs in source order', () => {
+    const { container } = renderBottomBar({ viewerKind: 'epub', showBookmarks: false });
+    // paging chevrons, then the (unselected) bookmarks glyph. The zoom trigger
+    // draws its own inline chevron, which is not a lucide icon.
+    expect(glyphs(container)).toEqual([
+      'lucide-chevron-left',
+      'lucide-chevron-right',
+      'lucide-bookmark',
+    ]);
+    for (const icon of container.querySelectorAll('svg.lucide-icon')) expectGlyphContract(icon);
+  });
+
+  it('renders the bottom bar PDF glyphs in source order, with the fit glyphs', () => {
+    const { container } = renderBottomBar({ viewerKind: 'pdf', showBookmarks: false });
+    // Fit is PDF-only, so the ordering guarantee is asserted per format.
+    expect(glyphs(container)).toEqual([
+      'lucide-chevron-left',
+      'lucide-chevron-right',
+      'lucide-unfold-horizontal',
+      'lucide-frame',
+      'lucide-bookmark',
+    ]);
+  });
+
+  it('swaps the bottom bar bookmarks glyph when the panel is open', () => {
+    const { container } = renderBottomBar({ viewerKind: 'epub', showBookmarks: true });
+    expect(glyphs(container)).toEqual(['lucide-chevron-left', 'lucide-chevron-right', 'lucide-x']);
   });
 
   it('renders the saved-toast glyph through the direct lucide component', async () => {
@@ -194,17 +230,17 @@ describe('reader chrome icon migration', () => {
 });
 
 describe('one page input implementation (U1.5)', () => {
-  it('header strip input commits through onGoToPage like the toolbar', async () => {
+  it('the single page field commits through onGoToPage', async () => {
     const onGoToPage = vi.fn().mockResolvedValue(true);
-    renderHeader({ isFullscreen: true, currentPage: 3, totalPages: 10, onGoToPage });
+    renderBottomBar({ currentPage: 3, totalPages: 10, onGoToPage });
     const input = screen.getByLabelText('reader.page_input');
     await fireEvent.change(input, { target: { value: '7' } });
     expect(onGoToPage).toHaveBeenCalledWith(7);
   });
 
-  it('header strip input reverts out-of-range values to the current page', async () => {
+  it('the single page field reverts out-of-range values to the current page', async () => {
     const onGoToPage = vi.fn();
-    renderHeader({ isFullscreen: true, currentPage: 3, totalPages: 10, onGoToPage });
+    renderBottomBar({ currentPage: 3, totalPages: 10, onGoToPage });
     const input = screen.getByLabelText('reader.page_input') as HTMLInputElement;
     await fireEvent.change(input, { target: { value: '20' } });
     expect(onGoToPage).not.toHaveBeenCalled();

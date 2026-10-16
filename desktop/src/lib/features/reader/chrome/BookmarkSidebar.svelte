@@ -21,13 +21,6 @@
     activeReadingBook?.format ? String(activeReadingBook.format).toLowerCase() === 'epub' : false,
   );
 
-  // Load bookmarks when panel opens
-  $effect(() => {
-    if (bookmarksPanel.showBookmarks && activeReadingBook) {
-      void bookmarksPanel.bookmarksState.loadBookmarks(activeReadingBook.id);
-    }
-  });
-
   // Focus trap when open
   $effect(() => {
     if (bookmarksPanel.showBookmarks && bookmarksPanel.bookmarksPanelEl) {

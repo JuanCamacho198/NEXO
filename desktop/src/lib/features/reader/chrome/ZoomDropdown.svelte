@@ -1,17 +1,27 @@
 <script lang="ts">
   import { clampZoomPercent, ZOOM_OPTIONS } from '$lib/features/reader/viewer-pdf/pdfNavigation';
+  import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
     value: number;
     onSelect: (value: number) => void;
+    /** Required so no call site can silently announce the wrong unit: the PDF
+     * path shows viewer scale, the EPUB path shows font size. */
+    labelKind: 'zoom' | 'fontSize';
+    t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let { value, onSelect }: Props = $props();
+  let { value, onSelect, labelKind, t }: Props = $props();
 
   let open = $state(false);
   let rootEl: HTMLDivElement | null = $state(null);
 
   const clampedValue = $derived(clampZoomPercent(value));
+  const accessibleName = $derived(
+    labelKind === 'fontSize'
+      ? t('reader.font_size_level', { level: clampedValue })
+      : t('reader.zoomLevel', { level: clampedValue }),
+  );
   const options = ZOOM_OPTIONS;
 
   function selectOption(v: number): void {
@@ -40,7 +50,7 @@
     class="inline-flex items-center gap-1 rounded-full border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-xs font-medium text-(--color-primary) hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] cursor-pointer min-w-18 min-h-11 justify-center"
     aria-haspopup="listbox"
     aria-expanded={open}
-    aria-label="Zoom {clampedValue}%"
+    aria-label={accessibleName}
     data-testid="zoom-dropdown-trigger"
   >
     <span>{clampedValue}%</span>

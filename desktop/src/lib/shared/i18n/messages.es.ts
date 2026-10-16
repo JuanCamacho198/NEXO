@@ -1319,6 +1319,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.reset_confirm': 'Toca de nuevo para confirmar',
   'reader.zoom': 'Zoom',
   'reader.zoomLevel': 'Zoom: {{level}}%',
+  'reader.font_size_level': 'Tamaño: {{level}}%',
   'reader.fitWidth': 'Ajustar al ancho',
   'reader.fitPage': 'Ajustar a la página',
   'reader.fullscreenHint': 'Pulsa F para pantalla completa',

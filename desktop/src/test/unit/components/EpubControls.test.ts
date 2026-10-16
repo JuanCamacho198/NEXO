@@ -1,114 +1,133 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import EpubControls from '$lib/features/reader/viewer-epub/EpubControls.svelte';
+import ReaderBottomBar from '$lib/features/reader/chrome/ReaderBottomBar.svelte';
 
 const t = (key: string) => key;
 
 function makeProps(overrides: Record<string, unknown> = {}) {
   return {
+    title: 'Some Book',
+    bookProgress: 15,
+    currentPdfPage: 1,
+    totalPdfPages: 0,
+    viewerKind: 'epub' as 'pdf' | 'epub' | null,
+    isFullscreen: false,
+    visible: true,
     currentPage: 1,
     totalPages: 10,
-    currentPercentage: 15,
-    fontSize: 100,
+    zoomPercent: 100,
+    bookmarkCount: 0,
+    bookmarksLoading: false,
+    showBookmarks: false,
     t,
     onPrev: vi.fn(),
     onNext: vi.fn(),
     onGoToPage: vi.fn().mockResolvedValue(true),
-    onFontSizeChange: vi.fn(),
+    onFit: vi.fn(),
+    onZoomSelect: vi.fn(),
+    onToggleBookmarks: vi.fn(),
     ...overrides,
   };
 }
 
-describe('EpubControls (U1.1) — toolbar owns paging and zoom only', () => {
-  it('does NOT render TOC or fullscreen controls (the header owns them)', () => {
-    render(EpubControls, makeProps());
+describe('ReaderBottomBar EPUB controls (U3.3, was EpubControls U1.1)', () => {
+  it('does NOT render TOC or fullscreen controls (the top bar owns them)', () => {
+    render(ReaderBottomBar, makeProps());
     expect(screen.queryByTestId('epub-toc')).toBeNull();
     expect(screen.queryByTestId('epub-fullscreen')).toBeNull();
   });
 
   it('renders prev/next navigation buttons', () => {
-    render(EpubControls, makeProps());
-    expect(screen.getByTestId('epub-prev')).toBeInTheDocument();
-    expect(screen.getByTestId('epub-next')).toBeInTheDocument();
+    render(ReaderBottomBar, makeProps());
+    expect(screen.getByLabelText('reader.prev_page')).toBeInTheDocument();
+    expect(screen.getByLabelText('reader.next_page')).toBeInTheDocument();
   });
 
   it('renders page input with currentPage and totalPages', () => {
-    render(EpubControls, makeProps({ currentPage: 3, totalPages: 15 }));
-    const input = screen.getByTestId('epub-page-input') as HTMLInputElement;
+    render(ReaderBottomBar, makeProps({ currentPage: 3, totalPages: 15 }));
+    const input = screen.getByLabelText('reader.page_input') as HTMLInputElement;
     expect(input).toBeInTheDocument();
     expect(input.value).toBe('3');
-    expect(screen.getByTestId('epub-total-pages')).toHaveTextContent('/ 15');
+    expect(screen.getByText('/ 15')).toBeInTheDocument();
   });
 
-  it('renders ZoomDropdown with current fontSize (pill)', () => {
-    render(EpubControls, makeProps());
+  it('renders the zoom dropdown', () => {
+    render(ReaderBottomBar, makeProps());
     expect(screen.getByTestId('zoom-dropdown-trigger')).toBeInTheDocument();
   });
 
-  it('shows ZoomDropdown with correct percentage', () => {
-    render(EpubControls, makeProps({ fontSize: 120 }));
+  it('shows the zoom dropdown with the correct percentage', () => {
+    render(ReaderBottomBar, makeProps({ zoomPercent: 120 }));
     expect(screen.getByTestId('zoom-dropdown-trigger')).toHaveTextContent('120%');
   });
 
+  // ADR-006: the EPUB path means font size, not scale, and must announce it.
+  it('announces font size, not zoom, on the EPUB path', () => {
+    render(ReaderBottomBar, makeProps({ viewerKind: 'epub', zoomPercent: 120 }));
+    expect(screen.getByTestId('zoom-dropdown-trigger')).toHaveAttribute(
+      'aria-label',
+      'reader.font_size_level',
+    );
+  });
+
+  it('announces zoom on the PDF path', () => {
+    render(ReaderBottomBar, makeProps({ viewerKind: 'pdf', zoomPercent: 120 }));
+    expect(screen.getByTestId('zoom-dropdown-trigger')).toHaveAttribute(
+      'aria-label',
+      'reader.zoomLevel',
+    );
+  });
+
   it('disables prev button at first chapter (page 1)', () => {
-    render(EpubControls, makeProps({ currentPage: 1 }));
-    expect(screen.getByTestId('epub-prev')).toBeDisabled();
+    render(ReaderBottomBar, makeProps({ currentPage: 1 }));
+    expect(screen.getByLabelText('reader.prev_page')).toBeDisabled();
   });
 
   it('disables next button at last chapter', () => {
-    render(EpubControls, makeProps({ currentPage: 10, totalPages: 10 }));
-    expect(screen.getByTestId('epub-next')).toBeDisabled();
+    render(ReaderBottomBar, makeProps({ currentPage: 10, totalPages: 10 }));
+    expect(screen.getByLabelText('reader.next_page')).toBeDisabled();
   });
 
-  it('enables prev/next in middle of book', () => {
-    render(EpubControls, makeProps({ currentPage: 5, totalPages: 10 }));
-    expect(screen.getByTestId('epub-prev')).not.toBeDisabled();
-    expect(screen.getByTestId('epub-next')).not.toBeDisabled();
+  it('enables prev/next in the middle of a book', () => {
+    render(ReaderBottomBar, makeProps({ currentPage: 5, totalPages: 10 }));
+    expect(screen.getByLabelText('reader.prev_page')).not.toBeDisabled();
+    expect(screen.getByLabelText('reader.next_page')).not.toBeDisabled();
   });
 
-  it('renders the currentPercentage readout rounded to a whole number', () => {
-    render(EpubControls, makeProps({ currentPercentage: 37.4 }));
-    expect(screen.getByTestId('epub-percentage')).toHaveTextContent('37%');
+  it('renders the progress percentage readout from bookProgress', () => {
+    render(ReaderBottomBar, makeProps({ viewerKind: 'epub', bookProgress: 37 }));
+    expect(screen.getByText('37%')).toHaveTextContent('37%');
+    expect(screen.getByTestId('footer-progress-bar')).toBeInTheDocument();
   });
 });
 
-describe('EpubControls (U1.1) — Callback behavior', () => {
+describe('ReaderBottomBar EPUB callback behavior', () => {
   it('calls onPrev when prev button clicked', async () => {
     const onPrev = vi.fn();
-    render(EpubControls, makeProps({ currentPage: 5, totalPages: 10, onPrev }));
-    await fireEvent.click(screen.getByTestId('epub-prev'));
+    render(ReaderBottomBar, makeProps({ currentPage: 5, totalPages: 10, onPrev }));
+    await fireEvent.click(screen.getByLabelText('reader.prev_page'));
     expect(onPrev).toHaveBeenCalledTimes(1);
   });
 
   it('calls onNext when next button clicked', async () => {
     const onNext = vi.fn();
-    render(EpubControls, makeProps({ currentPage: 5, totalPages: 10, onNext }));
-    await fireEvent.click(screen.getByTestId('epub-next'));
+    render(ReaderBottomBar, makeProps({ currentPage: 5, totalPages: 10, onNext }));
+    await fireEvent.click(screen.getByLabelText('reader.next_page'));
     expect(onNext).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onFontSizeChange when ZoomDropdown option selected', async () => {
-    const onFontSizeChange = vi.fn();
-    render(EpubControls, makeProps({ fontSize: 100, onFontSizeChange }));
+  it('calls onZoomSelect when a ZoomDropdown option is selected', async () => {
+    const onZoomSelect = vi.fn();
+    render(ReaderBottomBar, makeProps({ zoomPercent: 100, onZoomSelect }));
     await fireEvent.click(screen.getByTestId('zoom-dropdown-trigger'));
-    const opt = screen.getByTestId('zoom-option-125');
-    await fireEvent.click(opt);
-    expect(onFontSizeChange).toHaveBeenCalledWith(125);
+    await fireEvent.click(screen.getByTestId('zoom-option-125'));
+    expect(onZoomSelect).toHaveBeenCalledWith(125);
   });
 
-  it('ZoomDropdown clamps selection to 50-300 via onFontSizeChange', async () => {
-    const onFontSizeChange = vi.fn();
-    render(EpubControls, makeProps({ fontSize: 100, onFontSizeChange }));
-    await fireEvent.click(screen.getByTestId('zoom-dropdown-trigger'));
-    const opt50 = screen.getByTestId('zoom-option-50');
-    await fireEvent.click(opt50);
-    expect(onFontSizeChange).toHaveBeenCalledWith(50);
-  });
-
-  it('calls onGoToPage when valid page entered in input', async () => {
+  it('calls onGoToPage when a valid page is entered in the input', async () => {
     const onGoToPage = vi.fn().mockResolvedValue(true);
-    render(EpubControls, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
-    const input = screen.getByTestId('epub-page-input');
+    render(ReaderBottomBar, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
+    const input = screen.getByLabelText('reader.page_input');
     await fireEvent.change(input, { target: { value: '7' } });
     await fireEvent.blur(input);
     // onchange fires on blur in testing-lib/svelte
@@ -116,29 +135,29 @@ describe('EpubControls (U1.1) — Callback behavior', () => {
   });
 });
 
-describe('EpubControls (U1.1) — Page input validation', () => {
-  it('calls onGoToPage with valid page and resets on failure', async () => {
+describe('ReaderBottomBar page input validation', () => {
+  it('calls onGoToPage with a valid page and resets on failure', async () => {
     const onGoToPage = vi.fn().mockResolvedValue(false);
-    render(EpubControls, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
-    const input = screen.getByTestId('epub-page-input') as HTMLInputElement;
+    render(ReaderBottomBar, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
+    const input = screen.getByLabelText('reader.page_input') as HTMLInputElement;
     await fireEvent.change(input, { target: { value: '7' } });
     expect(onGoToPage).toHaveBeenCalledWith(7);
   });
 
-  it('resets to current page when value exceeds totalPages', async () => {
+  it('resets to the current page when the value exceeds totalPages', async () => {
     const onGoToPage = vi.fn();
-    render(EpubControls, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
-    const input = screen.getByTestId('epub-page-input') as HTMLInputElement;
+    render(ReaderBottomBar, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
+    const input = screen.getByLabelText('reader.page_input') as HTMLInputElement;
     await fireEvent.change(input, { target: { value: '20' } });
     // onGoToPage is NOT called for out-of-range values
     expect(onGoToPage).not.toHaveBeenCalled();
     expect(input.value).toBe('3');
   });
 
-  it('resets to current page when value is non-numeric', async () => {
+  it('resets to the current page when the value is non-numeric', async () => {
     const onGoToPage = vi.fn();
-    render(EpubControls, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
-    const input = screen.getByTestId('epub-page-input') as HTMLInputElement;
+    render(ReaderBottomBar, makeProps({ currentPage: 3, totalPages: 10, onGoToPage }));
+    const input = screen.getByLabelText('reader.page_input') as HTMLInputElement;
     await fireEvent.change(input, { target: { value: 'abc' } });
     await fireEvent.blur(input);
     expect(input.value).toBe('3');

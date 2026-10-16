@@ -7,7 +7,6 @@
     ReaderTextAlign,
     ReaderDirection,
   } from '$lib/shared/types';
-  import EpubControls from './EpubControls.svelte';
   import { logger } from '$lib/shared/logger/Logger';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
@@ -140,10 +139,6 @@
   let iframeContentHeight = $state(0);
   let lastRenderedChapter = $state(-1);
   let lastContinueLocation = $state<string | null>(null);
-  // Seeded once from the prop: the viewer mounts per book, so reading the
-  // initial value here is intentional (REQ-WIN-001 pre-first-event window).
-  // svelte-ignore state_referenced_locally
-  let epubProgress = $state(initialPercentage);
   // U5: footnote popover. Viewport-space anchor + parent scroll to restore.
   let footnote = $state<{ x: number; y: number; text: string; returnScroll: number } | null>(null);
 
@@ -286,7 +281,6 @@
     setLastContinueLocation: (v) => (lastContinueLocation = v),
     getOnTocReady: () => onTocReady,
     onLocationChange: (cfi, pct) => {
-      epubProgress = Number.isFinite(pct) ? Math.min(100, Math.max(0, pct)) : 0;
       onLocationChange?.(cfi, pct);
     },
     onLocationContext: (ctx) => onLocationContext?.(ctx),
@@ -537,25 +531,6 @@
       {t('epub.error')}: {error}
     </div>
   {:else}
-    {#if !isFullscreen}
-      <EpubControls
-        currentPage={displayCurrentPage}
-        totalPages={displayTotal}
-        currentPercentage={epubProgress}
-        {fontSize}
-        {t}
-        onPrev={goToPrev}
-        onNext={goToNext}
-        onGoToPage={handleGoToPage}
-        onFontSizeChange={(size: number) => {
-          const updated: ReaderSettings = {
-            ...readerSettings,
-            epub: { ...readerSettings.epub, fontSize: size },
-          };
-          onSettingsChange?.(updated);
-        }}
-      />
-    {/if}
     <div
       data-testid="epub-scroll-container"
       class="flex-1 w-full min-h-0 overflow-y-auto pb-16"

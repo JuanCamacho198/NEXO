@@ -7,8 +7,8 @@
   import ReaderTextSettings from './ReaderTextSettings.svelte';
   import ReaderTocPanel from './ReaderTocPanel.svelte';
   import type { TocEntry } from './ReaderTocPanel.svelte';
-  import ReaderHeader from './ReaderHeader.svelte';
-  import ReaderFooter from './ReaderFooter.svelte';
+  import ReaderTopBar from './ReaderTopBar.svelte';
+  import ReaderBottomBar from './ReaderBottomBar.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, SearchBookTextResponse } from '$lib/shared/types';
   import type { LibraryBookDto } from '$lib/shared/types/library';
@@ -31,6 +31,7 @@
   import { createImmersiveChrome } from './useImmersiveChrome.svelte';
   import { createReaderShortcuts } from './useReaderShortcuts.svelte';
   import { createReaderZoom } from './useReaderZoom.svelte';
+  import { clampZoomPercent } from '../viewer-pdf/pdfNavigation';
   import { createHighlightMenu } from '../highlight/useHighlightMenu.svelte';
   import { createBookmarksPanel } from './useBookmarksPanel.svelte';
   import { createReaderNavigation } from './useReaderNavigation.svelte';
@@ -200,6 +201,14 @@
     const v = readerState.highlightsVersion;
     if (v > 0 && activeReadingBook) highlightsState.reloadHighlights();
   });
+  // Bookmarks follow the BOOK, not the panel (ADR-005): the count is in the
+  // bottom bar and must be right before the panel is ever opened. The
+  // supersede guard for concurrent loads lives in `bookmarksState`.
+  $effect(() => {
+    const bookId = activeReadingBook?.id ?? null;
+    if (!bookId) return;
+    void bookmarksPanel.bookmarksState.loadBookmarks(bookId);
+  });
   $effect(() => {
     const handler = (e: Event): void => {
       const detail = (e as CustomEvent).detail as { bookId?: string } | undefined;
@@ -274,9 +283,6 @@
   function toggleFullscreen(): void {
     chrome.toggleFullscreen();
     syncDebugReaderInfo();
-  }
-  function handleHeaderFontSizeChange(size: number): void {
-    zoom.handleHeaderFontSizeChange(size);
   }
   $effect(() => {
     void chrome.isFullscreen;
@@ -535,27 +541,19 @@
   bind:this={workspaceRoot}
   onmouseleave={handleWorkspaceMouseLeave}
 >
-  <ReaderHeader
+  <ReaderTopBar
     title={activeReadingBook?.title ?? ''}
     showTocPanel={nav.showTocPanel}
     {searchPanelOpen}
     {showTextSettings}
-    showBookmarks={bookmarksPanel.showBookmarks}
     {isFullscreen}
-    format={viewer.kind === 'pdf' ? 'pdf' : 'epub'}
-    headerVisible={isFullscreen ? headerVisible : true}
+    visible={isFullscreen ? headerVisible : true}
     {t}
     {onBackToHome}
     onToggleToc={toggleTocPanel}
     onToggleSearch={toggleSearch}
     onToggleTextSettings={toggleTextSettings}
-    onToggleBookmarks={toggleBookmarks}
     onToggleFullscreen={toggleFullscreen}
-    currentPage={headerCurrentPage}
-    totalPages={headerTotalPages}
-    fontSizePercent={headerZoomPercent}
-    onGoToPage={handleHeaderGoToPage}
-    onFontSizeChange={handleHeaderFontSizeChange}
   />
   <div class="flex flex-1 min-h-0 items-stretch justify-center" class:p-0={isFullscreen}>
     {#if getReaderErrorFn()}
@@ -741,14 +739,32 @@
       {t}
     />
   </div>
-  <ReaderFooter
+  <ReaderBottomBar
     title={activeReadingBook?.title ?? ''}
     {bookProgress}
     currentPdfPage={nav.currentPdfPage}
     totalPdfPages={nav.totalPdfPages}
     viewerKind={viewer.kind}
     {isFullscreen}
+    visible={isFullscreen ? headerVisible : true}
+    currentPage={headerCurrentPage}
+    totalPages={headerTotalPages}
+    zoomPercent={headerZoomPercent}
+    bookmarkCount={bookmarksPanel.bookmarksState.bookmarksList.length}
+    bookmarksLoading={bookmarksPanel.bookmarksState.bookmarksLoading}
+    showBookmarks={bookmarksPanel.showBookmarks}
     {t}
+    onPrev={goPrevPage}
+    onNext={goNextPage}
+    onGoToPage={handleHeaderGoToPage}
+    onFit={(mode) => {
+      void pdfRef?.applyFit(mode);
+    }}
+    onZoomSelect={(pct) => {
+      if (viewer.kind === 'pdf') void pdfRef?.setScale(clampZoomPercent(pct) / 100);
+      else zoom.handleHeaderFontSizeChange(pct);
+    }}
+    onToggleBookmarks={toggleBookmarks}
   />
   {#if isFullscreen && activeReadingBook}
     <!-- U2: persistent rescue strips. The chapter iframe swallows hover, so

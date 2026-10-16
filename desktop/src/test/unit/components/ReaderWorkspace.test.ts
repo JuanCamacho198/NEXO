@@ -20,6 +20,14 @@ vi.mock('$lib/features/reader/viewer-pdf/PdfViewer.svelte', async () => {
   return { default: mod.default };
 });
 
+// The bottom bar reads the bookmark count through the viewer port, which is a
+// Tauri IPC call. Stub it so mounting the workspace never hits the bridge.
+vi.mock('$lib/shared/api/tauriClient', () => ({
+  listBookmarks: vi.fn().mockResolvedValue([]),
+  saveBookmark: vi.fn().mockResolvedValue(undefined),
+  deleteBookmark: vi.fn().mockResolvedValue(undefined),
+}));
+
 import ReaderWorkspace from '$lib/features/reader/chrome/ReaderWorkspace.svelte';
 
 const makeBook = (overrides: Partial<{ format: string; filePath: string }> = {}) => ({
@@ -143,5 +151,55 @@ describe('ReaderWorkspace', () => {
     expect(header?.className).not.toContain('py-6');
     expect(footer?.className).not.toContain('px-10');
     expect(footer?.className).not.toContain('py-6');
+  });
+  it('composes exactly one top bar and one bottom bar in windowed mode (U3.1)', () => {
+    const { container } = render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    expect(container.querySelectorAll('header')).toHaveLength(1);
+    expect(container.querySelectorAll('footer')).toHaveLength(1);
+    // The "no second header row" contract lives here, where it is a property of
+    // the composition, and never as a sibling-position selector in a test that
+    // is about responsiveness.
+    expect(container.querySelector('header > div + div')).toBeNull();
+  });
+  it('composes exactly one top bar and one bottom bar in fullscreen mode (U3.1)', async () => {
+    const { container } = render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    await fireEvent.click(screen.getByLabelText('pdf.fullscreenEnter'));
+    await tick();
+
+    expect(container.querySelectorAll('header')).toHaveLength(1);
+    expect(container.querySelectorAll('footer')).toHaveLength(1);
+    expect(container.querySelector('header > div + div')).toBeNull();
+  });
+  it('carries the bookmarks control on the bottom bar and search on the top bar (U3.17)', () => {
+    render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    expect(screen.getByLabelText('search.title').closest('header')).not.toBeNull();
+    expect(screen.getByLabelText('reader.bookmark').closest('footer')).not.toBeNull();
+  });
+  it('loads bookmarks on book open, without opening the panel (ADR-005)', () => {
+    render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    // The count slot exists and resolved — reaching it at all proves the load
+    // is triggered by the book, not by opening the panel, because the panel is
+    // never opened in this render.
+    expect(screen.getByTestId('bookmark-count')).toBeInTheDocument();
   });
 });

@@ -879,6 +879,7 @@ export const messagesEn = {
   'reader.reset_confirm': 'Tap again to confirm reset',
   'reader.zoom': 'Zoom',
   'reader.zoomLevel': 'Zoom: {{level}}%',
+  'reader.font_size_level': 'Size: {{level}}%',
   'reader.fitWidth': 'Fit to width',
   'reader.fitPage': 'Fit to page',
   'reader.fullscreenHint': 'Press F to toggle fullscreen',

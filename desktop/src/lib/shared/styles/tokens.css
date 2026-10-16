@@ -204,6 +204,11 @@
   /* Dedicated plane for the reader chrome bars. Distinct from --color-bg-deep
      so the chrome reads as its own surface against the app background. */
   --color-reader-chrome: #0f1b2e;
+  /* Progress-track fill for the chrome bars. A track on the chrome plane needs
+     a step PAST the plane, not backwards to --color-surface-strong (1.29:1
+     against #0f1b2e). #3c5f88 is 2.52:1, so the empty track is a visible
+     affordance rather than a smear. */
+  --color-chrome-track: #3c5f88;
 
   /* Surface hierarchy */
   --color-surface-hover: rgba(148, 173, 206, 0.18);
@@ -349,6 +354,8 @@
   --color-bg-deep: #dbe4ed;
   /* Mirror of the dark reader-chrome plane. */
   --color-reader-chrome: #f5f8fc;
+  /* Mirror of the dark chrome track. #b7c9de is 1.56:1 against #f5f8fc. */
+  --color-chrome-track: #b7c9de;
 
   /* Surface hierarchy */
   --color-surface-hover: rgba(30, 58, 95, 0.15);
