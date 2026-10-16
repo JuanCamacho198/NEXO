@@ -261,6 +261,7 @@
   // because it is reader-scoped and reads its binding from the shared registry.
   const readerShortcuts = createReaderShortcuts({ onToggleSearch: () => toggleSearch() });
   let isFullscreen = $derived(chrome.isFullscreen);
+  // Reads the read-only alias, which resolves to the single shared value.
   let headerVisible = $derived(chrome.headerVisible);
   let edgeNavVisible = $derived(chrome.edgeNavVisible);
   function handleWorkspaceMouseLeave(): void {
@@ -288,6 +289,7 @@
     void chrome.isFullscreen;
     void panelOpen;
     void chrome.hoverTop;
+    void chrome.hoverBottom;
     chrome.resetIdleTimer();
     chrome.updateEdgeNav(chrome.mouseX);
   });
@@ -547,7 +549,7 @@
     {searchPanelOpen}
     {showTextSettings}
     {isFullscreen}
-    visible={isFullscreen ? headerVisible : true}
+    visible={isFullscreen ? chrome.chromeVisible : true}
     {t}
     {onBackToHome}
     onToggleToc={toggleTocPanel}
@@ -746,7 +748,7 @@
     totalPdfPages={nav.totalPdfPages}
     viewerKind={viewer.kind}
     {isFullscreen}
-    visible={isFullscreen ? headerVisible : true}
+    visible={isFullscreen ? chrome.chromeVisible : true}
     currentPage={headerCurrentPage}
     totalPages={headerTotalPages}
     zoomPercent={headerZoomPercent}
