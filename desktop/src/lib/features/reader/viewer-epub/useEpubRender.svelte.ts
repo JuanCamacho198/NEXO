@@ -349,7 +349,7 @@ export function buildChapterSrcdoc(
   chapterTitle?: string | null,
   bookLanguage?: string | null,
 ): string {
-  logger.warn('build srcdoc CHAPTER_INDEX', { chapterIndex, href: currentChapterHref }, 'reader');
+  logger.debug('build srcdoc CHAPTER_INDEX', { chapterIndex, href: currentChapterHref }, 'reader');
   const sanitizedHtml = sanitizeEpubHtml(chapterData.html);
   const parser = new DOMParser();
   const doc = parser.parseFromString(sanitizedHtml, 'text/html');
@@ -667,17 +667,7 @@ export function buildChapterSrcdoc(
   doc.body.appendChild(resizeScript);
   doc.body.appendChild(selectionScript);
 
-  const serialized = doc.documentElement.outerHTML;
-  if (currentChapterHref.includes('HM-colombia-5')) {
-    logger.warn('SERIALIZED SNIPPET HM5 START', { snippet: serialized.slice(0, 6000) }, 'reader');
-    logger.warn('SERIALIZED SNIPPET HM5 END', { snippet: serialized.slice(-8000) }, 'reader');
-    logger.warn(
-      'BRIDGE SNIPPET',
-      { snippet: IFRAME_CFI_BRIDGE_SCRIPT.slice(1800, 2400) },
-      'reader',
-    );
-  }
-  return `<!DOCTYPE html>\n${serialized}`;
+  return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
 }
 
 // ─── Stateful composable ───────────────────────────────────────
@@ -837,7 +827,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
     const spineHrefForLog = deps.getSpineHrefs()[spineIndex] ?? `(spine ${spineIndex})`;
     const frag = extractFragment(tocHrefForLog);
     if (frag) deps.setPendingFragment(frag);
-    logger.warn(
+    logger.debug(
       'epub-hl: renderChapter called',
       {
         tocIndex: index,
@@ -851,7 +841,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
       'reader',
     );
     if (spineIndex !== index) {
-      logger.warn(
+      logger.debug(
         'epub-toc: renderChapter toc -> spine',
         { tocIndex: index, spineIndex, href: tocHrefForLog },
         'reader',
@@ -865,7 +855,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
       });
 
       if (myEpoch !== renderEpoch || currentRenderIndex !== index) {
-        logger.warn(
+        logger.debug(
           'epub-hl: renderChapter stale abort before srcdoc',
           { index, epoch: myEpoch, current: renderEpoch },
           'reader',
@@ -920,7 +910,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
         let attempt = 0;
         function markReady(): void {
           if (myEpoch !== renderEpoch || currentRenderIndex !== index) {
-            logger.warn(
+            logger.debug(
               'epub-hl: markReady stale epoch',
               {
                 epoch: myEpoch,

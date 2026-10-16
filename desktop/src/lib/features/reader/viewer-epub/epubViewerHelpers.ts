@@ -66,7 +66,7 @@ export function resolveFootnoteNote(
  */
 export function spineIndexForToc(toc: EpubChapterMeta[], tocIndex: number): number {
   if (tocIndex < 0 || tocIndex >= toc.length) {
-    logger.warn(
+    logger.debug(
       'epub-toc: spineIndexForToc tocIndex out-of-bounds',
       { tocIndex, tocLen: toc.length },
       'reader',
@@ -75,7 +75,7 @@ export function spineIndexForToc(toc: EpubChapterMeta[], tocIndex: number): numb
   }
   const entry = toc[tocIndex];
   if (!entry || typeof entry.index !== 'number') {
-    logger.warn(
+    logger.debug(
       'epub-toc: spineIndexForToc missing entry for tocIndex',
       { tocIndex, fallback: tocIndex },
       'reader',
@@ -83,7 +83,7 @@ export function spineIndexForToc(toc: EpubChapterMeta[], tocIndex: number): numb
     return tocIndex;
   }
   if (entry.index < 0 || !Number.isFinite(entry.index)) {
-    logger.warn(
+    logger.debug(
       'epub-toc: spineIndexForToc invalid index',
       { index: entry.index, tocIndex },
       'reader',
@@ -120,7 +120,7 @@ export function tocIndexForSpine(
     if (byFile !== -1) return byFile;
   }
   if (spineHref) {
-    logger.warn(
+    logger.debug(
       'epub-toc: tocIndexForSpine no TOC entry for spineIndex',
       { spineIndex, spineHref, tocLen: toc.length },
       'reader',

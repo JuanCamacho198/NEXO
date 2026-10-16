@@ -341,7 +341,7 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     {
       const cfiPreview =
         typeof event.data.cfi === 'string' ? event.data.cfi.slice(0, 40) : '(null)';
-      logger.warn(
+      logger.debug(
         'epub-sel: received page',
         {
           pageNumber: event.data.pageNumber,
@@ -418,7 +418,7 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
       const locAtInit = deps.getInitialLocation();
       const initialCfi = locAtInit;
       if (!locAtInit || locAtInit === '') {
-        logger.warn(
+        logger.debug(
           'epub-hl: initReader with empty initialLocation, deferring to continue effect if any',
           { chapter: deps.getCurrentChapterIndex() },
           'reader',
@@ -435,7 +435,7 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
             const mapped = (() => {
               const byIndex = tocForInit.findIndex((c) => c.index === spineIdx);
               if (byIndex !== -1) return byIndex;
-              logger.warn(
+              logger.debug(
                 'epub-toc: initReader spine not in TOC, fallback to spineIdx',
                 { spineIdx, tocLen: tocForInit.length },
                 'reader',
@@ -447,7 +447,7 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
               deps.setCurrentChapterIndex(tocIdx);
               deps.setPendingCfiScroll(initialCfi);
             } else if (mapped === null && tocIdx >= 0 && tocIdx < deps.getTotalChapters()) {
-              logger.warn(
+              logger.debug(
                 'epub-toc: initReader fallback spineIdx as tocIdx',
                 { spineIdx, tocIdx },
                 'reader',
@@ -505,8 +505,8 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
 
   // Lifecycle: message listener
   onMount(() => {
-    logger.warn('epub-hl: VIEWER BUILD v4 epoch-guard active', {}, 'reader');
-    logger.warn(
+    logger.debug('epub-hl: VIEWER BUILD v4 epoch-guard active', {}, 'reader');
+    logger.debug(
       'epub-hl: onMount',
       {
         bookId: deps.getBookId().slice(0, 8),
@@ -558,7 +558,7 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     const currentIdx = untrack(() => deps.getCurrentChapterIndex());
     const pending = untrack(() => deps.getPendingCfiScroll());
     if (result) {
-      logger.warn(
+      logger.debug(
         'continue: initialLocation changed',
         { initialLocation: loc.slice(0, 80), chapterIdx: result.chapterIdx, current: currentIdx },
         'reader',
@@ -567,7 +567,7 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     deps.setLastContinueLocation(loc);
     if (result && result.needsScroll && !result.navigated) {
       if (pending !== loc) {
-        logger.warn(
+        logger.debug(
           'continue: already at chapter, scrolling to',
           { location: loc.slice(0, 60) },
           'reader',
@@ -577,10 +577,10 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
           scrollToCfi(loc);
         }
       } else {
-        logger.warn('continue: already at chapter with same pendingCfi, ignoring', {}, 'reader');
+        logger.debug('continue: already at chapter with same pendingCfi, ignoring', {}, 'reader');
       }
     } else if (result?.navigated) {
-      logger.warn(
+      logger.debug(
         'continue: navigating to chapter',
         { chapterIdx: result.chapterIdx, from: currentIdx },
         'reader',

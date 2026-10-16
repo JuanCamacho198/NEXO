@@ -71,6 +71,8 @@ export function createEpubSpine(deps: EpubSpineDeps): {
     // Fallback: derive from toc hrefs — spine authority preferred. May be misaligned offset-2.
     const toc = getToc();
     if (toc.length > 0) {
+      // warn, not debug: this is a degraded path that can misalign every
+      // locator built from it, so it must stay visible in the console.
       logger.warn(
         'epub-spine: falling back to TOC-derived hrefs (spine empty) — may be misaligned if offset-2',
         { tocLen: toc.length },
@@ -88,7 +90,7 @@ export function createEpubSpine(deps: EpubSpineDeps): {
     const toc = getToc();
     const entry = toc[tocIndex];
     if (!entry || typeof entry.index !== 'number') {
-      logger.warn(
+      logger.debug(
         'epub-toc: spineIndexForToc missing entry for tocIndex',
         { tocIndex, fallback: tocIndex, tocLen: toc.length },
         'reader',
@@ -98,7 +100,7 @@ export function createEpubSpine(deps: EpubSpineDeps): {
     const spineLen = getSpineHrefs().length;
     const resolved = pureSpineIndexForToc(toc, tocIndex);
     if (spineLen > 0 && (resolved < 0 || resolved >= spineLen)) {
-      logger.warn(
+      logger.debug(
         'epub-toc: spineIndexForToc resolved index out-of-bounds',
         { resolved, spineLen, tocIndex },
         'reader',
@@ -113,7 +115,7 @@ export function createEpubSpine(deps: EpubSpineDeps): {
     const toc = getToc();
     const res = pureTocIndexForSpine(toc, spineIndex, spineHref);
     if (res !== null) return res;
-    logger.warn(
+    logger.debug(
       'epub-toc: tocIndexForSpine no TOC entry for spineIndex',
       { spineIndex, spineHref: spineHref ?? '(none)' },
       'reader',

@@ -64,7 +64,7 @@ export function createSpineResolver(deps: { parseEpub?: ParseEpubFn } = {}): {
       if (spineHrefs.length > 0) {
         epubSpineHrefs = spineHrefs;
         epubSpineLoadedFor = bookId;
-        logger.warn(
+        logger.debug(
           'RW: spine loaded',
           {
             spineHrefCount: epubSpineHrefs.length,

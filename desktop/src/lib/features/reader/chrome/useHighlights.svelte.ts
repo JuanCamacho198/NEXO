@@ -104,7 +104,7 @@ export function createHighlights(deps: HighlightsDeps): {
             );
             continue;
           }
-          logger.warn(
+          logger.debug(
             'RW: listHighlights loaded',
             {
               count: rows.length,
@@ -126,7 +126,7 @@ export function createHighlights(deps: HighlightsDeps): {
               if (m) {
                 const idx = parseInt(m[1], 10) - 1;
                 if (idx >= 0 && idx !== pageNumber) {
-                  logger.warn(
+                  logger.debug(
                     'RW: fixing page mismatch',
                     { id: r.id.slice(0, 4), from: r.pageNumber, to: idx },
                     'reader',
@@ -137,7 +137,7 @@ export function createHighlights(deps: HighlightsDeps): {
               } else if (cfiTrim.startsWith('readium:')) {
                 const spineIdx = spine.getSpineIndexForHref(cfiTrim, spine.epubSpineHrefs);
                 if (spineIdx !== null && spineIdx >= 0 && spineIdx !== pageNumber) {
-                  logger.warn(
+                  logger.debug(
                     'RW: fixing page mismatch (readium)',
                     {
                       id: r.id.slice(0, 4),
@@ -173,7 +173,7 @@ export function createHighlights(deps: HighlightsDeps): {
             };
           });
           if (optimistic.length > 0) {
-            logger.warn(
+            logger.debug(
               'RW: preserving optimistic highlights not yet in DB',
               {
                 count: optimistic.length,
@@ -210,7 +210,7 @@ export function createHighlights(deps: HighlightsDeps): {
       dbg.epub.colorPickCount++;
       dbg.epub.lastPickedColor = color;
     }
-    logger.warn(
+    logger.debug(
       'RW: handleColorSelect',
       {
         pageNumber: data.pageNumber,
@@ -226,7 +226,7 @@ export function createHighlights(deps: HighlightsDeps): {
       const bounds = data.bounds;
       const pageNumber = data.pageNumber ?? (book.format?.toLowerCase() === 'epub' ? 0 : 1);
       const cfi = data.cfi ?? null;
-      logger.warn(
+      logger.debug(
         'RW: push highlight',
         {
           pageNumber,

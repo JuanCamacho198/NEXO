@@ -129,7 +129,7 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
     const mapped = deps.tocIndexForSpine(spineIdx);
     const chapterIdx = mapped !== null ? mapped : spineIdx;
     if (mapped === null) {
-      logger.warn(
+      logger.debug(
         'epub-toc: searchTargetLocator spine not in TOC, fallback',
         {
           spineIdx,

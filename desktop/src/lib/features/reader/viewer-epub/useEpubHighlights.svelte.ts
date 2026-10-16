@@ -139,7 +139,7 @@ export function createEpubHighlights(deps: EpubHighlightsDeps): {
     const highlightsSnapshot = deps.getPersistedHighlights();
     const lastRenderedSnapshot = untrack(() => deps.getLastRenderedChapter());
 
-    logger.warn(
+    logger.debug(
       'epub-hl: effect triggered',
       {
         highlightCount: highlightsSnapshot.length,
@@ -157,7 +157,7 @@ export function createEpubHighlights(deps: EpubHighlightsDeps): {
 
     const renderKey = `${currentIdx}|${deps.getCurrentSpineIndex()}|${chapterHref}|${highlightsSnapshot.map((h) => h.id + ':' + h.pageNumber).join(',')}`;
     if (renderKey === untrack(() => lastHighlightRenderKey)) {
-      logger.warn(
+      logger.debug(
         'epub-hl: skip duplicate render',
         { renderKey: renderKey.slice(0, 120) },
         'reader',
@@ -188,7 +188,7 @@ export function createEpubHighlights(deps: EpubHighlightsDeps): {
         if (retries++ < MAX_RETRIES) {
           timer = setTimeout(attemptRender, RETRY_INTERVAL);
           if (retries === 1) {
-            logger.warn(
+            logger.debug(
               'epub-hl: render deferred (lastRenderedChapter !== current) - retrying',
               { lastRendered: currentLastRendered, current: currentIdx },
               'reader',
@@ -208,7 +208,7 @@ export function createEpubHighlights(deps: EpubHighlightsDeps): {
         if (retries++ < MAX_RETRIES) {
           timer = setTimeout(attemptRender, RETRY_INTERVAL);
           if (retries === 1) {
-            logger.warn(
+            logger.debug(
               'epub-hl: render deferred (overlay not mounted on iframe window) - retrying',
               {},
               'reader',
@@ -224,7 +224,7 @@ export function createEpubHighlights(deps: EpubHighlightsDeps): {
         return;
       }
 
-      logger.warn(
+      logger.debug(
         'epub-hl: render called',
         {
           highlightCount: highlightsSnapshot.length,
