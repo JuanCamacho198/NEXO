@@ -326,6 +326,10 @@ export const messagesEn = {
   'notifications.center.collapse': 'Hide grouped notifications',
   'notifications.center.newArrival': 'New notification: {{message}}',
   'notifications.bell.unread': 'Open notifications, {{count}} unread',
+  // The bell badge caps its visible text at "9+" for legibility, so the
+  // accessible name must carry that exact string (WCAG 2.5.3) — {{badge}} is
+  // the visible text, {{count}} is the full count stated alongside it.
+  'notifications.bell.unreadBadge': 'Open notifications, {{badge}} unread ({{count}} total)',
 
   // Notification delivery preferences (NOTIF-05)
   'settings.notifications.delivery.title': 'Notifications',
@@ -593,6 +597,7 @@ export const messagesEn = {
   'sidebar.storage': 'Storage',
   'sidebar.sync': 'Sync',
   'sidebar.addons': 'Addons',
+  'sidebar.beta': 'Beta',
   'sidebar.dataSection': 'Data',
   'sidebar.expand': 'Expand sidebar',
   'sidebar.collapse': 'Collapse sidebar',
@@ -838,6 +843,7 @@ export const messagesEn = {
   'reader.section_page': 'Page',
   'reader.section_writing': 'Writing',
   'reader.bookmark': 'Bookmark',
+  'reader.bookmarks_count': '{{count}} bookmarks',
   'reader.direction': 'Direction',
   'reader.alignment': 'Alignment',
   'reader.colors': 'Colors',
@@ -879,6 +885,7 @@ export const messagesEn = {
   'reader.reset_confirm': 'Tap again to confirm reset',
   'reader.zoom': 'Zoom',
   'reader.zoomLevel': 'Zoom: {{level}}%',
+  'reader.font_size_level': 'Size: {{level}}%',
   'reader.fitWidth': 'Fit to width',
   'reader.fitPage': 'Fit to page',
   'reader.fullscreenHint': 'Press F to toggle fullscreen',

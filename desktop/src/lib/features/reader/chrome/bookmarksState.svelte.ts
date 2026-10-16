@@ -34,19 +34,27 @@ export function createBookmarksState(
   const viewerPort = deps.viewerPort ?? defaultViewerPort;
   let bookmarksList = $state<BookmarkItem[]>([]);
   let bookmarksLoading = $state(false);
+  // Supersede marker for concurrent loads. The guard lives here, at the write,
+  // not in the caller: guarding on the read side would leave a stale
+  // `bookmarksList = rows` intact, which is exactly the count-follows-book bug.
+  let requestedBookId: string | null = null;
 
   async function loadBookmarks(bookId: string): Promise<void> {
+    requestedBookId = bookId;
     bookmarksLoading = true;
     try {
-      bookmarksList = await viewerPort.listBookmarks(bookId);
+      const rows = await viewerPort.listBookmarks(bookId);
+      if (requestedBookId !== bookId) return; // a newer load superseded this one
+      bookmarksList = rows;
     } catch (err) {
+      if (requestedBookId !== bookId) return;
       handleError(err, 'reader', {
         bookId,
         action: 'load_bookmarks',
       });
       bookmarksList = [];
     } finally {
-      bookmarksLoading = false;
+      if (requestedBookId === bookId) bookmarksLoading = false;
     }
   }
 

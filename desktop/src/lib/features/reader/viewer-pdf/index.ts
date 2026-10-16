@@ -1,5 +1,4 @@
 export { default as PdfViewer } from './PdfViewer.svelte';
-export { default as PdfControls } from './PdfControls.svelte';
 export { default as PdfLoadingOverlay } from './PdfLoadingOverlay.svelte';
 export { default as PdfSelectionOverlay } from './PdfSelectionOverlay.svelte';
 export { default as PdfTocSidebar } from './PdfTocSidebar.svelte';

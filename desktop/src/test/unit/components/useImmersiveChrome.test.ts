@@ -15,7 +15,11 @@ vi.mock('$lib/features/reader/viewer-epub/keyboardNav', () => ({
   hasEditableContext: vi.fn().mockReturnValue(false),
 }));
 
-import { createImmersiveChrome } from '$lib/features/reader/chrome/useImmersiveChrome.svelte';
+import {
+  BOTTOM_BAND,
+  createImmersiveChrome,
+  TOP_BAND,
+} from '$lib/features/reader/chrome/useImmersiveChrome.svelte';
 import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
 
 describe('useImmersiveChrome', () => {
@@ -35,6 +39,8 @@ describe('useImmersiveChrome', () => {
     // reset readerState
     (readerState as unknown as { isFullscreen: boolean }).isFullscreen = false;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    // hoverBottom reads window.innerHeight, so pin it beside innerWidth.
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
   });
 
   afterEach(() => {
@@ -248,6 +254,100 @@ describe('useImmersiveChrome', () => {
     } as unknown as KeyboardEvent);
     await vi.advanceTimersByTimeAsync(0);
     expect(setFullscreen).toHaveBeenCalledWith(true);
+    chrome.cleanup();
+  });
+
+  it('bottom-band coords rescue a hidden chrome (twin of the top-strip test)', () => {
+    const chrome = createImmersiveChrome({ getPanelOpen: () => false });
+    chrome.toggleFullscreen();
+    chrome.handleForwardedMouse(500, 200);
+    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(2500);
+    expect(chrome.chromeVisible).toBe(false);
+    // Enter the bottom 72px band.
+    chrome.handleForwardedMouse(500, window.innerHeight - BOTTOM_BAND + 1);
+    vi.advanceTimersByTime(16);
+    expect(chrome.chromeVisible).toBe(true);
+    chrome.cleanup();
+  });
+
+  it('top and bottom band thresholds are symmetric', () => {
+    expect(TOP_BAND).toBe(BOTTOM_BAND);
+    const chrome = createImmersiveChrome({ getPanelOpen: () => false });
+    chrome.toggleFullscreen();
+    // Just inside the top band.
+    chrome.handleForwardedMouse(500, TOP_BAND - 1);
+    vi.advanceTimersByTime(16);
+    expect(chrome.hoverTop).toBe(true);
+    expect(chrome.hoverBottom).toBe(false);
+    // Just inside the bottom band, mirrored distance from the bottom edge.
+    chrome.handleForwardedMouse(500, window.innerHeight - (BOTTOM_BAND - 1));
+    vi.advanceTimersByTime(16);
+    expect(chrome.hoverBottom).toBe(true);
+    expect(chrome.hoverTop).toBe(false);
+    chrome.cleanup();
+  });
+
+  it('header and footer visibility stay equal at every step', () => {
+    let panelOpen = false;
+    const chrome = createImmersiveChrome({ getPanelOpen: () => panelOpen });
+    chrome.toggleFullscreen();
+    // On fullscreen entry both bars enter visible.
+    expect(chrome.chromeVisible).toBe(chrome.headerVisible);
+    expect(chrome.chromeVisible).toBe(true);
+    // After idle both hide.
+    chrome.handleForwardedMouse(500, 200);
+    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(2500);
+    expect(chrome.chromeVisible).toBe(chrome.headerVisible);
+    expect(chrome.chromeVisible).toBe(false);
+    // Top-band entry rescues both.
+    chrome.handleForwardedMouse(500, 4);
+    vi.advanceTimersByTime(16);
+    expect(chrome.chromeVisible).toBe(chrome.headerVisible);
+    expect(chrome.chromeVisible).toBe(true);
+    // Idle again, then bottom-band entry rescues both.
+    chrome.handleForwardedMouse(500, 200);
+    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(2500);
+    expect(chrome.chromeVisible).toBe(chrome.headerVisible);
+    expect(chrome.chromeVisible).toBe(false);
+    chrome.handleForwardedMouse(500, window.innerHeight - 4);
+    vi.advanceTimersByTime(16);
+    expect(chrome.chromeVisible).toBe(chrome.headerVisible);
+    expect(chrome.chromeVisible).toBe(true);
+    // Panel open forces both visible and keeps them equal.
+    chrome.handleForwardedMouse(500, 200);
+    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(2500);
+    expect(chrome.chromeVisible).toBe(chrome.headerVisible);
+    panelOpen = true;
+    chrome.resetIdleTimer();
+    expect(chrome.chromeVisible).toBe(chrome.headerVisible);
+    expect(chrome.chromeVisible).toBe(true);
+    chrome.cleanup();
+  });
+
+  it('headerVisible alias is not writable and footerVisible does not exist (ADR-002)', () => {
+    const chrome = createImmersiveChrome({ getPanelOpen: () => false });
+    // The alias must read the shared value and expose no setter: having no
+    // setter is the type-level guarantee that the header and footer cannot be
+    // written to diverge.
+    expect(Object.getOwnPropertyDescriptor(chrome, 'headerVisible')?.set).toBeUndefined();
+    expect(Object.getOwnPropertyDescriptor(chrome, 'chromeVisible')?.set).toBeUndefined();
+    expect('footerVisible' in chrome).toBe(false);
+    expect(chrome.headerVisible).toBe(chrome.chromeVisible);
+    chrome.cleanup();
+  });
+
+  it('windowed mode never hides the chrome', () => {
+    const chrome = createImmersiveChrome({ getPanelOpen: () => false });
+    expect(chrome.isFullscreen).toBe(false);
+    chrome.handleForwardedMouse(500, 200);
+    vi.advanceTimersByTime(16);
+    vi.advanceTimersByTime(2500);
+    expect(chrome.chromeVisible).toBe(true);
+    expect(chrome.headerVisible).toBe(true);
     chrome.cleanup();
   });
 });

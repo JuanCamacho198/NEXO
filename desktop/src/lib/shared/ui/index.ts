@@ -12,6 +12,7 @@ export { default as Field } from './forms/Field.svelte';
 export { default as ColorPicker } from './forms/ColorPicker.svelte';
 export { default as Avatar } from './forms/Avatar.svelte';
 export { default as Badge } from './forms/Badge.svelte';
+export { default as StatusChip } from './forms/StatusChip.svelte';
 
 // Layout components
 export { default as Modal } from './layout/Modal.svelte';

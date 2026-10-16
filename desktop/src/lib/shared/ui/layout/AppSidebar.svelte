@@ -3,6 +3,7 @@
   import type { NavItem } from '$lib/shared/stores/NavigationState.svelte';
   import type { MessageKey } from '../../i18n';
   import ThemeToggle from '$lib/shared/ui/navigation/ThemeToggle.svelte';
+  import StatusChip from '$lib/shared/ui/forms/StatusChip.svelte';
   import NotificationCenter from '$lib/shared/ui/feedback/NotificationCenter.svelte';
   import NotificationArrivalAnnouncer from '$lib/shared/ui/feedback/NotificationArrivalAnnouncer.svelte';
   import { notificationCenter, markAllRead } from '$lib/shared/stores/notificationCenter.svelte';
@@ -75,6 +76,16 @@
     notificationOpen = true;
     markAllRead();
   };
+
+  /**
+   * The badge caps the count at "9+" to stay legible in a 16px dot. WCAG 2.5.3
+   * requires the accessible name to CONTAIN the visible label text, so the two
+   * cannot drift: both the badge and the aria-label read this one string. The
+   * full count is named alongside it for a screen reader.
+   */
+  const unreadBadgeText = $derived(
+    notificationCenter.unreadCount > 9 ? '9+' : String(notificationCenter.unreadCount),
+  );
 </script>
 
 {#snippet navButton(item: NavItem)}
@@ -88,7 +99,9 @@
           ? 'bg-(--color-accent-nav-bg) text-(--color-accent-nav-fg)'
           : 'text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary)'
       }`}
-      aria-label={t(item.messageKey)}
+      aria-label={item.badgeKey
+        ? `${t(item.messageKey)} (${t(item.badgeKey)})`
+        : t(item.messageKey)}
       onclick={item.action}
     >
       {#if activeRoute === item.id}
@@ -97,7 +110,18 @@
           aria-hidden="true"
         ></span>
       {/if}
-      <ItemIcon size={16} strokeWidth={1.8} aria-hidden="true" />
+      <span class="relative shrink-0">
+        <ItemIcon size={16} strokeWidth={1.8} aria-hidden="true" />
+        {#if item.badgeKey && collapsed}
+          <!--
+            Collapsed there is no room to spell the status out, so the same
+            signal reduces to a dot. It reuses the notification badge's
+            geometry (bottom-right of the glyph) so the rail keeps one language
+            for "there is something here".
+          -->
+          <StatusChip dot tone="danger" class="absolute -right-1 -bottom-1" />
+        {/if}
+      </span>
       <span
         class={labelFadeClass}
         class:max-w-0={collapsed}
@@ -108,6 +132,24 @@
       >
         {t(item.messageKey)}
       </span>
+      {#if item.badgeKey}
+        <!--
+          The chip sits outside the collapsing label box: inside it, its width
+          would feed the 350ms max-width animation and the chip would visibly
+          squeeze before disappearing. It stays mounted and fades on its own,
+          matching how the labels collapse.
+        -->
+        <span
+          class="transition-[max-width,opacity] duration-(--duration-fast) ease-(--ease-smooth) overflow-hidden whitespace-nowrap"
+          class:max-w-0={collapsed}
+          class:opacity-0={collapsed}
+          class:max-w-full={!collapsed}
+          class:opacity-100={!collapsed}
+          aria-hidden={collapsed ? 'true' : undefined}
+        >
+          <StatusChip text={t(item.badgeKey)} />
+        </span>
+      {/if}
     </Tooltip.Trigger>
     <!--
       The label is already visible while expanded, so the tooltip would only
@@ -122,7 +164,7 @@
           sideOffset={8}
           class="z-50 whitespace-nowrap rounded bg-(--color-surface) p-1 text-xs text-(--color-primary) shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
         >
-          {t(item.messageKey)}
+          {item.badgeKey ? `${t(item.messageKey)} (${t(item.badgeKey)})` : t(item.messageKey)}
         </Tooltip.Content>
       </Tooltip.Portal>
     {/if}
@@ -209,7 +251,10 @@
       class:justify-center={collapsed}
       class:gap-3={!collapsed}
       aria-label={notificationCenter.unreadCount > 0
-        ? t('notifications.bell.unread', { count: notificationCenter.unreadCount })
+        ? t('notifications.bell.unreadBadge', {
+            badge: unreadBadgeText,
+            count: notificationCenter.unreadCount,
+          })
         : t('notifications.bell.label')}
     >
       <span class="relative shrink-0">
@@ -219,7 +264,7 @@
             class="absolute -top-1.5 -right-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-(--color-error) px-1 text-[10px] font-bold text-(--color-background)"
             aria-hidden="true"
           >
-            {notificationCenter.unreadCount > 9 ? '9+' : notificationCenter.unreadCount}
+            {unreadBadgeText}
           </span>
         {/if}
       </span>

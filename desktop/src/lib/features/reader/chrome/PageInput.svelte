@@ -1,27 +1,20 @@
 <script lang="ts">
   import type { MessageKey } from '$lib/shared/i18n';
+  import { CHROME_PAGE_FIELD } from './chromeControl';
 
   type Props = {
     currentPage: number;
     totalPages: number;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onGoToPage?: (page: number) => Promise<boolean>;
-    variant: 'toolbar' | 'header';
     /** Optional data-testid for the page input */
     pageInputTestId?: string;
     /** Optional data-testid for the total pages span */
     totalPagesTestId?: string;
   };
 
-  let {
-    currentPage,
-    totalPages,
-    t,
-    onGoToPage,
-    variant,
-    pageInputTestId,
-    totalPagesTestId,
-  }: Props = $props();
+  let { currentPage, totalPages, t, onGoToPage, pageInputTestId, totalPagesTestId }: Props =
+    $props();
 
   let pageValue = $state(1);
 
@@ -42,28 +35,16 @@
     }
   }
 
-  const wrapClass = $derived(
-    variant === 'header'
-      ? 'flex items-center gap-1 text-xs text-(--color-text-auxiliary)'
-      : 'flex items-center gap-1 text-xs text-(--color-primary)',
-  );
-  const inputClass = $derived(
-    variant === 'header'
-      ? 'w-[50px] min-h-11 p-1 border border-(--color-surface-strong) rounded-full text-center bg-(--color-bg-deep) text-(--color-text-auxiliary)'
-      : 'w-[50px] min-h-11 p-1 border border-(--color-border) rounded-full text-center bg-(--color-surface) text-(--color-primary)',
-  );
-  const totalClass = $derived(
-    variant === 'header'
-      ? 'text-xs text-(--color-text-auxiliary) opacity-70'
-      : 'text-xs text-(--color-text-muted) opacity-70',
-  );
+  const wrapClass = 'flex items-center gap-1 text-xs text-(--color-text-muted)';
+  const inputClass = CHROME_PAGE_FIELD;
+  const totalClass = 'text-xs text-(--color-text-muted)';
 </script>
 
 <span class={wrapClass}>
   <input
-    type="number"
-    min="1"
-    max={totalPages}
+    type="text"
+    inputmode="numeric"
+    pattern="[0-9]*"
     value={pageValue}
     onchange={handlePageInput}
     class={inputClass}

@@ -1,5 +1,4 @@
 export { default as EpubNativeViewer } from './EpubNativeViewer.svelte';
-export { default as EpubControls } from './EpubControls.svelte';
 export { default as EpubTocSidebar } from './EpubTocSidebar.svelte';
 export * from './cfiBridge';
 export { IFRAME_CFI_BRIDGE_SCRIPT } from './cfiBridgeIframe';

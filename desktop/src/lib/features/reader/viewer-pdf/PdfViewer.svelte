@@ -27,7 +27,6 @@
   import { createPdfOutlineState } from '$lib/features/reader/viewer-pdf/usePdfOutline.svelte';
   import { createPdfZoomThemeState } from '$lib/features/reader/viewer-pdf/usePdfZoomTheme.svelte';
   import { resolveFitScalePercent, type FitMode } from '$lib/features/reader/chrome/fitZoom';
-  import PdfControls from './PdfControls.svelte';
   import { logger } from '$lib/shared/logger/Logger';
   import PdfSelectionOverlay from './PdfSelectionOverlay.svelte';
   import PdfLoadingOverlay from './PdfLoadingOverlay.svelte';
@@ -454,22 +453,6 @@
   };
 </script>
 
-{#snippet pdfControlsSnippet()}
-  <PdfControls
-    {currentPage}
-    totalPages={docState.totalPages}
-    {scale}
-    isLoading={docState.isLoading}
-    error={docState.error}
-    {t}
-    onPrevPage={goToPrevPage}
-    onNextPage={goToNextPage}
-    onGoToPage={navigateToPage}
-    onSetScale={(s) => setScale(s)}
-    onFit={applyFit}
-  />
-{/snippet}
-
 <svelte:window onkeydown={handleViewerKeydown} />
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
@@ -510,7 +493,6 @@
     loadProgressMax={docState.loadProgressMax}
     {t}
   />
-  {#if !isFullscreen}{@render pdfControlsSnippet()}{/if}
   {#if navigationError}<p
       class="m-0 px-3 pt-2 text-red-600 text-xs"
       role="status"

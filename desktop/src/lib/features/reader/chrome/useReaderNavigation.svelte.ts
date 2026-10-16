@@ -25,6 +25,8 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   tocNavigate: TocEntry | null;
   showTocPanel: boolean;
   readonly bookProgress: number;
+  readonly hasEpubProgress: boolean;
+  readonly currentChapterTitle: string | null;
   readonly headerCurrentPage: number;
   readonly headerTotalPages: number;
   readonly showHeaderReadingControls: boolean;
@@ -46,7 +48,20 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   let tocEntries = $state<TocEntry[]>([]);
   let tocNavigate = $state<TocEntry | null>(null);
   let showTocPanel = $state(false);
+  let epubProgress = $state(0);
+  let hasEpubProgress = $state(false);
 
+  // The reader's current chapter title, or null when none is known. EPUB maps
+  // the spine index straight into the TOC. PDF has no such mapping: its
+  // outline entries carry no page number until a destination resolves
+  // asynchronously, and `tocEntries` here never receives that value, so the
+  // page -> chapter correspondence is not reliable. PDF returns null and the
+  // bar falls back to the book title (product decision in the feature doc).
+  const currentChapterTitle = $derived.by((): string | null => {
+    if (resolveViewer().kind !== 'epub') return null;
+    const title = tocEntries[currentEpubChapter]?.title?.trim() ?? '';
+    return title.length > 0 ? title : null;
+  });
   const resolveViewer = (): ViewerHandle => {
     if (deps.getViewer) return deps.getViewer();
     // fallback for legacy tests: build minimal viewer from getRefs/getActiveBook without polluting chrome with format branches
@@ -113,12 +128,13 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
 
   const bookProgress = $derived.by(() => {
     const v = resolveViewer();
-    const cur = v.getCurrentPage();
-    const total = v.getTotalForHeader();
-    if (v.kind === 'pdf' && cur > 0 && total > 0) {
-      return Math.round((cur / total) * 100);
+    if (v.kind === 'pdf') {
+      const cur = v.getCurrentPage();
+      const total = v.getTotalForHeader();
+      if (cur > 0 && total > 0) return Math.round((cur / total) * 100);
+      return 0;
     }
-    return 0;
+    return Math.round(epubProgress);
   });
 
   const headerCurrentPage = $derived.by(() => {
@@ -162,6 +178,8 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   function handleEpubLocationChange(cfi: string, pct: number): void {
     const match = cfi.match(/chapter:(\d+)/);
     if (match) currentEpubChapter = parseInt(match[1], 10);
+    epubProgress = Number.isFinite(pct) ? Math.min(100, Math.max(0, pct)) : 0;
+    hasEpubProgress = true;
     captureBreadcrumb('navigation', BREADCRUMB_LABELS.CHAPTER_CHANGE, {
       bookId: deps.getActiveBook?.()?.id ?? null,
       chapterIndex: currentEpubChapter,
@@ -206,8 +224,6 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
     return resolveViewer().goToPage(page);
   }
 
-  function cleanup(): void {}
-
   return {
     get currentPdfPage() {
       return currentPdfPage;
@@ -248,6 +264,12 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
     get bookProgress() {
       return bookProgress;
     },
+    get hasEpubProgress() {
+      return hasEpubProgress;
+    },
+    get currentChapterTitle() {
+      return currentChapterTitle;
+    },
     get headerCurrentPage() {
       return headerCurrentPage;
     },
@@ -271,7 +293,7 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
     goPrev,
     goNext,
     handleHeaderGoToPage,
-    cleanup,
+    cleanup() {},
   };
 }
 

@@ -330,6 +330,10 @@ export const messagesEs: Record<MessageKey, string> = {
   'notifications.center.collapse': 'Ocultar notificaciones agrupadas',
   'notifications.center.newArrival': 'Nueva notificación: {{message}}',
   'notifications.bell.unread': 'Abrir notificaciones, {{count}} sin leer',
+  // The bell badge caps its visible text at "9+" for legibility, so the
+  // accessible name must carry that exact string (WCAG 2.5.3) — {{badge}} is
+  // the visible text, {{count}} is the full count stated alongside it.
+  'notifications.bell.unreadBadge': 'Abrir notificaciones, {{badge}} sin leer ({{count}} en total)',
 
   // Notification delivery preferences (NOTIF-05)
   'settings.notifications.delivery.title': 'Notificaciones',
@@ -601,6 +605,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'sidebar.storage': 'Almacenamiento',
   'sidebar.sync': 'Sincronización',
   'sidebar.addons': 'Addons',
+  'sidebar.beta': 'Beta',
   'sidebar.dataSection': 'Datos',
   'sidebar.expand': 'Expandir sidebar',
   'sidebar.collapse': 'Colapsar sidebar',
@@ -1278,6 +1283,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.section_page': 'Página',
   'reader.section_writing': 'Escritura',
   'reader.bookmark': 'Marcador',
+  'reader.bookmarks_count': '{{count}} marcadores',
   'reader.direction': 'Dirección',
   'reader.alignment': 'Alineación',
   'reader.colors': 'Colores',
@@ -1319,6 +1325,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.reset_confirm': 'Toca de nuevo para confirmar',
   'reader.zoom': 'Zoom',
   'reader.zoomLevel': 'Zoom: {{level}}%',
+  'reader.font_size_level': 'Tamaño: {{level}}%',
   'reader.fitWidth': 'Ajustar al ancho',
   'reader.fitPage': 'Ajustar a la página',
   'reader.fullscreenHint': 'Pulsa F para pantalla completa',

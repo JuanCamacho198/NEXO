@@ -7,11 +7,10 @@
 // Chrome (reader layout: workspace, header, footer, controls, text settings,
 // toc panel) + bookmarks state.
 export {
-  ReaderControls,
-  ReaderFooter,
-  ReaderHeader,
+  ReaderBottomBar,
   ReaderTextSettings,
   ReaderTocPanel,
+  ReaderTopBar,
   ReaderWorkspace,
 } from './chrome';
 export * from './chrome/bookmarksState.svelte';
@@ -31,7 +30,6 @@ export { BookmarksPanel, SearchPanel } from './panels';
 
 // EPUB viewer + sub-components + scripts.
 export {
-  EpubControls,
   EpubNativeViewer,
   EpubTocSidebar,
   IFRAME_CFI_BRIDGE_SCRIPT,
@@ -43,13 +41,7 @@ export * from './viewer-epub/epubCache';
 export * from './viewer-epub/keyboardNav';
 
 // PDF viewer + sub-components + scripts + state.
-export {
-  PdfControls,
-  PdfLoadingOverlay,
-  PdfSelectionOverlay,
-  PdfTocSidebar,
-  PdfViewer,
-} from './viewer-pdf';
+export { PdfLoadingOverlay, PdfSelectionOverlay, PdfTocSidebar, PdfViewer } from './viewer-pdf';
 export {
   scaleOptions,
   TOOLBAR_OFFSET,

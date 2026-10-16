@@ -7,7 +7,8 @@
  *
  * The decision is only worth anything if it stays true, so the invariant is
  * mechanical instead of prose: the production importer set is exactly those four
- * files, and none of the three swapped wrappers imports the utility.
+ * reader surfaces that keep the hand-rolled `focusTrap`, and none of the swapped
+ * wrappers imports the utility.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
@@ -26,10 +27,14 @@ const SWAPPED_WRAPPERS = [
 
 const EXPECTED_IMPORTERS = [
   // NoteEditorModal migrated to bits-ui Dialog (perf-stability-cleanup M1):
-  // its hand-rolled focusTrap + Escape pair is gone, three importers remain.
+  // its hand-rolled focusTrap + Escape pair is gone, three chrome importers
+  // remained until SearchPanel's drawer adoption (reader-search-panel-fix) made
+  // it the fourth — it lives in panels/, not chrome/, so the set is reader
+  // surfaces rather than chrome consumers.
   'features/reader/chrome/BookmarkSidebar.svelte',
   'features/reader/chrome/ReaderTextSettings.svelte',
   'features/reader/chrome/ReaderTocPanel.svelte',
+  'features/reader/panels/SearchPanel.svelte',
 ];
 
 interface SourceFile {
@@ -84,7 +89,7 @@ const LIB_PATH = resolveLibPath();
 const IMPORTERS = findFocusTrapImporters(readProductionSources(LIB_PATH));
 
 describe('focusTrap production importer set (D4)', () => {
-  it('is exactly the four reader-chrome consumers', () => {
+  it('is exactly the four reader surfaces that keep the hand-rolled focusTrap', () => {
     expect(IMPORTERS).toEqual(EXPECTED_IMPORTERS);
   });
 

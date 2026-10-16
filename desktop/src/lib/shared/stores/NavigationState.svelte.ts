@@ -15,6 +15,15 @@ export type NavItem = {
   messageKey: MessageKey;
   icon: typeof LucideIcon;
   action: () => void;
+  /**
+   * Optional status chip rendered next to the label while the rail is
+   * expanded. Collapsed, the same signal reduces to a dot on the icon, so the
+   * flag stays visible in both states without a per-route branch in the
+   * sidebar. A nav item that carries a badge announces it through
+   * `aria-label` as well, since the chip is decorative to a screen reader
+   * reading only the destination name.
+   */
+  badgeKey?: MessageKey;
 };
 
 export type NavCallbacks = {
@@ -54,6 +63,7 @@ export function getNavItems(callbacks: NavCallbacks): NavItem[] {
       messageKey: 'sidebar.addons',
       icon: LayoutGrid,
       action: callbacks.onNavigateAddons,
+      badgeKey: 'sidebar.beta',
     });
   }
   items.push(

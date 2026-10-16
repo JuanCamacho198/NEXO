@@ -19,6 +19,8 @@ function fakeT(key: string, params?: Record<string, string | number>): string {
   const labels: Record<string, string> = {
     'sidebar.home': 'Inicio',
     'sidebar.library': 'Estantería',
+    'sidebar.addons': 'Addons',
+    'sidebar.beta': 'Beta',
     'sidebar.stats': 'Estadísticas',
     'sidebar.highlights': 'Notas y resaltados',
     'sidebar.settings': 'Ajustes',
@@ -26,6 +28,8 @@ function fakeT(key: string, params?: Record<string, string | number>): string {
     'sidebar.collapse': 'Colapsar sidebar',
     'notifications.bell.label': 'Abrir notificaciones',
     'notifications.bell.unread': 'Abrir notificaciones, {{count}} sin leer',
+    'notifications.bell.unreadBadge':
+      'Abrir notificaciones, {{badge}} sin leer ({{count}} en total)',
     'notifications.center.title': 'Notificaciones',
     'notifications.center.newArrival': 'Nueva notificación: {{message}}',
     'theme.currentDark': 'Tema oscuro',
@@ -49,6 +53,7 @@ function makeNavItems(
     onNavigateStats: () => void;
     onNavigateHighlights: () => void;
     onNavigateSettings: () => void;
+    onNavigateAddons: () => void;
   }> = {},
 ) {
   return getNavItems({
@@ -57,6 +62,7 @@ function makeNavItems(
     onNavigateStats: vi.fn(),
     onNavigateHighlights: vi.fn(),
     onNavigateSettings: vi.fn(),
+    onNavigateAddons: vi.fn(),
     ...overrides,
   });
 }
@@ -101,7 +107,7 @@ describe('AppSidebar', () => {
     expect(dividers.length).toBeGreaterThanOrEqual(2);
     // Dividers never wrap destinations: nav buttons stay direct children.
     const buttons = nav!.querySelectorAll(':scope > button');
-    expect(buttons.length).toBe(5);
+    expect(buttons.length).toBe(6);
   });
 
   it('collapses to an icon rail that keeps every destination reachable', async () => {
@@ -327,15 +333,28 @@ describe('AppSidebar', () => {
     );
     expect(overlays).toHaveLength(0);
 
-    // Every collapsed nav label is likewise in flow and clipped to zero.
-    const collapsedLabels = Array.from(aside!.querySelectorAll('nav button > span')).filter((el) =>
-      el.className.includes('max-w-0'),
+    // Every collapsed nav label is likewise in flow and clipped to zero. The
+    // six destinations carry a label; the status chip is asserted separately
+    // below, because it collapses the same way but is not a destination name.
+    const collapsedLabels = Array.from(aside!.querySelectorAll('nav button > span')).filter(
+      (el) => el.className.includes('max-w-0') && !el.querySelector('span'),
     );
-    expect(collapsedLabels).toHaveLength(5);
+    expect(collapsedLabels).toHaveLength(6);
     for (const label of collapsedLabels) {
       expect(label.className).not.toContain('absolute');
       expect(label.className).toContain('overflow-hidden');
     }
+
+    // The Addons status chip collapses on its own box: it must clip to zero
+    // without going absolute, exactly like the labels it sits beside. It is
+    // selected by its fade class rather than by `rounded-full`, which also
+    // matches the collapsed dot and the active-route bar.
+    const collapsedChip = Array.from(aside!.querySelectorAll('nav button > span.max-w-0')).find(
+      (el) => el.className.includes('transition-[max-width,opacity]'),
+    );
+    expect(collapsedChip).toBeDefined();
+    expect(collapsedChip!.className).toContain('overflow-hidden');
+    expect(collapsedChip!.className).not.toContain('absolute');
 
     // A retained flex `gap-3` still separates a zero-width in-flow label from
     // its icon, which would widen the row past the 72px rail. The two rows that
@@ -351,6 +370,51 @@ describe('AppSidebar', () => {
     // The state round-trips: a click expands the rail back.
     await user.click(expand);
     expect(screen.getByLabelText('Colapsar sidebar')).toBeInTheDocument();
+  });
+
+  describe('nav status chip', () => {
+    /** The chip is the only `rounded-full` text node inside a nav trigger. */
+    function chipIn(trigger: HTMLElement): Element | null {
+      return (
+        Array.from(trigger.querySelectorAll('span.rounded-full')).find(
+          (el) => (el.textContent?.trim().length ?? 0) > 0 || el.className.includes('size-1.5'),
+        ) ?? null
+      );
+    }
+
+    it('renders the status chip beside the Addons label while expanded', () => {
+      render(AppSidebar, defaultProps);
+      const trigger = screen.getByLabelText('Addons (Beta)');
+      const chip = chipIn(trigger);
+      expect(chip).not.toBeNull();
+      expect(chip!.textContent?.trim()).toBe('Beta');
+    });
+
+    it('announces the status in the trigger name so the chip is not the only carrier', () => {
+      render(AppSidebar, defaultProps);
+      // The chip itself is decorative to a screen reader reading a label list;
+      // the trigger name is what reaches assistive tech.
+      expect(screen.getByLabelText('Addons (Beta)')).toBeInTheDocument();
+    });
+
+    it('reduces the status to a dot on the icon once collapsed', async () => {
+      const user = userEvent.setup();
+      render(AppSidebar, defaultProps);
+
+      await user.click(screen.getByLabelText('Colapsar sidebar'));
+
+      const trigger = screen.getByLabelText('Addons (Beta)');
+      const dot = chipIn(trigger);
+      expect(dot).not.toBeNull();
+      expect(dot!.textContent?.trim()).toBe('');
+      expect(dot!.className).toContain('size-1.5');
+    });
+
+    it('leaves destinations without a status free of a chip', () => {
+      render(AppSidebar, defaultProps);
+      const library = screen.getByRole('button', { name: 'Estantería' });
+      expect(chipIn(library)).toBeNull();
+    });
   });
 
   describe('notification bell and arrival announcements (NOTIF-06)', () => {
@@ -396,7 +460,53 @@ describe('AppSidebar', () => {
       expect(screen.getByRole('status').textContent).toContain(
         'Nueva notificación: notifications.kind.syncFailure',
       );
-      expect(screen.getByLabelText('Abrir notificaciones, 2 sin leer')).toBeInTheDocument();
+      // WCAG 2.5.3: the name must contain the visible badge text, so at two
+      // unread the badge shows "2" and the name carries that exact string.
+      expect(
+        screen.getByLabelText('Abrir notificaciones, 2 sin leer (2 en total)'),
+      ).toBeInTheDocument();
+    });
+
+    /**
+     * The badge caps at "9+" for legibility while the count keeps growing.
+     * WCAG 2.5.3 requires the accessible name to contain the visible text, so
+     * the "9+" branch and the exact-number branch are both load-bearing and
+     * each needs its own assertion.
+     */
+    function notifyTimes(times: number): void {
+      for (let i = 0; i < times; i++) {
+        notify(
+          {
+            source: 'sync',
+            severity: 'error',
+            i18nKey: 'notifications.kind.syncFailure',
+            i18nParams: { detail: `Run ${i}` },
+          },
+          { isWindowFocused: true, isReading: true },
+        );
+      }
+    }
+
+    it('keeps the exact count in the bell name at or below the badge cap', async () => {
+      render(AppSidebar, defaultProps);
+      notifyTimes(9);
+      await tick();
+
+      const bell = screen.getByLabelText('Abrir notificaciones, 9 sin leer (9 en total)');
+      expect(bell).toBeInTheDocument();
+      // The visible badge text is the exact number, and it is contained.
+      expect(bell.textContent).toContain('9');
+    });
+
+    it('caps the badge at "9+" and carries that same text in the bell name', async () => {
+      render(AppSidebar, defaultProps);
+      notifyTimes(12);
+      await tick();
+
+      const bell = screen.getByLabelText('Abrir notificaciones, 9+ sin leer (12 en total)');
+      expect(bell).toBeInTheDocument();
+      // The visible badge shows the capped text, and the name contains it.
+      expect(bell.textContent).toContain('9+');
     });
   });
 });

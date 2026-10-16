@@ -7,7 +7,6 @@
     ReaderTextAlign,
     ReaderDirection,
   } from '$lib/shared/types';
-  import EpubControls from './EpubControls.svelte';
   import { logger } from '$lib/shared/logger/Logger';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
@@ -174,9 +173,6 @@
     const t = spine.getToc().length;
     return t > 0 ? navigation.currentChapterIndex + 1 : navigation.currentSpineIndex + 1;
   });
-  let displayPercentage = $derived.by(() =>
-    displayTotal <= 0 ? 0 : ((displayCurrentPage - 0.5) / displayTotal) * 100,
-  );
 
   function getToc(): EpubChapterMeta[] {
     return spine.getToc();
@@ -284,7 +280,9 @@
     getLastContinueLocation: () => lastContinueLocation,
     setLastContinueLocation: (v) => (lastContinueLocation = v),
     getOnTocReady: () => onTocReady,
-    onLocationChange: (cfi, pct) => onLocationChange?.(cfi, pct),
+    onLocationChange: (cfi, pct) => {
+      onLocationChange?.(cfi, pct);
+    },
     onLocationContext: (ctx) => onLocationContext?.(ctx),
     onselection: (event) => onselection?.(event),
     onselectionclear: () => onselectionclear?.(),
@@ -533,25 +531,6 @@
       {t('epub.error')}: {error}
     </div>
   {:else}
-    {#if !isFullscreen}
-      <EpubControls
-        currentPage={displayCurrentPage}
-        totalPages={displayTotal}
-        currentPercentage={displayPercentage}
-        {fontSize}
-        {t}
-        onPrev={goToPrev}
-        onNext={goToNext}
-        onGoToPage={handleGoToPage}
-        onFontSizeChange={(size: number) => {
-          const updated: ReaderSettings = {
-            ...readerSettings,
-            epub: { ...readerSettings.epub, fontSize: size },
-          };
-          onSettingsChange?.(updated);
-        }}
-      />
-    {/if}
     <div
       data-testid="epub-scroll-container"
       class="flex-1 w-full min-h-0 overflow-y-auto pb-16"

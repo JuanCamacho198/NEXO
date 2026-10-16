@@ -5,10 +5,13 @@
 - **Install**: `bun install`
 - **Dev frontend**: `bun run dev`
 - **Dev Tauri**: `bun run tauri:dev`
+- **Dev Tauri (CDP debug)**: `bun run tauri:dev:debug` — same app, with the WebView2 remote-debugging port open for the `tauri-cdp` Playwright project. Windows only, not a CI gate. See `e2e/tauri/README.md`.
 - **Build frontend**: `bun run build`
 - **Build Tauri**: `bun run tauri:build`
 - **Test all**: `bun run test`
 - **Test single**: `bun vitest run --testNamePattern="test name" src/test/file.test.ts`
+- **Test e2e (stubbed, CI)**: `bun run test:e2e`
+- **Test e2e (real app over CDP)**: `bun run test:e2e:cdp` — requires `tauri:dev:debug` running. Local only; see `e2e/tauri/README.md`.
 - **Type check**: `bun run check`
 - **Lint frontend**: `bun run lint`
 - **Format frontend**: `bun run format`

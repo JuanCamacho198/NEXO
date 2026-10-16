@@ -289,7 +289,11 @@ describe('EpubNativeViewer', () => {
       expect(screen.queryByTestId('epub-fullscreen')).toBeNull();
     });
 
-    it('renders EpubControls with prev/next/font-size controls', async () => {
+    // INVERSION (U3.7): this test previously asserted that the VIEWER rendered
+    // paging controls. The viewer now renders none — the reader-level bottom bar
+    // owns prev/next/fit/zoom for both formats. Asserting the absence is the
+    // contract: a viewer that grows its own controls again is a regression.
+    it('renders no paging controls of its own (the reader bottom bar owns them)', async () => {
       render(EpubNativeViewer, {
         filePath: '/test/book.epub',
         bookId: 'test-book',
@@ -298,9 +302,9 @@ describe('EpubNativeViewer', () => {
 
       await screen.findByTitle('chapter');
 
-      expect(screen.getByTestId('epub-prev')).toBeInTheDocument();
-      expect(screen.getByTestId('epub-next')).toBeInTheDocument();
-      expect(screen.getByTestId('zoom-dropdown-trigger')).toBeInTheDocument();
+      expect(screen.queryByTestId('epub-prev')).toBeNull();
+      expect(screen.queryByTestId('epub-next')).toBeNull();
+      expect(screen.queryByTestId('zoom-dropdown-trigger')).toBeNull();
     });
   });
 

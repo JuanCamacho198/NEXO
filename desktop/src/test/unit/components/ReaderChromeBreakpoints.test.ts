@@ -1,74 +1,95 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
-import ReaderControls from '$lib/features/reader/chrome/ReaderControls.svelte';
-import ReaderHeader from '$lib/features/reader/chrome/ReaderHeader.svelte';
+import ReaderTopBar from '$lib/features/reader/chrome/ReaderTopBar.svelte';
+import ReaderBottomBar from '$lib/features/reader/chrome/ReaderBottomBar.svelte';
 import type { MessageKey } from '$lib/shared/i18n';
 
 const t = (key: MessageKey, _params?: Record<string, string | number>): string => key;
 
-function renderHeader(overrides: Record<string, unknown> = {}) {
-  return render(ReaderHeader, {
+function renderTopBar(overrides: Record<string, unknown> = {}) {
+  return render(ReaderTopBar, {
     title: 'Book',
     showTocPanel: false,
     searchPanelOpen: false,
     showTextSettings: false,
-    showBookmarks: false,
     isFullscreen: false,
-    format: 'epub' as const,
+    visible: true,
     t,
     onBackToHome: () => {},
     onToggleToc: () => {},
     onToggleSearch: () => {},
     onToggleTextSettings: () => {},
-    onToggleBookmarks: () => {},
     onToggleFullscreen: () => {},
     ...overrides,
   });
 }
 
-describe('reader chrome breakpoints (U2.3)', () => {
-  it('header top row tightens padding on narrow widths', () => {
-    const { container } = renderHeader();
-    const topRow = container.querySelector('header > div');
-    expect(topRow?.className).toContain('px-4');
-    expect(topRow?.className).toContain('sm:px-8');
+export function renderBottomBar(overrides: Record<string, unknown> = {}) {
+  return render(ReaderBottomBar, {
+    title: 'Book',
+    bookProgress: 42,
+    currentPdfPage: 3,
+    totalPdfPages: 10,
+    viewerKind: 'pdf' as const,
+    isFullscreen: false,
+    visible: true,
+    currentPage: 5,
+    totalPages: 10,
+    zoomPercent: 100,
+    bookmarkCount: 0,
+    bookmarksLoading: false,
+    showBookmarks: false,
+    t,
+    onPrev: () => {},
+    onNext: () => {},
+    onGoToPage: async () => true,
+    onFit: () => {},
+    onZoomSelect: () => {},
+    onToggleBookmarks: () => {},
+    ...overrides,
+  });
+}
+
+describe('reader chrome breakpoints (U3.3)', () => {
+  it('top bar tightens padding on narrow widths', () => {
+    const { container } = renderTopBar();
+    const bar = container.firstElementChild;
+    expect(bar?.className).toContain('px-4');
+    expect(bar?.className).toContain('sm:px-8');
   });
 
-  it('header title truncates and yields below 480px', () => {
-    renderHeader();
+  it('top bar title truncates and yields below 480px', () => {
+    renderTopBar();
     const title = screen.getByText('Book');
     expect(title.className).toContain('truncate');
     expect(title.className).toContain('min-w-0');
     expect(title.className).toContain('max-[480px]:hidden');
   });
 
-  it('toolbar wraps and tightens gaps on narrow widths', () => {
-    const { container } = render(ReaderControls, {
-      currentPage: 1,
-      totalPages: 10,
-      t,
-      onPrev: () => {},
-      onNext: () => {},
-      onGoToPage: async () => true,
-    });
-    const toolbar = container.firstElementChild;
+  it('bottom bar control cluster wraps and tightens gaps on narrow widths', () => {
+    const { container } = renderBottomBar();
+    const toolbar = container.querySelector('[data-testid="bottom-bar-controls"]');
     expect(toolbar?.className).toContain('flex-wrap');
     expect(toolbar?.className).toContain('gap-2');
     expect(toolbar?.className).toContain('sm:gap-3');
     expect(toolbar?.className).toContain('px-2');
-    expect(toolbar?.className).toContain('sm:px-3');
+    expect(toolbar?.className).toContain('sm:px-4');
   });
 
-  it('fullscreen status strip tightens gaps on narrow widths', () => {
-    const { container } = renderHeader({
-      isFullscreen: true,
-      currentPage: 3,
-      totalPages: 10,
-      onGoToPage: async () => true,
-    });
-    const strip = container.querySelector('header > div + div');
-    expect(strip?.className).toContain('gap-3');
-    expect(strip?.className).toContain('px-2');
-    expect(strip?.className).toContain('sm:px-4');
+  // The previous form of this test selected `header > div + div` — the second
+  // header row — and became null when that row was deleted. The contract is not
+  // "a second header div exists": it is "the bottom bar's control cluster stays
+  // responsive", asserted here against its own test id. That no second header
+  // row exists is a composition property and is asserted structurally in
+  // ReaderWorkspace.test.ts, NEVER by sibling position — asserting the absence
+  // here would re-encode row position as the contract this test guards.
+  it('bottom bar control cluster is the responsive surface, selected by test id', () => {
+    const { container } = renderBottomBar();
+    const cluster = container.querySelector('[data-testid="bottom-bar-controls"]');
+    expect(cluster).not.toBeNull();
+    expect(cluster?.className).toContain('gap-2');
+    expect(cluster?.className).toContain('sm:gap-3');
+    expect(cluster?.className).toContain('px-2');
+    expect(cluster?.className).toContain('sm:px-4');
   });
 });

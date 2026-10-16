@@ -7,8 +7,10 @@
   import ReaderTextSettings from './ReaderTextSettings.svelte';
   import ReaderTocPanel from './ReaderTocPanel.svelte';
   import type { TocEntry } from './ReaderTocPanel.svelte';
-  import ReaderHeader from './ReaderHeader.svelte';
-  import ReaderFooter from './ReaderFooter.svelte';
+  import ReaderTopBar from './ReaderTopBar.svelte';
+  import ReaderBottomBar from './ReaderBottomBar.svelte';
+  import ReaderFullscreenAffordances from './ReaderFullscreenAffordances.svelte';
+  import ReaderSelectionDebugOverlay from './ReaderSelectionDebugOverlay.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, SearchBookTextResponse } from '$lib/shared/types';
   import type { LibraryBookDto } from '$lib/shared/types/library';
@@ -31,6 +33,7 @@
   import { createImmersiveChrome } from './useImmersiveChrome.svelte';
   import { createReaderShortcuts } from './useReaderShortcuts.svelte';
   import { createReaderZoom } from './useReaderZoom.svelte';
+  import { clampZoomPercent } from '../viewer-pdf/pdfNavigation';
   import { createHighlightMenu } from '../highlight/useHighlightMenu.svelte';
   import { createBookmarksPanel } from './useBookmarksPanel.svelte';
   import { createReaderNavigation } from './useReaderNavigation.svelte';
@@ -200,6 +203,14 @@
     const v = readerState.highlightsVersion;
     if (v > 0 && activeReadingBook) highlightsState.reloadHighlights();
   });
+  // Bookmarks follow the BOOK, not the panel (ADR-005): the count is in the
+  // bottom bar and must be right before the panel is ever opened. The
+  // supersede guard for concurrent loads lives in `bookmarksState`.
+  $effect(() => {
+    const bookId = activeReadingBook?.id ?? null;
+    if (!bookId) return;
+    void bookmarksPanel.bookmarksState.loadBookmarks(bookId);
+  });
   $effect(() => {
     const handler = (e: Event): void => {
       const detail = (e as CustomEvent).detail as { bookId?: string } | undefined;
@@ -252,7 +263,6 @@
   // because it is reader-scoped and reads its binding from the shared registry.
   const readerShortcuts = createReaderShortcuts({ onToggleSearch: () => toggleSearch() });
   let isFullscreen = $derived(chrome.isFullscreen);
-  let headerVisible = $derived(chrome.headerVisible);
   let edgeNavVisible = $derived(chrome.edgeNavVisible);
   function handleWorkspaceMouseLeave(): void {
     chrome.handleWorkspaceMouseLeave();
@@ -275,13 +285,11 @@
     chrome.toggleFullscreen();
     syncDebugReaderInfo();
   }
-  function handleHeaderFontSizeChange(size: number): void {
-    zoom.handleHeaderFontSizeChange(size);
-  }
   $effect(() => {
     void chrome.isFullscreen;
     void panelOpen;
     void chrome.hoverTop;
+    void chrome.hoverBottom;
     chrome.resetIdleTimer();
     chrome.updateEdgeNav(chrome.mouseX);
   });
@@ -322,7 +330,7 @@
         isTocOpen: nav.showTocPanel,
         isSearchOpen: searchPanelOpen,
         isFullscreen,
-        pageInfo: `${nav.bookProgress}%`,
+        pageInfo: `${bookProgress}%`,
         scale: 0,
       };
     }
@@ -340,16 +348,13 @@
     syncDebugReaderInfo();
   }
 
-  const bookProgress = $derived(nav.bookProgress || Math.round(percentage));
+  const bookProgress = $derived(nav.hasEpubProgress ? nav.bookProgress : Math.round(percentage));
   const headerCurrentPage = $derived(nav.headerCurrentPage);
   const headerTotalPages = $derived(nav.headerTotalPages);
   // The fullscreen `%` reads the viewer scale (PDF) or viewer zoom (EPUB),
   // never `epub.fontSize` for a PDF. `getScaleOrZoom` subscribes to the
   // viewer's own state, so wheel/keys/dropdown all flow into this readout.
   const headerZoomPercent = $derived(viewer.getScaleOrZoom());
-  const showHeaderReadingControls = $derived(
-    isFullscreen && headerTotalPages > 0 && activeReadingBook !== null,
-  );
 
   async function handleHeaderGoToPage(page: number): Promise<boolean> {
     // U2: navigation invalidates the selection anchor — never carry the menu
@@ -528,113 +533,114 @@
     searchPanelOpen = !searchPanelOpen;
     syncDebugReaderInfo();
   }
+  // The drawer closes through a named path (not an inline assignment) so the
+  // debug snapshot stays in sync: `readerInfo.isSearchOpen` reads
+  // `searchPanelOpen`, and a bare assignment would leave it stale.
+  function closeSearch(): void {
+    searchPanelOpen = false;
+    syncDebugReaderInfo();
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <section
   class="flex flex-col bg-(--color-bg-deep) {isFullscreen
     ? 'fixed inset-0 z-40 h-screen w-screen overflow-hidden bg-[#f8f5ec]'
-    : 'h-screen'} {chrome.cursorHidden ? 'cursor-none' : ''}"
+    : 'h-full min-h-0'} {chrome.cursorHidden ? 'cursor-none' : ''}"
   bind:this={workspaceRoot}
   onmouseleave={handleWorkspaceMouseLeave}
 >
-  <ReaderHeader
+  <ReaderTopBar
     title={activeReadingBook?.title ?? ''}
     showTocPanel={nav.showTocPanel}
     {searchPanelOpen}
     {showTextSettings}
-    showBookmarks={bookmarksPanel.showBookmarks}
     {isFullscreen}
-    format={viewer.kind === 'pdf' ? 'pdf' : 'epub'}
-    headerVisible={isFullscreen ? headerVisible : true}
+    visible={isFullscreen ? chrome.chromeVisible : true}
     {t}
     {onBackToHome}
     onToggleToc={toggleTocPanel}
     onToggleSearch={toggleSearch}
     onToggleTextSettings={toggleTextSettings}
-    onToggleBookmarks={toggleBookmarks}
     onToggleFullscreen={toggleFullscreen}
-    currentPage={headerCurrentPage}
-    totalPages={headerTotalPages}
-    fontSizePercent={headerZoomPercent}
-    onGoToPage={handleHeaderGoToPage}
-    onFontSizeChange={handleHeaderFontSizeChange}
   />
-  {#if !isFullscreen}
-    <div class="shrink-0 h-16" aria-hidden="true"></div>
-  {/if}
-  <div
-    class="flex flex-1 min-h-0 items-stretch justify-center"
-    class:px-10={!isFullscreen}
-    class:py-6={!isFullscreen}
-    class:p-0={isFullscreen}
-    class:pt-16={isFullscreen && headerVisible && !showHeaderReadingControls}
-    class:pt-28={isFullscreen && headerVisible && showHeaderReadingControls}
-  >
+  <div class="flex flex-1 min-h-0 items-stretch justify-center" class:p-0={isFullscreen}>
     {#if getReaderErrorFn()}
       <p class="font-inter text-sm text-(--color-text-inverse)">{getReaderErrorFn()}</p>
     {:else if !activeReadingBook}
       <p class="font-inter text-sm text-(--color-text-inverse)">{t('reader.no_book_loaded')}</p>
     {:else if viewer.kind === 'pdf'}
       <div
-        class="relative bg-white flex flex-col min-h-0 h-full w-full"
-        class:rounded-xl={!isFullscreen}
-        class:shadow-lg={!isFullscreen}
+        class="flex min-h-0 min-w-0 flex-1"
+        class:px-10={!isFullscreen}
+        class:py-6={!isFullscreen}
       >
-        <PdfViewer
-          bind:this={pdfRef}
-          filePath={activeReadingBook.filePath}
-          bookId={activeReadingBook.id}
-          initialPage={Math.max(1, activeReadingBook.currentPage || 1)}
-          {searchTargetLocator}
-          readerSettings={localReaderSettings}
-          preloadedBytes={preloadedBytes?.filePath === activeReadingBook.filePath
-            ? preloadedBytes.data
-            : null}
-          onPageChange={nav.handlePdfPageChange}
-          onSessionProgress={onPdfSessionProgress}
-          onselection={handleViewerSelection}
-          onselectionclear={dismissToolbar}
-          onHighlightAction={handleHighlightAction}
-          onTocReady={nav.handleTocReady}
-          externalTocNavigate={nav.tocNavigate}
-          {isFullscreen}
-          tocOpen={nav.showTocPanel}
-          persistedHighlights={highlightsState.persistedHighlights}
-          {t}
-        />
+        <div
+          class="relative bg-white flex flex-col min-h-0 h-full w-full"
+          class:rounded-xl={!isFullscreen}
+          class:shadow-lg={!isFullscreen}
+        >
+          <PdfViewer
+            bind:this={pdfRef}
+            filePath={activeReadingBook.filePath}
+            bookId={activeReadingBook.id}
+            initialPage={Math.max(1, activeReadingBook.currentPage || 1)}
+            {searchTargetLocator}
+            readerSettings={localReaderSettings}
+            preloadedBytes={preloadedBytes?.filePath === activeReadingBook.filePath
+              ? preloadedBytes.data
+              : null}
+            onPageChange={nav.handlePdfPageChange}
+            onSessionProgress={onPdfSessionProgress}
+            onselection={handleViewerSelection}
+            onselectionclear={dismissToolbar}
+            onHighlightAction={handleHighlightAction}
+            onTocReady={nav.handleTocReady}
+            externalTocNavigate={nav.tocNavigate}
+            {isFullscreen}
+            tocOpen={nav.showTocPanel}
+            persistedHighlights={highlightsState.persistedHighlights}
+            {t}
+          />
+        </div>
       </div>
     {:else if viewer.kind === 'epub'}
       <div
-        class="relative overflow-hidden bg-white flex flex-col h-full min-h-0 w-full"
-        class:rounded-xl={!isFullscreen}
-        class:shadow-lg={!isFullscreen}
+        class="flex min-h-0 min-w-0 flex-1"
+        class:px-10={!isFullscreen}
+        class:py-6={!isFullscreen}
       >
-        <EpubNativeViewer
-          bind:this={epubRef}
-          filePath={activeReadingBook.filePath}
-          bookId={activeReadingBook.id}
-          initialLocation={readerState.cfiLocation}
-          initialPercentage={percentage}
-          {searchTargetLocator}
-          readerSettings={localReaderSettings}
-          onLocationContext={onReaderLocationContext}
-          onLocationChange={nav.handleEpubLocationChange}
-          onTocReady={nav.handleTocReady}
-          externalTocNavigate={nav.tocNavigate}
-          onselection={handleViewerSelection}
-          onselectionclear={dismissToolbar}
-          {isFullscreen}
-          hasSelectionMenu={showToolbar}
-          onSettingsChange={handleTextSettingsChange}
-          persistedHighlights={highlightsState.persistedHighlights}
-          onHighlightAction={handleHighlightAction}
-          onIframeMouseMove={(x, y) => chrome.handleForwardedMouse(x, y)}
-          onIframeMouseLeave={() => chrome.handleWorkspaceMouseLeave()}
-          onIframeClick={(x, isLink) => handleIframeTercileClick(x, isLink)}
-          cursorHidden={chrome.cursorHidden}
-          {t}
-        />
+        <div
+          class="relative overflow-hidden bg-white flex flex-col h-full min-h-0 w-full"
+          class:rounded-xl={!isFullscreen}
+          class:shadow-lg={!isFullscreen}
+        >
+          <EpubNativeViewer
+            bind:this={epubRef}
+            filePath={activeReadingBook.filePath}
+            bookId={activeReadingBook.id}
+            initialLocation={readerState.cfiLocation}
+            initialPercentage={percentage}
+            {searchTargetLocator}
+            readerSettings={localReaderSettings}
+            onLocationContext={onReaderLocationContext}
+            onLocationChange={nav.handleEpubLocationChange}
+            onTocReady={nav.handleTocReady}
+            externalTocNavigate={nav.tocNavigate}
+            onselection={handleViewerSelection}
+            onselectionclear={dismissToolbar}
+            {isFullscreen}
+            hasSelectionMenu={showToolbar}
+            onSettingsChange={handleTextSettingsChange}
+            persistedHighlights={highlightsState.persistedHighlights}
+            onHighlightAction={handleHighlightAction}
+            onIframeMouseMove={(x, y) => chrome.handleForwardedMouse(x, y)}
+            onIframeMouseLeave={() => chrome.handleWorkspaceMouseLeave()}
+            onIframeClick={(x, isLink) => handleIframeTercileClick(x, isLink)}
+            cursorHidden={chrome.cursorHidden}
+            {t}
+          />
+        </div>
       </div>
     {:else}
       <p class="font-inter text-sm text-(--color-text-inverse)">
@@ -653,40 +659,13 @@
         {t}
       />
     {/if}
-    {#if dbg.enabled && computedToolbarX !== null && computedToolbarY !== null}
-      <div
-        aria-hidden="true"
-        class="pointer-events-none fixed z-9998"
-        style="left: {computedToolbarX}px; top: {computedToolbarY}px;"
-      >
-        <div class="relative">
-          <div
-            class="absolute -left-1 -top-1 h-3 w-3 rounded-full bg-cyan-400 ring-2 ring-white"
-          ></div>
-          <div
-            class="absolute left-3 top-0 whitespace-nowrap rounded bg-cyan-500 px-1.5 py-0.5 text-micro font-mono text-white shadow"
-          >
-            toolbar target ({Math.round(computedToolbarX)},{Math.round(computedToolbarY)})
-          </div>
-        </div>
-      </div>
-    {/if}
-    {#if dbg.enabled && selectionBounds && selectionContainer}
-      {@const selParentLeft = selectionContainer.left + selectionBounds.left}
-      {@const selParentTop = selectionContainer.top + selectionBounds.top}
-      {@const selParentWidth = selectionBounds.right - selectionBounds.left}
-      {@const selParentHeight = selectionBounds.bottom - selectionBounds.top}
-      <div
-        aria-hidden="true"
-        class="pointer-events-none fixed z-9997 border-2 border-dashed border-red-500"
-        style="left: {selParentLeft}px; top: {selParentTop}px; width: {selParentWidth}px; height: {selParentHeight}px;"
-      >
-        <span
-          class="absolute -top-5 left-0 whitespace-nowrap rounded bg-red-500 px-1.5 py-0.5 text-micro font-mono text-white shadow"
-          >selection bounds ({Math.round(selParentLeft)},{Math.round(selParentTop)})</span
-        >
-      </div>
-    {/if}
+    <ReaderSelectionDebugOverlay
+      enabled={dbg.enabled}
+      {computedToolbarX}
+      {computedToolbarY}
+      {selectionBounds}
+      {selectionContainer}
+    />
     {#if highlightMenuState.highlightMenu.open && highlightMenuState.highlightMenu.highlightId && highlightMenuState.highlightMenu.position}
       <div
         class="fixed inset-0 z-[99]"
@@ -742,115 +721,62 @@
       {t}
     />
   </div>
-  <ReaderFooter
+  <ReaderBottomBar
     title={activeReadingBook?.title ?? ''}
+    chapterTitle={nav.currentChapterTitle}
     {bookProgress}
     currentPdfPage={nav.currentPdfPage}
     totalPdfPages={nav.totalPdfPages}
     viewerKind={viewer.kind}
     {isFullscreen}
+    visible={isFullscreen ? chrome.chromeVisible : true}
+    currentPage={headerCurrentPage}
+    totalPages={headerTotalPages}
+    zoomPercent={headerZoomPercent}
+    bookmarkCount={bookmarksPanel.bookmarksState.bookmarksList.length}
+    bookmarksLoading={bookmarksPanel.bookmarksState.bookmarksLoading}
+    showBookmarks={bookmarksPanel.showBookmarks}
     {t}
+    onPrev={goPrevPage}
+    onNext={goNextPage}
+    onGoToPage={handleHeaderGoToPage}
+    onFit={(mode) => {
+      void pdfRef?.applyFit(mode);
+    }}
+    onZoomSelect={(pct) => {
+      if (viewer.kind === 'pdf') void pdfRef?.setScale(clampZoomPercent(pct) / 100);
+      else zoom.handleHeaderFontSizeChange(pct);
+    }}
+    onToggleBookmarks={toggleBookmarks}
   />
-  {#if isFullscreen && activeReadingBook}
-    <!-- U2: persistent rescue strips. The chapter iframe swallows hover, so
-      these 1-2px DOM strips above it guarantee a mouse path back. -->
-    <div
-      role="presentation"
-      aria-hidden="true"
-      class="fixed inset-x-0 top-0 z-40 h-2"
-      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
-    ></div>
-    <div
-      role="presentation"
-      aria-hidden="true"
-      class="fixed bottom-0 left-0 top-0 z-40 w-2"
-      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
-    ></div>
-    <div
-      role="presentation"
-      aria-hidden="true"
-      class="fixed bottom-0 right-0 top-0 z-40 w-2"
-      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
-    ></div>
-    {@const prevDisabled = nav.prevDisabled}
-    {@const nextDisabled = nav.nextDisabled}
-    <button
-      type="button"
-      class="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-(--color-bg-deep)/40 text-(--color-text-inverse) backdrop-blur hover:bg-(--color-bg-deep)/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
-        ? 'opacity-100'
-        : 'opacity-40'} {prevDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
-      aria-label={t('reader.prev_page')}
-      onclick={goPrevPage}
-      disabled={prevDisabled}
-      aria-disabled={prevDisabled}
-      ><svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"><path d="M15 18l-6-6 6-6" /></svg
-      ></button
-    >
-    <button
-      type="button"
-      class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-(--color-bg-deep)/40 text-(--color-text-inverse) backdrop-blur hover:bg-(--color-bg-deep)/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
-        ? 'opacity-100'
-        : 'opacity-40'} {nextDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
-      aria-label={t('reader.next_page')}
-      onclick={goNextPage}
-      disabled={nextDisabled}
-      aria-disabled={nextDisabled}
-      ><svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"><path d="M9 18l6-6-6-6" /></svg
-      ></button
-    >
-    {#if selectedText}
-      <button
-        type="button"
-        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full bg-(--color-accent-blue) px-4 py-2 text-sm font-medium text-(--color-accent-on) shadow-lg hover:opacity-90 cursor-pointer"
-        onclick={() => void handleShareText()}
-        ><svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          ><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle
-            cx="18"
-            cy="19"
-            r="3"
-          /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg
-        >{t('reader.share')}</button
-      >
-    {/if}
-    {#if headerVisible}
-      <p
-        class="pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 z-40 whitespace-nowrap text-xs text-(--color-text-inverse)/70"
-        aria-hidden="true"
-      >
-        {t('reader.fullscreenKeysHint')}
-      </p>
-    {/if}
+  <ReaderFullscreenAffordances
+    {isFullscreen}
+    hasBook={activeReadingBook !== null}
+    {edgeNavVisible}
+    prevDisabled={nav.prevDisabled}
+    nextDisabled={nav.nextDisabled}
+    chromeVisible={chrome.chromeVisible}
+    {selectedText}
+    {t}
+    onPrev={goPrevPage}
+    onNext={goNextPage}
+    onShare={() => void handleShareText()}
+    onMouseMove={(e) => chrome.handleWorkspaceMouseMove(e)}
+  />
+  {#if searchPanelOpen && activeReadingBook}
+    <SearchPanel
+      open={searchPanelOpen}
+      onClose={closeSearch}
+      bookId={activeReadingBook.id}
+      disabledReason={searchUnavailableReason}
+      {isSearching}
+      response={searchResponse}
+      onSearch={(query, page) => onSearch?.(query, page)}
+      onJump={(target) => onSearchJump?.(target)}
+      {t}
+    />
   {/if}
 </section>
-{#if searchPanelOpen && activeReadingBook}
-  <SearchPanel
-    bookId={activeReadingBook.id}
-    disabledReason={searchUnavailableReason}
-    {isSearching}
-    response={searchResponse}
-    onSearch={(query, page) => onSearch?.(query, page)}
-    onJump={(target) => onSearchJump?.(target)}
-    {t}
-  />
-{/if}
 <ReaderTextSettings
   open={showTextSettings}
   format={viewer.kind}
