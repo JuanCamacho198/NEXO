@@ -347,9 +347,6 @@
   // never `epub.fontSize` for a PDF. `getScaleOrZoom` subscribes to the
   // viewer's own state, so wheel/keys/dropdown all flow into this readout.
   const headerZoomPercent = $derived(viewer.getScaleOrZoom());
-  const showHeaderReadingControls = $derived(
-    isFullscreen && headerTotalPages > 0 && activeReadingBook !== null,
-  );
 
   async function handleHeaderGoToPage(page: number): Promise<boolean> {
     // U2: navigation invalidates the selection anchor — never carry the menu
@@ -534,7 +531,7 @@
 <section
   class="flex flex-col bg-(--color-bg-deep) {isFullscreen
     ? 'fixed inset-0 z-40 h-screen w-screen overflow-hidden bg-[#f8f5ec]'
-    : 'h-screen'} {chrome.cursorHidden ? 'cursor-none' : ''}"
+    : 'h-full min-h-0'} {chrome.cursorHidden ? 'cursor-none' : ''}"
   bind:this={workspaceRoot}
   onmouseleave={handleWorkspaceMouseLeave}
 >
@@ -560,81 +557,83 @@
     onGoToPage={handleHeaderGoToPage}
     onFontSizeChange={handleHeaderFontSizeChange}
   />
-  {#if !isFullscreen}
-    <div class="shrink-0 h-16" aria-hidden="true"></div>
-  {/if}
-  <div
-    class="flex flex-1 min-h-0 items-stretch justify-center"
-    class:px-10={!isFullscreen}
-    class:py-6={!isFullscreen}
-    class:p-0={isFullscreen}
-    class:pt-16={isFullscreen && headerVisible && !showHeaderReadingControls}
-    class:pt-28={isFullscreen && headerVisible && showHeaderReadingControls}
-  >
+  <div class="flex flex-1 min-h-0 items-stretch justify-center" class:p-0={isFullscreen}>
     {#if getReaderErrorFn()}
       <p class="font-inter text-sm text-(--color-text-inverse)">{getReaderErrorFn()}</p>
     {:else if !activeReadingBook}
       <p class="font-inter text-sm text-(--color-text-inverse)">{t('reader.no_book_loaded')}</p>
     {:else if viewer.kind === 'pdf'}
       <div
-        class="relative bg-white flex flex-col min-h-0 h-full w-full"
-        class:rounded-xl={!isFullscreen}
-        class:shadow-lg={!isFullscreen}
+        class="flex min-h-0 min-w-0 flex-1"
+        class:px-10={!isFullscreen}
+        class:py-6={!isFullscreen}
       >
-        <PdfViewer
-          bind:this={pdfRef}
-          filePath={activeReadingBook.filePath}
-          bookId={activeReadingBook.id}
-          initialPage={Math.max(1, activeReadingBook.currentPage || 1)}
-          {searchTargetLocator}
-          readerSettings={localReaderSettings}
-          preloadedBytes={preloadedBytes?.filePath === activeReadingBook.filePath
-            ? preloadedBytes.data
-            : null}
-          onPageChange={nav.handlePdfPageChange}
-          onSessionProgress={onPdfSessionProgress}
-          onselection={handleViewerSelection}
-          onselectionclear={dismissToolbar}
-          onHighlightAction={handleHighlightAction}
-          onTocReady={nav.handleTocReady}
-          externalTocNavigate={nav.tocNavigate}
-          {isFullscreen}
-          tocOpen={nav.showTocPanel}
-          persistedHighlights={highlightsState.persistedHighlights}
-          {t}
-        />
+        <div
+          class="relative bg-white flex flex-col min-h-0 h-full w-full"
+          class:rounded-xl={!isFullscreen}
+          class:shadow-lg={!isFullscreen}
+        >
+          <PdfViewer
+            bind:this={pdfRef}
+            filePath={activeReadingBook.filePath}
+            bookId={activeReadingBook.id}
+            initialPage={Math.max(1, activeReadingBook.currentPage || 1)}
+            {searchTargetLocator}
+            readerSettings={localReaderSettings}
+            preloadedBytes={preloadedBytes?.filePath === activeReadingBook.filePath
+              ? preloadedBytes.data
+              : null}
+            onPageChange={nav.handlePdfPageChange}
+            onSessionProgress={onPdfSessionProgress}
+            onselection={handleViewerSelection}
+            onselectionclear={dismissToolbar}
+            onHighlightAction={handleHighlightAction}
+            onTocReady={nav.handleTocReady}
+            externalTocNavigate={nav.tocNavigate}
+            {isFullscreen}
+            tocOpen={nav.showTocPanel}
+            persistedHighlights={highlightsState.persistedHighlights}
+            {t}
+          />
+        </div>
       </div>
     {:else if viewer.kind === 'epub'}
       <div
-        class="relative overflow-hidden bg-white flex flex-col h-full min-h-0 w-full"
-        class:rounded-xl={!isFullscreen}
-        class:shadow-lg={!isFullscreen}
+        class="flex min-h-0 min-w-0 flex-1"
+        class:px-10={!isFullscreen}
+        class:py-6={!isFullscreen}
       >
-        <EpubNativeViewer
-          bind:this={epubRef}
-          filePath={activeReadingBook.filePath}
-          bookId={activeReadingBook.id}
-          initialLocation={readerState.cfiLocation}
-          initialPercentage={percentage}
-          {searchTargetLocator}
-          readerSettings={localReaderSettings}
-          onLocationContext={onReaderLocationContext}
-          onLocationChange={nav.handleEpubLocationChange}
-          onTocReady={nav.handleTocReady}
-          externalTocNavigate={nav.tocNavigate}
-          onselection={handleViewerSelection}
-          onselectionclear={dismissToolbar}
-          {isFullscreen}
-          hasSelectionMenu={showToolbar}
-          onSettingsChange={handleTextSettingsChange}
-          persistedHighlights={highlightsState.persistedHighlights}
-          onHighlightAction={handleHighlightAction}
-          onIframeMouseMove={(x, y) => chrome.handleForwardedMouse(x, y)}
-          onIframeMouseLeave={() => chrome.handleWorkspaceMouseLeave()}
-          onIframeClick={(x, isLink) => handleIframeTercileClick(x, isLink)}
-          cursorHidden={chrome.cursorHidden}
-          {t}
-        />
+        <div
+          class="relative overflow-hidden bg-white flex flex-col h-full min-h-0 w-full"
+          class:rounded-xl={!isFullscreen}
+          class:shadow-lg={!isFullscreen}
+        >
+          <EpubNativeViewer
+            bind:this={epubRef}
+            filePath={activeReadingBook.filePath}
+            bookId={activeReadingBook.id}
+            initialLocation={readerState.cfiLocation}
+            initialPercentage={percentage}
+            {searchTargetLocator}
+            readerSettings={localReaderSettings}
+            onLocationContext={onReaderLocationContext}
+            onLocationChange={nav.handleEpubLocationChange}
+            onTocReady={nav.handleTocReady}
+            externalTocNavigate={nav.tocNavigate}
+            onselection={handleViewerSelection}
+            onselectionclear={dismissToolbar}
+            {isFullscreen}
+            hasSelectionMenu={showToolbar}
+            onSettingsChange={handleTextSettingsChange}
+            persistedHighlights={highlightsState.persistedHighlights}
+            onHighlightAction={handleHighlightAction}
+            onIframeMouseMove={(x, y) => chrome.handleForwardedMouse(x, y)}
+            onIframeMouseLeave={() => chrome.handleWorkspaceMouseLeave()}
+            onIframeClick={(x, isLink) => handleIframeTercileClick(x, isLink)}
+            cursorHidden={chrome.cursorHidden}
+            {t}
+          />
+        </div>
       </div>
     {:else}
       <p class="font-inter text-sm text-(--color-text-inverse)">

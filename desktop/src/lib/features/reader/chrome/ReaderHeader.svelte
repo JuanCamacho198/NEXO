@@ -74,7 +74,9 @@
 </script>
 
 <header
-  class="flex flex-col border-b border-(--color-surface-strong) bg-(--color-bg-deep) fixed inset-x-0 top-0 z-50 transition-transform duration-300 {headerTransform}"
+  class="flex flex-col shrink-0 border-b border-(--color-surface-strong) bg-(--color-bg-deep) transition-transform duration-300 {isFullscreen
+    ? 'fixed inset-x-0 top-0 z-50'
+    : ''} {headerTransform}"
   class:shadow-md={isFullscreen}
 >
   <!-- Top row: Biblioteca + title + tools -->

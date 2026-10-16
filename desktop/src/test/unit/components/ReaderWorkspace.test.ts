@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 
 const t = (key: string) => key;
@@ -88,5 +89,59 @@ describe('ReaderWorkspace', () => {
     expect(toolbar).toBeTruthy();
     expect(toolbar?.getAttribute('style')).toContain('left: 116px');
     expect(toolbar?.getAttribute('style')).toContain('top: 296px');
+  });
+  it('windowed root fits its parent box instead of the viewport (U1.1)', () => {
+    const { container } = render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    const root = container.querySelector('section');
+    expect(root?.className).toContain('h-full');
+    expect(root?.className).toContain('min-h-0');
+    expect(root?.className).not.toContain('h-screen');
+  });
+  it('fullscreen takeover root keeps fixed inset-0 and h-screen (U1.1)', async () => {
+    const { container } = render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    await fireEvent.click(screen.getByLabelText('pdf.fullscreenEnter'));
+    await tick();
+
+    const root = container.querySelector('section');
+    expect(root?.className).toContain('fixed inset-0');
+    expect(root?.className).toContain('h-screen');
+  });
+  it('renders no phantom h-16 spacer for an overlay header (U1.3)', () => {
+    const { container } = render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    expect(container.querySelector('div[aria-hidden="true"].h-16')).toBeNull();
+  });
+  it('applies the paper inset to the document wrapper only (U1.5)', () => {
+    const { container } = render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    const card = screen.getByTestId('mock-pdfviewer-toggle').closest('div.rounded-xl');
+    const wrapper = card?.parentElement;
+    expect(wrapper?.className).toContain('px-10');
+    expect(wrapper?.className).toContain('py-6');
+
+    const header = container.querySelector('header');
+    const footer = container.querySelector('footer');
+    expect(header?.className).not.toContain('px-10');
+    expect(header?.className).not.toContain('py-6');
+    expect(footer?.className).not.toContain('px-10');
+    expect(footer?.className).not.toContain('py-6');
   });
 });
