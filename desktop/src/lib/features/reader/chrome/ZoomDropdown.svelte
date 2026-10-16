@@ -1,5 +1,6 @@
 <script lang="ts">
   import { clampZoomPercent, ZOOM_OPTIONS } from '$lib/features/reader/viewer-pdf/pdfNavigation';
+  import { chromeIconButton } from './chromeControl';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -24,6 +25,8 @@
   );
   const options = ZOOM_OPTIONS;
 
+  const triggerClass = `${chromeIconButton('action')} gap-1 min-w-18`;
+
   function selectOption(v: number): void {
     const clamped = clampZoomPercent(v);
     open = false;
@@ -47,7 +50,7 @@
   <button
     type="button"
     onclick={() => (open = !open)}
-    class="inline-flex items-center gap-1 rounded-full border border-(--color-border) bg-(--color-surface) px-3 py-1.5 text-xs font-medium text-(--color-primary) hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,var(--color-surface))] cursor-pointer min-w-18 min-h-11 justify-center"
+    class={triggerClass}
     aria-haspopup="listbox"
     aria-expanded={open}
     aria-label={accessibleName}

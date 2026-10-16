@@ -4,4 +4,5 @@ export { default as ReaderTopBar } from './ReaderTopBar.svelte';
 export { default as ReaderTextSettings } from './ReaderTextSettings.svelte';
 export { default as ReaderTocPanel } from './ReaderTocPanel.svelte';
 export { default as ReaderWorkspace } from './ReaderWorkspace.svelte';
+export * from './chromeControl';
 export * from './bookmarksState.svelte';
