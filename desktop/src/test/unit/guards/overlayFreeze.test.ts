@@ -25,16 +25,19 @@ const BITS_UI_IMPORT = /from\s+['"]bits-ui['"]/;
  * fails loudly so the freeze decision is revisited on purpose, never by
  * drift. bits-ui overlays (Modal, NoteEditorModal, FeedbackDialog) carry
  * `fixed inset-0` on their Overlay element but are excluded by the scanner:
- * this list pins hand-rolled roots only. Five remain: the NoteEditorModal and
+ * this list pins hand-rolled roots only. Six remain: the NoteEditorModal and
  * FeedbackDialog migrations (perf-stability-cleanup M1/M2), the
- * CollectionManager deletion (dead code — no trigger ever opened it), and the
- * SettingsPanel overlay-mode deletion (dead code — page mode was the only mode used).
+ * CollectionManager deletion (dead code — no trigger ever opened it), the
+ * SettingsPanel overlay-mode deletion (dead code — page mode was the only mode used),
+ * and the SearchPanel drawer adoption (reader-search-panel-fix: the in-book search
+ * surface became the fourth hand-rolled drawer instead of an in-flow card).
  */
 const KNOWN_OVERLAY_ROOTS = [
   'features/reader/chrome/BookmarkSidebar.svelte',
   'features/reader/chrome/ReaderTextSettings.svelte',
   'features/reader/chrome/ReaderTocPanel.svelte',
   'features/reader/chrome/ReaderWorkspace.svelte',
+  'features/reader/panels/SearchPanel.svelte',
   'shared/ui/feedback/ErrorFallback.svelte',
 ];
 

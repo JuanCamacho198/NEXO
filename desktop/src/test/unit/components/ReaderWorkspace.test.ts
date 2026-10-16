@@ -202,4 +202,22 @@ describe('ReaderWorkspace', () => {
     // never opened in this render.
     expect(screen.getByTestId('bookmark-count')).toBeInTheDocument();
   });
+  it('mounts the search drawer inside the reader root (reader-search-panel-fix)', async () => {
+    const { container } = render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    await fireEvent.click(screen.getByLabelText('search.title'));
+    await tick();
+
+    const root = container.querySelector('section');
+    const dialog = container.querySelector('[role="dialog"]');
+    // Structural, not geometric: jsdom has no layout engine, so a
+    // getBoundingClientRect assertion would be vacuous. Ancestry is the direct
+    // encoding of the defect — the panel used to be a sibling AFTER the root.
+    expect(dialog).not.toBeNull();
+    expect(root?.contains(dialog as Node)).toBe(true);
+  });
 });

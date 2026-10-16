@@ -533,6 +533,13 @@
     searchPanelOpen = !searchPanelOpen;
     syncDebugReaderInfo();
   }
+  // The drawer closes through a named path (not an inline assignment) so the
+  // debug snapshot stays in sync: `readerInfo.isSearchOpen` reads
+  // `searchPanelOpen`, and a bare assignment would leave it stale.
+  function closeSearch(): void {
+    searchPanelOpen = false;
+    syncDebugReaderInfo();
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -755,18 +762,20 @@
     onShare={() => void handleShareText()}
     onMouseMove={(e) => chrome.handleWorkspaceMouseMove(e)}
   />
+  {#if searchPanelOpen && activeReadingBook}
+    <SearchPanel
+      open={searchPanelOpen}
+      onClose={closeSearch}
+      bookId={activeReadingBook.id}
+      disabledReason={searchUnavailableReason}
+      {isSearching}
+      response={searchResponse}
+      onSearch={(query, page) => onSearch?.(query, page)}
+      onJump={(target) => onSearchJump?.(target)}
+      {t}
+    />
+  {/if}
 </section>
-{#if searchPanelOpen && activeReadingBook}
-  <SearchPanel
-    bookId={activeReadingBook.id}
-    disabledReason={searchUnavailableReason}
-    {isSearching}
-    response={searchResponse}
-    onSearch={(query, page) => onSearch?.(query, page)}
-    onJump={(target) => onSearchJump?.(target)}
-    {t}
-  />
-{/if}
 <ReaderTextSettings
   open={showTextSettings}
   format={viewer.kind}
