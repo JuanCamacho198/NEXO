@@ -114,6 +114,7 @@
           class:bg-(--color-surface-hover)={showTocPanel}
           class:text-(--color-text-inverse)={!showTocPanel}
           aria-label={showTocPanel ? t('settings.close') : t('reader.tabla_contenidos')}
+          title={showTocPanel ? t('settings.close') : t('reader.tabla_contenidos')}
         >
           <TocIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
         </button>
@@ -125,6 +126,7 @@
           class:bg-(--color-surface-hover)={searchPanelOpen}
           class:text-(--color-text-inverse)={!searchPanelOpen}
           aria-label={searchPanelOpen ? t('settings.close') : t('search.title')}
+          title={searchPanelOpen ? t('settings.close') : t('search.title')}
         >
           <SearchIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
         </button>
@@ -136,6 +138,7 @@
           class:bg-(--color-surface-hover)={showTextSettings}
           class:text-(--color-text-inverse)={!showTextSettings}
           aria-label={showTextSettings ? t('settings.close') : t('reader.ajustes_texto')}
+          title={showTextSettings ? t('settings.close') : t('reader.ajustes_texto')}
         >
           <TextSettingsIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
         </button>
@@ -147,6 +150,7 @@
           class:bg-(--color-surface-hover)={showBookmarks}
           class:text-(--color-text-inverse)={!showBookmarks}
           aria-label={showBookmarks ? t('settings.close') : t('reader.bookmark')}
+          title={showBookmarks ? t('settings.close') : t('reader.bookmark')}
         >
           <BookmarksIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
         </button>
@@ -157,6 +161,7 @@
         onclick={onToggleFullscreen}
         class="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg text-(--color-text-inverse) transition-colors hover:bg-(--color-surface-hover)"
         aria-label={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
+        title={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
       >
         <FullscreenIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
       </button>

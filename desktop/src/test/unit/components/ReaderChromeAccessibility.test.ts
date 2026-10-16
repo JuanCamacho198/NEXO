@@ -158,4 +158,23 @@ describe('reader chrome labels and surfaces (U3.3/U3.4)', () => {
       expect(node.getAttribute('aria-hidden')).toBe('true');
     }
   });
+
+  it('every icon-only header control carries a matching title for the hover tooltip', () => {
+    const { container } = renderHeader();
+    // Icon-only controls explain themselves nowhere else: without a title the
+    // row reads as five unlabelled glyphs until one is pressed. A control with
+    // visible text (the Biblioteca back button) needs neither.
+    const iconButtons = Array.from(container.querySelectorAll('button')).filter((button) => {
+      if (!button.querySelector('svg')) return false;
+      const text = button.textContent?.trim() ?? '';
+      return text.length === 0;
+    });
+    expect(iconButtons.length).toBeGreaterThanOrEqual(5);
+    for (const button of iconButtons) {
+      const label = button.getAttribute('aria-label');
+      const title = button.getAttribute('title');
+      expect(label, 'aria-label').toBeTruthy();
+      expect(title, `title on the control labelled "${label}"`).toBe(label);
+    }
+  });
 });
