@@ -25,6 +25,7 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   tocNavigate: TocEntry | null;
   showTocPanel: boolean;
   readonly bookProgress: number;
+  readonly hasEpubProgress: boolean;
   readonly headerCurrentPage: number;
   readonly headerTotalPages: number;
   readonly showHeaderReadingControls: boolean;
@@ -46,6 +47,8 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   let tocEntries = $state<TocEntry[]>([]);
   let tocNavigate = $state<TocEntry | null>(null);
   let showTocPanel = $state(false);
+  let epubProgress = $state(0);
+  let hasEpubProgress = $state(false);
 
   const resolveViewer = (): ViewerHandle => {
     if (deps.getViewer) return deps.getViewer();
@@ -113,12 +116,13 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
 
   const bookProgress = $derived.by(() => {
     const v = resolveViewer();
-    const cur = v.getCurrentPage();
-    const total = v.getTotalForHeader();
-    if (v.kind === 'pdf' && cur > 0 && total > 0) {
-      return Math.round((cur / total) * 100);
+    if (v.kind === 'pdf') {
+      const cur = v.getCurrentPage();
+      const total = v.getTotalForHeader();
+      if (cur > 0 && total > 0) return Math.round((cur / total) * 100);
+      return 0;
     }
-    return 0;
+    return Math.round(epubProgress);
   });
 
   const headerCurrentPage = $derived.by(() => {
@@ -162,6 +166,8 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   function handleEpubLocationChange(cfi: string, pct: number): void {
     const match = cfi.match(/chapter:(\d+)/);
     if (match) currentEpubChapter = parseInt(match[1], 10);
+    epubProgress = Number.isFinite(pct) ? Math.min(100, Math.max(0, pct)) : 0;
+    hasEpubProgress = true;
     captureBreadcrumb('navigation', BREADCRUMB_LABELS.CHAPTER_CHANGE, {
       bookId: deps.getActiveBook?.()?.id ?? null,
       chapterIndex: currentEpubChapter,
@@ -247,6 +253,9 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
     },
     get bookProgress() {
       return bookProgress;
+    },
+    get hasEpubProgress() {
+      return hasEpubProgress;
     },
     get headerCurrentPage() {
       return headerCurrentPage;

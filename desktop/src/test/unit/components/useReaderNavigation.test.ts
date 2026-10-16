@@ -186,4 +186,76 @@ describe('useReaderNavigation', () => {
     });
     expect(() => nav.cleanup()).not.toThrow();
   });
+
+  it('bookProgress for epub returns the received pct and updates on later events', () => {
+    const book: any = makeEpubBook();
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => book,
+    });
+    expect(nav.bookProgress).toBe(0);
+    expect(nav.hasEpubProgress).toBe(false);
+    nav.handleEpubLocationChange('epubcfi(/6/2!)', 42);
+    expect(nav.bookProgress).toBe(42);
+    expect(nav.hasEpubProgress).toBe(true);
+    nav.handleEpubLocationChange('epubcfi(/6/2!)', 47);
+    expect(nav.bookProgress).toBe(47);
+  });
+
+  it('bookProgress for epub sanitizes non-finite and out-of-range pct', () => {
+    const book: any = makeEpubBook();
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => book,
+    });
+    const cases: Array<[number, number]> = [
+      [NaN, 0],
+      [Infinity, 0],
+      [-Infinity, 0],
+      [-5, 0],
+      [150, 100],
+    ];
+    for (const [pct, expected] of cases) {
+      nav.handleEpubLocationChange('epubcfi(/6/2!)', pct);
+      expect(nav.bookProgress).toBe(expected);
+      expect(Number.isFinite(nav.bookProgress)).toBe(true);
+    }
+  });
+
+  it('bookProgress for epub is correctly zero after an event carrying pct 0', () => {
+    const book: any = makeEpubBook();
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => book,
+    });
+    nav.handleEpubLocationChange('epubcfi(/6/2!)', 0);
+    expect(nav.bookProgress).toBe(0);
+    expect(nav.hasEpubProgress).toBe(true);
+  });
+
+  it('bookProgress for pdf remains the page fraction', () => {
+    const book: any = makePdfBook();
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => book,
+    });
+    nav.handlePdfPageChange(3, 10);
+    expect(nav.bookProgress).toBe(30);
+  });
+
+  it('preserves header semantics for epub with the new progress state', () => {
+    const book: any = makeEpubBook();
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => book,
+    });
+    nav.handleTocReady([
+      { id: 'a', title: 'A', depth: 0 },
+      { id: 'b', title: 'B', depth: 0 },
+    ]);
+    nav.currentEpubChapter = 1;
+    nav.handleEpubLocationChange('epubcfi(/6/2!)', 42);
+    expect(nav.headerCurrentPage).toBe(2);
+    expect(nav.headerTotalPages).toBe(2);
+  });
 });

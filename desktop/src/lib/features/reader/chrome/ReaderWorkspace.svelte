@@ -322,7 +322,7 @@
         isTocOpen: nav.showTocPanel,
         isSearchOpen: searchPanelOpen,
         isFullscreen,
-        pageInfo: `${nav.bookProgress}%`,
+        pageInfo: `${bookProgress}%`,
         scale: 0,
       };
     }
@@ -340,7 +340,7 @@
     syncDebugReaderInfo();
   }
 
-  const bookProgress = $derived(nav.bookProgress || Math.round(percentage));
+  const bookProgress = $derived(nav.hasEpubProgress ? nav.bookProgress : Math.round(percentage));
   const headerCurrentPage = $derived(nav.headerCurrentPage);
   const headerTotalPages = $derived(nav.headerTotalPages);
   // The fullscreen `%` reads the viewer scale (PDF) or viewer zoom (EPUB),

@@ -65,6 +65,11 @@ describe('EpubControls (U1.1) — toolbar owns paging and zoom only', () => {
     expect(screen.getByTestId('epub-prev')).not.toBeDisabled();
     expect(screen.getByTestId('epub-next')).not.toBeDisabled();
   });
+
+  it('renders the currentPercentage readout rounded to a whole number', () => {
+    render(EpubControls, makeProps({ currentPercentage: 37.4 }));
+    expect(screen.getByTestId('epub-percentage')).toHaveTextContent('37%');
+  });
 });
 
 describe('EpubControls (U1.1) — Callback behavior', () => {

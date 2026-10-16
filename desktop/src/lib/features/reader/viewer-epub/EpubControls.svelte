@@ -41,7 +41,9 @@
   totalPagesTestId="epub-total-pages"
 >
   {#snippet right()}
-    <span class="text-xs text-(--color-text-muted) min-w-10 text-center"
+    <span
+      data-testid="epub-percentage"
+      class="text-xs text-(--color-text-muted) min-w-10 text-center"
       >{Math.round(currentPercentage)}%</span
     >
     <ZoomDropdown value={fontSize} onSelect={onFontSizeChange} />

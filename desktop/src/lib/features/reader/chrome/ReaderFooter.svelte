@@ -41,6 +41,7 @@
     <div class="flex items-center gap-3">
       <div class="h-2 w-50 rounded-full bg-(--color-surface-strong)">
         <div
+          data-testid="footer-progress-bar"
           class="h-full rounded-full bg-(--color-accent-sky) transition-all duration-300"
           style="width: {bookProgress}%"
         ></div>

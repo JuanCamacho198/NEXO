@@ -140,6 +140,10 @@
   let iframeContentHeight = $state(0);
   let lastRenderedChapter = $state(-1);
   let lastContinueLocation = $state<string | null>(null);
+  // Seeded once from the prop: the viewer mounts per book, so reading the
+  // initial value here is intentional (REQ-WIN-001 pre-first-event window).
+  // svelte-ignore state_referenced_locally
+  let epubProgress = $state(initialPercentage);
   // U5: footnote popover. Viewport-space anchor + parent scroll to restore.
   let footnote = $state<{ x: number; y: number; text: string; returnScroll: number } | null>(null);
 
@@ -174,9 +178,6 @@
     const t = spine.getToc().length;
     return t > 0 ? navigation.currentChapterIndex + 1 : navigation.currentSpineIndex + 1;
   });
-  let displayPercentage = $derived.by(() =>
-    displayTotal <= 0 ? 0 : ((displayCurrentPage - 0.5) / displayTotal) * 100,
-  );
 
   function getToc(): EpubChapterMeta[] {
     return spine.getToc();
@@ -284,7 +285,10 @@
     getLastContinueLocation: () => lastContinueLocation,
     setLastContinueLocation: (v) => (lastContinueLocation = v),
     getOnTocReady: () => onTocReady,
-    onLocationChange: (cfi, pct) => onLocationChange?.(cfi, pct),
+    onLocationChange: (cfi, pct) => {
+      epubProgress = Number.isFinite(pct) ? Math.min(100, Math.max(0, pct)) : 0;
+      onLocationChange?.(cfi, pct);
+    },
     onLocationContext: (ctx) => onLocationContext?.(ctx),
     onselection: (event) => onselection?.(event),
     onselectionclear: () => onselectionclear?.(),
@@ -537,7 +541,7 @@
       <EpubControls
         currentPage={displayCurrentPage}
         totalPages={displayTotal}
-        currentPercentage={displayPercentage}
+        currentPercentage={epubProgress}
         {fontSize}
         {t}
         onPrev={goToPrev}
