@@ -9,12 +9,17 @@
   let { hidden = false }: { hidden?: boolean } = $props();
 
   onMount(() => {
-    titlebarState.init();
+    // A failed init only costs the maximize/restore icon and the resize
+    // listener; it must never take the window controls down with it, so the
+    // rejection is contained here rather than surfacing as an unhandled one.
+    titlebarState.init().catch((err) => {
+      console.warn('[custom-titlebar] init() failed:', err);
+    });
     return () => titlebarState.destroy();
   });
 </script>
 
-<div class="flex h-9 items-center pl-4 select-none" class:hidden>
+<div class="flex h-9 shrink-0 items-center pl-4 select-none" class:hidden>
   <!-- Left: branding -->
   <span class="font-bold text-sm text-(--color-accent-blue) leading-none">NEXO</span>
 

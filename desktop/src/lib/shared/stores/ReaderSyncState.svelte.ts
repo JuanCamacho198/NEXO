@@ -83,7 +83,7 @@ export class ReaderSyncState {
     try {
       const remote = await sync.fetchBookState(bookId);
       if (isStale()) {
-        logger.warn(
+        logger.debug(
           '[continue] remote progress stale epoch',
           {
             epoch,
@@ -94,7 +94,7 @@ export class ReaderSyncState {
         );
         return;
       }
-      logger.warn(
+      logger.debug(
         '[continue] remote progress fetched book',
         {
           bookId,
@@ -110,7 +110,7 @@ export class ReaderSyncState {
         remote.progress &&
         (!localUpdatedAt || Date.parse(remote.progress.updatedAt) > Date.parse(localUpdatedAt))
       ) {
-        logger.warn(
+        logger.debug(
           '[continue] remote progress applied book',
           {
             bookId,
@@ -122,7 +122,7 @@ export class ReaderSyncState {
         );
         this.applyRemoteProgressInternal(remote.progress);
       } else if (remote.progress) {
-        logger.warn(
+        logger.debug(
           '[continue] remote progress ignored (older than local)',
           { bookId, epoch },
           'sync',
@@ -180,7 +180,7 @@ export class ReaderSyncState {
         }
       }
       if (remote.highlights.length > 0) {
-        logger.warn(
+        logger.debug(
           '[highlights] fetchAndApplyBookState applied',
           {
             count: remote.highlights.length,
@@ -199,7 +199,7 @@ export class ReaderSyncState {
   }
 
   private applyRemoteProgressInternal(progress: SupabaseProgressRow): void {
-    logger.warn(
+    logger.debug(
       '[continue] applyRemoteProgress book',
       {
         bookId: progress.bookId,
@@ -327,7 +327,7 @@ export class ReaderSyncState {
           .fetchAllHighlightsForPull()
           .then((rows) => {
             if (rows.length > 0) {
-              logger.warn('[highlights] initial pull fetched', { count: rows.length }, 'sync');
+              logger.debug('[highlights] initial pull fetched', { count: rows.length }, 'sync');
             }
             const chunkSize = 500;
             for (let i = 0; i < rows.length; i += chunkSize) {

@@ -820,8 +820,22 @@ export function createEpubRender(deps: EpubRenderDeps): {
     const iframeEl = deps.getIframeEl();
     if (!metadata || !iframeEl) return;
     const myEpoch = ++renderEpoch;
-    currentRenderIndex = index;
     const spineIndex = deps.spineIndexForToc(index);
+    const tocLength = deps.getToc().length;
+    const spineHrefCount = deps.getSpineHrefs().length;
+    // `index` may legitimately exceed toc.length: the reader falls back to the
+    // raw spine position for spine chapters that have no TOC entry (see
+    // useEpubBridge initReader and navigation.goToNext). What must NEVER reach
+    // Rust is a negative index or a spineIndex outside the spine range.
+    if (index < 0 || spineIndex < 0 || (spineHrefCount > 0 && spineIndex >= spineHrefCount)) {
+      logger.warn(
+        'epub-hl: renderChapter index out of range',
+        { index, spineIndex, tocLen: tocLength, spineHrefCount },
+        'reader',
+      );
+      return;
+    }
+    currentRenderIndex = index;
     const tocEntry = deps.getToc()[index];
     const tocHrefForLog = tocEntry?.href ?? '';
     const spineHrefForLog = deps.getSpineHrefs()[spineIndex] ?? `(spine ${spineIndex})`;

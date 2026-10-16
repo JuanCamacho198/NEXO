@@ -361,7 +361,7 @@
     (debugState.epub as unknown as Record<string, unknown>).currentSpineIndex = currentSpineIndex;
   });
   onDestroy(() => {
-    logger.warn(
+    logger.debug(
       'epub-hl: onDestroy',
       {
         bookId: bookId.slice(0, 8),

@@ -14,9 +14,7 @@
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import { titlebarState } from '$lib/stores/titlebarState.svelte';
-  import { isCustomTitlebarPlatform } from '$lib/shared/utils/platform';
   import { installGlobalShortcuts, ShortcutHelpModal, CommandPalette } from '$lib/shared/shortcuts';
-  import { type as osType } from '@tauri-apps/plugin-os';
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
   import { logger } from '$lib/shared/logger/Logger';
   import {
@@ -25,23 +23,11 @@
     runStartupUpdateCheck,
   } from '$lib/features/settings/update/updateChecker';
 
-  // Resolved at module load, not in onMount: `osType()` is synchronous, and
-  // waiting for the mount effect left a window where the `{#if}` was false. In
-  // that window the window has no OS chrome (`decorations: false`) and no
-  // controls of our own, so a slow or failed mount showed a window that could
-  // not be closed. Resolving first means the first paint is already correct.
-  function resolveCustomTitlebar(): boolean {
-    try {
-      return isCustomTitlebarPlatform(osType());
-    } catch (err) {
-      // Never swallow this silently: without it the reason a user sees no
-      // window controls is invisible in the logs.
-      logger.warn('custom titlebar disabled: osType() failed', { error: String(err) }, 'app_shell');
-      return false;
-    }
-  }
-
-  titlebarState.isCustomTitlebar = resolveCustomTitlebar();
+  // The platform gate that decides whether the custom titlebar renders is
+  // resolved inside `titlebarState` at module load, so the first paint is
+  // already correct. See `$lib/stores/titlebarState.svelte` for why it must not
+  // wait for a mount effect: the window runs with `decorations: false`, so a
+  // gate stuck at `false` leaves a window with no controls at all.
 
   onMount(() => {
     appState.init();
