@@ -16,15 +16,15 @@
 </script>
 
 <footer
-  class="flex h-12 shrink-0 items-center justify-between border-t border-(--color-surface-strong) px-8"
+  class="flex h-12 shrink-0 items-center justify-between border-t border-(--color-border) bg-(--color-reader-chrome) px-8"
   class:hidden={isFullscreen}
 >
-  <span class="font-inter text-xs font-normal text-(--color-text-auxiliary)">
+  <span class="font-inter text-xs font-normal text-(--color-text-muted)">
     {title}
   </span>
   {#if viewerKind === 'pdf' && totalPdfPages > 0}
     <div class="flex items-center gap-3">
-      <span class="font-inter text-xs font-normal text-(--color-text-auxiliary)"
+      <span class="font-inter text-xs font-normal text-(--color-text-muted)"
         >{totalPdfPages - currentPdfPage} {t('pdf.pagesLeft')}</span
       >
       <div class="h-2 w-50 rounded-full bg-(--color-surface-strong)">
@@ -33,7 +33,7 @@
           style="width: {Math.round((currentPdfPage / totalPdfPages) * 100)}%"
         ></div>
       </div>
-      <span class="font-inter text-xs font-normal text-(--color-text-auxiliary)"
+      <span class="font-inter text-xs font-normal text-(--color-text-muted)"
         >{Math.round((currentPdfPage / totalPdfPages) * 100)}%</span
       >
     </div>
@@ -46,9 +46,7 @@
           style="width: {bookProgress}%"
         ></div>
       </div>
-      <span class="font-inter text-xs font-normal text-(--color-text-auxiliary)"
-        >{bookProgress}%</span
-      >
+      <span class="font-inter text-xs font-normal text-(--color-text-muted)">{bookProgress}%</span>
     </div>
   {/if}
 </footer>

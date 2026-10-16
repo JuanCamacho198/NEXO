@@ -74,7 +74,7 @@
 </script>
 
 <header
-  class="flex flex-col shrink-0 border-b border-(--color-surface-strong) bg-(--color-bg-deep) transition-transform duration-300 {isFullscreen
+  class="flex flex-col shrink-0 border-b border-(--color-border) bg-(--color-reader-chrome) transition-transform duration-300 {isFullscreen
     ? 'fixed inset-x-0 top-0 z-50'
     : ''} {headerTransform}"
   class:shadow-md={isFullscreen}
@@ -86,10 +86,10 @@
       <button
         type="button"
         onclick={onBackToHome}
-        class="flex min-h-11 cursor-pointer items-center gap-2 text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
+        class="flex min-h-11 cursor-pointer items-center gap-2 text-(--color-text-muted) hover:text-(--color-text-inverse)"
       >
         <ChevronLeft size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
-        <span class="font-inter text-sm font-medium text-(--color-text-auxiliary)"
+        <span class="font-inter text-sm font-medium text-(--color-text-muted)"
           >{t('reader.biblioteca')}</span
         >
       </button>
@@ -97,7 +97,7 @@
 
     <!-- Center: book title -->
     <span
-      class="font-inter text-sm font-medium text-(--color-text-auxiliary) min-w-0 flex-1 truncate px-2 text-center max-[480px]:hidden"
+      class="font-inter text-sm font-medium text-(--color-text-muted) min-w-0 flex-1 truncate px-2 text-center max-[480px]:hidden"
     >
       {title}
     </span>
@@ -157,7 +157,7 @@
           <BookmarksIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
-      <div class="h-5 w-px bg-(--color-surface-strong)" aria-hidden="true"></div>
+      <div class="h-5 w-px bg-(--color-border)" aria-hidden="true"></div>
       <button
         type="button"
         onclick={onToggleFullscreen}
@@ -177,7 +177,7 @@
       is the scale of the page - in EPUB the same value is the font size, which
       the text settings panel owns with proper context. -->
     <div
-      class="flex h-12 shrink-0 items-center justify-center gap-3 border-t border-(--color-surface-strong)/20 px-2 bg-(--color-bg-deep) sm:px-4"
+      class="flex h-12 shrink-0 items-center justify-center gap-3 border-t border-(--color-border) px-2 bg-(--color-reader-chrome) sm:px-4"
     >
       <PageInput
         variant="header"

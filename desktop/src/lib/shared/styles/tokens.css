@@ -201,6 +201,9 @@
   --color-accent: var(--color-accent-start);
   --color-accent-on: #061222;
   --color-bg-deep: #0b1120;
+  /* Dedicated plane for the reader chrome bars. Distinct from --color-bg-deep
+     so the chrome reads as its own surface against the app background. */
+  --color-reader-chrome: #0f1b2e;
 
   /* Surface hierarchy */
   --color-surface-hover: rgba(148, 173, 206, 0.18);
@@ -344,6 +347,8 @@
   --color-accent: var(--color-accent-start);
   --color-accent-on: #ffffff;
   --color-bg-deep: #dbe4ed;
+  /* Mirror of the dark reader-chrome plane. */
+  --color-reader-chrome: #f5f8fc;
 
   /* Surface hierarchy */
   --color-surface-hover: rgba(30, 58, 95, 0.15);

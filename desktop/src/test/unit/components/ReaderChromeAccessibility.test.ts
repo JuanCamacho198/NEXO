@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 import ReaderControls from '$lib/features/reader/chrome/ReaderControls.svelte';
+import ReaderFooter from '$lib/features/reader/chrome/ReaderFooter.svelte';
 import ReaderHeader from '$lib/features/reader/chrome/ReaderHeader.svelte';
 import FitControls from '$lib/features/reader/chrome/FitControls.svelte';
 import ZoomDropdown from '$lib/features/reader/chrome/ZoomDropdown.svelte';
@@ -121,6 +122,19 @@ describe('reader chrome target sizes (U3.2)', () => {
   });
 });
 
+function renderBottomBar(overrides: Record<string, unknown> = {}) {
+  return render(ReaderFooter, {
+    title: 'Book',
+    bookProgress: 42,
+    currentPdfPage: 3,
+    totalPdfPages: 10,
+    viewerKind: 'pdf' as const,
+    isFullscreen: false,
+    t,
+    ...overrides,
+  });
+}
+
 describe('reader chrome labels and surfaces (U3.3/U3.4)', () => {
   it('announces search with the format-agnostic key in any viewer', () => {
     renderHeader();
@@ -128,11 +142,24 @@ describe('reader chrome labels and surfaces (U3.3/U3.4)', () => {
     expect(screen.queryByLabelText('epub.search')).toBeNull();
   });
 
-  it('paints the toolbar over a fixed opaque surface', () => {
-    const { container } = renderToolbar();
-    const toolbar = container.firstElementChild;
-    expect(toolbar?.className).toContain('bg-(--color-bg-deep)');
-    expect(toolbar?.className).not.toContain('bg-(--color-surface)');
+  // The previous form of this test REQUIRED `bg-(--color-bg-deep)` on the bar
+  // and thereby forbade the fix: the chrome wore the app's background plane
+  // instead of its own. Both tokens below are now rejected on purpose.
+  // `bg-deep` because it is the old broken plane; `bg-surface` because it is
+  // the paper pill the chrome must never wear again. Do not "repair" this by
+  // restoring either — assert against the dedicated chrome plane.
+  it('paints the chrome over the dedicated chrome surface, never the app plane', () => {
+    const topBar = renderHeader().container.firstElementChild;
+    expect(topBar?.className).toContain('bg-(--color-reader-chrome)');
+    expect(topBar?.className).not.toContain('bg-(--color-bg-deep)');
+    expect(topBar?.className).not.toContain('bg-(--color-surface)');
+  });
+
+  it('paints the bottom chrome over the dedicated chrome surface, never the app plane', () => {
+    const bottomBar = renderBottomBar().container.firstElementChild;
+    expect(bottomBar?.className).toContain('bg-(--color-reader-chrome)');
+    expect(bottomBar?.className).not.toContain('bg-(--color-bg-deep)');
+    expect(bottomBar?.className).not.toContain('bg-(--color-surface)');
   });
 
   it('hides the decorative page total from assistive tech', () => {
