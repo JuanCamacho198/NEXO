@@ -28,6 +28,8 @@ function fakeT(key: string, params?: Record<string, string | number>): string {
     'sidebar.collapse': 'Colapsar sidebar',
     'notifications.bell.label': 'Abrir notificaciones',
     'notifications.bell.unread': 'Abrir notificaciones, {{count}} sin leer',
+    'notifications.bell.unreadBadge':
+      'Abrir notificaciones, {{badge}} sin leer ({{count}} en total)',
     'notifications.center.title': 'Notificaciones',
     'notifications.center.newArrival': 'Nueva notificación: {{message}}',
     'theme.currentDark': 'Tema oscuro',
@@ -458,7 +460,53 @@ describe('AppSidebar', () => {
       expect(screen.getByRole('status').textContent).toContain(
         'Nueva notificación: notifications.kind.syncFailure',
       );
-      expect(screen.getByLabelText('Abrir notificaciones, 2 sin leer')).toBeInTheDocument();
+      // WCAG 2.5.3: the name must contain the visible badge text, so at two
+      // unread the badge shows "2" and the name carries that exact string.
+      expect(
+        screen.getByLabelText('Abrir notificaciones, 2 sin leer (2 en total)'),
+      ).toBeInTheDocument();
+    });
+
+    /**
+     * The badge caps at "9+" for legibility while the count keeps growing.
+     * WCAG 2.5.3 requires the accessible name to contain the visible text, so
+     * the "9+" branch and the exact-number branch are both load-bearing and
+     * each needs its own assertion.
+     */
+    function notifyTimes(times: number): void {
+      for (let i = 0; i < times; i++) {
+        notify(
+          {
+            source: 'sync',
+            severity: 'error',
+            i18nKey: 'notifications.kind.syncFailure',
+            i18nParams: { detail: `Run ${i}` },
+          },
+          { isWindowFocused: true, isReading: true },
+        );
+      }
+    }
+
+    it('keeps the exact count in the bell name at or below the badge cap', async () => {
+      render(AppSidebar, defaultProps);
+      notifyTimes(9);
+      await tick();
+
+      const bell = screen.getByLabelText('Abrir notificaciones, 9 sin leer (9 en total)');
+      expect(bell).toBeInTheDocument();
+      // The visible badge text is the exact number, and it is contained.
+      expect(bell.textContent).toContain('9');
+    });
+
+    it('caps the badge at "9+" and carries that same text in the bell name', async () => {
+      render(AppSidebar, defaultProps);
+      notifyTimes(12);
+      await tick();
+
+      const bell = screen.getByLabelText('Abrir notificaciones, 9+ sin leer (12 en total)');
+      expect(bell).toBeInTheDocument();
+      // The visible badge shows the capped text, and the name contains it.
+      expect(bell.textContent).toContain('9+');
     });
   });
 });

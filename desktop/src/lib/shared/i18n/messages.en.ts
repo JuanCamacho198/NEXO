@@ -326,6 +326,10 @@ export const messagesEn = {
   'notifications.center.collapse': 'Hide grouped notifications',
   'notifications.center.newArrival': 'New notification: {{message}}',
   'notifications.bell.unread': 'Open notifications, {{count}} unread',
+  // The bell badge caps its visible text at "9+" for legibility, so the
+  // accessible name must carry that exact string (WCAG 2.5.3) — {{badge}} is
+  // the visible text, {{count}} is the full count stated alongside it.
+  'notifications.bell.unreadBadge': 'Open notifications, {{badge}} unread ({{count}} total)',
 
   // Notification delivery preferences (NOTIF-05)
   'settings.notifications.delivery.title': 'Notifications',

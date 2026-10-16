@@ -330,6 +330,10 @@ export const messagesEs: Record<MessageKey, string> = {
   'notifications.center.collapse': 'Ocultar notificaciones agrupadas',
   'notifications.center.newArrival': 'Nueva notificación: {{message}}',
   'notifications.bell.unread': 'Abrir notificaciones, {{count}} sin leer',
+  // The bell badge caps its visible text at "9+" for legibility, so the
+  // accessible name must carry that exact string (WCAG 2.5.3) — {{badge}} is
+  // the visible text, {{count}} is the full count stated alongside it.
+  'notifications.bell.unreadBadge': 'Abrir notificaciones, {{badge}} sin leer ({{count}} en total)',
 
   // Notification delivery preferences (NOTIF-05)
   'settings.notifications.delivery.title': 'Notificaciones',

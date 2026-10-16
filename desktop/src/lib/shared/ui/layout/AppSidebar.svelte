@@ -76,6 +76,16 @@
     notificationOpen = true;
     markAllRead();
   };
+
+  /**
+   * The badge caps the count at "9+" to stay legible in a 16px dot. WCAG 2.5.3
+   * requires the accessible name to CONTAIN the visible label text, so the two
+   * cannot drift: both the badge and the aria-label read this one string. The
+   * full count is named alongside it for a screen reader.
+   */
+  const unreadBadgeText = $derived(
+    notificationCenter.unreadCount > 9 ? '9+' : String(notificationCenter.unreadCount),
+  );
 </script>
 
 {#snippet navButton(item: NavItem)}
@@ -241,7 +251,10 @@
       class:justify-center={collapsed}
       class:gap-3={!collapsed}
       aria-label={notificationCenter.unreadCount > 0
-        ? t('notifications.bell.unread', { count: notificationCenter.unreadCount })
+        ? t('notifications.bell.unreadBadge', {
+            badge: unreadBadgeText,
+            count: notificationCenter.unreadCount,
+          })
         : t('notifications.bell.label')}
     >
       <span class="relative shrink-0">
@@ -251,7 +264,7 @@
             class="absolute -top-1.5 -right-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-(--color-error) px-1 text-[10px] font-bold text-(--color-background)"
             aria-hidden="true"
           >
-            {notificationCenter.unreadCount > 9 ? '9+' : notificationCenter.unreadCount}
+            {unreadBadgeText}
           </span>
         {/if}
       </span>
