@@ -81,7 +81,8 @@ describe('reader chrome breakpoints (U3.3)', () => {
   // "a second header div exists": it is "the bottom bar's control cluster stays
   // responsive", asserted here against its own test id. That no second header
   // row exists is a composition property and is asserted structurally in
-  // ReaderWorkspace.test.ts, never by sibling position.
+  // ReaderWorkspace.test.ts, NEVER by sibling position — asserting the absence
+  // here would re-encode row position as the contract this test guards.
   it('bottom bar control cluster is the responsive surface, selected by test id', () => {
     const { container } = renderBottomBar();
     const cluster = container.querySelector('[data-testid="bottom-bar-controls"]');
@@ -90,6 +91,5 @@ describe('reader chrome breakpoints (U3.3)', () => {
     expect(cluster?.className).toContain('sm:gap-3');
     expect(cluster?.className).toContain('px-2');
     expect(cluster?.className).toContain('sm:px-4');
-    expect(container.querySelector('header > div + div')).toBeNull();
   });
 });

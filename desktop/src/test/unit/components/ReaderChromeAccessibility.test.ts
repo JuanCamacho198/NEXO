@@ -195,8 +195,21 @@ describe('reader chrome labels and surfaces (U3.3/U3.4)', () => {
     for (const node of toolbarTotals) {
       expect(node.getAttribute('aria-hidden')).toBe('true');
     }
-    const topBarTree = renderTopBar();
-    expect(topBarTree.container.querySelector('header > div + div')).toBeNull();
+  });
+
+  // ADR-003/The pill criterion: the chrome never wears the paper pill. The
+  // recipe's base is `rounded-lg`; a `rounded-full` on an icon control means a
+  // consumer reintroduced the old paper pill (`bg-(--color-surface)`), which is
+  // what the button system exists to eliminate. The progress track and fill are
+  // bars, not controls, and are allowed to stay pill-shaped.
+  it('never wears the paper pill on a chrome control', () => {
+    for (const container of [renderTopBar().container, renderBottomBar().container]) {
+      for (const control of container.querySelectorAll('button')) {
+        expect(control.className, 'a chrome control regained the paper pill').not.toContain(
+          'rounded-full',
+        );
+      }
+    }
   });
 
   // The count was >= 5 while the header still carried the bookmarks toggle.

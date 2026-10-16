@@ -9,6 +9,8 @@
   import type { TocEntry } from './ReaderTocPanel.svelte';
   import ReaderTopBar from './ReaderTopBar.svelte';
   import ReaderBottomBar from './ReaderBottomBar.svelte';
+  import ReaderFullscreenAffordances from './ReaderFullscreenAffordances.svelte';
+  import ReaderSelectionDebugOverlay from './ReaderSelectionDebugOverlay.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, SearchBookTextResponse } from '$lib/shared/types';
   import type { LibraryBookDto } from '$lib/shared/types/library';
@@ -261,8 +263,6 @@
   // because it is reader-scoped and reads its binding from the shared registry.
   const readerShortcuts = createReaderShortcuts({ onToggleSearch: () => toggleSearch() });
   let isFullscreen = $derived(chrome.isFullscreen);
-  // Reads the read-only alias, which resolves to the single shared value.
-  let headerVisible = $derived(chrome.headerVisible);
   let edgeNavVisible = $derived(chrome.edgeNavVisible);
   function handleWorkspaceMouseLeave(): void {
     chrome.handleWorkspaceMouseLeave();
@@ -652,40 +652,13 @@
         {t}
       />
     {/if}
-    {#if dbg.enabled && computedToolbarX !== null && computedToolbarY !== null}
-      <div
-        aria-hidden="true"
-        class="pointer-events-none fixed z-9998"
-        style="left: {computedToolbarX}px; top: {computedToolbarY}px;"
-      >
-        <div class="relative">
-          <div
-            class="absolute -left-1 -top-1 h-3 w-3 rounded-full bg-cyan-400 ring-2 ring-white"
-          ></div>
-          <div
-            class="absolute left-3 top-0 whitespace-nowrap rounded bg-cyan-500 px-1.5 py-0.5 text-micro font-mono text-white shadow"
-          >
-            toolbar target ({Math.round(computedToolbarX)},{Math.round(computedToolbarY)})
-          </div>
-        </div>
-      </div>
-    {/if}
-    {#if dbg.enabled && selectionBounds && selectionContainer}
-      {@const selParentLeft = selectionContainer.left + selectionBounds.left}
-      {@const selParentTop = selectionContainer.top + selectionBounds.top}
-      {@const selParentWidth = selectionBounds.right - selectionBounds.left}
-      {@const selParentHeight = selectionBounds.bottom - selectionBounds.top}
-      <div
-        aria-hidden="true"
-        class="pointer-events-none fixed z-9997 border-2 border-dashed border-red-500"
-        style="left: {selParentLeft}px; top: {selParentTop}px; width: {selParentWidth}px; height: {selParentHeight}px;"
-      >
-        <span
-          class="absolute -top-5 left-0 whitespace-nowrap rounded bg-red-500 px-1.5 py-0.5 text-micro font-mono text-white shadow"
-          >selection bounds ({Math.round(selParentLeft)},{Math.round(selParentTop)})</span
-        >
-      </div>
-    {/if}
+    <ReaderSelectionDebugOverlay
+      enabled={dbg.enabled}
+      {computedToolbarX}
+      {computedToolbarY}
+      {selectionBounds}
+      {selectionContainer}
+    />
     {#if highlightMenuState.highlightMenu.open && highlightMenuState.highlightMenu.highlightId && highlightMenuState.highlightMenu.position}
       <div
         class="fixed inset-0 z-[99]"
@@ -768,94 +741,20 @@
     }}
     onToggleBookmarks={toggleBookmarks}
   />
-  {#if isFullscreen && activeReadingBook}
-    <!-- U2: persistent rescue strips. The chapter iframe swallows hover, so
-      these 1-2px DOM strips above it guarantee a mouse path back. -->
-    <div
-      role="presentation"
-      aria-hidden="true"
-      class="fixed inset-x-0 top-0 z-40 h-2"
-      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
-    ></div>
-    <div
-      role="presentation"
-      aria-hidden="true"
-      class="fixed bottom-0 left-0 top-0 z-40 w-2"
-      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
-    ></div>
-    <div
-      role="presentation"
-      aria-hidden="true"
-      class="fixed bottom-0 right-0 top-0 z-40 w-2"
-      onmousemove={(e) => chrome.handleWorkspaceMouseMove(e)}
-    ></div>
-    {@const prevDisabled = nav.prevDisabled}
-    {@const nextDisabled = nav.nextDisabled}
-    <button
-      type="button"
-      class="fixed left-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-(--color-bg-deep)/40 text-(--color-text-inverse) backdrop-blur hover:bg-(--color-bg-deep)/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
-        ? 'opacity-100'
-        : 'opacity-40'} {prevDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
-      aria-label={t('reader.prev_page')}
-      onclick={goPrevPage}
-      disabled={prevDisabled}
-      aria-disabled={prevDisabled}
-      ><svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"><path d="M15 18l-6-6 6-6" /></svg
-      ></button
-    >
-    <button
-      type="button"
-      class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-(--color-bg-deep)/40 text-(--color-text-inverse) backdrop-blur hover:bg-(--color-bg-deep)/60 transition-opacity duration-200 cursor-pointer {edgeNavVisible
-        ? 'opacity-100'
-        : 'opacity-40'} {nextDisabled ? 'opacity-30 cursor-not-allowed' : ''}"
-      aria-label={t('reader.next_page')}
-      onclick={goNextPage}
-      disabled={nextDisabled}
-      aria-disabled={nextDisabled}
-      ><svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"><path d="M9 18l6-6-6-6" /></svg
-      ></button
-    >
-    {#if selectedText}
-      <button
-        type="button"
-        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full bg-(--color-accent-blue) px-4 py-2 text-sm font-medium text-(--color-accent-on) shadow-lg hover:opacity-90 cursor-pointer"
-        onclick={() => void handleShareText()}
-        ><svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          ><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle
-            cx="18"
-            cy="19"
-            r="3"
-          /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></svg
-        >{t('reader.share')}</button
-      >
-    {/if}
-    {#if headerVisible}
-      <p
-        class="pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 z-40 whitespace-nowrap text-xs text-(--color-text-inverse)/70"
-        aria-hidden="true"
-      >
-        {t('reader.fullscreenKeysHint')}
-      </p>
-    {/if}
-  {/if}
+  <ReaderFullscreenAffordances
+    {isFullscreen}
+    hasBook={activeReadingBook !== null}
+    {edgeNavVisible}
+    prevDisabled={nav.prevDisabled}
+    nextDisabled={nav.nextDisabled}
+    chromeVisible={chrome.chromeVisible}
+    {selectedText}
+    {t}
+    onPrev={goPrevPage}
+    onNext={goNextPage}
+    onShare={() => void handleShareText()}
+    onMouseMove={(e) => chrome.handleWorkspaceMouseMove(e)}
+  />
 </section>
 {#if searchPanelOpen && activeReadingBook}
   <SearchPanel
