@@ -44,7 +44,15 @@ function expectGlyphContract(icon: Element, strokeWidth: string = CHROME_STROKE_
     expect(icon.getAttribute(attr), attr).toBe(value);
   }
   expect(icon.getAttribute('stroke-width')).toBe(strokeWidth);
-  expect(icon.getAttribute('width')).toBe(strokeWidth === CHROME_STROKE_WIDTH ? '16' : '14');
+  // The control glyphs are 16px in the chrome; a glyph nested inside another
+  // control (the zoom trigger's disclosure chevron) is drawn at 12px so it
+  // reads as part of that control rather than as a second one beside it.
+  const width = icon.getAttribute('width');
+  if (strokeWidth === CHROME_STROKE_WIDTH) {
+    expect(['16', '12']).toContain(width);
+  } else {
+    expect(width).toBe('14');
+  }
 }
 
 const readerSettings: ReaderSettings = {
@@ -180,11 +188,12 @@ describe('reader chrome icon migration', () => {
 
   it('renders the bottom bar EPUB glyphs in source order', () => {
     const { container } = renderBottomBar({ viewerKind: 'epub', showBookmarks: false });
-    // paging chevrons, then the (unselected) bookmarks glyph. The zoom trigger
-    // draws its own inline chevron, which is not a lucide icon.
+    // paging chevrons, the zoom trigger's disclosure chevron, then the
+    // (unselected) bookmarks glyph.
     expect(glyphs(container)).toEqual([
       'lucide-chevron-left',
       'lucide-chevron-right',
+      'lucide-chevron-down',
       'lucide-bookmark',
     ]);
     for (const icon of container.querySelectorAll('svg.lucide-icon')) expectGlyphContract(icon);
@@ -198,13 +207,19 @@ describe('reader chrome icon migration', () => {
       'lucide-chevron-right',
       'lucide-unfold-horizontal',
       'lucide-frame',
+      'lucide-chevron-down',
       'lucide-bookmark',
     ]);
   });
 
   it('swaps the bottom bar bookmarks glyph when the panel is open', () => {
     const { container } = renderBottomBar({ viewerKind: 'epub', showBookmarks: true });
-    expect(glyphs(container)).toEqual(['lucide-chevron-left', 'lucide-chevron-right', 'lucide-x']);
+    expect(glyphs(container)).toEqual([
+      'lucide-chevron-left',
+      'lucide-chevron-right',
+      'lucide-chevron-down',
+      'lucide-x',
+    ]);
   });
 
   it('renders the saved-toast glyph through the direct lucide component', async () => {

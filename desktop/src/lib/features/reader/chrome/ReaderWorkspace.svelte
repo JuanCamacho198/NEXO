@@ -723,6 +723,7 @@
   </div>
   <ReaderBottomBar
     title={activeReadingBook?.title ?? ''}
+    chapterTitle={nav.currentChapterTitle}
     {bookProgress}
     currentPdfPage={nav.currentPdfPage}
     totalPdfPages={nav.totalPdfPages}

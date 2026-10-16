@@ -26,6 +26,7 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   showTocPanel: boolean;
   readonly bookProgress: number;
   readonly hasEpubProgress: boolean;
+  readonly currentChapterTitle: string | null;
   readonly headerCurrentPage: number;
   readonly headerTotalPages: number;
   readonly showHeaderReadingControls: boolean;
@@ -50,6 +51,17 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   let epubProgress = $state(0);
   let hasEpubProgress = $state(false);
 
+  // The reader's current chapter title, or null when none is known. EPUB maps
+  // the spine index straight into the TOC. PDF has no such mapping: its
+  // outline entries carry no page number until a destination resolves
+  // asynchronously, and `tocEntries` here never receives that value, so the
+  // page -> chapter correspondence is not reliable. PDF returns null and the
+  // bar falls back to the book title (product decision in the feature doc).
+  const currentChapterTitle = $derived.by((): string | null => {
+    if (resolveViewer().kind !== 'epub') return null;
+    const title = tocEntries[currentEpubChapter]?.title?.trim() ?? '';
+    return title.length > 0 ? title : null;
+  });
   const resolveViewer = (): ViewerHandle => {
     if (deps.getViewer) return deps.getViewer();
     // fallback for legacy tests: build minimal viewer from getRefs/getActiveBook without polluting chrome with format branches
@@ -212,8 +224,6 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
     return resolveViewer().goToPage(page);
   }
 
-  function cleanup(): void {}
-
   return {
     get currentPdfPage() {
       return currentPdfPage;
@@ -257,6 +267,9 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
     get hasEpubProgress() {
       return hasEpubProgress;
     },
+    get currentChapterTitle() {
+      return currentChapterTitle;
+    },
     get headerCurrentPage() {
       return headerCurrentPage;
     },
@@ -280,7 +293,7 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
     goPrev,
     goNext,
     handleHeaderGoToPage,
-    cleanup,
+    cleanup() {},
   };
 }
 

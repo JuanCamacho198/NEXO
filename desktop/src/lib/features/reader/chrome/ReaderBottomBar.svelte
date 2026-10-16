@@ -6,6 +6,7 @@
   import FitControls from './FitControls.svelte';
   import PageInput from './PageInput.svelte';
   import ZoomDropdown from './ZoomDropdown.svelte';
+  import StatusChip from '$lib/shared/ui/forms/StatusChip.svelte';
   import type { FitMode } from './fitZoom';
   import { chromeIconButton } from './chromeControl';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -13,6 +14,8 @@
 
   type Props = {
     title: string;
+    /** Current chapter title when known; the bar falls back to `title` otherwise. */
+    chapterTitle?: string | null;
     bookProgress: number;
     currentPdfPage: number;
     totalPdfPages: number;
@@ -36,6 +39,7 @@
 
   let {
     title,
+    chapterTitle = null,
     bookProgress,
     currentPdfPage,
     totalPdfPages,
@@ -62,6 +66,17 @@
   let focusedControl = $state<'prev' | 'next'>('prev');
 
   const isPdf = $derived(viewerKind === 'pdf');
+  // The bar names where the reader is, not what they already know: the chapter
+  // when known, the book title otherwise. Never empty.
+  const locationLabel = $derived(chapterTitle ?? title);
+  // Zero bookmarks is the default state, so a bare count there is noise. The
+  // count only appears once the book is known to have any.
+  const hasBookmarkCount = $derived(!bookmarksLoading && bookmarkCount > 0);
+  // The number is the chip's compact text; the labelled form goes to the
+  // bookmarks control's accessible name so screen readers hear a described
+  // count rather than a floating digit.
+  const bookmarkCountText = $derived(String(bookmarkCount));
+  const bookmarkCountLabel = $derived(t('reader.bookmarks_count', { count: bookmarkCount }));
   const prevDisabled = $derived(currentPage <= 1);
   const nextDisabled = $derived(currentPage >= totalPages);
   const BookmarksIcon = $derived(showBookmarks ? X : Bookmark);
@@ -110,17 +125,19 @@
   the progress readout, and the bookmarks control. It is never hidden by
   fullscreen state — only the immersive chrome visibility drives `barTransform`. -->
 <footer
-  class="flex h-12 shrink-0 items-center justify-between gap-2 border-t border-(--color-border) bg-(--color-reader-chrome) px-3 transition-transform duration-300 sm:px-4 {isFullscreen
+  class="grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-t border-(--color-border) bg-(--color-reader-chrome) px-3 transition-transform duration-300 sm:px-4 {isFullscreen
     ? 'fixed inset-x-0 bottom-0 z-50'
     : ''} {barTransform}"
   class:shadow-md={isFullscreen}
 >
-  <span class="font-inter text-xs font-normal text-(--color-text-muted) min-w-0 truncate">
-    {title}
+  <span
+    class="justify-self-start font-inter text-xs font-normal text-(--color-text-muted) min-w-0 truncate"
+  >
+    {locationLabel}
   </span>
 
   <div
-    class="flex items-center gap-2 px-2 py-2 flex-wrap sm:gap-3 sm:px-4"
+    class="justify-self-center flex items-center gap-2 px-2 py-2 flex-wrap sm:gap-3 sm:px-4"
     role="toolbar"
     aria-label={t('reader.toolbar')}
     tabindex={-1}
@@ -166,46 +183,74 @@
     {/if}
   </div>
 
-  <div class="flex items-center gap-3">
+  <div class="justify-self-end flex items-center gap-3">
     {#if isPdf && totalPdfPages > 0}
-      <span class="font-inter text-xs font-normal text-(--color-text-muted)"
-        >{totalPdfPages - currentPdfPage} {t('pdf.pagesLeft')}</span
-      >
-      <div class="h-2 w-50 rounded-full bg-(--color-chrome-track)">
-        <div
-          class="h-full rounded-full bg-(--color-accent-sky) transition-all duration-300"
-          style="width: {Math.round((currentPdfPage / totalPdfPages) * 100)}%"
-        ></div>
+      <!-- The pages-left label and the bar+% read as one reading-progress
+        cluster; the bar is the unit and its numbers sit immediately with it.
+        The label keeps its own shrink-0 so a narrow column never squeezes it
+        out of the row, which is what used to flatten it against the track. -->
+      <span class="shrink-0 font-inter text-xs font-normal text-(--color-text-muted)">
+        {totalPdfPages - currentPdfPage}
+        {t('pdf.pagesLeft')}
+      </span>
+      <!-- Progress read as a single unit: the track and its percentage hug at
+        gap-1.5 with tabular figures, so the eye reads one quantity and the
+        number does not jitter as the percentage changes. -->
+      <div class="flex items-center gap-1.5">
+        <div class="h-2 w-50 rounded-full bg-(--color-chrome-track)">
+          <div
+            class="h-full rounded-full bg-(--color-accent-sky) transition-all duration-300"
+            style="width: {Math.round((currentPdfPage / totalPdfPages) * 100)}%"
+          ></div>
+        </div>
+        <span class="font-inter text-xs font-normal tabular-nums text-(--color-text-muted)">
+          {Math.round((currentPdfPage / totalPdfPages) * 100)}%
+        </span>
       </div>
-      <span class="font-inter text-xs font-normal text-(--color-text-muted)"
-        >{Math.round((currentPdfPage / totalPdfPages) * 100)}%</span
-      >
     {:else}
-      <div class="h-2 w-50 rounded-full bg-(--color-chrome-track)">
-        <div
-          data-testid="footer-progress-bar"
-          class="h-full rounded-full bg-(--color-accent-sky) transition-all duration-300"
-          style="width: {bookProgress}%"
-        ></div>
+      <div class="flex items-center gap-1.5">
+        <div class="h-2 w-50 rounded-full bg-(--color-chrome-track)">
+          <div
+            data-testid="footer-progress-bar"
+            class="h-full rounded-full bg-(--color-accent-sky) transition-all duration-300"
+            style="width: {bookProgress}%"
+          ></div>
+        </div>
+        <span class="font-inter text-xs font-normal tabular-nums text-(--color-text-muted)">
+          {bookProgress}%
+        </span>
       </div>
-      <span class="font-inter text-xs font-normal text-(--color-text-muted)">{bookProgress}%</span>
     {/if}
     <button
       type="button"
       onclick={onToggleBookmarks}
       class={chromeIconButton('toggle', showBookmarks)}
-      aria-label={showBookmarks ? t('settings.close') : t('reader.bookmark')}
-      title={showBookmarks ? t('settings.close') : t('reader.bookmark')}
+      aria-label={showBookmarks
+        ? t('settings.close')
+        : hasBookmarkCount
+          ? `${t('reader.bookmark')} · ${bookmarkCountLabel}`
+          : t('reader.bookmark')}
+      title={showBookmarks
+        ? t('settings.close')
+        : hasBookmarkCount
+          ? `${t('reader.bookmark')} · ${bookmarkCountLabel}`
+          : t('reader.bookmark')}
     >
       <BookmarksIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
     </button>
-    <span
-      data-testid="bookmark-count"
-      class="text-xs text-(--color-text-muted)"
-      aria-busy={bookmarksLoading}
-      aria-hidden="true"
-    >
-      {bookmarksLoading ? '—' : bookmarkCount}
-    </span>
+    {#if hasBookmarkCount}
+      <!-- The count is real information, not decoration: it renders as a chip
+        attached to the bookmark control, and the button's accessible name
+        above folds the same count in so assistive tech gets both the control
+        and its tally from one stop. A plain wrapper keeps `bookmark-count`
+        addressable as a stable hook for tests that predate the chip. -->
+      <span data-testid="bookmark-count" aria-busy={bookmarksLoading}>
+        <StatusChip text={bookmarkCountText} tone="accent" />
+      </span>
+    {:else}
+      <!-- Zero is the default state, so nothing renders; the wrapper stays so
+        loading is observable (aria-busy) and never ships a false zero. -->
+      <span data-testid="bookmark-count" aria-busy={bookmarksLoading}></span>
+    {/if}
   </div>
 </footer>

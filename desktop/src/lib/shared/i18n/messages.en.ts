@@ -839,6 +839,7 @@ export const messagesEn = {
   'reader.section_page': 'Page',
   'reader.section_writing': 'Writing',
   'reader.bookmark': 'Bookmark',
+  'reader.bookmarks_count': '{{count}} bookmarks',
   'reader.direction': 'Direction',
   'reader.alignment': 'Alignment',
   'reader.colors': 'Colors',

@@ -1279,6 +1279,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.section_page': 'Página',
   'reader.section_writing': 'Escritura',
   'reader.bookmark': 'Marcador',
+  'reader.bookmarks_count': '{{count}} marcadores',
   'reader.direction': 'Dirección',
   'reader.alignment': 'Alineación',
   'reader.colors': 'Colores',

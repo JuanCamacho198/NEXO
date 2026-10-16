@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ChevronDown from 'lucide-svelte/icons/chevron-down';
+  import Check from 'lucide-svelte/icons/check';
   import { clampZoomPercent, ZOOM_OPTIONS } from '$lib/features/reader/viewer-pdf/pdfNavigation';
   import { chromeIconButton } from './chromeControl';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -57,20 +59,12 @@
     data-testid="zoom-dropdown-trigger"
   >
     <span>{clampedValue}%</span>
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg
-    >
+    <ChevronDown size={12} strokeWidth={2} class="h-3 w-3" aria-hidden="true" />
   </button>
 
   {#if open}
     <ul
-      class="absolute right-0 z-50 mt-2 min-w-28 rounded-xl border border-(--color-border) bg-(--color-surface) py-1 shadow-lg"
+      class="absolute bottom-full right-0 z-50 mb-2 max-h-[min(16rem,60vh)] min-w-28 overflow-y-auto overscroll-contain rounded-xl border border-(--color-border) bg-(--color-surface) py-1 shadow-lg"
       role="listbox"
       data-testid="zoom-dropdown-list"
     >
@@ -83,22 +77,14 @@
             role="option"
             aria-selected={selected}
             onclick={() => selectOption(opt)}
-            class="flex w-full items-center justify-between px-3 py-1.5 text-xs hover:bg-(--color-surface-strong) cursor-pointer {selected
+            class="flex w-full items-center justify-between px-3 py-1.5 text-xs hover:bg-(--color-surface-hover) cursor-pointer {selected
               ? 'font-semibold text-(--color-primary)'
               : 'text-(--color-text-muted)'}"
             data-testid="zoom-option-{opt}"
           >
             <span class="flex items-center gap-1.5">
               {#if selected}
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg
-                >
+                <Check size={12} strokeWidth={2.5} class="h-3 w-3 shrink-0" aria-hidden="true" />
               {:else}
                 <span class="w-3 inline-block"></span>
               {/if}
@@ -107,9 +93,6 @@
                 <span class="sr-only">(default)</span>
               {/if}
             </span>
-            {#if selected}
-              <span class="text-micro opacity-60">✓</span>
-            {/if}
           </button>
         </li>
       {/each}

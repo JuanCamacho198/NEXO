@@ -37,14 +37,14 @@
 
   const wrapClass = 'flex items-center gap-1 text-xs text-(--color-text-muted)';
   const inputClass = CHROME_PAGE_FIELD;
-  const totalClass = 'text-xs text-(--color-text-muted) opacity-70';
+  const totalClass = 'text-xs text-(--color-text-muted)';
 </script>
 
 <span class={wrapClass}>
   <input
-    type="number"
-    min="1"
-    max={totalPages}
+    type="text"
+    inputmode="numeric"
+    pattern="[0-9]*"
     value={pageValue}
     onchange={handlePageInput}
     class={inputClass}
