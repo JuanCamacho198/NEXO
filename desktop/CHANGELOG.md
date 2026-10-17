@@ -1,5 +1,61 @@
 # Changelog
 
+## [0.6.0](https://github.com/JuanCamacho198/NEXO/compare/desktop-v0.5.0...desktop-v0.6.0) (2026-10-17)
+
+
+### Features
+
+* **desktop:** add persistent rescue strips for hidden fullscreen chrome ([2613155](https://github.com/JuanCamacho198/NEXO/commit/2613155812354cbb76b07bec9d421491f80a5d60))
+* **desktop:** cap Books depth and back off on rate limits ([3b664be](https://github.com/JuanCamacho198/NEXO/commit/3b664be541652fabdc985c76cc017984c1c00886))
+* **desktop:** close epub selection menu on Escape by layers ([5722799](https://github.com/JuanCamacho198/NEXO/commit/57227995c0068733449c5375d25f78c0f9e2f30b))
+* **desktop:** collapse epub selection from parent-chrome clicks ([6bb875a](https://github.com/JuanCamacho198/NEXO/commit/6bb875a2446aa0fcaeb36a81d5652879f30e7c9f))
+* **desktop:** control EPUB fragmentation, hyphenation and i18n in the reader CSS ([3637475](https://github.com/JuanCamacho198/NEXO/commit/36374753f6b50f195946ea0fd1942eb75bec609d))
+* **desktop:** couple epub justification to hyphenation with lang fallback ([04a0888](https://github.com/JuanCamacho198/NEXO/commit/04a088830b4519462ea1943265cf0caba43294a5))
+* **desktop:** dismiss epub selection menu on scroll and navigation ([c2176bd](https://github.com/JuanCamacho198/NEXO/commit/c2176bdb304f952b228b0c43bf0286b50d863a7c))
+* **desktop:** fade the reader header and footer together in fullscreen ([9e57f59](https://github.com/JuanCamacho198/NEXO/commit/9e57f5935ae07e5afa4fa543c7372add4f0f263d))
+* **desktop:** fetch the update feed behind a Tauri command ([2f14366](https://github.com/JuanCamacho198/NEXO/commit/2f14366db6cbfab20180e0b3e7e6a2deb3ace9ce))
+* **desktop:** give epub figures covers and tables intent ([b2c7d6d](https://github.com/JuanCamacho198/NEXO/commit/b2c7d6d87b637b73fcb924eb90ade7117463d380))
+* **desktop:** give the reader chrome groups, contrast and breathing room ([412d42d](https://github.com/JuanCamacho198/NEXO/commit/412d42d977ff9d4456343e1bc4bd949c8fe1e972))
+* **desktop:** give the reader chrome its own colour plane ([ce8bfeb](https://github.com/JuanCamacho198/NEXO/commit/ce8bfebd0b6688c52660b44d8d2fc7c1d0674aa0))
+* **desktop:** guard text-settings reset behind two-tap confirm ([e5e53b8](https://github.com/JuanCamacho198/NEXO/commit/e5e53b807bb6b5b392c3290a11c875aff5969f9e))
+* **desktop:** harden epub long-session typography ([4f0c4fd](https://github.com/JuanCamacho198/NEXO/commit/4f0c4fda46cfe2551ba11a059fbb1d74ff7fd975))
+* **desktop:** hide fullscreen cursor at rest with instant reshow trick ([0a0f8da](https://github.com/JuanCamacho198/NEXO/commit/0a0f8daa163c72bd709a5ddb42d24a9dc8769369))
+* **desktop:** honest font-size stepper with limits ([f613072](https://github.com/JuanCamacho198/NEXO/commit/f613072cba87524bcf3100eb4e408f146248fb2c))
+* **desktop:** mark Addons as beta in the sidebar ([bd89c9f](https://github.com/JuanCamacho198/NEXO/commit/bd89c9f298c2f92d3e6c0063f88dbac1229330ee))
+* **desktop:** name the reader header controls on hover ([d2b1ce8](https://github.com/JuanCamacho198/NEXO/commit/d2b1ce8d3d78f66f9740714f14501ae5fe33634d))
+* **desktop:** one stepper row shape for every numeric reader setting ([74eeca7](https://github.com/JuanCamacho198/NEXO/commit/74eeca782733482590fe938b57e3204221919f54))
+* **desktop:** open epub footnotes inline with scroll-safe return ([53e517d](https://github.com/JuanCamacho198/NEXO/commit/53e517dd9627debc2ffef64fbd688c8ff809c1b4))
+* **desktop:** preview fonts with publisher exit in text settings ([c6ff30e](https://github.com/JuanCamacho198/NEXO/commit/c6ff30e1bfb744e5e2b2c3ece39dbe65797013bc))
+* **desktop:** remove dead controls from text-settings panel ([6186e1c](https://github.com/JuanCamacho198/NEXO/commit/6186e1c5bc593f393a6758ca5111609ac1e75c2f))
+* **desktop:** replace text-settings roulettes with selects and switch ([2cd76a8](https://github.com/JuanCamacho198/NEXO/commit/2cd76a8641489557406bf9bb92c95ed2641bb2ea))
+* **desktop:** reveal fullscreen chrome on entry for discoverability ([81bfbe3](https://github.com/JuanCamacho198/NEXO/commit/81bfbe3dde15bb671e72b9951a5bb3aa04d86c66))
+* **desktop:** scale epub measure in ch across font sizes ([3aa8636](https://github.com/JuanCamacho198/NEXO/commit/3aa8636a4f16dad99824b6c434c33e465e69925e))
+* **desktop:** self-host Manrope and Newsreader via fontsource ([b841586](https://github.com/JuanCamacho198/NEXO/commit/b841586a7ec994dc8c236c0fd8b645a0de2e785a))
+* **desktop:** show live spacing values in text settings ([3008c71](https://github.com/JuanCamacho198/NEXO/commit/3008c71d6e6956f9f30bd74f855c2f1eac7f8746))
+* **desktop:** split reader margins into two axes and rename the section ([70aedae](https://github.com/JuanCamacho198/NEXO/commit/70aedaebc249a848245be168fa2c115a26291b77))
+* **desktop:** surface one-meaning fullscreen key hint ([f38a990](https://github.com/JuanCamacho198/NEXO/commit/f38a99072171a8fe87dc37a13095ad7c10afc85c))
+* **desktop:** theme the full epub element set from one owner ([9dbde4c](https://github.com/JuanCamacho198/NEXO/commit/9dbde4c5fa829e5f26df1cae37126bb52b0fdf70))
+* **desktop:** widen fullscreen edges with tercile click paging ([80a43d0](https://github.com/JuanCamacho198/NEXO/commit/80a43d030c80b7d01a3149e8bcec7ddf5be997c6))
+* Discover source filter chip on Android and desktop [8/10] ([#178](https://github.com/JuanCamacho198/NEXO/issues/178)) ([0a4e0f0](https://github.com/JuanCamacho198/NEXO/commit/0a4e0f0d5a6b27fcf4b177b227332028d36eb04f))
+
+
+### Bug Fixes
+
+* **desktop:** admit Tauri IPC origin in the CSP connect-src ([7d0bfff](https://github.com/JuanCamacho198/NEXO/commit/7d0bfff236cc0a208875553fcd414a0a082308f7))
+* **desktop:** alignment and paragraph spacing now reach the page ([b5565fd](https://github.com/JuanCamacho198/NEXO/commit/b5565fd64bfba4a2241c4e94a7269dac0d583526))
+* **desktop:** forward epub iframe mouse to immersive chrome ([6563fc0](https://github.com/JuanCamacho198/NEXO/commit/6563fc0ca72abd3d16217f9866d927fa287e5bd4))
+* **desktop:** let epub selection clears beat stale chapter guards ([e85e2a6](https://github.com/JuanCamacho198/NEXO/commit/e85e2a657dc540e7082887b343bbfab643bc6ef6))
+* **desktop:** let the notification bell's name carry its visible badge text ([83cc058](https://github.com/JuanCamacho198/NEXO/commit/83cc058879712eade22ea54e726e133854f53b96))
+* **desktop:** make the reader font pick actually change the book ([834aca7](https://github.com/JuanCamacho198/NEXO/commit/834aca7ba2cd16e747a0dce18ea4110308a04a41))
+* **desktop:** open the in-book search as a drawer instead of below the fold ([9d0c636](https://github.com/JuanCamacho198/NEXO/commit/9d0c636315398a872779f1ebc4bea7606c03b8da))
+* **desktop:** repair the reader bars' zoom menu, centring and orientation ([8593614](https://github.com/JuanCamacho198/NEXO/commit/85936140a806edcffead279b593c249b08ba44be))
+* **desktop:** report real EPUB reading progress in reader footer and toolbar ([d39cf8f](https://github.com/JuanCamacho198/NEXO/commit/d39cf8f841197e232723a33577ad41c0088f94d5))
+* **desktop:** resolve the custom titlebar before first paint and log its failure ([d17a0c6](https://github.com/JuanCamacho198/NEXO/commit/d17a0c6dd1aae838b2356944fe606a48475f6f1d))
+* **desktop:** seed the titlebar gate at module load and stop the window hiding it ([42d4087](https://github.com/JuanCamacho198/NEXO/commit/42d4087943ea6505ca57f84e4c03d95833fe46dd))
+* **desktop:** serve reader fonts from the app origin, not the asset protocol ([dddb926](https://github.com/JuanCamacho198/NEXO/commit/dddb926ee1e359a7263286e4474f1e1ccffbc741))
+* **desktop:** stop the reader clipping 36px and make its chrome edge-to-edge ([0ceff1d](https://github.com/JuanCamacho198/NEXO/commit/0ceff1dfdf553375ecabe851d067d4f238060ee1))
+* **desktop:** treat any rejected Drive refresh as a dead grant ([fcf321c](https://github.com/JuanCamacho198/NEXO/commit/fcf321c5e838768295b706379dd28f29675c68fb))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/desktop-v0.2.0...desktop-v0.3.0) (2026-09-17)
 
 
