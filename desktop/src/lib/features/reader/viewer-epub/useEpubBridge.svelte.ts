@@ -470,6 +470,7 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
           id: ch.id,
           title: ch.label,
           depth: ch.depth ?? 0,
+          index: ch.index,
         }));
         onTocReady(entries);
       }

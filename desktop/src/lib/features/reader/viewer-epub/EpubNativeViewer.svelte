@@ -82,7 +82,9 @@
     onIframeClick?: (x: number, isLink: boolean) => void;
     cursorHidden?: boolean;
     hasSelectionMenu?: boolean;
-    onTocReady?: (entries: Array<{ id: string; title: string; depth: number }>) => void;
+    onTocReady?: (
+      entries: Array<{ id: string; title: string; depth: number; index?: number }>,
+    ) => void;
     externalTocNavigate?: { id: string } | null;
     onSettingsChange?: (settings: ReaderSettings) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;

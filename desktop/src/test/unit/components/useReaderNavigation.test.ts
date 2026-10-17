@@ -187,6 +187,56 @@ describe('useReaderNavigation', () => {
     expect(() => nav.cleanup()).not.toThrow();
   });
 
+  // The header counts TOC entries, but the viewer reports a spine index (the N
+  // in `epubcfi(/6/N!…)`). These two are not the same number: one spine file
+  // can carry several TOC entries. Before this mapping existed the live app
+  // always read "1 / T" no matter the chapter, because nothing consumed the CFI
+  // the viewer actually emits.
+  it('maps a spine index from the CFI to its TOC position', () => {
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => makeEpubBook(),
+    });
+    // Three TOC entries where the third shares entry 1's spine file — the
+    // "Part heading plus its first chapter" case the extractor resolves for.
+    nav.handleTocReady([
+      { id: 'a', title: 'A', depth: 0, index: 0 },
+      { id: 'b', title: 'B', depth: 0, index: 4 },
+      { id: 'c', title: 'C', depth: 0, index: 8 },
+    ]);
+
+    // CFI is 1-based; TOC position is what the header renders.
+    nav.handleEpubLocationChange('epubcfi(/6/5!', 30);
+    expect(nav.currentEpubChapter).toBe(1);
+
+    nav.handleEpubLocationChange('epubcfi(/6/9!', 70);
+    expect(nav.currentEpubChapter).toBe(2);
+  });
+
+  it('keeps the last known chapter when the CFI resolves to no TOC entry', () => {
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => makeEpubBook(),
+    });
+    nav.handleTocReady([{ id: 'a', title: 'A', depth: 0, index: 0 }]);
+
+    nav.handleEpubLocationChange('epubcfi(/6/1!', 10);
+    expect(nav.currentEpubChapter).toBe(0);
+
+    // Spine 42 is in no entry, and a TOC with no `index` at all is the other
+    // shape of the same gap. Neither may jump the reader to the top.
+    nav.handleEpubLocationChange('epubcfi(/6/42!', 90);
+    expect(nav.currentEpubChapter).toBe(0);
+
+    const noIndex = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => makeEpubBook(),
+    });
+    noIndex.handleTocReady([{ id: 'x', title: 'X', depth: 0 }]);
+    noIndex.handleEpubLocationChange('epubcfi(/6/3!', 20);
+    expect(noIndex.currentEpubChapter).toBe(0);
+  });
+
   it('bookProgress for epub returns the received pct and updates on later events', () => {
     const book: any = makeEpubBook();
     const nav = createReaderNavigation({

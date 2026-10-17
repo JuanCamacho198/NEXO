@@ -1,4 +1,5 @@
 import type { TocEntry } from './ReaderTocPanel.svelte';
+import { chapterFromLocator } from './spineToToc';
 import type PdfViewer from '../viewer-pdf/PdfViewer.svelte';
 import type EpubNativeViewer from '../viewer-epub/EpubNativeViewer.svelte';
 import type { LibraryBookDto } from '$lib/shared/types/library';
@@ -176,8 +177,8 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   }
 
   function handleEpubLocationChange(cfi: string, pct: number): void {
-    const match = cfi.match(/chapter:(\d+)/);
-    if (match) currentEpubChapter = parseInt(match[1], 10);
+    const chapter = chapterFromLocator(cfi, tocEntries, currentEpubChapter);
+    if (chapter !== null) currentEpubChapter = chapter;
     epubProgress = Number.isFinite(pct) ? Math.min(100, Math.max(0, pct)) : 0;
     hasEpubProgress = true;
     captureBreadcrumb('navigation', BREADCRUMB_LABELS.CHAPTER_CHANGE, {

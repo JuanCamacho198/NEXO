@@ -8,6 +8,16 @@
     id: string;
     title: string;
     depth: number;
+    /**
+     * Spine index this entry points at, as the Rust extractor resolved it
+     * (`epub_extractor.rs` `build_toc`). Several TOC entries can share one spine
+     * index — a "Part" heading and its first chapter point at the same file —
+     * which is why `id` is a monotonic counter instead of this value.
+     *
+     * Absent on PDF entries, whose outline carries no page until a destination
+     * resolves asynchronously.
+     */
+    index?: number;
     active?: boolean;
     pageNumber?: number;
   }
