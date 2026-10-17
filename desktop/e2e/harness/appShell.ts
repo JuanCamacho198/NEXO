@@ -36,7 +36,13 @@ const ROUTE_INDEX: Record<GateRoute, number> = {
 };
 
 const ROUTE_ANCHORS: Record<GateRoute, (page: Page) => Locator> = {
-  home: (page) => page.getByText('My Shelf', { exact: true }),
+  // Anchored to `home.recentBooksTitle`, which `HomeMainContent` renders as an
+  // `h2`. It previously looked for "My Shelf", a catalog key (`home.myShelf`)
+  // that no component renders — so the anchor waited 15s for text that was
+  // never on screen. Anchoring by role+name keeps this tied to rendered
+  // structure rather than to a string that can fall out of use unnoticed.
+  home: (page) =>
+    page.locator('#main-content').getByRole('heading', { name: 'Recent books', exact: true }),
   library: (page) => page.locator('#main-content').getByRole('heading', { name: 'Library' }),
   stats: (page) => page.locator('#main-content').getByRole('heading', { name: 'Reading Stats' }),
   settings: (page) => page.getByRole('tab', { name: 'Account' }),

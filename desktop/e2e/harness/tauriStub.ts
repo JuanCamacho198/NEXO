@@ -118,6 +118,22 @@ export async function installTauriInvokeStub(page: Page, seed: TauriStubSeed = {
     // machine's persisted locale.
     window.localStorage.setItem('nexo.ui.locale', 'en');
 
+    // Pin the theme for the same reason, and because the visual baselines were
+    // captured in the default dark theme. `theme.ts` falls back to 'dark' only
+    // when nothing is stored, so a developer who has ever toggled the app to
+    // light carries that value into every run and every baseline silently
+    // captures the wrong theme.
+    //
+    // The pin is `localStorage` only. `AppState.initTheme()` subscribes and
+    // calls `applyThemeToDom`, which sets `data-theme` from this stored value at
+    // boot, so writing the attribute here would be redundant. It would also be
+    // fatal: an init script runs before the document is parsed, so
+    // `document.documentElement` is still `null`, and the resulting TypeError
+    // aborts the whole script before `__TAURI_INTERNALS__` is assigned — which
+    // silently hands the app over to the `bun run dev` shim in `src/`, whose
+    // seed data then replaces this stub's in every E2E run.
+    window.localStorage.setItem('nexo-theme', 'dark');
+
     const internals = {
       transformCallback: (callback: unknown) => {
         const id = Math.floor(Math.random() * 1_000_000_000);

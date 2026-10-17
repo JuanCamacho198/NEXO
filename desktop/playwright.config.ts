@@ -73,6 +73,12 @@ export default defineConfig({
       // Drives the *real* Tauri app. No server is started for this project —
       // the app must already be running under `bun run tauri:dev:debug`.
       //
+      // Deliberately NOT part of `bun run test:e2e`: that script pins
+      // `--project=chromium`, so the default suite stays runnable with no app,
+      // no Rust build and no graphical session. Running it here would make it
+      // wait 30s for a window that is not there and fail, which is how the
+      // whole suite came to look broken. Reach it through `test:e2e:cdp`.
+      //
       // CDP attachment is done by `e2e/tauri/harness/connectApp.ts`, which
       // exposes `test`/`expect` extensions whose `appPage` fixture calls
       // `chromium.connectOverCDP`. The `connectOptions` use-option is

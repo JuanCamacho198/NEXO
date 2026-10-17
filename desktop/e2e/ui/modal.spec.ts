@@ -124,7 +124,11 @@ test('stats: the chart dialog renders over the reading stats page', async ({ pag
   await page.getByRole('button', { name: 'Pantalla completa', exact: true }).click();
 
   await expect(page.locator(DIALOG)).toHaveCount(1);
-  await expect(page.locator(DIALOG)).toContainText('Minutes read');
+  // The modal's title is `stats.minutesReadChart` ("Reading activity"), not
+  // `stats.minutesRead` ("Minutes read") — the two keys are distinct and this
+  // dialog was relabelled in the reader-chrome merge. Asserting the former key
+  // is what this surface actually renders.
+  await expect(page.locator(DIALOG)).toContainText('Reading activity');
   await captureViewport(page, 'modal-stats-chart.png');
 
   await page.keyboard.press('Escape');
