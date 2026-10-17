@@ -124,11 +124,15 @@ describe('SettingsAboutTab', () => {
     expect(notices).toContain('Apache-2.0');
     expect(notices).toContain('BSD-2-Clause');
     expect(notices).toContain('no longer lists the libraries');
+    // Readium CSS rules are adapted into the desktop reader's override
+    // stylesheet, so its BSD-3 notice belongs here too.
+    expect(notices).toContain('Readium CSS');
+    expect(notices).toContain('BSD-3-Clause');
     const rows = notices
       .split('\n')
       .filter((line) => line.startsWith('|'))
       .filter((line) => !line.includes('---') && !line.includes('Library'));
-    expect(rows).toHaveLength(15);
+    expect(rows).toHaveLength(16);
   });
 
   it('renders the daily quote with author, source and a working source link', async () => {

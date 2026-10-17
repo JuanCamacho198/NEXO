@@ -36,7 +36,6 @@ export {
   IFRAME_HIGHLIGHT_OVERLAY_SCRIPT,
 } from './viewer-epub';
 export * from './viewer-epub/cfiBridge';
-export * from './viewer-epub/epub';
 export * from './viewer-epub/epubCache';
 export * from './viewer-epub/keyboardNav';
 

@@ -190,4 +190,100 @@ test('the injected reader CSS is applied inside the real chapter iframe', async 
   expect(measured.headingBreakInside).toBe('avoid');
   expect(measured.headingBreakAfter).toBe('avoid');
   expect(measured.headingHyphens).toBe('none');
+
+  // ── U3 — the readium-css rules, measured in the same real chapter ──────────
+  //
+  // The library book is picked by the user's shelf, so it may not contain a
+  // `dt`, a `table` or any CJK text. Rather than skip, the probe *creates* the
+  // elements it needs inside the chapter document and reads the computed style:
+  // the stylesheet is already applied to that document, so a fresh element
+  // cascades against the same rules a book's own element would. That is what
+  // makes these assertions honest — they exercise the real CSS engine against
+  // the real injected stylesheet, not a fixture.
+  const readium = await chapter.evaluate(() => {
+    const created: HTMLElement[] = [];
+    const probe = <T extends HTMLElement>(tag: string, configure?: (el: T) => void) => {
+      const el = document.createElement(tag) as T;
+      el.textContent = 'probe';
+      configure?.(el);
+      document.body.appendChild(el);
+      created.push(el);
+      const style = getComputedStyle(el);
+      return {
+        breakInside: style.getPropertyValue('break-inside'),
+        breakAfter: style.getPropertyValue('break-after'),
+        hyphens: style.getPropertyValue('hyphens'),
+        fontVariantNumeric: style.getPropertyValue('font-variant-numeric'),
+        fontStyle: style.getPropertyValue('font-style'),
+      };
+    };
+
+    const result = {
+      // R1a — dt gets both break rules; hr and caption get break-after.
+      dt: probe('dt'),
+      hr: probe('hr'),
+      caption: probe('caption'),
+      // R1b — the widened hyphenation opt-out.
+      address: probe('address'),
+      // R2 — OTF numeric variants.
+      body: (() => {
+        const s = getComputedStyle(document.body);
+        return s.getPropertyValue('font-variant-numeric');
+      })(),
+      table: probe('table'),
+      // R3 — CJK emphasis is upright. `:lang(ja)` needs the attribute on the
+      // `em` itself or on an ancestor, so the element is created INSIDE a
+      // `lang="ja"` wrapper and never reparented afterwards: removing and
+      // re-appending it (as an earlier version of this probe did) detaches it
+      // from the language context and the rule stops matching, which is a
+      // mistake in the probe, not in the stylesheet.
+      cjkEm: (() => {
+        const wrap = document.createElement('span');
+        wrap.setAttribute('lang', 'ja');
+        const em = document.createElement('em');
+        em.textContent = 'probe';
+        wrap.appendChild(em);
+        document.body.appendChild(wrap);
+        created.push(wrap);
+        const style = getComputedStyle(em);
+        return {
+          breakInside: style.getPropertyValue('break-inside'),
+          breakAfter: style.getPropertyValue('break-after'),
+          hyphens: style.getPropertyValue('hyphens'),
+          fontVariantNumeric: style.getPropertyValue('font-variant-numeric'),
+          fontStyle: style.getPropertyValue('font-style'),
+        };
+      })(),
+      // Control: a Latin `<em>` must stay italic, proving the CJK rule is scoped
+      // and not a global `font-style: normal`.
+      latinEm: (() => {
+        const em = document.createElement('em');
+        em.textContent = 'probe';
+        document.body.appendChild(em);
+        created.push(em);
+        return { fontStyle: getComputedStyle(em).getPropertyValue('font-style') };
+      })(),
+    };
+
+    for (const el of created) el.remove();
+    return result;
+  });
+
+  // R1a: the fragmentation Readium adds on top of S1.
+  expect(readium.dt.breakInside).toBe('avoid');
+  expect(readium.dt.breakAfter).toBe('avoid');
+  expect(readium.hr.breakAfter).toBe('avoid');
+  expect(readium.caption.breakAfter).toBe('avoid');
+
+  // R1b: the widened opt-out.
+  expect(readium.address.hyphens).toBe('none');
+
+  // R2: the numeric variants the engine resolved.
+  expect(readium.body).toContain('oldstyle-nums');
+  expect(readium.table.fontVariantNumeric).toContain('tabular-nums');
+
+  // R3: CJK emphasis is upright rather than synthesised-oblique.
+  expect(readium.cjkEm.fontStyle).toBe('normal');
+  // …and the rule is scoped: Latin emphasis keeps its italic.
+  expect(readium.latinEm.fontStyle).toBe('italic');
 });

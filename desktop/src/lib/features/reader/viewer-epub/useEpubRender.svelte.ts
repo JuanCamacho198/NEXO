@@ -14,6 +14,12 @@ import { IFRAME_QUOTE_SCRIPT } from '$lib/features/reader/viewer-epub/epubQuoteI
 import { IFRAME_HIGHLIGHT_OVERLAY_SCRIPT } from '$lib/features/reader/viewer-epub/epubHighlightOverlayIframe';
 import { buildReaderFontFaceCss } from '$lib/features/reader/viewer-epub/readerFontFaces';
 import {
+  buildReaderOverrideCss,
+  getThemeStyles,
+  getThemeBgColor,
+  type ReaderCssOptions,
+} from '$lib/features/reader/viewer-epub/readerCssBuilder';
+import {
   HIGHLIGHT_COLORS,
   highlightFillRgba,
   nearestHighlightHex,
@@ -51,6 +57,13 @@ export interface EpubMetadataExtract {
   resourcesPath: string;
   resources_path?: string;
 }
+
+// ─── Reader CSS surface, re-exported ───────────────────────────
+// The tables and the builder now live in `readerCssBuilder.ts`; this re-export
+// keeps the existing import paths (the viewer barrel, `useEpubZoomTheme`, the
+// tests) resolving without a second copy that could drift.
+export { buildReaderOverrideCss, getThemeStyles, getThemeBgColor };
+export type { ReaderCssOptions };
 
 // ─── Pure helpers — exported for golden tests ──────────────────
 export function resolveResourcePath(chapterPath: string, href: string): string {
@@ -153,244 +166,10 @@ export function stripMissingFontFaces(cssText: string, missingFonts: Set<string>
   });
 }
 
-// NOTE (U5.4): the hex literals below are intentional. They style HTML
-// injected into the EPUB iframe, where the app's CSS tokens do not exist,
-// so var(--color-*) references would resolve to nothing.
-// U3: themes own the full element set (headings, quotes, code, rules,
-// tables, captions) — body+a alone left book colors bleeding into dark modes.
-export function getThemeStyles(themeMode: string): string {
-  const themes: Record<string, string> = {
-    paper: `
-        body { background: #faf8f5; color: #333; }
-        a { color: #3366cc; }
-        h1, h2, h3, h4, h5, h6 { color: #1a1a1a !important; }
-        blockquote { color: #5a544a !important; border-left: 3px solid #d8d0c4 !important; background: #f3efe8 !important; }
-        code { color: #7a3b2e !important; background: #efe9dd !important; }
-        pre { color: #333 !important; background: #f3efe8 !important; border: 1px solid #e2dacb !important; }
-        hr { border-color: #d8d0c4 !important; }
-        table, th, td { border-color: #d8d0c4 !important; }
-        th { background: #f3efe8 !important; }
-        figcaption { color: #8a8478 !important; }
-      `,
-    sepia: `
-        body { background: #f5eedd; color: #5b4636; }
-        a { color: #8b6914; }
-        h1, h2, h3, h4, h5, h6 { color: #3f2f22 !important; }
-        blockquote { color: #6b563d !important; border-left: 3px solid #d6c49a !important; background: #efe3cb !important; }
-        code { color: #6b3b1f !important; background: #e9dcc0 !important; }
-        pre { color: #5b4636 !important; background: #efe3cb !important; border: 1px solid #d6c49a !important; }
-        hr { border-color: #d6c49a !important; }
-        table, th, td { border-color: #d6c49a !important; }
-        th { background: #efe3cb !important; }
-        figcaption { color: #97805a !important; }
-      `,
-    night: `
-        body { background: #0f1320; color: #c8ccd8; }
-        a { color: #7bb8ff; }
-        h1, h2, h3, h4, h5, h6 { color: #eef1f8 !important; }
-        blockquote { color: #9aa3bd !important; border-left: 3px solid #2c3a55 !important; background: #151b2e !important; }
-        code { color: #ffb86b !important; background: #1a2238 !important; }
-        pre { color: #c8ccd8 !important; background: #151b2e !important; border: 1px solid #2c3a55 !important; }
-        hr { border-color: #2c3a55 !important; }
-        table, th, td { border-color: #2c3a55 !important; }
-        th { background: #151b2e !important; }
-        figcaption { color: #7d86a0 !important; }
-      `,
-    oled: `
-        body { background: #000000; color: #b8bcc8; }
-        a { color: #7bb8ff; }
-        h1, h2, h3, h4, h5, h6 { color: #e8ebf4 !important; }
-        blockquote { color: #8f97ad !important; border-left: 3px solid #22262f !important; background: #0a0c10 !important; }
-        code { color: #ffb86b !important; background: #0d0f14 !important; }
-        pre { color: #b8bcc8 !important; background: #0a0c10 !important; border: 1px solid #22262f !important; }
-        hr { border-color: #22262f !important; }
-        table, th, td { border-color: #22262f !important; }
-        th { background: #0a0c10 !important; }
-        figcaption { color: #737a8c !important; }
-      `,
-  };
-  return themes[themeMode] || themes.paper;
-}
-
-export function getThemeBgColor(themeMode: string): string {
-  const bgs: Record<string, string> = {
-    paper: '#faf8f5',
-    sepia: '#f5eedd',
-    night: '#151b2e',
-    oled: '#000000',
-  };
-  return bgs[themeMode] || bgs.paper;
-}
-
-export function buildReaderOverrideCss(opts: {
-  fontSize: number;
-  zoomLevel: number;
-  themeMode: string;
-  lineHeight: number;
-  letterSpacing: number;
-  paragraphSpacing: number;
-  textAlign: string;
-  direction: string;
-  hyphenation: boolean;
-  margins: { top: number; bottom: number; left: number; right: number };
-  /** The book's own face is `''`; the caller appends the override when set. */
-  fontFamily?: string;
-}): string {
-  const justify = opts.textAlign.toLowerCase() === 'justify';
-  // U1: justification without hyphenation rivers. Justify always hyphenates;
-  // explicit hyphenation still controls the left/center paths.
-  const hyphensValue = opts.hyphenation || justify ? 'auto' : 'none';
-  const effectiveFontSize = (opts.fontSize * opts.zoomLevel) / 100;
-  const themeCss = getThemeStyles(opts.themeMode);
-
-  return `
-      ${themeCss}
-      html {
-        height: auto !important;
-        max-height: none !important;
-        overflow-x: hidden !important;
-        overflow-y: visible !important;
-      }
-      body {
-        height: auto !important;
-        min-height: 100% !important;
-        max-height: none !important;
-        overflow: visible !important;
-        font-size: ${effectiveFontSize}% !important;
-        line-height: ${opts.lineHeight} !important;
-        letter-spacing: ${opts.letterSpacing}px !important;
-        direction: ${opts.direction} !important;
-        hyphens: ${hyphensValue} !important;
-        text-wrap: pretty !important;
-        /* U6: long-session legibility. */
-        orphans: 3 !important;
-        widows: 3 !important;
-        overflow-wrap: break-word !important;
-        padding: ${opts.margins.top}rem ${opts.margins.right}rem ${opts.margins.bottom}rem ${opts.margins.left}rem !important;
-        /* U2: measure in ch, not rem — ch tracks the reader font-size, so the
-          line stays ~65 characters from 80% to 200%. */
-        max-width: min(65ch, 100%) !important;
-        margin: 0 auto !important;
-        box-sizing: border-box !important;
-      }
-      /* Alignment must reach the text elements, not just body: EPUB stylesheets
-        routinely set text-align on p/div/headings, and those descend from body,
-        so a body-only rule loses. */
-      body p, body div, body li, body dd, body dt, body blockquote,
-      body h1, body h2, body h3, body h4, body h5, body h6 {
-        text-align: ${opts.textAlign} !important;
-      }
-      /* Paragraph spacing carried no !important and was the only rule in this
-        block without it, so the book's own stylesheet won and the control did
-        nothing. Covers div-wrapped paragraphs too, which many EPUBs use. */
-      body p, body div > p, body p + p {
-        margin-bottom: ${opts.paragraphSpacing}em !important;
-      }
-      /* U6: spacing XOR indent. Book stylesheets that indent would double
-        up with our paragraph spacing, so indent loses when spacing is on. */
-      ${opts.paragraphSpacing > 0 ? 'body p, body div { text-indent: 0 !important; }' : ''}
-      body pre {
-        white-space: pre-wrap !important;
-        overflow-x: auto !important;
-        overflow-wrap: break-word !important;
-      }
-      body code {
-        overflow-wrap: break-word !important;
-      }
-      body img {
-        max-width: 100%;
-        height: auto;
-        /* U4: covers never push text off-screen; small inline images unaffected. */
-        max-height: 85vh;
-      }
-      body svg {
-        max-width: 100% !important;
-        max-height: 85vh !important;
-      }
-      /* U4: figures read as intentional spreads; captions stay muted. */
-      body figure {
-        margin: 2em auto !important;
-        text-align: center !important;
-        max-width: 100% !important;
-      }
-      body figcaption {
-        font-size: 0.85em !important;
-        margin-top: 0.5em !important;
-      }
-      /* U4: wide tables scroll instead of breaking the measure. */
-      body table {
-        display: block !important;
-        overflow-x: auto !important;
-        max-width: 100% !important;
-      }
-      /* S1: fragmentation control, ported from ReadiumCSS-html5patch.
-        Orphans/widows alone do not stop a heading or a figure from being split
-        from the block it introduces, so the atomic elements get break-inside
-        and the headings additionally break-after. Structural only — no color,
-        so the four themes are unaffected. */
-      body h1, body h2, body h3, body h4, body h5, body h6,
-      body figure, body table, body pre, body img, body svg, body tr {
-        break-inside: avoid !important;
-      }
-      body h1, body h2, body h3, body h4, body h5, body h6 {
-        break-after: avoid !important;
-      }
-      /* S2: hyphenation limits (ReadiumCSS-html5patch). hyphens is set on
-        body, so headings, code, pre and captions inherit it and get hyphenated
-        where they must not - hence the explicit opt-out below. The limits only
-        apply where hyphens is auto, so they are inert for the left/center paths. */
-      body {
-        hyphenate-character: '-' !important;
-        hyphenate-limit-chars: 6 3 3 !important;
-        hyphenate-limit-lines: 3 !important;
-      }
-      body h1, body h2, body h3, body h4, body h5, body h6,
-      body code, body pre, body figcaption, body caption, body var {
-        hyphens: none !important;
-      }
-      /* S3: i18n baseline (ReadiumCSS-base + html5patch). Ruby sizing and
-        east-asian variant; CJK line-breaking and word-breaking; CJK-capable
-        font stacks; and a math font stack for MathML. Font stacks name
-        families only — srcdoc cannot fetch, so they are fallback chains. */
-      body ruby {
-        ruby-position: over !important;
-      }
-      body rt, body rp {
-        font-size: 0.5em !important;
-        font-variant-east-asian: ruby !important;
-        user-select: none !important;
-      }
-      body :lang(ja), body :lang(zh), body :lang(ko) {
-        line-break: strict !important;
-        word-break: normal !important;
-        overflow-wrap: break-word !important;
-      }
-      /* CJK-capable chain: a Japanese face first, then the pan-CJK families a
-        Windows/macOS/Android install commonly ships, then the book's own face.
-        Named families only — srcdoc has no network, so any that is absent is
-        skipped by the cascade. No !important, so an explicit reader font pick
-        (which carries !important) still wins. */
-      body :lang(ja) {
-        font-family:
-          'Yu Mincho', 'Hiragino Mincho ProN', 'Noto Serif CJK JP', 'Noto Serif JP',
-          'Source Han Serif', 'BIZ UDMincho', serif;
-      }
-      body :lang(zh) {
-        font-family:
-          'Songti SC', 'SimSun', 'Noto Serif CJK SC', 'Noto Serif SC',
-          'Source Han Serif', serif;
-      }
-      body :lang(ko) {
-        font-family:
-          'Nanum Myeongjo', 'Batang', 'Noto Serif CJK KR', 'Noto Serif KR',
-          'Source Han Serif', serif;
-      }
-      body math {
-        font-family:
-          'Latin Modern Math', 'STIX Two Math', 'Cambria Math', 'DejaVu Math TeX Gyre', serif !important;
-      }
-    `;
-}
+// Theme tables and the override builder moved to `readerCssBuilder.ts` (U2 of
+// `epub-css-followups`) — a pure move, hash-verified against
+// `scripts/u1-css-fixture.json`. They are re-exported below so existing
+// importers (`useEpubZoomTheme`, view tests, the barrel) keep resolving.
 
 export function buildChapterSrcdoc(
   chapterData: EpubChapterContent,
@@ -399,19 +178,7 @@ export function buildChapterSrcdoc(
   currentChapterHref: string,
   chapterIndex: number,
   missingFonts: Set<string> = new Set(),
-  readerCssOpts?: {
-    fontSize: number;
-    zoomLevel: number;
-    themeMode: string;
-    lineHeight: number;
-    letterSpacing: number;
-    paragraphSpacing: number;
-    textAlign: string;
-    direction: string;
-    hyphenation: boolean;
-    margins: { top: number; bottom: number; left: number; right: number };
-    fontFamily: string;
-  },
+  readerCssOpts?: ReaderCssOptions,
   chapterTitle?: string | null,
   bookLanguage?: string | null,
 ): string {

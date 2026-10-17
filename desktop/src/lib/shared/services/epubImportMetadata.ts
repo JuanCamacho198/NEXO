@@ -1,10 +1,10 @@
 /**
  * Lightweight one-shot metadata extractor for EPUB files used at import time.
  *
- * The full `EpubReaderService` (in `src/lib/features/reader/viewer-epub/epub.ts`)
- * is geared toward rendering and tears down the epubjs `Book` on every cleanup.
- * For import we only need the title and author once, so we build a dedicated,
- * side-effect-free helper.
+ * `epubjs` is used here only for import metadata. The reader does not render
+ * through it — chapters come from the Rust extractor and render in a `srcdoc`
+ * iframe (`useEpubRender.svelte.ts`). This helper builds a dedicated,
+ * side-effect-free path for the one-shot import case.
  *
  * Strategy (defense in depth, in case any single layer returns empty for an
  * otherwise-valid EPUB):
