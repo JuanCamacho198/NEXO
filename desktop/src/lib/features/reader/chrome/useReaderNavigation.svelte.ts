@@ -141,7 +141,16 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   const headerCurrentPage = $derived.by(() => {
     const v = resolveViewer();
     if (v.kind === 'pdf') return currentPdfPage || v.getCurrentPage();
-    if (v.kind === 'epub') return currentEpubChapter + 1 || v.getCurrentPage();
+    // EPUB: prefer the viewer's live committed chapter over the CFI-derived
+    // `currentEpubChapter`. The latter only updates when the iframe reports a
+    // precise location, which happens *after* a render completes — so during a
+    // burst of paging (or any render backlog) the header and the page field
+    // froze, then jumped several chapters when the queue drained. The viewer's
+    // index advances synchronously with the navigation, so the header reads the
+    // destination the reader committed to. `v.getCurrentPage()` falls back to
+    // `currentEpubChapter + 1` when no live viewer is attached (see
+    // `resolveViewer`), so the CFI path still answers when the viewer cannot.
+    if (v.kind === 'epub') return v.getCurrentPage();
     return 1;
   });
   const headerTotalPages = $derived.by(() => {

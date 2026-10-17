@@ -95,6 +95,17 @@ export const canHandleReaderArrowNav = (event: KeyboardEvent): boolean => {
 };
 
 export const resolveReaderArrowIntent = (event: KeyboardEvent): ReaderArrowIntent | null => {
+  // Auto-repeat is the reader's *skip ahead* gesture, not a burst of intent.
+  // Holding an arrow emits one event per repeat (~30/s on Windows after the
+  // initial delay); resolving each one as a fresh intent would run a full
+  // chapter render per repeat. Filtering here — in the resolution, not in a
+  // consumer — means every caller inherits the rule instead of each one having
+  // to remember it. The *first* event has `repeat === false`, so a deliberate
+  // press still resolves and still moves.
+  if (event.repeat) {
+    return null;
+  }
+
   if (!canHandleReaderArrowNav(event)) {
     return null;
   }

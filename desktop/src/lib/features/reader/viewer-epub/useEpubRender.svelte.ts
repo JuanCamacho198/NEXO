@@ -33,6 +33,7 @@ import {
 } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import { setReaderError } from '$lib/stores/readerErrorState.svelte';
 import { logger } from '$lib/shared/logger/Logger';
+import { createCoalescingRenderer } from '$lib/features/reader/viewer-epub/epubRenderCoalescer';
 
 // ─── Types ─────────────────────────────────────────────────────
 export interface EpubChapterContent {
@@ -561,6 +562,14 @@ export function createEpubRender(deps: EpubRenderDeps): {
   buildChapterSrcdoc: typeof buildChapterSrcdoc;
   buildReaderOverrideCssPure: typeof buildReaderOverrideCss;
 } {
+  // The index the *latest* request asked for. A render that is in flight when a
+  // newer request arrives is superseded: its result must not be committed, or
+  // the page field jumps forward to the newest destination and then back to
+  // the older one as the stale render finishes. `currentRenderIndex` tracks
+  // "started"; `requestedIndex` tracks "wanted", and a commit needs both to
+  // agree.
+  let requestedIndex: number | null = null;
+
   // Epoch guard — plain vars NOT $state (prevents ping-pong BUILD v4)
   let renderEpoch = 0;
   let currentRenderIndex: number | null = null;
@@ -648,7 +657,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
     syncIframeHeight();
   }
 
-  async function renderChapter(index: number): Promise<void> {
+  async function runChapterRender(index: number): Promise<void> {
     const metadata = deps.getMetadata();
     const iframeEl = deps.getIframeEl();
     if (!metadata || !iframeEl) return;
@@ -701,10 +710,10 @@ export function createEpubRender(deps: EpubRenderDeps): {
         chapterIndex: spineIndex,
       });
 
-      if (myEpoch !== renderEpoch || currentRenderIndex !== index) {
+      if (myEpoch !== renderEpoch || currentRenderIndex !== index || requestedIndex !== index) {
         logger.debug(
           'epub-hl: renderChapter stale abort before srcdoc',
-          { index, epoch: myEpoch, current: renderEpoch },
+          { index, epoch: myEpoch, current: renderEpoch, requested: requestedIndex },
           'reader',
         );
         return;
@@ -756,7 +765,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
         const interval = 20;
         let attempt = 0;
         function markReady(): void {
-          if (myEpoch !== renderEpoch || currentRenderIndex !== index) {
+          if (myEpoch !== renderEpoch || currentRenderIndex !== index || requestedIndex !== index) {
             logger.debug(
               'epub-hl: markReady stale epoch',
               {
@@ -764,6 +773,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
                 current: renderEpoch,
                 index,
                 currentRenderIndex,
+                requestedIndex,
               },
               'reader',
             );
@@ -829,6 +839,32 @@ export function createEpubRender(deps: EpubRenderDeps): {
       deps.setError(msg);
       setReaderError(msg);
     }
+  }
+
+  // Single-flight, latest-wins: a burst of navigation requests collapses to one
+  // render of the destination, while the first request still runs immediately.
+  // See `epubRenderCoalescer.ts` for the contract; `runChapterRender` is the
+  // unit of work it schedules.
+  const coalescer = createCoalescingRenderer(runChapterRender, (err) => {
+    logger.warn(
+      'epub-hl: coalesced render failed',
+      { error: err instanceof Error ? err.message : String(err) },
+      'reader',
+    );
+  });
+
+  /**
+   * Schedules a render of `index`. Resolves once the render pipeline for this
+   * request has settled (including any coalesced follow-up that superseded it),
+   * so an awaiting caller never observes a half-scheduled burst.
+   */
+  async function renderChapter(index: number): Promise<void> {
+    // Record the wanted destination *before* scheduling: a render already in
+    // flight now sees `requestedIndex !== index` and discards its result instead
+    // of committing a chapter the reader has already moved past.
+    requestedIndex = index;
+    coalescer.request(index);
+    await coalescer.idle();
   }
 
   return {

@@ -42,6 +42,40 @@ describe('keyboardNav', () => {
     expect(resolveReaderArrowIntent(createKeyboardEvent(target, { key: 'Enter' }))).toBeNull();
   });
 
+  describe('auto-repeat filter', () => {
+    // Holding an arrow key emits one event per repeat. Each one used to resolve
+    // to a fresh intent and run a full chapter render, so a held key queued one
+    // backend extraction per repeat. The filter lives in the resolution so every
+    // consumer inherits it.
+    it('resolves nothing for a repeated arrow event', () => {
+      const target = document.createElement('div');
+
+      for (const key of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']) {
+        expect(
+          resolveReaderArrowIntent(createKeyboardEvent(target, { key, repeat: true })),
+        ).toBeNull();
+      }
+    });
+
+    it('still resolves the first (non-repeated) press', () => {
+      const target = document.createElement('div');
+
+      expect(
+        resolveReaderArrowIntent(createKeyboardEvent(target, { key: 'ArrowRight', repeat: false })),
+      ).toBe('nextPage');
+    });
+
+    it('does not depend on the editable-context check to filter repeats', () => {
+      // A repeat inside an editable already resolves to null via the context
+      // check; a repeat elsewhere must resolve to null because of `repeat`.
+      const target = document.createElement('div');
+      expect(canHandleReaderArrowNav(createKeyboardEvent(target, { repeat: true }))).toBe(true);
+      expect(
+        resolveReaderArrowIntent(createKeyboardEvent(target, { key: 'ArrowRight', repeat: true })),
+      ).toBeNull();
+    });
+  });
+
   it('allows arrow nav on generic containers', () => {
     const target = document.createElement('div');
     expect(canHandleReaderArrowNav(createKeyboardEvent(target))).toBe(true);

@@ -17,6 +17,7 @@
   import { createEpubZoomTheme } from '$lib/features/reader/viewer-epub/useEpubZoomTheme.svelte';
   import { createEpubBridge } from '$lib/features/reader/viewer-epub/useEpubBridge.svelte';
   import { resolveFootnoteNote } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+  import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
 
   interface EpubChapterMeta {
     index: number;
@@ -416,8 +417,14 @@
       onselectionclear?.();
       return;
     }
-    if (e.key === 'ArrowLeft') goToPrev();
-    if (e.key === 'ArrowRight') goToNext();
+    // The arrow contract lives in `keyboardNav.resolveReaderArrowIntent`: it
+    // owns which keys page, when an editable context wins, and the auto-repeat
+    // filter. Reading `e.key` directly here would bypass all three — most
+    // importantly the repeat filter, which is what made a held arrow issue one
+    // backend chapter extraction per key repeat.
+    const intent = resolveReaderArrowIntent(e);
+    if (intent === 'prevPage') goToPrev();
+    else if (intent === 'nextPage') goToNext();
   }
 
   // U1 (fullscreen): the chapter iframe swallows mouse events, so the
