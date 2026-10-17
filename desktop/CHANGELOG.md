@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.2](https://github.com/JuanCamacho198/NEXO/compare/desktop-v0.5.1...desktop-v0.5.2) (2026-10-17)
+
+
+### Bug Fixes
+
+* **desktop:** coalesce EPUB chapter renders and stop key auto-repeat storms ([e9df85b](https://github.com/JuanCamacho198/NEXO/commit/e9df85b0b47daea16cbfaf487c65ef107bc5f7b4))
+* **desktop:** read the reader's chapter from the locator the viewer emits ([c659e2b](https://github.com/JuanCamacho198/NEXO/commit/c659e2bb0beb46d1114fb95ac3c6dd48954f78d6))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/desktop-v0.2.0...desktop-v0.3.0) (2026-09-17)
 
 
