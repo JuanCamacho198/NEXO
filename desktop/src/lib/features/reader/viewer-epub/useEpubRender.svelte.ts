@@ -323,6 +323,72 @@ export function buildReaderOverrideCss(opts: {
         overflow-x: auto !important;
         max-width: 100% !important;
       }
+      /* S1: fragmentation control, ported from ReadiumCSS-html5patch.
+        Orphans/widows alone do not stop a heading or a figure from being split
+        from the block it introduces, so the atomic elements get break-inside
+        and the headings additionally break-after. Structural only — no color,
+        so the four themes are unaffected. */
+      body h1, body h2, body h3, body h4, body h5, body h6,
+      body figure, body table, body pre, body img, body svg, body tr {
+        break-inside: avoid !important;
+      }
+      body h1, body h2, body h3, body h4, body h5, body h6 {
+        break-after: avoid !important;
+      }
+      /* S2: hyphenation limits (ReadiumCSS-html5patch). hyphens is set on
+        body, so headings, code, pre and captions inherit it and get hyphenated
+        where they must not - hence the explicit opt-out below. The limits only
+        apply where hyphens is auto, so they are inert for the left/center paths. */
+      body {
+        hyphenate-character: '-' !important;
+        hyphenate-limit-chars: 6 3 3 !important;
+        hyphenate-limit-lines: 3 !important;
+      }
+      body h1, body h2, body h3, body h4, body h5, body h6,
+      body code, body pre, body figcaption, body caption, body var {
+        hyphens: none !important;
+      }
+      /* S3: i18n baseline (ReadiumCSS-base + html5patch). Ruby sizing and
+        east-asian variant; CJK line-breaking and word-breaking; CJK-capable
+        font stacks; and a math font stack for MathML. Font stacks name
+        families only — srcdoc cannot fetch, so they are fallback chains. */
+      body ruby {
+        ruby-position: over !important;
+      }
+      body rt, body rp {
+        font-size: 0.5em !important;
+        font-variant-east-asian: ruby !important;
+        user-select: none !important;
+      }
+      body :lang(ja), body :lang(zh), body :lang(ko) {
+        line-break: strict !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+      }
+      /* CJK-capable chain: a Japanese face first, then the pan-CJK families a
+        Windows/macOS/Android install commonly ships, then the book's own face.
+        Named families only — srcdoc has no network, so any that is absent is
+        skipped by the cascade. No !important, so an explicit reader font pick
+        (which carries !important) still wins. */
+      body :lang(ja) {
+        font-family:
+          'Yu Mincho', 'Hiragino Mincho ProN', 'Noto Serif CJK JP', 'Noto Serif JP',
+          'Source Han Serif', 'BIZ UDMincho', serif;
+      }
+      body :lang(zh) {
+        font-family:
+          'Songti SC', 'SimSun', 'Noto Serif CJK SC', 'Noto Serif SC',
+          'Source Han Serif', serif;
+      }
+      body :lang(ko) {
+        font-family:
+          'Nanum Myeongjo', 'Batang', 'Noto Serif CJK KR', 'Noto Serif KR',
+          'Source Han Serif', serif;
+      }
+      body math {
+        font-family:
+          'Latin Modern Math', 'STIX Two Math', 'Cambria Math', 'DejaVu Math TeX Gyre', serif !important;
+      }
     `;
 }
 

@@ -138,7 +138,17 @@ export const test = base.extend<AppFixtures>({
       // The shell renders its sidebar once `AppState.init()` resolves. Waiting
       // on it here means a spec starts from a booted app rather than a blank
       // document, and turns "the app never came up" into a clear failure.
-      await expect(page.locator('aside nav > button').first()).toBeVisible({ timeout: 60_000 });
+      //
+      // OR the reader surface. The reader route replaces the whole shell — the
+      // sidebar is not in the DOM there — so a strict sidebar wait made the
+      // suite one-shot: a spec that opened a book left the app in the reader,
+      // and the *next* attach timed out on a sidebar that will never appear. A
+      // chapter iframe (`title="chapter"`, mounted only by the EPUB viewer) is
+      // the reader's own booted marker, so accepting either keeps the "app came
+      // up" guarantee on both routes.
+      await expect(
+        page.locator('aside nav > button').first().or(page.locator('iframe[title="chapter"]')).first(),
+      ).toBeVisible({ timeout: 60_000 });
 
       await use(page);
     } finally {

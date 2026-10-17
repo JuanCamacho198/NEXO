@@ -324,6 +324,86 @@ describe('useEpubRender — pure helpers', () => {
       });
       expect(tight).not.toContain('text-indent: 0');
     });
+
+    // ── CSS polish: fragmentation / hyphenation / i18n (S1-S3) ──
+    // HONESTY: jsdom has no layout engine, so nothing here proves a rule
+    // *renders*. These tests only assert the rules are present in the injected
+    // string. Whether break-inside/break-after, the hyphenation limits and the
+    // ruby/CJK/math rules actually take effect is verified against the real app
+    // in e2e/tauri/reader.spec.ts (CDP), which reads computed styles inside the
+    // chapter iframe.
+    describe('CSS polish rules are emitted', () => {
+      const base = {
+        fontSize: 100,
+        zoomLevel: 100,
+        themeMode: 'paper',
+        lineHeight: 1.7,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        margins: { top: 1, bottom: 1, left: 1, right: 1 },
+      };
+      const css = buildReaderOverrideCss(base);
+
+      it('S1: fragmentation -- break-inside on atomic elements, break-after on headings', () => {
+        // Every atomic element must be named in the break-inside selector list.
+        const breakInsideBlock =
+          css.match(/body h1[^]*?\{[^}]*break-inside: avoid[^}]*\}/)?.[0] ?? '';
+        expect(breakInsideBlock).toContain('break-inside: avoid !important');
+        for (const sel of ['h1', 'h6', 'figure', 'table', 'pre', 'img', 'svg', 'tr']) {
+          expect(breakInsideBlock).toContain(sel);
+        }
+        const breakAfterBlock =
+          css.match(/body h1[^]*?\{[^}]*break-after: avoid[^}]*\}/)?.[0] ?? '';
+        expect(breakAfterBlock).toContain('break-after: avoid !important');
+      });
+
+      it('S2: hyphenation limits land on body', () => {
+        expect(css).toContain("hyphenate-character: '-' !important");
+        expect(css).toMatch(/hyphenate-limit-chars:\s*\d+/);
+        expect(css).toContain('hyphenate-limit-lines: 3 !important');
+      });
+
+      it('S2: hyphens:none is re-asserted on elements that must not hyphenate', () => {
+        const optOut = css.match(/body code[^]*?\{[^}]*hyphens: none[^}]*\}/)?.[0] ?? '';
+        expect(optOut).toContain('hyphens: none !important');
+        for (const sel of ['h1', 'h6', 'code', 'pre', 'figcaption', 'caption', 'var']) {
+          expect(optOut).toContain(sel);
+        }
+      });
+
+      it('S3: ruby sizing and east-asian variant', () => {
+        expect(css).toContain('font-variant-east-asian: ruby !important');
+        expect(css).toMatch(/body rt,\s*body rp\s*\{/);
+        expect(css).toContain('font-size: 0.5em !important');
+      });
+
+      it('S3: CJK line-breaking and font stacks', () => {
+        expect(css).toContain(':lang(ja)');
+        expect(css).toContain(':lang(zh)');
+        expect(css).toContain(':lang(ko)');
+        expect(css).toContain('line-break: strict !important');
+        // CJK-capable families named (no @import / no network).
+        expect(css).toContain('Noto Serif CJK JP');
+        expect(css).toContain('Noto Serif CJK SC');
+        expect(css).toContain('Noto Serif CJK KR');
+        expect(css).not.toContain('@import');
+      });
+
+      it('S3: math font stack for MathML', () => {
+        expect(css).toMatch(/body math\s*\{[^}]*font-family/);
+        expect(css).toContain('STIX Two Math');
+      });
+
+      it('S3: new rules carry no colour (themes are structural-safe)', () => {
+        // The three new groups must not introduce colour tokens or hex values
+        // that would fight the theme block.
+        const newGroups = css.slice(css.indexOf('/* S1:'));
+        expect(newGroups).not.toMatch(/#[0-9a-fA-F]{3,6}/);
+      });
+    });
   });
 
   describe('buildChapterSrcdoc — golden', () => {
