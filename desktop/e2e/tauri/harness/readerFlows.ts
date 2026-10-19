@@ -120,12 +120,48 @@ export async function goToLibrary(page: Page): Promise<void> {
 }
 
 /**
+ * Accessible names of the controls that enter the reader, across the locales
+ * this repo ships. The label depends on the surface and the book's progress:
+ *
+ *   - `app.read` ("Read" / "Leer") — `BookCard` (home rail) fresh book, and the
+ *     detail modal's CTA.
+ *   - `app.continue` ("Continue reading" / "Seguir leyendo") — `BookCard` for
+ *     an in-progress book.
+ *   - `shelf.openBook` ("Open book" / "Abrir libro") — `ShelfGrid` secondary
+ *     button.
+ *   - `shelf.read` ("Read" / "Abrir") — `ShelfList` secondary button.
+ *   - `shelf.start` / `shelf.continueReading` ("Start" / "Continue reading" /
+ *     "Empezar" / "Continuar lectura") — `ShelfGrid` accent button.
+ *   - `shelf.startReading` ("Start reading" / "Empezar lectura") — `ShelfList`
+ *     accent button.
+ *
+ * Anchored with `^…$` so a book whose *title* happens to contain "Read" or
+ * "Leer" cannot match: the title is a `<button>` too (`BookCard` makes the card
+ * body clickable), and an unanchored match would pick it and open the detail
+ * modal instead of the reader.
+ */
+const READ_BUTTON_NAME =
+  /^(Read|Continue reading|Open book|Start|Start reading|Leer|Seguir leyendo|Abrir|Abrir libro|Empezar|Continuar lectura|Empezar lectura)$/;
+
+/**
  * Opens `book` and returns the live chapter frame.
  *
- * `BookCard` renders an `<article>` labelled `"{title}, {author}, {progress}%"`,
- * both on the home recent rail and on the shelf grid, so the card locator is
- * stable across both screens. "Read" / "Continue" is the first `<button>` with
- * visible text (the options trigger is icon-only).
+ * `BookCard` (home rail) and `ShelfGrid` / `ShelfList` (shelf screen) all render
+ * the book inside an `<article>` that contains the title, so the card locator is
+ * stable across both screens.
+ *
+ * The read control is located by **role + accessible name**, never by position.
+ * The card's first `<button>` is NOT the read action: `BookCard` makes the whole
+ * body a button whose `onclick` is `onSelect` -> `onOpenDetails`, i.e. it opens
+ * the detail modal. Picking "the first button with visible text" therefore opens
+ * the modal, not the reader. Ordering the buttons differently (or adding one
+ * above) must not change which control this helper clicks, so the name is the
+ * only stable handle.
+ *
+ * If no reader control is found on the card — the layout changed, or the surface
+ * only offers the modal — the detail dialog is used as a fallback: its own CTA
+ * is `app.read` and routes to the same `startReading`. The fallback is a
+ * recovery path, not the main one.
  */
 export async function openBook(page: Page, book: LibraryRow): Promise<Frame> {
   await goToLibrary(page);
@@ -133,8 +169,17 @@ export async function openBook(page: Page, book: LibraryRow): Promise<Frame> {
   const card = page.locator('article').filter({ hasText: book.title }).first();
   await expect(card).toBeVisible({ timeout: 30_000 });
 
-  const readButton = card.locator('button').filter({ hasText: /\S/ }).first();
-  await readButton.click();
+  const readButton = card.getByRole('button', { name: READ_BUTTON_NAME }).first();
+
+  if ((await readButton.count()) > 0) {
+    await readButton.click();
+  } else {
+    // No reader control in the card: open the detail modal and read from there.
+    await card.click();
+    const dialog = page.locator('[role="dialog"][data-state="open"]');
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    await dialog.getByRole('button', { name: READ_BUTTON_NAME }).first().click();
+  }
 
   return waitForChapterFrame(page);
 }

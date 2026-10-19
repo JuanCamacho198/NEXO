@@ -7,6 +7,7 @@ const t = (key: string, _params?: Record<string, string | number>) => {
   const dictionary: Record<string, string> = {
     'reader.tabla_contenidos': 'Table of Contents',
     'reader.toc_empty': 'No chapters yet',
+    'settings.close': 'Close',
   };
 
   return dictionary[key] ?? key;
@@ -85,5 +86,31 @@ describe('ReaderTocPanel', () => {
     const backdrop = screen.getByRole('presentation');
     await user.click(backdrop);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes from a control inside the panel, not only the backdrop', async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(ReaderTocPanel, { ...defaultProps, onClose });
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders depth as a real hierarchy: indent, weight and colour differ', () => {
+    render(ReaderTocPanel, { ...defaultProps });
+
+    const top = screen.getByText('Chapter 1');
+    const sub = screen.getByText('Section 1.1');
+
+    // The indent separates levels by a full step (16px), not a hairline.
+    const topPad = parseFloat(getComputedStyle(top.closest('button')!).paddingLeft);
+    const subPad = parseFloat(getComputedStyle(sub.closest('button')!).paddingLeft);
+    expect(subPad - topPad).toBe(16);
+
+    // A top-level entry is the emphasised one; a sub-entry is de-emphasised.
+    expect(top.classList.contains('text-sm')).toBe(true);
+    expect(top.style.opacity).toBe('1');
+    expect(sub.classList.contains('text-xs')).toBe(true);
+    expect(Number(sub.style.opacity)).toBeLessThan(1);
   });
 });

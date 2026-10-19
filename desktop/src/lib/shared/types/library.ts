@@ -74,6 +74,12 @@ export type LibraryBookDto = {
   completedAt?: string | null;
   progressUpdatedAt?: string | null;
   stateVersion?: ReadingStateVersion;
+  /**
+   * Absolute path to the book file. Empty on sync stubs — placeholder rows
+   * created for books that were never downloaded here. Absent on older
+   * payloads; treat a missing or empty value as "not a real book".
+   */
+  filePath?: string;
 };
 
 export type CollectionDto = {

@@ -3,6 +3,8 @@
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
   import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
+  import X from 'lucide-svelte/icons/x';
+  import Button from '$lib/shared/ui/forms/Button.svelte';
 
   export interface TocEntry {
     id: string;
@@ -88,9 +90,23 @@
       aria-label={t('reader.tabla_contenidos')}
       tabindex="0"
     >
-      <!-- Heading -->
-      <header class="border-b border-(--color-border)/5 px-5 py-4">
+      <!-- Heading. The close control lives here, in the panel, next to the
+        title: the top bar's X sits outside the panel and the reader has to
+        look away from the panel to find it. Matches ReaderTextSettings. -->
+      <header
+        class="flex items-center justify-between border-b border-(--color-border)/5 px-5 py-4"
+      >
         <h2 class="text-base font-bold text-(--color-primary)">{t('reader.tabla_contenidos')}</h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onclick={onClose}
+          class="shrink-0 px-2 text-(--color-text-muted) hover:text-(--color-primary)"
+          aria-label={t('settings.close')}
+          title={t('settings.close')}
+        >
+          <X size={16} strokeWidth={2} aria-hidden="true" />
+        </Button>
       </header>
 
       <!-- Chapter List -->
@@ -101,25 +117,30 @@
       {:else}
         <nav class="flex-1 overflow-y-auto py-2">
           {#each entries as entry, i (i)}
+            {@const depth = Math.max(0, Math.min(entry.depth, 3))}
             <button
               type="button"
-              class="flex w-full cursor-pointer items-start px-5 py-2 text-left transition-colors hover:bg-(--color-surface-hover)"
+              class="flex w-full cursor-pointer items-start py-2 pr-5 text-left transition-colors hover:bg-(--color-surface-hover)"
+              class:mt-3={depth === 0 && i > 0}
               class:border-l-2={entry.id === activeId}
               class:border-(--color-accent-blue)={entry.id === activeId}
               style="background-color: {entry.id === activeId
                 ? 'rgba(73, 212, 255, 0.05)'
-                : 'transparent'};"
-              class:pl-7={entry.depth === 1}
-              class:pl-9={entry.depth === 2}
-              class:pl-11={entry.depth >= 3}
+                : 'transparent'}; padding-left: {20 + depth * 16}px;"
               onclick={() => onNavigate(entry)}
             >
               <span
-                class="text-sm leading-relaxed"
+                class="leading-relaxed"
+                class:text-sm={depth === 0}
+                class:text-xs={depth >= 1}
+                class:font-medium={depth === 0 || entry.id === activeId}
+                class:tracking-wide={depth === 0}
                 class:text-(--color-primary)={entry.id === activeId}
-                class:font-medium={entry.id === activeId}
-                class:text-(--color-text-muted)={entry.id !== activeId}
-                class:text-xs={entry.depth >= 2}
+                style={entry.id === activeId
+                  ? undefined
+                  : `color: var(--color-${depth === 0 ? 'secondary' : 'text-muted'}); opacity: ${
+                      depth === 0 ? 1 : depth === 1 ? 0.8 : 0.6
+                    };`}
               >
                 {entry.title}
               </span>

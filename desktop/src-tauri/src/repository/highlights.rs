@@ -148,29 +148,54 @@ pub fn save_highlight(
     }
 
     // FK guard: per-book pull (fetchAndApplyBookState) calls saveHighlight one-by-one before
-    // the catalog sync may have inserted the book. Previously this hit FK constraint → 0 highlights.
-    // Mirror upsert_remote_highlights stub logic so single saves also succeed.
+    // the catalog sync may have inserted the book. Creating a placeholder `books` row here
+    // used to make this succeed, but the placeholder outlived the real book (it was inserted
+    // with INSERT OR IGNORE, so the later real insert was discarded) and rendered as a book
+    // with no file. Defer instead: record the highlight and apply it when the book arrives.
+    // A highlight whose book never arrives is dropped.
     let book_exists: bool = repo.connection.query_row(
         "SELECT EXISTS(SELECT 1 FROM books WHERE id = ?1)",
         params![&payload.book_id],
         |r| r.get(0),
     )?;
     if !book_exists {
-        let now_stub = Utc::now().to_rfc3339();
-        let stub_format = if normalized_cfi.is_some() { "epub" } else { "pdf" };
-        let stub_title = format!(
-            "Unknown Title (sync stub) {}",
-            &payload.book_id[..4.min(payload.book_id.len())]
-        );
-        let _ = repo.connection.execute(
-            "INSERT OR IGNORE INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
-             VALUES (?1, ?2, ?3, ?4, ?5, 'synced', 0, 0, ?6, ?6, 1)",
-            params![payload.book_id, stub_title, "Unknown", "", stub_format, now_stub],
-        );
         eprintln!(
-            "FK guard (save_highlight): created stub book {} format {} for highlight",
-            payload.book_id, stub_format
+            "FK guard (save_highlight): book {} absent — deferring highlight instead of stubbing",
+            payload.book_id
         );
+        let now_deferred = Utc::now().to_rfc3339();
+        let deferred_id = payload
+            .id
+            .clone()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| Uuid::new_v4().to_string());
+        repo.defer_highlight(RemoteHighlightRow {
+            id: deferred_id.clone(),
+            user_id: String::new(),
+            book_id: payload.book_id.clone(),
+            cfi_range: normalized_cfi.clone(),
+            text_content: payload.text.clone(),
+            note: payload.note.clone(),
+            color: payload.color.clone(),
+            page: Some(i64::from(page)),
+            updated_at_epoch_millis: rfc3339_to_epoch_millis(&now_deferred),
+            deleted_at_epoch_millis: None,
+        });
+        return Ok(HighlightDto {
+            id: deferred_id,
+            book_id: payload.book_id,
+            color: payload.color,
+            text: payload.text,
+            page,
+            rect_left: payload.rect_left,
+            rect_right: payload.rect_right,
+            rect_top: payload.rect_top,
+            rect_bottom: payload.rect_bottom,
+            cfi: normalized_cfi,
+            note: payload.note,
+            created_at: now_deferred.clone(),
+            updated_at: now_deferred,
+        });
     }
 
     let now = Utc::now().to_rfc3339();
@@ -320,7 +345,7 @@ pub fn upsert_remote_highlights(
             }
         }
 
-        // ── 2) FK guard ── (stub creation if missing so bulk pull before catalog sync doesn't lose data)
+        // ── 2) FK guard ── (defer when the book is absent; never stub)
         let book_exists: bool = repo.connection.query_row(
             "SELECT EXISTS(SELECT 1 FROM books WHERE id = ?1)",
             params![&row.book_id],
@@ -328,48 +353,12 @@ pub fn upsert_remote_highlights(
         )?;
         if !book_exists {
             eprintln!(
-                "FK guard: skipping highlight {} for unknown book {} — attempting stub creation",
+                "FK guard: deferring highlight {} for absent book {} (replayed when the book lands)",
                 row.id, row.book_id
             );
-            let now = Utc::now().to_rfc3339();
-            let stub_format = if normalized_cfi.is_some() { "epub" } else { "pdf" };
-            let stub_title =
-                format!("Unknown Title (sync stub) {}", &row.book_id[..4.min(row.book_id.len())]);
-            let stub_res = repo.connection.execute(
-                "INSERT OR IGNORE INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
-                 VALUES (?1, ?2, ?3, ?4, ?5, 'synced', 0, 0, ?6, ?6, 1)",
-                params![row.book_id, stub_title, "Unknown", "", stub_format, now],
-            );
-            match stub_res {
-                Ok(changed) if changed > 0 => {
-                    eprintln!(
-                        "FK guard: created stub book {} format {} for highlight {}",
-                        row.book_id, stub_format, row.id
-                    );
-                }
-                Ok(_) => {
-                    // 0 rows changed means another thread already inserted the stub (race) — proceed
-                }
-                Err(e) => {
-                    eprintln!("FK guard: failed to create stub book {}: {}", row.book_id, e);
-                    skipped_unknown_book += 1;
-                    continue;
-                }
-            }
-            // Verify stub now exists before proceeding to highlight insert
-            let still_missing: bool = !repo.connection.query_row(
-                "SELECT EXISTS(SELECT 1 FROM books WHERE id = ?1)",
-                params![&row.book_id],
-                |r| r.get(0),
-            )?;
-            if still_missing {
-                eprintln!(
-                    "FK guard: still missing book {} after stub attempt — skipping highlight {}",
-                    row.book_id, row.id
-                );
-                skipped_unknown_book += 1;
-                continue;
-            }
+            repo.defer_highlight(row.clone());
+            skipped_unknown_book += 1;
+            continue;
         }
 
         // ── 3) LWW + tombstone branches (DQ2) ──
@@ -840,20 +829,103 @@ mod tests {
         let unknown =
             remote_highlight("hl-unknown", "book-absent", Some("epubcfi(/6/1)"), 1000, None);
         let summary = upsert_remote_highlights(&repo, &[known, unknown]).unwrap();
-        // FK guard now creates a stub book instead of dropping the highlight (fixes PC Odisea 0 highlights)
-        assert_eq!(summary.applied, 2);
-        assert_eq!(summary.skipped_unknown_book, 0);
+        // The known book applies immediately; the absent-book row is deferred
+        // rather than dropped, and no stub `books` row is created for it.
+        assert_eq!(summary.applied, 1);
+        assert_eq!(summary.skipped_unknown_book, 1);
         assert_eq!(summary.skipped_invalid, 0);
         let count: i64 =
             repo.connection.query_row("SELECT COUNT(*) FROM highlights", [], |r| r.get(0)).unwrap();
-        assert_eq!(count, 2);
+        assert_eq!(count, 1);
         let stub_exists: bool = repo
             .connection
             .query_row("SELECT EXISTS(SELECT 1 FROM books WHERE id='book-absent')", [], |r| {
                 r.get(0)
             })
             .unwrap();
-        assert!(stub_exists);
+        assert!(!stub_exists, "deferral must not create a placeholder books row");
+        assert_eq!(repo.pending_highlight_count(), 1);
+    }
+
+    #[test]
+    fn deferred_highlight_applies_when_book_arrives_and_is_not_stubbed() {
+        let repo = new_repository();
+        // 1) Highlight arrives first — its book is absent.
+        let remote = remote_highlight(
+            "hl-deferred",
+            "book-later",
+            Some("epubcfi(/6/3)"),
+            1_700_000_000_000,
+            None,
+        );
+        let summary = upsert_remote_highlights(&repo, &[remote]).unwrap();
+        assert_eq!(summary.applied, 0);
+        assert_eq!(summary.skipped_unknown_book, 1);
+        assert_eq!(repo.pending_highlight_count(), 1);
+        // Nothing was written, and no placeholder book exists.
+        let before: i64 =
+            repo.connection.query_row("SELECT COUNT(*) FROM highlights", [], |r| r.get(0)).unwrap();
+        assert_eq!(before, 0);
+        let stub: bool = repo
+            .connection
+            .query_row("SELECT EXISTS(SELECT 1 FROM books WHERE id='book-later')", [], |r| r.get(0))
+            .unwrap();
+        assert!(!stub);
+
+        // 2) The real book arrives through the catalog: `upsert_book` is the
+        //    exact entry point `SupabaseBookCatalogSync`-driven sync uses.
+        let now = Utc::now().to_rfc3339();
+        crate::repository::library::upsert_book(
+            &repo,
+            crate::models::BookDto {
+                id: "book-later".to_string(),
+                title: "Real Book".to_string(),
+                author: "Author".to_string(),
+                file_path: "C:/real.epub".to_string(),
+                format: "epub".to_string(),
+                sync_status: "local".to_string(),
+                current_page: 0,
+                total_pages: 100,
+                created_at: now.clone(),
+                updated_at: now,
+                genre: None,
+                language: None,
+                publication_date: None,
+            },
+        )
+        .unwrap();
+
+        // 3) The deferred highlight is now applied, still with its remote clock.
+        assert_eq!(repo.pending_highlight_count(), 0);
+        let (text, book_id, updated_at): (String, String, String) = repo
+            .connection
+            .query_row(
+                "SELECT text, book_id, updated_at FROM highlights WHERE id='hl-deferred'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(text, "sample text");
+        assert_eq!(book_id, "book-later");
+        assert_eq!(rfc3339_to_epoch_millis(&updated_at), 1_700_000_000_000);
+    }
+
+    #[test]
+    fn deferred_highlight_for_a_book_that_never_arrives_leaves_no_row() {
+        let repo = new_repository();
+        let remote = remote_highlight("hl-never", "book-never", Some("epubcfi(/6/1)"), 1000, None);
+        upsert_remote_highlights(&repo, &[remote]).unwrap();
+        // Replaying for a different book must not apply, and must not drop it.
+        repo.replay_pending_highlights_for_book("some-other-book");
+        assert_eq!(repo.pending_highlight_count(), 1);
+        let count: i64 =
+            repo.connection.query_row("SELECT COUNT(*) FROM highlights", [], |r| r.get(0)).unwrap();
+        assert_eq!(count, 0);
+        let stub: bool = repo
+            .connection
+            .query_row("SELECT EXISTS(SELECT 1 FROM books WHERE id='book-never')", [], |r| r.get(0))
+            .unwrap();
+        assert!(!stub);
     }
 
     #[test]
@@ -1165,7 +1237,7 @@ mod tests {
         // Verify list_highlights returns 3(+1) for book filter
         let listed = list_highlights(&repo, Some("098c")).unwrap();
         assert_eq!(listed.len(), 4);
-        // Test per-highlight saveHighlight path also creates stub and normalizes (FK guard)
+        // Test per-highlight saveHighlight path normalizes CFI and defers (FK guard)
         // Simulate missing book via save_highlight
         let save_ok = save_highlight(
             &repo,
@@ -1192,7 +1264,8 @@ mod tests {
                 r.get(0)
             })
             .unwrap();
-        assert!(stub_exists, "save_highlight must create stub book for unknown book_id");
+        assert!(!stub_exists, "save_highlight must defer, not create a stub book");
+        assert_eq!(repo.pending_highlight_count(), 1);
     }
 
     #[test]

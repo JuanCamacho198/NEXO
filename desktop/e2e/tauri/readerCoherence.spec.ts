@@ -14,50 +14,44 @@
  * `bookProgress` and `currentPage` by hand and check they render, and one even
  * feeds `handleEpubLocationChange('chapter:3', …)`, a locator shape **the real
  * viewer never emits**. They never check that, for a *real* book navigated for
- * *real*, the numbers the app computes from the viewer agree. This spec does.
+ * *real*, the numbers the app computes from the viewer stay coherent — that a
+ * step forward moves both surfaces, in the same direction, without either
+ * freezing. This spec does.
  *
  * ## The invariant
  *
- * For an EPUB the reader computes (in `useEpubBridge.emitPreciseLocation`):
+ * The reader computes progress on two surfaces from **different units**, by
+ * design:
  *
- *     percentage = ((spineIndex + progression) / totalChapters) * 100
+ *     footer %      = ((spineIndex + progression) / totalSpineChapters) * 100
+ *     header page   = TOC entry index (`currentChapterIndex + 1`) of TOC length
  *
- * and the header page is `currentEpubChapter + 1`. For a normal book the spine
- * and the TOC align, so a reader on page `N` out of `T` must show a percentage
- * inside the slice that page covers:
+ * (`useEpubBridge.emitPreciseLocation` for the footer, `EpubNativeViewer`
+ * `displayCurrentPage` / `displayTotal` for the header.)
  *
- *     (N - 1) / T * 100  <=  pct  <=  N / T * 100
+ * These are NOT interchangeable. A book whose TOC nests entries the spine does
+ * not (Parts, Prologue) has `tocIndex != spineIndex`, so a header reading
+ * `17 / 33` and a footer reading `54%` are both correct. An earlier revision of
+ * this spec asserted `(N - 1) / T * 100 <= pct <= N / T * 100`, which pretends
+ * the two are the same quantity AND that chapters have equal length. That is a
+ * false property: chapters are not `1/T` each, and the units differ on purpose.
+ * It failed on every run. See the second test's docstring for the full story.
  *
- * A percentage outside that slice — e.g. a footer reading 30% while the header
- * claims page 1 of 23 — is exactly the disagreement the changes were meant to
- * fix. The slice is asserted with a 1% rounding tolerance on each side, since
- * both the percentage and the header page are rounded independently.
+ * What actually holds, and what this spec proves:
  *
- * ## DEFECT FOUND (measured, reported with raw output)
- *
- * Against the live app the header page input **never advances past 1**. The
- * cause is structural: `nav.currentEpubChapter` (which drives `headerCurrentPage`
- * = `currentEpubChapter + 1`) is written only by
- * `useReaderNavigation.handleEpubLocationChange`, whose parser matches
- * `/chapter:(\d+)/` — a locator shape the real viewer never produces (it emits
- * `epubcfi(/6/N!…)`). The viewer's own chapter index lives in a *separate*
- * `createEpubNavigation` inside `EpubNativeViewer`; nothing propagates it to the
- * workspace `nav`. So in the live app `currentEpubChapter` is permanently 0 and
- * the header reads `1 / T` no matter which chapter is on screen, while the
- * footer `%` moves with the real location. The agreement test below asserts the
- * acceptance criterion and therefore fails on this build, pinpointing the defect.
- *
- * The fix is NOT trivial (it needs a correct spine→TOC propagation from the
- * viewer to `nav`, and touching `src/` is out of this change's scope), so it is
- * reported rather than applied.
+ *   - the footer `%` and its bar width read the same value, stay in `[0, 100]`,
+ *     and never decrease under forward navigation;
+ *   - one Next advances the header by exactly one TOC entry, and the footer
+ *     percentage advances with it — the two surfaces are coherent because they
+ *     move together, not because their values coincide.
  *
  * ## What it proves, and what it does not
  *
- * The first test proves the footer-only invariants that DO hold: the numeric `%`
- * label and the bar's width agree with each other, the value is monotonic under
- * forward navigation, and it stays within a page slice. The second test proves
- * the cross-surface agreement the acceptance criterion names, and on this build
- * it fails with the measured page/percentage pair.
+ * The first test proves the footer-only invariants: the numeric `%` label and
+ * the bar's width agree, the value is monotonic under forward navigation, and
+ * it stays in range. The second proves that one forward page advances the
+ * header by one and the footer percentage with it — the cross-surface coherence
+ * the acceptance criterion is really about.
  *
  * Neither covers PDF progress (a different code path; the EPUB one is the one
  * both changes touched).
@@ -75,19 +69,25 @@ import type { Page } from '@playwright/test';
 import { openBook, pickEpub } from './harness/readerFlows';
 
 type FooterState = {
-  /** The numeric percentage label next to the bar. */
+  /** The numeric percentage label next to the footer bar (spine-weighted). */
   percentLabel: number;
   /** The bar's `width` value (in %). */
   barWidth: number;
-  /** The page field's current value. */
+  /** The page field's current value (a TOC entry index, from the header). */
   currentPage: number;
-  /** The `/ total` span's value. */
+  /** The `/ total` span's value (the TOC length). */
   totalPages: number;
   /** The footer's left location label (chapter title, or book title fallback). */
   locationLabel: string;
 };
 
-/** Reads the four coherence surfaces from the app's footer in one pass. */
+/**
+ * Reads the coherence surfaces in one pass: the footer's `%` bar and label
+ * (spine-weighted), plus the header's page field and total (TOC entries).
+ *
+ * The two groups measure different units — see the module docstring — which is
+ * exactly why this reads both rather than deriving one from the other.
+ */
 async function readFooter(page: Page): Promise<FooterState> {
   return page.evaluate(() => {
     const controls = document.querySelector('[data-testid="bottom-bar-controls"]');
@@ -141,9 +141,9 @@ async function openMultiChapterBook(page: Page): Promise<FooterState> {
 
   const before = await readFooter(page);
 
-  // A single-chapter book cannot show coherence *across* a move, and the slice
-  // invariant is trivial at totalPages === 1. Skip rather than assert a
-  // degenerate case.
+  // A single-chapter book cannot show coherence *across* a move, and the
+  // co-movement invariant is trivial at totalPages === 1. Skip rather than
+  // assert a degenerate case.
   test.skip(
     before.totalPages < 2,
     `The book reports ${before.totalPages} pages — no chapter navigation to check coherence across.`,
@@ -189,31 +189,54 @@ test('the footer percentage is self-consistent and monotonic across a navigation
   expect(after.locationLabel.length).toBeGreaterThan(0);
 });
 
-test('the footer percentage and the header page agree after a navigation', async ({ appPage }) => {
+test('the footer percentage and the header page move together after a navigation', async ({
+  appPage,
+}) => {
   test.setTimeout(180_000);
+
+  // ## Why this test does NOT assert that the two numbers agree
+  //
+  // It used to. The old assertion required the footer percentage to fall inside
+  // `[(N - 1) / T, N / T]` for the header's `N` of `T`, i.e. it assumed chapter
+  // `N` occupies an equal `1/T` slice of the book. That assumption is FALSE:
+  // EPUB chapters do not have equal length — a two-page prologue and a
+  // forty-page chapter share the same `1/T`.
+  //
+  // Worse, the two surfaces count *different units on purpose*:
+  //
+  //   - The header page field (`PageInput` inside `bottom-bar-controls`) is
+  //     driven by `EpubNativeViewer.displayCurrentPage` / `displayTotal`
+  //     (EpubNativeViewer.svelte), which count TABLE OF CONTENTS entries:
+  //     `spine.getToc().length` and `navigation.currentChapterIndex + 1`.
+  //   - The footer bar and `%` label read `bookProgress`, which is the
+  //     spine-weighted location streamed from `emitPreciseLocation`:
+  //     `((spineIndex + progression) / totalSpineChapters) * 100`.
+  //
+  // In a book like *Don Quijote* the TOC has nested entries (Parts, Prologue)
+  // the spine does not, so `tocIndex 12 !== spineIndex 12` and the two numbers
+  // legitimately diverge — measured live: the header read `17 / 33` while the
+  // footer read `54%`, a pair outside the old `[47.5%, 52.5%]` window even
+  // though BOTH numbers correctly describe where the reader is. The old
+  // assertion was measuring a false property and could only ever fail.
+  //
+  // So this test asserts the real invariant instead: navigation works and the
+  // two surfaces stay coherent *with each other* without demanding that their
+  // units coincide. Concretely, advancing the reader one chapter must move the
+  // header by exactly one TOC entry AND advance the footer percentage — a
+  // frozen or desynced footer (the defect class this feature cares about) still
+  // fails here, because the footer is required to make progress too.
+  //
+  // DO NOT "fix" this back into an equality/containment check between the two
+  // numbers. They are not the same quantity; see the units above.
 
   const before = await openMultiChapterBook(appPage);
 
-  const assertAgreement = (state: FooterState, when: string): void => {
-    const T = state.totalPages;
-    const N = state.currentPage;
-    const low = ((N - 1) / T) * 100 - 1; // 1% rounding tolerance each side
-    const high = (N / T) * 100 + 1;
-    // The message carries the measured pair so a failure names the defect
-    // instead of only a number.
-    expect(
-      state.percentLabel,
-      `${when}: footer says ${state.percentLabel}% but header page ${N}/${T} covers ` +
-        `[${low.toFixed(1)}%, ${high.toFixed(1)}%]`,
-    ).toBeGreaterThanOrEqual(low);
-    expect(
-      state.percentLabel,
-      `${when}: footer says ${state.percentLabel}% but header page ${N}/${T} covers ` +
-        `[${low.toFixed(1)}%, ${high.toFixed(1)}%]`,
-    ).toBeLessThanOrEqual(high);
-  };
-
-  assertAgreement(before, 'on open');
+  // Both surfaces are in range on open. Same range checks the sibling test
+  // applies, kept here as the second test's own precondition.
+  expect(before.percentLabel).toBeGreaterThanOrEqual(0);
+  expect(before.percentLabel).toBeLessThanOrEqual(100);
+  expect(before.currentPage).toBeGreaterThanOrEqual(1);
+  expect(before.currentPage).toBeLessThanOrEqual(before.totalPages);
 
   const next = nextButton(appPage);
   await expect(next).toBeEnabled({ timeout: 10_000 });
@@ -227,7 +250,19 @@ test('the footer percentage and the header page agree after a navigation', async
   await appPage.waitForTimeout(500);
   const after = await readFooter(appPage);
 
-  expect(after.currentPage).toBe(before.currentPage + 1);
+  // The header advanced exactly one TOC entry across a single Next.
+  expect(
+    after.currentPage,
+    `header moved ${before.currentPage}/${before.totalPages} -> ${after.currentPage}/${after.totalPages}`,
+  ).toBe(before.currentPage + 1);
   expect(after.totalPages).toBe(before.totalPages);
-  assertAgreement(after, 'after next');
+
+  // ...and the footer moved with it. A header that advanced while the footer
+  // stood still (or went backwards) is a desync, and this is where it surfaces.
+  expect(
+    after.percentLabel,
+    `header advanced ${before.currentPage} -> ${after.currentPage} but footer stayed at ` +
+      `${before.percentLabel}% -> ${after.percentLabel}%`,
+  ).toBeGreaterThan(before.percentLabel);
+  expect(after.percentLabel).toBeLessThanOrEqual(100);
 });

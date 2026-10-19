@@ -41,6 +41,7 @@ const BOOK: LibraryBookDto = {
   minutesRead: 42,
   updatedAt: '2026-09-19T12:00:00.000Z',
   createdAt: '2026-09-01T12:00:00.000Z',
+  filePath: 'C:/books/habitos.epub',
 };
 
 const HIGHLIGHT: HighlightDto = {
@@ -67,6 +68,18 @@ function makeDeps(highlights: HighlightDto[]): HighlightsViewDeps {
 function renderView(highlights: HighlightDto[]): ReturnType<typeof render> {
   return render(HighlightsView, {
     books: [BOOK],
+    t,
+    deps: makeDeps(highlights),
+    viewerPort: {} as ViewerPort,
+  });
+}
+
+function renderViewWithBooks(
+  highlights: HighlightDto[],
+  books: LibraryBookDto[],
+): ReturnType<typeof render> {
+  return render(HighlightsView, {
+    books,
     t,
     deps: makeDeps(highlights),
     viewerPort: {} as ViewerPort,
@@ -130,6 +143,30 @@ describe('HighlightsView empty states', () => {
     const [, emptyAction] = screen.getAllByRole('button', { name: 'Clear filters' });
     await fireEvent.click(emptyAction!);
 
+    await waitFor(() => expect(screen.getByText(HIGHLIGHT.text)).toBeTruthy());
+  });
+
+  it('hides highlights whose book is absent or is a sync stub', async () => {
+    // Measured on the real database: an orphaned highlight points at a book
+    // that was imported elsewhere and never downloaded here, and the sync FK
+    // guard left a stub row with an empty file_path. Neither can be opened, so
+    // neither may appear in the collected-highlights screen.
+    const stubBook: LibraryBookDto = { ...BOOK, filePath: '' };
+    const orphan: HighlightDto = { ...HIGHLIGHT, id: 'h-orphan', bookId: 'missing-book' };
+    const stubHighlight: HighlightDto = { ...HIGHLIGHT, id: 'h-stub', bookId: 'b1' };
+
+    renderViewWithBooks([stubHighlight, orphan], [stubBook]);
+
+    // The reachable highlight is absent, so this is the "nothing yet" state —
+    // not the filter-miss state, which would blame the reader's filters.
+    await waitFor(() => expect(screen.getByText('No highlights yet')).toBeTruthy());
+    expect(screen.queryByText(stubHighlight.text)).toBeNull();
+    expect(screen.queryByText(orphan.text)).toBeNull();
+    expect(screen.queryByText('No highlights found with current filters.')).toBeNull();
+  });
+
+  it('shows a highlight again once its book is present and real', async () => {
+    renderViewWithBooks([HIGHLIGHT], [BOOK]);
     await waitFor(() => expect(screen.getByText(HIGHLIGHT.text)).toBeTruthy());
   });
 });

@@ -16,8 +16,19 @@
   import { createEpubHighlights } from '$lib/features/reader/viewer-epub/useEpubHighlights.svelte';
   import { createEpubZoomTheme } from '$lib/features/reader/viewer-epub/useEpubZoomTheme.svelte';
   import { createEpubBridge } from '$lib/features/reader/viewer-epub/useEpubBridge.svelte';
+  import { createEpubPagination } from '$lib/features/reader/viewer-epub/useEpubPagination.svelte';
+  import type { PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
   import { resolveFootnoteNote } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
   import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
+
+  /**
+   * How long a turn is queued for while a chapter's layout settles and any
+   * position restore lands. A press made the instant a book opens arrives before
+   * both; measured, the restore plus column layout completes within a few
+   * hundred milliseconds of the frame existing. Bounded so a genuinely one-page
+   * chapter still falls through to chapter navigation instead of waiting forever.
+   */
+  const DEFER_TURN_MAX_MS = 4000;
 
   interface EpubChapterMeta {
     index: number;
@@ -111,6 +122,7 @@
       direction: 'ltr' as ReaderDirection,
       hyphenation: false,
       verticalScrolling: false,
+      paginated: false,
       margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
       showHeader: true,
       showFooter: true,
@@ -166,15 +178,36 @@
   let direction: ReaderDirection = $derived(readerSettings.direction);
   let hyphenation = $derived(readerSettings.hyphenation);
   let margins = $derived(readerSettings.margins);
+  // Paginated mode (phase 1). The flag is a persisted reader setting; the
+  // geometry lives in `pagination` below.
+  let paginated = $derived(readerSettings.paginated ?? false);
 
   let currentSpineIndex = $derived(navigation.currentSpineIndex);
+  // The page box the pagination CSS and the pinned iframe height must agree on.
+  // Declared as `$state` because the viewer's template reads it to pin the
+  // iframe; `pagination` writes it on every measured change.
+  let pageBox = $state<PageBox | null>(null);
   let displayTotal = $derived.by(() => {
     const t = spine.getToc().length;
     return t > 0 ? t : totalChapters;
   });
+  // The header reports the chapter that is ON SCREEN, not the one navigation has
+  // requested. A Next at a chapter's last page bumps `currentChapterIndex`
+  // synchronously and falls through to chapter navigation, but the new chapter
+  // only reaches the screen when its `srcdoc` has loaded (`markReady` ->
+  // `setLastRenderedChapter`). Reading the requested index made the number
+  // advance through 9, 10, 11… while `scrollLeft` stayed pinned to the old
+  // chapter's maximum and the visible text never changed — the measured
+  // "header advances, screen does not" desync. `lastRenderedChapter` is
+  // committed-render state (the pagination lifecycle and the highlights overlay
+  // already key on it), so it is the number that matches what the reader sees.
+  // Before the first render commits (`< 0`) the requested index is the only
+  // answer available, so it is the fallback.
   let displayCurrentPage = $derived.by(() => {
+    const committed =
+      lastRenderedChapter >= 0 ? lastRenderedChapter : navigation.currentChapterIndex;
     const t = spine.getToc().length;
-    return t > 0 ? navigation.currentChapterIndex + 1 : navigation.currentSpineIndex + 1;
+    return t > 0 ? committed + 1 : navigation.currentSpineIndex + 1;
   });
 
   function getToc(): EpubChapterMeta[] {
@@ -234,6 +267,7 @@
     getDirection: () => direction,
     getHyphenation: () => hyphenation,
     getMargins: () => margins,
+    getPageBox: () => (paginated ? pageBox : null),
     getCurrentChapterIndex: () => navigation.currentChapterIndex,
     setCurrentChapterIndex: (v: number) => (navigation.currentChapterIndex = v),
     getCurrentSpineIndex: () => currentSpineIndex,
@@ -293,8 +327,47 @@
     handleEpubHighlightFailed: (m) => highlights.handleEpubHighlightFailed(m),
     handleEpubHighlightPlaced: (m) => highlights.handleEpubHighlightPlaced(m),
     syncIframeHeight: () => render.syncIframeHeight(),
+    handlePaginationKey: (direction) => {
+      if (direction === 'next') goToNext();
+      else goToPrev();
+    },
     handleExternalTocNavigate: (id) => navigation.handleExternalTocNavigate(id),
     handleSearchTargetLocator: (t, o) => navigation.handleSearchTargetLocator(t, o),
+  });
+
+  // Paginated mode. Created after `render`/`bridge` because its deps reach into
+  // both; it writes `pageBox`, which `render.getPageBox` reads, so the
+  // stylesheet and the pinned iframe height can never disagree.
+  const pagination = createEpubPagination({
+    getContainerEl: () => zoomContainerEl,
+    getChapterRoot: () => iframeEl?.contentDocument?.documentElement ?? null,
+    isPaginated: () => paginated,
+    refreshReaderStyles: () => render.refreshReaderStyles(),
+    getPageBox: () => (paginated ? pageBox : null),
+    // The composable is the only writer of the box; the viewer holds the only
+    // reactive copy. A pull (`pageBox = pagination.pageBox` in an $effect) would
+    // read and write the same state graph and Svelte aborts with
+    // `effect_update_depth_exceeded` — verified live. Pushing through a callback
+    // keeps the data flow one-directional.
+    setPageBox: (box) => {
+      pageBox = box;
+    },
+    onHeightModeChange: (pinned) => {
+      // Leaving paginated mode restores the content-measured height; entering
+      // clears it so the box (not a stale chapter height) drives the iframe.
+      // The box itself is measured by `pagination.enter()`/`refresh()`.
+      if (!pinned) {
+        pageBox = null;
+        iframeContentHeight = 0;
+      }
+    },
+    emitPreciseLocation: () => bridge.emitPreciseLocation(),
+    onPageTurn: () => onselectionclear?.(),
+    // The CFI/fragment restore is what places the reader at their stored
+    // position on open; while it is in flight the offset is still the fresh
+    // document's 0, so a turn taken there would step from a position about to be
+    // overwritten. See `turn()` in the composable.
+    isRestoring: () => navigation.pendingCfiScroll !== null || navigation.pendingFragment !== null,
   });
 
   function emitPreciseLocation(): void {
@@ -302,6 +375,11 @@
   }
 
   function handleContainerScroll(): void {
+    // Both axes matter. In scrolling mode the container moves vertically; in
+    // paginated mode it moves in the inline direction, and the location
+    // emission has to follow either one so the footer percentage and the
+    // highlight anchors do not freeze on a page turn.
+    pagination.syncPageFromScroll();
     emitPreciseLocation();
     // U2: scrolling invalidates the selection anchor bounds the menu is
     // pinned to — the menu must not float over the new viewport.
@@ -315,10 +393,78 @@
   }
 
   export function goToPrev(): void {
+    // A restore in flight owns the offset. The press is QUEUED rather than
+    // applied (from a position the restore is about to overwrite) or dropped
+    // (which loses the reader's input): it runs once the restore has landed, so
+    // an immediate press advances exactly one page from the restored position.
+    if (paginated && (pagination.isRestoring() || pagination.isLayoutSettling())) {
+      deferTurn(-1);
+      return;
+    }
+    // Paginated mode turns a screen at a time. At the chapter's first page the
+    // turn falls through to the chapter itself, so the reader can keep going
+    // backwards across a boundary instead of hitting a dead stop.
+    if (paginated && pagination.goToPrevPage()) return;
     navigation.goToPrev();
   }
   export function goToNext(): void {
+    if (paginated && (pagination.isRestoring() || pagination.isLayoutSettling())) {
+      deferTurn(1);
+      return;
+    }
+    if (paginated && pagination.goToNextPage()) return;
     navigation.goToNext();
+  }
+
+  /**
+   * True while a press is already queued behind the layout/restore.
+   *
+   * A reader who presses Next twice during load should end up one page on, not
+   * two chapters on. Without this every press spawns its own retry chain and the
+   * whole burst fires the moment the layout lands. One press while queued is
+   * already a request to advance; the rest are the same gesture repeated.
+   */
+  let turnQueued = false;
+
+  /**
+   * Run a turn once the chapter's layout has settled and any position restore
+   * has landed.
+   *
+   * A press made the instant a book opens arrives while the columns are still a
+   * single box and the CFI restore is still in flight. Applying it there steps
+   * from an offset the restore is about to overwrite — measured live as
+   * `scrollLeft` 0 -> 23310 (21 pages), the restore's own target. Queueing the
+   * press until both settle turns it into exactly one page from the position the
+   * reader is actually restored to. Bounded so a genuinely one-page chapter
+   * still falls through to chapter navigation instead of retrying forever.
+   */
+  function deferTurn(delta: 1 | -1): void {
+    if (turnQueued) return;
+    turnQueued = true;
+    const deadline = Date.now() + DEFER_TURN_MAX_MS;
+    const retry = (): void => {
+      if (!paginated) {
+        turnQueued = false;
+        return;
+      }
+      // A restore that starts (a new chapter's CFI) keeps the wait alive until
+      // the deadline, so a slow restore is still honoured rather than skipped.
+      if (pagination.isRestoring() || pagination.isLayoutSettling()) {
+        if (Date.now() < deadline) {
+          requestAnimationFrame(retry);
+        } else {
+          turnQueued = false;
+          if (delta === 1) navigation.goToNext();
+          else navigation.goToPrev();
+        }
+        return;
+      }
+      turnQueued = false;
+      if (delta === 1 ? pagination.goToNextPage() : pagination.goToPrevPage()) return;
+      if (delta === 1) navigation.goToNext();
+      else navigation.goToPrev();
+    };
+    requestAnimationFrame(retry);
   }
   export function goToChapter(index: number): void {
     navigation.goToChapter(index);
@@ -372,6 +518,7 @@
       'reader',
     );
     zoomTheme.cleanup();
+    pagination.cleanup();
   });
 
   $effect(() => {
@@ -401,6 +548,61 @@
       return;
     }
     refreshReaderStyles();
+  });
+
+  // Paginated-mode lifecycle. One effect, two edges:
+  //  - a mode change enters or leaves pagination (measure, pin, restyle);
+  //  - a chapter render re-measures, because the new chapter is a new layout
+  //    with its own page count, and the reader restarts at its first page.
+  //
+  // Deliberately NOT in scope here: zoom, font-size and orientation changes as
+  // their own triggers. Those belong to phase 3, and the composable's guarded
+  // box observer already covers a window resize on an already-laid-out chapter.
+  let paginationMode = $state(false);
+  // The chapter index the pagination state currently describes. A render of a
+  // *different* chapter resets paging; a re-render of the same one does not.
+  let paginationChapter = -1;
+  $effect(() => {
+    const active = paginated;
+    if (active === paginationMode) return;
+    paginationMode = active;
+    // The container has to exist before a box can be measured; the render
+    // effect runs after mount, and this one re-runs on the mode flip.
+    // `untrack`: entering/leaving publishes a measured box, and letting that
+    // write feed back into this effect's dependencies would loop.
+    untrack(() => {
+      if (active) {
+        paginationChapter = lastRenderedChapter;
+        pagination.enter();
+      } else {
+        pagination.exit();
+      }
+    });
+  });
+
+  $effect(() => {
+    if (!paginated) return;
+    // Re-measure whenever a chapter has just been laid out. `lastRenderedChapter`
+    // is the render pipeline's own "this chapter is committed" signal, so
+    // measuring on it avoids racing the srcdoc swap. The measure itself is
+    // untracked for the same reason as the mode effect above.
+    void lastRenderedChapter;
+    if (lastRenderedChapter < 0) return;
+    // Only a chapter CHANGE resets the reader to page 1. The pipeline also
+    // re-renders the SAME chapter as its assets settle — measured on the real
+    // app: three `srcdoc` swaps for one opening, with the column set growing
+    // 9 -> 15 -> 25 pages between them. Resetting on each of those threw a
+    // reader paging through the chapter back to page 1. A re-render of the
+    // current chapter keeps the page index and only re-derives the count.
+    const changedChapter = untrack(() => paginationChapter) !== lastRenderedChapter;
+    untrack(() => {
+      if (changedChapter) {
+        paginationChapter = lastRenderedChapter;
+        pagination.resetForChapter();
+      } else {
+        pagination.restoreAfterRerender();
+      }
+    });
   });
 
   function handleKeydown(e: KeyboardEvent): void {
@@ -454,6 +656,14 @@
     const onLeave = (): void => {
       onIframeMouseLeave?.();
     };
+    const onFrameScroll = (): void => {
+      // Only meaningful in paginated mode; scrolling mode already reports
+      // through the parent container's own listener.
+      if (!paginated) return;
+      pagination.syncPageFromScroll();
+      emitPreciseLocation();
+      onselectionclear?.();
+    };
     const onClick = (e: MouseEvent): void => {
       const target = e.target as Element | null;
       const win = frame.contentWindow as
@@ -490,6 +700,12 @@
       doc.addEventListener('mousemove', onMove as EventListener);
       doc.addEventListener('mouseleave', onLeave);
       doc.addEventListener('click', onClick as EventListener);
+      // Paginated mode scrolls the chapter document itself, so a page turn
+      // fires `scroll` here and never on the (pinned) parent container. Without
+      // this listener the footer percentage and the highlight anchors would not
+      // follow a page turn. A capture listener catches the scroll on whichever
+      // element the browser bubbles it from.
+      doc.addEventListener('scroll', onFrameScroll, true);
     };
     const detach = (): void => {
       const doc = frame.contentDocument;
@@ -497,6 +713,7 @@
       doc.removeEventListener('mousemove', onMove as EventListener);
       doc.removeEventListener('mouseleave', onLeave);
       doc.removeEventListener('click', onClick as EventListener);
+      doc.removeEventListener('scroll', onFrameScroll, true);
     };
     frame.addEventListener('load', attach);
     attach();
@@ -542,7 +759,11 @@
   {:else}
     <div
       data-testid="epub-scroll-container"
-      class="flex-1 w-full min-h-0 overflow-y-auto pb-16"
+      class="flex-1 w-full min-h-0"
+      class:overflow-y-auto={!paginated}
+      class:pb-16={!paginated}
+      class:overflow-x-auto={paginated}
+      class:overflow-y-hidden={paginated}
       style="background: {getThemeBgColor()};"
       bind:this={zoomContainerEl}
       onscroll={handleContainerScroll}
@@ -553,7 +774,11 @@
         class:outline-2={debugState.enabled}
         class:outline-dashed={debugState.enabled}
         class:outline-red-500={debugState.enabled}
-        style:height={iframeContentHeight > 0 ? `${iframeContentHeight}px` : 'auto'}
+        style:height={paginated && pageBox
+          ? `${pageBox.height}px`
+          : iframeContentHeight > 0
+            ? `${iframeContentHeight}px`
+            : 'auto'}
         title="chapter"
       ></iframe>
     </div>

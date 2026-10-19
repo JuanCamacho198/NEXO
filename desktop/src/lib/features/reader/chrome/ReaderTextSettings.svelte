@@ -378,6 +378,16 @@
           <div class="flex flex-col gap-4">
             {@render sectionTitle(t('reader.section_page'))}
             {@render selectRow(
+              t('reader.reading_mode'),
+              readerSettings.paginated ? 'paginated' : 'scroll',
+              [
+                { value: 'scroll', label: t('reader.mode_scroll') },
+                { value: 'paginated', label: t('reader.mode_paginated') },
+              ],
+              (v) => onSettingsChange({ ...readerSettings, paginated: v === 'paginated' }),
+              'reading-mode-select',
+            )}
+            {@render selectRow(
               t('reader.alignment'),
               readerSettings.textAlign,
               (['left', 'center', 'right', 'justify'] as const).map((a) => ({

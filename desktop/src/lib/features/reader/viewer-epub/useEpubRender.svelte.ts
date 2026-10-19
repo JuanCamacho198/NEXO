@@ -8,6 +8,7 @@
  * injected deps for testability (`invoke`, `iframeEl`, `getToc`, `getSpineHrefs`).
  * Pure helpers are exported for golden testing.
  */
+import { untrack } from 'svelte';
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { IFRAME_CFI_BRIDGE_SCRIPT } from '$lib/features/reader/viewer-epub/cfiBridgeIframe';
 import { IFRAME_QUOTE_SCRIPT } from '$lib/features/reader/viewer-epub/epubQuoteIframe';
@@ -486,6 +487,42 @@ export function buildChapterSrcdoc(
         }
         window.addEventListener('scroll', dismissOnScroll, true);
         document.addEventListener('scroll', dismissOnScroll, true);
+
+        // Pagination key routing. When the chapter document is the only
+        // scrollable surface (paginated mode pins the parent container to one
+        // page box and moves the overflow in here), focusing the frame means
+        // the browser's own arrow handling consumes the key and scrolls the
+        // columns by its default step — a few dozen pixels, not a page — and
+        // the parent window never sees a keydown at all, because key events do
+        // not cross a frame boundary.
+        //
+        // So the frame reports the arrow upward and the parent decides. It only
+        // does this when the document is genuinely the inline column layout, so
+        // scrolling mode keeps its existing behaviour untouched; and it only
+        // claims Left/Right, leaving Up/Down to the browser for intra-page
+        // scrolling of a tall block.
+        document.addEventListener('keydown', function(ev) {
+          if (ev.key !== 'ArrowRight' && ev.key !== 'ArrowLeft') return;
+          if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+          var html = document.documentElement;
+          var rootStyle = window.getComputedStyle(html);
+          var inlineColumns =
+            (rootStyle.overflowX === 'auto' || rootStyle.overflowX === 'scroll') &&
+            rootStyle.overflowY !== 'auto' &&
+            rootStyle.overflowY !== 'scroll';
+          if (!inlineColumns) return;
+          var target = ev.target;
+          if (target && target.closest &&
+              target.closest('input, textarea, select, button, [contenteditable], [role="textbox"], [role="searchbox"], [role="combobox"]')) {
+            return;
+          }
+          ev.preventDefault();
+          window.parent.postMessage({
+            type: 'epub-pagination-key',
+            direction: ev.key === 'ArrowRight' ? 'next' : 'prev',
+            pageNumber: CHAPTER_INDEX
+          }, '*');
+        }, true);
       })();
     `;
 
@@ -525,6 +562,12 @@ export type EpubRenderDeps = {
   getDirection: () => string;
   getHyphenation: () => boolean;
   getMargins: () => { top: number; bottom: number; left: number; right: number };
+  /**
+   * The page box when paginated mode is active, `null` in scrolling mode. The
+   * override builder takes it directly, so the stylesheet and the pinned iframe
+   * height can never disagree about what a page is.
+   */
+  getPageBox?: () => { width: number; height: number } | null;
   getCurrentChapterIndex: () => number;
   setCurrentChapterIndex: (v: number) => void;
   getCurrentSpineIndex: () => number;
@@ -590,6 +633,10 @@ export function createEpubRender(deps: EpubRenderDeps): {
   }
 
   function syncIframeHeight(): void {
+    // Paginated mode pins the iframe to the page box; measuring the content
+    // height here would unbind the column box and collapse the chapter back to
+    // a single tall column. The viewer owns the height in that mode.
+    if (currentPageBox()) return;
     const iframeEl = deps.getIframeEl();
     if (!iframeEl?.contentDocument) return;
     const doc = iframeEl.contentDocument;
@@ -606,6 +653,17 @@ export function createEpubRender(deps: EpubRenderDeps): {
     return internalHeight;
   }
 
+  /** The page box in paginated mode, `null` in scrolling mode. */
+  function currentPageBox(): { width: number; height: number } | null {
+    // `untrack`: the box is layout state, not a reactive input to the render
+    // pipeline. Reading it as a tracked dependency inside the viewer's style
+    // effect closes a loop with the effect that publishes a freshly measured
+    // box, and Svelte aborts with `effect_update_depth_exceeded` (reproduced
+    // live before this guard). The pipeline only needs the value at the moment
+    // it builds the stylesheet.
+    return untrack(() => deps.getPageBox?.() ?? null);
+  }
+
   function buildReaderOverrideCssLocal(): string {
     return buildReaderOverrideCss({
       fontSize: deps.getFontSize(),
@@ -619,6 +677,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
       hyphenation: deps.getHyphenation(),
       margins: deps.getMargins(),
       fontFamily: deps.getFontFamily(),
+      pagination: currentPageBox(),
     });
   }
 
@@ -744,6 +803,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
         hyphenation: deps.getHyphenation(),
         margins: deps.getMargins(),
         fontFamily: deps.getFontFamily(),
+        pagination: currentPageBox(),
       };
       const srcdoc = buildChapterSrcdoc(
         chapterData,

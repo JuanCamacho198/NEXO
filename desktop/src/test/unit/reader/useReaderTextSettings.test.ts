@@ -24,6 +24,7 @@ const baseSettings = (overrides: Partial<ReaderSettings> = {}): ReaderSettings =
   direction: 'ltr',
   hyphenation: false,
   verticalScrolling: false,
+  paginated: false,
   margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
   showHeader: true,
   showFooter: true,

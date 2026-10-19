@@ -108,3 +108,16 @@ export function getTimestamp(book: ShelfBook): number {
 export function formatPercent(book: ShelfBook): string {
   return `${Math.round(getSafeProgressPercentage(book))}%`;
 }
+
+// ─── Book presence ───
+
+/**
+ * True when the book is actually present on this device rather than a sync
+ * stub. The highlights FK guard used to create placeholder `books` rows with an
+ * empty `file_path` for books that had never been downloaded here; those rows
+ * have no file to open and render as "Página 0". A missing `filePath` (older
+ * payloads) counts as absent so the caller fails closed.
+ */
+export function isRealBook(book: Pick<LibraryBookDto, 'filePath'> | undefined | null): boolean {
+  return typeof book?.filePath === 'string' && book.filePath.trim().length > 0;
+}

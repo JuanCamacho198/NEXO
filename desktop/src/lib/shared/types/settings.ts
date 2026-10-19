@@ -25,6 +25,7 @@ export const READER_TEXT_ALIGN_SETTING_KEY = 'reader.textAlign' as const;
 export const READER_DIRECTION_SETTING_KEY = 'reader.direction' as const;
 export const READER_HYPHENATION_SETTING_KEY = 'reader.hyphenation' as const;
 export const READER_VERTICAL_SCROLLING_SETTING_KEY = 'reader.verticalScrolling' as const;
+export const READER_PAGINATED_SETTING_KEY = 'reader.paginated' as const;
 export const READER_MARGINS_SETTING_KEY = 'reader.margins' as const; // deprecated — kept for reading legacy entries
 export const READER_MARGIN_TOP_SETTING_KEY = 'reader.margins.top' as const;
 export const READER_MARGIN_BOTTOM_SETTING_KEY = 'reader.margins.bottom' as const;
@@ -67,6 +68,16 @@ export type ReaderSettings = {
   direction: ReaderDirection;
   hyphenation: boolean;
   verticalScrolling: boolean;
+  /**
+   * Paginated mode: the chapter renders as pages that turn one screen at a
+   * time, instead of one tall scrolling column. `false` is scrolling mode.
+   *
+   * A new field rather than a reuse of `verticalScrolling`: that one predates
+   * any viewer reading it (the reader settings panel removed its switch because
+   * nothing consumed it) and its polarity is inverted, so overloading it would
+   * make `false` mean two different things across stored settings.
+   */
+  paginated: boolean;
   margins: {
     top: number; // 0.5–4 rem
     bottom: number;

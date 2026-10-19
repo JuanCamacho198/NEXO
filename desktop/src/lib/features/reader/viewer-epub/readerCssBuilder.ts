@@ -18,6 +18,9 @@
  * ones that must NOT win (the CJK font stacks) deliberately go without it, so an
  * explicit reader font pick — which carries `!important` — still beats them.
  */
+import type { PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
+
+export type { PageBox };
 export interface ReaderCssOptions {
   fontSize: number;
   zoomLevel: number;
@@ -31,6 +34,90 @@ export interface ReaderCssOptions {
   margins: { top: number; bottom: number; left: number; right: number };
   /** The book's own face is `''`; the caller appends the override when set. */
   fontFamily?: string;
+  /**
+   * Paginated mode. When set, the chapter is laid out as columns instead of a
+   * single tall scroll. The values are the measured page box in CSS pixels, so
+   * the caller must re-render the stylesheet when the box changes.
+   *
+   * Absent (or `null`) is scrolling mode, and its output is byte-identical to
+   * the pre-pagination builder — the scroll path must not move.
+   */
+  pagination?: PaginationCssOptions | null;
+}
+
+/** The measured page box, in CSS pixels, that a column must occupy. */
+export type PaginationCssOptions = PageBox;
+
+/**
+ * Pagination stylesheet.
+ *
+ * The model is CSS multicolumn on the chapter's root: `column-width` equal to
+ * the page box, `column-gap: 0`, and `column-fill: auto` so columns pack in
+ * source order rather than being balanced into a shorter stack. The root then
+ * becomes the horizontally overflowing column container, exactly one page per
+ * step.
+ *
+ * Two deliberate choices, both measured against the real app on 2026-10-17:
+ *
+ *  1. **Pixels, not viewport units.** `100vh`/`100vw` are useless here. The
+ *     chapter frame is a `srcdoc` iframe that the viewer sizes to its content,
+ *     so inside the frame `100vh` resolves to the *chapter's* height (measured:
+ *     `window.innerHeight` 25292 for a 25292px chapter) and a single giant
+ *     column is produced instead of pages. The page box is therefore measured in
+ *     the parent and passed in as pixels.
+ *  2. **The height is bounded on both the root and the body.** An unbounded
+ *     column container is one column however many columns are requested. With
+ *     the box pinned to the page height, the same chapter measured
+ *     `scrollWidth` 28600 against `clientWidth` 1100 — exactly 26 pages.
+ *
+ * `overflow-x: auto` + `overflow-y: hidden` moves the reader's paging axis to
+ * the inline axis while keeping the container scrollable, so the existing
+ * `scroll` listener on the chapter still fires and still drives location
+ * emission; only the axis it reads changes.
+ */
+export function buildPaginationCss(opts: PaginationCssOptions): string {
+  const w = Math.max(1, Math.round(opts.width));
+  const h = Math.max(1, Math.round(opts.height));
+  return `
+      html {
+        height: ${h}px !important;
+        max-height: ${h}px !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        column-width: ${w}px !important;
+        column-gap: 0 !important;
+        column-fill: auto !important;
+        /* A page turn is a single offset assignment and must land exactly one
+           page box away. Native smooth scrolling animates toward the target and
+           the browser keeps adjusting after the assignment, which measured as
+           turns landing on non-multiples of the page width (offsets 2795 and
+           14870 against a 1110px box). Pinning the behaviour to auto keeps the
+           step exact, and it is also what makes a turn feel instant rather than
+           animated. */
+        scroll-behavior: auto !important;
+      }
+      body {
+        height: ${h}px !important;
+        max-height: ${h}px !important;
+        min-height: 0 !important;
+        /* Scrolling mode centres the measure with max-width + margin; a column
+           must fill the page box instead, or the text would be a narrow ribbon
+           inside a wide column. */
+        max-width: none !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+      }
+      /* The scrollbar itself must not consume a page's width: with a visible
+         vertical scrollbar a page would measure narrower than the column and
+         the page step would drift out of phase. */
+      html {
+        scrollbar-width: none;
+      }
+      html::-webkit-scrollbar {
+        display: none;
+      }
+    `;
 }
 
 // NOTE (U5.4): the hex literals below are intentional. They style HTML
@@ -109,6 +196,10 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
   const hyphensValue = opts.hyphenation || justify ? 'auto' : 'none';
   const effectiveFontSize = (opts.fontSize * opts.zoomLevel) / 100;
   const themeCss = getThemeStyles(opts.themeMode);
+  // Pagination wins over the scroll rules below by being emitted last: the
+  // scroll path sets `height:auto`, `overflow-y:visible` and a centred
+  // `max-width`, and every one of those must lose to the column box.
+  const paginationCss = opts.pagination ? buildPaginationCss(opts.pagination) : '';
 
   return `
       ${themeCss}
@@ -311,5 +402,5 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
       body :lang(ko) :is(em, i, cite, dfn) {
         font-style: normal;
       }
-    `;
+${paginationCss}    `;
 }

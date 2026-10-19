@@ -403,6 +403,11 @@ pub struct LibraryBookDto {
     pub publication_date: Option<String>,
     pub cover_user_deleted: Option<bool>,
     pub reading_status: Option<String>,
+    /// Absolute path to the book file. Empty on sync stubs — placeholder rows
+    /// created by the highlights FK guard for books that were never downloaded
+    /// here. Consumers treat an empty path as "not a real book".
+    #[serde(default)]
+    pub file_path: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -60,6 +60,7 @@ describe('tauriClient reader settings', () => {
       direction: 'ltr',
       hyphenation: false,
       verticalScrolling: false,
+      paginated: false,
       margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
       showHeader: true,
       showFooter: true,
@@ -122,6 +123,7 @@ describe('tauriClient reader settings', () => {
       direction: 'ltr',
       hyphenation: false,
       verticalScrolling: false,
+      paginated: false,
       margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
       showHeader: true,
       showFooter: true,
@@ -159,6 +161,7 @@ describe('tauriClient reader settings', () => {
       direction: 'ltr',
       hyphenation: false,
       verticalScrolling: false,
+      paginated: false,
       margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
       showHeader: true,
       showFooter: true,
@@ -172,9 +175,13 @@ describe('tauriClient reader settings', () => {
       { settings: Array<{ key: string; valueJson: string }> },
     ];
     expect(command).toBe('upsertSettings');
-    expect(args.settings).toHaveLength(21);
+    // 22 since `reader.paginated` joined the payload (the paginated-mode flag).
+    expect(args.settings).toHaveLength(22);
     expect(args.settings.find((entry) => entry.key === 'reader.themeMode')?.valueJson).toBe(
       JSON.stringify('sepia'),
+    );
+    expect(args.settings.find((entry) => entry.key === 'reader.paginated')?.valueJson).toBe(
+      JSON.stringify(false),
     );
     expect(args.settings.find((entry) => entry.key === 'reader.brightness')?.valueJson).toBe(
       JSON.stringify(89),

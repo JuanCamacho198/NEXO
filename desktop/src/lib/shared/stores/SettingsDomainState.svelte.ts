@@ -16,6 +16,7 @@ const FALLBACK_READER_SETTINGS: ReaderSettings = {
   direction: 'ltr',
   hyphenation: false,
   verticalScrolling: false,
+  paginated: false,
   margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
   showHeader: true,
   showFooter: true,

@@ -41,41 +41,7 @@
  * the library this runs against rarely has one.
  */
 import { expect, test } from './harness/connectApp';
-import type { Frame, Page } from '@playwright/test';
-
-/** Subset of the Rust `listLibraryBooks` row needed to pick a readable EPUB. */
-type LibraryRow = {
-  id: string;
-  title: string;
-  format?: string;
-  coverPath?: string | null;
-};
-
-/**
- * Returns the chapter frame: the one whose document carries the reader-override
- * `<style id="nexo-reader-overrides">` injected by `buildChapterSrcdoc`. We poll
- * because the frame is created, then its `srcdoc` parsed, asynchronously after
- * the click.
- */
-async function waitForChapterFrame(page: Page): Promise<Frame> {
-  const deadline = Date.now() + 30_000;
-
-  while (Date.now() < deadline) {
-    for (const frame of page.frames()) {
-      const hasOverrides = await frame
-        .evaluate(() => Boolean(document.getElementById('nexo-reader-overrides')))
-        .catch(() => false);
-      if (hasOverrides) return frame;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-
-  const urls = page.frames().map((frame) => frame.url());
-  throw new Error(
-    `No chapter frame with #nexo-reader-overrides appeared within 30s. ` +
-      `Frames seen: ${urls.length > 0 ? urls.join(', ') : '(none)'}.`,
-  );
-}
+import { openBook, pickEpub } from './harness/readerFlows';
 
 test('the injected reader CSS is applied inside the real chapter iframe', async ({ appPage }) => {
   // The book open path runs a real Rust extraction plus a chapter render; 30s
@@ -90,61 +56,19 @@ test('the injected reader CSS is applied inside the real chapter iframe', async 
   // preferring an EPUB that carries a `coverPath` skips them: the cover is only
   // written by a real local import. If every EPUB is a stub, the spec proceeds
   // and fails honestly at the chapter-frame wait rather than skipping green.
-  const epub = await appPage.evaluate(async (): Promise<LibraryRow | null> => {
-    const internals = (
-      window as unknown as {
-        __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: unknown) => Promise<unknown> };
-      }
-    ).__TAURI_INTERNALS__;
-
-    if (!internals) throw new Error('__TAURI_INTERNALS__ is missing — not a Tauri webview');
-
-    const rows = (await internals.invoke('listLibraryBooks', {
-      payload: { responseVersion: 1 },
-    })) as LibraryRow[];
-
-    const epubs = rows.filter((row) => (row.format ?? '').toLowerCase() === 'epub');
-    return epubs.find((row) => Boolean(row.coverPath)) ?? epubs[0] ?? null;
-  });
+  const epub = await pickEpub(appPage);
 
   // No EPUB in this library: skip loudly instead of inventing a fixture. A green
   // run on an empty library would be a lie; a skip is honest.
   test.skip(epub === null, 'No EPUB book in the library — cannot measure the chapter frame.');
 
-  // Normalise the starting screen. A previous run may have left the app in the
-  // reader, where the sidebar does not exist, and the rest of this spec needs a
-  // navigable screen. If a chapter iframe is present we are in the reader; the
-  // reader top bar is a `<header>` whose first button is "back" (`onBackToHome`
-  // in `ReaderTopBar.svelte`). Its label is i18n, so target position, not text.
-  if ((await appPage.locator('iframe[title="chapter"]').count()) > 0) {
-    await appPage.locator('header button').first().click();
-    await expect(appPage.locator('aside nav > button').first()).toBeVisible({ timeout: 20_000 });
-  }
-
-  // The sidebar nav is built from a model whose button labels come from the
-  // app's i18n, so a hard-coded English name would fail on a Spanish UI. Match
-  // the *label* for the library route across the locales this repo ships
-  // (`sidebar.library`: "Library" / "Estantería"). If the label model changes,
-  // the fallback below still finds the card on the home screen.
-  const libraryNav = appPage.locator('aside nav').getByRole('button', {
-    name: /^(Library|Estanter[ií]a)$/,
-  });
-  if ((await libraryNav.count()) > 0) {
-    await libraryNav.first().click();
-  }
-
-  // `BookCard` renders an `<article>` labelled `"{title}, {author}, {progress}%"`,
-  // both on the home recent rail and on the shelf grid, so this locator is
-  // stable across both screens.
-  const card = appPage.locator('article').filter({ hasText: epub!.title }).first();
-  await expect(card).toBeVisible({ timeout: 30_000 });
-
-  // "Read" / "Continue" (`app.read` / `app.continue`) starts reading. It is the
-  // first `<button>` with visible text; the options trigger is icon-only.
-  const readButton = card.locator('button').filter({ hasText: /\S/ }).first();
-  await readButton.click();
-
-  const chapter = await waitForChapterFrame(appPage);
+  // Drive the app from wherever it is (a previous run may have left it in the
+  // reader) into this book's reader. `openBook` normalises to the library and
+  // clicks the read control by role + accessible name; an inlined copy of that
+  // logic here used to pick the card's *first* button — the title button, which
+  // opens the detail modal on `BookCard` — so this spec only ever passed when
+  // the app was already in the reader from an earlier run.
+  const chapter = await openBook(appPage, epub!);
 
   // The chapter document must have real content, or every measurement below is
   // vacuous.

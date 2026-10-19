@@ -6,6 +6,7 @@
   import { createHighlightsViewDeps, type HighlightsViewDeps } from '../highlightsViewDeps';
   import { createHighlightsFilters } from '../useHighlightsFilters.svelte';
   import { createHighlightsSync } from '../useHighlightsSync.svelte';
+  import { isRealBook } from '$lib/features/library/utils';
   import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
   import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
@@ -35,7 +36,13 @@
   const deps: HighlightsViewDeps = depsProp ?? createHighlightsViewDeps(viewerPort);
   let highlights = $state<HighlightDto[]>([]);
   let isLoading = $state(true);
-  const totalHighlights = $derived(highlights.length);
+  // A highlight is only reachable when its book is present and real. Stub books
+  // (empty file_path) have no file to open, so their highlights never render and
+  // must not drive the empty states or the book filter.
+  const reachableHighlights = $derived(
+    highlights.filter((h) => isRealBook(books.find((b) => b.id === h.bookId))),
+  );
+  const totalHighlights = $derived(reachableHighlights.length);
   const filters = createHighlightsFilters({
     getHighlights: () => highlights,
     getBooks: () => books,
@@ -48,7 +55,7 @@
   });
   const bookMap = $derived(new Map(books.map((b) => [b.id, b])));
   const uniqueBooks = $derived.by(() => {
-    const ids = new Set(highlights.map((h) => h.bookId));
+    const ids = new Set(reachableHighlights.map((h) => h.bookId));
     return books.filter((b) => ids.has(b.id));
   });
   const bookFilterOptions = $derived([

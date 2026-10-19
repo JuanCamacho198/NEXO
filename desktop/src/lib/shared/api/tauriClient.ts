@@ -53,6 +53,7 @@ import {
   READER_DIRECTION_SETTING_KEY,
   READER_HYPHENATION_SETTING_KEY,
   READER_VERTICAL_SCROLLING_SETTING_KEY,
+  READER_PAGINATED_SETTING_KEY,
   READER_MARGINS_SETTING_KEY,
   READER_MARGIN_TOP_SETTING_KEY,
   READER_MARGIN_BOTTOM_SETTING_KEY,
@@ -497,6 +498,7 @@ const DEFAULT_READER_SETTINGS: ReaderSettings = {
   direction: 'ltr',
   hyphenation: false,
   verticalScrolling: false,
+  paginated: false,
   margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
   showHeader: true,
   showFooter: true,
@@ -634,6 +636,7 @@ export const sanitizeReaderSettings = (input?: Partial<ReaderSettings> | null): 
       next.verticalScrolling,
       DEFAULT_READER_SETTINGS.verticalScrolling,
     ),
+    paginated: sanitizeBoolean(next.paginated, DEFAULT_READER_SETTINGS.paginated),
     margins: sanitizeMargins(next.margins, DEFAULT_READER_SETTINGS.margins),
     showHeader: sanitizeBoolean(next.showHeader, DEFAULT_READER_SETTINGS.showHeader),
     showFooter: sanitizeBoolean(next.showFooter, DEFAULT_READER_SETTINGS.showFooter),
@@ -713,6 +716,11 @@ const buildReaderSettingsPayload = (settings: ReaderSettings): AppSettingDto[] =
     {
       key: READER_VERTICAL_SCROLLING_SETTING_KEY,
       valueJson: JSON.stringify(settings.verticalScrolling),
+      updatedAt: now,
+    },
+    {
+      key: READER_PAGINATED_SETTING_KEY,
+      valueJson: JSON.stringify(settings.paginated),
       updatedAt: now,
     },
     {
@@ -802,6 +810,10 @@ export const getReaderSettings = async (): Promise<ReaderSettings> => {
     direction: readSettingValue(settings, READER_DIRECTION_SETTING_KEY) as ReaderDirection,
     hyphenation: readSettingValue(settings, READER_HYPHENATION_SETTING_KEY) as boolean,
     verticalScrolling: readSettingValue(settings, READER_VERTICAL_SCROLLING_SETTING_KEY) as boolean,
+    // Absent on any database written before this key existed; `false` is
+    // scrolling mode, which is the behaviour those installs already had.
+    paginated:
+      (readSettingValue(settings, READER_PAGINATED_SETTING_KEY) as boolean | undefined) ?? false,
     margins: (readSettingValue(
       settings,
       READER_MARGINS_SETTING_KEY,

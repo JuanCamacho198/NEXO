@@ -17,6 +17,7 @@ pub mod search;
 pub mod settings;
 pub mod tags;
 
+use std::cell::RefCell;
 use std::collections::HashSet;
 
 use std::path::{Path, PathBuf};
@@ -38,13 +39,35 @@ const MAX_SETTING_BATCH: usize = 100;
 const MAX_SEARCH_PAGE_SIZE: i64 = 200;
 const DEFAULT_SEARCH_PAGE_SIZE: i64 = 50;
 
+/// A highlight that arrived (via sync pull) for a book that is not present
+/// locally yet. It is held here instead of being written to `highlights`, which
+/// would violate the `book_id` foreign key, and instead of a placeholder `books`
+/// row, which would outlive the arrival of the real book. It is replayed once
+/// the catalog lands the book.
+///
+/// The buffer is intentionally in-memory. Supabase re-delivers every highlight
+/// of the user on each pull (`fetchAllHighlightsForPull` selects the full table
+/// for the user), so a pending row that a restart drops is simply deferred again
+/// on the next pull — it is never lost permanently. A highlight whose book never
+/// arrives is dropped, as the feature requires.
+#[derive(Debug, Clone)]
+pub(crate) struct PendingHighlight {
+    pub row: RemoteHighlightRow,
+}
+
+/// Cap on the pending buffer so a long-lived process pulling for many absent
+/// books cannot grow without bound. The oldest entries are dropped first, and
+/// the next pull re-defers them.
+const MAX_PENDING_HIGHLIGHTS: usize = 5_000;
+
 pub struct LibraryRepository {
     connection: Connection,
+    pending_highlights: RefCell<Vec<PendingHighlight>>,
 }
 
 impl LibraryRepository {
     pub fn new(connection: Connection) -> Self {
-        Self { connection }
+        Self { connection, pending_highlights: RefCell::new(Vec::new()) }
     }
 
     pub fn connection(&self) -> &Connection {
@@ -57,6 +80,68 @@ impl LibraryRepository {
 
     pub fn upsert_book(&self, book: BookDto) -> AppResult<()> {
         library::upsert_book(self, book)
+    }
+
+    /// Queue a highlight whose book is not present locally yet. See
+    /// [`PendingHighlight`] for why this is in-memory rather than a table.
+    pub(crate) fn defer_highlight(&self, row: RemoteHighlightRow) {
+        let mut pending = self.pending_highlights.borrow_mut();
+        // Re-deferring the same row (full pull re-delivers it) must not stack
+        // duplicates: the newest remote clock wins for that id.
+        if let Some(existing) = pending.iter_mut().find(|p| p.row.id == row.id) {
+            existing.row = row;
+            return;
+        }
+        if pending.len() >= MAX_PENDING_HIGHLIGHTS {
+            pending.remove(0);
+        }
+        pending.push(PendingHighlight { row });
+    }
+
+    #[cfg(test)]
+    pub(crate) fn pending_highlight_count(&self) -> usize {
+        self.pending_highlights.borrow().len()
+    }
+
+    /// Apply every pending highlight whose book now exists locally. Called from
+    /// the two entry points that land a book row: a catalog upsert
+    /// ([`library::upsert_book`]) and a downloaded/recovered file
+    /// ([`files::commit_book_file_row`]). Rows still missing a book stay queued.
+    pub(crate) fn replay_pending_highlights_for_book(&self, book_id: &str) {
+        let ready: Vec<RemoteHighlightRow> = {
+            let mut pending = self.pending_highlights.borrow_mut();
+            let (ready, rest): (Vec<_>, Vec<_>) =
+                pending.drain(..).partition(|p| p.row.book_id == book_id);
+            *pending = rest;
+            ready.into_iter().map(|p| p.row).collect()
+        };
+        if ready.is_empty() {
+            return;
+        }
+        // The book exists now, so the FK can no longer be violated.
+        match highlights::upsert_remote_highlights(self, &ready) {
+            Ok(summary) => {
+                let unresolved = ready.len() as i64 - summary.applied;
+                if unresolved != 0 {
+                    eprintln!(
+                        "replay_pending_highlights: book {} applied {} of {} (unknown_book={}, invalid={})",
+                        book_id,
+                        summary.applied,
+                        ready.len(),
+                        summary.skipped_unknown_book,
+                        summary.skipped_invalid
+                    );
+                }
+            }
+            Err(err) => {
+                // Put them back so a later attempt can retry rather than drop.
+                let mut pending = self.pending_highlights.borrow_mut();
+                for row in ready {
+                    pending.push(PendingHighlight { row });
+                }
+                eprintln!("replay_pending_highlights: retry later for book {}: {}", book_id, err);
+            }
+        }
     }
 
     pub fn get_settings(&self) -> AppResult<Vec<AppSettingDto>> {

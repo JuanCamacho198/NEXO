@@ -342,6 +342,7 @@ pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
 }
 
 pub fn upsert_book(repo: &LibraryRepository, book: BookDto) -> AppResult<()> {
+    let book_id = book.id.clone();
     repo.connection.execute(
         "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, genre, language, publication_date)\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11, ?12, ?13)\n         ON CONFLICT(id) DO UPDATE SET\n           title = excluded.title,\n           author = excluded.author,\n           file_path = excluded.file_path,\n           format = excluded.format,\n           sync_status = excluded.sync_status,\n           current_page = excluded.current_page,\n           total_pages = excluded.total_pages,\n           updated_at = excluded.updated_at,\n           genre = excluded.genre,\n           language = excluded.language,\n           publication_date = excluded.publication_date,\n           version = version + 1",
         params![
@@ -360,6 +361,9 @@ pub fn upsert_book(repo: &LibraryRepository, book: BookDto) -> AppResult<()> {
             book.publication_date,
         ],
     )?;
+    // Catalog landed (or refreshed) this book: replay highlights that were
+    // deferred because it was not present locally yet.
+    repo.replay_pending_highlights_for_book(&book_id);
     Ok(())
 }
 
@@ -423,7 +427,8 @@ pub fn list_library_books(repo: &LibraryRepository) -> AppResult<Vec<LibraryBook
                 b.language,
                 b.publication_date,
                 (SELECT MAX(user_deleted) FROM book_covers bc2 WHERE bc2.book_id = b.id) AS cover_user_deleted,
-                brs.status AS reading_status
+                brs.status AS reading_status,
+                b.file_path
          FROM books b
          LEFT JOIN reading_progress rp
            ON rp.book_id = b.id
@@ -467,6 +472,7 @@ pub fn list_library_books(repo: &LibraryRepository) -> AppResult<Vec<LibraryBook
             publication_date: row.get(14)?,
             cover_user_deleted: row.get(15)?,
             reading_status: row.get(16)?,
+            file_path: row.get(17)?,
         })
     })?;
 

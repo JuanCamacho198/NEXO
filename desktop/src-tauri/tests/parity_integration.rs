@@ -537,7 +537,8 @@ fn upsert_remote_highlights_merges_through_facade_and_summary_round_trips() {
     let repository = LibraryRepository::new(connection);
     insert_test_book(&repository, "book-highlight-merge");
 
-    // Valid EPUB highlight + FK guard now creates stub (fix for Odisea DHR-3) — unknown book also applied
+    // Valid EPUB highlight applies; the absent-book row is deferred, not stubbed
+    // (U2: the old FK guard created a permanent placeholder book here).
     let valid = RemoteHighlightRow {
         id: "hl_remote_1".to_string(),
         user_id: "u-remote".to_string(),
@@ -564,9 +565,17 @@ fn upsert_remote_highlights_merges_through_facade_and_summary_round_trips() {
     };
 
     let summary = repository.upsert_remote_highlights(&[valid, unknown]).unwrap();
-    assert_eq!(summary.applied, 2);
-    assert_eq!(summary.skipped_unknown_book, 0);
+    assert_eq!(summary.applied, 1);
+    assert_eq!(summary.skipped_unknown_book, 1);
     assert_eq!(summary.skipped_invalid, 0);
+    // No placeholder book was created for the deferred highlight.
+    let stub_exists: bool = repository
+        .connection()
+        .query_row("SELECT EXISTS(SELECT 1 FROM books WHERE id = 'book-not-installed')", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert!(!stub_exists);
 
     // Serde camelCase contract
     let json = serde_json::to_value(&summary).unwrap();
@@ -588,6 +597,21 @@ fn upsert_remote_highlights_merges_through_facade_and_summary_round_trips() {
     let stored_epoch =
         chrono::DateTime::parse_from_rfc3339(&updated_at).unwrap().timestamp_millis();
     assert_eq!(stored_epoch, 1_700_000_000_000);
+
+    // The deferred highlight lands once its book arrives through the catalog
+    // entry point the sync uses — proving the facade replays it, end to end.
+    insert_test_book(&repository, "book-not-installed");
+    let (orphan_text, orphan_epoch): (String, String) = repository
+        .connection()
+        .query_row("SELECT text, updated_at FROM highlights WHERE id = 'hl_remote_2'", [], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .unwrap();
+    assert_eq!(orphan_text, "orphan");
+    assert_eq!(
+        chrono::DateTime::parse_from_rfc3339(&orphan_epoch).unwrap().timestamp_millis(),
+        1_700_000_000_001
+    );
 
     let _ = fs::remove_file(db_path);
 }

@@ -180,6 +180,9 @@ fn commit_book_file_row(
         params![now, book_id, repaired],
     )?;
     transaction.commit()?;
+    // The book row now exists with a real path, so any highlight deferred while
+    // it was absent can be applied without risking the FK.
+    repo.replay_pending_highlights_for_book(book_id);
     Ok(())
 }
 

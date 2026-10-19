@@ -12,6 +12,7 @@ import { clearReaderError } from '$lib/stores/readerErrorState.svelte';
 import { locatorFromCfi, locatorToJson, normalizeHref } from '$lib/shared/sync/LocatorCodec';
 import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import type { EpubChapterMeta } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+import { isInlineColumnLayout } from '$lib/features/reader/viewer-epub/readerPagination';
 import { handleError, ReaderError } from '$lib/shared/utils/errors';
 import { logger } from '$lib/shared/logger/Logger';
 
@@ -93,6 +94,8 @@ export type EpubBridgeDeps = {
   }) => void;
   handleEpubHighlightPlaced: (msg: { id: string; pageNumber: number }) => void;
   syncIframeHeight: () => void;
+  /** A page-turn intent forwarded from the chapter frame (paginated mode). */
+  handlePaginationKey?: (direction: 'next' | 'prev') => void;
   handleExternalTocNavigate: (id: string | null) => boolean;
   handleSearchTargetLocator: (
     target: string | null,
@@ -163,21 +166,53 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
   handleIframeMessage(event: MessageEvent): void;
   initReader(): Promise<void>;
 } {
+  /**
+   * In paginated mode a `scrollIntoView` moves the inline offset by whatever
+   * geometry the target has, which lands the reader between two pages — measured
+   * as a last page at offset 17728 against the exact 17760 the page grid needs
+   * (the 32px body padding). Snapping the offset back onto the page grid after
+   * the scroll is what keeps "page N" honest, and it is the phase-1 substitute
+   * for phase 3's real CFI-to-page mapping.
+   */
+  function snapToPageGrid(): void {
+    const iframeEl = deps.getIframeEl();
+    const root = iframeEl?.contentDocument?.documentElement;
+    if (!root || !isInlineColumnLayout(iframeEl?.contentDocument ?? null)) return;
+    const w = root.clientWidth;
+    if (w <= 0) return;
+    const snapped = Math.round(root.scrollLeft / w) * w;
+    if (snapped !== root.scrollLeft) root.scrollLeft = snapped;
+  }
+
   /** Scroll iframe to fragment anchor (preserved #frag in toc.href). 3×rAF ensures layout. */
   function scrollToFragment(fragment: string | null): void {
     const iframeEl = deps.getIframeEl();
     const zoomContainerEl = deps.getZoomContainerEl();
-    if (!fragment || !iframeEl?.contentDocument) return;
+    // Consumed by the attempt, like `scrollToCfi`: an early return must not leave
+    // `pendingFragment` set, or the turn guard reading it refuses every page turn.
+    if (!fragment || !iframeEl?.contentDocument) {
+      deps.setPendingFragment(null);
+      return;
+    }
     const doc = iframeEl.contentDocument;
     const target = doc.getElementById(fragment);
     if (!target) {
       logger.warn('epub-frag: fragment not found', { fragment }, 'reader');
+      deps.setPendingFragment(null);
       return;
     }
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          target.scrollIntoView({ block: 'start', behavior: 'smooth' });
+          // `smooth` animates toward the target and keeps adjusting afterwards,
+          // which fights the page grid; a page layout wants an immediate,
+          // exact landing.
+          const paginated = isInlineColumnLayout(doc);
+          target.scrollIntoView({ block: 'start', behavior: paginated ? 'auto' : 'smooth' });
+          if (paginated) {
+            snapToPageGrid();
+            return;
+          }
           if (zoomContainerEl) {
             const rect = target.getBoundingClientRect();
             const containerRect = zoomContainerEl.getBoundingClientRect();
@@ -194,7 +229,14 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
   function scrollToCfi(cfi: string): void {
     const metadata = deps.getMetadata();
     const iframeEl = deps.getIframeEl();
-    if (!metadata || !iframeEl?.contentDocument || !iframeEl.contentWindow) return;
+    // The restore is CONSUMED by the attempt, whatever it resolves to. Leaving
+    // `pendingCfiScroll` set on an early return (no bridge, unresolvable CFI)
+    // would report a restore in flight forever, and the turn guard that keys on
+    // it would then refuse every page turn for the life of the chapter.
+    if (!metadata || !iframeEl?.contentDocument || !iframeEl.contentWindow) {
+      deps.setPendingCfiScroll(null);
+      return;
+    }
     const doc = iframeEl.contentDocument;
     const bridge = (
       iframeEl.contentWindow as Window & {
@@ -205,20 +247,32 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
       deps.getSpineHrefs()[deps.getCurrentSpineIndex()] ??
       stripFragment(deps.getToc()[deps.getCurrentChapterIndex()]?.href ?? '');
     const chapterHref = normalizeHref(rawChapterHref);
-    if (!bridge || !chapterHref) return;
+    if (!bridge || !chapterHref) {
+      deps.setPendingCfiScroll(null);
+      return;
+    }
 
     try {
       const range = bridge.cfiToRange(cfi, chapterHref, doc);
-      if (!range || !range.startContainer) return;
+      if (!range || !range.startContainer) {
+        deps.setPendingCfiScroll(null);
+        return;
+      }
       const targetNode =
         range.startContainer.nodeType === Node.TEXT_NODE
           ? range.startContainer.parentElement
           : (range.startContainer as Element);
       if (targetNode) {
-        (targetNode as Element).scrollIntoView({ block: 'center', behavior: 'smooth' });
+        const paginated = isInlineColumnLayout(doc);
+        (targetNode as Element).scrollIntoView({
+          block: 'center',
+          behavior: paginated ? 'auto' : 'smooth',
+        });
+        if (paginated) snapToPageGrid();
       }
       deps.setPendingCfiScroll(null);
     } catch (err) {
+      deps.setPendingCfiScroll(null);
       logger.warn(
         'epub-cfi: scrollToCfi failed',
         { error: err instanceof Error ? err.message : String(err) },
@@ -261,6 +315,23 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
       const range = doc.createRange();
       range.selectNodeContents(textNode);
       const rect = range.getBoundingClientRect();
+      // The visibility window is axis-dependent. Scrolling mode moves the
+      // reader vertically, so "visible" is the vertical band. Paginated mode
+      // lays the columns out across the inline axis and keeps every node inside
+      // the vertical band, so the vertical test alone would always match the
+      // first text node and the emitted location would freeze on page one. The
+      // axis is read from the chapter root's own overflow — which is what the
+      // pagination stylesheet sets — rather than from a mode flag duplicated
+      // here, so the two can never disagree.
+      if (isInlineColumnLayout(doc)) {
+        // The inline scroller is the chapter root, not the parent container:
+        // the parent is pinned to one page box while the column overflow lives
+        // in this document.
+        const root = doc.documentElement;
+        const offset = root.scrollLeft;
+        const width = root.clientWidth || iframeEl.clientWidth;
+        return rect.right > offset && rect.left < offset + width;
+      }
       return rect.bottom >= 0 && rect.top <= (iframeEl?.clientHeight ?? window.innerHeight);
     });
     if (!visibleNode) return;
@@ -315,6 +386,15 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
 
     if (event.data.type === 'epub-resize') {
       deps.syncIframeHeight();
+      return;
+    }
+
+    if (event.data.type === 'epub-pagination-key') {
+      // The chapter frame owns the keydown once the frame is focused (see the
+      // pagination key-routing script in `buildChapterSrcdoc`); it forwards the
+      // intent here so the viewer performs a real page turn instead of the
+      // browser's few-dozen-pixel native scroll.
+      deps.handlePaginationKey?.(event.data.direction === 'next' ? 'next' : 'prev');
       return;
     }
 

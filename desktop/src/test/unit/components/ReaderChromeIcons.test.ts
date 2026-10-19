@@ -68,6 +68,7 @@ const readerSettings: ReaderSettings = {
   direction: 'ltr',
   hyphenation: false,
   verticalScrolling: false,
+  paginated: false,
   margins: { top: 1, bottom: 1, left: 1, right: 1 },
   showHeader: true,
   showFooter: true,

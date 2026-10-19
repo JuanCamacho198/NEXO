@@ -1,5 +1,6 @@
 import type { HighlightDto, LibraryBookDto, TagDto } from '$lib/shared/types';
 import { HIGHLIGHT_COLORS, PAGE_SIZE, resolveHighlightHex } from './state.svelte';
+import { isRealBook } from '$lib/features/library/utils';
 import type { HighlightsViewDeps } from './highlightsViewDeps';
 
 type SelectedType = 'all' | 'quotes' | 'ideas' | 'passages';
@@ -98,6 +99,11 @@ export function createHighlightsFilters(opts: {
 
   const filteredHighlights = $derived.by(() => {
     let result = opts.getHighlights();
+    // Drop highlights whose book is absent locally or is a sync stub (empty
+    // file_path). Those rows lead nowhere: the book cannot be opened, and the
+    // stub renders as "Página 0". Runs first so every other filter operates on
+    // rows the reader can actually reach.
+    result = result.filter((h) => isRealBook(bookMap.get(h.bookId)));
     if (searchQuery.trim().length > 0) {
       const q = searchQuery.toLowerCase();
       result = result.filter((h) => {
