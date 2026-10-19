@@ -7,6 +7,7 @@
   import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
+  import { debugState } from '$lib/shared/debug/debugState.svelte';
   import { getNavItems, getDataNavItems } from '$lib/shared/stores/NavigationState.svelte';
   import {
     resolveRouteLayout,
@@ -295,6 +296,7 @@
                 isSearching={searchState.isSearching}
                 searchUnavailableReason={searchState.searchUnavailableReason}
                 preloadedBytes={readerState.preloadedBytes}
+                showDiagnostics={debugState.enabled}
                 t={appState.t}
                 onBackToHome={() => navigationState.backToHome()}
                 onPdfPageChange={appState.handlePdfPageChange}
@@ -324,6 +326,7 @@
       isSearching={searchState.isSearching}
       searchUnavailableReason={searchState.searchUnavailableReason}
       preloadedBytes={readerState.preloadedBytes}
+      showDiagnostics={debugState.enabled}
       t={appState.t}
       onBackToHome={() => navigationState.backToHome()}
       onPdfPageChange={appState.handlePdfPageChange}

@@ -488,6 +488,44 @@
     return displayTotal;
   }
   /**
+   * Read-only snapshot for the opt-in diagnostic panel (`ReaderDiagnosticPanel`).
+   *
+   * The two hard numbers are `pageBox`/`pageCount` (owned by `pagination`) and
+   * `pendingCfiScroll`/`pendingFragment` (owned by `navigation`): the reader
+   * cannot see either today, and the conflict between the restore and the turn
+   * is exactly the pair. Nothing here writes.
+   *
+   * `page`/`totalPages` are the header's own numbers in scroll mode (TOC
+   * entries, which is what the reader sees in the page field) and the chapter's
+   * page grid in paginated mode, where "page 4 of 31" is the number that
+   * actually describes the layout. Reporting the header's numbers in scroll mode
+   * keeps the panel's "Page" row non-zero instead of printing `1/0` for the
+   * default mode.
+   *
+   * `layoutSettled` reuses `pagination.isLayoutSettling()` — the turn gate's own
+   * definition of "the columns are laid out" — so the panel cannot disagree with
+   * the code that decides whether a turn is safe to honour.
+   */
+  export function getDiagnostics(): {
+    mode: 'PAGINATED' | 'SCROLL';
+    page: number;
+    totalPages: number;
+    scrollLeft: number;
+    layoutSettled: boolean;
+    restoring: boolean;
+  } {
+    const root = iframeEl?.contentDocument?.documentElement ?? null;
+    const paginatedNow = paginated && pagination.pageCount > 0;
+    return {
+      mode: paginatedNow ? 'PAGINATED' : 'SCROLL',
+      page: paginatedNow ? pagination.currentPage : displayCurrentPage,
+      totalPages: paginatedNow ? pagination.pageCount : displayTotal,
+      scrollLeft: root?.scrollLeft ?? zoomContainerEl?.scrollLeft ?? 0,
+      layoutSettled: paginated ? !pagination.isLayoutSettling() : true,
+      restoring: navigation.pendingCfiScroll !== null || navigation.pendingFragment !== null,
+    };
+  }
+  /**
    * U3: collapse the chapter selection from the parent. Clicks inside the
    * iframe document never reach the parent, so parent-chrome clicks would
    * otherwise leave the menu stranded with no event to clear it.

@@ -3,6 +3,8 @@ export { default as ReaderBottomBar } from './ReaderBottomBar.svelte';
 export { default as ReaderTopBar } from './ReaderTopBar.svelte';
 export { default as ReaderFullscreenAffordances } from './ReaderFullscreenAffordances.svelte';
 export { default as ReaderSelectionDebugOverlay } from './ReaderSelectionDebugOverlay.svelte';
+export { default as ReaderDiagnosticPanel } from './ReaderDiagnosticPanel.svelte';
+export * from './readerDiagnostics';
 export { default as ReaderTextSettings } from './ReaderTextSettings.svelte';
 export { default as ReaderTocPanel } from './ReaderTocPanel.svelte';
 export { default as ReaderWorkspace } from './ReaderWorkspace.svelte';

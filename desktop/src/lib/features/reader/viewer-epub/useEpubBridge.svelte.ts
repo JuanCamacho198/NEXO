@@ -556,7 +556,7 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
       }
 
       if (debugState.enabled) {
-        invoke('indexEpubText', { bookId: deps.getBookId() }).catch((err: unknown) => {
+        invoke('index_epub_text', { bookId: deps.getBookId() }).catch((err: unknown) => {
           handleError(err, 'reader', {
             format: 'epub',
             bookId: deps.getBookId(),

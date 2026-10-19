@@ -11,6 +11,8 @@
   import ReaderBottomBar from './ReaderBottomBar.svelte';
   import ReaderFullscreenAffordances from './ReaderFullscreenAffordances.svelte';
   import ReaderSelectionDebugOverlay from './ReaderSelectionDebugOverlay.svelte';
+  import ReaderDiagnosticPanel from './ReaderDiagnosticPanel.svelte';
+  import { emptyReaderDiagnostics, type ReaderDiagnostics } from './readerDiagnostics';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, SearchBookTextResponse } from '$lib/shared/types';
   import type { LibraryBookDto } from '$lib/shared/types/library';
@@ -73,6 +75,12 @@
     onSearchJump?: (target: unknown) => void;
     preloadedBytes?: { filePath: string; data: Uint8Array } | null;
     debugState?: typeof defaultDebugState;
+    /**
+     * Opt-in live diagnostic readout. Off by default and read-only; see
+     * `ReaderDiagnosticPanel`. Passed as a prop so the surface has exactly one
+     * entry point and cannot be switched on by anything the reader renders.
+     */
+    showDiagnostics?: boolean;
     getReaderError?: typeof defaultGetReaderError;
     getUserId?: () => string | null;
     outboxDao?: SyncOutboxDao;
@@ -99,6 +107,7 @@
     onSearch,
     onSearchJump,
     debugState: debugStateProp = undefined,
+    showDiagnostics = false,
     getReaderError: getReaderErrorProp = undefined,
     getUserId: getUserIdProp = undefined,
     outboxDao: outboxDaoProp = undefined,
@@ -349,6 +358,27 @@
   }
 
   const bookProgress = $derived(nav.hasEpubProgress ? nav.bookProgress : Math.round(percentage));
+  // ── Opt-in diagnostics ──────────────────────────────────────────────────
+  // The panel is fed by polling the viewer's own read-only snapshot rather
+  // than by mirroring the numbers into `$state` here. Two reasons:
+  //   1. `pageBox`/`pageCount` and the pending-restore flags are plain layout
+  //      state inside the viewer's composables — they are not reactive and
+  //      cannot be subscribed to from here. Polling is the only honest read.
+  //   2. A mirror would be a second copy that can disagree with the reader.
+  // The poll only runs while the panel is on, so the cost is zero by default
+  // — which is what "invisible, not a product surface" has to mean in practice.
+  let liveDiagnostics = $state<ReaderDiagnostics>(emptyReaderDiagnostics());
+  const diagnosticsEnabled = $derived(showDiagnostics && viewer.kind === 'epub');
+  $effect(() => {
+    if (!diagnosticsEnabled) return;
+    const read = (): void => {
+      const snapshot = epubRef?.getDiagnostics?.();
+      if (snapshot) liveDiagnostics = snapshot;
+    };
+    read();
+    const timer = setInterval(read, 250);
+    return () => clearInterval(timer);
+  });
   const headerCurrentPage = $derived(nav.headerCurrentPage);
   const headerTotalPages = $derived(nav.headerTotalPages);
   // The fullscreen `%` reads the viewer scale (PDF) or viewer zoom (EPUB),
@@ -666,6 +696,7 @@
       {selectionBounds}
       {selectionContainer}
     />
+    <ReaderDiagnosticPanel diagnostics={{ ...liveDiagnostics, enabled: diagnosticsEnabled }} />
     {#if highlightMenuState.highlightMenu.open && highlightMenuState.highlightMenu.highlightId && highlightMenuState.highlightMenu.position}
       <div
         class="fixed inset-0 z-[99]"
