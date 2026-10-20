@@ -44,6 +44,25 @@ describe('Drive catalog contract', () => {
     expect(parseCanonicalBookName('uuid')).toBeNull();
     expect(parseCanonicalBookName('uuid.')).toBeNull();
   });
+  it('strips a Drive collision suffix so a twin upload dedupes to one bookId', () => {
+    // Drive renames the loser of a same-name upload race to `X (1).ext`. Both
+    // names are the SAME book and must resolve to the same id, or the shelf
+    // lists it twice (once with a `(1)` title).
+    expect(parseCanonicalBookName('5a110fa6 (1).pdf')).toEqual({
+      bookId: '5a110fa6',
+      ext: 'pdf',
+    });
+    expect(parseCanonicalBookName('5a110fa6 (2).epub')).toEqual({
+      bookId: '5a110fa6',
+      ext: 'epub',
+    });
+    // A name that merely contains parentheses is untouched: only a trailing
+    // parenthesised integer is the suffix.
+    expect(parseCanonicalBookName('Mi Libro (Edición).pdf')).toEqual({
+      bookId: 'Mi Libro (Edición)',
+      ext: 'pdf',
+    });
+  });
   it('reconciles by id, name, then independently verified hash', async () => {
     const r = await reconcileLegacyReference(
       'legacy-id',

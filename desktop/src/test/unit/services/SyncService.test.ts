@@ -474,9 +474,9 @@ describe('SyncService — syncBooks persists remote refs for local-only uploads 
     await SyncService.syncMetadata();
 
     expect(mockGDriveUpload).toHaveBeenCalledWith(
-      'book-9.epub',
+      'Local Only -- book-9.epub',
       new Uint8Array([1, 2, 3]),
-      'book-9.epub',
+      'Local Only -- book-9.epub',
     );
     expect(mockCatalogUpsertBook).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -521,11 +521,14 @@ describe('SyncService — syncBookCatalog reconciles books missing Drive refs (D
 
     await SyncService.syncMetadata();
 
-    // Binary upload under the canonical name, then refs persisted on the row.
+    // Binary upload under the readable `Title -- id.ext` name, then refs
+    // persisted on the row. The readable name is the user-facing identity; the
+    // canonical id stays embedded after the separator and is recovered by
+    // `parseCanonicalBookName`, so old id-only files keep resolving.
     expect(mockGDriveUpload).toHaveBeenCalledWith(
-      'book-gap.epub',
+      'Gap Book -- book-gap.epub',
       new Uint8Array([1, 2, 3]),
-      'book-gap.epub',
+      'Gap Book -- book-gap.epub',
     );
     expect(mockCatalogUpsertBook).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -13,11 +13,31 @@ import {
   canonicalStem,
   legacyForms,
   legacyStateNames,
+  readableDriveObjectName,
+  sanitizeTitleForFilename,
 } from '$lib/shared/sync/driveFilename';
 
-interface FilenameFixture {
+interface CanonicalFixture {
   input: string;
   expectedStem: string;
+}
+
+interface ReadableFixture {
+  title: string;
+  bookId: string;
+  extension: string;
+  expectedName: string;
+}
+
+interface TruncationFixture {
+  title: string;
+  expectedSanitized: string;
+}
+
+interface FixtureContract {
+  canonical: CanonicalFixture[];
+  readable: ReadableFixture[];
+  truncation: TruncationFixture[];
 }
 
 function locateFixturesFile(): string {
@@ -35,7 +55,8 @@ function locateFixturesFile(): string {
   }
 }
 
-const fixtures = JSON.parse(readFileSync(locateFixturesFile(), 'utf8')) as FilenameFixture[];
+const contract = JSON.parse(readFileSync(locateFixturesFile(), 'utf8')) as FixtureContract;
+const fixtures = contract.canonical;
 
 describe('DriveFilename — shared fixtures contract', () => {
   it('keeps at least 14 fixtures and matches each expected stem', () => {
@@ -46,6 +67,23 @@ describe('DriveFilename — shared fixtures contract', () => {
       );
       // Idempotence: re-canonicalizing an already-canonical stem is a no-op.
       expect(canonicalStem(fixture.expectedStem)).toBe(fixture.expectedStem);
+    }
+  });
+
+  it('composes the readable name for every pinned title/bookId/extension', () => {
+    expect(contract.readable.length).toBeGreaterThanOrEqual(7);
+    for (const fixture of contract.readable) {
+      expect(
+        readableDriveObjectName(fixture.title, fixture.bookId, fixture.extension),
+        `readable name for ${fixture.title}`,
+      ).toBe(fixture.expectedName);
+    }
+  });
+
+  it('sanitizes the pinned titles to the exact code-point bound', () => {
+    expect(contract.truncation.length).toBeGreaterThanOrEqual(1);
+    for (const fixture of contract.truncation) {
+      expect(sanitizeTitleForFilename(fixture.title)).toBe(fixture.expectedSanitized);
     }
   });
 

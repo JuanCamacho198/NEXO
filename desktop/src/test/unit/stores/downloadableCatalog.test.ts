@@ -27,7 +27,17 @@ vi.mock('$lib/shared/services/DriveConnectService', () => ({
 
 vi.mock('$lib/shared/services/storage/GDriveProvider', () => ({
   GDriveProvider: vi.fn(function () {
-    return { list: mockGDriveList, download: mockGDriveDownload };
+    return {
+      list: mockGDriveList,
+      // The store now reads the union of every `Nexo*` root. These specs model a
+      // single-root account: the same names come back with one root, so the
+      // existing `mockGDriveList` fixtures keep their meaning.
+      listAllRoots: async () => {
+        const names: string[] = await mockGDriveList('');
+        return { names, rootCount: 1, emptyRoots: 0 };
+      },
+      download: mockGDriveDownload,
+    };
   }),
 }));
 
@@ -139,6 +149,35 @@ describe('downloadableCatalog — loadAvailableFromDrive (REQ-01)', () => {
 
     expect(downloadableCatalog.error).toContain('boom');
     expect(downloadableCatalog.books).toEqual([]);
+    // A genuine failure is also reachable on the EMPTY shelf (contract §3.1):
+    // the banner used to live inside the `books.length > 0` block.
+    expect(downloadableCatalog.loadError).toContain('boom');
+  });
+
+  it('does NOT raise a listing error when Drive was never connected', async () => {
+    // "never connected" is the ordinary state, not a failure: it is typed
+    // DRIVE_NOT_CONNECTED and must stay off the empty shelf.
+    const notConnected = Object.assign(
+      new Error('Google Drive is not connected. Connect Google Drive in Settings.'),
+      { code: 'DRIVE_NOT_CONNECTED' },
+    );
+    mockGDriveList.mockRejectedValue(notConnected);
+
+    await loadAvailableFromDrive();
+
+    expect(downloadableCatalog.loadError).toBeNull();
+  });
+
+  it('dedupes the same book arriving from two roots (and a collided twin name)', async () => {
+    // Two `Nexo*` roots unioned: `shared.epub` appears in both, and the lost
+    // side of a same-name upload race carries Drive's ` (1)` suffix.
+    mockGDriveList.mockResolvedValue(['shared.epub', 'shared (1).epub', 'only-in-second.epub']);
+    mockListLibraryBooks.mockResolvedValue([]);
+
+    await loadAvailableFromDrive();
+
+    // ONE entry for `shared`, plus the genuinely distinct book.
+    expect(downloadableCatalog.books.map((b) => b.id)).toEqual(['shared', 'only-in-second']);
   });
 });
 

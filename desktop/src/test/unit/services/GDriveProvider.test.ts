@@ -130,6 +130,84 @@ describe('GDriveProvider — token source swap', () => {
   });
 });
 
+describe('GDriveProvider — listAllRoots (union of every Nexo* root, read-only)', () => {
+  let provider: GDriveProvider;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    globalThis.fetch = vi.fn();
+    __resetGDriveFolderCache();
+    provider = new GDriveProvider();
+  });
+
+  it('unions book names across `Nexo` and `Nexo (1)`, never creating anything', async () => {
+    mockAuth('token-multi');
+    mockDriveApiResponses([
+      // 1. Root folders: the original plus Drive's collision twin.
+      {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            files: [
+              { id: 'root-a', name: 'Nexo' },
+              { id: 'root-b', name: 'Nexo (1)' },
+              // A contrived sibling that only CONTAINS "Nexo" is not a root.
+              { id: 'root-x', name: 'Nexo backup' },
+            ],
+          }),
+      },
+      // 2. `Nexo` books folder lookup.
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'books-a', name: 'books' }] }) },
+      // 3. `Nexo` book files.
+      {
+        ok: true,
+        json: () => Promise.resolve({ files: [{ name: 'aaa.epub' }, { name: 'shared.pdf' }] }),
+      },
+      // 4. `Nexo (1)` books folder lookup.
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'books-b', name: 'books' }] }) },
+      // 5. `Nexo (1)` book files, incl. the collision-suffixed duplicate.
+      {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            files: [{ name: 'bbb.epub' }, { name: 'shared.pdf' }, { name: 'zzz (1).pdf' }],
+          }),
+      },
+    ]);
+
+    const result = await provider.listAllRoots();
+
+    expect(result.rootCount).toBe(2);
+    expect(result.emptyRoots).toBe(0);
+    expect(result.names).toEqual([
+      'aaa.epub',
+      'shared.pdf',
+      'bbb.epub',
+      'shared.pdf',
+      'zzz (1).pdf',
+    ]);
+    // Read-only: no POST (create) ever leaves this method.
+    const methods = vi.mocked(globalThis.fetch).mock.calls.map((c) => c[1]?.method);
+    expect(methods).not.toContain('POST');
+    expect(methods).not.toContain('PATCH');
+  });
+
+  it('counts a root with no books folder as empty and returns its other books', async () => {
+    mockAuth('token-empty');
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-a', name: 'Nexo' }] }) },
+      // No books folder under this root.
+      { ok: true, json: () => Promise.resolve({ files: [] }) },
+    ]);
+
+    const result = await provider.listAllRoots();
+
+    expect(result.rootCount).toBe(1);
+    expect(result.emptyRoots).toBe(1);
+    expect(result.names).toEqual([]);
+  });
+});
+
 describe('GDriveProvider — idempotent upload (DRP-3)', () => {
   let provider: GDriveProvider;
 
