@@ -3,6 +3,8 @@ package com.nexo.domain.sync
 import app.cash.turbine.test
 import com.nexo.data.session.SessionManager
 import com.nexo.data.sync.SessionGateImpl
+import com.nexo.domain.error.AppError
+import com.nexo.domain.error.ErrorCategory
 import com.nexo.domain.model.AuthSession
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -67,9 +69,40 @@ class SessionGateTest {
         }
 
     @Test
-    fun hasLiveSession_returnsFalseAfterEnsureFreshSessionFailure() =
+    fun hasLiveSession_keepsGateOpenOnTransientRefreshFailure() =
         runTest {
-            coEvery { sessionManager.ensureFreshSession() } returns Result.failure(IllegalStateException("expired"))
+            // Policy: a transient failure to REFRESH is not the same as having no
+            // session. A non-AppError failure (network/SDK hiccup) must not close
+            // the gate once it has been established.
+            coEvery { sessionManager.ensureFreshSession() } returns Result.success(authSession())
+            gate.ensureFreshSession()
+            assertTrue(gate.hasLiveSession())
+
+            coEvery { sessionManager.ensureFreshSession() } returns
+                Result.failure(IllegalStateException("network unreachable"))
+
+            gate.ensureFreshSession()
+
+            assertTrue(gate.hasLiveSession())
+        }
+
+    @Test
+    fun hasLiveSession_closesGateWhenSessionIsGenuinelyMissing() =
+        runTest {
+            // Policy: only an explicit "no session" error closes the gate.
+            coEvery { sessionManager.ensureFreshSession() } returns Result.success(authSession())
+            gate.ensureFreshSession()
+            assertTrue(gate.hasLiveSession())
+
+            coEvery { sessionManager.ensureFreshSession() } returns
+                Result.failure(
+                    AppError(
+                        category = ErrorCategory.AUTH,
+                        code = "SUPABASE_SESSION_MISSING",
+                        message = "No session available.",
+                        component = "test",
+                    ),
+                )
 
             gate.ensureFreshSession()
 

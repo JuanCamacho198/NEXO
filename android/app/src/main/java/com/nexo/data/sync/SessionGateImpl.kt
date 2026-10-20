@@ -2,6 +2,7 @@ package com.nexo.data.sync
 
 import com.nexo.data.session.SessionManager
 import com.nexo.debug.DebugLog
+import com.nexo.domain.error.AppError
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.sync.SessionEvent
 import com.nexo.domain.sync.SessionGate
@@ -46,10 +47,25 @@ class SessionGateImpl(
             val result = sessionManager.ensureFreshSession()
             if (result.isSuccess) {
                 live = true
+                DebugLog.info(TAG, "ensureFreshSession: live session confirmed — gate open")
                 _sessionEvents.tryEmit(SessionEvent.Live)
             } else {
-                val reason = result.exceptionOrNull()?.message ?: "ensureFreshSession failed"
-                DebugLog.warn(TAG, "ensureFreshSession failed: $reason")
+                val error = result.exceptionOrNull()
+                val reason = error?.message ?: "ensureFreshSession failed"
+                val code = (error as? AppError)?.code
+                // "No session" and "could not refresh" are DIFFERENT states. The
+                // manager falls back to the persisted session on a transient
+                // refresh failure, so reaching here means there is genuinely no
+                // session to serve (or the fallback could not be read).
+                val isMissingSession = code == NO_SESSION_CODE
+                DebugLog.warn(
+                    TAG,
+                    "ensureFreshSession failed [${code ?: error?.javaClass?.simpleName ?: "unknown"}]: $reason " +
+                        "(sessionPresent=$isMissingSession)",
+                )
+                if (isMissingSession) {
+                    live = false
+                }
                 _sessionEvents.tryEmit(SessionEvent.Expired(reason))
             }
             result
@@ -81,5 +97,13 @@ class SessionGateImpl(
 
     companion object {
         private const val TAG = "SessionGateImpl"
+
+        /**
+         * Error code meaning "there is genuinely no session", as opposed to a
+         * transient failure to refresh one. Kept as a literal so the gate does
+         * not depend on a concrete session-manager implementation; the value
+         * matches `SupabaseSessionManager`'s `SUPABASE_SESSION_MISSING`.
+         */
+        private const val NO_SESSION_CODE = "SUPABASE_SESSION_MISSING"
     }
 }

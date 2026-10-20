@@ -157,6 +157,10 @@ class AuthViewModel
                 val sessionResult = authRepository.getCurrentSession()
                 logDebug("restore: getCurrentSession took ${System.currentTimeMillis() - t0}ms")
                 val session = sessionResult.getOrNull()
+                logDebug(
+                    "restore: decision session=${if (session == null) "none" else "present(${session.userId})"} " +
+                        "error=${sessionResult.exceptionOrNull()?.message ?: "none"}",
+                )
 
                 // Release the splash the moment the session is known. Sync must NEVER
                 // gate the first frame: on a slow network its sequential retries (Drive

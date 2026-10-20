@@ -3,10 +3,13 @@
 package com.nexo.data.session
 
 import com.nexo.data.remote.supabase.SupabaseClientProvider
+import com.nexo.debug.DebugLog
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
 import com.nexo.domain.model.AuthSession
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.user.UserSession
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -38,65 +41,113 @@ class SupabaseSessionManager(
 
     override suspend fun restoreSession(): Result<AuthSession?> = getCurrentSession()
 
+    /**
+     * Waits for supabase-kt to finish loading the persisted session before reading it.
+     *
+     * `Auth.init()` restores the session from storage on `authScope` **in the
+     * background**, so `sessionStatus` is still `Initializing` for the first
+     * milliseconds of a cold start. Reading `currentSessionOrNull()` without
+     * awaiting returns `null` during that window, which is indistinguishable
+     * from "signed out" — the app would route to the login screen even though a
+     * valid session is on disk. That is a race, so it only reproduces sometimes.
+     */
+    private suspend fun awaitAuthInitialized() {
+        runCatching { supabase.auth.awaitInitialization() }
+            .onFailure { DebugLog.warn(TAG, "awaitInitialization failed: ${it.message}") }
+    }
+
     override suspend fun getCurrentSession(): Result<AuthSession?> =
         try {
+            awaitAuthInitialized()
             val session = supabase.auth.currentSessionOrNull()
-            val authSession =
-                session?.let { s ->
-                    s.user?.let { user ->
-                        AuthSession(
-                            userId = user.id,
-                            email = user.email,
-                            displayName =
-                                user.userMetadata?.get("full_name").asMetadataString()
-                                    ?: user.userMetadata?.get("name").asMetadataString(),
-                            photoUrl =
-                                user.userMetadata?.get("avatar_url").asMetadataString()
-                                    ?: user.userMetadata?.get("picture").asMetadataString(),
-                            providerToken = s.providerToken,
-                            provider = user.userMetadata?.get("provider").asMetadataString(),
-                            createdAt = user.createdAt?.toString(),
-                        )
-                    }
-                }
+            val authSession = session?.toAuthSession()
+            DebugLog.info(
+                TAG,
+                "getCurrentSession: ${if (authSession == null) "no session" else "session restored for ${authSession.userId}"}",
+            )
             Result.success(authSession)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
+            DebugLog.warn(TAG, "getCurrentSession failed: ${e.message}")
             Result.failure(e)
         }
 
     @OptIn(kotlin.time.ExperimentalTime::class)
     override suspend fun ensureFreshSession(): Result<AuthSession> {
+        awaitAuthInitialized()
+        val current = supabase.auth.currentSessionOrNull()
+        if (current == null) {
+            DebugLog.warn(TAG, "ensureFreshSession: no session available")
+            return Result.failure(missingSessionError())
+        }
+
+        val expiresSoon = current.expiresAt.epochSeconds <= System.currentTimeMillis() / 1000 + REFRESH_WINDOW_SECONDS
+        if (!expiresSoon) {
+            DebugLog.info(TAG, "ensureFreshSession: token still valid, no refresh needed")
+            return current.toAuthSession()
+                ?.let { Result.success(it) }
+                ?: Result.failure(missingSessionError())
+        }
+
         return try {
-            val session = supabase.auth.currentSessionOrNull()
-            if (session == null || session.expiresAt.epochSeconds <= System.currentTimeMillis() / 1000 + 60) {
-                supabase.auth.refreshCurrentSession()
-                val freshSession =
-                    supabase.auth.currentSessionOrNull()
-                        ?: return Result.failure(Exception("No session after refresh"))
-                val authSession =
-                    freshSession.user?.let { user ->
-                        AuthSession(
-                            userId = user.id,
-                            email = user.email,
-                            displayName =
-                                user.userMetadata?.get("full_name").asMetadataString()
-                                    ?: user.userMetadata?.get("name").asMetadataString(),
-                            photoUrl =
-                                user.userMetadata?.get("avatar_url").asMetadataString()
-                                    ?: user.userMetadata?.get("picture").asMetadataString(),
-                            providerToken = freshSession.providerToken,
-                            provider = user.userMetadata?.get("provider").asMetadataString(),
-                            createdAt = user.createdAt?.toString(),
-                        )
-                    } ?: return Result.failure(Exception("No user in session after refresh"))
-                Result.success(authSession)
+            DebugLog.info(TAG, "ensureFreshSession: token expires soon, refreshing")
+            supabase.auth.refreshCurrentSession()
+            val refreshed = supabase.auth.currentSessionOrNull()
+            val authSession = refreshed?.toAuthSession()
+            if (authSession == null) {
+                // Refresh reported success but left no session: fall back to what
+                // was on disk rather than inventing a signed-out state.
+                DebugLog.warn(TAG, "ensureFreshSession: refresh left no session, falling back to persisted session")
+                current.toAuthSession()
+                    ?.let { Result.success(it) }
+                    ?: Result.failure(missingSessionError())
             } else {
-                getCurrentSession().mapCatching { requireNotNull(it) { "No session after refresh" } }
+                DebugLog.info(TAG, "ensureFreshSession: refreshed for ${authSession.userId}")
+                Result.success(authSession)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Result.failure(e)
+            // A transient refresh failure (network down, Play/SDK hiccup, 5xx)
+            // does NOT mean the user has no session. Keep serving the persisted
+            // session so callers do not interpret this as "signed out" — an
+            // unexpired token is still usable while the retry window runs.
+            DebugLog.warn(
+                TAG,
+                "ensureFreshSession: refresh failed (${e.javaClass.simpleName}: ${e.message}); " +
+                    "serving persisted session instead of failing",
+            )
+            current.toAuthSession()
+                ?.let { Result.success(it) }
+                ?: Result.failure(e)
         }
     }
+
+    private fun UserSession.toAuthSession(): AuthSession? =
+        user?.let { user ->
+            AuthSession(
+                userId = user.id,
+                email = user.email,
+                displayName =
+                    user.userMetadata?.get("full_name").asMetadataString()
+                        ?: user.userMetadata?.get("name").asMetadataString(),
+                photoUrl =
+                    user.userMetadata?.get("avatar_url").asMetadataString()
+                        ?: user.userMetadata?.get("picture").asMetadataString(),
+                providerToken = providerToken,
+                provider = user.userMetadata?.get("provider").asMetadataString(),
+                createdAt = user.createdAt?.toString(),
+            )
+        }
+
+    private fun missingSessionError(): AppError =
+        AppError(
+            category = ErrorCategory.AUTH,
+            code = "SUPABASE_SESSION_MISSING",
+            message = "No session available.",
+            component = COMPONENT,
+        )
 
     override suspend fun signOutAll(): Result<Unit> =
         try {
@@ -136,5 +187,10 @@ class SupabaseSessionManager(
 
     companion object {
         const val COMPONENT = "SupabaseSessionManager"
+
+        private const val TAG = COMPONENT
+
+        /** Refresh an access token this many seconds before it actually expires. */
+        private const val REFRESH_WINDOW_SECONDS = 60L
     }
 }
