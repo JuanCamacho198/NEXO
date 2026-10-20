@@ -13,6 +13,7 @@ import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { IFRAME_CFI_BRIDGE_SCRIPT } from '$lib/features/reader/viewer-epub/cfiBridgeIframe';
 import { IFRAME_QUOTE_SCRIPT } from '$lib/features/reader/viewer-epub/epubQuoteIframe';
 import { IFRAME_HIGHLIGHT_OVERLAY_SCRIPT } from '$lib/features/reader/viewer-epub/epubHighlightOverlayIframe';
+import { buildChapterSelectionScript } from '$lib/features/reader/viewer-epub/epubSelectionScript';
 import { buildReaderFontFaceCss } from '$lib/features/reader/viewer-epub/readerFontFaces';
 import {
   buildReaderOverrideCss,
@@ -350,181 +351,11 @@ export function buildChapterSrcdoc(
   highlightOverlayScript.textContent = IFRAME_HIGHLIGHT_OVERLAY_SCRIPT;
 
   const selectionScript = doc.createElement('script');
-  selectionScript.textContent = `
-      (function() {
-        var timer = null;
-        var mouseupDebounceTimer = null;
-        var CHAPTER_HREF = ${JSON.stringify(normalizeHref(currentChapterHref))};
-        var CHAPTER_INDEX = ${chapterIndex};
-        var CHAPTER_TITLE = ${JSON.stringify(chapterTitle ?? null)};
-
-        document.addEventListener('click', function(ev) {
-          var hit = null;
-          try {
-            if (window.__epubHighlightOverlay &&
-                typeof window.__epubHighlightOverlay.hitTest === 'function') {
-              hit = window.__epubHighlightOverlay.hitTest(ev.clientX, ev.clientY);
-            }
-          } catch (e) {
-            hit = null;
-          }
-          if (!hit) return;
-          ev.stopPropagation();
-          if (ev.preventDefault) ev.preventDefault();
-          if (mouseupDebounceTimer) {
-            clearTimeout(mouseupDebounceTimer);
-            mouseupDebounceTimer = null;
-          }
-          if (timer) {
-            clearTimeout(timer);
-            timer = null;
-          }
-          var sel = window.getSelection();
-          if (sel) sel.removeAllRanges();
-          window.parent.postMessage({
-            type: 'epub-highlight-click',
-            id: hit.id,
-            x: ev.clientX,
-            y: ev.clientY,
-            color: hit.color,
-            text: hit.text,
-            pageNumber: CHAPTER_INDEX
-          }, '*');
-        }, true);
-
-        document.addEventListener('mouseup', function() {
-          if (timer) clearTimeout(timer);
-          if (mouseupDebounceTimer) clearTimeout(mouseupDebounceTimer);
-          mouseupDebounceTimer = setTimeout(function() {
-            mouseupDebounceTimer = null;
-            var sel = window.getSelection();
-            if (!sel || sel.isCollapsed || !sel.toString().trim()) return;
-            var text = sel.toString().trim();
-            var range = sel.getRangeAt(0);
-            var overlapsHl = false;
-            try {
-              if (window.__epubHighlightOverlay &&
-                  typeof window.__epubHighlightOverlay.rangeOverlapsHighlight === 'function') {
-                overlapsHl = window.__epubHighlightOverlay.rangeOverlapsHighlight(range);
-              }
-            } catch (e) {
-              overlapsHl = false;
-            }
-            if (overlapsHl) return;
-            var frameRect = (window.frameElement && window.frameElement.getBoundingClientRect)
-              ? window.frameElement.getBoundingClientRect()
-              : { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 };
-            var rect = range.getBoundingClientRect();
-            var bounds = {
-              left: rect.left,
-              top: rect.top,
-              right: rect.right,
-              bottom: rect.bottom
-            };
-            var containerRect = {
-              left: frameRect.left,
-              top: frameRect.top,
-              width: frameRect.width,
-              height: frameRect.height
-            };
-            var clientRects = range.getClientRects();
-            var rects = [];
-            for (var i = 0; i < clientRects.length; i++) {
-              var r = clientRects[i];
-              rects.push({
-                left: r.left,
-                top: r.top,
-                width: r.width,
-                height: r.height
-              });
-            }
-            var cfi = null;
-            try {
-              if (window.__cfiBridge &&
-                  typeof window.__cfiBridge.rangeToCFI === 'function') {
-                cfi = window.__cfiBridge.rangeToCFI(range, CHAPTER_HREF, document);
-              }
-            } catch (e) {
-              console.warn('epub-cfi: rangeToCFI threw', e);
-            }
-            var quote = null;
-            try {
-              if (window.__epubQuote &&
-                  typeof window.__epubQuote.extract === 'function') {
-                quote = window.__epubQuote.extract(range, document).quote;
-              }
-            } catch (e) {
-              quote = null;
-            }
-            window.parent.postMessage({
-              type: 'epub-selection',
-              text: text,
-              bounds: bounds,
-              container: containerRect,
-              rects: rects,
-              pageNumber: CHAPTER_INDEX,
-              cfi: cfi,
-              quote: quote,
-              chapterTitle: CHAPTER_TITLE
-            }, '*');
-          }, 100);
-        });
-        document.addEventListener('selectionchange', function() {
-          var sel = window.getSelection();
-          if (!sel || sel.isCollapsed) {
-            if (timer) clearTimeout(timer);
-            timer = setTimeout(function() {
-              window.parent.postMessage({ type: 'epub-selection', text: '', pageNumber: CHAPTER_INDEX }, '*');
-            }, 200);
-          }
-        });
-        var scrollDismissTimer = null;
-        function dismissOnScroll() {
-          if (scrollDismissTimer) clearTimeout(scrollDismissTimer);
-          scrollDismissTimer = setTimeout(function() {
-            window.parent.postMessage({ type: 'epub-selection', text: '', pageNumber: CHAPTER_INDEX }, '*');
-          }, 50);
-        }
-        window.addEventListener('scroll', dismissOnScroll, true);
-        document.addEventListener('scroll', dismissOnScroll, true);
-
-        // Pagination key routing. When the chapter document is the only
-        // scrollable surface (paginated mode pins the parent container to one
-        // page box and moves the overflow in here), focusing the frame means
-        // the browser's own arrow handling consumes the key and scrolls the
-        // columns by its default step — a few dozen pixels, not a page — and
-        // the parent window never sees a keydown at all, because key events do
-        // not cross a frame boundary.
-        //
-        // So the frame reports the arrow upward and the parent decides. It only
-        // does this when the document is genuinely the inline column layout, so
-        // scrolling mode keeps its existing behaviour untouched; and it only
-        // claims Left/Right, leaving Up/Down to the browser for intra-page
-        // scrolling of a tall block.
-        document.addEventListener('keydown', function(ev) {
-          if (ev.key !== 'ArrowRight' && ev.key !== 'ArrowLeft') return;
-          if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
-          var html = document.documentElement;
-          var rootStyle = window.getComputedStyle(html);
-          var inlineColumns =
-            (rootStyle.overflowX === 'auto' || rootStyle.overflowX === 'scroll') &&
-            rootStyle.overflowY !== 'auto' &&
-            rootStyle.overflowY !== 'scroll';
-          if (!inlineColumns) return;
-          var target = ev.target;
-          if (target && target.closest &&
-              target.closest('input, textarea, select, button, [contenteditable], [role="textbox"], [role="searchbox"], [role="combobox"]')) {
-            return;
-          }
-          ev.preventDefault();
-          window.parent.postMessage({
-            type: 'epub-pagination-key',
-            direction: ev.key === 'ArrowRight' ? 'next' : 'prev',
-            pageNumber: CHAPTER_INDEX
-          }, '*');
-        }, true);
-      })();
-    `;
+  selectionScript.textContent = buildChapterSelectionScript({
+    chapterHref: normalizeHref(currentChapterHref),
+    chapterIndex,
+    chapterTitle: chapterTitle ?? null,
+  });
 
   for (const script of doc.querySelectorAll('script')) {
     script.remove();

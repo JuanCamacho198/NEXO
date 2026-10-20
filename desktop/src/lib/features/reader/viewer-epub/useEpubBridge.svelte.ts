@@ -76,7 +76,7 @@ export type EpubBridgeDeps = {
     quote?: string | null;
     chapterTitle?: string | null;
   }) => void;
-  onselectionclear?: () => void;
+  onselectionclear?: (reason?: string) => void;
   handleEpubHighlightClick: (msg: {
     id: string;
     x: number;
@@ -358,6 +358,18 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     deps.onLocationContext?.({ locator: locatorToJson(locator), percentage });
   }
 
+  /**
+   * The selection the reader was last told about, as `spine|cfi`.
+   *
+   * A release emits its selection twice (immediate, then debounced). The pair
+   * must collapse into one menu, and the two forms are not byte-identical (the
+   * immediate one carries no rects), so they cannot be compared as payloads.
+   * This records the last *opened* selection so its own debounced twin is
+   * dropped, and is cleared by any explicit clear so a reader selecting the
+   * same words again gets a menu.
+   */
+  let lastSelectionKey: string | null = null;
+
   function handleIframeMessage(event: MessageEvent): void {
     if (!event.data || typeof event.data !== 'object') return;
 
@@ -438,12 +450,23 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     // text from old chapters are still dropped below.
     const verdict = classifySelectionMessage(event.data, deps.getCurrentSpineIndex());
     if (verdict === 'clear') {
+      // The frame's own handler names why the selection ended (`scroll`,
+      // `inside-click`, `escape`, …). Forwarding it is what turns "the menu did
+      // not close" from an unattributable symptom into a logged event with a
+      // source.
+      const clearReason = typeof event.data.reason === 'string' ? event.data.reason : undefined;
       if (debugState.enabled) {
         debugState.epub.guardResult = 'pass-clear';
         debugState.epub.emptyTextMessageCount++;
       }
+      logger.debug(
+        'epub-sel: clear received',
+        { reason: clearReason ?? '(none)', pageNumber: event.data.pageNumber ?? null },
+        'reader',
+      );
       debugState.epub.onselectionclearCalled++;
-      deps.onselectionclear?.();
+      lastSelectionKey = null;
+      deps.onselectionclear?.(clearReason);
       return;
     }
 
@@ -469,6 +492,30 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     const resolvedQuote = typeof event.data.quote === 'string' ? event.data.quote : null;
     const resolvedChapterTitle =
       typeof event.data.chapterTitle === 'string' ? event.data.chapterTitle : null;
+
+    // A release emits the selection twice — an immediate form and the debounced
+    // authoritative one. The reader must see ONE menu, and the two forms differ
+    // (the immediate one carries no rects), so the pair cannot be collapsed by
+    // comparing payloads. The pair is recognised by the page it belongs to plus
+    // the fact that neither a clear nor a different chapter intervened: the
+    // first form opens the menu, and the second is allowed through only when it
+    // carries rects the first could not. A gesture on a *different* chapter
+    // resets the flag, so a genuine second selection is never swallowed.
+    const selectionKey = `${deps.getCurrentSpineIndex()}|${resolvedCfi ?? ''}`;
+    const isFast = event.data.fast === true;
+    if (!isFast && selectionKey === lastSelectionKey) {
+      logger.debug(
+        'epub-sel: duplicate selection ignored',
+        {
+          key: selectionKey.slice(0, 80),
+          rects: Array.isArray(event.data.rects) ? event.data.rects.length : 0,
+        },
+        'reader',
+      );
+      return;
+    }
+    lastSelectionKey = selectionKey;
+
     deps.onselection({
       text: event.data.text,
       bounds: event.data.bounds,

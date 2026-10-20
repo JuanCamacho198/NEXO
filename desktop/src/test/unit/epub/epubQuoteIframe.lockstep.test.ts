@@ -137,16 +137,25 @@ describe('epubQuoteIframe lockstep (REQ-DRE-005)', () => {
   });
 
   it('useEpubRender injects the fragment and carries the chapter title into the payload', () => {
-    const source = readFileSync(
+    const renderSource = readFileSync(
       join(process.cwd(), 'src/lib/features/reader/viewer-epub/useEpubRender.svelte.ts'),
       'utf8',
     );
-    expect(source).toContain('IFRAME_QUOTE_SCRIPT');
-    expect(source).toContain('window.__epubQuote');
-    expect(source).toContain('__epubQuote.extract(range, document)');
-    expect(source).toContain('CHAPTER_TITLE');
-    expect(source).toContain('chapterTitle: CHAPTER_TITLE');
+    // The selection script was extracted to its own module (the viewer was far
+    // over the 300-line budget); the payload assertions follow it there. What
+    // stays here is that the viewer actually injects both scripts, and that the
+    // chapter title reaches the payload the selection script builds.
+    const selectionSource = readFileSync(
+      join(process.cwd(), 'src/lib/features/reader/viewer-epub/epubSelectionScript.ts'),
+      'utf8',
+    );
+    expect(renderSource).toContain('IFRAME_QUOTE_SCRIPT');
+    expect(renderSource).toContain('buildChapterSelectionScript');
+    expect(selectionSource).toContain('window.__epubQuote');
+    expect(selectionSource).toContain('__epubQuote.extract(range, document)');
+    expect(selectionSource).toContain('CHAPTER_TITLE');
+    expect(selectionSource).toContain('chapterTitle: CHAPTER_TITLE');
     // The CFI bridge stays untouched: its lockstep twin is not imported here.
-    expect(source).toContain('IFRAME_CFI_BRIDGE_SCRIPT');
+    expect(renderSource).toContain('IFRAME_CFI_BRIDGE_SCRIPT');
   });
 });

@@ -542,6 +542,10 @@ describe('useEpubRender — pure helpers', () => {
       expect(srcdoc).toContain('__cfiBridge');
       expect(srcdoc).toContain('__epubHighlightOverlay');
       expect(srcdoc).toContain('epub-selection');
+      // The pagination key routing lives in the same injected script as the
+      // selection bridge (it reads the same `CHAPTER_INDEX` closure variable),
+      // so a chapter render must carry it too.
+      expect(srcdoc).toContain('epub-pagination-key');
       expect(srcdoc).toContain('epub-resize');
       expect(srcdoc).toContain('setSpine');
       // spine JSON injected

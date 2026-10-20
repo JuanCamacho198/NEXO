@@ -87,7 +87,7 @@
       id: string,
       opts?: HighlightActionOpts,
     ) => void;
-    onselectionclear?: () => void;
+    onselectionclear?: (reason?: string) => void;
     isFullscreen?: boolean;
     onIframeMouseMove?: (x: number, y: number) => void;
     onIframeMouseLeave?: () => void;
@@ -322,7 +322,7 @@
     },
     onLocationContext: (ctx) => onLocationContext?.(ctx),
     onselection: (event) => onselection?.(event),
-    onselectionclear: () => onselectionclear?.(),
+    onselectionclear: (reason) => onselectionclear?.(reason),
     handleEpubHighlightClick: (m) => highlights.handleEpubHighlightClick(m),
     handleEpubHighlightFailed: (m) => highlights.handleEpubHighlightFailed(m),
     handleEpubHighlightPlaced: (m) => highlights.handleEpubHighlightPlaced(m),
@@ -362,7 +362,7 @@
       }
     },
     emitPreciseLocation: () => bridge.emitPreciseLocation(),
-    onPageTurn: () => onselectionclear?.(),
+    onPageTurn: () => onselectionclear?.('page-turn'),
     // The CFI/fragment restore is what places the reader at their stored
     // position on open; while it is in flight the offset is still the fresh
     // document's 0, so a turn taken there would step from a position about to be
@@ -383,7 +383,19 @@
     emitPreciseLocation();
     // U2: scrolling invalidates the selection anchor bounds the menu is
     // pinned to — the menu must not float over the new viewport.
-    onselectionclear?.();
+    //
+    // Contract §2.2 case 3 requires BOTH the menu to close AND the selection to
+    // clear. `onselectionclear` only hides the menu: the parent's
+    // `dismissToolbar` collapses nothing, and the frame's own `scroll` clear is
+    // suppressed while `dragState === 'dragging'` (a scroll can be the tail of a
+    // drag), so the chapter's selection survived a scroll with the toolbar gone.
+    // This is the REAL scroll surface for scrolling mode: the iframe is sized to
+    // the whole chapter (measured `scrollHeight === clientHeight`), so a scroll
+    // never fires inside the frame and `onFrameScroll` never runs for the reader.
+    // Collapse the frame's selection explicitly, exactly as the pointerdown and
+    // colour paths already do.
+    clearIframeSelection();
+    onselectionclear?.('container-scroll');
   }
   function refreshReaderStyles(): void {
     render.refreshReaderStyles();
@@ -654,7 +666,11 @@
     // immersive chrome, which exits on the next Esc via its own handler.
     if (e.key === 'Escape' && hasSelectionMenu) {
       e.stopImmediatePropagation();
-      onselectionclear?.();
+      // Escape closes the menu AND the frame's selection. Leaving the range
+      // selected kept the text highlighted with nothing to act on it (measured;
+      // documented in `readerSelection.spec.ts` as a known defect).
+      clearIframeSelection();
+      onselectionclear?.('escape');
       return;
     }
     // The arrow contract lives in `keyboardNav.resolveReaderArrowIntent`: it
@@ -700,7 +716,7 @@
       if (!paginated) return;
       pagination.syncPageFromScroll();
       emitPreciseLocation();
-      onselectionclear?.();
+      onselectionclear?.('frame-scroll');
     };
     const onClick = (e: MouseEvent): void => {
       const target = e.target as Element | null;

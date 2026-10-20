@@ -40,6 +40,13 @@ export type LibraryRow = {
  * Returns the chapter frame: the one whose document carries the reader-override
  * `<style id="nexo-reader-overrides">`. Polls because the frame is created and
  * its `srcdoc` parsed asynchronously after the click.
+ *
+ * This deliberately does NOT wait for rendered text: a chapter legitimately has
+ * none (a cover page), and the specs that must skip on that case
+ * (`chapterHasText`) need the frame back so they can decide. Callers that need a
+ * *settled* document — anything that selects, because the reader swaps the
+ * `srcdoc` again as assets arrive and drives a document that would be discarded
+ * — wait for their own precondition; see `selectTextInChapter`.
  */
 export async function waitForChapterFrame(page: Page, timeoutMs = 30_000): Promise<Frame> {
   const deadline = Date.now() + timeoutMs;
@@ -199,10 +206,21 @@ export async function chapterHasText(frame: Frame): Promise<boolean> {
  * **frame's own** `Selection`/`Range` API — the parent document has a different
  * `document` and cannot select nodes the chapter owns.
  *
- * The range starts at the first non-whitespace text node and spans up to
- * `maxChars` characters, stopping at a whitespace boundary so the selection is
- * a readable run rather than a mid-word cut. Returns the selected string, or
- * null when the document has no usable text node.
+ * The range starts at the first non-whitespace text node **that is on screen**
+ * and spans up to `maxChars` characters, stopping at a whitespace boundary so
+ * the selection is a readable run rather than a mid-word cut. Returns the
+ * selected string, or null when the document has no usable text node.
+ *
+ * The on-screen requirement is not cosmetic. This harness previously took the
+ * first text node anywhere in the chapter, and the chapter is not just the
+ * visible page: the iframe is sized to the whole chapter (measured at ~18 000 px
+ * for one), so the first node can be tens of thousands of pixels above the
+ * viewport. The toolbar is anchored to the selection's rect, so selecting an
+ * off-screen run puts the toolbar off-screen too and `toBeVisible()` fails for
+ * a reason that has nothing to do with the behaviour under test. The visible
+ * band is the **parent** viewport height (the frame's own `innerHeight` is the
+ * content height, not the visible one), which is how `readerPaging` picks its
+ * node as well.
  *
  * The mouse is NOT driven: `mouseup` on the iframe would require the iframe to
  * be scrolled into view at real coordinates, which is fragile. The chapter's
@@ -212,35 +230,57 @@ export async function chapterHasText(frame: Frame): Promise<boolean> {
  * (`frame.getSelection()` -> postMessage -> parent `onselection`).
  */
 export async function selectTextInChapter(frame: Frame, maxChars = 60): Promise<string | null> {
-  const text = await frame.evaluate((limit) => {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    let node = walker.nextNode();
-    while (node) {
-      const value = node.nodeValue ?? '';
-      if (value.trim().length >= 3) break;
-      node = walker.nextNode();
-    }
-    if (!node || !node.nodeValue) return null;
+  const visibleHeight = await frame
+    .locator('body')
+    .evaluate(
+      () => (globalThis as unknown as { parent: { innerHeight: number } }).parent.innerHeight,
+    )
+    .catch(() => 800);
 
-    const data = node.nodeValue;
-    const start = data.search(/\S/);
-    if (start < 0) return null;
+  const text = await frame.evaluate(
+    ([limit, visible]) => {
+      const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE']);
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          let el: Node | null = node.parentElement;
+          while (el) {
+            if (SKIP.has(el.nodeName)) return NodeFilter.FILTER_REJECT;
+            el = el.parentElement;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
+      let node = walker.nextNode();
+      while (node) {
+        const value = node.nodeValue ?? '';
+        const rect = (node as Text).parentElement?.getBoundingClientRect();
+        const onScreen = rect ? rect.top >= 0 && rect.bottom <= visible : false;
+        if (value.trim().length >= 3 && onScreen) break;
+        node = walker.nextNode();
+      }
+      if (!node || !node.nodeValue) return null;
 
-    let end = Math.min(data.length, start + limit);
-    const ws = data.lastIndexOf(' ', end);
-    if (ws > start + 4) end = ws;
+      const data = node.nodeValue;
+      const start = data.search(/\S/);
+      if (start < 0) return null;
 
-    const range = document.createRange();
-    range.setStart(node, start);
-    range.setEnd(node, end);
+      let end = Math.min(data.length, start + limit);
+      const ws = data.lastIndexOf(' ', end);
+      if (ws > start + 4) end = ws;
 
-    const selection = document.getSelection();
-    if (!selection) return null;
-    selection.removeAllRanges();
-    selection.addRange(range);
+      const range = document.createRange();
+      range.setStart(node, start);
+      range.setEnd(node, end);
 
-    return range.toString();
-  }, maxChars);
+      const selection = document.getSelection();
+      if (!selection) return null;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      return range.toString();
+    },
+    [maxChars, visibleHeight] as const,
+  );
 
   if (text === null) return null;
 
@@ -256,9 +296,99 @@ export async function selectTextInChapter(frame: Frame, maxChars = 60): Promise<
 
 /** The frame's own current selection text (the parent cannot see it). */
 export async function readFrameSelection(frame: Frame): Promise<string> {
-  return frame
-    .evaluate(() => (document.getSelection()?.toString() ?? '').trim())
-    .catch(() => '');
+  return frame.evaluate(() => (document.getSelection()?.toString() ?? '').trim()).catch(() => '');
+}
+
+/**
+ * Clicks inside the chapter without selecting anything, the way a reader clicks
+ * to move the caret.
+ *
+ * The gesture is composed at the frame level (down, up, collapse, click) rather
+ * than driven with `page.mouse`, because a real click needs real page
+ * coordinates inside a frame that `openBook` did not scroll into view. The
+ * frame's own handlers read `mousedown` / `click`, which is exactly this
+ * sequence — the same technique `selectTextInChapter` uses for `mouseup`.
+ */
+export async function clickInsideChapter(frame: Frame): Promise<void> {
+  await frame.evaluate(() => {
+    document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    document.getSelection()?.removeAllRanges();
+    document.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+}
+
+/**
+ * Scrolls the reader by `delta` pixels and returns nothing; the caller asserts.
+ *
+ * The scrolling surface is `[data-testid="epub-scroll-container"]` in scrolling
+ * mode (the default). The synthetic `scroll` event is dispatched in addition to
+ * setting `scrollTop`, because a programmatic assignment does not always fire
+ * one in WebView2 — and this harness must not depend on which engine behaviour
+ * it gets.
+ */
+export async function scrollChapter(page: Page, delta = 400): Promise<void> {
+  await page.locator('[data-testid="epub-scroll-container"]').evaluate((el, by) => {
+    el.scrollTop = el.scrollTop + by;
+    el.dispatchEvent(new Event('scroll', { bubbles: true }));
+  }, delta);
+}
+
+/** How many highlights the backend reports for `bookId`, over the real IPC bridge. */
+export async function countHighlights(page: Page, bookId: string): Promise<number> {
+  return page.evaluate(async (id) => {
+    const internals = (
+      window as unknown as {
+        __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: unknown) => Promise<unknown> };
+      }
+    ).__TAURI_INTERNALS__;
+    if (!internals) throw new Error('__TAURI_INTERNALS__ is missing — not a Tauri webview');
+    const rows = (await internals.invoke('listHighlights', { bookId: id })) as unknown[];
+    return rows.length;
+  }, bookId);
+}
+
+/**
+ * The highlight the backend holds for `highlightId`, read over the real IPC
+ * bridge. The database is the authority on whether a colour was applied — a
+ * screenshot is not (see the contract's §2.4 note about the Android
+ * measurement).
+ */
+export async function readHighlight(
+  page: Page,
+  bookId: string,
+  highlightId: string,
+): Promise<{ id: string; color: string; text?: string } | null> {
+  return page.evaluate(
+    async ([id, hlId]) => {
+      const internals = (
+        window as unknown as {
+          __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: unknown) => Promise<unknown> };
+        }
+      ).__TAURI_INTERNALS__;
+      if (!internals) throw new Error('__TAURI_INTERNALS__ is missing — not a Tauri webview');
+      const rows = (await internals.invoke('listHighlights', { bookId: id })) as Array<{
+        id: string;
+        color: string;
+        text?: string;
+      }>;
+      return rows.find((row) => row.id === hlId) ?? null;
+    },
+    [bookId, highlightId] as const,
+  );
+}
+
+/** Deletes a highlight this spec created, so it does not leak into the library. */
+export async function deleteHighlight(page: Page, highlightId: string): Promise<void> {
+  await page.evaluate(async (id) => {
+    const internals = (
+      window as unknown as {
+        __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: unknown) => Promise<unknown> };
+      }
+    ).__TAURI_INTERNALS__;
+    if (!internals) throw new Error('__TAURI_INTERNALS__ is missing — not a Tauri webview');
+    await internals.invoke('deleteHighlight', { id });
+  }, highlightId);
 }
 
 /**
@@ -270,9 +400,14 @@ export async function readFrameSelection(frame: Frame): Promise<string> {
  *
  * Returns null while the toolbar is absent or still has no measurable box.
  */
-export async function readToolbarRect(
-  page: Page,
-): Promise<{ x: number; y: number; width: number; height: number; viewportWidth: number; viewportHeight: number } | null> {
+export async function readToolbarRect(page: Page): Promise<{
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  viewportWidth: number;
+  viewportHeight: number;
+} | null> {
   return page.evaluate(() => {
     const el = document.querySelector('.selection-toolbar');
     if (!el) return null;

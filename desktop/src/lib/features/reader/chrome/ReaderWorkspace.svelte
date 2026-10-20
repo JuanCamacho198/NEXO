@@ -43,6 +43,7 @@
   import { createViewerSelection, type ViewerSelection } from '../viewer-shared/Viewer';
   import type { SelectionData } from '../highlight/SelectionToolbar.svelte';
   import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
+  import { logger } from '$lib/shared/logger/Logger';
   import {
     buildEvidence,
     captureFromSelection,
@@ -279,16 +280,26 @@
   // U3: parent-chrome clicks never reach the iframe document, so its
   // selection (and menu) would survive them. Collapse from the parent; the
   // toolbar owns its own clicks and the iframe its own flow.
+  //
+  // U2: the ORDER matters. Collapsing the frame's selection fires its
+  // `selectionchange`, which posts a delayed clear — but delivered
+  // asynchronously, so it can land after a *later* selection has raised the
+  // toolbar again and close a menu that should be open. `clearIframeSelection`
+  // is what produces that post; dismissing first and clearing after means the
+  // clear belongs to a selection that no longer has a menu. Verified against
+  // the live app: clicking away with the selection collapsed and the selection
+  // still present both end with the toolbar gone and the frame's selection
+  // empty.
   function handleWorkspacePointerDown(e: PointerEvent): void {
     if (viewer.kind !== 'epub') return;
     const target = e.target as Element | null;
     if (target?.closest?.('.selection-toolbar')) return;
+    dismissToolbar('workspace-pointerdown');
     // typeof-guard: bind:this may hold a viewer without this export (mocks,
-    // torn-down chapters). The parent dismiss below always runs.
+    // torn-down chapters).
     if (typeof epubRef?.clearIframeSelection === 'function') {
       epubRef.clearIframeSelection();
     }
-    dismissToolbar();
   }
   function toggleFullscreen(): void {
     chrome.toggleFullscreen();
@@ -389,15 +400,15 @@
   async function handleHeaderGoToPage(page: number): Promise<boolean> {
     // U2: navigation invalidates the selection anchor — never carry the menu
     // into the next chapter.
-    dismissToolbar();
+    dismissToolbar('header-goto-page');
     return nav.handleHeaderGoToPage(page);
   }
   function goPrevPage(): void {
-    dismissToolbar();
+    dismissToolbar('prev-page');
     nav.goPrev();
   }
   function goNextPage(): void {
-    dismissToolbar();
+    dismissToolbar('next-page');
     nav.goNext();
   }
   // U4: lateral tercile paging as fallback when chevrons rest faded.
@@ -411,7 +422,7 @@
     else if (x > (2 * w) / 3) goNextPage();
   }
   function handleTocNavigate(entry: TocEntry): void {
-    dismissToolbar();
+    dismissToolbar('toc-navigate');
     nav.handleTocNavigate(entry);
   }
 
@@ -512,7 +523,14 @@
   }
   async function handleColorSelect(color: string, data: SelectionData): Promise<void> {
     await highlightsState.handleColorSelect(color, data);
-    highlightMenuState.scheduleToolbarDismiss(dismissToolbar);
+    // Case 5 (menu must not reopen): the write appends to `persistedHighlights`
+    // and re-renders the overlay. The collapse of the frame's selection has to
+    // land FIRST, so nothing can re-read it as a live selection while the
+    // overlay is being rebuilt.
+    if (typeof epubRef?.clearIframeSelection === 'function') {
+      epubRef.clearIframeSelection();
+    }
+    highlightMenuState.scheduleToolbarDismiss(() => dismissToolbar('color-applied'));
   }
   function closeHighlightMenu(): void {
     highlightMenuState.closeHighlightMenu();
@@ -551,13 +569,43 @@
   function handleColorPickerSelect(color: string): void {
     highlightMenuState.handleColorPickerSelect(color);
   }
-  function dismissToolbar(): void {
+  /**
+   * Close the selection toolbar and record why.
+   *
+   * The contract's governing rule is that a failure is findable; the same
+   * applies to a dismissal. When the toolbar fails to disappear, the question
+   * is always "which clear ran, and did one run at all" — neither was
+   * observable before, because this function's only trace was a debug counter
+   * the reader cannot see. Every path that closes the menu funnels through here
+   * with a `reason`, and the reason reaches the log.
+   */
+  function dismissToolbar(reason = 'unknown'): void {
+    const wasOpen = showToolbar;
     dbg.epub.dismissToolbarCallCount++;
-    dbg.epub.lastDismissTrigger = 'dismissToolbar()';
+    dbg.epub.lastDismissTrigger = reason;
     showToolbar = false;
     selectedText = '';
     selectionBounds = null;
     selectionContainer = null;
+    logger.debug(
+      'RW: dismissToolbar',
+      { reason, wasOpen, count: dbg.epub.dismissToolbarCallCount },
+      'reader',
+    );
+  }
+  /**
+   * The viewer's `onselectionclear`: the selection ended inside the chapter and
+   * the toolbar must follow it. `reason` is forwarded from the frame's own
+   * handler (which knows why the selection ended); it is absent for the parent
+   * paths that call the handler indirectly, which is itself the useful signal.
+   *
+   * A clear arriving for a book, or a chapter, whose toolbar was never raised
+   * is normal — `scroll` fires continuously — so this logs at debug, not warn.
+   * What it must not do is stay silent.
+   */
+  function handleSelectionClear(reason?: string): void {
+    logger.debug('RW: selection cleared in frame', { reason: reason ?? '(none)' }, 'reader');
+    dismissToolbar(`onselectionclear:${reason ?? 'none'}`);
   }
   function toggleSearch(): void {
     searchPanelOpen = !searchPanelOpen;
@@ -623,7 +671,7 @@
             onPageChange={nav.handlePdfPageChange}
             onSessionProgress={onPdfSessionProgress}
             onselection={handleViewerSelection}
-            onselectionclear={dismissToolbar}
+            onselectionclear={() => dismissToolbar('pdf-onselectionclear')}
             onHighlightAction={handleHighlightAction}
             onTocReady={nav.handleTocReady}
             externalTocNavigate={nav.tocNavigate}
@@ -658,7 +706,7 @@
             onTocReady={nav.handleTocReady}
             externalTocNavigate={nav.tocNavigate}
             onselection={handleViewerSelection}
-            onselectionclear={dismissToolbar}
+            onselectionclear={handleSelectionClear}
             {isFullscreen}
             hasSelectionMenu={showToolbar}
             onSettingsChange={handleTextSettingsChange}
