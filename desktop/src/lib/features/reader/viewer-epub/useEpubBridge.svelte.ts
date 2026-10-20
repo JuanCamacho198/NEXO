@@ -13,6 +13,7 @@ import { locatorFromCfi, locatorToJson, normalizeHref } from '$lib/shared/sync/L
 import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import type { EpubChapterMeta } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import { isInlineColumnLayout } from '$lib/features/reader/viewer-epub/readerPagination';
+import { createLocationEcho } from '$lib/features/reader/viewer-epub/epubLocationEcho';
 import { handleError, ReaderError } from '$lib/shared/utils/errors';
 import { logger } from '$lib/shared/logger/Logger';
 
@@ -354,6 +355,11 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     const progression = locator.locations.progression ?? 0;
     const percentage =
       ((deps.getCurrentSpineIndex() + progression) / deps.getTotalChapters()) * 100;
+    // Record what this bridge is about to publish. The parent writes it into the
+    // reader state that comes back as `initialLocation`, so the value must be
+    // recognisable as an ECHO of the reader's own position — see the `continue`
+    // effect below, which must not treat it as an external navigation request.
+    locationEcho.remember(preciseCfi);
     deps.onLocationChange?.(preciseCfi, percentage);
     deps.onLocationContext?.({ locator: locatorToJson(locator), percentage });
   }
@@ -369,6 +375,13 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
    * same words again gets a menu.
    */
   let lastSelectionKey: string | null = null;
+
+  /**
+   * Recognises the reader's own emitted position when it round-trips back as
+   * `initialLocation`. See `epubLocationEcho.ts` for the measured defect and why
+   * a set of values, not a single "last value", is required.
+   */
+  const locationEcho = createLocationEcho();
 
   function handleIframeMessage(event: MessageEvent): void {
     if (!event.data || typeof event.data !== 'object') return;
@@ -541,6 +554,10 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
 
       deps.setMetadata(meta);
       deps.setTotalChapters(meta.totalChapters);
+      // A new book must not inherit the previous one's emitted positions: a CFI
+      // is book-specific, and a stale echo of the last book could suppress a
+      // genuine restore for this one if the strings happened to collide.
+      locationEcho.clear();
 
       const locAtInit = deps.getInitialLocation();
       const initialCfi = locAtInit;
@@ -678,6 +695,20 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     const loc = deps.getInitialLocation();
     if (!loc || !loc.startsWith('epubcfi(') || !deps.getMetadata() || deps.getIsLoading()) return;
     if (loc === untrack(() => deps.getLastContinueLocation())) return;
+    // The reader's own published position round-trips through the parent and
+    // comes back as `initialLocation`. It is an ECHO, not a request: acting on it
+    // re-navigates the reader to the chapter it just left, which is the measured
+    // bounce (a turn to 30 followed by a stale echo naming 29 re-navigating back).
+    // Record it as consumed and do nothing.
+    if (untrack(() => locationEcho.isEcho(loc))) {
+      deps.setLastContinueLocation(loc);
+      logger.debug(
+        'continue: ignoring echo of own emitted location',
+        { location: loc.slice(0, 60) },
+        'reader',
+      );
+      return;
+    }
     const result = deps.handleSearchTargetLocator(loc, {
       currentChapterIndex: untrack(() => deps.getCurrentChapterIndex()),
       totalChapters: deps.getTotalChapters(),
