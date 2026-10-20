@@ -309,7 +309,9 @@ export async function downloadBook(bookId: string): Promise<void> {
       id: book.id,
       userId: authState.userId ?? '',
       title: book.displayTitle,
-      author: null,
+      // `book.author` is the catalog author when the listing had one; passing
+      // null here discarded a known author before it ever reached the row.
+      author: book.author ?? null,
       format: book.ext,
       filePath: null,
       coverUrl: null,
@@ -328,12 +330,16 @@ export async function downloadBook(bookId: string): Promise<void> {
       // synthetic row's optional remoteName would widen to `string | null`.
       download: () => gdrive.download(book.remoteName),
       persist: async (id, bytes, meta) => {
-        // When the catalog row only carried the UUID as its title (book was
-        // originally imported without extracted metadata), pull the REAL
-        // title/author from the EPUB bytes before persisting. Falls back to
-        // the catalog title on any parse failure — never breaks the download.
+        // When the catalog row only carried the UUID as its title, or supplied
+        // no author at all, pull the REAL title/author from the EPUB bytes
+        // before persisting. The authorless case is not hypothetical: the
+        // synthetic row above always carries `author: null`, and a local row
+        // that once held the FK guard's `Unknown` placeholder keeps that value
+        // (the Rust upsert preserves a stored author when none is supplied).
+        // Falls back to the catalog values on any parse failure — never breaks
+        // the download.
         let { title, author } = meta;
-        if (book.ext === 'epub' && isFallbackTitle(title, id)) {
+        if (book.ext === 'epub' && (isFallbackTitle(title, id) || !author.trim())) {
           try {
             const real = await extractEpubMetadataFromBytes(bytes);
             if (real.title) title = real.title;

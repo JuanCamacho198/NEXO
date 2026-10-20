@@ -358,7 +358,7 @@ describe('downloadableCatalog — real EPUB title extraction on download', () =>
     expect(downloadableCatalog.books).toEqual([]);
   });
 
-  it('keeps the catalog title for a non-UUID title (no extraction)', async () => {
+  it('keeps the catalog title and author for a non-UUID title (no extraction)', async () => {
     mockAuthUserId.value = 'user-123';
     mockCatalogFetchCatalog.mockResolvedValue([
       {
@@ -384,10 +384,64 @@ describe('downloadableCatalog — real EPUB title extraction on download', () =>
 
     await downloadBook('book-1');
 
+    // A real title AND a catalog author are already good enough: no parse, and
+    // the catalog author is no longer discarded.
     expect(mockExtractEpubMetadata).not.toHaveBeenCalled();
     expect(mockSaveBookFile).toHaveBeenCalledWith('book-1', [1, 2, 3], {
       title: 'The Great Book',
-      author: '',
+      author: 'Jane Doe',
+      format: 'epub',
+    });
+  });
+
+  /**
+   * Regression (measured live 2026-10-20): a book restored from the "Available
+   * from other devices" shelf came back with the RIGHT title but still authored
+   * "Unknown". The synthetic catalog row always carries `author: null`, and a
+   * local row that once held the FK guard's placeholder keeps its stored author
+   * when none is supplied — so a real title silently skipped EPUB extraction
+   * and the author was lost. `Prisioneros de la geografía` ships its
+   * `<dc:creator>Tim Marshall</dc:creator>` in the OPF.
+   */
+  it('extracts the real author when the catalog title is real but no author is supplied', async () => {
+    mockGDriveList.mockResolvedValue([`${UUID}.epub`]);
+    await loadAvailableFromDrive();
+
+    // The catalog row supplies a usable title and no author.
+    mockCatalogFetchCatalog.mockResolvedValue([
+      {
+        id: UUID,
+        userId: 'user-123',
+        title: 'Prisioneros de la geografía',
+        author: null,
+        format: 'epub',
+        filePath: null,
+        coverUrl: null,
+        description: null,
+        totalPages: null,
+        sourceDevice: null,
+        importedAt: '',
+        updatedAt: '',
+      },
+    ]);
+    mockAuthUserId.value = 'user-123';
+
+    const bytes = new Uint8Array([4, 5, 6]);
+    mockGDriveDownload.mockResolvedValue(bytes);
+    mockSaveBookFile.mockResolvedValue(undefined);
+    mockExtractEpubMetadata.mockResolvedValue({
+      title: 'Prisioneros de la geografía',
+      author: 'Tim Marshall',
+      subject: null,
+      subjects: [],
+    });
+
+    await downloadBook(UUID);
+
+    expect(mockExtractEpubMetadata).toHaveBeenCalledWith(bytes);
+    expect(mockSaveBookFile).toHaveBeenCalledWith(UUID, [4, 5, 6], {
+      title: 'Prisioneros de la geografía',
+      author: 'Tim Marshall',
       format: 'epub',
     });
   });
