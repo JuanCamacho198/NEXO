@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.nexo.data.session.SessionManager
+import com.nexo.debug.DebugLog
 import com.nexo.domain.sync.OutboxDrainScheduler
 import java.util.concurrent.TimeUnit
 
@@ -36,6 +37,16 @@ class WorkManagerOutboxDrainScheduler(
 ) : OutboxDrainScheduler {
     override suspend fun scheduleDrain() {
         val userId = sessionManager.getCurrentSession().getOrNull()?.userId ?: return
+        // Record the request so a parked outbox is traceable: the drain is a
+        // ONE-SHOT with no initial delay and a CONNECTED (any-network) constraint
+        // — a scheduled delay here would be a defect, and the last session that
+        // tried to diagnose a stuck upload misread a +1d11h jobscheduler entry
+        // that actually belonged to the 7-day RetentionPruneWorker.
+        DebugLog.info(
+            TAG,
+            "enqueue one-shot drain '$DRAIN_WORK_PREFIX$userId' " +
+                "(no initial delay, requiredNetwork=CONNECTED, backoff=${BACKOFF_DELAY_SECONDS}s exponential)",
+        )
         workManager().enqueueUniqueWork(
             drainWorkName(userId),
             ExistingWorkPolicy.KEEP,
@@ -58,6 +69,8 @@ class WorkManagerOutboxDrainScheduler(
     private fun workManager(): WorkManager = workManager ?: WorkManager.getInstance(context.applicationContext)
 
     companion object {
+        private const val TAG = "OutboxDrainScheduler"
+
         internal const val DRAIN_WORK_PREFIX = "outbox-drain-"
 
         /** Exponential backoff initial delay; WorkManager doubles it on retry. */

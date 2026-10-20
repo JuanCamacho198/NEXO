@@ -50,15 +50,8 @@ class GoogleDriveSyncService(
     override val pendingCount: Flow<Int> = outboxDao.observePendingCount()
 
     override suspend fun bootstrap(userId: String): Result<Unit> {
-        if (!isEnabled()) {
-            val disabledError =
-                diagnosticError ?: AppError(
-                    category = ErrorCategory.CONFIG_ERROR,
-                    code = "SYNC_DISABLED",
-                    message = "Sync service is disabled due to Google Drive configuration.",
-                    component = COMPONENT,
-                )
-            state.value = DriveSyncState.Disabled
+        val disabledError = ensureDriveAuthorized("bootstrap")
+        if (disabledError != null) {
             return Result.failure(disabledError)
         }
         if (userId.isBlank()) {
@@ -80,21 +73,51 @@ class GoogleDriveSyncService(
 
     private suspend fun hasLiveSession(): Boolean = sessionManager.getCurrentSession().getOrNull() != null
 
+    /**
+     * Gate every Drive entry point behind a live token, attempting a refresh
+     * first.
+     *
+     * A stored access token expires (~1h). Before this gate existed the only
+     * check was `isEnabled()` — "is a non-blank token string stored?" — so once
+     * the token expired (or was never persisted, as measured on the device where
+     * `nexo_drive_token_store.xml` held only its keysets) every push declined in
+     * silence and the outbox parked a book for days. The refresher is the only
+     * path that can restore a usable token without the user re-authorizing.
+     *
+     * @return null when Drive is usable, or the error to fail the caller with.
+     */
+    private suspend fun ensureDriveAuthorized(caller: String): AppError? {
+        if (!isEnabled() && tokenRefresher().isSuccess) {
+            DebugLog.info(COMPONENT, "$caller: Drive token refreshed, proceeding")
+        }
+        if (isEnabled()) {
+            return null
+        }
+        val disabledError =
+            diagnosticError ?: AppError(
+                category = ErrorCategory.CONFIG_ERROR,
+                code = "SYNC_DISABLED",
+                message = "Sync service is disabled due to Google Drive configuration.",
+                component = COMPONENT,
+            )
+        // Contract (READER-AND-SYNC-CONTRACT §"failure is logged"): an
+        // unauthorized Drive is the most common reason an imported book never
+        // reaches the cloud, and it used to fail with NO log at all. The pending
+        // count is included so a parked outbox is traceable to its cause and to
+        // how many rows it is holding back.
+        val pending = runCatching { outboxDao.getPendingItems().size }.getOrDefault(-1)
+        DebugLog.warn(
+            COMPONENT,
+            "$caller skipped: Drive unauthorized (${disabledError.code}); " +
+                "token refresh failed, $pending outbox item(s) stay parked",
+        )
+        state.value = DriveSyncState.Disabled
+        return disabledError
+    }
+
     override suspend fun schedulePush(): Result<Unit> {
-        if (!isEnabled()) {
-            val disabledError =
-                diagnosticError ?: AppError(
-                    category = ErrorCategory.CONFIG_ERROR,
-                    code = "SYNC_DISABLED",
-                    message = "Sync service is disabled due to Google Drive configuration.",
-                    component = COMPONENT,
-                )
-            // Contract (READER-AND-SYNC-CONTRACT §"failure is logged"): a disabled
-            // Drive is the most common reason an imported book never reaches the
-            // cloud, and it used to fail with NO log at all. Record it so a book
-            // parked in the outbox is traceable to its cause.
-            DebugLog.warn(COMPONENT, "schedulePush skipped: Drive disabled (${disabledError.code})")
-            state.value = DriveSyncState.Disabled
+        val disabledError = ensureDriveAuthorized("schedulePush")
+        if (disabledError != null) {
             return Result.failure(disabledError)
         }
         val session =
@@ -266,15 +289,8 @@ class GoogleDriveSyncService(
     }
 
     override suspend fun schedulePull(): Result<Unit> {
-        if (!isEnabled()) {
-            val disabledError =
-                diagnosticError ?: AppError(
-                    category = ErrorCategory.CONFIG_ERROR,
-                    code = "SYNC_DISABLED",
-                    message = "Sync service is disabled due to Google Drive configuration.",
-                    component = COMPONENT,
-                )
-            state.value = DriveSyncState.Disabled
+        val disabledError = ensureDriveAuthorized("schedulePull")
+        if (disabledError != null) {
             return Result.failure(disabledError)
         }
         val session =

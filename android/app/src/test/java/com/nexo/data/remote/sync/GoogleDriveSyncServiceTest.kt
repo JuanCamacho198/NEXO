@@ -46,19 +46,21 @@ class GoogleDriveSyncServiceTest {
         unmockkAll()
     }
 
-    private fun service(refresher: suspend () -> Result<String> = { Result.success("a") }) =
-        GoogleDriveSyncService(
-            outboxDao = mockk<SyncOutboxDao>(relaxed = true),
-            bookDao = bookDao,
-            mappingDao = mappingDao,
-            highlightDao = mockk<HighlightDao>(relaxed = true),
-            bookmarkDao = mockk<BookmarkDao>(relaxed = true),
-            sessionManager = sessionManager,
-            remoteDataSource = remote,
-            localBooksDir = localDir,
-            isEnabled = { true },
-            tokenRefresher = refresher,
-        )
+    private fun service(
+        refresher: suspend () -> Result<String> = { Result.success("a") },
+        enabled: () -> Boolean = { true },
+    ) = GoogleDriveSyncService(
+        outboxDao = mockk<SyncOutboxDao>(relaxed = true),
+        bookDao = bookDao,
+        mappingDao = mappingDao,
+        highlightDao = mockk<HighlightDao>(relaxed = true),
+        bookmarkDao = mockk<BookmarkDao>(relaxed = true),
+        sessionManager = sessionManager,
+        remoteDataSource = remote,
+        localBooksDir = localDir,
+        isEnabled = enabled,
+        tokenRefresher = refresher,
+    )
 
     @Test fun pull_skipsDeletedMarkedBookWithoutResurrection() =
         runBlocking {
@@ -89,10 +91,10 @@ class GoogleDriveSyncServiceTest {
             }
             var refreshes = 0
             assertTrue(
-                service {
+                service(refresher = {
                     refreshes++
                     Result.success("a")
-                }.schedulePull().isSuccess,
+                }).schedulePull().isSuccess,
             )
             assertEquals(1, refreshes)
             coVerify(exactly = 2) { remote.list(any()) }
@@ -108,9 +110,37 @@ class GoogleDriveSyncServiceTest {
                     "t",
                 )
             val r =
-                service { Result.failure(AppError(ErrorCategory.AUTH, "REFRESH_FAILED", "m", "t")) }
+                service(refresher = { Result.failure(AppError(ErrorCategory.AUTH, "REFRESH_FAILED", "m", "t")) })
                     .schedulePull()
             assertTrue(r.isFailure)
             assertEquals("REFRESH_FAILED", (r.exceptionOrNull() as AppError).code)
+        }
+
+    @Test fun push_whenDriveUnauthorized_refreshesTokenThenProceeds() =
+        runBlocking {
+            var refreshes = 0
+            var enabled = false
+            val r =
+                service(
+                    refresher = {
+                        refreshes++
+                        enabled = true
+                        Result.success("fresh")
+                    },
+                    enabled = { enabled },
+                ).schedulePush()
+            assertTrue(r.isSuccess)
+            assertEquals(1, refreshes)
+        }
+
+    @Test fun push_whenDriveUnauthorizedAndRefreshFails_returnsOnboardingError() =
+        runBlocking {
+            var refreshes = 0
+            val r =
+                service(refresher = { refreshes++; Result.failure(IllegalStateException("no refresh token")) }, enabled = { false })
+                    .schedulePush()
+            assertTrue(r.isFailure)
+            assertEquals(1, refreshes)
+            assertEquals("SYNC_DISABLED", (r.exceptionOrNull() as AppError).code)
         }
 }
