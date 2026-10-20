@@ -32,6 +32,7 @@ import {
 import { MANIFEST_FILE, createManifest, serializeManifest } from '$lib/shared/sync/driveManifest';
 import { planReconciliation } from '../sync/driveReconciler';
 import { toSyncError } from '$lib/shared/recovery/desktopRecoveryImport';
+import { extractRestoredBookMeta } from './restoredBookMetadata';
 import {
   recordCatalogSyncFailure,
   recordCatalogSyncSuccess,
@@ -984,7 +985,18 @@ export class SyncService {
           try {
             logger.debug('Syncing missing file for book', { bookId: localBook.id }, 'sync');
             const fileData = await this.gdrive.download(remoteFile);
-            await this.libraryPort.saveBookFile(localBook.id, Array.from(fileData));
+            // The row may still carry the placeholder title the FK guard gave it
+            // (`Unknown Title (sync stub) …`). Passing the stored title back
+            // would be a no-op for that row and pointless for a healthy one, so
+            // only the real metadata is offered — and only when the stored title
+            // is a placeholder, so a metadata-less write never rewrites a good
+            // title with the raw id (the Rust side preserves on absent meta).
+            const meta = await extractRestoredBookMeta(localBook, fileData);
+            await this.libraryPort.saveBookFile(
+              localBook.id,
+              Array.from(fileData),
+              meta ?? undefined,
+            );
           } catch (e) {
             reportAuthError(e);
             logger.error(

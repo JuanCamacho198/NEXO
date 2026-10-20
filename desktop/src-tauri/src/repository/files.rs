@@ -139,9 +139,19 @@ fn write_book_file(path: &Path, data: &[u8]) -> AppResult<()> {
 /// as synced, or nothing was committed.
 ///
 /// The INSERT always runs. For an existing row its `ON CONFLICT(id) DO UPDATE`
-/// is the only place that repairs a legacy unsanitized `file_path`; it sets just
-/// `file_path`/`format`/`updated_at`/`version`, so an existing row's title,
-/// author and reading progress are never clobbered.
+/// is the only place that repairs a legacy unsanitized `file_path`; it sets
+/// `file_path`/`format`/`updated_at`/`version` and only *conditionally*
+/// fills `title`/`author`, so an existing row's title, author and reading
+/// progress are never clobbered.
+///
+/// The conditional title/author fill exists because the FK guard used to create
+/// placeholder rows titled `Unknown Title (sync stub) …` for books that had
+/// never been downloaded. When the real file later arrives (background sync
+/// calls `saveBookFile` with no metadata; Discover passes real metadata) the
+/// row's `file_path` was repaired but its title stayed a placeholder forever —
+/// the row kept claiming to be a stub while holding the real book. A supplied
+/// non-empty value wins; an absent or blank one leaves the stored value alone,
+/// so a metadata-less sync can never overwrite a good title with the raw id.
 ///
 /// `repaired` is true only when this call rewrote a legacy unsanitized
 /// destination. The hidden-flag clear is conditional on it, so a write that was
@@ -157,12 +167,31 @@ fn commit_book_file_row(
     fmt: &str,
 ) -> AppResult<()> {
     let now = Utc::now().to_rfc3339();
+    // A blank string is treated the same as absent: the caller has no metadata
+    // to offer, so the stored value must survive.
+    let supplied_title = title.map(str::trim).filter(|v| !v.is_empty());
+    let supplied_author = author.map(str::trim).filter(|v| !v.is_empty());
     let transaction = repo.connection.unchecked_transaction()?;
     transaction.execute(
         "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
              VALUES (?1, ?2, ?3, ?4, ?5, 'local', 0, 0, ?6, ?6, 1)
-             ON CONFLICT(id) DO UPDATE SET file_path = excluded.file_path, format = excluded.format, updated_at = excluded.updated_at, version = version + 1",
-        params![book_id, title.unwrap_or(book_id), author.unwrap_or_default(), destination.to_string_lossy().to_string(), fmt, now],
+             ON CONFLICT(id) DO UPDATE SET
+                 file_path = excluded.file_path,
+                 format = excluded.format,
+                 title = CASE WHEN ?7 IS NOT NULL THEN ?7 ELSE books.title END,
+                 author = CASE WHEN ?8 IS NOT NULL THEN ?8 ELSE books.author END,
+                 updated_at = excluded.updated_at,
+                 version = version + 1",
+        params![
+            book_id,
+            title.unwrap_or(book_id),
+            author.unwrap_or_default(),
+            destination.to_string_lossy().to_string(),
+            fmt,
+            now,
+            supplied_title,
+            supplied_author
+        ],
     )?;
     // A cleared flag is warranted only for a repair: a legacy row created before
     // the sanitizer existed stores a colon `file_path`, and the library lists
@@ -416,6 +445,126 @@ mod tests {
         assert!(written.exists(), "the file must exist at the stored path");
         assert_eq!(fs::read(&written).expect("read"), b"epub-bytes");
         assert!(!written.with_extension("part").exists());
+    }
+
+    /// Regression: the FK guard created placeholder rows titled
+    /// `Unknown Title (sync stub) …` for books never downloaded here. Background
+    /// sync then wrote the real file through this path with NO metadata, which
+    /// repaired `file_path` but left the placeholder title in place forever — the
+    /// row kept presenting itself as a stub while holding the real book.
+    #[test]
+    fn save_book_file_keeps_the_placeholder_title_when_no_metadata_is_supplied() {
+        let repo = new_repository();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let books_dir = dir.path().join("books");
+        seed_stub_row(&repo, "5b4ba1c1-1b6f-4301-816a-40385be603fa");
+
+        // Exactly what SyncService.ts:987 does: bytes only, no meta.
+        save_book_file_under(
+            &repo,
+            &books_dir,
+            "5b4ba1c1-1b6f-4301-816a-40385be603fa",
+            b"epub-bytes",
+            None,
+            None,
+            None,
+        )
+        .expect("save");
+
+        let (file_path, title, author, sync_status): (String, String, String, String) = repo
+            .connection
+            .query_row(
+                "SELECT file_path, title, author, sync_status FROM books WHERE id = ?1",
+                params!["5b4ba1c1-1b6f-4301-816a-40385be603fa"],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .expect("row");
+        assert_eq!(sync_status, "synced");
+        assert!(file_path.ends_with("5b4ba1c1-1b6f-4301-816a-40385be603fa.epub"), "{file_path}");
+        // A metadata-less sync must not rewrite the title as the raw id.
+        assert!(
+            title.contains("sync stub"),
+            "no metadata supplied: the stored title must survive, got {title:?}"
+        );
+        assert_eq!(author, "Unknown", "no metadata supplied: author must survive");
+        assert!(PathBuf::from(&file_path).exists());
+    }
+
+    /// The other half: when the caller DOES have real metadata (Discover import),
+    /// it must replace the stale placeholder title rather than being swallowed.
+    #[test]
+    fn save_book_file_replaces_a_placeholder_title_when_metadata_is_supplied() {
+        let repo = new_repository();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let books_dir = dir.path().join("books");
+        let book_id = "5b4ba1c1-1b6f-4301-816a-40385be603fa";
+        seed_stub_row(&repo, book_id);
+
+        save_book_file_under(
+            &repo,
+            &books_dir,
+            book_id,
+            b"epub-bytes",
+            Some("Prisioneros de la geografía"),
+            Some("Some Author"),
+            Some("epub"),
+        )
+        .expect("save");
+
+        let (title, author): (String, String) = repo
+            .connection
+            .query_row("SELECT title, author FROM books WHERE id = ?1", params![book_id], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })
+            .expect("row");
+        assert_eq!(title, "Prisioneros de la geografía");
+        assert_eq!(author, "Some Author");
+    }
+
+    /// A blank string carries no information, so it must be treated exactly like
+    /// an absent one instead of erasing the stored title.
+    #[test]
+    fn save_book_file_treats_a_blank_title_as_absent() {
+        let repo = new_repository();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let books_dir = dir.path().join("books");
+        seed_stub_row(&repo, "5b4ba1c1-1b6f-4301-816a-40385be603fa");
+
+        save_book_file_under(
+            &repo,
+            &books_dir,
+            "5b4ba1c1-1b6f-4301-816a-40385be603fa",
+            b"epub-bytes",
+            Some("   "),
+            Some(""),
+            Some("epub"),
+        )
+        .expect("save");
+
+        let (title, author): (String, String) = repo
+            .connection
+            .query_row(
+                "SELECT title, author FROM books WHERE id = ?1",
+                params!["5b4ba1c1-1b6f-4301-816a-40385be603fa"],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .expect("row");
+        assert!(title.contains("sync stub"), "{title:?}");
+        assert_eq!(author, "Unknown");
+    }
+
+    /// Seeds a placeholder row exactly as the FK guard left it: a stub title, an
+    /// empty `file_path`, and a row that is not hidden.
+    fn seed_stub_row(repo: &LibraryRepository, book_id: &str) {
+        let now = Utc::now().to_rfc3339();
+        let title = format!("Unknown Title (sync stub) {}", &book_id[..4]);
+        repo.connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
+                 VALUES (?1, ?2, 'Unknown', '', 'epub', 'synced', 0, 0, ?3, ?3, 1)",
+                params![book_id, title, now],
+            )
+            .expect("seed stub row");
     }
 
     /// Seeds a row exactly as the pre-sanitizer app left it: the unsanitized
