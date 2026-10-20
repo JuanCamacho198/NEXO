@@ -72,7 +72,7 @@ fun DrivePromptHost(
                             ),
                         )
                     }
-                    scope.launch { syncService.schedulePush() }
+                    syncService.schedulePushInBackground()
                     val shouldOfferPrompt =
                         DriveConnectPromptGate.shouldShow(
                             importSucceeded = true,
@@ -122,7 +122,13 @@ fun DrivePromptHost(
                 when (result) {
                     is DriveAuthResult.Success -> {
                         prefs.clearDeclined()
-                        scope.launch { syncService.schedulePush() }
+                        // Fire-and-forget on the service's own process-lifetime
+                        // scope: the user is typically on /settings when they
+                        // accept Drive, and the push must survive whatever they
+                        // navigate to (NEXO-ANDROID-R). It is deliberately NOT
+                        // awaited here — awaiting it from the composition is what
+                        // tied the upload's lifetime to this screen.
+                        syncService.schedulePushInBackground()
                     }
                     is DriveAuthResult.Failure -> {
                         if (drivePromptAuthInFlight) {

@@ -1,5 +1,6 @@
 package com.nexo.data.remote.sync
 
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -55,6 +56,24 @@ interface SyncService {
     suspend fun bootstrap(userId: String): Result<Unit>
 
     suspend fun schedulePush(): Result<Unit>
+
+    /**
+     * Fire-and-forget push that does NOT depend on the caller's coroutine scope.
+     *
+     * NEXO-ANDROID-R: the UI used to call [schedulePush] from
+     * `rememberCoroutineScope()` (DrivePromptHost), so the upload died with
+     * "rememberCoroutineScope left the composition" the moment the user left the
+     * screen or the Activity was recreated on a config change (MainActivity does
+     * not declare `android:configChanges`). Once Drive was actually authorized
+     * the push started doing real work — seconds of upload — which is what made
+     * the cancellation reachable. A sync that dies because you left a screen is
+     * not a sync.
+     *
+     * Implementations MUST run the work on a process-lifetime scope owned by the
+     * service, never on a caller-supplied one. The returned [Job] is exposed only
+     * so callers/tests can observe completion; production UI ignores it.
+     */
+    fun schedulePushInBackground(): Job
 
     suspend fun schedulePull(): Result<Unit>
 

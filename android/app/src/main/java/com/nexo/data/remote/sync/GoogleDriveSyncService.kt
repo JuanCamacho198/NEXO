@@ -15,6 +15,7 @@ import com.nexo.data.sync.DriveWriteGuard
 import com.nexo.debug.DebugLog
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +44,13 @@ class GoogleDriveSyncService(
     },
     private val diagnosticError: AppError? = null,
     private val maxRetries: Int = DEFAULT_MAX_RETRIES,
+    /**
+     * Process-lifetime scope for background pushes (NEXO-ANDROID-R). Injectable
+     * so tests can drive a deterministic dispatcher; production uses
+     * [Dispatchers.IO]. See [DrivePushScope] for why the upload must not live on
+     * a caller's scope.
+     */
+    private val pushScope: DrivePushScope = DrivePushScope(),
 ) : SyncService {
     private val state = MutableStateFlow<DriveSyncState>(if (isEnabled()) DriveSyncState.Idle else DriveSyncState.Disabled)
 
@@ -114,6 +122,27 @@ class GoogleDriveSyncService(
         state.value = DriveSyncState.Disabled
         return disabledError
     }
+
+    override fun schedulePushInBackground(): Job =
+        // The push runs on [DrivePushScope], NOT on any caller scope, so
+        // navigating away or recreating the Activity cannot cancel it. The
+        // outcome is logged here because this is the only place that sees it —
+        // the UI no longer awaits the result, which is the whole point: awaiting
+        // it from the UI is what tied the upload's lifetime to the UI.
+        pushScope.launch {
+            val result = runCatching { schedulePush() }
+            result
+                .onSuccess { push ->
+                    if (push.isFailure) {
+                        val mapped = mapError(push.exceptionOrNull(), defaultCode = "SYNC_BOOK_PUSH_FAILED")
+                        DebugLog.warn(COMPONENT, "background push declined: ${mapped.code} — ${mapped.message}")
+                    } else {
+                        DebugLog.info(COMPONENT, "background push completed")
+                    }
+                }.onFailure { thrown ->
+                    DebugLog.error(COMPONENT, "background push threw: ${thrown.message}")
+                }
+        }
 
     override suspend fun schedulePush(): Result<Unit> {
         val disabledError = ensureDriveAuthorized("schedulePush")

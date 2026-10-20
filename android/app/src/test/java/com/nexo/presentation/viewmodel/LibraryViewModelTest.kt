@@ -18,6 +18,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
@@ -520,6 +521,8 @@ class LibraryViewModelTest {
         override suspend fun bootstrap(userId: String): Result<Unit> = Result.success(Unit)
 
         override suspend fun schedulePush(): Result<Unit> = Result.success(Unit)
+
+        override fun schedulePushInBackground(): Job = Job().apply { complete() }
 
         override suspend fun schedulePull(): Result<Unit> = Result.success(Unit)
 
