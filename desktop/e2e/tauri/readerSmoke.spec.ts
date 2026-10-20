@@ -75,7 +75,7 @@
  *   bun run test:e2e:cdp         # terminal 2
  */
 import { expect, test } from './harness/connectApp';
-import { goToLibrary } from './harness/readerFlows';
+import { deleteHighlight, goToLibrary } from './harness/readerFlows';
 import {
   addHighlight,
   closeReader,
@@ -87,7 +87,9 @@ import {
   settleReader,
   turnBackward,
   turnForward,
+  type SmokeBook,
 } from './harness/readerPaging';
+import type { Page } from '@playwright/test';
 import {
   SMOKE_PROGRESS,
   readProgress,
@@ -124,6 +126,11 @@ test('a reader can open a book, read it, highlight it, close it and find their p
       progress: await readProgress(appPage, id),
     })),
   );
+  // Set when this spec creates its own highlight, so the teardown can delete
+  // that one and only that one. Held in an object rather than a local so the
+  // cycle can record it even when a later step throws before it returns —
+  // otherwise a failed run would leak the highlight it created.
+  const created: { highlightId: string | null } = { highlightId: null };
 
   await seedProgress(appPage, books!.first.id, SMOKE_PROGRESS);
   await seedSetting(appPage, 'reader.epub.fontSize', 100);
@@ -139,19 +146,44 @@ test('a reader can open a book, read it, highlight it, close it and find their p
   await reloadApp(appPage);
   await goToLibrary(appPage);
 
-  // The reset is not a claim, it is a check: a seeded position the app did not
-  // actually pick up would make the "the place was kept" step pass or fail for
-  // the wrong reason.
-  await openAndAssertChapter(appPage, books!.first);
-  const seededPosition = await settleReader(appPage);
-  expect(
-    seededPosition,
-    'the reader reported no page after opening the seeded book',
-  ).not.toBeNull();
-  await closeReader(appPage);
+  try {
+    await driveReadCycle(appPage, books!.first, books!.second, created);
+  } finally {
+    // ── Restore ────────────────────────────────────────────────────────────
+    // Put the settings and both books' reading positions back the way they were
+    // found. This spec drives a real library; leaving it walked forward would be
+    // the test silently corrupting the developer's place in their own books —
+    // the very kind of ambient-state damage it exists to eliminate. Runs even
+    // when an assertion above failed, so a red run does not also damage state.
+    await restoreSettings(appPage, previousSettings);
+    for (const { bookId, progress } of previousPositions) {
+      await restoreProgress(appPage, bookId, progress);
+    }
+    // Delete exactly the highlight this run created, and nothing else. The id
+    // was captured by diffing before/after, so a pre-existing highlight — the
+    // developer's own, or a leaked one — is never touched.
+    if (created.highlightId) {
+      await deleteHighlight(appPage, created.highlightId);
+    }
+  }
+});
 
+/**
+ * The read-cycle the smoke test drives, extracted so the spec body can wrap it
+ * in a `try/finally` and restore the developer's state even on a failed
+ * assertion. Returns nothing; every step asserts what it observed.
+ *
+ * `onHighlightCreated` receives the id of the highlight this cycle created (or
+ * null if it never got that far) so the caller can delete exactly that one.
+ */
+async function driveReadCycle(
+  appPage: Page,
+  first: SmokeBook,
+  second: SmokeBook,
+  created: { highlightId: string | null },
+): Promise<void> {
   // ── 1. Open a book ───────────────────────────────────────────────────────
-  await openAndAssertChapter(appPage, books!.first);
+  await openAndAssertChapter(appPage, first);
   // Let the entry restore and the column layout settle before reading numbers.
   await appPage.waitForTimeout(2_500);
 
@@ -192,13 +224,25 @@ test('a reader can open a book, read it, highlight it, close it and find their p
   // ── 4. Add a highlight ───────────────────────────────────────────────────
   // The chapter a turn lands on is not a choice this spec gets to make, so the
   // reader is taken to one with visible prose to mark before selecting.
-  const highlightsBefore = (await listHighlights(appPage, books!.first.id)).length;
+  //
+  // The highlight this creates MUST be removed before the spec ends: a smoke
+  // test that runs on every change and never cleans up after itself grows the
+  // developer's book by one highlight per run (measured: a book reached 114
+  // highlights this way). The id is captured by diffing the highlight set
+  // before and after, so the teardown removes exactly this one and nothing the
+  // developer already had.
+  const highlightIdsBefore = new Set(
+    (await listHighlights(appPage, first.id)).map((row) => row.id),
+  );
   await addHighlight(appPage, await seekSelectableChapter(appPage));
   // The render path is asynchronous; the proof is that the backend now holds one
   // more highlight than it did before the click.
   await expect
-    .poll(async () => (await listHighlights(appPage, books!.first.id)).length, { timeout: 20_000 })
-    .toBeGreaterThan(highlightsBefore);
+    .poll(async () => (await listHighlights(appPage, first.id)).length, { timeout: 20_000 })
+    .toBeGreaterThan(highlightIdsBefore.size);
+  created.highlightId =
+    (await listHighlights(appPage, first.id)).find((row) => !highlightIdsBefore.has(row.id))?.id ??
+    null;
 
   // ── 5. Close the book ────────────────────────────────────────────────────
   // The position the reader must come back to is read *before* closing, so the
@@ -207,7 +251,7 @@ test('a reader can open a book, read it, highlight it, close it and find their p
   await closeReader(appPage);
 
   // ── 6. Reopen and check the position was kept ────────────────────────────
-  await openAndAssertChapter(appPage, books!.first);
+  await openAndAssertChapter(appPage, first);
   await appPage.waitForTimeout(3_000);
 
   const positionOnReopen = await settleReader(appPage);
@@ -218,11 +262,11 @@ test('a reader can open a book, read it, highlight it, close it and find their p
 
   // ── 7. Switch books ──────────────────────────────────────────────────────
   await closeReader(appPage);
-  await openAndAssertChapter(appPage, books!.second);
+  await openAndAssertChapter(appPage, second);
 
   // ── 8. Return to the first book ──────────────────────────────────────────
   await closeReader(appPage);
-  await openAndAssertChapter(appPage, books!.first);
+  await openAndAssertChapter(appPage, first);
   await appPage.waitForTimeout(3_000);
 
   // The first book's position is the one it was left at, not the second book's.
@@ -231,14 +275,4 @@ test('a reader can open a book, read it, highlight it, close it and find their p
     positionAfterReturn,
     `returning to the first book showed page ${positionAfterReturn} instead of ${positionOnClose}`,
   ).toBe(positionOnClose);
-
-  // ── Restore ──────────────────────────────────────────────────────────────
-  // Put the settings and both books' reading positions back the way they were
-  // found. This spec drives a real library; leaving it walked forward would be
-  // the test silently corrupting the developer's place in their own books —
-  // the very kind of ambient-state damage it exists to eliminate.
-  await restoreSettings(appPage, previousSettings);
-  for (const { bookId, progress } of previousPositions) {
-    await restoreProgress(appPage, bookId, progress);
-  }
-});
+}
