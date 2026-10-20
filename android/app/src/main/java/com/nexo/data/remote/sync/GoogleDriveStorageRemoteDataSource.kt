@@ -38,6 +38,8 @@ class GoogleDriveStorageRemoteDataSource(
     private val driveService: Drive,
     private val component: String = COMPONENT,
 ) : StorageSyncRemoteDataSource {
+    private val lookups = DriveFileLookup(driveService)
+
     override suspend fun upload(
         path: String,
         bytes: ByteArray,
@@ -156,6 +158,7 @@ class GoogleDriveStorageRemoteDataSource(
                         )
                 val file =
                     findFileByName(folderId = folder, name = physicalName)
+                        ?: findFileByBookId(folderId = folder, path = path)
                         ?: throw AppError(
                             category = ErrorCategory.NOT_FOUND,
                             code = "REMOTE_NOT_FOUND",
@@ -207,7 +210,10 @@ class GoogleDriveStorageRemoteDataSource(
             runCatching {
                 val physicalName = path.substringAfterLast('/')
                 val folder = booksFolderIdOrNull() ?: return@runCatching null
-                val file = findFileByName(folderId = folder, name = physicalName) ?: return@runCatching null
+                val file =
+                    findFileByName(folderId = folder, name = physicalName)
+                        ?: findFileByBookId(folderId = folder, path = path)
+                        ?: return@runCatching null
                 val size: Long? =
                     driveService
                         .files()
@@ -383,18 +389,17 @@ class GoogleDriveStorageRemoteDataSource(
     private fun findFileByName(
         folderId: String,
         name: String,
-    ): File? {
-        val query = "name='$name' and '$folderId' in parents and trashed = false"
-        val files =
-            driveService
-                .files()
-                .list()
-                .setSpaces("drive")
-                .setQ(query)
-                .setFields("files(id, name)")
-                .execute()
-        return files.files?.firstOrNull { it.name == name }
-    }
+    ): File? = lookups.findByName(folderId, name)
+
+    /**
+     * Fallback lookup for a book stored under the readable new-upload name while
+     * the caller only holds the canonical logical path. See
+     * [DriveFileLookup.findByBookId] for the matching rule.
+     */
+    private fun findFileByBookId(
+        folderId: String,
+        path: String,
+    ): File? = lookups.findByBookId(folderId, path)
 
     /**
      * Like [findFileByName] but requests `appProperties` so the guard marker can
@@ -403,18 +408,7 @@ class GoogleDriveStorageRemoteDataSource(
     private fun findFileByNameWithProperties(
         folderId: String,
         name: String,
-    ): File? {
-        val query = "name='$name' and '$folderId' in parents and trashed = false"
-        val files =
-            driveService
-                .files()
-                .list()
-                .setSpaces("drive")
-                .setQ(query)
-                .setFields("files(id, name, appProperties)")
-                .execute()
-        return files.files?.firstOrNull { it.name == name }
-    }
+    ): File? = lookups.findByNameWithProperties(folderId, name)
 
     /**
      * Maps a Drive API failure to an [AppError], tagging HTTP 401/403 as an

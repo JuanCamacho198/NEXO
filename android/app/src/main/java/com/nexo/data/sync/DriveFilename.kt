@@ -133,6 +133,14 @@ object DriveFilename {
 
     /**
      * Parses a `books/{user}/{stem}.{ext}` path into its parts, or null.
+     *
+     * The stem is the identity-bearing book id, recovered across both name
+     * shapes the Drive folder holds: the readable new-upload form
+     * (`<title> -- <id>.<ext>`) resolves to `<id>` via [parseReadableStem], and
+     * the id-only form is used as-is. Without this, a book another device pushed
+     * under the readable name yields a `stem` of
+     * `Prisioneros de la geografía -- <uuid>`, which matches no local book id
+     * and makes the pull skip the file.
      */
     fun parseDrivePath(path: String): ParsedDrivePath? {
         val segments = path.split('/')
@@ -140,7 +148,8 @@ object DriveFilename {
         val fileName = segments.last()
         val dotIndex = fileName.lastIndexOf('.')
         if (dotIndex <= 0 || dotIndex == fileName.lastIndex) return null
-        val stem = fileName.substring(0, dotIndex)
+        val rawStem = fileName.substring(0, dotIndex)
+        val stem = parseReadableStem(rawStem) ?: rawStem
         val extension = canonicalExtension(fileName.substring(dotIndex + 1))
         return ParsedDrivePath(stem = stem, extension = extension)
     }

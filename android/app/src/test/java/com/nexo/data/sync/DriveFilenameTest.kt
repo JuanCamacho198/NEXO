@@ -137,6 +137,21 @@ class DriveFilenameTest {
     }
 
     @Test
+    fun `parse drive path recovers the id from a readable name`() {
+        val uuid = "5b4ba1c1-1b6f-4301-816a-40385be603fa"
+        assertEquals(
+            DriveFilename.ParsedDrivePath(uuid, "epub"),
+            DriveFilename.parseDrivePath("books/u1/Prisioneros de la geografía -- $uuid.epub"),
+        )
+        // A title that itself contains the separator still resolves to the id
+        // after the LAST ` -- `.
+        assertEquals(
+            DriveFilename.ParsedDrivePath(uuid, "epub"),
+            DriveFilename.parseDrivePath("books/u1/A -- B -- $uuid.epub"),
+        )
+    }
+
+    @Test
     fun `sanitize title replaces reserved and control characters and keeps unicode`() {
         assertEquals(
             "a b c d e f g h i j",

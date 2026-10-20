@@ -77,6 +77,43 @@ class GoogleDriveStorageRemoteDataSourceTest {
             assertEquals("hi", String(source().download("books/u1/b.pdf")))
         }
 
+    @Test fun download_fallsBackToReadableNameWhenCanonicalNameIsAbsent() =
+        runBlocking {
+            val uuid = "5b4ba1c1-1b6f-4301-816a-40385be603fa"
+            listResults.add(id("next"))
+            listResults.add(id("books"))
+            // Exact canonical-name search misses: the file is stored readable.
+            listResults.add(empty())
+            // Fallback `name contains '<id>.'` finds it under the readable name.
+            listResults.add(
+                FileList().apply {
+                    files = listOf(File().setId("f1").setName("Prisioneros de la geografía -- $uuid.epub"))
+                },
+            )
+            downloadBytes = "hi".toByteArray()
+            assertEquals("hi", String(source().download("books/u1/$uuid.epub")))
+            verify { files.get("f1") }
+        }
+
+    @Test fun download_readableFallbackIgnoresNameThatOnlySharesTheIdPrefix() =
+        runBlocking {
+            val uuid = "5b4ba1c1-1b6f-4301-816a-40385be603fa"
+            listResults.add(id("next"))
+            listResults.add(id("books"))
+            listResults.add(empty())
+            // A sibling whose readable name embeds a LONGER id: it must not be
+            // mistaken for this book (the suffix must match exactly).
+            listResults.add(
+                FileList().apply {
+                    files = listOf(File().setId("other").setName("Otro -- ${uuid}extra.epub"))
+                },
+            )
+            val outcome = runCatching { source().download("books/u1/$uuid.epub") }
+            if (outcome.isSuccess) {
+                throw AssertionError("must not resolve a longer-id sibling")
+            }
+        }
+
     @Test fun list_mapsNamesToLogicalPaths() =
         runBlocking {
             listResults.add(id("next"))
