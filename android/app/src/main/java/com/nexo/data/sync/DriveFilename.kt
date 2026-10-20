@@ -32,6 +32,16 @@ object DriveFilename {
     const val FALLBACK_BOOK_ID: String = "book"
     const val DEFAULT_EXTENSION: String = "epub"
 
+    /**
+     * Separator between the readable title and the identity-bearing book id in a
+     * readable Drive object name (`Title -- <id>.epub`). It cannot appear in a
+     * canonical stem (`[a-z0-9_-]` only) and survives Drive/NTFS intact.
+     */
+    const val READABLE_NAME_SEPARATOR: String = " -- "
+
+    /** Max characters kept from the sanitized title, so the composed name stays short. */
+    const val MAX_TITLE_CHARS: Int = 80
+
     private const val MAX_EXT_CHARS: Int = 5
 
     private val RESERVED_DEVICE_NAMES: Set<String> =
@@ -121,7 +131,9 @@ object DriveFilename {
             add("${rawBookId}_state.json")
         }
 
-    /** Parses a `books/{user}/{stem}.{ext}` path into its parts, or null. */
+    /**
+     * Parses a `books/{user}/{stem}.{ext}` path into its parts, or null.
+     */
     fun parseDrivePath(path: String): ParsedDrivePath? {
         val segments = path.split('/')
         if (segments.size != 3 || segments.first() != "books") return null
@@ -138,6 +150,86 @@ object DriveFilename {
         val stem: String,
         val extension: String,
     )
+
+    /**
+     * Sanitizes a book title into a filename-safe, human-readable segment: drops
+     * the NTFS/Drive reserved characters `< > : " / \ | ? *` and control
+     * characters, collapses whitespace runs, and trims leading/trailing dots and
+     * spaces. Not lowercased and keeps Unicode letters — this segment is meant to
+     * be read. Returns an empty string when nothing usable remains so the caller
+     * can fall back to the id.
+     *
+     * The [MAX_TITLE_CHARS] bound counts Unicode code points, not UTF-16 units.
+     * Taking UTF-16 units can split a surrogate pair and leave a lone surrogate
+     * in the name, which yields a different (and broken) filename per platform;
+     * counting code points matches the Rust (`.chars().take`) and TypeScript
+     * (`Array.from(...).slice`) implementations.
+     */
+    fun sanitizeTitleForFilename(title: String): String =
+        Normalizer
+            .normalize(title, Normalizer.Form.NFKC)
+            .map { ch ->
+                val code = ch.code
+                if (code < 0x20 || code == 0x7f || ch in "<>:\"/\\|?*") ' ' else ch
+            }.joinToString("")
+            .split(Regex("\\s+"))
+            .filter { it.isNotEmpty() }
+            .joinToString(" ")
+            .trim { it == '.' || it == ' ' }
+            .takeCodePoints(MAX_TITLE_CHARS)
+
+    /**
+     * Keeps the first [limit] Unicode code points of this string, never splitting
+     * a surrogate pair. `String.take` counts UTF-16 units and can leave a lone
+     * surrogate; this counts code points so the result stays well-formed.
+     */
+    private fun String.takeCodePoints(limit: Int): String {
+        if (limit <= 0) return ""
+        var count = 0
+        var end = 0
+        while (end < length && count < limit) {
+            val ch = this[end]
+            end += if (Character.isHighSurrogate(ch) && end + 1 < length && Character.isLowSurrogate(this[end + 1])) 2 else 1
+            count++
+        }
+        return substring(0, end)
+    }
+
+    /**
+     * Readable Drive object name for a NEW upload:
+     * `<sanitized title> -- <id>.<ext>`. The full id is retained after the
+     * separator so identity is stable ([parseReadableStem] recovers it) and
+     * concurrent same-name uploads cannot collide. An empty title yields the
+     * id-only canonical name, so a nameless book never produces a dangling
+     * separator. Existing id-only files are never renamed.
+     */
+    fun readableObjectName(
+        title: String,
+        rawBookId: String,
+        extension: String?,
+    ): String {
+        val safeTitle = sanitizeTitleForFilename(title)
+        val idPart = canonicalStem(rawBookId)
+        val ext = canonicalExtension(extension)
+        return if (safeTitle.isEmpty()) {
+            "$idPart.$ext"
+        } else {
+            "$safeTitle$READABLE_NAME_SEPARATOR$idPart.$ext"
+        }
+    }
+
+    /**
+     * Recovers the identity-bearing id from a readable object name stem
+     * (`Title -- <id>` -> `<id>`). Returns null when the stem carries no
+     * separator. Splits on the LAST separator so a title containing ` -- `
+     * resolves to the right id.
+     */
+    fun parseReadableStem(stem: String): String? {
+        val idx = stem.lastIndexOf(READABLE_NAME_SEPARATOR)
+        if (idx < 0) return null
+        val idPart = stem.substring(idx + READABLE_NAME_SEPARATOR.length)
+        return idPart.ifEmpty { null }
+    }
 
     private fun dropFilter(raw: String): String =
         raw.filter {

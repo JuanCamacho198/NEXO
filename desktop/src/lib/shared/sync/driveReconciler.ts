@@ -14,7 +14,7 @@
  * The plan never contains a delete. Reconciliation cannot orphan or duplicate a
  * book: exactly one canonical target is resolvable per book.
  */
-import { canonicalDriveObjectName, legacyForms } from './driveFilename';
+import { canonicalDriveObjectName, legacyForms, parseReadableStem } from './driveFilename';
 
 export interface DriveBookRef {
   bookId: string;
@@ -42,6 +42,27 @@ function stemOf(objectName: string): string | null {
   return objectName.slice(0, dot);
 }
 
+/**
+ * The book id a remote object belongs to, across both name shapes: the readable
+ * `<title> -- <id>.<ext>` form and the id-only `<id>.<ext>` form. Returns null
+ * for names that carry neither shape (sync-state, malformed).
+ */
+function bookIdOf(objectName: string): string | null {
+  const stem = stemOf(objectName);
+  return stem == null ? null : (parseReadableStem(stem) ?? stem);
+}
+
+/**
+ * True only for the readable shape (`<title> -- <id>.<ext>`): the stem carries
+ * the separator. A name without it is NOT readable — even when its stem happens
+ * to equal the raw book id (the colon-bearing legacy desktop form), which must
+ * keep flowing through the legacy `copy-to-canonical` path.
+ */
+function isReadableName(objectName: string): boolean {
+  const stem = stemOf(objectName);
+  return stem != null && parseReadableStem(stem) != null;
+}
+
 /** Pure plan: no I/O, no deletes. */
 export function planReconciliation(
   books: DriveBookRef[],
@@ -53,6 +74,20 @@ export function planReconciliation(
   for (const book of books) {
     const canonicalName = canonicalDriveObjectName(book.bookId, book.extension);
     const legacyStems = legacyForms(book.bookId);
+    // A readable-named object (`<title> -- <id>.<ext>`) is a live object for this
+    // book too: adopt it and never copy the canonical name over it (that would
+    // duplicate the book). Checked before the canonical/legacy branches so a book
+    // uploaded under the new format is left exactly as it is.
+    const readableTwin = objects.find(
+      (object) =>
+        object.name !== canonicalName &&
+        isReadableName(object.name) &&
+        bookIdOf(object.name) === book.bookId,
+    );
+    if (readableTwin) {
+      actions.push({ kind: 'adopt', bookId: book.bookId, canonicalName: readableTwin.name });
+      continue;
+    }
     const legacyTwin = objects.find((object) => {
       if (object.name === canonicalName) return false;
       const stem = stemOf(object.name);

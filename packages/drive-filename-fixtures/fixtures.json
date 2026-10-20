@@ -1,20 +1,118 @@
-[
-  { "input": "gutendex:2701", "expectedStem": "gutendex2701" },
-  { "input": "openlibrary:/works/OL45804W", "expectedStem": "openlibraryworksol45804w" },
-  { "input": "CON", "expectedStem": "con_" },
-  { "input": "con", "expectedStem": "con_" },
-  { "input": ":::", "expectedStem": "book" },
-  { "input": "", "expectedStem": "book" },
-  {
-    "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "expectedStem": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  },
-  { "input": "Ｈｅｌｌｏ:123", "expectedStem": "hello123" },
-  { "input": "📚book🎉", "expectedStem": "book" },
-  { "input": "Moby Dick. ", "expectedStem": "mobydick" },
-  { "input": "a<b>c:d\"e/f\\g|h?i*j", "expectedStem": "abcdefghij" },
-  { "input": "my-book_2:edition", "expectedStem": "my-book_2edition" },
-  { "input": "chapter_one-two", "expectedStem": "chapter_one-two" },
-  { "input": "gutendex2701", "expectedStem": "gutendex2701" },
-  { "input": "GuTeNdEx:2701", "expectedStem": "gutendex2701" }
-]
+{
+  "canonical": [
+    {
+      "input": "gutendex:2701",
+      "expectedStem": "gutendex2701"
+    },
+    {
+      "input": "openlibrary:/works/OL45804W",
+      "expectedStem": "openlibraryworksol45804w"
+    },
+    {
+      "input": "CON",
+      "expectedStem": "con_"
+    },
+    {
+      "input": "con",
+      "expectedStem": "con_"
+    },
+    {
+      "input": ":::",
+      "expectedStem": "book"
+    },
+    {
+      "input": "",
+      "expectedStem": "book"
+    },
+    {
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expectedStem": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "input": "Ｈｅｌｌｏ:123",
+      "expectedStem": "hello123"
+    },
+    {
+      "input": "📚book🎉",
+      "expectedStem": "book"
+    },
+    {
+      "input": "Moby Dick. ",
+      "expectedStem": "mobydick"
+    },
+    {
+      "input": "a<b>c:d\"e/f\\g|h?i*j",
+      "expectedStem": "abcdefghij"
+    },
+    {
+      "input": "my-book_2:edition",
+      "expectedStem": "my-book_2edition"
+    },
+    {
+      "input": "chapter_one-two",
+      "expectedStem": "chapter_one-two"
+    },
+    {
+      "input": "gutendex2701",
+      "expectedStem": "gutendex2701"
+    },
+    {
+      "input": "GuTeNdEx:2701",
+      "expectedStem": "gutendex2701"
+    }
+  ],
+  "readable": [
+    {
+      "title": "Prisioneros de la geografía",
+      "bookId": "5b4ba1c1-1b6f-4301-816a-40385be603fa",
+      "extension": "epub",
+      "expectedName": "Prisioneros de la geografía -- 5b4ba1c1-1b6f-4301-816a-40385be603fa.epub"
+    },
+    {
+      "title": "Moby Dick. ",
+      "bookId": "gutendex:2701",
+      "extension": "epub",
+      "expectedName": "Moby Dick -- gutendex2701.epub"
+    },
+    {
+      "title": "///",
+      "bookId": "5b4ba1c1-1b6f-4301-816a-40385be603fa",
+      "extension": "epub",
+      "expectedName": "5b4ba1c1-1b6f-4301-816a-40385be603fa.epub"
+    },
+    {
+      "title": "   ",
+      "bookId": "gutendex:2701",
+      "extension": "epub",
+      "expectedName": "gutendex2701.epub"
+    },
+    {
+      "title": "a/b\\c:d*e?f\"g<h>i|j",
+      "bookId": "book-1",
+      "extension": "EPUB",
+      "expectedName": "a b c d e f g h i j -- book-1.epub"
+    },
+    {
+      "title": "CON",
+      "bookId": "CON",
+      "extension": "epub",
+      "expectedName": "CON -- con_.epub"
+    },
+    {
+      "title": "Title",
+      "bookId": "gutendex:2701",
+      "extension": "PDF",
+      "expectedName": "Title -- gutendex2701.pdf"
+    }
+  ],
+  "truncation": [
+    {
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa🎉tail",
+      "expectedSanitized": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa🎉"
+    },
+    {
+      "title": "Prisioneros de la geografía",
+      "expectedSanitized": "Prisioneros de la geografía"
+    }
+  ]
+}

@@ -8,9 +8,30 @@ import org.junit.Test
 import java.io.File
 
 @Serializable
-private data class FilenameFixture(
+private data class CanonicalFixture(
     val input: String,
     val expectedStem: String,
+)
+
+@Serializable
+private data class ReadableFixture(
+    val title: String,
+    val bookId: String,
+    val extension: String,
+    val expectedName: String,
+)
+
+@Serializable
+private data class TruncationFixture(
+    val title: String,
+    val expectedSanitized: String,
+)
+
+@Serializable
+private data class FixtureContract(
+    val canonical: List<CanonicalFixture>,
+    val readable: List<ReadableFixture>,
+    val truncation: List<TruncationFixture>,
 )
 
 /**
@@ -19,9 +40,11 @@ private data class FilenameFixture(
  * instead of staying latent (INV-1 is executable).
  */
 class DriveFilenameTest {
-    private val fixtures: List<FilenameFixture> by lazy {
+    private val contract: FixtureContract by lazy {
         JSON.decodeFromString(locateFixturesFile().readText())
     }
+
+    private val fixtures: List<CanonicalFixture> get() = contract.canonical
 
     @Test
     fun `canonical matches the shared fixtures contract`() {
@@ -37,6 +60,30 @@ class DriveFilenameTest {
                 "re-sanitizing ${fixture.expectedStem} must be a no-op",
                 fixture.expectedStem,
                 DriveFilename.canonicalStem(fixture.expectedStem),
+            )
+        }
+    }
+
+    @Test
+    fun `readable names match the shared fixtures contract`() {
+        assertTrue("the readable surface keeps at least 7 fixtures", contract.readable.size >= 7)
+        for (fixture in contract.readable) {
+            assertEquals(
+                "readable name for title ${fixture.title}",
+                fixture.expectedName,
+                DriveFilename.readableObjectName(fixture.title, fixture.bookId, fixture.extension),
+            )
+        }
+    }
+
+    @Test
+    fun `truncation matches the shared fixtures contract`() {
+        assertTrue("the truncation surface keeps at least 1 fixture", contract.truncation.isNotEmpty())
+        for (fixture in contract.truncation) {
+            assertEquals(
+                "sanitized title for fixture ${fixture.title}",
+                fixture.expectedSanitized,
+                DriveFilename.sanitizeTitleForFilename(fixture.title),
             )
         }
     }
@@ -87,6 +134,50 @@ class DriveFilenameTest {
             DriveFilename.ParsedDrivePath("gutendex2701", "epub"),
             DriveFilename.parseDrivePath("books/user1/gutendex2701.epub"),
         )
+    }
+
+    @Test
+    fun `sanitize title replaces reserved and control characters and keeps unicode`() {
+        assertEquals(
+            "a b c d e f g h i j",
+            DriveFilename.sanitizeTitleForFilename("a/b\\c:d*e?f\"g<h>i|j"),
+        )
+        assertEquals("multiple spaces", DriveFilename.sanitizeTitleForFilename("  multiple   spaces  "))
+        assertEquals("line break tab", DriveFilename.sanitizeTitleForFilename("line\nbreak\ttab"))
+        assertEquals("Moby Dick", DriveFilename.sanitizeTitleForFilename("Moby Dick. "))
+        assertEquals("title", DriveFilename.sanitizeTitleForFilename("...title..."))
+        // Unicode letters, case, and accents are preserved: the name is read.
+        assertEquals(
+            "Prisioneros de la geografía",
+            DriveFilename.sanitizeTitleForFilename("Prisioneros de la geografía"),
+        )
+        assertEquals("", DriveFilename.sanitizeTitleForFilename("///"))
+    }
+
+    @Test
+    fun `readable object name composes title separator and id`() {
+        val uuid = "5b4ba1c1-1b6f-4301-816a-40385be603fa"
+        assertEquals(
+            "Prisioneros de la geografía -- $uuid.epub",
+            DriveFilename.readableObjectName("Prisioneros de la geografía", uuid, "epub"),
+        )
+        // Empty title falls back to the id-only canonical name (no dangling separator).
+        assertEquals(
+            DriveFilename.objectName(uuid, "epub"),
+            DriveFilename.readableObjectName("", uuid, "epub"),
+        )
+        // The extension is canonicalized.
+        assertTrue(DriveFilename.readableObjectName("T", uuid, "PDF").endsWith(".pdf"))
+    }
+
+    @Test
+    fun `parse readable stem recovers the id after the last separator`() {
+        val uuid = "5b4ba1c1-1b6f-4301-816a-40385be603fa"
+        assertEquals(uuid, DriveFilename.parseReadableStem("Title -- $uuid"))
+        // A title that itself contains the separator still resolves to the id.
+        assertEquals(uuid, DriveFilename.parseReadableStem("A -- B -- $uuid"))
+        assertEquals(null, DriveFilename.parseReadableStem(uuid))
+        assertEquals(null, DriveFilename.parseReadableStem("Title -- "))
     }
 
     private fun locateFixturesFile(): File {

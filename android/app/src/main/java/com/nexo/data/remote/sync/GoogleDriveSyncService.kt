@@ -89,18 +89,25 @@ class GoogleDriveSyncService(
                     message = "Sync service is disabled due to Google Drive configuration.",
                     component = COMPONENT,
                 )
+            // Contract (READER-AND-SYNC-CONTRACT §"failure is logged"): a disabled
+            // Drive is the most common reason an imported book never reaches the
+            // cloud, and it used to fail with NO log at all. Record it so a book
+            // parked in the outbox is traceable to its cause.
+            DebugLog.warn(COMPONENT, "schedulePush skipped: Drive disabled (${disabledError.code})")
             state.value = DriveSyncState.Disabled
             return Result.failure(disabledError)
         }
         val session =
             sessionManager.ensureFreshSession().getOrElse { error ->
                 val mapped = mapError(error, defaultCode = "SYNC_SESSION_REQUIRED")
+                DebugLog.warn(COMPONENT, "schedulePush skipped: no live session (${mapped.code})")
                 state.value = DriveSyncState.Error(mapped.message)
                 return Result.failure(mapped)
             }
 
         state.value = DriveSyncState.Running
         val pendingItems = outboxDao.getPendingItems()
+        DebugLog.info(COMPONENT, "schedulePush: ${pendingItems.size} pending outbox item(s) for user ${session.userId}")
 
         for (item in pendingItems) {
             when (item.entityType) {
@@ -146,18 +153,27 @@ class GoogleDriveSyncService(
         if (item.operation == SyncOperation.DELETE.name) {
             // DELETE ops for books are handled by removing the outbox entry;
             // the actual Drive file can be cleaned up lazily.
+            DebugLog.info(COMPONENT, "pushBook skipped for ${item.entityId}: DELETE op acked, no binary push")
             return Result.success(Unit)
         }
 
         // entityId is nullable: FK is ON DELETE SET NULL, so a deleted book leaves the outbox
         // row with a null entity_id. Treat that as "nothing to push" and ack the row.
-        val entityId = item.entityId ?: return Result.success(Unit)
+        val entityId = item.entityId
+        if (entityId == null) {
+            DebugLog.info(COMPONENT, "pushBook skipped: outbox item ${item.id} has no entity id (book deleted)")
+            return Result.success(Unit)
+        }
 
         val book =
             bookDao.getBookById(entityId)
-                ?: return Result.success(Unit) // Book deleted locally, skip
+                ?: run {
+                    DebugLog.info(COMPONENT, "pushBook skipped for $entityId: book no longer exists locally")
+                    return Result.success(Unit)
+                } // Book deleted locally, skip
 
         if (book.deletedAtEpochMillis != null) {
+            DebugLog.info(COMPONENT, "pushBook skipped for ${book.id}: book is tombstoned locally")
             return Result.success(Unit)
         }
 
@@ -177,6 +193,28 @@ class GoogleDriveSyncService(
         val drivePath = drivePathFor(userId, book.id, extension)
         val canonical = DriveFilename.canonical(book.id)
         val objectName = DriveWriteGuard.objectName(canonical, extension)
+        // New uploads use the readable `Title -- id.ext` physical Drive name so
+        // the user can identify the file. The logical `drivePath` (identity used
+        // for remotePath + file mappings) stays canonical, so nothing that keys
+        // off it changes. A pre-existing id-only object is NEVER duplicated: when
+        // the canonical name already has a remote object (a legacy upload from
+        // another device), the write targets that canonical name instead of
+        // creating a second readable file.
+        val canonicalAlreadyRemote = runCatching { remoteDataSource.readMarker(objectName) }.getOrNull() != null
+        val readableName =
+            if (canonicalAlreadyRemote) null else DriveFilename.readableObjectName(book.title, book.id, extension)
+        if (canonicalAlreadyRemote) {
+            // A legacy id-only object already exists for this book, so the push
+            // targets that canonical name instead of uploading a readable twin
+            // (which would duplicate the book in Drive). Record the decision: the
+            // resulting file keeps the old name on purpose.
+            DebugLog.info(
+                COMPONENT,
+                "pushBook ${book.id}: canonical object $objectName already remote — pushing under the canonical name, not a readable twin",
+            )
+        } else {
+            DebugLog.info(COMPONENT, "pushBook ${book.id}: uploading readable object $readableName")
+        }
         val uploadResult =
             retryable {
                 DriveWriteGuard.uploadWithRetry(
@@ -184,7 +222,16 @@ class GoogleDriveSyncService(
                     book = canonical,
                     extension = extension,
                     bytes = localFile.readBytes(),
-                    loadBase = { DriveWriteGuard.recallBase(objectName) },
+                    // `rememberBase` stores under the RESOLVED (readable) name, so
+                    // the recall must use the same resolved key or the in-session
+                    // base cache never hits on a re-push. The real version is still
+                    // read from Drive either way; this only restores the shortcut.
+                    loadBase = {
+                        DriveWriteGuard.recallBase(
+                            DriveWriteGuard.resolveObjectName(canonical, extension, readableName),
+                        )
+                    },
+                    readableName = readableName,
                 )
             }
 
@@ -214,6 +261,7 @@ class GoogleDriveSyncService(
                 updatedAtEpochMillis = System.currentTimeMillis(),
             ),
         )
+        DebugLog.info(COMPONENT, "pushBook OK for ${book.id} — remotePath=$drivePath")
         return Result.success(Unit)
     }
 

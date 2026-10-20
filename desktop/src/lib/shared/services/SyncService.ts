@@ -18,8 +18,11 @@ import {
   buildRemoteRefs,
   reportCoverFailure,
 } from '../sync/SupabaseBookCatalogSync';
-import { canonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
-import { canonicalName } from '$lib/shared/sync/driveFilename';
+import {
+  canonicalBookName,
+  parseCanonicalBookName,
+} from '$lib/shared/protocol/DriveCatalogContract';
+import { canonicalName, readableDriveObjectName } from '$lib/shared/sync/driveFilename';
 import {
   guardedUploadWithRetry,
   recallBase,
@@ -631,12 +634,16 @@ export class SyncService {
               const fileBytes = await this.libraryPort.getFileBytes(book.filePath);
               const format = book.format || 'epub';
               const expectedName = canonicalBookName(book.id, format);
+              // New upload: readable `Title -- id.ext` (see the local-only pass
+              // below for the identity/collision rationale).
               const guarded = await guardedUploadWithRetry(
                 this.gdrive,
                 canonicalName(book.id),
                 format,
                 new Uint8Array(fileBytes),
                 () => recallBase(expectedName),
+                undefined,
+                readableDriveObjectName(book.title, book.id, format),
               );
               this.rememberManifestObject(guarded.objectName, guarded.marker);
               remoteRefs = buildRemoteRefs(book.id, format, guarded.fileId);
@@ -961,11 +968,15 @@ export class SyncService {
     // deleting the source. Reuses the listing above (no extra Drive round-trip).
     await this.reconcileDriveNames(localBooks, remoteBookFiles);
 
-    // 3. Download book files that are on Drive but missing locally
+    // 3. Download book files that are on Drive but missing locally.
+    // Match on parsed identity, not the exact name, so BOTH an id-only file
+    // (`<id>.epub`) and a readable one (`<title> -- <id>.epub`) resolve to the
+    // owning book.
     for (const remoteFile of remoteBookFiles) {
-      const localBook = localBooks.find(
-        (b) => canonicalBookName(b.id, b.format || 'epub') === remoteFile,
-      );
+      const parsedRemote = parseCanonicalBookName(remoteFile);
+      const localBook = parsedRemote
+        ? localBooks.find((b) => b.id === parsedRemote.bookId)
+        : undefined;
 
       if (localBook) {
         const existsLocally = await this.libraryPort.fileExists(localBook.filePath);
@@ -986,21 +997,36 @@ export class SyncService {
       }
     }
 
-    // 4. Upload local-only books to Drive (file only, not metadata)
-    const remoteFileIds = new Set(remoteBookFiles);
+    // 4. Upload local-only books to Drive (file only, not metadata).
+    // A book counts as already-remote when ANY remote file resolves to its id —
+    // whether id-only or readable — so a readable-named upload is never
+    // duplicated as a second id-only file (and vice versa).
+    const remoteBookIds = new Set(
+      remoteBookFiles
+        .map((name) => parseCanonicalBookName(name)?.bookId)
+        .filter((id): id is string => id != null),
+    );
     for (const localBook of localBooks) {
       const expectedName = canonicalBookName(localBook.id, localBook.format || 'epub');
-      if (!remoteFileIds.has(expectedName)) {
+      if (!remoteBookIds.has(localBook.id)) {
         try {
           const existsLocally = await this.libraryPort.fileExists(localBook.filePath);
           if (existsLocally) {
             const fileBytes = await this.libraryPort.getFileBytes(localBook.filePath);
+            const format = localBook.format || 'epub';
+            // New uploads use the readable `Title -- id.ext` name so the user can
+            // identify the file in Drive. The id stays embedded for stable
+            // identity and collision-free concurrent uploads. An existing
+            // id-only file for the same book is never renamed or duplicated: when
+            // the canonical name is already remote, this branch is skipped.
             const guarded = await guardedUploadWithRetry(
               this.gdrive,
               canonicalName(localBook.id),
-              localBook.format || 'epub',
+              format,
               new Uint8Array(fileBytes),
               () => recallBase(expectedName),
+              undefined,
+              readableDriveObjectName(localBook.title, localBook.id, format),
             );
             this.rememberManifestObject(guarded.objectName, guarded.marker);
             // Persist the remote ref (DRP-1): the upload fileId was previously

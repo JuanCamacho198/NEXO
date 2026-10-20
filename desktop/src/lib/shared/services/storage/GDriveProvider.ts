@@ -43,6 +43,16 @@ export function __resetGDriveFolderCache(): void {
   folderIdsPromise = null;
 }
 
+/**
+ * True when `name` is the app's root folder or a Drive collision twin of it:
+ * `Nexo`, `Nexo (1)`, `Nexo (2)`, … Drive appends ` (n)` when two uploads of
+ * the same folder name race, so these are all the SAME logical root and every
+ * one of them has to be read.
+ */
+export function matchesNexoRootName(name: string): boolean {
+  return name === 'Nexo' || /^Nexo \(\d+\)$/.test(name);
+}
+
 export class GDriveProvider implements StorageProvider, DriveGuardPort {
   private static readonly GDRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
   private static readonly GDRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
@@ -598,6 +608,83 @@ export class GDriveProvider implements StorageProvider, DriveGuardPort {
 
     const data = await response.json();
     return (data.files || []).map((f: { name: string }) => f.name);
+  }
+
+  /**
+   * Read-only union of every book file across EVERY `Nexo*` root the account
+   * owns, not just the one `list()` resolves.
+   *
+   * ## Why
+   *
+   * Drive creates a second root folder when two devices upload the same tree at
+   * once — a PC and an Android device syncing simultaneously produce `Nexo` and
+   * `Nexo (1)` (then `Nexo (2)`, …), and `list()` reads only `files[0]`, i.e. one
+   * of them. The books in the other root are invisible to the app and the reader
+   * cannot tell which is "the real one" — that is not a question the reader
+   * should have to answer.
+   *
+   * This method never creates, renames, moves or deletes anything: it lists the
+   * roots, lists each root's `books`/`Books` child, and concatenates the file
+   * names. The caller dedupes by bookId.
+   *
+   * ## Shape
+   *
+   * The returned names are raw Drive filenames; two roots may carry the same
+   * book under the same name (dedupe), and a collided upload may carry a
+   * ` (1)` suffix (the caller's parser strips it). `rootCount` is reported so a
+   * caller can log the diagnosis without a second Drive round-trip.
+   */
+  async listAllRoots(): Promise<{ names: string[]; rootCount: number; emptyRoots: number }> {
+    const accessToken = await this.getAccessToken();
+
+    // Root-level folders named `Nexo` or `Nexo (n)`. Drive's query language has
+    // no alternation, so the collision-suffixed names are matched with
+    // `name contains 'Nexo'` and then filtered by the exact shape on this side.
+    const listQuery = encodeURIComponent(
+      `mimeType = 'application/vnd.google-apps.folder' and trashed = false ` +
+        `and name contains 'Nexo'`,
+    );
+    const rootsResponse = await this.fetchWithToken(
+      `${GDriveProvider.GDRIVE_API_BASE}/files?q=${listQuery}&fields=files(id,name)&pageSize=1000`,
+      { method: 'GET' },
+      accessToken,
+    );
+    if (!rootsResponse.ok) throw await this.driveError('GDrive root listing failed', rootsResponse);
+
+    const rootData = await rootsResponse.json();
+    const roots: DriveFolderRef[] = (rootData.files ?? [])
+      .filter((f: { id?: string; name?: string }) => typeof f.id === 'string')
+      .filter((f: { name?: string }) => matchesNexoRootName(f.name ?? ''))
+      .map((f: { id: string; name?: string }) => ({ id: f.id, name: f.name ?? 'Nexo' }));
+
+    const names: string[] = [];
+    let emptyRoots = 0;
+    for (const root of roots) {
+      const folders = await this.findBooksFolders(accessToken, root.id);
+      const picked = pickBooksFolder(
+        folders.find((f) => f.name === BOOKS_FOLDER) ?? null,
+        folders.find((f) => f.name === LEGACY_BOOKS_FOLDER) ?? null,
+      );
+      if (!picked) {
+        emptyRoots++;
+        continue;
+      }
+      const query = encodeURIComponent(
+        `'${picked.id}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
+      );
+      const response = await this.fetchWithToken(
+        `${GDriveProvider.GDRIVE_API_BASE}/files?q=${query}&fields=files(name)&pageSize=1000`,
+        { method: 'GET' },
+        accessToken,
+      );
+      if (!response.ok) throw await this.driveError('GDrive book listing failed', response);
+      const data = await response.json();
+      for (const f of data.files ?? []) {
+        if (typeof f.name === 'string') names.push(f.name);
+      }
+    }
+
+    return { names, rootCount: roots.length, emptyRoots };
   }
 
   /**

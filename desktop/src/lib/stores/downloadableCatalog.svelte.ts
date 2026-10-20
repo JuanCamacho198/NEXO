@@ -26,6 +26,7 @@ import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { importRecoveredBook } from '$lib/shared/recovery/desktopRecoveryImport';
 import { extractEpubMetadataFromBytes } from '$lib/shared/services/epubImportMetadata';
+import { logger } from '$lib/shared/logger/Logger';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 
@@ -56,6 +57,14 @@ export function setDownloadableCatalogPort(port: LibraryPort): void {
 let downloadableBooks: AvailableDriveBook[] = $state([]);
 let isDownloadingSet: Set<string> = $state(new Set());
 let downloadErrorMsg: string | null = $state(null);
+/**
+ * Set only when the Drive LISTING itself failed. Distinct from
+ * `downloadErrorMsg` (which also carries download-time messages, including the
+ * "not connected" copy a user sees before ever connecting Drive). The empty
+ * shelf renders this one — a genuine listing failure is worth showing even with
+ * no books, while "not connected" is the ordinary state and must stay quiet.
+ */
+let loadErrorMsg: string | null = $state(null);
 
 /**
  * One-time "Connect Google Drive?" pre-prompt request (login-drive-separation).
@@ -120,6 +129,10 @@ export function clearDownloadError(): void {
   downloadErrorMsg = null;
 }
 
+export function clearLoadError(): void {
+  loadErrorMsg = null;
+}
+
 // ─── Drive Listing (REQ-01) ───────────────────────────────────────────
 
 /** Module-level in-flight guard: concurrent mounts/refreshes share one listing. */
@@ -149,16 +162,41 @@ export async function loadAvailableFromDrive(): Promise<void> {
         : [];
       const catalogByBookId = new Map(catalogRows.map((r) => [r.id, r]));
 
-      const [remoteNames, localBooks] = await Promise.all([
-        gdrive.list(''),
+      // Union EVERY `Nexo*` root the account owns, not just the first: two
+      // devices uploading at once make Drive create `Nexo` and `Nexo (1)`, and
+      // reading only one hides the books in the other. Read-only — nothing in
+      // the reader's Drive is created, renamed, moved or deleted. A single-root
+      // account (the majority) takes the same path with one root and no
+      // duplicates; `listAllRoots` is a superset of `list('')`'s answer.
+      const [roots, localBooks] = await Promise.all([
+        gdrive.listAllRoots(),
         libraryPort.listLibraryBooks(),
       ]);
+      const remoteNames = roots.names;
+
       const localIds = new Set(localBooks.map((b) => b.id));
       const available: AvailableDriveBook[] = [];
+      // Dedupe by bookId: the same book present in both roots (or under a
+      // collision-suffixed name) is ONE entry, not two.
+      const seen = new Set<string>();
+      let droppedInvalidName = 0;
+      let droppedAlreadyLocal = 0;
+      let droppedDuplicate = 0;
       for (const name of remoteNames) {
         const parsed = parseCanonicalBookName(name);
-        if (!parsed) continue; // sync-state / malformed names are not books
-        if (localIds.has(parsed.bookId)) continue; // already local (SCN-02)
+        if (!parsed) {
+          droppedInvalidName++;
+          continue; // sync-state / malformed names are not books
+        }
+        if (localIds.has(parsed.bookId)) {
+          droppedAlreadyLocal++;
+          continue; // already local
+        }
+        if (seen.has(parsed.bookId)) {
+          droppedDuplicate++;
+          continue; // same book from another root/twin name
+        }
+        seen.add(parsed.bookId);
         const meta = catalogByBookId.get(parsed.bookId);
         available.push({
           id: parsed.bookId,
@@ -173,9 +211,39 @@ export async function loadAvailableFromDrive(): Promise<void> {
         });
       }
       downloadableBooks = available;
+      loadErrorMsg = null;
+      // The contract's governing rule: a failure must be findable. This path
+      // used to fail in absolute silence — the diagnosis below records every
+      // count that decides the outcome, so "why is the shelf empty" is
+      // answerable from the log without a reproduction.
+      logger.info(
+        'downloadableCatalog: drive listing',
+        {
+          rootCount: roots.rootCount,
+          emptyRoots: roots.emptyRoots,
+          remoteFiles: remoteNames.length,
+          localBooks: localBooks.length,
+          droppedInvalidName,
+          droppedAlreadyLocal,
+          droppedDuplicate,
+          available: available.length,
+        },
+        'sync',
+      );
     } catch (e) {
       reportAuthError(e);
-      downloadErrorMsg = e instanceof Error ? e.message : 'Failed to load books from Drive';
+      const message = e instanceof Error ? e.message : 'Failed to load books from Drive';
+      downloadErrorMsg = message;
+      // A genuine listing failure, not the ordinary "not connected" state: this
+      // is what the empty shelf renders so the reader is told WHY it is empty.
+      // A typed AUTH_REQUIRED/AUTH_EXPIRED means Drive was never connected (or
+      // the grant lapsed) — that is the ordinary state, already surfaced on the
+      // global auth banner, and must not raise a listing error on the shelf.
+      const code = (e as { code?: unknown } | null)?.code;
+      const isAuthClass =
+        code === 'AUTH_REQUIRED' || code === 'AUTH_EXPIRED' || code === 'DRIVE_NOT_CONNECTED';
+      loadErrorMsg = isAuthClass ? null : message;
+      logger.error('downloadableCatalog: drive listing failed', { message, code }, 'sync');
     }
   })().finally(() => {
     if (availableLoadPromise === promise) availableLoadPromise = null;
@@ -326,6 +394,10 @@ export const downloadableCatalog = {
   get error(): string | null {
     return downloadErrorMsg;
   },
+  /** A listing failure only — what the empty shelf shows. Never the "not connected" copy. */
+  get loadError(): string | null {
+    return loadErrorMsg;
+  },
   get drivePromptPending(): boolean {
     return drivePromptPending;
   },
@@ -336,6 +408,7 @@ export const downloadableCatalog = {
   loadAvailableFromDrive,
   setDownloadError,
   clearDownloadError,
+  clearLoadError,
   isDrivePromptPending,
   clearDrivePrompt,
   declineDrivePrompt,

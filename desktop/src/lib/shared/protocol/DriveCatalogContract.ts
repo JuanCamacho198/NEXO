@@ -1,4 +1,4 @@
-import { canonicalDriveObjectName } from '$lib/shared/sync/driveFilename';
+import { canonicalDriveObjectName, parseReadableStem } from '$lib/shared/sync/driveFilename';
 
 export const DRIVE_PROVIDER = 'google_drive' as const;
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file' as const;
@@ -73,18 +73,53 @@ export function canonicalBookName(bookId: string, format: string): string {
   return canonicalDriveObjectName(bookId, format);
 }
 /**
- * Inverse of `canonicalBookName`: parse a Drive filename into `{ bookId, ext }`.
- * Returns null for sync-state files (`_state.json`, bare `state.json`), empty
- * names, names without a dot, trailing-dot names, and any `.json` file (the
- * Books folder only carries book binaries + JSON state). Splits on the LAST dot
- * (bookIds are UUIDs without dots, so the last dot is always the extension
- * separator) and lowercases the extension.
+ * Drive's collision suffix: when two uploads of the same name race, Drive
+ * renames the loser to `name (1).ext`, then `name (2).ext`, and so on. It is
+ * the visible fingerprint of the same accident that produces a duplicate
+ * `Nexo (1)` root folder, so a book listed twice under `X.pdf` and
+ * `X (1).pdf` is ONE book, not two.
+ */
+const DRIVE_COLLISION_SUFFIX_RE = /\s+\((\d+)\)$/;
+
+/**
+ * Strips a trailing Drive collision suffix (` (1)`, ` (2)`, …) from a book id.
+ * Applied to the id only, never to a name that legitimately ends in digits: the
+ * suffix is only recognised when it is a parenthesised integer.
+ */
+export function stripDriveCollisionSuffix(bookId: string): string {
+  return bookId.replace(DRIVE_COLLISION_SUFFIX_RE, '');
+}
+
+/**
+ * Inverse of `canonicalBookName` (and of the readable new-file format): parse a
+ * Drive filename into `{ bookId, ext }`. Returns null for sync-state files
+ * (`_state.json`, bare `state.json`), empty names, names without a dot,
+ * trailing-dot names, and any `.json` file (the Books folder only carries book
+ * binaries + JSON state). Splits on the LAST dot (bookIds are UUIDs without
+ * dots, so the last dot is always the extension separator) and lowercases the
+ * extension.
+ *
+ * Two name shapes resolve to the SAME bookId:
+ * - id-only, the original format (`<id>.epub`);
+ * - readable, the new-upload format (`<title> -- <id>.epub`), where the id after
+ *   the last ` -- ` is recovered so a readable file and its id-only twin dedupe
+ *   to one book.
+ *
+ * A trailing Drive collision suffix on the id (`X (1).pdf`) is stripped in both
+ * shapes, so the same book uploaded twice under two names resolves to ONE
+ * bookId and dedupes against its unsuffixed twin. Without this the duplicate
+ * listed as a separate book with a `(1)`-suffixed id.
  */
 export function parseCanonicalBookName(fileName: string): { bookId: string; ext: string } | null {
   if (!fileName || fileName.endsWith('_state.json') || fileName.endsWith('.json')) return null;
   const idx = fileName.lastIndexOf('.');
   if (idx <= 0 || idx === fileName.length - 1) return null;
-  return { bookId: fileName.slice(0, idx), ext: fileName.slice(idx + 1).toLowerCase() };
+  const stem = fileName.slice(0, idx);
+  // Readable form first: the identity is the id after the last ` -- `.
+  const readableId = parseReadableStem(stem);
+  const bookId = readableId ?? stripDriveCollisionSuffix(stem);
+  if (bookId.length === 0) return null;
+  return { bookId, ext: fileName.slice(idx + 1).toLowerCase() };
 }
 export function canonicalBookPath(bookId: string, format: string): string {
   return `${DRIVE_BOOKS_PATH}/${canonicalBookName(bookId, format)}`;

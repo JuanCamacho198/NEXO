@@ -66,6 +66,23 @@ export interface GuardedWriteResult {
 
 export type BaseLoader = () => VersionMarker | null | Promise<VersionMarker | null>;
 
+/**
+ * Resolves the object name a guarded write targets. A `readableName` override
+ * (the new-upload `Title -- id.ext` form) is used when provided; otherwise the
+ * canonical `<id>.<ext>` name is composed from the branded stem. The chosen name
+ * is used for BOTH the marker read and the binary write, so the version marker
+ * always rides the object it describes.
+ */
+function resolveGuardObjectName(
+  book: CanonicalName,
+  extension: string | null,
+  readableName?: string | null,
+): string {
+  return readableName && readableName.length > 0
+    ? readableName
+    : canonicalObjectName(book, extension);
+}
+
 const FNV_OFFSET_BASIS = 0xcbf29ce484222325n;
 const FNV_PRIME = 0x100000001b3n;
 const FNV_MASK = 0xffffffffffffffffn;
@@ -135,8 +152,9 @@ export async function guardedUpload(
   extension: string | null,
   bytes: Uint8Array,
   base: VersionMarker | null,
+  readableName?: string | null,
 ): Promise<GuardedWriteResult> {
-  const objectName = canonicalObjectName(book, extension);
+  const objectName = resolveGuardObjectName(book, extension, readableName);
   const remote = await port.readMarker(objectName);
   const remoteVersion = remote?.version ?? 0;
   if (base !== null && remoteVersion !== base.version) {
@@ -161,12 +179,13 @@ export async function guardedUploadWithRetry(
   bytes: Uint8Array,
   loadBase: BaseLoader = () => null,
   maxAttempts: number = DEFAULT_GUARD_ATTEMPTS,
+  readableName?: string | null,
 ): Promise<GuardedWriteResult> {
   let lastError: unknown = null;
   let base = await loadBase();
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {
-      return await guardedUpload(port, book, extension, bytes, base);
+      return await guardedUpload(port, book, extension, bytes, base, readableName);
     } catch (error) {
       lastError = error;
       if (error instanceof StaleWriteError) {

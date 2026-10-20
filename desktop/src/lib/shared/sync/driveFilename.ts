@@ -59,6 +59,86 @@ export function canonicalDriveObjectName(bookId: string, extension?: string | nu
 }
 
 /**
+ * Separator between the human-readable title and the identity-bearing book id in
+ * a readable Drive object name (`Title -- <uuid>.epub`). Chosen because it cannot
+ * appear in a canonical stem (`[a-z0-9_-]` only) and survives Drive/NTFS intact.
+ */
+export const READABLE_NAME_SEPARATOR = ' -- ';
+
+/** Max characters kept from the sanitized title, so the composed name stays short. */
+export const MAX_TITLE_CHARS = 80;
+
+/**
+ * Sanitizes a book title into a filename-safe segment. Replaces the
+ * Windows/Drive reserved characters `/ \ : * ? " < > |` and control characters
+ * with a space, collapses runs of whitespace, and trims leading/trailing dots
+ * and spaces (NTFS rejects a trailing dot or space). Returns an empty string
+ * when nothing usable remains, so the caller can fall back to the id-only name.
+ * Unlike a canonical stem this is NOT lowercased and keeps Unicode letters: it
+ * is meant to be read.
+ *
+ * The 80-character bound counts Unicode code points, not UTF-16 units. Slicing
+ * UTF-16 units can split a surrogate pair and leave a lone surrogate in the
+ * name, which produces a different (and broken) filename per platform; counting
+ * code points matches the Rust and Kotlin implementations and `Array.from`.
+ */
+export function sanitizeTitleForFilename(title: string): string {
+  const cleaned = Array.from(title.normalize('NFKC'))
+    .map((ch) => {
+      const code = ch.codePointAt(0) ?? 0;
+      if (code < 0x20 || code === 0x7f) return ' ';
+      return '<>:"/\\|?*'.includes(ch) ? ' ' : ch;
+    })
+    .join('')
+    .replace(/\s+/g, ' ')
+    .replace(/^[.\s]+|[.\s]+$/g, '');
+  return Array.from(cleaned).slice(0, MAX_TITLE_CHARS).join('').trim();
+}
+
+/**
+ * Readable Drive object name for a NEW upload: `<sanitized title> -- <id>.<ext>`.
+ * The full book id is retained after the separator so identity is stable
+ * (`parseReadableBookName` recovers it) and two devices uploading concurrently
+ * for the same book cannot collide on the name. When the title is empty after
+ * sanitization the id-only canonical name is returned, so a nameless book never
+ * produces a dangling separator. This is for NEW objects only; existing
+ * id-only files are never renamed.
+ */
+export function readableDriveObjectName(
+  title: string,
+  bookId: string,
+  extension?: string | null,
+): string {
+  const safeTitle = sanitizeTitleForFilename(title);
+  const idPart = canonicalStem(bookId);
+  const ext = canonicalExtension(extension);
+  return safeTitle.length === 0
+    ? `${idPart}.${ext}`
+    : `${safeTitle}${READABLE_NAME_SEPARATOR}${idPart}.${ext}`;
+}
+
+/**
+ * Recovers the identity-bearing book id from a readable object name stem
+ * (`Title -- <id>` -> `<id>`). Returns null when the stem carries no separator,
+ * so an id-only or title-only stem is not mistaken for a readable name. Splits
+ * on the LAST separator so a title that itself contains ` -- ` still resolves.
+ */
+export function parseReadableStem(stem: string): string | null {
+  const idx = stem.lastIndexOf(READABLE_NAME_SEPARATOR);
+  if (idx < 0) return null;
+  const idPart = stem.slice(idx + READABLE_NAME_SEPARATOR.length);
+  return idPart.length === 0 ? null : stripDriveCollisionSuffix(idPart);
+}
+
+/** Drive's collision suffix (` (1)`) on an id-only name; kept out of the readable path. */
+const ID_COLLISION_SUFFIX_RE = /\s+\((\d+)\)$/;
+
+/** Strips a trailing Drive collision suffix without importing the contract module. */
+function stripDriveCollisionSuffix(bookId: string): string {
+  return bookId.replace(ID_COLLISION_SUFFIX_RE, '');
+}
+
+/**
  * Branded canonical stem (FR-06). Constructible only through
  * {@link canonicalName}; the write guard's upload entry (FR-08) accepts this
  * type so an uncanonicalized raw string cannot reach a Drive upload.

@@ -77,6 +77,19 @@ object DriveWriteGuard {
         extension: String,
     ): String = "${book.stem}.${DriveFilename.canonicalExtension(extension)}"
 
+    /**
+     * Resolves the object name a guarded write targets. A [readableName] override
+     * (the new-upload `Title -- id.ext` form) is used when provided; otherwise the
+     * canonical `<id>.<ext>` name is composed from the branded stem. The chosen
+     * name is used for BOTH the marker read and the binary write, so the version
+     * marker always rides the object it describes.
+     */
+    fun resolveObjectName(
+        book: CanonicalName,
+        extension: String,
+        readableName: String? = null,
+    ): String = readableName?.takeIf { it.isNotEmpty() } ?: objectName(book, extension)
+
     /** FNV-1a 64-bit hex content checksum (matches the TypeScript guard). */
     fun checksum(bytes: ByteArray): String {
         var hash = FNV_OFFSET_BASIS
@@ -131,8 +144,9 @@ object DriveWriteGuard {
         extension: String,
         bytes: ByteArray,
         base: DriveVersionMarker?,
+        readableName: String? = null,
     ): GuardedWrite {
-        val name = objectName(book, extension)
+        val name = resolveObjectName(book, extension, readableName)
         val remote = port.readMarker(name)
         val remoteVersion = remote?.version ?: 0L
         if (base != null && remoteVersion != base.version) {
@@ -157,12 +171,13 @@ object DriveWriteGuard {
         bytes: ByteArray,
         loadBase: suspend () -> DriveVersionMarker? = { null },
         maxAttempts: Int = DEFAULT_MAX_ATTEMPTS,
+        readableName: String? = null,
     ): GuardedWrite {
         var lastError: Throwable? = null
         var base = loadBase()
         repeat(maxAttempts) {
             try {
-                return upload(port, book, extension, bytes, base)
+                return upload(port, book, extension, bytes, base, readableName)
             } catch (error: StaleWriteError) {
                 base = runCatching { port.readMarker(error.objectName) }.getOrNull()
                 lastError = error

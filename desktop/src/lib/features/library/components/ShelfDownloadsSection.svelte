@@ -16,6 +16,7 @@
 
   $effect(() => {
     if (downloadableCatalog.error) downloadErrorDismissed = false;
+    if (downloadableCatalog.loadError) downloadErrorDismissed = false;
   });
 
   $effect(() => {
@@ -32,6 +33,46 @@
     onDownloaded?.();
   }
 </script>
+
+{#if downloadableCatalog.loadError && downloadableCatalog.books.length === 0}
+  <!--
+    The failure banner must be reachable when the load failed and the list is
+    EMPTY. It used to render inside the `books.length > 0` block below, which the
+    empty case by definition skips — so the error the store stored could never be
+    shown, and the section simply vanished. This is the contract's governing rule
+    (READER-AND-SYNC-CONTRACT.md §3.1): a failure is stored and never shown.
+
+    It reads `loadError` (a listing failure), not `error`: the latter also carries
+    the "not connected" copy, and a user who never connected Drive must not be
+    told the library is broken.
+  -->
+  <section
+    class="mt-6 rounded-(--radius-2xl) border border-(--color-error)/30 bg-(--color-error)/10 p-4"
+  >
+    <div class="flex items-start gap-2 text-xs text-(--color-error)">
+      <span class="flex-1">{downloadableCatalog.loadError}</span>
+      <button
+        type="button"
+        class="shrink-0 text-(--color-error) transition-opacity hover:opacity-80"
+        onclick={() => {
+          downloadErrorDismissed = true;
+          downloadableCatalog.clearLoadError();
+        }}
+        aria-label={t('shelf.closeAria')}
+      >
+        <svg
+          class="h-3.5 w-3.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M18 6L6 18M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+  </section>
+{/if}
 
 {#if downloadableCatalog.books.length > 0}
   <section
