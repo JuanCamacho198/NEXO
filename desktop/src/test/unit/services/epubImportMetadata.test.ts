@@ -94,6 +94,44 @@ describe('epubImportMetadata OPF fallback (regex parser)', () => {
     expect(meta.subjects).toEqual(['Novela']);
   });
 
+  // The real defect: `books.title` held `Prisioneros de la geograf\xEDa` — a
+  // bare 0xED at byte 25 where `0xC3 0xAD` belongs. SQLite applies no UTF-8
+  // validation and hands back whatever bytes were stored, so a stream that
+  // decodes bytes as Latin-1 turns the two-byte `í` into `Ã` + `\u00AD` and
+  // produces a title that no longer contains the word the reader searches for.
+  it('extracts an accented title without mangling it into a stray byte', async () => {
+    const title = 'Prisioneros de la geografía';
+    vi.mocked(getFileBytes).mockResolvedValue(
+      encodeOpf(
+        `<?xml version="1.0"?>
+<package xmlns="http://www.idpf.org/2007/opf" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <metadata>
+    <dc:title>${title}</dc:title>
+    <dc:creator>Tim Marshall</dc:creator>
+  </metadata>
+</package>`,
+      ),
+    );
+
+    const meta = await parseOpfDirectly(MOCK_FILE_PATH);
+
+    expect(meta.title).toBe(title);
+    expect(meta.title).toContain('geografía');
+    // The exact byte sequence that belongs in the database.
+    expect(Buffer.from(meta.title ?? '', 'utf8').toString('hex')).toBe(
+      '50726973696f6e65726f73206465206c612067656f67726166c3ad61',
+    );
+    // A bare 0xED byte, or the `Ã` mojibake it produces, must never reach the DB.
+    // Note U+00ED (`í`) itself is the CORRECT character — asserting against it
+    // would be the very category error this defect came from. Only the byte
+    // sequence and its mojibake are checked.
+    expect(meta.title).not.toContain('Ã');
+    expect(meta.title).not.toContain('\uFFFD');
+    expect(meta.title).not.toContain('\u00AD');
+    // The UTF-8 encoding must be two bytes, not one.
+    expect(meta.title?.endsWith('a')).toBe(true);
+  });
+
   it('captures the first dc:subject and lists every subject in document order', async () => {
     vi.mocked(getFileBytes).mockResolvedValue(encodeOpf(OPF_WITH_MULTIPLE_SUBJECTS));
     const meta = await parseOpfDirectly(MOCK_FILE_PATH);

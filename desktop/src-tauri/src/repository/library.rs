@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 
+use super::sql_text;
 use super::LibraryRepository;
 use crate::error::{AppError, AppResult};
 use crate::models::{
@@ -322,18 +323,22 @@ pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
     let rows = statement.query_map([], |row| {
         Ok(BookDto {
             id: row.get(0)?,
-            title: row.get(1)?,
-            author: row.get(2)?,
-            file_path: row.get(3)?,
+            // A legacy row can hold bytes that are not valid UTF-8; SQLite then
+            // reports the column as BLOB and a plain `String` read fails the
+            // whole list. Read tolerantly and let the stored bytes surface as
+            // the replacement character instead of an empty library.
+            title: sql_text::text(row, 1)?,
+            author: sql_text::text(row, 2)?,
+            file_path: sql_text::text(row, 3)?,
             format: row.get(4)?,
             sync_status: row.get(5)?,
             current_page: row.get(6)?,
             total_pages: row.get(7)?,
             created_at: row.get(8)?,
             updated_at: row.get(9)?,
-            genre: row.get(10)?,
-            language: row.get(11)?,
-            publication_date: row.get(12)?,
+            genre: sql_text::text_opt(row, 10)?,
+            language: sql_text::text_opt(row, 11)?,
+            publication_date: sql_text::text_opt(row, 12)?,
         })
     })?;
 
@@ -456,23 +461,25 @@ pub fn list_library_books(repo: &LibraryRepository) -> AppResult<Vec<LibraryBook
             .unwrap_or_default();
         Ok(LibraryBookDto {
             id: row.get(0)?,
-            title: row.get(1)?,
-            author: row.get(2)?,
+            // Same tolerance as `list_books`: the shelf must render even when a
+            // legacy row stores bytes that are not valid UTF-8.
+            title: sql_text::text(row, 1)?,
+            author: sql_text::text(row, 2)?,
             format: row.get(3)?,
             current_page: row.get(4)?,
             total_pages: row.get(5)?,
             progress_percentage: row.get(6)?,
-            cover_path: row.get(7)?,
+            cover_path: sql_text::text_opt(row, 7)?,
             minutes_read: row.get(8)?,
             updated_at: row.get(9)?,
             created_at: row.get(10)?,
             collection_ids,
-            genre: row.get(12)?,
-            language: row.get(13)?,
-            publication_date: row.get(14)?,
+            genre: sql_text::text_opt(row, 12)?,
+            language: sql_text::text_opt(row, 13)?,
+            publication_date: sql_text::text_opt(row, 14)?,
             cover_user_deleted: row.get(15)?,
-            reading_status: row.get(16)?,
-            file_path: row.get(17)?,
+            reading_status: sql_text::text_opt(row, 16)?,
+            file_path: sql_text::text(row, 17)?,
         })
     })?;
 
@@ -562,6 +569,44 @@ mod tests {
             )
             .unwrap();
         assert_eq!(deleted_cover_rows, 1);
+    }
+
+    /// The live defect. `books.title` held `Prisioneros de la geograf\xEDa` —
+    /// a bare `0xED` where `0xC3 0xAD` belongs. SQLite applies no UTF-8
+    /// validation, reports the value as BLOB, and `row.get::<_, String>` refused
+    /// it, so EVERY book list query failed and the library would not open.
+    ///
+    /// The row must now come back readable, with the damaged byte surfaced as
+    /// `U+FFFD`, and the healthy rows around it untouched.
+    #[test]
+    fn a_title_holding_invalid_utf8_does_not_break_the_book_lists() {
+        let repository = new_repository();
+        insert_book(&repository, "book-healthy", "C:/library/book-healthy.epub");
+
+        let now = Utc::now().to_rfc3339();
+        repository
+            .connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
+                 VALUES (?1, ?2, 'Tim Marshall', ?3, 'epub', 'local', 0, 0, ?4, ?4, 1)",
+                params![
+                    "book-damaged",
+                    b"Prisioneros de la geograf\xeda" as &[u8],
+                    "C:/library/book-damaged.epub",
+                    now
+                ],
+            )
+            .unwrap();
+
+        let books = repository.list_books().expect("a damaged row must not fail the list");
+        assert_eq!(books.len(), 2, "the healthy row must still be listed");
+
+        let damaged = books.iter().find(|book| book.id == "book-damaged").expect("damaged row");
+        assert_eq!(damaged.title, "Prisioneros de la geograf\u{FFFD}a");
+        assert_eq!(damaged.author, "Tim Marshall");
+
+        let shelf = repository.list_library_books().expect("the shelf must still load");
+        assert_eq!(shelf.len(), 2, "the shelf must list both books");
     }
 
     #[test]

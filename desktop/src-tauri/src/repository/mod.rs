@@ -15,6 +15,7 @@ pub mod reading_stats;
 pub mod reading_status;
 pub mod search;
 pub mod settings;
+pub mod sql_text;
 pub mod tags;
 
 use std::cell::RefCell;
