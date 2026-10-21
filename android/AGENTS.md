@@ -2,7 +2,7 @@
 
 ## Commands
 
-### Build & Run
+### Build and Run
 ```powershell
 # Build debug APK
 .\gradlew.bat assembleDebug
@@ -104,12 +104,12 @@ android/
 - **Kotlin 1.9.24** with **Compose 1.5.14**
 - Use **coroutines** for async operations
 - Use **Flow** for reactive streams
-- Follow **Clean Architecture**: presentation -> domain -> data
+- Follow **Clean Architecture**: presentation, then domain, then data
 - **Dependency direction**: UI depends on domain, domain has no dependencies, data implements domain interfaces
 
 ### Compose
 - Use **Material 3** (`material3` dependency)
-- Follow **compoundable pattern**: atoms -> molecules -> screens
+- Follow **compoundable pattern**: atoms, then molecules, then screens
 - Use **StateFlow** in ViewModels, collect via `collectAsState()` in Compose
 - Use **rememberCoroutineScope** for async operations in Composables
 
