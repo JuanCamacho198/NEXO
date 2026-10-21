@@ -94,19 +94,4 @@ Before committing, run:
 - Never commit secrets; use `.env` and exclude from git
 - Tauri commands run in Rust backend; validate all input in `commands.rs`
 
-## AI Toolchain (Windows)
-
-Fast native tools installed to replace slow PowerShell cmdlets. USE these when executing bash commands — they are 5-10x faster.
-
-| Tool | Install | Use instead of | What for |
-|------|---------|---------------|----------|
-| `rg` | winget | `Select-String` | Search file contents (`rg 'pattern' --type ts src/`) |
-| `fd` | winget | `Get-ChildItem -Recurse` | Find files (`fd '\.ts$' src/`) |
-| `bat` | winget | `Get-Content` / `cat` | Read files with syntax highlighting and line numbers |
-| `jq` | winget | manual JSON parsing | Process JSON from pipe or file |
-| `delta` | winget | plain `git diff` | Git pager with compact, colored diffs (already configured globally) |
-| `fzf` | winget | — | Interactive fuzzy filter (useful in terminal) |
-| `rtk` | cargo | raw command output | Wrap any command to compress output (e.g. `rtk ls`, `rtk grep`, `rtk git log`) |
-
-**Rule**: When you need to search content, find files, read files, or process JSON via bash, use these tools — NOT PowerShell `Select-String` or `Get-ChildItem`.
 
