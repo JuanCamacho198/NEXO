@@ -20,6 +20,11 @@
   import type { PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
   import { resolveFootnoteNote } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
   import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
+  import {
+    contentImageFromEvent,
+    isSelectionClick,
+  } from '$lib/features/reader/viewer-epub/epubImageFit';
+  import EpubImageViewer from '$lib/features/reader/viewer-epub/EpubImageViewer.svelte';
 
   /**
    * How long a turn is queued for while a chapter's layout settles and any
@@ -158,6 +163,10 @@
   let lastContinueLocation = $state<string | null>(null);
   // U5: footnote popover. Viewport-space anchor + parent scroll to restore.
   let footnote = $state<{ x: number; y: number; text: string; returnScroll: number } | null>(null);
+  // Image viewer state. The URL is resolved in the chapter frame (its `src` is
+  // already an `asset:` URL by the time the click arrives), so the parent only
+  // carries it and the alt text across.
+  let imageViewer = $state<{ src: string; alt: string } | null>(null);
 
   const spine = createEpubSpine({ getMetadata: () => metadata });
   const navigation = createEpubNavigation({
@@ -672,6 +681,9 @@
   });
 
   function handleKeydown(e: KeyboardEvent): void {
+    // The image viewer owns the keyboard while it is open; its own handler runs
+    // first and stops propagation, so this is a belt against a missed stop.
+    if (imageViewer) return;
     if (e.key === 'Escape' && footnote) {
       // First Esc closes the note; the immersive chrome exits on the next one.
       e.stopImmediatePropagation();
@@ -761,6 +773,16 @@
       }
       if (!onIframeClick) return;
       const isLink = !!target?.closest?.('a');
+      // Enlarge a content-sized image BEFORE the tercile/reader click dispatch:
+      // that dispatch pages forward on a left-third click, so enlarging after it
+      // would turn the page under the picture. The guards (link, selection,
+      // ornament) live in `epubImageFit` so they are testable without a frame.
+      const image = isLink || isSelectionClick(e) ? null : contentImageFromEvent(e);
+      if (image) {
+        e.preventDefault();
+        imageViewer = { src: image.currentSrc || image.src, alt: image.alt || '' };
+        return;
+      }
       const rect = frame.getBoundingClientRect();
       onIframeClick(rect.left + e.clientX, isLink);
     };
@@ -874,6 +896,14 @@
           {t('reader.footnoteBack')}
         </button>
       </div>
+    {/if}
+    {#if imageViewer}
+      <EpubImageViewer
+        src={imageViewer.src}
+        alt={imageViewer.alt}
+        onClose={() => (imageViewer = null)}
+        {t}
+      />
     {/if}
   {/if}
 </div>

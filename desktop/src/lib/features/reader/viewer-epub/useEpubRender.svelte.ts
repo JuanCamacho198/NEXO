@@ -22,6 +22,10 @@ import {
   type ReaderCssOptions,
 } from '$lib/features/reader/viewer-epub/readerCssBuilder';
 import {
+  isImageOnlyDocument,
+  markChapterImages,
+} from '$lib/features/reader/viewer-epub/epubImageFit';
+import {
   HIGHLIGHT_COLORS,
   highlightFillRgba,
   nearestHighlightHex,
@@ -266,6 +270,12 @@ export function buildChapterSrcdoc(
     styleEl.textContent = cssText;
   }
 
+  // An image-only spine document (a plate, a cover, a two-map spread) must not
+  // be laid out inside the prose measure — see `epubImageFit.ts` for the
+  // measurement behind this. Decided from the parsed DOM so the stylesheet is
+  // written once, before the srcdoc is handed to the frame.
+  const imageOnly = isImageOnlyDocument(doc);
+  markChapterImages(doc);
   // Reader overrides — use provided opts or fall back to defaults (for golden tests)
   const cssOpts = readerCssOpts ?? {
     fontSize: 100,
@@ -280,7 +290,9 @@ export function buildChapterSrcdoc(
     margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
     fontFamily: 'serif',
   };
-  let readerCss = buildReaderOverrideCss(cssOpts);
+  let readerCss = buildReaderOverrideCss(
+    imageOnly ? { ...cssOpts, layout: 'image-only' } : cssOpts,
+  );
   // Inject the self-hosted faces first: without them a pick like "Literata"
   // resolves to nothing inside this document and silently falls back to serif.
   readerCss = `${buildReaderFontFaceCss()}\n${readerCss}`;
@@ -497,6 +509,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
   }
 
   function buildReaderOverrideCssLocal(): string {
+    const iframeDoc = deps.getIframeEl()?.contentDocument ?? null;
     return buildReaderOverrideCss({
       fontSize: deps.getFontSize(),
       zoomLevel: deps.getZoomLevel(),
@@ -510,6 +523,13 @@ export function createEpubRender(deps: EpubRenderDeps): {
       margins: deps.getMargins(),
       fontFamily: deps.getFontFamily(),
       pagination: currentPageBox(),
+      // Derived from the live document, not from render-time state: this builder
+      // runs again on every settings, zoom and theme change, and it REPLACES
+      // the whole `<style>` text. Omitting the layout there measured as the
+      // image-only release being undone the moment the reader touched a
+      // control — the prose measure came back and the two-map spread shrank
+      // again. The document on screen is the authority on whether it is a plate.
+      layout: isImageOnlyDocument(iframeDoc) ? 'image-only' : 'prose',
     });
   }
 

@@ -19,6 +19,7 @@
  * explicit reader font pick — which carries `!important` — still beats them.
  */
 import type { PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
+import { SOLO_IMAGE_ATTR, STACKED_IMAGE_ATTR } from '$lib/features/reader/viewer-epub/epubImageFit';
 
 export type { PageBox };
 export interface ReaderCssOptions {
@@ -43,6 +44,18 @@ export interface ReaderCssOptions {
    * the pre-pagination builder — the scroll path must not move.
    */
   pagination?: PaginationCssOptions | null;
+  /**
+   * The chapter document holds images and no prose (see `epubImageFit.ts`).
+   *
+   * `image-only` drops the prose measure and the viewport-height cap so the
+   * plates get the page. `plate` is the same release of the measure for a
+   * document that is mostly text but carries a full-page figure; the cap stays,
+   * because there the image shares a scroll with text.
+   *
+   * Absent means `prose`, whose output is byte-identical to the pre-image-fit
+   * builder — a book with no images must render exactly as before.
+   */
+  layout?: 'prose' | 'image-only' | 'plate';
 }
 
 /** The measured page box, in CSS pixels, that a column must occupy. */
@@ -200,6 +213,10 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
   // scroll path sets `height:auto`, `overflow-y:visible` and a centred
   // `max-width`, and every one of those must lose to the column box.
   const paginationCss = opts.pagination ? buildPaginationCss(opts.pagination) : '';
+  // Emitted LAST so it wins the cascade over both the scroll and the pagination
+  // blocks above: an image-only document is a plate either way, and both blocks
+  // centre `body` at the prose measure.
+  const imageOnlyCss = opts.layout === 'image-only' ? buildImageOnlyCss() : '';
 
   return `
       ${themeCss}
@@ -256,14 +273,47 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
         overflow-wrap: break-word !important;
       }
       body img {
-        max-width: 100%;
+        /* Never upscaled past a sane multiple of the file's own pixels. The old
+           rule had max-width: 100% alone, which a browser resolves against the
+           PROSE measure (min(65ch, 100%)) — so an image was never wider than
+           the text column. 200% is the high-density headroom: at DPR 2 a 500px
+           source is meant to print 250 CSS px, and 2x lets it fill a page
+           without turning a 500px source into a 1400px smear. max-height keeps
+           covers from pushing text off-screen. */
+        max-width: min(100%, 200%);
+        width: auto;
         height: auto;
-        /* U4: covers never push text off-screen; small inline images unaffected. */
         max-height: 85vh;
       }
       body svg {
         max-width: 100% !important;
         max-height: 85vh !important;
+      }
+      /* An image-only document (no prose, only plates) must not be laid out
+         inside the prose measure: Prisioneros de la geografía's
+         OPS/0005_0001.htm holds two 500x750 maps that rendered at ~280px each,
+         which made every place name ~6px tall. Such a chapter drops the column
+         and unreserves the viewport-height cap, because 85vh of a scroll
+         container clipped a plate that should be read top to bottom. */
+      ${imageOnlyCss}
+      /* A plate alone in its block grows past the measure in every layout mode.
+         Images sharing a parent never do — a row of two inside a text column is
+         still a row of two. Colour is untouched, so the four themes hold. */
+      body img[${SOLO_IMAGE_ATTR}] {
+        max-width: min(100%, 200%);
+        height: auto;
+      }
+      /* Consecutive content images stack instead of splitting the measure
+         between them (the two-map spread again). The images may sit in
+         different parents, so no single container can own the layout — hence a
+         per-image display:block rather than a flex column. */
+      body img[${STACKED_IMAGE_ATTR}] {
+        display: block;
+        max-width: min(100%, 200%);
+        height: auto;
+        margin-inline: auto;
+        margin-block: 1em;
+        float: none !important;
       }
       /* U4: figures read as intentional spreads; captions stay muted. */
       body figure {
@@ -402,5 +452,43 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
       body :lang(ko) :is(em, i, cite, dfn) {
         font-style: normal;
       }
-${paginationCss}    `;
+${paginationCss}${imageOnlyCss}    `;
+}
+
+/**
+ * The image-only override: last in the cascade, so it beats both the scroll and
+ * the pagination body rules.
+ *
+ * `max-width: none` is the whole fix — `body img { max-width: min(100%, 200%) }`
+ * resolves its percentage against the body's own width, and it is the centred
+ * `min(65ch, 100%)` body that halved each map. Releasing the column releases the
+ * images with it, so no per-image width is set here.
+ *
+ * `max-height: none` only for this layout. The 85vh cap exists so a cover in a
+ * text chapter cannot push the prose off-screen; in a document that is ALL
+ * image there is no prose to push, and the cap was clipping a plate to a
+ * letterbox the reader could not scroll past.
+ */
+function buildImageOnlyCss(): string {
+  return `
+      body {
+        max-width: none !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+      }
+      body img, body svg {
+        max-width: min(100%, 200%) !important;
+        max-height: none !important;
+        height: auto !important;
+      }
+      body img[${STACKED_IMAGE_ATTR}] {
+        display: block;
+        margin-inline: auto;
+        margin-block: 0.5em;
+        float: none !important;
+      }
+      body img[${SOLO_IMAGE_ATTR}] {
+        max-width: min(100%, 200%) !important;
+      }
+    `;
 }

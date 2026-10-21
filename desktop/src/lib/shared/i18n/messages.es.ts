@@ -762,6 +762,10 @@ export const messagesEs: Record<MessageKey, string> = {
   'epub.next': 'Siguiente',
   'epub.tableOfContents': 'Tabla de contenidos',
   'epub.search': 'Buscar en el libro',
+  'epub.imageViewer': 'Visor de imagen',
+  'epub.imageZoomIn': 'Aumentar zoom',
+  'epub.imageZoomOut': 'Reducir zoom',
+  'epub.imageZoomReset': 'Restablecer zoom',
   'epub.selectionActionsUnavailable':
     'Las notas y resaltados por seleccion aun no estan disponibles para EPUB.',
   'import.reading': 'Leyendo archivo...',

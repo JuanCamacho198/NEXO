@@ -752,6 +752,10 @@ export const messagesEn = {
   'epub.next': 'Next',
   'epub.tableOfContents': 'Table of Contents',
   'epub.search': 'Search in book',
+  'epub.imageViewer': 'Image viewer',
+  'epub.imageZoomIn': 'Zoom in',
+  'epub.imageZoomOut': 'Zoom out',
+  'epub.imageZoomReset': 'Reset zoom',
   'epub.selectionActionsUnavailable':
     'Selection notes and highlights are not available for EPUB yet.',
   'import.reading': 'Reading file...',

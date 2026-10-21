@@ -1,7 +1,7 @@
 /**
  * Overlay-pattern freeze (perf-stability-cleanup P3).
  *
- * Decision: the six hand-rolled overlay roots below stay hand-rolled.
+ * Decision: the seven hand-rolled overlay roots below stay hand-rolled.
  * Migrating them to bits-ui is weeks of work and was explicitly deferred;
  * what ends today is the ambiguity, not the migration. New overlay roots
  * must either reuse Modal/Dialog (preferred) or update this allowlist
@@ -31,6 +31,12 @@ const BITS_UI_IMPORT = /from\s+['"]bits-ui['"]/;
  * SettingsPanel overlay-mode deletion (dead code — page mode was the only mode used),
  * and the SearchPanel drawer adoption (reader-search-panel-fix: the in-book search
  * surface became the fourth hand-rolled drawer instead of an in-flow card).
+ *
+ * Image viewer (reader-image-readability): a fixed full-viewport stage, not a
+ * dialog with a card. It cannot use `Modal` — the backdrop IS the picture
+ * backdrop, it needs pointer capture for drag panning, and it must own Escape
+ * before the reader's own handler; `Modal` supplies a card shell with its own
+ * dismissal and focus trap, all of which are in the way here.
  */
 const KNOWN_OVERLAY_ROOTS = [
   'features/reader/chrome/BookmarkSidebar.svelte',
@@ -38,6 +44,7 @@ const KNOWN_OVERLAY_ROOTS = [
   'features/reader/chrome/ReaderTocPanel.svelte',
   'features/reader/chrome/ReaderWorkspace.svelte',
   'features/reader/panels/SearchPanel.svelte',
+  'features/reader/viewer-epub/EpubImageViewer.svelte',
   'shared/ui/feedback/ErrorFallback.svelte',
 ];
 
