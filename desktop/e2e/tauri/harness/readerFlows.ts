@@ -34,6 +34,13 @@ export type LibraryRow = {
   title: string;
   format?: string;
   coverPath?: string | null;
+  /**
+   * Absolute path to the book file. Empty on a *sync stub* — a placeholder row
+   * for a book that was never downloaded here (the Rust DTO documents this
+   * explicitly: "Consumers treat an empty path as 'not a real book'"). Optional
+   * so a caller can build a row by hand without it.
+   */
+  filePath?: string;
 };
 
 /**
@@ -78,11 +85,48 @@ export async function findChapterFrame(page: Page): Promise<Frame | null> {
 }
 
 /**
+ * Candidate rows for "a book a reader spec can run against", in the order they
+ * should be tried, before any capability has been measured.
+ *
+ * A *sync stub* — a row synced from another device with no local file — never
+ * renders, so it is out by rule: the library reports it with an empty
+ * `filePath` (the DTO documents "Consumers treat an empty path as 'not a real
+ * book'"), and the Rust migration reports these rows verbatim. Matching the
+ * title is a *belt* on top of that brace, because a stub is also what
+ * `scripts/s1-bounce-scroll-mode.mts` filters out by name.
+ *
+ * The order is deliberately **not** the shelf order (`updated_at DESC`, which
+ * is what `listLibraryBooks` returns): the most recently opened book on this
+ * machine is the one with the text-sparse spine, so trying in shelf order costs
+ * the whole traversal before reaching a book that serves. Books that carry a
+ * `coverPath` are tried first, which is the same preference `pickEpub` always
+ * had, now only as an ordering hint rather than as proof of capability.
+ */
+export function usableEpubCandidates(rows: LibraryRow[]): LibraryRow[] {
+  const isEpub = (row: LibraryRow): boolean => (row.format ?? '').toLowerCase() === 'epub';
+  const hasLocalFile = (row: LibraryRow): boolean => (row.filePath ?? '').length > 0;
+  const isStub = (row: LibraryRow): boolean => /sync stub/i.test(row.title);
+
+  const epubs = rows.filter((row) => isEpub(row) && hasLocalFile(row) && !isStub(row));
+  return [
+    ...epubs.filter((row) => Boolean(row.coverPath)),
+    ...epubs.filter((row) => !row.coverPath),
+  ];
+}
+
+/**
  * Picks a real EPUB from the library over the live IPC bridge. Returns null
  * when the library holds no EPUB (the spec then skips with a reason).
  *
  * `format` is only trustworthy from the Rust side, so it is read from the
  * command's answer rather than guessed from a title.
+ *
+ * **This is a metadata pick, not a capability one.** A row that passes it can
+ * still render an empty chapter — measured on this machine, where the first row
+ * it returned (*Prisioneros de la geografía*) renders 0 characters across ten
+ * consecutive spine chapters. Specs that need a chapter to *contain something*
+ * must establish that by measurement; see `readerCapacity.ts` and
+ * {@link pickUsableEpub}.
  */
 export async function pickEpub(page: Page): Promise<LibraryRow | null> {
   return page.evaluate(async (): Promise<LibraryRow | null> => {
@@ -100,6 +144,27 @@ export async function pickEpub(page: Page): Promise<LibraryRow | null> {
 
     const epubs = rows.filter((row) => (row.format ?? '').toLowerCase() === 'epub');
     return epubs.find((row) => Boolean(row.coverPath)) ?? epubs[0] ?? null;
+  });
+}
+
+/**
+ * Every library row, over the live IPC bridge, unfiltered. Specs that need to
+ * choose a book by measurement start from this rather than from `pickEpub`,
+ * whose first match is chosen by metadata alone.
+ */
+export async function readLibraryRows(page: Page): Promise<LibraryRow[]> {
+  return page.evaluate(async (): Promise<LibraryRow[]> => {
+    const internals = (
+      window as unknown as {
+        __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: unknown) => Promise<unknown> };
+      }
+    ).__TAURI_INTERNALS__;
+
+    if (!internals) throw new Error('__TAURI_INTERNALS__ is missing — not a Tauri webview');
+
+    return (await internals.invoke('listLibraryBooks', {
+      payload: { responseVersion: 1 },
+    })) as LibraryRow[];
   });
 }
 
@@ -202,121 +267,19 @@ export async function chapterHasText(frame: Frame): Promise<boolean> {
 }
 
 /**
- * Selects a run of real characters inside the chapter frame using the
- * **frame's own** `Selection`/`Range` API — the parent document has a different
- * `document` and cannot select nodes the chapter owns.
- *
- * The range starts at the first non-whitespace text node **that is on screen**
- * and spans up to `maxChars` characters, stopping at a whitespace boundary so
- * the selection is a readable run rather than a mid-word cut. Returns the
- * selected string, or null when the document has no usable text node.
- *
- * The on-screen requirement is not cosmetic. This harness previously took the
- * first text node anywhere in the chapter, and the chapter is not just the
- * visible page: the iframe is sized to the whole chapter (measured at ~18 000 px
- * for one), so the first node can be tens of thousands of pixels above the
- * viewport. The toolbar is anchored to the selection's rect, so selecting an
- * off-screen run puts the toolbar off-screen too and `toBeVisible()` fails for
- * a reason that has nothing to do with the behaviour under test. The visible
- * band is the **parent** viewport height (the frame's own `innerHeight` is the
- * content height, not the visible one), which is how `readerPaging` picks its
- * node as well.
- *
- * The mouse is NOT driven: `mouseup` on the iframe would require the iframe to
- * be scrolled into view at real coordinates, which is fragile. The chapter's
- * own selection script reads `window.getSelection()` on `mouseup`, so the spec
- * synthesises that event on the frame after setting the range. That is the
- * frame-level equivalent of the gesture and it crosses the same boundary
- * (`frame.getSelection()` -> postMessage -> parent `onselection`).
+ * Selection geometry and gestures live in their own module — they are the one
+ * part of this harness whose correctness depends on translating between the
+ * chapter frame's coordinate space and the parent's viewport. Re-exported here
+ * so a spec has a single import for "drive the reader".
  */
-export async function selectTextInChapter(frame: Frame, maxChars = 60): Promise<string | null> {
-  const visibleHeight = await frame
-    .locator('body')
-    .evaluate(
-      () => (globalThis as unknown as { parent: { innerHeight: number } }).parent.innerHeight,
-    )
-    .catch(() => 800);
-
-  const text = await frame.evaluate(
-    ([limit, visible]) => {
-      const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE']);
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-        acceptNode(node) {
-          let el: Node | null = node.parentElement;
-          while (el) {
-            if (SKIP.has(el.nodeName)) return NodeFilter.FILTER_REJECT;
-            el = el.parentElement;
-          }
-          return NodeFilter.FILTER_ACCEPT;
-        },
-      });
-      let node = walker.nextNode();
-      while (node) {
-        const value = node.nodeValue ?? '';
-        const rect = (node as Text).parentElement?.getBoundingClientRect();
-        const onScreen = rect ? rect.top >= 0 && rect.bottom <= visible : false;
-        if (value.trim().length >= 3 && onScreen) break;
-        node = walker.nextNode();
-      }
-      if (!node || !node.nodeValue) return null;
-
-      const data = node.nodeValue;
-      const start = data.search(/\S/);
-      if (start < 0) return null;
-
-      let end = Math.min(data.length, start + limit);
-      const ws = data.lastIndexOf(' ', end);
-      if (ws > start + 4) end = ws;
-
-      const range = document.createRange();
-      range.setStart(node, start);
-      range.setEnd(node, end);
-
-      const selection = document.getSelection();
-      if (!selection) return null;
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      return range.toString();
-    },
-    [maxChars, visibleHeight] as const,
-  );
-
-  if (text === null) return null;
-
-  // Synthesise the gesture the chapter's own script waits for: the selection
-  // script debounces `mouseup` by 100ms and only then posts `epub-selection`.
-  // Dispatch it inside the frame's document so `window` there is the frame's.
-  await frame.evaluate(() => {
-    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-  });
-
-  return text;
-}
-
-/** The frame's own current selection text (the parent cannot see it). */
-export async function readFrameSelection(frame: Frame): Promise<string> {
-  return frame.evaluate(() => (document.getSelection()?.toString() ?? '').trim()).catch(() => '');
-}
-
-/**
- * Clicks inside the chapter without selecting anything, the way a reader clicks
- * to move the caret.
- *
- * The gesture is composed at the frame level (down, up, collapse, click) rather
- * than driven with `page.mouse`, because a real click needs real page
- * coordinates inside a frame that `openBook` did not scroll into view. The
- * frame's own handlers read `mousedown` / `click`, which is exactly this
- * sequence — the same technique `selectTextInChapter` uses for `mouseup`.
- */
-export async function clickInsideChapter(frame: Frame): Promise<void> {
-  await frame.evaluate(() => {
-    document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-    document.getSelection()?.removeAllRanges();
-    document.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  });
-}
+export {
+  chapterVisibleBand,
+  clickInsideChapter,
+  onScreenProseLength,
+  readFrameSelection,
+  scrollToChapterProse,
+  selectTextInChapter,
+} from './readerSelection';
 
 /**
  * Scrolls the reader by `delta` pixels and returns nothing; the caller asserts.
@@ -334,62 +297,10 @@ export async function scrollChapter(page: Page, delta = 400): Promise<void> {
   }, delta);
 }
 
-/** How many highlights the backend reports for `bookId`, over the real IPC bridge. */
-export async function countHighlights(page: Page, bookId: string): Promise<number> {
-  return page.evaluate(async (id) => {
-    const internals = (
-      window as unknown as {
-        __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: unknown) => Promise<unknown> };
-      }
-    ).__TAURI_INTERNALS__;
-    if (!internals) throw new Error('__TAURI_INTERNALS__ is missing — not a Tauri webview');
-    const rows = (await internals.invoke('listHighlights', { bookId: id })) as unknown[];
-    return rows.length;
-  }, bookId);
-}
-
 /**
- * The highlight the backend holds for `highlightId`, read over the real IPC
- * bridge. The database is the authority on whether a colour was applied — a
- * screenshot is not (see the contract's §2.4 note about the Android
- * measurement).
+ * The backend is the authority on a book's highlights — see `readerHighlights`.
  */
-export async function readHighlight(
-  page: Page,
-  bookId: string,
-  highlightId: string,
-): Promise<{ id: string; color: string; text?: string } | null> {
-  return page.evaluate(
-    async ([id, hlId]) => {
-      const internals = (
-        window as unknown as {
-          __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: unknown) => Promise<unknown> };
-        }
-      ).__TAURI_INTERNALS__;
-      if (!internals) throw new Error('__TAURI_INTERNALS__ is missing — not a Tauri webview');
-      const rows = (await internals.invoke('listHighlights', { bookId: id })) as Array<{
-        id: string;
-        color: string;
-        text?: string;
-      }>;
-      return rows.find((row) => row.id === hlId) ?? null;
-    },
-    [bookId, highlightId] as const,
-  );
-}
-
-/** Deletes a highlight this spec created, so it does not leak into the library. */
-export async function deleteHighlight(page: Page, highlightId: string): Promise<void> {
-  await page.evaluate(async (id) => {
-    const internals = (
-      window as unknown as {
-        __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: unknown) => Promise<unknown> };
-      }
-    ).__TAURI_INTERNALS__;
-    if (!internals) throw new Error('__TAURI_INTERNALS__ is missing — not a Tauri webview');
-    await internals.invoke('deleteHighlight', { id });
-  }, highlightId);
-}
+export { countHighlights, deleteHighlight, highlightIds, readHighlight } from './readerHighlights';
 
 /**
  * The selection toolbar's rect, read from the DOM rather than through

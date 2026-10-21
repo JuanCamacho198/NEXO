@@ -14,6 +14,7 @@
  */
 import { chromium, type Page } from '@playwright/test';
 import { goToLibrary, openBook, waitForChapterFrame } from '../e2e/tauri/harness/readerFlows';
+import { noUsableEpubReason, selectUsableEpub } from '../e2e/tauri/harness/readerCapacity';
 
 const RUNS = Number(process.env.NEXO_S1_RUNS ?? '10');
 const SAMPLE_MS = 200;
@@ -32,26 +33,12 @@ try {
   if (!page) throw new Error('app page not found');
   const app = page;
 
-  const book = await app.evaluate(async () => {
-    const internals = (
-      window as unknown as {
-        __TAURI_INTERNALS__?: { invoke: (c: string, a?: unknown) => Promise<unknown> };
-      }
-    ).__TAURI_INTERNALS__;
-    const rows = (await internals!.invoke('listLibraryBooks', {
-      payload: { responseVersion: 1 },
-    })) as Array<Record<string, unknown>>;
-    // Any real (non-stub) epub will do; a chapter-count floor keeps a cover-only
-    // row out, since the bounce is only observable where turns are possible.
-    const candidates = rows.filter(
-      (r) => String(r.format) === 'epub' && String(r.title).length > 0 && !/sync stub/i.test(String(r.title)),
-    );
-    return (
-      candidates.find((r) => Number(r.totalPages) > 1) ?? candidates[0] ?? null
-    );
+  const { found, candidates } = await selectUsableEpub(app, (attempted, total, title) => {
+    console.log(`[s1] candidate ${attempted}/${total}: ${title}`);
   });
-  if (!book) throw new Error('no usable epub in the library');
-  console.log(`book: ${book.title}`);
+  if (!found) throw new Error(noUsableEpubReason(candidates));
+  const book = found.book;
+  console.log(`book: ${book.title} (${found.textLen} chars of prose)`);
 
   const readPage = async (): Promise<number | null> =>
     app.evaluate(() => {
@@ -84,7 +71,7 @@ try {
       await app.waitForTimeout(200);
       await goToLibrary(app);
     });
-    await openBook(app, book as never);
+    await openBook(app, book);
     await waitForChapterFrame(app).catch(() => null);
 
     const series: number[] = [];

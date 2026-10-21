@@ -27,7 +27,16 @@
  * budgets are sized from measurement, and each is documented where it is used.
  */
 import { expect, type Frame, type Page } from '@playwright/test';
-import { findChapterFrame, goToLibrary, openBook, type LibraryRow } from './readerFlows';
+import {
+  findChapterFrame,
+  goToLibrary,
+  openBook,
+  readLibraryRows,
+  usableEpubCandidates,
+  type LibraryRow,
+} from './readerFlows';
+import { onScreenProseLength, selectTextInChapter } from './readerSelection';
+import { pickUsableEpub } from './readerCapacity';
 
 /** A book the read-cycle opens, as the library reports it. */
 export type SmokeBook = LibraryRow;
@@ -38,28 +47,48 @@ export type SmokeBooks = { first: SmokeBook; second: SmokeBook };
 /**
  * Books the spec opens, read over the real IPC bridge (not guessed from a title).
  *
- * A real local EPUB only: a *sync stub* (`coverPath` absent) has no local file
- * and never renders, so it would fail at step 2 for a reason the smoke test is
- * not about.
+ * Both must be **books that render prose**, not merely rows that claim to be
+ * EPUBs: a sync stub has no local file and never renders, and a book whose
+ * chapters are only covers and part titles renders nothing a reader can select,
+ * scroll or highlight. Selecting on metadata alone is what let this spec open a
+ * book that returned `textLen: 0` and fail at its first step for a reason that
+ * had nothing to do with the code under test.
+ *
+ * `readerCapacity` is the authority on that — it opens each candidate in the
+ * running app and measures what renders, restoring each book's reading position
+ * afterwards. This spec's own reset then seeds the positions it asserts about.
+ *
+ * ## The extra requirement: the book must *record* its position
+ *
+ * The cycle's last assertions are "the place was kept". That is only provable on
+ * a book whose reader publishes its location, and **not every book in this
+ * library does** — measured on this machine: *Prisioneros de la geografía* and
+ * *Freakonomics* reopen on the page they were left on, while *Don Quijote*
+ * reopens on page 1 after being left on page 2 (its footer stays at `0%` and it
+ * issues no `saveProgress` at all).
+ *
+ * `readerProgressProbe` owns that measurement and the spec skips with its
+ * evidence. It is deliberately **not** inlined here: proving the property costs
+ * an open, a turn, a close and a reopen of a real book, and paying that inside
+ * the candidate scan would make every reader spec slower for a question only the
+ * smoke cycle asks.
+ *
+ * `first` is the book the cycle reads; `second` is the one it switches to.
  */
 export async function pickTwoEpubs(page: Page): Promise<SmokeBooks | null> {
-  const rows = (await page.evaluate(async () => {
-    const internals = (
-      window as unknown as {
-        __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: unknown) => Promise<unknown> };
-      }
-    ).__TAURI_INTERNALS__;
-    if (!internals) throw new Error('__TAURI_INTERNALS__ is missing — not a Tauri webview');
-    return (await internals.invoke('listLibraryBooks', {
-      payload: { responseVersion: 1 },
-    })) as unknown;
-  })) as SmokeBook[];
+  const rows = await readLibraryRows(page);
+  const candidates = usableEpubCandidates(rows);
+  if (candidates.length < 2) return null;
 
-  const epubs = rows.filter(
-    (row) => (row.format ?? '').toLowerCase() === 'epub' && Boolean(row.coverPath),
-  );
-  if (epubs.length < 2) return null;
-  return { first: epubs[0], second: epubs[1] };
+  const first = await pickUsableEpub(page, candidates);
+
+  // The second book is chosen from the remaining candidates by the same rule, so
+  // the switch step also lands on prose rather than on a cover.
+  const remaining = candidates.filter((row) => row.id !== first?.book.id);
+  const second = await pickUsableEpub(page, remaining);
+
+  if (!first || !second) return null;
+  return { first: first.book, second: second.book };
 }
 
 /** The reader's header page field (a TOC entry index), or null when absent. */
@@ -238,38 +267,6 @@ export async function liveChapterFrame(page: Page): Promise<Frame> {
   return frame;
 }
 
-/** How much selectable, on-screen prose the chapter frame currently offers. */
-async function chapterProseLength(frame: Frame): Promise<number> {
-  const visibleHeight = await frame
-    .locator('body')
-    .evaluate(() => (globalThis as unknown as { parent: { innerHeight: number } }).parent.innerHeight)
-    .catch(() => 800);
-
-  return frame.evaluate((visible) => {
-    const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE']);
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-      acceptNode(node) {
-        let el: Node | null = node.parentElement;
-        while (el) {
-          if (SKIP.has(el.nodeName)) return NodeFilter.FILTER_REJECT;
-          el = el.parentElement;
-        }
-        return NodeFilter.FILTER_ACCEPT;
-      },
-    });
-    let best = 0;
-    let node = walker.nextNode();
-    while (node) {
-      const trimmed = (node.nodeValue ?? '').trim();
-      const rect = (node as Text).parentElement?.getBoundingClientRect();
-      const onScreen = rect ? rect.top >= 0 && rect.bottom <= visible : false;
-      if (onScreen && trimmed.length > best) best = trimmed.length;
-      node = walker.nextNode();
-    }
-    return best;
-  }, visibleHeight);
-}
-
 /**
  * Turns forward until the reader is on a chapter with enough on-screen prose to
  * select a run from.
@@ -285,7 +282,7 @@ async function chapterProseLength(frame: Frame): Promise<number> {
 export async function seekSelectableChapter(page: Page, maxTurns = 6): Promise<Frame> {
   for (let turn = 0; turn <= maxTurns; turn++) {
     const frame = await liveChapterFrame(page);
-    if ((await chapterProseLength(frame)) >= 30) return frame;
+    if ((await onScreenProseLength(frame)) >= 30) return frame;
     if (turn === maxTurns) break;
     const next = page.locator('[data-testid="bottom-bar-controls"] button').nth(1);
     await expect(next).toBeEnabled({ timeout: 15_000 });
@@ -295,84 +292,6 @@ export async function seekSelectableChapter(page: Page, maxTurns = 6): Promise<F
   throw new Error(
     `no chapter with selectable prose within ${maxTurns} forward turns of the reader`,
   );
-}
-
-/**
- * Selects a real run of book characters inside the chapter frame and returns it.
- *
- * The range is set with the **frame's own** `Selection` API (the parent cannot
- * select nodes the chapter owns) and the gesture the chapter's script waits for
- * is synthesised in the frame — the same boundary `readerSelection.spec.ts`
- * crosses. The chapter debounces that `mouseup` by 100 ms before it posts
- * `epub-selection`, so the caller polls for the toolbar rather than reading it
- * once.
- *
- * The walker skips `script` / `style` / `noscript` subtrees: the chapter
- * document is not just prose, the reader injects its own bridge script into it,
- * and the first text node ≥30 chars in document order was that script's source.
- * A selection over script source is not a user-visible run, so it produces no
- * toolbar.
- *
- * The candidate must also be within the reader's visible area. The toolbar is
- * positioned from the selection's rect and a run deep in a long chapter lands
- * off screen with it, where the swatch cannot be clicked ("element is outside of
- * the viewport", retried until the test times out). Note the frame's own
- * `window.innerHeight` is the **content** height, not the visible one — the
- * iframe is sized to the chapter (measured: 18 874 px) — so the visible band is
- * taken from the parent viewport and the frame's current scroll offset.
- */
-export async function selectTextInChapter(frame: Frame, maxChars = 40): Promise<string | null> {
-  const visibleHeight = await frame
-    .locator('body')
-    .evaluate(() => (globalThis as unknown as { parent: { innerHeight: number } }).parent.innerHeight)
-    .catch(() => 800);
-
-  const text = await frame.evaluate(([limit, visible]) => {
-    const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE']);
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-      acceptNode(node) {
-        let el: Node | null = node.parentElement;
-        while (el) {
-          if (SKIP.has(el.nodeName)) return NodeFilter.FILTER_REJECT;
-          el = el.parentElement;
-        }
-        return NodeFilter.FILTER_ACCEPT;
-      },
-    });
-
-    let node = walker.nextNode();
-    while (node) {
-      const value = node.nodeValue ?? '';
-      const trimmed = value.trim();
-      const rect = (node as Text).parentElement?.getBoundingClientRect();
-      const onScreen = rect ? rect.top >= 0 && rect.bottom <= visible : false;
-      if (trimmed.length >= 30 && onScreen) break;
-      node = walker.nextNode();
-    }
-    if (!node?.nodeValue) return null;
-
-    const data = node.nodeValue;
-    const start = data.search(/\S/);
-    if (start < 0) return null;
-    let end = Math.min(data.length, start + limit);
-    const ws = data.lastIndexOf(' ', end);
-    if (ws > start + 4) end = ws;
-
-    const range = document.createRange();
-    range.setStart(node, start);
-    range.setEnd(node, end);
-    const selection = document.getSelection();
-    if (!selection) return null;
-    selection.removeAllRanges();
-    selection.addRange(range);
-    return range.toString();
-  }, [maxChars, visibleHeight] as const);
-
-  if (text === null) return null;
-  await frame.evaluate(() => {
-    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-  });
-  return text;
 }
 
 /** The highlights the backend reports for `bookId`, over the real IPC bridge. */

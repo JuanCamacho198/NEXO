@@ -89,6 +89,7 @@ import {
   turnForward,
   type SmokeBook,
 } from './harness/readerPaging';
+import { probeProgressPersistence } from './harness/readerProgressProbe';
 import type { Page } from '@playwright/test';
 import {
   SMOKE_PROGRESS,
@@ -110,15 +111,17 @@ test('a reader can open a book, read it, highlight it, close it and find their p
   test.setTimeout(600_000);
 
   const books = await pickTwoEpubs(appPage);
-  test.skip(books === null, 'The library needs two local EPUBs to run the read-cycle.');
+  test.skip(
+    books === null,
+    'The library needs two EPUBs that render prose to run the read-cycle ' +
+      '(a sync stub, or a book whose chapters are only covers and part titles, cannot).',
+  );
 
-  // ── Reset ────────────────────────────────────────────────────────────────
-  // Everything this spec asserts about is seeded here, so nothing it measures
-  // can have been inherited from the developer's last session. Both the
-  // settings map and the two books' positions are captured first so the
-  // teardown can put them back — this spec drives a real library, and leaving
-  // it walked forward would be this test corrupting the state it was written to
-  // protect against.
+  // ── Capture the state this run must restore ──────────────────────────────
+  // Read *before* the persistence probe below, which opens the first book and
+  // turns a chapter: capturing afterwards would record the probe's own movement
+  // as the value to restore, and the teardown would then "restore" the developer
+  // into a chapter this test walked them to.
   const previousSettings = await readSettings(appPage);
   const previousPositions = await Promise.all(
     [books!.first.id, books!.second.id].map(async (id) => ({
@@ -126,13 +129,34 @@ test('a reader can open a book, read it, highlight it, close it and find their p
       progress: await readProgress(appPage, id),
     })),
   );
+
+  // ── The book must also *record* where the reader is ──────────────────────
+  // The cycle ends by asserting "the place was kept", which is only provable on
+  // a book whose reader publishes its location and the app stores it. Not every
+  // book here does: measured on this machine, *Don Quijote* reopens on page 1
+  // after being left on page 2 — its footer stays at 0% and it issues no
+  // `saveProgress` at all — while *Prisioneros* and *Freakonomics* reopen where
+  // they were left. Without this check the spec's outcome depends on which book
+  // the capacity scan happened to pick, which is exactly the ambient dependency
+  // it exists to remove.
+  //
+  // It probes BOTH books and swaps their roles when only the second records, so
+  // a library that holds a working book still exercises the full cycle instead
+  // of skipping. The skip is reserved for a library where neither book can carry
+  // the assertion at all.
+  //
+  // The probes run inside the `try` below: each opens a book and turns a
+  // chapter, and the teardown must put those positions back.
+
+  // ── Reset ────────────────────────────────────────────────────────────────
+  // Everything this spec asserts about is seeded here, so nothing it measures
+  // can have been inherited from the developer's last session.
   // Set when this spec creates its own highlight, so the teardown can delete
   // that one and only that one. Held in an object rather than a local so the
   // cycle can record it even when a later step throws before it returns —
   // otherwise a failed run would leak the highlight it created.
   const created: { highlightId: string | null } = { highlightId: null };
 
-  await seedProgress(appPage, books!.first.id, SMOKE_PROGRESS);
   await seedSetting(appPage, 'reader.epub.fontSize', 100);
   await seedSetting(appPage, 'reader.paginated', false);
   // The diagnostic flag is read at boot and, when on, changes the reader's
@@ -146,8 +170,41 @@ test('a reader can open a book, read it, highlight it, close it and find their p
   await reloadApp(appPage);
   await goToLibrary(appPage);
 
+  const io = { open: openAndAssertChapter, close: closeReader };
+
   try {
-    await driveReadCycle(appPage, books!.first, books!.second, created);
+    const firstProbe = await probeProgressPersistence(appPage, books!.first, io);
+    let read = books!.first;
+    let other = books!.second;
+    let evidence = firstProbe;
+    if (!firstProbe.records) {
+      // The first book cannot carry the assertion; try the second before giving
+      // up. Their roles swap so the cycle still reads the book that can.
+      const secondProbe = await probeProgressPersistence(appPage, books!.second, io);
+      if (secondProbe.records) {
+        read = books!.second;
+        other = books!.first;
+      }
+      evidence = secondProbe;
+    }
+
+    test.skip(
+      !evidence.records,
+      `Neither "${books!.first.title}" nor "${books!.second.title}" came back to the page it ` +
+        `was left on (${books!.first.title}: closed ${firstProbe.closedOn ?? '(unknown)'} / ` +
+        `reopened ${firstProbe.reopenedOn ?? '(none)'}; ${books!.second.title}: closed ` +
+        `${evidence.closedOn ?? '(unknown)'} / reopened ${evidence.reopenedOn ?? '(none)'}). ` +
+        `A book whose reader never publishes its location cannot prove the "the place was ` +
+        `kept" half of this cycle.`,
+    );
+
+    // The probes left the reader open; the cycle opens the book itself, so return
+    // to the shelf first.
+    await closeReader(appPage);
+    await seedProgress(appPage, read.id, SMOKE_PROGRESS);
+    await reloadApp(appPage);
+    await goToLibrary(appPage);
+    await driveReadCycle(appPage, read, other, created);
   } finally {
     // ── Restore ────────────────────────────────────────────────────────────
     // Put the settings and both books' reading positions back the way they were

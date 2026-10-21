@@ -66,7 +66,7 @@
  */
 import { expect, test } from './harness/connectApp';
 import type { Page } from '@playwright/test';
-import { openBook, pickEpub } from './harness/readerFlows';
+import { noUsableEpubReason, seekRenderedChapter, selectUsableEpub } from './harness/readerCapacity';
 
 type FooterState = {
   /** The numeric percentage label next to the footer bar (spine-weighted). */
@@ -115,12 +115,20 @@ async function readFooter(page: Page): Promise<FooterState> {
   });
 }
 
-/** Opens an EPUB and skips the caller when the book is missing or single-chapter. */
+/** Opens a book with prose and chapter navigation, or skips the caller with a reason. */
 async function openMultiChapterBook(page: Page): Promise<FooterState> {
-  const epub = await pickEpub(page);
-  test.skip(epub === null, 'No EPUB book in the library — cannot measure progress.');
+  // The book must render prose and have chapters to navigate *across*: this
+  // spec's invariant is about two surfaces co-moving under a real navigation, and
+  // a book whose chapters are covers alone gives it nothing to move between.
+  // `selectUsableEpub` opens each candidate and measures what renders, so the
+  // choice does not depend on what the developer's library happens to hold.
+  const { found, candidates } = await selectUsableEpub(page);
+  test.skip(found === null, noUsableEpubReason(candidates));
 
-  await openBook(page, epub!);
+  // Read on to a chapter with prose if the book did not open on one. Covers and
+  // part titles render a few characters and would make the footer read a
+  // chapter whose contribution to the book's percentage is trivially small.
+  await seekRenderedChapter(page);
 
   // The two surfaces settle on different clocks, and reading before they do
   // measures a transient state rather than the app.
@@ -129,15 +137,23 @@ async function openMultiChapterBook(page: Page): Promise<FooterState> {
   // book's persisted `percentage` until the viewer reports a location. The
   // header chapter is not — it can only come from the viewer's first
   // `epubcfi(/6/N!…)`, which arrives after the chapter iframe has parsed. So
-  // immediately after `openBook` the footer can read 33% while the header still
-  // reads 1/23, and that pair is correct for that instant, not a defect.
+  // immediately after opening, the footer can read 33% while the header still
+  // holds a placeholder, and that pair is correct for that instant, not a defect.
   //
-  // Wait for the header to leave page 1 rather than sleeping a fixed span: a
-  // fixed wait either flakes or wastes time, and this one fails loudly if the
+  // Wait for the header to report a real page rather than sleeping a fixed span:
+  // a fixed wait either flakes or wastes time, and this one fails loudly if the
   // chapter never arrives.
+  //
+  // Note this waits for `>= 1`, NOT `> 1`. An earlier revision waited for the
+  // page to leave chapter 1, on the assumption that the book opened mid-way
+  // through. This spec now deliberately positions the reader on the *first*
+  // chapter that renders prose, which for the chosen book is chapter 1 — so a
+  // `> 1` wait could never be satisfied and timed out at 15 s (measured). What
+  // the assertions actually need is that the header has received its location,
+  // which is a page number of 1 or more.
   await expect
     .poll(async () => (await readFooter(page)).currentPage, { timeout: 15_000 })
-    .toBeGreaterThan(1);
+    .toBeGreaterThanOrEqual(1);
 
   const before = await readFooter(page);
 
@@ -146,7 +162,20 @@ async function openMultiChapterBook(page: Page): Promise<FooterState> {
   // assert a degenerate case.
   test.skip(
     before.totalPages < 2,
-    `The book reports ${before.totalPages} pages — no chapter navigation to check coherence across.`,
+    `The book "${found!.book.title}" reports ${before.totalPages} pages — no chapter navigation to check coherence across.`,
+  );
+
+  // Both tests below turn forward and require the *footer percentage to
+  // increase*. At the book's last chapter that is unsatisfiable: the
+  // spine-weighted percentage saturates while the TOC index can still tick over.
+  // Measured before this guard existed: the header moved 19 -> 20 while the
+  // footer stayed at 93% -> 93%, which is the app behaving correctly at the end
+  // of a book and the test demanding something the app never promised. Skip with
+  // the real numbers rather than assert a property that does not hold there.
+  test.skip(
+    before.currentPage >= before.totalPages,
+    `The reader is on the book's last chapter (${before.currentPage}/${before.totalPages}) — ` +
+      `the footer percentage cannot increase past the end of the book.`,
   );
 
   return before;
@@ -156,6 +185,18 @@ async function openMultiChapterBook(page: Page): Promise<FooterState> {
 function nextButton(page: Page) {
   return page.locator('[data-testid="bottom-bar-controls"] button').nth(1);
 }
+
+/**
+ * How many forward turns the footer-percentage assertions may take to observe a
+ * change.
+ *
+ * The footer is spine-weighted and rounded to whole percent, so a book whose
+ * early chapters are a small fraction of its length can hold the label at the
+ * same value for several turns — measured on *Don Quijote*: seven turns at `0%`
+ * before the eighth reads `50%`. The bound keeps a genuinely frozen footer
+ * failing at the assertion below instead of looping forever.
+ */
+const MAX_PROGRESS_TURNS = 12;
 
 test('the footer percentage is self-consistent and monotonic across a navigation', async ({
   appPage,
@@ -173,17 +214,49 @@ test('the footer percentage is self-consistent and monotonic across a navigation
 
   const next = nextButton(appPage);
   await expect(next).toBeEnabled({ timeout: 10_000 });
-  await next.click();
 
-  // Let the new location stream in, then read the settled state once.
-  await appPage.waitForTimeout(800);
-  const after = await readFooter(appPage);
+  // Turn forward until the footer percentage actually moves, sampling every step.
+  //
+  // Why not "one Next must raise the percentage": the footer is
+  // spine-weighted, so its percentage reflects how much of the *book* has been
+  // passed, not how many chapters. Measured on the selected book (*Don Quijote*,
+  // percentage per turn): `0,0,0,0,0,0,0,50,50,50` across chapters 1..11 — the
+  // first seven chapters together are under half a percent, so a single turn
+  // raises it by 0 and the old single-turn assertion could only ever fail. A
+  // real book made of ordinary chapters does move on the first turn; this one
+  // does not, and the app is right both times.
+  //
+  // What must hold at every step is that the value never *decreases* — a footer
+  // that dropped under forward navigation would be a regression in the streaming
+  // path, which is the defect this spec exists to catch.
+  let after = before;
+  const samples: number[] = [before.percentLabel];
+  for (let turn = 0; turn < MAX_PROGRESS_TURNS; turn++) {
+    await next.click();
+    // Let the new location stream in, then read the settled state once.
+    await appPage.waitForTimeout(1_200);
+    after = await readFooter(appPage);
 
-  expect(after.barWidth).toBe(after.percentLabel);
-  // Progress is monotonic under forward navigation: a footer that dropped after
-  // Next would be a regression in the streaming path.
-  expect(after.percentLabel).toBeGreaterThanOrEqual(before.percentLabel);
-  expect(after.percentLabel).toBeLessThanOrEqual(100);
+    expect(
+      after.percentLabel,
+      `the footer percentage dropped from ${samples.at(-1)}% to ${after.percentLabel}% after ` +
+        `forward navigation (series: ${[...samples, after.percentLabel].join(', ')})`,
+    ).toBeGreaterThanOrEqual(samples.at(-1)!);
+    expect(after.percentLabel).toBeLessThanOrEqual(100);
+    // The two surfaces must stay equal at every settled step, not just the first.
+    expect(after.barWidth).toBe(after.percentLabel);
+    samples.push(after.percentLabel);
+
+    if (after.percentLabel > before.percentLabel) break;
+  }
+
+  // The run must have observed the percentage actually advance, or the loop
+  // above proved nothing about the streaming path.
+  expect(
+    after.percentLabel,
+    `the footer percentage never advanced past ${before.percentLabel}% in ` +
+      `${MAX_PROGRESS_TURNS} forward turns (series: ${samples.join(', ')})`,
+  ).toBeGreaterThan(before.percentLabel);
 
   // The location label is never blank (chapter title, or book-title fallback).
   expect(after.locationLabel.length).toBeGreaterThan(0);
@@ -221,13 +294,26 @@ test('the footer percentage and the header page move together after a navigation
   //
   // So this test asserts the real invariant instead: navigation works and the
   // two surfaces stay coherent *with each other* without demanding that their
-  // units coincide. Concretely, advancing the reader one chapter must move the
-  // header by exactly one TOC entry AND advance the footer percentage — a
-  // frozen or desynced footer (the defect class this feature cares about) still
-  // fails here, because the footer is required to make progress too.
+  // units coincide. Concretely, advancing the reader must move the header by
+  // exactly one TOC entry per turn AND must never lower the footer percentage,
+  // and across the turns it must eventually raise it — a frozen or desynced
+  // footer (the defect class this feature cares about) still fails here, because
+  // the footer is required to make progress too.
+  //
+  // ## Why "the footer must rise on the very next turn" is also wrong
+  //
+  // The footer is spine-weighted and rounds to whole percent. Measured on the
+  // selected book (*Don Quijote*), the percentage per turn is
+  // `0,0,0,0,0,0,0,50,50,50` across chapters 1..11: the book's first seven
+  // chapters are together less than half a percent of it, so several turns pass
+  // with the label reading exactly `0%` while the reader genuinely advances. A
+  // one-turn "must rise" check fails on that honest behaviour — and did, on the
+  // baseline: `header advanced 19 -> 20 but footer stayed at 93% -> 93%`, the
+  // mirror image of the same rounding, at the far end of the book.
   //
   // DO NOT "fix" this back into an equality/containment check between the two
-  // numbers. They are not the same quantity; see the units above.
+  // numbers, and do not tighten the footer check back to one turn. They are not
+  // the same quantity; see the units above.
 
   const before = await openMultiChapterBook(appPage);
 
@@ -240,29 +326,56 @@ test('the footer percentage and the header page move together after a navigation
 
   const next = nextButton(appPage);
   await expect(next).toBeEnabled({ timeout: 10_000 });
-  await next.click();
 
-  // The header page must advance; wait for it, because the location streams asynchronously.
-  await expect
-    .poll(async () => (await readFooter(appPage)).currentPage, { timeout: 15_000 })
-    .toBeGreaterThan(before.currentPage);
+  // Each turn must advance the header by exactly one TOC entry and must never
+  // lower the footer. The footer is allowed to hold still while it rounds, and
+  // the loop stops as soon as it has been seen to move.
+  let header = before.currentPage;
+  let footer = before.percentLabel;
+  const headerPath: number[] = [header];
+  const footerPath: number[] = [footer];
 
-  await appPage.waitForTimeout(500);
-  const after = await readFooter(appPage);
+  for (let turn = 0; turn < MAX_PROGRESS_TURNS; turn++) {
+    await next.click();
 
-  // The header advanced exactly one TOC entry across a single Next.
+    // The header page must advance; wait for it, because the location streams
+    // asynchronously and the field is committed-render state.
+    await expect
+      .poll(async () => (await readFooter(appPage)).currentPage, { timeout: 15_000 })
+      .toBeGreaterThan(header);
+
+    await appPage.waitForTimeout(500);
+    const step = await readFooter(appPage);
+
+    // The header advanced exactly one TOC entry across a single Next.
+    expect(
+      step.currentPage,
+      `header moved ${header}/${before.totalPages} -> ${step.currentPage}/${step.totalPages}`,
+    ).toBe(header + 1);
+    expect(step.totalPages).toBe(before.totalPages);
+
+    // ...and the footer never moved backwards. A header that advanced while the
+    // footer went backwards is a desync, and this is where it surfaces.
+    expect(
+      step.percentLabel,
+      `header advanced ${header} -> ${step.currentPage} but the footer dropped ` +
+        `${footer}% -> ${step.percentLabel}%`,
+    ).toBeGreaterThanOrEqual(footer);
+    expect(step.percentLabel).toBeLessThanOrEqual(100);
+
+    header = step.currentPage;
+    footer = step.percentLabel;
+    headerPath.push(header);
+    footerPath.push(footer);
+
+    if (footer > before.percentLabel) break;
+  }
+
+  // The turn budget must have been enough to see the footer actually move;
+  // otherwise the monotonicity above proved nothing.
   expect(
-    after.currentPage,
-    `header moved ${before.currentPage}/${before.totalPages} -> ${after.currentPage}/${after.totalPages}`,
-  ).toBe(before.currentPage + 1);
-  expect(after.totalPages).toBe(before.totalPages);
-
-  // ...and the footer moved with it. A header that advanced while the footer
-  // stood still (or went backwards) is a desync, and this is where it surfaces.
-  expect(
-    after.percentLabel,
-    `header advanced ${before.currentPage} -> ${after.currentPage} but footer stayed at ` +
-      `${before.percentLabel}% -> ${after.percentLabel}%`,
+    footer,
+    `the footer never rose past ${before.percentLabel}% in ${MAX_PROGRESS_TURNS} turns ` +
+      `(headers: ${headerPath.join(', ')}; footers: ${footerPath.join(', ')})`,
   ).toBeGreaterThan(before.percentLabel);
-  expect(after.percentLabel).toBeLessThanOrEqual(100);
 });

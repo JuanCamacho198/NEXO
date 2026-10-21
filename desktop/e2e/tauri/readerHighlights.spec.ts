@@ -51,7 +51,13 @@
  *   bun run test:e2e:cdp         # terminal 2
  */
 import { expect, test } from './harness/connectApp';
-import { findChapterFrame, openBook, pickEpub, waitForChapterFrame } from './harness/readerFlows';
+import {
+  findChapterFrame,
+  openBook,
+  pickEpub,
+  waitForChapterFrame,
+  type LibraryRow,
+} from './harness/readerFlows';
 
 type HighlightRow = {
   id: string;
@@ -77,18 +83,23 @@ type HighlightRow = {
  *
  * The highlight is read over the real IPC bridge, so it is the developer's own
  * data, not a fixture.
+ *
+ * The **book row itself** comes back, not just its title: the spec must open the
+ * same book it read the highlight from, and re-deriving one from a second
+ * `pickEpub` call can return a different row.
  */
 async function pickEpubWithHighlight(
   page: Parameters<typeof pickEpub>[0],
-): Promise<{ bookTitle: string; highlight: HighlightRow } | null> {
+): Promise<{ book: LibraryRow; highlight: HighlightRow } | null> {
   const epub = await pickEpub(page);
   if (!epub) return null;
 
   return page.evaluate(
     async ({
-      bookId,
-      bookTitle,
-    }): Promise<{ bookTitle: string; highlight: HighlightRow } | null> => {
+      book,
+    }: {
+      book: LibraryRow;
+    }): Promise<{ book: LibraryRow; highlight: HighlightRow } | null> => {
       const internals = (
         window as unknown as {
           __TAURI_INTERNALS__?: { invoke: (cmd: string, args?: unknown) => Promise<unknown> };
@@ -96,15 +107,15 @@ async function pickEpubWithHighlight(
       ).__TAURI_INTERNALS__;
       if (!internals) throw new Error('__TAURI_INTERNALS__ is missing — not a Tauri webview');
 
-      const rows = (await internals.invoke('listHighlights', { bookId })) as HighlightRow[];
+      const rows = (await internals.invoke('listHighlights', { bookId: book.id })) as HighlightRow[];
       // A highlight with text can be placed by the text-anchor fallback even if
       // its CFI does not resolve; a highlight with a CFI can resolve directly.
       // Either is a real candidate; a row with neither could not render and is
       // not evidence.
       const usable = rows.find((r) => Boolean(r.text) || Boolean(r.cfi));
-      return usable ? { bookTitle, highlight: usable } : null;
+      return usable ? { book, highlight: usable } : null;
     },
-    { bookId: epub.id, bookTitle: epub.title },
+    { book: epub },
   );
 }
 
@@ -159,8 +170,12 @@ test('a persisted highlight renders in the live chapter via the Custom Highlight
     'No EPUB in the library has a persisted highlight — nothing to render.',
   );
 
-  const epub = await pickEpub(appPage);
-  const chapter = await openBook(appPage, epub!);
+  // Open the book the highlight belongs to, and wait for its chapter. The book
+  // is opened by `openBook` directly rather than re-derived from `pickEpub`: a
+  // second pick can return a *different* row (the library is not stable between
+  // calls) and the spec would then look for this book's highlight in another
+  // book's chapters. Both come from the same `found`, so they cannot disagree.
+  const chapter = await openBook(appPage, found!.book);
 
   // The API must exist in this engine at all. WebView2 is evergreen Chromium, so
   // it does; a false here would mean the design's feature-detect path is live and

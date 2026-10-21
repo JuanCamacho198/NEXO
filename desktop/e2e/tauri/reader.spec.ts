@@ -41,34 +41,50 @@
  * the library this runs against rarely has one.
  */
 import { expect, test } from './harness/connectApp';
-import { openBook, pickEpub } from './harness/readerFlows';
+import { waitForChapterFrame } from './harness/readerFlows';
+import { openUsableEpub, seekChapterWithHeading } from './harness/readerCapacity';
 
 test('the injected reader CSS is applied inside the real chapter iframe', async ({ appPage }) => {
   // The book open path runs a real Rust extraction plus a chapter render; 30s
   // (the default) is not enough on a cold cache.
   test.setTimeout(180_000);
 
-  // Pick a real EPUB from the user's library. `format` is only trustworthy from
-  // the Rust side, so ask it rather than guessing from the title.
+  // Pick a book whose chapter actually renders prose **and a heading**, by
+  // measurement rather than by metadata. `pickEpub` alone is not enough: it
+  // selects by `coverPath`, and measured on this machine the first book it
+  // returns renders every chapter empty.
   //
-  // A library can hold *sync stubs* — rows synced from another device that have
-  // no local file. Those never render (extraction has nothing to unzip), so
-  // preferring an EPUB that carries a `coverPath` skips them: the cover is only
-  // written by a real local import. If every EPUB is a stub, the spec proceeds
-  // and fails honestly at the chapter-frame wait rather than skipping green.
-  const epub = await pickEpub(appPage);
+  // `openUsableEpub` is the spec-facing entry point and the one that must be
+  // used: `selectUsableEpub` alone is cached for the process (`workers: 1`), so
+  // after an earlier spec has run it returns the book chosen then *without
+  // driving the app into it* — leaving the reader on whatever that spec opened.
+  // Measured in this suite, that mismatch made one spec resolve *Don Quijote*
+  // while the screen held *Prisioneros*, and every assertion was taken against
+  // the wrong document.
+  //
+  // Prose is checked here; a heading is not, because prose does not imply one
+  // (measured: *Don Quijote* 32 524 characters with zero `h1`-`h6`, *Historia
+  // mínima de Colombia* 3 371 with zero). The heading requirement is established
+  // separately below, against the chapter that is actually on screen.
+  const opened = await openUsableEpub(appPage);
+  const book = opened.book;
 
-  // No EPUB in this library: skip loudly instead of inventing a fixture. A green
-  // run on an empty library would be a lie; a skip is honest.
-  test.skip(epub === null, 'No EPUB book in the library — cannot measure the chapter frame.');
+  // The measurements below need a chapter with a heading. `seekChapterWithHeading`
+  // reads on until one has both prose and a heading, which is the precondition
+  // the heading assertions need. If no reachable chapter qualifies the spec SKIPS
+  // with a reason naming what it looked for — it does not pass, and it does not
+  // fail for a reason that says nothing about the injected CSS.
+  const sought = await seekChapterWithHeading(appPage);
+  test.skip(
+    sought.headingCount === 0,
+    `No reachable chapter of "${book.title}" carried a heading: the reader stopped ` +
+      `after ${sought.turns} turn(s) on ${sought.textLen} character(s) of prose and found no ` +
+      `h1-h6. The injected heading rules (break-inside, break-after, hyphens) can only be ` +
+      `measured against a chapter that has one — measured in this library: Don Quijote and ` +
+      `Historia mínima de Colombia render prose with no headings at all.`,
+  );
 
-  // Drive the app from wherever it is (a previous run may have left it in the
-  // reader) into this book's reader. `openBook` normalises to the library and
-  // clicks the read control by role + accessible name; an inlined copy of that
-  // logic here used to pick the card's *first* button — the title button, which
-  // opens the detail modal on `BookCard` — so this spec only ever passed when
-  // the app was already in the reader from an earlier run.
-  const chapter = await openBook(appPage, epub!);
+  const chapter = await waitForChapterFrame(appPage);
 
   // The chapter document must have real content, or every measurement below is
   // vacuous.

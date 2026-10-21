@@ -45,7 +45,8 @@
  * `NEXO_CDP_PORT` overrides the endpoint, matching `tauri:dev:debug`.
  */
 import { chromium } from '@playwright/test';
-import { openBook, pickEpub } from '../e2e/tauri/harness/readerFlows';
+import { openBook } from '../e2e/tauri/harness/readerFlows';
+import { noUsableEpubReason, selectUsableEpub } from '../e2e/tauri/harness/readerCapacity';
 
 /** Presses in the burst — the baseline used twelve. */
 const PRESSES = 12;
@@ -75,11 +76,28 @@ try {
   }
   if (!page) throw new Error('app page not found — is the app running under tauri:dev:debug?');
 
-  // Open a real EPUB so the probe is one command from a cold app. The library
-  // row comes from the real Rust `listLibraryBooks`; the same helper the CDP
-  // specs use, so the entry path is the one they exercise.
-  const epub = await pickEpub(page);
-  if (!epub) throw new Error('no EPUB in the library — cannot measure paging');
+  // Open a real EPUB so the probe is one command from a cold app.
+  //
+  // The book is chosen by *measurement*, not by metadata: the instrument needs a
+  // chapter with prose to press Next through, and a book selected by
+  // `coverPath` alone can render every chapter empty. Measured on this machine,
+  // the book that selection returned first did exactly that, and this instrument
+  // then stalled on both trees it was supposed to compare — it could not measure
+  // anything. `selectUsableEpub` opens each candidate, reads on past covers and
+  // part titles, restores every book's reading position, and leaves a book with
+  // real prose on screen.
+  const { found, candidates } = await selectUsableEpub(page, (attempted, total, title) => {
+    console.log(`[cdp-measure] candidate ${attempted}/${total}: ${title}`);
+  });
+  if (!found) throw new Error(noUsableEpubReason(candidates));
+  const epub = found.book;
+  console.log(
+    `[cdp-measure] book "${epub.title}" — ${found.textLen} chars of prose at page ` +
+      `${found.page ?? '(unknown)'} of ${found.totalPages ?? '(unknown)'}`,
+  );
+
+  // The selection leaves the book open in a prose chapter; re-open through the
+  // shared helper so the reset below starts from the library as usual.
   await openBook(page, epub);
 
   /** Reads the page field in the bottom bar, and the Next button's enabled state. */
