@@ -65,6 +65,22 @@ describe('levelPasses — threshold ordering', () => {
   });
 });
 
+describe('Logger default threshold — debug does not reach sinks by default', () => {
+  it('defaults to info in every build, dev included', async () => {
+    // The singleton's threshold is mutated by the tests above, so read the
+    // module fresh. `info` (not `debug`) is the default in dev too: shipping
+    // debug to the sink is what saturated IPC and froze book opens
+    // (odd/tasks/log-ipc-hang.md). The debug call sites are untouched —
+    // setThreshold('debug') still turns them on for a session.
+    vi.resetModules();
+    const fresh = await import('$lib/shared/logger/Logger');
+    expect(fresh.logger.getThreshold()).toBe('info');
+    expect(!fresh.levelPasses('debug', fresh.logger.getThreshold())).toBe(true);
+    expect(fresh.levelPasses('info', fresh.logger.getThreshold())).toBe(true);
+    expect(fresh.levelPasses('error', fresh.logger.getThreshold())).toBe(true);
+  });
+});
+
 describe('Logger level gate — below-threshold events cost zero IPC', () => {
   it('drops below-threshold events before any sink dispatch', () => {
     logger.setThreshold('error');
@@ -161,7 +177,7 @@ describe('ConsoleSink gating — release mute', () => {
 });
 
 describe('BatchedTauriSink — local retention with batched transfer', () => {
-  it('buffers routine events and transfers them together on flush', async () => {
+  it('buffers routine events and transfers them in ONE call on flush', async () => {
     const invokeMock = vi.mocked(invoke);
     invokeMock.mockClear();
     const sink = new BatchedTauriSink();
@@ -173,8 +189,15 @@ describe('BatchedTauriSink — local retention with batched transfer', () => {
 
     await sink.flush();
 
-    expect(invokeMock).toHaveBeenCalledTimes(10);
-    expect(invokeMock).toHaveBeenCalledWith('logEvent', expect.anything());
+    // One IPC call for the whole batch, not one per event: the per-event shape
+    // serialised behind the backend's global logger lock and froze book opens
+    // for seconds (odd/tasks/log-ipc-hang.md).
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+    expect(invokeMock).toHaveBeenCalledWith('logEvents', {
+      events: expect.arrayContaining([expect.objectContaining({ message: 'routine-0' })]),
+    });
+    const [, payload] = invokeMock.mock.calls[0] as [string, { events: unknown[] }];
+    expect(payload.events).toHaveLength(10);
   });
 
   it('flushes on the 5s interval when the event cap is not reached', async () => {
@@ -191,10 +214,29 @@ describe('BatchedTauriSink — local retention with batched transfer', () => {
 
       await vi.advanceTimersByTimeAsync(5000);
 
-      expect(invokeMock).toHaveBeenCalledTimes(3);
+      expect(invokeMock).toHaveBeenCalledTimes(1);
+      expect(invokeMock).toHaveBeenCalledWith('logEvents', expect.anything());
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('retains the batch for retry when the batched call fails — never drops silently', async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockClear();
+    invokeMock.mockRejectedValueOnce(new Error('ipc down'));
+    const sink = new BatchedTauriSink();
+
+    sink.log(makeEvent({ message: 'must-survive' }), 'info');
+    await sink.flush();
+    expect(invokeMock).toHaveBeenCalledTimes(1);
+
+    // The failed batch is retried on the next flush, not lost.
+    invokeMock.mockResolvedValueOnce(undefined);
+    await sink.flush();
+    expect(invokeMock).toHaveBeenCalledTimes(2);
+    const [, retry] = invokeMock.mock.calls[1] as [string, { events: Array<{ message: string }> }];
+    expect(retry.events.map((e) => e.message)).toContain('must-survive');
   });
 
   it('routes ERROR events through reportErrorEvent', async () => {

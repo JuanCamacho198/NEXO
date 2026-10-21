@@ -261,6 +261,7 @@ fn main() {
             commands::pruneSyncOutbox,
             commands::reportErrorEvent,
             commands::logEvent,
+            commands::logEvents,
             commands::open_devtools,
             commands::diagnose,
             commands::collectDiagnosticsBundle,

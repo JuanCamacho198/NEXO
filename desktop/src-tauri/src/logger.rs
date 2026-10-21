@@ -146,6 +146,55 @@ pub enum StoredEvent {
     Generic(LogEventDto),
 }
 
+/// Secret-key regexes, compiled **once** per process.
+///
+/// `redact_string` used to build and compile a fresh `Regex` for every pattern
+/// on every call — 15 secret patterns plus 4 path patterns, per string, per
+/// event. A 60-event batch measured 4.6 s on the real backend, almost all of it
+/// `Regex::new`. Caching the compiled set makes redaction cost one pass, not
+/// nineteen compiles (`odd/tasks/log-ipc-hang.md`).
+fn secret_pattern_regexes() -> &'static [(regex::Regex, String)] {
+    static CACHE: std::sync::OnceLock<Vec<(regex::Regex, String)>> = std::sync::OnceLock::new();
+    CACHE.get_or_init(|| {
+        Logger::default_redaction_patterns()
+            .iter()
+            .filter_map(|pattern| {
+                let regex_pattern = format!(r"(?i){}:[^\s,}}]+", regex::escape(pattern));
+                regex::Regex::new(&regex_pattern)
+                    .ok()
+                    .map(|re| (re, format!("{}:[REDACTED]", pattern)))
+            })
+            .collect()
+    })
+}
+
+/// Path / home-dir regexes, compiled once per process. Same rationale as
+/// [`secret_pattern_regexes`].
+fn path_pattern_regexes() -> &'static [(regex::Regex, &'static str)] {
+    static CACHE: std::sync::OnceLock<Vec<(regex::Regex, &'static str)>> =
+        std::sync::OnceLock::new();
+    CACHE.get_or_init(|| {
+        // Each pattern captures a boundary char (or start-of-string) in group 1
+        // so URLs stay intact: in `https://host/cb?code=x` every `/` is preceded
+        // by `:`, `/`, or a word char, none of which the boundary allows.
+        const PATH_PATTERNS: &[(&str, &str)] = &[
+            (r#"((?:^|[^\w:]))([a-zA-Z]:[\\/][^\s,"'\]}]*)"#, "${1}[REDACTED_PATH]"),
+            (
+                r#"((?i)(?:^|[^:\w/]))(/(?:home|users|tmp|var|etc|opt|data|storage|mnt|root|private)[^\s,"'\]}]*)"#,
+                "${1}[REDACTED_PATH]",
+            ),
+            (r#"((?:^|[^:\w/]))(/(?:[\w.\-]+/)+[\w.\-~]*)"#, "${1}[REDACTED_PATH]"),
+            (r#"((?:^|[^\w]))~(/[^\s,"'\]}]*)?"#, "${1}[REDACTED_PATH]"),
+        ];
+        PATH_PATTERNS
+            .iter()
+            .filter_map(|(pattern, replacement)| {
+                regex::Regex::new(pattern).ok().map(|re| (re, *replacement))
+            })
+            .collect()
+    })
+}
+
 pub struct Logger {
     /// Active rotated file (`app-log.0.jsonl`).
     log_path: PathBuf,
@@ -302,30 +351,15 @@ impl Logger {
 
     fn redact_string(&self, input: &str) -> String {
         let mut result = input.to_string();
-        for pattern in &self.redaction_patterns {
-            let pattern_escaped = regex::escape(pattern);
-            let regex_pattern = format!(r"(?i){}:[^\s,}}]+", pattern_escaped);
-            if let Ok(re) = regex::Regex::new(&regex_pattern) {
-                result = re.replace_all(&result, format!("{}:[REDACTED]", pattern)).to_string();
-            }
+        for (re, replacement) in secret_pattern_regexes() {
+            result = re.replace_all(&result, replacement.as_str()).to_string();
         }
         // Absolute filesystem paths and home-dir references. Each pattern
         // captures a boundary char (or start-of-string) in group 1 so URLs
         // stay intact: in `https://host/cb?code=x` every `/` is preceded by
         // `:`, `/`, or a word char, none of which the boundary allows.
-        const PATH_PATTERNS: &[(&str, &str)] = &[
-            (r#"((?:^|[^\w:]))([a-zA-Z]:[\\/][^\s,"'\]}]*)"#, "${1}[REDACTED_PATH]"),
-            (
-                r#"((?i)(?:^|[^:\w/]))(/(?:home|users|tmp|var|etc|opt|data|storage|mnt|root|private)[^\s,"'\]}]*)"#,
-                "${1}[REDACTED_PATH]",
-            ),
-            (r#"((?:^|[^:\w/]))(/(?:[\w.\-]+/)+[\w.\-~]*)"#, "${1}[REDACTED_PATH]"),
-            (r#"((?:^|[^\w]))~(/[^\s,"'\]}]*)?"#, "${1}[REDACTED_PATH]"),
-        ];
-        for (path_pattern, replacement) in PATH_PATTERNS {
-            if let Ok(re) = regex::Regex::new(path_pattern) {
-                result = re.replace_all(&result, *replacement).to_string();
-            }
+        for (re, replacement) in path_pattern_regexes() {
+            result = re.replace_all(&result, *replacement).to_string();
         }
         result
     }
@@ -400,6 +434,22 @@ impl Logger {
     /// Append one JSON line to the active file, rotating when it exceeds the
     /// size cap. Rotation replaces the previous file (see [`Self::rotate`]).
     fn append_json_line(&self, json_line: &str) -> Result<(), String> {
+        self.append_json_lines(std::slice::from_ref(&json_line.to_owned()))
+    }
+
+    /// Append JSON lines to the active file in **one** open/write/close/stat
+    /// pass, rotating once afterwards when the size cap is crossed.
+    ///
+    /// The previous per-line shape opened, wrote, closed and `stat`ed the file
+    /// for every event — real disk I/O per line, under the global logger lock
+    /// (`odd/tasks/log-ipc-hang.md`). Writing the whole batch through a single
+    /// handle keeps the same on-disk format and the same rotation semantics
+    /// while cutting the syscall count from ~4 per line to ~4 per batch.
+    fn append_json_lines(&self, json_lines: &[String]) -> Result<(), String> {
+        if json_lines.is_empty() {
+            return Ok(());
+        }
+
         if let Some(parent) = self.log_path.parent() {
             fs::create_dir_all(parent).map_err(|e| format!("Failed to create log dir: {}", e))?;
         }
@@ -409,11 +459,18 @@ impl Logger {
             .append(true)
             .open(&self.log_path)
             .map_err(|e| format!("Failed to open log file: {}", e))?;
-        writeln!(file, "{}", json_line).map_err(|e| format!("Failed to write to log: {}", e))?;
+        let mut written: u64 = 0;
+        for json_line in json_lines {
+            writeln!(file, "{}", json_line)
+                .map_err(|e| format!("Failed to write to log: {}", e))?;
+            written += json_line.len() as u64 + 1;
+        }
         drop(file);
 
-        let size = fs::metadata(&self.log_path).map(|m| m.len()).unwrap_or(0);
-        if size > self.file_size_cap_bytes {
+        // Size is known from this write plus the stat we take once per batch,
+        // so the check is one `metadata` call per batch instead of one per line.
+        let base = fs::metadata(&self.log_path).map(|m| m.len()).unwrap_or(written);
+        if base > self.file_size_cap_bytes {
             self.rotate()?;
         }
         Ok(())
@@ -490,6 +547,50 @@ impl Logger {
 
     pub fn log_generic(&mut self, event: &LogEventDto) -> Result<(), String> {
         self.log_generic_with_threshold(event, &LogLevel::current_threshold()).map(|_| ())
+    }
+
+    /// Level-gated batch write: redact, serialize and persist a whole batch in
+    /// one disk pass, then retain the survivors in the general ring.
+    ///
+    /// This is the backend half of the `logEvents` command. It exists so N
+    /// buffered frontend events cost **one** lock acquisition, one file open and
+    /// one size check instead of N of each — the per-event shape held the
+    /// `ipc.localhost` queue for seconds during a book open
+    /// (`odd/tasks/log-ipc-hang.md`).
+    ///
+    /// Events below `threshold` are dropped before redaction and disk, exactly
+    /// as the single-event path does, so the gate semantics are identical.
+    /// Returns the number of events persisted.
+    pub fn log_generic_batch(
+        &mut self,
+        events: &[LogEventDto],
+        threshold: &LogLevel,
+    ) -> Result<usize, String> {
+        let mut lines: Vec<String> = Vec::with_capacity(events.len());
+        let mut retained: Vec<LogEventDto> = Vec::with_capacity(events.len());
+
+        for event in events {
+            if !event.level.passes(threshold) {
+                continue;
+            }
+            let redacted = self.redact_log_event(event);
+            let json_line = serde_json::to_string(&redacted)
+                .map_err(|e| format!("Failed to serialize log event: {}", e))?;
+            lines.push(json_line);
+            retained.push(redacted);
+        }
+
+        if lines.is_empty() {
+            return Ok(0);
+        }
+
+        self.append_json_lines(&lines)?;
+
+        let persisted = retained.len();
+        for event in retained {
+            self.push_general(StoredEvent::Generic(event));
+        }
+        Ok(persisted)
     }
 
     /// Level-gated generic write. Events below `threshold` are dropped before
@@ -1031,6 +1132,74 @@ mod tests {
             "legacy must not be read once rotated files exist: {:?}",
             logs
         );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// `odd/tasks/log-ipc-hang.md`: the batch write must persist every retained
+    /// event in one pass, in order, with the same on-disk format as the
+    /// single-event path (one JSON object per line).
+    #[test]
+    fn log_generic_batch_persists_every_event_in_one_pass() {
+        let dir = temp_dir("batch");
+        let mut logger = Logger::new(dir.clone());
+
+        let events: Vec<LogEventDto> =
+            (0..50).map(|i| small_generic(&format!("batch-{}", i))).collect();
+        let persisted = logger.log_generic_batch(&events, &LogLevel::Debug).expect("batch writes");
+
+        assert_eq!(persisted, 50, "every event must be persisted");
+        let lines = logger.read_all_logs().expect("reads back");
+        assert_eq!(lines.len(), 50, "one line per event");
+        assert!(lines[0].contains("batch-0"), "order preserved: {:?}", lines[0]);
+        assert!(lines[49].contains("batch-49"), "order preserved: {:?}", lines[49]);
+        // Every line parses as a standalone JSON object — the single-event format.
+        for line in &lines {
+            serde_json::from_str::<serde_json::Value>(line).expect("each line is JSON");
+        }
+        assert_eq!(logger.general_ring().len(), 50, "all retained in the ring");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The batch path applies the same level gate as the single-event path:
+    /// below-threshold events are dropped before redaction, disk, and ring.
+    #[test]
+    fn log_generic_batch_drops_below_threshold_events() {
+        let dir = temp_dir("batch-gate");
+        let mut logger = Logger::new(dir.clone());
+
+        let mut debug_event = small_generic("dropped-debug");
+        debug_event.level = LogLevel::Debug;
+        let kept_event = small_generic("kept-info");
+        let events = vec![debug_event, kept_event];
+
+        let persisted = logger
+            .log_generic_batch(&events, &LogLevel::release_threshold())
+            .expect("batch writes");
+
+        assert_eq!(persisted, 1, "debug dropped, info kept");
+        let lines = logger.read_all_logs().expect("reads back");
+        assert_eq!(lines.len(), 1);
+        assert!(lines[0].contains("kept-info"));
+        assert!(!lines[0].contains("dropped-debug"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// An empty batch (everything gated out) is a no-op with zero disk side
+    /// effect, so a flush of nothing never creates a file.
+    #[test]
+    fn log_generic_batch_with_nothing_kept_touches_no_disk() {
+        let dir = temp_dir("batch-empty");
+        let mut logger = Logger::new(dir.clone());
+
+        let mut debug_event = small_generic("gated");
+        debug_event.level = LogLevel::Debug;
+        let persisted = logger
+            .log_generic_batch(std::slice::from_ref(&debug_event), &LogLevel::release_threshold())
+            .expect("batch runs");
+
+        assert_eq!(persisted, 0);
+        assert!(!logger.get_log_path().exists(), "empty batch must not create the file");
+        assert!(logger.general_ring().is_empty());
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -5,6 +5,9 @@ import {
   type ErrorSource,
 } from '../events/ErrorEvent';
 
+export { redactRecord } from './redaction';
+import { redactRecord } from './redaction';
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 /**
@@ -48,104 +51,23 @@ const SEVERITY_BY_LEVEL: Record<LogLevel, ErrorSeverity> = {
   error: 'high',
 };
 
-const SENSITIVE_KEY_PATTERNS: readonly string[] = [
-  'password',
-  'token',
-  'secret',
-  'api_key',
-  'api-key',
-  'apikey',
-  'accesstoken',
-  'refreshtoken',
-  'idtoken',
-  'authorization',
-  'supabase',
-  'dsn',
-  'highlight',
-  'book_content',
-  'bookcontent',
-];
-
-const SECRET_ASSIGNMENT_RE = new RegExp(
-  `(${SENSITIVE_KEY_PATTERNS.map((pattern) => pattern.replace(/[-_]/g, '[-_]')).join('|')})\\s*[:=]\\s*\\S+`,
-  'gi',
-);
-const BEARER_RE = /(Bearer\s+)[A-Za-z0-9._-]+/gi;
-const DSN_RE = /(https?:\/\/)[A-Za-z0-9]+@/gi;
-const WINDOWS_PATH_RE = /(^|[^\w:])([a-zA-Z]:[\\/][^\s,"'\]}]*)/g;
-const UNIX_PATH_RE =
-  /(^|[^:\w/])(\/(?:home|users|tmp|var|etc|opt|data|storage|mnt|root|private)[^\s,"'\]}]*)/gi;
-const NESTED_PATH_RE = /(^|[^:\w/])(\/(?:[\w.-]+\/)+[\w.~-]*)/g;
-const HOME_RE = /(^|[^\w])(~(?:\/[^\s,"'\]}]*)?)/g;
-
-const REDACTED = '[REDACTED]';
-const REDACTED_PATH = '[REDACTED_PATH]';
-
 /** Level gate: true when `level` meets or exceeds `threshold`. */
 export function levelPasses(level: LogLevel, threshold: LogLevel): boolean {
   return LEVEL_ORDER[level] >= LEVEL_ORDER[threshold];
 }
 
-function redactText(input: string): string {
-  if (input.length === 0) {
-    return input;
-  }
-
-  let result = input;
-  result = result.replace(SECRET_ASSIGNMENT_RE, (match) => {
-    const separatorIndex = match.search(/[:=]/);
-    const key = separatorIndex >= 0 ? match.slice(0, separatorIndex) : match;
-    return `${key}:${REDACTED}`;
-  });
-  result = result.replace(BEARER_RE, `$1${REDACTED}`);
-  result = result.replace(DSN_RE, `$1${REDACTED}@`);
-  result = result.replace(WINDOWS_PATH_RE, `$1${REDACTED_PATH}`);
-  result = result.replace(UNIX_PATH_RE, `$1${REDACTED_PATH}`);
-  result = result.replace(NESTED_PATH_RE, `$1${REDACTED_PATH}`);
-  result = result.replace(HOME_RE, `$1${REDACTED_PATH}`);
-  return result;
-}
-
-function redactValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((entry) => redactValue(entry));
-  }
-  if (value !== null && typeof value === 'object') {
-    const result: Record<string, unknown> = {};
-    for (const [key, inner] of Object.entries(value as Record<string, unknown>)) {
-      const lowerKey = key.toLowerCase();
-      const sensitive = SENSITIVE_KEY_PATTERNS.some((pattern) => lowerKey.includes(pattern));
-      result[key] = sensitive ? REDACTED : redactValue(inner);
-    }
-    return result;
-  }
-  if (typeof value === 'string') {
-    return redactText(value);
-  }
-  return value;
-}
-
 /**
- * Redact secrets, DSN values, absolute paths, and sensitive keys from a
- * retained record. Applied before ring retention and before transfer
- * (defense in depth ahead of the authoritative Rust boundary).
+ * Default level threshold: `info` in every build, dev included. Debug is ~95% of
+ * what the app emits; a dev build shipping it to the sink saturated the IPC
+ * channel and froze book opens for seconds (`odd/tasks/log-ipc-hang.md`). Debug
+ * call sites are untouched — `setThreshold('debug')` still turns them on.
  */
-export function redactRecord(record: LogRecord): LogRecord {
-  return {
-    ...record,
-    message: redactText(record.message),
-    context: redactValue(record.context) as Record<string, unknown>,
-  };
-}
-
-function defaultThreshold(): LogLevel {
-  return import.meta.env.PROD ? 'info' : 'debug';
-}
+const DEFAULT_THRESHOLD: LogLevel = 'info';
 
 class LoggerImpl {
   private sinks: LoggerSink[] = [];
   private ring: LogRecord[] = [];
-  private threshold: LogLevel = defaultThreshold();
+  private threshold: LogLevel = DEFAULT_THRESHOLD;
   private acceptedSinceFlush = 0;
 
   registerSink(sink: LoggerSink): void {

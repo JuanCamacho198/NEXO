@@ -173,6 +173,21 @@ pub fn logEvent(state: State<'_, AppState>, event: LogEventDto) -> Result<(), St
     logger.log_generic(&event)
 }
 
+/// Batched counterpart of [`logEvent`]: one IPC call, one lock, one disk pass
+/// for the whole batch. The frontend sink sends its buffered batch here; see
+/// `desktop/src/lib/shared/logger/TauriSink.ts` and `odd/tasks/log-ipc-hang.md`.
+///
+/// Returns the number of events persisted so a caller can tell a fully-gated
+/// batch (0) apart from a failure (Err). An event that fails to serialize
+/// fails the whole call: the frontend then retains the batch for retry rather
+/// than losing it, which is the failure contract the sink documents.
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn logEvents(state: State<'_, AppState>, events: Vec<LogEventDto>) -> Result<usize, String> {
+    let mut logger = state.logger.lock().map_err(|e| format!("{}", e))?;
+    logger.log_generic_batch(&events, &crate::logger::LogLevel::current_threshold())
+}
+
 #[tauri::command(rename_all = "camelCase")]
 pub fn diagnose(state: State<'_, AppState>) -> crate::services::diagnostics::DiagnoseResult {
     crate::services::diagnostics::run_diagnose(&state)
