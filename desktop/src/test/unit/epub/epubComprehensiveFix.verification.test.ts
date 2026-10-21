@@ -367,6 +367,25 @@ describe('4.6 float bar stripped — sanitize', () => {
     expect(rustSrc).toContain('floatBarImgId');
   });
 
+  it('scenario 10c: a self-closing <title/> must not swallow the document', () => {
+    // Real spine document from *Prisioneros de la geografía* (`OPS/0005_0001.htm`).
+    // `<title/>` is RCDATA: the parser ignores the `/>` and eats the rest of the
+    // file as title text, leaving an empty body and a blank chapter.
+    const blank =
+      '<html><head><meta content="text/html" http-equiv="Content-Type"/><title/><link href="css/global.css" rel="stylesheet"/></head><body><div class="body"><p>Rusia es vasta.</p></div></body></html>';
+    const fixed = sanitizeEpubHtml(blank);
+    expect(fixed).not.toMatch(/<title\s*\/\s*>/i);
+
+    // The repaired markup must parse into a body that carries the text.
+    const doc = new DOMParser().parseFromString(fixed, 'text/html');
+    expect(doc.title).toBe('');
+    expect(doc.body.textContent).toContain('Rusia es vasta.');
+
+    // The empty *pair* is valid and must be left alone, as must a named title.
+    expect(sanitizeEpubHtml('<title></title>')).toBe('<title></title>');
+    expect(sanitizeEpubHtml('<title>notas</title>')).toBe('<title>notas</title>');
+  });
+
   it('scenario 10b: normal content preserved and empty src cleaned', () => {
     const normal = '<p>Keep <img src="images/cover.jpg"> and <a href="chapter2.xhtml">link</a></p>';
     expect(sanitizeEpubHtml(normal)).toContain('images/cover.jpg');

@@ -137,6 +137,19 @@ export function tocIndexForSpine(
 export function sanitizeEpubHtml(html: string): string {
   let result = html;
 
+  // A self-closing `<title/>` is a trap: `<title>` is an RCDATA element, so the
+  // parser never honours the `/>` and keeps consuming the rest of the document
+  // as title text until it finds a `</title>`. It never does, so the whole head
+  // and body end up inside `<title>`, the body stays empty, and the chapter
+  // renders blank. Measured on *Prisioneros de la geografía* (2026-10-21): 39 of
+  // 43 spine documents carry `<title/>` and every one of them rendered 0
+  // characters, while the 4 with a named `<title>` (portada, índice, notas,
+  // tematica) rendered their text. The empty *pair* `<title></title>` is safe,
+  // so only the `/>` form is rewritten. Must run before `buildChapterSrcdoc`'s DOMParser: serialising the
+  // already-corrupted tree back out (outerHTML) bakes the escaped remainder into
+  // the srcdoc permanently.
+  result = result.replace(/<title\s*\/\s*>/gi, '<title></title>');
+
   // Remove whole tags containing floatBarImgId
   result = result.replace(/<[^>]*\bfloatBarImgId\b[^>]*>/gi, '');
   // Remove whole tags where src="chrome-extension://..."
