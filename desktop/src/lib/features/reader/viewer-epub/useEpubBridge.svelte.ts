@@ -14,6 +14,10 @@ import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelper
 import type { EpubChapterMeta } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import { isInlineColumnLayout } from '$lib/features/reader/viewer-epub/readerPagination';
 import { createLocationEcho } from '$lib/features/reader/viewer-epub/epubLocationEcho';
+import {
+  collectVisibleTextNodes,
+  visibleTextIndex,
+} from '$lib/features/reader/viewer-epub/epubVisibleText';
 import { handleError, ReaderError } from '$lib/shared/utils/errors';
 import { logger } from '$lib/shared/logger/Logger';
 
@@ -41,6 +45,12 @@ export type EpubBridgeDeps = {
   setError: (v: string | null) => void;
   getIframeEl: () => HTMLIFrameElement | null;
   getZoomContainerEl: () => HTMLDivElement | null;
+  /**
+   * The element that actually scrolls the chapter. In scrolling mode (the
+   * default) the iframe is sized to its full content and never scrolls, so this
+   * is the ONLY viewport the reader has — see `epubVisibleText.ts`.
+   */
+  getScrollContainerEl: () => HTMLElement | null;
   getSpineHrefs: () => string[];
   getToc: () => EpubChapterMeta[];
   getBookId: () => string;
@@ -302,40 +312,13 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     const chapterHref = normalizeHref(rawChapterHref);
     if (!bridge || !chapterHref) return;
 
-    const nodes: Text[] = [];
-    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-    let node = walker.nextNode();
-    while (node) {
-      if ((node.nodeValue ?? '').trim().length > 0) nodes.push(node as Text);
-      node = walker.nextNode();
-    }
+    const nodes = collectVisibleTextNodes(doc);
     const chapterChars = nodes.reduce((total, textNode) => total + (textNode.data?.length ?? 0), 0);
     if (chapterChars <= 0) return;
 
-    const visibleNode = nodes.find((textNode) => {
-      const range = doc.createRange();
-      range.selectNodeContents(textNode);
-      const rect = range.getBoundingClientRect();
-      // The visibility window is axis-dependent. Scrolling mode moves the
-      // reader vertically, so "visible" is the vertical band. Paginated mode
-      // lays the columns out across the inline axis and keeps every node inside
-      // the vertical band, so the vertical test alone would always match the
-      // first text node and the emitted location would freeze on page one. The
-      // axis is read from the chapter root's own overflow — which is what the
-      // pagination stylesheet sets — rather than from a mode flag duplicated
-      // here, so the two can never disagree.
-      if (isInlineColumnLayout(doc)) {
-        // The inline scroller is the chapter root, not the parent container:
-        // the parent is pinned to one page box while the column overflow lives
-        // in this document.
-        const root = doc.documentElement;
-        const offset = root.scrollLeft;
-        const width = root.clientWidth || iframeEl.clientWidth;
-        return rect.right > offset && rect.left < offset + width;
-      }
-      return rect.bottom >= 0 && rect.top <= (iframeEl?.clientHeight ?? window.innerHeight);
-    });
-    if (!visibleNode) return;
+    const visibleIdx = visibleTextIndex(doc, nodes, deps.getScrollContainerEl());
+    if (visibleIdx < 0) return;
+    const visibleNode = nodes[visibleIdx]!;
 
     const range = doc.createRange();
     range.setStart(visibleNode, 0);
@@ -344,7 +327,7 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     if (!preciseCfi) return;
 
     const charOffset = nodes
-      .slice(0, nodes.indexOf(visibleNode))
+      .slice(0, visibleIdx)
       .reduce((total, textNode) => total + textNode.data.length, 0);
     const locator = locatorFromCfi(deps.getSpineHrefs(), preciseCfi, {
       chapterChars,

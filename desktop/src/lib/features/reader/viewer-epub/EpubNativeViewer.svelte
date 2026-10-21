@@ -151,6 +151,8 @@
   let iframeEl = $state<HTMLIFrameElement | null>(null);
   let totalChapters = $state(0);
   let zoomContainerEl = $state<HTMLDivElement | null>(null);
+  /** The element that really scrolls the chapter (see `epubVisibleText.ts`). */
+  let scrollContainerEl = $state<HTMLDivElement | null>(null);
   let iframeContentHeight = $state(0);
   let lastRenderedChapter = $state(-1);
   let lastContinueLocation = $state<string | null>(null);
@@ -295,6 +297,7 @@
     setError: (v) => (error = v),
     getIframeEl: () => iframeEl,
     getZoomContainerEl: () => zoomContainerEl,
+    getScrollContainerEl: () => scrollContainerEl,
     getSpineHrefs: () => spine.getSpineHrefs(),
     getToc: () => spine.getToc(),
     getBookId: () => bookId,
@@ -813,6 +816,7 @@
   {:else}
     <div
       data-testid="epub-scroll-container"
+      bind:this={scrollContainerEl}
       class="flex-1 w-full min-h-0"
       class:overflow-y-auto={!paginated}
       class:pb-16={!paginated}
