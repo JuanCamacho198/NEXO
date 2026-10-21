@@ -379,7 +379,8 @@ export type EpubRenderDeps = {
   getMetadata: () => EpubMetadataExtract | null;
   getSpineHrefs: () => string[];
   getToc: () => EpubChapterMeta[];
-  spineIndexForToc: (tocIndex: number) => number;
+  /** Spine document for a reading-order position (see `epubReadingOrder.ts`). */
+  spineIndexForOrder: (orderIndex: number) => number;
   getBookId: () => string;
   getResourcesPath: () => string;
   getZoomLevel: () => number;
@@ -552,13 +553,15 @@ export function createEpubRender(deps: EpubRenderDeps): {
     const iframeEl = deps.getIframeEl();
     if (!metadata || !iframeEl) return;
     const myEpoch = ++renderEpoch;
-    const spineIndex = deps.spineIndexForToc(index);
+    // `index` is a position in the reading order, not an outline index: the
+    // order is the only space the navigator hands out, and a chapter body the
+    // NCX never names has no outline index at all. Convert once, here.
+    const spineIndex = deps.spineIndexForOrder(index);
     const tocLength = deps.getToc().length;
     const spineHrefCount = deps.getSpineHrefs().length;
-    // `index` may legitimately exceed toc.length: the reader falls back to the
-    // raw spine position for spine chapters that have no TOC entry (see
-    // useEpubBridge initReader and navigation.goToNext). What must NEVER reach
-    // Rust is a negative index or a spineIndex outside the spine range.
+    // An order position can still arrive before the spine is readable (-1), and
+    // a hand-driven position can be negative or past the end. What must NEVER
+    // reach Rust is a negative spine index or one outside the spine range.
     if (index < 0 || spineIndex < 0 || (spineHrefCount > 0 && spineIndex >= spineHrefCount)) {
       logger.warn(
         'epub-hl: renderChapter index out of range',
@@ -568,7 +571,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
       return;
     }
     currentRenderIndex = index;
-    const tocEntry = deps.getToc()[index];
+    const tocEntry = deps.getToc().find((candidate) => candidate.index === spineIndex);
     const tocHrefForLog = tocEntry?.href ?? '';
     const spineHrefForLog = deps.getSpineHrefs()[spineIndex] ?? `(spine ${spineIndex})`;
     const frag = extractFragment(tocHrefForLog);
@@ -576,7 +579,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
     logger.debug(
       'epub-hl: renderChapter called',
       {
-        tocIndex: index,
+        orderIndex: index,
         spineIndex,
         epoch: myEpoch,
         spineHrefCount: deps.getSpineHrefs().length,
@@ -614,7 +617,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
       deps.setIframeContentHeight(0);
 
       const spineHrefs = deps.getSpineHrefs();
-      const tocHrefRaw = deps.getToc()[index]?.href ?? '';
+      const tocHrefRaw = tocEntry?.href ?? '';
       const chapterHref = normalizeHref(stripFragment(tocHrefRaw) || spineHrefs[spineIndex] || '');
       const fontUrls = collectFontFaceAssetUrls(
         chapterData.html,
@@ -644,7 +647,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
         spineIndex,
         missingFonts,
         readerCssOpts,
-        deps.getToc()[index]?.label ?? null,
+        tocEntry?.label ?? null,
         metadata.language ?? null,
       );
 

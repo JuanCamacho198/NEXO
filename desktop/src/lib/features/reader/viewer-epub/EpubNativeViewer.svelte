@@ -20,10 +20,6 @@
   import type { PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
   import { resolveFootnoteNote } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
   import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
-  import {
-    countPageTotal,
-    pageNumberForSpine,
-  } from '$lib/features/reader/viewer-epub/epubReachablePages';
 
   /**
    * How long a turn is queued for while a chapter's layout settles and any
@@ -168,8 +164,6 @@
     getToc: () => spine.getToc(),
     getSpineHrefs: () => spine.getSpineHrefs(),
     getTotalChapters: () => totalChapters,
-    spineIndexForToc: (i: number) => spine.spineIndexForToc(i),
-    tocIndexForSpine: (i: number, href?: string) => spine.tocIndexForSpine(i, href),
   });
 
   let fontSize = $derived(readerSettings.epub.fontSize ?? 100);
@@ -193,12 +187,10 @@
   // Declared as `$state` because the viewer's template reads it to pin the
   // iframe; `pagination` writes it on every measured change.
   let pageBox = $state<PageBox | null>(null);
-  // A spine document is a page, so the spine — not the outline — is "of M".
-  // The footer already percentages the spine; counting the TOC here printed 21
-  // pages against a footer that said 43, and hid every chapter body from the
-  // page field, since a partial NCX names only some documents.
-  let spineLength = $derived(spine.getSpineHrefs().length || totalChapters);
-  let displayTotal = $derived(countPageTotal(spineLength));
+  // The reading order holds every spine document exactly once, so its length is
+  // the page total. It replaces the raw spine length as "of M" because a page
+  // number is now a position in that order (see `epubReadingOrder.ts`).
+  let displayTotal = $derived(navigation.totalPages);
   // The header reports the chapter that is ON SCREEN, not the one navigation has
   // requested. A Next at a chapter's last page bumps `currentChapterIndex`
   // synchronously and falls through to chapter navigation, but the new chapter
@@ -210,13 +202,23 @@
   // committed-render state (the pagination lifecycle and the highlights overlay
   // already key on it), so it is the number that matches what the reader sees.
   // Before the first render commits (`< 0`) the requested index is the only
-  // answer available, so it is the fallback.
+  // answer available, so it is the fallback. Both are reading-order positions.
   let displayCurrentPage = $derived.by(() => {
     const committed =
       lastRenderedChapter >= 0 ? lastRenderedChapter : navigation.currentChapterIndex;
-    const page = pageNumberForSpine(committed, spineLength);
-    return page || navigation.currentSpineIndex + 1;
+    return navigation.resolve(committed).order + 1;
   });
+
+  /**
+   * Render a document addressed by its spine index, which is the space the
+   * restore paths and "open this chapter" callers speak. Rendering itself takes a
+   * reading-order position, so convert here rather than teaching every caller
+   * about the order.
+   */
+  function renderSpineChapter(spineIndex: number): Promise<void> {
+    const position = navigation.orderForSpine(spineIndex);
+    return position >= 0 ? render.renderChapter(position) : Promise.resolve();
+  }
 
   function getToc(): EpubChapterMeta[] {
     return spine.getToc();
@@ -261,7 +263,7 @@
     getMetadata: () => metadata,
     getSpineHrefs: () => spine.getSpineHrefs(),
     getToc: () => spine.getToc(),
-    spineIndexForToc: (i: number) => spine.spineIndexForToc(i),
+    spineIndexForOrder: (i: number) => navigation.resolve(i).spine,
     getBookId: () => bookId,
     getResourcesPath: () => metadata?.resourcesPath ?? '',
     getZoomLevel: () => zoomTheme.zoomLevel,
@@ -341,6 +343,7 @@
       else goToPrev();
     },
     handleExternalTocNavigate: (id) => navigation.handleExternalTocNavigate(id),
+    orderForSpine: (spineIdx) => navigation.orderForSpine(spineIdx),
     handleSearchTargetLocator: (t, o) => navigation.handleSearchTargetLocator(t, o),
   });
 
@@ -409,9 +412,13 @@
   function refreshReaderStyles(): void {
     render.refreshReaderStyles();
   }
-  async function renderChapter(index: number): Promise<void> {
-    return render.renderChapter(index);
+  // The parent's restore path still calls `renderChapter(id)`, and a chapter id
+  // names a spine document — so it goes through the order like every other jump.
+  // `void` keeps it visibly reachable despite having no in-file caller today.
+  async function renderChapter(spineIndex: number): Promise<void> {
+    return renderSpineChapter(spineIndex);
   }
+  void renderChapter;
 
   export function goToPrev(): void {
     // A restore in flight owns the offset. The press is QUEUED rather than
@@ -603,7 +610,7 @@
       )
         return;
       footnote = null;
-      renderChapter(navigation.currentChapterIndex);
+      render.renderChapter(navigation.currentChapterIndex);
       return;
     }
     refreshReaderStyles();

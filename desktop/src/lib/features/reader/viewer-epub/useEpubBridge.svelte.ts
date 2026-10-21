@@ -108,9 +108,11 @@ export type EpubBridgeDeps = {
   /** A page-turn intent forwarded from the chapter frame (paginated mode). */
   handlePaginationKey?: (direction: 'next' | 'prev') => void;
   handleExternalTocNavigate: (id: string | null) => boolean;
+  /** Reading-order position of a spine document, or -1 (see `epubReadingOrder.ts`). */
+  orderForSpine: (spineIndex: number) => number;
   handleSearchTargetLocator: (
     target: string | null,
-    options: { currentChapterIndex: number; totalChapters: number; tocLength: number },
+    options: { currentChapterIndex: number },
   ) => { navigated: boolean; needsScroll: boolean; chapterIdx: number | null } | null;
 };
 
@@ -559,28 +561,20 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
           const spineOneBased = Number.parseInt(spineMatch[1]!, 10);
           const spineIdx = spineOneBased - 1;
           if (spineIdx >= 0) {
-            const mapped = (() => {
-              const byIndex = tocForInit.findIndex((c) => c.index === spineIdx);
-              if (byIndex !== -1) return byIndex;
+            // A CFI names a spine document; the navigator speaks reading-order
+            // positions. Recording the CFI and letting the navigator resolve the
+            // document keeps restore on the same path as every other jump, so a
+            // body the NCX never names restores just as well as a title page.
+            const position = deps.orderForSpine(spineIdx);
+            if (position >= 0) {
+              deps.setCurrentChapterIndex(position);
+              deps.setPendingCfiScroll(initialCfi);
+            } else {
               logger.debug(
-                'epub-toc: initReader spine not in TOC, fallback to spineIdx',
-                { spineIdx, tocLen: tocForInit.length },
+                'epub-toc: initReader spine not in reading order',
+                { spineIdx, totalChapters: deps.getTotalChapters() },
                 'reader',
               );
-              return null;
-            })();
-            const tocIdx = mapped !== null ? mapped : spineIdx;
-            if (tocIdx >= 0 && tocIdx < tocForInit.length) {
-              deps.setCurrentChapterIndex(tocIdx);
-              deps.setPendingCfiScroll(initialCfi);
-            } else if (mapped === null && tocIdx >= 0 && tocIdx < deps.getTotalChapters()) {
-              logger.debug(
-                'epub-toc: initReader fallback spineIdx as tocIdx',
-                { spineIdx, tocIdx },
-                'reader',
-              );
-              deps.setCurrentChapterIndex(tocIdx);
-              deps.setPendingCfiScroll(initialCfi);
             }
           }
         }
@@ -664,8 +658,6 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     if (!target || !target.startsWith('epubcfi(') || !deps.getMetadata()) return;
     const result = deps.handleSearchTargetLocator(target, {
       currentChapterIndex: deps.getCurrentChapterIndex(),
-      totalChapters: deps.getTotalChapters(),
-      tocLength: deps.getToc().length,
     });
     if (!result) return;
     if (result.needsScroll && !result.navigated) {
@@ -694,8 +686,6 @@ export function createEpubBridge(deps: EpubBridgeDeps): {
     }
     const result = deps.handleSearchTargetLocator(loc, {
       currentChapterIndex: untrack(() => deps.getCurrentChapterIndex()),
-      totalChapters: deps.getTotalChapters(),
-      tocLength: deps.getToc().length,
     });
     const currentIdx = untrack(() => deps.getCurrentChapterIndex());
     const pending = untrack(() => deps.getPendingCfiScroll());

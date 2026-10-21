@@ -1,13 +1,29 @@
 import { extractFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 import type { EpubChapterMeta } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+import {
+  buildReadingOrder,
+  readingOrderIndexFor,
+} from '$lib/features/reader/viewer-epub/epubReadingOrder';
 import { logger } from '$lib/shared/logger/Logger';
 
 export type EpubNavigationDeps = {
   getToc: () => EpubChapterMeta[];
   getSpineHrefs: () => string[];
   getTotalChapters: () => number;
-  spineIndexForToc: (tocIndex: number) => number;
-  tocIndexForSpine: (spineIndex: number, spineHref?: string) => number | null;
+};
+
+/**
+ * A position in the book, expressed in both index spaces at once.
+ *
+ * Callers routinely need "the position I am at" as a spine document (render,
+ * highlights, CFI, progress) and as a page number (footer, page field). Handing
+ * both back from one call is what keeps the two from drifting apart.
+ */
+export type EpubNavigationPosition = {
+  /** Index into the reading order — the space the page field, pages and turns use. */
+  order: number;
+  /** Spine document at that position — the space rendering and highlights use. */
+  spine: number;
 };
 
 export function createEpubNavigation(deps: EpubNavigationDeps): {
@@ -15,60 +31,79 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
   pendingCfiScroll: string | null;
   pendingFragment: string | null;
   readonly currentSpineIndex: number;
+  readonly readingOrder: number[];
+  readonly totalPages: number;
+  /** Reading-order position and spine document for a position; spine is -1 if impossible. */
+  resolve(rawOrder: number): EpubNavigationPosition;
+  /** Reading-order position of a spine document. */
+  orderForSpine(spineIndex: number): number;
   goToPrev(): void;
   goToNext(): void;
   goToChapter(index: number): void;
+  goToSpine(spineIndex: number): void;
   handleGoToPage(page: number): Promise<boolean>;
   handleExternalTocNavigate(targetId: string | null): boolean;
   handleSearchTargetLocator(
     target: string | null,
-    options: { currentChapterIndex: number; totalChapters: number; tocLength: number },
+    options: { currentChapterIndex: number },
   ): { navigated: boolean; needsScroll: boolean; chapterIdx: number | null } | null;
   clearPendingCfiScroll(): void;
   clearPendingFragment(): void;
 } {
+  // The reading order is the only index space this module navigates in. An
+  // earlier version kept one number for two namespaces — below `toc.length` it
+  // was an outline entry, at or above it a spine document — which is exactly
+  // the seam that made a 43-document book read chapter 7, then the conclusion,
+  // then chapter 5's body. One list, one space, no branch.
   let currentChapterIndex = $state(0);
   let pendingCfiScroll = $state<string | null>(null);
   let pendingFragment = $state<string | null>(null);
 
   /**
-   * How many pages the reader can walk.
+   * Spine documents in the order a reader reads them.
    *
-   * The TOC is not the book: a partial NCX names 21 of this book's 43 spine
-   * documents, so bounding the walk by the outline stranded every chapter body
-   * behind an entry that does not exist. The spine is the book, so it wins. The
-   * other two are kept only as floors for the window between a book opening and
-   * its spine being read.
+   * `getTotalChapters` is a floor because the window between a book opening and
+   * its spine being read has no spine hrefs yet; without it the reader would
+   * report one page for a book it has not finished describing.
    */
-  function walkLength(): number {
-    return Math.max(deps.getSpineHrefs().length, deps.getTotalChapters(), deps.getToc().length);
+  const readingOrder = $derived.by(() =>
+    buildReadingOrder(
+      deps.getToc(),
+      Math.max(deps.getSpineHrefs().length, deps.getTotalChapters()),
+    ),
+  );
+
+  function resolve(rawOrder: number): EpubNavigationPosition {
+    const order = readingOrder;
+    if (order.length === 0) return { order: 0, spine: 0 };
+    const at = Number.isFinite(rawOrder) ? Math.trunc(rawOrder) : 0;
+    const clamped = Math.min(Math.max(at, 0), order.length - 1);
+    return { order: clamped, spine: order[clamped] ?? -1 };
+  }
+
+  function orderForSpine(spineIndex: number): number {
+    return readingOrderIndexFor(readingOrder, spineIndex);
   }
 
   /**
-   * Fragment to land on when moving to `index`, or null.
-   *
-   * Only outline entries carry fragments, and there are fewer of them than
-   * pages. Reading past the end of the array would hand back `undefined` and
-   * leak an "undefined" fragment into the render.
+   * Spine position of the current page — the one number highlights, the CFI
+   * bridge and the renderer are keyed on.
    */
-  function fragmentAt(index: number): string | null {
-    const entry = deps.getToc()[index];
+  const currentSpineIndex = $derived(resolve(currentChapterIndex).spine);
+
+  /**
+   * Fragment to land on when moving to reading-order position `order`, or null.
+   *
+   * Only outline entries carry fragments. A spine document the outline never
+   * names has no fragment — returning one from past the end of the array would
+   * leak `undefined` into the render as a fragment to scroll to.
+   */
+  function fragmentAt(order: number): string | null {
+    const spineIndex = readingOrder[order];
+    if (spineIndex === undefined) return null;
+    const entry = deps.getToc().find((candidate) => candidate.index === spineIndex);
     return entry ? extractFragment(entry.href) : null;
   }
-
-  /**
-   * Spine position of the current page.
-   *
-   * Below the TOC length the current index names an outline entry, and the
-   * entry carries the spine document it points at. At or above it, the index IS
-   * a spine index — there is no outline entry to consult, and asking the TOC
-   * mapper for one would log a miss and fall back to the same number anyway.
-   */
-  const currentSpineIndex = $derived.by(() => {
-    const tocLen = deps.getToc().length;
-    if (currentChapterIndex < tocLen) return deps.spineIndexForToc(currentChapterIndex);
-    return currentChapterIndex;
-  });
 
   function goToPrev(): void {
     if (currentChapterIndex > 0) {
@@ -81,7 +116,7 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
 
   function goToNext(): void {
     const nextIdx = currentChapterIndex + 1;
-    if (nextIdx < walkLength()) {
+    if (nextIdx < readingOrder.length) {
       const frag = fragmentAt(nextIdx);
       if (frag) pendingFragment = frag;
       currentChapterIndex = nextIdx;
@@ -89,19 +124,23 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
   }
 
   function goToChapter(index: number): void {
-    if (index >= 0 && index < walkLength()) {
-      const frag = fragmentAt(index);
-      if (frag) pendingFragment = frag;
-      else pendingFragment = null;
+    if (index >= 0 && index < readingOrder.length) {
+      pendingFragment = fragmentAt(index);
       currentChapterIndex = index;
     }
   }
 
   /**
-   * A numbered page is a spine document, so page N is spine N-1. Resolving
-   * through the TOC would send "9" to the ninth *outline entry* (spine 24 in
-   * this book) instead of the ninth document.
+   * Jump to the document a caller holds by spine index (a search hit, a
+   * restored CFI, an outline entry). Resolves through the order so the page
+   * number the reader lands on is the document's own reading position.
    */
+  function goToSpine(spineIndex: number): void {
+    const position = orderForSpine(spineIndex);
+    if (position >= 0) goToChapter(position);
+  }
+
+  /** A page number is a position in the reading order, so page N is position N-1. */
   async function handleGoToPage(page: number): Promise<boolean> {
     goToChapter(page - 1);
     return currentChapterIndex === page - 1;
@@ -110,27 +149,25 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
   function handleExternalTocNavigate(targetId: string | null): boolean {
     if (!targetId) return false;
     const toc = deps.getToc();
-    const chapterIdx = toc.findIndex((c) => c.id === targetId);
-    if (chapterIdx >= 0) {
-      const href = toc[chapterIdx]?.href ?? '';
-      const frag = extractFragment(href);
-      if (frag) pendingFragment = frag;
-      goToChapter(chapterIdx);
-      return true;
-    }
-    return false;
+    const entry = toc.find((c) => c.id === targetId);
+    if (!entry) return false;
+    const frag = extractFragment(entry.href);
+    const position = orderForSpine(entry.index);
+    if (frag) pendingFragment = frag;
+    goToChapter(position);
+    return true;
   }
 
   /**
    * Handles CFI-driven navigation (searchTargetLocator / initialLocation).
-   * Parses spine index from `epubcfi(/6/N!...)`, maps to TOC, sets pendingCfiScroll,
-   * and navigates or signals that a scroll is needed.
-   * Returns true if navigation/scroll was triggered, false if out-of-bounds.
-   * Caller is responsible for invoking `scrollToCfi` when staying on same chapter.
+   *
+   * A CFI names a spine document, but every position this module compares and
+   * navigates by is a reading-order position, so the spine index is converted
+   * once here and the recorded `chapterIdx` is already in the caller's space.
    */
   function handleSearchTargetLocator(
     target: string | null,
-    options: { currentChapterIndex: number; totalChapters: number; tocLength: number },
+    options: { currentChapterIndex: number },
   ): { navigated: boolean; needsScroll: boolean; chapterIdx: number | null } | null {
     if (!target || !target.startsWith('epubcfi(')) return null;
     const spineMatch = /epubcfi\(\/6\/(\d+)!/.exec(target);
@@ -138,24 +175,14 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
     const spineOneBased = Number.parseInt(spineMatch[1]!, 10);
     const spineIdx = spineOneBased - 1;
     if (spineIdx < 0) return null;
-    const mapped = deps.tocIndexForSpine(spineIdx);
-    const chapterIdx = mapped !== null ? mapped : spineIdx;
-    if (mapped === null) {
+    const chapterIdx = orderForSpine(spineIdx);
+    if (chapterIdx < 0 || chapterIdx >= readingOrder.length) {
       logger.debug(
-        'epub-toc: searchTargetLocator spine not in TOC, fallback',
-        {
-          spineIdx,
-          fallback: chapterIdx,
-          totalChapters: options.totalChapters,
-          tocLen: options.tocLength,
-        },
+        'epub-toc: searchTargetLocator spine not in reading order',
+        { spineIdx, totalChapters: deps.getTotalChapters(), orderLength: readingOrder.length },
         'reader',
       );
-    }
-    if (mapped !== null) {
-      if (chapterIdx < 0 || chapterIdx >= options.tocLength) return null;
-    } else {
-      if (chapterIdx < 0 || chapterIdx >= options.totalChapters) return null;
+      return null;
     }
     if (chapterIdx !== options.currentChapterIndex) {
       pendingCfiScroll = target;
@@ -196,9 +223,18 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
     get currentSpineIndex(): number {
       return currentSpineIndex;
     },
+    get readingOrder(): number[] {
+      return readingOrder;
+    },
+    get totalPages(): number {
+      return readingOrder.length;
+    },
+    resolve,
+    orderForSpine,
     goToPrev,
     goToNext,
     goToChapter,
+    goToSpine,
     handleGoToPage,
     handleExternalTocNavigate,
     handleSearchTargetLocator,
