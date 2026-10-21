@@ -156,7 +156,11 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   const headerTotalPages = $derived.by(() => {
     const v = resolveViewer();
     if (v.kind === 'pdf') return totalPdfPages || v.getTotalForHeader();
-    if (v.kind === 'epub') return tocEntries.length > 0 ? tocEntries.length : v.getTotalForHeader();
+    // EPUB: the viewer counts spine documents, which is what the footer
+    // percentages. Preferring `tocEntries.length` here printed 21 pages above a
+    // footer that said 43 for a book whose NCX is a partial outline. The TOC is
+    // only a fallback for when no viewer is attached yet.
+    if (v.kind === 'epub') return v.getTotalForHeader() || tocEntries.length;
     return 0;
   });
   const showHeaderReadingControls = $derived(headerTotalPages > 0);

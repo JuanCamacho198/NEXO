@@ -31,68 +31,80 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
   let pendingCfiScroll = $state<string | null>(null);
   let pendingFragment = $state<string | null>(null);
 
-  const currentSpineIndex = $derived(deps.spineIndexForToc(currentChapterIndex));
+  /**
+   * How many pages the reader can walk.
+   *
+   * The TOC is not the book: a partial NCX names 21 of this book's 43 spine
+   * documents, so bounding the walk by the outline stranded every chapter body
+   * behind an entry that does not exist. The spine is the book, so it wins. The
+   * other two are kept only as floors for the window between a book opening and
+   * its spine being read.
+   */
+  function walkLength(): number {
+    return Math.max(deps.getSpineHrefs().length, deps.getTotalChapters(), deps.getToc().length);
+  }
+
+  /**
+   * Fragment to land on when moving to `index`, or null.
+   *
+   * Only outline entries carry fragments, and there are fewer of them than
+   * pages. Reading past the end of the array would hand back `undefined` and
+   * leak an "undefined" fragment into the render.
+   */
+  function fragmentAt(index: number): string | null {
+    const entry = deps.getToc()[index];
+    return entry ? extractFragment(entry.href) : null;
+  }
+
+  /**
+   * Spine position of the current page.
+   *
+   * Below the TOC length the current index names an outline entry, and the
+   * entry carries the spine document it points at. At or above it, the index IS
+   * a spine index — there is no outline entry to consult, and asking the TOC
+   * mapper for one would log a miss and fall back to the same number anyway.
+   */
+  const currentSpineIndex = $derived.by(() => {
+    const tocLen = deps.getToc().length;
+    if (currentChapterIndex < tocLen) return deps.spineIndexForToc(currentChapterIndex);
+    return currentChapterIndex;
+  });
 
   function goToPrev(): void {
     if (currentChapterIndex > 0) {
       const prevIdx = currentChapterIndex - 1;
-      const frag = extractFragment(deps.getToc()[prevIdx]?.href ?? '');
+      const frag = fragmentAt(prevIdx);
       if (frag) pendingFragment = frag;
       currentChapterIndex = prevIdx;
     }
   }
 
   function goToNext(): void {
-    const tocLen = deps.getToc().length;
     const nextIdx = currentChapterIndex + 1;
-    const totalChapters = deps.getTotalChapters();
-    const limit = tocLen > 0 ? tocLen : totalChapters;
-    if (nextIdx < limit) {
-      const frag = extractFragment(deps.getToc()[nextIdx]?.href ?? '');
+    if (nextIdx < walkLength()) {
+      const frag = fragmentAt(nextIdx);
       if (frag) pendingFragment = frag;
-      currentChapterIndex = nextIdx;
-    } else if (nextIdx < totalChapters) {
       currentChapterIndex = nextIdx;
     }
   }
 
   function goToChapter(index: number): void {
-    const tocLen = deps.getToc().length;
-    const totalChapters = deps.getTotalChapters();
-    const limit = tocLen > 0 ? tocLen : totalChapters;
-    if (index >= 0 && index < limit) {
-      const frag = extractFragment(deps.getToc()[index]?.href ?? '');
+    if (index >= 0 && index < walkLength()) {
+      const frag = fragmentAt(index);
       if (frag) pendingFragment = frag;
       else pendingFragment = null;
-      currentChapterIndex = index;
-    } else if (index >= 0 && index < totalChapters) {
-      const frag2 = extractFragment(deps.getToc()[index]?.href ?? '');
-      if (frag2) pendingFragment = frag2;
       currentChapterIndex = index;
     }
   }
 
+  /**
+   * A numbered page is a spine document, so page N is spine N-1. Resolving
+   * through the TOC would send "9" to the ninth *outline entry* (spine 24 in
+   * this book) instead of the ninth document.
+   */
   async function handleGoToPage(page: number): Promise<boolean> {
-    const tocLen = deps.getToc().length;
-    const totalChapters = deps.getTotalChapters();
-    if (tocLen > 0) {
-      if (page < 1 || page > tocLen) return false;
-      const tocIdx = page - 1;
-      goToChapter(tocIdx);
-      return true;
-    }
-    const spineIdx = page - 1;
-    if (spineIdx < 0 || spineIdx >= totalChapters) return false;
-    const mapped = deps.tocIndexForSpine(spineIdx, deps.getSpineHrefs()[spineIdx]);
-    if (mapped !== null && mapped >= 0 && mapped < tocLen) {
-      goToChapter(mapped);
-      return true;
-    }
-    if (spineIdx >= 0 && spineIdx < totalChapters) {
-      goToChapter(spineIdx);
-      return true;
-    }
-    return false;
+    goToChapter(page - 1);
+    return currentChapterIndex === page - 1;
   }
 
   function handleExternalTocNavigate(targetId: string | null): boolean {

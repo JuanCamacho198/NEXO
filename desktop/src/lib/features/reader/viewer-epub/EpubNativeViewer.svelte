@@ -20,6 +20,10 @@
   import type { PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
   import { resolveFootnoteNote } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
   import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
+  import {
+    countPageTotal,
+    pageNumberForSpine,
+  } from '$lib/features/reader/viewer-epub/epubReachablePages';
 
   /**
    * How long a turn is queued for while a chapter's layout settles and any
@@ -189,10 +193,12 @@
   // Declared as `$state` because the viewer's template reads it to pin the
   // iframe; `pagination` writes it on every measured change.
   let pageBox = $state<PageBox | null>(null);
-  let displayTotal = $derived.by(() => {
-    const t = spine.getToc().length;
-    return t > 0 ? t : totalChapters;
-  });
+  // A spine document is a page, so the spine — not the outline — is "of M".
+  // The footer already percentages the spine; counting the TOC here printed 21
+  // pages against a footer that said 43, and hid every chapter body from the
+  // page field, since a partial NCX names only some documents.
+  let spineLength = $derived(spine.getSpineHrefs().length || totalChapters);
+  let displayTotal = $derived(countPageTotal(spineLength));
   // The header reports the chapter that is ON SCREEN, not the one navigation has
   // requested. A Next at a chapter's last page bumps `currentChapterIndex`
   // synchronously and falls through to chapter navigation, but the new chapter
@@ -208,8 +214,8 @@
   let displayCurrentPage = $derived.by(() => {
     const committed =
       lastRenderedChapter >= 0 ? lastRenderedChapter : navigation.currentChapterIndex;
-    const t = spine.getToc().length;
-    return t > 0 ? committed + 1 : navigation.currentSpineIndex + 1;
+    const page = pageNumberForSpine(committed, spineLength);
+    return page || navigation.currentSpineIndex + 1;
   });
 
   function getToc(): EpubChapterMeta[] {

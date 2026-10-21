@@ -63,6 +63,38 @@ describe('useReaderNavigation', () => {
     expect(nav2.headerTotalPages).toBe(0);
   });
 
+  it('headerTotalPages prefers the viewer spine count over the TOC length', () => {
+    // *Prisioneros de la geografía*: 21 navPoints, 43 spine documents. The
+    // footer percentages the spine, so a header that reported the outline
+    // disagreed with it by 22 pages and hid every chapter body from the field.
+    const epub: any = {
+      getTotalForHeader: vi.fn().mockReturnValue(43),
+      getCurrentPage: vi.fn().mockReturnValue(1),
+    };
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub }),
+      getActiveBook: () => makeEpubBook(),
+    });
+    nav.handleTocReady(
+      Array.from({ length: 21 }, (_, i) => ({ id: `c${i}`, title: `C${i}`, depth: 0 })),
+    );
+    expect(nav.tocEntries).toHaveLength(21);
+    expect(nav.headerTotalPages).toBe(43);
+  });
+
+  it('headerTotalPages falls back to the TOC length when the viewer reports none', () => {
+    const epub: any = { getTotalForHeader: vi.fn().mockReturnValue(0) };
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub }),
+      getActiveBook: () => makeEpubBook(),
+    });
+    nav.handleTocReady([
+      { id: 'a', title: 'A', depth: 0 },
+      { id: 'b', title: 'B', depth: 0 },
+    ]);
+    expect(nav.headerTotalPages).toBe(2);
+  });
+
   it('goPrev/Next pdf bounds disabled and delegates to pdfRef', async () => {
     const book: any = makePdfBook();
     const pdf: any = { navigateToPage: vi.fn().mockResolvedValue(true) };

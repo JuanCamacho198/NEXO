@@ -56,7 +56,7 @@ describe('useEpubNavigation — offset-2 + limits', () => {
       expect(nav.currentChapterIndex).toBe(0);
     });
 
-    it('goToNext respects tocLen limit (20) with fallback to spine (24)', () => {
+    it('goToNext walks past the TOC length up to the spine length', () => {
       const toc = makeToc(2, 20);
       const nav = createEpubNavigation({
         getToc: () => toc as any,
@@ -67,14 +67,33 @@ describe('useEpubNavigation — offset-2 + limits', () => {
       });
       nav.currentChapterIndex = 19;
       nav.goToNext();
-      // 19→20 via spine fallback (cover/nav not in TOC) — preserves original viewer behavior
+      // Past the last outline entry the index is a spine index; nothing clamps
+      // it to the TOC, so the walk continues through the untitled documents.
       expect(nav.currentChapterIndex).toBe(20);
       nav.goToNext();
       expect(nav.currentChapterIndex).toBe(21);
-      // clamp at totalChapters
+      // clamp at the spine length, not at the TOC
       nav.currentChapterIndex = 23;
       nav.goToNext();
       expect(nav.currentChapterIndex).toBe(23);
+    });
+
+    it('goToNext reaches the last spine page of a partial-NCX book and stops there', () => {
+      // The measured shape: 21 navPoints, 43 spine documents. Every chapter body
+      // sits in a document the NCX does not name.
+      const toc = makeToc(0, 21);
+      const nav = createEpubNavigation({
+        getToc: () => toc as any,
+        getSpineHrefs: () => Array.from({ length: 43 }, (_, i) => `spine-${i}.xhtml`),
+        getTotalChapters: () => 43,
+        spineIndexForToc: (i) => i,
+        tocIndexForSpine: () => null,
+      });
+      nav.currentChapterIndex = 20;
+      for (let i = 21; i <= 42; i++) nav.goToNext();
+      expect(nav.currentChapterIndex).toBe(42);
+      nav.goToNext();
+      expect(nav.currentChapterIndex).toBe(42);
     });
 
     it('goToNext allows spine fallback when toc empty', () => {
@@ -115,8 +134,8 @@ describe('useEpubNavigation — offset-2 + limits', () => {
     });
   });
 
-  describe('handleGoToPage (tocLen vs totalChapters offset-2)', () => {
-    it('page 1..tocLen maps to TOC index when toc present', async () => {
+  describe('handleGoToPage (page N is spine N-1)', () => {
+    it('resolves every page to the spine document of the same number', async () => {
       const toc = makeToc(2, 20);
       const nav = createEpubNavigation({
         getToc: () => toc as any,
@@ -125,12 +144,36 @@ describe('useEpubNavigation — offset-2 + limits', () => {
         spineIndexForToc: (i) => spineIndexForToc(toc as any, i),
         tocIndexForSpine: (i, href) => tocIndexForSpine(toc as any, i, href),
       });
+      // Page 9 is the ninth document, not the ninth outline entry (which would
+      // be spine 11 in an offset-2 book).
+      expect(await nav.handleGoToPage(9)).toBe(true);
+      expect(nav.currentChapterIndex).toBe(8);
       expect(await nav.handleGoToPage(1)).toBe(true);
       expect(nav.currentChapterIndex).toBe(0);
+      // The walk is bounded by the spine (24), not by the TOC (20).
       expect(await nav.handleGoToPage(20)).toBe(true);
       expect(nav.currentChapterIndex).toBe(19);
-      expect(await nav.handleGoToPage(21)).toBe(false);
+      expect(await nav.handleGoToPage(24)).toBe(true);
+      expect(nav.currentChapterIndex).toBe(23);
+      expect(await nav.handleGoToPage(25)).toBe(false);
       expect(await nav.handleGoToPage(0)).toBe(false);
+    });
+
+    it('handleGoToPage(30) lands on spine 29 of a partial-NCX book', async () => {
+      const toc = makeToc(0, 21);
+      const nav = createEpubNavigation({
+        getToc: () => toc as any,
+        getSpineHrefs: () => Array.from({ length: 43 }, (_, i) => `spine-${i}.xhtml`),
+        getTotalChapters: () => 43,
+        spineIndexForToc: (i) => i,
+        tocIndexForSpine: () => null,
+      });
+      expect(await nav.handleGoToPage(30)).toBe(true);
+      expect(nav.currentChapterIndex).toBe(29);
+      // Page 43 is reachable and page 44 is not, because the spine says 43.
+      expect(await nav.handleGoToPage(43)).toBe(true);
+      expect(nav.currentChapterIndex).toBe(42);
+      expect(await nav.handleGoToPage(44)).toBe(false);
     });
 
     it('falls back to spine when toc empty', async () => {
