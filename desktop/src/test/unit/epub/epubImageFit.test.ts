@@ -22,10 +22,15 @@ import {
 } from '$lib/features/reader/viewer-epub/readerCssBuilder';
 import {
   CONTENT_IMAGE_MIN_WIDTH,
+  IMAGE_PLATE_ZOOM_ATTR,
   SOLO_IMAGE_ATTR,
   STACKED_IMAGE_ATTR,
+  applyImagePlateZoomToDocument,
+  clearImagePlateZoomFromDocument,
   contentImageFromEvent,
   hasProseText,
+  imageZoomPercentOfNatural,
+  imageZoomScale,
   isImageOnlyDocument,
   isSelectionClick,
   markChapterImages,
@@ -119,6 +124,140 @@ describe('an image is never upscaled past a sane multiple of its pixels', () => 
     const block = buildReaderOverrideCss(base).match(/body img \{[^}]*\}/)?.[0] ?? '';
     expect(block).toContain('width: auto');
     expect(block).toContain('height: auto');
+  });
+});
+
+describe('zoom reaches the plates on an image-only page', () => {
+  /** An image-only chapter: two plates inside publisher wrappers, no prose. */
+  function spreadDoc(naturalWidth = 504): Document {
+    const doc = parse(
+      `<div class="image"><img id="a" src="a.png"/></div>` +
+        `<div class="image"><img id="b" src="b.png"/></div>`,
+    );
+    markChapterImages(doc);
+    // jsdom never loads images, so the natural width the browser would report is
+    // stubbed: it is the ONLY length the pixel rule is derived from.
+    for (const img of doc.querySelectorAll('img')) {
+      Object.defineProperty(img, 'naturalWidth', { value: naturalWidth, configurable: true });
+    }
+    return doc;
+  }
+
+  it('scale is monotonic across every zoom stop the control offers', () => {
+    // The same stops `ZOOM_OPTIONS` exposes in the reader's menu.
+    const stops = [50, 75, 90, 100, 110, 125, 150, 175, 200, 250, 300];
+    let previous = -1;
+    for (const stop of stops) {
+      const grown = imageZoomScale(stop);
+      expect(grown, `zoom ${stop}% did not grow the plate`).toBeGreaterThanOrEqual(previous);
+      previous = grown;
+    }
+    // Exactly 100% states no scale at all: the natural-size render must stay
+    // reachable, and it is the one value that must never write a width.
+    expect(imageZoomPercentOfNatural(100)).toBeNull();
+    // Below and above 100% both scale: a percentage ceiling can never SHRINK a
+    // plate, so 75% has no other way to render smaller.
+    expect(imageZoomPercentOfNatural(75)).toBe(75);
+    expect(imageZoomPercentOfNatural(110)).toBe(110);
+  });
+
+  it('scales the plate down below 100% as well as up above it', () => {
+    // The measured bug this pins: at 75% and 100% every plate stayed 503/507px.
+    const doc = spreadDoc(504);
+    const img = doc.getElementById('a')!;
+
+    applyImagePlateZoomToDocument(doc, 75);
+    expect(img.style.getPropertyValue('width')).toBe('378px');
+    expect(doc.documentElement.getAttribute(IMAGE_PLATE_ZOOM_ATTR)).toBe('75');
+
+    applyImagePlateZoomToDocument(doc, 100);
+    expect(
+      img.style.getPropertyValue('width'),
+      'at 100% the inline width must be REMOVED, not set to the natural size — ' +
+        'the default render is the one an image-only page had before zoom existed',
+    ).toBe('');
+    expect(doc.documentElement.getAttribute(IMAGE_PLATE_ZOOM_ATTR)).toBe('100');
+
+    applyImagePlateZoomToDocument(doc, 125);
+    expect(img.style.getPropertyValue('width')).toBe('630px');
+    applyImagePlateZoomToDocument(doc, 300);
+    expect(img.style.getPropertyValue('width')).toBe('1512px');
+  });
+
+  it('sizes from the plate own pixels, not from the container', () => {
+    // Measured live, the bug this replaced: a stylesheet `width: 75%` rendered
+    // 729px for a 504px plate, because the percentage resolves against the
+    // publisher's 972px wrapper. The stated width must be natural * zoom even
+    // when the wrapper is unrelated to the image's size.
+    const doc = spreadDoc(1200);
+    applyImagePlateZoomToDocument(doc, 75);
+    expect(doc.getElementById('a')!.style.getPropertyValue('width')).toBe('900px');
+  });
+
+  it('leaves a prose chapter alone and clears a stale plate size', () => {
+    const doc = spreadDoc(504);
+    const img = doc.getElementById('a')!;
+    applyImagePlateZoomToDocument(doc, 150);
+    expect(img.style.getPropertyValue('width')).toBe('756px');
+    // The pipeline re-renders a chapter as its assets settle, and the document
+    // on screen is the authority: once it has prose it must stop being sized as
+    // a plate.
+    doc.body.appendChild(doc.createTextNode('A'.repeat(80)));
+    applyImagePlateZoomToDocument(doc, 150);
+    expect(img.style.getPropertyValue('width')).toBe('');
+    expect(doc.documentElement.hasAttribute(IMAGE_PLATE_ZOOM_ATTR)).toBe(false);
+  });
+
+  it('never overwrites a publisher inline width it did not write', () => {
+    const doc = spreadDoc(504);
+    const img = doc.getElementById('a')!;
+    img.style.setProperty('width', '420px');
+    applyImagePlateZoomToDocument(doc, 50);
+    // Ours wins while the zoom is applied…
+    expect(img.style.getPropertyValue('width')).toBe('252px');
+    clearImagePlateZoomFromDocument(doc);
+    // …and the book's own value comes back, because only our marker is cleared.
+    expect(img.style.getPropertyValue('width')).toBe('420px');
+  });
+
+  it('skips a plate that has not loaded yet instead of freezing it at 0px', () => {
+    const doc = spreadDoc(0);
+    applyImagePlateZoomToDocument(doc, 75);
+    expect(doc.getElementById('a')!.style.getPropertyValue('width')).toBe('');
+    // The root marker still records the attempt, so a load path knows to redo it.
+    expect(doc.documentElement.getAttribute(IMAGE_PLATE_ZOOM_ATTR)).toBe('75');
+  });
+
+  it('emits a ceiling release rather than a percentage width', () => {
+    const imageOnly = buildReaderOverrideCss({ ...base, layout: 'image-only', zoomLevel: 150 });
+    // The stylesheet must NOT state a plate width: a percentage there is a
+    // percentage of the publisher's wrapper (measured 729px for a 504px plate).
+    expect(imageOnly).not.toMatch(/body img, body svg \{[^}]*width: \d+% !important/);
+    // It releases every percentage bound that would clamp the pixel width.
+    expect(imageOnly).toMatch(/body img, body svg \{[^}]*max-width: none !important/);
+    expect(imageOnly).toMatch(/body img\[data-nexo-image-solo\][^}]*max-width: none !important/);
+    // Prose is untouched at any zoom — its images keep width:auto.
+    const prose = buildReaderOverrideCss({ ...base, zoomLevel: 150 });
+    expect(prose).toContain('body img {');
+    expect(prose).not.toContain('max-width: none !important;\n        max-height: none');
+  });
+
+  it('keeps a zoomed plate horizontally reachable instead of clipping it', () => {
+    // The chapter root sets overflow-x: hidden for the prose measure, which
+    // would clip a plate wider than the viewport to its left edge.
+    const imageOnly = buildReaderOverrideCss({ ...base, layout: 'image-only', zoomLevel: 300 });
+    expect(imageOnly).toMatch(/html \{[^}]*overflow-x: auto !important/);
+    // Prose keeps the hidden overflow it has always had.
+    const proseHtml = buildReaderOverrideCss(base).match(/html \{[^}]*\}/)?.[0] ?? '';
+    expect(proseHtml).toContain('overflow-x: hidden');
+  });
+
+  it('a book with no images never receives the image-only rules at all', () => {
+    const prose = buildReaderOverrideCss({ ...base, zoomLevel: 300 });
+    expect(prose).not.toContain(IMAGE_PLATE_ZOOM_ATTR);
+    expect(prose).not.toMatch(/html \{[^}]*overflow-x: auto/);
+    // And the prose path carries nothing a plate page adds.
+    expect(prose).not.toContain('max-height: none !important;\n        height: auto !important;');
   });
 });
 

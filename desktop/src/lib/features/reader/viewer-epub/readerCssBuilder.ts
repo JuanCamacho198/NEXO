@@ -459,15 +459,24 @@ ${paginationCss}${imageOnlyCss}    `;
  * The image-only override: last in the cascade, so it beats both the scroll and
  * the pagination body rules.
  *
- * `max-width: none` is the whole fix — `body img { max-width: min(100%, 200%) }`
- * resolves its percentage against the body's own width, and it is the centred
- * `min(65ch, 100%)` body that halved each map. Releasing the column releases the
- * images with it, so no per-image width is set here.
+ * `max-width: none` on `body` is the whole layout fix — `body img { max-width:
+ * min(100%, 200%) }` resolves its percentage against the body's own width, and
+ * it is the centred `min(65ch, 100%)` body that halved each map. Releasing the
+ * column releases the images with it.
  *
  * `max-height: none` only for this layout. The 85vh cap exists so a cover in a
  * text chapter cannot push the prose off-screen; in a document that is ALL
  * image there is no prose to push, and the cap was clipping a plate to a
  * letterbox the reader could not scroll past.
+ *
+ * ## The zoom is NOT a percentage here, and this rule says so
+ *
+ * A plate's zoom is a multiple of the image's own `naturalWidth`, which no
+ * stylesheet percentage can express: `width: 75%` is 75% of the publisher's
+ * wrapper (measured 729px for a 504px plate the reader had asked to see at
+ * 378px). `useEpubRender` therefore writes a pixel width per image, and
+ * {@link buildImagePlateZoomCss} emits the rules that let it win — this block
+ * deliberately states no `width` at all, only the ceiling release.
  */
 function buildImageOnlyCss(): string {
   return `
@@ -476,19 +485,58 @@ function buildImageOnlyCss(): string {
         padding-top: 0 !important;
         padding-bottom: 0 !important;
       }
-      body img, body svg {
-        max-width: min(100%, 200%) !important;
-        max-height: none !important;
-        height: auto !important;
+      /* A zoomed plate grows past the viewport. The chapter root hides
+         overflow-x for the prose path (the measure is centred and must never
+         produce a sideways scrollbar), so a wide plate would be CLIPPED to the
+         viewport and the reader could reach only its left edge — trading an
+         unreadably small plate for an unreachable large one. Releasing it here
+         makes the chapter document itself scroll sideways: measured at 300%
+         zoom, scrollLeft reaches 2182 of a 3433px document, so the right edge of
+         a 3369px plate really comes into view. Only this layout is affected, and
+         at 100% zoom the content fits, so no scrollbar appears. */
+      html {
+        overflow-x: auto !important;
       }
+      ${buildImagePlateZoomCss()}
       body img[${STACKED_IMAGE_ATTR}] {
         display: block;
         margin-inline: auto;
         margin-block: 0.5em;
         float: none !important;
       }
-      body img[${SOLO_IMAGE_ATTR}] {
-        max-width: min(100%, 200%) !important;
+    `;
+}
+
+/**
+ * The rules that let a per-image pixel `width` be the plate's zoom.
+ *
+ * The generic block above (`body img { max-width: min(100%, 200%) }`) is a
+ * CEILING, and on an image-only page the ceiling is the wrapper width — so it
+ * would clamp a plate the reader zoomed IN, and could only ever `max-width` a
+ * plate they zoomed OUT, which an upper bound cannot do (measured: `min(75%,
+ * 200%)` resolves to 200%, plate unchanged at 504px). Both problems disappear
+ * once the width is stated in the plate's own pixels, which is what
+ * `useEpubRender` does with `imageZoomPercentOfNatural`, so this block removes
+ * every percentage bound that could fight it and leaves height flowing from the
+ * stated width.
+ *
+ * `max-width: none` is what makes an upscale reachable past the wrapper; without
+ * it a 300% plate is silently cut back to the publisher's column, which is the
+ * original "the zoom control is dead" symptom in a different disguise.
+ */
+export function buildImagePlateZoomCss(): string {
+  return `
+      body img, body svg {
+        max-width: none !important;
+        max-height: none !important;
+        height: auto !important;
+      }
+      /* The solo/stacked markers only carry layout. Their \`!important\` width
+         ceiling would otherwise win over the inline pixel width and clamp a
+         zoomed plate, so they are re-stated here without one. */
+      body img[${SOLO_IMAGE_ATTR}], body img[${STACKED_IMAGE_ATTR}] {
+        max-width: none !important;
+        height: auto !important;
       }
     `;
 }

@@ -1,5 +1,5 @@
 /**
- * Two reader-side decisions about chapter images, kept out of the three large
+ * Three reader-side decisions about chapter images, kept out of the three large
  * reader modules on purpose:
  *
  *  1. **Layout class.** A document made only of images must escape the prose
@@ -10,10 +10,14 @@
  *     out side by side at ~280 px each, so every place name rendered ~6 px tall.
  *     The images get the page; the text keeps its measure.
  *
- *  2. **Clickability.** Whether a click landed on an image worth enlarging.
+ *  2. **Zoom destination.** The reader has one zoom value (`epub.fontSize`).
+ *     On prose it scales type; on an image-only document there is no type, so
+ *     it must scale the plates instead. {@link imageZoomScale} is that rule.
  *
- * Both are pure functions over a document so the rules are testable in jsdom
- * (no layout engine needed for (2), and (1) is decided from the DOM shape).
+ *  3. **Clickability.** Whether a click landed on an image worth enlarging.
+ *
+ * All are pure functions over a document (and a number) so the rules are
+ * testable in jsdom: no layout engine is involved anywhere in this module.
  */
 
 /**
@@ -229,4 +233,191 @@ function proseLength(root: Element): number {
     if (chars >= PROSE_MIN_CHARS) return chars;
   }
   return chars;
+}
+
+/**
+ * How much an image-only page's plates grow for a given zoom value, as a
+ * multiplier of `1` (no change).
+ *
+ * The reader owns exactly ONE zoom number, `epub.fontSize`, clamped to 50..300
+ * by `clampZoomPercent`. On a text page that number scales type. On a document
+ * that is only images there is no type, so the number has to reach the pictures
+ * or the control is dead — measured live on the two-map spread in
+ * *Prisioneros de la geografía* (spine 8): at 100%, 125% and 150% every image
+ * stayed 504x754 / 501x754 while `body` font-size went 16px -> 20px -> 24px.
+ *
+ * It is derived here rather than stored beside `epub.fontSize` on purpose. A
+ * second persisted value could disagree with the first (the header, the wheel,
+ * the keys and the menu all write `epub.fontSize`), and the reader would then
+ * have two competing "current zooms". The derivation makes disagreement
+ * unrepresentable.
+ *
+ * The clamp lives with the value that is persisted (`clampZoomPercent`); this
+ * function only translates it. A non-finite or non-positive input yields `1`, so
+ * a broken settings row cannot collapse a plate to zero width.
+ */
+export function imageZoomScale(zoomPercent: number): number {
+  if (!Number.isFinite(zoomPercent) || zoomPercent <= 0) return 1;
+  return zoomPercent / 100;
+}
+
+/**
+ * How wide a plate renders, as a `%` of the image's OWN natural width, or
+ * `null` for "leave it at its natural size".
+ *
+ * `null` is exactly 100%: the default view must render a plate exactly as it did
+ * before zoom reached the pictures (measured: `width: 100%` in the stylesheet
+ * stretched the 504px maps to 1123px, because that percentage is of the
+ * container).
+ *
+ * ## Why the stylesheet cannot state this as a percentage
+ *
+ * A stylesheet `width: N%` resolves against the image's CONTAINING BLOCK, not
+ * against the image. On the measured spread (*Prisioneros de la geografía*,
+ * spine 8) each plate sits in a publisher `div` 972px wide inside a 1100px body,
+ * and the images are 504px natural, so a percentage is off by 972/504 — and by a
+ * different factor in every book, since each book wraps its plates its own way.
+ * Measured live on this very fix:
+ *
+ *     width: 75%  -> 729px rendered  (the reader asked for 378px: LARGER than natural)
+ *     width: 125% -> 1215px rendered (the reader asked for 630px)
+ *
+ * A percentage `max-width` cannot rescue it: it is an upper bound, so
+ * `min(75%, 200%)` resolves to `200%` and the plate stays at 504px (measured).
+ * Growth has to be a stated `width`; shrink has to be a stated `width`; and the
+ * only length that means "this plate" rather than "this container" is the live
+ * image's own `naturalWidth`.
+ *
+ * So this function answers the DECISION (what multiple of its own pixels) and
+ * `useEpubRender` applies it as a pixel width per image, in the chapter it
+ * already rewrites on every zoom change. Keeping the rule here keeps it a pure,
+ * testable function rather than a stray constant in the render pipeline.
+ *
+ * A non-finite or non-positive input yields `null` (no scaling), so a broken
+ * settings row cannot collapse a plate to zero width.
+ */
+export function imageZoomPercentOfNatural(zoomPercent: number): number | null {
+  if (!Number.isFinite(zoomPercent) || zoomPercent <= 0) return null;
+  return zoomPercent === 100 ? null : zoomPercent;
+}
+
+/**
+ * Root marker recording the zoom a chapter document was last sized for.
+ *
+ * `document.documentElement` carries it so the pass is provable in the DOM: a
+ * value of `100` means "sized to natural, no inline width written", any other
+ * number is the multiple applied. It is also what makes the teardown scoped —
+ * see {@link clearImagePlateZoomFromDocument}.
+ */
+export const IMAGE_PLATE_ZOOM_ATTR = 'data-nexo-plate-zoom';
+
+/** Marks an element whose inline `width` this pipeline wrote. */
+const PLATE_WIDTH_MARKER = 'data-nexo-plate-zoom-width';
+
+/** Holds the publisher's own inline `width` while ours is in effect. */
+const PLATE_ORIGIN_WIDTH_ATTR = 'data-nexo-plate-origin-width';
+
+/** Holds the publisher's own inline `width` priority alongside it. */
+const PLATE_ORIGIN_PRIORITY_ATTR = 'data-nexo-plate-origin-priority';
+
+/**
+ * The width an SVG plate contributes when it has no intrinsic pixel size.
+ *
+ * `<svg>` elements (as opposed to SVG files loaded through `<img>`) expose no
+ * `naturalWidth`, and an inline book chart legitimately has none. Reading the
+ * author's own `width` attribute — or the rendered box before anything was
+ * written — is the only honest natural size available. Returns 0 when neither
+ * exists, which {@link applyImagePlateZoomToDocument} treats as "not measurable
+ * yet, leave it alone".
+ */
+function naturalPlateWidth(plate: HTMLElement): number {
+  const img = plate as HTMLImageElement;
+  if (typeof img.naturalWidth === 'number' && img.naturalWidth > 0) return img.naturalWidth;
+  const attr = Number.parseInt(plate.getAttribute('width') ?? '', 10);
+  if (Number.isFinite(attr) && attr > 0) return attr;
+  return 0;
+}
+
+/**
+ * Writes the reader's zoom onto an image-only chapter's plates, as a pixel width
+ * per image, and returns true when the document was treated as a plate page.
+ *
+ * `zoomPercent` is the reader's zoom in percent (`75`, `125`), i.e.
+ * `fontSize * zoomLevel / 100` — the same two numbers the prose path folds into
+ * its `font-size`. At exactly 100 no width is written at all: the plate keeps its
+ * natural size, which is the render an image-only page had before zoom reached
+ * the pictures.
+ *
+ * A document with prose is left untouched and has any previous width removed, so
+ * a chapter that gains text (the pipeline re-renders a chapter as its assets
+ * settle) cannot keep a plate sizing it no longer earned.
+ */
+export function applyImagePlateZoomToDocument(doc: Document | null, zoomPercent: number): boolean {
+  if (!doc?.documentElement) return false;
+  if (!isImageOnlyDocument(doc)) {
+    clearImagePlateZoomFromDocument(doc);
+    return false;
+  }
+  const percent = imageZoomPercentOfNatural(zoomPercent);
+  // The marker goes on BEFORE the per-image loop: it records that this pass ran
+  // for this document, so a later teardown knows the inline widths are ours.
+  doc.documentElement.setAttribute(IMAGE_PLATE_ZOOM_ATTR, String(percent ?? 100));
+  for (const plate of doc.querySelectorAll<HTMLElement>('img, svg')) {
+    if (percent === null) {
+      clearPlateWidth(plate);
+      continue;
+    }
+    const natural = naturalPlateWidth(plate);
+    // Not measurable yet (an image mid-load): leave it alone. The chapter's own
+    // load path re-runs this pass once the pixels exist, rather than freezing a
+    // 0px-wide plate into the document.
+    if (natural <= 0) continue;
+    writePlateWidth(plate, `${Math.round((natural * percent) / 100)}px`);
+  }
+  return true;
+}
+
+/**
+ * Writes our pixel width and remembers what was there before.
+ *
+ * A publisher may set its own inline `width`; clobbering it would leave the book
+ * permanently mis-sized after the reader returns to 100%, because the teardown
+ * would have nothing to restore. The previous value is parked in data
+ * attributes on the first write and put back on the teardown, so `100%` really
+ * is the book's own layout again rather than "no width at all".
+ */
+function writePlateWidth(plate: HTMLElement, width: string): void {
+  if (plate.getAttribute(PLATE_WIDTH_MARKER) !== '1') {
+    const previous = plate.style.getPropertyValue('width');
+    const priority = plate.style.getPropertyPriority('width');
+    if (previous) plate.setAttribute(PLATE_ORIGIN_WIDTH_ATTR, previous);
+    if (priority) plate.setAttribute(PLATE_ORIGIN_PRIORITY_ATTR, priority);
+    plate.setAttribute(PLATE_WIDTH_MARKER, '1');
+  }
+  plate.style.setProperty('width', width, 'important');
+}
+
+/**
+ * Removes the per-image widths this pipeline wrote.
+ *
+ * Scoped by marker rather than "clear every image": a publisher's own inline
+ * width must survive, and a plain `style.removeProperty('width')` on every image
+ * would silently delete it.
+ */
+export function clearImagePlateZoomFromDocument(doc: Document | null): void {
+  const root = doc?.documentElement;
+  if (!root?.hasAttribute(IMAGE_PLATE_ZOOM_ATTR)) return;
+  root.removeAttribute(IMAGE_PLATE_ZOOM_ATTR);
+  for (const plate of doc!.querySelectorAll<HTMLElement>('img, svg')) clearPlateWidth(plate);
+}
+
+function clearPlateWidth(plate: HTMLElement): void {
+  if (plate.getAttribute(PLATE_WIDTH_MARKER) !== '1') return;
+  const previous = plate.getAttribute(PLATE_ORIGIN_WIDTH_ATTR);
+  const priority = plate.getAttribute(PLATE_ORIGIN_PRIORITY_ATTR);
+  if (previous) plate.style.setProperty('width', previous, priority ?? '');
+  else plate.style.removeProperty('width');
+  plate.removeAttribute(PLATE_WIDTH_MARKER);
+  plate.removeAttribute(PLATE_ORIGIN_WIDTH_ATTR);
+  plate.removeAttribute(PLATE_ORIGIN_PRIORITY_ATTR);
 }

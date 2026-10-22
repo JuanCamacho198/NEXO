@@ -22,6 +22,7 @@ import {
   type ReaderCssOptions,
 } from '$lib/features/reader/viewer-epub/readerCssBuilder';
 import {
+  applyImagePlateZoomToDocument,
   isImageOnlyDocument,
   markChapterImages,
 } from '$lib/features/reader/viewer-epub/epubImageFit';
@@ -565,7 +566,44 @@ export function createEpubRender(deps: EpubRenderDeps): {
       `;
     }
     readerStyle.textContent = css;
+    applyImagePlateZoom(doc);
     syncIframeHeight();
+  }
+
+  /**
+   * Applies the reader's zoom to an image-only chapter's plates as a pixel width
+   * per image, and clears it everywhere else.
+   *
+   * ## Why pixels and not a stylesheet percentage
+   *
+   * The zoom is a multiple of each plate's OWN `naturalWidth`; a percentage in
+   * the stylesheet is a multiple of the publisher's wrapper instead, so it is
+   * wrong by the wrapper/source ratio — measured on the two-map spread as
+   * `width: 75%` rendering 729px for a 504px plate. `naturalWidth` is only
+   * known once the image has loaded, so the value has to be written into the
+   * live document rather than generated with the rest of the CSS. The CSS half
+   * of this contract is `buildImagePlateZoomCss` (it removes every percentage
+   * bound that would otherwise clamp the stated width).
+   *
+   * ## Why it runs on EVERY rebuild
+   *
+   * `refreshReaderStyles()` REPLACES the whole `<style>` text on every settings,
+   * zoom and theme change, and a chapter re-render replaces the document
+   * outright. The exact bug happened one change ago with `layout`: a value
+   * captured at render time vanished on the first control touch. So this is
+   * recomputed here, from the same live zoom the prose path reads, and at 100%
+   * it REMOVES the inline width instead of writing one — the natural-size render
+   * must be reachable again, not stale.
+   *
+   * `isImageOnlyDocument` is asked of the live document for the same reason
+   * {@link buildReaderOverrideCssLocal} asks it: the document on screen is the
+   * authority on whether it is a plate.
+   */
+  function applyImagePlateZoom(doc: Document): void {
+    // `getFontSize()` is a percentage (`100`), so the product is percent-of-
+    // percent: multiplying by `zoomLevel` and dividing by 100 yields the
+    // reader's zoom in percent, which is what the pure helper takes.
+    applyImagePlateZoomToDocument(doc, (deps.getFontSize() * deps.getZoomLevel()) / 100);
   }
 
   async function runChapterRender(index: number): Promise<void> {
