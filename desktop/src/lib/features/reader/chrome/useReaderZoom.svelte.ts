@@ -2,15 +2,19 @@ import { clampZoomPercent } from '$lib/features/reader/viewer-pdf/pdfNavigation'
 import type { SettingsPort } from '$lib/shared/ports/SettingsPort';
 import { TauriSettingsAdapter } from '$lib/shared/ports/adapters/tauri/TauriSettingsAdapter';
 import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
+import { READER_ZOOM_STEP_PERCENT } from '$lib/features/reader/viewer-epub/epubZoomWheel';
 import type { ReaderSettings } from '$lib/shared/types';
 import type { ViewerHandle } from '../viewer-shared/Viewer';
 
 /**
  * The single zoom step (percentage points) for every zoom gesture.
- * Wheel (ctrl+wheel) and keyboard (ctrl+=/ctrl+-) both funnel through
- * `adjustZoom`, so one gesture changes the scale exactly once by this amount.
+ *
+ * Defined once, in `epubZoomWheel.ts`, so the chapter-frame forwarder can use it
+ * without importing this rune module. Wheel (ctrl+wheel), the forwarded in-frame
+ * wheel and keyboard (ctrl+=/ctrl+-) all funnel through `adjustZoom`, so one
+ * gesture changes the scale exactly once by this amount.
  */
-export const READER_ZOOM_STEP_PERCENT = 10;
+export { READER_ZOOM_STEP_PERCENT };
 
 export type ReaderZoomDeps = {
   getViewer?: () => ViewerHandle;
@@ -28,6 +32,7 @@ export function createReaderZoom(deps: ReaderZoomDeps): {
   handleTextSettingsChange(updated: ReaderSettings): void;
   syncFromProps(next: ReaderSettings | undefined): void;
   adjustZoom(delta: number): void;
+  getZoomPercent(): number;
   handleHeaderFontSizeChange(size: number): void;
   handleGlobalWheel(e: WheelEvent): void;
   handleGlobalKeydown(e: KeyboardEvent): void;
@@ -183,6 +188,18 @@ export function createReaderZoom(deps: ReaderZoomDeps): {
     }
   }
 
+  /**
+   * The zoom the reader is at right now, read through the viewer so the value is
+   * the viewer's own state (PDF scale) or the EPUB font size — never a copy.
+   *
+   * This is what a forwarded in-frame wheel notch steps FROM. Reading
+   * `localReaderSettings` instead would be wrong for a PDF, whose scale lives in
+   * the viewer, and would be stale inside the same frame a wheel burst lands in.
+   */
+  function getZoomPercent(): number {
+    return resolveViewer().getScaleOrZoom();
+  }
+
   function cleanup(): void {
     if (persistTimer) {
       clearTimeout(persistTimer);
@@ -214,6 +231,7 @@ export function createReaderZoom(deps: ReaderZoomDeps): {
     handleTextSettingsChange,
     syncFromProps,
     adjustZoom,
+    getZoomPercent,
     handleHeaderFontSizeChange,
     handleGlobalWheel,
     handleGlobalKeydown,

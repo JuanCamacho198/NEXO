@@ -20,6 +20,7 @@
   import type { PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
   import { resolveFootnoteNote } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
   import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
+  import { attachFrameZoomWheel } from '$lib/features/reader/viewer-epub/epubZoomWheel';
   import {
     contentImageFromEvent,
     isSelectionClick,
@@ -738,6 +739,11 @@
     const onLeave = (): void => {
       onIframeMouseLeave?.();
     };
+    /**
+     * Tears down the in-frame ctrl+wheel forwarder. One slot per effect run, so
+     * a `srcdoc` swap cannot leave a second listener counting the same notch.
+     */
+    let detachFrameWheel: (() => void) | null = null;
     const onFrameScroll = (): void => {
       // Only meaningful in paginated mode; scrolling mode already reports
       // through the parent container's own listener.
@@ -789,6 +795,16 @@
     const attach = (): void => {
       const doc = frame.contentDocument;
       if (!doc) return;
+      // A `load` fires on every `srcdoc` swap while this effect is still the
+      // current run, so the listeners below can be added again to the SAME
+      // document. They are guarded by removing first rather than by a flag: a
+      // duplicate wheel listener would count one notch twice, and a duplicate
+      // mouse/click listener was already a latent hazard here.
+      doc.removeEventListener('mousemove', onMove as EventListener);
+      doc.removeEventListener('mouseleave', onLeave);
+      doc.removeEventListener('click', onClick as EventListener);
+      doc.removeEventListener('scroll', onFrameScroll, true);
+      detachFrameWheel?.();
       doc.addEventListener('mousemove', onMove as EventListener);
       doc.addEventListener('mouseleave', onLeave);
       doc.addEventListener('click', onClick as EventListener);
@@ -798,14 +814,45 @@
       // follow a page turn. A capture listener catches the scroll on whichever
       // element the browser bubbles it from.
       doc.addEventListener('scroll', onFrameScroll, true);
+      // Ctrl+wheel over the chapter. The window listener in `ReaderWorkspace`
+      // never sees a gesture dispatched inside this document, so it has to be
+      // forwarded from here; a plain wheel is left alone and keeps scrolling.
+      // The current zoom is read through the viewer, not through a captured
+      // prop, so a step taken by the keys or the menu is honoured.
+      detachFrameWheel = attachFrameZoomWheel(doc, () => getZoomPercent());
+      // Apply the current zoom to this document's plates.
+      //
+      // `attach` runs here precisely because it is bound to the frame's `load`,
+      // and that is the only signal that a NEW document exists. The viewer's
+      // settings effect cannot cover it: it early-returns when the requested
+      // chapter already matches the rendered one, which is exactly the state a
+      // re-render leaves behind — measured live as a spread that stayed at 729px
+      // while the zoom label said 75%, with no plate marker in the document.
+      refreshReaderStyles();
+      // A plate's size is a multiple of its own `naturalWidth`, which is 0 until
+      // the image decodes — and `load` on the FRAME fires before its images do.
+      // Without this, an image-only chapter opened at 75% would render at
+      // natural size until the reader touched a control.
+      for (const img of Array.from(doc.querySelectorAll('img'))) {
+        if (img.complete && img.naturalWidth > 0) continue;
+        img.addEventListener('load', onPlateLoad);
+      }
+    };
+    const onPlateLoad = (): void => {
+      refreshReaderStyles();
     };
     const detach = (): void => {
+      detachFrameWheel?.();
+      detachFrameWheel = null;
       const doc = frame.contentDocument;
       if (!doc) return;
       doc.removeEventListener('mousemove', onMove as EventListener);
       doc.removeEventListener('mouseleave', onLeave);
       doc.removeEventListener('click', onClick as EventListener);
       doc.removeEventListener('scroll', onFrameScroll, true);
+      for (const img of Array.from(doc.querySelectorAll('img'))) {
+        img.removeEventListener('load', onPlateLoad);
+      }
     };
     frame.addEventListener('load', attach);
     attach();

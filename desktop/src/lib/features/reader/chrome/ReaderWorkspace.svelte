@@ -35,6 +35,7 @@
   import { createImmersiveChrome } from './useImmersiveChrome.svelte';
   import { createReaderShortcuts } from './useReaderShortcuts.svelte';
   import { createReaderZoom } from './useReaderZoom.svelte';
+  import { registerZoomStepResolver } from '../viewer-epub/epubZoomWheel';
   import { clampZoomPercent } from '../viewer-pdf/pdfNavigation';
   import { createHighlightMenu } from '../highlight/useHighlightMenu.svelte';
   import { createBookmarksPanel } from './useBookmarksPanel.svelte';
@@ -322,11 +323,18 @@
       capture: true,
       passive: false,
     });
+    // The chapter is an iframe, and a wheel gesture dispatched inside it never
+    // reaches the window listener above — which is why Ctrl+wheel over the book
+    // did nothing while Ctrl+`+`/`-` worked. Publish the step for the frame to
+    // call. It is `adjustZoom` itself, the same function the keys and the menu
+    // use, so the step size, the clamp and the persistence stay in ONE place.
+    const unregisterZoomStep = registerZoomStepResolver(() => zoom.adjustZoom);
     window.addEventListener('keydown', chrome.handleGlobalKeydown as EventListener);
     window.addEventListener('keydown', zoom.handleGlobalKeydown as EventListener);
     window.addEventListener('keydown', readerShortcuts.handleGlobalKeydown as EventListener);
     return () => {
       root.removeEventListener('mousemove', chrome.handleWorkspaceMouseMove);
+      unregisterZoomStep();
       window.removeEventListener('pointerdown', handleWorkspacePointerDown, {
         capture: true,
       } as AddEventListenerOptions);
