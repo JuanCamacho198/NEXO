@@ -29,7 +29,7 @@
  *    `.svelte.ts` file must reload first or it measures the previous build.
  */
 import { expect, type Frame, type Page } from '@playwright/test';
-import { findChapterFrame } from './readerFlows';
+import { findChapterFrame, waitForChapterFrame } from './readerFlows';
 
 /** What the header's page field claims right now. */
 export type PageFieldClaim = {
@@ -173,7 +173,10 @@ export async function settledColumnLayout(
  * option is chosen by its label and both shipped locales are matched — a spec
  * that pinned one language would fail on the other machine.
  */
-export async function openPaginatedMode(page: Page): Promise<void> {
+export async function openPaginatedMode(
+  page: Page,
+  options: { keepOpen?: boolean } = {},
+): Promise<void> {
   const closed = page.getByRole('button', { name: /^(Ajustes de texto|Text settings)$/ });
   if ((await closed.count()) > 0) {
     await closed.first().click();
@@ -192,8 +195,27 @@ export async function openPaginatedMode(page: Page): Promise<void> {
     await option.click();
   }
 
+  // A caller that goes on to change another setting keeps the panel open: the
+  // zoom and text controls live inside it, and closing then reopening it costs
+  // two animations and makes the next control unavailable in between.
+  if (options.keepOpen) return;
+
   // The panel's own close control is INSIDE the sidebar; the top bar's toggle is
   // behind the panel's backdrop and cannot be clicked until the panel is gone.
+  await closeTextSettings(page);
+}
+
+/** Opens the reader's text-settings sidebar. */
+export async function openTextSettings(page: Page): Promise<void> {
+  const toggle = page.getByRole('button', { name: /^(Ajustes de texto|Text settings)$/ });
+  if ((await toggle.count()) > 0) await toggle.first().click();
+  await expect(page.locator('[data-testid="reading-mode-select"]')).toBeVisible({
+    timeout: 15_000,
+  });
+}
+
+/** Closes the reader's text-settings sidebar if it is open. */
+export async function closeTextSettings(page: Page): Promise<void> {
   const sidebar = page.getByRole('dialog', { name: /^(Ajustes de texto|Text settings)$/ });
   const panelClose = sidebar.getByRole('button', {
     name: /^(Cerrar ajustes|Close settings)$/,
@@ -201,7 +223,9 @@ export async function openPaginatedMode(page: Page): Promise<void> {
   if ((await panelClose.count()) > 0) {
     await panelClose.first().click();
   }
-  await expect(select).toBeHidden({ timeout: 10_000 });
+  await expect(page.locator('[data-testid="reading-mode-select"]')).toBeHidden({
+    timeout: 10_000,
+  });
 }
 
 /** The reader's zoom label, e.g. "150%" -> 150; null when there is no control. */
@@ -266,6 +290,111 @@ export async function selectZoomOtherThan(page: Page, current: number | null): P
  * has not visited and skips any candidate whose field did not actually land on
  * the value asked for.
  */
+/**
+ * A named book's library row, and whether the app's reader is currently open —
+ * the two facts a spec needs to put itself in a known place.
+ *
+ * Opening a book is done through `readLibraryRows` + `openBook` rather than
+ * `openUsableEpub` for the layout specs: the latter opens whatever position the
+ * reader was left on, and *Supercomunicadores* / *Prisioneros* can land on a
+ * synopsis that fits in one page box — measured: one column, a forward turn
+ * disabled, and nothing to paginate.
+ */
+export async function readBookRow(
+  page: Page,
+  titlePattern: RegExp,
+): Promise<{ id: string; title: string } | null> {
+  const rows = await page.evaluate(async () => {
+    const internals = (
+      window as unknown as {
+        __TAURI_INTERNALS__: { invoke: (cmd: string, args?: unknown) => Promise<unknown> };
+      }
+    ).__TAURI_INTERNALS__;
+    return (await internals.invoke('listLibraryBooks', {
+      payload: { responseVersion: 1 },
+    })) as { id: string; title: string; format?: string; filePath?: string }[];
+  });
+  const row = rows.find(
+    (candidate) =>
+      titlePattern.test(candidate.title) && (candidate.format ?? '').toLowerCase() === 'epub',
+  );
+  return row ? { id: row.id, title: row.title } : null;
+}
+
+/** True when the EPUB reader's chapter frame is on screen. */
+export async function isReaderOpen(page: Page): Promise<boolean> {
+  return (await page.locator('iframe[title="chapter"]').count()) > 0;
+}
+
+/**
+ * Opens a named library book and puts it in paginated mode on a settled column
+ * layout, without any of the probes' assumptions about which book opened last.
+ *
+ * The caller names a *pattern* that must match one row's title (`/Supercom/`).
+ * A book chosen by measurement (`openUsableEpub`) is the right default for a
+ * general spec, but it opens "wherever the reader was", and some books open on a
+ * chapter that fits in one page box — measured on *Prisioneros de la geografía*,
+ * whose stored position lands on its synopsis: one column, a forward turn
+ * disabled, and nothing to paginate. A spec that has to page *inside* a chapter
+ * therefore pins both the book and the mode.
+ */
+export async function openPaginatedBook(
+  page: Page,
+  titlePattern: RegExp,
+): Promise<{ frame: Frame; layout: ColumnLayout; title: string }> {
+  const book = await readBookRow(page, titlePattern);
+  if (!book) throw new Error(`no library book matches ${titlePattern}`);
+
+  if (await isReaderOpen(page)) {
+    await page.locator('header button').first().click();
+    await page.locator('aside nav > button').first().waitFor({ timeout: 30_000 });
+  }
+  const libraryNav = page.locator('aside nav').getByRole('button', {
+    name: /^(Library|Estanter[ií]a)$/,
+  });
+  if ((await libraryNav.count()) > 0) await libraryNav.first().click();
+  const card = page.locator('article').filter({ hasText: book.title }).first();
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  await card
+    .getByRole('button', {
+      name: /^(Read|Continue reading|Open book|Start|Start reading|Leer|Seguir leyendo|Abrir|Abrir libro|Empezar|Continuar lectura|Empezar lectura)$/,
+    })
+    .first()
+    .click();
+  await waitForChapterFrame(page);
+  await openPaginatedMode(page, { keepOpen: true });
+  await page.waitForTimeout(2_500);
+
+  const settled = await settledColumnLayout(page, { timeoutMs: 30_000 });
+  return { ...settled, title: book.title };
+}
+
+/**
+ * Opens a named book, enters paginated mode and parks on `column`, confirming
+ * the reader really landed there.
+ *
+ * A parked column is the precondition for the two claims a recount must uphold:
+ * it must not move (`currentPage` stays) and it must clamp when the new count is
+ * smaller. Column 20 on a 52-column chapter is deep enough that a zoom-out has
+ * to clamp and a font-size change has to leave it alone.
+ */
+export async function parkOnColumn(
+  page: Page,
+  titlePattern: RegExp,
+  column: number,
+): Promise<{ layout: ColumnLayout; frame: Frame }> {
+  const opened = await openPaginatedBook(page, titlePattern);
+  const input = page.locator('[data-testid="bottom-bar-controls"] input').first();
+  await input.fill(String(column));
+  await input.blur();
+  await expect
+    .poll(async () => (await readPageFieldClaim(page)).current, { timeout: 15_000 })
+    .toBe(column);
+  const frame = (await findChapterFrame(page)) ?? opened.frame;
+  const layout = (await readColumnLayout(frame)) ?? opened.layout;
+  return { layout, frame };
+}
+
 export async function seekMultiColumnChapter(
   page: Page,
   options: { candidates?: number[] } = {},

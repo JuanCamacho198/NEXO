@@ -10,9 +10,20 @@
  * turning — and it never touches the scroll container except through the
  * container passed in.
  *
- * Recalculation is phase 1: on mode entry, on chapter render, and when the
- * chapter's inline extent GROWS. Zoom, font-size and orientation changes are
- * deliberately NOT watched — that is phase 3.
+ * Recalculation happens on two kinds of signal, both routed through `refresh()`:
+ *
+ *  - LAYOUT OBSERVATION — entering the mode, a chapter render, a window resize
+ *    or fullscreen toggle (the container's box changes, the `ResizeObserver`
+ *    fires), and a chapter whose inline extent GROWS (the content observer).
+ *  - A SETTINGS CHANGE — zoom, font size, font family, line height, letter
+ *    spacing, paragraph spacing, margins, alignment, direction, hyphenation and
+ *    theme. These reflow the chapter WITHOUT changing the page box, so no
+ *    observer sees them; the viewer's settings effect calls `refresh()` for
+ *    exactly that reason.
+ *
+ * `recount()` is the only writer of the count and it only ever CLAMPS the page.
+ * It deliberately does not re-derive the page from the scroll offset — that is
+ * what keeps a recount from throwing the reader back to page 1.
  */
 import {
   derivePageCount,
@@ -54,6 +65,16 @@ export type EpubPaginationDeps = {
   refreshReaderStyles: () => void;
   /** The page box the CSS builder must use; `null` in scrolling mode. */
   getPageBox: () => PageBox | null;
+  /**
+   * Every input the injected stylesheet is built from — the text settings, the
+   * zoom and the theme — as one comparable string.
+   *
+   * `refresh()` restyles only when this moved (or when the page box moved), so
+   * an unchanged box that no setting touched is never written back into the
+   * layout it was measured from. Optional: a caller without it keeps the old
+   * "always restyle" behaviour.
+   */
+  getStylesKey?: () => string;
   /**
    * Publish a newly measured box. The viewer holds the reactive copy the
    * template reads to pin the iframe; this composable must NOT keep a second
@@ -127,6 +148,14 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
   let currentPage = $state(1);
   let lastKey = '';
   let lastContentWidth = 0;
+  /**
+   * The styles inputs the last restyle was built from, or `null` before this
+   * chapter's first write. `refresh()` compares against it so a settings change
+   * restyles and a pure re-observe does not — see `refresh`.
+   */
+  let lastWrittenStylesKey: string | null = null;
+  /** `getStylesKey` of a caller that does not provide one: it always restyles. */
+  let volatileStylesKey = 0;
   /** The deferred-work scheduler: recount coalescing and turn re-assertion. */
   const scheduler = createFrameScheduler();
   /**
@@ -216,56 +245,107 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
   }
 
   /**
-   * Re-measure the box and, when it actually changed, restyle and recount.
-   * The key comparison is what makes this cheap enough to call from a resize
-   * observer: a repeat observe of the same box is a no-op, so a page turn —
-   * which fires the container's scroll listener, not a resize — never triggers
-   * a restyle.
+   * Re-measure the box, and restyle ONLY when the layout inputs actually moved.
    *
-   * The restyle happens BEFORE the count is derived, and the order is load
-   * bearing. `refreshReaderStyles()` rewrites the injected stylesheet, and a
-   * stylesheet edit is what makes the browser lay the chapter out again — the
-   * new `column-width`, the new font size. Reading `scrollWidth` first measured
-   * the PREVIOUS layout and then reported it as this box's: measured live,
-   * a zoom step from 100% to 75% left `pageCount` at 20 while the chapter had
-   * actually reflowed to 12 columns, and the field printed "of 20" over 12 real
-   * pages. Client-side style changes apply synchronously to computed layout, so
-   * a read after the restyle sees the new extent without waiting for a frame.
+   * The restyle is the expensive, layout-re-entering part: `refreshReaderStyles`
+   * replaces the chapter's injected `<style>`, the browser lays the chapter out
+   * again, and whatever changed the caller's mind hears about it. Writing it
+   * when nothing changed is therefore not free — it is a layout invalidation
+   * published back into the same graph that asked for the refresh — so this
+   * function only writes when it can name a reason:
+   *
+   *  - `stylesKey` (every setting plus zoom/theme) differs from the last write:
+   *    a settings change reflows the TEXT without moving the page box, which is
+   *    why the box comparison alone cannot be the trigger.
+   *  - a resize moved the box: `column-width` is pinned to it.
+   *  - nothing has been written yet for this chapter.
+   *
+   * Everything else is a plain re-measure of the count, which reads layout and
+   * writes nothing (measured: an idle `refresh` changes neither the root's
+   * extent nor `columnCount`).
+   *
+   * A restyle is always followed by one re-read on the next frame
+   * (`scheduleCommitRecount`): a stylesheet write is applied to computed style
+   * synchronously, but the COLUMN layout it implies is not always committed by
+   * the next line. Measured on a 100% -> 75% zoom, the synchronous read returned
+   * 41070 (37 pages) and the same root read one frame later 42180 (38 pages).
+   * Nothing else revisits it — a multicolumn reflow leaves the chapter root's
+   * border box alone, so the content `ResizeObserver` never fires — and
+   * `recount()` only clamps, so the re-read cannot move the reader off their
+   * page.
    */
   function refresh(): void {
     if (!deps.isPaginated()) return;
     const container = deps.getContainerEl();
     const box = measurePageBox(container);
     const key = pageBoxKey(box);
-    if (key === lastKey) {
-      // The box is unchanged, but the chapter may have grown under it.
-      recount();
+    const stylesKey = deps.getStylesKey?.() ?? `volatile:${++volatileStylesKey}`;
+    const boxChanged = key !== lastKey;
+    const stylesChanged = lastWrittenStylesKey === null || stylesKey !== lastWrittenStylesKey;
+    if (boxChanged) {
+      const first = lastKey === '';
+      lastKey = key;
+      pageBox = box;
+      deps.setPageBox(box);
+      // Reading the extent before the box is published would measure the
+      // PREVIOUS chapter's layout: `column-width` is read from the box.
+      publishCount(box.width);
+      logger.debug(
+        'epub-pagination: page box changed',
+        {
+          width: box.width,
+          height: box.height,
+          pageCount,
+          currentPage,
+          firstMeasure: first,
+        },
+        'reader',
+      );
+    }
+    // A box change alone does not reflow the text into different columns (the
+    // injected `column-width` follows the box through the restyle), so the
+    // restyle is gated on the settings/zoom key and on the first write only.
+    if (stylesChanged) {
+      lastWrittenStylesKey = stylesKey;
+      deps.refreshReaderStyles();
+      publishCount(box.width);
+      scheduleCommitRecount();
       return;
     }
-    const first = lastKey === '';
-    lastKey = key;
-    pageBox = box;
-    deps.setPageBox(box);
-    // Restyle first: this is the write that produces the layout being measured.
-    deps.refreshReaderStyles();
+    if (!boxChanged) recount();
+  }
+
+  /**
+   * Derive the count from the live extent and, on a box change, place the page
+   * from the offset.
+   *
+   * That placement is the one exception to "a recount never touches the page":
+   * it runs on the box change that follows entering the mode or a window resize,
+   * where the offset IS the reader's position, and it keeps a page turn from
+   * being re-derived on every layout tick (see `recount`).
+   */
+  function publishCount(width: number): void {
     const el = scroller();
-    if (el) {
-      const count = derivePageCount(el.scrollWidth, box.width);
-      pageCount = count;
-      lastContentWidth = el.scrollWidth;
-      currentPage = pageFromScrollLeft(el.scrollLeft, box.width, count);
-    }
-    logger.debug(
-      'epub-pagination: page box changed',
-      {
-        width: box.width,
-        height: box.height,
-        pageCount,
-        currentPage,
-        firstMeasure: first,
-      },
-      'reader',
-    );
+    if (!el || width <= 0) return;
+    const count = derivePageCount(el.scrollWidth, width);
+    pageCount = count;
+    lastContentWidth = el.scrollWidth;
+    currentPage = pageFromScrollLeft(el.scrollLeft, width, count);
+  }
+
+  /**
+   * Ask for one re-read of the count once the layout committed.
+   *
+   * Only a restyle needs this: without a write the synchronous read already sees
+   * the committed layout. The re-read is what catches a column layout the
+   * browser had not committed when the synchronous read ran (see `refresh`).
+   * Coalesced by key, so a zoom burst that passes through several stops within
+   * one frame costs a single re-read rather than one per stop.
+   */
+  function scheduleCommitRecount(): void {
+    scheduler.coalesce('commit-recount', () => {
+      if (deps.isPaginated() && recount()) deps.emitPreciseLocation();
+    });
   }
 
   /** Enter paginated mode: pin the height, measure, observe, restyle. */
@@ -273,6 +353,10 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     deps.onHeightModeChange(true);
     lastKey = '';
     lastContentWidth = 0;
+    // The chapter was last styled in scrolling mode, where the pagination rules
+    // are absent entirely: the first page-box restyle has to happen even if no
+    // setting moved.
+    lastWrittenStylesKey = null;
     refresh();
     observers.attach(deps.getContainerEl(), deps.getChapterRoot?.() ?? null);
   }
@@ -319,6 +403,10 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     const wanted = claimedPage > 0 ? claimedPage : currentPage;
     lastKey = '';
     lastContentWidth = 0;
+    // A re-render replaces the chapter document, taking its injected `<style>`
+    // with it, so the well-known "already written" state is gone even when no
+    // setting moved.
+    lastWrittenStylesKey = null;
     if (el && box) el.scrollLeft = scrollLeftForPage(wanted, box.width, pageCount || wanted);
     refresh();
     // Re-apply now that the count is known: the clamp depends on the new count.
@@ -334,6 +422,9 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     observers.detach();
     lastKey = '';
     lastContentWidth = 0;
+    // Scrolling mode has its own stylesheet; the paginated one is gone, so the
+    // next entry must write it again.
+    lastWrittenStylesKey = null;
     pageBox = null;
     deps.setPageBox(null);
     pageCount = 0;
@@ -355,6 +446,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     if (!deps.isPaginated()) return;
     lastKey = '';
     lastContentWidth = 0;
+    lastWrittenStylesKey = null;
     currentPage = 1;
     // A new chapter clears the claim: the reader has not turned a page here yet,
     // so the CFI/fragment restore that places them within this chapter is free

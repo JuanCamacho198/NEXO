@@ -22,6 +22,10 @@
   import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
   import { attachFrameZoomWheel } from '$lib/features/reader/viewer-epub/epubZoomWheel';
   import {
+    createEpubPageWheelGesture,
+    resolveEpubPageWheelIntent,
+  } from '$lib/features/reader/viewer-epub/epubPageWheel';
+  import {
     contentImageFromEvent,
     isSelectionClick,
   } from '$lib/features/reader/viewer-epub/epubImageFit';
@@ -345,6 +349,31 @@
     isPaginated: () => paginated,
     refreshReaderStyles: () => render.refreshReaderStyles(),
     getPageBox: () => (paginated ? pageBox : null),
+    // Everything the injected stylesheet is built from. `refresh()` restyles only
+    // when this moved (or the page box did), so an observer re-run with nothing
+    // changed cannot write the stylesheet back and re-enter the layout it was
+    // measured from. `untrack`: the composable asks for it from an observer
+    // callback, and tracking these settings there would make the observer a
+    // dependency of the settings graph it feeds.
+    getStylesKey: () =>
+      untrack(() =>
+        JSON.stringify({
+          fontSize,
+          fontFamily,
+          themeMode,
+          lineHeight,
+          letterSpacing,
+          paragraphSpacing,
+          textAlign,
+          direction,
+          hyphenation,
+          margins,
+          zoom: zoomTheme.zoomLevel,
+          // The box is written into the stylesheet (`column-width`, the page
+          // height), so it is part of "what the last write was built from".
+          pageBox: pagination.pageBox,
+        }),
+      ),
     // The composable is the only writer of the box; the viewer holds the only
     // reactive copy. A pull (`pageBox = pagination.pageBox` in an $effect) would
     // read and write the same state graph and Svelte aborts with
@@ -657,22 +686,32 @@
       render.renderChapter(navigation.currentChapterIndex);
       return;
     }
-    // Restyle, then re-read the count. `column-width` is pinned to the page box
-    // but the TEXT SIZE is not, so a font-size or spacing change reflows the
-    // chapter into a different number of columns while leaving the root's own
-    // border box — and therefore its `ResizeObserver` — untouched. Nothing else
-    // would notice: measured live, a step from 100% to 50% left the page field
-    // claiming "of 20" over a chapter that had reflowed to 7 columns.
+    // Every setting that changes the text layout lands here, because this
+    // effect already voids them to make them reactive (see the `void` list
+    // above). `column-width` is pinned to the page box but the TEXT SIZE is not,
+    // so a font-size or spacing change reflows the chapter into a different
+    // number of columns while leaving the root's own border box — and therefore
+    // its `ResizeObserver` — untouched. Nothing else would notice: measured
+    // live, a step from 100% to 50% left the page field claiming "of 20" over a
+    // chapter that had reflowed to 7 columns.
     //
-    // This does NOT make zoom a pagination trigger (phase 3 owns that): it runs
-    // on the settings effect that already exists, and it only re-derives the
-    // count from the live layout that edit just produced.
-    refreshReaderStyles();
+    // The recount goes through `pagination.refresh()` rather than being written
+    // here, so there is ONE path that restyles and derives the count: `refresh`
+    // owns the restyle-then-measure order, the coalescing for a zoom burst, and
+    // the re-read that catches a layout the browser had not committed yet.
+    // Calling `recount()` directly would restyle here and then measure through
+    // the composable's own cached box, which skips that re-read — which is how
+    // a step to 75% came to print "of 37" over 38 columns and stay there.
     if (paginated) {
-      // The count may grow or shrink; a reader parked past the new end is
-      // clamped, which `recount` already does.
-      if (pagination.recount()) emitPreciseLocation();
+      // `refresh` restyles only because a key in its `getStylesKey` moved: this
+      // effect runs for a settings change, but it can also re-run for a chapter
+      // or loading transition that changed none of them, and a restyle is a
+      // layout write. Skipping it there is what keeps the write out of the
+      // observer's path.
+      pagination.refresh();
+      return;
     }
+    refreshReaderStyles();
   });
 
   // Paginated-mode lifecycle. One effect, two edges:
@@ -680,9 +719,11 @@
   //  - a chapter render re-measures, because the new chapter is a new layout
   //    with its own page count, and the reader restarts at its first page.
   //
-  // Deliberately NOT in scope here: zoom, font-size and orientation changes as
-  // their own triggers. Those belong to phase 3, and the composable's guarded
-  // box observer already covers a window resize on an already-laid-out chapter.
+  // A layout change on an ALREADY-open chapter is the settings effect above:
+  // zoom, font size, font family, line height, letter spacing, paragraph
+  // spacing, margins, alignment, direction, hyphenation and theme all change
+  // the column count without changing the page box, so none of them produces a
+  // resize for the observer below to see.
   let paginationMode = $state(false);
   // The chapter index the pagination state currently describes. A render of a
   // *different* chapter resets paging; a re-render of the same one does not.
@@ -793,6 +834,52 @@
      * a `srcdoc` swap cannot leave a second listener counting the same notch.
      */
     let detachFrameWheel: (() => void) | null = null;
+    /**
+     * The coalescing state for "one wheel notch is one page".
+     *
+     * One per effect run, next to the listener that owns it: a `srcdoc` swap
+     * re-attaches into a NEW document, and a window shared across documents
+     * would let the last notch of the outgoing chapter swallow the first notch
+     * of the incoming one.
+     */
+    const pageWheelGesture = createEpubPageWheelGesture();
+    /**
+     * A plain (unmodified) wheel over the chapter turns the page in paginated
+     * mode.
+     *
+     * In this mode the chapter is columns on `documentElement` and the root has
+     * `overflow-y: hidden` on purpose, so a vertical wheel has nothing to scroll
+     * and used to do nothing at all — measured live, `scrollLeft` stayed at 1276
+     * across a gesture while the Next control moved it by a column.
+     *
+     * The decision is pure (`epubPageWheel.ts`) and excludes ctrl/meta, so this
+     * never competes with `attachFrameZoomWheel` below: a zoom gesture is left
+     * completely untouched for it. `defaultPrevented` is honoured because the
+     * zoom listener runs first on this same document.
+     *
+     * The turn itself is delegated to `goToNext`/`goToPrev` — the functions the
+     * Next control and the arrow keys call — rather than writing `scrollLeft`
+     * here. Those own the restore gate, the queued press and the claimed page,
+     * and a second writer of the offset is how a page turn comes to disagree
+     * with the header.
+     */
+    const onPageWheel = (event: Event): void => {
+      const wheel = event as WheelEvent;
+      if (wheel.defaultPrevented) return;
+      const intent = resolveEpubPageWheelIntent(
+        wheel,
+        { paginated, pageCount: pagination.pageCount },
+        pageWheelGesture,
+        performance.now(),
+      );
+      if (intent === 'none') return;
+      // Claimed so the browser's own scroll cannot also act on this notch. Safe
+      // to do only after the decision said "turn": in scrolling mode this
+      // returns 'none' and the gesture is never touched.
+      wheel.preventDefault();
+      if (intent === 'next') goToNext();
+      else goToPrev();
+    };
     const onFrameScroll = (): void => {
       // Only meaningful in paginated mode; scrolling mode already reports
       // through the parent container's own listener.
@@ -857,6 +944,10 @@
       doc.addEventListener('mousemove', onMove as EventListener);
       doc.addEventListener('mouseleave', onLeave);
       doc.addEventListener('click', onClick as EventListener);
+      // Removed first for the same reason as the listeners above: a duplicate
+      // wheel listener would count one notch twice.
+      doc.removeEventListener('wheel', onPageWheel, { capture: false });
+      doc.addEventListener('wheel', onPageWheel, { passive: false });
       // Paginated mode scrolls the chapter document itself, so a page turn
       // fires `scroll` here and never on the (pinned) parent container. Without
       // this listener the footer percentage and the highlight anchors would not
@@ -899,6 +990,7 @@
       doc.removeEventListener('mouseleave', onLeave);
       doc.removeEventListener('click', onClick as EventListener);
       doc.removeEventListener('scroll', onFrameScroll, true);
+      doc.removeEventListener('wheel', onPageWheel, { capture: false });
       for (const img of Array.from(doc.querySelectorAll('img'))) {
         img.removeEventListener('load', onPlateLoad);
       }

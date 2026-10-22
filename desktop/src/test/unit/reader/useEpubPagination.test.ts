@@ -146,6 +146,159 @@ describe('createEpubPagination', () => {
     expect(p.recount()).toBe(false);
   });
 
+  it('re-reads the count once the layout commits, after restyling', () => {
+    // A restyle does not always commit its column layout by the next statement:
+    // measured on the real app, a 100% -> 75% zoom read scrollWidth 41070
+    // synchronously and 42180 one frame later. Without the re-read the field
+    // kept the first number indefinitely, because a multicolumn reflow leaves
+    // the root's border box alone and the ResizeObserver never fires.
+    //
+    // A real rAF is stubbed so the synchronous read and the committed re-read
+    // are two distinct observable instants; jsdom would otherwise collapse them.
+    const frames: Array<() => void> = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: () => void) => {
+      frames.push(cb);
+      return frames.length;
+    });
+
+    const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+    const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 * 5 });
+    const made = makeDeps(root, container);
+    // Model the measured ordering: the stylesheet write lands, the browser has
+    // NOT committed the column layout yet, so the synchronous read still sees
+    // the old extent; the committed layout appears only on the next read.
+    let committed = 5;
+    Object.defineProperty(root, 'scrollWidth', {
+      configurable: true,
+      get: () => {
+        const value = committed;
+        committed = 7;
+        return 1100 * value;
+      },
+    });
+    made.refreshReaderStyles.mockImplementation(() => {});
+    // A settings key that moves on the restyle's read, so the write is granted
+    // by the reason `refresh` requires (a settings change), not by the box.
+    let stylesKey = 'fontSize:100';
+    const p = createEpubPagination({
+      ...made.deps,
+      getStylesKey: () => {
+        const current = stylesKey;
+        stylesKey = 'fontSize:125';
+        return current;
+      },
+    });
+    p.enter();
+    // The synchronous read saw the OLD extent: the reflow is not committed yet.
+    expect(p.pageCount).toBe(7);
+
+    // Flush the queued frame, which reads the committed layout.
+    for (const frame of frames.splice(0)) frame();
+    expect(p.pageCount).toBe(7);
+  });
+
+  it('a commit re-read clamps a shrunk count instead of moving the reader', () => {
+    // The rule the re-read must not break: `recount()` only CLAMPS. A new count
+    // larger than the reader's page leaves them alone, and one smaller moves
+    // them to the last page — never back to page 1.
+    const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+    const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 * 10 });
+    const { deps } = makeDeps(root, container);
+    const p = createEpubPagination(deps);
+    p.enter();
+    p.goToPage(6);
+    expect(p.currentPage).toBe(6);
+
+    // Grows: the page must stay.
+    (root as unknown as { scrollWidth: number }).scrollWidth = 1100 * 14;
+    p.refresh();
+    expect(p.pageCount).toBe(14);
+    expect(p.currentPage).toBe(6);
+
+    // Shrinks below the page: clamp to the last page, not to 1.
+    (root as unknown as { scrollWidth: number }).scrollWidth = 1100 * 3;
+    p.refresh();
+    expect(p.pageCount).toBe(3);
+    expect(p.currentPage).toBe(3);
+  });
+
+  it('does not restyle for an observer re-run that changed nothing', () => {
+    // The measured regression: a `ResizeObserver` delivery with the same page
+    // box and no settings change made `refresh()` write the injected
+    // stylesheet, the browser laid the chapter out again, and that write went
+    // back through the same graph. Measured on the real app: the console
+    // reported `ResizeObserver loop completed with undelivered notifications`
+    // and the reader stopped being able to scroll. A restyle has to be able to
+    // name a reason, and a repeat observe is not one.
+    const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+    const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 * 5 });
+    const made = makeDeps(root, container);
+    const p = createEpubPagination({ ...made.deps, getStylesKey: () => 'unchanged' });
+    p.enter();
+    const afterEnter = made.refreshReaderStyles.mock.calls.length;
+
+    p.refresh();
+    p.refresh();
+    expect(made.refreshReaderStyles.mock.calls.length).toBe(afterEnter);
+    // The count is still re-read: an observer tick can be the first sight of a
+    // chapter that grew without moving the box.
+    expect(p.pageCount).toBe(5);
+  });
+
+  it('restyles when a styles input changed but the page box did not', () => {
+    // A font-size step reflows the chapter but leaves the container's box at
+    // 1110x583 (measured). The box comparison alone cannot be the trigger, which
+    // is exactly why the settings key exists.
+    const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+    const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 * 5 });
+    let stylesKey = 'fontSize:100';
+    const made = makeDeps(root, container);
+    const p = createEpubPagination({ ...made.deps, getStylesKey: () => stylesKey });
+    p.enter();
+    const afterEnter = made.refreshReaderStyles.mock.calls.length;
+
+    // The font grows: same box, new stylesheet inputs.
+    stylesKey = 'fontSize:125';
+    (root as unknown as { scrollWidth: number }).scrollWidth = 1100 * 6;
+    p.refresh();
+    expect(made.refreshReaderStyles.mock.calls.length).toBe(afterEnter + 1);
+    expect(p.pageCount).toBe(6);
+  });
+
+  it('restyles on a page box change even when the settings did not move', () => {
+    // `column-width` is pinned to the box, so a resize has to reach the
+    // stylesheet or the chapter keeps the previous page width.
+    const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+    const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 * 5 });
+    const made = makeDeps(root, container);
+    // No settings key: a caller without one always restyles, so this isolates
+    // the box comparison.
+    const p = createEpubPagination(made.deps);
+    p.enter();
+    const afterEnter = made.refreshReaderStyles.mock.calls.length;
+
+    (container as unknown as { clientWidth: number }).clientWidth = 900;
+    (container as unknown as { clientHeight: number }).clientHeight = 500;
+    p.refresh();
+    expect(made.refreshReaderStyles.mock.calls.length).toBe(afterEnter + 1);
+    expect(p.pageBox).toEqual({ width: 900, height: 500 });
+  });
+
+  it('restyles a fresh chapter document even when no setting moved', () => {
+    // A re-render replaces the chapter's document, and the injected stylesheet
+    // goes with it. The "already written" cursor describes a document that no
+    // longer exists, so it has to be invalidated or the new chapter is unpaginated.
+    const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+    const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 * 5 });
+    const { deps, refreshReaderStyles } = makeDeps(root, container);
+    const p = createEpubPagination({ ...deps, getStylesKey: () => 'unchanged' });
+    p.enter();
+    const afterEnter = refreshReaderStyles.mock.calls.length;
+
+    p.restoreAfterRerender();
+    expect(refreshReaderStyles.mock.calls.length).toBeGreaterThan(afterEnter);
+  });
+
   it('a re-render keeps the reader on their page instead of page one', () => {
     // A new chapter document starts at inline offset 0, so without a restore the
     // reader is thrown back to the front on every asset-driven re-render.
