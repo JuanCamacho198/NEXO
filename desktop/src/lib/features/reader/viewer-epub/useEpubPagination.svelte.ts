@@ -114,8 +114,17 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
   // Plain vars, not `$state`: the source is layout, which no rune can observe.
   // The reactive copy lives in the viewer, published through `setPageBox`.
   let pageBox: PageBox | null = null;
-  let pageCount = 0;
-  let currentPage = 1;
+  // `pageCount` and `currentPage` ARE `$state`, unlike `pageBox` above, and the
+  // difference is deliberate. The page field is a `$derived` over these two, so
+  // they have to be observable or the header never learns the count changed —
+  // measured live: the columns advanced 1 -> 2 -> 3 while the field sat on 16,
+  // because a plain `let` behind a getter establishes no dependency and the
+  // derived value was computed once and never invalidated. `pageBox` stays a
+  // plain var because the viewer already holds its own `$state` copy, and two
+  // reactive copies of the same value is what caused the
+  // `effect_update_depth_exceeded` abort documented in `setPageBox`.
+  let pageCount = $state(0);
+  let currentPage = $state(1);
   let lastKey = '';
   let lastContentWidth = 0;
   /** The deferred-work scheduler: recount coalescing and turn re-assertion. */
@@ -212,6 +221,16 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    * observer: a repeat observe of the same box is a no-op, so a page turn —
    * which fires the container's scroll listener, not a resize — never triggers
    * a restyle.
+   *
+   * The restyle happens BEFORE the count is derived, and the order is load
+   * bearing. `refreshReaderStyles()` rewrites the injected stylesheet, and a
+   * stylesheet edit is what makes the browser lay the chapter out again — the
+   * new `column-width`, the new font size. Reading `scrollWidth` first measured
+   * the PREVIOUS layout and then reported it as this box's: measured live,
+   * a zoom step from 100% to 75% left `pageCount` at 20 while the chapter had
+   * actually reflowed to 12 columns, and the field printed "of 20" over 12 real
+   * pages. Client-side style changes apply synchronously to computed layout, so
+   * a read after the restyle sees the new extent without waiting for a frame.
    */
   function refresh(): void {
     if (!deps.isPaginated()) return;
@@ -227,6 +246,8 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     lastKey = key;
     pageBox = box;
     deps.setPageBox(box);
+    // Restyle first: this is the write that produces the layout being measured.
+    deps.refreshReaderStyles();
     const el = scroller();
     if (el) {
       const count = derivePageCount(el.scrollWidth, box.width);
@@ -245,7 +266,6 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
       },
       'reader',
     );
-    deps.refreshReaderStyles();
   }
 
   /** Enter paginated mode: pin the height, measure, observe, restyle. */

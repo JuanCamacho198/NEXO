@@ -197,27 +197,6 @@
   // Declared as `$state` because the viewer's template reads it to pin the
   // iframe; `pagination` writes it on every measured change.
   let pageBox = $state<PageBox | null>(null);
-  // The reading order holds every spine document exactly once, so its length is
-  // the page total. It replaces the raw spine length as "of M" because a page
-  // number is now a position in that order (see `epubReadingOrder.ts`).
-  let displayTotal = $derived(navigation.totalPages);
-  // The header reports the chapter that is ON SCREEN, not the one navigation has
-  // requested. A Next at a chapter's last page bumps `currentChapterIndex`
-  // synchronously and falls through to chapter navigation, but the new chapter
-  // only reaches the screen when its `srcdoc` has loaded (`markReady` ->
-  // `setLastRenderedChapter`). Reading the requested index made the number
-  // advance through 9, 10, 11… while `scrollLeft` stayed pinned to the old
-  // chapter's maximum and the visible text never changed — the measured
-  // "header advances, screen does not" desync. `lastRenderedChapter` is
-  // committed-render state (the pagination lifecycle and the highlights overlay
-  // already key on it), so it is the number that matches what the reader sees.
-  // Before the first render commits (`< 0`) the requested index is the only
-  // answer available, so it is the fallback. Both are reading-order positions.
-  let displayCurrentPage = $derived.by(() => {
-    const committed =
-      lastRenderedChapter >= 0 ? lastRenderedChapter : navigation.currentChapterIndex;
-    return navigation.resolve(committed).order + 1;
-  });
 
   /**
    * Render a document addressed by its spine index, which is the space the
@@ -392,6 +371,51 @@
     isRestoring: () => navigation.pendingCfiScroll !== null || navigation.pendingFragment !== null,
   });
 
+  // The reading order holds every spine document exactly once, so its length is
+  // the DOCUMENT total — the unit scrolling mode counts, where a turn moves one
+  // document. Paginated mode counts something else entirely: the columns the
+  // chapter was sliced into. Both are correct and they are not interchangeable,
+  // which is why the two are held separately and chosen by one condition.
+  const documentTotal = $derived(navigation.totalPages);
+
+  // "The layout has been measured" — the single condition the page field's two
+  // numbers hang off. `derivePageCount` returns 0 (never 1) for an unmeasured
+  // chapter on purpose, so 0 must fall back to the document count rather than
+  // print "of 0" — and until the layout exists a column number has nothing to
+  // address, so the document path answers instead.
+  const paginatedMeasured = $derived(paginated && pagination.pageCount > 0);
+
+  // Paginated mode replaces the total outright. Leaving the document count here
+  // is what let the field claim "of 43" while the chapter on screen had 37
+  // columns.
+  let displayTotal = $derived(paginatedMeasured ? pagination.pageCount : documentTotal);
+
+  // The header reports the chapter that is ON SCREEN, not the one navigation has
+  // requested. A Next at a chapter's last page bumps `currentChapterIndex`
+  // synchronously and falls through to chapter navigation, but the new chapter
+  // only reaches the screen when its `srcdoc` has loaded (`markReady` ->
+  // `setLastRenderedChapter`). Reading the requested index made the number
+  // advance through 9, 10, 11… while `scrollLeft` stayed pinned to the old
+  // chapter's maximum and the visible text never changed — the measured
+  // "header advances, screen does not" desync. `lastRenderedChapter` is
+  // committed-render state (the pagination lifecycle and the highlights overlay
+  // already key on it), so it is the number that matches what the reader sees.
+  // Before the first render commits (`< 0`) the requested index is the only
+  // answer available, so it is the fallback. Both are reading-order positions.
+  //
+  // Paginated mode replaces this number too: the reader is not on a document
+  // there, it is on a COLUMN of one, and `pagination.currentPage` is the only
+  // thing that knows which. Measured before this was wired up — chapter at
+  // reading order 16, 25 columns, viewport 1200x779 — `scrollLeft` walked
+  // 0 -> 6660 -> 3330 across five forward and three backward turns while this
+  // field sat on 16 for all eight. The count existed and nobody asked for it.
+  let displayCurrentPage = $derived.by(() => {
+    if (paginatedMeasured) return pagination.currentPage;
+    const committed =
+      lastRenderedChapter >= 0 ? lastRenderedChapter : navigation.currentChapterIndex;
+    return navigation.resolve(committed).order + 1;
+  });
+
   function emitPreciseLocation(): void {
     bridge.emitPreciseLocation();
   }
@@ -507,7 +531,18 @@
   export function goToChapter(index: number): void {
     navigation.goToChapter(index);
   }
+  /**
+   * The page field's "go to": in paginated mode the number typed is a column of
+   * the chapter on screen, so it must move the chapter's own offset. Handing it
+   * to `navigation.handleGoToPage` would read the same number as a reading-order
+   * position and jump the reader to a different document — the same unit
+   * confusion the field itself had, one layer down.
+   *
+   * The document path is kept for scroll mode and for a chapter whose layout is
+   * not measured yet, where a column number has nothing to address.
+   */
   export async function handleGoToPage(page: number): Promise<boolean> {
+    if (paginatedMeasured && pagination.goToPage(page)) return true;
     return navigation.handleGoToPage(page);
   }
   export function setZoom(percent: number): void {
@@ -533,12 +568,12 @@
    * cannot see either today, and the conflict between the restore and the turn
    * is exactly the pair. Nothing here writes.
    *
-   * `page`/`totalPages` are the header's own numbers in scroll mode (TOC
-   * entries, which is what the reader sees in the page field) and the chapter's
-   * page grid in paginated mode, where "page 4 of 31" is the number that
-   * actually describes the layout. Reporting the header's numbers in scroll mode
-   * keeps the panel's "Page" row non-zero instead of printing `1/0` for the
-   * default mode.
+   * `page`/`totalPages` read the SAME values the page field shows
+   * (`displayCurrentPage`/`displayTotal`), rather than deriving a second answer.
+   * That is deliberate: the panel exists to explain what the reader sees, and a
+   * panel that computed its own count would be free to disagree with the field —
+   * which is exactly how the count came to be correct in this panel and wrong in
+   * the header.
    *
    * `layoutSettled` reuses `pagination.isLayoutSettling()` — the turn gate's own
    * definition of "the columns are laid out" — so the panel cannot disagree with
@@ -553,11 +588,10 @@
     restoring: boolean;
   } {
     const root = iframeEl?.contentDocument?.documentElement ?? null;
-    const paginatedNow = paginated && pagination.pageCount > 0;
     return {
-      mode: paginatedNow ? 'PAGINATED' : 'SCROLL',
-      page: paginatedNow ? pagination.currentPage : displayCurrentPage,
-      totalPages: paginatedNow ? pagination.pageCount : displayTotal,
+      mode: paginatedMeasured ? 'PAGINATED' : 'SCROLL',
+      page: displayCurrentPage,
+      totalPages: displayTotal,
       scrollLeft: root?.scrollLeft ?? zoomContainerEl?.scrollLeft ?? 0,
       layoutSettled: paginated ? !pagination.isLayoutSettling() : true,
       restoring: navigation.pendingCfiScroll !== null || navigation.pendingFragment !== null,
@@ -623,7 +657,22 @@
       render.renderChapter(navigation.currentChapterIndex);
       return;
     }
+    // Restyle, then re-read the count. `column-width` is pinned to the page box
+    // but the TEXT SIZE is not, so a font-size or spacing change reflows the
+    // chapter into a different number of columns while leaving the root's own
+    // border box — and therefore its `ResizeObserver` — untouched. Nothing else
+    // would notice: measured live, a step from 100% to 50% left the page field
+    // claiming "of 20" over a chapter that had reflowed to 7 columns.
+    //
+    // This does NOT make zoom a pagination trigger (phase 3 owns that): it runs
+    // on the settings effect that already exists, and it only re-derives the
+    // count from the live layout that edit just produced.
     refreshReaderStyles();
+    if (paginated) {
+      // The count may grow or shrink; a reader parked past the new end is
+      // clamped, which `recount` already does.
+      if (pagination.recount()) emitPreciseLocation();
+    }
   });
 
   // Paginated-mode lifecycle. One effect, two edges:
