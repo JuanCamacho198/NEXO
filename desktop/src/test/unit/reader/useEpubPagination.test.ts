@@ -422,4 +422,75 @@ describe('createEpubPagination', () => {
     expect(p.goToNextPage()).toBe(true);
     expect(root.scrollLeft).toBe(1100);
   });
+
+  /**
+   * A chapter is usually several documents (a title page the outline names, then
+   * an image spread and a body it does not), and only the one on screen has
+   * columns. Measured in the live app on *Prisioneros de la geografía*: the
+   * 60-character title page of "1. Rusia" lays out as ONE column, so a total
+   * answered from columns alone read "1 / 1" and disabled Next — the
+   * 57 356-character body could not be reached from the title page at all.
+   */
+  describe('a chapter made of several documents', () => {
+    it('counts the later documents in its total, so "of 1" is not the answer', () => {
+      const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+      const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+      const { deps } = makeDeps(root, container);
+      const p = createEpubPagination({ ...deps, getLaterDocuments: () => 2 });
+      p.enter();
+      expect(p.pageCount, 'the document on screen still has ONE column').toBe(1);
+      expect(p.chapterTotal, 'but the chapter has three pages to turn through').toBe(3);
+    });
+
+    it('reports the columns alone for a chapter of one document', () => {
+      const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+      const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 * 7 });
+      const { deps } = makeDeps(root, container);
+      const p = createEpubPagination({ ...deps, getLaterDocuments: () => 0 });
+      p.enter();
+      expect(p.chapterTotal).toBe(7);
+    });
+
+    it('ends the chapter at its LAST document, not at its last column', () => {
+      // The host renders the next document when a turn is refused, so a title
+      // page with two documents after it must let the reader turn (the host
+      // then shows the image spread) instead of falling through to the next
+      // chapter on the first press.
+      const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+      const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+      const { deps } = makeDeps(root, container);
+      const p = createEpubPagination({ ...deps, getLaterDocuments: () => 2 });
+      p.enter();
+      expect(p.currentPage).toBe(1);
+      // Past the only column: refused here, and the host renders the next
+      // document of the chapter rather than the next chapter.
+      expect(p.goToNextPage()).toBe(false);
+      // On the chapter's LAST document with no columns left, the turn leaves the
+      // chapter — which is what ends it.
+      const last = createEpubPagination({
+        ...deps,
+        getLaterDocuments: () => 0,
+      });
+      last.enter();
+      expect(last.goToNextPage()).toBe(false);
+    });
+
+    it('re-reads the extent when the chapter changes or re-renders', () => {
+      const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+      const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+      let later = 2;
+      const { deps } = makeDeps(root, container);
+      const p = createEpubPagination({ ...deps, getLaterDocuments: () => later });
+      p.enter();
+      expect(p.chapterTotal).toBe(3);
+
+      later = 0;
+      p.resetForChapter();
+      expect(p.chapterTotal, 'a new chapter is a different document').toBe(1);
+
+      later = 1;
+      p.restoreAfterRerender();
+      expect(p.chapterTotal, 'the reading order can arrive after the first frame').toBe(2);
+    });
+  });
 });

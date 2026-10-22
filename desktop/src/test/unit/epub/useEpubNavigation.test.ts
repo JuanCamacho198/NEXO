@@ -125,6 +125,46 @@ describe('useEpubNavigation — one index space (the reading order)', () => {
       expect(nav.currentChapterIndex).toBe(42);
     });
 
+    /**
+     * The shape *Prisioneros de la geografía* really has, taken from its OPF and
+     * NCX rather than reconstructed: each section is a title page the NCX names,
+     * then an image spread and a body it does not.
+     *
+     *     5  Prefacio          6  Introducción      7  "1. Rusia"  <- NCX entry
+     *     8  0005_0001.htm    (two maps, 0 chars)   9  0005_0002.htm (57 356 chars)
+     *    10  "2. China"       ...
+     *
+     * A reader who is on "1. Rusia" must reach the 57 356-character body by
+     * turning forward. Before this was pinned, `goToNext` walked the reading
+     * order correctly, but the PAGE FIELD in paginated mode counted the
+     * document's columns instead — and measured the title page as one column, so
+     * "1 / 1" disabled Next and the body became unreachable from the title.
+     */
+    it('walks from a title page through its unnamed image spread to its body', () => {
+      const measured = [
+        0, 3, 4, 5, 6, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 38, 39, 40, 41, 42,
+      ];
+      const toc = measured.map((index) => ({
+        index,
+        id: `ch-${index}`,
+        label: `Chapter ${index}`,
+        href: `OEBPS/Text/ch-${index}.xhtml`,
+        depth: 0,
+      }));
+      const nav = makeNav(43, toc);
+      const rusiaTitle = nav.orderForSpine(7);
+      nav.goToChapter(rusiaTitle);
+      expect(nav.currentSpineIndex).toBe(7);
+
+      nav.goToNext();
+      expect(nav.currentSpineIndex, 'the image spread follows the title page').toBe(8);
+      nav.goToNext();
+      expect(nav.currentSpineIndex, 'then the chapter body').toBe(9);
+      // And the body is still one turn away from the next section's title page.
+      nav.goToNext();
+      expect(nav.currentSpineIndex).toBe(10);
+    });
+
     it('goToNext allows spine fallback when toc empty', () => {
       const nav = makeNav(3, []);
       expect(nav.readingOrder).toEqual([0, 1, 2]);

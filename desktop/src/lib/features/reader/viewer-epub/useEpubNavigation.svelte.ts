@@ -37,6 +37,15 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
   resolve(rawOrder: number): EpubNavigationPosition;
   /** Reading-order position of a spine document. */
   orderForSpine(spineIndex: number): number;
+  /**
+   * True when the outline names the document at reading-order `position`.
+   *
+   * The reading order puts a chapter's unnamed documents (its image spread, its
+   * body) directly after the entry that names it, so "is this a chapter start?"
+   * is exactly "does an outline entry name this document?" — the same question
+   * `buildReadingOrder` answers when it stops a trailing run.
+   */
+  isChapterStart(position: number): boolean;
   goToPrev(): void;
   goToNext(): void;
   goToChapter(index: number): void;
@@ -83,6 +92,24 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
 
   function orderForSpine(spineIndex: number): number {
     return readingOrderIndexFor(readingOrder, spineIndex);
+  }
+
+  /**
+   * A Set rebuilt with the order, not a scan per call: the reader asks this once
+   * per render while deciding which pages belong to the chapter on screen.
+   */
+  const chapterStarts = $derived.by(() => {
+    const starts = new Set<number>();
+    for (const entry of deps.getToc()) {
+      const target = Math.trunc(entry?.index ?? Number.NaN);
+      const position = readingOrderIndexFor(readingOrder, target);
+      if (position >= 0) starts.add(position);
+    }
+    return starts;
+  });
+
+  function isChapterStart(position: number): boolean {
+    return chapterStarts.has(position);
   }
 
   /**
@@ -231,6 +258,7 @@ export function createEpubNavigation(deps: EpubNavigationDeps): {
     },
     resolve,
     orderForSpine,
+    isChapterStart,
     goToPrev,
     goToNext,
     goToChapter,

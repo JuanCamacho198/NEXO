@@ -44,6 +44,10 @@ import {
   createTurnGate,
   createTurnReassert,
 } from '$lib/features/reader/viewer-epub/epubPaginationScheduler';
+import {
+  chapterPageTotal,
+  turnStaysInChapter,
+} from '$lib/features/reader/viewer-epub/epubPageTurn';
 
 export type EpubPaginationDeps = {
   /** The scroll container (the chapter's viewport). */
@@ -90,6 +94,15 @@ export type EpubPaginationDeps = {
   /** Clear a stale text selection when the page moves. */
   onPageTurn?: () => void;
   /**
+   * How many documents of the chapter being read follow the one on screen. The
+   * chapter's own columns cannot address them, so the page field has to; see
+   * `epubPageTurn.ts` for the defect this answers.
+   *
+   * Optional: a caller without it gets a chapter of one document, which is the
+   * behaviour every existing test was written against.
+   */
+  getLaterDocuments?: () => number;
+  /**
    * True while an asynchronous position restore (the CFI or fragment
    * `scrollIntoView`) is still in flight. The reader's stored position outranks
    * a turn pressed during load. Optional so a caller without a restore path
@@ -100,7 +113,14 @@ export type EpubPaginationDeps = {
 
 export function createEpubPagination(deps: EpubPaginationDeps): {
   readonly pageBox: PageBox | null;
+  /** Columns the chapter on screen lays out as. */
   readonly pageCount: number;
+  /**
+   * Pages the whole chapter has: its columns plus one page for each later
+   * document of the same chapter, which the columns cannot address. This is
+   * what the page field's total must be — see `epubPageTurn.ts`.
+   */
+  readonly chapterTotal: number;
   readonly currentPage: number;
   refresh(): void;
   /**
@@ -146,6 +166,12 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
   // `effect_update_depth_exceeded` abort documented in `setPageBox`.
   let pageCount = $state(0);
   let currentPage = $state(1);
+  /**
+   * Later documents of the chapter on screen, re-read whenever the chapter or
+   * the layout changes. `$state` for the same reason as `pageCount`: the total
+   * and the Next control's disabled state derive from it.
+   */
+  let laterDocuments = $state(0);
   let lastKey = '';
   let lastContentWidth = 0;
   /**
@@ -190,6 +216,23 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     const root = deps.getChapterRoot?.() ?? null;
     if (root) return root;
     return deps.getContainerEl();
+  }
+
+  /**
+   * What the chapter on screen totals: its columns plus the later documents the
+   * reader reaches by turning past the last column. A derivation rather than a
+   * second stored count, so it cannot drift from the columns it is built on.
+   */
+  const chapterTotal = $derived(chapterPageTotal({ columnPages: pageCount, laterDocuments }));
+
+  /**
+   * Re-read the chapter's extent. Called on every chapter change — a new chapter
+   * is a different document with a different number of successors — and on a
+   * re-render, because the reading order can arrive after the first frame.
+   */
+  function syncLaterDocuments(): void {
+    const next = Math.max(0, deps.getLaterDocuments?.() ?? 0);
+    if (next !== laterDocuments) laterDocuments = next;
   }
 
   /**
@@ -353,6 +396,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     deps.onHeightModeChange(true);
     lastKey = '';
     lastContentWidth = 0;
+    syncLaterDocuments();
     // The chapter was last styled in scrolling mode, where the pagination rules
     // are absent entirely: the first page-box restyle has to happen even if no
     // setting moved.
@@ -397,6 +441,10 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    */
   function restoreAfterRerender(): void {
     if (!deps.isPaginated()) return;
+    // The reading order can arrive after the first frame of a book (it is built
+    // from the metadata), so a re-render is also a chance to learn how many
+    // documents this chapter still has.
+    syncLaterDocuments();
     const box = pageBox;
     const el = scroller();
     // A page the reader chose wins over wherever a restore wants to put them.
@@ -447,6 +495,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     lastKey = '';
     lastContentWidth = 0;
     lastWrittenStylesKey = null;
+    syncLaterDocuments();
     currentPage = 1;
     // A new chapter clears the claim: the reader has not turned a page here yet,
     // so the CFI/fragment restore that places them within this chapter is free
@@ -527,8 +576,15 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    * origin from the raw offset unconditionally is what produced the jumps this
    * fixes. The count is refreshed first so the chapter's edge is known.
    *
-   * Returns false when the turn would leave the chapter in that direction, so
-   * the caller can fall through to chapter navigation.
+   * The CHAPTER's end is not the columns' end. A chapter is usually several
+   * documents (a title page, an image spread, a body) and only the one on screen
+   * has columns, so once the last column is reached the remaining documents are
+   * one page each and this returns false for them — the caller then renders the
+   * next document, which stays inside the chapter. Reading stops at
+   * `chapterTotal`, which is what the page field shows and what disables Next.
+   *
+   * Returns false when the turn would leave the document in that direction, so
+   * the caller can render the next one.
    */
   function turn(delta: 1 | -1): boolean {
     if (!deps.isPaginated()) return false;
@@ -543,6 +599,9 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     if (!container || !box || box.width <= 0) return false;
     recount();
     if (pageCount <= 0) return false;
+    if (!turnStaysInChapter({ page: currentPage, columnPages: pageCount, chapterTotal }, delta)) {
+      return false;
+    }
     const live = container.clientWidth || box.width;
     if (live <= 0) return false;
     const origin = resolveTurnOrigin(container.scrollLeft, live, pageCount, currentPage);
@@ -563,7 +622,11 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
   /** Jump to an absolute page, clamped into the chapter. */
   function goToPage(page: number): boolean {
     if (!deps.isPaginated() || pageCount <= 0) return false;
-    return applyPage(page);
+    // A number past the columns can only name a LATER document of the chapter;
+    // this function only moves within the document on screen, so it clamps there
+    // instead of pretending to have jumped. Rendering that document is the
+    // caller's job (see the viewer's `handleGoToPage`).
+    return applyPage(Math.min(page, pageCount));
   }
 
   /**
@@ -603,6 +666,9 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     },
     get pageCount(): number {
       return pageCount;
+    },
+    get chapterTotal(): number {
+      return chapterTotal;
     },
     get currentPage(): number {
       return currentPage;
