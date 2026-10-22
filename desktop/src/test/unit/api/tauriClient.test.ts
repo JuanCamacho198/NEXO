@@ -33,19 +33,6 @@ describe('tauriClient reader settings', () => {
     invokeMock.mockReset();
   });
 
-  // `sanitizeEnum` lowercases before matching, so a mixed-case enum member is
-  // silently reverted to the default on every save. That exact revert is what
-  // made the book-pages switch read ON in the panel and persist as
-  // `percentage` — the setting looked wired and was not. Pin the round trip.
-  it('round-trips the bookpages progress indicator through sanitization', () => {
-    expect(sanitizeReaderSettings({ progressIndicator: 'bookpages' }).progressIndicator).toBe(
-      'bookpages',
-    );
-    expect(sanitizeReaderSettings({ progressIndicator: 'percentage' }).progressIndicator).toBe(
-      'percentage',
-    );
-  });
-
   it('sanitizes invalid reader settings with defaults and clamps', () => {
     const settings = sanitizeReaderSettings({
       themeMode: 'invalid' as never,

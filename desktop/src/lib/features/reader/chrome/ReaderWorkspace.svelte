@@ -15,7 +15,6 @@
   import { emptyReaderDiagnostics, type ReaderDiagnostics } from './readerDiagnostics';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, SearchBookTextResponse } from '$lib/shared/types';
-  import { isBookPagesIndicator } from '$lib/shared/types';
   import type { LibraryBookDto } from '$lib/shared/types/library';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
   import { debugState as defaultDebugState } from '$lib/shared/debug/debugState.svelte';
@@ -405,41 +404,6 @@
   // never `epub.fontSize` for a PDF. `getScaleOrZoom` subscribes to the
   // viewer's own state, so wheel/keys/dropdown all flow into this readout.
   const headerZoomPercent = $derived(viewer.getScaleOrZoom());
-
-  // ── Whole-book page numbers in the footer ────────────────────────────────
-  // The number lives in the viewer: it owns the per-chapter counts, and those are
-  // written from layout measurement (`recount`, the chapter render) where no rune
-  // can observe the source. So the workspace pulls from the viewer's read-only
-  // accessor instead of being told.
-  //
-  // The pull is a POLL for the same reason the diagnostics panel polls (see
-  // `liveDiagnostics`): the viewer's numbers are derived from state this
-  // component cannot subscribe to. It used to be a push — the viewer called back
-  // on change and the workspace stored a version — which closed a cycle through
-  // the parent that owns the viewer and aborted with
-  // `effect_update_depth_exceeded`. 500ms is invisible to a reader (the number
-  // moves once per chapter, not per frame) and costs one accessor call.
-  let bookPagesPolled = $state<{ page: number; total: number } | null>(null);
-  $effect(() => {
-    const epub = epubRef;
-    if (!epub) {
-      bookPagesPolled = null;
-      return;
-    }
-    const read = (): void => {
-      bookPagesPolled = epub.getBookPagePosition?.() ?? null;
-    };
-    read();
-    // PDF counts its own pages, so `N / M` there is its existing page field and
-    // this switch has nothing to add.
-    if (viewer.kind !== 'epub') return;
-    const timer = setInterval(read, 500);
-    return () => clearInterval(timer);
-  });
-  const bookPagePosition = $derived(bookPagesPolled);
-  // The switch itself. It reads the persisted setting, so it survives a reopen —
-  // the enum value is the only source of truth for "which footer readout".
-  const showBookPages = $derived(isBookPagesIndicator(localReaderSettings.progressIndicator));
 
   async function handleHeaderGoToPage(page: number): Promise<boolean> {
     // U2: navigation invalidates the selection anchor — never carry the menu
@@ -855,7 +819,6 @@
     visible={isFullscreen ? chrome.chromeVisible : true}
     currentPage={headerCurrentPage}
     totalPages={headerTotalPages}
-    bookPages={showBookPages ? bookPagePosition : null}
     zoomPercent={headerZoomPercent}
     bookmarkCount={bookmarksPanel.bookmarksState.bookmarksList.length}
     bookmarksLoading={bookmarksPanel.bookmarksState.bookmarksLoading}

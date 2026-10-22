@@ -1296,9 +1296,6 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.margins': 'Márgenes',
   'reader.paragraph_spacing': 'Espaciado de párrafo',
   'reader.hyphenation': 'Separación silábica',
-  'reader.book_pages': 'Páginas del libro',
-  'reader.book_pages_tooltip':
-    'Muestra la página del libro en lugar del porcentaje. El total crece a medida que avanzas por los capítulos.',
   'reader.theme': 'Tema',
   'reader.font': 'Fuente',
   'reader.font_size': 'Tamaño',
