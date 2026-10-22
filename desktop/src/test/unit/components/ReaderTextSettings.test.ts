@@ -94,6 +94,51 @@ describe('ReaderTextSettings (U1) — every visible control works', () => {
     expect(screen.queryByLabelText('settings.reading.showFooter')).toBeNull();
     expect(screen.queryByLabelText('reader.vertical_scroll')).toBeNull();
   });
+
+  it('renders the book-pages switch off by default, beside hyphenation in Writing', () => {
+    render(ReaderTextSettings, makeProps('epub'));
+    const toggle = screen.getByRole('switch', { name: 'reader.book_pages_tooltip' });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    // Directly beneath the hyphenation row: same section, and the hyphenation
+    // row is its immediately preceding sibling.
+    const hyphenation = screen.getByRole('switch', { name: 'reader.hyphenation' });
+    const writingSection = toggle.closest('div.flex.flex-col');
+    expect(writingSection).toBe(hyphenation.closest('div.flex.flex-col'));
+    expect(toggle.closest('div.flex.flex-col')?.lastElementChild?.contains(toggle)).toBe(true);
+    expect(toggle.closest('div.flex.items-center')?.previousElementSibling).toBe(
+      hyphenation.closest('div.flex.items-center'),
+    );
+  });
+
+  it('switches the progress indicator to bookPages and back to percentage', async () => {
+    const props = makeProps('epub');
+    render(ReaderTextSettings, props);
+    await fireEvent.click(screen.getByRole('switch', { name: 'reader.book_pages_tooltip' }));
+    expect(props.onSettingsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ progressIndicator: 'bookpages' }),
+    );
+  });
+
+  it('reads as ON when the stored indicator is bookPages', () => {
+    const props = makeProps('epub');
+    props.readerSettings = makeSettings({ progressIndicator: 'bookpages' });
+    render(ReaderTextSettings, props);
+    expect(screen.getByRole('switch', { name: 'reader.book_pages_tooltip' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+  });
+
+  it('keeps the percentage/chapter/time indicators meaning what they mean', () => {
+    // A stored legacy value must not be reinterpreted as book pages.
+    const props = makeProps('epub');
+    props.readerSettings = makeSettings({ progressIndicator: 'time' });
+    render(ReaderTextSettings, props);
+    expect(screen.getByRole('switch', { name: 'reader.book_pages_tooltip' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+  });
 });
 
 describe('ReaderTextSettings (U2) — honest font-size stepper', () => {

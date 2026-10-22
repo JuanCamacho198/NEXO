@@ -480,7 +480,12 @@ const readSettingValue = (settings: AppSettingDto[], key: string): unknown => {
 const READER_THEME_MODES: ReadonlyArray<ReaderThemeMode> = ['paper', 'sepia', 'night', 'oled'];
 const TEXT_ALIGN_MODES: ReadonlyArray<ReaderTextAlign> = ['left', 'center', 'right', 'justify'];
 const DIRECTION_MODES: ReadonlyArray<ReaderDirection> = ['ltr', 'rtl'];
-const PROGRESS_MODES: ReadonlyArray<ReaderProgressIndicator> = ['percentage', 'chapter', 'time'];
+const PROGRESS_MODES: ReadonlyArray<ReaderProgressIndicator> = [
+  'percentage',
+  'chapter',
+  'time',
+  'bookpages',
+];
 
 const DEFAULT_READER_SETTINGS: ReaderSettings = {
   themeMode: 'paper',

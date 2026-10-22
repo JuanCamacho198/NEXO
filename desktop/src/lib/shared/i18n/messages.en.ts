@@ -856,6 +856,9 @@ export const messagesEn = {
   'reader.margins': 'Margins',
   'reader.paragraph_spacing': 'Paragraph spacing',
   'reader.hyphenation': 'Hyphenation',
+  'reader.book_pages': 'Book pages',
+  'reader.book_pages_tooltip':
+    'Shows the page in the book instead of the percentage. The total grows as you move through the chapters.',
   'reader.theme': 'Theme',
   'reader.font': 'Font',
   'reader.font_size': 'Size',

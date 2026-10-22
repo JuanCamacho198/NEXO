@@ -47,7 +47,30 @@ export type ReaderThemeMode = 'paper' | 'sepia' | 'night' | 'oled';
 
 export type ReaderTextAlign = 'left' | 'center' | 'right' | 'justify';
 export type ReaderDirection = 'ltr' | 'rtl';
-export type ReaderProgressIndicator = 'percentage' | 'chapter' | 'time';
+/**
+ * Reader progress readouts. Every member is lowercase because
+ * `sanitizeReaderSettings` lowercases before matching (`sanitizeEnum`); a
+ * camelCase member would be silently reverted to the default on every save.
+ *
+ * `bookpages` is a page number and total across the whole book (`N / M`);
+ * `percentage` is spine-weighted text. They answer different questions, which is
+ * why the footer's switch swaps one for the other instead of replacing both.
+ */
+export type ReaderProgressIndicator = 'percentage' | 'chapter' | 'time' | 'bookpages';
+
+/**
+ * True when the footer should answer with book page numbers (`N / M`) instead of
+ * the percentage.
+ *
+ * The footer renders only `percentage` and `bookpages` today: `chapter` meant
+ * "show the chapter's own numbers in the percentage slot", which is now the page
+ * field beside it, and `time` has no estimator behind it. They keep their stored
+ * meaning (both still resolve to the percentage) so an existing settings row is
+ * never silently reinterpreted — and so this stays an additive extension of the
+ * enum rather than a fourth setting that says almost the same thing.
+ */
+export const isBookPagesIndicator = (indicator: ReaderProgressIndicator): boolean =>
+  indicator === 'bookpages';
 
 export type ReaderSettings = {
   // Existing fields

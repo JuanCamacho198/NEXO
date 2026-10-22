@@ -24,6 +24,11 @@
     visible: boolean;
     currentPage: number;
     totalPages: number;
+    /**
+     * `N / M` across the whole book, or null when the switch is off or nothing
+     * measured yet. Null keeps the percentage: the footer never prints "/ 0".
+     */
+    bookPages?: { page: number; total: number } | null;
     zoomPercent: number;
     bookmarkCount: number;
     bookmarksLoading: boolean;
@@ -48,6 +53,7 @@
     visible,
     currentPage,
     totalPages,
+    bookPages = null,
     zoomPercent,
     bookmarkCount,
     bookmarksLoading,
@@ -79,6 +85,24 @@
   const bookmarkCountLabel = $derived(t('reader.bookmarks_count', { count: bookmarkCount }));
   const prevDisabled = $derived(currentPage <= 1);
   const nextDisabled = $derived(currentPage >= totalPages);
+  // The progress readout: `N / M` when the reader asked for book pages and a
+  // count exists, the percentage otherwise.
+  //
+  // This label is the ONE place either number is rendered. The `%` text lives in
+  // this sibling div of `bottom-bar-controls`, next to the zoom chip — a selector
+  // that grabs "the label in the bar" reaches `150%` (the zoom) instead, which is
+  // the trap this label is kept in a single, addressable span to avoid.
+  //
+  // A null `bookPages` is "nothing measured yet" or "switch off"; both mean the
+  // percentage is the honest answer, including the case where a total of 0 would
+  // otherwise print as "/ 0".
+  const progressLabel = $derived.by((): string => {
+    const position = bookPages;
+    if (position && position.page > 0 && position.total > 0) {
+      return `${position.page} / ${position.total}`;
+    }
+    return `${bookProgress}%`;
+  });
   const BookmarksIcon = $derived(showBookmarks ? X : Bookmark);
   const barTransform = $derived(visible ? 'translate-y-0' : 'translate-y-full');
 
@@ -216,8 +240,14 @@
             style="width: {bookProgress}%"
           ></div>
         </div>
-        <span class="font-inter text-xs font-normal tabular-nums text-(--color-text-muted)">
-          {bookProgress}%
+        <!-- One span, one source: the book page numbers when the reader asked
+          for them and a count exists, the percentage otherwise. The testid is
+          the stable hook for both — the label's TEXT is what differs. -->
+        <span
+          data-testid="footer-progress-label"
+          class="font-inter text-xs font-normal tabular-nums text-(--color-text-muted)"
+        >
+          {progressLabel}
         </span>
       </div>
     {/if}

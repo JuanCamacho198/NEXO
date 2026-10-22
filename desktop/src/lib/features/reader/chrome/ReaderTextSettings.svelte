@@ -4,6 +4,7 @@
   import { onDestroy } from 'svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, ReaderTextAlign } from '$lib/shared/types';
+  import { isBookPagesIndicator } from '$lib/shared/types';
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
   import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
@@ -430,6 +431,11 @@
               'direction-select',
             )}
             {@render toggleRow(t('reader.hyphenation'), readerSettings.hyphenation, () => onSettingsChange({ ...readerSettings, hyphenation: !readerSettings.hyphenation }), t('reader.hyphenation'))}
+            <!-- The footer's progress readout: percentage (the default) or the
+              book's own page numbers. Wired end to end before shipping it —
+              `progressIndicator` used to persist with no viewer reading it, and a
+              switch that does nothing is worse than no switch. -->
+            {@render toggleRow(t('reader.book_pages'), isBookPagesIndicator(readerSettings.progressIndicator), () => onSettingsChange({ ...readerSettings, progressIndicator: isBookPagesIndicator(readerSettings.progressIndicator) ? 'percentage' : 'bookpages' }), t('reader.book_pages_tooltip'))}
           </div>
         {/if}
         <!-- U1: the showHeader/showFooter/verticalScrolling switches lived here.
