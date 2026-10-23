@@ -14,6 +14,9 @@ enum class AddonFetchErrorCode {
     BAD_CONTENT_TYPE,
     INVALID_MANIFEST,
     NETWORK,
+
+    /** Reserved protocol types (`audiobook`, `comic`) are declared but not implemented. */
+    UNSUPPORTED_TYPE,
     ;
 
     /** Stable additive wire code (ADDON_FETCH_*), shared with desktop TS/Rust. */

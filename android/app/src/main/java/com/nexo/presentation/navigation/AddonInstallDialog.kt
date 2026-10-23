@@ -29,6 +29,7 @@ internal object AddonInstallDialogText {
             AddonFetchErrorCode.TOO_LARGE -> "The addon manifest is too large."
             AddonFetchErrorCode.BAD_CONTENT_TYPE -> "The addon manifest is not valid JSON."
             AddonFetchErrorCode.INVALID_MANIFEST -> "This addon manifest is invalid."
+            AddonFetchErrorCode.UNSUPPORTED_TYPE -> "This addon type is not supported yet."
         }
 }
 
