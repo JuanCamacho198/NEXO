@@ -6,6 +6,7 @@ export * from './collection';
 export * from './legacy';
 export * from './payload';
 export * from './router';
+export * from './library';
 export * from './cache';
 export * from './breaker';
 export * from './fanout';
