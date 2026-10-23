@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0](https://github.com/JuanCamacho198/NEXO/compare/android-v0.4.1...android-v0.5.0) (2026-10-23)
+
+
+### Features
+
+* upload imported books from Android, and make Drive filenames readable ([a405f98](https://github.com/JuanCamacho198/NEXO/commit/a405f987bf3f96427c89f26bf7987d1d4c2512b8))
+
+
+### Bug Fixes
+
+* **android:** find Drive files stored under the readable name ([97c9b7d](https://github.com/JuanCamacho198/NEXO/commit/97c9b7d91b1f772538a5866dbb4c82901741d989))
+* **android:** refresh the Drive token before declaring sync disabled ([4c6db76](https://github.com/JuanCamacho198/NEXO/commit/4c6db766b2dce3f4d2219fb7404f2da83884548f))
+* **android:** stop signing the reader out on a cold start ([dcd0565](https://github.com/JuanCamacho198/NEXO/commit/dcd0565ee99d35a2d7728632e0856f3779052d23))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXO/compare/android-v0.2.0...android-v0.3.0) (2026-09-17)
 
 
