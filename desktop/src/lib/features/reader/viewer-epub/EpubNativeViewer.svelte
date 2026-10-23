@@ -663,18 +663,42 @@
   /**
    * Whether a forward turn can still do something.
    *
-   * With the book total displayed the field's own numbers cannot answer: the
-   * total is the sum of the chapters measured SO FAR, so `page === total` holds
-   * at the last page of every chapter on the way through the book, and gating
-   * Next on it stopped the reader exactly where they wanted to continue. Only
-   * the reading order and the current chapter's columns know what is left.
+   * The page field's own numbers cannot answer this. In paginated mode they
+   * count the columns of the chapter on screen, so `page === total` holds at the
+   * last column of EVERY chapter — and a page turn at that point is not the end
+   * of anything: it renders the chapter's next document or the next chapter.
+   * Gating Next on the field disabled the control exactly where the reader needed
+   * it, and measured on *Prisioneros de la geografía* it was disabled on all 22
+   * multi-column documents at their last column (the wheel, which never consulted
+   * it, kept working, which is why the defect read as "the arrows do nothing").
+   *
+   * The whole-book total has the same flaw from the other side: it is the sum of
+   * the chapters measured SO FAR, so `page === total` again holds at the last page
+   * of every chapter on the way through the book. Neither total is the reader's
+   * boundary; the reading order is.
    */
   export function getCanGoNext(): boolean {
-    if (!bookTotalsOn) return displayCurrentPage < displayTotal;
-    if (paginated && pagination.pageCount > 0 && pagination.currentPage < pagination.pageCount) {
-      return true;
+    if (paginated && pagination.pageCount > 0) {
+      if (pagination.currentPage < pagination.chapterTotal) return true;
+      return committedOrder < documentTotal - 1;
     }
-    return committedOrder < documentTotal - 1;
+    if (bookTotalsOn) return committedOrder < documentTotal - 1;
+    return displayCurrentPage < displayTotal;
+  }
+
+  /**
+   * Whether a backward turn can still do something.
+   *
+   * The mirror of `getCanGoNext`, and the same defect: on the first column of any
+   * chapter the field reads page 1, so `page <= 1` disabled Prev on the first page
+   * of every chapter — the one place a reader going back needs it. A backward
+   * turn there renders the previous chapter's last document.
+   */
+  export function getCanGoPrev(): boolean {
+    if (paginated && pagination.pageCount > 0) {
+      return pagination.currentPage > 1 || committedOrder > 0;
+    }
+    return displayCurrentPage > 1;
   }
   /**
    * Read-only snapshot for the opt-in diagnostic panel (`ReaderDiagnosticPanel`).

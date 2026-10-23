@@ -204,6 +204,25 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    * re-asserted until the chapter changes.
    */
   let claimedPage = 0;
+  /**
+   * When this chapter's layout last changed, on `performance.now()`'s clock: a
+   * document swap, an entry, or a column count that moved. The turn gate reads
+   * the age of it to decide whether a one-column reading is a layout that has not
+   * arrived yet or a page that really is one page — see
+   * `LAYOUT_SETTLE_GRACE_MS`. A plain var, not `$state`: it is read inside a
+   * press handler, never rendered.
+   */
+  let layoutChangedAt = typeof performance !== 'undefined' ? performance.now() : 0;
+
+  /** Restart the settle window: the layout this gate was judging is gone. */
+  function markLayoutChange(): void {
+    layoutChangedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  }
+
+  function msSinceLayoutChange(): number {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    return Math.max(0, now - layoutChangedAt);
+  }
 
   /**
    * The element that owns the inline scroll. In paginated mode the columns are
@@ -244,6 +263,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     isRestoring: () => deps.isRestoring?.() ?? false,
     getScroller: () => scroller(),
     getPageBox: () => pageBox,
+    msSinceLayoutChange,
   });
 
   /**
@@ -275,6 +295,10 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     const changed = count !== previous || width !== lastContentWidth;
     lastContentWidth = width;
     pageCount = count;
+    // A count that MOVED is a reflow: the columns are still arriving, so the
+    // settle window restarts and the turn gate keeps holding presses. A count
+    // that merely re-measured the same extent changes nothing.
+    if (count !== previous) markLayoutChange();
     if (currentPage > count && count > 0) currentPage = count;
     if (currentPage < 1) currentPage = 1;
     if (changed && previous !== count) {
@@ -371,6 +395,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     const el = scroller();
     if (!el || width <= 0) return;
     const count = derivePageCount(el.scrollWidth, width);
+    if (count !== pageCount) markLayoutChange();
     pageCount = count;
     lastContentWidth = el.scrollWidth;
     currentPage = pageFromScrollLeft(el.scrollLeft, width, count);
@@ -394,6 +419,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
   /** Enter paginated mode: pin the height, measure, observe, restyle. */
   function enter(): void {
     deps.onHeightModeChange(true);
+    markLayoutChange();
     lastKey = '';
     lastContentWidth = 0;
     syncLaterDocuments();
@@ -441,6 +467,9 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    */
   function restoreAfterRerender(): void {
     if (!deps.isPaginated()) return;
+    // A re-render is a new document: its columns are not there yet, so the gate
+    // must not honour a press against the old column set.
+    markLayoutChange();
     // The reading order can arrive after the first frame of a book (it is built
     // from the metadata), so a re-render is also a chance to learn how many
     // documents this chapter still has.
@@ -492,6 +521,9 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    */
   function resetForChapter(): void {
     if (!deps.isPaginated()) return;
+    // A new chapter is a new document, so the settle window starts here: a press
+    // that arrives before its columns do must wait for them.
+    markLayoutChange();
     lastKey = '';
     lastContentWidth = 0;
     lastWrittenStylesKey = null;

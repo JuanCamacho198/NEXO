@@ -69,6 +69,29 @@ describe('createEpubPagination', () => {
     expect(p.pageCount).toBe(25);
   });
 
+  it('holds a press on a one-column chapter only until its layout settles', () => {
+    // The gate's whole test used to be "one column", which is also the final
+    // layout of a 60-character chapter title: every press on one queued behind a
+    // gate that could never open (measured: 4.1s on 13 of this book's 43
+    // documents). The composable has to hand the gate a live clock for the
+    // single-column case to ever resolve.
+    vi.useFakeTimers({ toFake: ['performance'] });
+    try {
+      const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+      const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+      const { deps } = makeDeps(root, container);
+      const p = createEpubPagination(deps);
+      p.enter();
+      expect(p.isLayoutSettling()).toBe(true);
+      vi.advanceTimersByTime(700);
+      expect(p.isLayoutSettling(), 'a one-column chapter IS settled once it stops moving').toBe(
+        false,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('derives the count and publishes the page box on enter', () => {
     const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
     const root = makeScroller({ clientWidth: 1100, scrollWidth: 28600 });

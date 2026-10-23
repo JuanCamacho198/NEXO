@@ -168,7 +168,10 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   const prevDisabled = $derived.by(() => {
     const v = resolveViewer();
     if (v.kind === 'pdf') return currentPdfPage <= 1;
-    if (v.kind === 'epub') return currentEpubChapter <= 0;
+    // The viewer answers when it can: in paginated mode the page field's "page 1"
+    // is the first column of a chapter, and a backward turn there renders the
+    // previous chapter, so the field's number cannot decide (see `getCanGoPrev`).
+    if (v.kind === 'epub') return v.getCanGoPrev ? !v.getCanGoPrev() : currentEpubChapter <= 0;
     return false;
   });
 

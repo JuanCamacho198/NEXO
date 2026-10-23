@@ -133,6 +133,69 @@ export function buildPaginationCss(opts: PaginationCssOptions): string {
     `;
 }
 
+/**
+ * A ceiling on media height, for paginated mode only.
+ *
+ * ## The defect this answers
+ *
+ * In paginated mode the chapter is a stack of columns of exactly the page box's
+ * height, and the root's vertical overflow is `hidden` (see
+ * `buildPaginationCss`). A block that cannot be fragmented — an `<img>` is one,
+ * it carries `break-inside: avoid` — and that is TALLER than the box therefore
+ * overflows the column and is simply cut off: there is no vertical scroll in
+ * this mode to reach the rest of it.
+ *
+ * Measured on *Prisioneros de la geografía* at a 1110x583 box: the two-map
+ * spread of every chapter holds 507x754 and 505x754 plates, so the root reported
+ * `scrollHeight` 754 against a 583 box — the bottom 171px of both maps were
+ * unreachable — and the closing page's five plates pushed its last line 20px
+ * below the box. 14 of the book's 43 documents clipped content this way.
+ *
+ * The release that causes it is deliberate: `buildImageOnlyCss` sets
+ * `max-height: none` so a plate can be zoomed past the viewport, which is right
+ * in scrolling mode (the chapter scrolls) and wrong in a column (it does not).
+ * So this block restores a cap, sized to the page, only when pagination is on.
+ *
+ * `max-height` alone is enough: with `height: auto` the browser preserves the
+ * aspect ratio and shrinks the inline size to match (measured: 507x754 became
+ * 392x583, and the root's `scrollHeight` became the box's 583).
+ *
+ * The available height is the box minus body's vertical padding, EXCEPT for an
+ * image-only document, whose block zeroes that padding so the plate can use the
+ * whole page.
+ */
+function buildPaginatedMediaCeiling(opts: ReaderCssOptions): string {
+  const pagination = opts.pagination;
+  if (!pagination) return '';
+  const height = Math.max(1, Math.round(pagination.height));
+  const top = Number.isFinite(opts.margins.top) ? Math.max(0, opts.margins.top) : 0;
+  const bottom = Number.isFinite(opts.margins.bottom) ? Math.max(0, opts.margins.bottom) : 0;
+  // The plate case gets the whole page because `buildImageOnlyCss` zeroes the
+  // body's vertical padding; the prose case has to subtract what body reserves.
+  // Stated in rem, the unit the padding is written in, so a book that changes the
+  // root font-size still resolves to the same box.
+  const ceiling =
+    opts.layout === 'image-only' || (top === 0 && bottom === 0)
+      ? `${height}px`
+      : // `max()` keeps the expression valid on a box shorter than the body's own
+        // padding (a very small window): a plain `calc` would resolve negative and
+        // the browser would drop the declaration, which is the clipping this rule
+        // exists to prevent.
+        `max(1px, calc(${height}px - ${top}rem - ${bottom}rem))`;
+  // A capped plate still sat in a line box, and the leading below its baseline
+  // pushed the wrapper 8px past the page (measured on this book's cover: the
+  // image landed at exactly 583 and its `div` measured 591). A plate is a block
+  // of its own here — the image-only layout exists precisely because the
+  // document is plates and no prose — so it stacks instead of sitting on a line.
+  const plateDisplay = opts.layout === 'image-only' ? 'display: block !important;' : '';
+  return `
+      body img, body svg {
+        max-height: ${ceiling} !important;
+        ${plateDisplay}
+      }
+    `;
+}
+
 // NOTE (U5.4): the hex literals below are intentional. They style HTML
 // injected into the EPUB iframe, where the app's CSS tokens do not exist,
 // so var(--color-*) references would resolve to nothing.
@@ -217,6 +280,10 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
   // blocks above: an image-only document is a plate either way, and both blocks
   // centre `body` at the prose measure.
   const imageOnlyCss = opts.layout === 'image-only' ? buildImageOnlyCss() : '';
+  // After `imageOnlyCss` on purpose: that block releases the viewport-height cap
+  // (`max-height: none`) so a plate can be zoomed, which in a column would let a
+  // plate grow taller than the page it is printed on. See the function.
+  const paginatedMediaCss = buildPaginatedMediaCeiling(opts);
 
   return `
       ${themeCss}
@@ -452,7 +519,7 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
       body :lang(ko) :is(em, i, cite, dfn) {
         font-style: normal;
       }
-${paginationCss}${imageOnlyCss}    `;
+${paginationCss}${imageOnlyCss}${paginatedMediaCss}    `;
 }
 
 /**

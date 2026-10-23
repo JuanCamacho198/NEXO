@@ -130,6 +130,13 @@ export interface TurnGateProbe {
   getScroller: () => HTMLElement | null;
   /** The measured page box, or null before the first measure. */
   getPageBox: () => { width: number } | null;
+  /**
+   * Milliseconds since this chapter's layout last changed — a document swap, or
+   * a column count that moved. The gate reads it to tell "the columns have not
+   * arrived yet" from "this document IS one column", which the extent alone
+   * cannot say.
+   */
+  msSinceLayoutChange: () => number;
 }
 
 /** The gate a page turn must pass before it may be honoured. */
@@ -137,12 +144,35 @@ export interface TurnGate {
   /** A position restore is in flight. The viewer queues the press for this. */
   isRestoring(): boolean;
   /**
-   * The chapter is not laid out yet — no box, or still a single column. A turn
-   * taken here is computed from a one-page chapter and is left stranded when the
-   * real columns land.
+   * The chapter is not laid out yet — no box, or a single column that has not had
+   * time to become the real column set. A turn taken here is computed from a
+   * one-page chapter and is left stranded when the real columns land.
    */
   isLayoutSettling(): boolean;
 }
+
+/**
+ * How long a chapter may still report a single column before that column is
+ * taken at face value.
+ *
+ * This is the fix for a gate that never opened. `scrollWidth <= box.width` was
+ * the WHOLE test, so on a document that genuinely lays out as one page — a
+ * 60-character chapter title, the acknowledgements, a body that fits — the gate
+ * stayed shut forever and every press queued behind it. Measured on
+ * *Prisioneros de la geografía*: 13 of its 43 documents are single column, and a
+ * press on any of them reached the next document only when the viewer's own
+ * 4-second deadline expired and fell through to chapter navigation (measured
+ * wheel-to-next-document: 4066, 4083, 4094, 4121, 4143, 4149, 4161 ms on those
+ * documents; 127-200 ms on the multi-column ones).
+ *
+ * The real "has it laid out yet" signal is TIME SINCE THE LAYOUT CHANGED: a
+ * freshly committed `srcdoc` reports one column for the first frames (measured
+ * 1110 at press time, 31080 — 28 columns — 120 ms later), and a reflow keeps
+ * extending the window because every column-count change restarts it. 600 ms is
+ * four times the measured settle and shorter than a reader's second press, so a
+ * single-column chapter answers on the next frame instead of after 4 s.
+ */
+export const LAYOUT_SETTLE_GRACE_MS = 600;
 
 /**
  * The two "do not turn yet" windows, as one concern.
@@ -165,7 +195,14 @@ export function createTurnGate(probe: TurnGateProbe): TurnGate {
     // is the most unsettled state there is. Returning false here let an
     // immediate press through exactly when it must not be.
     if (!el || !box || box.width <= 0) return true;
-    return el.scrollWidth <= box.width;
+    // More than one column: the column layout arrived, whatever else is still
+    // settling.
+    if (el.scrollWidth > box.width) return false;
+    // Exactly one column: either the document is still becoming a column set, or
+    // it really is a single page. Only the clock can tell those apart, so the
+    // press waits out a bounded window and is then honoured against the layout
+    // the reader can actually see.
+    return probe.msSinceLayoutChange() < LAYOUT_SETTLE_GRACE_MS;
   };
 
   return { isRestoring, isLayoutSettling };

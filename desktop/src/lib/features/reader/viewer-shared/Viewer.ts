@@ -37,6 +37,12 @@ export type ViewerHandle = {
    * answers instead.
    */
   getCanGoNext?(): boolean;
+  /**
+   * The mirror of `getCanGoNext`, for the same reason: in paginated mode the page
+   * field's "page 1" is the first COLUMN of a chapter, which a reader can leave by
+   * turning back into the previous chapter.
+   */
+  getCanGoPrev?(): boolean;
 };
 
 export function createViewerSelection(
@@ -75,8 +81,13 @@ export function createViewerSelection(
         getCurrentPage?: () => number;
       } | null;
       if (!epub?.goToPrev) return false;
-      const cur = epub.getCurrentPage?.() ?? 1;
-      if (cur <= 1) return false;
+      // No page-number guard here, deliberately. In paginated mode
+      // `getCurrentPage()` is the COLUMN of the chapter on screen, so "page 1"
+      // describes the first column of EVERY chapter — refusing the turn there is
+      // what made Prev dead at the start of every chapter (measured: a press at
+      // page 1 of a 26-column chapter moved nothing in 9s). The viewer owns the
+      // boundary: `goToPrev()` turns within the chapter and falls through to the
+      // previous one, and `getCanGoPrev()` says whether that is possible at all.
       epub.goToPrev();
       return true;
     },
@@ -178,6 +189,16 @@ export function createViewerSelection(
       // No answer from the viewer means no reason to block the press: the turn
       // itself is the authority and it refuses when it cannot move.
       return epub?.getCanGoNext?.() ?? true;
+    },
+    getCanGoPrev(): boolean {
+      const kind = getKind();
+      const refs = getRefs();
+      if (kind === 'pdf') {
+        const pdf = refs.pdf as unknown as { getCurrentPage?: () => number } | null;
+        return (pdf?.getCurrentPage?.() ?? 1) > 1;
+      }
+      const epub = refs.epub as unknown as { getCanGoPrev?: () => boolean } | null;
+      return epub?.getCanGoPrev?.() ?? true;
     },
   };
 }

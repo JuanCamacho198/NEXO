@@ -41,6 +41,12 @@
      * the only one that can answer, so the caller passes its answer.
      */
     canGoNext?: boolean;
+    /**
+     * Whether a backward turn can do anything. The mirror of `canGoNext`, and
+     * for the same reason: in paginated mode the field's page 1 is the first
+     * column of a chapter, not the book's first page.
+     */
+    canGoPrev?: boolean;
     onFit: (mode: FitMode) => void;
     onZoomSelect: (percent: number) => void;
     onToggleBookmarks: () => void;
@@ -66,6 +72,7 @@
     onNext,
     onGoToPage,
     canGoNext = undefined,
+    canGoPrev = undefined,
     onFit,
     onZoomSelect,
     onToggleBookmarks,
@@ -87,7 +94,7 @@
   // count rather than a floating digit.
   const bookmarkCountText = $derived(String(bookmarkCount));
   const bookmarkCountLabel = $derived(t('reader.bookmarks_count', { count: bookmarkCount }));
-  const prevDisabled = $derived(currentPage <= 1);
+  const prevDisabled = $derived(canGoPrev === undefined ? currentPage <= 1 : !canGoPrev);
   const nextDisabled = $derived(canGoNext === undefined ? currentPage >= totalPages : !canGoNext);
   const BookmarksIcon = $derived(showBookmarks ? X : Bookmark);
   const barTransform = $derived(visible ? 'translate-y-0' : 'translate-y-full');

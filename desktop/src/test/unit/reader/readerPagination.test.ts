@@ -247,6 +247,62 @@ describe('buildReaderOverrideCss pagination wiring', () => {
   });
 });
 
+describe('buildReaderOverrideCss paginated media ceiling', () => {
+  const base = {
+    fontSize: 100,
+    zoomLevel: 100,
+    themeMode: 'paper',
+    lineHeight: 1.8,
+    letterSpacing: 0,
+    paragraphSpacing: 1,
+    textAlign: 'left',
+    direction: 'ltr',
+    hyphenation: false,
+    margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+  };
+  const box = { width: 1110, height: 583 };
+
+  it('caps a plate to the page, minus the body padding, in prose', () => {
+    // 507x754 plates in a 583px box measured `scrollHeight` 754 and the bottom
+    // 171px of both maps was unreachable: the root's vertical overflow is hidden
+    // and a column has no vertical scroll.
+    const css = buildReaderOverrideCss({ ...base, pagination: box });
+    expect(css).toContain('max-height: max(1px, calc(583px - 2.5rem - 2.5rem)) !important');
+  });
+
+  it('gives an image-only document the whole page', () => {
+    // That block zeroes body's vertical padding, so nothing is reserved.
+    const css = buildReaderOverrideCss({ ...base, pagination: box, layout: 'image-only' });
+    expect(css).toContain('max-height: 583px !important');
+  });
+
+  it('is stated after the image-only release it has to beat', () => {
+    const css = buildReaderOverrideCss({ ...base, pagination: box, layout: 'image-only' });
+    const releaseAt = css.indexOf('max-height: none !important');
+    const ceilingAt = css.indexOf('max-height: 583px !important');
+    expect(releaseAt).toBeGreaterThan(-1);
+    expect(ceilingAt).toBeGreaterThan(releaseAt);
+  });
+
+  it('emits nothing in scrolling mode, where the chapter scrolls to the plate', () => {
+    expect(buildReaderOverrideCss(base)).not.toContain('max-height: max(');
+    expect(buildReaderOverrideCss({ ...base, layout: 'image-only' })).not.toContain(
+      'max-height: max(',
+    );
+  });
+
+  it('never emits a negative ceiling', () => {
+    // A box shorter than the body's own padding would resolve `calc` negative, and
+    // a dropped declaration puts the clipping back.
+    const css = buildReaderOverrideCss({
+      ...base,
+      margins: { top: 4, bottom: 4, left: 2, right: 2 },
+      pagination: { width: 1110, height: 60 },
+    });
+    expect(css).toContain('max-height: max(1px, calc(60px - 4rem - 4rem)) !important');
+  });
+});
+
 describe('PAGE_EPSILON', () => {
   it('is far below a page and above real sub-pixel noise', () => {
     expect(PAGE_EPSILON).toBeGreaterThan(0);
