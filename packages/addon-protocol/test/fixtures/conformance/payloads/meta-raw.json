@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "id": "isbn:9780141439518",
+    "type": "book",
+    "name": "Pride and Prejudice",
+    "description": "A novel of manners.",
+    "releaseInfo": "1813",
+    "authors": [{ "name": "Jane Austen" }],
+    "languages": ["en"],
+    "subjects": ["Classics"]
+  }
+}

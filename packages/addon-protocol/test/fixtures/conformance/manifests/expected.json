@@ -1,0 +1,89 @@
+{
+  "contentType": "application/json; charset=utf-8",
+  "cases": {
+    "book-basic.json": {
+      "ok": true,
+      "shape": null,
+      "types": ["book"],
+      "catalogIds": ["popular"],
+      "catalogExtras": { "popular": ["search", "skip"] },
+      "resourceNames": ["catalog", "meta", "stream"],
+      "resourceTypes": { "meta": ["book"], "stream": ["book"] },
+      "resourceIdPrefixes": { "stream": ["gutenberg:", "isbn:"] },
+      "idPrefixes": ["gutenberg:"],
+      "templates": null
+    },
+    "book-empty-catalogs.json": {
+      "ok": true,
+      "shape": null,
+      "types": ["book"],
+      "catalogIds": [],
+      "catalogExtras": {},
+      "resourceNames": ["catalog", "meta"],
+      "resourceTypes": { "meta": ["book"] },
+      "resourceIdPrefixes": {},
+      "idPrefixes": null,
+      "templates": null
+    },
+    "stremio-stream-only.json": {
+      "ok": true,
+      "shape": null,
+      "types": ["movie", "series"],
+      "catalogIds": [],
+      "catalogExtras": {},
+      "resourceNames": ["stream"],
+      "resourceTypes": {},
+      "resourceIdPrefixes": {},
+      "idPrefixes": ["tt"],
+      "templates": null
+    },
+    "v2-legacy.json": {
+      "ok": true,
+      "shape": "legacy-v2",
+      "types": ["book"],
+      "catalogIds": ["gutendex"],
+      "catalogExtras": { "gutendex": [] },
+      "resourceNames": ["catalog", "meta"],
+      "resourceTypes": { "meta": ["book"] },
+      "resourceIdPrefixes": {},
+      "idPrefixes": null,
+      "templates": null
+    },
+    "v2-templated.json": {
+      "ok": true,
+      "shape": "legacy-v2",
+      "types": ["book"],
+      "catalogIds": ["popular"],
+      "catalogExtras": { "popular": ["search", "skip"] },
+      "resourceNames": ["catalog", "meta", "stream"],
+      "resourceTypes": { "meta": ["book"], "stream": ["book"] },
+      "resourceIdPrefixes": {},
+      "idPrefixes": null,
+      "templates": {
+        "catalog": "https://gutendex.com/books?q={search}&page={skip}",
+        "meta": "https://gutendex.com/books/{id}",
+        "stream": "https://gutendex.com/books/{id}/formats"
+      }
+    },
+    "malformed-catalogs-are-ok.json": {
+      "ok": true,
+      "shape": "raw",
+      "types": ["book"],
+      "catalogIds": ["popular"],
+      "catalogExtras": { "popular": ["search"] },
+      "resourceNames": ["catalog", "meta"],
+      "resourceTypes": { "meta": ["book"] },
+      "resourceIdPrefixes": {},
+      "idPrefixes": null,
+      "templates": null
+    },
+    "reserved-type.json": {
+      "ok": false,
+      "error": "ADDON_FETCH_UNSUPPORTED_TYPE"
+    },
+    "oversize.json": {
+      "ok": false,
+      "error": "ADDON_FETCH_TOO_LARGE"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "org.example.bookmeta",
+  "version": "3.0.0",
+  "name": "Book Meta Only",
+  "description": "Declares no catalog at all",
+  "types": ["book"],
+  "catalogs": [],
+  "resources": ["catalog", { "name": "meta", "types": ["book"] }]
+}

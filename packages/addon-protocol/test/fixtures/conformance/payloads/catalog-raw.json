@@ -1,0 +1,24 @@
+{
+  "metas": [
+    {
+      "id": "gutendex:1342",
+      "type": "book",
+      "name": "Pride and Prejudice",
+      "poster": "https://example.org/poster/1342.jpg",
+      "releaseInfo": "1813",
+      "authors": [{ "name": "Jane Austen" }],
+      "languages": ["en"],
+      "subjects": ["Classics", "Romance"]
+    },
+    {
+      "id": "gutenberg:11",
+      "type": "book",
+      "name": "Alice's Adventures in Wonderland",
+      "authors": ["Lewis Carroll"]
+    },
+    {
+      "type": "book",
+      "name": "An entry with no id is skipped"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "id": "org.nexo.gutendex",
+  "name": "Gutendex",
+  "version": "1.0.0",
+  "catalogs": [{ "type": "book-catalog", "id": "gutendex", "name": "Project Gutenberg" }],
+  "resources": ["search", "book-details"]
+}

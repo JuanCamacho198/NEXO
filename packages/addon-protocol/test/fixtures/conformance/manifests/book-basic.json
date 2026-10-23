@@ -1,0 +1,27 @@
+{
+  "id": "org.example.gutendex",
+  "version": "3.0.0",
+  "name": "Gutendex",
+  "description": "Project Gutenberg catalog",
+  "types": ["book"],
+  "catalogs": [
+    {
+      "type": "book",
+      "id": "popular",
+      "name": "Popular",
+      "extra": [
+        { "name": "search", "isRequired": false },
+        { "name": "skip", "isRequired": false }
+      ]
+    }
+  ],
+  "resources": [
+    "catalog",
+    { "name": "meta", "types": ["book"] },
+    { "name": "stream", "types": ["book"], "idPrefixes": ["gutenberg:", "isbn:"] }
+  ],
+  "idPrefixes": ["gutenberg:"],
+  "logo": "https://example.org/gutendex/logo.png",
+  "background": "https://example.org/gutendex/background.jpg",
+  "behaviorHints": { "adult": false }
+}

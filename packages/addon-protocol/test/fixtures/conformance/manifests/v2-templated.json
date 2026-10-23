@@ -1,0 +1,11 @@
+{
+  "id": "org.nexo.gutendex.templated",
+  "name": "Gutendex Templated",
+  "version": "1.1.0",
+  "catalogs": [{ "type": "book-catalog", "id": "popular", "name": "Popular" }],
+  "resources": ["search", "book-details", "resolve"],
+  "searchUrl": "https://gutendex.com/books?q={query}&page={page}",
+  "detailsUrl": "https://gutendex.com/books/{bookId}",
+  "resolveUrl": "https://gutendex.com/books/{bookId}/formats",
+  "capabilities": ["resolve"]
+}

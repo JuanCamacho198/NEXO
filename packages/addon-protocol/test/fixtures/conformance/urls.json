@@ -1,0 +1,90 @@
+{
+  "contentType": "application/json; charset=utf-8",
+  "manifests": {
+    "routed": {
+      "id": "org.example.routed",
+      "version": "3.0.0",
+      "name": "Routed Addon",
+      "types": ["book"],
+      "catalogs": [{ "type": "book", "id": "popular", "name": "Popular" }],
+      "resources": [
+        "catalog",
+        { "name": "meta", "types": ["book"] },
+        { "name": "stream", "types": ["book"] }
+      ]
+    },
+    "templated": {
+      "id": "org.example.templated",
+      "version": "3.0.0",
+      "name": "Templated Addon",
+      "types": ["book"],
+      "catalogs": [{ "type": "book", "id": "popular", "name": "Popular" }],
+      "resources": ["catalog"],
+      "nexo": {
+        "templates": {
+          "catalog": "https://api.example.org/v1/books?q={search}&page={skip}",
+          "meta": "https://api.example.org/v1/books/{id}"
+        }
+      }
+    }
+  },
+  "cases": [
+    {
+      "name": "routed catalog without extra",
+      "installUrl": "https://addons.example.org/gutendex/manifest.json",
+      "manifest": "routed",
+      "request": { "resource": "catalog", "type": "book", "id": "popular" },
+      "expectedUrl": "https://addons.example.org/gutendex/catalog/book/popular.json"
+    },
+    {
+      "name": "routed catalog with extra",
+      "installUrl": "https://addons.example.org/gutendex/manifest.json",
+      "manifest": "routed",
+      "request": {
+        "resource": "catalog",
+        "type": "book",
+        "id": "popular",
+        "extra": { "search": "pride", "skip": 100 }
+      },
+      "expectedUrl": "https://addons.example.org/gutendex/catalog/book/popular/search=pride&skip=100.json"
+    },
+    {
+      "name": "spaces encode as %20 and never as +",
+      "installUrl": "https://addons.example.org/gutendex/manifest.json",
+      "manifest": "routed",
+      "request": {
+        "resource": "catalog",
+        "type": "book",
+        "id": "popular",
+        "extra": { "search": "pride and prejudice" }
+      },
+      "expectedUrl": "https://addons.example.org/gutendex/catalog/book/popular/search=pride%20and%20prejudice.json"
+    },
+    {
+      "name": "a namespaced id keeps its colon unencoded",
+      "installUrl": "https://addons.example.org/gutendex/manifest.json",
+      "manifest": "routed",
+      "request": { "resource": "stream", "type": "book", "id": "isbn:9780141439518" },
+      "expectedUrl": "https://addons.example.org/gutendex/stream/book/isbn:9780141439518.json"
+    },
+    {
+      "name": "a template wins over the routed form",
+      "installUrl": "https://api.example.org/manifest.json",
+      "manifest": "templated",
+      "request": {
+        "resource": "catalog",
+        "type": "book",
+        "id": "popular",
+        "extra": { "search": "pride and prejudice", "skip": 2 }
+      },
+      "expectedUrl": "https://api.example.org/v1/books?q=pride%20and%20prejudice&page=2"
+    },
+    {
+      "name": "an id containing a slash is a manifest defect",
+      "installUrl": "https://addons.example.org/gutendex/manifest.json",
+      "manifest": "routed",
+      "request": { "resource": "meta", "type": "book", "id": "openlibrary/works/OL123W" },
+      "expectedError": "ADDON_FETCH_INVALID_MANIFEST"
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "cases": [
+    {
+      "name": "a url epub is accepted as a download",
+      "stream": {
+        "name": "Standard Ebooks",
+        "title": "EPUB · Public domain",
+        "url": "https://standardebooks.org/ebooks/jane-austen/pride-and-prejudice/downloads/jane-austen_pride-and-prejudice.epub",
+        "behaviorHints": { "accessType": "public-domain", "format": "epub" }
+      },
+      "expected": {
+        "accepted": true,
+        "source": "download",
+        "url": "https://standardebooks.org/ebooks/jane-austen/pride-and-prejudice/downloads/jane-austen_pride-and-prejudice.epub",
+        "format": "epub",
+        "accessType": "public-domain"
+      }
+    },
+    {
+      "name": "an externalUrl is accepted as an external open",
+      "stream": {
+        "name": "Open Library",
+        "title": "Borrow",
+        "externalUrl": "https://openlibrary.org/borrow/ia/prideandprejudice00aust",
+        "behaviorHints": { "accessType": "borrow" }
+      },
+      "expected": {
+        "accepted": true,
+        "source": "external",
+        "url": "https://openlibrary.org/borrow/ia/prideandprejudice00aust",
+        "format": "epub",
+        "accessType": "borrow"
+      }
+    },
+    {
+      "name": "an infoHash is rejected",
+      "stream": {
+        "name": "ThePirateBay+",
+        "title": "2160p",
+        "infoHash": "DEADBEEFDEADBEEFDEADBEEFDEADBEEF",
+        "url": "https://thepiratebay-plus.strem.fun/play/DEADBEEFDEADBEEFDEADBEEFDEADBEEF:0:0"
+      },
+      "expected": { "accepted": false }
+    },
+    {
+      "name": "a behaviorHints bittorrent object is rejected",
+      "stream": {
+        "name": "Torrent hint",
+        "url": "https://example.org/book.epub",
+        "behaviorHints": { "bittorrent": { "infoHash": "DEADBEEFDEADBEEFDEADBEEFDEADBEEF" } }
+      },
+      "expected": { "accepted": false }
+    },
+    {
+      "name": "a magnet link in url is rejected",
+      "stream": {
+        "name": "Magnet only",
+        "title": "magnet",
+        "url": "magnet:?xt=urn:btih:DEADBEEFDEADBEEFDEADBEEFDEADBEEF"
+      },
+      "expected": { "accepted": false }
+    },
+    {
+      "name": "a torrent source without an infoHash is rejected",
+      "stream": {
+        "name": "Torrent source",
+        "url": "https://example.org/book.epub",
+        "sources": [
+          { "source": "tracker:https://tracker.example.org/announce", "type": "torrent" }
+        ]
+      },
+      "expected": { "accepted": false }
+    }
+  ]
+}

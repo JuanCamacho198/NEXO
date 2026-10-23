@@ -1,0 +1,49 @@
+{
+  "cases": {
+    "catalog-raw.json": {
+      "kind": "catalog",
+      "shape": "raw",
+      "metaCount": 2,
+      "firstMetaId": "gutendex:1342",
+      "lastMetaId": "gutenberg:11",
+      "authorsById": {
+        "gutendex:1342": ["Jane Austen"],
+        "gutenberg:11": ["Lewis Carroll"]
+      },
+      "skipped": 1
+    },
+    "catalog-over-cap.json": {
+      "kind": "catalog",
+      "shape": "raw",
+      "metaCount": 200,
+      "firstMetaId": "bulk:0",
+      "lastMetaId": "bulk:199",
+      "authorsById": {},
+      "skipped": 1
+    },
+    "meta-raw.json": {
+      "kind": "meta",
+      "shape": "raw",
+      "metaId": "isbn:9780141439518",
+      "isbn13": "9780141439518"
+    },
+    "streams-raw.json": {
+      "kind": "streams",
+      "streams": [
+        {
+          "url": "https://standardebooks.org/ebooks/jane-austen/pride-and-prejudice/downloads/jane-austen_pride-and-prejudice.epub",
+          "source": "download",
+          "format": "epub",
+          "accessType": "public-domain"
+        },
+        {
+          "url": "https://openlibrary.org/borrow/ia/prideandprejudice00aust",
+          "source": "external",
+          "format": "epub",
+          "accessType": "borrow"
+        }
+      ],
+      "skipped": 3
+    }
+  }
+}

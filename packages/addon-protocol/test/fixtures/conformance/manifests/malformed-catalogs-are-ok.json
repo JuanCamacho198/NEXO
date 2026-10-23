@@ -1,0 +1,19 @@
+{
+  "id": "org.example.mixed-catalogs",
+  "version": "3.0.0",
+  "name": "Mixed Catalogs",
+  "types": ["book"],
+  "catalogs": [
+    { "type": "movie", "id": "films", "name": "Films" },
+    {
+      "type": "book",
+      "id": "popular",
+      "name": "Popular",
+      "extra": [{ "name": "search" }, { "name": "publisher" }]
+    },
+    { "type": "series", "id": "shows", "name": "Shows" }
+  ],
+  "resources": ["catalog", { "name": "meta", "types": ["book"] }],
+  "nexo": { "shape": "raw", "unknownNexoField": "dropped" },
+  "unknownTopLevelField": { "nested": true }
+}
