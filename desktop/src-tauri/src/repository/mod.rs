@@ -568,6 +568,15 @@ mod tests {
     use super::*;
 
     fn apply_test_migrations(connection: &Connection) {
+        apply_test_migrations_through_0021(connection);
+        connection
+            .execute_batch(include_str!("../../migrations/0022_book_provenance.sql"))
+            .unwrap();
+    }
+
+    /// Every migration before addon provenance, so a new migration can be applied
+    /// on top of a database that already holds user data.
+    fn apply_test_migrations_through_0021(connection: &Connection) {
         connection.execute_batch(include_str!("../../migrations/0001_init.sql")).unwrap();
         connection.execute_batch(include_str!("../../migrations/0002_books.sql")).unwrap();
         connection.execute_batch(include_str!("../../migrations/0003_highlights.sql")).unwrap();
@@ -626,4 +635,98 @@ mod tests {
     }
 
     // ─── reading-stats-real: new tests for activity, range, streak ───
+
+    fn book_columns(connection: &Connection) -> Vec<(String, String, bool)> {
+        let mut statement = connection.prepare("PRAGMA table_info(books)").unwrap();
+        let rows = statement
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(1)?, row.get::<_, String>(2)?, row.get::<_, i64>(3)? != 0))
+            })
+            .unwrap();
+        rows.map(|row| row.unwrap()).collect()
+    }
+
+    fn column<'a>(
+        columns: &'a [(String, String, bool)],
+        name: &str,
+    ) -> Option<&'a (String, String, bool)> {
+        columns.iter().find(|(column_name, _, _)| column_name == name)
+    }
+
+    #[test]
+    fn provenance_migration_adds_nullable_text_columns() {
+        let connection = Connection::open_in_memory().unwrap();
+        apply_test_migrations_through_0021(&connection);
+
+        let before = book_columns(&connection);
+        assert!(column(&before, "source_addon_id").is_none(), "precondition: column absent");
+
+        connection
+            .execute_batch(include_str!("../../migrations/0022_book_provenance.sql"))
+            .unwrap();
+
+        let after = book_columns(&connection);
+        for name in ["source_addon_id", "source_item_id", "isbn13"] {
+            let (_, data_type, not_null) =
+                column(&after, name).unwrap_or_else(|| panic!("missing column {}", name));
+            assert_eq!(data_type, "TEXT", "{} must be TEXT", name);
+            assert!(!not_null, "{} must stay nullable; existing rows carry NULL", name);
+        }
+    }
+
+    #[test]
+    fn provenance_migration_preserves_existing_rows_with_null_provenance() {
+        let connection = Connection::open_in_memory().unwrap();
+        apply_test_migrations_through_0021(&connection);
+        let now = Utc::now().to_rfc3339();
+        connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
+                 VALUES ('legacy-book', 'Legacy', 'Author', '/tmp/legacy.epub', 'epub', 'local', 3, 100, ?1, ?1, 1)",
+                params![now],
+            )
+            .unwrap();
+
+        connection
+            .execute_batch(include_str!("../../migrations/0022_book_provenance.sql"))
+            .unwrap();
+
+        let row: (String, Option<String>, Option<String>, Option<String>) = connection
+            .query_row(
+                "SELECT title, source_addon_id, source_item_id, isbn13 FROM books WHERE id = 'legacy-book'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .unwrap();
+        assert_eq!(row.0, "Legacy", "existing row must survive the migration untouched");
+        assert_eq!((row.1, row.2, row.3), (None, None, None), "nothing is backfilled");
+    }
+
+    #[test]
+    fn provenance_round_trips_and_duplicate_source_items_are_allowed() {
+        let connection = Connection::open_in_memory().unwrap();
+        apply_test_migrations(&connection);
+        let now = Utc::now().to_rfc3339();
+
+        for id in ["book-a", "book-b"] {
+            connection
+                .execute(
+                    "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, source_addon_id, source_item_id, isbn13)
+                     VALUES (?1, 'Book', 'Author', '/tmp/a.epub', 'epub', 'local', 0, 10, ?2, ?2, 1, 'org.example.gutendex', 'gutenberg:1342', '9780141439518')",
+                    params![id, now],
+                )
+                .unwrap_or_else(|error| panic!("duplicate provenance must be allowed: {}", error));
+        }
+
+        let row: (Option<String>, Option<String>, Option<String>) = connection
+            .query_row(
+                "SELECT source_addon_id, source_item_id, isbn13 FROM books WHERE id = 'book-a'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(row.0.as_deref(), Some("org.example.gutendex"));
+        assert_eq!(row.1.as_deref(), Some("gutenberg:1342"));
+        assert_eq!(row.2.as_deref(), Some("9780141439518"));
+    }
 }

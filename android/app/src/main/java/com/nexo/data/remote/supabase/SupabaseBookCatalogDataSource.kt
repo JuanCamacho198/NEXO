@@ -214,4 +214,10 @@ data class UserBookRow(
     // persists NULL for rows never written by the recovery protocol. Consumers
     // convert with `toIntOrNull()` and default to 1.
     @SerialName("protocol_version") val protocolVersion: String? = null,
+    // Addon provenance (v3 protocol). Null on every row synced before it, and
+    // on books imported from device storage. `source_item_id` carries the frozen
+    // addon-namespaced id (e.g. `gutenberg:1342`); never renamed after 3.0.0.
+    @SerialName("source_addon_id") val sourceAddonId: String? = null,
+    @SerialName("source_item_id") val sourceItemId: String? = null,
+    val isbn13: String? = null,
 )

@@ -10,6 +10,11 @@ export type BookDto = {
   createdAt: string;
   updatedAt: string;
   genre?: string | null;
+  /** Addon that delivered this book; null for books imported from disk. */
+  sourceAddonId?: string | null;
+  /** Addon-namespaced item id (e.g. `gutenberg:1342`); frozen after protocol 3.0.0. */
+  sourceItemId?: string | null;
+  isbn13?: string | null;
 };
 
 export type ReadingProgressDto = {

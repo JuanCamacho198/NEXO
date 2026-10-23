@@ -790,6 +790,9 @@ class SupabaseBookCatalogSync(
             remotePath = remotePath,
             coverObjectPath = remoteCoverRef,
             protocolVersion = (remoteProtocolVersion ?: 1).toString(),
+            sourceAddonId = sourceAddonId,
+            sourceItemId = sourceItemId,
+            isbn13 = isbn13,
         )
     }
 

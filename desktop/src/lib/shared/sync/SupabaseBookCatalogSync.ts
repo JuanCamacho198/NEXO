@@ -50,6 +50,10 @@ export interface SupabaseUserBookRow {
   coverObjectPath?: string | null;
   coverHash?: string | null;
   coverMediaType?: string | null;
+  /** Addon provenance (v3 protocol). Null for books imported from disk. */
+  sourceAddonId?: string | null;
+  sourceItemId?: string | null;
+  isbn13?: string | null;
 }
 export type CatalogChangeCallback = (row: SupabaseUserBookRow) => void;
 
@@ -218,6 +222,9 @@ export class SupabaseBookCatalogSync {
         cover_object_path: book.coverObjectPath ?? null,
         cover_hash: book.coverHash ?? null,
         cover_media_type: book.coverMediaType ?? null,
+        source_addon_id: book.sourceAddonId ?? null,
+        source_item_id: book.sourceItemId ?? null,
+        isbn13: book.isbn13 ?? null,
       },
       {
         onConflict: 'user_id, id',
@@ -441,6 +448,9 @@ export class SupabaseBookCatalogSync {
       coverObjectPath: row.cover_object_path != null ? String(row.cover_object_path) : null,
       coverHash: row.cover_hash != null ? String(row.cover_hash) : null,
       coverMediaType: row.cover_media_type != null ? String(row.cover_media_type) : null,
+      sourceAddonId: row.source_addon_id != null ? String(row.source_addon_id) : null,
+      sourceItemId: row.source_item_id != null ? String(row.source_item_id) : null,
+      isbn13: row.isbn13 != null ? String(row.isbn13) : null,
     };
   }
 }
