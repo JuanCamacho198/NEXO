@@ -7,7 +7,6 @@ import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingStatsDao
 import com.nexo.data.local.dao.StoredBookPath
-import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.ReadingProgressEntity
 import com.nexo.data.local.entity.ReadingStatsEntity
@@ -198,8 +197,7 @@ class BookProvenanceTest {
         private val booksState = MutableStateFlow<List<BookEntity>>(emptyList())
         var lastUpserted: BookEntity? = null
 
-        override fun observeAllBooks(): Flow<List<BookEntity>> =
-            booksState.map { books -> books.filter { it.deletedAtEpochMillis == null } }
+        override fun observeAllBooks(): Flow<List<BookEntity>> = booksState.map { books -> books.filter { it.deletedAtEpochMillis == null } }
 
         override fun observeReadingBooks(): Flow<List<BookEntity>> = observeAllBooks()
 
