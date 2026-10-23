@@ -117,6 +117,27 @@ val sentryProject = "nexo-android"
 val releaseKeystoreBase64 = System.getenv("ANDROID_KEYSTORE_BASE64") ?: ""
 val useReleaseSigning = releaseKeystoreBase64.isNotEmpty()
 
+// Stremio-shaped addon protocol Task 11: the shared conformance corpus under
+// `packages/addon-protocol/test/fixtures/conformance/` is the cross-platform
+// contract. The unit tests read those exact files (no Kotlin copy), so a
+// divergence between the TypeScript implementation and this port fails here.
+// Sync copies the corpus under the test resources root instead of pointing a
+// source dir at the sibling package, which keeps the module buildable on its own.
+val addonConformanceCorpusSource =
+    rootProject.projectDir.parentFile.resolve("packages/addon-protocol/test/fixtures/conformance")
+val syncAddonConformanceCorpus by tasks.registering(Sync::class) {
+    description = "Copies the shared addon protocol conformance corpus into generated unit-test resources"
+    from(addonConformanceCorpusSource)
+    into(layout.buildDirectory.dir("generated/addon-conformance/conformance"))
+}
+
+// The resource root has to be populated before any task consumes the `test`
+// source set's resources, and before the tests themselves run.
+tasks.withType(Test::class).configureEach { dependsOn(syncAddonConformanceCorpus) }
+tasks.matching { it.name.startsWith("process") && it.name.endsWith("UnitTestJavaRes") }.configureEach {
+    dependsOn(syncAddonConformanceCorpus)
+}
+
 android {
     namespace = "com.nexo"
     compileSdk = 36
@@ -343,6 +364,9 @@ android {
     sourceSets {
         getByName("androidTest").assets.srcDirs("$projectDir/schemas")
         getByName("test").assets.srcDirs("$projectDir/schemas")
+        // Stremio-shaped addon protocol Task 11: generated root holding the
+        // shared conformance corpus copied by `syncAddonConformanceCorpus`.
+        getByName("test").resources.srcDir(layout.buildDirectory.dir("generated/addon-conformance"))
     }
 }
 
