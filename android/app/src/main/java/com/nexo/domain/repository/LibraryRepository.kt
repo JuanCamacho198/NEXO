@@ -70,6 +70,16 @@ interface LibraryRepository {
         author: String?,
     ): Book? = null
 
+    /**
+     * Ownership lookup for addon sources: returns the active library book that
+     * carries [sourceItemId] (the frozen protocol id, e.g. `gutenberg:1342`),
+     * or `null` when the library does not own it yet.
+     *
+     * Default `null` keeps lightweight fakes and partial implementations
+     * compiling; the production repository overrides it.
+     */
+    suspend fun findOwned(sourceItemId: String): Book? = null
+
     suspend fun startReading(bookId: String): Result<Unit> = Result.success(Unit)
 
     suspend fun updateReadingProgress(

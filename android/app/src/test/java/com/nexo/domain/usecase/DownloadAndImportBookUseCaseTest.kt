@@ -112,6 +112,7 @@ class DownloadAndImportBookUseCaseTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
             coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns importedBook()
+            coEvery { repo.findOwned(any()) } returns null
             val downloader = FakeDownloader()
             val importUseCase = mockk<ImportEpubBookUseCase>()
             val tempDir = tempFolder.newFolder("catalog")
@@ -124,11 +125,33 @@ class DownloadAndImportBookUseCaseTest {
         }
 
     @Test
+    fun ownedItemPreCheck_emitsDuplicate_andNeverTouchesTheNetwork() =
+        runTest {
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val repo = mockk<LibraryRepository>()
+            // Title/author differ from the library copy: only the item id proves ownership.
+            coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns null
+            coEvery { repo.findOwned(any()) } returns importedBook().copy(sourceItemId = "gutendex:1342")
+            val downloader = FakeDownloader()
+            val importUseCase = mockk<ImportEpubBookUseCase>()
+            val tempDir = tempFolder.newFolder("catalog")
+
+            val states = useCase(downloader, importUseCase, repo, tempDir, dispatcher)(catalogBook()).toList()
+
+            assertTrue(states.last() is DownloadImportState.Duplicate)
+            assertTrue(states.none { it is DownloadImportState.Failure })
+            assertEquals(0, downloader.invocations)
+            coVerify(exactly = 0) { importUseCase.invoke(any(), any()) }
+            coVerify { repo.findOwned("gutendex:1342") }
+        }
+
+    @Test
     fun success_emitsIdleDownloadingImportingSuccess() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
             coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns null
+            coEvery { repo.findOwned(any()) } returns null
             val downloader = FakeDownloader()
             val importUseCase = mockk<ImportEpubBookUseCase>()
             coEvery { importUseCase.invoke(any(), any()) } returns Result.success(importedBook())
@@ -152,6 +175,7 @@ class DownloadAndImportBookUseCaseTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
             coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns null
+            coEvery { repo.findOwned(any()) } returns null
             val downloader = FakeDownloader(failAtChunk = 1)
             val importUseCase = mockk<ImportEpubBookUseCase>()
             val tempDir = tempFolder.newFolder("catalog")
@@ -172,6 +196,7 @@ class DownloadAndImportBookUseCaseTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
             coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns null
+            coEvery { repo.findOwned(any()) } returns null
             val downloader = FakeDownloader(hangAfterFirstChunk = true)
             val importUseCase = mockk<ImportEpubBookUseCase>()
             val tempDir = tempFolder.newFolder("catalog")
@@ -198,6 +223,7 @@ class DownloadAndImportBookUseCaseTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
             coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns null
+            coEvery { repo.findOwned(any()) } returns null
             val downloader = FakeDownloader()
             val importUseCase = mockk<ImportEpubBookUseCase>()
             coEvery { importUseCase.invoke(any(), any()) } returns Result.failure(DuplicateBookException())
@@ -215,6 +241,7 @@ class DownloadAndImportBookUseCaseTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
             coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns null
+            coEvery { repo.findOwned(any()) } returns null
             val downloader = FakeDownloader()
             val importUseCase = mockk<ImportEpubBookUseCase>()
             coEvery { importUseCase.invoke(any(), any()) } returns Result.success(importedBook())

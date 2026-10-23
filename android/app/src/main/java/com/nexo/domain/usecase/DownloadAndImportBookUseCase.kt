@@ -4,6 +4,7 @@ import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogException
 import com.nexo.data.remote.catalog.CatalogFileDownloader
+import com.nexo.data.remote.catalog.addonSourceIdOf
 import com.nexo.data.sync.DriveFilename
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.BookImportRequest
@@ -81,6 +82,17 @@ class DownloadAndImportBookUseCase(
                 return@channelFlow
             }
 
+            // Ownership pre-check: the frozen protocol id proves ownership even
+            // when the addon rewrote the title or author metadata.
+            val owned =
+                withContext(ioDispatcher) {
+                    libraryRepository.findOwned(book.id)
+                }
+            if (owned != null) {
+                send(DownloadImportState.Duplicate(DUPLICATE_MESSAGE))
+                return@channelFlow
+            }
+
             // Cheap pre-check: never touch the network for a book already owned.
             val existing =
                 withContext(ioDispatcher) {
@@ -123,7 +135,17 @@ class DownloadAndImportBookUseCase(
                 send(DownloadImportState.Importing)
                 val result =
                     importEpubBookUseCase(
-                        request = BookImportRequest(sourcePath = finalFile.path, fallbackTitle = book.title),
+                        request =
+                            BookImportRequest(
+                                sourcePath = finalFile.path,
+                                fallbackTitle = book.title,
+                                // Provenance: the addon id is null for first-party
+                                // catalog sources, the item id is always the
+                                // namespaced catalog id used by the pre-checks.
+                                sourceAddonId = addonSourceIdOf(book.provider),
+                                sourceItemId = book.id,
+                                isbn13 = book.isbn13,
+                            ),
                         inputStreamProvider = { finalFile.inputStream() },
                     )
                 result.fold(

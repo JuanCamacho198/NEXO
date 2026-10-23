@@ -125,6 +125,9 @@ class LibraryRepositoryImpl(
                     publisher = metadata.publisher,
                     tags = metadata.tags.joinToString(", ").takeIf { it.isNotBlank() },
                     publishedDate = metadata.publishedDate,
+                    sourceAddonId = request.sourceAddonId,
+                    sourceItemId = request.sourceItemId,
+                    isbn13 = request.isbn13,
                     updatedAtEpochMillis = now,
                 )
 
@@ -164,6 +167,9 @@ class LibraryRepositoryImpl(
                     filePath = request.sourcePath,
                     format = PDF_FORMAT,
                     totalPages = metadata.pageCount,
+                    sourceAddonId = request.sourceAddonId,
+                    sourceItemId = request.sourceItemId,
+                    isbn13 = request.isbn13,
                     updatedAtEpochMillis = now,
                 )
 
@@ -193,6 +199,15 @@ class LibraryRepositoryImpl(
                                 .equals(requestedAuthor, ignoreCase = true)
                     )
             }?.toDomain()
+    }
+
+    override suspend fun findOwned(sourceItemId: String): Book? {
+        if (sourceItemId.isBlank()) return null
+        return bookDao
+            .observeAllBooks()
+            .first()
+            .firstOrNull { it.sourceItemId == sourceItemId }
+            ?.toDomain()
     }
 
     override suspend fun startReading(bookId: String): Result<Unit> =
