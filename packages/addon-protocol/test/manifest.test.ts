@@ -145,6 +145,16 @@ describe('parseManifestV3', () => {
     expect(parsed.nexo).toEqual(nexo);
   });
 
+  it('rejects a nexo.shape that no reader in this build can serve', () => {
+    // Both were once declared. Nothing parses them, so selecting either would
+    // install an addon that contributes nothing: the wire name is now unknown.
+    for (const shape of ['standard-ebooks', 'librivox']) {
+      const code = errorCodeOf(() => parse(manifest({ nexo: { shape } })));
+
+      expect(code).toBe(AddonFetchErrorCode.INVALID_MANIFEST);
+    }
+  });
+
   it('rejects a nexo object over 8 KiB', () => {
     const templates: Record<string, string> = {};
     for (let index = 0; index < 6; index += 1) {
@@ -239,14 +249,7 @@ describe('constants', () => {
       'librivox:',
     ]);
     expect([...EXTRA_NAMES]).toEqual(['search', 'skip', 'genre', 'lang']);
-    expect([...SHAPES]).toEqual([
-      'raw',
-      'gutendex',
-      'openlibrary',
-      'standard-ebooks',
-      'librivox',
-      'legacy-v2',
-    ]);
+    expect([...SHAPES]).toEqual(['raw', 'gutendex', 'openlibrary', 'legacy-v2']);
     expect(MAX_NEXO_CHARS).toBe(8 * 1024);
   });
 });

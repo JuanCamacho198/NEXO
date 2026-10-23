@@ -154,12 +154,6 @@ describe('parseCatalogPayload', () => {
     });
   });
 
-  it('contributes nothing for a shape this build does not implement', () => {
-    for (const shape of ['standard-ebooks', 'librivox'] as const) {
-      expect(parseCatalogPayload(loadFixture('catalog-raw'), shape)).toEqual({ metas: [], skipped: 0 });
-    }
-  });
-
   it('reads a legacy-v2 catalog payload through its shape', () => {
     const { metas, skipped } = parseCatalogPayload(loadFixture('legacy-v2-catalog'), 'legacy-v2');
 

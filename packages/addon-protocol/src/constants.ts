@@ -26,14 +26,7 @@ export const EXTRA_NAMES = ['search', 'skip', 'genre', 'lang'] as const;
  * Client-bundled payload adapters. Shapes are explicitly not portable: they are
  * the price of supporting third-party APIs that will never speak the protocol.
  */
-export const SHAPES = [
-  'raw',
-  'gutendex',
-  'openlibrary',
-  'standard-ebooks',
-  'librivox',
-  'legacy-v2',
-] as const;
+export const SHAPES = ['raw', 'gutendex', 'openlibrary', 'legacy-v2'] as const;
 
 /** `nexo` is NEXO-only, and is capped so it can never bloat the manifest. */
 export const MAX_NEXO_CHARS = 8 * 1024;

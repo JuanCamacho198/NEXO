@@ -110,7 +110,7 @@ omitted or empty, which is how a stream-only addon is declared.
 | `nexo.homepage` | no | HTTPS URL, at most 2048 chars |
 | `nexo.license` | no | non-empty string, at most 2048 chars |
 | `nexo.templates` | no | at most 16 entries; key at most 64 chars; value an HTTPS URL at most 2048 chars |
-| `nexo.shape` | no | one of `raw`, `gutendex`, `openlibrary`, `standard-ebooks`, `librivox`, `legacy-v2` |
+| `nexo.shape` | no | one of `raw`, `gutendex`, `openlibrary`, `legacy-v2` |
 | `nexo` | no | the serialized object must be at most 8192 chars |
 
 `resources` must be non-empty even when every request is served by a template. A
@@ -358,13 +358,17 @@ therefore does not make that third party able to serve files.
 | `raw` | envelope | envelope | envelope |
 | `gutendex` | Gutendex `/books` (`results[]`) | Gutendex `/books/{id}` | envelope |
 | `openlibrary` | Open Library search (`docs[]`) | Open Library work | envelope |
-| `standard-ebooks` | no adapter in this revision | no adapter | envelope |
-| `librivox` | no adapter in this revision | no adapter | envelope |
 | `legacy-v2` | v2 `results[]` book list | v2 book object | envelope |
 
-An addon whose shape has no adapter declares successfully and produces nothing through
-the protocol path. Do not pick a shape you are not matching: a mismatched shape reads as
-empty, not as an error.
+That table is the whole set. A name outside it is not a shape: the manifest fails with
+`ADDON_FETCH_INVALID_MANIFEST` and nothing is installed. Do not pick a shape you are not
+matching either: a mismatched shape reads as empty, not as an error.
+
+`standard-ebooks` and `librivox` are planned, not supported. No build ships a reader for
+either, so neither is in the set, and a manifest that names one is rejected at install with
+`ADDON_FETCH_INVALID_MANIFEST` — the same answer an invented name gets. Until a revision
+adds those readers, serve those upstreams with `nexo.templates` (section 5) or answer the
+protocol routes yourself with a `raw` envelope.
 
 The `legacy-v2` adapter reads the format the installed v2 addons already serve:
 `searchUrl` answers `{ "results": [book…], "totalCount": n }` and `detailsUrl` answers a

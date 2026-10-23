@@ -19,12 +19,6 @@ const MAX_STRING_CHARS = 2048;
 const MAX_METAS = 200;
 const MAX_STREAMS = 100;
 
-/**
- * Declared shapes with no reader in this build. Clients never route these
- * addons, so the parser contributes nothing rather than counting a failure.
- */
-const UNREADABLE_SHAPES: ReadonlySet<string> = new Set(['standard-ebooks', 'librivox']);
-
 const ACCESS_TYPES = ['public-domain', 'borrow', 'purchase'] as const;
 const HTTP_PROTOCOLS = ['http:', 'https:'];
 
@@ -158,10 +152,9 @@ function capMetas(candidates: MetaPreview[], skipped: number): CatalogPayload {
 }
 
 /**
- * `shape` selects the named adapter. `"raw"` is the Stremio envelope;
- * `standard-ebooks` and `librivox` have no reader in this build and contribute
- * nothing rather than failing the fan-out. A shape nobody declared counts one
- * unreadable payload, the same as a malformed envelope.
+ * `shape` selects the named adapter. `"raw"` is the Stremio envelope. A shape
+ * outside the closed set counts one unreadable payload, the same as a malformed
+ * envelope.
  */
 export function parseCatalogPayload(body: unknown, shape: AddonShape): CatalogPayload {
   if (shape === 'gutendex') {
@@ -176,7 +169,6 @@ export function parseCatalogPayload(body: unknown, shape: AddonShape): CatalogPa
     const shaped = shapeLegacyV2Catalog(body);
     return capMetas(shaped.metas, shaped.skipped);
   }
-  if (UNREADABLE_SHAPES.has(shape)) return { metas: [], skipped: 0 };
   if (shape !== 'raw') return { metas: [], skipped: 1 };
 
   const entries = readEnvelopeList(body, 'metas');
