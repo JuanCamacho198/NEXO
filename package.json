@@ -14,6 +14,7 @@
     "install:all": "bun install",
     "test:desktop": "bun run --cwd desktop test",
     "test:validator": "bun run --cwd packages/manifest-validator test",
+    "test:protocol": "bun run --cwd packages/addon-protocol test",
     "build:web": "bun run --cwd web build"
   }
 }

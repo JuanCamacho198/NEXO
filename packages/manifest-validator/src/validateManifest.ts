@@ -13,6 +13,8 @@ export const AddonFetchErrorCode = {
   BAD_CONTENT_TYPE: 'ADDON_FETCH_BAD_CONTENT_TYPE',
   INVALID_MANIFEST: 'ADDON_FETCH_INVALID_MANIFEST',
   NETWORK: 'ADDON_FETCH_NETWORK',
+  /** Reserved protocol types (`audiobook`, `comic`) are declared but not implemented. */
+  UNSUPPORTED_TYPE: 'ADDON_FETCH_UNSUPPORTED_TYPE',
 } as const;
 
 export type AddonFetchErrorCode = (typeof AddonFetchErrorCode)[keyof typeof AddonFetchErrorCode];
