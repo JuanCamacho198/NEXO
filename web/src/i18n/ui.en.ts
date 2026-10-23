@@ -141,7 +141,7 @@ export const messagesEn = {
     'Use the pre-filled template link to open a submission issue with the manifest URL, the name, the Spanish and English descriptions, and the category.',
   'submit.step3Title': 'Pass automated validation',
   'submit.step3Sub':
-    'Automated validation checks HTTPS, valid JSON up to 64 KB, and the manifest shape (id, name, version, catalogs, resources). An unreachable host is reported as advisory only: reachability never marks a manifest invalid.',
+    'Automated validation checks HTTPS, valid JSON up to 64 KB, and the manifest shape (id, name, version, types, catalogs, resources). An unreachable host is reported as advisory only: reachability never marks a manifest invalid.',
   'submit.step4Title': 'Maintainer review',
   'submit.step4Sub':
     'A maintainer approves or declines the proposal. On approval the addon lands in addons.json and shows up in the catalog; there is no guaranteed timeline.',
@@ -150,29 +150,25 @@ export const messagesEn = {
     'Community addons install from the app with a nextpage://install?url=… link pointing at the HTTPS manifest URL.',
   'submit.templateTitle': 'Starter template',
   'submit.templateDesc':
-    'Copy the template: it is the exact minimal shape the validator enforces (id, name, version, catalogs, resources). The optional searchUrl, detailsUrl and resolveUrl endpoints are HTTPS-only with placeholders such as {query} or {bookId}, and capabilities is an optional list.',
+    'Copy the template: it is the exact minimal v3 manifest the validator enforces (id, name, version, types, catalogs, resources). An addon that cannot serve the protocol routes declares nexo.templates plus a nexo.shape instead; templates are HTTPS-only and use placeholders such as {search} or {id}.',
   'submit.templateFile': 'mi-addon.json',
   'submit.copyButton': 'Copy',
   'submit.copied': 'Copied',
   'submit.docsCta': 'Read the manifest spec',
   'submit.contribGuideCta': 'Contribution guide',
   'docs.badge': 'DOCUMENTATION',
-  'docs.title': 'Manifest spec',
+  'docs.title': 'Addon manifest v3',
   'docs.subtitle': 'Every addon is a JSON file that passes the local validator before publishing.',
-  'docs.tableTitle': 'Manifest fields',
-  'docs.colField': 'FIELD',
-  'docs.colType': 'TYPE',
-  'docs.colRequired': 'REQUIRED',
-  'docs.colDesc': 'DESCRIPTION',
-  'docs.requiredYes': 'Yes',
-  'docs.requiredNo': 'No',
-  'docs.fieldDesc.id': 'Unique identifier, kebab-case. Eg: gutendex.',
-  'docs.fieldDesc.name': 'Human-visible addon name.',
-  'docs.fieldDesc.version': 'SemVer version. Bump it on every change.',
-  'docs.fieldDesc.catalogs': 'Entries {type, id, name}; non-empty, max 16.',
-  'docs.fieldDesc.resources': 'Resources such as search or book-details; non-empty, max 16.',
-  'docs.fieldDesc.searchUrl': 'Optional catalog endpoint template ({query}, {page}); HTTPS only.',
-  'docs.fieldDesc.detailsUrl': 'Optional detail endpoint template ({bookId}); HTTPS only.',
+  'docs.v3Title': 'Manifest v3 at a glance',
+  'docs.v3Summary1':
+    'types is required and holds "book". Other declared types install successfully and contribute nothing.',
+  'docs.v3Summary2':
+    'catalogs holds {type: "book", id, name} entries and may be empty for a stream-only addon. extra declares search and skip.',
+  'docs.v3Summary3':
+    'resources is required and names catalog, meta or stream. A stream addon asks for consent before any fetch.',
+  'docs.v3Summary4':
+    'An API that cannot serve these routes uses nexo.templates for the URL and a nexo.shape for the response.',
+  'docs.v3DocCta': 'Read the full protocol',
   'docs.rulesTitle': 'Validation rules',
   'docs.ruleSizeTitle': '64 KB max',
   'docs.ruleSizeSub': 'The JSON must not exceed 64 KiB uncompressed.',
@@ -183,7 +179,7 @@ export const messagesEn = {
   'docs.ruleParseSub': 'The manifest must parse as UTF-8 JSON and be an object.',
   'docs.ruleShapeTitle': 'Valid shape',
   'docs.ruleShapeSub':
-    'Non-empty catalogs and resources (max 16 each); catalog fields up to 512 chars, resources up to 64, endpoints up to 2048.',
+    'types and resources are required (max 16 entries each); catalogs may be empty for a stream-only addon; catalog fields up to 512 chars, resources up to 64, templates up to 2048.',
   'docs.ruleOrderTitle': 'Fixed order',
   'docs.ruleOrderSub': 'Validation runs in order: size, content-type, parse, then shape.',
   'docs.ruleUnknownTitle': 'Unknown fields',
@@ -191,7 +187,7 @@ export const messagesEn = {
   'docs.checklistTitle': 'Publishing checklist',
   'docs.ruleCodesTitle': 'Error codes',
   'docs.ruleCodesSub':
-    'The validator returns stable codes: ADDON_FETCH_HTTPS_REQUIRED, ADDON_FETCH_TOO_LARGE, ADDON_FETCH_BAD_CONTENT_TYPE, ADDON_FETCH_INVALID_MANIFEST, ADDON_FETCH_NETWORK.',
+    'The validator returns stable codes: ADDON_FETCH_HTTPS_REQUIRED, ADDON_FETCH_TOO_LARGE, ADDON_FETCH_BAD_CONTENT_TYPE, ADDON_FETCH_INVALID_MANIFEST, ADDON_FETCH_UNSUPPORTED_TYPE, ADDON_FETCH_NETWORK.',
   'docs.check1': 'The JSON passes the local validator.',
   'docs.check2': 'Endpoints respond and use HTTPS.',
   'docs.check3': 'I tried search and detail in NEXO.',
@@ -208,7 +204,9 @@ export const messagesEn = {
   'docs.approvalGateType':
     'BAD_CONTENT_TYPE: the content-type must be application/json or end in +json.',
   'docs.approvalGateShape':
-    'INVALID_MANIFEST: the JSON does not parse as a UTF-8 object or misses the required shape (non-empty id, name, version, catalogs and resources; optional searchUrl, detailsUrl and resolveUrl are HTTPS-only up to 2048 chars; optional capabilities up to 16 entries).',
+    'INVALID_MANIFEST: the JSON does not parse as a UTF-8 object or misses the required shape (non-empty id, name, version, types and resources; catalogs may be empty; nexo.templates are HTTPS-only up to 2048 chars).',
+  'docs.approvalGateUnsupportedType':
+    'UNSUPPORTED_TYPE: the manifest declares a reserved type (audiobook, comic) that NEXO does not implement yet.',
   'docs.approvalNetwork':
     'NETWORK: the manifest could not be reached (network error, timeout, or non-2xx HTTP). It is reported as advisory and never conflated with an invalid manifest.',
   'docs.approvalLanding':

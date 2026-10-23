@@ -1,6 +1,6 @@
 ---
 import type { AddonAvailability, AddonSeed } from '@/data/addons';
-import { catalogHref } from '@/data/addons';
+import { catalogHref, toManifestV3 } from '@/data/addons';
 import { t, type UiLocale } from '@/i18n';
 import AddonIcon from '@/components/AddonIcon.astro';
 
@@ -40,17 +40,7 @@ const langLabel =
     ? t(locale, 'catalog.langMulti')
     : t(locale, addon.languages[0] === 'es' ? 'catalog.langEs' : 'catalog.langEn');
 
-const manifestJson = JSON.stringify(
-  {
-    id: addon.id,
-    name: addon.name,
-    version: addon.version,
-    catalogs: addon.catalogs,
-    resources: addon.resources,
-  },
-  null,
-  2,
-);
+const manifestJson = JSON.stringify(toManifestV3(addon), null, 2);
 ---
 
 <div class="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-12" data-detail-root>

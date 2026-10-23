@@ -128,4 +128,8 @@ jobs:
             web/public/robots.txt
 
       - name: Validate manifests
-        run: bun run --cwd packages/manifest-validator test
+        # v2 stays for v2 clients; the v3 package owns the registry contract
+        # (`test/registry.test.ts` parses web/public/catalog.json), so both run.
+        run: |
+          bun run --cwd packages/manifest-validator test
+          bun run --cwd packages/addon-protocol test

@@ -14,34 +14,18 @@ const gates = [
   t(locale, 'docs.approvalGateSize'),
   t(locale, 'docs.approvalGateType'),
   t(locale, 'docs.approvalGateShape'),
+  t(locale, 'docs.approvalGateUnsupportedType'),
 ];
 
-const yes = t(locale, 'docs.requiredYes');
-const no = t(locale, 'docs.requiredNo');
+const protocolDocHref = 'https://github.com/JuanCamacho198/NEXO/blob/main/docs/addon-protocol.md';
 
-const fields = [
-  { name: 'id', type: 'string', required: yes, desc: t(locale, 'docs.fieldDesc.id') },
-  { name: 'name', type: 'string', required: yes, desc: t(locale, 'docs.fieldDesc.name') },
-  { name: 'version', type: 'string', required: yes, desc: t(locale, 'docs.fieldDesc.version') },
-  {
-    name: 'catalogs',
-    type: 'AddonCatalogEntry[]',
-    required: yes,
-    desc: t(locale, 'docs.fieldDesc.catalogs'),
-  },
-  {
-    name: 'resources',
-    type: 'string[]',
-    required: yes,
-    desc: t(locale, 'docs.fieldDesc.resources'),
-  },
-  { name: 'searchUrl', type: 'string?', required: no, desc: t(locale, 'docs.fieldDesc.searchUrl') },
-  {
-    name: 'detailsUrl',
-    type: 'string?',
-    required: no,
-    desc: t(locale, 'docs.fieldDesc.detailsUrl'),
-  },
+// Summary only: the full protocol lives in docs/addon-protocol.md, so this page
+// states the shape and links out instead of restating a contract it would drift from.
+const summary = [
+  t(locale, 'docs.v3Summary1'),
+  t(locale, 'docs.v3Summary2'),
+  t(locale, 'docs.v3Summary3'),
+  t(locale, 'docs.v3Summary4'),
 ];
 
 const rules = [
@@ -78,38 +62,21 @@ const checklist = [
   <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
     <div class="flex flex-col gap-12 lg:col-span-2">
       <section class="flex flex-col gap-4">
-        <h2 class="font-serif text-3xl font-bold text-text-primary">
-          {t(locale, 'docs.tableTitle')}
-        </h2>
-        <div class="overflow-x-auto rounded-xl border border-border-subtle bg-surface-1">
-          <table class="w-full min-w-[560px] border-collapse text-left text-sm">
-            <thead>
-              <tr class="border-b border-border-subtle">
-                <th class="px-4 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-text-muted">
-                  {t(locale, 'docs.colField')}
-                </th>
-                <th class="px-4 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-text-muted">
-                  {t(locale, 'docs.colType')}
-                </th>
-                <th class="px-4 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-text-muted">
-                  {t(locale, 'docs.colRequired')}
-                </th>
-                <th class="px-4 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-text-muted">
-                  {t(locale, 'docs.colDesc')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {fields.map((f) => (
-                <tr class="border-b border-border-subtle last:border-0">
-                  <td class="px-4 py-3 font-mono text-xs text-accent">{f.name}</td>
-                  <td class="px-4 py-3 font-mono text-xs text-text-primary">{f.type}</td>
-                  <td class="px-4 py-3 text-sm text-text-secondary">{f.required}</td>
-                  <td class="px-4 py-3 text-sm text-text-secondary">{f.desc}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <h2 class="font-serif text-3xl font-bold text-text-primary">{t(locale, 'docs.v3Title')}</h2>
+        <ul class="flex flex-col gap-3">
+          {summary.map((item) => (
+            <li class="rounded-xl border border-border-subtle bg-surface-1 px-4 py-3">
+              <p class="font-mono text-xs leading-relaxed text-text-secondary">{item}</p>
+            </li>
+          ))}
+        </ul>
+        <div>
+          <a
+            href={protocolDocHref}
+            class="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-6 py-2.5 font-sans text-sm font-semibold text-text-primary transition hover:border-accent hover:text-accent"
+          >
+            {t(locale, 'docs.v3DocCta')}
+          </a>
         </div>
       </section>
 

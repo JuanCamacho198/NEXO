@@ -22,9 +22,23 @@ const templateJson = JSON.stringify(
   {
     id: 'mi-addon',
     name: 'Mi Addon',
-    version: '1.0.0',
-    catalogs: [{ type: 'book-catalog', id: 'mi-addon', name: 'Mi Addon' }],
-    resources: ['search'],
+    version: '3.0.0',
+    types: ['book'],
+    catalogs: [
+      {
+        type: 'book',
+        id: 'mi-addon',
+        name: 'Mi Addon',
+        extra: [
+          { name: 'search', isRequired: false },
+          { name: 'skip', isRequired: false },
+        ],
+      },
+    ],
+    resources: [
+      { name: 'catalog', types: ['book'] },
+      { name: 'meta', types: ['book'] },
+    ],
   },
   null,
   2,

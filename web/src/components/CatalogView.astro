@@ -59,14 +59,14 @@ const facetLangs = [
 
 const facetCaps = [
   {
-    value: 'search',
+    value: 'catalog',
     label: t(locale, 'catalog.filter.capSearch'),
-    count: catalogAddons.filter((a) => a.resources.includes('search')).length,
+    count: catalogAddons.filter((a) => a.resources.some((r) => r.name === 'catalog')).length,
   },
   {
-    value: 'book-details',
+    value: 'meta',
     label: t(locale, 'catalog.filter.capDetails'),
-    count: catalogAddons.filter((a) => a.resources.includes('book-details')).length,
+    count: catalogAddons.filter((a) => a.resources.some((r) => r.name === 'meta')).length,
   },
 ];
 

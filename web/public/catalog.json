@@ -6,6 +6,9 @@
       "id": "gutendex",
       "name": "Gutendex",
       "version": "1.0.0",
+      "types": [
+        "book"
+      ],
       "author": "Project Gutenberg",
       "license": "Dominio público",
       "languages": [
@@ -21,15 +24,78 @@
       },
       "catalogs": [
         {
-          "type": "book-catalog",
+          "type": "book",
           "id": "gutendex",
-          "name": "Project Gutenberg (via Gutendex)"
+          "name": "Project Gutenberg (via Gutendex)",
+          "extra": [
+            {
+              "name": "search",
+              "isRequired": false
+            },
+            {
+              "name": "skip",
+              "isRequired": false
+            }
+          ]
         }
       ],
       "resources": [
-        "search",
-        "book-details"
+        {
+          "name": "catalog",
+          "types": [
+            "book"
+          ]
+        },
+        {
+          "name": "meta",
+          "types": [
+            "book"
+          ]
+        }
       ],
+      "manifest": {
+        "id": "gutendex",
+        "name": "Gutendex",
+        "version": "1.0.0",
+        "types": [
+          "book"
+        ],
+        "catalogs": [
+          {
+            "type": "book",
+            "id": "gutendex",
+            "name": "Project Gutenberg (via Gutendex)",
+            "extra": [
+              {
+                "name": "search",
+                "isRequired": false
+              },
+              {
+                "name": "skip",
+                "isRequired": false
+              }
+            ]
+          }
+        ],
+        "resources": [
+          {
+            "name": "catalog",
+            "types": [
+              "book"
+            ]
+          },
+          {
+            "name": "meta",
+            "types": [
+              "book"
+            ]
+          }
+        ],
+        "description": "Over 70,000 free ebooks from Project Gutenberg, with search and full details.",
+        "idPrefixes": [
+          "gutenberg:"
+        ]
+      },
       "detailUrl": {
         "es": "https://nexo-addons.jcamachomolina503.workers.dev/catalogo/gutendex",
         "en": "https://nexo-addons.jcamachomolina503.workers.dev/en/catalog/gutendex"
@@ -39,6 +105,9 @@
       "id": "openlibrary",
       "name": "Open Library",
       "version": "1.0.0",
+      "types": [
+        "book"
+      ],
       "author": "Internet Archive",
       "license": "Mixta abierta",
       "languages": [
@@ -54,14 +123,66 @@
       },
       "catalogs": [
         {
-          "type": "book-catalog",
+          "type": "book",
           "id": "openlibrary",
-          "name": "Open Library"
+          "name": "Open Library",
+          "extra": [
+            {
+              "name": "search",
+              "isRequired": false
+            },
+            {
+              "name": "skip",
+              "isRequired": false
+            }
+          ]
         }
       ],
       "resources": [
-        "search"
+        {
+          "name": "catalog",
+          "types": [
+            "book"
+          ]
+        }
       ],
+      "manifest": {
+        "id": "openlibrary",
+        "name": "Open Library",
+        "version": "1.0.0",
+        "types": [
+          "book"
+        ],
+        "catalogs": [
+          {
+            "type": "book",
+            "id": "openlibrary",
+            "name": "Open Library",
+            "extra": [
+              {
+                "name": "search",
+                "isRequired": false
+              },
+              {
+                "name": "skip",
+                "isRequired": false
+              }
+            ]
+          }
+        ],
+        "resources": [
+          {
+            "name": "catalog",
+            "types": [
+              "book"
+            ]
+          }
+        ],
+        "description": "Millions of records and covers from the Internet Archive open library.",
+        "idPrefixes": [
+          "openlibrary:"
+        ]
+      },
       "detailUrl": {
         "es": "https://nexo-addons.jcamachomolina503.workers.dev/catalogo/openlibrary",
         "en": "https://nexo-addons.jcamachomolina503.workers.dev/en/catalog/openlibrary"

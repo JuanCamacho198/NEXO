@@ -3,10 +3,23 @@
     "id": "gutendex",
     "name": "Gutendex",
     "version": "1.0.0",
+    "types": ["book"],
     "catalogs": [
-      { "type": "book-catalog", "id": "gutendex", "name": "Project Gutenberg (via Gutendex)" }
+      {
+        "type": "book",
+        "id": "gutendex",
+        "name": "Project Gutenberg (via Gutendex)",
+        "extra": [
+          { "name": "search", "isRequired": false },
+          { "name": "skip", "isRequired": false }
+        ]
+      }
     ],
-    "resources": ["search", "book-details"],
+    "resources": [
+      { "name": "catalog", "types": ["book"] },
+      { "name": "meta", "types": ["book"] }
+    ],
+    "idPrefixes": ["gutenberg:"],
     "author": "Project Gutenberg",
     "license": "Dominio público",
     "languages": ["multi"],
@@ -25,8 +38,20 @@
     "id": "openlibrary",
     "name": "Open Library",
     "version": "1.0.0",
-    "catalogs": [{ "type": "book-catalog", "id": "openlibrary", "name": "Open Library" }],
-    "resources": ["search"],
+    "types": ["book"],
+    "catalogs": [
+      {
+        "type": "book",
+        "id": "openlibrary",
+        "name": "Open Library",
+        "extra": [
+          { "name": "search", "isRequired": false },
+          { "name": "skip", "isRequired": false }
+        ]
+      }
+    ],
+    "resources": [{ "name": "catalog", "types": ["book"] }],
+    "idPrefixes": ["openlibrary:"],
     "author": "Internet Archive",
     "license": "Mixta abierta",
     "languages": ["multi"],
@@ -45,8 +70,20 @@
     "id": "standard-ebooks",
     "name": "Standard Ebooks",
     "version": "1.0.0",
-    "catalogs": [{ "type": "book-catalog", "id": "standard-ebooks", "name": "Standard Ebooks" }],
-    "resources": ["search"],
+    "types": ["book"],
+    "catalogs": [
+      {
+        "type": "book",
+        "id": "standard-ebooks",
+        "name": "Standard Ebooks",
+        "extra": [
+          { "name": "search", "isRequired": false },
+          { "name": "skip", "isRequired": false }
+        ]
+      }
+    ],
+    "resources": [{ "name": "catalog", "types": ["book"] }],
+    "idPrefixes": ["standardebooks:"],
     "author": "Standard Ebooks",
     "license": "Dominio público",
     "languages": ["en"],
@@ -65,8 +102,20 @@
     "id": "librivox",
     "name": "LibriVox",
     "version": "1.0.0",
-    "catalogs": [{ "type": "book-catalog", "id": "librivox", "name": "LibriVox" }],
-    "resources": ["search"],
+    "types": ["book"],
+    "catalogs": [
+      {
+        "type": "book",
+        "id": "librivox",
+        "name": "LibriVox",
+        "extra": [
+          { "name": "search", "isRequired": false },
+          { "name": "skip", "isRequired": false }
+        ]
+      }
+    ],
+    "resources": [{ "name": "catalog", "types": ["book"] }],
+    "idPrefixes": ["librivox:"],
     "author": "LibriVox",
     "license": "Dominio público",
     "languages": ["multi"],
@@ -85,8 +134,19 @@
     "id": "wikisource",
     "name": "Wikisource",
     "version": "1.0.0",
-    "catalogs": [{ "type": "book-catalog", "id": "wikisource", "name": "Wikisource" }],
-    "resources": ["search"],
+    "types": ["book"],
+    "catalogs": [
+      {
+        "type": "book",
+        "id": "wikisource",
+        "name": "Wikisource",
+        "extra": [
+          { "name": "search", "isRequired": false },
+          { "name": "skip", "isRequired": false }
+        ]
+      }
+    ],
+    "resources": [{ "name": "catalog", "types": ["book"] }],
     "author": "Wikimedia",
     "license": "Mixta abierta",
     "languages": ["es"],
@@ -105,8 +165,19 @@
     "id": "faded-page",
     "name": "Faded Page",
     "version": "1.0.0",
-    "catalogs": [{ "type": "book-catalog", "id": "faded-page", "name": "Faded Page" }],
-    "resources": ["search"],
+    "types": ["book"],
+    "catalogs": [
+      {
+        "type": "book",
+        "id": "faded-page",
+        "name": "Faded Page",
+        "extra": [
+          { "name": "search", "isRequired": false },
+          { "name": "skip", "isRequired": false }
+        ]
+      }
+    ],
+    "resources": [{ "name": "catalog", "types": ["book"] }],
     "author": "Faded Page",
     "license": "Dominio público (CA)",
     "languages": ["en"],

@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
+    "@nexo/addon-protocol": "workspace:*",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@fontsource/source-serif-4": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",

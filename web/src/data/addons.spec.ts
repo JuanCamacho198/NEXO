@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { parseManifestV3, TYPE_BOOK } from '@nexo/addon-protocol';
+import { toManifestV3 } from '@/data/addons';
 import addonsData from '@/data/addons.json';
 import type {
   AddonAvailability,
@@ -36,6 +38,10 @@ const ICONS = [
 ] as const satisfies readonly AddonSeed['icon'][];
 
 const REQUIRED_STRINGS = ['id', 'name', 'version', 'author', 'license', 'updatedAt'] as const;
+
+// The closed resource set of the protocol. A seed entry naming anything else
+// would be published and then contribute nothing at install time.
+const PROTOCOL_RESOURCES = ['catalog', 'meta', 'stream', 'subtitles'] as const;
 
 // These entries describe sources that exist in the directory but whose upstream
 // catalog has NOT been proven to return results. Keeping them `planned` is the
@@ -134,21 +140,48 @@ describe('addons.json seed contract', () => {
     }
   });
 
-  it('resources is an array of non-empty strings', () => {
+  it('resources are v3 declarations: a name, optional types, optional idPrefixes', () => {
     for (const [index, addon] of addons.entries()) {
       const { resources } = addon;
       expect(Array.isArray(resources), `${where(addon, index)}.resources must be an array`).toBe(
         true,
       );
+      expect(
+        (resources as unknown[]).length,
+        `${where(addon, index)}.resources must declare at least one resource: an addon that ` +
+          'declares none can never contribute anything, so publishing it would be a lie',
+      ).toBeGreaterThan(0);
       for (const [resourceIndex, resource] of (resources as unknown[]).entries()) {
+        const entry = resource as Record<string, unknown> | null;
         expect(
-          typeof resource,
-          `${where(addon, index)}.resources[${resourceIndex}] must be a string`,
+          entry !== null && typeof entry === 'object' && !Array.isArray(entry),
+          `${where(addon, index)}.resources[${resourceIndex}] must be an object (the v3 shape is ` +
+            '{ name, types?, idPrefixes? }); a bare v2 string such as "search" is not a resource',
+        ).toBe(true);
+        const name = entry?.name;
+        expect(
+          typeof name,
+          `${where(addon, index)}.resources[${resourceIndex}].name must be a string`,
         ).toBe('string');
         expect(
-          (resource as string).trim(),
-          `${where(addon, index)}.resources[${resourceIndex}] must not be blank`,
-        ).not.toBe('');
+          isMember(PROTOCOL_RESOURCES, name),
+          `${where(addon, index)}.resources[${resourceIndex}].name "${String(name)}" is not one of ` +
+            `${PROTOCOL_RESOURCES.join(' | ')}`,
+        ).toBe(true);
+        for (const field of ['types', 'idPrefixes'] as const) {
+          const value = entry?.[field];
+          if (value === undefined) continue;
+          expect(
+            Array.isArray(value) && value.length > 0,
+            `${where(addon, index)}.resources[${resourceIndex}].${field} must be a non-empty array`,
+          ).toBe(true);
+          for (const item of value as unknown[]) {
+            expect(
+              typeof item === 'string' && item.trim() !== '',
+              `${where(addon, index)}.resources[${resourceIndex}].${field} must hold non-empty strings`,
+            ).toBe(true);
+          }
+        }
       }
     }
   });
@@ -174,15 +207,15 @@ describe('addons.json seed contract', () => {
     }
   });
 
-  it('catalogs is a non-empty array of { type, id, name } with non-empty strings', () => {
+  it('catalogs are v3 entries: type "book", non-empty id and name', () => {
     for (const [index, addon] of addons.entries()) {
       const { catalogs } = addon;
       expect(Array.isArray(catalogs), `${where(addon, index)}.catalogs must be an array`).toBe(
         true,
       );
-      const list = catalogs as unknown[];
-      expect(list.length, `${where(addon, index)}.catalogs must not be empty`).toBeGreaterThan(0);
-      for (const [catalogIndex, catalog] of list.entries()) {
+      // Empty is legal in v3 (a stream-only addon), so emptiness is not asserted
+      // here; what each entry declares when present is.
+      for (const [catalogIndex, catalog] of (catalogs as unknown[]).entries()) {
         expect(
           catalog !== null && typeof catalog === 'object',
           `${where(addon, index)}.catalogs[${catalogIndex}] must be an object`,
@@ -197,6 +230,31 @@ describe('addons.json seed contract', () => {
             (entry[field] as string).trim(),
             `${where(addon, index)}.catalogs[${catalogIndex}].${field} must not be blank`,
           ).not.toBe('');
+        }
+        expect(
+          entry.type,
+          `${where(addon, index)}.catalogs[${catalogIndex}].type "${String(entry.type)}" must be ` +
+            `"${TYPE_BOOK}": v3 has exactly one book type, and a v2 "book-catalog" entry would be ` +
+            'published as a type the client cannot route',
+        ).toBe(TYPE_BOOK);
+        const extra = entry.extra;
+        if (extra === undefined) continue;
+        expect(
+          Array.isArray(extra),
+          `${where(addon, index)}.catalogs[${catalogIndex}].extra must be an array`,
+        ).toBe(true);
+        for (const [extraIndex, arg] of (extra as unknown[]).entries()) {
+          const parsed = arg as Record<string, unknown> | null;
+          expect(
+            typeof parsed?.name === 'string' && (parsed.name as string).trim() !== '',
+            `${where(addon, index)}.catalogs[${catalogIndex}].extra[${extraIndex}].name must be a non-empty string`,
+          ).toBe(true);
+          if (parsed?.isRequired !== undefined) {
+            expect(
+              typeof parsed.isRequired,
+              `${where(addon, index)}.catalogs[${catalogIndex}].extra[${extraIndex}].isRequired must be a boolean`,
+            ).toBe('boolean');
+          }
         }
       }
     }
@@ -245,6 +303,73 @@ describe('addons.json seed contract', () => {
         addon?.availability,
         `"${id}" has a working builtin catalog and must stay availability:"builtin"`,
       ).toBe('builtin');
+    }
+  });
+});
+
+// The registry publishes a manifest per entry. These assertions run the real v3
+// parser over the real projection, so a seed edit that the protocol would
+// reject fails here instead of shipping a manifest clients cannot install.
+describe('addons.json publishes v3 manifests', () => {
+  it('every seed entry projects to a manifest that parseManifestV3 accepts', () => {
+    const encoder = new TextEncoder();
+
+    for (const [index, addon] of addons.entries()) {
+      const manifest = toManifestV3(addon as unknown as AddonSeed);
+      const bytes = encoder.encode(JSON.stringify(manifest));
+      const parse = () => parseManifestV3(bytes, 'application/json');
+
+      expect(
+        parse,
+        `${where(addon, index)} does not project to a valid v3 manifest. Published shape: ` +
+          `${JSON.stringify(manifest)}`,
+      ).not.toThrow();
+
+      const parsed = parse();
+      expect(parsed.id, `${where(addon, index)} must round-trip its id`).toBe(addon.id);
+      expect(parsed.name, `${where(addon, index)} must round-trip its name`).toBe(addon.name);
+      expect(parsed.version, `${where(addon, index)} must round-trip its version`).toBe(
+        addon.version,
+      );
+      expect(
+        parsed.types,
+        `${where(addon, index)} must declare the book type: every entry in this registry is a book addon`,
+      ).toContain(TYPE_BOOK);
+      expect(
+        parsed.resources.length,
+        `${where(addon, index)} must survive parsing with at least one resource`,
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('no entry still declares the retired v2 vocabulary', () => {
+    const published = JSON.stringify(addons);
+
+    for (const legacy of [
+      'book-catalog',
+      'book-details',
+      'searchUrl',
+      'detailsUrl',
+      'resolveUrl',
+    ]) {
+      expect(
+        published.includes(legacy),
+        `addons.json still contains "${legacy}", which belongs to the retired v2 manifest. v3 ` +
+          'declares types/catalogs/resources and, for addons that cannot serve the protocol, ' +
+          'nexo.templates with a nexo.shape. Publish the v3 form instead of the v2 field.',
+      ).toBe(false);
+    }
+  });
+
+  it('every catalog that is published declares the single book type', () => {
+    for (const [index, addon] of addons.entries()) {
+      for (const [catalogIndex, catalog] of (addon.catalogs as unknown[]).entries()) {
+        const entry = catalog as Record<string, unknown>;
+        expect(
+          entry.type,
+          `${where(addon, index)}.catalogs[${catalogIndex}] must declare type "${TYPE_BOOK}"`,
+        ).toBe(TYPE_BOOK);
+      }
     }
   });
 });

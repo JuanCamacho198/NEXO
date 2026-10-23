@@ -36,7 +36,7 @@ const searchable = [addon.name, addon.author, addon.description[locale]].join(' 
   data-search={searchable}
   data-kind={addon.kind}
   data-langs={addon.languages.join(',')}
-  data-resources={addon.resources.join(',')}
+  data-resources={addon.resources.map((r) => r.name).join(',')}
   data-cat={addon.category}
   data-updated={addon.updatedAt}
   class="group flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface-1 p-5 transition hover:border-accent"

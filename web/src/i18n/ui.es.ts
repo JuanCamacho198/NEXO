@@ -144,7 +144,7 @@ export const messagesEs: Record<UiKey, string> = {
     'Usa el enlace con la plantilla pre-rellenada para abrir un issue de envío con la URL del manifiesto, el nombre, la descripción en español e inglés y la categoría.',
   'submit.step3Title': 'Pasa la validación automática',
   'submit.step3Sub':
-    'La validación automática comprueba HTTPS, JSON válido de hasta 64 KB y la forma del manifiesto (id, name, version, catalogs, resources). Un servidor inalcanzable solo se informa como aviso: el alcance nunca marca un manifiesto como inválido.',
+    'La validación automática comprueba HTTPS, JSON válido de hasta 64 KB y la forma del manifiesto (id, name, version, types, catalogs, resources). Un servidor inalcanzable solo se informa como aviso: el alcance nunca marca un manifiesto como inválido.',
   'submit.step4Title': 'Revisión del mantenedor',
   'submit.step4Sub':
     'Un mantenedor aprueba o rechaza la propuesta. Al aprobarse, el addon entra en addons.json y aparece en el catálogo; no hay plazos garantizados.',
@@ -153,30 +153,25 @@ export const messagesEs: Record<UiKey, string> = {
     'Los addons de la comunidad se instalan desde la app con un enlace nextpage://install?url=… que apunta a la URL HTTPS del manifiesto.',
   'submit.templateTitle': 'Plantilla inicial',
   'submit.templateDesc':
-    'Copia la plantilla: es la forma mínima exacta que exige el validador (id, name, version, catalogs, resources). Los endpoints opcionales searchUrl, detailsUrl y resolveUrl son solo HTTPS con variables como {query} o {bookId}, y capabilities es una lista opcional.',
+    'Copia la plantilla: es el manifiesto v3 mínimo exacto que exige el validador (id, name, version, types, catalogs, resources). Un addon que no puede servir las rutas del protocolo declara nexo.templates más un nexo.shape; las plantillas son solo HTTPS y usan variables como {search} o {id}.',
   'submit.templateFile': 'mi-addon.json',
   'submit.copyButton': 'Copiar',
   'submit.copied': 'Copiado',
   'submit.docsCta': 'Leer la spec del manifiesto',
   'submit.contribGuideCta': 'Guía de contribución',
   'docs.badge': 'DOCUMENTACIÓN',
-  'docs.title': 'Spec del manifiesto',
+  'docs.title': 'Manifiesto de addon v3',
   'docs.subtitle': 'Todo addon es un archivo JSON que pasa el validador local antes de publicarse.',
-  'docs.tableTitle': 'Campos del manifiesto',
-  'docs.colField': 'CAMPO',
-  'docs.colType': 'TIPO',
-  'docs.colRequired': 'REQUERIDO',
-  'docs.colDesc': 'DESCRIPCIÓN',
-  'docs.requiredYes': 'Sí',
-  'docs.requiredNo': 'No',
-  'docs.fieldDesc.id': 'Identificador único, kebab-case. Ej: gutendex.',
-  'docs.fieldDesc.name': 'Nombre visible del addon.',
-  'docs.fieldDesc.version': 'Versión SemVer. Se incrementa en cada cambio.',
-  'docs.fieldDesc.catalogs': 'Entradas {type, id, name}; no vacío, máximo 16.',
-  'docs.fieldDesc.resources': 'Recursos como search o book-details; no vacío, máximo 16.',
-  'docs.fieldDesc.searchUrl':
-    'Plantilla opcional del endpoint de catálogo ({query}, {page}); solo HTTPS.',
-  'docs.fieldDesc.detailsUrl': 'Plantilla opcional del endpoint de detalle ({bookId}); solo HTTPS.',
+  'docs.v3Title': 'Manifiesto v3 de un vistazo',
+  'docs.v3Summary1':
+    'types es obligatorio y contiene "book". Otros tipos declarados se instalan sin aportar nada.',
+  'docs.v3Summary2':
+    'catalogs contiene entradas {type: "book", id, name} y puede quedar vacío en un addon solo de stream. extra declara search y skip.',
+  'docs.v3Summary3':
+    'resources es obligatorio y nombra catalog, meta o stream. Un addon de stream pide consentimiento antes de cualquier petición.',
+  'docs.v3Summary4':
+    'Una API que no puede servir estas rutas usa nexo.templates para la URL y un nexo.shape para la respuesta.',
+  'docs.v3DocCta': 'Leer el protocolo completo',
   'docs.rulesTitle': 'Reglas de validación',
   'docs.ruleSizeTitle': 'Máximo 64 KB',
   'docs.ruleSizeSub': 'El JSON no puede superar los 64 KiB sin comprimir.',
@@ -187,7 +182,7 @@ export const messagesEs: Record<UiKey, string> = {
   'docs.ruleParseSub': 'El manifiesto debe parsear como JSON UTF-8 y ser un objeto.',
   'docs.ruleShapeTitle': 'Forma válida',
   'docs.ruleShapeSub':
-    'catalogs y resources no vacíos (máx. 16 cada uno); campos de catálogo de hasta 512 caracteres, recursos de hasta 64 y endpoints de hasta 2048.',
+    'types y resources son obligatorios (máx. 16 entradas cada uno); catalogs puede quedar vacío en un addon solo de stream; campos de catálogo de hasta 512 caracteres, recursos de hasta 64 y plantillas de hasta 2048.',
   'docs.ruleOrderTitle': 'Orden fijo',
   'docs.ruleOrderSub': 'La validación corre en orden: tamaño, content-type, parseo y forma.',
   'docs.ruleUnknownTitle': 'Campos desconocidos',
@@ -195,7 +190,7 @@ export const messagesEs: Record<UiKey, string> = {
   'docs.checklistTitle': 'Checklist para publicar',
   'docs.ruleCodesTitle': 'Códigos de error',
   'docs.ruleCodesSub':
-    'El validador devuelve códigos estables: ADDON_FETCH_HTTPS_REQUIRED, ADDON_FETCH_TOO_LARGE, ADDON_FETCH_BAD_CONTENT_TYPE, ADDON_FETCH_INVALID_MANIFEST, ADDON_FETCH_NETWORK.',
+    'El validador devuelve códigos estables: ADDON_FETCH_HTTPS_REQUIRED, ADDON_FETCH_TOO_LARGE, ADDON_FETCH_BAD_CONTENT_TYPE, ADDON_FETCH_INVALID_MANIFEST, ADDON_FETCH_UNSUPPORTED_TYPE, ADDON_FETCH_NETWORK.',
   'docs.check1': 'El JSON pasa el validador local.',
   'docs.check2': 'Los endpoints responden y usan HTTPS.',
   'docs.check3': 'Probé búsqueda y detalle en NEXO.',
@@ -212,7 +207,9 @@ export const messagesEs: Record<UiKey, string> = {
   'docs.approvalGateType':
     'BAD_CONTENT_TYPE: el content-type debe ser application/json o terminar en +json.',
   'docs.approvalGateShape':
-    'INVALID_MANIFEST: el JSON no parsea como objeto UTF-8 o no tiene la forma exigida (id, name, version, catalogs y resources no vacíos; searchUrl, detailsUrl y resolveUrl opcionales solo HTTPS de hasta 2048 caracteres; capabilities opcional de hasta 16 entradas).',
+    'INVALID_MANIFEST: el JSON no parsea como objeto UTF-8 o no tiene la forma exigida (id, name, version, types y resources no vacíos; catalogs puede quedar vacío; nexo.templates solo HTTPS de hasta 2048 caracteres).',
+  'docs.approvalGateUnsupportedType':
+    'UNSUPPORTED_TYPE: el manifiesto declara un tipo reservado (audiobook, comic) que NEXO todavía no implementa.',
   'docs.approvalNetwork':
     'NETWORK: el manifiesto no se pudo alcanzar (error de red, timeout o HTTP no 2xx). Se informa como aviso y nunca se confunde con un manifiesto inválido.',
   'docs.approvalLanding':

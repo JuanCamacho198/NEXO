@@ -8,6 +8,12 @@
 // validation of this file lives in ./addons.spec.ts and is enforced in CI by
 // `bun run --cwd web test`. The value is not silently widened: consumers still
 // see `AddonSeed[]`.
+import type {
+  AddonCatalogEntryV3,
+  AddonManifestV3,
+  AddonNexo,
+  AddonResourceV3,
+} from '@nexo/addon-protocol';
 import addonsData from '@/data/addons.json';
 
 export type AddonKind = 'builtin';
@@ -16,12 +22,20 @@ export type AddonCategory =
   'dominio-publico' | 'bibliotecas' | 'audiolibros' | 'wikis' | 'prensa' | 'independientes';
 export type AddonLang = 'es' | 'en' | 'multi';
 
+/**
+ * The protocol-facing part of a seed entry. Every field here is manifest v3
+ * shape, not a NEXO-local invention: `types` is required, `catalogs` may be
+ * empty for a stream-only addon, and `resources` holds v3 declarations.
+ */
 export interface AddonManifestRef {
   id: string;
   name: string;
   version: string;
-  catalogs: Array<{ type: string; id: string; name: string }>;
-  resources: string[];
+  types: string[];
+  catalogs: AddonCatalogEntryV3[];
+  resources: AddonResourceV3[];
+  idPrefixes?: string[];
+  nexo?: AddonNexo;
 }
 
 export interface AddonSeed extends AddonManifestRef {
@@ -38,6 +52,29 @@ export interface AddonSeed extends AddonManifestRef {
 }
 
 export const ADDONS = addonsData as unknown as AddonSeed[];
+
+/**
+ * The manifest this registry publishes for a seed entry: the v3 protocol
+ * fields plus the display metadata's English description. Optional keys are
+ * omitted rather than emitted empty, because an empty `description` is a
+ * manifest defect, not an absent field. `scripts/emit-surfaces.mjs` builds the
+ * same projection without the TS toolchain; `addons.spec.ts` verifies both.
+ */
+export function toManifestV3(addon: AddonSeed): AddonManifestV3 {
+  const manifest: AddonManifestV3 = {
+    id: addon.id,
+    name: addon.name,
+    version: addon.version,
+    types: addon.types,
+    catalogs: addon.catalogs,
+    resources: addon.resources,
+  };
+  const description = addon.description.en.trim();
+  if (description.length > 0) manifest.description = description;
+  if (addon.idPrefixes !== undefined) manifest.idPrefixes = addon.idPrefixes;
+  if (addon.nexo !== undefined) manifest.nexo = addon.nexo;
+  return manifest;
+}
 
 export function getAddon(id: string): AddonSeed | undefined {
   return ADDONS.find((a) => a.id === id);

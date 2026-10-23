@@ -96,6 +96,29 @@ const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://w
 // routes actually change, which is what "generated" should mean. If a consumer
 // ever needs freshness, derive it from the last commit that touched the source
 // rather than from the build clock.
+
+// The registry publishes a manifest per addon, so `catalog.json` carries the
+// exact v3 manifest an addon author can compare against. This is the same
+// projection as `toManifestV3` in src/data/addons.ts — this script is
+// dependency-free on purpose (no TS toolchain, no build step), so the two are
+// kept in step by test: `addons.spec.ts` asserts the seed projection and
+// `packages/addon-protocol/test/registry.test.ts` parses this emitted file.
+function manifestOf(addon) {
+  const manifest = {
+    id: addon.id,
+    name: addon.name,
+    version: addon.version,
+    types: addon.types,
+    catalogs: addon.catalogs,
+    resources: addon.resources,
+  };
+  const description = typeof addon.description?.en === 'string' ? addon.description.en.trim() : '';
+  if (description.length > 0) manifest.description = description;
+  if (addon.idPrefixes !== undefined) manifest.idPrefixes = addon.idPrefixes;
+  if (addon.nexo !== undefined) manifest.nexo = addon.nexo;
+  return manifest;
+}
+
 const catalog = {
   site: SITE,
   count: visibleAddons.length,
@@ -105,6 +128,7 @@ const catalog = {
       id: a.id,
       name: a.name,
       version: a.version,
+      types: a.types,
       author: a.author,
       license: a.license,
       languages: a.languages,
@@ -115,6 +139,7 @@ const catalog = {
       description: a.description,
       catalogs: a.catalogs,
       resources: a.resources,
+      manifest: manifestOf(a),
       detailUrl: {
         es: abs(`/catalogo/${a.id}`),
         en: abs(`/en/catalog/${a.id}`),
