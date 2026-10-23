@@ -14,10 +14,11 @@ import org.json.JSONObject
 /**
  * Curated first-party bundle: read-only, manifest-shaped `assets/addons/curated.json`
  * (byte-identical to desktop `services/addons/curated.json`). Every entry passes
- * [ManifestValidator] at construction — a malformed bundle fails fast. Browse-only:
- * search contributes nothing to the composite (empty page, no I/O, keeping the
- * zero-addon parity byte-for-byte) and getDetails fails stable NOT_FOUND
- * ("not routable"). Never a registry row. Mirrors desktop `CuratedCatalogProvider.ts`.
+ * the v3 manifest parser at construction — a malformed bundle fails fast.
+ * Browse-only: search contributes nothing to the composite (empty page, no I/O,
+ * keeping the zero-addon parity byte-for-byte) and getDetails fails stable
+ * NOT_FOUND ("not routable"). Never a registry row. Mirrors desktop
+ * `CuratedCatalogProvider.ts`.
  */
 class CuratedCatalogProvider private constructor(
     private val sources: List<CatalogSourceInfo>,
@@ -70,13 +71,14 @@ class CuratedCatalogProvider private constructor(
                 val entry =
                     addons.opt(i) as? JSONObject
                         ?: throw AddonFetchException(AddonFetchErrorCode.INVALID_MANIFEST, "curated entry must be an object")
-                // Shared validation gate: same rules as registry installs.
-                ManifestValidator.validate(entry.toString().toByteArray(Charsets.UTF_8), "application/json")
-                val manifestId = entry.getString("id")
+                // Shared validation gate: the same v3 rules as registry installs.
+                val manifest =
+                    com.nexo.data.remote.addons.protocol.AddonManifestParserV3
+                        .loadManifestV3(entry.toString().toByteArray(Charsets.UTF_8), "application/json")
                 out.add(
                     CatalogSourceInfo(
-                        sourceId = parseCatalogSource("builtin:$manifestId"),
-                        name = entry.getString("name"),
+                        sourceId = parseCatalogSource("builtin:${manifest.id}"),
+                        name = manifest.name,
                         kind = CatalogSourceKind.CURATED,
                     ),
                 )

@@ -7,8 +7,6 @@ import com.nexo.data.remote.addons.protocol.AddonProtocolConstants
 import com.nexo.data.remote.addons.protocol.AddonShape
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -104,7 +102,6 @@ class AddonRegistryV3ReadTest {
             )
             assertEquals(listOf(AddonProtocolConstants.TYPE_BOOK), row.manifest.catalogs.map { it.type })
             assertTrue(row.manifest.resources.any { it.name == "stream" })
-            assertNotNull(row.legacyManifest)
             assertEquals(V2_ROW_JSON, dao.rows.single().manifestJson)
         }
 
@@ -120,7 +117,6 @@ class AddonRegistryV3ReadTest {
             assertTrue(installed.catalogs.isEmpty())
             val row = registry.listInstalled().single()
             assertTrue(row.manifest.catalogs.isEmpty())
-            assertNull(row.legacyManifest)
             assertEquals(V3_STREAM_ONLY_JSON, dao.rows.single().manifestJson)
         }
 

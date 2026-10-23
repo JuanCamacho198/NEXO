@@ -2,12 +2,10 @@ package com.nexo.data.remote.addons
 
 import com.nexo.data.remote.addons.protocol.AddonClient
 import com.nexo.data.remote.addons.protocol.AddonDescriptorV3
-import com.nexo.data.remote.addons.protocol.AddonManifestV3
 import com.nexo.data.remote.addons.protocol.AddonMetaItem
 import com.nexo.data.remote.addons.protocol.AddonProtocolConstants
 import com.nexo.data.remote.addons.protocol.AddonResourceRouter
 import com.nexo.data.remote.addons.protocol.AddonRouteRequest
-import com.nexo.data.remote.addons.protocol.AddonShape
 import com.nexo.data.remote.addons.protocol.BookStream
 import com.nexo.data.remote.addons.protocol.CatalogRequest
 import com.nexo.data.remote.addons.protocol.IdRequest
@@ -37,22 +35,14 @@ import kotlinx.coroutines.coroutineScope
 private const val TITLE_OPEN_EXTERNAL = "Open"
 
 /**
- * Payload shapes this build has no reader for. A `legacy-v2` row is served by
- * [LegacyAddonCatalogProvider], which still understands its wire format, so the
- * router skips those addons rather than sending a request whose answer it would
- * discard.
- */
-private val UNREADABLE_CATALOG_SHAPES = setOf(AddonShape.LEGACY_V2)
-
-/**
  * One [CatalogProvider] for every installed addon: the port stays
  * `search` / `getDetails` / `resolveAccess`, and the v3 router decides who
  * answers (`AddonResourceRouter.selectAddons`), so no screen or ViewModel ever
  * learns about `metas`, `streams` or `types`.
  *
  * Sources are `addon:<addonId>`, one per enabled addon in install order, and
- * every page item keeps its namespaced protocol id (`gutenberg:1342`) so `meta`
- * and `stream` can route on it later.
+ * every page item keeps its protocol id (`gutenberg:1342`, or the addon's own
+ * id for a `legacy-v2` row) so `meta` and `stream` can route on it later.
  *
  * Isolation: one addon failing — timeout, non-2xx, malformed payload, an
  * unbuildable request URL — never fails the aggregate, and a disabled or
@@ -174,17 +164,13 @@ class AddonCatalogProvider(
             AddonRouteRequest(resource = resource, type = AddonProtocolConstants.TYPE_BOOK, id = id),
         )
 
-    /** Enabled addons that declare `catalog` for books and whose shape this build can read. */
+    /** Enabled addons that declare `catalog` for books. */
     private fun catalogCandidates(): List<AddonDescriptorV3> =
         AddonResourceRouter
             .selectAddons(
                 descriptors,
                 AddonRouteRequest(resource = "catalog", type = AddonProtocolConstants.TYPE_BOOK),
-            ).filter { addon ->
-                addon.manifest.catalogs.isNotEmpty() && readableShape(addon.manifest)
-            }
-
-    private fun readableShape(manifest: AddonManifestV3): Boolean = (manifest.nexo?.shape ?: AddonShape.RAW) !in UNREADABLE_CATALOG_SHAPES
+            ).filter { addon -> addon.manifest.catalogs.isNotEmpty() }
 
     /**
      * One addon's every declared catalog, unioned in install order. `search` is

@@ -4,45 +4,75 @@
       "id": "gutendex",
       "name": "Gutendex",
       "version": "1.0.0",
+      "types": ["book"],
       "catalogs": [
-        { "type": "book-catalog", "id": "gutendex", "name": "Project Gutenberg (via Gutendex)" }
+        { "type": "book", "id": "gutendex", "name": "Project Gutenberg (via Gutendex)" }
       ],
-      "resources": ["search", "book-details"]
+      "resources": [
+        { "name": "catalog", "types": ["book"] },
+        { "name": "meta", "types": ["book"] }
+      ],
+      "installUrl": null
     },
     {
       "id": "openlibrary",
       "name": "Open Library",
       "version": "1.0.0",
-      "catalogs": [{ "type": "book-catalog", "id": "openlibrary", "name": "Open Library" }],
-      "resources": ["search"]
+      "types": ["book"],
+      "catalogs": [{ "type": "book", "id": "openlibrary", "name": "Open Library" }],
+      "resources": [
+        { "name": "catalog", "types": ["book"] },
+        { "name": "meta", "types": ["book"] }
+      ],
+      "installUrl": null
     },
     {
       "id": "standard-ebooks",
       "name": "Standard Ebooks",
       "version": "1.0.0",
-      "catalogs": [{ "type": "book-catalog", "id": "standard-ebooks", "name": "Standard Ebooks" }],
-      "resources": ["search"]
+      "types": ["book"],
+      "catalogs": [{ "type": "book", "id": "standard-ebooks", "name": "Standard Ebooks" }],
+      "resources": [
+        { "name": "catalog", "types": ["book"] },
+        { "name": "meta", "types": ["book"] }
+      ],
+      "installUrl": null
     },
     {
       "id": "librivox",
       "name": "LibriVox",
       "version": "1.0.0",
-      "catalogs": [{ "type": "book-catalog", "id": "librivox", "name": "LibriVox" }],
-      "resources": ["search"]
+      "types": ["book"],
+      "catalogs": [{ "type": "book", "id": "librivox", "name": "LibriVox" }],
+      "resources": [
+        { "name": "catalog", "types": ["book"] },
+        { "name": "meta", "types": ["book"] }
+      ],
+      "installUrl": null
     },
     {
       "id": "wikisource",
       "name": "Wikisource",
       "version": "1.0.0",
-      "catalogs": [{ "type": "book-catalog", "id": "wikisource", "name": "Wikisource" }],
-      "resources": ["search"]
+      "types": ["book"],
+      "catalogs": [{ "type": "book", "id": "wikisource", "name": "Wikisource" }],
+      "resources": [
+        { "name": "catalog", "types": ["book"] },
+        { "name": "meta", "types": ["book"] }
+      ],
+      "installUrl": null
     },
     {
       "id": "faded-page",
       "name": "Faded Page",
       "version": "1.0.0",
-      "catalogs": [{ "type": "book-catalog", "id": "faded-page", "name": "Faded Page" }],
-      "resources": ["search"]
+      "types": ["book"],
+      "catalogs": [{ "type": "book", "id": "faded-page", "name": "Faded Page" }],
+      "resources": [
+        { "name": "catalog", "types": ["book"] },
+        { "name": "meta", "types": ["book"] }
+      ],
+      "installUrl": null
     }
   ]
 }

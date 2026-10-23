@@ -313,4 +313,101 @@ class AddonFanoutTest {
             assertEquals(0, provider.search("dune", 1).results.size)
             assertTrue(transport.calls.isEmpty())
         }
+
+    // -------------------------------------------------------------- legacy v2
+
+    /** A stored v2 row, adapted on read exactly as the registry adapts one. */
+    private fun legacyV2Row(id: String = ADDON_A): InstalledAddonRow =
+        addonRow(
+            id,
+            "Space Books",
+            manifest =
+                AddonManifestParserV3.loadManifestV3(
+                    """
+                    {
+                      "id": "space-books",
+                      "name": "Space Books",
+                      "version": "2.0.0",
+                      "catalogs": [{ "type": "book-catalog", "id": "main", "name": "Main catalog" }],
+                      "resources": ["search", "book-details", "resolve"],
+                      "searchUrl": "https://space.example/search?q={query}",
+                      "detailsUrl": "https://space.example/book/{bookId}",
+                      "resolveUrl": "https://space.example/resolve/{bookId}",
+                      "capabilities": ["resolve"]
+                    }
+                    """.trimIndent().toByteArray(Charsets.UTF_8),
+                    "application/json",
+                ),
+        )
+
+    private fun legacyV2CatalogPayload(): String =
+        JSONObject()
+            .put(
+                "results",
+                JSONArray()
+                    .put(JSONObject().put("id", "1342").put("title", "Pride and Prejudice").put("authors", JSONArray().put("Jane Austen")))
+                    .put(JSONObject().put("id", "84").put("title", "Frankenstein"))
+                    .put(JSONObject().put("id", "11")),
+            ).put("totalCount", 3)
+            .toString()
+
+    @Test
+    fun `a legacy v2 row reads its catalog through the fan-out instead of being skipped`() =
+        runTest {
+            val transport =
+                FanoutTransport(mapOf("https://space.example/search?q=dune" to legacyV2CatalogPayload()))
+            val provider = providerFor(listOf(legacyV2Row()), transport)
+
+            val page = provider.search("dune", 1)
+
+            // Ids stay verbatim: the addon resolves its own ids through `{bookId}`.
+            assertEquals(listOf("1342", "84"), page.results.map { it.id })
+            assertEquals(listOf("Pride and Prejudice", "Frankenstein"), page.results.map { it.title })
+            assertEquals(listOf("Jane Austen"), page.results[0].authors)
+            // The entry with no title is not a book; totalCount is not carried.
+            assertEquals(2, page.totalCount)
+            assertNull(page.nexoPage)
+            assertEquals(listOf("https://space.example/search?q=dune"), transport.calls)
+        }
+
+    @Test
+    fun `a legacy v2 row answers meta and stream from its rewritten templates`() =
+        runTest {
+            val transport =
+                FanoutTransport(
+                    mapOf(
+                        "https://space.example/book/1342" to
+                            JSONObject()
+                                .put("id", "1342")
+                                .put("title", "Pride and Prejudice")
+                                .put("authors", JSONArray().put("Jane Austen"))
+                                .toString(),
+                        "https://space.example/resolve/1342" to
+                            JSONObject()
+                                .put(
+                                    "streams",
+                                    JSONArray().put(
+                                        JSONObject()
+                                            .put("url", "https://files.example/1342.epub")
+                                            .put("behaviorHints", JSONObject().put("accessType", "public-domain")),
+                                    ),
+                                ).toString(),
+                    ),
+                )
+            val consent = InMemoryAddonConsentStore().apply { recordConsent(ADDON_A) }
+            val provider = providerFor(listOf(legacyV2Row()), transport, consent)
+
+            val book = provider.getDetails("1342")
+            assertEquals("Pride and Prejudice", book.title)
+            // A v2 book payload's `downloadUrl` is not a meta field: files come from `stream`.
+            assertNull(book.downloadUrl)
+
+            val access = provider.resolveAccess(book)
+            assertTrue(access.canDownloadInApp)
+            assertEquals("https://files.example/1342.epub", access.downloadUrl)
+            assertEquals(
+                listOf("https://space.example/book/1342", "https://space.example/resolve/1342"),
+                transport.calls,
+            )
+        }
 }

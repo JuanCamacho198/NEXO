@@ -8,7 +8,6 @@ import com.nexo.data.remote.addons.AddonRegistry
 import com.nexo.data.remote.addons.CuratedCatalogProvider
 import com.nexo.data.remote.addons.InstalledAddonRow
 import com.nexo.data.remote.addons.KtorAddonHttpTransport
-import com.nexo.data.remote.addons.LegacyAddonCatalogProvider
 import com.nexo.data.remote.addons.PersistentAddonConsentStore
 import com.nexo.data.remote.addons.catalogProvidersWithAddons
 import com.nexo.data.remote.addons.protocol.AddonClient
@@ -364,27 +363,15 @@ class NetworkModule(
      * v3 `stream` resource. Fail-closed: an unknown addon, a missing disclosure
      * consent, or an addon that declares no `stream` all resolve to an empty
      * [LegalAccess] with zero I/O (the fan-out re-checks consent itself, before
-     * any transport call). A stored v2 row keeps its v2 resolve path, which is
-     * the only reader of its payload shape.
+     * any transport call).
      */
     val addonResolveForBook: suspend (addonId: String, book: CatalogBook) -> LegalAccess =
         { addonId, book ->
             val row = addonRegistry.listInstalled().find { it.id == addonId }
-            val legacy = row?.legacyManifest
-            when {
-                row == null -> LegalAccess(book.id, false, null, emptyList())
-                legacy != null ->
-                    if (!addonRegistry.hasAddonConsent(addonId)) {
-                        LegalAccess(book.id, false, null, emptyList())
-                    } else {
-                        LegacyAddonCatalogProvider(
-                            legacy,
-                            addonId,
-                            addonTransport,
-                            consent = addonRegistry.consent,
-                        ).resolveAccess(book)
-                    }
-                else -> addonProvider(listOf(row)).resolveAccess(book)
+            if (row == null) {
+                LegalAccess(book.id, false, null, emptyList())
+            } else {
+                addonProvider(listOf(row)).resolveAccess(book)
             }
         }
 

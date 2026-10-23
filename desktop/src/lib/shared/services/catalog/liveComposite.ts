@@ -109,10 +109,11 @@ async function isOwnedSourceItem(sourceItemId: string): Promise<boolean> {
  * One composite per rebuild: built-ins and the curated bundle first, then the
  * installed addons, then the v3 addon fan-out provider.
  *
- * Addons appear twice on purpose and that is not a duplicate result: the
- * per-row providers keep serving v2 rows (their `legacy-v2` payload shape) and
- * the consent-gated resolve, while the fan-out provider serves the v3 addons
- * and skips every shape the v2 adapter owns.
+ * A per-row provider and the fan-out can both answer one addon today: the
+ * per-row provider owns the consent-gated resolve and the templated routes,
+ * while the fan-out reads every payload through its `nexo.shape` adapter
+ * (`legacy-v2` included). Their results merge by title and author, so one book
+ * is never listed twice.
  *
  * Google Books is registered only when `VITE_GOOGLE_BOOKS_KEY` is non-blank; a
  * blank key omits the provider and the app keeps working on Gutendex + OL.

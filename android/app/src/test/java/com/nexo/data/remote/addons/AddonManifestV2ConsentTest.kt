@@ -2,7 +2,6 @@ package com.nexo.data.remote.addons
 
 import com.nexo.data.local.dao.AddonDao
 import com.nexo.data.local.entity.AddonEntity
-import com.nexo.data.remote.catalog.CatalogBook
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
 import org.json.JSONObject
@@ -14,13 +13,13 @@ import org.junit.Test
 import java.nio.charset.StandardCharsets
 
 /**
- * U4 regression suite: manifest v2 (optional/additive) + registry consent
- * gate + free-gate end to end. Strictly additive: v1 manifests validate and
- * behave byte-identically (defaults only, no new validation).
+ * U4 regression suite: the v2 manifest shape (optional/additive) and the
+ * consent gate. A v2 row is adapted on read and served by the v3 fan-out, so
+ * this suite covers the manifest vocabulary and consent bookkeeping only; the
+ * payload reading is covered where the shaper lives.
  */
 private const val V2_ADDON_ID = "a1b2c3d4e5f60718"
-private const val V2_RESOLVE_TEMPLATE =
-    "https://resolve.example/r?isbn={isbn}&title={title}&author={author}&olid={openLibraryId}&gbid={googleBooksId}"
+private const val V2_RESOLVE_TEMPLATE = "https://resolve.example/r?bookId={bookId}"
 
 private val V1_MANIFEST_JSON =
     """
@@ -47,52 +46,6 @@ private fun v2ManifestJson(): String =
         .toString()
 
 private fun v2Manifest(): AddonManifest = ManifestValidator.validate(v2ManifestJson().toByteArray(StandardCharsets.UTF_8), "application/json")
-
-private fun resolveItemJson(
-    accessType: String? = "free",
-    license: String? = null,
-    readUrl: String? = "https://read.example/b1",
-    downloadUrl: String? = "https://dl.example/b1.epub",
-): JSONObject =
-    JSONObject()
-        .put("id", "b1")
-        .put("title", "Dune")
-        .apply {
-            if (accessType != null) put("accessType", accessType) else put("accessType", JSONObject.NULL)
-            if (license != null) put("license", license)
-            if (readUrl != null) put("readUrl", readUrl)
-            if (downloadUrl != null) put("downloadUrl", downloadUrl)
-        }
-
-private fun resolvePayload(vararg items: JSONObject): String = JSONObject().put("results", JSONArray(items.toList())).put("totalCount", items.size).toString()
-
-private fun book(publicDomain: Boolean?): CatalogBook =
-    CatalogBook(
-        id = "builtin:gutendex:123",
-        provider = "builtin:gutendex",
-        title = "The Odyssey",
-        authors = listOf("Homer"),
-        coverUrl = null,
-        languages = listOf("en"),
-        subjects = emptyList(),
-        downloadUrl = null,
-        isPublicDomain = publicDomain,
-        isbn13 = "9780140449136",
-        openLibraryWorkId = "/works/OL123W",
-        googleBooksId = "abc123",
-    )
-
-/** Recording transport: canned JSON body, every fetched URL captured. */
-private class RecordingAddonTransport(
-    private val body: String,
-) : AddonHttpTransport {
-    val urls = mutableListOf<String>()
-
-    override suspend fun fetch(url: String): AddonResource {
-        urls.add(url)
-        return AddonResource(200, "application/json", body.toByteArray(StandardCharsets.UTF_8))
-    }
-}
 
 private class V2FakeAddonDao : AddonDao {
     val rows = mutableListOf<AddonEntity>()
@@ -134,22 +87,13 @@ class AddonManifestV2ConsentTest {
     }
 
     @Test
-    fun `v1 manifest validates with v2 defaults and behaves byte-identically`() =
-        runTest {
-            val manifest = ManifestValidator.validate(bytes(V1_MANIFEST_JSON), "application/json")
-            assertNull(manifest.searchUrl)
-            assertNull(manifest.detailsUrl)
-            assertNull(manifest.resolveUrl)
-            assertEquals(emptyList<String>(), manifest.capabilities)
-            // Endpoint-less v1 provider: stable empty page, NOT_FOUND details, zero I/O.
-            val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = LegacyAddonCatalogProvider(manifest, V2_ADDON_ID, transport)
-            val page = provider.search("anything", 1)
-            assertEquals(0, page.results.size)
-            assertEquals(0, page.totalCount)
-            assertNull(page.nexoPage)
-            assertEquals(0, transport.urls.size)
-        }
+    fun `v1 manifest validates with v2 defaults`() {
+        val manifest = ManifestValidator.validate(bytes(V1_MANIFEST_JSON), "application/json")
+        assertNull(manifest.searchUrl)
+        assertNull(manifest.detailsUrl)
+        assertNull(manifest.resolveUrl)
+        assertEquals(emptyList<String>(), manifest.capabilities)
+    }
 
     @Test
     fun `v2 optional fields parse when present`() {
@@ -211,131 +155,6 @@ class AddonManifestV2ConsentTest {
     }
 
     @Test
-    fun `no consent means empty resolve with zero network io`() =
-        runTest {
-            val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport)
-            val access = provider.resolveAccess(book(publicDomain = true))
-            assertFalse(access.canDownloadInApp)
-            assertNull(access.downloadUrl)
-            assertEquals(0, access.options.size)
-            assertEquals(0, transport.urls.size)
-        }
-
-    @Test
-    fun `consent without resolveUrl stays empty with zero network io`() =
-        runTest {
-            val consent = InMemoryAddonConsentStore()
-            consent.recordConsent(V2_ADDON_ID)
-            val v1 = ManifestValidator.validate(bytes(V1_MANIFEST_JSON), "application/json")
-            val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = LegacyAddonCatalogProvider(v1, V2_ADDON_ID, transport, consent = consent)
-            val access = provider.resolveAccess(book(publicDomain = true))
-            assertFalse(access.canDownloadInApp)
-            assertNull(access.downloadUrl)
-            assertEquals(0, access.options.size)
-            assertEquals(0, transport.urls.size)
-        }
-
-    @Test
-    fun `consent resolves the url template from book identity`() =
-        runTest {
-            val consent = InMemoryAddonConsentStore()
-            consent.recordConsent(V2_ADDON_ID)
-            val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
-            provider.resolveAccess(book(publicDomain = true))
-            assertEquals(1, transport.urls.size)
-            assertEquals(
-                "https://resolve.example/r?isbn=9780140449136&title=The%20Odyssey" +
-                    "&author=Homer&olid=%2Fworks%2FOL123W&gbid=abc123",
-                transport.urls[0],
-            )
-        }
-
-    @Test
-    fun `free item plus public domain book flows to in-app download`() =
-        runTest {
-            val consent = InMemoryAddonConsentStore()
-            consent.recordConsent(V2_ADDON_ID)
-            val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
-            val access = provider.resolveAccess(book(publicDomain = true))
-            assertTrue(access.canDownloadInApp)
-            assertEquals("https://dl.example/b1.epub", access.downloadUrl)
-            assertEquals(1, access.options.size)
-            assertEquals("https://read.example/b1", access.options[0].url)
-            assertFalse(access.options[0].opensInApp)
-        }
-
-    @Test
-    fun `free item on a non-public-domain book never downloads in-app`() =
-        runTest {
-            val consent = InMemoryAddonConsentStore()
-            consent.recordConsent(V2_ADDON_ID)
-            val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
-            for (pd in listOf(false, null)) {
-                val access = provider.resolveAccess(book(publicDomain = pd))
-                assertFalse(access.canDownloadInApp)
-                assertNull(access.downloadUrl)
-                // External-open link still resolves.
-                assertEquals(1, access.options.size)
-            }
-        }
-
-    @Test
-    fun `non-free items resolve to external-open links only`() =
-        runTest {
-            val consent = InMemoryAddonConsentStore()
-            consent.recordConsent(V2_ADDON_ID)
-            val transport =
-                RecordingAddonTransport(
-                    resolvePayload(
-                        resolveItemJson(
-                            accessType = "buy",
-                            readUrl = "https://shop.example/b1",
-                            downloadUrl = "https://dl.example/b1.epub",
-                        ),
-                    ),
-                )
-            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
-            val access = provider.resolveAccess(book(publicDomain = true))
-            assertFalse(access.canDownloadInApp)
-            assertNull(access.downloadUrl)
-            assertEquals(1, access.options.size)
-            assertEquals("https://shop.example/b1", access.options[0].url)
-            assertFalse(access.options[0].opensInApp)
-        }
-
-    @Test
-    fun `license-cleared item may download in-app for public domain books`() =
-        runTest {
-            val consent = InMemoryAddonConsentStore()
-            consent.recordConsent(V2_ADDON_ID)
-            val transport =
-                RecordingAddonTransport(
-                    resolvePayload(resolveItemJson(accessType = "buy", license = "public-domain")),
-                )
-            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
-            val access = provider.resolveAccess(book(publicDomain = true))
-            assertTrue(access.canDownloadInApp)
-            assertEquals("https://dl.example/b1.epub", access.downloadUrl)
-        }
-
-    @Test
-    fun `unknown accessType is never downloadable`() =
-        runTest {
-            val consent = InMemoryAddonConsentStore()
-            consent.recordConsent(V2_ADDON_ID)
-            val transport = RecordingAddonTransport(resolvePayload(resolveItemJson(accessType = "rental")))
-            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
-            val access = provider.resolveAccess(book(publicDomain = true))
-            assertFalse(access.canDownloadInApp)
-            assertNull(access.downloadUrl)
-        }
-
-    @Test
     fun `consent is recorded once per addon`() {
         val consent = InMemoryAddonConsentStore()
         assertFalse(consent.hasConsent(V2_ADDON_ID))
@@ -358,16 +177,4 @@ class AddonManifestV2ConsentTest {
             registry.revokeAddonConsent(V2_ADDON_ID)
             assertFalse(registry.hasAddonConsent(V2_ADDON_ID))
         }
-
-    @Test
-    fun `manifest json roundtrip preserves v2 fields and decodes v1 caches`() {
-        val manifest = v2Manifest()
-        val decoded = AddonManifestJson.decode(AddonManifestJson.encode(manifest))
-        assertEquals(manifest.resolveUrl, decoded.resolveUrl)
-        assertEquals(manifest.capabilities, decoded.capabilities)
-        // Old cached rows without v2 keys keep decoding (additive defaults).
-        val legacy = AddonManifestJson.decode(V1_MANIFEST_JSON)
-        assertNull(legacy.resolveUrl)
-        assertEquals(emptyList<String>(), legacy.capabilities)
-    }
 }

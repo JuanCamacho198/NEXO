@@ -17,6 +17,7 @@ import com.nexo.data.remote.catalog.MIN_PAGE_SIZE
 import com.nexo.data.remote.catalog.OL_MIN_GAP_MS
 import com.nexo.data.remote.catalog.PAGE_TTL_S
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -72,9 +73,26 @@ class CuratedCatalogProviderTest {
     }
 
     @Test
-    fun `every bundled entry passes ManifestValidator`() {
-        // fromBundle validates each entry; a malformed bundle throws AddonFetchException.
-        assertEquals(6, providerFromBundle().listSources().size)
+    fun `every bundled entry passes the v3 manifest parser and stays browse-only`() {
+        // fromBundle parses each entry; a malformed bundle throws AddonFetchException.
+        val sources = providerFromBundle().listSources()
+        assertEquals(6, sources.size)
+        // No entry may carry an endpoint or a shape: the bundle is declarations only.
+        val file =
+            listOf(
+                java.io.File("src/main/assets/addons/curated.json"),
+                java.io.File("app/src/main/assets/addons/curated.json"),
+            ).first { it.exists() }
+        val addons = org.json.JSONObject(file.readText()).getJSONArray("addons")
+        for (index in 0 until addons.length()) {
+            val entry = addons.getJSONObject(index)
+            assertEquals(listOf("book"), (0 until entry.getJSONArray("types").length()).map { entry.getJSONArray("types").getString(it) })
+            assertFalse(entry.has("nexo"))
+            assertFalse(entry.has("searchUrl"))
+            assertFalse(entry.has("detailsUrl"))
+            assertFalse(entry.has("resolveUrl"))
+            assertTrue(entry.isNull("installUrl"))
+        }
     }
 
     @Test

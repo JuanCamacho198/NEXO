@@ -358,6 +358,8 @@ class AddonRegistryTest {
                     builtIns = listOf(FakeCatalogProvider("g", CatalogSourceKind.BUILTIN), FakeCatalogProvider("ol", CatalogSourceKind.BUILTIN)),
                     curated = FakeCatalogProvider("curated", CatalogSourceKind.CURATED),
                     installedAddons = rows,
+                    // An addon is only registered when something can reach it: fail-closed.
+                    addonTransport = FakeAddonHttpTransport(),
                 )
             val sources = providers.flatMap { it.listSources() }
             assertEquals(1, sources.count { it.kind == CatalogSourceKind.ADDON })
@@ -382,25 +384,57 @@ class AddonRegistryTest {
     }
 
     @Test
-    fun `addon catalog provider is browse-only and exposes one addon source`() =
+    fun `a stored v2 row is served by the single addon fan-out, not a second provider`() =
         runTest {
-            val addonId = AddonId.fromUrl("https://example.com/manifest.json")
-            val manifest = ManifestValidator.validate(VALID_MANIFEST_JSON.toByteArray(), "application/json")
-            val provider = LegacyAddonCatalogProvider(manifest, addonId, FakeAddonHttpTransport())
-            val sources = provider.listSources()
-            assertEquals(1, sources.size)
-            assertEquals(addonSource(addonId), sources[0].sourceId)
-            assertEquals(CatalogSourceKind.ADDON, sources[0].kind)
-            assertEquals("My Addon", sources[0].name)
-            val page = provider.search("anything", 1)
-            assertEquals(0, page.results.size)
-            assertEquals(null, page.nexoPage)
-            assertEquals(0, page.totalCount)
-            try {
-                provider.getDetails("addon:$addonId:some-book")
-                fail("expected NOT_FOUND")
-            } catch (err: CatalogException) {
-                assertEquals(CatalogErrorCode.NOT_FOUND, err.code)
-            }
+            val v2Json =
+                """
+                {
+                  "id": "space-books",
+                  "name": "Space Books",
+                  "version": "2.0.0",
+                  "catalogs": [{ "type": "book-catalog", "id": "main", "name": "Main catalog" }],
+                  "resources": ["search", "book-details"],
+                  "searchUrl": "https://space.example/search?q={query}",
+                  "detailsUrl": "https://space.example/book/{bookId}"
+                }
+                """.trimIndent()
+            val dao = FakeAddonDao()
+            dao.upsert(
+                AddonEntity(
+                    id = "a1b2c3d4e5f60718",
+                    url = "https://space.example/manifest.json",
+                    manifestJson = v2Json,
+                    enabled = true,
+                    addedAt = 1L,
+                ),
+            )
+            val rows = AddonRegistry(dao, FakeAddonHttpTransport()).listInstalled()
+            assertEquals(
+                com.nexo.data.remote.addons.protocol.AddonShape.LEGACY_V2,
+                rows
+                    .single()
+                    .manifest.nexo
+                    ?.shape,
+            )
+
+            val providers =
+                catalogProvidersWithAddons(
+                    builtIns = listOf(FakeCatalogProvider("g", CatalogSourceKind.BUILTIN)),
+                    curated = FakeCatalogProvider("curated", CatalogSourceKind.CURATED),
+                    installedAddons = rows,
+                    addonTransport = FakeAddonHttpTransport(),
+                )
+
+            // One addon, one provider: the adapter's shape is a payload reading, not a class.
+            assertEquals(3, providers.size)
+            assertEquals(1, providers.count { it is AddonCatalogProvider })
+            assertEquals(
+                addonSource("a1b2c3d4e5f60718"),
+                providers
+                    .last()
+                    .listSources()
+                    .single()
+                    .sourceId,
+            )
         }
 }

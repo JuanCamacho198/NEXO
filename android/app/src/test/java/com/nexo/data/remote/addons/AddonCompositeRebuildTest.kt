@@ -167,8 +167,10 @@ class AddonCompositeRebuildTest {
             val addonId = dao.rows[0].id
             val sources = live.provider().listSources().filter { it.kind == CatalogSourceKind.ADDON }
             assertEquals(listOf(addonSource(addonId)), sources.map { it.sourceId })
-            val book = live.provider().getDetails("addon:$addonId:book-1")
+            val book = live.provider().getDetails("book-1")
+            // A legacy-v2 id passes through verbatim; the source still names the addon.
             assertEquals("Space Book", book.title)
+            assertEquals("book-1", book.id)
             assertEquals("addon:$addonId", book.provider)
             assertEquals(listOf("https://space.example/book/book-1"), payloadTransport.calls)
 
@@ -176,7 +178,7 @@ class AddonCompositeRebuildTest {
             reg.setEnabled(addonId, false)
             assertEquals(0, live.provider().listSources().count { it.kind == CatalogSourceKind.ADDON })
             try {
-                live.provider().getDetails("addon:$addonId:book-1")
+                live.provider().getDetails("book-1")
                 fail("expected NOT_FOUND")
             } catch (e: CatalogException) {
                 assertEquals(CatalogErrorCode.NOT_FOUND, e.code)
@@ -188,7 +190,7 @@ class AddonCompositeRebuildTest {
             reg.uninstall(addonId)
             assertEquals(0, live.provider().listSources().count { it.kind == CatalogSourceKind.ADDON })
             try {
-                live.provider().getDetails("addon:$addonId:book-1")
+                live.provider().getDetails("book-1")
                 fail("expected NOT_FOUND")
             } catch (e: CatalogException) {
                 assertEquals(CatalogErrorCode.NOT_FOUND, e.code)

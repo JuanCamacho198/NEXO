@@ -221,8 +221,15 @@ describe('AddonFanoutCatalogProvider.search', () => {
     expect(onFailure).toHaveBeenCalledWith([{ addonId: ADDON_B, reason: 'network' }]);
   });
 
-  it('leaves a legacy-v2 row to the v2 adapter instead of requesting it twice', async () => {
-    const { client, urls } = scriptedClient(twoAddonHandler);
+  it('reads a legacy-v2 row through its shape instead of skipping it', async () => {
+    const { client, urls } = scriptedClient((url) =>
+      url.includes('legacy.example')
+        ? {
+            status: 200,
+            body: { results: [{ id: '1342', title: 'Pride and Prejudice' }], totalCount: 1 },
+          }
+        : { status: 200, body: { metas: [GUTENBERG_META] } },
+    );
     const adapted = descriptor(
       ADDON_STREAM_ONLY,
       'https://legacy.example/manifest.json',
@@ -239,8 +246,11 @@ describe('AddonFanoutCatalogProvider.search', () => {
 
     const page = await provider.search('whale', 1);
 
-    expect(page.results).toEqual([]);
-    expect(urls).toEqual([]);
+    // Ids stay verbatim: the addon resolves its own ids through `{bookId}`.
+    expect(page.results.map((book) => book.id)).toEqual(['1342']);
+    expect(page.results[0]?.title).toBe('Pride and Prejudice');
+    // Page 1 sends no `skip`, so the template's `{page}` substitutes empty.
+    expect(urls).toEqual(['https://legacy.example/books?q=whale&page=']);
   });
 
   it('never requests an addon that declares no catalog, nor a disabled one', async () => {

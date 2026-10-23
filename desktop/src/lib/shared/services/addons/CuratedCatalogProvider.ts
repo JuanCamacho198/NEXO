@@ -18,21 +18,21 @@ import type {
 } from '../catalog/CatalogProvider';
 import { parseCatalogSource } from '../catalog/CatalogProvider';
 import { resolveDownloadUrl } from '../catalog/mappers';
-import { validateManifest, type AddonManifest } from '@nexo/manifest-validator';
+import { loadManifest, type AddonManifestV3 } from '@nexo/addon-protocol';
 import curatedJson from './curated.json';
 
 interface CuratedBundle {
   addons: unknown[];
 }
 
-function loadCuratedManifests(): AddonManifest[] {
+function loadCuratedManifests(): AddonManifestV3[] {
   const bundle = curatedJson as CuratedBundle;
   if (!Array.isArray(bundle.addons)) {
     throw new Error('curated bundle must be {addons: [...]}');
   }
   const encoder = new TextEncoder();
   return bundle.addons.map((entry) =>
-    validateManifest(encoder.encode(JSON.stringify(entry)), 'application/json'),
+    loadManifest(encoder.encode(JSON.stringify(entry)), 'application/json'),
   );
 }
 

@@ -460,13 +460,6 @@ export class AddonCatalogProvider implements CatalogProvider {
 /** One addon's failure sink: additive, so no caller has to break. */
 export type AddonFailureListener = (failures: readonly AddonFailure[]) => void;
 
-/**
- * Payload shapes this build has no adapter for. Those addons are served by the
- * v2 adapter, which still understands their wire format, so the router skips
- * them rather than sending a request whose answer it would discard.
- */
-const UNREADABLE_CATALOG_SHAPES: ReadonlySet<string> = new Set(['legacy-v2']);
-
 export interface AddonFanoutCatalogOptions {
   /** Installed addons as protocol descriptors, in install order. */
   loadAddons: () => Promise<AddonDescriptor[]>;
@@ -830,9 +823,6 @@ export class AddonFanoutCatalogProvider implements CatalogProvider {
   ): Promise<AddonSearchOutcome> {
     const catalogs = addon.manifest.catalogs;
     if (catalogs.length === 0) return { books: [] };
-    // A shape this build cannot parse is served by the v2 adapter instead;
-    // requesting it here would only discard the answer.
-    if (UNREADABLE_CATALOG_SHAPES.has(addon.manifest.nexo?.shape ?? 'raw')) return { books: [] };
 
     const client = this.options.clientFor(addon.id);
     const extra: Record<string, string | number> =

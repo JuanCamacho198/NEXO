@@ -5,12 +5,10 @@ import com.nexo.data.local.entity.AddonEntity
 import com.nexo.data.remote.addons.protocol.AddonClient
 import com.nexo.data.remote.addons.protocol.AddonManifestParserV3
 import com.nexo.data.remote.addons.protocol.AddonManifestV3
-import com.nexo.data.remote.addons.protocol.AddonShape
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.isHttpSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 
 /** The stored column is always JSON, whatever shape the addon served. */
 private const val STORED_MANIFEST_CONTENT_TYPE = "application/json"
@@ -20,10 +18,9 @@ private const val STORED_MANIFEST_CONTENT_TYPE = "application/json"
  *
  * [manifest] is the v3 view: a stored v2 row is adapted on read
  * (`loadManifestV3`), so the column keeps whatever the addon served and nothing
- * is rewritten or re-fetched. [legacyManifest] is the v2 view of that same row —
- * non-null exactly when the row is v2 — and is what
- * [LegacyAddonCatalogProvider] serves, so the two providers never answer for the
- * same addon.
+ * is rewritten or re-fetched. An adapted row is served by the same v3 fan-out as
+ * every other addon — the `legacy-v2` shape is a payload reading, not a
+ * separate provider.
  */
 data class InstalledAddonRow(
     val id: String,
@@ -31,7 +28,6 @@ data class InstalledAddonRow(
     val manifest: AddonManifestV3,
     val enabled: Boolean,
     val addedAt: Long,
-    val legacyManifest: AddonManifest? = null,
 )
 
 /**
@@ -187,12 +183,8 @@ class AddonRegistry(
             manifest = manifest,
             enabled = enabled,
             addedAt = addedAt,
-            legacyManifest = if (manifest.nexo?.shape == AddonShape.LEGACY_V2) v2ViewOf(bytes) else null,
         )
     }
-
-    /** The v2 reading of an adapted row, for the one class that still speaks it. */
-    private fun v2ViewOf(bytes: ByteArray): AddonManifest? = runCatching { ManifestValidator.validate(bytes, STORED_MANIFEST_CONTENT_TYPE) }.getOrNull()
 
     override suspend fun setEnabled(
         id: String,
@@ -219,58 +211,15 @@ class AddonRegistry(
     }
 }
 
-/** JSON codec for the v2 manifest shape (org.json, mirroring ManifestValidator's parser). */
-internal object AddonManifestJson {
-    fun decode(json: String): AddonManifest =
-        ManifestValidator.validate(
-            json.toByteArray(Charsets.UTF_8),
-            "application/json",
-        )
-
-    fun encode(manifest: AddonManifest): String =
-        JSONObject()
-            .put("id", manifest.id)
-            .put("name", manifest.name)
-            .put("version", manifest.version)
-            .put(
-                "catalogs",
-                org.json.JSONArray().apply {
-                    manifest.catalogs.forEach {
-                        put(
-                            org.json
-                                .JSONObject()
-                                .put("type", it.type)
-                                .put("id", it.id)
-                                .put("name", it.name),
-                        )
-                    }
-                },
-            ).put("resources", org.json.JSONArray().apply { manifest.resources.forEach { put(it) } })
-            .apply {
-                manifest.searchUrl?.let { put("searchUrl", it) }
-                manifest.detailsUrl?.let { put("detailsUrl", it) }
-                manifest.resolveUrl?.let { put("resolveUrl", it) }
-                if (manifest.capabilities.isNotEmpty()) {
-                    put(
-                        "capabilities",
-                        org.json.JSONArray().apply {
-                            manifest.capabilities.forEach { put(it) }
-                        },
-                    )
-                }
-            }.toString()
-}
-
 /**
  * Ordered provider list: built-ins first, curated, then the addons.
  *
- * A stored v2 row is served by [LegacyAddonCatalogProvider] — the only class
- * that reads its `legacy-v2` payload shape — and every v3 row by the single
- * [AddonCatalogProvider] fan-out, so one addon never answers twice. Disabled
- * rows are excluded, and an addon is only registered when a transport (or a
- * ready client) can actually reach it: fail-closed, never a source that can
- * only fail. Mirrors desktop `defaultCatalogProviders` +
- * `AddonFanoutCatalogProvider`.
+ * Every enabled row — v3 or adapted from v2 — is served by the single
+ * [AddonCatalogProvider] fan-out, which reads each payload through its
+ * `nexo.shape` adapter. Disabled rows are excluded, and an addon is only
+ * registered when a transport (or a ready client) can actually reach it:
+ * fail-closed, never a source that can only fail. Mirrors desktop
+ * `defaultCatalogProviders` + `AddonFanoutCatalogProvider`.
  */
 fun catalogProvidersWithAddons(
     builtIns: List<CatalogProvider>,
@@ -283,14 +232,10 @@ fun catalogProvidersWithAddons(
 ): List<CatalogProvider> {
     val enabled = installedAddons.filter { it.enabled }
     val consent = addonConsent ?: InMemoryAddonConsentStore()
-    val legacy =
-        enabled.mapNotNull { row ->
-            row.legacyManifest?.let { LegacyAddonCatalogProvider(it, row.id, addonTransport, consent = consent) }
-        }
     val client = addonClient ?: addonTransport?.let { AddonClient(AddonProtocolTransport(it)) }
     val addons =
         client
             ?.takeIf { enabled.isNotEmpty() }
             ?.let { AddonCatalogProvider(enabled, it, consent, isOwned) }
-    return builtIns + curated + legacy + listOfNotNull(addons)
+    return builtIns + curated + listOfNotNull(addons)
 }

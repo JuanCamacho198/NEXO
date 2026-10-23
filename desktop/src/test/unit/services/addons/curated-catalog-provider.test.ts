@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateManifest } from '@nexo/manifest-validator';
+import { loadManifest } from '@nexo/addon-protocol';
 import { CuratedCatalogProvider } from '$lib/shared/services/addons/CuratedCatalogProvider';
 import curatedJson from '$lib/shared/services/addons/curated.json';
 import { CompositeCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
@@ -47,10 +47,13 @@ describe('curated bundle', () => {
     expect(entries.map((e) => (e as { name: string }).name)).toEqual(CURATED_NAMES);
   });
 
-  it('every entry passes the shared manifest validation', () => {
+  it('every entry validates as a v3 manifest and declares catalog plus meta', () => {
     const entries = (curatedJson as { addons: unknown[] }).addons;
     for (const entry of entries) {
-      expect(() => validateManifest(entryBytes(entry), 'application/json')).not.toThrow();
+      const manifest = loadManifest(entryBytes(entry), 'application/json');
+      expect(manifest.catalogs.map((catalog) => catalog.type)).toEqual(['book']);
+      expect(manifest.resources.map((resource) => resource.name)).toEqual(['catalog', 'meta']);
+      expect(manifest.nexo).toBeUndefined();
     }
   });
 });
