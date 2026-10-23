@@ -12,7 +12,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "validate": "bun src/cli.ts"
   },
   "dependencies": {
     "@nexo/manifest-validator": "workspace:*"

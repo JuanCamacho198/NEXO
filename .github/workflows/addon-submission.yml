@@ -1,10 +1,10 @@
 name: Addon submission
 
 # Handles `addon-submission` issues: validates the proposed manifest with the
-# B1 CLI and, on success, opens a PR appending one entry to
-# `web/src/data/addons.json`. Runs only when the `addon-submission` label is
-# added — note `web-ci.yml` does NOT run on `issues` events, so there is no
-# overlap with Web CI.
+# v3 CLI (`packages/addon-protocol`, which accepts v3 natively and adapts v2) and,
+# on success, opens a PR appending one entry to `web/src/data/addons.json`. Runs
+# only when the `addon-submission` label is added — note `web-ci.yml` does NOT run
+# on `issues` events, so there is no overlap with Web CI.
 #
 # Token rationale (house precedent: `release-notes.yml`): a PR opened with the
 # default `GITHUB_TOKEN` does not trigger workflows, so Web CI would stay
@@ -91,7 +91,7 @@ jobs:
           MANIFEST_URL: ${{ steps.parse.outputs.manifest_url }}
         run: |
           set +e
-          VALIDATOR_OUTPUT=$(bun run --cwd packages/manifest-validator validate -- "$MANIFEST_URL" 2>&1)
+          VALIDATOR_OUTPUT=$(bun run --cwd packages/addon-protocol validate -- "$MANIFEST_URL" 2>&1)
           VALIDATOR_EXIT=$?
           set -e
           echo "$VALIDATOR_OUTPUT"
@@ -116,7 +116,8 @@ jobs:
             *ADDON_FETCH_HTTPS_REQUIRED*) MEANING="the manifest URL must use \`https:\` (checked before any network request)." ;;
             *ADDON_FETCH_BAD_CONTENT_TYPE*) MEANING="the manifest must be served as JSON, not an HTML error page." ;;
             *ADDON_FETCH_TOO_LARGE*) MEANING="the manifest exceeds the 64 KB size cap." ;;
-            *ADDON_FETCH_INVALID_MANIFEST*) MEANING="the manifest is not a valid addon manifest — it must declare \`id\`, \`name\`, \`version\`, \`catalogs\` and \`resources\`." ;;
+            *ADDON_FETCH_UNSUPPORTED_TYPE*) MEANING="the manifest declares a reserved \`types\` entry (\`audiobook\` or \`comic\`) that NEXO does not implement yet. Declare \`types: [\"book\"]\`; other types install but contribute nothing, and a reserved one is rejected outright." ;;
+            *ADDON_FETCH_INVALID_MANIFEST*) MEANING="the manifest is not a valid addon manifest — it must declare \`id\`, \`name\`, \`version\`, \`types\` and a non-empty \`resources\` array. \`catalogs\` may be empty for a stream-only addon." ;;
             *) MEANING="validation failed with an unrecognised error." ;;
           esac
           CODE=$(echo "$VALIDATOR_OUTPUT" | grep -o "ADDON_FETCH_[A-Z_]*" | head -n 1)
@@ -162,12 +163,30 @@ jobs:
             if (/Spanish/i.test(raw)) langs.push("es");
             if (/English/i.test(raw)) langs.push("en");
             if (/Multiple languages/i.test(raw)) langs.length = 0, langs.push("multi");
+            // The submitted manifest may be v3, or a v2 one the CLI adapted before
+            // accepting it. The seed is published as v3, so normalize here: types is
+            // required, every catalog declares the single book type, and resources are
+            // v3 declarations rather than v2 endpoint names.
+            const isV3 = Array.isArray(manifest.types) && Array.isArray(manifest.resources);
+            const types = isV3 ? manifest.types : ["book"];
+            const catalogs = (Array.isArray(manifest.catalogs) ? manifest.catalogs : []).map((c) => ({ ...c, type: "book" }));
+            let resources;
+            if (isV3) {
+              resources = manifest.resources;
+            } else {
+              const declared = new Set(Array.isArray(manifest.resources) ? manifest.resources : []);
+              resources = [];
+              if (catalogs.length > 0 || manifest.searchUrl !== undefined || declared.has("search")) resources.push({ name: "catalog", types: ["book"] });
+              if (manifest.detailsUrl !== undefined || declared.has("book-details") || declared.has("details")) resources.push({ name: "meta", types: ["book"] });
+              if (manifest.resolveUrl !== undefined || declared.has("resolve")) resources.push({ name: "stream", types: ["book"] });
+            }
             const entry = {
               id: manifest.id,
               name: manifest.name,
               version: manifest.version,
-              catalogs: manifest.catalogs,
-              resources: manifest.resources,
+              types,
+              catalogs,
+              resources,
               author: process.env.AUTHOR ?? "",
               license: typeof manifest.license === "string" ? manifest.license : "",
               languages: langs.length > 0 ? langs : ["multi"],
