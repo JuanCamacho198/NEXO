@@ -16,6 +16,7 @@
  * A failing addon is silent: no toast, no dialog, no retry.
  */
 import {
+  ID_PREFIXES,
   TtlCache,
   candidateIds,
   mergeMeta,
@@ -106,6 +107,24 @@ export interface LibraryMetadataResult {
 /** A metadata response as cached: `null` records "asked, nothing to say". */
 type CachedMeta = MetaPreview | null;
 
+/**
+ * The ids this book can be asked about.
+ *
+ * Desktop imports an addon catalog item under the namespaced catalog id as the
+ * LOCAL book id (see `enrichMetadataSafely`, which passes `sourceItemId: book.id`),
+ * so a row whose `source_item_id` never landed still carries the identity the
+ * addon minted in its `id`. Only a frozen `ID_PREFIXES` namespace is accepted —
+ * anything else stays a guess and is dropped by `candidateIds`.
+ */
+function libraryCandidateIds(book: LibraryMetadataBook): string[] {
+  const sourceItemId = typeof book.sourceItemId === 'string' ? book.sourceItemId.trim() : '';
+  if (sourceItemId.length === 0) {
+    const id = typeof book.id === 'string' ? book.id.trim() : '';
+    if ((ID_PREFIXES as readonly string[]).some((prefix) => id.startsWith(prefix))) return [id];
+  }
+  return candidateIds(book);
+}
+
 function fieldPatch(changed: LibraryMetaPatch): LibraryMetaPatch {
   const { coverUrl: coverUrl, ...fields } = changed;
   void coverUrl;
@@ -140,7 +159,7 @@ export class LibraryMetadataService {
     book: LibraryMetadataBook,
     opts: { refresh?: boolean } = {},
   ): Promise<LibraryMetadataResult> {
-    const candidates = candidateIds(book);
+    const candidates = libraryCandidateIds(book);
     const skipped: LibraryMetadataResult = { candidates, consulted: [], changed: {} };
     if (candidates.length === 0) return skipped;
 

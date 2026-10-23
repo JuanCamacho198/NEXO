@@ -891,6 +891,9 @@ mod tests {
                 genre: None,
                 language: None,
                 publication_date: None,
+                source_addon_id: None,
+                source_item_id: None,
+                isbn13: None,
             },
         )
         .unwrap();

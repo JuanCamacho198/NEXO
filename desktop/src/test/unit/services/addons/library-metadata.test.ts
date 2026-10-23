@@ -347,4 +347,56 @@ describe('LibraryMetadataService', () => {
     expect(result.changed.language).toBe('es');
     expect(persist.updateFields).toHaveBeenCalledTimes(1);
   });
+
+  /**
+   * Desktop stores an addon import under the namespaced catalog id as its LOCAL
+   * book id, so a row whose `source_item_id` never landed still holds the very
+   * identity the addon minted. Without this fallback every library book reported
+   * zero candidates and no metadata addon was ever asked.
+   */
+  it('falls back to a namespaced local id when source_item_id is blank', async () => {
+    const fake = fakeClient({
+      id: 'gutenberg:1342',
+      type: 'book',
+      name: 'Pride and Prejudice',
+      description: 'A novel of manners.',
+    });
+    const { enrich } = service({
+      client: fake,
+      addons: [
+        addon('org.example.gutendex', {
+          manifest: manifest({
+            id: 'org.example.gutendex',
+            resources: [{ name: 'meta', types: ['book'], idPrefixes: ['gutenberg:'] }],
+          }),
+        }),
+      ],
+    });
+
+    const result = await enrich(book({ id: 'gutenberg:1342', isbn13: null, sourceItemId: null }));
+
+    expect(result.candidates).toEqual(['gutenberg:1342']);
+    expect(fake.getMeta).toHaveBeenCalledWith([expect.anything()], { id: 'gutenberg:1342' });
+    expect(result.changed.description).toBe('A novel of manners.');
+  });
+
+  it('never guesses an identity from an unprefixed or blank local id', async () => {
+    const { enrich, fake } = service();
+
+    const unprefixed = await enrich(book({ id: 'book-1', isbn13: null, sourceItemId: null }));
+    const blank = await enrich(book({ id: '   ', isbn13: null, sourceItemId: '   ' }));
+
+    expect(unprefixed.candidates).toEqual([]);
+    expect(blank.candidates).toEqual([]);
+    expect(fake.getMeta).not.toHaveBeenCalled();
+  });
+
+  it('a recorded source_item_id still wins over the local id', async () => {
+    const { enrich, fake } = service();
+
+    const result = await enrich(book({ id: 'gutenberg:1342', sourceItemId: `isbn:${ISBN}` }));
+
+    expect(result.candidates).toEqual([CANDIDATE]);
+    expect(fake.getMeta).toHaveBeenCalledWith([expect.anything()], { id: CANDIDATE });
+  });
 });

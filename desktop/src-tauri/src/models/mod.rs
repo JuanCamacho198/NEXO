@@ -286,6 +286,14 @@ pub struct BookDto {
     pub genre: Option<String>,
     pub language: Option<String>,
     pub publication_date: Option<String>,
+    /// `books.source_addon_id`: the addon that delivered this book, when one did.
+    #[serde(default)]
+    pub source_addon_id: Option<String>,
+    /// `books.source_item_id`: the addon-namespaced item id, frozen after 3.0.0.
+    #[serde(default)]
+    pub source_item_id: Option<String>,
+    #[serde(default)]
+    pub isbn13: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -408,6 +416,14 @@ pub struct LibraryBookDto {
     /// here. Consumers treat an empty path as "not a real book".
     #[serde(default)]
     pub file_path: String,
+    /// Provenance of an addon-delivered book; all three are null for a book
+    /// imported from disk, because that history is not knowable.
+    #[serde(default)]
+    pub source_addon_id: Option<String>,
+    #[serde(default)]
+    pub source_item_id: Option<String>,
+    #[serde(default)]
+    pub isbn13: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -224,11 +224,14 @@ pub fn import_book(
         genre: genre.clone(),
         language: language.clone(),
         publication_date: publication_date.clone(),
+        source_addon_id: None,
+        source_item_id: None,
+        isbn13: None,
     };
 
     repo.connection.execute(
-            "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, genre, language, publication_date)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11, ?12, ?13)",
+            "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, genre, language, publication_date, source_addon_id, source_item_id, isbn13)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11, ?12, ?13, ?14, ?15, ?16)",
             params![
                 book.id,
                 book.title,
@@ -243,6 +246,9 @@ pub fn import_book(
                 genre,
                 language,
                 publication_date,
+                book.source_addon_id,
+                book.source_item_id,
+                book.isbn13,
             ],
         )?;
 
@@ -317,7 +323,7 @@ pub fn delete_book(
 
 pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
     let mut statement = repo.connection.prepare(
-        "SELECT id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, genre, language, publication_date\n         FROM books\n         WHERE deleted_at IS NULL\n           AND hidden_at IS NULL\n         ORDER BY updated_at DESC",
+        "SELECT id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, genre, language, publication_date, source_addon_id, source_item_id, isbn13\n         FROM books\n         WHERE deleted_at IS NULL\n           AND hidden_at IS NULL\n         ORDER BY updated_at DESC",
     )?;
 
     let rows = statement.query_map([], |row| {
@@ -339,6 +345,9 @@ pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
             genre: sql_text::text_opt(row, 10)?,
             language: sql_text::text_opt(row, 11)?,
             publication_date: sql_text::text_opt(row, 12)?,
+            source_addon_id: sql_text::text_opt(row, 13)?,
+            source_item_id: sql_text::text_opt(row, 14)?,
+            isbn13: sql_text::text_opt(row, 15)?,
         })
     })?;
 
@@ -348,8 +357,11 @@ pub fn list_books(repo: &LibraryRepository) -> AppResult<Vec<BookDto>> {
 
 pub fn upsert_book(repo: &LibraryRepository, book: BookDto) -> AppResult<()> {
     let book_id = book.id.clone();
+    // Provenance is fill-only. The shelf edit path (`handleSaveEditedBook`)
+    // upserts a title and carries no provenance, and a book's recorded origin
+    // must never be erased by an edit — only a non-null value replaces it.
     repo.connection.execute(
-        "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, genre, language, publication_date)\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11, ?12, ?13)\n         ON CONFLICT(id) DO UPDATE SET\n           title = excluded.title,\n           author = excluded.author,\n           file_path = excluded.file_path,\n           format = excluded.format,\n           sync_status = excluded.sync_status,\n           current_page = excluded.current_page,\n           total_pages = excluded.total_pages,\n           updated_at = excluded.updated_at,\n           genre = excluded.genre,\n           language = excluded.language,\n           publication_date = excluded.publication_date,\n           version = version + 1",
+        "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, genre, language, publication_date, source_addon_id, source_item_id, isbn13)\n         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11, ?12, ?13, ?14, ?15, ?16)\n         ON CONFLICT(id) DO UPDATE SET\n           title = excluded.title,\n           author = excluded.author,\n           file_path = excluded.file_path,\n           format = excluded.format,\n           sync_status = excluded.sync_status,\n           current_page = excluded.current_page,\n           total_pages = excluded.total_pages,\n           updated_at = excluded.updated_at,\n           genre = excluded.genre,\n           language = excluded.language,\n           publication_date = excluded.publication_date,\n           source_addon_id = COALESCE(excluded.source_addon_id, books.source_addon_id),\n           source_item_id = COALESCE(excluded.source_item_id, books.source_item_id),\n           isbn13 = COALESCE(excluded.isbn13, books.isbn13),\n           version = version + 1",
         params![
             book.id,
             book.title,
@@ -364,6 +376,9 @@ pub fn upsert_book(repo: &LibraryRepository, book: BookDto) -> AppResult<()> {
             book.genre,
             book.language,
             book.publication_date,
+            book.source_addon_id,
+            book.source_item_id,
+            book.isbn13,
         ],
     )?;
     // Catalog landed (or refreshed) this book: replay highlights that were
@@ -433,7 +448,10 @@ pub fn list_library_books(repo: &LibraryRepository) -> AppResult<Vec<LibraryBook
                 b.publication_date,
                 (SELECT MAX(user_deleted) FROM book_covers bc2 WHERE bc2.book_id = b.id) AS cover_user_deleted,
                 brs.status AS reading_status,
-                b.file_path
+                b.file_path,
+                b.source_addon_id,
+                b.source_item_id,
+                b.isbn13
          FROM books b
          LEFT JOIN reading_progress rp
            ON rp.book_id = b.id
@@ -480,6 +498,9 @@ pub fn list_library_books(repo: &LibraryRepository) -> AppResult<Vec<LibraryBook
             cover_user_deleted: row.get(15)?,
             reading_status: sql_text::text_opt(row, 16)?,
             file_path: sql_text::text(row, 17)?,
+            source_addon_id: sql_text::text_opt(row, 18)?,
+            source_item_id: sql_text::text_opt(row, 19)?,
+            isbn13: sql_text::text_opt(row, 20)?,
         })
     })?;
 
@@ -632,6 +653,130 @@ mod tests {
 
         let rows = repository.list_library_books().unwrap();
         assert_eq!(rows.len(), 1_000);
+    }
+
+    /// The sync layer stores provenance and the frontend asks metadata addons
+    /// about it, but the local path dropped all three columns in both the read
+    /// and the write direction: `book.sourceItemId` was always `undefined` on
+    /// the shelf and no addon could ever be asked about an owned book.
+    #[test]
+    fn provenance_round_trips_through_upsert_and_both_book_lists() {
+        let repository = new_repository();
+        let now = Utc::now().to_rfc3339();
+
+        upsert_book(
+            &repository,
+            BookDto {
+                id: "book-provenance".to_string(),
+                title: "Pride and Prejudice".to_string(),
+                author: "Jane Austen".to_string(),
+                file_path: "C:/library/pride.epub".to_string(),
+                format: "epub".to_string(),
+                sync_status: "local".to_string(),
+                current_page: 0,
+                total_pages: 100,
+                created_at: now.clone(),
+                updated_at: now,
+                genre: None,
+                language: None,
+                publication_date: None,
+                source_addon_id: Some("org.example.gutendex".to_string()),
+                source_item_id: Some("gutenberg:1342".to_string()),
+                isbn13: Some("9780141439518".to_string()),
+            },
+        )
+        .unwrap();
+
+        let listed = list_books(&repository)
+            .unwrap()
+            .into_iter()
+            .find(|book| book.id == "book-provenance")
+            .expect("the upserted book must be listed");
+        assert_eq!(listed.source_addon_id.as_deref(), Some("org.example.gutendex"));
+        assert_eq!(listed.source_item_id.as_deref(), Some("gutenberg:1342"));
+        assert_eq!(listed.isbn13.as_deref(), Some("9780141439518"));
+
+        let shelf = list_library_books(&repository).unwrap();
+        let shelf_book = shelf
+            .iter()
+            .find(|book| book.id == "book-provenance")
+            .expect("the book must be on the shelf");
+        assert_eq!(shelf_book.source_addon_id.as_deref(), Some("org.example.gutendex"));
+        assert_eq!(shelf_book.source_item_id.as_deref(), Some("gutenberg:1342"));
+        assert_eq!(shelf_book.isbn13.as_deref(), Some("9780141439518"));
+    }
+
+    /// A book imported from disk carries no provenance, and the shelf edit path
+    /// (`handleSaveEditedBook`) upserts a title without any. Neither may invent
+    /// a source, and the edit must not erase one the sync layer recorded.
+    #[test]
+    fn provenance_stays_null_for_disk_imports_and_survives_a_shelf_edit() {
+        let repository = new_repository();
+        insert_book(&repository, "book-local", "C:/library/book-local.epub");
+
+        let listed = list_books(&repository).unwrap();
+        assert_eq!(listed[0].source_addon_id, None);
+        assert_eq!(listed[0].source_item_id, None);
+        assert_eq!(listed[0].isbn13, None);
+
+        let now = Utc::now().to_rfc3339();
+        upsert_book(
+            &repository,
+            BookDto {
+                id: "book-provenance".to_string(),
+                title: "Pride and Prejudice".to_string(),
+                author: "Jane Austen".to_string(),
+                file_path: "C:/library/pride.epub".to_string(),
+                format: "epub".to_string(),
+                sync_status: "local".to_string(),
+                current_page: 0,
+                total_pages: 100,
+                created_at: now.clone(),
+                updated_at: now.clone(),
+                genre: None,
+                language: None,
+                publication_date: None,
+                source_addon_id: Some("org.example.gutendex".to_string()),
+                source_item_id: Some("gutenberg:1342".to_string()),
+                isbn13: Some("9780141439518".to_string()),
+            },
+        )
+        .unwrap();
+
+        upsert_book(
+            &repository,
+            BookDto {
+                id: "book-provenance".to_string(),
+                title: "Pride and Prejudice (edited)".to_string(),
+                author: "Jane Austen".to_string(),
+                file_path: "C:/library/pride.epub".to_string(),
+                format: "epub".to_string(),
+                sync_status: "local".to_string(),
+                current_page: 10,
+                total_pages: 100,
+                created_at: now.clone(),
+                updated_at: now,
+                genre: None,
+                language: None,
+                publication_date: None,
+                source_addon_id: None,
+                source_item_id: None,
+                isbn13: None,
+            },
+        )
+        .unwrap();
+
+        let edited = list_books(&repository)
+            .unwrap()
+            .into_iter()
+            .find(|book| book.id == "book-provenance")
+            .expect("the edited book must still be listed");
+        assert_eq!(edited.title, "Pride and Prejudice (edited)");
+        assert_eq!(
+            edited.source_item_id.as_deref(),
+            Some("gutenberg:1342"),
+            "an edit that carries no provenance must not erase the recorded source"
+        );
     }
 
     #[test]

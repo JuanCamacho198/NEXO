@@ -69,6 +69,9 @@ fn delete_book_metadata_soft_deletes_cover_metadata_and_returns_storage_path() {
             genre: None,
             language: None,
             publication_date: None,
+            source_addon_id: None,
+            source_item_id: None,
+            isbn13: None,
         })
         .unwrap();
 
@@ -105,6 +108,9 @@ fn restart_roundtrip_preserves_settings_and_stats() {
                 genre: None,
                 language: None,
                 publication_date: None,
+                source_addon_id: None,
+                source_item_id: None,
+                isbn13: None,
             })
             .unwrap();
 
@@ -256,6 +262,9 @@ fn reading_stats_activity_command_round_trips_through_repository() {
             genre: None,
             language: None,
             publication_date: None,
+            source_addon_id: None,
+            source_item_id: None,
+            isbn13: None,
         })
         .unwrap();
     repository
@@ -273,6 +282,9 @@ fn reading_stats_activity_command_round_trips_through_repository() {
             genre: None,
             language: None,
             publication_date: None,
+            source_addon_id: None,
+            source_item_id: None,
+            isbn13: None,
         })
         .unwrap();
     repository
@@ -290,6 +302,9 @@ fn reading_stats_activity_command_round_trips_through_repository() {
             genre: None,
             language: None,
             publication_date: None,
+            source_addon_id: None,
+            source_item_id: None,
+            isbn13: None,
         })
         .unwrap();
 
@@ -343,6 +358,9 @@ fn insert_test_book(repository: &LibraryRepository, id: &str) {
             genre: None,
             language: None,
             publication_date: None,
+            source_addon_id: None,
+            source_item_id: None,
+            isbn13: None,
         })
         .unwrap();
 }

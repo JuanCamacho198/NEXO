@@ -80,6 +80,11 @@ export type LibraryBookDto = {
    * payloads; treat a missing or empty value as "not a real book".
    */
   filePath?: string;
+  /** Addon that delivered this book; null for books imported from disk. */
+  sourceAddonId?: string | null;
+  /** Addon-namespaced item id (e.g. `gutenberg:1342`); frozen after protocol 3.0.0. */
+  sourceItemId?: string | null;
+  isbn13?: string | null;
 };
 
 export type CollectionDto = {
