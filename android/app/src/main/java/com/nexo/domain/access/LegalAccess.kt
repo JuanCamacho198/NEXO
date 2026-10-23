@@ -15,13 +15,16 @@ enum class AccessGroup {
 
 /**
  * One external web option. [opensInApp] is true only for the gated
- * public-domain download; every other option opens externally.
+ * public-domain download; every other option opens externally. [owned] is true
+ * when the shelf already holds this item (a `books.source_item_id` match):
+ * flagged, never hidden — the link stays, the re-download does not.
  */
 data class AccessOption(
     val group: AccessGroup,
     val title: String,
     val url: String,
     val opensInApp: Boolean = false,
+    val owned: Boolean = false,
 )
 
 /**

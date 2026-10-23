@@ -66,7 +66,7 @@ fun AddonCapabilityDetailRoute(
     }
     AddonCapabilityDetailScreen(
         addonName = current.manifest.name,
-        capabilities = current.manifest.capabilities,
+        capabilities = current.manifest.resources.map { it.name },
         hasConsent = consented,
         onConsentChange = { granted ->
             onConsentChange(addonId, granted)

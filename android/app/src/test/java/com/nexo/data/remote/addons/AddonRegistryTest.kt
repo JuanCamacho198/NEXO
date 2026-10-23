@@ -44,6 +44,15 @@ private fun manifestJson(
         ).put("resources", JSONArray().put("catalog"))
         .toString()
 
+/** A fetched-but-uninstalled manifest, as the confirm step hands it back. */
+private fun previewOf(json: String) =
+    AddonManifestPreview(
+        manifest =
+            com.nexo.data.remote.addons.protocol.AddonManifestParserV3
+                .loadManifestV3(json.toByteArray(Charsets.UTF_8), "application/json"),
+        rawJson = json,
+    )
+
 private fun resource(
     json: String? = null,
     name: String = "My Addon",
@@ -235,12 +244,7 @@ class AddonRegistryTest {
             val url = "https://example.com/manifest.json"
             val transport = ScriptedAddonTransport(resource())
             val reg = AddonRegistry(dao, transport)
-            val manifest =
-                ManifestValidator.validate(
-                    manifestJson().toByteArray(Charsets.UTF_8),
-                    "application/json",
-                )
-            reg.installManifest(url, manifest)
+            reg.installManifest(url, previewOf(manifestJson()))
             assertEquals(0, transport.calls)
             assertEquals(1, dao.rows.size)
             assertEquals(AddonId.fromUrl(url), dao.rows[0].id)
@@ -257,12 +261,7 @@ class AddonRegistryTest {
             val id = dao.rows[0].id
             val addedAt = dao.rows[0].addedAt
             reg.setEnabled(id, false)
-            val updated =
-                ManifestValidator.validate(
-                    manifestJson(version = "2.0.0").toByteArray(Charsets.UTF_8),
-                    "application/json",
-                )
-            reg.installManifest(url, updated)
+            reg.installManifest(url, previewOf(manifestJson(version = "2.0.0")))
             assertEquals(1, dao.rows.size)
             assertFalse(dao.rows[0].enabled)
             assertEquals(addedAt, dao.rows[0].addedAt)
@@ -274,13 +273,8 @@ class AddonRegistryTest {
         runTest {
             val dao = FakeAddonDao()
             val reg = registry(dao, resource())
-            val colliding =
-                ManifestValidator.validate(
-                    manifestJson(id = "gutendex").toByteArray(Charsets.UTF_8),
-                    "application/json",
-                )
             try {
-                reg.installManifest("https://example.com/manifest.json", colliding)
+                reg.installManifest("https://example.com/manifest.json", previewOf(manifestJson(id = "gutendex")))
                 fail("expected INVALID_MANIFEST")
             } catch (err: AddonFetchException) {
                 assertEquals(AddonFetchErrorCode.INVALID_MANIFEST, err.code)
@@ -304,8 +298,8 @@ class AddonRegistryTest {
         runTest {
             val dao = FakeAddonDao()
             val reg = registry(dao, resource(name = "Preview Addon"))
-            val manifest = reg.fetchManifest("https://example.com/manifest.json")
-            assertEquals("Preview Addon", manifest.name)
+            val preview = reg.fetchManifest("https://example.com/manifest.json")
+            assertEquals("Preview Addon", preview.manifest.name)
             assertEquals(0, dao.rows.size)
         }
 
@@ -392,7 +386,7 @@ class AddonRegistryTest {
         runTest {
             val addonId = AddonId.fromUrl("https://example.com/manifest.json")
             val manifest = ManifestValidator.validate(VALID_MANIFEST_JSON.toByteArray(), "application/json")
-            val provider = AddonCatalogProvider(manifest, addonId, FakeAddonHttpTransport())
+            val provider = LegacyAddonCatalogProvider(manifest, addonId, FakeAddonHttpTransport())
             val sources = provider.listSources()
             assertEquals(1, sources.size)
             assertEquals(addonSource(addonId), sources[0].sourceId)

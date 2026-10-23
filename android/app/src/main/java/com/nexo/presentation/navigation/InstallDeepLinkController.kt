@@ -3,8 +3,9 @@ package com.nexo.presentation.navigation
 import android.net.Uri
 import com.nexo.data.remote.addons.AddonFetchErrorCode
 import com.nexo.data.remote.addons.AddonFetchException
-import com.nexo.data.remote.addons.AddonManifest
+import com.nexo.data.remote.addons.AddonManifestPreview
 import com.nexo.data.remote.addons.AddonRegistryLike
+import com.nexo.data.remote.addons.protocol.AddonManifestV3
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -22,8 +23,12 @@ sealed class InstallUiState {
 
     data class Confirming(
         val url: String,
-        val manifest: AddonManifest,
-    ) : InstallUiState()
+        val preview: AddonManifestPreview,
+    ) : InstallUiState() {
+        /** What the dialog renders; the bytes ride along on [preview]. */
+        val manifest: AddonManifestV3
+            get() = preview.manifest
+    }
 
     data class Error(
         val code: AddonFetchErrorCode,
@@ -44,7 +49,7 @@ sealed class InstallUiState {
 class InstallDeepLinkController(
     private val registry: AddonRegistryLike,
     private val mainDispatcher: CoroutineDispatcher,
-    installedManifest: AddonManifest? = null,
+    installedManifest: AddonManifestV3? = null,
 ) {
     constructor(registry: AddonRegistryLike) : this(registry, kotlinx.coroutines.Dispatchers.Main)
 
@@ -82,8 +87,8 @@ class InstallDeepLinkController(
         scope.launch {
             _state.value =
                 try {
-                    val manifest = registry.fetchManifest(url)
-                    val confirming = InstallUiState.Confirming(url, manifest)
+                    val preview = registry.fetchManifest(url)
+                    val confirming = InstallUiState.Confirming(url, preview)
                     pendingConfirming = confirming
                     confirming
                 } catch (err: AddonFetchException) {
@@ -101,7 +106,7 @@ class InstallDeepLinkController(
         confirmJob =
             scope.launch {
                 try {
-                    registry.installManifest(confirming.url, confirming.manifest)
+                    registry.installManifest(confirming.url, confirming.preview)
                 } catch (err: AddonFetchException) {
                     _state.value = InstallUiState.Error(err.code)
                     return@launch

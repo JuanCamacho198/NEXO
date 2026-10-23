@@ -346,7 +346,7 @@ private fun AddonRow(
 
             Spacer(Modifier.height(8.dp))
 
-            AddonCapabilityBadges(capabilities = row.manifest.capabilities)
+            AddonCapabilityBadges(capabilities = row.manifest.resources.map { it.name })
 
             Spacer(Modifier.height(8.dp))
 

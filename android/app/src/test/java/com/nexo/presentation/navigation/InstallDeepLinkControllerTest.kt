@@ -3,10 +3,11 @@ package com.nexo.presentation.navigation
 import android.net.Uri
 import com.nexo.data.remote.addons.AddonFetchErrorCode
 import com.nexo.data.remote.addons.AddonFetchException
-import com.nexo.data.remote.addons.AddonManifest
+import com.nexo.data.remote.addons.AddonManifestPreview
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.addons.InstalledAddonRow
-import com.nexo.data.remote.addons.ManifestValidator
+import com.nexo.data.remote.addons.protocol.AddonManifestParserV3
+import com.nexo.data.remote.addons.protocol.AddonManifestV3
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -26,27 +27,31 @@ private fun previewManifest(
     id: String = "dl-addon",
     name: String = "Deep Link Addon",
     version: String = "1.0.0",
-): AddonManifest {
+): AddonManifestPreview {
     val json =
         JSONObject()
             .put("id", id)
             .put("name", name)
             .put("version", version)
+            .put("types", org.json.JSONArray().put("book"))
             .put(
                 "catalogs",
                 org.json.JSONArray().put(JSONObject().put("type", "book").put("id", "main").put("name", "Main")),
             ).put("resources", org.json.JSONArray().put("catalog"))
             .toString()
-    return ManifestValidator.validate(json.toByteArray(Charsets.UTF_8), "application/json")
+    return AddonManifestPreview(
+        manifest = AddonManifestParserV3.loadManifestV3(json.toByteArray(Charsets.UTF_8), "application/json"),
+        rawJson = json,
+    )
 }
 
 /** Fake registry seam recording fetch/confirm calls (no persistence). */
 private class RecordingRegistry : AddonRegistryLike {
     var fetchCount = 0
     var fetchError: AddonFetchException? = null
-    val confirmed = mutableListOf<Pair<String, AddonManifest>>()
+    val confirmed = mutableListOf<Pair<String, AddonManifestPreview>>()
 
-    override suspend fun fetchManifest(url: String): AddonManifest {
+    override suspend fun fetchManifest(url: String): AddonManifestPreview {
         fetchCount += 1
         fetchError?.let { throw it }
         return previewManifest()
@@ -54,15 +59,15 @@ private class RecordingRegistry : AddonRegistryLike {
 
     override suspend fun installManifest(
         url: String,
-        manifest: AddonManifest,
-    ): AddonManifest {
-        confirmed.add(url to manifest)
-        return manifest
+        preview: AddonManifestPreview,
+    ): AddonManifestV3 {
+        confirmed.add(url to preview)
+        return preview.manifest
     }
 
-    override suspend fun install(url: String): AddonManifest {
-        val m = fetchManifest(url)
-        return installManifest(url, m)
+    override suspend fun install(url: String): AddonManifestV3 {
+        val preview = fetchManifest(url)
+        return installManifest(url, preview)
     }
 
     override suspend fun listInstalled(): List<InstalledAddonRow> = emptyList()
@@ -122,7 +127,11 @@ class InstallDeepLinkControllerTest {
         controller.confirm()
         assertEquals(1, registry.confirmed.size)
         assertEquals("https://x.test/m.json", registry.confirmed[0].first)
-        assertEquals("dl-addon", registry.confirmed[0].second.id)
+        assertEquals(
+            "dl-addon",
+            registry.confirmed[0]
+                .second.manifest.id,
+        )
         assertEquals(InstallUiState.Idle, controller.state.value)
     }
 
@@ -187,7 +196,7 @@ class InstallDeepLinkControllerTest {
     @Test
     fun `confirm while installing is a no-op - single install`() {
         val registry = RecordingRegistry()
-        val controller = InstallDeepLinkController(registry, dispatcher, installedManifest = previewManifest())
+        val controller = InstallDeepLinkController(registry, dispatcher, installedManifest = previewManifest().manifest)
         controller.onInstallUri(installUri())
         controller.confirm()
         // First confirm completed synchronously (unconfined); a repeat must not re-install.

@@ -188,6 +188,14 @@ interface CatalogProvider {
         query: String,
         page: Int,
     ): PagedResult = PagedResult(emptyList(), null, 0)
+
+    /**
+     * True when this provider answers book ids no source prefix owns
+     * (`gutenberg:1342`). The composite's prefix routing cannot pick an owner for
+     * those, so it delegates to the first provider that opts in. Fail-closed
+     * default: absent opt-in keeps the composite's NOT_FOUND behaviour.
+     */
+    fun servesNamespacedIds(): Boolean = false
 }
 
 enum class CatalogSourceKind {

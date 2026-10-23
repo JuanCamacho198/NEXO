@@ -74,7 +74,7 @@ class AddonCatalogProviderPayloadTest {
     fun `search renders the searchUrl template and maps payload books to addon source ids`() =
         runTest {
             val transport = RoutingTransport(mapOf("space.example" to (200 to SPACE_PAYLOAD)))
-            val provider = AddonCatalogProvider(spaceManifest(), ADDON_ID, transport)
+            val provider = LegacyAddonCatalogProvider(spaceManifest(), ADDON_ID, transport)
             val page = provider.search("dune mess iah", 1)
             assertEquals(listOf("https://space.example/search?q=dune%20mess%20iah&page=1"), transport.calls)
             assertEquals(1, page.results.size)
@@ -94,7 +94,7 @@ class AddonCatalogProviderPayloadTest {
             for (i in 0 until 40) many.put(JSONObject().put("id", "b$i").put("title", "Book $i"))
             val payload = JSONObject().put("results", many).put("totalCount", 100).toString()
             val transport = RoutingTransport(mapOf("space.example" to (200 to payload)))
-            val provider = AddonCatalogProvider(spaceManifest(), ADDON_ID, transport)
+            val provider = LegacyAddonCatalogProvider(spaceManifest(), ADDON_ID, transport)
             val page = provider.search("x", 1)
             assertEquals(MAX_PAGE_SIZE, page.results.size)
             assertEquals(100, page.totalCount)
@@ -122,7 +122,7 @@ class AddonCatalogProviderPayloadTest {
                         SPACE_MANIFEST_JSON
                             .replace("space.example", host)
                             .replace("space-books", "addon-$i")
-                    AddonCatalogProvider(ManifestValidator.validate(manifestJson.toByteArray(), "application/json"), addonId, transport)
+                    LegacyAddonCatalogProvider(ManifestValidator.validate(manifestJson.toByteArray(), "application/json"), addonId, transport)
                 }
             val builtin = FakeBuiltinProvider()
             val composite = CompositeCatalogProvider(listOf(builtin) + providers)
@@ -138,7 +138,7 @@ class AddonCatalogProviderPayloadTest {
     fun `getDetails routes to the owning addon and renders the detailsUrl R3-1`() =
         runTest {
             val transport = RoutingTransport(mapOf("space.example" to (200 to bookJson(id = "book-7", title = "Detail Book"))))
-            val provider = AddonCatalogProvider(spaceManifest(), ADDON_ID, transport)
+            val provider = LegacyAddonCatalogProvider(spaceManifest(), ADDON_ID, transport)
             val composite = CompositeCatalogProvider(listOf(provider))
             val detail = composite.getDetails("addon:$ADDON_ID:book-7")
             assertEquals("addon:$ADDON_ID:book-7", detail.id)
@@ -166,7 +166,7 @@ class AddonCatalogProviderPayloadTest {
                 )
             for (bad in cases) {
                 val transport = RoutingTransport(mapOf("space.example" to (200 to bad)))
-                val provider = AddonCatalogProvider(spaceManifest(), ADDON_ID, transport)
+                val provider = LegacyAddonCatalogProvider(spaceManifest(), ADDON_ID, transport)
                 try {
                     provider.search("q", 1)
                     fail("expected UPSTREAM_ERROR")
@@ -176,7 +176,7 @@ class AddonCatalogProviderPayloadTest {
                 assertEquals(1, transport.calls.size)
             }
             val detailTransport = RoutingTransport(mapOf("space.example" to (200 to JSONObject().put("title", "no id").toString())))
-            val provider = AddonCatalogProvider(spaceManifest(), ADDON_ID, detailTransport)
+            val provider = LegacyAddonCatalogProvider(spaceManifest(), ADDON_ID, detailTransport)
             try {
                 provider.getDetails("addon:$ADDON_ID:x")
                 fail("expected UPSTREAM_ERROR")
@@ -189,7 +189,7 @@ class AddonCatalogProviderPayloadTest {
     fun `enforces the payload size cap before parse`() =
         runTest {
             val transport = RoutingTransport(mapOf("space.example" to (200 to SPACE_PAYLOAD)), oversizeHosts = setOf("space.example"))
-            val provider = AddonCatalogProvider(spaceManifest(), ADDON_ID, transport)
+            val provider = LegacyAddonCatalogProvider(spaceManifest(), ADDON_ID, transport)
             try {
                 provider.search("q", 1)
                 fail("expected UPSTREAM_ERROR")
@@ -202,7 +202,7 @@ class AddonCatalogProviderPayloadTest {
     fun `maps non-2xx statuses to stable catalog codes after at most one retry`() =
         runTest {
             val rateLimited = RoutingTransport(mapOf("space.example" to (429 to "{}")))
-            val provider = AddonCatalogProvider(spaceManifest(), ADDON_ID, rateLimited, retryDelayMs = 0)
+            val provider = LegacyAddonCatalogProvider(spaceManifest(), ADDON_ID, rateLimited, retryDelayMs = 0)
             try {
                 provider.search("q", 1)
                 fail("expected RATE_LIMITED")
@@ -212,7 +212,7 @@ class AddonCatalogProviderPayloadTest {
             assertEquals(2, rateLimited.calls.size)
 
             val notFound = RoutingTransport(mapOf("space.example" to (404 to "{}")))
-            val provider404 = AddonCatalogProvider(spaceManifest(), ADDON_ID, notFound, retryDelayMs = 0)
+            val provider404 = LegacyAddonCatalogProvider(spaceManifest(), ADDON_ID, notFound, retryDelayMs = 0)
             try {
                 provider404.getDetails("addon:$ADDON_ID:x")
                 fail("expected NOT_FOUND")
@@ -222,7 +222,7 @@ class AddonCatalogProviderPayloadTest {
             assertEquals(1, notFound.calls.size)
 
             val upstream = RoutingTransport(mapOf("space.example" to (500 to "{}")))
-            val provider500 = AddonCatalogProvider(spaceManifest(), ADDON_ID, upstream, retryDelayMs = 0)
+            val provider500 = LegacyAddonCatalogProvider(spaceManifest(), ADDON_ID, upstream, retryDelayMs = 0)
             try {
                 provider500.search("q", 1)
                 fail("expected UPSTREAM_ERROR")
@@ -243,7 +243,7 @@ class AddonCatalogProviderPayloadTest {
             val manifest = ManifestValidator.validate(bareJson.toByteArray(), "application/json")
             assertNull(manifest.searchUrl)
             assertNull(manifest.detailsUrl)
-            val provider = AddonCatalogProvider(manifest, ADDON_ID, transport)
+            val provider = LegacyAddonCatalogProvider(manifest, ADDON_ID, transport)
             val page = provider.search("q", 1)
             assertEquals(0, page.results.size)
             assertEquals(0, page.totalCount)
@@ -260,7 +260,7 @@ class AddonCatalogProviderPayloadTest {
     @Test
     fun `endpoints without transport fail fast at construction`() {
         try {
-            AddonCatalogProvider(spaceManifest(), ADDON_ID, transport = null)
+            LegacyAddonCatalogProvider(spaceManifest(), ADDON_ID, transport = null)
             fail("expected IllegalStateException")
         } catch (_: IllegalArgumentException) {
         }

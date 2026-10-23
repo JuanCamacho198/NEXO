@@ -1,5 +1,18 @@
 package com.nexo.data.remote.addons
 
+import com.nexo.data.remote.addons.protocol.AddonClient
+import com.nexo.data.remote.addons.protocol.AddonDescriptorV3
+import com.nexo.data.remote.addons.protocol.AddonManifestV3
+import com.nexo.data.remote.addons.protocol.AddonMetaItem
+import com.nexo.data.remote.addons.protocol.AddonProtocolConstants
+import com.nexo.data.remote.addons.protocol.AddonResourceRouter
+import com.nexo.data.remote.addons.protocol.AddonRouteRequest
+import com.nexo.data.remote.addons.protocol.AddonShape
+import com.nexo.data.remote.addons.protocol.BookStream
+import com.nexo.data.remote.addons.protocol.CatalogRequest
+import com.nexo.data.remote.addons.protocol.IdRequest
+import com.nexo.data.remote.addons.protocol.StreamAccessType
+import com.nexo.data.remote.addons.protocol.StreamSource
 import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogProvider
@@ -7,25 +20,16 @@ import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.CatalogSourceKind
 import com.nexo.data.remote.catalog.MAX_PAGE_SIZE
 import com.nexo.data.remote.catalog.PagedResult
-import com.nexo.data.remote.catalog.RETRY_BASE_DELAY_MS
 import com.nexo.data.remote.catalog.addonSource
 import com.nexo.data.remote.catalog.catalogError
-import com.nexo.data.remote.catalog.computeNextPage
-import com.nexo.data.remote.catalog.isHttpSuccess
-import com.nexo.data.remote.catalog.mapHttpStatusToCode
 import com.nexo.data.remote.catalog.resolveDownloadUrl
-import com.nexo.data.remote.catalog.shouldRetryStatus
 import com.nexo.domain.access.AccessGroup
 import com.nexo.domain.access.AccessOption
 import com.nexo.domain.access.LegalAccess
-import kotlinx.coroutines.delay
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import com.nexo.domain.access.resolveAccess as resolveU3Access
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 /**
  * U4 external-open link title (localized copy, if any, belongs to U5).
@@ -33,143 +37,91 @@ import com.nexo.domain.access.resolveAccess as resolveU3Access
 private const val TITLE_OPEN_EXTERNAL = "Open"
 
 /**
- * U4 v2 resolve item: per-item `accessType`/`license`/`readUrl`/
- * `downloadUrl`. Unknown access types parse to null and fail closed
- * ([mayDownloadInApp] requires an explicit free or cleared license, so an
- * unknown item is never downloadable); its `readUrl` may still surface as
- * an external-open link.
+ * Payload shapes this build has no reader for. A `legacy-v2` row is served by
+ * [LegacyAddonCatalogProvider], which still understands its wire format, so the
+ * router skips those addons rather than sending a request whose answer it would
+ * discard. The other two have no reader yet and contribute nothing.
  */
-data class AddonResolveItem(
-    val accessType: AddonAccessType?,
-    val license: String?,
-    val readUrl: String?,
-    val downloadUrl: String?,
-) {
-    /** Only `free` (or license-cleared) items with an https download may flow in-app. */
-    val mayDownloadInApp: Boolean
-        get() =
-            (accessType == AddonAccessType.FREE || ManifestValidator.isLicenseCleared(license)) &&
-                downloadUrl != null
-
-    /** External-open link for this item, or null when it has no https read URL. */
-    fun toExternalOption(): AccessOption? {
-        val url = readUrl ?: return null
-        val group =
-            when (accessType) {
-                AddonAccessType.BUY -> AccessGroup.BUY
-                AddonAccessType.SUBSCRIBE -> AccessGroup.SUBSCRIBE
-                else -> AccessGroup.FREE
-            }
-        return AccessOption(group, TITLE_OPEN_EXTERNAL, url, opensInApp = false)
-    }
-}
+private val UNREADABLE_CATALOG_SHAPES = setOf(AddonShape.LEGACY_V2, AddonShape.STANDARD_EBOOKS, AddonShape.LIBRIVOX)
 
 /**
- * One [CatalogProvider] per installed addon manifest. Sources are
- * `addon:<addonId>`. Manifests MAY declare endpoint templates
- * (searchUrl/detailsUrl, validated https by [ManifestValidator]); when
- * present, search/getDetails fetch the addon's own catalog payloads through
- * the platform network layer (KtorAddonHttpTransport over the shared catalog
- * HttpClient) and parse them into CatalogBooks with provider = the addon
- * source id. Endpoint-less manifests stay browse-only: stable empty page /
- * NOT_FOUND, zero I/O. Mirrors desktop AddonCatalogProvider.ts.
+ * One [CatalogProvider] for every installed addon: the port stays
+ * `search` / `getDetails` / `resolveAccess`, and the v3 router decides who
+ * answers (`AddonResourceRouter.selectAddons`), so no screen or ViewModel ever
+ * learns about `metas`, `streams` or `types`.
  *
- * U4: v2 manifests MAY also declare `resolveUrl` + `capabilities`.
- * [resolveAccess] renders `resolveUrl` from the book identity, but only
- * after per-addon disclosure consent was recorded in [consent] — without
- * consent it returns an empty [LegalAccess] with zero I/O.
+ * Sources are `addon:<addonId>`, one per enabled addon in install order, and
+ * every page item keeps its namespaced protocol id (`gutenberg:1342`) so `meta`
+ * and `stream` can route on it later.
+ *
+ * Isolation: one addon failing — timeout, non-2xx, malformed payload, an
+ * unbuildable request URL — never fails the aggregate, and a disabled or
+ * uninstalled addon contributes nothing at all.
  */
 class AddonCatalogProvider(
-    manifest: AddonManifest,
-    addonId: String,
-    private val transport: AddonHttpTransport?,
-    private val retryDelayMs: Long = RETRY_BASE_DELAY_MS,
+    addons: List<InstalledAddonRow>,
+    private val client: AddonClient,
     private val consent: AddonConsentStore = InMemoryAddonConsentStore(),
+    /**
+     * Local lookup by `books.source_item_id`. Omitted ⇒ nothing is owned, which
+     * is the only safe default: an unknown item must never hide a download.
+     */
+    private val isOwned: suspend (sourceItemId: String) -> Boolean = { false },
 ) : CatalogProvider {
-    init {
-        val hasEndpoint = manifest.searchUrl != null || manifest.detailsUrl != null
-        require(!(hasEndpoint && transport == null)) {
-            "addon declares catalog endpoints but no transport is configured"
+    private val descriptors: List<AddonDescriptorV3> =
+        addons
+            .filter { it.enabled }
+            .map { row -> AddonDescriptorV3(row.id, row.url, row.addedAt, row.enabled, row.manifest) }
+
+    override fun listSources(): List<CatalogSourceInfo> =
+        descriptors.map { addon ->
+            CatalogSourceInfo(
+                sourceId = addonSource(addon.id),
+                name = addon.manifest.name,
+                kind = CatalogSourceKind.ADDON,
+            )
         }
-    }
 
-    private val source =
-        CatalogSourceInfo(
-            sourceId = addonSource(addonId),
-            name = manifest.name,
-            kind = CatalogSourceKind.ADDON,
-        )
-
-    private val searchUrl: String? = manifest.searchUrl
-    private val detailsUrl: String? = manifest.detailsUrl
-    private val resolveUrl: String? = manifest.resolveUrl
-    private val addonIdKey: String = addonId
-
-    /** U4: declared v2 capabilities, disclosed before consent is recorded (U5 UI). */
-    val capabilities: List<String> = manifest.capabilities
-
-    private val json = Json { ignoreUnknownKeys = true }
-
-    override fun listSources(): List<CatalogSourceInfo> = listOf(source)
+    /** Namespaced ids are not source-prefixed: the composite delegates here. */
+    override fun servesNamespacedIds(): Boolean = true
 
     override suspend fun search(
         query: String,
         page: Int,
     ): PagedResult {
-        val template = searchUrl ?: return BROWSE_ONLY_PAGE
-        val url =
-            renderTemplate(
-                template,
-                mapOf("query" to encodeValue(query), "page" to page.toString()),
-            )
-        return parseSearchPayload(fetchJson(url), source.sourceId, page)
+        if (page < 1) throw catalogError(CatalogErrorCode.INVALID_PAGE, "page must be >= 1, got $page")
+        return fanOut(catalogCandidates(), query, page)
     }
 
+    /**
+     * Per-source search: the source chip filter. An unknown or disabled source
+     * fails closed with an empty page and zero I/O.
+     */
+    override suspend fun searchSource(
+        sourceId: String,
+        query: String,
+        page: Int,
+    ): PagedResult {
+        if (page < 1) throw catalogError(CatalogErrorCode.INVALID_PAGE, "page must be >= 1, got $page")
+        val target = catalogCandidates().filter { addonSource(it.id) == sourceId }
+        if (target.isEmpty()) return PagedResult(emptyList(), null, 0)
+        return fanOut(target, query, page)
+    }
+
+    /**
+     * Detail for one namespaced id, through the `meta` resource. `meta` carries
+     * no consent requirement: it is a read-only description, and the addon
+     * already answered `catalog` for it. Only a NON_NULL answer is returned —
+     * an addon that cannot describe the id is skipped, never an error.
+     */
     override suspend fun getDetails(id: String): CatalogBook {
-        val prefix = "${source.sourceId}:"
-        if (!id.startsWith(prefix) || id.length <= prefix.length) {
-            throw catalogError(CatalogErrorCode.NOT_FOUND, "unknown catalog id $id")
+        val candidates = candidates("meta", id)
+        if (candidates.isEmpty()) throw catalogError(CatalogErrorCode.NOT_FOUND, "unknown catalog id $id")
+        for (addon in candidates) {
+            val item = client.getMeta(listOf(addon), IdRequest(id = id)).items.firstOrNull() ?: continue
+            return toCatalogBook(item)
         }
-        val template =
-            detailsUrl
-                ?: throw catalogError(CatalogErrorCode.NOT_FOUND, "addon source has no details endpoint: $id")
-        val url =
-            renderTemplate(
-                template,
-                mapOf("bookId" to encodeValue(id.removePrefix(prefix))),
-            )
-        return parseAddonBook(fetchJson(url), id, source.sourceId)
-    }
-
-    private suspend fun fetchJson(url: String): JsonElement {
-        var response = callTransport(url)
-        if (shouldRetryStatus(response.status)) {
-            if (retryDelayMs > 0) delay(retryDelayMs)
-            response = callTransport(url)
-        }
-        if (!response.status.isHttpSuccess()) {
-            throw catalogError(mapHttpStatusToCode(response.status), "addon payload status ${response.status}")
-        }
-        if (response.body.size > ManifestValidator.MAX_MANIFEST_BYTES) {
-            throw catalogError(CatalogErrorCode.UPSTREAM_ERROR, "addon payload exceeds size cap")
-        }
-        return try {
-            json.parseToJsonElement(response.body.decodeToString())
-        } catch (_: Exception) {
-            throw catalogError(CatalogErrorCode.UPSTREAM_ERROR, "addon payload is not valid JSON")
-        }
-    }
-
-    private suspend fun callTransport(url: String): AddonResource {
-        val transport =
-            transport
-                ?: throw catalogError(CatalogErrorCode.NETWORK_ERROR, "addon transport unavailable")
-        return try {
-            transport.fetch(url)
-        } catch (err: Throwable) {
-            if (err is com.nexo.data.remote.catalog.CatalogException) throw err
-            throw catalogError(CatalogErrorCode.NETWORK_ERROR, "addon payload request failed")
-        }
+        throw catalogError(CatalogErrorCode.NOT_FOUND, "unknown catalog id $id")
     }
 
     override fun resolveDownloadUrl(
@@ -178,158 +130,173 @@ class AddonCatalogProvider(
     ): String = resolveDownloadUrl(formats, preferEpub)
 
     /**
-     * U4 consent-gated resolve. Without recorded consent for this addon —
-     * or without a `resolveUrl` capability — returns an empty [LegalAccess]
-     * with zero I/O. With consent, `resolveUrl` renders from the book
-     * identity (`{isbn}`, `{title}`, `{author}`, `{openLibraryId}`,
-     * `{googleBooksId}`), the free-gate admits only `free`/license-cleared
-     * items to the in-app download path, everything else surfaces as
-     * external-open links, and the in-app download additionally reuses the
-     * U3 gate (`isPublicDomain == true` on the book).
+     * Reading access through the `stream` resource.
+     *
+     * - No addon declares `stream` for this id ⇒ empty resolution, zero I/O.
+     * - Consent is checked BEFORE any transport call and only here: `stream` is
+     *   the one resource that can point at an arbitrary third-party file. When
+     *   no candidate holds a grant the resolve returns an empty [LegalAccess]
+     *   with zero I/O (the same outcome the v2 adapter produced); an unconsented
+     *   addon is skipped while a consented one still answers.
+     * - Every answering addon contributes, in the product order the client
+     *   already applied (access type, format, install time, id). One addon
+     *   failing is a dropped contribution, never an error.
+     * - `AddonDeliveryGuard.assertDeliverableStream` has already dropped every
+     *   torrent; this class adds no second filtering path.
+     * - An owned book keeps its options but is never downloaded again.
      */
     suspend fun resolveAccess(book: CatalogBook): LegalAccess {
-        if (!consent.hasConsent(addonIdKey)) return LegalAccess(book.id, false, null, emptyList())
-        val template = resolveUrl ?: return LegalAccess(book.id, false, null, emptyList())
-        val items = parseResolvePayload(fetchJson(renderTemplate(template, resolveParams(book))))
-        val candidate = items.firstOrNull { it.mayDownloadInApp }?.downloadUrl
-        val gate = resolveU3Access(book.copy(downloadUrl = candidate))
+        val candidates = candidates("stream", book.id)
+        if (candidates.isEmpty()) return emptyAccess(book.id)
+        val consented = candidates.filter { consent.hasConsent(it.id) }
+        if (consented.isEmpty()) return emptyAccess(book.id)
+
+        val streams = uniqueByUrl(client.getStreams(consented, IdRequest(id = book.id)).items)
+        if (streams.isEmpty()) return emptyAccess(book.id)
+
+        val owned = ownedByLocalCatalog(book.id)
+        val downloadable = streams.firstOrNull { it.source == StreamSource.DOWNLOAD && it.accessType == StreamAccessType.PUBLIC_DOMAIN }
+        val canDownloadInApp = downloadable != null && !owned
         return LegalAccess(
             bookId = book.id,
-            canDownloadInApp = gate.canDownloadInApp,
-            downloadUrl = gate.downloadUrl,
-            options = items.mapNotNull { it.toExternalOption() },
+            canDownloadInApp = canDownloadInApp,
+            downloadUrl = if (canDownloadInApp) downloadable?.url else null,
+            options = streams.map { toAccessOption(it, owned) },
         )
     }
 
-    companion object {
-        /** Parity with desktop encodeURIComponent: spaces are %20, never +. */
-        private fun encodeValue(value: String): String =
-            java.net.URLEncoder
-                .encode(value, "UTF-8")
-                .replace("+", "%20")
+    private fun candidates(
+        resource: String,
+        id: String,
+    ): List<AddonDescriptorV3> =
+        AddonResourceRouter.selectAddons(
+            descriptors,
+            AddonRouteRequest(resource = resource, type = AddonProtocolConstants.TYPE_BOOK, id = id),
+        )
 
-        private val BROWSE_ONLY_PAGE = PagedResult(emptyList(), null, 0)
-
-        /** U4 resolveUrl template keys, rendered from the U3 book identity. */
-        private const val PARAM_ISBN = "isbn"
-        private const val PARAM_TITLE = "title"
-        private const val PARAM_AUTHOR = "author"
-        private const val PARAM_OPEN_LIBRARY_ID = "openLibraryId"
-        private const val PARAM_GOOGLE_BOOKS_ID = "googleBooksId"
-
-        /** Substitute `{placeholders}` in a validated endpoint template. */
-        internal fun renderTemplate(
-            template: String,
-            params: Map<String, String>,
-        ): String =
-            Regex("\\{(\\w+)\\}").replace(template) { match ->
-                params[match.groupValues[1]] ?: match.value
+    /** Enabled addons that declare `catalog` for books and whose shape this build can read. */
+    private fun catalogCandidates(): List<AddonDescriptorV3> =
+        AddonResourceRouter
+            .selectAddons(
+                descriptors,
+                AddonRouteRequest(resource = "catalog", type = AddonProtocolConstants.TYPE_BOOK),
+            ).filter { addon ->
+                addon.manifest.catalogs.isNotEmpty() && readableShape(addon.manifest)
             }
 
-        /** U4: identity params for a resolveUrl template (missing identity ⇒ empty). */
-        private fun resolveParams(book: CatalogBook): Map<String, String> =
-            mapOf(
-                PARAM_ISBN to encodeValue(book.isbn13 ?: book.isbn10 ?: ""),
-                PARAM_TITLE to encodeValue(book.title),
-                PARAM_AUTHOR to encodeValue(book.authors.firstOrNull() ?: ""),
-                PARAM_OPEN_LIBRARY_ID to encodeValue(book.openLibraryWorkId ?: ""),
-                PARAM_GOOGLE_BOOKS_ID to encodeValue(book.googleBooksId ?: ""),
-            )
+    private fun readableShape(manifest: AddonManifestV3): Boolean = (manifest.nexo?.shape ?: AddonShape.RAW) !in UNREADABLE_CATALOG_SHAPES
 
-        private fun httpsOrNull(value: JsonElement?): String? =
-            ((value as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content)
-                ?.takeIf { it.startsWith("https://") }
-
-        private fun stringArray(
-            value: JsonElement?,
-            field: String,
-        ): List<String> {
-            if (value == null || value is JsonNull) return emptyList()
-            val array =
-                value as? JsonArray
-                    ?: throw catalogError(CatalogErrorCode.UPSTREAM_ERROR, "malformed addon payload: $field must be an array of strings")
-            return array.map { element ->
-                (element as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
-                    ?: throw catalogError(CatalogErrorCode.UPSTREAM_ERROR, "malformed addon payload: $field must be strings")
+    /**
+     * One addon's every declared catalog, unioned in install order. `search` is
+     * always sent; `skip` only past the first page, and the package drops any
+     * argument the catalog did not declare.
+     */
+    private suspend fun fanOut(
+        candidates: List<AddonDescriptorV3>,
+        query: String,
+        page: Int,
+    ): PagedResult {
+        if (candidates.isEmpty()) return PagedResult(emptyList(), null, 0)
+        val extra: Map<String, Any?> =
+            if (page > 1) {
+                mapOf("search" to query, "skip" to (page - 1) * MAX_PAGE_SIZE)
+            } else {
+                mapOf("search" to query)
             }
-        }
 
-        private fun malformed(detail: String): Nothing = throw catalogError(CatalogErrorCode.UPSTREAM_ERROR, "malformed addon payload: $detail")
-
-        private fun parseAddonBook(
-            value: JsonElement,
-            bookId: String,
-            sourceId: String,
-        ): CatalogBook {
-            val obj = value as? JsonObject ?: malformed("book must be an object")
-            val rawId = (obj["id"] as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
-            val rawTitle = (obj["title"] as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
-            if (rawId.isNullOrEmpty() || rawTitle.isNullOrEmpty()) malformed("book missing id/title")
-            return CatalogBook(
-                id = bookId,
-                provider = sourceId,
-                title = rawTitle,
-                authors = stringArray(obj["authors"], "authors"),
-                coverUrl = httpsOrNull(obj["coverUrl"]),
-                languages = stringArray(obj["languages"], "languages"),
-                subjects = stringArray(obj["subjects"], "subjects"),
-                downloadUrl = httpsOrNull(obj["downloadUrl"]),
-            )
-        }
-
-        /**
-         * U4: parse a resolve payload (`{"results": [...]}`) into access
-         * items. `accessType`/`license`/`readUrl`/`downloadUrl` are all
-         * optional per item; non-https URLs are dropped (never fail the
-         * whole payload); unknown `accessType` parses to null (fail closed
-         * for the download path at [AddonResolveItem.mayDownloadInApp]).
-         */
-        internal fun parseResolvePayload(payload: JsonElement): List<AddonResolveItem> {
-            val obj = payload as? JsonObject ?: malformed("resolve payload must be an object with a results array")
-            val results = obj["results"] as? JsonArray ?: malformed("resolve payload must be an object with a results array")
-            return results.mapIndexed { i, element ->
-                val entry = element as? JsonObject ?: malformed("resolve item $i must be an object")
-                AddonResolveItem(
-                    accessType =
-                        ManifestValidator.parseAccessType(
-                            (entry["accessType"] as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content,
-                        ),
-                    license = (entry["license"] as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content,
-                    readUrl = httpsOrNull(entry["readUrl"]),
-                    downloadUrl = httpsOrNull(entry["downloadUrl"]),
-                )
+        val answers =
+            coroutineScope {
+                candidates
+                    .flatMap { addon ->
+                        addon.manifest.catalogs.map { catalog ->
+                            async { searchOne(addon, catalog.id, extra) }
+                        }
+                    }.awaitAll()
             }
-        }
 
-        internal fun parseSearchPayload(
-            payload: JsonElement,
-            sourceId: String,
-            page: Int,
-        ): PagedResult {
-            val obj = payload as? JsonObject ?: malformed("payload must be an object with a results array")
-            val results = obj["results"] as? JsonArray ?: malformed("payload must be an object with a results array")
-            var totalCount = results.size
-            val declared = obj["totalCount"]
-            if (declared != null && declared !is JsonNull) {
-                val n =
-                    (declared as? JsonPrimitive)?.content?.toIntOrNull()
-                        ?: malformed("totalCount must be a non-negative integer")
-                if (n < 0) malformed("totalCount must be a non-negative integer")
-                totalCount = n
-            }
-            val books =
-                results.mapIndexed { i, element ->
-                    val entry = element as? JsonObject ?: malformed("book $i must be an object")
-                    val rawId = (entry["id"] as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
-                    if (rawId.isNullOrEmpty()) malformed("book $i missing id")
-                    parseAddonBook(entry, "$sourceId:$rawId", sourceId)
+        val results = mutableListOf<CatalogBook>()
+        val seenIds = HashSet<String>()
+        var truncated = false
+        for (answer in answers) {
+            for (item in answer) {
+                if (!seenIds.add(item.meta.id)) continue
+                if (results.size >= MAX_PAGE_SIZE) {
+                    truncated = true
+                    continue
                 }
-            val clamped = books.take(MAX_PAGE_SIZE)
-            return PagedResult(
-                results = clamped,
-                nexoPage = computeNextPage(page, clamped.size, totalCount),
-                totalCount = totalCount,
-            )
+                results += toCatalogBook(item)
+            }
         }
+        return PagedResult(
+            results = results,
+            nexoPage = if (truncated) page + 1 else null,
+            totalCount = results.size,
+        )
+    }
+
+    private suspend fun searchOne(
+        addon: AddonDescriptorV3,
+        catalogId: String,
+        extra: Map<String, Any?>,
+    ): List<AddonMetaItem> =
+        try {
+            client.searchCatalog(listOf(addon), CatalogRequest(catalogId = catalogId, extra = extra)).items
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            // The fan-out's isolation guarantee has to survive an adapter throwing.
+            emptyList()
+        }
+
+    /** First occurrence wins, so a duplicate link keeps its better-ranked option. */
+    private fun uniqueByUrl(streams: List<BookStream>): List<BookStream> {
+        val seen = HashSet<String>()
+        return streams.filter { seen.add(it.url) }
+    }
+
+    /** `gutenberg:1342` stays intact: `meta` and `stream` route on this id. */
+    private fun toCatalogBook(item: AddonMetaItem): CatalogBook =
+        CatalogBook(
+            id = item.meta.id,
+            provider = addonSource(item.addonId),
+            title = item.meta.name,
+            authors = item.meta.authors,
+            coverUrl = item.meta.poster?.takeIf { it.startsWith("https://") },
+            languages = item.meta.languages,
+            subjects = item.meta.subjects,
+            downloadUrl = null,
+            description = item.meta.description,
+            isbn13 = item.meta.isbn13,
+        )
+
+    /**
+     * One stream → one option. A loan behaves like a lending subscription:
+     * there is deliberately no separate LEND group.
+     */
+    private fun toAccessOption(
+        stream: BookStream,
+        owned: Boolean,
+    ): AccessOption {
+        val group =
+            when (stream.accessType) {
+                StreamAccessType.PURCHASE -> AccessGroup.BUY
+                StreamAccessType.BORROW -> AccessGroup.SUBSCRIBE
+                else -> AccessGroup.FREE
+            }
+        return AccessOption(group, TITLE_OPEN_EXTERNAL, stream.url, opensInApp = false, owned = owned)
+    }
+
+    /** Local catalog match on the provenance item id; a failed lookup owns nothing. */
+    private suspend fun ownedByLocalCatalog(sourceItemId: String): Boolean =
+        try {
+            isOwned(sourceItemId)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            false
+        }
+
+    private companion object {
+        fun emptyAccess(bookId: String): LegalAccess = LegalAccess(bookId, false, null, emptyList())
     }
 }

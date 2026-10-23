@@ -143,7 +143,7 @@ class AddonManifestV2ConsentTest {
             assertEquals(emptyList<String>(), manifest.capabilities)
             // Endpoint-less v1 provider: stable empty page, NOT_FOUND details, zero I/O.
             val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = AddonCatalogProvider(manifest, V2_ADDON_ID, transport)
+            val provider = LegacyAddonCatalogProvider(manifest, V2_ADDON_ID, transport)
             val page = provider.search("anything", 1)
             assertEquals(0, page.results.size)
             assertEquals(0, page.totalCount)
@@ -214,7 +214,7 @@ class AddonManifestV2ConsentTest {
     fun `no consent means empty resolve with zero network io`() =
         runTest {
             val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = AddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport)
+            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport)
             val access = provider.resolveAccess(book(publicDomain = true))
             assertFalse(access.canDownloadInApp)
             assertNull(access.downloadUrl)
@@ -229,7 +229,7 @@ class AddonManifestV2ConsentTest {
             consent.recordConsent(V2_ADDON_ID)
             val v1 = ManifestValidator.validate(bytes(V1_MANIFEST_JSON), "application/json")
             val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = AddonCatalogProvider(v1, V2_ADDON_ID, transport, consent = consent)
+            val provider = LegacyAddonCatalogProvider(v1, V2_ADDON_ID, transport, consent = consent)
             val access = provider.resolveAccess(book(publicDomain = true))
             assertFalse(access.canDownloadInApp)
             assertNull(access.downloadUrl)
@@ -243,7 +243,7 @@ class AddonManifestV2ConsentTest {
             val consent = InMemoryAddonConsentStore()
             consent.recordConsent(V2_ADDON_ID)
             val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = AddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
+            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
             provider.resolveAccess(book(publicDomain = true))
             assertEquals(1, transport.urls.size)
             assertEquals(
@@ -259,7 +259,7 @@ class AddonManifestV2ConsentTest {
             val consent = InMemoryAddonConsentStore()
             consent.recordConsent(V2_ADDON_ID)
             val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = AddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
+            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
             val access = provider.resolveAccess(book(publicDomain = true))
             assertTrue(access.canDownloadInApp)
             assertEquals("https://dl.example/b1.epub", access.downloadUrl)
@@ -274,7 +274,7 @@ class AddonManifestV2ConsentTest {
             val consent = InMemoryAddonConsentStore()
             consent.recordConsent(V2_ADDON_ID)
             val transport = RecordingAddonTransport(resolvePayload(resolveItemJson()))
-            val provider = AddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
+            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
             for (pd in listOf(false, null)) {
                 val access = provider.resolveAccess(book(publicDomain = pd))
                 assertFalse(access.canDownloadInApp)
@@ -299,7 +299,7 @@ class AddonManifestV2ConsentTest {
                         ),
                     ),
                 )
-            val provider = AddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
+            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
             val access = provider.resolveAccess(book(publicDomain = true))
             assertFalse(access.canDownloadInApp)
             assertNull(access.downloadUrl)
@@ -317,7 +317,7 @@ class AddonManifestV2ConsentTest {
                 RecordingAddonTransport(
                     resolvePayload(resolveItemJson(accessType = "buy", license = "public-domain")),
                 )
-            val provider = AddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
+            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
             val access = provider.resolveAccess(book(publicDomain = true))
             assertTrue(access.canDownloadInApp)
             assertEquals("https://dl.example/b1.epub", access.downloadUrl)
@@ -329,7 +329,7 @@ class AddonManifestV2ConsentTest {
             val consent = InMemoryAddonConsentStore()
             consent.recordConsent(V2_ADDON_ID)
             val transport = RecordingAddonTransport(resolvePayload(resolveItemJson(accessType = "rental")))
-            val provider = AddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
+            val provider = LegacyAddonCatalogProvider(v2Manifest(), V2_ADDON_ID, transport, consent = consent)
             val access = provider.resolveAccess(book(publicDomain = true))
             assertFalse(access.canDownloadInApp)
             assertNull(access.downloadUrl)

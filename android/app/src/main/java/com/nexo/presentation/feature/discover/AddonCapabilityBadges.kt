@@ -77,13 +77,19 @@ fun AddonTrustNote(
     }
 }
 
-/** Localized label for a known capability id; unknown ids render raw. */
+/**
+ * Localized label for a known capability id; unknown ids render raw.
+ *
+ * A v3 manifest declares resources (`catalog` / `meta` / `stream`) instead of
+ * v2 capabilities, so the v3 name is the alias of the v2 disclosure it enables
+ * and the same three labels keep working.
+ */
 @Composable
 internal fun capabilityLabel(capability: String): String =
     when (capability.trim().lowercase()) {
-        CAPABILITY_SEARCH -> stringResource(R.string.addon_capability_search)
-        CAPABILITY_DETAILS -> stringResource(R.string.addon_capability_details)
-        CAPABILITY_RESOLVE -> stringResource(R.string.addon_capability_resolve)
+        CAPABILITY_SEARCH, CAPABILITY_CATALOG -> stringResource(R.string.addon_capability_search)
+        CAPABILITY_DETAILS, CAPABILITY_META -> stringResource(R.string.addon_capability_details)
+        CAPABILITY_RESOLVE, CAPABILITY_STREAM -> stringResource(R.string.addon_capability_resolve)
         else -> capability
     }
 
@@ -95,3 +101,12 @@ private const val CAPABILITY_DETAILS = "details"
 
 /** Manifest capability: the addon resolves "where to read" links. */
 private const val CAPABILITY_RESOLVE = "resolve"
+
+/** v3 resource: catalog pages (the v2 `search` capability). */
+private const val CAPABILITY_CATALOG = "catalog"
+
+/** v3 resource: per-book detail payloads (the v2 `details` capability). */
+private const val CAPABILITY_META = "meta"
+
+/** v3 resource: reading links (the v2 `resolve` capability). */
+private const val CAPABILITY_STREAM = "stream"

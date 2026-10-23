@@ -79,8 +79,15 @@ class AppContainer(
     // NetworkModule is built BEFORE RepositoryModule so the drain scheduler can
     // resolve the (lazy, dependency-free) SessionManager at container init. The
     // two modules are otherwise independent — NetworkModule does not reference
-    // RepositoryModule.
-    private val networkModule = NetworkModule(context.applicationContext, databaseModule, preferencesModule)
+    // RepositoryModule. The one exception is the ownership probe captured here:
+    // it is a lambda, so it only reads the repository when a stream resolve runs.
+    private val networkModule =
+        NetworkModule(
+            context = context.applicationContext,
+            databaseModule = databaseModule,
+            preferencesModule = preferencesModule,
+            ownedLookup = { sourceItemId -> repositoryModule.libraryRepository.findOwned(sourceItemId) != null },
+        )
 
     /**
      * Outbox drain scheduler (S6): WorkManager-backed, one-shot unique work per
@@ -173,7 +180,7 @@ class AppContainer(
         )
     }
 
-    private val repositoryModule =
+    private val repositoryModule: RepositoryModule =
         RepositoryModule(
             context = context.applicationContext,
             databaseModule = databaseModule,

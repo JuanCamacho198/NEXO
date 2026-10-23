@@ -21,6 +21,8 @@ data class AddonResource(
     val status: Int,
     val contentType: String?,
     val body: ByteArray,
+    /** Upstream `Cache-Control`, so a `max-age` can shorten the client ttl. */
+    val cacheControl: String? = null,
 )
 
 class KtorAddonHttpTransport(
@@ -38,6 +40,7 @@ class KtorAddonHttpTransport(
                 status = response.status.value,
                 contentType = response.headers[HttpHeaders.ContentType],
                 body = response.bodyAsBytes(),
+                cacheControl = response.headers[HttpHeaders.CacheControl],
             )
         } catch (err: Throwable) {
             if (err is AddonFetchException) throw err

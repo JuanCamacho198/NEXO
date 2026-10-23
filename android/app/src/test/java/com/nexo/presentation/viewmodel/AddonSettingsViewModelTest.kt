@@ -1,6 +1,5 @@
 package com.nexo.presentation.viewmodel
 
-import com.nexo.data.remote.addons.AddonManifest
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.addons.InstalledAddonRow
 import com.nexo.testutil.MainDispatcherRule
@@ -23,20 +22,31 @@ class AddonSettingsViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val manifest =
-        AddonManifest(
-            id = "my-addon",
-            name = "My Addon",
-            version = "1.0.0",
-            catalogs =
-                listOf(
-                    com.nexo.data.remote.addons
-                        .AddonCatalogEntry("book", "main", "Main catalog"),
-                ),
-            resources = listOf("catalog"),
-        )
+        com.nexo.data.remote.addons.protocol
+            .AddonManifestV3(
+                id = "my-addon",
+                name = "My Addon",
+                version = "3.0.0",
+                types = listOf("book"),
+                catalogs =
+                    listOf(
+                        com.nexo.data.remote.addons.protocol
+                            .AddonCatalogEntryV3("book", "main", "Main catalog"),
+                    ),
+                resources =
+                    listOf(
+                        com.nexo.data.remote.addons.protocol
+                            .AddonResourceV3("catalog"),
+                    ),
+            )
+
+    private val preview =
+        com.nexo.data.remote.addons
+            .AddonManifestPreview(manifest = manifest, rawJson = """{"id":"my-addon"}""")
 
     private class FakeAddonRegistry(
-        private val manifest: AddonManifest,
+        private val manifest: com.nexo.data.remote.addons.protocol.AddonManifestV3,
+        private val preview: com.nexo.data.remote.addons.AddonManifestPreview,
     ) : com.nexo.data.remote.addons.AddonRegistryLike {
         var rows = mutableListOf<InstalledAddonRow>()
         val installedUrls = mutableListOf<String>()
@@ -46,18 +56,18 @@ class AddonSettingsViewModelTest {
 
         override suspend fun listInstalled(): List<InstalledAddonRow> = rows.toList()
 
-        override suspend fun fetchManifest(url: String): AddonManifest = manifest
+        override suspend fun fetchManifest(url: String): com.nexo.data.remote.addons.AddonManifestPreview = preview
 
         override suspend fun installManifest(
             url: String,
-            manifest: AddonManifest,
-        ): AddonManifest {
+            preview: com.nexo.data.remote.addons.AddonManifestPreview,
+        ): com.nexo.data.remote.addons.protocol.AddonManifestV3 {
             installedUrls.add(url)
             rows.add(InstalledAddonRow("id-${rows.size + 1}", url, manifest, true, rows.size.toLong()))
             return manifest
         }
 
-        override suspend fun install(url: String): AddonManifest {
+        override suspend fun install(url: String): com.nexo.data.remote.addons.protocol.AddonManifestV3 {
             installError?.let { throw it }
             installedUrls.add(url)
             rows.add(InstalledAddonRow("id-${rows.size + 1}", url, manifest, true, rows.size.toLong()))
@@ -81,7 +91,7 @@ class AddonSettingsViewModelTest {
     @Test
     fun `refresh loads installed addons into state`() =
         runTest {
-            val registry = FakeAddonRegistry(manifest)
+            val registry = FakeAddonRegistry(manifest, preview)
             registry.rows.add(InstalledAddonRow("id-1", "https://example.com/m.json", manifest, true, 1))
             val vm = AddonSettingsViewModel(registry)
             vm.refresh()
@@ -98,7 +108,7 @@ class AddonSettingsViewModelTest {
     @Test
     fun `install stores by url, clears input, refreshes`() =
         runTest {
-            val registry = FakeAddonRegistry(manifest)
+            val registry = FakeAddonRegistry(manifest, preview)
             val vm = AddonSettingsViewModel(registry)
             vm.onUrlChange("https://example.com/m.json")
             vm.install()
@@ -112,7 +122,7 @@ class AddonSettingsViewModelTest {
     @Test
     fun `install failure keeps url and reports via callback`() =
         runTest {
-            val registry = FakeAddonRegistry(manifest)
+            val registry = FakeAddonRegistry(manifest, preview)
             registry.installError =
                 com.nexo.data.remote.addons.AddonFetchException(
                     com.nexo.data.remote.addons.AddonFetchErrorCode.HTTPS_REQUIRED,
@@ -131,7 +141,7 @@ class AddonSettingsViewModelTest {
     @Test
     fun `install with blank url is a no-op`() =
         runTest {
-            val registry = FakeAddonRegistry(manifest)
+            val registry = FakeAddonRegistry(manifest, preview)
             val vm = AddonSettingsViewModel(registry)
             vm.onUrlChange("   ")
             vm.install()
@@ -142,7 +152,7 @@ class AddonSettingsViewModelTest {
     @Test
     fun `toggle and uninstall mutate the registry and refresh state`() =
         runTest {
-            val registry = FakeAddonRegistry(manifest)
+            val registry = FakeAddonRegistry(manifest, preview)
             registry.rows.add(InstalledAddonRow("id-1", "https://example.com/m.json", manifest, true, 1))
             val vm = AddonSettingsViewModel(registry)
             vm.refresh()

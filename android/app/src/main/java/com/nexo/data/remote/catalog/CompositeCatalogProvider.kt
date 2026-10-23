@@ -377,12 +377,18 @@ class CompositeCatalogProvider(
     /**
      * Exact-prefix routing over the active source set: `gutendex:`/`openlibrary:`
      * book ids hit the built-ins, `addon:<addonId>:<bookId>` the owning addon.
-     * Unroutable ids reject NOT_FOUND without any I/O.
+     * Namespaced addon ids (`gutenberg:1342`) have no owning source prefix, so
+     * they fall through to the provider that answers them itself (the v3
+     * fan-out, through `meta`). Unroutable ids reject NOT_FOUND without any I/O.
      */
     override suspend fun getDetails(id: String): CatalogBook {
-        val route =
-            routeDetails(id)
-                ?: throw catalogError(CatalogErrorCode.NOT_FOUND, "unknown catalog id $id")
+        val route = routeDetails(id)
+        if (route == null) {
+            val namespaced =
+                namespacedIdProvider()
+                    ?: throw catalogError(CatalogErrorCode.NOT_FOUND, "unknown catalog id $id")
+            return namespaced.getDetails(id)
+        }
         val active = activeSourceIds()
         if (cache != null && route.source.sourceId in active) {
             val hit = cache.get(detailCacheKey(route.source.sourceId, id), nowEpochSecs())
@@ -399,6 +405,14 @@ class CompositeCatalogProvider(
         }
         return book
     }
+
+    /**
+     * The provider that answers ids no source prefix owns (`gutenberg:1342`).
+     * Scanned across every registered provider, not only the ones with sources:
+     * the fan-out's roster is an installed-addon snapshot, and it answers
+     * NOT_FOUND (zero I/O) when no addon can describe the id.
+     */
+    private fun namespacedIdProvider(): CatalogProvider? = providers.firstOrNull { it.servesNamespacedIds() }
 
     private fun routeDetails(id: String): RoutedDetails? {
         var best: RoutedDetails? = null

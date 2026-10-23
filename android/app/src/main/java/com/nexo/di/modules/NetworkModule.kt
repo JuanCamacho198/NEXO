@@ -3,11 +3,17 @@ package com.nexo.di.modules
 import android.content.Context
 import com.nexo.BuildConfig
 import com.nexo.data.remote.addons.AddonCatalogProvider
+import com.nexo.data.remote.addons.AddonProtocolTransport
 import com.nexo.data.remote.addons.AddonRegistry
 import com.nexo.data.remote.addons.CuratedCatalogProvider
+import com.nexo.data.remote.addons.InstalledAddonRow
 import com.nexo.data.remote.addons.KtorAddonHttpTransport
+import com.nexo.data.remote.addons.LegacyAddonCatalogProvider
 import com.nexo.data.remote.addons.PersistentAddonConsentStore
 import com.nexo.data.remote.addons.catalogProvidersWithAddons
+import com.nexo.data.remote.addons.protocol.AddonClient
+import com.nexo.data.remote.addons.protocol.CircuitBreaker
+import com.nexo.data.remote.addons.protocol.TtlCache
 import com.nexo.data.remote.catalog.ANDROID_USER_AGENT
 import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogFileDownloader
@@ -80,6 +86,12 @@ class NetworkModule(
     private val context: Context,
     private val databaseModule: DatabaseModule,
     @Suppress("UNUSED_PARAMETER") private val preferencesModule: PreferencesModule,
+    /**
+     * Local-catalog lookup by `books.source_item_id`, used to flag an addon
+     * option whose item is already on the shelf. Defaults to "owns nothing":
+     * an unknown item must never hide a download.
+     */
+    private val ownedLookup: suspend (sourceItemId: String) -> Boolean = { false },
 ) {
     val driveTokenStore: DriveTokenStore by lazy {
         runCatching { EncryptedDriveTokenStore(context.applicationContext) }
@@ -348,23 +360,31 @@ class NetworkModule(
     }
 
     /**
-     * U5: resolves one installed addon's reading links for [book] through an
-     * ephemeral provider over its manifest. Fail-closed: unknown addon or
-     * missing disclosure consent resolves to an empty [LegalAccess] with
-     * zero I/O (mirrors the provider gate).
+     * U5: resolves one installed addon's reading links for [book] through the
+     * v3 `stream` resource. Fail-closed: an unknown addon, a missing disclosure
+     * consent, or an addon that declares no `stream` all resolve to an empty
+     * [LegalAccess] with zero I/O (the fan-out re-checks consent itself, before
+     * any transport call). A stored v2 row keeps its v2 resolve path, which is
+     * the only reader of its payload shape.
      */
     val addonResolveForBook: suspend (addonId: String, book: CatalogBook) -> LegalAccess =
         { addonId, book ->
             val row = addonRegistry.listInstalled().find { it.id == addonId }
-            if (row == null || !addonRegistry.hasAddonConsent(addonId)) {
-                LegalAccess(book.id, false, null, emptyList())
-            } else {
-                AddonCatalogProvider(
-                    row.manifest,
-                    addonId,
-                    addonTransport,
-                    consent = addonRegistry.consent,
-                ).resolveAccess(book)
+            val legacy = row?.legacyManifest
+            when {
+                row == null -> LegalAccess(book.id, false, null, emptyList())
+                legacy != null ->
+                    if (!addonRegistry.hasAddonConsent(addonId)) {
+                        LegalAccess(book.id, false, null, emptyList())
+                    } else {
+                        LegacyAddonCatalogProvider(
+                            legacy,
+                            addonId,
+                            addonTransport,
+                            consent = addonRegistry.consent,
+                        ).resolveAccess(book)
+                    }
+                else -> addonProvider(listOf(row)).resolveAccess(book)
             }
         }
 
@@ -375,6 +395,34 @@ class NetworkModule(
     val addonTransport: KtorAddonHttpTransport by lazy {
         KtorAddonHttpTransport(catalogHttpClient)
     }
+
+    // One response cache and one circuit breaker for the whole process: the
+    // composite rebuilds on every registry mutation, and a fresh cache per
+    // rebuild would defeat both the catalog ttl and the "3 consecutive failures"
+    // rule.
+    private val addonTtlCache: TtlCache by lazy { TtlCache() }
+    private val addonCircuitBreaker: CircuitBreaker by lazy { CircuitBreaker() }
+
+    private val addonProtocolTransport: AddonProtocolTransport by lazy {
+        AddonProtocolTransport(addonTransport)
+    }
+
+    val addonClient: AddonClient by lazy {
+        AddonClient(
+            transport = addonProtocolTransport,
+            cache = addonTtlCache,
+            breaker = addonCircuitBreaker,
+        )
+    }
+
+    /** The v3 fan-out over [rows]; `isOwned` flags an item already on the shelf. */
+    private fun addonProvider(rows: List<InstalledAddonRow>): AddonCatalogProvider =
+        AddonCatalogProvider(
+            addons = rows,
+            client = addonClient,
+            consent = addonRegistry.consent,
+            isOwned = { sourceItemId -> ownedLookup(sourceItemId) },
+        )
 
     val rebuildingCatalogProvider: RebuildingCatalogProvider by lazy {
         val provider =
@@ -392,8 +440,11 @@ class NetworkModule(
                         installedAddons = addonRegistry.listInstalled(),
                         addonTransport = addonTransport,
                         // U4: providers share the registry consent store so a
-                        // recorded disclosure consent unblocks resolveAccess.
+                        // recorded disclosure consent unblocks the stream resource.
                         addonConsent = addonRegistry.consent,
+                        // Shared across rebuilds, so ttl and breaker survive them.
+                        addonClient = addonClient,
+                        isOwned = { sourceItemId -> ownedLookup(sourceItemId) },
                     ),
                     cache = RoomDiscoverCache(databaseModule.discoverCacheDao),
                 )

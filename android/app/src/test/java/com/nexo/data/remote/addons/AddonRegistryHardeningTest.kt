@@ -20,12 +20,21 @@ class AddonRegistryHardeningTest {
         id = id,
         url = "https://$id.example/m.json",
         manifest =
-            AddonManifest(
+            com.nexo.data.remote.addons.protocol.AddonManifestV3(
                 id = name,
+                version = "3.0.0",
                 name = name,
-                version = "1.0.0",
-                catalogs = listOf(AddonCatalogEntry("book", "main", "Main")),
-                resources = listOf("catalog"),
+                types = listOf("book"),
+                catalogs =
+                    listOf(
+                        com.nexo.data.remote.addons.protocol
+                            .AddonCatalogEntryV3(type = "book", id = "main", name = "Main"),
+                    ),
+                resources =
+                    listOf(
+                        com.nexo.data.remote.addons.protocol
+                            .AddonResourceV3("catalog"),
+                    ),
             ),
         enabled = true,
         addedAt = 1,
@@ -40,6 +49,9 @@ class AddonRegistryHardeningTest {
                 ),
             curated = FakeBuiltin("curated", CatalogSourceKind.CURATED),
             installedAddons = rows,
+            // The roster only exists when the addons can actually be fetched:
+            // without a transport nothing is registered (fail-closed).
+            addonTransport = FakeAddonHttpTransport(),
         )
 
     private class FakeBuiltin(
