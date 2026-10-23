@@ -1,0 +1,19 @@
+{
+  "id": "org.example.unreadable-catalog",
+  "version": "3.0.0",
+  "name": "Catalog Without Meta",
+  "description": "Lists a catalog it cannot describe: no meta resource",
+  "types": ["book"],
+  "catalogs": [
+    {
+      "type": "book",
+      "id": "popular",
+      "name": "Popular",
+      "extra": [{ "name": "search", "isRequired": false }]
+    }
+  ],
+  "resources": [
+    "catalog",
+    { "name": "stream", "types": ["book"] }
+  ]
+}

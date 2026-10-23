@@ -57,10 +57,20 @@ function errorCodeOf(run: () => unknown): string {
   return 'NO_THROW';
 }
 
+function errorOf(run: () => unknown): AddonFetchError | null {
+  try {
+    run();
+  } catch (error) {
+    return error instanceof AddonFetchError ? error : null;
+  }
+  return null;
+}
+
 describe('parseManifestV3', () => {
   it('parses a book manifest with mixed resource forms', () => {
     const resources = [
       'catalog',
+      'meta',
       { name: 'stream', types: ['book'], idPrefixes: ['gutenberg:', 'isbn:'] },
     ];
     const parsed = parseManifestV3(encode(manifest({ resources })), JSON_CONTENT_TYPE);
@@ -69,7 +79,8 @@ describe('parseManifestV3', () => {
     expect(parsed.version).toBe('3.0.0');
     expect(parsed.types).toEqual(['book']);
     expect(parsed.resources[0]).toEqual({ name: 'catalog' });
-    expect(parsed.resources[1]).toEqual({
+    expect(parsed.resources[1]).toEqual({ name: 'meta' });
+    expect(parsed.resources[2]).toEqual({
       name: 'stream',
       types: ['book'],
       idPrefixes: ['gutenberg:', 'isbn:'],
@@ -92,6 +103,30 @@ describe('parseManifestV3', () => {
 
     expect(parsed.catalogs).toEqual([]);
     expect(parsed.resources).toHaveLength(2);
+  });
+
+  it('accepts catalogs that the meta resource can describe', () => {
+    const parsed = parse(manifest({ resources: ['catalog', 'meta'] }));
+
+    expect(parsed.catalogs.map((entry) => entry.id)).toEqual(['popular']);
+    expect(parsed.resources.map((entry) => entry.name)).toEqual(['catalog', 'meta']);
+  });
+
+  it('accepts an empty catalogs array without a meta resource', () => {
+    const parsed = parse(manifest({ catalogs: [], resources: ['stream'] }));
+
+    expect(parsed.catalogs).toEqual([]);
+    expect(parsed.resources.map((entry) => entry.name)).toEqual(['stream']);
+  });
+
+  it('rejects catalogs when no meta resource can describe them', () => {
+    const error = errorOf(() =>
+      parse(manifest({ resources: ['catalog', { name: 'stream', types: ['book'] }] })),
+    );
+
+    expect(error?.code).toBe(AddonFetchErrorCode.INVALID_MANIFEST);
+    // The message names the missing resource, so the author knows what to add.
+    expect(error?.message).toContain('meta');
   });
 
   it('preserves the nexo object verbatim', () => {

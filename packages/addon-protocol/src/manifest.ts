@@ -74,6 +74,7 @@ const MAX_EXTRA_ARGS = 8;
 const MAX_ID_PREFIXES = 16;
 const MAX_TEMPLATES = 16;
 const MAX_STRING_CHARS = 2048;
+const RESOURCE_META = 'meta';
 
 function invalid(detail: string): never {
   throw new AddonFetchError(AddonFetchErrorCode.INVALID_MANIFEST, detail);
@@ -166,6 +167,22 @@ function parseResources(value: unknown): AddonResourceV3[] {
     invalid('too many resources');
   }
   return value.map(parseResource);
+}
+
+/**
+ * `catalogs` and `meta` are one unit: an addon that lists books must be able to
+ * describe them, or it advertises a detail view it cannot answer. An empty
+ * `catalogs` list stays valid, so a stream-only addon needs no `meta`.
+ */
+function assertCatalogMetaPairing(
+  catalogs: AddonCatalogEntryV3[],
+  resources: AddonResourceV3[],
+): void {
+  if (catalogs.length === 0) return;
+  if (resources.some((resource) => resource.name === RESOURCE_META)) return;
+  invalid(
+    `catalogs require a "${RESOURCE_META}" resource: none is declared, so the listed books have no detail view`,
+  );
 }
 
 function parseExtraArgs(value: unknown): AddonExtraArg[] {
@@ -298,6 +315,7 @@ function parseManifestObject(value: unknown): AddonManifestV3 {
     catalogs: parseCatalogs(value.catalogs),
     resources: parseResources(value.resources),
   };
+  assertCatalogMetaPairing(manifest.catalogs, manifest.resources);
   if (value.description !== undefined) {
     manifest.description = parseBoundedString(value.description, 'description');
   }

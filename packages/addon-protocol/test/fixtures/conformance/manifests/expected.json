@@ -81,6 +81,10 @@
       "ok": false,
       "error": "ADDON_FETCH_UNSUPPORTED_TYPE"
     },
+    "catalogs-without-meta.json": {
+      "ok": false,
+      "error": "ADDON_FETCH_INVALID_MANIFEST"
+    },
     "oversize.json": {
       "ok": false,
       "error": "ADDON_FETCH_TOO_LARGE"

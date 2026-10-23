@@ -19,7 +19,7 @@
       "name": "Templated Addon",
       "types": ["book"],
       "catalogs": [{ "type": "book", "id": "popular", "name": "Popular" }],
-      "resources": ["catalog"],
+      "resources": ["catalog", "meta"],
       "nexo": {
         "templates": {
           "catalog": "https://api.example.org/v1/books?q={search}&page={skip}",

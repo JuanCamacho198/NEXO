@@ -321,10 +321,13 @@ rejected rather than ignored so that adding support later is additive. A catalog
 with `type: "audiobook"` is a different case: catalog types are matched, not validated,
 so that entry is dropped and the rest of the addon installs.
 
-A catalog entry the addon cannot describe through `meta` still installs. Item ids are
-namespaced to the addon that produced them, and the detail view resolves through the
-addon's `meta` resource. If there is none, the item has no detail view. The validator does
-not enforce the pairing; treat `catalogs` plus `meta` as one unit.
+A catalog entry the addon cannot describe through `meta` is not installable: `catalogs`
+and `meta` are one unit. When `catalogs` is non-empty, `resources` MUST declare `meta`,
+and a manifest that lists books without it is rejected with
+`ADDON_FETCH_INVALID_MANIFEST`; the message names the missing resource. An empty
+`catalogs` list still installs without `meta`, so a stream-only addon declares nothing
+extra. Item ids are namespaced to the addon that produced them, and the detail view
+resolves through the addon's `meta` resource.
 
 ## 11. Streams
 
