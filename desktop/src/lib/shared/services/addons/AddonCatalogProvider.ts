@@ -1,12 +1,15 @@
 /**
- * AddonCatalogProvider — one CatalogProvider per installed addon manifest.
- * Sources are `addon:<addonId>`. Manifests MAY declare endpoint templates
- * (searchUrl/detailsUrl, validated https by the manifest validator); when
- * present, search/getDetails fetch the addon's own catalog payloads through
- * the platform network layer (desktop: the fetchAddonResource Rust command)
- * and parse them into CatalogBooks with provider = the addon source id.
- * Endpoint-less manifests stay browse-only: stable empty page / NOT_FOUND,
- * zero I/O. Malformed payloads reject the whole page with a stable error.
+ * Two addon catalog providers share this module.
+ *
+ * `AddonFanoutCatalogProvider` is the v3 path: it asks the protocol router
+ * which installed addons can answer, fans the search out through each addon's
+ * memoized `createAddonClient()`, and maps `MetaPreview` onto `CatalogBook`.
+ * One addon failing is a non-blocking notice, never a failed search.
+ *
+ * `AddonCatalogProvider` is the retained v2 single-manifest adapter (one
+ * provider per installed addon): it renders the deprecated `searchUrl` /
+ * `detailsUrl` / `resolveUrl` endpoint templates. A v3 manifest handed to it
+ * stays browse-only, because those fields do not exist in v3.
  */
 import { catalogError, mapHttpStatusToCode } from '../catalog/errors';
 import { backoffDelayMs, MAX_PAGE_SIZE, shouldRetryStatus } from '../catalog/policy';
@@ -28,6 +31,15 @@ import {
   declaredCapabilities,
   type AddonManifest,
 } from '@nexo/manifest-validator';
+import {
+  TYPE_BOOK,
+  selectAddons,
+  type AddonClient,
+  type AddonDescriptor,
+  type AddonFailure,
+  type AddonManifestV3,
+  type MetaPreview,
+} from '@nexo/addon-protocol';
 import { defaultAddonTransport, type AddonTransport } from './AddonRegistry';
 import type { AddonFetchResult } from './AddonRegistry';
 
@@ -48,6 +60,28 @@ function malformed(detail: string): never {
 /** Substitute `{placeholders}` in a validated endpoint template. */
 function renderTemplate(template: string, params: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) => params[key] ?? match);
+}
+
+/**
+ * Both placeholder vocabularies reach this adapter: v2 endpoints use
+ * `{query}`/`{page}`/`{bookId}`, and the v2→v3 adapter rewrites them to
+ * `{search}`/`{skip}`/`{id}`. Supplying both keeps one rendering path.
+ */
+const PLACEHOLDER_ALIASES: ReadonlyArray<readonly [string, string]> = [
+  ['search', 'query'],
+  ['skip', 'page'],
+  ['id', 'bookId'],
+];
+
+function templateParams(params: Record<string, string>): Record<string, string> {
+  const aliased: Record<string, string> = { ...params };
+  for (const [canonical, alias] of PLACEHOLDER_ALIASES) {
+    const value = params[canonical] ?? params[alias];
+    if (value === undefined) continue;
+    aliased[canonical] = value;
+    aliased[alias] = value;
+  }
+  return aliased;
 }
 
 /** Optional cover/download URLs: https strings pass, anything else maps to null. */
@@ -238,16 +272,41 @@ export const EMPTY_ADDON_ACCESS: AddonAccessResolution = {
   options: [],
 };
 
+/**
+ * v3 manifests are the ones carrying `types`; v2 never declares it.
+ *
+ * A stored v2 row is adapted to v3 on read, and the adapter keeps the v2
+ * endpoint templates under `nexo.templates` with `nexo.shape: "legacy-v2"` —
+ * that shape is the signal that this class, not the v3 router, owns the addon's
+ * catalog/details/resolve requests.
+ */
+function legacyViewOf(manifest: AddonManifestV3 | AddonManifest): AddonManifest | null {
+  return Array.isArray((manifest as AddonManifestV3).types) ? null : (manifest as AddonManifest);
+}
+
+/**
+ * Endpoint templates for an adapted v2 row. A raw (or Tier B) v3 manifest keeps
+ * no endpoints here: the v3 router serves it, so answering it here too would
+ * duplicate every result.
+ */
+function adaptedTemplates(manifest: AddonManifestV3 | AddonManifest): Record<string, string> {
+  const v3 = manifest as AddonManifestV3;
+  if (legacyViewOf(manifest) !== null) return {};
+  if (v3.nexo?.shape !== 'legacy-v2') return {};
+  return v3.nexo.templates ?? {};
+}
+
 export class AddonCatalogProvider implements CatalogProvider {
   private readonly source: CatalogSourceInfo;
   private readonly addonId: string;
-  private readonly manifest: AddonManifest;
+  private readonly legacy: AddonManifest | null;
   private readonly searchUrl?: string;
   private readonly detailsUrl?: string;
+  private readonly resolveUrl?: string;
   private readonly consent: AddonConsentGate;
 
   constructor(
-    manifest: AddonManifest,
+    manifest: AddonManifestV3 | AddonManifest,
     addonId: string,
     private readonly transport: AddonTransport = defaultAddonTransport(),
     private readonly retryDelayMs: number = backoffDelayMs(0),
@@ -259,9 +318,13 @@ export class AddonCatalogProvider implements CatalogProvider {
       kind: 'addon' as const,
     };
     this.addonId = addonId;
-    this.manifest = manifest;
-    this.searchUrl = manifest.searchUrl;
-    this.detailsUrl = manifest.detailsUrl;
+    this.legacy = legacyViewOf(manifest);
+    const templates = adaptedTemplates(manifest);
+    this.searchUrl = this.legacy?.searchUrl ?? templates.catalog;
+    this.detailsUrl = this.legacy?.detailsUrl ?? templates.meta;
+    // Consent gating is unchanged; the template only supplies the URL, so an
+    // adapted v2 row keeps resolving exactly as it did as a v2 row.
+    this.resolveUrl = this.legacy?.resolveUrl ?? templates.stream;
     this.consent = consent;
   }
 
@@ -271,10 +334,10 @@ export class AddonCatalogProvider implements CatalogProvider {
 
   async search(query: string, page: number): Promise<PagedResult> {
     if (!this.searchUrl) return EMPTY_PAGE;
-    const url = renderTemplate(this.searchUrl, {
-      query: encodeURIComponent(query),
-      page: String(page),
-    });
+    const url = renderTemplate(
+      this.searchUrl,
+      templateParams({ search: encodeURIComponent(query), skip: String(page) }),
+    );
     const payload = await this.fetchJson(url);
     return parseSearchPayload(payload, this.source.sourceId, page);
   }
@@ -287,9 +350,10 @@ export class AddonCatalogProvider implements CatalogProvider {
     if (!this.detailsUrl) {
       throw catalogError('NOT_FOUND', `addon source has no details endpoint: ${id}`);
     }
-    const url = renderTemplate(this.detailsUrl, {
-      bookId: encodeURIComponent(id.slice(prefix.length)),
-    });
+    const url = renderTemplate(
+      this.detailsUrl,
+      templateParams({ id: encodeURIComponent(id.slice(prefix.length)) }),
+    );
     return parseAddonBook(await this.fetchJson(url), id, this.source.sourceId);
   }
 
@@ -337,13 +401,13 @@ export class AddonCatalogProvider implements CatalogProvider {
         `addon has no network consent: ${this.source.sourceId}`,
       );
     }
-    const resolveUrl = this.manifest.resolveUrl;
+    const resolveUrl = this.resolveUrl;
     if (typeof resolveUrl !== 'string' || resolveUrl.length === 0) {
       return { ...EMPTY_ADDON_ACCESS, options: [] };
     }
     if (
-      this.manifest.capabilities !== undefined &&
-      !declaredCapabilities(this.manifest).includes(RESOLVE_CAPABILITY)
+      this.legacy?.capabilities !== undefined &&
+      !declaredCapabilities(this.legacy).includes(RESOLVE_CAPABILITY)
     ) {
       return { ...EMPTY_ADDON_ACCESS, options: [] };
     }
@@ -399,5 +463,223 @@ export class AddonCatalogProvider implements CatalogProvider {
 
   resolveDownloadUrl(formats: Record<string, string>, preferEpub: boolean): string {
     return resolveDownloadUrl(formats, preferEpub);
+  }
+}
+
+/** One addon's failure sink: additive, so no caller has to break. */
+export type AddonFailureListener = (failures: readonly AddonFailure[]) => void;
+
+/**
+ * Payload shapes this build has no adapter for. Those addons are served by the
+ * v2 adapter, which still understands their wire format, so the router skips
+ * them rather than sending a request whose answer it would discard.
+ */
+const UNREADABLE_CATALOG_SHAPES: ReadonlySet<string> = new Set([
+  'standard-ebooks',
+  'librivox',
+  'legacy-v2',
+]);
+
+export interface AddonFanoutCatalogOptions {
+  /** Installed addons as protocol descriptors, in install order. */
+  loadAddons: () => Promise<AddonDescriptor[]>;
+  /** The registry's memoized protocol client for one addon. */
+  clientFor: (addonId: string) => AddonClient;
+  /**
+   * Non-blocking per-addon failure notice. Called once per failing addon and
+   * never allowed to fail the search.
+   */
+  onFailure?: AddonFailureListener;
+}
+
+/** `MetaPreview` → the internal catalog shape. Ids stay namespaced. */
+function toCatalogBook(meta: MetaPreview, provider: CatalogSource): CatalogBook {
+  return {
+    // `gutenberg:1342` stays intact: `meta` and `stream` route on this id.
+    id: meta.id,
+    provider,
+    title: meta.name,
+    authors: meta.authors,
+    coverUrl: httpsOrNull(meta.poster),
+    languages: meta.languages,
+    subjects: meta.subjects,
+    downloadUrl: null,
+    description: meta.description ?? null,
+    isbn13: meta.isbn13 ?? null,
+  };
+}
+
+interface AddonSearchOutcome {
+  books: CatalogBook[];
+  failure?: AddonFailure;
+}
+
+/**
+ * One provider for every installed addon. The router decides candidacy
+ * (`selectAddons`), each addon answers through its own memoized client, and the
+ * pages union in install order with the namespaced ids preserved.
+ *
+ * Sources are listed synchronously from the snapshot loaded by `ready()`;
+ * the composite is rebuilt whenever the registry mutates, which is what keeps
+ * that snapshot fresh.
+ */
+export class AddonFanoutCatalogProvider implements CatalogProvider {
+  private addons: AddonDescriptor[] | null = null;
+  private loading: Promise<void> | null = null;
+
+  constructor(private readonly options: AddonFanoutCatalogOptions) {}
+
+  /** Load the installed addons once per provider instance. */
+  ready(): Promise<void> {
+    this.loading ??= this.options.loadAddons().then(
+      (addons) => {
+        this.addons = addons;
+      },
+      () => {
+        // A registry read failure is an empty addon set, never a broken screen.
+        this.addons = [];
+      },
+    );
+    return this.loading;
+  }
+
+  listSources(): CatalogSourceInfo[] {
+    return this.enabledAddons().map((addon) => ({
+      sourceId: addonSource(addon.id),
+      name: addon.manifest.name,
+      kind: 'addon' as const,
+    }));
+  }
+
+  async search(query: string, page: number): Promise<PagedResult> {
+    if (!Number.isInteger(page) || page < 1) {
+      throw catalogError('INVALID_PAGE', `page must be >= 1, got ${page}`);
+    }
+    await this.ready();
+    return this.fanOut(this.catalogCandidates(), query, page);
+  }
+
+  /**
+   * Per-source search: the source chip filter. An unknown or disabled source
+   * fails closed with an empty page and zero I/O.
+   */
+  async searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {
+    await this.ready();
+    const target = this.catalogCandidates().filter((addon) => addonSource(addon.id) === sourceId);
+    if (target.length === 0) return EMPTY_PAGE;
+    return this.fanOut(target, query, page);
+  }
+
+  /** Addons opt out of featured rails; the rail auto-hides (fail-closed). */
+  async featured(_sort: CatalogFeaturedSort, limit: number): Promise<PagedResult> {
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw catalogError('INVALID_PAGE', `limit must be >= 1, got ${limit}`);
+    }
+    return EMPTY_PAGE;
+  }
+
+  supportsFeatured(_sort: CatalogFeaturedSort): boolean {
+    return false;
+  }
+
+  /**
+   * Detail routing belongs to the `meta` resource, which lands with the rest of
+   * the access-resolution slice. Catalog ids are namespaced (`gutenberg:1342`),
+   * so the composite's `addon:<id>:` route does not address them either.
+   */
+  async getDetails(id: string): Promise<CatalogBook> {
+    throw catalogError('NOT_FOUND', `unknown catalog id ${id}`);
+  }
+
+  resolveDownloadUrl(formats: Record<string, string>, preferEpub: boolean): string {
+    return resolveDownloadUrl(formats, preferEpub);
+  }
+
+  private enabledAddons(): AddonDescriptor[] {
+    return (this.addons ?? []).filter((addon) => addon.enabled);
+  }
+
+  /** Enabled addons that declare the catalog resource for `book`. */
+  private catalogCandidates(): AddonDescriptor[] {
+    return selectAddons(this.enabledAddons(), { resource: 'catalog', type: TYPE_BOOK });
+  }
+
+  private async fanOut(
+    candidates: AddonDescriptor[],
+    query: string,
+    page: number,
+  ): Promise<PagedResult> {
+    const outcomes = await Promise.all(
+      candidates.map((addon) => this.searchAddon(addon, query, page)),
+    );
+
+    const failures = new Map<string, AddonFailure>();
+    const results: CatalogBook[] = [];
+    const seenIds = new Set<string>();
+    let truncated = false;
+
+    for (const outcome of outcomes) {
+      if (outcome.failure !== undefined) failures.set(outcome.failure.addonId, outcome.failure);
+      for (const book of outcome.books) {
+        if (seenIds.has(book.id)) continue;
+        seenIds.add(book.id);
+        if (results.length >= MAX_PAGE_SIZE) {
+          truncated = true;
+          continue;
+        }
+        results.push(book);
+      }
+    }
+
+    if (failures.size > 0) {
+      try {
+        this.options.onFailure?.([...failures.values()]);
+      } catch {
+        // A notice sink must never fail a search that already has results.
+      }
+    }
+
+    return {
+      results,
+      nexoPage: truncated ? page + 1 : null,
+      totalCount: results.length,
+    };
+  }
+
+  /**
+   * One addon, every book catalog it declares. `search` is always sent;
+   * `skip` only past the first page, and the package drops any argument the
+   * catalog did not declare.
+   */
+  private async searchAddon(
+    addon: AddonDescriptor,
+    query: string,
+    page: number,
+  ): Promise<AddonSearchOutcome> {
+    const catalogs = addon.manifest.catalogs;
+    if (catalogs.length === 0) return { books: [] };
+    // A shape this build cannot parse is served by the v2 adapter instead;
+    // requesting it here would only discard the answer.
+    if (UNREADABLE_CATALOG_SHAPES.has(addon.manifest.nexo?.shape ?? 'raw')) return { books: [] };
+
+    const client = this.options.clientFor(addon.id);
+    const extra: Record<string, string | number> =
+      page > 1 ? { search: query, skip: (page - 1) * MAX_PAGE_SIZE } : { search: query };
+    const provider = addonSource(addon.id);
+    const settled = await Promise.allSettled(
+      catalogs.map((catalog) => client.searchCatalog([addon], { catalogId: catalog.id, extra })),
+    );
+
+    const books: CatalogBook[] = [];
+    let failure: AddonFailure | undefined;
+    for (const outcome of settled) {
+      if (outcome.status === 'rejected') {
+        failure ??= { addonId: addon.id, reason: 'payload' };
+        continue;
+      }
+      failure ??= outcome.value.failures[0];
+      for (const item of outcome.value.items) books.push(toCatalogBook(item, provider));
+    }
+    return failure === undefined ? { books } : { books, failure };
   }
 }

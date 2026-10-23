@@ -13,9 +13,11 @@ import {
   type AddonManifest,
 } from '@nexo/manifest-validator';
 import type { AddonTransport } from '$lib/shared/services/addons/AddonRegistry';
+import type { AddonManifestV3 } from '@nexo/addon-protocol';
 
 export interface InstallDeepLinkRegistry {
-  installManifest(url: string, manifest: AddonManifest): Promise<AddonManifest>;
+  /** The installed manifest as the registry parsed it (v3; v2 rows adapt). */
+  installManifest(url: string, manifest: AddonManifest): Promise<AddonManifestV3 | AddonManifest>;
   listInstalled(): Promise<{ id: string; url: string }[]>;
 }
 

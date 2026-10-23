@@ -447,6 +447,8 @@ export const messagesEs: Record<MessageKey, string> = {
   // Addons screen (new surfaces only; settings.addons.* copy is reused)
   'addons.title': 'Addons',
   'addons.subtitle': 'Gestiona los catálogos instalados y explora las fuentes propias',
+  'addons.search.unavailable':
+    'No se pudo alcanzar un catálogo de complemento. Se muestran los resultados de los demás.',
   'addons.firstParty.title': 'Fuentes propias',
   'addons.firstParty.builtinTitle': 'Integradas',
   'addons.firstParty.readOnly': 'Solo lectura: siempre disponibles, nunca se instalan.',

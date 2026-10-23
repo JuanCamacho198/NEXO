@@ -150,7 +150,10 @@
       />
     {/snippet}
     {#snippet capabilityBadges(addon)}
-      <AddonCapabilityBadges capabilities={declaredCapabilities(addon.manifest)} {t} />
+      <AddonCapabilityBadges
+        capabilities={'capabilities' in addon.manifest ? declaredCapabilities(addon.manifest) : []}
+        {t}
+      />
     {/snippet}
   </AddonsInstalledList>
 

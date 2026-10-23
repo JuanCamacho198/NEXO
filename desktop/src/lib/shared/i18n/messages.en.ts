@@ -442,6 +442,8 @@ export const messagesEn = {
   // Addons screen (new surfaces only; settings.addons.* copy is reused)
   'addons.title': 'Addons',
   'addons.subtitle': 'Manage installed catalogs and browse first-party sources',
+  'addons.search.unavailable':
+    'An addon catalog could not be reached. Showing results from the others.',
   'addons.firstParty.title': 'First-party sources',
   'addons.firstParty.builtinTitle': 'Built-in',
   'addons.firstParty.readOnly': 'Read-only: always available, never installed.',
