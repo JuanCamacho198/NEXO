@@ -55,6 +55,16 @@ interface LibraryRepository {
         publishedDate: String?,
     ): Result<Unit>
 
+    /**
+     * The explicit per-book "refresh metadata" action: re-asks the metadata
+     * addons for [bookId] with the response cache bypassed and writes whatever
+     * they could contribute into the blanks. Returns `true` when the row changed.
+     *
+     * Default `false` keeps lightweight fakes and partial implementations
+     * compiling; the production repository overrides it.
+     */
+    suspend fun refreshLibraryMetadata(bookId: String): Result<Boolean> = Result.success(false)
+
     suspend fun getBookById(bookId: String): Book?
 
     /**

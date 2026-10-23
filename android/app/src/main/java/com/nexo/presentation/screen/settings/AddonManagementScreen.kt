@@ -72,6 +72,8 @@ fun AddonManagementRoute(
     onBack: () -> Unit,
     hasConsent: (String) -> Boolean = { false },
     onConsentChange: (String, Boolean) -> Unit = { _, _ -> },
+    hasLibraryMetaConsent: (String) -> Boolean = { false },
+    onLibraryMetaConsentChange: (String, Boolean) -> Unit = { _, _ -> },
     onNavigateToLegal: () -> Unit = {},
     onOpenCapabilities: (String) -> Unit = {},
 ) {
@@ -84,6 +86,8 @@ fun AddonManagementRoute(
             onError = { errorMessage = it },
             hasConsent = hasConsent,
             onConsentChange = onConsentChange,
+            hasLibraryMetaConsent = hasLibraryMetaConsent,
+            onLibraryMetaConsentChange = onLibraryMetaConsentChange,
         )
 
     LaunchedEffect(viewModel) { viewModel.refresh() }
@@ -103,6 +107,7 @@ fun AddonManagementRoute(
         onToggle = viewModel::toggle,
         onUninstall = viewModel::uninstall,
         onConsentChange = viewModel::setConsent,
+        onLibraryMetaConsentChange = viewModel::setLibraryMetaConsent,
         onNavigateToLegal = onNavigateToLegal,
         onOpenCapabilities = onOpenCapabilities,
         onBack = onBack,
@@ -115,11 +120,20 @@ class AddonSettingsViewModelFactory(
     private val onError: (String) -> Unit,
     private val hasConsent: (String) -> Boolean = { false },
     private val onConsentChange: (String, Boolean) -> Unit = { _, _ -> },
+    private val hasLibraryMetaConsent: (String) -> Boolean = { false },
+    private val onLibraryMetaConsentChange: (String, Boolean) -> Unit = { _, _ -> },
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AddonSettingsViewModel::class.java)) {
-            return AddonSettingsViewModel(registry, onError, hasConsent, onConsentChange) as T
+            return AddonSettingsViewModel(
+                registry,
+                onError,
+                hasConsent,
+                onConsentChange,
+                hasLibraryMetaConsent,
+                onLibraryMetaConsentChange,
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
@@ -141,6 +155,7 @@ fun AddonManagementScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onConsentChange: (String, Boolean) -> Unit = { _, _ -> },
+    onLibraryMetaConsentChange: (String, Boolean) -> Unit = { _, _ -> },
     onNavigateToLegal: () -> Unit = {},
     onOpenCapabilities: (String) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
@@ -220,9 +235,11 @@ fun AddonManagementScreen(
                             row = row,
                             isBusy = uiState.isBusy,
                             hasConsent = row.id in uiState.consentedIds,
+                            hasLibraryMetaConsent = row.id in uiState.libraryMetaIds,
                             onToggle = onToggle,
                             onUninstall = onUninstall,
                             onConsentChange = onConsentChange,
+                            onLibraryMetaConsentChange = onLibraryMetaConsentChange,
                             onOpenCapabilities = onOpenCapabilities,
                         )
                     }
@@ -279,9 +296,11 @@ private fun AddonRow(
     row: InstalledAddonRow,
     isBusy: Boolean,
     hasConsent: Boolean,
+    hasLibraryMetaConsent: Boolean,
     onToggle: (String, Boolean) -> Unit,
     onUninstall: (String) -> Unit,
     onConsentChange: (String, Boolean) -> Unit,
+    onLibraryMetaConsentChange: (String, Boolean) -> Unit,
     onOpenCapabilities: (String) -> Unit,
 ) {
     var showUninstallDialog by remember { mutableStateOf(false) }
@@ -299,6 +318,14 @@ private fun AddonRow(
                 R.string.addon_consent_state_granted
             } else {
                 R.string.addon_consent_state_missing
+            },
+        )
+    val libraryMetaCaption =
+        stringResource(
+            if (hasLibraryMetaConsent) {
+                R.string.addon_library_meta_state_granted
+            } else {
+                R.string.addon_library_meta_state_missing
             },
         )
 
@@ -373,6 +400,27 @@ private fun AddonRow(
                 ) {
                     Text(text = stringResource(R.string.addon_capabilities_title))
                 }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Switch(
+                    checked = hasLibraryMetaConsent,
+                    onCheckedChange = { granted -> onLibraryMetaConsentChange(row.id, granted) },
+                    enabled = !isBusy,
+                    modifier = Modifier.semantics { contentDescription = libraryMetaCaption },
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = libraryMetaCaption,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }

@@ -13,6 +13,7 @@ import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.local.entity.SyncOutboxEntity
 import com.nexo.data.pdf.PdfParserService
+import com.nexo.data.remote.addons.LibraryMetaSource
 import com.nexo.data.remote.drive.coverFailureError
 import com.nexo.data.storage.CoverStorage
 import com.nexo.domain.model.Book
@@ -22,6 +23,7 @@ import com.nexo.domain.model.ReadingProgress
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.sync.OutboxDrainScheduler
 import com.nexo.domain.sync.SyncSettleGate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -63,6 +65,12 @@ class LibraryRepositoryImpl(
      * is requested after a successful book outbox enqueue.
      */
     private val drainScheduler: OutboxDrainScheduler? = null,
+    /**
+     * Metadata-addon enrichment, resolved lazily so the repository can be built
+     * before the network module. Absent ⇒ import writes exactly what the file
+     * said and nothing is ever asked over the network.
+     */
+    private val libraryMeta: () -> LibraryMetaSource? = { null },
 ) : LibraryRepository {
     override fun observeLibrary(): Flow<List<Book>> =
         combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { books, progresses ->
@@ -139,8 +147,10 @@ class LibraryRepositoryImpl(
                 throw DuplicateBookException()
             }
             bookDao.upsert(book.toEntity().copy(contentHash = contentHash))
+            // The row exists now, so the metadata addons can be asked about it.
+            val enriched = enrichFromMetadataAddons(book)
             queueBookOutboxEntry(bookId)
-            book
+            enriched
         }
 
     override suspend fun importBookFromPdf(
@@ -175,8 +185,9 @@ class LibraryRepositoryImpl(
 
             val contentHash = computeSha256(file.absolutePath)
             bookDao.upsert(book.toEntity().copy(contentHash = contentHash))
+            val enriched = enrichFromMetadataAddons(book)
             queueBookOutboxEntry(bookId)
-            book
+            enriched
         }
 
     override suspend fun getBookById(bookId: String): Book? = bookDao.getBookById(bookId)?.toDomain()
@@ -339,6 +350,63 @@ class LibraryRepositoryImpl(
             // defers books without a remote file to the Drive push.
             queueBookOutboxEntry(bookId, SyncOperation.UPDATE)
         }
+
+    /**
+     * The explicit per-book "refresh metadata" action: re-asks the metadata
+     * addons with the response cache bypassed and writes whatever they could
+     * contribute into the blanks. `false` means nothing was fillable.
+     */
+    override suspend fun refreshLibraryMetadata(bookId: String): Result<Boolean> =
+        runCatching {
+            val book = bookDao.getBookById(bookId)?.toDomain() ?: return@runCatching false
+            val source = libraryMeta() ?: return@runCatching false
+            val enriched = source.enrich(book, force = true) ?: return@runCatching false
+            writeMergedMetadata(enriched)
+            queueBookOutboxEntry(bookId, SyncOperation.UPDATE)
+            true
+        }
+
+    /**
+     * Import-time enrichment, after the row exists. Silent by contract: a failing
+     * addon — or none configured at all — leaves the imported row exactly as the
+     * file described it.
+     */
+    private suspend fun enrichFromMetadataAddons(book: Book): Book {
+        val source = libraryMeta() ?: return book
+        val enriched =
+            try {
+                source.enrich(book)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                null
+            } ?: return book
+        return try {
+            writeMergedMetadata(enriched)
+            enriched
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            book
+        }
+    }
+
+    /** Only the six metadata columns move: identity, provenance and progress stay put. */
+    private suspend fun writeMergedMetadata(book: Book) {
+        bookDao.updateMetadata(
+            bookId = book.id,
+            title = book.title,
+            author = book.author,
+            description = book.description,
+            coverPath = book.coverPath,
+            genre = book.genre,
+            language = book.language,
+            publisher = book.publisher,
+            tags = book.tags,
+            publishedDate = book.publishedDate,
+            updatedAt = System.currentTimeMillis(),
+        )
+    }
 
     /**
      * Attempts to extract cover image bytes using Readium's [Publication.cover]

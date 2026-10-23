@@ -19,11 +19,24 @@ interface AddonConsentStore {
     fun recordConsent(addonId: String)
 
     fun revokeConsent(addonId: String)
+
+    /**
+     * The `library_meta` scope: may this addon be told which books the reader
+     * owns, so it can enrich them? A separate scope, default off, and never
+     * implied by [hasConsent] — that one covers the `stream` resolution only.
+     */
+    fun hasLibraryMetaConsent(addonId: String): Boolean
+
+    fun setLibraryMetaConsent(
+        addonId: String,
+        granted: Boolean,
+    )
 }
 
 /** Process-local [AddonConsentStore]: consent recorded once per addon id. */
 class InMemoryAddonConsentStore : AddonConsentStore {
     private val consentedIds = mutableSetOf<String>()
+    private val libraryMetaIds = mutableSetOf<String>()
 
     @Synchronized
     override fun hasConsent(addonId: String): Boolean = addonId in consentedIds
@@ -36,5 +49,16 @@ class InMemoryAddonConsentStore : AddonConsentStore {
     @Synchronized
     override fun revokeConsent(addonId: String) {
         consentedIds.remove(addonId)
+    }
+
+    @Synchronized
+    override fun hasLibraryMetaConsent(addonId: String): Boolean = addonId in libraryMetaIds
+
+    @Synchronized
+    override fun setLibraryMetaConsent(
+        addonId: String,
+        granted: Boolean,
+    ) {
+        if (granted) libraryMetaIds.add(addonId) else libraryMetaIds.remove(addonId)
     }
 }

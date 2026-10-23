@@ -1003,6 +1003,8 @@
     <string name="addon_consent_trust_note">Addons run outside NEXO. Share details only with sources you trust.</string>
     <string name="addon_consent_state_granted">Access granted: this addon may resolve reading links.</string>
     <string name="addon_consent_state_missing">Access not granted: this addon won\'t resolve reading links.</string>
+    <string name="addon_library_meta_state_granted">Library metadata on: this addon can see which books you own.</string>
+    <string name="addon_library_meta_state_missing">Library metadata off: this addon can\'t see which books you own.</string>
     <!-- U5: addon capabilities -->
     <string name="addon_capabilities_title">Capabilities</string>
     <string name="addon_capability_search">Search</string>

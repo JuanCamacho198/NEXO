@@ -994,6 +994,8 @@
     <string name="addon_consent_trust_note">Los complementos corren fuera de NEXO. Compartí datos solo con fuentes en las que confíes.</string>
     <string name="addon_consent_state_granted">Acceso otorgado: este complemento puede resolver enlaces de lectura.</string>
     <string name="addon_consent_state_missing">Acceso no otorgado: este complemento no va a resolver enlaces de lectura.</string>
+    <string name="addon_library_meta_state_granted">Metadatos de biblioteca activados: este complemento puede ver qué libros tienes.</string>
+    <string name="addon_library_meta_state_missing">Metadatos de biblioteca desactivados: este complemento no puede ver qué libros tienes.</string>
     <!-- U5: addon capabilities -->
     <string name="addon_capabilities_title">Capacidades</string>
     <string name="addon_capability_search">Buscar</string>

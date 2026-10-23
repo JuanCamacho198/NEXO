@@ -15,6 +15,8 @@ data class AddonSettingsUiState(
     val isBusy: Boolean = false,
     /** U5: addon ids with recorded capability-disclosure consent. */
     val consentedIds: Set<String> = emptySet(),
+    /** Addon ids holding the `library_meta` grant (who may see which books are owned). */
+    val libraryMetaIds: Set<String> = emptySet(),
 )
 
 class AddonSettingsViewModel(
@@ -22,6 +24,8 @@ class AddonSettingsViewModel(
     private val onError: (message: String) -> Unit = {},
     private val hasConsent: (addonId: String) -> Boolean = { false },
     private val onConsentChange: (addonId: String, granted: Boolean) -> Unit = { _, _ -> },
+    private val hasLibraryMetaConsent: (addonId: String) -> Boolean = { false },
+    private val onLibraryMetaConsentChange: (addonId: String, granted: Boolean) -> Unit = { _, _ -> },
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AddonSettingsUiState())
     val uiState: StateFlow<AddonSettingsUiState> = _uiState.asStateFlow()
@@ -37,6 +41,7 @@ class AddonSettingsViewModel(
                 _uiState.value.copy(
                     installed = installed,
                     consentedIds = installed.map { it.id }.filter(hasConsent).toSet(),
+                    libraryMetaIds = installed.map { it.id }.filter(hasLibraryMetaConsent).toSet(),
                 )
         }
     }
@@ -101,6 +106,32 @@ class AddonSettingsViewModel(
                     _uiState.value.copy(
                         installed = installed,
                         consentedIds = installed.map { it.id }.filter(hasConsent).toSet(),
+                    )
+            } finally {
+                _uiState.value = _uiState.value.copy(isBusy = false)
+            }
+        }
+    }
+
+    /**
+     * Grants or revokes the `library_meta` scope for [id]: permission to tell
+     * this addon which books the reader owns. Independent of [setConsent] — one
+     * never grants the other.
+     */
+    fun setLibraryMetaConsent(
+        id: String,
+        granted: Boolean,
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isBusy = true)
+            try {
+                onLibraryMetaConsentChange(id, granted)
+                val installed = registry.listInstalled()
+                _uiState.value =
+                    _uiState.value.copy(
+                        installed = installed,
+                        consentedIds = installed.map { it.id }.filter(hasConsent).toSet(),
+                        libraryMetaIds = installed.map { it.id }.filter(hasLibraryMetaConsent).toSet(),
                     )
             } finally {
                 _uiState.value = _uiState.value.copy(isBusy = false)

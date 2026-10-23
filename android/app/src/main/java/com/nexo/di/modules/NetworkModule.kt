@@ -9,6 +9,7 @@ import com.nexo.data.remote.addons.AddonRegistry
 import com.nexo.data.remote.addons.CuratedCatalogProvider
 import com.nexo.data.remote.addons.InstalledAddonRow
 import com.nexo.data.remote.addons.KtorAddonHttpTransport
+import com.nexo.data.remote.addons.LibraryMetadataService
 import com.nexo.data.remote.addons.PersistentAddonConsentStore
 import com.nexo.data.remote.addons.catalogProvidersWithAddons
 import com.nexo.data.remote.addons.protocol.AddonClient
@@ -59,6 +60,8 @@ import com.nexo.data.session.PreferencesSessionStore
 import com.nexo.data.session.SessionManager
 import com.nexo.data.session.SessionStore
 import com.nexo.data.session.SupabaseSessionManager
+import com.nexo.data.storage.AppInternalCoverStorage
+import com.nexo.data.storage.CoverStorage
 import com.nexo.data.sync.DictionarySyncService
 import com.nexo.data.update.AndroidUpdateNetworkGate
 import com.nexo.data.update.UpdateDownloader
@@ -92,6 +95,11 @@ class NetworkModule(
      * an unknown item must never hide a download.
      */
     private val ownedLookup: suspend (sourceItemId: String) -> Boolean = { false },
+    /**
+     * The same cover store import persists through, so a metadata-addon cover
+     * lands in the same place as an EPUB one.
+     */
+    private val coverStorage: CoverStorage = AppInternalCoverStorage(context.applicationContext),
 ) {
     val driveTokenStore: DriveTokenStore by lazy {
         runCatching { EncryptedDriveTokenStore(context.applicationContext) }
@@ -403,6 +411,27 @@ class NetworkModule(
             transport = addonProtocolTransport,
             cache = addonTtlCache,
             breaker = addonCircuitBreaker,
+        )
+    }
+
+    /**
+     * Library-side metadata enrichment (Task 19): asks the `meta` resource about
+     * books the reader already owns, gated on the per-addon `library_meta`
+     * consent. Reuses the shared response cache (24 h entries), the shared
+     * circuit breaker, the shared transport and the same [CoverStorage] import
+     * writes covers through.
+     */
+    val libraryMetadataService: LibraryMetadataService by lazy {
+        LibraryMetadataService(
+            installedAddons = { addonRegistry.listInstalled() },
+            client = addonClient,
+            consent = addonRegistry.consent,
+            cache = addonTtlCache,
+            coverStorage = coverStorage,
+            fetchCover = { url ->
+                val resource = addonTransport.fetch(url)
+                if (resource.status in 200..299) resource.body else null
+            },
         )
     }
 

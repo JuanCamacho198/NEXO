@@ -35,10 +35,32 @@ class PersistentAddonConsentStore(
         prefs.edit().remove(consentKey(addonId)).apply()
     }
 
+    /**
+     * The `library_meta` grant: a distinct key in the same store, so revoking
+     * one scope can never touch the other and an upgrade keeps both.
+     */
+    @Synchronized
+    override fun hasLibraryMetaConsent(addonId: String): Boolean = prefs.getBoolean(libraryMetaKey(addonId), false)
+
+    @Synchronized
+    override fun setLibraryMetaConsent(
+        addonId: String,
+        granted: Boolean,
+    ) {
+        if (granted) {
+            prefs.edit().putBoolean(libraryMetaKey(addonId), true).apply()
+        } else {
+            prefs.edit().remove(libraryMetaKey(addonId)).apply()
+        }
+    }
+
     companion object {
         private const val PREFS_NAME = "addon_consent"
         private const val KEY_PREFIX_CONSENT = "consented:"
+        private const val KEY_PREFIX_LIBRARY_META = "library_meta:"
 
         private fun consentKey(addonId: String): String = KEY_PREFIX_CONSENT + addonId
+
+        private fun libraryMetaKey(addonId: String): String = KEY_PREFIX_LIBRARY_META + addonId
     }
 }

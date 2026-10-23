@@ -87,6 +87,7 @@ class AppContainer(
             databaseModule = databaseModule,
             preferencesModule = preferencesModule,
             ownedLookup = { sourceItemId -> repositoryModule.libraryRepository.findOwned(sourceItemId) != null },
+            coverStorage = storageModule.coverStorage,
         )
 
     /**
@@ -189,6 +190,7 @@ class AppContainer(
             syncSettleGateProvider = { syncSettleGate },
             drainSchedulerProvider = { outboxDrainScheduler },
             dictionarySyncProvider = { networkModule.dictionarySyncService },
+            libraryMetaProvider = { networkModule.libraryMetadataService },
         )
     private val useCaseModule = UseCaseModule(repositoryModule, preferencesModule)
 

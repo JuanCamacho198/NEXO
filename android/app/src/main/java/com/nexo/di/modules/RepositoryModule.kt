@@ -2,6 +2,7 @@ package com.nexo.di.modules
 
 import android.content.Context
 import android.util.Log
+import com.nexo.data.remote.addons.LibraryMetaSource
 import com.nexo.data.repository.CacheRepositoryImpl
 import com.nexo.data.repository.DictionaryRepositoryImpl
 import com.nexo.data.repository.HomeRepositoryImpl
@@ -39,6 +40,11 @@ class RepositoryModule(
      * Defaults to absent so unit tests and non-wired callers stay local-only.
      */
     dictionarySyncProvider: () -> DictionarySyncService? = { null },
+    /**
+     * Resolves the metadata-addon enrichment seam lazily, for the same reason:
+     * the network module owns the client and is built before this one.
+     */
+    libraryMetaProvider: () -> LibraryMetaSource? = { null },
 ) {
     companion object {
         private const val TAG = "RepositoryModule"
@@ -66,6 +72,7 @@ class RepositoryModule(
             outboxDao = databaseModule.syncOutboxDao,
             settleGate = syncSettleGate,
             drainScheduler = drainScheduler,
+            libraryMeta = libraryMetaProvider,
         )
     val epubImportInitTimeMs: Long = System.currentTimeMillis() - epubImportStartTime
 

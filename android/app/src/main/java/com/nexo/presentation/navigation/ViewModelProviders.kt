@@ -248,6 +248,8 @@ internal fun rememberAddonSettingsViewModel(
     onError: (String) -> Unit,
     hasConsent: (String) -> Boolean,
     onConsentChange: (String, Boolean) -> Unit,
+    hasLibraryMetaConsent: (String) -> Boolean,
+    onLibraryMetaConsentChange: (String, Boolean) -> Unit,
 ): AddonSettingsViewModel =
     viewModel(
         factory =
@@ -256,6 +258,8 @@ internal fun rememberAddonSettingsViewModel(
                 onError = onError,
                 hasConsent = hasConsent,
                 onConsentChange = onConsentChange,
+                hasLibraryMetaConsent = hasLibraryMetaConsent,
+                onLibraryMetaConsentChange = onLibraryMetaConsentChange,
             ),
     )
 

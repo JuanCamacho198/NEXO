@@ -108,6 +108,17 @@ class AddonRegistry(
     /** U4: withdraw disclosure consent for [addonId] (resolve goes empty again). */
     fun revokeAddonConsent(addonId: String) = consent.revokeConsent(addonId)
 
+    /**
+     * `library_meta` scope: may [addonId] be told which books the reader owns, so
+     * it can enrich them? Default off, and never granted by stream consent.
+     */
+    fun hasLibraryMetaConsent(addonId: String): Boolean = consent.hasLibraryMetaConsent(addonId)
+
+    fun setLibraryMetaConsent(
+        addonId: String,
+        granted: Boolean,
+    ) = consent.setLibraryMetaConsent(addonId, granted)
+
     /** install(url): HTTPS check → fetch → validate → addonId → upsert preserving enabled. */
     override suspend fun install(url: String): AddonManifestV3 {
         val preview = fetchManifest(url)

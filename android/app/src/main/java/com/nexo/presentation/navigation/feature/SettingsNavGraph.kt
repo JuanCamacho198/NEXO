@@ -142,6 +142,10 @@ fun NavGraphBuilder.settingsGraph(
                     appContainer.addonRegistry.revokeAddonConsent(addonId)
                 }
             },
+            hasLibraryMetaConsent = { addonId -> appContainer.addonRegistry.hasLibraryMetaConsent(addonId) },
+            onLibraryMetaConsentChange = { addonId, granted ->
+                appContainer.addonRegistry.setLibraryMetaConsent(addonId, granted)
+            },
             onNavigateToLegal = {
                 navController.navigate(NexoDestination.SettingsLegal.route)
             },
