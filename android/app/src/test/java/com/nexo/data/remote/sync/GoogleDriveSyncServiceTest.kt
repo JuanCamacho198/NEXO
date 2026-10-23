@@ -137,7 +137,10 @@ class GoogleDriveSyncServiceTest {
         runBlocking {
             var refreshes = 0
             val r =
-                service(refresher = { refreshes++; Result.failure(IllegalStateException("no refresh token")) }, enabled = { false })
+                service(refresher = {
+                    refreshes++
+                    Result.failure(IllegalStateException("no refresh token"))
+                }, enabled = { false })
                     .schedulePush()
             assertTrue(r.isFailure)
             assertEquals(1, refreshes)

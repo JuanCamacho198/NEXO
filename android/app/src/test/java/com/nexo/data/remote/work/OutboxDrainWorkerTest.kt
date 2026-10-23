@@ -88,9 +88,10 @@ class OutboxDrainWorkerTest {
         runTest {
             val progressSync = stubProgressSync()
             val catalogSync = stubCatalogSync()
-            val driveSync = mockk<SyncService>(relaxed = true).also {
-                coEvery { it.schedulePush() } throws IllegalStateException("drive disabled")
-            }
+            val driveSync =
+                mockk<SyncService>(relaxed = true).also {
+                    coEvery { it.schedulePush() } throws IllegalStateException("drive disabled")
+                }
             val worker = outboxDrainWorker(progressSync, catalogSync, driveSync)
 
             val result = worker.doWork()
@@ -145,6 +146,5 @@ class OutboxDrainWorkerTest {
 
     private fun stubCatalogSync(): SupabaseBookCatalogSync = mockk<SupabaseBookCatalogSync>().also { every { it.startProcessing() } just Runs }
 
-    private fun stubDriveSync(): SyncService =
-        mockk<SyncService>(relaxed = true).also { coEvery { it.schedulePush() } returns Result.success(Unit) }
+    private fun stubDriveSync(): SyncService = mockk<SyncService>(relaxed = true).also { coEvery { it.schedulePush() } returns Result.success(Unit) }
 }

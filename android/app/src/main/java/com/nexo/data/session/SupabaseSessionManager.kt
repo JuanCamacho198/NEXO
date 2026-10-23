@@ -85,7 +85,8 @@ class SupabaseSessionManager(
         val expiresSoon = current.expiresAt.epochSeconds <= System.currentTimeMillis() / 1000 + REFRESH_WINDOW_SECONDS
         if (!expiresSoon) {
             DebugLog.info(TAG, "ensureFreshSession: token still valid, no refresh needed")
-            return current.toAuthSession()
+            return current
+                .toAuthSession()
                 ?.let { Result.success(it) }
                 ?: Result.failure(missingSessionError())
         }
@@ -99,7 +100,8 @@ class SupabaseSessionManager(
                 // Refresh reported success but left no session: fall back to what
                 // was on disk rather than inventing a signed-out state.
                 DebugLog.warn(TAG, "ensureFreshSession: refresh left no session, falling back to persisted session")
-                current.toAuthSession()
+                current
+                    .toAuthSession()
                     ?.let { Result.success(it) }
                     ?: Result.failure(missingSessionError())
             } else {
@@ -118,7 +120,8 @@ class SupabaseSessionManager(
                 "ensureFreshSession: refresh failed (${e.javaClass.simpleName}: ${e.message}); " +
                     "serving persisted session instead of failing",
             )
-            current.toAuthSession()
+            current
+                .toAuthSession()
                 ?.let { Result.success(it) }
                 ?: Result.failure(e)
         }
