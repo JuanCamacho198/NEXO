@@ -134,6 +134,29 @@ export function buildPaginationCss(opts: PaginationCssOptions): string {
 }
 
 /**
+ * The block height a paginated page has for its content, as a CSS length.
+ *
+ * One expression, shared by every rule that has to fit inside a page: `max()`
+ * keeps it valid on a box shorter than the body's own padding (a very small
+ * window), where a plain `calc` would resolve negative and the browser would
+ * drop the declaration — which is the clipping these rules exist to prevent.
+ * Stated in rem, the unit the padding is written in, so a book that changes the
+ * root font-size still resolves to the same box.
+ */
+function paginatedContentCeiling(opts: ReaderCssOptions): string | null {
+  const pagination = opts.pagination;
+  if (!pagination) return null;
+  const height = Math.max(1, Math.round(pagination.height));
+  const top = Number.isFinite(opts.margins.top) ? Math.max(0, opts.margins.top) : 0;
+  const bottom = Number.isFinite(opts.margins.bottom) ? Math.max(0, opts.margins.bottom) : 0;
+  // The plate case gets the whole page because `buildImageOnlyCss` zeroes the
+  // body's vertical padding; the prose case has to subtract what body reserves.
+  return opts.layout === 'image-only' || (top === 0 && bottom === 0)
+    ? `${height}px`
+    : `max(1px, calc(${height}px - ${top}rem - ${bottom}rem))`;
+}
+
+/**
  * A ceiling on media height, for paginated mode only.
  *
  * ## The defect this answers
@@ -159,29 +182,10 @@ export function buildPaginationCss(opts: PaginationCssOptions): string {
  * `max-height` alone is enough: with `height: auto` the browser preserves the
  * aspect ratio and shrinks the inline size to match (measured: 507x754 became
  * 392x583, and the root's `scrollHeight` became the box's 583).
- *
- * The available height is the box minus body's vertical padding, EXCEPT for an
- * image-only document, whose block zeroes that padding so the plate can use the
- * whole page.
  */
 function buildPaginatedMediaCeiling(opts: ReaderCssOptions): string {
-  const pagination = opts.pagination;
-  if (!pagination) return '';
-  const height = Math.max(1, Math.round(pagination.height));
-  const top = Number.isFinite(opts.margins.top) ? Math.max(0, opts.margins.top) : 0;
-  const bottom = Number.isFinite(opts.margins.bottom) ? Math.max(0, opts.margins.bottom) : 0;
-  // The plate case gets the whole page because `buildImageOnlyCss` zeroes the
-  // body's vertical padding; the prose case has to subtract what body reserves.
-  // Stated in rem, the unit the padding is written in, so a book that changes the
-  // root font-size still resolves to the same box.
-  const ceiling =
-    opts.layout === 'image-only' || (top === 0 && bottom === 0)
-      ? `${height}px`
-      : // `max()` keeps the expression valid on a box shorter than the body's own
-        // padding (a very small window): a plain `calc` would resolve negative and
-        // the browser would drop the declaration, which is the clipping this rule
-        // exists to prevent.
-        `max(1px, calc(${height}px - ${top}rem - ${bottom}rem))`;
+  const ceiling = paginatedContentCeiling(opts);
+  if (ceiling === null) return '';
   // A capped plate still sat in a line box, and the leading below its baseline
   // pushed the wrapper 8px past the page (measured on this book's cover: the
   // image landed at exactly 583 and its `div` measured 591). A plate is a block
@@ -192,6 +196,49 @@ function buildPaginatedMediaCeiling(opts: ReaderCssOptions): string {
       body img, body svg {
         max-height: ${ceiling} !important;
         ${plateDisplay}
+      }
+    `;
+}
+
+/**
+ * The page-scrolls-within-itself fallback for a table that cannot fit, in
+ * paginated mode only.
+ *
+ * ## The defect this answers
+ *
+ * A table has no line-breaking: its inline size is the width of its widest
+ * cell content, and `break-inside: avoid` (S1, above) keeps its rows on one
+ * column. Two publisher pages of *Prisioneros de la geografía* are a single
+ * table each — spine 2 (`portadilla.htm`, 1203px wide) and spine 42
+ * (`tematica_01.htm`, 977px) — inside a 583px page box, and each is taller
+ * than the page as well. The generic `body table { display: block;
+ * overflow-x: auto }` rule already gives the inline axis a scroller, but with
+ * no height bound the block simply grows to its full height (620px) and the
+ * column clips the rest: `html { overflow-y: hidden }` leaves the reader no
+ * way to reach it.
+ *
+ * Bounding the block to the page turns the table into its own scroller, so
+ * "that page scrolls" instead of being cut. The bound is deliberately the same
+ * expression the media ceiling uses: a table that FITS never reaches it, so
+ * no ordinary page gains a scrollbar, and the column geometry that pagination
+ * depends on is untouched — the block still occupies one column.
+ *
+ * Scaling the page down was rejected: it shrinks the text the reader was
+ * given, and these pages are the publisher's fixed-size artwork.
+ */
+function buildPaginatedTableFallback(opts: ReaderCssOptions): string {
+  const ceiling = paginatedContentCeiling(opts);
+  if (ceiling === null) return '';
+  return `
+      body table {
+        max-height: ${ceiling} !important;
+        overflow: auto !important;
+        /* A table that scrolls must LOOK like it can. These are publisher
+           colours, not app tokens: this sheet is injected into the chapter
+           iframe, where the app's palette does not exist. A mid grey reads on
+           both the light and the dark reading themes. */
+        scrollbar-width: thin !important;
+        scrollbar-color: rgba(128, 128, 128, 0.45) transparent !important;
       }
     `;
 }
@@ -265,6 +312,27 @@ export function getThemeBgColor(themeMode: string): string {
   return bgs[themeMode] || bgs.paper;
 }
 
+/**
+ * The reader's scrollbar thumb, per reading theme.
+ *
+ * The reading theme is NOT the app theme: a reader on `night` with the app in
+ * light mode would otherwise get the app's dark-blue thumb painted on a
+ * near-black surface and lose the only continuous position indicator the
+ * scrolling mode has. The values are written as `rgba` because the parent
+ * stylesheet paints them onto the reader's own surface with
+ * `scrollbar-color`, where a token reference would resolve against the app's
+ * palette instead. Opacity keeps the thumb quiet enough to read as chrome.
+ */
+export function getThemeScrollbarColor(themeMode: string): string {
+  const thumbs: Record<string, string> = {
+    paper: 'rgba(51, 51, 51, 0.35)',
+    sepia: 'rgba(91, 70, 54, 0.4)',
+    night: 'rgba(200, 204, 216, 0.35)',
+    oled: 'rgba(184, 188, 200, 0.35)',
+  };
+  return thumbs[themeMode] || thumbs.paper;
+}
+
 export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
   const justify = opts.textAlign.toLowerCase() === 'justify';
   // U1: justification without hyphenation rivers. Justify always hyphenates;
@@ -284,6 +352,10 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
   // (`max-height: none`) so a plate can be zoomed, which in a column would let a
   // plate grow taller than the page it is printed on. See the function.
   const paginatedMediaCss = buildPaginatedMediaCeiling(opts);
+  // Last of the paginated blocks: it has to win over the generic `body table`
+  // rule above (`overflow-x: auto` with no height bound), which is what left a
+  // table taller than the page with its bottom unreachable.
+  const paginatedTableCss = buildPaginatedTableFallback(opts);
 
   return `
       ${themeCss}
@@ -519,7 +591,7 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
       body :lang(ko) :is(em, i, cite, dfn) {
         font-style: normal;
       }
-${paginationCss}${imageOnlyCss}${paginatedMediaCss}    `;
+${paginationCss}${imageOnlyCss}${paginatedMediaCss}${paginatedTableCss}    `;
 }
 
 /**

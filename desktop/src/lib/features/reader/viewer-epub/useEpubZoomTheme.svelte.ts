@@ -20,9 +20,10 @@ export { clampZoomPercent };
 import {
   getThemeStyles,
   getThemeBgColor,
+  getThemeScrollbarColor,
 } from '$lib/features/reader/viewer-epub/useEpubRender.svelte';
 
-export { getThemeStyles, getThemeBgColor };
+export { getThemeStyles, getThemeBgColor, getThemeScrollbarColor };
 
 export type EpubZoomThemeDeps = {
   getReaderSettings: () => ReaderSettings;
@@ -37,6 +38,8 @@ export function createEpubZoomTheme(deps: EpubZoomThemeDeps): {
   clampZoomPercent: typeof clampZoomPercent;
   getThemeStyles: typeof getThemeStyles;
   getThemeBgColor(): string;
+  /** The thumb colour for this reading theme (see `getThemeScrollbarColor`). */
+  getThemeScrollbarColor(): string;
   setZoom(percent: number): void;
   cleanup(): void;
 } {
@@ -75,6 +78,9 @@ export function createEpubZoomTheme(deps: EpubZoomThemeDeps): {
     getThemeStyles,
     getThemeBgColor(): string {
       return getThemeBgColor(deps.getThemeMode());
+    },
+    getThemeScrollbarColor(): string {
+      return getThemeScrollbarColor(deps.getThemeMode());
     },
     setZoom,
     cleanup,

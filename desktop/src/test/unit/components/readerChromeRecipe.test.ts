@@ -70,6 +70,17 @@ describe('chrome control recipe (U4.1)', () => {
     expect(chromeIconButton('toggle', true)).toBe(CHROME_ICON_TOGGLE_ACTIVE);
     expect(chromeIconButton('toggle')).toBe(CHROME_ICON_TOGGLE_IDLE);
   });
+
+  // The field sits in a bar that is now a MINIMUM height, so it must stay one
+  // of the shorter things in the row. `styles.css` sets
+  // `input[type='text'] { width: 100% }` unlayered, which beats every layered
+  // width utility: without a max-width the field measured 149px instead of
+  // 50px, and the "/ 24" label beside it wrapped onto two lines.
+  it('keeps the page field at its recipe width against the global input rule', () => {
+    expect(CHROME_PAGE_FIELD).toContain('max-w-12.5');
+    // Explicit small vertical padding, not the 10px the global rule implies.
+    expect(CHROME_PAGE_FIELD).toContain('py-1');
+  });
 });
 
 describe('chrome consumers import the recipe (U4.10)', () => {

@@ -752,6 +752,14 @@
   function getThemeBgColor(): string {
     return zoomTheme.getThemeBgColor();
   }
+  /**
+   * The scrolling mode's only continuous position indicator. Painted with the
+   * READING theme's thumb colour, not the app's: the surface behind it is the
+   * book page, and the app palette can be the opposite brightness.
+   */
+  function getThemeScrollbarColor(): string {
+    return zoomTheme.getThemeScrollbarColor();
+  }
 
   $effect(() => {
     debugState.epub.currentChapterIndex = navigation.currentChapterIndex;
@@ -1202,12 +1210,12 @@
     <div
       data-testid="epub-scroll-container"
       bind:this={scrollContainerEl}
-      class="flex-1 w-full min-h-0"
+      class="reader-scroll-surface flex-1 w-full min-h-0"
       class:overflow-y-auto={!paginated}
       class:pb-16={!paginated}
       class:overflow-x-auto={paginated}
       class:overflow-y-hidden={paginated}
-      style="background: {getThemeBgColor()};"
+      style="background: {getThemeBgColor()}; --reader-scrollbar-thumb: {getThemeScrollbarColor()};"
       bind:this={zoomContainerEl}
       onscroll={handleContainerScroll}
     >

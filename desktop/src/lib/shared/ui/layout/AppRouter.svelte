@@ -99,10 +99,17 @@
       t={appState.t}
       onNavigateSettings={() => navigationState.navigateToSettings()}
     />
+    <!-- The library owns `#main-content` as its scroll surface and asks it to
+      paint no bar (see `.scrollbar-hidden`): a system scrollbar sat outside
+      the shelf panel's rounded corners, against the window edge. Scrolling
+      itself is untouched, so wheel and keyboard still reach the last row. The
+      other routes keep the bar — this is the library's layout decision, not a
+      global one. -->
     <main
       id="main-content"
       tabindex="-1"
       class="flex-1 overflow-y-auto relative flex flex-col min-h-0"
+      class:scrollbar-hidden={navigationState.route === 'library'}
       class:p-4={mainUsesPadding}
       class:md:p-6={mainUsesPadding}
     >

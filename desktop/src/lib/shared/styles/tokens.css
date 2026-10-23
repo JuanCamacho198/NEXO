@@ -614,6 +614,58 @@ body {
 }
 
 /* ============================================
+ * SCROLL SURFACES — who owns the scrollbar
+ * ============================================ */
+
+/*
+ * Library (and anything else that adopts it): hidden.
+ *
+ * The shelf grid scrolls `#main-content`, and the system scrollbar was drawn
+ * hard against the window edge, cutting past the panel's rounded corners — an
+ * OS artefact in the middle of the layout. There is no way to inset a native
+ * bar from inside the element that owns it, so the grid gets no bar at all.
+ *
+ * This is presentation only. `scrollbar-width` and the WebKit pseudo-element
+ * change what is PAINTED, never what can be scrolled: wheel, trackpad,
+ * PageDown/End and the scrollbar-less drag all still reach the last row, which
+ * is what the live check proves.
+ */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Reader surface: kept, and dressed.
+ *
+ * In scrolling mode this bar is not decoration — it is the only CONTINUOUS
+ * position indicator the reader has (the footer reports progress, not where in
+ * the chapter the eye is). So it stays, but it belongs to the book page: thin,
+ * and painted in the READING theme's thumb colour, which the viewer passes as
+ * `--reader-scrollbar-thumb` (the reading theme and the app theme are
+ * independent, and a `night` page with the app in light mode would otherwise
+ * get the app's dark-blue thumb on a near-black surface).
+ *
+ * Why the standard properties and no `::-webkit-scrollbar` rules: this build
+ * ignores the legacy pseudo-elements as soon as a standard scrollbar property
+ * is not `auto` — and `* { scrollbar-width: thin }` plus the theme's
+ * `scrollbar-color` make that true app-wide. Measured on a scratch element in
+ * the live app: `scrollbar-width: auto` with no colour change still painted the
+ * default 15px bar and ignored an explicit `::-webkit-scrollbar { width }`,
+ * while `thin` + `scrollbar-color` painted the themed 10px one. So the pseudo-
+ * element block would be dead code here; the properties that DO paint are the
+ * ones below.
+ */
+.reader-scroll-surface {
+  scrollbar-width: thin;
+  scrollbar-color: var(--reader-scrollbar-thumb, var(--scrollbar-thumb)) transparent;
+}
+
+/* ============================================
  * PDF.js TEXT LAYER
  * The text layer must stay interactive; the native browser selection
  * (pdfjs's own `::selection`, pdf_viewer.css) is the single visual source

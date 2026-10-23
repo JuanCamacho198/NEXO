@@ -66,10 +66,15 @@ describe('reader chrome breakpoints (U3.3)', () => {
     expect(title.className).toContain('max-[480px]:hidden');
   });
 
-  it('bottom bar control cluster wraps and tightens gaps on narrow widths', () => {
+  // The cluster used to WRAP at narrow widths, which is what put the page field
+  // on a second line inside a 48px bar. Wrapping is no longer the narrow-width
+  // answer: the row stays one line and tightens its gaps instead, because paging
+  // and the page field are one instrument.
+  it('bottom bar control cluster never wraps and tightens gaps on narrow widths', () => {
     const { container } = renderBottomBar();
     const toolbar = container.querySelector('[data-testid="bottom-bar-controls"]');
-    expect(toolbar?.className).toContain('flex-wrap');
+    expect(toolbar?.className).toContain('flex-nowrap');
+    expect(toolbar?.className).not.toContain('flex-wrap');
     expect(toolbar?.className).toContain('gap-2');
     expect(toolbar?.className).toContain('sm:gap-3');
     expect(toolbar?.className).toContain('px-2');

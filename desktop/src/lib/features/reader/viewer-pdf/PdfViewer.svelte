@@ -506,9 +506,9 @@
     style:visibility={docState.isLoading || docState.error ? 'hidden' : 'visible'}
   >
     <div
-      class="flex-1 min-h-0 overflow-auto bg-(--pdf-reader-root-bg,var(--color-background))"
+      class="reader-scroll-surface flex-1 min-h-0 overflow-auto bg-(--pdf-reader-root-bg,var(--color-background))"
       bind:this={canvasContainer}
-      style="padding: 0;"
+      style="padding: 0; --reader-scrollbar-thumb: color-mix(in srgb, {readerThemePalette.textColor} 35%, transparent);"
     >
       <div class="flex min-h-full items-center justify-center">
         <div

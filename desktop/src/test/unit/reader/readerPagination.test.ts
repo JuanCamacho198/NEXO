@@ -303,6 +303,59 @@ describe('buildReaderOverrideCss paginated media ceiling', () => {
   });
 });
 
+describe('buildReaderOverrideCss paginated table fallback', () => {
+  const base = {
+    fontSize: 100,
+    zoomLevel: 100,
+    themeMode: 'paper',
+    lineHeight: 1.8,
+    letterSpacing: 0,
+    paragraphSpacing: 1,
+    textAlign: 'left',
+    direction: 'ltr',
+    hyphenation: false,
+    margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+  };
+  const box = { width: 1110, height: 583 };
+
+  // Measured on *Prisioneros de la geografía*: spine 2 (`portadilla.htm`) is one
+  // table 1203px wide, spine 42 (`tematica_01.htm`) one of 977px, both taller
+  // than the 583px page. A table cannot break a line, so in a column with
+  // `overflow-y: hidden` everything past the page was unreachable.
+  it('bounds a table to the page and gives it its own scroller', () => {
+    const css = buildReaderOverrideCss({ ...base, pagination: box });
+    expect(css).toContain('max-height: max(1px, calc(583px - 2.5rem - 2.5rem)) !important');
+    expect(css).toContain('overflow: auto !important');
+  });
+
+  it('bounds a table in an image-only document by the whole page', () => {
+    const css = buildReaderOverrideCss({ ...base, pagination: box, layout: 'image-only' });
+    expect(css).toContain('max-height: 583px !important');
+  });
+
+  it('scopes the bound to tables, so a page without one gains nothing', () => {
+    const css = buildReaderOverrideCss({ ...base, pagination: box });
+    // Scoped to `body table` on purpose: bounding the page ROOT would make every
+    // chapter scrollable and break the column model.
+    expect(css).toMatch(/body table \{\s*max-height: [^;]+;\s*overflow: auto !important;/);
+  });
+
+  it('wins over the generic table rule it has to beat', () => {
+    const css = buildReaderOverrideCss({ ...base, pagination: box });
+    // The generic rule above gives a table a horizontal scroller and no height
+    // bound. At equal specificity the later block wins, so the bound has to be
+    // stated after it or a table taller than the page stays clipped.
+    const genericAt = css.indexOf('overflow-x: auto !important');
+    const boundAt = css.indexOf('overflow: auto !important');
+    expect(genericAt).toBeGreaterThan(-1);
+    expect(boundAt).toBeGreaterThan(genericAt);
+  });
+
+  it('emits nothing in scrolling mode, where the chapter already scrolls', () => {
+    expect(buildReaderOverrideCss(base)).not.toContain('overflow: auto !important');
+  });
+});
+
 describe('PAGE_EPSILON', () => {
   it('is far below a page and above real sub-pixel noise', () => {
     expect(PAGE_EPSILON).toBeGreaterThan(0);

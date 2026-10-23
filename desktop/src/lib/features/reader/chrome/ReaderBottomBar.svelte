@@ -141,20 +141,36 @@
 <!-- The single bottom bar: paging, the page field, fit and zoom for both modes,
   the progress readout, and the bookmarks control. It is never hidden by
   fullscreen state — only the immersive chrome visibility drives `barTransform`. -->
+<!-- `min-h-12`, not `h-12`: the bar's height must never be a formula the
+  controls have to fit into. At a fixed 48px the page field — a bordered,
+  padded input — was taller than the box and painted over the reading area
+  above and below it. A minimum with `items-center` keeps the bar at 48px when
+  the controls fit (they do: 44px touch targets) and still contains them if a
+  future control is taller, instead of clipping it. -->
 <footer
-  class="grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-t border-(--color-border) bg-(--color-reader-chrome) px-3 transition-transform duration-300 sm:px-4 {isFullscreen
+  class="grid min-h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 border-t border-(--color-border) bg-(--color-reader-chrome) px-3 transition-transform duration-300 sm:px-4 {isFullscreen
     ? 'fixed inset-x-0 bottom-0 z-50'
     : ''} {barTransform}"
   class:shadow-md={isFullscreen}
 >
+  <!-- `w-full` is what makes `truncate` work: a grid item with
+    `justify-self-start` is shrink-to-fit (max-content), so its box always
+    matched its text and `text-overflow: ellipsis` never had a narrower box to
+    ellipsize into — a long chapter title measured 912px wide inside a 444px
+    track and ran under the paging controls. Filling the track keeps the title
+    one ellipsized line and the bar its 48px. -->
   <span
-    class="justify-self-start font-inter text-xs font-normal text-(--color-text-muted) min-w-0 truncate"
+    class="w-full justify-self-start font-inter text-xs font-normal text-(--color-text-muted) min-w-0 truncate"
   >
     {locationLabel}
   </span>
 
+  <!-- No vertical padding and no wrapping. The row used `py-2` on top of 44px
+    controls, which made it 60px inside a 48px bar; and `flex-wrap` let the
+    whole control row drop to a second line under any squeeze. Paging, the page
+    field and the zoom control are one instrument — they stay on one line. -->
   <div
-    class="justify-self-center flex items-center gap-2 px-2 py-2 flex-wrap sm:gap-3 sm:px-4"
+    class="justify-self-center flex flex-nowrap items-center gap-2 px-2 sm:gap-3 sm:px-4"
     role="toolbar"
     aria-label={t('reader.toolbar')}
     tabindex={-1}

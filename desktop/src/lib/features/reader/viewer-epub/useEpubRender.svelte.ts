@@ -19,6 +19,7 @@ import {
   buildReaderOverrideCss,
   getThemeStyles,
   getThemeBgColor,
+  getThemeScrollbarColor,
   type ReaderCssOptions,
 } from '$lib/features/reader/viewer-epub/readerCssBuilder';
 import {
@@ -70,7 +71,7 @@ export interface EpubMetadataExtract {
 // The tables and the builder now live in `readerCssBuilder.ts`; this re-export
 // keeps the existing import paths (the viewer barrel, `useEpubZoomTheme`, the
 // tests) resolving without a second copy that could drift.
-export { buildReaderOverrideCss, getThemeStyles, getThemeBgColor };
+export { buildReaderOverrideCss, getThemeStyles, getThemeBgColor, getThemeScrollbarColor };
 export type { ReaderCssOptions };
 
 // ─── Pure helpers — exported for golden tests ──────────────────
@@ -447,6 +448,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
   stripMissingFontFaces: typeof stripMissingFontFaces;
   getThemeStyles: typeof getThemeStyles;
   getThemeBgColor: typeof getThemeBgColor;
+  getThemeScrollbarColor: typeof getThemeScrollbarColor;
   buildChapterSrcdoc: typeof buildChapterSrcdoc;
   buildReaderOverrideCssPure: typeof buildReaderOverrideCss;
 } {
@@ -842,6 +844,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
     stripMissingFontFaces,
     getThemeStyles,
     getThemeBgColor,
+    getThemeScrollbarColor,
     buildChapterSrcdoc,
     buildReaderOverrideCssPure: buildReaderOverrideCss,
   };
