@@ -289,6 +289,7 @@ class AddonProtocolTest {
             "resources",
             JSONArray()
                 .put("catalog")
+                .put("meta")
                 .put(
                     JSONObject()
                         .put("name", "stream")
@@ -303,9 +304,10 @@ class AddonProtocolTest {
         assertEquals("3.0.0", parsed.version)
         assertEquals(listOf("book"), parsed.types)
         assertEquals(AddonResourceV3("catalog"), parsed.resources[0])
+        assertEquals(AddonResourceV3("meta"), parsed.resources[1])
         assertEquals(
             AddonResourceV3("stream", listOf("book"), listOf("gutenberg:", "isbn:")),
-            parsed.resources[1],
+            parsed.resources[2],
         )
         assertEquals(
             listOf(AddonExtraArg("search", false), AddonExtraArg("skip", false)),

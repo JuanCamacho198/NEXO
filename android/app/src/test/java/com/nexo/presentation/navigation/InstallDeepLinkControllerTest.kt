@@ -37,7 +37,7 @@ private fun previewManifest(
             .put(
                 "catalogs",
                 org.json.JSONArray().put(JSONObject().put("type", "book").put("id", "main").put("name", "Main")),
-            ).put("resources", org.json.JSONArray().put("catalog"))
+            ).put("resources", org.json.JSONArray().put("catalog").put("meta"))
             .toString()
     return AddonManifestPreview(
         manifest = AddonManifestParserV3.loadManifestV3(json.toByteArray(Charsets.UTF_8), "application/json"),

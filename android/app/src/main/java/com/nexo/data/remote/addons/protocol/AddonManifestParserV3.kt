@@ -27,6 +27,7 @@ object AddonManifestParserV3 {
     private const val MAX_ID_PREFIXES = 16
     private const val MAX_TEMPLATES = 16
     private const val MAX_STRING_CHARS = 2048
+    private const val RESOURCE_META = "meta"
 
     /** Any brace-delimited token, so `{publisher}` is caught, not passed through. */
     private val TEMPLATE_TOKEN = Regex("\\{[^{}]*\\}")
@@ -311,15 +312,35 @@ object AddonManifestParserV3 {
         return AddonBehaviorHints(adult = adult)
     }
 
+    /**
+     * `catalogs` and `meta` are one unit: an addon that lists books must be able
+     * to describe them, or it advertises a detail view it cannot answer. An empty
+     * `catalogs` list stays valid, so a stream-only addon needs no `meta`.
+     */
+    private fun assertCatalogMetaPairing(
+        catalogs: List<AddonCatalogEntryV3>,
+        resources: List<AddonResourceV3>,
+    ) {
+        if (catalogs.isEmpty()) return
+        if (resources.any { it.name == RESOURCE_META }) return
+        invalid(
+            "catalogs require a \"$RESOURCE_META\" resource: none is declared, " +
+                "so the listed books have no detail view",
+        )
+    }
+
     private fun parseManifestObject(value: Any?): AddonManifestV3 {
         if (value !is JSONObject) invalid("manifest must be a JSON object")
+        val catalogs = parseCatalogs(if (value.has("catalogs")) value.opt("catalogs") else null)
+        val resources = parseResources(value.opt("resources"))
+        assertCatalogMetaPairing(catalogs, resources)
         return AddonManifestV3(
             id = parseBoundedString(value.opt("id"), "id"),
             version = parseBoundedString(value.opt("version"), "version"),
             name = parseBoundedString(value.opt("name"), "name"),
             types = parseTypes(value.opt("types"), "types"),
-            catalogs = parseCatalogs(if (value.has("catalogs")) value.opt("catalogs") else null),
-            resources = parseResources(value.opt("resources")),
+            catalogs = catalogs,
+            resources = resources,
             description = if (value.has("description")) parseBoundedString(value.opt("description"), "description") else null,
             idPrefixes = if (value.has("idPrefixes")) parseIdPrefixes(value.opt("idPrefixes"), "idPrefixes") else null,
             logo = if (value.has("logo")) parseHttpsUrl(value.opt("logo"), "logo") else null,
