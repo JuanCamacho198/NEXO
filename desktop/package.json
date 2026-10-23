@@ -41,6 +41,7 @@
     "@fontsource/atkinson-hyperlegible": "^5.3.0",
     "@fontsource/manrope": "^5.3.0",
     "@internationalized/date": "^3.8.1",
+    "@nexo/addon-protocol": "workspace:*",
     "@nexo/manifest-validator": "workspace:*",
     "@sentry/browser": "^10.53.1",
     "@supabase/supabase-js": "^2.110.2",
