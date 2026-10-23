@@ -34,6 +34,8 @@ import { resolveDownloadUrl } from './mappers';
 import { AddonRegistry, getAddonRegistry } from '../addons/AddonRegistry';
 import { AddonFanoutCatalogProvider } from '../addons/AddonCatalogProvider';
 import { addonConsent } from '../addons/AddonConsent';
+import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { i18n } from '$lib/shared/i18n';
 import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
 import { authorEntriesFor } from '$lib/features/discover/railRotation';
@@ -86,6 +88,23 @@ async function preloadAuthorRailPages(): Promise<void> {
   }
 }
 
+/** Local catalog, for the "do I already own this?" question. */
+const library: LibraryPort = new TauriLibraryAdapter();
+
+/**
+ * True when a book row already carries this addon item id, so the read sheet
+ * flags it instead of downloading it twice. A library read failure is "not
+ * owned": the flag is an optimization, never a gate on the resolve.
+ */
+async function isOwnedSourceItem(sourceItemId: string): Promise<boolean> {
+  try {
+    const books = await library.listBooks();
+    return books.some((book) => book.sourceItemId === sourceItemId);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * One composite per rebuild: built-ins and the curated bundle first, then the
  * installed addons, then the v3 addon fan-out provider.
@@ -104,6 +123,10 @@ async function buildComposite(): Promise<CompositeCatalogProvider> {
     loadAddons: () => registry.listDescriptors(),
     clientFor: (addonId) => registry.addonClient(addonId),
     onFailure: surfaceAddonFailures,
+    // `stream` is the one consent-gated resource; the same per-addon gate the
+    // v2 adapters receive, so a grant covers both paths for one addon.
+    consent: addonConsent,
+    isOwned: isOwnedSourceItem,
   });
   // `listSources` is a synchronous port method, so the roster is loaded once
   // per build; a registry mutation rebuilds the whole composite.

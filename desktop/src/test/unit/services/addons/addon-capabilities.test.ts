@@ -4,13 +4,13 @@
  * Badges render one per declared capability (known id `resolve` localized,
  * unknown ids raw) and none when empty; the detail dialog lists the declared
  * capabilities. Resolution: a manifest without `resolveUrl` ⇒ empty with 0
- * I/O; declared `capabilities` without `resolve` ⇒ empty with 0 I/O (an
- * UNDECLARED list leaves `resolveUrl` authoritative); a `resolveUrl`-capable
- * addon resolves through its declared `resolveUrl` within its declared
- * capabilities and only with consent granted (denied ⇒ CONSENT_REQUIRED, 0
- * I/O). The composite routes by the existing book-id prefix over the active
- * source set; `getDetails` prefix routing and `NOT_FOUND` zero-I/O are pinned
- * unchanged.
+ * I/O; a declared `capabilities` list without `resolve` no longer suppresses
+ * the endpoint (under v3 the routing table decides who answers `stream`, so
+ * the v2 capability list is advisory); a `resolveUrl`-capable addon resolves
+ * through its declared `resolveUrl` and only with consent granted (denied ⇒
+ * CONSENT_REQUIRED, 0 I/O). The composite routes by the existing book-id
+ * prefix over the active source set; `getDetails` prefix routing and
+ * `NOT_FOUND` zero-I/O are pinned unchanged.
  */
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -243,7 +243,7 @@ describe('addon resolve (consent + endpoint + capabilities)', () => {
     expect(transport.calls).toHaveLength(0);
   });
 
-  it('declared capabilities without resolve ⇒ empty with 0 I/O', async () => {
+  it('declared capabilities are advisory: a resolve endpoint still answers', async () => {
     const transport = resolveTransport();
     const provider = new AddonCatalogProvider(
       NO_RESOLVE_CAP_MANIFEST,
@@ -253,9 +253,11 @@ describe('addon resolve (consent + endpoint + capabilities)', () => {
       await grantedConsentFor(ADDON_ID),
     );
 
+    // v3 routing, not the v2 capability list, decides who answers `stream`, so
+    // the endpoint is authoritative for an addon that still carries one.
     const resolution = await provider.resolveAddonAccess(publicDomainBook());
-    expect(resolution).toEqual({ canDownloadInApp: false, downloadUrl: null, options: [] });
-    expect(transport.calls).toHaveLength(0);
+    expect(resolution.options).toHaveLength(3);
+    expect(transport.calls).toHaveLength(1);
   });
 
   it('an UNDECLARED capabilities list leaves resolveUrl authoritative (v1-style)', async () => {

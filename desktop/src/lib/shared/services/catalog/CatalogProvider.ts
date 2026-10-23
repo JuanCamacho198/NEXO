@@ -107,6 +107,12 @@ export interface AddonAccessResolution {
   canDownloadInApp: boolean;
   downloadUrl: string | null;
   options: AccessOption[];
+  /**
+   * True when the local library already holds this item (a `books.source_item_id`
+   * match). Flagged, never hidden: the options stay, the re-download does not.
+   * Absent ⇒ not known to be owned (the v2 adapter never consults the library).
+   */
+  owned?: boolean;
 }
 
 /**
@@ -173,6 +179,15 @@ export interface CatalogProvider {
    * registered provider.
    */
   supportsCompositeSearch?(): boolean;
+
+  /**
+   * Namespaced addon ids (`gutenberg:1342`) carry no source prefix, so the
+   * composite's prefix routing can never pick an owner for them. A provider
+   * that answers such ids itself opts in here; detail and access routing reach
+   * it only after prefix routing found no owner. Absent ⇒ false (prefix
+   * routing alone).
+   */
+  servesNamespacedIds?(): boolean;
 
   /**
    * Lazy per-book authority resolve (DISC-04c, additive + optional): resolve a

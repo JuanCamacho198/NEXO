@@ -3,8 +3,14 @@
  *
  * Fail-closed contract (mirrors Android `AddonConsentStore` + the 0018 table):
  * consent is per addon (never global), absent means denied (including newly
- * installed addons), and no consent implies ZERO network/transport I/O from
- * `AddonCatalogProvider.resolveAddonAccess` (a `CONSENT_REQUIRED` outcome).
+ * installed addons), and no consent implies ZERO network/transport I/O from the
+ * addon access resolve (a `CONSENT_REQUIRED` outcome).
+ *
+ * Consent gates the `stream` resource alone: `stream` is the only resource that
+ * can point at an arbitrary third-party file, while `catalog` and `meta` are
+ * read-only descriptions. `AddonCatalogProvider.resolveAddonAccess` and the v3
+ * fan-out resolve both check this gate BEFORE building or sending a request.
+ *
  * Grants and withdrawals persist durably, so both survive a restart;
  * uninstall revokes the row (Rust `deleteInstalledAddon`), so a reinstall
  * starts denied and can never inherit consent.
@@ -26,6 +32,19 @@ export interface AddonConsentStore {
 export interface AddonConsentGate {
   ensureLoaded(): Promise<void>;
   hasConsent(addonId: string): boolean;
+}
+
+/**
+ * The candidates whose addon id holds a grant, in candidate order. Fail-closed
+ * by construction: an unknown addon and an unhydrated snapshot both answer
+ * "no". Callers must `ensureLoaded()` first and send no request for an addon
+ * this drops.
+ */
+export function consentedCandidates<T extends { id: string }>(
+  gate: AddonConsentGate,
+  candidates: readonly T[],
+): T[] {
+  return candidates.filter((candidate) => gate.hasConsent(candidate.id));
 }
 
 /** Process-local store: consent recorded once per addon id (tests / fallback). */

@@ -17,6 +17,14 @@ import type { CatalogBook } from './CatalogProvider';
 
 export type AccessGroup = 'FREE' | 'BUY' | 'SUBSCRIBE';
 
+/**
+ * Legal terms of one option, mirroring the protocol's
+ * `behaviorHints.accessType` verbatim (`StreamAccessType` in
+ * `@nexo/addon-protocol`) so no adapter has to invent a second vocabulary.
+ * A built-in web link is neither public domain nor a loan, so it is `unknown`.
+ */
+export type AccessType = 'public-domain' | 'borrow' | 'purchase' | 'unknown';
+
 /** One external web option; `titleKey` is localized at the render boundary. */
 export interface AccessOption {
   group: AccessGroup;
@@ -24,6 +32,14 @@ export interface AccessOption {
   url: string;
   /** True only for the public-domain in-app download. */
   opensInApp: boolean;
+  /**
+   * Addon stream provenance (additive): the browser-openable form of `url`
+   * when the stream carried one, so the sheet can tell "open here" from
+   * "open in the browser". Absent for links built by this resolver.
+   */
+  externalUrl?: string;
+  /** Addon stream provenance (additive); absent for links built here. */
+  accessType?: AccessType;
 }
 
 /**
@@ -35,6 +51,13 @@ export interface LegalAccess {
   canDownloadInApp: boolean;
   downloadUrl: string | null;
   options: AccessOption[];
+  /**
+   * True when the local library already holds this item. Only a producer that
+   * can consult the local catalog (the addon stream path, by `sourceItemId`)
+   * sets it; this pure, I/O-free resolver leaves it absent, which reads as
+   * "not known to be owned".
+   */
+  owned?: boolean;
 }
 
 const HTTPS_PREFIX = 'https://';

@@ -13,7 +13,7 @@
  */
 import { catalogError, mapHttpStatusToCode } from '../catalog/errors';
 import { backoffDelayMs, MAX_PAGE_SIZE, shouldRetryStatus } from '../catalog/policy';
-import type { AddonConsentGate } from './AddonConsent';
+import { consentedCandidates, type AddonConsentGate } from './AddonConsent';
 import type {
   CatalogBook,
   CatalogFeaturedSort,
@@ -23,22 +23,21 @@ import type {
   PagedResult,
 } from '../catalog/CatalogProvider';
 import type { AddonAccessResolution } from '../catalog/CatalogProvider';
-import type { AccessGroup, AccessOption } from '../catalog/accessResolver';
+import type { AccessGroup, AccessOption, AccessType } from '../catalog/accessResolver';
 import { addonSource } from '../catalog/CatalogProvider';
 import { computeNextPage, resolveDownloadUrl } from '../catalog/mappers';
-import {
-  MAX_MANIFEST_BYTES,
-  declaredCapabilities,
-  type AddonManifest,
-} from '@nexo/manifest-validator';
+import { MAX_MANIFEST_BYTES, type AddonManifest } from '@nexo/manifest-validator';
 import {
   TYPE_BOOK,
+  orderStreams,
   selectAddons,
   type AddonClient,
   type AddonDescriptor,
   type AddonFailure,
   type AddonManifestV3,
+  type BookStream,
   type MetaPreview,
+  type StreamItem,
 } from '@nexo/addon-protocol';
 import { defaultAddonTransport, type AddonTransport } from './AddonRegistry';
 import type { AddonFetchResult } from './AddonRegistry';
@@ -161,9 +160,6 @@ const denyAllAddonConsent: AddonConsentGate = {
  */
 export type { AddonAccessResolution };
 export type { AccessOption };
-
-/** The only known v2 capability id: the addon may resolve reading access. */
-const RESOLVE_CAPABILITY = 'resolve';
 
 /** Per-item `accessType` wire values (open set on the wire; unknown ⇒ null). */
 export type AddonAccessType = 'free' | 'buy' | 'subscribe';
@@ -387,11 +383,12 @@ export class AddonCatalogProvider implements CatalogProvider {
    *
    * - No consent ⇒ rejects `CONSENT_REQUIRED` with ZERO transport calls.
    * - No `resolveUrl` (every v1 manifest) ⇒ empty resolution, zero I/O.
-   * - Declared `capabilities` without `resolve` ⇒ same empty result, zero
-   *   I/O. An UNDECLARED list leaves `resolveUrl` authoritative, preserving
-   *   v1-style manifests.
    * - Otherwise the `resolveUrl` renders from the book identity and fetches
    *   through the existing transport (retry + 64 KiB cap + JSON parse).
+   *
+   * The declared-`capabilities` gate is gone: under v3, routing decides who
+   * answers a `stream` request, so a v2 row that still carries a resolve
+   * endpoint answers it whatever its (advisory) capability list says.
    */
   async resolveAddonAccess(book: CatalogBook): Promise<AddonAccessResolution> {
     await this.consent.ensureLoaded();
@@ -403,12 +400,6 @@ export class AddonCatalogProvider implements CatalogProvider {
     }
     const resolveUrl = this.resolveUrl;
     if (typeof resolveUrl !== 'string' || resolveUrl.length === 0) {
-      return { ...EMPTY_ADDON_ACCESS, options: [] };
-    }
-    if (
-      this.legacy?.capabilities !== undefined &&
-      !declaredCapabilities(this.legacy).includes(RESOLVE_CAPABILITY)
-    ) {
       return { ...EMPTY_ADDON_ACCESS, options: [] };
     }
     const items = parseResolvePayload(
@@ -490,6 +481,60 @@ export interface AddonFanoutCatalogOptions {
    * never allowed to fail the search.
    */
   onFailure?: AddonFailureListener;
+  /**
+   * Per-addon network-consent gate. Consent governs the `stream` resource
+   * alone; `catalog` and `meta` are never gated. Omitted ⇒ every resolve is
+   * denied (fail-closed default, same contract as the v2 adapter).
+   */
+  consent?: AddonConsentGate;
+  /**
+   * Local-catalog lookup by `books.source_item_id`. An owned item is flagged
+   * and never re-downloaded. Omitted ⇒ nothing is owned (a book with no
+   * provenance row can never be "already on the shelf").
+   */
+  isOwned?: (sourceItemId: string) => Promise<boolean>;
+}
+
+/** `accessType` → the option group the sheet renders under. */
+function groupOfAccessType(accessType: AccessType): AccessGroup {
+  switch (accessType) {
+    case 'purchase':
+      return 'BUY';
+    // A loan behaves like a lending subscription: there is deliberately no
+    // separate LEND group (Android parity).
+    case 'borrow':
+      return 'SUBSCRIBE';
+    default:
+      return 'FREE';
+  }
+}
+
+/**
+ * One stream → one option. `externalUrl` is set only for a stream that opens
+ * in the browser; a `download` stream keeps its file URL in `url`.
+ */
+function toStreamOption(stream: BookStream): AccessOption {
+  const option: AccessOption = {
+    group: groupOfAccessType(stream.accessType),
+    titleKey: 'discover.accessOpen',
+    url: stream.url,
+    opensInApp: false,
+    accessType: stream.accessType,
+  };
+  if (stream.source === 'external') option.externalUrl = stream.url;
+  return option;
+}
+
+/** First occurrence wins, so a duplicate link keeps its better-ranked option. */
+function uniqueByUrl(streams: BookStream[]): BookStream[] {
+  const seen = new Set<string>();
+  const unique: BookStream[] = [];
+  for (const stream of streams) {
+    if (seen.has(stream.url)) continue;
+    seen.add(stream.url);
+    unique.push(stream);
+  }
+  return unique;
 }
 
 /** `MetaPreview` → the internal catalog shape. Ids stay namespaced. */
@@ -583,12 +628,143 @@ export class AddonFanoutCatalogProvider implements CatalogProvider {
   }
 
   /**
-   * Detail routing belongs to the `meta` resource, which lands with the rest of
-   * the access-resolution slice. Catalog ids are namespaced (`gutenberg:1342`),
-   * so the composite's `addon:<id>:` route does not address them either.
+   * Detail for one namespaced addon id, through the `meta` resource. Catalog
+   * ids are namespaced (`gutenberg:1342`), so no source prefix owns them; the
+   * composite's prefix routing cannot pick an owner and delegates here.
+   *
+   * `meta` carries no consent requirement: it is a read-only description, and
+   * the addon already answered `catalog` for it. Returns `null` - never throws -
+   * when no addon can describe the id.
    */
+  async getMeta(id: string): Promise<CatalogBook | null> {
+    await this.ready();
+    const candidates = selectAddons(this.enabledAddons(), {
+      resource: 'meta',
+      type: TYPE_BOOK,
+      id,
+    });
+    if (candidates.length === 0) return null;
+
+    const settled = await Promise.allSettled(
+      candidates.map((addon) => this.options.clientFor(addon.id).getMeta([addon], { id })),
+    );
+    const failures: AddonFailure[] = [];
+    let book: CatalogBook | null = null;
+    settled.forEach((outcome, index) => {
+      const addon = candidates[index] as AddonDescriptor;
+      if (outcome.status === 'rejected') {
+        failures.push({ addonId: addon.id, reason: 'payload' });
+        return;
+      }
+      failures.push(...outcome.value.failures);
+      const [meta] = outcome.value.items;
+      if (book === null && meta !== undefined) {
+        book = toCatalogBook(meta, addonSource(addon.id));
+      }
+    });
+    this.reportFailures(failures);
+    return book;
+  }
+
   async getDetails(id: string): Promise<CatalogBook> {
-    throw catalogError('NOT_FOUND', `unknown catalog id ${id}`);
+    const book = await this.getMeta(id);
+    if (book === null) {
+      throw catalogError('NOT_FOUND', `unknown catalog id ${id}`);
+    }
+    return book;
+  }
+
+  /** Namespaced addon ids are not source-prefixed: the composite delegates here. */
+  servesNamespacedIds(): boolean {
+    return true;
+  }
+
+  /**
+   * Reading access for one book, through the `stream` resource.
+   *
+   * - No addon declares `stream` for this id ⇒ empty resolution, zero I/O.
+   * - Consent is checked BEFORE any transport call and only here: `stream` is
+   *   the one resource that can point at an arbitrary third-party file. When
+   *   no candidate holds a grant the resolve rejects `CONSENT_REQUIRED` with
+   *   zero I/O; an unconsented addon is skipped while a consented one still
+   *   answers.
+   * - Every answering addon contributes, ordered by the product rule
+   *   (`orderStreams`): access type, then format, then install time, then id.
+   *   One addon failing is a notice, never an empty list.
+   * - An owned book (local catalog match on `sourceItemId`) keeps its options
+   *   but is never downloaded again.
+   */
+  async resolveAddonAccess(book: CatalogBook): Promise<AddonAccessResolution> {
+    await this.ready();
+    const candidates = selectAddons(this.enabledAddons(), {
+      resource: 'stream',
+      type: TYPE_BOOK,
+      id: book.id,
+    });
+    if (candidates.length === 0) return { ...EMPTY_ADDON_ACCESS };
+
+    const gate = this.options.consent ?? denyAllAddonConsent;
+    await gate.ensureLoaded();
+    const consented = consentedCandidates(gate, candidates);
+    if (consented.length === 0) {
+      // Same outcome the v2 adapter produced for a denied resolve: no request.
+      throw catalogError('CONSENT_REQUIRED', `no addon consented to stream ${book.id}`);
+    }
+
+    const settled = await Promise.allSettled(
+      consented.map((addon) =>
+        this.options.clientFor(addon.id).getStreams([addon], { id: book.id }),
+      ),
+    );
+    const failures: AddonFailure[] = [];
+    const streams: StreamItem[] = [];
+    settled.forEach((outcome, index) => {
+      const addon = consented[index] as AddonDescriptor;
+      if (outcome.status === 'rejected') {
+        failures.push({ addonId: addon.id, reason: 'payload' });
+        return;
+      }
+      failures.push(...outcome.value.failures);
+      streams.push(...outcome.value.items);
+    });
+    this.reportFailures(failures);
+
+    // `orderStreams` re-orders the union: each addon's own answer is already
+    // sorted, and the product rule is global across addons.
+    const ordered = uniqueByUrl(orderStreams(streams));
+    const owned = await this.ownedByLocalCatalog(book.id);
+    const downloadable = ordered.find(
+      (stream) => stream.source === 'download' && stream.accessType === 'public-domain',
+    );
+    const canDownloadInApp = downloadable !== undefined && !owned;
+
+    return {
+      canDownloadInApp,
+      downloadUrl: canDownloadInApp ? downloadable.url : null,
+      owned,
+      options: ordered.map(toStreamOption),
+    };
+  }
+
+  /** Local catalog match on the provenance item id; a failed lookup owns nothing. */
+  private async ownedByLocalCatalog(sourceItemId: string): Promise<boolean> {
+    const lookup = this.options.isOwned;
+    if (lookup === undefined) return false;
+    try {
+      return await lookup(sourceItemId);
+    } catch {
+      return false;
+    }
+  }
+
+  /** The notice sink must never fail an operation that already has results. */
+  private reportFailures(failures: readonly AddonFailure[]): void {
+    if (failures.length === 0) return;
+    try {
+      this.options.onFailure?.(failures);
+    } catch {
+      // Swallowed on purpose: a broken notice sink is not a broken resolve.
+    }
   }
 
   resolveDownloadUrl(formats: Record<string, string>, preferEpub: boolean): string {

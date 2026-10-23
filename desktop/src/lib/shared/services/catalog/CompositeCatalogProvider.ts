@@ -561,12 +561,18 @@ export class CompositeCatalogProvider implements CatalogProvider {
   /**
    * Exact-prefix routing over the active source set: `gutendex:`/`openlibrary:`
    * book ids hit the built-ins, `addon:<addonId>:<bookId>` the owning addon.
-   * Unroutable ids reject NOT_FOUND without any I/O.
+   * Namespaced addon ids (`gutenberg:1342`) have no owning source prefix, so
+   * they fall through to the provider that answers them itself (the v3
+   * fan-out, through `meta`). Unroutable ids reject NOT_FOUND without any I/O.
    */
   async getDetails(id: string): Promise<CatalogBook> {
     const route = this.routeDetails(id);
     if (!route) {
-      throw catalogError('NOT_FOUND', `unknown catalog id ${id}`);
+      const namespaced = this.namespacedIdProvider();
+      if (!namespaced) {
+        throw catalogError('NOT_FOUND', `unknown catalog id ${id}`);
+      }
+      return namespaced.getDetails(id);
     }
     const { provider, source } = route;
     const active = this.activeSourceIds();
@@ -575,6 +581,18 @@ export class CompositeCatalogProvider implements CatalogProvider {
       return this.readOrFetchDetail(cache, provider, source.sourceId, id);
     }
     return provider.getDetails(id);
+  }
+
+  /**
+   * The provider that answers ids no source prefix owns (`gutenberg:1342`).
+   * Scans every registered provider, not only the ones with sources: the
+   * fan-out's source roster loads lazily, and it answers NOT_FOUND (zero I/O)
+   * when no installed addon can describe the id. Fail-closed: absent opt-in
+   * keeps the composite's NOT_FOUND behaviour, so an unroutable id still costs
+   * zero I/O.
+   */
+  private namespacedIdProvider(): CatalogProvider | null {
+    return this.providers.find((provider) => provider.servesNamespacedIds?.() === true) ?? null;
   }
 
   /**
@@ -638,19 +656,22 @@ export class CompositeCatalogProvider implements CatalogProvider {
    * Addon access resolve (slice 9): route by the existing
    * `bookIdPrefixForSource` over the active source set (longest-prefix wins,
    * same as `getDetails`) and delegate to the owning provider that implements
-   * `resolveAddonAccess`. No owner or no implementation ⇒ empty result.
-   * `getDetails` prefix routing and `NOT_FOUND` zero-I/O are unchanged.
+   * `resolveAddonAccess`. A namespaced addon id (`gutenberg:1342`) has no
+   * owning prefix, so it falls through to the provider that opts into
+   * namespaced ids (the v3 fan-out, through `stream`). No owner or no
+   * implementation ⇒ empty result.
    */
   async resolveAddonAccess(book: CatalogBook): Promise<AddonAccessResolution> {
     const route = this.routeDetails(book.id);
-    if (!route) {
+    const provider = route?.provider ?? this.namespacedIdProvider();
+    if (!provider) {
       return { ...EMPTY_ADDON_ACCESS, options: [] };
     }
-    const resolve = route.provider.resolveAddonAccess;
+    const resolve = provider.resolveAddonAccess;
     if (typeof resolve !== 'function') {
       return { ...EMPTY_ADDON_ACCESS, options: [] };
     }
-    return resolve.call(route.provider, book);
+    return resolve.call(provider, book);
   }
 
   /**
