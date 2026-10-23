@@ -464,6 +464,12 @@ export const messagesEn = {
     '{{name}} will be able to fetch catalog data from its own server. No access is granted until you allow it.',
   'addons.consent.allow': 'Allow',
   'addons.consent.deny': 'Deny',
+  'addons.libraryMeta.label': 'Let {{name}} see your library',
+  'addons.libraryMeta.granted': 'Library sharing allowed',
+  'addons.libraryMeta.title': 'Let {{name}} know which books you own?',
+  'addons.libraryMeta.body':
+    '{{name}} will receive the identifiers of books already in your library — their ISBN or the catalog id it published — so it can add a description, genres and a cover. Only books it declares are sent. This is separate from network access and is off by default.',
+  'addons.libraryMeta.description': 'Lets metadata addons enrich books you already own.',
   'addons.capabilities.title': 'Capabilities',
   'addons.capabilities.detail': 'What this addon is allowed to do.',
   'addons.capabilities.resolve': 'Resolve reading access',

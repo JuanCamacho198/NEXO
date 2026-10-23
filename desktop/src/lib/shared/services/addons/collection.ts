@@ -7,10 +7,11 @@
  * entries through the registry.
  *
  * Rule 4, stated where the install happens: a collection can NEVER grant
- * `stream` consent. A collection is untrusted input from a stranger, so it
- * cannot consent on the reader's behalf; every addon that requests `stream`
- * asks for permission individually, through `AddonConsentService.grant`, at the
- * moment the reader allows that addon. Do not "simplify" the loop below by
+ * consent — neither `stream` nor `library_meta`. A collection is untrusted
+ * input from a stranger, so it cannot consent on the reader's behalf; every
+ * addon that requests `stream`, or that asks to read the reader's library for
+ * metadata, asks for permission individually through `AddonConsentService`, at
+ * the moment the reader allows that addon. Do not "simplify" the loop below by
  * granting consent for the whole set.
  */
 import {

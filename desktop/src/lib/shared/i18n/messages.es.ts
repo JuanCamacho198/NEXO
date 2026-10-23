@@ -471,6 +471,13 @@ export const messagesEs: Record<MessageKey, string> = {
     '{{name}} podrá obtener datos del catálogo desde su propio servidor. No se concede ningún acceso hasta que lo permitas.',
   'addons.consent.allow': 'Permitir',
   'addons.consent.deny': 'Denegar',
+  'addons.libraryMeta.label': 'Permitir que {{name}} vea tu biblioteca',
+  'addons.libraryMeta.granted': 'Uso compartido de tu biblioteca permitido',
+  'addons.libraryMeta.title': '¿Permitir que {{name}} sepa qué libros tienes?',
+  'addons.libraryMeta.body':
+    '{{name}} recibirá los identificadores de los libros que ya están en tu biblioteca —su ISBN o el id de catálogo que publicó— para poder añadir descripción, géneros y portada. Solo se envían los libros que ese complemento declara. Es independiente del acceso a la red y está desactivado por defecto.',
+  'addons.libraryMeta.description':
+    'Permite que los complementos de metadatos enriquezcan los libros que ya tienes.',
   'addons.capabilities.title': 'Capacidades',
   'addons.capabilities.detail': 'Lo que este complemento puede hacer.',
   'addons.capabilities.resolve': 'Resolver acceso de lectura',

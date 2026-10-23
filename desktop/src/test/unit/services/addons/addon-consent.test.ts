@@ -78,3 +78,76 @@ describe('AddonConsentService (fail-closed per-addon gate)', () => {
     expect(listSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * `library_meta` is the disclosure that lets a metadata addon be asked about
+ * books the reader already owns. It is a SECOND scope on purpose: the network
+ * grant must not imply it, it must not imply the network grant, and nothing a
+ * collection installs may set it.
+ */
+describe('AddonConsentService library_meta scope', () => {
+  const ADDON = 'a1b2c3d4e5f60718';
+
+  it('defaults off even when the addon is installed and consumed', async () => {
+    const service = new AddonConsentService(new InMemoryAddonConsentStore());
+    await service.ensureLoaded();
+    expect(service.hasLibraryMetaConsent(ADDON)).toBe(false);
+  });
+
+  it('a stream grant never implies library_meta', async () => {
+    const service = new AddonConsentService(new InMemoryAddonConsentStore());
+    await service.grant(ADDON);
+    expect(service.hasConsent(ADDON)).toBe(true);
+    expect(service.hasLibraryMetaConsent(ADDON)).toBe(false);
+  });
+
+  it('a library_meta grant never implies stream', async () => {
+    const service = new AddonConsentService(new InMemoryAddonConsentStore());
+    await service.grantLibraryMeta(ADDON);
+    expect(service.hasLibraryMetaConsent(ADDON)).toBe(true);
+    expect(service.hasConsent(ADDON)).toBe(false);
+  });
+
+  it('grant and withdraw persist under the library_meta scope only', async () => {
+    const store = new InMemoryAddonConsentStore();
+    const setSpy = vi.spyOn(store, 'set');
+    const service = new AddonConsentService(store);
+
+    await service.grantLibraryMeta(ADDON);
+    expect(setSpy).toHaveBeenLastCalledWith(ADDON, true, 'library_meta');
+    expect(service.hasLibraryMetaConsent(ADDON)).toBe(true);
+
+    await service.revokeLibraryMeta(ADDON);
+    expect(setSpy).toHaveBeenLastCalledWith(ADDON, false, 'library_meta');
+    expect(service.hasLibraryMetaConsent(ADDON)).toBe(false);
+    // The stream scope was never written.
+    expect(setSpy.mock.calls.every((call) => call[2] === 'library_meta')).toBe(true);
+  });
+
+  it('the library_meta grant survives a restart', async () => {
+    const store = new InMemoryAddonConsentStore();
+    await new AddonConsentService(store).grantLibraryMeta(ADDON);
+
+    const restarted = new AddonConsentService(store);
+    expect(restarted.hasLibraryMetaConsent(ADDON)).toBe(false);
+    await restarted.ensureLoaded();
+    expect(restarted.hasLibraryMetaConsent(ADDON)).toBe(true);
+    expect(restarted.hasConsent(ADDON)).toBe(false);
+  });
+
+  it('forget clears both scopes, so a reinstall inherits neither', async () => {
+    const store = new InMemoryAddonConsentStore();
+    const service = new AddonConsentService(store);
+    await service.grant(ADDON);
+    await service.grantLibraryMeta(ADDON);
+
+    await service.forget(ADDON);
+    expect(service.hasConsent(ADDON)).toBe(false);
+    expect(service.hasLibraryMetaConsent(ADDON)).toBe(false);
+
+    const restarted = new AddonConsentService(store);
+    await restarted.ensureLoaded();
+    expect(restarted.hasConsent(ADDON)).toBe(false);
+    expect(restarted.hasLibraryMetaConsent(ADDON)).toBe(false);
+  });
+});

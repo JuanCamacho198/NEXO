@@ -20,6 +20,7 @@
 import { invoke } from '@tauri-apps/api/core';
 
 import { addonIdFromUrl } from './addonId';
+import { addonConsent } from './AddonConsent';
 import {
   AddonFetchError,
   AddonFetchErrorCode,
@@ -265,6 +266,7 @@ export class AddonRegistry {
   private readonly now: () => number;
   private readonly listeners = new Set<(version: number) => void>();
   private readonly clients = new Map<string, AddonClient>();
+  private readonly onUninstalled: ((addonId: string) => Promise<void>) | undefined;
   private mutationVersion = 0;
 
   constructor(
@@ -274,12 +276,19 @@ export class AddonRegistry {
       /** Protocol-level transport (timeout + per-host budget already applied). */
       resourceTransport?: ResourceTransport;
       now?: () => number;
+      /**
+       * Uninstall hook: consent is per addon and outlives the row, so the
+       * caller that owns consent clears both scopes here. Omitted ⇒ nothing to
+       * clear (tests, one-off registries).
+       */
+      onUninstalled?: (addonId: string) => Promise<void>;
     } = {},
   ) {
     this.store = options.store ?? new TauriAddonRegistryStore();
     this.transport = options.transport ?? defaultAddonTransport();
     this.resourceTransport = options.resourceTransport ?? createAddonResourceTransport();
     this.now = options.now ?? (() => Date.now());
+    this.onUninstalled = options.onUninstalled;
   }
 
   async install(url: string): Promise<AddonManifestV3> {
@@ -359,6 +368,13 @@ export class AddonRegistry {
       await this.store.uninstall(id);
     } finally {
       this.clients.delete(id);
+      // Consent is per addon and survives the row unless it is cleared here,
+      // so a reinstall would inherit a grant. Both scopes go.
+      try {
+        await this.onUninstalled?.(id);
+      } catch {
+        // A consent-clearing failure must not report the uninstall as failed.
+      }
       this.notifyChanged();
     }
   }
@@ -430,6 +446,10 @@ export class AddonRegistry {
 /** Shared singleton so onChanged listeners stay consistent across consumers */
 let sharedRegistry: AddonRegistry | null = null;
 export function getAddonRegistry(): AddonRegistry {
-  sharedRegistry ??= new AddonRegistry();
+  sharedRegistry ??= new AddonRegistry({
+    // Uninstall revokes both consent scopes in the same operation, so a
+    // reinstall never inherits `stream` OR `library_meta`.
+    onUninstalled: (addonId) => addonConsent.forget(addonId),
+  });
   return sharedRegistry;
 }

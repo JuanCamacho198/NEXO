@@ -148,6 +148,21 @@
         disabled={addonsState.isBusy}
         onToggle={(id: string, next: boolean) => void consentState.handleConsentToggle(id, next)}
       />
+      <!--
+        The library-metadata scope is a SECOND, independent grant: it discloses
+        which books the reader owns, so it is never implied by network access
+        and is off until the reader turns it on for this addon.
+      -->
+      <AddonConsentToggle
+        {t}
+        scope="library_meta"
+        addonId={addon.id}
+        addonName={addon.manifest.name}
+        granted={consentState.libraryMetaById[addon.id] ?? false}
+        disabled={addonsState.isBusy}
+        onToggle={(id: string, next: boolean) =>
+          void consentState.handleLibraryMetaToggle(id, next)}
+      />
     {/snippet}
     {#snippet capabilityBadges(addon)}
       <AddonCapabilityBadges

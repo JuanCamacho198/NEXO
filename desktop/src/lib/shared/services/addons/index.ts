@@ -43,3 +43,18 @@ export type {
 } from './collection';
 export { AddonFanoutCatalogProvider } from './AddonCatalogProvider';
 export type { AddonFanoutCatalogOptions, AddonFailureListener } from './AddonCatalogProvider';
+export {
+  LIBRARY_META_CACHE_TTL_MS,
+  LibraryMetadataService,
+  TauriLibraryMetadataPersistence,
+  enrichLibraryBookAfterImport,
+  libraryMetaCacheKey,
+  libraryMetadata,
+} from './libraryMetadata';
+export type {
+  LibraryCoverBytes,
+  LibraryMetadataBook,
+  LibraryMetadataOptions,
+  LibraryMetadataPersistence,
+  LibraryMetadataResult,
+} from './libraryMetadata';

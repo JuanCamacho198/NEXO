@@ -18,6 +18,10 @@ import { importRecoveredBook, type ImportDeps } from '$lib/shared/recovery/deskt
 import type { SupabaseUserBookRow } from '$lib/shared/sync/SupabaseBookCatalogSync';
 import { SupabaseBookCatalogSync } from '$lib/shared/sync/SupabaseBookCatalogSync';
 import { extractEpubMetadataFromBytes } from '$lib/shared/services/epubImportMetadata';
+import {
+  enrichLibraryBookAfterImport,
+  type LibraryMetadataBook,
+} from '$lib/shared/services/addons/libraryMetadata';
 import { logger } from '$lib/shared/logger/Logger';
 import type { DownloadTransferPort } from './downloadTransfer';
 
@@ -31,6 +35,12 @@ export interface DiscoverDownloadPorts {
   markImported?: ImportDeps['markImported'];
   /** Local file reader; defaults to the existing `getFileBytes` command. */
   readFile?: (filePath: string) => Promise<Uint8Array>;
+  /**
+   * Library-metadata enrichment for the freshly imported row. Defaults to the
+   * shared addon service, which is gated by the per-addon `library_meta` consent
+   * and silent on every failure. Tests inject a recorder.
+   */
+  enrichMetadata?: (book: LibraryMetadataBook) => void;
 }
 
 let discoverLibraryPort: LibraryPort = new TauriLibraryAdapter();
@@ -158,7 +168,33 @@ export async function importDiscoverFile(
       }),
   });
   if (result.outcome === 'imported' || result.outcome === 'already_imported') {
+    // The row exists now, so a metadata addon can be asked about it. Fire and
+    // forget on purpose: enrichment never blocks, delays or fails an import,
+    // and its silence is the contract (no toast, no dialog, no retry). Only a
+    // fresh import asks: `already_imported` means the content hash belongs to a
+    // DIFFERENT row, which may not exist locally at all.
+    if (result.outcome === 'imported') enrichMetadataSafely(book, ports.enrichMetadata);
     return { ok: true, error: null };
   }
   return { ok: false, error: result.error?.message ?? result.outcome };
+}
+
+/** One import-triggered enrichment: never awaited, never allowed to throw. */
+function enrichMetadataSafely(
+  book: CatalogBook,
+  enrich: ((book: LibraryMetadataBook) => void) | undefined,
+): void {
+  const ask = enrich ?? enrichLibraryBookAfterImport;
+  try {
+    ask({
+      id: book.id,
+      title: book.title,
+      // The local row is created with the catalog's namespaced id, so the
+      // source item id is the id itself on this path.
+      sourceItemId: book.id,
+      isbn13: book.isbn13 ?? null,
+    });
+  } catch {
+    // Best effort: a metadata ask must never surface as an import failure.
+  }
 }

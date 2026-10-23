@@ -568,6 +568,77 @@ describe('importDiscoverFile', () => {
 
     expect(result).toEqual({ ok: false, error: 'bad bytes' });
   });
+
+  it('asks the metadata addons once the row exists, with the catalog identity', async () => {
+    const book = fakeBook({ id: 'isbn:9780141439518', isbn13: '9780141439518' });
+    const enrichMetadata = vi.fn();
+
+    const result = await importDiscoverFile(book, '/tmp/x.epub', {
+      readFile: async () => new Uint8Array([1]),
+      enrichMetadata,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(enrichMetadata).toHaveBeenCalledWith({
+      id: 'isbn:9780141439518',
+      title: book.title,
+      sourceItemId: 'isbn:9780141439518',
+      isbn13: '9780141439518',
+    });
+  });
+
+  it('a failed import never asks for metadata', async () => {
+    const importFn = vi.fn(async () => ({
+      bookId: 'isbn:9780141439518',
+      outcome: 'failed' as const,
+      error: {
+        code: 'UNAVAILABLE' as const,
+        message: 'bad bytes',
+        retryable: true,
+        correlationId: 'c1',
+        bookId: 'isbn:9780141439518',
+      },
+    }));
+    const enrichMetadata = vi.fn();
+
+    await importDiscoverFile(fakeBook(), '/tmp/x.epub', {
+      importFn,
+      readFile: async () => new Uint8Array([1]),
+      enrichMetadata,
+    });
+
+    expect(enrichMetadata).not.toHaveBeenCalled();
+  });
+
+  it('an already-imported content hash does not ask: that row is a different book', async () => {
+    const importFn = vi.fn(async () => ({
+      bookId: 'isbn:9780141439518',
+      outcome: 'already_imported' as const,
+    }));
+    const enrichMetadata = vi.fn();
+
+    const result = await importDiscoverFile(fakeBook(), '/tmp/x.epub', {
+      importFn,
+      readFile: async () => new Uint8Array([1]),
+      enrichMetadata,
+    });
+
+    expect(result).toEqual({ ok: true, error: null });
+    expect(enrichMetadata).not.toHaveBeenCalled();
+  });
+
+  it('an enrichment that throws never fails the import', async () => {
+    const enrichMetadata = vi.fn(() => {
+      throw new Error('metadata addon exploded');
+    });
+
+    const result = await importDiscoverFile(fakeBook(), '/tmp/x.epub', {
+      readFile: async () => new Uint8Array([1]),
+      enrichMetadata,
+    });
+
+    expect(result).toEqual({ ok: true, error: null });
+  });
 });
 
 describe('Discover source guard', () => {
