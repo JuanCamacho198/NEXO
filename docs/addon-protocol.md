@@ -357,11 +357,21 @@ therefore does not make that third party able to serve files.
 | `openlibrary` | Open Library search (`docs[]`) | Open Library work | envelope |
 | `standard-ebooks` | no adapter in this revision | no adapter | envelope |
 | `librivox` | no adapter in this revision | no adapter | envelope |
-| `legacy-v2` | no adapter in this revision | no adapter | envelope |
+| `legacy-v2` | v2 `results[]` book list | v2 book object | envelope |
 
 An addon whose shape has no adapter declares successfully and produces nothing through
-the protocol path; NEXO serves installed v2 addons through its v2 path. Do not pick a
-shape you are not matching: a mismatched shape reads as empty, not as an error.
+the protocol path. Do not pick a shape you are not matching: a mismatched shape reads as
+empty, not as an error.
+
+The `legacy-v2` adapter reads the format the installed v2 addons already serve:
+`searchUrl` answers `{ "results": [book…], "totalCount": n }` and `detailsUrl` answers a
+single book. A book is flat on both endpoints — `id`, `title`, `authors[]`, `coverUrl`,
+`languages[]`, `subjects[]`, `downloadUrl` — with no metadata envelope anywhere. `id`
+becomes the item id verbatim, because the addon resolves its own ids through `{bookId}`;
+`title` becomes `name`; `authors`, `languages` and `subjects` become their lists; a
+`coverUrl` becomes `poster` only when it is `https`. `downloadUrl` is not carried, since
+files come from `stream` and a `stream` answer is always the Stremio envelope
+(section 11); `totalCount` is ignored.
 
 The Gutendex adapter prefixes `id` with `gutenberg:`, maps `title` to `name`, maps
 `authors`, `languages` and `subjects` to their lists, and takes the `image/jpeg` entry of

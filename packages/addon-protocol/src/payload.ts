@@ -12,11 +12,18 @@
 import { TYPE_BOOK } from './constants';
 import type { AddonShape } from './manifest';
 import { shapeGutendexCatalog, shapeGutendexMeta } from './shapes/gutendex';
+import { shapeLegacyV2Catalog, shapeLegacyV2Meta } from './shapes/legacy-v2';
 import { shapeOpenlibraryCatalog, shapeOpenlibraryMeta } from './shapes/openlibrary';
 
 const MAX_STRING_CHARS = 2048;
 const MAX_METAS = 200;
 const MAX_STREAMS = 100;
+
+/**
+ * Declared shapes with no reader in this build. Clients never route these
+ * addons, so the parser contributes nothing rather than counting a failure.
+ */
+const UNREADABLE_SHAPES: ReadonlySet<string> = new Set(['standard-ebooks', 'librivox']);
 
 const ACCESS_TYPES = ['public-domain', 'borrow', 'purchase'] as const;
 const HTTP_PROTOCOLS = ['http:', 'https:'];
@@ -151,9 +158,10 @@ function capMetas(candidates: MetaPreview[], skipped: number): CatalogPayload {
 }
 
 /**
- * `shape` selects the named adapter. `"raw"` is the Stremio envelope; shapes
- * this build does not implement (`standard-ebooks`, `librivox`, `legacy-v2`)
- * contribute nothing rather than failing the fan-out.
+ * `shape` selects the named adapter. `"raw"` is the Stremio envelope;
+ * `standard-ebooks` and `librivox` have no reader in this build and contribute
+ * nothing rather than failing the fan-out. A shape nobody declared counts one
+ * unreadable payload, the same as a malformed envelope.
  */
 export function parseCatalogPayload(body: unknown, shape: AddonShape): CatalogPayload {
   if (shape === 'gutendex') {
@@ -164,7 +172,12 @@ export function parseCatalogPayload(body: unknown, shape: AddonShape): CatalogPa
     const shaped = shapeOpenlibraryCatalog(body);
     return capMetas(shaped.metas, shaped.skipped);
   }
-  if (shape !== 'raw') return { metas: [], skipped: 0 };
+  if (shape === 'legacy-v2') {
+    const shaped = shapeLegacyV2Catalog(body);
+    return capMetas(shaped.metas, shaped.skipped);
+  }
+  if (UNREADABLE_SHAPES.has(shape)) return { metas: [], skipped: 0 };
+  if (shape !== 'raw') return { metas: [], skipped: 1 };
 
   const entries = readEnvelopeList(body, 'metas');
   if (entries === null) return { metas: [], skipped: 1 };
@@ -185,6 +198,7 @@ export function parseCatalogPayload(body: unknown, shape: AddonShape): CatalogPa
 export function parseMetaPayload(body: unknown, shape: AddonShape): MetaPreview | null {
   if (shape === 'gutendex') return shapeGutendexMeta(body);
   if (shape === 'openlibrary') return shapeOpenlibraryMeta(body);
+  if (shape === 'legacy-v2') return shapeLegacyV2Meta(body);
   if (shape !== 'raw') return null;
   if (!isPlainObject(body)) return null;
   return toMetaPreview(body.meta);

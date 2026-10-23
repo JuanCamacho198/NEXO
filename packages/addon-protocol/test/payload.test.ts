@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { SHAPES } from '../src/constants';
+import type { AddonShape } from '../src/manifest';
 import {
   type BookStream,
   assertDeliverableStream,
@@ -154,9 +155,52 @@ describe('parseCatalogPayload', () => {
   });
 
   it('contributes nothing for a shape this build does not implement', () => {
-    for (const shape of ['standard-ebooks', 'librivox', 'legacy-v2'] as const) {
+    for (const shape of ['standard-ebooks', 'librivox'] as const) {
       expect(parseCatalogPayload(loadFixture('catalog-raw'), shape)).toEqual({ metas: [], skipped: 0 });
     }
+  });
+
+  it('reads a legacy-v2 catalog payload through its shape', () => {
+    const { metas, skipped } = parseCatalogPayload(loadFixture('legacy-v2-catalog'), 'legacy-v2');
+
+    expect(skipped).toBe(1);
+    expect(metas).toHaveLength(2);
+    expect(metas[0]).toEqual({
+      id: '1342',
+      type: 'book',
+      name: 'Pride and Prejudice',
+      poster: 'https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg',
+      authors: ['Jane Austen'],
+      languages: ['en'],
+      subjects: ['Courtship -- Fiction', 'England -- Fiction'],
+    });
+    // A non-https cover is dropped; the book still installs and lists.
+    expect(metas[1]).toEqual({
+      id: '84',
+      type: 'book',
+      name: 'Frankenstein; Or, The Modern Prometheus',
+      authors: ['Shelley, Mary Wollstonecraft'],
+      languages: ['en'],
+      subjects: [],
+    });
+  });
+
+  it('returns an empty result when a legacy-v2 body is not a results envelope', () => {
+    for (const body of MALFORMED_BODIES) {
+      expect(parseCatalogPayload(body, 'legacy-v2')).toEqual({ metas: [], skipped: 1 });
+    }
+    expect(parseCatalogPayload({ results: [] }, 'legacy-v2')).toEqual({ metas: [], skipped: 0 });
+  });
+
+  it('counts an unknown shape as one unreadable payload, never a throw', () => {
+    const unknown = 'mystery' as AddonShape;
+    expect(() => parseCatalogPayload(loadFixture('catalog-raw'), unknown)).not.toThrow();
+    expect(parseCatalogPayload(loadFixture('catalog-raw'), unknown)).toEqual({
+      metas: [],
+      skipped: 1,
+    });
+    expect(() => parseMetaPayload(loadFixture('meta-raw'), unknown)).not.toThrow();
+    expect(parseMetaPayload(loadFixture('meta-raw'), unknown)).toBeNull();
   });
 
   it('never throws for any body and shape combination', () => {
@@ -206,6 +250,24 @@ describe('parseMetaPayload', () => {
     expect(work?.description).toBe('A novel of manners.');
     expect(work?.releaseInfo).toBe('1813');
     expect(work?.poster).toBe('https://covers.openlibrary.org/b/id/8732464-M.jpg');
+  });
+
+  it('reads a legacy-v2 book object through its shape', () => {
+    expect(parseMetaPayload(loadFixture('legacy-v2-meta'), 'legacy-v2')).toEqual({
+      id: '1342',
+      type: 'book',
+      name: 'Pride and Prejudice',
+      poster: 'https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg',
+      authors: ['Jane Austen'],
+      languages: ['en'],
+      subjects: ['Courtship -- Fiction'],
+    });
+  });
+
+  it('returns null for a legacy-v2 book without an id or a title', () => {
+    expect(parseMetaPayload({ id: '1342' }, 'legacy-v2')).toBeNull();
+    expect(parseMetaPayload({ title: 'Pride and Prejudice' }, 'legacy-v2')).toBeNull();
+    expect(parseMetaPayload({ meta: loadFixture('legacy-v2-meta') }, 'legacy-v2')).toBeNull();
   });
 });
 
