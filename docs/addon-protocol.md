@@ -242,6 +242,7 @@ or derived when the id is `isbn:` followed by 13 digits.
     "poster": "https://media.example.org/covers/1342.jpg",
     "description": "Elizabeth Bennet, Mr Darcy, and the society that judges them.",
     "releaseInfo": "1813",
+    "publisher": "Penguin Classics",
     "authors": ["Jane Austen"],
     "languages": ["en"],
     "subjects": ["Courtship", "England", "Fiction"],
@@ -250,7 +251,10 @@ or derived when the id is `isbn:` followed by 13 digits.
 }
 ```
 
-The object is read with the same rules as a catalog entry, from under `meta`.
+The object is read with the same rules as a catalog entry, from under `meta`. `publisher` is
+read from either envelope, and on a `meta` answer it is also what a metadata addon
+contributes to a book the reader already owns: it fills the library's `publisher` column
+only when that column is empty.
 
 ### Streams
 
@@ -284,7 +288,17 @@ The final option list is ordered by product rules, not by install order:
 install time, then addon id.
 
 NEXO asks for per-addon consent before it sends any `stream` request. `catalog` and
-`meta` are read-only descriptions and need no consent.
+`meta` requests are read-only descriptions of items the addon itself listed, and need no
+consent: asking about a book the addon just offered discloses nothing the addon did not
+already serve.
+
+A `meta` request about a book already in the reader's library is a different case. The
+library is the reader's own shelf, so a request naming one of its items tells the addon
+which books that reader owns, one id at a time. That ask is therefore a separate scope,
+`library_meta`, opted in per addon: it defaults to off, and consent for `stream` — or
+adding the addon to a collection — never implies it. An addon is only asked under that
+scope when it also declares `meta` with `idPrefixes` that match the book's identifier; an
+addon declaring `meta` with no prefixes is never asked about a library book at all.
 
 ## 8. Extra arguments
 
@@ -378,13 +392,14 @@ becomes the item id verbatim, because the addon resolves its own ids through `{b
 `title` becomes `name`; `authors`, `languages` and `subjects` become their lists; a
 `coverUrl` becomes `poster` only when it is `https`. `downloadUrl` is not carried, since
 files come from `stream` and a `stream` answer is always the Stremio envelope
-(section 11); `totalCount` is ignored.
+(section 11); `totalCount` is ignored. There is no publisher in that format either, so a
+`legacy-v2` book leaves the library's `publisher` column untouched rather than guessing one.
 
 The Gutendex adapter prefixes `id` with `gutenberg:`, maps `title` to `name`, maps
 `authors`, `languages` and `subjects` to their lists, and takes the `image/jpeg` entry of
 `formats` as `poster`. The Open Library adapter turns a work key into
-`openlibrary:{key}` and builds `poster` from the cover id. Neither adapter reads
-`formats` for downloads.
+`openlibrary:{key}`, builds `poster` from the cover id, and takes the first entry of
+`publishers` as `publisher`. Neither adapter reads `formats` for downloads.
 
 ## 13. Worked example: a templated addon
 
