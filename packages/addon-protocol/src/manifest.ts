@@ -11,6 +11,7 @@ import {
   AddonFetchErrorCode,
   MAX_MANIFEST_BYTES,
   assertHttpsInstallUrl,
+  isJsonContentType,
 } from '@nexo/manifest-validator';
 import {
   EXTRA_NAMES,
@@ -87,12 +88,6 @@ function isNonEmptyString(value: unknown): value is string {
 }
 
 /** Mirrors the validator's rule: `application/json` or any `+json` suffix. */
-function isJsonContentType(contentType: string | null | undefined): boolean {
-  if (!contentType) return false;
-  const base = contentType.split(';')[0]!.trim().toLowerCase();
-  return base === 'application/json' || base.endsWith('+json');
-}
-
 /**
  * Bounded HTTPS string. Delegates the scheme decision to the shared install-URL
  * rule, then reports a shape error because a bad template is a manifest defect.

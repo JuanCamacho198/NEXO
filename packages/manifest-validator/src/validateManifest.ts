@@ -73,7 +73,7 @@ export function assertHttpsInstallUrl(url: string): boolean {
   return true;
 }
 
-function isJsonContentType(contentType: string | null | undefined): boolean {
+export function isJsonContentType(contentType: string | null | undefined): boolean {
   if (!contentType) return false;
   const base = contentType.split(';')[0]!.trim().toLowerCase();
   return base === 'application/json' || base.endsWith('+json');
