@@ -1,4 +1,5 @@
 ---
+import type { AddonManifestV3 } from '@nexo/addon-protocol';
 import { t, type UiLocale } from '@/i18n';
 
 export interface Props {
@@ -8,6 +9,8 @@ export interface Props {
 const { locale } = Astro.props;
 
 const docsHref = locale === 'es' ? '/docs' : '/en/docs';
+const protocolHref =
+  'https://github.com/JuanCamacho198/NEXO/blob/main/docs/addon-protocol.md';
 const contribHref = 'https://github.com/JuanCamacho198/NEXO/blob/main/CONTRIBUTING.md';
 const issueHref = 'https://github.com/JuanCamacho198/NEXO/issues/new?template=addon-submission.yml';
 
@@ -18,31 +21,31 @@ const steps = [
   { title: t(locale, 'submit.step4Title'), sub: t(locale, 'submit.step4Sub') },
 ];
 
-const templateJson = JSON.stringify(
-  {
-    id: 'mi-addon',
-    name: 'Mi Addon',
-    version: '3.0.0',
-    types: ['book'],
-    catalogs: [
-      {
-        type: 'book',
-        id: 'mi-addon',
-        name: 'Mi Addon',
-        extra: [
-          { name: 'search', isRequired: false },
-          { name: 'skip', isRequired: false },
-        ],
-      },
-    ],
-    resources: [
-      { name: 'catalog', types: ['book'] },
-      { name: 'meta', types: ['book'] },
-    ],
-  },
-  null,
-  2,
-);
+// Typed as `AddonManifestV3`, so `astro check` fails if this drifts from the shape
+// `parseManifestV3` accepts.
+const templateManifest: AddonManifestV3 = {
+  id: 'mi-addon',
+  name: 'Mi Addon',
+  version: '3.0.0',
+  types: ['book'],
+  catalogs: [
+    {
+      type: 'book',
+      id: 'mi-addon',
+      name: 'Mi Addon',
+      extra: [
+        { name: 'search', isRequired: false },
+        { name: 'skip', isRequired: false },
+      ],
+    },
+  ],
+  resources: [
+    { name: 'catalog', types: ['book'] },
+    { name: 'meta', types: ['book'] },
+  ],
+};
+
+const templateJson = JSON.stringify(templateManifest, null, 2);
 ---
 
 <div class="mx-auto flex max-w-6xl flex-col gap-16 px-4 py-12" data-submit-root>
@@ -95,6 +98,11 @@ const templateJson = JSON.stringify(
     <pre class="overflow-x-auto rounded-lg bg-surface-0 p-4 font-mono text-xs leading-relaxed text-text-secondary">{templateJson}</pre>
     <p data-copied hidden class="mt-2 text-xs text-emerald-400">
       {t(locale, 'submit.copied')}
+    </p>
+    <p class="mt-3 text-sm text-text-secondary">
+      <a href={protocolHref} class="underline decoration-border-subtle underline-offset-4 transition hover:text-accent">
+        {t(locale, 'docs.v3DocCta')}
+      </a>
     </p>
   </section>
 
