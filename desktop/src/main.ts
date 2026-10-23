@@ -7,6 +7,7 @@ import { mount } from 'svelte';
 import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
 import { registerSupabaseCallbackHandler } from './lib/shared/services';
 import { handleDeepLinkUrls } from './lib/features/addons/installDeepLink';
+import { handleCollectionDeepLinkUrls } from './lib/features/addons/collectionDeepLink';
 import { registerDeepLinkListener } from './lib/shared/ports/adapters/tauri/tauriDeepLink';
 import { logger } from './lib/shared/logger/Logger';
 import { consoleSink } from './lib/shared/logger/ConsoleSink';
@@ -69,6 +70,9 @@ onOpenUrl((urls) => {
   // single entry point shared with the warm-start single-instance event —
   // non-install URLs stay ignored (REQ-7: deep-link reserved, OAuth loopback).
   void handleDeepLinkUrls(urls);
+  // task 15: a collection link installs a whole set. Same batch, different
+  // host, so the install router above leaves it alone.
+  void handleCollectionDeepLinkUrls(urls);
 });
 
 // Warm start: single-instance plugin forwards the scheme argv (nexo:// and the
@@ -77,6 +81,7 @@ onOpenUrl((urls) => {
 // pure feature module, which is what keeps that module free of Tauri imports.
 void registerDeepLinkListener((url) => {
   void handleDeepLinkUrls([url]);
+  void handleCollectionDeepLinkUrls([url]);
 });
 
 // Supabase OAuth wiring: listen for OAuth callback on loopback URL.

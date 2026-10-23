@@ -8,9 +8,15 @@
   import ToastHost from '$lib/shared/ui/feedback/ToastHost.svelte';
   import FeedbackDialog from '$lib/shared/ui/feedback/FeedbackDialog.svelte';
   import AddonInstallConfirmDialog from '$lib/shared/ui/addons/AddonInstallConfirmDialog.svelte';
-  import { getAddonRegistry } from '$lib/shared/services/addons/AddonRegistry';
+  import AddonCollectionConfirmDialog from '$lib/shared/ui/addons/AddonCollectionConfirmDialog.svelte';
+  import {
+    getAddonRegistry,
+    defaultAddonTransport,
+  } from '$lib/shared/services/addons/AddonRegistry';
   import { createInstallDeepLink } from '$lib/features/settings/useInstallDeepLink.svelte';
+  import { createCollectionDeepLink } from '$lib/features/addons/useCollectionDeepLink.svelte';
   import { setInstallDeepLinkHandler } from '$lib/features/addons/installDeepLink';
+  import { setCollectionDeepLinkHandler } from '$lib/features/addons/collectionDeepLink';
   import {
     isDismissed,
     readLastEventId,
@@ -103,6 +109,14 @@
   // handleDeepLinkUrls (cold onOpenUrl + warm single-instance event) here.
   const installDeepLink = createInstallDeepLink({ registry: getAddonRegistry() });
   setInstallDeepLinkHandler((url) => void installDeepLink.handleInstallUrl(url));
+
+  // task 15: one link installs a whole set. Same registry + transport as the
+  // single-addon flow, so a collection entry is stored by the same code path.
+  const collectionDeepLink = createCollectionDeepLink({
+    registry: getAddonRegistry(),
+    transport: defaultAddonTransport(),
+  });
+  setCollectionDeepLinkHandler((url) => void collectionDeepLink.handleCollectionUrl(url));
 </script>
 
 <EditMetadataModal
@@ -165,6 +179,18 @@
   alreadyInstalled={installDeepLink.alreadyInstalled}
   onconfirm={() => void installDeepLink.confirm()}
   oncancel={() => installDeepLink.cancel()}
+/>
+
+<!-- task 15: confirm-install flow for a whole collection link. -->
+<AddonCollectionConfirmDialog
+  open={collectionDeepLink.dialogOpen}
+  entries={collectionDeepLink.entries}
+  skipped={collectionDeepLink.skipped}
+  alreadyInstalled={collectionDeepLink.alreadyInstalled}
+  busy={collectionDeepLink.state === 'installing' || collectionDeepLink.state === 'fetching'}
+  error={collectionDeepLink.errorCode}
+  onconfirm={() => void collectionDeepLink.confirm()}
+  oncancel={() => collectionDeepLink.cancel()}
 />
 
 <ToastHost />

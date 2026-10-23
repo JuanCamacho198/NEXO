@@ -27,5 +27,19 @@ export type {
 } from './AddonRegistry';
 export { addonIdFromUrl } from './addonId';
 export { CuratedCatalogProvider } from './CuratedCatalogProvider';
+export {
+  MAX_COLLECTION_ENTRIES,
+  fetchCollection,
+  installCollection,
+  parseCollection,
+  requestsStream,
+  serializeCollection,
+} from './collection';
+export type {
+  CollectionEntry,
+  CollectionInstallRegistry,
+  CollectionInstallResult,
+  ParsedCollection,
+} from './collection';
 export { AddonFanoutCatalogProvider } from './AddonCatalogProvider';
 export type { AddonFanoutCatalogOptions, AddonFailureListener } from './AddonCatalogProvider';
