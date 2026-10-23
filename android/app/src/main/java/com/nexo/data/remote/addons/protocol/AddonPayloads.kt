@@ -202,9 +202,9 @@ object AddonPayloads {
         }
 
     /**
-     * `shape` selects the named adapter. `"raw"` is the Stremio envelope; shapes
-     * this build does not implement (`standard-ebooks`, `librivox`, `legacy-v2`)
-     * contribute nothing rather than failing the fan-out.
+     * `shape` selects the named adapter. `"raw"` is the Stremio envelope; a shape
+     * this build ships no adapter for (`legacy-v2`) contributes nothing rather
+     * than failing the fan-out.
      */
     fun parseCatalogPayload(
         body: Any?,

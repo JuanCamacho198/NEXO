@@ -204,6 +204,26 @@ describe('registry v3 read path', () => {
     expect(store.rows).toHaveLength(0);
   });
 
+  /**
+   * `standard-ebooks` and `librivox` are not in the closed shape set: no reader
+   * exists for either, so installing one would be silent emptiness. They are
+   * rejected at install, the same way an invented shape name is.
+   */
+  it('rejects a manifest that selects a shape no reader can serve', async () => {
+    for (const shape of ['standard-ebooks', 'librivox']) {
+      const store = fakeStore();
+      const registry = new AddonRegistry({
+        store,
+        transport: manifestTransport(bytesOf({ ...ROUTED_V3, nexo: { shape } })),
+      });
+
+      await expect(registry.install(INSTALL_URL)).rejects.toMatchObject({
+        code: AddonFetchErrorCode.INVALID_MANIFEST,
+      });
+      expect(store.rows).toHaveLength(0);
+    }
+  });
+
   it('exposes protocol descriptors so the router can address every addon', async () => {
     const store = fakeStore();
     const registry = new AddonRegistry({ store, transport: manifestTransport(bytesOf(ROUTED_V3)) });

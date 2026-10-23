@@ -7,8 +7,6 @@ enum class AddonShape(
     RAW("raw"),
     GUTENDEX("gutendex"),
     OPENLIBRARY("openlibrary"),
-    STANDARD_EBOOKS("standard-ebooks"),
-    LIBRIVOX("librivox"),
     LEGACY_V2("legacy-v2"),
     ;
 

@@ -274,7 +274,7 @@ class AddonProtocolTest {
         )
         assertEquals(listOf("search", "skip", "genre", "lang"), AddonProtocolConstants.EXTRA_NAMES)
         assertEquals(
-            listOf("raw", "gutendex", "openlibrary", "standard-ebooks", "librivox", "legacy-v2"),
+            listOf("raw", "gutendex", "openlibrary", "legacy-v2"),
             AddonProtocolConstants.SHAPES,
         )
         assertEquals(8 * 1024, AddonProtocolConstants.MAX_NEXO_CHARS)
@@ -369,6 +369,20 @@ class AddonProtocolTest {
 
         assertEquals(8 * 1024, AddonProtocolConstants.MAX_NEXO_CHARS)
         assertEquals(AddonFetchErrorCode.INVALID_MANIFEST, code)
+    }
+
+    @Test
+    fun `parseManifestV3 rejects a nexo shape that no reader in this build can serve`() {
+        // Both were once declared. Nothing parses them, so selecting either would
+        // install an addon that contributes nothing: the wire name is now unknown.
+        for (shape in listOf("standard-ebooks", "librivox")) {
+            val source = manifestObject().put("nexo", JSONObject().put("shape", shape))
+
+            assertEquals(
+                AddonFetchErrorCode.INVALID_MANIFEST,
+                codeOf { parseManifest(source.toString()) },
+            )
+        }
     }
 
     @Test
@@ -1158,9 +1172,10 @@ class AddonProtocolTest {
 
     @Test
     fun `parseCatalogPayload contributes nothing for an unimplemented shape`() {
-        for (shape in listOf(AddonShape.STANDARD_EBOOKS, AddonShape.LIBRIVOX, AddonShape.LEGACY_V2)) {
-            assertEquals(CatalogPayload(emptyList(), 0), AddonPayloads.parseCatalogPayload(json(catalogRaw), shape))
-        }
+        assertEquals(
+            CatalogPayload(emptyList(), 0),
+            AddonPayloads.parseCatalogPayload(json(catalogRaw), AddonShape.LEGACY_V2),
+        )
     }
 
     @Test

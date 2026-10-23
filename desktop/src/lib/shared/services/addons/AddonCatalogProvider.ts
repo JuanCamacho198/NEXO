@@ -465,11 +465,7 @@ export type AddonFailureListener = (failures: readonly AddonFailure[]) => void;
  * v2 adapter, which still understands their wire format, so the router skips
  * them rather than sending a request whose answer it would discard.
  */
-const UNREADABLE_CATALOG_SHAPES: ReadonlySet<string> = new Set([
-  'standard-ebooks',
-  'librivox',
-  'legacy-v2',
-]);
+const UNREADABLE_CATALOG_SHAPES: ReadonlySet<string> = new Set(['legacy-v2']);
 
 export interface AddonFanoutCatalogOptions {
   /** Installed addons as protocol descriptors, in install order. */

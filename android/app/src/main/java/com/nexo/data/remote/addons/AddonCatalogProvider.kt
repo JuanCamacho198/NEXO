@@ -40,9 +40,9 @@ private const val TITLE_OPEN_EXTERNAL = "Open"
  * Payload shapes this build has no reader for. A `legacy-v2` row is served by
  * [LegacyAddonCatalogProvider], which still understands its wire format, so the
  * router skips those addons rather than sending a request whose answer it would
- * discard. The other two have no reader yet and contribute nothing.
+ * discard.
  */
-private val UNREADABLE_CATALOG_SHAPES = setOf(AddonShape.LEGACY_V2, AddonShape.STANDARD_EBOOKS, AddonShape.LIBRIVOX)
+private val UNREADABLE_CATALOG_SHAPES = setOf(AddonShape.LEGACY_V2)
 
 /**
  * One [CatalogProvider] for every installed addon: the port stays
