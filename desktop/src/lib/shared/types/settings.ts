@@ -47,7 +47,26 @@ export type ReaderThemeMode = 'paper' | 'sepia' | 'night' | 'oled';
 
 export type ReaderTextAlign = 'left' | 'center' | 'right' | 'justify';
 export type ReaderDirection = 'ltr' | 'rtl';
-export type ReaderProgressIndicator = 'percentage' | 'chapter' | 'time';
+/**
+ * How the reader reports their position.
+ *
+ * `book-pages` is the only value any component acts on today: it makes the page
+ * field count the WHOLE book (columns in paginated mode, documents in scrolling
+ * mode) instead of the current chapter. The other three are inert — they
+ * persist and render nothing — and are kept because stored settings and the
+ * settings screens still name them.
+ *
+ * The value is lowercase with a hyphen because persistence lowercases before it
+ * checks this whitelist (`sanitizeEnum` in `tauriClient`): a camelCase value is
+ * silently rejected and reverted to `percentage` on every save, which shipped
+ * once as a switch that showed ON while nothing was stored.
+ */
+export type ReaderProgressIndicator = 'percentage' | 'chapter' | 'time' | 'book-pages';
+
+/** The value that makes the page field count the whole book. */
+export const READER_PROGRESS_INDICATOR_BOOK_PAGES = 'book-pages' as const;
+/** What the switch turns back off to; the default, and the only value with a rendered meaning. */
+export const READER_PROGRESS_INDICATOR_DEFAULT = 'percentage' as const;
 
 export type ReaderSettings = {
   // Existing fields

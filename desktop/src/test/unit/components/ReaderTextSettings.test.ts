@@ -394,3 +394,57 @@ describe('ReaderTextSettings (U6) — guarded reset', () => {
     );
   });
 });
+
+describe('ReaderTextSettings — whole-book page field switch', () => {
+  function renderEpub(progressIndicator: string) {
+    const props = {
+      open: true,
+      format: 'epub',
+      readerSettings: {
+        themeMode: 'paper',
+        brightness: 100,
+        contrast: 100,
+        selectionColor: '#3388ff',
+        epub: { fontSize: 100, fontFamily: 'serif' },
+        lineHeight: 1.8,
+        letterSpacing: 0,
+        paragraphSpacing: 1,
+        textAlign: 'left',
+        direction: 'ltr',
+        hyphenation: false,
+        verticalScrolling: false,
+        paginated: false,
+        margins: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+        showHeader: true,
+        showFooter: true,
+        showPageNumbers: true,
+        progressIndicator,
+      },
+      onSettingsChange: vi.fn(),
+      t: (key: string) => key,
+      onClose: vi.fn(),
+    };
+    render(ReaderTextSettings, props as never);
+    return props;
+  }
+
+  it('is off by default and turns the whole-book count on', async () => {
+    const props = renderEpub('percentage');
+    const toggle = screen.getByLabelText('reader.book_page_totals');
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await fireEvent.click(toggle);
+    expect(props.onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ progressIndicator: 'book-pages' }),
+    );
+  });
+
+  it('shows on when the stored setting is on, and turns it back off', async () => {
+    const props = renderEpub('book-pages');
+    const toggle = screen.getByLabelText('reader.book_page_totals');
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await fireEvent.click(toggle);
+    expect(props.onSettingsChange).toHaveBeenCalledWith(
+      expect.objectContaining({ progressIndicator: 'percentage' }),
+    );
+  });
+});

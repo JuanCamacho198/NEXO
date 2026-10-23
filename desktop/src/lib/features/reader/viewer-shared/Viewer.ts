@@ -30,6 +30,13 @@ export type ViewerHandle = {
   getScaleOrZoom(): number;
   getCurrentPage(): number;
   getTotalForHeader(): number;
+  /**
+   * Whether a forward turn can still do something. Optional because the numbers
+   * the bar already holds answer it for a fixed total; a total that GROWS while
+   * the reader walks (the EPUB whole-book count) cannot be asked, so the viewer
+   * answers instead.
+   */
+  getCanGoNext?(): boolean;
 };
 
 export function createViewerSelection(
@@ -154,6 +161,23 @@ export function createViewerSelection(
       if (epub?.getTotalForHeader) return epub.getTotalForHeader();
       if (epub?.getTotalPages) return epub.getTotalPages();
       return 0;
+    },
+    getCanGoNext(): boolean {
+      const kind = getKind();
+      const refs = getRefs();
+      if (kind === 'pdf') {
+        const pdf = refs.pdf as unknown as {
+          getCurrentPage?: () => number;
+          getTotalPages?: () => number;
+        } | null;
+        const cur = pdf?.getCurrentPage?.() ?? 1;
+        const total = pdf?.getTotalPages?.() ?? 0;
+        return !(total > 0 && cur >= total);
+      }
+      const epub = refs.epub as unknown as { getCanGoNext?: () => boolean } | null;
+      // No answer from the viewer means no reason to block the press: the turn
+      // itself is the authority and it refuses when it cannot move.
+      return epub?.getCanGoNext?.() ?? true;
     },
   };
 }

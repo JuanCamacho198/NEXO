@@ -19,6 +19,13 @@
   import { createEpubPagination } from '$lib/features/reader/viewer-epub/useEpubPagination.svelte';
   import type { PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
   import { resolveFootnoteNote } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
+  import {
+    bookPagePosition,
+    chapterPageForBookPage,
+    type BookPagePosition,
+  } from '$lib/features/reader/viewer-epub/bookPagePosition';
+  import { bookPageCounts } from '$lib/features/reader/viewer-epub/bookPageCounts.svelte';
+  import { READER_PROGRESS_INDICATOR_BOOK_PAGES } from '$lib/shared/types/settings';
   import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
   import { attachFrameZoomWheel } from '$lib/features/reader/viewer-epub/epubZoomWheel';
   import {
@@ -414,36 +421,72 @@
   // address, so the document path answers instead.
   const paginatedMeasured = $derived(paginated && pagination.pageCount > 0);
 
-  // Paginated mode replaces the total outright. Leaving the document count here
-  // is what let the field claim "of 43" while the chapter on screen had 37
-  // columns.
-  let displayTotal = $derived(paginatedMeasured ? pagination.pageCount : documentTotal);
+  /**
+   * The reader's `progressIndicator` = "count the whole book in the page field".
+   * Off — the default, and every other stored value — leaves the field counting
+   * the chapter, exactly as it did before this setting meant anything.
+   */
+  const bookTotalsOn = $derived(
+    readerSettings.progressIndicator === READER_PROGRESS_INDICATOR_BOOK_PAGES,
+  );
 
-  // The header reports the chapter that is ON SCREEN, not the one navigation has
-  // requested. A Next at a chapter's last page bumps `currentChapterIndex`
-  // synchronously and falls through to chapter navigation, but the new chapter
-  // only reaches the screen when its `srcdoc` has loaded (`markReady` ->
-  // `setLastRenderedChapter`). Reading the requested index made the number
-  // advance through 9, 10, 11… while `scrollLeft` stayed pinned to the old
-  // chapter's maximum and the visible text never changed — the measured
-  // "header advances, screen does not" desync. `lastRenderedChapter` is
-  // committed-render state (the pagination lifecycle and the highlights overlay
-  // already key on it), so it is the number that matches what the reader sees.
-  // Before the first render commits (`< 0`) the requested index is the only
-  // answer available, so it is the fallback. Both are reading-order positions.
-  //
-  // Paginated mode replaces this number too: the reader is not on a document
-  // there, it is on a COLUMN of one, and `pagination.currentPage` is the only
-  // thing that knows which. Measured before this was wired up — chapter at
-  // reading order 16, 25 columns, viewport 1200x779 — `scrollLeft` walked
-  // 0 -> 6660 -> 3330 across five forward and three backward turns while this
-  // field sat on 16 for all eight. The count existed and nobody asked for it.
-  let displayCurrentPage = $derived.by(() => {
-    if (paginatedMeasured) return pagination.currentPage;
-    const committed =
-      lastRenderedChapter >= 0 ? lastRenderedChapter : navigation.currentChapterIndex;
-    return navigation.resolve(committed).order + 1;
+  // The chapter that is committed ON SCREEN, as a reading-order position. A Next
+  // at a chapter's last page bumps the requested index synchronously and falls
+  // through to chapter navigation, but the new chapter only reaches the screen
+  // when its `srcdoc` has loaded (`markReady` -> `setLastRenderedChapter`).
+  // Reading the requested index made the number advance through 9, 10, 11 while
+  // `scrollLeft` stayed pinned to the old chapter — the measured "header
+  // advances, screen does not" desync. Before the first render commits (`< 0`)
+  // the requested index is the only answer available, so it is the fallback.
+  const committedOrder = $derived(
+    lastRenderedChapter >= 0 ? lastRenderedChapter : navigation.currentChapterIndex,
+  );
+
+  /** Measured column counts per reading-order position, for this book. */
+  const bookColumnCounts = $derived(bookPageCounts.countsFor(bookId));
+
+  /**
+   * Where the reader is in the BOOK, in the unit their reading mode counts — or
+   * null when nothing usable is measured yet, so the caller falls back instead of
+   * printing a zero.
+   *
+   * Scrolling mode needs no cache: a document IS a page there, and the reading
+   * order names every one of them the moment the book opens, so that total is
+   * exact from the first frame. Paginated mode is the opposite — a column count
+   * only exists once a chapter has been laid out — so its total is the sum of the
+   * chapters measured so far. That is why it grows as the reader walks, and why
+   * paginating the whole book up front (a multi-second open) is not done.
+   */
+  const bookPosition = $derived.by((): BookPagePosition | null => {
+    if (!paginated) {
+      if (documentTotal <= 0) return null;
+      const page = navigation.resolve(committedOrder).order + 1;
+      return { page: Math.min(page, documentTotal), total: documentTotal };
+    }
+    return bookPagePosition(bookColumnCounts, committedOrder, pagination.currentPage);
   });
+
+  /**
+   * The chapter's own numbers: what the field shows with the switch off, and the
+   * fallback with it on. In paginated mode the reader is not on a document, they
+   * are on a COLUMN of one, and `pagination.currentPage` is the only thing that
+   * knows which — measured before that was wired up, `scrollLeft` walked 0 ->
+   * 6660 -> 3330 across eight turns while the field sat on the chapter index.
+   */
+  const chapterPosition = $derived.by((): BookPagePosition => {
+    if (paginatedMeasured) return { page: pagination.currentPage, total: pagination.pageCount };
+    return { page: navigation.resolve(committedOrder).order + 1, total: documentTotal };
+  });
+
+  // Paginated mode replaces the total outright: leaving the document count here is
+  // what let the field claim "of 43" while the chapter on screen had 37 columns.
+  // The book total replaces it in turn, and only when it exists.
+  let displayTotal = $derived(
+    bookTotalsOn && bookPosition ? bookPosition.total : chapterPosition.total,
+  );
+  let displayCurrentPage = $derived(
+    bookTotalsOn && bookPosition ? bookPosition.page : chapterPosition.page,
+  );
 
   function emitPreciseLocation(): void {
     bridge.emitPreciseLocation();
@@ -483,7 +526,17 @@
   }
   void renderChapter;
 
+  /**
+   * A "go to page" that names a page in ANOTHER chapter, waiting for that
+   * chapter to lay out. The page inside a chapter does not exist until its
+   * columns are measured, so the number is remembered here and applied by the
+   * effect below once the target chapter reports a count.
+   */
+  let pendingBookPage = $state<{ chapter: number; page: number } | null>(null);
+
   export function goToPrev(): void {
+    // A press is a new position: it outranks a queued jump to a book page.
+    pendingBookPage = null;
     // A restore in flight owns the offset. The press is QUEUED rather than
     // applied (from a position the restore is about to overwrite) or dropped
     // (which loses the reader's input): it runs once the restore has landed, so
@@ -499,6 +552,7 @@
     navigation.goToPrev();
   }
   export function goToNext(): void {
+    pendingBookPage = null;
     if (paginated && (pagination.isRestoring() || pagination.isLayoutSettling())) {
       deferTurn(1);
       return;
@@ -561,16 +615,33 @@
     navigation.goToChapter(index);
   }
   /**
-   * The page field's "go to": in paginated mode the number typed is a column of
-   * the chapter on screen, so it must move the chapter's own offset. Handing it
-   * to `navigation.handleGoToPage` would read the same number as a reading-order
-   * position and jump the reader to a different document — the same unit
-   * confusion the field itself had, one layer down.
+   * The page field's "go to", resolved in the unit the field is DISPLAYING.
    *
-   * The document path is kept for scroll mode and for a chapter whose layout is
-   * not measured yet, where a column number has nothing to address.
+   * With the whole-book switch on, the number the reader typed is a page of the
+   * BOOK: a column (paginated) or a document (scrolling). Handing it to
+   * `navigation.handleGoToPage` would read it as a reading-order position and
+   * jump to a different chapter — the same unit confusion the field itself had,
+   * one layer down. With the switch off (or with nothing measured, which is when
+   * the field falls back to the chapter's numbers) the old chapter-local
+   * behaviour is exactly what the number means.
+   *
+   * The document path needs no resolution: page N of the book IS reading-order
+   * position N-1, which is precisely what `navigation.handleGoToPage` does.
    */
   export async function handleGoToPage(page: number): Promise<boolean> {
+    if (bookTotalsOn && bookPosition && paginated) {
+      const target = chapterPageForBookPage(bookColumnCounts, page);
+      // Past the measured part of the book. Refusing is what keeps the field
+      // honest: the number reverts instead of landing somewhere it did not name.
+      if (!target) return false;
+      if (target.chapter === committedOrder && pagination.pageCount > 0) {
+        return pagination.goToPage(target.page);
+      }
+      pendingBookPage = target;
+      navigation.goToChapter(target.chapter);
+      return true;
+    }
+    if (bookTotalsOn && bookPosition) return navigation.handleGoToPage(page);
     if (paginatedMeasured && pagination.goToPage(page)) return true;
     return navigation.handleGoToPage(page);
   }
@@ -588,6 +659,22 @@
   }
   export function getTotalPages(): number {
     return displayTotal;
+  }
+  /**
+   * Whether a forward turn can still do something.
+   *
+   * With the book total displayed the field's own numbers cannot answer: the
+   * total is the sum of the chapters measured SO FAR, so `page === total` holds
+   * at the last page of every chapter on the way through the book, and gating
+   * Next on it stopped the reader exactly where they wanted to continue. Only
+   * the reading order and the current chapter's columns know what is left.
+   */
+  export function getCanGoNext(): boolean {
+    if (!bookTotalsOn) return displayCurrentPage < displayTotal;
+    if (paginated && pagination.pageCount > 0 && pagination.currentPage < pagination.pageCount) {
+      return true;
+    }
+    return committedOrder < documentTotal - 1;
   }
   /**
    * Read-only snapshot for the opt-in diagnostic panel (`ReaderDiagnosticPanel`).
@@ -737,12 +824,63 @@
     // `untrack`: entering/leaving publishes a measured box, and letting that
     // write feed back into this effect's dependencies would loop.
     untrack(() => {
+      // A mode change invalidates every cached page count. Columns and documents
+      // are different units, and a column total (`/ 345`) left standing over 43
+      // documents is the contradiction the whole-book switch exists to avoid.
+      // Cleared on both edges: the column counts are only valid for the layout
+      // they were measured from, and the reader may have changed the type size
+      // while scrolling.
+      bookPageCounts.clear(bookId);
       if (active) {
         paginationChapter = lastRenderedChapter;
         pagination.enter();
       } else {
         pagination.exit();
       }
+    });
+  });
+
+  // Record the chapter's measured column count, which is what the book total is
+  // a sum of. This runs on every measurement (first layout, chapter change, a
+  // zoom or font change that reflows the columns) and `record` ignores an
+  // unchanged value, so a measurement can never re-invalidate the graph that
+  // asked for it.
+  $effect(() => {
+    if (!paginated) return;
+    const position = committedOrder;
+    const count = pagination.pageCount;
+    if (position < 0 || count <= 0) return;
+    bookPageCounts.record(bookId, position, count);
+  });
+
+  // A different book in the same viewer instance must not inherit the previous
+  // one's cache: the counts are per layout, and the store is keyed by book id.
+  // A fresh open (the common case, where this component is mounted for the book)
+  // starts already in step and keeps whatever was measured last session.
+  let cachedBookId = untrack(() => bookId);
+  $effect(() => {
+    const id = bookId;
+    untrack(() => {
+      if (id === cachedBookId) return;
+      cachedBookId = id;
+      pendingBookPage = null;
+      bookPageCounts.clear(id);
+    });
+  });
+
+  // Apply a queued "go to book page" that named another chapter. The page inside
+  // that chapter only exists once its columns are measured, so the jump waits for
+  // the first count instead of writing a `scrollLeft` the layout would overwrite.
+  $effect(() => {
+    const pending = pendingBookPage;
+    if (!pending) return;
+    void lastRenderedChapter;
+    void pagination.pageCount;
+    untrack(() => {
+      if (pendingBookPage !== pending) return;
+      if (lastRenderedChapter !== pending.chapter || pagination.pageCount <= 0) return;
+      pendingBookPage = null;
+      if (pending.page <= pagination.pageCount) pagination.goToPage(pending.page);
     });
   });
 

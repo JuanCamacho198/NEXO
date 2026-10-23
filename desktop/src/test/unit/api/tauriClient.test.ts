@@ -234,6 +234,51 @@ describe('tauriClient reader settings', () => {
       JSON.stringify('left'),
     );
   });
+
+  /**
+   * The whole-book page field rides on `reader.progressIndicator`. It shipped
+   * once as a camelCase value, which `sanitizeEnum` lowercased away before
+   * checking its whitelist — the switch showed ON while nothing was stored. This
+   * is the round trip that proves the value survives a save and a reload.
+   */
+  it('round-trips the whole-book page setting without silently dropping it', async () => {
+    expect(sanitizeReaderSettings({ progressIndicator: 'book-pages' }).progressIndicator).toBe(
+      'book-pages',
+    );
+
+    invokeMock.mockResolvedValue(undefined);
+    const saved = await upsertReaderSettings({ progressIndicator: 'book-pages' });
+    expect(saved.progressIndicator).toBe('book-pages');
+
+    const [, args] = invokeMock.mock.calls[0] as [
+      string,
+      { settings: Array<{ key: string; valueJson: string }> },
+    ];
+    expect(args.settings.find((entry) => entry.key === 'reader.progressIndicator')?.valueJson).toBe(
+      JSON.stringify('book-pages'),
+    );
+
+    // Reload: the persisted value comes back unchanged.
+    invokeMock.mockReset();
+    invokeMock.mockResolvedValueOnce([
+      {
+        key: 'reader.progressIndicator',
+        valueJson: JSON.stringify('book-pages'),
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+    const loaded = await getReaderSettings();
+    expect(loaded.progressIndicator).toBe('book-pages');
+  });
+
+  it('defaults the whole-book page setting to off', () => {
+    expect(getDefaultReaderSettings().progressIndicator).toBe('percentage');
+    // An unknown or camelCase value falls back rather than persisting a switch
+    // that looks on but is stored as something else.
+    expect(
+      sanitizeReaderSettings({ progressIndicator: 'bookPages' as never }).progressIndicator,
+    ).toBe('percentage');
+  });
 });
 
 describe('tauriClient highlight menu commands', () => {

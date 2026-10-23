@@ -827,6 +827,7 @@
     onPrev={goPrevPage}
     onNext={goNextPage}
     onGoToPage={handleHeaderGoToPage}
+    canGoNext={!nav.nextDisabled}
     onFit={(mode) => {
       void pdfRef?.applyFit(mode);
     }}

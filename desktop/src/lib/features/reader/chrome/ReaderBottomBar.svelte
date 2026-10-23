@@ -32,6 +32,15 @@
     onPrev: () => void;
     onNext: () => void;
     onGoToPage: (page: number) => Promise<boolean>;
+    /**
+     * Whether a forward turn can do anything. Optional, and only meaningful for
+     * a total that can GROW: the EPUB field's whole-book total is the sum of the
+     * chapters measured so far, so "the position equals the total" describes the
+     * edge of what has been measured, not the end of the book — gating Next on
+     * it stopped a reader dead at the last page of every chapter. The viewer is
+     * the only one that can answer, so the caller passes its answer.
+     */
+    canGoNext?: boolean;
     onFit: (mode: FitMode) => void;
     onZoomSelect: (percent: number) => void;
     onToggleBookmarks: () => void;
@@ -56,6 +65,7 @@
     onPrev,
     onNext,
     onGoToPage,
+    canGoNext = undefined,
     onFit,
     onZoomSelect,
     onToggleBookmarks,
@@ -78,7 +88,7 @@
   const bookmarkCountText = $derived(String(bookmarkCount));
   const bookmarkCountLabel = $derived(t('reader.bookmarks_count', { count: bookmarkCount }));
   const prevDisabled = $derived(currentPage <= 1);
-  const nextDisabled = $derived(currentPage >= totalPages);
+  const nextDisabled = $derived(canGoNext === undefined ? currentPage >= totalPages : !canGoNext);
   const BookmarksIcon = $derived(showBookmarks ? X : Bookmark);
   const barTransform = $derived(visible ? 'translate-y-0' : 'translate-y-full');
 

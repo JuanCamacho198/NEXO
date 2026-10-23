@@ -175,6 +175,10 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   const nextDisabled = $derived.by(() => {
     const v = resolveViewer();
     if (v.kind === 'pdf') return totalPdfPages > 0 && currentPdfPage >= totalPdfPages;
+    // A growing total cannot answer this: the position equals the total at the
+    // edge of what has been measured, which is the last page of every chapter
+    // on the way through a book. The viewer knows what is actually left.
+    if (v.kind === 'epub') return v.getCanGoNext ? !v.getCanGoNext() : false;
     return false;
   });
 

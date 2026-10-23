@@ -4,6 +4,10 @@
   import { onDestroy } from 'svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, ReaderTextAlign } from '$lib/shared/types';
+  import {
+    READER_PROGRESS_INDICATOR_BOOK_PAGES,
+    READER_PROGRESS_INDICATOR_DEFAULT,
+  } from '$lib/shared/types/settings';
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
   import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
@@ -131,7 +135,13 @@
   <h3 class="text-xs font-semibold tracking-wide text-(--color-text-muted) uppercase">{label}</h3>
 {/snippet}
 
-{#snippet toggleRow(label: string, checked: boolean, onclick: () => void, ariaLabel: string)}
+{#snippet toggleRow(
+  label: string,
+  checked: boolean,
+  onclick: () => void,
+  ariaLabel: string,
+  title = '',
+)}
   <div class="flex items-center justify-between">
     <span class="text-sm text-(--color-text-muted)">{label}</span>
     <button
@@ -142,6 +152,7 @@
       role="switch"
       aria-checked={checked}
       aria-label={ariaLabel}
+      title={title || undefined}
     >
       <span
         class="h-4 w-4 rounded-full bg-white shadow transition-transform"
@@ -430,6 +441,21 @@
               'direction-select',
             )}
             {@render toggleRow(t('reader.hyphenation'), readerSettings.hyphenation, () => onSettingsChange({ ...readerSettings, hyphenation: !readerSettings.hyphenation }), t('reader.hyphenation'))}
+            <!-- The page field counts the current chapter unless this is on, and
+              then it counts the whole book in whatever unit the reading mode
+              uses. Same row shape as the switch above it. -->
+            {@render toggleRow(
+              t('reader.book_page_totals'),
+              readerSettings.progressIndicator === READER_PROGRESS_INDICATOR_BOOK_PAGES,
+              () => onSettingsChange({
+                ...readerSettings,
+                progressIndicator: readerSettings.progressIndicator === READER_PROGRESS_INDICATOR_BOOK_PAGES
+                  ? READER_PROGRESS_INDICATOR_DEFAULT
+                  : READER_PROGRESS_INDICATOR_BOOK_PAGES,
+              }),
+              t('reader.book_page_totals'),
+              t('reader.book_page_totals_tooltip'),
+            )}
           </div>
         {/if}
         <!-- U1: the showHeader/showFooter/verticalScrolling switches lived here.

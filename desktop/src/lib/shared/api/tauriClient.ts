@@ -480,7 +480,15 @@ const readSettingValue = (settings: AppSettingDto[], key: string): unknown => {
 const READER_THEME_MODES: ReadonlyArray<ReaderThemeMode> = ['paper', 'sepia', 'night', 'oled'];
 const TEXT_ALIGN_MODES: ReadonlyArray<ReaderTextAlign> = ['left', 'center', 'right', 'justify'];
 const DIRECTION_MODES: ReadonlyArray<ReaderDirection> = ['ltr', 'rtl'];
-const PROGRESS_MODES: ReadonlyArray<ReaderProgressIndicator> = ['percentage', 'chapter', 'time'];
+const PROGRESS_MODES: ReadonlyArray<ReaderProgressIndicator> = [
+  'percentage',
+  'chapter',
+  'time',
+  // The page field's whole-book total. Lowercase on purpose: `sanitizeEnum`
+  // lowercases before checking this list, so any camelCase spelling of this
+  // value is dropped and the setting silently reverts to `percentage`.
+  'book-pages',
+];
 
 const DEFAULT_READER_SETTINGS: ReaderSettings = {
   themeMode: 'paper',

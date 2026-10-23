@@ -856,6 +856,9 @@ export const messagesEn = {
   'reader.margins': 'Margins',
   'reader.paragraph_spacing': 'Paragraph spacing',
   'reader.hyphenation': 'Hyphenation',
+  'reader.book_page_totals': 'Whole-book pages',
+  'reader.book_page_totals_tooltip':
+    'The page field counts the whole book instead of the current chapter: columns in Pages mode, documents in Scroll mode',
   'reader.theme': 'Theme',
   'reader.font': 'Font',
   'reader.font_size': 'Size',
