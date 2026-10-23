@@ -10,7 +10,6 @@ import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.local.entity.SyncOutboxEntity
 import com.nexo.data.session.SessionManager
-import com.nexo.data.sync.DriveVersionMarker
 import com.nexo.domain.model.AuthSession
 import io.mockk.coEvery
 import io.mockk.coVerify
