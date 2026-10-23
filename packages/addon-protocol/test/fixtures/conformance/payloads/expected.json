@@ -21,6 +21,24 @@
       "authorsById": {},
       "skipped": 1
     },
+    "legacy-v2-catalog.json": {
+      "kind": "catalog",
+      "shape": "legacy-v2",
+      "metaCount": 2,
+      "firstMetaId": "1342",
+      "lastMetaId": "84",
+      "authorsById": {
+        "1342": ["Jane Austen"],
+        "84": ["Shelley, Mary Wollstonecraft"]
+      },
+      "skipped": 1
+    },
+    "legacy-v2-meta.json": {
+      "kind": "meta",
+      "shape": "legacy-v2",
+      "metaId": "1342",
+      "isbn13": null
+    },
     "meta-raw.json": {
       "kind": "meta",
       "shape": "raw",

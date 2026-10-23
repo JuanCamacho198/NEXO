@@ -1,0 +1,26 @@
+{
+  "results": [
+    {
+      "id": "1342",
+      "title": "Pride and Prejudice",
+      "authors": ["Jane Austen"],
+      "coverUrl": "https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg",
+      "languages": ["en"],
+      "subjects": ["Courtship -- Fiction", "England -- Fiction"],
+      "downloadUrl": "https://www.gutenberg.org/ebooks/1342.epub.images"
+    },
+    {
+      "id": "84",
+      "title": "Frankenstein; Or, The Modern Prometheus",
+      "authors": ["Shelley, Mary Wollstonecraft"],
+      "coverUrl": "http://example.org/insecure-cover.jpg",
+      "languages": ["en"],
+      "subjects": []
+    },
+    {
+      "id": "11",
+      "authors": ["Carroll, Lewis"]
+    }
+  ],
+  "totalCount": 3
+}

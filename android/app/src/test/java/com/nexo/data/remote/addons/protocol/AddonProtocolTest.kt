@@ -177,6 +177,46 @@ class AddonProtocolTest {
         }
         """.trimIndent()
 
+    private val legacyV2Catalog =
+        """
+        {
+          "results": [
+            {
+              "id": "1342",
+              "title": "Pride and Prejudice",
+              "authors": ["Jane Austen"],
+              "coverUrl": "https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg",
+              "languages": ["en"],
+              "subjects": ["Courtship -- Fiction", "England -- Fiction"],
+              "downloadUrl": "https://www.gutenberg.org/ebooks/1342.epub.images"
+            },
+            {
+              "id": "84",
+              "title": "Frankenstein; Or, The Modern Prometheus",
+              "authors": ["Shelley, Mary Wollstonecraft"],
+              "coverUrl": "http://example.org/insecure-cover.jpg",
+              "languages": ["en"],
+              "subjects": []
+            },
+            { "id": "11", "authors": ["Carroll, Lewis"] }
+          ],
+          "totalCount": 3
+        }
+        """.trimIndent()
+
+    private val legacyV2Meta =
+        """
+        {
+          "id": "1342",
+          "title": "Pride and Prejudice",
+          "authors": ["Jane Austen"],
+          "coverUrl": "https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg",
+          "languages": ["en"],
+          "subjects": ["Courtship -- Fiction"],
+          "downloadUrl": "https://www.gutenberg.org/ebooks/1342.epub.images"
+        }
+        """.trimIndent()
+
     private val gutendexBooks =
         """
         {
@@ -1171,11 +1211,76 @@ class AddonProtocolTest {
     }
 
     @Test
-    fun `parseCatalogPayload contributes nothing for an unimplemented shape`() {
+    fun `parseCatalogPayload reads a legacy v2 results list through its shape`() {
+        val parsed = AddonPayloads.parseCatalogPayload(json(legacyV2Catalog), AddonShape.LEGACY_V2)
+
+        // The third entry has no title, so it is not a book: skipped, never a throw.
+        assertEquals(1, parsed.skipped)
+        assertEquals(2, parsed.metas.size)
         assertEquals(
-            CatalogPayload(emptyList(), 0),
-            AddonPayloads.parseCatalogPayload(json(catalogRaw), AddonShape.LEGACY_V2),
+            MetaPreview(
+                id = "1342",
+                type = "book",
+                name = "Pride and Prejudice",
+                poster = "https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg",
+                authors = listOf("Jane Austen"),
+                languages = listOf("en"),
+                subjects = listOf("Courtship -- Fiction", "England -- Fiction"),
+            ),
+            parsed.metas[0],
         )
+        // A non-https coverUrl has no poster; downloadUrl is a `stream`, never a meta field.
+        assertEquals(
+            MetaPreview(
+                id = "84",
+                type = "book",
+                name = "Frankenstein; Or, The Modern Prometheus",
+                authors = listOf("Shelley, Mary Wollstonecraft"),
+                languages = listOf("en"),
+            ),
+            parsed.metas[1],
+        )
+    }
+
+    @Test
+    fun `parseCatalogPayload keeps legacy v2 ids verbatim and ignores totalCount`() {
+        val parsed =
+            AddonPayloads.parseCatalogPayload(
+                json("""{ "results": [{ "id": "gutenberg:1342", "title": "Pride", "totalCount": 500 }], "totalCount": 500 }"""),
+                AddonShape.LEGACY_V2,
+            )
+
+        // The addon resolves its own ids through `{bookId}`: prefixing would 404.
+        assertEquals("gutenberg:1342", parsed.metas[0].id)
+        assertEquals("Pride", parsed.metas[0].name)
+        assertEquals(1, parsed.metas.size)
+    }
+
+    @Test
+    fun `parseCatalogPayload returns an empty skipped result for a legacy v2 body without results`() {
+        for (body in listOf(json("{}"), json("""{ "results": "nope" }"""), json("42"), json("[]"))) {
+            assertEquals(CatalogPayload(emptyList(), 1), AddonPayloads.parseCatalogPayload(body, AddonShape.LEGACY_V2))
+        }
+    }
+
+    @Test
+    fun `parseMetaPayload reads a flat legacy v2 book with no meta envelope`() {
+        assertEquals(
+            MetaPreview(
+                id = "1342",
+                type = "book",
+                name = "Pride and Prejudice",
+                poster = "https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg",
+                authors = listOf("Jane Austen"),
+                languages = listOf("en"),
+                subjects = listOf("Courtship -- Fiction"),
+            ),
+            AddonPayloads.parseMetaPayload(json(legacyV2Meta), AddonShape.LEGACY_V2),
+        )
+        // No id or no title is not a book; nothing is read from under a `meta` key.
+        assertNull(AddonPayloads.parseMetaPayload(json("""{ "id": "1342" }"""), AddonShape.LEGACY_V2))
+        assertNull(AddonPayloads.parseMetaPayload(json("""{ "title": "No id" }"""), AddonShape.LEGACY_V2))
+        assertNull(AddonPayloads.parseMetaPayload(json("""{ "meta": { "id": "1342", "title": "Pride" } }"""), AddonShape.LEGACY_V2))
     }
 
     @Test

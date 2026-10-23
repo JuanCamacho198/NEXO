@@ -132,6 +132,7 @@ object AddonPayloads {
     private const val OPENLIBRARY_ID_PREFIX = "openlibrary:"
     private const val ISBN_PREFIX = "isbn:"
     private const val COVER_FORMAT = "image/jpeg"
+    private const val HTTPS_PREFIX = "https://"
     private const val COVER_URL_PREFIX = "https://covers.openlibrary.org/b/id/"
     private const val COVER_URL_SUFFIX = "-M.jpg"
 
@@ -202,24 +203,24 @@ object AddonPayloads {
         }
 
     /**
-     * `shape` selects the named adapter. `"raw"` is the Stremio envelope; a shape
-     * this build ships no adapter for (`legacy-v2`) contributes nothing rather
-     * than failing the fan-out.
+     * `shape` selects the named adapter. `"raw"` is the Stremio envelope; every
+     * name in the closed set has a reader here, so no answering shape is
+     * silently discarded.
      */
     fun parseCatalogPayload(
         body: Any?,
         shape: AddonShape,
-    ): CatalogPayload {
-        if (shape == AddonShape.GUTENDEX) {
-            val shaped = shapeGutendexCatalog(body)
-            return capMetas(shaped.metas, shaped.skipped)
+    ): CatalogPayload =
+        when (shape) {
+            AddonShape.GUTENDEX -> shapeGutendexCatalog(body).capped()
+            AddonShape.OPENLIBRARY -> shapeOpenlibraryCatalog(body).capped()
+            AddonShape.LEGACY_V2 -> shapeLegacyV2Catalog(body).capped()
+            AddonShape.RAW -> shapeRawCatalog(body)
         }
-        if (shape == AddonShape.OPENLIBRARY) {
-            val shaped = shapeOpenlibraryCatalog(body)
-            return capMetas(shaped.metas, shaped.skipped)
-        }
-        if (shape != AddonShape.RAW) return CatalogPayload(emptyList(), 0)
 
+    private fun CatalogPayload.capped(): CatalogPayload = capMetas(metas, skipped)
+
+    private fun shapeRawCatalog(body: Any?): CatalogPayload {
         val entries = readEnvelopeList(body, "metas") ?: return CatalogPayload(emptyList(), 1)
         val metas = mutableListOf<MetaPreview>()
         var skipped = 0
@@ -237,13 +238,18 @@ object AddonPayloads {
     fun parseMetaPayload(
         body: Any?,
         shape: AddonShape,
-    ): MetaPreview? {
-        if (shape == AddonShape.GUTENDEX) return shapeGutendexMeta(body)
-        if (shape == AddonShape.OPENLIBRARY) return shapeOpenlibraryMeta(body)
-        if (shape != AddonShape.RAW) return null
-        if (body !is JSONObject) return null
-        return toMetaPreview(body.opt("meta"))
-    }
+    ): MetaPreview? =
+        when (shape) {
+            AddonShape.GUTENDEX -> shapeGutendexMeta(body)
+            AddonShape.OPENLIBRARY -> shapeOpenlibraryMeta(body)
+            AddonShape.LEGACY_V2 -> shapeLegacyV2Meta(body)
+            AddonShape.RAW ->
+                if (body is JSONObject) {
+                    toMetaPreview(body.opt("meta"))
+                } else {
+                    null
+                }
+        }
 
     // ------------------------------------------------------------------ streams
 
@@ -410,6 +416,53 @@ object AddonPayloads {
         var skipped = 0
         for (index in 0 until docs.length()) {
             val meta = shapeOpenlibraryMeta(docs.opt(index))
+            if (meta == null) {
+                skipped += 1
+                continue
+            }
+            metas += meta
+        }
+        return CatalogPayload(metas, skipped)
+    }
+
+    // --------------------------------------------------------------- legacy v2
+
+    /**
+     * The v2 adapters accept a cover only over https; anything else has no poster.
+     */
+    private fun readHttpsUrl(value: Any?): String? = AddonPayloadJson.readString(value)?.takeIf { it.startsWith(HTTPS_PREFIX) }
+
+    /**
+     * One v2 book. `id` and `title` are the v2 adapter's two mandatory fields;
+     * without them the entry is not a book. `downloadUrl` is deliberately not
+     * read: a file URL is a `stream`, and the protocol path takes files from
+     * there. Ids pass through verbatim — the addon resolves its own ids through
+     * its own template, so prefixing one here would send it an id it cannot find.
+     */
+    private fun shapeLegacyV2Meta(body: Any?): MetaPreview? {
+        if (body !is JSONObject) return null
+        val id = AddonPayloadJson.readString(body.opt("id")) ?: return null
+        val name = AddonPayloadJson.readString(body.opt("title")) ?: return null
+        return MetaPreview(
+            id = id,
+            type = AddonProtocolConstants.TYPE_BOOK,
+            name = name,
+            poster = readHttpsUrl(body.opt("coverUrl")),
+            authors = AddonPayloadJson.readStringArray(body.opt("authors")),
+            languages = AddonPayloadJson.readStringArray(body.opt("languages")),
+            subjects = AddonPayloadJson.readStringArray(body.opt("subjects")),
+        )
+    }
+
+    /** `{ "results": [book…], "totalCount": n }`; `totalCount` is not carried. */
+    private fun shapeLegacyV2Catalog(body: Any?): CatalogPayload {
+        if (body !is JSONObject || body.opt("results") !is JSONArray) return CatalogPayload(emptyList(), 1)
+        val results = body.opt("results") as JSONArray
+
+        val metas = mutableListOf<MetaPreview>()
+        var skipped = 0
+        for (index in 0 until results.length()) {
+            val meta = shapeLegacyV2Meta(results.opt(index))
             if (meta == null) {
                 skipped += 1
                 continue
