@@ -33,6 +33,11 @@ data class Book(
     val tags: String? = null,
     /** Publication date as ISO `yyyy-MM-dd`; null when unknown. */
     val publishedDate: String? = null,
+    /** Installed addon that produced this book; null for local imports. */
+    val sourceAddonId: String? = null,
+    /** Frozen protocol id (e.g. `gutenberg:1342`) used for ownership checks. */
+    val sourceItemId: String? = null,
+    val isbn13: String? = null,
 )
 
 /** Persisted book status values stored in [Book.status]. */

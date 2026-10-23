@@ -706,6 +706,25 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * Addon provenance on imported books (protocol v3). Three additive nullable
+     * columns — an existing local import has no provenance and nothing is
+     * backfilled, because guessing it would be wrong. `source_item_id` carries
+     * the frozen protocol id (`gutenberg:1342`) so the library can answer
+     * "do I already own this?". The index is non-unique on purpose: a partial
+     * unique index (`WHERE source_item_id IS NOT NULL`) cannot be expressed as a
+     * Room annotation, so uniqueness is enforced by the DAO query instead.
+     */
+    val MIGRATION_32_33 =
+        object : Migration(32, 33) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE books ADD COLUMN source_addon_id TEXT")
+                db.execSQL("ALTER TABLE books ADD COLUMN source_item_id TEXT")
+                db.execSQL("ALTER TABLE books ADD COLUMN isbn13 TEXT")
+                db.execSQL("CREATE INDEX index_books_source_item_id ON books(source_item_id)")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -739,5 +758,6 @@ object AppDatabaseMigrations {
             MIGRATION_29_30,
             MIGRATION_30_31,
             MIGRATION_31_32,
+            MIGRATION_32_33,
         )
 }

@@ -116,6 +116,9 @@ class HomeRepositoryImpl(
             completedAtEpochMillis = completedAtEpochMillis,
             progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
             stateVersion = stateVersion,
+            sourceAddonId = sourceAddonId,
+            sourceItemId = sourceItemId,
+            isbn13 = isbn13,
         )
 
     private fun com.nexo.data.local.entity.BookEntity.toBookWithCanonical(
@@ -139,5 +142,8 @@ class HomeRepositoryImpl(
             progressPercentage = canonical.percentage,
             progressUpdatedAtEpochMillis = canonical.updatedAtEpochMillis,
             stateVersion = stateVersion,
+            sourceAddonId = sourceAddonId,
+            sourceItemId = sourceItemId,
+            isbn13 = isbn13,
         )
 }

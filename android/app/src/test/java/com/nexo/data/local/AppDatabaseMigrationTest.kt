@@ -1,8 +1,13 @@
 package com.nexo.data.local
 
+import android.content.Context
+import androidx.room.Room
 import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
+import com.nexo.data.local.entity.BookEntity
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -87,6 +92,13 @@ class AppDatabaseMigrationTest {
             .getInstrumentation()
             .targetContext
             .getDatabasePath("migration-31-32")
+            .absolutePath
+
+    private fun testDbPath32To33(): String =
+        InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getDatabasePath("migration-32-33")
             .absolutePath
 
     private fun columnNames(
@@ -418,4 +430,91 @@ class AppDatabaseMigrationTest {
         assertEquals(1L, query(db, "SELECT COUNT(*) FROM installed_addons"))
         db.close()
     }
+
+    @Test
+    fun `migration 32 to 33 adds the provenance columns and keeps existing rows NULL`() {
+        val dbPath = testDbPath32To33()
+        helper.createDatabase(dbPath, 32).use { db ->
+            db.execSQL(
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, " +
+                    "state_version, remote_lifecycle, remote_catalog_version) " +
+                    "VALUES ('bk-prov', 'Existing', '/bk.epub', 'epub', 1000, 'reading', 0, 'imported', 0)",
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(dbPath, 33, true, AppDatabaseMigrations.MIGRATION_32_33)
+
+        val columns = columnNames(db, "books")
+        listOf("source_addon_id", "source_item_id", "isbn13").forEach { column ->
+            assertTrue("books is missing the provenance column $column", columns.contains(column))
+        }
+
+        db
+            .query("SELECT title, source_addon_id, source_item_id, isbn13 FROM books WHERE id = 'bk-prov'")
+            .use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("Existing", cursor.getString(0))
+                // Nothing is backfilled: guessing provenance would be wrong.
+                for (index in 1 until cursor.columnCount) {
+                    assertTrue("provenance column at index $index must stay NULL", cursor.isNull(index))
+                }
+            }
+
+        val indexes = mutableListOf<String>()
+        db
+            .query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'books'")
+            .use { cursor ->
+                while (cursor.moveToNext()) indexes.add(cursor.getString(0))
+            }
+        assertTrue("expected index_books_source_item_id, got $indexes", indexes.contains("index_books_source_item_id"))
+
+        var sourceItemIndexIsUnique = true
+        db.query("PRAGMA index_list(books)").use { cursor ->
+            val nameIndex = cursor.getColumnIndex("name")
+            val uniqueIndex = cursor.getColumnIndex("unique")
+            while (cursor.moveToNext()) {
+                if (cursor.getString(nameIndex) == "index_books_source_item_id") {
+                    sourceItemIndexIsUnique = cursor.getInt(uniqueIndex) != 0
+                }
+            }
+        }
+        assertFalse("index_books_source_item_id must be non-unique", sourceItemIndexIsUnique)
+
+        assertEquals(1L, query(db, "SELECT COUNT(*) FROM books"))
+        db.close()
+    }
+
+    @Test
+    fun `provenance survives a round trip through the dao`() =
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val room =
+                Room
+                    .inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+                    .allowMainThreadQueries()
+                    .build()
+            try {
+                room.bookDao().upsert(
+                    BookEntity(
+                        id = "bk-provenance",
+                        title = "Pride and Prejudice",
+                        author = "Jane Austen",
+                        coverPath = null,
+                        filePath = "/pride.epub",
+                        format = "epub",
+                        updatedAtEpochMillis = 1000,
+                        sourceAddonId = "org.example.gutendex",
+                        sourceItemId = "gutenberg:1342",
+                        isbn13 = "9780141439518",
+                    ),
+                )
+
+                val stored = room.bookDao().getBookById("bk-provenance")
+                assertEquals("org.example.gutendex", stored?.sourceAddonId)
+                assertEquals("gutenberg:1342", stored?.sourceItemId)
+                assertEquals("9780141439518", stored?.isbn13)
+            } finally {
+                room.close()
+            }
+        }
 }

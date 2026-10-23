@@ -418,6 +418,9 @@ class LibraryRepositoryImpl(
             publisher = publisher,
             tags = tags,
             publishedDate = publishedDate,
+            sourceAddonId = sourceAddonId,
+            sourceItemId = sourceItemId,
+            isbn13 = isbn13,
         )
 
     private fun BookEntity.toDomainWithCanonical(canonical: ReadingProgressEntity): Book =
@@ -444,6 +447,9 @@ class LibraryRepositoryImpl(
             publisher = publisher,
             tags = tags,
             publishedDate = publishedDate,
+            sourceAddonId = sourceAddonId,
+            sourceItemId = sourceItemId,
+            isbn13 = isbn13,
         )
 
     private fun ReadingProgressEntity.toDomain(): ReadingProgress =
@@ -480,6 +486,9 @@ class LibraryRepositoryImpl(
             publisher = publisher,
             tags = tags,
             publishedDate = publishedDate,
+            sourceAddonId = sourceAddonId,
+            sourceItemId = sourceItemId,
+            isbn13 = isbn13,
         )
 
     /**

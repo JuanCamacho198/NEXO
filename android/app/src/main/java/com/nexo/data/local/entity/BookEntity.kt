@@ -10,6 +10,9 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["deleted_at", "updated_at"], orders = [Index.Order.ASC, Index.Order.DESC]),
         Index(value = ["reading_state"]),
+        // Non-unique: a partial unique index (WHERE source_item_id IS NOT NULL) is not
+        // expressible as a Room annotation. Uniqueness is enforced in the DAO query.
+        Index(value = ["source_item_id"]),
     ],
 )
 data class BookEntity(
@@ -59,4 +62,9 @@ data class BookEntity(
     @ColumnInfo(name = "publisher") val publisher: String? = null,
     @ColumnInfo(name = "tags") val tags: String? = null,
     @ColumnInfo(name = "published_date") val publishedDate: String? = null,
+    /** Installed addon that produced this book; null for local imports. */
+    @ColumnInfo(name = "source_addon_id") val sourceAddonId: String? = null,
+    /** Frozen protocol id (e.g. `gutenberg:1342`) used for ownership checks. */
+    @ColumnInfo(name = "source_item_id") val sourceItemId: String? = null,
+    @ColumnInfo(name = "isbn13") val isbn13: String? = null,
 )
