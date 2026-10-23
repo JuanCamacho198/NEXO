@@ -3,6 +3,7 @@ package com.nexo.di.modules
 import android.content.Context
 import com.nexo.BuildConfig
 import com.nexo.data.remote.addons.AddonCatalogProvider
+import com.nexo.data.remote.addons.AddonHttpTransport
 import com.nexo.data.remote.addons.AddonProtocolTransport
 import com.nexo.data.remote.addons.AddonRegistry
 import com.nexo.data.remote.addons.CuratedCatalogProvider
@@ -348,10 +349,13 @@ class NetworkModule(
         )
     }
 
+    /** The addon network layer, shared by the registry and the deep-link flows. */
+    val addonHttpTransport: AddonHttpTransport by lazy { KtorAddonHttpTransport(catalogHttpClient) }
+
     val addonRegistry: AddonRegistry by lazy {
         AddonRegistry(
             databaseModule.installedAddonDao,
-            KtorAddonHttpTransport(catalogHttpClient),
+            addonHttpTransport,
             // U5: durable consent (survives process restart); delivers the
             // persistence deferred from U4's in-memory default.
             PersistentAddonConsentStore(context),

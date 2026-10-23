@@ -29,6 +29,7 @@ import com.nexo.debug.FeedbackEvent
 import com.nexo.debug.FeedbackPersistence
 import com.nexo.di.AppContainer
 import com.nexo.domain.model.ThemeMode
+import com.nexo.presentation.navigation.CollectionDeepLinkParser
 import com.nexo.presentation.navigation.DeepLinkSchemes
 import com.nexo.presentation.navigation.InstallDeepLinkParser
 import com.nexo.presentation.navigation.NexoNavHost
@@ -59,6 +60,10 @@ class MainActivity : AppCompatActivity() {
         // error dialog (verify D1).
         if (InstallDeepLinkParser.isInstallUri(intent?.data)) {
             appContainer.installDeepLinkController.onInstallUri(intent?.data)
+        } else if (CollectionDeepLinkParser.isCollectionUri(intent?.data)) {
+            // Addon collection links (nexo://collection?url=…): one link installs
+            // a whole set. Routed before auth, exactly like install.
+            appContainer.collectionInstallController.onCollectionUri(intent?.data)
         } else {
             // Email-confirmation / OAuth deep links (nexo://auth/..., legacy
             // nextpage://auth/...). supabase-kt parses the fragment and imports
@@ -173,6 +178,10 @@ class MainActivity : AppCompatActivity() {
         val uri = intent.data
         if (InstallDeepLinkParser.isInstallUri(uri)) {
             appContainer.installDeepLinkController.onInstallUri(uri)
+            return
+        }
+        if (CollectionDeepLinkParser.isCollectionUri(uri)) {
+            appContainer.collectionInstallController.onCollectionUri(uri)
             return
         }
         // Warm-start email confirmation: import the session so the next launch

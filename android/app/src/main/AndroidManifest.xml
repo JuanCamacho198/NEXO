@@ -91,6 +91,16 @@
                 <data
                     android:scheme="nextpage"
                     android:host="install" />
+
+                <!-- Addon collection deep link (nexo://collection?url=…): one
+                     link installs a whole set. Same routing as `install`, only
+                     the host differs. -->
+                <data
+                    android:scheme="nexo"
+                    android:host="collection" />
+                <data
+                    android:scheme="nextpage"
+                    android:host="collection" />
             </intent-filter>
 
             <!-- Google Drive OAuth redirect (authorization-code + PKCE).

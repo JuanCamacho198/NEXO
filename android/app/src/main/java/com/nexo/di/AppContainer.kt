@@ -266,6 +266,16 @@ class AppContainer(
     val installDeepLinkController: com.nexo.presentation.navigation.InstallDeepLinkController by lazy {
         createInstallDeepLinkController(registry = addonRegistry)
     }
+
+    // ── addon collection deep links (nexo://collection?url=…) ─────────────
+    // One link installs a whole set. Shares the registry and the addon HTTP
+    // transport with the single-addon flow, so both go through one install path.
+    val collectionInstallController: com.nexo.presentation.navigation.CollectionInstallController by lazy {
+        com.nexo.presentation.navigation.CollectionInstallController(
+            registry = addonRegistry,
+            transport = networkModule.addonHttpTransport,
+        )
+    }
     val driveColdBackupService: DriveColdBackupService by lazy { networkModule.driveColdBackupService }
 
     // ── sync-layer-split PR-1 foundations ────────────────────────────────

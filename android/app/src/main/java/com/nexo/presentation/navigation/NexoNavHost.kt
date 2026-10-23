@@ -164,6 +164,9 @@ fun NexoNavHost(
     // ── Addon install deep-link dialog (nextpage://install) ─────────────
     AddonInstallDialogHost(controller = appContainer.installDeepLinkController)
 
+    // ── Addon collection deep-link dialog (nexo://collection) ───────────
+    AddonCollectionInstallDialogHost(controller = appContainer.collectionInstallController)
+
     // ── App-update self-check (SDD app-auto-update) ────────────────────
     // Single shared instance: the startup check fires once here, the About
     // manual row (settings graph) drives the same state. The dialog host
