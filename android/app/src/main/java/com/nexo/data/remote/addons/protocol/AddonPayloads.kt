@@ -46,6 +46,7 @@ data class MetaPreview(
     val languages: List<String> = emptyList(),
     val subjects: List<String> = emptyList(),
     val isbn13: String? = null,
+    val publisher: String? = null,
 )
 
 data class BookStream(
@@ -189,6 +190,7 @@ object AddonPayloads {
             languages = AddonPayloadJson.readStringArray(value.opt("languages")),
             subjects = AddonPayloadJson.readStringArray(value.opt("subjects")),
             isbn13 = readIsbn13(value.opt("isbn13"), id),
+            publisher = AddonPayloadJson.readString(value.opt("publisher")),
         )
     }
 
@@ -405,6 +407,7 @@ object AddonPayloads {
             languages = AddonPayloadJson.readStringArray(body.opt("language")),
             subjects = subjects,
             isbn13 = readIsbn13(body.opt("isbn")),
+            publisher = AddonPayloadJson.readStringArray(body.opt("publishers")).firstOrNull(),
         )
     }
 
@@ -438,6 +441,9 @@ object AddonPayloads {
      * read: a file URL is a `stream`, and the protocol path takes files from
      * there. Ids pass through verbatim — the addon resolves its own ids through
      * its own template, so prefixing one here would send it an id it cannot find.
+     *
+     * `publisher` is never read: the v2 book object has no such field, and
+     * inventing a source would be a guess written into the reader's library.
      */
     private fun shapeLegacyV2Meta(body: Any?): MetaPreview? {
         if (body !is JSONObject) return null

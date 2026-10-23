@@ -799,6 +799,10 @@
     <string name="edit_metadata_add">Agregar</string>
     <string name="edit_metadata_remove_chip">Eliminar</string>
     <string name="edit_metadata_save_failed">No se pudieron guardar los cambios</string>
+    <string name="edit_metadata_refresh">Actualizar metadatos</string>
+    <string name="edit_metadata_refresh_running">Actualizando…</string>
+    <string name="edit_metadata_refresh_none">No se encontraron metadatos nuevos</string>
+    <string name="edit_metadata_refresh_failed">No se pudieron actualizar los metadatos</string>
     <string name="action_ok">Aceptar</string>
 
     <!-- Library Snackbars -->

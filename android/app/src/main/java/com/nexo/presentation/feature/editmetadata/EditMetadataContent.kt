@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.presentation.viewmodel.EditBookMetadataUiState
+import com.nexo.ui.components.atoms.NexoButton
+import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.molecules.GenreChips
 import com.nexo.ui.components.molecules.TagChips
 import com.nexo.ui.util.formatSizeMb
@@ -39,6 +41,7 @@ internal fun EditMetadataContent(
     onPublisherChange: (String) -> Unit,
     onLanguageChange: (String) -> Unit,
     onPublishedDateChange: (String?) -> Unit,
+    onRefreshMetadata: () -> Unit,
     onGenreAdd: (String) -> Unit,
     onGenreRemove: (String) -> Unit,
     onTagAdd: (String) -> Unit,
@@ -121,6 +124,24 @@ internal fun EditMetadataContent(
             counter = stringResource(R.string.edit_metadata_counter, state.publisher.length, MAX_SHORT_FIELD),
             singleLine = true,
         )
+
+        NexoButton(
+            onClick = onRefreshMetadata,
+            enabled = !state.isRefreshing,
+            variant = NexoButtonVariant.OUTLINED,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text =
+                    stringResource(
+                        if (state.isRefreshing) {
+                            R.string.edit_metadata_refresh_running
+                        } else {
+                            R.string.edit_metadata_refresh
+                        },
+                    ),
+            )
+        }
 
         ReadOnlyDetailRow(
             label = stringResource(R.string.edit_metadata_field_size),

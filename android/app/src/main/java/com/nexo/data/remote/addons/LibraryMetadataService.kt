@@ -252,12 +252,15 @@ class LibraryMetadataService(
 }
 
 /**
- * The protocol's `meta` preview mapped onto the library's metadata columns. The
- * preview carries no publisher, so that column stays exactly as it was.
+ * The protocol's `meta` preview mapped onto the library's metadata columns.
+ * Every field the preview can carry is mapped: `releaseInfo` is the protocol's
+ * name for the publication date, and the first language/subject become the
+ * single-valued `language`/`genre` columns.
  */
 internal fun MetaPreview.toLibraryMeta(): LibraryMeta =
     LibraryMeta(
         description = description,
+        publisher = publisher,
         publishedDate = releaseInfo,
         language = languages.firstOrNull(),
         genre = subjects.firstOrNull(),

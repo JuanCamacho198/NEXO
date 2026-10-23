@@ -795,6 +795,10 @@
     <string name="edit_metadata_add">Add</string>
     <string name="edit_metadata_remove_chip">Remove</string>
     <string name="edit_metadata_save_failed">Could not save changes</string>
+    <string name="edit_metadata_refresh">Refresh metadata</string>
+    <string name="edit_metadata_refresh_running">Refreshing…</string>
+    <string name="edit_metadata_refresh_none">No new metadata was found</string>
+    <string name="edit_metadata_refresh_failed">Could not refresh metadata</string>
     <string name="action_ok">OK</string>
 
     <!-- Library Snackbars -->

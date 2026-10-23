@@ -297,17 +297,99 @@ class EditBookMetadataViewModelTest {
             }
         }
 
+    // ── Metadata refresh ───────────────────────────────────────────────
+
+    @Test
+    fun `refreshMetadata asks the repository with force and fills the form blanks`() =
+        runTest {
+            val repository = mockk<LibraryRepository>()
+            val context = mockk<Context>()
+            coEvery { repository.observeBookById("book-1") } returns flowOf(sampleBook)
+            coEvery { repository.refreshLibraryMetadata("book-1") } returns Result.success(true)
+            coEvery { repository.getBookById("book-1") } returns
+                sampleBook.copy(description = "From the addon", language = "es")
+            every { context.getString(R.string.library_snackbar_metadata_saved) } returns "Metadata updated"
+
+            val events = mutableListOf<UiEvent>()
+            val viewModel = createViewModel(repository, context = context)
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiEvent.collect { events.add(it) }
+            }
+            advanceUntilIdle()
+
+            viewModel.refreshMetadata()
+            advanceUntilIdle()
+
+            coVerify { repository.refreshLibraryMetadata("book-1") }
+            // The blank form field takes the refreshed row; the seeded ones keep their value.
+            assertEquals("From the addon", viewModel.uiState.value.description)
+            assertEquals("Publisher X", viewModel.uiState.value.publisher)
+            assertEquals("en", viewModel.uiState.value.language)
+            assertEquals(
+                "Metadata updated",
+                (events.lastOrNull() as? UiEvent.ShowSnackbar)?.message,
+            )
+        }
+
+    @Test
+    fun `refreshMetadata reports when the addons had nothing to add`() =
+        runTest {
+            val repository = mockk<LibraryRepository>()
+            val context = mockk<Context>()
+            coEvery { repository.observeBookById("book-1") } returns flowOf(sampleBook)
+            coEvery { repository.refreshLibraryMetadata("book-1") } returns Result.success(false)
+            every { context.getString(R.string.edit_metadata_refresh_none) } returns "No new metadata"
+
+            val events = mutableListOf<UiEvent>()
+            val viewModel = createViewModel(repository, context = context)
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiEvent.collect { events.add(it) }
+            }
+            advanceUntilIdle()
+
+            viewModel.refreshMetadata()
+            advanceUntilIdle()
+
+            assertEquals("No new metadata", (events.lastOrNull() as? UiEvent.ShowSnackbar)?.message)
+            assertEquals("", viewModel.uiState.value.description)
+        }
+
+    @Test
+    fun `refreshMetadata failure emits an error snackbar and never crashes`() =
+        runTest {
+            val repository = mockk<LibraryRepository>()
+            val context = mockk<Context>()
+            coEvery { repository.observeBookById("book-1") } returns flowOf(sampleBook)
+            coEvery { repository.refreshLibraryMetadata("book-1") } returns
+                Result.failure(IllegalStateException("boom"))
+            every { context.getString(R.string.edit_metadata_refresh_failed) } returns "Could not refresh"
+
+            val events = mutableListOf<UiEvent>()
+            val viewModel = createViewModel(repository, context = context)
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiEvent.collect { events.add(it) }
+            }
+            advanceUntilIdle()
+
+            viewModel.refreshMetadata()
+            advanceUntilIdle()
+
+            assertEquals("Could not refresh", (events.lastOrNull() as? UiEvent.ShowSnackbar)?.message)
+            assertFalse(viewModel.uiState.value.isRefreshing)
+        }
+
     // ── Helpers ────────────────────────────────────────────────────────
 
     private fun createViewModel(
         repository: LibraryRepository,
         onSaved: () -> Unit = {},
+        context: Context = mockk(),
     ): EditBookMetadataViewModel =
         EditBookMetadataViewModel(
             bookId = "book-1",
             libraryRepository = repository,
             coverStorage = mockk(),
-            appContext = mockk(),
+            appContext = context,
             onSaved = onSaved,
             mainDispatcher = UnconfinedTestDispatcher(),
         )

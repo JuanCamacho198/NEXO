@@ -78,6 +78,7 @@ data class EditBookMetadataUiState(
     val coverUri: Uri? = null,
     val coverBytes: ByteArray? = null,
     val isSaving: Boolean = false,
+    val isRefreshing: Boolean = false,
 )
 
 /**
@@ -232,6 +233,60 @@ class EditBookMetadataViewModel(
             )
         }
     }
+
+    /**
+     * The manual counterpart of import-time enrichment: re-asks the metadata
+     * addons for this book, bypassing the response cache, and writes whatever
+     * they could contribute into the row's blanks ([LibraryRepository.refreshLibraryMetadata]).
+     *
+     * Only the fields the merge can fill are copied back into the form, and only
+     * where the form is blank — the reader's unsaved edits are never replaced.
+     * The snackbar distinguishes "something was filled" from "the addons had
+     * nothing to add"; a failure is reported, never thrown.
+     */
+    fun refreshMetadata() {
+        val book = _uiState.value.book ?: return
+        if (_uiState.value.isRefreshing || _uiState.value.isSaving) return
+        _uiState.update { it.copy(isRefreshing = true) }
+
+        viewModelScope.launch(mainDispatcher) {
+            val result = libraryRepository.refreshLibraryMetadata(book.id)
+            _uiState.update { it.copy(isRefreshing = false) }
+
+            result.fold(
+                onSuccess = { changed ->
+                    if (changed) {
+                        libraryRepository.getBookById(book.id)?.let(::fillBlankFields)
+                        _uiEvent.tryEmit(
+                            UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_metadata_saved)),
+                        )
+                    } else {
+                        _uiEvent.tryEmit(
+                            UiEvent.ShowSnackbar(appContext.getString(R.string.edit_metadata_refresh_none)),
+                        )
+                    }
+                },
+                onFailure = {
+                    _uiEvent.tryEmit(
+                        UiEvent.ShowSnackbar(appContext.getString(R.string.edit_metadata_refresh_failed)),
+                    )
+                },
+            )
+        }
+    }
+
+    /** Fill-only form update: a blank field takes the refreshed row, an edited one keeps its value. */
+    private fun fillBlankFields(fresh: Book) =
+        _uiState.update { state ->
+            state.copy(
+                description = state.description.ifBlank { fresh.description.orEmpty() },
+                publisher = state.publisher.ifBlank { fresh.publisher.orEmpty() },
+                publishedDate = state.publishedDate ?: fresh.publishedDate,
+                language = state.language ?: fresh.language,
+                genres = state.genres.ifEmpty { sanitizeChipList(parseChipList(fresh.genre), MAX_GENRES) },
+                tags = state.tags.ifEmpty { sanitizeChipList(parseChipList(fresh.tags), MAX_TAGS) },
+            )
+        }
 
     class Factory(
         private val bookId: String,

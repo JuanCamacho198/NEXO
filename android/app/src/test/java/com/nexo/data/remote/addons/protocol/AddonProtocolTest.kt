@@ -1284,6 +1284,40 @@ class AddonProtocolTest {
     }
 
     @Test
+    fun `parseMetaPayload carries a publisher from a raw envelope and an openlibrary work`() {
+        val raw =
+            AddonPayloads.parseMetaPayload(
+                json("""{ "meta": { "id": "isbn:9780141439518", "name": "Pride", "publisher": "Penguin Classics" } }"""),
+                AddonShape.RAW,
+            )
+        assertEquals("Penguin Classics", raw?.publisher)
+
+        val work =
+            AddonPayloads.parseMetaPayload(
+                json("""{ "key": "/works/OL66554W", "title": "Pride", "publishers": ["Penguin Classics", "John Murray"] }"""),
+                AddonShape.OPENLIBRARY,
+            )
+        assertEquals("Penguin Classics", work?.publisher)
+
+        val noPublishers =
+            AddonPayloads.parseMetaPayload(
+                json("""{ "key": "/works/OL66554W", "title": "Pride", "publishers": [] }"""),
+                AddonShape.OPENLIBRARY,
+            )
+        assertNull(noPublishers?.publisher)
+    }
+
+    @Test
+    fun `parseMetaPayload leaves publisher unset for a legacy v2 book`() {
+        // The v2 book object has no publisher field, so nothing is invented for it.
+        val meta = AddonPayloads.parseMetaPayload(json(legacyV2Meta), AddonShape.LEGACY_V2)
+
+        assertNull(meta?.publisher)
+        val stray = AddonPayloads.parseMetaPayload((json(legacyV2Meta) as JSONObject).put("publisher", "Invented"), AddonShape.LEGACY_V2)
+        assertNull(stray?.publisher)
+    }
+
+    @Test
     fun `parseCatalogPayload never throws for any body and shape combination`() {
         for (shape in AddonShape.entries) {
             for (body in malformedBodies) {

@@ -108,6 +108,7 @@ private fun metaUrl(
 private fun metaAnswer(
     id: String,
     description: String? = null,
+    publisher: String? = null,
     poster: String? = null,
     releaseInfo: String? = null,
     languages: List<String> = emptyList(),
@@ -115,6 +116,7 @@ private fun metaAnswer(
 ): String {
     val meta = JSONObject().put("id", id).put("type", "book").put("name", "Pride and Prejudice")
     if (description != null) meta.put("description", description)
+    if (publisher != null) meta.put("publisher", publisher)
     if (poster != null) meta.put("poster", poster)
     if (releaseInfo != null) meta.put("releaseInfo", releaseInfo)
     meta.put("languages", JSONArray().apply { languages.forEach { put(it) } })
@@ -316,6 +318,28 @@ class LibraryMetadataServiceTest {
             assertEquals(listOf(metaUrl(META_ADDON, "isbn:$ISBN")), transport.calls)
             assertEquals("A novel", enriched?.description)
             assertEquals("1813", enriched?.publishedDate)
+        }
+
+    @Test
+    fun `enrich carries the publisher of the addon answer into the blank column`() =
+        runTest {
+            val transport = FanoutTransport(mapOf(metaUrl(META_ADDON, "isbn:$ISBN") to metaAnswer("isbn:$ISBN", publisher = "Penguin Classics")))
+            val service = serviceFor(rows = listOf(metaRow()), transport = transport, consented = true)
+
+            val enriched = service.enrich(ownedBook(isbn13 = ISBN))
+
+            assertEquals("Penguin Classics", enriched?.publisher)
+        }
+
+    @Test
+    fun `enrich never overwrites a publisher the book already has`() =
+        runTest {
+            val transport = FanoutTransport(mapOf(metaUrl(META_ADDON, "isbn:$ISBN") to metaAnswer("isbn:$ISBN", description = "A novel")))
+            val service = serviceFor(rows = listOf(metaRow()), transport = transport, consented = true)
+
+            val enriched = service.enrich(ownedBook(isbn13 = ISBN, description = "A novel", publisher = "Alma Editorial"))
+
+            assertNull(enriched)
         }
 
     @Test
