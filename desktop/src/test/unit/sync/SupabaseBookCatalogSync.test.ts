@@ -398,6 +398,9 @@ describe('SupabaseBookCatalogSync — fetchCatalog', () => {
       coverObjectPath: null,
       coverHash: null,
       coverMediaType: null,
+      sourceAddonId: null,
+      sourceItemId: null,
+      isbn13: null,
     });
   });
 });
