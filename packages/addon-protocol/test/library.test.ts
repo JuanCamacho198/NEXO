@@ -7,6 +7,7 @@ import {
   type LibraryMetaSource,
 } from '../src/library';
 import type { AddonManifestV3 } from '../src/manifest';
+import { parseMetaPayload } from '../src/payload';
 
 function manifest(overrides: Partial<AddonManifestV3> = {}): AddonManifestV3 {
   return {
@@ -178,6 +179,26 @@ describe('mergeMeta', () => {
       tags: ['Fiction', 'Romance'],
       coverUrl: 'https://covers.example.org/pride.jpg',
     });
+  });
+
+  it('a meta preview carries its publisher into the merge', () => {
+    const meta = parseMetaPayload(
+      {
+        meta: {
+          id: 'isbn:9780141439518',
+          type: 'book',
+          name: 'Pride and Prejudice',
+          publisher: 'Penguin Classics',
+        },
+      },
+      'raw',
+    );
+    expect(meta).not.toBeNull();
+
+    const { book: merged, changed } = mergeMeta(book(), meta!);
+
+    expect(merged.publisher).toBe('Penguin Classics');
+    expect(changed.publisher).toBe('Penguin Classics');
   });
 
   it('a book that already has a description and a cover is not overwritten', () => {

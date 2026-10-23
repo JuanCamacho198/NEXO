@@ -33,6 +33,7 @@ export interface MetaPreview {
   poster?: string;
   description?: string;
   releaseInfo?: string;
+  publisher?: string;
   authors: string[];
   languages: string[];
   subjects: string[];
@@ -138,6 +139,8 @@ function toMetaPreview(value: unknown): MetaPreview | null {
   if (description !== undefined) meta.description = description;
   const releaseInfo = readString(value.releaseInfo);
   if (releaseInfo !== undefined) meta.releaseInfo = releaseInfo;
+  const publisher = readString(value.publisher);
+  if (publisher !== undefined) meta.publisher = publisher;
   const isbn13 = readIsbn13(value.isbn13, id);
   if (isbn13 !== undefined) meta.isbn13 = isbn13;
   return meta;

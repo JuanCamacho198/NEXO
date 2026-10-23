@@ -12,6 +12,10 @@
  * Ids pass through verbatim. The addon resolves its own ids through its own
  * template (`{bookId}`), so prefixing one here would send the addon an id it
  * cannot find.
+ *
+ * There is no publisher in the v2 book object, so `publisher` stays undefined:
+ * inventing a source (an author, a collection name) would be a guess written
+ * into the reader's library.
  */
 
 import { TYPE_BOOK } from '../constants';

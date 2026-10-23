@@ -222,6 +222,43 @@ describe('parseMetaPayload', () => {
     });
   });
 
+  it('carries the publisher of a raw meta envelope', () => {
+    const meta = parseMetaPayload(
+      {
+        meta: {
+          id: 'isbn:9780141439518',
+          type: 'book',
+          name: 'Pride and Prejudice',
+          publisher: 'Penguin Classics',
+        },
+      },
+      'raw',
+    );
+
+    expect(meta?.publisher).toBe('Penguin Classics');
+  });
+
+  it('takes the first Open Library publisher and leaves a missing list undefined', () => {
+    const work = {
+      key: '/works/OL66554W',
+      title: 'Pride and prejudice',
+      publishers: ['Penguin Classics', 'John Murray'],
+    };
+
+    expect(parseMetaPayload(work, 'openlibrary')?.publisher).toBe('Penguin Classics');
+    expect(parseMetaPayload({ ...work, publishers: [] }, 'openlibrary')?.publisher).toBeUndefined();
+    expect(parseMetaPayload({ key: work.key, title: work.title }, 'openlibrary')?.publisher).toBeUndefined();
+  });
+
+  it('leaves publisher undefined for a legacy-v2 book, whose wire format has no such field', () => {
+    const meta = parseMetaPayload(loadFixture('legacy-v2-meta'), 'legacy-v2');
+
+    expect(meta).not.toBeNull();
+    expect(meta?.publisher).toBeUndefined();
+    // A stray `publisher` key is not part of the v2 contract, so it is not read.
+    expect(parseMetaPayload({ ...(loadFixture('legacy-v2-meta') as object), publisher: 'X' }, 'legacy-v2')?.publisher).toBeUndefined();
+  });
+
   it('returns null for a malformed meta envelope', () => {
     for (const body of MALFORMED_BODIES) {
       expect(parseMetaPayload(body, 'raw')).toBeNull();

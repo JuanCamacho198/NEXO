@@ -99,6 +99,8 @@ export function shapeOpenlibraryMeta(body: unknown): MetaPreview | null {
   if (description !== undefined) meta.description = description;
   const releaseInfo = readReleaseInfo(body.first_publish_year, body.first_publish_date);
   if (releaseInfo !== undefined) meta.releaseInfo = releaseInfo;
+  const publisher = readStringArray(body.publishers)[0];
+  if (publisher !== undefined) meta.publisher = publisher;
   const isbn13 = readIsbn13(body.isbn);
   if (isbn13 !== undefined) meta.isbn13 = isbn13;
   return meta;
