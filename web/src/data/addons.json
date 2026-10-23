@@ -50,7 +50,10 @@
         ]
       }
     ],
-    "resources": [{ "name": "catalog", "types": ["book"] }],
+    "resources": [
+      { "name": "catalog", "types": ["book"] },
+      { "name": "meta", "types": ["book"] }
+    ],
     "idPrefixes": ["openlibrary:"],
     "author": "Internet Archive",
     "license": "Mixta abierta",
@@ -82,7 +85,10 @@
         ]
       }
     ],
-    "resources": [{ "name": "catalog", "types": ["book"] }],
+    "resources": [
+      { "name": "catalog", "types": ["book"] },
+      { "name": "meta", "types": ["book"] }
+    ],
     "idPrefixes": ["standardebooks:"],
     "author": "Standard Ebooks",
     "license": "Dominio público",
@@ -114,7 +120,10 @@
         ]
       }
     ],
-    "resources": [{ "name": "catalog", "types": ["book"] }],
+    "resources": [
+      { "name": "catalog", "types": ["book"] },
+      { "name": "meta", "types": ["book"] }
+    ],
     "idPrefixes": ["librivox:"],
     "author": "LibriVox",
     "license": "Dominio público",
@@ -146,7 +155,10 @@
         ]
       }
     ],
-    "resources": [{ "name": "catalog", "types": ["book"] }],
+    "resources": [
+      { "name": "catalog", "types": ["book"] },
+      { "name": "meta", "types": ["book"] }
+    ],
     "author": "Wikimedia",
     "license": "Mixta abierta",
     "languages": ["es"],
@@ -177,7 +189,10 @@
         ]
       }
     ],
-    "resources": [{ "name": "catalog", "types": ["book"] }],
+    "resources": [
+      { "name": "catalog", "types": ["book"] },
+      { "name": "meta", "types": ["book"] }
+    ],
     "author": "Faded Page",
     "license": "Dominio público (CA)",
     "languages": ["en"],

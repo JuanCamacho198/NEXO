@@ -144,6 +144,12 @@
           "types": [
             "book"
           ]
+        },
+        {
+          "name": "meta",
+          "types": [
+            "book"
+          ]
         }
       ],
       "manifest": {
@@ -173,6 +179,12 @@
         "resources": [
           {
             "name": "catalog",
+            "types": [
+              "book"
+            ]
+          },
+          {
+            "name": "meta",
             "types": [
               "book"
             ]
