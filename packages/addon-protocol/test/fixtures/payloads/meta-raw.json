@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "id": "openlibrary:OL66554W",
+    "type": "book",
+    "name": "Pride and Prejudice",
+    "poster": "https://covers.openlibrary.org/b/id/8732464-M.jpg",
+    "description": "A novel of manners.",
+    "releaseInfo": "1813",
+    "authors": ["Jane Austen"],
+    "languages": ["en"],
+    "subjects": ["Courtship -- Fiction"],
+    "isbn13": "9780141439518"
+  }
+}

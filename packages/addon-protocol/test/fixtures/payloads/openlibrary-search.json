@@ -1,0 +1,20 @@
+{
+  "numFound": 2,
+  "start": 0,
+  "docs": [
+    {
+      "key": "/works/OL66554W",
+      "title": "Pride and prejudice",
+      "author_name": ["Jane Austen"],
+      "first_publish_year": 1813,
+      "language": ["eng"],
+      "subject": ["Courtship", "Fiction"],
+      "isbn": ["0141439513", "9780141439518"],
+      "cover_i": 8732464
+    },
+    {
+      "key": "/works/OL1W",
+      "author_name": ["Anonymous"]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "streams": [
+    {
+      "name": "Standard Ebooks",
+      "title": "EPUB · Public domain",
+      "url": "https://standardebooks.org/ebooks/jane-austen/pride-and-prejudice/downloads/jane-austen_pride-and-prejudice.epub",
+      "behaviorHints": { "accessType": "public-domain", "format": "epub" }
+    },
+    {
+      "name": "Open Library",
+      "title": "Borrow for 14 days",
+      "externalUrl": "https://openlibrary.org/borrow/ia/prideandprejudice00aust",
+      "behaviorHints": { "accessType": "borrow" }
+    },
+    {
+      "name": "Archive scan",
+      "url": "https://archive.org/download/prideandprejudice/prideandprejudice.pdf?token=abc",
+      "behaviorHints": {}
+    },
+    {
+      "name": "A stream that links nowhere",
+      "title": "Broken",
+      "behaviorHints": { "accessType": "purchase" }
+    }
+  ]
+}

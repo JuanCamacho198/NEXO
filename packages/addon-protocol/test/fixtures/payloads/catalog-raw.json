@@ -1,0 +1,34 @@
+{
+  "metas": [
+    {
+      "id": "gutenberg:1342",
+      "type": "book",
+      "name": "Pride and Prejudice",
+      "poster": "https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg",
+      "description": "Austen's most famous novel.",
+      "releaseInfo": "1813",
+      "authors": ["Jane Austen"],
+      "languages": ["en"],
+      "subjects": ["Courtship -- Fiction"]
+    },
+    {
+      "id": "isbn:9780141439518",
+      "type": "book",
+      "name": "Pride and Prejudice (Penguin Classics)",
+      "authors": [{ "name": "Jane Austen" }],
+      "languages": ["en"]
+    },
+    {
+      "id": "gutenberg:84",
+      "name": "Frankenstein; Or, The Modern Prometheus"
+    },
+    {
+      "type": "book",
+      "name": "A meta without an id"
+    },
+    {
+      "id": "gutenberg:98",
+      "type": "book"
+    }
+  ]
+}

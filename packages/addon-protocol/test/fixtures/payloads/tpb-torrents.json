@@ -1,0 +1,23 @@
+{
+  "streams": [
+    {
+      "name": "The Pirate Bay",
+      "title": "Pride and Prejudice 1813 1080p",
+      "infoHash": "8f2a1c4b6d9e0f3a5c7b1d2e4f6a8c0b1d3e5f70",
+      "sources": ["tracker:udp://tracker.opentrackr.org:1337/announce", "dht:8f2a1c4b"]
+    },
+    {
+      "name": "The Pirate Bay",
+      "title": "Pride and Prejudice 1813 720p",
+      "infoHash": "c91e3d5f7a9b1c3e5f7a9b1d3c5e7f9a1b3c5d70",
+      "behaviorHints": { "bingeGroup": "tpb" }
+    },
+    {
+      "name": "The Pirate Bay",
+      "title": "Pride and Prejudice 1813 ebook",
+      "url": "https://torrents.example.org/8f2a1c4b6d9e0f3a.torrent",
+      "sources": [{ "type": "torrent", "magnet": "magnet:?xt=urn:btih:8f2a1c4b" }],
+      "behaviorHints": { "accessType": "public-domain" }
+    }
+  ]
+}

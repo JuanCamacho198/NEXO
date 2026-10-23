@@ -1,0 +1,43 @@
+{
+  "count": 3,
+  "next": "https://gutendex.com/books?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1342,
+      "title": "Pride and Prejudice",
+      "authors": [{ "name": "Austen, Jane", "birth_year": 1775, "death_year": 1817 }],
+      "summaries": [],
+      "subjects": ["Courtship -- Fiction", "England -- Fiction"],
+      "bookshelves": ["Best Books Ever Listings"],
+      "languages": ["en"],
+      "copyright": false,
+      "media_type": "Text",
+      "formats": {
+        "text/html": "https://www.gutenberg.org/ebooks/1342.html.images",
+        "image/jpeg": "https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg",
+        "application/epub+zip": "https://www.gutenberg.org/ebooks/1342.epub3.images"
+      },
+      "download_count": 72341
+    },
+    {
+      "id": 84,
+      "title": "Frankenstein; Or, The Modern Prometheus",
+      "authors": [{ "name": "Shelley, Mary Wollstonecraft", "birth_year": 1797, "death_year": 1851 }],
+      "summaries": [],
+      "subjects": ["Science fiction"],
+      "bookshelves": ["Gothic Fiction"],
+      "languages": ["en"],
+      "copyright": false,
+      "media_type": "Text",
+      "formats": {
+        "image/jpeg": "https://www.gutenberg.org/cache/epub/84/pg84.cover.medium.jpg"
+      },
+      "download_count": 60000
+    },
+    {
+      "id": 999,
+      "authors": []
+    }
+  ]
+}
