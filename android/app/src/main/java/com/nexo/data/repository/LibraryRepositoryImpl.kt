@@ -203,11 +203,7 @@ class LibraryRepositoryImpl(
 
     override suspend fun findOwned(sourceItemId: String): Book? {
         if (sourceItemId.isBlank()) return null
-        return bookDao
-            .observeAllBooks()
-            .first()
-            .firstOrNull { it.sourceItemId == sourceItemId }
-            ?.toDomain()
+        return bookDao.getBySourceItemId(sourceItemId)?.toDomain()
     }
 
     override suspend fun startReading(bookId: String): Result<Unit> =

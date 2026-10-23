@@ -442,6 +442,11 @@ class ColdBackupE2ETest {
 
         override suspend fun getBookById(id: String) = books[id]
 
+        override suspend fun getBySourceItemId(sourceItemId: String): BookEntity? =
+            books.values.firstOrNull {
+                it.sourceItemId == sourceItemId && it.deletedAtEpochMillis == null
+            }
+
         override suspend fun upsert(book: BookEntity) {
             books[book.id] = book
         }

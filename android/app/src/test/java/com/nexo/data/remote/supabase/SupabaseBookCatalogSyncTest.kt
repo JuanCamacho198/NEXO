@@ -823,6 +823,11 @@ class SupabaseBookCatalogSyncTest {
 
         override suspend fun getBookById(bookId: String): BookEntity? = booksState.value.firstOrNull { it.id == bookId }
 
+        override suspend fun getBySourceItemId(sourceItemId: String): BookEntity? =
+            booksState.value.firstOrNull {
+                it.sourceItemId == sourceItemId && it.deletedAtEpochMillis == null
+            }
+
         override suspend fun deleteBook(
             bookId: String,
             deletedAt: Long,

@@ -433,6 +433,11 @@ class SupabaseBookCatalogDownloadTest {
 
         override suspend fun getBookById(bookId: String): BookEntity? = byId[bookId]
 
+        override suspend fun getBySourceItemId(sourceItemId: String): BookEntity? =
+            byId.values.firstOrNull {
+                it.sourceItemId == sourceItemId && it.deletedAtEpochMillis == null
+            }
+
         override suspend fun upsert(book: BookEntity) {
             if (failUpsert) throw IllegalStateException("db down")
             byId[book.id] = book

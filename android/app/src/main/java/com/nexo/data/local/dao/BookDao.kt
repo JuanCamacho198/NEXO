@@ -47,6 +47,12 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE id = :bookId LIMIT 1")
     suspend fun getBookById(bookId: String): BookEntity?
 
+    @Query(
+        "SELECT * FROM books WHERE source_item_id = :sourceItemId " +
+            "AND deleted_at IS NULL LIMIT 1",
+    )
+    suspend fun getBySourceItemId(sourceItemId: String): BookEntity?
+
     @Query("UPDATE books SET deleted_at = :deletedAt, updated_at = :deletedAt WHERE id = :bookId")
     suspend fun deleteBook(
         bookId: String,
