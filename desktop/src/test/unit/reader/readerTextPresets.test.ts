@@ -3,6 +3,7 @@ import {
   ALIGN_CYCLE,
   FONT_FAMILY_PRESETS,
   LINE_HEIGHT_PRESETS,
+  MARGIN_MAX_HORIZONTAL_REM,
   MARGIN_MAX_REM,
   MARGIN_MIN_REM,
   MARGIN_STEP_REM,
@@ -56,6 +57,14 @@ describe('readerTextPresets', () => {
     expect(MARGIN_STEP_REM).toBeGreaterThan(0);
     // The step must divide the range, or the slider cannot reach its own max.
     expect((MARGIN_MAX_REM - MARGIN_MIN_REM) % MARGIN_STEP_REM).toBeCloseTo(0);
+  });
+
+  it('gives the horizontal margin more range than the vertical one', () => {
+    // The vertical axis spends a page's height; the horizontal axis spends
+    // width a paginated page has far more of, and 4rem a side left the text
+    // looking full-width in a 1120px page box.
+    expect(MARGIN_MAX_HORIZONTAL_REM).toBeGreaterThan(MARGIN_MAX_REM);
+    expect((MARGIN_MAX_HORIZONTAL_REM - MARGIN_MIN_REM) % MARGIN_STEP_REM).toBeCloseTo(0);
   });
 });
 
