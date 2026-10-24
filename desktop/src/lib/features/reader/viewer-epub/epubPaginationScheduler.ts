@@ -80,13 +80,10 @@ export const REASSERT_FRAMES = 3;
 
 export interface PaginationObservers {
   /**
-   * Start watching the container and the chapter root, if not already watching.
-   * `onContainerResize` and `onContentResize` are invoked outside the observer
-   * callback — see the module note.
+   * Start watching the container, if not already watching. `onContainerResize`
+   * is invoked outside the observer callback — see the module note.
    */
-  attach(container: HTMLElement | null, chapterRoot: HTMLElement | null): void;
-  /** Watch `observed` in place of the current chapter root (a srcdoc swap). */
-  reobserveContent(chapterRoot: HTMLElement | null): void;
+  attach(container: HTMLElement | null): void;
   /** Stop watching everything. */
   detach(): void;
 }
@@ -209,50 +206,57 @@ export function createTurnGate(probe: TurnGateProbe): TurnGate {
 }
 
 /**
- * The two `ResizeObserver`s paginated mode needs, and nothing about what to do
+ * The one `ResizeObserver` paginated mode needs, and nothing about what to do
  * with a resize beyond handing it to the caller on a clean frame.
  *
- * The container observer exists because the container is pinned to one page box
- * and never resizes when the columns grow INSIDE the chapter, so the chapter
- * document's own root and body must be watched separately — that is the one
- * that sees the column set getting taller.
+ * The container observer exists because the container is the element whose box
+ * defines the page, and a window resize or a fullscreen toggle moves it.
+ *
+ * ## Why the chapter's own document is NOT observed
+ *
+ * A second observer used to watch the chapter iframe's `documentElement` and
+ * `body` from this (the app's) realm. That is a CROSS-DOCUMENT registration, and
+ * Chromium cannot settle it: on every chapter swap it reported
+ * `ResizeObserver loop completed with undelivered notifications` on the app
+ * window, which the app's global error handler turned into a reader-facing error
+ * toast — measured on *Prisioneros de la geografía* as 2-3 per chapter crossing,
+ * 65 over 26 crossings.
+ *
+ * Measured attribution (no source change, live app): an observer created here
+ * with an EMPTY callback, observing only the chapter's `html` or only its
+ * `body`, reproduced it (47 errors on the first crossing, and 260-357 over five
+ * when the app's own observer was detached) — so the app's recount logic was
+ * never involved. Observing same-document targets (the `iframe` element, its
+ * parent) produced none, as did observing the container alone.
+ *
+ * Nothing is lost by removing it. The observed boxes are pinned in paginated
+ * mode (the `iframe` is one page tall and `column-width` is the page width), so
+ * a growing column set changes `scrollWidth` and leaves every border box alone:
+ * the observer fired exactly once per chapter — on the new document's first
+ * layout — which `enter()`, `resetForChapter()` and `restoreAfterRerender()`
+ * already recount through `refresh()` and `scheduleCommitRecount()`. A/B on the
+ * live app: with it suppressed for the whole session, eight chapter crossings
+ * produced the same page sequence and the same presses per chapter as the
+ * baseline (22, 1, 3, 21, 1, 3, 21, 1) and 0 loop errors instead of 16.
  */
 export function createPaginationObservers(
   scheduler: FrameScheduler,
-  handlers: { onContainerResize: () => void; onContentResize: () => void },
+  handlers: { onContainerResize: () => void },
 ): PaginationObservers {
   let containerObserver: ResizeObserver | null = null;
-  let contentObserver: ResizeObserver | null = null;
-
-  const observeContent = (chapterRoot: HTMLElement | null): void => {
-    if (typeof ResizeObserver === 'undefined' || !chapterRoot) return;
-    contentObserver?.disconnect();
-    contentObserver = new ResizeObserver(() =>
-      scheduler.coalesce('recount', handlers.onContentResize),
-    );
-    contentObserver.observe(chapterRoot);
-    const body = chapterRoot.ownerDocument?.body;
-    if (body) contentObserver.observe(body);
-  };
 
   return {
-    attach(container, chapterRoot): void {
+    attach(container): void {
       if (container && typeof ResizeObserver !== 'undefined' && !containerObserver) {
         containerObserver = new ResizeObserver(() =>
           scheduler.coalesce('refresh', handlers.onContainerResize),
         );
         containerObserver.observe(container);
       }
-      if (!contentObserver) observeContent(chapterRoot);
-    },
-    reobserveContent(chapterRoot): void {
-      observeContent(chapterRoot);
     },
     detach(): void {
       containerObserver?.disconnect();
       containerObserver = null;
-      contentObserver?.disconnect();
-      contentObserver = null;
     },
   };
 }

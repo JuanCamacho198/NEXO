@@ -12,9 +12,12 @@
  *
  * Recalculation happens on two kinds of signal, both routed through `refresh()`:
  *
- *  - LAYOUT OBSERVATION — entering the mode, a chapter render, a window resize
- *    or fullscreen toggle (the container's box changes, the `ResizeObserver`
- *    fires), and a chapter whose inline extent GROWS (the content observer).
+ *  - LAYOUT OBSERVATION — entering the mode, a chapter render, or a window
+ *    resize / fullscreen toggle (the container's box changes, the
+ *    `ResizeObserver` fires). The chapter's own document is deliberately NOT
+ *    observed: a cross-document registration cannot settle in Chromium and
+ *    reported a loop error on every chapter swap — see
+ *    `createPaginationObservers`.
  *  - A SETTINGS CHANGE — zoom, font size, font family, line height, letter
  *    spacing, paragraph spacing, margins, alignment, direction, hyphenation and
  *    theme. These reflow the chapter WITHOUT changing the page box, so no
@@ -190,13 +193,9 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    * re-assertion as its concern.
    */
   const turnReassert = createTurnReassert(scheduler);
-  /** The two layout observers; the handlers defer to `scheduler`. */
+  /** The layout observer; the handler defers to `scheduler`. */
   const observers = createPaginationObservers(scheduler, {
     onContainerResize: () => refresh(),
-    onContentResize: () => {
-      if (recount()) deps.emitPreciseLocation();
-      reassertClaimedPage();
-    },
   });
   /**
    * The page the reader chose in this chapter, or 0 when they have not turned a
@@ -428,30 +427,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     // setting moved.
     lastWrittenStylesKey = null;
     refresh();
-    observers.attach(deps.getContainerEl(), deps.getChapterRoot?.() ?? null);
-  }
-
-  /**
-   * Put the offset back on the page the reader chose, when a restore has moved
-   * it. The CFI/fragment restore scrolls the chapter to a stored position on up
-   * to three nested animation frames, and `restoreAfterRerender` runs on every
-   * asset-driven srcdoc swap — both can land after the reader has started
-   * turning pages, and with a page layout that is a visible teleport (measured:
-   * a turn to page 6 was followed by a restore to page 10). The claim is only
-   * set by an actual turn, so entering a chapter still honours the stored
-   * position, and it is cleared by `resetForChapter` so a new chapter starts
-   * free.
-   */
-  function reassertClaimedPage(): void {
-    if (claimedPage <= 0 || !deps.isPaginated()) return;
-    const el = scroller();
-    const box = pageBox;
-    if (!el || !box || pageCount <= 0) return;
-    const target = scrollLeftForPage(Math.min(claimedPage, pageCount), box.width, pageCount);
-    if (el.scrollLeft === target) return;
-    el.scrollLeft = target;
-    currentPage = pageFromScrollLeft(el.scrollLeft, box.width, pageCount);
-    deps.emitPreciseLocation();
+    observers.attach(deps.getContainerEl());
   }
 
   /**
@@ -540,9 +516,6 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     const el = scroller();
     if (el) el.scrollLeft = 0;
     refresh();
-    // The frame's content is a new document now; re-observe it, because the old
-    // observation pointed at the previous chapter's root.
-    observers.reobserveContent(deps.getChapterRoot?.() ?? null);
   }
 
   /**
