@@ -18,6 +18,7 @@
     title,
     state: railState,
     books = [],
+    canViewAll = true,
     t,
     onOpen,
     onPrefetch,
@@ -28,6 +29,11 @@
     state: DiscoverRailState;
     /** Already chip-filtered books; used only while the rail is `Loaded`. */
     books?: CatalogBook[];
+    /**
+     * False for a rail with no pageable query (the fixed-source shelves), so the
+     * header renders without a "Ver todo" that could only reopen the same page.
+     */
+    canViewAll?: boolean;
     t: Translate;
     onOpen: (book: CatalogBook) => void;
     /** Optional cache warm on pointer/keyboard intent; threaded to the cards. */
@@ -82,13 +88,15 @@
   <section bind:this={sectionEl} aria-label={title} class="flex flex-col gap-3">
     <div class="flex items-baseline justify-between gap-3">
       <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{title}</h2>
-      <button
-        type="button"
-        class="rounded-md px-2 py-1 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/10"
-        onclick={onViewAll}
-      >
-        {t('discover.rail.viewAll')}
-      </button>
+      {#if canViewAll}
+        <button
+          type="button"
+          class="rounded-md px-2 py-1 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/10"
+          onclick={onViewAll}
+        >
+          {t('discover.rail.viewAll')}
+        </button>
+      {/if}
     </div>
     <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
       {#each visible as book (book.id)}

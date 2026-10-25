@@ -20,17 +20,21 @@ export const BUILTIN_OPENLIBRARY = 'builtin:openlibrary' as CatalogSource;
  * only constructed when `VITE_GOOGLE_BOOKS_KEY` is non-blank (fail-closed).
  */
 export const BUILTIN_GOOGLEBOOKS = 'builtin:googlebooks' as CatalogSource;
+/**
+ * Standard Ebooks source: a first-party OPDS catalog served from
+ * standardebooks.org's Atom feed. Unlike the other curated entries this one has
+ * a real provider, so it is routable for detail and download resolution.
+ */
+export const BUILTIN_STANDARD_EBOOKS = 'builtin:standard-ebooks' as CatalogSource;
 
-/** Closed registry of first-party built-in source names (curated bundle included). */
-const KNOWN_BUILTIN_NAMES = [
-  'gutendex',
-  'openlibrary',
-  'googlebooks',
-  'standard-ebooks',
-  'librivox',
-  'wikisource',
-  'faded-page',
-] as const;
+/**
+ * Closed registry of first-party built-in source names (curated bundle included).
+ * Every name here must be answerable by a registered provider: an entry with no
+ * provider accepts a source id that can never return a book. `librivox`,
+ * `wikisource` and `faded-page` were removed for exactly that reason — they are
+ * audio, wiki-page and HTML-only sources this reader cannot serve.
+ */
+const KNOWN_BUILTIN_NAMES = ['gutendex', 'openlibrary', 'googlebooks', 'standard-ebooks'] as const;
 
 /** addonId = sha256(url) first 16 hex chars (design A6) — lowercase only. */
 const ADDON_ID_RE = /^[0-9a-f]{16}$/;

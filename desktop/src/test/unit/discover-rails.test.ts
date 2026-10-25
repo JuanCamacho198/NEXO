@@ -14,6 +14,7 @@ import {
   DISCOVER_RAIL_COUNT,
   DISCOVER_RAIL_FETCH_LIMIT,
   DISCOVER_RAIL_LIMIT,
+  loadRail,
   RAIL_SCOPE_LIMIT,
   withDeadline,
 } from '$lib/features/discover/railPlan';
@@ -24,7 +25,9 @@ import {
   dayOfYear,
 } from '$lib/features/discover/railRotation';
 import {
+  BUILTIN_GUTENDEX,
   BUILTIN_GOOGLEBOOKS,
+  BUILTIN_STANDARD_EBOOKS,
   catalogError,
   REQUEST_DEADLINE_MS,
   type CatalogBook,
@@ -43,15 +46,18 @@ function readSource(file: string): string {
   return readFileSync(resolve(DISCOVER_DIR, file), 'utf8');
 }
 
-/** 2026-06-10: local day-of-year 161 and start index 0 ⇒ doyle, poe, wilde. */
+/** 2026-06-10: local day-of-year 161 and start index 0 ⇒ doyle, poe. */
 const PINNED_DAY = new Date(2026, 5, 10, 12);
 const pinnedNow = (): Date => PINNED_DAY;
-const PINNED_TERMS = ['arthur conan doyle', 'edgar allan poe', 'oscar wilde'] as const;
+const PINNED_TERMS = ['arthur conan doyle', 'edgar allan poe'] as const;
 const PINNED_KEYS = [
   'discover.rail.author.conan-doyle',
   'discover.rail.author.poe',
-  'discover.rail.author.wilde',
+  'discover.rail.gutendexPopular',
+  'discover.rail.standardEbooks',
 ] as const;
+/** The two fixed-source rails' upstream sources, in plan order. */
+const FIXED_RAIL_SOURCES = [BUILTIN_GUTENDEX, BUILTIN_STANDARD_EBOOKS] as const;
 
 /**
  * Title-cased surname of a rail term: the author credit a fake returns so the
@@ -62,13 +68,17 @@ function railAuthor(term: string): string {
   return surname.charAt(0).toUpperCase() + surname.slice(1);
 }
 
+/**
+ * Rail books carry a cover: a coverless book is dropped from rails by design,
+ * so a fixture without one would hide every shelf it is fed to.
+ */
 function book(id: string, authors: string[] = ['Author']): CatalogBook {
   return {
     id,
     provider: 'googlebooks',
     title: `Title ${id}`,
     authors,
-    coverUrl: null,
+    coverUrl: `https://covers.example.org/${id}.jpg`,
     languages: ['en'],
     subjects: ['Fiction'],
     downloadUrl: null,
@@ -90,6 +100,8 @@ type RailRequest =
 interface FakeBehaviour {
   /** Per-query outcome; an Error value is thrown from `searchSource`. */
   searching?: (query: string) => CatalogBook[] | Error;
+  /** Per-source outcome, applied before `searching` (falls back to it). */
+  bySource?: (sourceId: string, query: string) => CatalogBook[] | Error | undefined;
   searchSourceError?: Error | null;
 }
 
@@ -109,15 +121,17 @@ function recordingProvider(behaviour: FakeBehaviour = {}): {
     },
     async featured(_sort, limit): Promise<PagedResult> {
       requests.push({ kind: 'featured', limit });
-      return paged([]);
+      // The popular rail resolves through this path, so it must answer with a
+      // cover-bearing book for index-stability assertions to see a Loaded rail.
+      return paged([book('gutendex:1342')]);
     },
     supportsFeatured(): boolean {
-      return false;
+      return true;
     },
     async searchSource(sourceId, query, page): Promise<PagedResult> {
       requests.push({ kind: 'searchSource', sourceId, query, page });
       if (behaviour.searchSourceError) throw behaviour.searchSourceError;
-      const outcome = behaviour.searching?.(query) ?? [];
+      const outcome = behaviour.bySource?.(sourceId, query) ?? behaviour.searching?.(query) ?? [];
       if (outcome instanceof Error) throw outcome;
       return paged(outcome);
     },
@@ -125,10 +139,19 @@ function recordingProvider(behaviour: FakeBehaviour = {}): {
       throw catalogError('UNAVAILABLE_DOWNLOAD', 'no usable url');
     },
     listSources(): CatalogSourceInfo[] {
-      return [{ sourceId: BUILTIN_GOOGLEBOOKS, name: 'Google Books', kind: 'builtin' }];
+      return [
+        { sourceId: BUILTIN_GOOGLEBOOKS, name: 'Google Books', kind: 'builtin' },
+        { sourceId: BUILTIN_GUTENDEX, name: 'Gutendex', kind: 'builtin' },
+        { sourceId: BUILTIN_STANDARD_EBOOKS, name: 'Standard Ebooks', kind: 'builtin' },
+      ];
     },
   };
   return { provider, requests };
+}
+
+/** One cover-bearing book per rail, whatever source the fake is answering for. */
+function anyRailBook(sourceId: string, query: string): CatalogBook[] {
+  return [book(`${sourceId}:${query}`, [railAuthor(query)])];
 }
 
 function sourceRequests(requests: RailRequest[]): Extract<RailRequest, { kind: 'searchSource' }>[] {
@@ -138,57 +161,78 @@ function sourceRequests(requests: RailRequest[]): Extract<RailRequest, { kind: '
   );
 }
 
-describe('discover rails — fixed three-rail author shelves', () => {
-  it('plans exactly three distinct author shelves, all termed', () => {
+describe('discover rails — four-rail mixed-source plan', () => {
+  it('plans two rotating author shelves plus one Gutendex and one Standard Ebooks rail', () => {
     const specs = buildRailSpecs(PINNED_DAY);
-    expect(DISCOVER_RAIL_COUNT).toBe(3);
+    expect(DISCOVER_RAIL_COUNT).toBe(4);
     expect(DISCOVER_RAIL_LIMIT).toBe(6);
     expect(RAIL_SCOPE_LIMIT).toBe(24);
     expect(specs).toHaveLength(DISCOVER_RAIL_COUNT);
-    expect(specs.map((spec) => spec.kind)).toEqual(['author', 'author', 'author']);
-    expect(specs.map((spec) => spec.term)).toEqual([...PINNED_TERMS]);
+    expect(specs.map((spec) => spec.kind)).toEqual(['author', 'author', 'popular', 'opds']);
+    // Only the author rails carry a term; the fixed shelves are term-free.
+    expect(specs.filter((spec) => spec.kind === 'author').map((spec) => spec.term)).toEqual([
+      ...PINNED_TERMS,
+    ]);
     expect(specs.map((spec) => spec.titleKey)).toEqual([...PINNED_KEYS]);
-    // Distinct within a day.
-    expect(new Set(specs.map((spec) => spec.term)).size).toBe(DISCOVER_RAIL_COUNT);
-    // Stable for the same local calendar day, shifting across days.
+    // Distinct author terms within a day.
+    const authorTerms = specs
+      .flatMap((spec) => (spec.kind === 'author' ? [spec.term] : []))
+      .filter(Boolean);
+    expect(new Set(authorTerms).size).toBe(PINNED_TERMS.length);
+    // Stable for the same local calendar day.
     expect(buildRailSpecs(new Date(2026, 5, 10, 0, 5))).toEqual(specs);
-    expect(buildRailSpecs(new Date(2026, 5, 11))).not.toEqual(specs);
   });
 
-  it('refreshRails issues one Google Books source search per rail and never featured', async () => {
-    const { provider, requests } = recordingProvider({
-      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
-    });
+  it('rotates only the author shelves and never renumbers a fixed rail', () => {
+    const today = buildRailSpecs(new Date(2026, 5, 10));
+    const tomorrow = buildRailSpecs(new Date(2026, 5, 11));
+    expect(tomorrow).not.toEqual(today);
+    // The two fixed shelves keep their positions across the day boundary.
+    expect(tomorrow[2]).toEqual(today[2]);
+    expect(tomorrow[3]).toEqual(today[3]);
+    expect(tomorrow[2]?.kind).toBe('popular');
+    expect(tomorrow[3]?.kind).toBe('opds');
+    // The author window slid one slot forward.
+    expect(tomorrow[0]).toEqual(today[1]);
+  });
+
+  it('routes each rail kind to its own source, never an accidental empty search', async () => {
+    const { provider, requests } = recordingProvider({ bySource: anyRailBook });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
 
     expect(state.rails).toHaveLength(DISCOVER_RAIL_COUNT);
-    expect(requests.map((request) => request.kind)).toEqual([
-      'searchSource',
-      'searchSource',
-      'searchSource',
+    // The popular rail resolves through `featured('POPULAR')`, not a term search.
+    expect(requests.filter((request) => request.kind === 'featured')).toHaveLength(1);
+    const calls = sourceRequests(requests);
+    expect(calls.map((call) => call.sourceId)).toEqual([
+      BUILTIN_GOOGLEBOOKS,
+      BUILTIN_GOOGLEBOOKS,
+      BUILTIN_STANDARD_EBOOKS,
     ]);
-    for (const call of sourceRequests(requests)) {
-      expect(call.sourceId).toBe(BUILTIN_GOOGLEBOOKS);
-      expect(call.query.trim()).not.toBe('');
-      expect(call.query).not.toContain(':');
-      expect(call.page).toBe(1);
-    }
-    // The retired featured and Gutendex paths are never touched by the rails.
-    expect(requests.some((request) => request.kind === 'featured')).toBe(false);
+    // Author rails search a real term; the Standard Ebooks rail passes none.
+    expect(calls.slice(0, 2).map((call) => call.query)).toEqual([...PINNED_TERMS]);
+    expect(calls[2]?.query).toBe('');
+    for (const call of calls) expect(call.page).toBe(1);
+    // No rail ever issues a keyword search on the composite path.
     expect(requests.some((request) => request.kind === 'search')).toBe(false);
   });
 
   it('keeps rail positions index-stable and publishes the whole plan', async () => {
-    const { provider } = recordingProvider({
-      searching: (query) => [book(`googlebooks:${query}`, [railAuthor(query)])],
-    });
+    const { provider } = recordingProvider({ bySource: anyRailBook });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
 
     expect(state.specs).toHaveLength(DISCOVER_RAIL_COUNT);
-    const loaded = state.rails.map((rail) => (rail.kind === 'Loaded' ? rail.books[0]?.id : ''));
-    expect(loaded).toEqual(PINNED_TERMS.map((term) => `googlebooks:${term}`));
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded', 'Loaded']);
+    const ids = state.rails.map((rail) => (rail.kind === 'Loaded' ? rail.books[0]?.id : ''));
+    expect(ids).toEqual([
+      `${BUILTIN_GOOGLEBOOKS}:${PINNED_TERMS[0]}`,
+      `${BUILTIN_GOOGLEBOOKS}:${PINNED_TERMS[1]}`,
+      // The popular rail comes from the featured fake, the opds rail from its source.
+      'gutendex:1342',
+      `${BUILTIN_STANDARD_EBOOKS}:`,
+    ]);
   });
 
   it('truncates a long rail to the fetch limit while short rails render as-is', async () => {
@@ -196,21 +240,23 @@ describe('discover rails — fixed three-rail author shelves', () => {
       book(`googlebooks:${100 + i}`, [railAuthor(PINNED_TERMS[0])]),
     );
     const { provider } = recordingProvider({
-      searching: (query) =>
-        query === PINNED_TERMS[0] ? many : [book('googlebooks:one', [railAuthor(query)])],
+      bySource: (sourceId, query) =>
+        sourceId === BUILTIN_GOOGLEBOOKS && query === PINNED_TERMS[0]
+          ? many
+          : [book(`${sourceId}:${query}`, [railAuthor(query)])],
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
 
     const longRail = state.rails[0];
     expect(longRail.kind === 'Loaded' ? longRail.books.length : -1).toBe(DISCOVER_RAIL_FETCH_LIMIT);
-    const shortRail = state.rails[2];
+    const shortRail = state.rails[1];
     expect(shortRail.kind === 'Loaded' ? shortRail.books.length : -1).toBe(1);
   });
 
-  it('keeps only the rail author and hides a rail whose page has none', async () => {
+  it('keeps only the rail author and hides an author rail whose page has none', async () => {
     const { provider } = recordingProvider({
-      searching: (query) => {
+      bySource: (sourceId, query) => {
         if (query === PINNED_TERMS[0]) {
           return [
             book('googlebooks:owned', ['Arthur Conan Doyle']),
@@ -220,9 +266,12 @@ describe('discover rails — fixed three-rail author shelves', () => {
             book('googlebooks:authorless', []),
           ];
         }
-        // No book by the rail author: the rail hides outright, never an empty
-        // row and never a fallback to the unfiltered page.
-        return [book('googlebooks:foreign', ['Herman Melville'])];
+        if (sourceId === BUILTIN_GOOGLEBOOKS) {
+          // No book by the rail author: the rail hides outright, never an empty
+          // row and never a fallback to the unfiltered page.
+          return [book('googlebooks:foreign', ['Herman Melville'])];
+        }
+        return [book(`${sourceId}:${query}`)];
       },
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
@@ -233,50 +282,106 @@ describe('discover rails — fixed three-rail author shelves', () => {
       'googlebooks:owned',
     ]);
     expect(state.rails[1]).toEqual({ kind: 'Hidden' });
-    expect(state.rails[2]).toEqual({ kind: 'Hidden' });
+    // The fixed-source rails are not author-filtered, so they still render.
+    expect(state.rails[2].kind).toBe('Loaded');
+    expect(state.rails[3].kind).toBe('Loaded');
   });
 
-  it('gives every rail a distinct query signature so no two shelves share a request', async () => {
-    const { provider, requests } = recordingProvider({
-      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
+  it('gives every rail a distinct source signature so no two shelves share a request', async () => {
+    const { provider, requests } = recordingProvider({ bySource: anyRailBook });
+    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+    await state.refreshRails();
+
+    const signatures = requests.map((request) => {
+      if (request.kind === 'featured') return `featured:POPULAR:${request.limit}`;
+      if (request.kind === 'searchSource') {
+        return `${request.kind}:${request.sourceId}:${request.query}`;
+      }
+      return `${request.kind}:${request.query}`;
+    });
+    expect(signatures).toEqual([
+      `searchSource:${BUILTIN_GOOGLEBOOKS}:${PINNED_TERMS[0]}`,
+      `searchSource:${BUILTIN_GOOGLEBOOKS}:${PINNED_TERMS[1]}`,
+      `featured:POPULAR:${DISCOVER_RAIL_FETCH_LIMIT}`,
+      `searchSource:${BUILTIN_STANDARD_EBOOKS}:`,
+    ]);
+    expect(new Set(signatures).size).toBe(signatures.length);
+  });
+
+  it('exposes the four-rail set through the DiscoverDomainState facade', async () => {
+    const { provider } = recordingProvider({ bySource: anyRailBook });
+    const state = new DiscoverDomainState(provider, {}, { now: pinnedNow });
+    await state.ensureRailsLoaded();
+
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded', 'Loaded']);
+    expect(state.railsState.specs).toHaveLength(DISCOVER_RAIL_COUNT);
+    expect(state.railsState.specs.map((spec) => spec.kind)).toEqual([
+      'author',
+      'author',
+      'popular',
+      'opds',
+    ]);
+    expect(state.isOnline).toBe(true);
+  });
+});
+
+describe('discover rails — coverless books are dropped from rails only', () => {
+  it('drops a coverless book from a rail but keeps its covered siblings', async () => {
+    const { provider } = recordingProvider({
+      bySource: (sourceId, query) => [
+        book(`${sourceId}:covered`, [railAuthor(query)]),
+        { ...book(`${sourceId}:coverless`, [railAuthor(query)]), coverUrl: null },
+      ],
     });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
 
-    const signatures = sourceRequests(requests).map(
-      (request) => `searchSource:${request.sourceId}:${request.query}`,
-    );
-    expect(signatures).toEqual(
-      PINNED_TERMS.map((term) => `searchSource:${BUILTIN_GOOGLEBOOKS}:${term}`),
-    );
-    expect(new Set(signatures).size).toBe(signatures.length);
+    for (const rail of state.rails) {
+      expect(rail.kind).toBe('Loaded');
+      if (rail.kind !== 'Loaded') continue;
+      expect(rail.books.every((entry) => entry.coverUrl !== null)).toBe(true);
+      expect(rail.books).toHaveLength(1);
+    }
   });
 
-  it('exposes the three-shelf set through the DiscoverDomainState facade', async () => {
+  it('hides an all-coverless rail instead of rendering a bare header', async () => {
     const { provider } = recordingProvider({
-      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
+      bySource: (sourceId, query) => [
+        { ...book(`${sourceId}:coverless`, [railAuthor(query)]), coverUrl: null },
+      ],
     });
-    const state = new DiscoverDomainState(provider, {}, { now: pinnedNow });
-    await state.ensureRailsLoaded();
+    // The popular rail resolves via featured(), so it needs its own coverless page.
+    const coverlessPopular: CatalogProvider = {
+      ...provider,
+      featured: async () => paged([{ ...book('gutendex:1'), coverUrl: null }]),
+    };
+    const state = new DiscoverRailsDomainState({ provider: coverlessPopular, now: pinnedNow });
+    await state.refreshRails();
 
-    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded']);
-    expect(state.railsState.specs).toHaveLength(DISCOVER_RAIL_COUNT);
-    expect(state.railsState.specs.map((spec) => spec.term)).toEqual([...PINNED_TERMS]);
-    expect(state.isOnline).toBe(true);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Hidden', 'Hidden', 'Hidden', 'Hidden']);
+  });
+
+  it('keeps coverless books out of the rail loader, not out of search', async () => {
+    // The filter lives on the rail path only: a coverless book still reaches
+    // search results, which the reader explicitly asked for.
+    const rails = readSource('DiscoverRailsDomainState.svelte.ts');
+    expect(rails).toContain('book.coverUrl !== null');
+    const screen = readSource('DiscoverScreen.svelte');
+    expect(screen).not.toContain('coverUrl');
+    const search = readSource('DiscoverDomainState.svelte.ts');
+    expect(search).not.toContain('coverUrl');
   });
 });
 
 describe('discover rails — isolated error and retry', () => {
   it('isolates a failing rail: the other rails keep their books', async () => {
-    const failingTerm = PINNED_TERMS[1];
-    const base = recordingProvider({
-      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
-    });
+    const base = recordingProvider({ bySource: anyRailBook });
     const requests = base.requests;
+    // The opds rail is the one that fails; every other rail answers normally.
     const flaky: CatalogProvider = {
       ...base.provider,
       searchSource: async (sourceId, query, page) => {
-        if (query === failingTerm) {
+        if (sourceId === BUILTIN_STANDARD_EBOOKS) {
           requests.push({ kind: 'searchSource', sourceId, query, page });
           throw catalogError('UPSTREAM_ERROR', 'boom');
         }
@@ -287,18 +392,19 @@ describe('discover rails — isolated error and retry', () => {
     await state.refreshRails();
 
     expect(state.rails[0].kind).toBe('Loaded');
-    expect(state.rails[1]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
+    expect(state.rails[1].kind).toBe('Loaded');
     expect(state.rails[2].kind).toBe('Loaded');
+    expect(state.rails[3]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
     expect(state.settled).toBe(true);
 
     const untouched = state.rails[0];
     const beforeRetry = requests.length;
-    await state.retryRail(1);
+    await state.retryRail(3);
     expect(state.rails[0]).toBe(untouched);
     expect(state.rails[2].kind).toBe('Loaded');
     // Retry re-resolved ONLY the failing rail: exactly one new request, for it.
     expect(requests.slice(beforeRetry)).toEqual([
-      { kind: 'searchSource', sourceId: BUILTIN_GOOGLEBOOKS, query: failingTerm, page: 1 },
+      { kind: 'searchSource', sourceId: BUILTIN_STANDARD_EBOOKS, query: '', page: 1 },
     ]);
 
     // A rail that is not in `Error` is never re-resolved.
@@ -310,10 +416,16 @@ describe('discover rails — isolated error and retry', () => {
     const { provider } = recordingProvider({
       searchSourceError: catalogError('NETWORK_ERROR', 'offline'),
     });
-    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+    const offline: CatalogProvider = {
+      ...provider,
+      featured: async () => {
+        throw catalogError('NETWORK_ERROR', 'offline');
+      },
+    };
+    const state = new DiscoverRailsDomainState({ provider: offline, now: pinnedNow });
     await state.refreshRails();
 
-    expect(state.rails.map((rail) => rail.kind)).toEqual(['Error', 'Error', 'Error']);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Error', 'Error', 'Error', 'Error']);
     expect(state.rails[0]).toEqual({ kind: 'Error', code: 'NETWORK_ERROR', offline: true });
     expect(state.isOnline).toBe(false);
     // NETWORK_ERROR is retryable, so automatic retries are pending; release them.
@@ -321,9 +433,7 @@ describe('discover rails — isolated error and retry', () => {
   });
 
   it('does not refetch a settled rail set on remount', async () => {
-    const { provider, requests } = recordingProvider({
-      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
-    });
+    const { provider, requests } = recordingProvider({ bySource: anyRailBook });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.ensureLoaded();
     const afterFirstMount = requests.length;
@@ -336,9 +446,7 @@ describe('discover rails — isolated error and retry', () => {
 
 describe('discover rails — remount dedup (spec: "Remount does not refetch resolved rails")', () => {
   it('issues no additional provider request when a resolved rail set is mounted again', async () => {
-    const { provider, requests } = recordingProvider({
-      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
-    });
+    const { provider, requests } = recordingProvider({ bySource: anyRailBook });
     // The screen shares one `DiscoverDomainState` singleton, so a remount runs
     // this same load path again; requests are counted, not just state observed.
     const state = new DiscoverDomainState(provider, {}, { now: pinnedNow });
@@ -347,7 +455,7 @@ describe('discover rails — remount dedup (spec: "Remount does not refetch reso
     const afterFirstMount = requests.length;
     expect(afterFirstMount).toBe(DISCOVER_RAIL_COUNT);
     const published = state.rails;
-    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded']);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded', 'Loaded']);
 
     await state.ensureRailsLoaded();
     await state.ensureRailsLoaded();
@@ -378,7 +486,8 @@ describe('discover rails — remount dedup (spec: "Remount does not refetch reso
       },
       async featured(_sort, limit): Promise<PagedResult> {
         requests.push({ kind: 'featured', limit });
-        return paged([]);
+        await gate;
+        return paged([book('gutendex:1342')]);
       },
       supportsFeatured(): boolean {
         return false;
@@ -386,7 +495,7 @@ describe('discover rails — remount dedup (spec: "Remount does not refetch reso
       async searchSource(sourceId, query, page): Promise<PagedResult> {
         requests.push({ kind: 'searchSource', sourceId, query, page });
         await gate;
-        return paged([book(`googlebooks:${query}`, [railAuthor(query)])]);
+        return paged([book(`${sourceId}:${query}`, [railAuthor(query)])]);
       },
       resolveDownloadUrl(): string {
         throw catalogError('UNAVAILABLE_DOWNLOAD', 'no usable url');
@@ -401,7 +510,12 @@ describe('discover rails — remount dedup (spec: "Remount does not refetch reso
     await flushMicrotasks();
     // Every rail is in flight (`Loading`) and no rail has settled yet.
     expect(state.settled).toBe(false);
-    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loading', 'Loading', 'Loading']);
+    expect(state.rails.map((rail) => rail.kind)).toEqual([
+      'Loading',
+      'Loading',
+      'Loading',
+      'Loading',
+    ]);
     expect(requests).toHaveLength(DISCOVER_RAIL_COUNT);
 
     // A remount while `Loading` must not re-request any rail.
@@ -413,39 +527,42 @@ describe('discover rails — remount dedup (spec: "Remount does not refetch reso
 
     expect(requests).toHaveLength(DISCOVER_RAIL_COUNT);
     expect(state.settled).toBe(true);
-    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded']);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded', 'Loaded']);
   });
 });
 
 describe('discover rails — curated author rotation', () => {
-  it('never degrades to an unsorted query across empty, error and retry', async () => {
+  it('never degrades an author rail to an unsorted query across empty, error and retry', async () => {
     const behaviour: FakeBehaviour = {
-      searching: (query) =>
-        query === PINNED_TERMS[2] ? [] : [book('googlebooks:1', [railAuthor(query)])],
+      bySource: (sourceId, query) =>
+        sourceId === BUILTIN_GOOGLEBOOKS && query === PINNED_TERMS[1]
+          ? []
+          : anyRailBook(sourceId, query),
     };
     const { provider, requests } = recordingProvider(behaviour);
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
 
     await state.refreshRails();
-    expect(state.rails[2]).toEqual({ kind: 'Hidden' });
+    expect(state.rails[1]).toEqual({ kind: 'Hidden' });
     expect(state.rails[0].kind).toBe('Loaded');
 
-    behaviour.searching = (query) =>
-      query === PINNED_TERMS[2]
+    behaviour.bySource = (sourceId, query) =>
+      sourceId === BUILTIN_GOOGLEBOOKS && query === PINNED_TERMS[1]
         ? catalogError('UPSTREAM_ERROR', 'boom')
-        : [book('googlebooks:1', [railAuthor(query)])];
+        : anyRailBook(sourceId, query);
     await state.refreshRails();
-    expect(state.rails[2].kind).toBe('Error');
+    expect(state.rails[1].kind).toBe('Error');
     expect(state.rails[0].kind).toBe('Loaded');
 
-    behaviour.searching = (query) => [book('googlebooks:9', [railAuthor(query)])];
-    await state.retryRail(2);
-    expect(state.rails[2].kind).toBe('Loaded');
+    behaviour.bySource = anyRailBook;
+    await state.retryRail(1);
+    expect(state.rails[1].kind).toBe('Loaded');
 
-    const termCalls = sourceRequests(requests);
-    expect(termCalls.length).toBeGreaterThanOrEqual(3);
-    for (const call of termCalls) {
-      expect(call.sourceId).toBe(BUILTIN_GOOGLEBOOKS);
+    const authorCalls = sourceRequests(requests).filter(
+      (call) => call.sourceId === BUILTIN_GOOGLEBOOKS,
+    );
+    expect(authorCalls.length).toBeGreaterThanOrEqual(3);
+    for (const call of authorCalls) {
       expect(call.query.trim()).not.toBe('');
       expect(PINNED_TERMS).toContain(call.query);
       expect(call.page).toBe(1);
@@ -522,24 +639,27 @@ describe('discover rails — curated author rotation', () => {
   });
 
   it('reuses the same shelves across refresh, retry and a fresh mount', async () => {
-    const { provider, requests } = recordingProvider({
-      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
-    });
+    const { provider, requests } = recordingProvider({ bySource: anyRailBook });
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await state.refreshRails();
     await state.refreshRails();
     const remounted = new DiscoverRailsDomainState({ provider, now: pinnedNow });
     await remounted.ensureLoaded();
 
-    const terms = sourceRequests(requests).map((call) => call.query);
-    expect(terms).toHaveLength(9);
+    const terms = sourceRequests(requests)
+      .filter((call) => call.sourceId === BUILTIN_GOOGLEBOOKS)
+      .map((call) => call.query);
+    // Three loads (two refreshes + one mount) × two author rails.
+    expect(terms).toHaveLength(6);
     expect(new Set(terms)).toEqual(new Set(PINNED_TERMS));
-    expect(remounted.specs[2].term).toBe(PINNED_TERMS[2]);
+    expect(remounted.specs[1]?.kind === 'author' ? remounted.specs[1].term : '').toBe(
+      PINNED_TERMS[1],
+    );
   });
 });
 
 describe('discover rails — retired rail paths in code', () => {
-  it('keeps no Recomendados rail, curated first slice, featured rail or Gutendex rail', () => {
+  it('keeps no Recomendados rail, curated first slice or featured rail', () => {
     for (const file of [
       'DiscoverDomainState.svelte.ts',
       'DiscoverRailsDomainState.svelte.ts',
@@ -551,11 +671,16 @@ describe('discover rails — retired rail paths in code', () => {
       expect(source).not.toContain('DISCOVER_RAIL_SPECS');
       expect(source).not.toMatch(/searchSource\(BUILTIN_GUTENDEX, ''/);
     }
-    expect(readSource('railPlan.ts')).toContain(
-      'provider.searchSource(BUILTIN_GOOGLEBOOKS, spec.term, 1)',
+    // Each rail kind routes to the provider that can actually answer it.
+    const plan = readSource('railPlan.ts');
+    expect(plan).toContain('provider.searchSource(BUILTIN_GOOGLEBOOKS, spec.term, 1)');
+    // The popular rail uses the verified sort ordering: an empty term search
+    // took 64s live and would time out every rail deadline.
+    expect(plan).toContain("provider.featured('POPULAR', limit)");
+    expect(plan).not.toContain('BUILTIN_GUTENDEX,');
+    expect(plan).toContain(
+      'provider.searchSource(BUILTIN_STANDARD_EBOOKS, STANDARD_EBOOKS_RAIL_QUERY, 1)',
     );
-    expect(readSource('railPlan.ts')).not.toContain('BUILTIN_GUTENDEX');
-    expect(readSource('railPlan.ts')).not.toContain('provider.featured(');
     // The scoped browse resolves against Google Books too.
     expect(readSource('DiscoverRailsDomainState.svelte.ts')).toContain(
       'this.provider.searchSource(BUILTIN_GOOGLEBOOKS, scope.term, this.scopePage + 1)',
@@ -566,6 +691,8 @@ describe('discover rails — retired rail paths in code', () => {
     const railKeys = [
       'discover.rail.newest',
       'discover.rail.popular',
+      'discover.rail.gutendexPopular',
+      'discover.rail.standardEbooks',
       'discover.rail.thematic.fiction',
       'discover.rail.thematic.classic',
       'discover.rail.thematic.adventure',
@@ -585,6 +712,14 @@ describe('discover rails — retired rail paths in code', () => {
     expect(messagesEs['discover.rail.author.conan-doyle']).toBe('Arthur Conan Doyle');
     expect(messagesEs['discover.rail.newest']).toBe('Recién agregados');
     expect(messagesEs['discover.rail.popular']).toBe('Populares');
+    // The two new rail titles exist in both locales and actually translate.
+    expect(messagesEn['discover.rail.gutendexPopular']).toContain('downloaded');
+    expect(messagesEs['discover.rail.gutendexPopular']).toContain('descargados');
+    expect(messagesEn['discover.rail.standardEbooks']).toContain('Standard Ebooks');
+    expect(messagesEs['discover.rail.standardEbooks']).toContain('Standard Ebooks');
+    expect(messagesEs['discover.rail.standardEbooks']).not.toBe(
+      messagesEn['discover.rail.standardEbooks'],
+    );
   });
 });
 
@@ -618,29 +753,24 @@ describe('discover rails — progressive per-rail publish', () => {
     const slow = new Promise<CatalogBook[]>((resolve) => {
       releaseSlow = resolve;
     });
-    const base = recordingProvider({
-      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
-    }).provider;
+    const base = recordingProvider({ bySource: anyRailBook }).provider;
     const provider: CatalogProvider = {
       ...base,
-      searchSource: async (sourceId, query, page) =>
-        query === PINNED_TERMS[1]
-          ? paged((await slow).slice(0, DISCOVER_RAIL_FETCH_LIMIT))
-          : base.searchSource(sourceId, query, page),
+      featured: async () => paged((await slow).slice(0, DISCOVER_RAIL_FETCH_LIMIT)),
     };
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
 
     const pending = state.refreshRails();
     await flushMicrotasks();
     // Each rail published on its own; nothing waits for the slowest rail.
-    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loading', 'Loaded']);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loading', 'Loaded']);
     expect(state.settled).toBe(false);
 
-    releaseSlow([book('googlebooks:slow', [railAuthor(PINNED_TERMS[1])])]);
+    releaseSlow([book('gutendex:1342', ['Author'])]);
     await pending;
-    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded']);
-    expect(state.rails[1].kind === 'Loaded' ? state.rails[1].books[0]?.id : '').toBe(
-      'googlebooks:slow',
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded', 'Loaded']);
+    expect(state.rails[2].kind === 'Loaded' ? state.rails[2].books[0]?.id : '').toBe(
+      'gutendex:1342',
     );
     expect(state.settled).toBe(true);
   });
@@ -648,13 +778,10 @@ describe('discover rails — progressive per-rail publish', () => {
   it('settles a hung rail to Error at the deadline and never leaves it Loading', async () => {
     vi.useFakeTimers();
     const hung = new Promise<PagedResult>(() => undefined);
-    const base = recordingProvider({
-      searching: (query) => [book('googlebooks:1', [railAuthor(query)])],
-    }).provider;
+    const base = recordingProvider({ bySource: anyRailBook }).provider;
     const provider: CatalogProvider = {
       ...base,
-      searchSource: (sourceId, query, page) =>
-        query === PINNED_TERMS[1] ? hung : base.searchSource(sourceId, query, page),
+      featured: () => hung,
     };
     const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
 
@@ -662,14 +789,15 @@ describe('discover rails — progressive per-rail publish', () => {
     await vi.advanceTimersByTimeAsync(0);
     // One hung rail never blocks the healthy rails from settling.
     expect(state.rails[0].kind).toBe('Loaded');
-    expect(state.rails[2].kind).toBe('Loaded');
-    expect(state.rails[1].kind).toBe('Loading');
+    expect(state.rails[1].kind).toBe('Loaded');
+    expect(state.rails[3].kind).toBe('Loaded');
+    expect(state.rails[2].kind).toBe('Loading');
 
     await vi.advanceTimersByTimeAsync(REQUEST_DEADLINE_MS);
     await pending;
     // A slow source is a timeout, not a connectivity failure: the rail errors
     // with the retryable UPSTREAM_TIMEOUT code and the hero pill stays online.
-    expect(state.rails[1]).toEqual({
+    expect(state.rails[2]).toEqual({
       kind: 'Error',
       code: 'UPSTREAM_TIMEOUT',
       offline: false,
@@ -683,6 +811,58 @@ describe('discover rails — progressive per-rail publish', () => {
     const source = readSource('DiscoverRailsDomainState.svelte.ts');
     expect(source).toContain('this.rails[index] = settled');
     expect(source).not.toMatch(/Promise\.all\(/);
+  });
+});
+
+describe('discover rails — per-kind resolution', () => {
+  function silentProvider(seen: { sourceId: string; query: string }[]): CatalogProvider {
+    return {
+      ...recordingProvider().provider,
+      async searchSource(sourceId, query): Promise<PagedResult> {
+        seen.push({ sourceId, query });
+        return paged([book(`${sourceId}:1`)]);
+      },
+    };
+  }
+
+  it('sends the popular rail to the verified POPULAR featured ordering', async () => {
+    const seen: string[] = [];
+    const specs = buildRailSpecs(PINNED_DAY);
+    const popular = specs.find((spec) => spec.kind === 'popular');
+    expect(popular).toBeDefined();
+    const provider: CatalogProvider = {
+      ...recordingProvider().provider,
+      async featured(sort): Promise<PagedResult> {
+        seen.push(sort);
+        return paged([book('gutendex:1342')]);
+      },
+      async searchSource(sourceId, query): Promise<PagedResult> {
+        seen.push(`searchSource:${sourceId}:${query}`);
+        return paged([book(`${sourceId}:1`)]);
+      },
+    };
+    await loadRail(provider, popular!, 6);
+    // An empty term search took 64s live; the sort ordering answers in ~250ms.
+    expect(seen).toEqual(['POPULAR']);
+  });
+
+  it('sends the opds rail to Standard Ebooks', async () => {
+    const seen: { sourceId: string; query: string }[] = [];
+    const specs = buildRailSpecs(PINNED_DAY);
+    const opds = specs.find((spec) => spec.kind === 'opds');
+    expect(opds).toBeDefined();
+    await loadRail(silentProvider(seen), opds!);
+    expect(seen).toEqual([{ sourceId: BUILTIN_STANDARD_EBOOKS, query: '' }]);
+  });
+
+  it('sends an author rail to Google Books with its term', async () => {
+    const seen: { sourceId: string; query: string }[] = [];
+    await loadRail(silentProvider(seen), {
+      kind: 'author',
+      term: 'herman melville',
+      titleKey: 'discover.rail.author.melville',
+    });
+    expect(seen).toEqual([{ sourceId: BUILTIN_GOOGLEBOOKS, query: 'herman melville' }]);
   });
 });
 
@@ -734,16 +914,16 @@ describe('discover rails — rail-scoped "Ver todo"', () => {
     await state.refreshRails();
     const before = requests.length;
 
-    await state.openScope({ kind: 'term', term: PINNED_TERMS[2], titleKey: PINNED_KEYS[2] });
+    await state.openScope({ kind: 'term', term: PINNED_TERMS[1], titleKey: PINNED_KEYS[1] });
     expect(state.scopeExhausted).toBe(false);
     expect(state.scopeBooks.map((scoped) => scoped.id)).toEqual([
-      `googlebooks:${PINNED_TERMS[2]}:1`,
+      `googlebooks:${PINNED_TERMS[1]}:1`,
     ]);
 
     await state.loadScopeNextPage();
     expect(state.scopeBooks.map((scoped) => scoped.id)).toEqual([
-      `googlebooks:${PINNED_TERMS[2]}:1`,
-      `googlebooks:${PINNED_TERMS[2]}:2`,
+      `googlebooks:${PINNED_TERMS[1]}:1`,
+      `googlebooks:${PINNED_TERMS[1]}:2`,
     ]);
     expect(state.scopeExhausted).toBe(true);
 
@@ -771,7 +951,7 @@ describe('discover rails — rail-scoped "Ver todo"', () => {
     await state.refreshRails();
     const before = requests.length;
 
-    await state.openScope({ kind: 'term', term: PINNED_TERMS[2], titleKey: PINNED_KEYS[2] });
+    await state.openScope({ kind: 'term', term: PINNED_TERMS[1], titleKey: PINNED_KEYS[1] });
     for (let i = 0; i < 20; i += 1) {
       await state.loadScopeNextPage();
     }

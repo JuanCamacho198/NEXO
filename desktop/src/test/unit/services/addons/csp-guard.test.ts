@@ -14,6 +14,11 @@ import { join } from 'node:path';
  * Exception (odd/desktop-prod-csp-fixes, U1): `http://ipc.localhost` is
  * Tauri's own IPC origin. Without it every invoke falls back to postMessage
  * in production builds. It is platform plumbing, not an addon host.
+ *
+ * Exception (discover-rails-0.6.1): `https://standardebooks.org` is the
+ * first-party Standard Ebooks Atom feed. It is a built-in provider endpoint
+ * (`StandardEbooksCatalogProvider`), not an addon host — addons still fetch
+ * through the Rust command and never appear here.
  */
 const CSP_CONNECT_SRC = [
   "'self'",
@@ -28,6 +33,8 @@ const CSP_CONNECT_SRC = [
   'https://openlibrary.org',
   'https://covers.openlibrary.org',
   'https://*.archive.org',
+  // discover-rails-0.6.1: first-party Standard Ebooks feed host.
+  'https://standardebooks.org',
   // sdd/app-auto-update: release-feed host for the Tauri updater endpoints.
   'https://github.com',
   // odd/desktop-prod-csp-fixes U1: Tauri's own IPC origin.
@@ -72,6 +79,8 @@ describe('addon registry CSP guard', () => {
         'https://openlibrary.org',
         'https://covers.openlibrary.org',
         'https://*.archive.org',
+        // discover-rails-0.6.1: first-party Standard Ebooks feed host.
+        'https://standardebooks.org',
         // sdd/app-auto-update: release-feed host for the Tauri updater endpoints.
         'https://github.com',
         // odd/desktop-prod-csp-fixes U1: Tauri's own IPC origin.

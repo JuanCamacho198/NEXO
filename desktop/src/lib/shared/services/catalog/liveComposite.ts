@@ -25,6 +25,7 @@ import { resolveDownloadUrl } from './mappers';
 import { AddonRegistry, getAddonRegistry } from '../addons/AddonRegistry';
 import { addonConsent } from '../addons/AddonConsent';
 import { authorEntriesFor } from '$lib/features/discover/railRotation';
+import { DISCOVER_AUTHOR_RAIL_COUNT } from '$lib/features/discover/railPlan';
 
 // Slice 7 single-state-source: the live composite listens on the SHARED
 // registry instance (the same one the addons singleton mutates), so screen
@@ -42,13 +43,19 @@ export const discoverCache = new PersistentDiscoverCache(new TauriDiscoverCacheP
 
 /**
  * Deterministic startup preload for the author rails: exactly the current day's
- * three page-1 keys, one per rail, all under Google Books. The rotation terms
- * are the only enumerable rail queries, so this stays three keys and disk
- * growth remains bounded. Reads stay fresh-only — preloading only makes an
- * already-valid page reachable sooner.
+ * two page-1 keys (`DISCOVER_AUTHOR_RAIL_COUNT`), one per rotating rail, all
+ * under Google Books. The rotation terms are the only enumerable rail queries,
+ * so this stays two keys and disk growth remains bounded. The Gutendex popular
+ * and Standard Ebooks shelves are deliberately not preloaded: they are one
+ * unpaged feed each, already warmed by the rail itself, and keying them would
+ * add durable rows that never change.
+ * Reads stay fresh-only — preloading only makes an already-valid page reachable
+ * sooner.
  */
 export function discoverPreloadPageKeys(now: Date = new Date()): readonly string[] {
-  return authorEntriesFor(now).map((entry) => pageCacheKey(BUILTIN_GOOGLEBOOKS, entry.term, 1));
+  return authorEntriesFor(now, DISCOVER_AUTHOR_RAIL_COUNT).map((entry) =>
+    pageCacheKey(BUILTIN_GOOGLEBOOKS, entry.term, 1),
+  );
 }
 
 // Google Books is registered only when `VITE_GOOGLE_BOOKS_KEY` is non-blank;

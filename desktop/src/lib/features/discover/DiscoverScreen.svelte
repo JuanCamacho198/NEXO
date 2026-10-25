@@ -131,15 +131,24 @@
     }),
   );
 
-  /** "Ver todo": scope the browse view to this author shelf's term. */
+  /** "Ver todo" is only expressible for a term shelf: only `author` has a term. */
   function openRailScope(index: number): void {
     const spec = discoverState.railsState.specs[index];
-    if (!spec) return;
+    if (!spec || spec.kind !== 'author') return;
     void discoverState.openRailScope({
       kind: 'term',
       term: spec.term,
       titleKey: spec.titleKey,
     });
+  }
+
+  /**
+   * A fixed-source rail (`popular`, `opds`) has no query to page through, so
+   * "Ver todo" would open a scope that can never return more than the rail.
+   * The section omits the control instead of offering a dead end.
+   */
+  function railHasScope(index: number): boolean {
+    return discoverState.railsState.specs[index]?.kind === 'author';
   }
 
   const scopeView = $derived.by<ScopeView | null>(() => {
@@ -328,6 +337,7 @@
         title={railTitles[index] ?? ''}
         state={rail.state}
         books={rail.books}
+        canViewAll={railHasScope(index)}
         {t}
         onOpen={(book) => void discoverState.openDetail(book)}
         onPrefetch={(book) => discoverState.prefetchDetail(book)}

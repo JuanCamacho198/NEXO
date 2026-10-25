@@ -12,6 +12,7 @@ import { join } from 'node:path';
  * - `gutenbergCoverUrl()` -> www.gutenberg.org
  * - `googleBooksCoverUrl()` -> books.google.com
  * - Open Library docs -> covers.openlibrary.org
+ * - `mapStandardEbooksAtomFeed()` -> standardebooks.org (the feed's `<media:thumbnail>`)
  *
  * Only the exact hosts are allowed: no wildcard may widen the image allowlist.
  */
@@ -19,6 +20,7 @@ const COVER_HOSTS = [
   'https://covers.openlibrary.org',
   'https://www.gutenberg.org',
   'https://books.google.com',
+  'https://standardebooks.org',
 ];
 
 function imgSrcDirective(): string {

@@ -12,6 +12,7 @@ import {
 } from '$lib/shared/services/catalog';
 import type { MessageKey } from '$lib/shared/i18n/messages.en';
 import {
+  boundRailPage,
   buildRailSpecs,
   DISCOVER_RAIL_FETCH_LIMIT,
   loadRail,
@@ -392,14 +393,20 @@ export class DiscoverRailsDomainState {
         loadRail(this.provider, spec, DISCOVER_RAIL_FETCH_LIMIT),
         this.timeoutMs,
       );
+      const bounded = boundRailPage(page, DISCOVER_RAIL_FETCH_LIMIT);
       // Free-text rail search ranks criticism and biographies above the works,
-      // so the shelf is the authored subset, bounded to the fetch limit. An
-      // all-foreign page hides the rail instead of rendering a mislabelled row.
-      const books = page.results
-        .filter((book) => matchesAuthorQuery(book, spec.term))
-        .slice(0, DISCOVER_RAIL_FETCH_LIMIT);
-      if (books.length === 0) return { kind: 'Hidden' };
-      return { kind: 'Loaded', books, totalCount: page.totalCount };
+      // so the author shelf is the attributed subset. The fixed-source rails
+      // carry no term to attribute against, so they are never filtered this way.
+      const books =
+        spec.kind === 'author'
+          ? bounded.results.filter((book) => matchesAuthorQuery(book, spec.term))
+          : bounded.results;
+      // Coverless books are dropped from RAILS only (search keeps them): a rail
+      // card is an image-first grid, so a book with no cover renders as a blank
+      // tile. All-coverless collapses to `Hidden`, which renders no section.
+      const withCovers = books.filter((book) => book.coverUrl !== null);
+      if (withCovers.length === 0) return { kind: 'Hidden' };
+      return { kind: 'Loaded', books: withCovers, totalCount: page.totalCount };
     } catch (err) {
       const code = catalogCodeOf(err);
       return { kind: 'Error', code, offline: isOfflineCatalogCode(code) };
