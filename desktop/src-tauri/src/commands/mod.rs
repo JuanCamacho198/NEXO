@@ -10,6 +10,7 @@ pub mod addon_consent;
 pub mod addon_fetch;
 pub mod addon_registry;
 pub mod bookmarks;
+pub mod catalog_fetch;
 pub mod collections;
 pub mod devtools;
 pub mod diagnostics;
@@ -39,6 +40,8 @@ pub use addon_fetch::*;
 pub use addon_registry::*;
 #[allow(unused_imports)]
 pub use bookmarks::*;
+#[allow(unused_imports)]
+pub use catalog_fetch::*;
 #[allow(unused_imports)]
 pub use collections::*;
 #[allow(unused_imports)]
