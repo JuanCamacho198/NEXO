@@ -2,6 +2,7 @@ export {
   BUILTIN_GUTENDEX,
   BUILTIN_GOOGLEBOOKS,
   BUILTIN_OPENLIBRARY,
+  BUILTIN_STANDARD_EBOOKS,
   addonSource,
   addonSourceIdOf,
   parseCatalogSource,
@@ -26,6 +27,13 @@ export {
 export type { CatalogErrorCode } from './errors';
 export { GutendexDataSource, GUTENDEX_BASE_URL } from './GutendexDataSource';
 export {
+  StandardEbooksDataSource,
+  STANDARD_EBOOKS_ATOM_FEED_URL,
+  STANDARD_EBOOKS_BASE_URL,
+  STANDARD_EBOOKS_NEW_RELEASES,
+  standardEbooksXmlParser,
+} from './StandardEbooksDataSource';
+export {
   GoogleBooksDataSource,
   GOOGLE_BOOKS_BASE_URL,
   GOOGLE_BOOKS_MAX_START_INDEX,
@@ -34,6 +42,8 @@ export {
 } from './GoogleBooksDataSource';
 export {
   GoogleBooksCatalogProvider,
+  GutendexCatalogProvider,
+  StandardEbooksCatalogProvider,
   googleBooksKeyFromEnv,
   googleBooksProviderOrNull,
 } from './BuiltInCatalogProviders';
@@ -102,11 +112,13 @@ export {
   mapGoogleBooksVolume,
   mapGutendexBook,
   mapOpenLibraryDoc,
+  mapStandardEbooksAtomFeed,
   mergeResults,
   normalizeMatchKey,
   openLibraryCoverUrl,
   resolveDownloadUrl,
   resolveTotalCount,
+  standardEbooksSlugOf,
   toPagedResult,
 } from './mappers';
 export type {

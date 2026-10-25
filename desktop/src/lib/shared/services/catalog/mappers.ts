@@ -3,7 +3,12 @@
  * Pure functions — fully testable offline with fixture JSON.
  */
 import { catalogError } from './errors';
-import { BUILTIN_GUTENDEX, BUILTIN_GOOGLEBOOKS, BUILTIN_OPENLIBRARY } from './CatalogProvider';
+import {
+  BUILTIN_GUTENDEX,
+  BUILTIN_GOOGLEBOOKS,
+  BUILTIN_OPENLIBRARY,
+  BUILTIN_STANDARD_EBOOKS,
+} from './CatalogProvider';
 import type { CatalogBook, PagedResult } from './CatalogProvider';
 
 export interface GutendexAuthor {
@@ -306,4 +311,128 @@ export function toPagedResult(
   totalCount: number,
 ): PagedResult {
   return { results, nexoPage: computeNextPage(page, results.length, totalCount), totalCount };
+}
+
+// ── Standard Ebooks (Atom/OPDS acquisition feed) ────────────────────
+
+/** Atom namespace the Standard Ebooks feed declares on every element. */
+const ATOM_NS = 'http://www.w3.org/2005/Atom';
+const MEDIA_NS = 'http://search.yahoo.com/mrss/';
+
+/** The enclosure title the feed marks as its default EPUB. */
+const SE_RECOMMENDED_EPUB = 'Recommended compatible epub';
+const SE_EPUB_MIME = 'application/epub+zip';
+
+/**
+ * Namespaced book id from the entry permalink
+ * (`https://standardebooks.org/ebooks/<author-slug>/<book-slug>[/<translator-slug>]`).
+ * The slug pair is stable and unique per work, and the `standard-ebooks:` prefix
+ * keeps it from ever colliding with another provider's id space.
+ */
+export function standardEbooksSlugOf(permalink: string): string | null {
+  const marker = '/ebooks/';
+  const at = permalink.indexOf(marker);
+  if (at === -1) return null;
+  const segments = permalink
+    .slice(at + marker.length)
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter((segment) => segment !== '');
+  // Two segments (author/book) identify the work; a third is the translator and
+  // is deliberately dropped so the id stays stable if the editio retranslates.
+  if (segments.length < 2) return null;
+  return `${segments[0]}/${segments[1]}`;
+}
+
+/**
+ * First https value of a translated-element text content, or null. `querySelector`
+ * is avoided on purpose: the feed's `<content type="html">` carries escaped
+ * markup, and selector matching across the whole document would be ambiguous.
+ */
+function atomText(parent: Element, localName: string): string | null {
+  for (const child of Array.from(parent.children)) {
+    if (child.localName === localName && child.namespaceURI === ATOM_NS) {
+      const text = (child.textContent ?? '').trim();
+      return text === '' ? null : text;
+    }
+  }
+  return null;
+}
+
+/**
+ * Map the Standard Ebooks Atom feed to catalog books. Entries without a title,
+ * an author or an https EPUB link are dropped: a rail card needs all three, and
+ * a book with no download could never be borrowed or read from here.
+ *
+ * `languages` stays empty rather than guessed: the feed carries no language
+ * element (no `xml:lang`, no `dc:language`), and inventing `['en']` would make
+ * the card claim a fact the payload does not state.
+ */
+export function mapStandardEbooksAtomFeed(xml: string, parser: DOMParser): CatalogBook[] {
+  const doc = parser.parseFromString(xml, 'application/xml');
+  // `DOMParser` reports malformed XML as a document-level <parsererror>; an empty
+  // or wrong-root document is never a legitimate "no books" answer.
+  if (doc.getElementsByTagName('parsererror').length > 0) return [];
+  const feed = doc.documentElement;
+  if (feed === null || feed.localName !== 'feed') return [];
+  const entries = Array.from(feed.children).filter(
+    (child) => child.localName === 'entry' && child.namespaceURI === ATOM_NS,
+  );
+  const books: CatalogBook[] = [];
+  for (const entry of entries) {
+    const title = atomText(entry, 'title');
+    const permalink = atomText(entry, 'id');
+    if (title === null || permalink === null) continue;
+    const slug = standardEbooksSlugOf(permalink);
+    if (slug === null) continue;
+    const authorNodes = Array.from(entry.children).filter(
+      (child) => child.localName === 'author' && child.namespaceURI === ATOM_NS,
+    );
+    const authors = authorNodes
+      .map((author) => atomText(author, 'name'))
+      .filter((name): name is string => name !== null);
+    if (authors.length === 0) continue;
+
+    const links = Array.from(entry.children).filter(
+      (child) => child.localName === 'link' && child.namespaceURI === ATOM_NS,
+    );
+    const epub = links.find(
+      (link) =>
+        link.getAttribute('rel') === 'enclosure' &&
+        link.getAttribute('type') === SE_EPUB_MIME &&
+        link.getAttribute('title') === SE_RECOMMENDED_EPUB,
+    );
+    // An acquisition URL that is not https is dropped, exactly like
+    // `resolveDownloadUrl` treats every other provider's download link.
+    const rawDownload = (epub?.getAttribute('href') ?? '').trim();
+    const downloadUrl = rawDownload.startsWith('https://') ? rawDownload : null;
+    if (downloadUrl === null) continue;
+
+    const thumbnail = Array.from(entry.children).find(
+      (child) => child.localName === 'thumbnail' && child.namespaceURI === MEDIA_NS,
+    );
+    const rawCover = (thumbnail?.getAttribute('url') ?? '').trim();
+    const coverUrl = rawCover.startsWith('https://') ? rawCover : null;
+
+    const subjects = Array.from(entry.children)
+      .filter((child) => child.localName === 'category' && child.namespaceURI === ATOM_NS)
+      .map((category) => (category.getAttribute('term') ?? '').trim())
+      .filter((term) => term !== '')
+      .slice(0, 8);
+    const summary = atomText(entry, 'summary');
+
+    books.push({
+      id: `standard-ebooks:${slug}`,
+      provider: BUILTIN_STANDARD_EBOOKS,
+      title,
+      authors,
+      coverUrl,
+      languages: [],
+      subjects,
+      downloadUrl,
+      description: summary ?? undefined,
+      isPublicDomain: true,
+    });
+  }
+  return books;
 }

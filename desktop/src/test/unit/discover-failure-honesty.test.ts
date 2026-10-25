@@ -44,7 +44,8 @@ function book(id: string, authors: string[] = ['Author']): CatalogBook {
     provider: 'googlebooks',
     title: `Title ${id}`,
     authors,
-    coverUrl: null,
+    // Rail books must carry a cover: coverless books are dropped from rails.
+    coverUrl: `https://covers.example.org/${id}.jpg`,
     languages: ['en'],
     subjects: ['Fiction'],
     downloadUrl: null,
@@ -164,7 +165,13 @@ describe('Discover failure honesty — rail state', () => {
 
   function railsWith(outcome: (query: string) => Promise<PagedResult>) {
     const { provider } = scriptedProvider(outcome);
-    return new DiscoverRailsDomainState({ provider, now: pinnedNow });
+    // The plan has four rails and the popular one resolves via `featured`, so
+    // the scripted outcome must cover that path too or it alone would hide.
+    const withFeatured: CatalogProvider = {
+      ...provider,
+      featured: () => outcome('featured'),
+    };
+    return new DiscoverRailsDomainState({ provider: withFeatured, now: pinnedNow });
   }
 
   it('marks every rail Error (not offline) on a 403 upstream failure', async () => {
@@ -173,7 +180,7 @@ describe('Discover failure honesty — rail state', () => {
 
     await state.refreshRails();
 
-    expect(state.rails.map((rail) => rail.kind)).toEqual(['Error', 'Error', 'Error']);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Error', 'Error', 'Error', 'Error']);
     // A permission failure is not a connectivity failure.
     expect(state.rails.every((rail) => rail.kind === 'Error' && !rail.offline)).toBe(true);
     state.dispose();
@@ -183,7 +190,7 @@ describe('Discover failure honesty — rail state', () => {
     const forbidden = catalogError('UPSTREAM_ERROR', 'upstream status 403');
     const failedOnce = { done: false };
     const state = railsWith((query) => {
-      // Fail exactly the first rail request, let the other two succeed.
+      // Fail exactly the first rail request, let the other three succeed.
       if (!failedOnce.done) {
         failedOnce.done = true;
         return Promise.reject(forbidden);
@@ -194,7 +201,7 @@ describe('Discover failure honesty — rail state', () => {
     await state.refreshRails();
 
     expect(state.rails[0]?.kind).toBe('Error');
-    expect(state.rails.filter((rail) => rail.kind === 'Loaded')).toHaveLength(2);
+    expect(state.rails.filter((rail) => rail.kind === 'Loaded')).toHaveLength(3);
     state.dispose();
   });
 

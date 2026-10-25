@@ -62,6 +62,18 @@ export interface ReaderCssOptions {
 export type PaginationCssOptions = PageBox;
 
 /**
+ * The reader's vertical page inset, in `rem`, for paginated mode.
+ *
+ * It is stated separately from the page box because it is a READER SETTING, not
+ * a measurement: the box comes from the container, the inset from the margin
+ * slider. See `buildPaginationCss` for why it cannot stay on `body`.
+ */
+export interface PaginationPageInsets {
+  top: number;
+  bottom: number;
+}
+
+/**
  * Pagination stylesheet.
  *
  * The model is CSS multicolumn on the chapter's root: `column-width` equal to
@@ -87,14 +99,49 @@ export type PaginationCssOptions = PageBox;
  * the inline axis while keeping the container scrollable, so the existing
  * `scroll` listener on the chapter still fires and still drives location
  * emission; only the axis it reads changes.
+ *
+ * ## Why the vertical inset lives on `html` and not on `body`
+ *
+ * `body` is the element that gets FRAGMENTED into columns, and a fragmented
+ * box's vertical padding is applied once to the flow — at the top of the first
+ * column and the bottom of the last one — not once per column. Measured on
+ * *Prisioneros de la geografía* (page box 1120x583, margins 4rem top/bottom):
+ * column 0 had a 159.5px top inset, and all 34 columns after it had a top inset
+ * of exactly 0. The vertical margin control therefore did nothing on every page
+ * except the chapter's first and last, which is what "the vertical margin does
+ * nothing" reported.
+ *
+ * `html` is the multicol CONTAINER: its content box is the column band, so
+ * padding there shifts and shortens every column at once. Its border box stays
+ * at the page height (`box-sizing: border-box`), and `body` is sized to the
+ * resulting content box instead of the raw page height. Measured after the
+ * move: every column reports the same top inset as column 0.
+ *
+ * `insets` is optional and absent means "no vertical inset", so a caller that
+ * has none gets byte-identical output to the pre-inset builder.
  */
-export function buildPaginationCss(opts: PaginationCssOptions): string {
+export function buildPaginationCss(
+  opts: PaginationCssOptions,
+  insets?: PaginationPageInsets | null,
+): string {
   const w = Math.max(1, Math.round(opts.width));
   const h = Math.max(1, Math.round(opts.height));
+  const top = insets && Number.isFinite(insets.top) ? Math.max(0, insets.top) : 0;
+  const bottom = insets && Number.isFinite(insets.bottom) ? Math.max(0, insets.bottom) : 0;
+  const inset = top > 0 || bottom > 0;
+  // The band the columns may occupy inside the padded root. Written as the same
+  // expression `paginatedContentCeiling` uses, so a plate capped to "the page"
+  // fills exactly the column it is printed in.
+  const band = inset ? `calc(${h}px - ${top}rem - ${bottom}rem)` : `${h}px`;
   return `
       html {
         height: ${h}px !important;
         max-height: ${h}px !important;
+        /* The inset must not grow the border box, or the page would be taller
+           than the viewport and the column step would drift out of phase. */
+        box-sizing: border-box !important;
+        ${inset ? `padding-top: ${top}rem !important;` : ''}
+        ${inset ? `padding-bottom: ${bottom}rem !important;` : ''}
         overflow-x: auto !important;
         overflow-y: hidden !important;
         column-width: ${w}px !important;
@@ -110,14 +157,24 @@ export function buildPaginationCss(opts: PaginationCssOptions): string {
         scroll-behavior: auto !important;
       }
       body {
-        height: ${h}px !important;
-        max-height: ${h}px !important;
+        /* The root's content box, not the raw page height: the vertical inset
+           is spent on the root now, and a body taller than the column band
+           would push the last line of every column out of it. */
+        height: ${band} !important;
+        max-height: ${band} !important;
         min-height: 0 !important;
         /* Scrolling mode centres the measure with max-width + margin; a column
            must fill the page box instead, or the text would be a narrow ribbon
            inside a wide column. */
         max-width: none !important;
         margin: 0 !important;
+        /* A fragmented box's vertical padding applies to the whole flow, not to
+           each column, so it belongs to the container above. Horizontal padding
+           is different: measured on every column of the same chapter, so the
+           left/right margins stay here where the reader's measure consumes
+           them. */
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
         overflow: visible !important;
         box-sizing: border-box !important;
       }
@@ -343,7 +400,22 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
   // Pagination wins over the scroll rules below by being emitted last: the
   // scroll path sets `height:auto`, `overflow-y:visible` and a centred
   // `max-width`, and every one of those must lose to the column box.
-  const paginationCss = opts.pagination ? buildPaginationCss(opts.pagination) : '';
+  //
+  // The vertical inset is passed in only for prose: `buildImageOnlyCss` gives a
+  // plate the whole page, and it can only do that if nothing reserves the top
+  // and bottom band. See `buildPaginationCss` for why the inset is the page
+  // box's business and not `body`'s.
+  const paginationCss = opts.pagination
+    ? buildPaginationCss(
+        opts.pagination,
+        opts.layout === 'image-only'
+          ? null
+          : {
+              top: Number.isFinite(opts.margins.top) ? Math.max(0, opts.margins.top) : 0,
+              bottom: Number.isFinite(opts.margins.bottom) ? Math.max(0, opts.margins.bottom) : 0,
+            },
+      )
+    : '';
   // Emitted LAST so it wins the cascade over both the scroll and the pagination
   // blocks above: an image-only document is a plate either way, and both blocks
   // centre `body` at the prose measure.
@@ -393,6 +465,17 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
       body p, body div, body li, body dd, body dt, body blockquote,
       body h1, body h2, body h3, body h4, body h5, body h6 {
         text-align: ${opts.textAlign} !important;
+      }
+      /* Line height needs the same reach, for exactly the same reason, and it
+        was the last setting still written only on body. The book sets
+        line-height: 1.25 on p, on .noindent and on .center, so a declaration on
+        the element beat the inherited one and the control did nothing:
+        measured in the chapter iframe, body resolved 49.92px at 2.4x while
+        every paragraph stayed at 22.75px (18.2px x 1.25) - and stepping to 2.0x
+        moved body to 41.6px and left the paragraphs at 22.75px. */
+      body p, body div, body li, body dd, body dt, body blockquote,
+      body h1, body h2, body h3, body h4, body h5, body h6 {
+        line-height: ${opts.lineHeight} !important;
       }
       /* Paragraph spacing carried no !important and was the only rule in this
         block without it, so the book's own stylesheet won and the control did

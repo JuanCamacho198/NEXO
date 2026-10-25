@@ -758,3 +758,75 @@ describe('epubHighlightOverlay — text-anchor placement fallback', () => {
     );
   });
 });
+
+// ────────────────────────────────────────────────────────────────────
+// The text-anchor fallback indexes the chapter ONCE per render.
+//
+// It used to rebuild the whole chapter's per-character normalized map for
+// every candidate highlight, so a chapter with none of its own highlights
+// still paid one full pass per highlight: measured live on *Prisioneros de la
+// geografía*, 48 821 characters costs 96.2 ms per pass and that book stores 7
+// highlights, so one render burned ~673 ms rebuilding the same string. The
+// tree walk is the first thing that pass does, so counting walks counts passes.
+// ────────────────────────────────────────────────────────────────────
+describe('epubHighlightOverlay — text-anchor index is built once per render', () => {
+  /** Highlights that belong to ANOTHER chapter, so each one needs the fallback. */
+  function foreignTextHighlights(count: number) {
+    return Array.from({ length: count }, (_, i) => ({
+      id: `txt-${i}`,
+      color: '#FACC15',
+      pageNumber: 9,
+      cfi: null,
+      text: `a needle that is not in this chapter ${i}`,
+    }));
+  }
+
+  it('walks the chapter once for N highlights that need the text fallback', () => {
+    const { win, doc } = setupOverlay();
+    const walk = vi.spyOn(doc, 'createTreeWalker');
+    try {
+      win.__epubHighlightOverlay!.render(foreignTextHighlights(5), CHAPTER_HREF, 0);
+      expect(walk).toHaveBeenCalledTimes(1);
+    } finally {
+      walk.mockRestore();
+    }
+  });
+
+  it('never walks the chapter when there is nothing to place by text', () => {
+    const { win, doc } = setupOverlay();
+    const walk = vi.spyOn(doc, 'createTreeWalker');
+    try {
+      win.__epubHighlightOverlay!.render([], CHAPTER_HREF, 0);
+      expect(walk).not.toHaveBeenCalled();
+    } finally {
+      walk.mockRestore();
+    }
+  });
+
+  it('still places a highlight by its stored text, one walk for all of them', () => {
+    const { win, doc, registry } = setupOverlay();
+    const walk = vi.spyOn(doc, 'createTreeWalker');
+    try {
+      win.__epubHighlightOverlay!.render(
+        [
+          {
+            id: 'android-hl',
+            color: '#FACC15',
+            pageNumber: 9,
+            cfi: 'readium:OEBPS/Text/cap1.xhtml',
+            text: 'Segundo parrafo',
+          },
+          ...foreignTextHighlights(4),
+        ],
+        CHAPTER_HREF,
+        0,
+      );
+      expect(registry.rangesFor('epub-hl-yellow').map((r) => r.toString())).toContain(
+        'Segundo parrafo',
+      );
+      expect(walk).toHaveBeenCalledTimes(1);
+    } finally {
+      walk.mockRestore();
+    }
+  });
+});

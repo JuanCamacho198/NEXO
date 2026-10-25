@@ -1,6 +1,6 @@
 /**
  * Addons screen content (slice 7, unit 7b): the read-only first-party section
- * lists exactly the two built-ins with no
+ * lists exactly the three provider-backed built-ins with no
  * install/uninstall affordance and no registry row; the installed list
  * reflects the shared registry (install-by-URL creates exactly one entry,
  * enable/disable persist, uninstall removes the entry and its sources stop
@@ -141,17 +141,22 @@ function manifestTransport(manifest: unknown): AddonTransport {
 }
 
 describe('addons first-party section (read-only)', () => {
-  it('lists exactly the two built-ins', () => {
+  it('lists exactly the three built-ins that have a real provider', () => {
     expect(FIRST_PARTY_BUILTINS.map((s) => s.sourceId)).toEqual([
       'builtin:gutendex',
       'builtin:openlibrary',
+      'builtin:standard-ebooks',
     ]);
-    expect(FIRST_PARTY_BUILTINS.map((s) => s.name)).toEqual(['Gutendex', 'Open Library']);
+    expect(FIRST_PARTY_BUILTINS.map((s) => s.name)).toEqual([
+      'Gutendex',
+      'Open Library',
+      'Standard Ebooks',
+    ]);
   });
 
   it('renders every first-party name with no install/uninstall affordance', () => {
     const { container } = render(AddonsFirstPartySection, { t });
-    for (const name of ['Gutendex', 'Open Library']) {
+    for (const name of ['Gutendex', 'Open Library', 'Standard Ebooks']) {
       expect(container.textContent).toContain(name);
     }
     // No install/uninstall/enable affordance anywhere in the section.

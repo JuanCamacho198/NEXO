@@ -209,6 +209,40 @@ describe('buildPaginationCss', () => {
   });
 });
 
+describe('buildPaginationCss vertical page inset', () => {
+  const box = { width: 1120, height: 583 };
+
+  it('puts the inset on the column container, not on the fragmented body', () => {
+    // `body` is the element fragmented into columns, and a fragmented box's
+    // vertical padding applies to the whole flow — top of the first column and
+    // bottom of the last one. Measured on *Prisioneros de la geografía* at
+    // 1120x583 with 4rem margins: column 0 had a 159.5px top inset and all 34
+    // columns after it had 0, so the vertical margin control did nothing on
+    // every page except the chapter's first and last.
+    const css = buildPaginationCss(box, { top: 2.5, bottom: 3 });
+    expect(css).toMatch(/html \{[^}]*padding-top: 2\.5rem !important/s);
+    expect(css).toMatch(/html \{[^}]*padding-bottom: 3rem !important/s);
+    // The border box must stay the page height, or the column step drifts.
+    expect(css).toMatch(/html \{[^}]*box-sizing: border-box !important/s);
+    expect(css).toMatch(/html \{[^}]*height: 583px !important/s);
+  });
+
+  it('sizes the body to the column band inside the padding', () => {
+    const css = buildPaginationCss(box, { top: 2.5, bottom: 2.5 });
+    // Same expression `paginatedContentCeiling` uses, so a capped plate fills
+    // exactly the column it is printed in.
+    expect(css).toContain('height: calc(583px - 2.5rem - 2.5rem) !important');
+    expect(css).toMatch(/body \{[^}]*padding-top: 0 !important/s);
+    expect(css).toMatch(/body \{[^}]*padding-bottom: 0 !important/s);
+  });
+
+  it('emits no inset at all when the margins are zero, so the page is unchanged', () => {
+    const css = buildPaginationCss(box, { top: 0, bottom: 0 });
+    expect(css).not.toContain('padding-top: 0rem');
+    expect(css).toContain('height: 583px !important');
+  });
+});
+
 describe('buildReaderOverrideCss pagination wiring', () => {
   const base = {
     fontSize: 100,
@@ -244,6 +278,68 @@ describe('buildReaderOverrideCss pagination wiring', () => {
 
   it('an explicit null pagination is still scrolling mode', () => {
     expect(buildReaderOverrideCss({ ...base, pagination: null })).not.toContain('column-width');
+  });
+
+  it('passes the reader’s vertical margin to the page box in paginated prose', () => {
+    // The inset belongs on the column container: on the fragmented `body` it
+    // only insets the chapter's first and last column. See buildPaginationCss.
+    const paginated = buildReaderOverrideCss({
+      ...base,
+      margins: { top: 1, bottom: 4, left: 2, right: 2 },
+      pagination: { width: 1100, height: 583 },
+    });
+    expect(paginated).toMatch(/html \{[^}]*padding-top: 1rem !important/s);
+    expect(paginated).toMatch(/html \{[^}]*padding-bottom: 4rem !important/s);
+  });
+
+  it('leaves an image-only page unpadded, because the plate gets the whole page', () => {
+    const paginated = buildReaderOverrideCss({
+      ...base,
+      pagination: { width: 1100, height: 583 },
+      layout: 'image-only',
+    });
+    expect(paginated).not.toContain('padding-top: 2.5rem');
+    expect(paginated).toContain('max-height: 583px !important');
+  });
+});
+
+describe('buildReaderOverrideCss line-height reach', () => {
+  const base = {
+    fontSize: 100,
+    zoomLevel: 100,
+    themeMode: 'paper',
+    lineHeight: 1.8,
+    letterSpacing: 0,
+    paragraphSpacing: 1,
+    textAlign: 'left',
+    direction: 'ltr',
+    hyphenation: false,
+    margins: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+  };
+
+  it('reaches the text elements, not just body', () => {
+    // EPUB stylesheets routinely set line-height on p/div/headings, and a
+    // declaration on the element beats inheritance from body. Measured on
+    // *Prisioneros de la geografía*: body resolved 49.92px at 2.4x while every
+    // paragraph stayed at 22.75px, the book's own 1.25, so the control moved
+    // nothing.
+    const css = buildReaderOverrideCss({ ...base, lineHeight: 2.2 });
+    const blocks = css.match(/body p, body div[^{]*\{[^}]*line-height: 2\.2 !important;/gs);
+    expect(blocks).not.toBeNull();
+    expect(blocks!.length).toBeGreaterThan(0);
+  });
+
+  it('uses the same reach the alignment rule already had', () => {
+    const css = buildReaderOverrideCss(base);
+    const alignAt = css.indexOf('text-align: left !important;');
+    const lineHeightAt = css.indexOf('line-height: 1.8 !important;', alignAt);
+    expect(alignAt).toBeGreaterThan(-1);
+    // Both selectors name the same element list; the line-height rule follows
+    // the alignment one it was copied from.
+    expect(lineHeightAt).toBeGreaterThan(alignAt);
+    expect(css).toMatch(
+      /body p, body div, body li, body dd, body dt, body blockquote,\s*body h1, body h2, body h3, body h4, body h5, body h6 \{\s*line-height: 1\.8 !important;/s,
+    );
   });
 });
 

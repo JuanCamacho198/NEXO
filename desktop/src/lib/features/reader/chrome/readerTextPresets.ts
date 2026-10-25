@@ -8,9 +8,19 @@ export const PARAGRAPH_SPACING_PRESETS: readonly number[] = [0, 0.5, 1, 1.5, 2, 
  * Margin bounds for the two sliders. The old named bundles (compacto/cómodo/…)
  * are gone: they moved four values at once and never said how much, so the
  * control had to be tried to be understood.
+ *
+ * The two axes do NOT share a bound. The vertical one spends a page's height,
+ * so 4rem a side is already a third of a page box. The horizontal one spends
+ * width that a paginated page has far more of, and at the old 4rem ceiling the
+ * slider topped out while the text still looked wide — measured in a 1120px
+ * page box at 130%: 4rem a side leaves a 992px column. 8rem is where a page
+ * starts to read as a comfortable narrow measure rather than a full-width block.
  */
 export const MARGIN_MIN_REM = 0;
+/** Vertical bound — top and bottom. One screen height to spend. */
 export const MARGIN_MAX_REM = 4;
+/** Horizontal bound — left and right. */
+export const MARGIN_MAX_HORIZONTAL_REM = 8;
 export const MARGIN_STEP_REM = 0.25;
 
 export const ALIGN_CYCLE: readonly ReaderTextAlign[] = [

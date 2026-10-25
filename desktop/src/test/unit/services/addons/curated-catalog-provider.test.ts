@@ -17,34 +17,34 @@ import {
   OL_MIN_GAP_MS,
 } from '$lib/shared/services/catalog/policy';
 
-const CURATED_IDS = [
-  'gutendex',
-  'openlibrary',
-  'standard-ebooks',
-  'librivox',
-  'wikisource',
-  'faded-page',
-];
+/**
+ * The curated bundle is the first-party source list minus every source that has
+ * no provider. `librivox` (audio — this reader cannot play it), `wikisource`
+ * (wiki pages, not books) and `faded-page` were removed because each accepted a
+ * `builtin:` id that could never answer a catalog request. `standard-ebooks`
+ * stayed because it now has a real provider.
+ */
+const CURATED_IDS = ['gutendex', 'openlibrary', 'standard-ebooks'];
 
-const CURATED_NAMES = [
-  'Gutendex',
-  'Open Library',
-  'Standard Ebooks',
-  'LibriVox',
-  'Wikisource',
-  'Faded Page',
-];
+const CURATED_NAMES = ['Gutendex', 'Open Library', 'Standard Ebooks'];
 
 function entryBytes(entry: unknown): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(entry));
 }
 
 describe('curated bundle', () => {
-  it('contains exactly the six first-party manifests in order', () => {
+  it('contains exactly the three first-party manifests in order', () => {
     const entries = (curatedJson as { addons: unknown[] }).addons;
-    expect(entries).toHaveLength(6);
+    expect(entries).toHaveLength(3);
     expect(entries.map((e) => (e as { id: string }).id)).toEqual(CURATED_IDS);
     expect(entries.map((e) => (e as { name: string }).name)).toEqual(CURATED_NAMES);
+  });
+
+  it('drops the three sources this reader could never serve', () => {
+    const ids = (curatedJson as { addons: { id: string }[] }).addons.map((e) => e.id);
+    for (const removed of ['librivox', 'wikisource', 'faded-page']) {
+      expect(ids).not.toContain(removed);
+    }
   });
 
   it('every entry passes the shared manifest validation', () => {
@@ -56,7 +56,7 @@ describe('curated bundle', () => {
 });
 
 describe('CuratedCatalogProvider', () => {
-  it('listSources() returns six curated sources derived from manifest ids', () => {
+  it('listSources() returns three curated sources derived from manifest ids', () => {
     const provider = new CuratedCatalogProvider();
     expect(provider.listSources()).toEqual(
       CURATED_IDS.map((id, i) => ({
@@ -123,7 +123,9 @@ describe('composite integration', () => {
       name: 'Gutendex',
       kind: 'builtin',
     });
-    expect(sources.filter((s) => s.kind === 'curated')).toHaveLength(4);
+    // Only `standard-ebooks` remains curated-but-unowned here; the other two
+    // curated entries are the sources the fake above already claims.
+    expect(sources.filter((s) => s.kind === 'curated')).toHaveLength(1);
   });
 
   it('courtesy policy constants are untouched by the curated layer', () => {

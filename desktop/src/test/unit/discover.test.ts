@@ -14,6 +14,7 @@ import { homeState } from '$lib/features/home/state.svelte';
 import { CompositeCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
 import {
   BUILTIN_GUTENDEX,
+  BUILTIN_STANDARD_EBOOKS,
   type CatalogBook,
   type CatalogFeaturedSort,
   type CatalogProvider,
@@ -311,7 +312,8 @@ function fakeBook(
     provider: 'gutendex',
     title: `Title ${id}`,
     authors,
-    coverUrl: null,
+    // Rail books need a cover: coverless books are dropped from rails by design.
+    coverUrl: `https://covers.example.org/${id}.jpg`,
     languages: ['en'],
     subjects,
     downloadUrl: null,
@@ -323,6 +325,25 @@ function paged(books: CatalogBook[]): PagedResult {
 }
 
 const EMPTY_PAGE: PagedResult = { results: [], nexoPage: null, totalCount: 0 };
+
+/**
+ * The popular rail's default page. Tests that care about an empty featured
+ * response pass `featuredBySort: { POPULAR: [] }` explicitly.
+ */
+const DEFAULT_FEATURED: Partial<Record<CatalogFeaturedSort, CatalogBook[]>> = {
+  POPULAR: [
+    {
+      id: 'gutendex:1342',
+      provider: 'gutendex',
+      title: 'Pride and Prejudice',
+      authors: ['Austen, Jane'],
+      coverUrl: 'https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg',
+      languages: ['en'],
+      subjects: ['Fiction'],
+      downloadUrl: 'https://www.gutenberg.org/ebooks/1342.epub3.images',
+    },
+  ],
+};
 
 interface FakeProviderOptions {
   sources?: CatalogSourceInfo[];
@@ -359,7 +380,10 @@ function fakeProvider(opts: FakeProviderOptions = {}): CatalogProvider & {
       if (opts.featuredError) throw opts.featuredError;
       const outcome = opts.featuredBySort?.[sort];
       if (outcome instanceof Error) throw outcome;
-      return paged(outcome ?? []);
+      // The DISCOVER `popular` rail resolves through this path, so the default
+      // answers one covered book: an empty page would hide that rail and make
+      // every unrelated rail-count assertion read the wrong index.
+      return paged(outcome ?? DEFAULT_FEATURED[sort] ?? []);
     },
     supportsFeatured(_sort: CatalogFeaturedSort): boolean {
       return opts.supports ?? true;
@@ -585,26 +609,35 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
     });
     const state = new DiscoverDomainState(provider, {}, { now: () => new Date(2026, 5, 10) });
     await state.refreshRails();
-    expect(state.rails).toHaveLength(3);
+    expect(state.rails).toHaveLength(4);
     expect(state.rails[0]?.kind).toBe('Loaded');
     expect(state.rails[1]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
+    // The fixed-source rails are untouched by an author shelf's failure.
     expect(state.rails[2]?.kind).toBe('Loaded');
+    expect(state.rails[3]?.kind).toBe('Loaded');
     expect(state.isOnline).toBe(true);
   });
 
-  it('per-rail fail-closed: a term error fails only the last rail', async () => {
-    const provider = fakeProvider({
-      searchSourceByQuery: (query) =>
-        query === 'oscar wilde'
-          ? catalogError('UPSTREAM_ERROR', 'term search down')
-          : [fakeBook('googlebooks:ok', ['Fiction'], [railAuthor(query)])],
-    });
+  it('per-rail fail-closed: a fixed-source error fails only its own rail', async () => {
+    const base = fakeProvider();
+    const provider: CatalogProvider = {
+      ...base,
+      // Everything but Standard Ebooks answers as a covered author book; the
+      // fixed-source rails carry no term, so attribution falls back to an author.
+      searchSource: (sourceId, query) =>
+        sourceId === BUILTIN_STANDARD_EBOOKS
+          ? Promise.reject(catalogError('UPSTREAM_ERROR', 'standard ebooks down'))
+          : Promise.resolve(
+              paged([fakeBook('googlebooks:ok', ['Fiction'], [railAuthor(query) || 'Author'])]),
+            ),
+    };
     const state = new DiscoverDomainState(provider, {}, { now: () => new Date(2026, 5, 10) });
     await state.refreshRails();
-    expect(state.rails).toHaveLength(3);
+    expect(state.rails).toHaveLength(4);
     expect(state.rails[0]?.kind).toBe('Loaded');
     expect(state.rails[1]?.kind).toBe('Loaded');
-    expect(state.rails[2]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
+    expect(state.rails[2]?.kind).toBe('Loaded');
+    expect(state.rails[3]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
   });
 
   it('short rails render as-is and long rails truncate to the fetch limit', async () => {
@@ -665,12 +698,17 @@ describe('desktop-descubrir Phase 3.3 — skeleton, offline retry, discover rout
         if (failing) throw catalogError('NETWORK_ERROR', 'offline');
         return base.searchSource(sourceId, query, page);
       },
+      // The popular rail resolves through featured, so offline covers both paths.
+      featured: async (sort, limit) => {
+        if (failing) throw catalogError('NETWORK_ERROR', 'offline');
+        return base.featured(sort, limit);
+      },
     };
     const state = new DiscoverDomainState(flaky, {}, { now: () => new Date(2026, 5, 10) });
     await state.refreshRails();
     expect(state.isOnline).toBe(false);
-    expect(state.rails).toHaveLength(3);
-    expect(state.rails.map((rail) => rail.kind)).toEqual(['Error', 'Error', 'Error']);
+    expect(state.rails).toHaveLength(4);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Error', 'Error', 'Error', 'Error']);
     expect(state.rails[0]).toEqual({ kind: 'Error', code: 'NETWORK_ERROR', offline: true });
     failing = false;
     await state.refreshRails();

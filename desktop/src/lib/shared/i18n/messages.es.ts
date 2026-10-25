@@ -576,6 +576,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'discover.searchResults': 'Resultados de búsqueda',
   'discover.rail.newest': 'Recién agregados',
   'discover.rail.popular': 'Populares',
+  'discover.rail.gutendexPopular': 'Clásicos más descargados',
+  'discover.rail.standardEbooks': 'Standard Ebooks: novedades',
   'discover.rail.thematic.fiction': 'Ficción',
   'discover.rail.thematic.classic': 'Clásicos',
   'discover.rail.thematic.adventure': 'Aventura',

@@ -1,5 +1,6 @@
 import {
   BUILTIN_GOOGLEBOOKS,
+  BUILTIN_STANDARD_EBOOKS,
   catalogError,
   type CatalogBook,
   type CatalogProvider,
@@ -9,17 +10,29 @@ import type { MessageKey } from '$lib/shared/i18n/messages.en';
 import { authorEntriesFor } from './railRotation';
 
 /**
- * The rail set is exactly three curated author shelves. Every spec carries a
- * non-empty Google Books term, so no rail can ever issue an unsorted query and
- * no rail depends on an upstream ordering Google Books does not expose.
+ * One rail, as a discriminated union so each source is reached through the
+ * resolution its upstream actually supports:
+ *
+ * - `author` — a Google Books term search of a curated author surname.
+ * - `popular` — the Gutendex all-time download ordering (`?sort=popular`).
+ * - `opds` — the Standard Ebooks newest-releases OPDS/Atom shelf.
+ *
+ * The union is the reason `loadRail` needs no capability probing at the call
+ * site: the spec already names the source that can answer it.
  */
-export interface DiscoverRailSpec {
-  kind: 'author';
-  term: string;
-  titleKey: MessageKey;
-}
+export type DiscoverRailSpec =
+  | { kind: 'author'; term: string; titleKey: MessageKey }
+  | { kind: 'popular'; titleKey: MessageKey }
+  | { kind: 'opds'; titleKey: MessageKey };
 
-export const DISCOVER_RAIL_COUNT = 3;
+/** The two rotating author shelves' share of the plan. */
+export const DISCOVER_AUTHOR_RAIL_COUNT = 2;
+/**
+ * Four rails: two rotating authors, one Gutendex popular, one Standard Ebooks.
+ * Fixed count so the plan's length never depends on which sources happen to
+ * answer — a failing source hides its own section, it never renumbers the row.
+ */
+export const DISCOVER_RAIL_COUNT = 4;
 /**
  * Fallback render count used only until the rail container's width is
  * measured. Once measured, the visible count comes from
@@ -63,32 +76,68 @@ export function deriveVisibleRailCount(containerWidth: number): number {
 }
 
 /**
- * Index-stable rail plan: the day's three curated author shelves, best-vetted
- * first. Rebuilt per refresh, so crossing local midnight rolls the window
- * forward one author; the selection formula lives in `railRotation.ts`.
+ * Index-stable rail plan: the day's two rotating author shelves first, then the
+ * two fixed-source shelves. Rebuilt per refresh, so crossing local midnight
+ * rolls the author window forward; the selection formula lives in
+ * `railRotation.ts`. The fixed rails never move, so a refresh can only change
+ * positions 0–1 and a settled rail is never renumbered by a neighbour's failure.
  */
 export function buildRailSpecs(now: Date = new Date()): readonly DiscoverRailSpec[] {
-  return authorEntriesFor(now, DISCOVER_RAIL_COUNT).map((entry) => ({
-    kind: 'author',
-    term: entry.term,
-    titleKey: entry.titleKey,
-  }));
+  const authorRails: DiscoverRailSpec[] = authorEntriesFor(now, DISCOVER_AUTHOR_RAIL_COUNT).map(
+    (entry) => ({
+      kind: 'author',
+      term: entry.term,
+      titleKey: entry.titleKey,
+    }),
+  );
+  return [
+    ...authorRails,
+    { kind: 'popular', titleKey: 'discover.rail.gutendexPopular' },
+    { kind: 'opds', titleKey: 'discover.rail.standardEbooks' },
+  ];
 }
 
 /**
- * Resolve one rail through Google Books. Rails are non-ordering author shelves,
- * so this is always a per-source search of a non-empty term; `searchSource`
- * read-through-caches the page, so a cold fan-out of three rails stays within
- * the shared page cache and never gratuitously multiplies quota pressure.
- * The `limit` parameter is retained for call-site/compatibility stability: the
- * Google Books datasource owns its own page size and the state layer slices.
+ * Resolve one rail through the provider named by its own kind. The `limit` is
+ * used by the fixed-source rails, which ask for exactly one row; the author
+ * path keeps passing it for call-site compatibility, because the Google Books
+ * datasource owns its own page size and the state layer slices.
  */
 export function loadRail(
   provider: CatalogProvider,
   spec: DiscoverRailSpec,
-  _limit: number = DISCOVER_RAIL_FETCH_LIMIT,
+  limit: number = DISCOVER_RAIL_FETCH_LIMIT,
 ): Promise<PagedResult> {
-  return provider.searchSource(BUILTIN_GOOGLEBOOKS, spec.term, 1);
+  switch (spec.kind) {
+    case 'author':
+      // Non-ordering author shelf: a per-source search of a non-empty term.
+      // `searchSource` read-through-caches the page, so a cold fan-out stays
+      // within the shared page cache and never multiplies quota pressure.
+      return provider.searchSource(BUILTIN_GOOGLEBOOKS, spec.term, 1);
+    case 'popular':
+      // The featured POPULAR ordering, never an empty term search: measured
+      // against the live API, `?search=&page=1` is an unfiltered full scan that
+      // took 64s, while `?sort=popular` answers in ~250ms. The rail deadline is
+      // 15s, so the search shape would time out every time.
+      return provider.featured('POPULAR', limit);
+    case 'opds':
+      // Standard Ebooks publishes one newest-releases feed; the provider maps
+      // that shelf to a page and slices it to the requested row width.
+      return provider.searchSource(BUILTIN_STANDARD_EBOOKS, STANDARD_EBOOKS_RAIL_QUERY, 1);
+  }
+}
+
+/** The Standard Ebooks feed has no query parameter; the term is ignored upstream. */
+const STANDARD_EBOOKS_RAIL_QUERY = '';
+
+/**
+ * Rails fetch one row, but a source may return its whole feed. Bound the page
+ * to `limit` so the state layer never holds more cards than the widest
+ * supported viewport can draw.
+ */
+export function boundRailPage(page: PagedResult, limit: number): PagedResult {
+  if (page.results.length <= limit) return page;
+  return { ...page, results: page.results.slice(0, limit) };
 }
 
 /**

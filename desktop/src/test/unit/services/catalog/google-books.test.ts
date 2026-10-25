@@ -6,6 +6,7 @@ import {
   BUILTIN_GOOGLEBOOKS,
   BUILTIN_GUTENDEX,
   BUILTIN_OPENLIBRARY,
+  BUILTIN_STANDARD_EBOOKS,
   parseCatalogSource,
 } from '$lib/shared/services/catalog/CatalogProvider';
 import type {
@@ -382,11 +383,13 @@ describe('composite fan-out with the key-gated Google Books provider', () => {
   it('absent key: no googlebooks source is registered (fail-closed)', () => {
     const sources = defaultCatalogProviders([], undefined, '').flatMap((p) => p.listSources());
     expect(sources.map((s) => s.sourceId)).not.toContain(BUILTIN_GOOGLEBOOKS);
+    // Standard Ebooks is a real provider regardless of the Google Books key.
     expect(sources.filter((s) => s.kind === 'builtin').map((s) => s.sourceId)).toEqual([
       BUILTIN_GUTENDEX,
       BUILTIN_OPENLIBRARY,
+      BUILTIN_STANDARD_EBOOKS,
     ]);
-    expect(sources.filter((s) => s.kind === 'curated')).toHaveLength(6);
+    expect(sources.filter((s) => s.kind === 'curated')).toHaveLength(3);
   });
 
   it('present key: Google Books sits after Open Library and before curated', () => {
@@ -395,6 +398,7 @@ describe('composite fan-out with the key-gated Google Books provider', () => {
       BUILTIN_GUTENDEX,
       BUILTIN_OPENLIBRARY,
       BUILTIN_GOOGLEBOOKS,
+      BUILTIN_STANDARD_EBOOKS,
     ]);
     const googleIndex = sources.findIndex((s) => s.sourceId === BUILTIN_GOOGLEBOOKS);
     const curatedIndex = sources.findIndex((s) => s.kind === 'curated');

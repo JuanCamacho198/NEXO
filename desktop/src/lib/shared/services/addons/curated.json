@@ -22,27 +22,6 @@
       "version": "1.0.0",
       "catalogs": [{ "type": "book-catalog", "id": "standard-ebooks", "name": "Standard Ebooks" }],
       "resources": ["search"]
-    },
-    {
-      "id": "librivox",
-      "name": "LibriVox",
-      "version": "1.0.0",
-      "catalogs": [{ "type": "book-catalog", "id": "librivox", "name": "LibriVox" }],
-      "resources": ["search"]
-    },
-    {
-      "id": "wikisource",
-      "name": "Wikisource",
-      "version": "1.0.0",
-      "catalogs": [{ "type": "book-catalog", "id": "wikisource", "name": "Wikisource" }],
-      "resources": ["search"]
-    },
-    {
-      "id": "faded-page",
-      "name": "Faded Page",
-      "version": "1.0.0",
-      "catalogs": [{ "type": "book-catalog", "id": "faded-page", "name": "Faded Page" }],
-      "resources": ["search"]
     }
   ]
 }

@@ -6,7 +6,10 @@ import {
   type AddonManifest,
 } from '$lib/shared/services/addons/AddonRegistry';
 import { AddonCatalogProvider } from '$lib/shared/services/addons/AddonCatalogProvider';
-import { defaultCatalogProviders } from '$lib/shared/services/catalog/CompositeCatalogProvider';
+import {
+  CompositeCatalogProvider,
+  defaultCatalogProviders,
+} from '$lib/shared/services/catalog/CompositeCatalogProvider';
 import { addonIdFromUrl } from '$lib/shared/services/addons/addonId';
 
 const VALID_MANIFEST: AddonManifest = {
@@ -233,15 +236,26 @@ describe('AddonCatalogProvider + dynamic composite', () => {
 
     const rows = await registry.listInstalled();
     const providers = defaultCatalogProviders(rows);
+    // These tests read the RAW provider list, not the composite's deduped one,
+    // so the curated bundle still lists its `standard-ebooks` copy here.
     const sources = providers.flatMap((p) => p.listSources());
-    expect(sources.filter((s) => s.kind === 'addon')).toHaveLength(1);
-    expect(sources.filter((s) => s.kind === 'addon')[0].sourceId).toBe(`addon:${store.rows[1].id}`);
-    // built-ins first, curated next (6 sources), addons last
-    expect(sources[0].kind).toBe('builtin');
-    expect(sources[1].kind).toBe('builtin');
-    expect(sources[2].kind).toBe('curated');
-    expect(sources[7].kind).toBe('curated');
-    expect(sources[8].kind).toBe('addon');
+    const addons = sources.filter((s) => s.kind === 'addon');
+    expect(addons).toHaveLength(1);
+    expect(addons[0].sourceId).toBe(`addon:${store.rows[1].id}`);
+    expect(sources.map((s) => s.kind)).toEqual([
+      // Gutendex, Open Library, Standard Ebooks (first-party providers).
+      'builtin',
+      'builtin',
+      'builtin',
+      // Curated bundle: gutendex, openlibrary, standard-ebooks.
+      'curated',
+      'curated',
+      'curated',
+      // The single enabled addon.
+      'addon',
+    ]);
+    // The last entry is the enabled addon (install order, disabled excluded).
+    expect(sources[sources.length - 1].sourceId).toBe(`addon:${store.rows[1].id}`);
   });
 
   it('uninstall isolates: remaining composite keeps built-ins and other addons', async () => {
@@ -253,24 +267,33 @@ describe('AddonCatalogProvider + dynamic composite', () => {
 
     const rows = await registry.listInstalled();
     const sources = defaultCatalogProviders(rows).flatMap((p) => p.listSources());
-    expect(sources.filter((s) => s.kind === 'builtin')).toHaveLength(2);
-    expect(sources.filter((s) => s.kind === 'curated')).toHaveLength(6);
+    expect(sources.filter((s) => s.kind === 'builtin')).toHaveLength(3);
+    expect(sources.filter((s) => s.kind === 'curated')).toHaveLength(3);
     expect(sources.filter((s) => s.kind === 'addon')).toHaveLength(1);
     expect(sources.some((s) => s.sourceId === 'builtin:gutendex')).toBe(true);
   });
 
-  it('defaultCatalogProviders with zero addons matches the zero-addon parity set', () => {
+  it('defaultCatalogProviders with zero addons keeps three real built-in sources', () => {
     const providers = defaultCatalogProviders([]);
     const kinds = providers.flatMap((p) => p.listSources()).map((s) => s.kind);
     expect(kinds).toEqual([
+      // Gutendex, Open Library, Standard Ebooks.
       'builtin',
       'builtin',
+      'builtin',
+      // Curated bundle.
       'curated',
       'curated',
       'curated',
-      'curated',
-      'curated',
-      'curated',
+    ]);
+    // The composite dedupes the shared `standard-ebooks` id down to one source,
+    // and the first-party provider wins that dedupe.
+    const deduped = new CompositeCatalogProvider(providers).listSources();
+    expect(deduped.map((s) => s.kind)).toEqual(['builtin', 'builtin', 'builtin']);
+    expect(deduped.map((s) => s.sourceId)).toEqual([
+      'builtin:gutendex',
+      'builtin:openlibrary',
+      'builtin:standard-ebooks',
     ]);
   });
 });

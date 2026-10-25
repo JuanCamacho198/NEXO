@@ -76,6 +76,7 @@ describe('rail visible count — render wiring', () => {
   it('fetches the rail page at the max render count, not the unmeasured default', () => {
     const source = readSource('DiscoverRailsDomainState.svelte.ts');
     expect(source).toContain('loadRail(this.provider, spec, DISCOVER_RAIL_FETCH_LIMIT)');
-    expect(source).toContain('.slice(0, DISCOVER_RAIL_FETCH_LIMIT)');
+    // A source that returns a whole feed is bounded to one row's worth of cards.
+    expect(source).toContain('boundRailPage(page, DISCOVER_RAIL_FETCH_LIMIT)');
   });
 });

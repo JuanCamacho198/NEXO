@@ -3,6 +3,7 @@ import { CatalogError } from '$lib/shared/services/catalog/errors';
 import {
   BUILTIN_GUTENDEX,
   BUILTIN_OPENLIBRARY,
+  BUILTIN_STANDARD_EBOOKS,
   addonSource,
   addonSourceIdOf,
   parseCatalogSource,
@@ -14,6 +15,15 @@ describe('parseCatalogSource (strict source ids)', () => {
   it('accepts the exact built-in ids', () => {
     expect(parseCatalogSource('builtin:gutendex')).toBe(BUILTIN_GUTENDEX);
     expect(parseCatalogSource('builtin:openlibrary')).toBe(BUILTIN_OPENLIBRARY);
+    expect(parseCatalogSource('builtin:standard-ebooks')).toBe(BUILTIN_STANDARD_EBOOKS);
+  });
+
+  it('rejects the removed sources that have no provider', () => {
+    // Each of these once parsed as a valid source and could never answer a
+    // request; the registry is closed so the id now fails fast.
+    for (const removed of ['builtin:librivox', 'builtin:wikisource', 'builtin:faded-page']) {
+      expect(() => parseCatalogSource(removed)).toThrowError(CatalogError);
+    }
   });
 
   it('accepts addon sources with a 16-hex addonId', () => {

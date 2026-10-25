@@ -294,7 +294,8 @@ fn main() {
             commands::discardRemoteDownload,
             commands::protectSecret,
             commands::unprotectSecret,
-            commands::fetchUpdateFeed
+            commands::fetchUpdateFeed,
+            commands::fetchCatalogFeed
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

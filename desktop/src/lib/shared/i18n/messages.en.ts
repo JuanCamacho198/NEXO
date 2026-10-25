@@ -568,6 +568,8 @@ export const messagesEn = {
   'discover.searchResults': 'Search results',
   'discover.rail.newest': 'Recently added',
   'discover.rail.popular': 'Popular',
+  'discover.rail.gutendexPopular': 'Most downloaded classics',
+  'discover.rail.standardEbooks': 'Standard Ebooks: new releases',
   'discover.rail.thematic.fiction': 'Fiction',
   'discover.rail.thematic.classic': 'Classics',
   'discover.rail.thematic.adventure': 'Adventure',

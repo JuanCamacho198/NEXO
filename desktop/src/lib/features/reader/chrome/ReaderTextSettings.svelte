@@ -22,6 +22,7 @@
   import {
     FONT_FAMILY_PRESETS,
     LINE_HEIGHT_PRESETS,
+    MARGIN_MAX_HORIZONTAL_REM,
     MARGIN_MAX_REM,
     MARGIN_MIN_REM,
     MARGIN_STEP_REM,
@@ -269,11 +270,14 @@
 {#snippet marginSlider(
   label: string,
   value: number,
+  max: number,
   testid: string,
   oninput: (value: number) => void,
 )}
   <!-- Two axes instead of five named bundles: "Cómodo" never said how much, and
-    a reader who wants wide margins but tight leading had no way to say it. -->
+    a reader who wants wide margins but tight leading had no way to say it.
+    Each axis carries its own ceiling: the vertical one spends a page's height,
+    the horizontal one width a page has far more of. -->
   <div class="flex flex-col gap-1.5">
     <div class="flex items-center justify-between">
       <span class="text-sm text-(--color-text-muted)">{label}</span>
@@ -282,7 +286,7 @@
     <input
       type="range"
       min={MARGIN_MIN_REM}
-      max={MARGIN_MAX_REM}
+      {max}
       step={MARGIN_STEP_REM}
       {value}
       data-testid={testid}
@@ -411,12 +415,14 @@
             {@render marginSlider(
               t('reader.margin_horizontal'),
               horizontalMargin(),
+              MARGIN_MAX_HORIZONTAL_REM,
               'margins-horizontal',
               setHorizontalMargin,
             )}
             {@render marginSlider(
               t('reader.margin_vertical'),
               verticalMargin(),
+              MARGIN_MAX_REM,
               'margins-vertical',
               setVerticalMargin,
             )}

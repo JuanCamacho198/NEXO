@@ -161,91 +161,114 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
   // DOM instead: whitespace-insensitive first match across concatenated
   // text nodes, mapped back to a DOM Range. Returns null when nothing
   // usable is found (short needle, no match, mapping failure).
-  function findTextRange(doc, needle) {
+  function locate(nodes, offset) {
+    for (var k = nodes.length - 1; k >= 0; k--) {
+      if (offset >= nodes[k].start) {
+        var local = offset - nodes[k].start;
+        if (local > nodes[k].len) local = nodes[k].len;
+        return { node: nodes[k].node, offset: local };
+      }
+    }
+    return null;
+  }
+
+  function normalizeForMatch(str) {
+    if (!str) return '';
+    var s = String(str);
+    s = s.replace(/\uFFFD/g, '').replace(/�/g, '');
+    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    s = s.toLowerCase();
+    s = s.replace(/[\u00A1!\u00BF?"\u201C\u201D\u2018\u2019'.,;:()\[\]{}<>\u00AB\u00BB\u2014\u2013\-]/g, ' ');
+    s = s.replace(/[^a-z0-9\\s]/g, ' ');
+    s = s.replace(/\\s+/g, ' ').trim();
+    return s;
+  }
+
+  function buildNormalizedWithMap(text) {
+    var norm = '';
+    var map = [];
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (ch === '\uFFFD' || ch === '�') { norm += '?'; map.push(i); continue; }
+      var chunk;
+      try { chunk = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e2) { chunk = ch; }
+      chunk = chunk.toLowerCase();
+      for (var ci = 0; ci < chunk.length; ci++) {
+        var c = chunk.charAt(ci);
+        if (/[\u00A1!\u00BF?"\u201C\u201D\u2018\u2019'.,;:()\[\]{}<>\u00AB\u00BB\u2014\u2013\-]/.test(c) || /[^a-z0-9\\s]/.test(c)) {
+          c = ' ';
+        }
+        var isSpace = /\\s/.test(c);
+        if (isSpace) {
+          if (norm.length === 0 || norm.charAt(norm.length - 1) !== ' ') {
+            norm += ' ';
+            map.push(i);
+          }
+        } else {
+          if (/[a-z0-9]/.test(c)) {
+            norm += c;
+            map.push(i);
+          } else if (c.trim()) {
+            norm += c;
+            map.push(i);
+          }
+        }
+      }
+    }
+    norm = norm.replace(/\\s+/g, ' ').trim();
+    while (map.length > norm.length) map.pop();
+    return { normalized: norm, map: map };
+  }
+
+  // The chapter's text, read and normalized ONCE per render.
+  //
+  // This used to live inside findTextRange, so every highlight that needed the
+  // text fallback rebuilt the whole chapter's per-character normalized map to
+  // search for its own needle. Measured on *Prisioneros de la geografía*
+  // (48 821 characters, 105 text nodes in one chapter) one pass costs 96.2 ms,
+  // and that book stores 7 highlights — none of them in most chapters — so a
+  // single render rebuilt the SAME string 7 times and spent ~673 ms, which is
+  // the 390-1140 ms long task seen while walking chapters.
+  //
+  // Built lazily, so a render with nothing to place by text — the common case,
+  // a chapter with no highlights of its own — never pays for it at all.
+  function buildChapterTextIndex(doc) {
+    var root = doc.body || doc.documentElement;
+    if (!root) return null;
+    var walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(n) {
+        var parent = n.parentNode;
+        if (parent && (parent.nodeName === 'SCRIPT' || parent.nodeName === 'STYLE')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var full = '';
+    var nodes = [];
+    var node = walker.nextNode();
+    while (node) {
+      nodes.push({ node: node, start: full.length, len: node.nodeValue.length });
+      full += node.nodeValue;
+      node = walker.nextNode();
+    }
+    if (!nodes.length) return null;
+    var built = buildNormalizedWithMap(full);
+    return { full: full, nodes: nodes, normalized: built.normalized, map: built.map };
+  }
+
+  function findTextRange(index, needle) {
     try {
+      if (!index) return null;
       var raw = String(needle || '');
       var target = raw.replace(/\\s+/g, ' ').trim();
       if (target.length < 3) return null;
-      var root = doc.body || doc.documentElement;
-      if (!root) return null;
-      var walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-        acceptNode: function(n) {
-          var parent = n.parentNode;
-          if (parent && (parent.nodeName === 'SCRIPT' || parent.nodeName === 'STYLE')) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-          return NodeFilter.FILTER_ACCEPT;
-        }
-      });
-      var full = '';
-      var nodes = [];
-      var node = walker.nextNode();
-      while (node) {
-        nodes.push({ node: node, start: full.length, len: node.nodeValue.length });
-        full += node.nodeValue;
-        node = walker.nextNode();
-      }
-      if (!nodes.length) return null;
-      function locate(offset) {
-        for (var k = nodes.length - 1; k >= 0; k--) {
-          if (offset >= nodes[k].start) {
-            var local = offset - nodes[k].start;
-            if (local > nodes[k].len) local = nodes[k].len;
-            return { node: nodes[k].node, offset: local };
-          }
-        }
-        return null;
-      }
-      function normalizeForMatch(str) {
-        if (!str) return '';
-        var s = String(str);
-        s = s.replace(/\uFFFD/g, '').replace(/�/g, '');
-        try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
-        s = s.toLowerCase();
-        s = s.replace(/[\u00A1!\u00BF?"\u201C\u201D\u2018\u2019'.,;:()\[\]{}<>\u00AB\u00BB\u2014\u2013\-]/g, ' ');
-        s = s.replace(/[^a-z0-9\\s]/g, ' ');
-        s = s.replace(/\\s+/g, ' ').trim();
-        return s;
-      }
-      function buildNormalizedWithMap(text) {
-        var norm = '';
-        var map = [];
-        for (var i = 0; i < text.length; i++) {
-          var ch = text.charAt(i);
-          if (ch === '\uFFFD' || ch === '�') { norm += '?'; map.push(i); continue; }
-          var chunk;
-          try { chunk = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e2) { chunk = ch; }
-          chunk = chunk.toLowerCase();
-          for (var ci = 0; ci < chunk.length; ci++) {
-            var c = chunk.charAt(ci);
-            if (/[\u00A1!\u00BF?"\u201C\u201D\u2018\u2019'.,;:()\[\]{}<>\u00AB\u00BB\u2014\u2013\-]/.test(c) || /[^a-z0-9\\s]/.test(c)) {
-              c = ' ';
-            }
-            var isSpace = /\\s/.test(c);
-            if (isSpace) {
-              if (norm.length === 0 || norm.charAt(norm.length - 1) !== ' ') {
-                norm += ' ';
-                map.push(i);
-              }
-            } else {
-              if (/[a-z0-9]/.test(c)) {
-                norm += c;
-                map.push(i);
-              } else if (c.trim()) {
-                norm += c;
-                map.push(i);
-              }
-            }
-          }
-        }
-        norm = norm.replace(/\\s+/g, ' ').trim();
-        while (map.length > norm.length) map.pop();
-        return { normalized: norm, map: map };
-      }
-      var built = buildNormalizedWithMap(full);
-      var normalizedFull = built.normalized;
-      var normMap = built.map;
+      var doc = document;
+      var full = index.full;
+      var nodes = index.nodes;
+      var normalizedFull = index.normalized;
+      var normMap = index.map;
       var normTarget = normalizeForMatch(target);
       if (!normTarget || normTarget.length < 3) return null;
       function rangeFromNorm(idx, len) {
@@ -268,8 +291,8 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
           }
           if (ext > 0) origEnd += ext;
         } catch (eExt) {}
-        var s = locate(origStart);
-        var e = locate(origEnd);
+        var s = locate(nodes, origStart);
+        var e = locate(nodes, origEnd);
         if (s && e) {
           var r = doc.createRange();
           r.setStart(s.node, s.offset);
@@ -278,15 +301,15 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
         }
         return null;
       }
-      function indexOfWithWildcard(haystack, needle) {
-        if (!haystack || !needle || needle.length > haystack.length) return -1;
+      function indexOfWithWildcard(haystack, needle2) {
+        if (!haystack || !needle2 || needle2.length > haystack.length) return -1;
         var hLen = haystack.length;
-        var nLen = needle.length;
+        var nLen = needle2.length;
         for (var hi = 0; hi <= hLen - nLen; hi++) {
           var ok = true;
           for (var nj = 0; nj < nLen; nj++) {
             var hc = haystack.charAt(hi + nj);
-            var nc = needle.charAt(nj);
+            var nc = needle2.charAt(nj);
             if (hc !== nc && hc !== '?') { ok = false; break; }
           }
           if (ok) return hi;
@@ -308,8 +331,8 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
         var re = new RegExp(parts.join('\\s+'));
         var m = re.exec(full);
         if (m) {
-          var sR = locate(m.index);
-          var eR = locate(m.index + m[0].length);
+          var sR = locate(nodes, m.index);
+          var eR = locate(nodes, m.index + m[0].length);
           if (sR && eR) {
             var rR = doc.createRange();
             rR.setStart(sR.node, sR.offset);
@@ -444,9 +467,22 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
     // carry a non-epubcfi locator with an unreliable pageNumber. When
     // the stored text is found in this chapter's DOM, the highlight is
     // placed here and the parent is told where it landed.
+    //
+    // The chapter's text index is built on the FIRST candidate and shared by
+    // every later one: see buildChapterTextIndex. A render with nothing to
+    // place by text never builds it.
+    var textIndex = null;
+    var textIndexBuilt = false;
+    function chapterTextIndex() {
+      if (!textIndexBuilt) {
+        textIndexBuilt = true;
+        textIndex = buildChapterTextIndex(doc);
+      }
+      return textIndex;
+    }
     function tryPlaceByText(hlObj) {
       if (typeof hlObj.text !== 'string' || !hlObj.text) return null;
-      var textRange = findTextRange(doc, hlObj.text);
+      var textRange = findTextRange(chapterTextIndex(), hlObj.text);
       if (textRange && !textRange.collapsed) {
         placedByText++;
         postPlaced(hlObj.id, currentChapterIndex);

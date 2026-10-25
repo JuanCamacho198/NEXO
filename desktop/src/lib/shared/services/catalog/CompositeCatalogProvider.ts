@@ -34,6 +34,7 @@ import {
 import { GutendexCatalogProvider } from './BuiltInCatalogProviders';
 import { GoogleBooksCatalogProvider, googleBooksProviderOrNull } from './BuiltInCatalogProviders';
 import { OpenLibraryCatalogProvider } from './BuiltInCatalogProviders';
+import { StandardEbooksCatalogProvider } from './BuiltInCatalogProviders';
 import { mergeResults, resolveDownloadUrl, resolveTotalCount, toPagedResult } from './mappers';
 import { DEBOUNCE_MS, createSearchDebouncer } from './policy';
 import {
@@ -136,6 +137,10 @@ export function defaultCatalogProviders(
     new GutendexCatalogProvider(undefined, googleBooks === null),
     new OpenLibraryCatalogProvider(),
     ...(googleBooks ? [googleBooks] : []),
+    // Before the curated bundle so its real source wins the source-id dedupe:
+    // the bundle lists the same `builtin:standard-ebooks` id with `kind:
+    // 'curated'`, and first occurrence wins in `listSources()`.
+    new StandardEbooksCatalogProvider(),
     new CuratedCatalogProvider(),
     ...addonProviders,
   ];
@@ -350,6 +355,13 @@ export class CompositeCatalogProvider implements CatalogProvider {
    * as `search` (the author rails resolve through here, so their pages are
    * cached too). An unknown or inactive source fails closed with an empty page — never
    * a crash, never a silent composite search. Mirrors Android.
+   *
+   * The owner is asked through its own `searchSource`, never its `search`. A
+   * provider whose `search` is contractually fail-closed (Standard Ebooks: the
+   * feed is a newest-releases shelf with no query parameter, so a keyword
+   * search cannot be honored) answers its `searchSource` door instead. Routing
+   * through `search` made that door unreachable and the rail silently empty
+   * with zero I/O — measured 0 books, 0 ms, no request to standardebooks.org.
    */
   async searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {
     if (!Number.isInteger(page) || page < 1) {
@@ -364,7 +376,7 @@ export class CompositeCatalogProvider implements CatalogProvider {
     const active = this.activeSourceIds();
     const cached = this.readPageHit(owner, query, page, active);
     if (cached !== null) return cached;
-    const result = await owner.search(query, page);
+    const result = await owner.searchSource(sourceId, query, page);
     this.cachePage(owner, query, page, result, active);
     return result;
   }
