@@ -21,19 +21,28 @@ class GetBookProgressUseCase(
      * Observe canonical progress percentage for a bookId.
      * Emits distinct values to avoid UI thrash.
      */
-    operator fun invoke(bookId: String): Flow<Float> =
+    operator fun invoke(
+        bookId: String,
+        userId: String,
+    ): Flow<Float> =
         readerRepository
-            .observeProgress(bookId)
+            .observeProgress(bookId, userId)
             .map { it?.percentage ?: 0f }
             .distinctUntilChanged()
 
     /**
      * Observe full ReadingProgress (includes locatorJson/cfi) if needed.
      */
-    fun observeProgress(bookId: String) = readerRepository.observeProgress(bookId)
+    fun observeProgress(
+        bookId: String,
+        userId: String,
+    ) = readerRepository.observeProgress(bookId, userId)
 
     /**
      * Canonical progress percent from `reading_progress.percentage`.
      */
-    fun observeProgressPercent(bookId: String): Flow<Float> = invoke(bookId)
+    fun observeProgressPercent(
+        bookId: String,
+        userId: String,
+    ): Flow<Float> = invoke(bookId, userId)
 }

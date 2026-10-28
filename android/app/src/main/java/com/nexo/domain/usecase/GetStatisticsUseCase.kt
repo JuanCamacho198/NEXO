@@ -43,15 +43,26 @@ class GetStatisticsUseCase(
 
     operator fun invoke(): Flow<Statistics> =
         combine(
-            readingStatsRepository.observeTotalTime(),
-            readingStatsRepository.observeBookStats(),
+            userFilter.flatMapLatest { userId ->
+                readingStatsRepository.observeTotalTime(userId.orEmpty())
+            },
+            userFilter.flatMapLatest { userId ->
+                readingStatsRepository.observeBookStats(userId.orEmpty())
+            },
             refreshTrigger
                 .combine(userFilter) { _, userId -> userId }
                 .flatMapLatest { userId ->
-                    flow { emit(readingStatsRepository.getDailyActivity(userId)) }
+                    combine(
+                        flow { emit(readingStatsRepository.getDailyActivity(userId)) },
+                        homeRepository.observeDailyStats(userId, dailyGoalProvider()),
+                    ) { dailyActivity, todayStats -> dailyActivity to todayStats }
                 },
-            homeRepository.observeBooks(),
-        ) { totalMinutes, bookStats, dailyActivity, books ->
+            userFilter.flatMapLatest { userId ->
+                homeRepository.observeBooks(userId.orEmpty())
+            },
+        ) { totalMinutes, bookStats, daily, books ->
+            val dailyActivity = daily.first
+            val todayStats = daily.second
             val todayStart = getTodayStartMillis()
             val todayMinutes =
                 dailyActivity
@@ -73,6 +84,8 @@ class GetStatisticsUseCase(
                         .filter { it.isNotBlank() }
                         .distinct()
                         .take(5),
+                minutesReadToday = todayStats.minutesRead,
+                sessionsToday = todayStats.sessionCount,
             )
         }
 

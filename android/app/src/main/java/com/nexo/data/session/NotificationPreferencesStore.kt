@@ -4,25 +4,31 @@ import android.content.Context
 import com.nexo.domain.notification.NotificationPreferences
 import com.nexo.domain.notification.isQuietHoursActive
 import com.nexo.domain.notification.parseNotificationPreferences
+import com.nexo.domain.session.ActiveUserProvider
 import org.json.JSONObject
 
 /**
- * Persisted notification preferences (U9).
+ * Persisted notification preferences (U9), scoped to the active account
+ * (T10 of `aislamiento-datos-por-cuenta`).
  *
- * Follows the hand-rolled SharedPreferences pattern used by
- * [ReadingGoalPreferences] / [AppThemePreferences] — this project has no
- * DataStore. The value is stored as a small JSON object and parsed through the
- * domain's [parseNotificationPreferences], so the store and the pure policy
- * share ONE shape: an unknown or corrupted blob degrades to
+ * Stored in `nexo_notification_preferences__{userId}`. The value is a small JSON
+ * object parsed through the domain's [parseNotificationPreferences], so the store
+ * and the pure policy share ONE shape: an unknown or corrupted blob degrades to
  * [NotificationPreferences.DEFAULT] instead of throwing.
+ *
+ * [load] returns defaults when no account is active; [save] is then a no-op
+ * (decision D5: the anonymous path writes nothing).
  */
 class NotificationPreferencesStore(
-    private val context: Context,
+    context: Context,
+    private val activeUser: ActiveUserProvider,
 ) {
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
 
-    /** @return the stored preferences, or defaults when absent/corrupted. */
+    /** @return the stored preferences, or defaults when absent/corrupted/no owner. */
     fun load(): NotificationPreferences {
+        val prefs = AccountPreferences.open(appContext, PREFS_NAME, activeUser)
+            ?: return NotificationPreferences.DEFAULT
         val raw = prefs.getString(KEY_PREFERENCES, null) ?: return NotificationPreferences.DEFAULT
         val parsed =
             runCatching { jsonToMap(JSONObject(raw)) }.getOrNull()
@@ -31,6 +37,7 @@ class NotificationPreferencesStore(
 
     /** Persists [preferences] as a JSON blob (flat keys + nested quiet hours). */
     fun save(preferences: NotificationPreferences) {
+        val prefs = AccountPreferences.open(appContext, PREFS_NAME, activeUser) ?: return
         val json =
             JSONObject().apply {
                 put("system", preferences.system)
@@ -60,7 +67,8 @@ class NotificationPreferencesStore(
         }
 
     companion object {
-        private const val PREFS_NAME = "nexo_notification_preferences"
+        /** Base name; [AccountPreferences] appends the owner segment. */
+        const val PREFS_NAME = "nexo_notification_preferences"
         private const val KEY_PREFERENCES = "preferences"
     }
 }

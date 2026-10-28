@@ -7,6 +7,8 @@ import com.nexo.data.local.AppDatabase
 import com.nexo.data.local.DictionaryNormalizer
 import com.nexo.data.local.dao.DictionaryWordDao
 import com.nexo.domain.model.DictionaryWord
+import com.nexo.testutil.OTHER_USER_ID
+import com.nexo.testutil.TEST_USER_ID
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -44,10 +46,14 @@ class DictionaryRepositoryImplTest {
         db.close()
     }
 
-    private suspend fun seedFullEntry(word: String = "Efímero"): DictionaryWord =
+    private suspend fun seedFullEntry(
+        word: String = "Efímero",
+        userId: String = TEST_USER_ID,
+    ): DictionaryWord =
         repository
             .save(
                 word = word,
+                userId = userId,
                 definition = "Que dura poco tiempo",
                 partOfSpeech = "adjetivo",
                 phonetic = "eˈfimeɾo",
@@ -74,7 +80,7 @@ class DictionaryRepositoryImplTest {
         runBlocking {
             val saved = seedFullEntry()
 
-            val stored = repository.observeAll().first().single()
+            val stored = repository.observeAll(TEST_USER_ID).first().single()
             assertEquals(saved, stored)
             assertEquals("Efímero", stored.word)
             assertEquals("Que dura poco tiempo", stored.definition)
@@ -83,16 +89,24 @@ class DictionaryRepositoryImplTest {
             assertEquals("Un amor efímero.", stored.example)
             assertEvidenceIntact(stored)
 
-            val searched = repository.search("Efímero").first().single()
+            val searched = repository.search("Efímero", TEST_USER_ID).first().single()
             assertEvidenceIntact(searched)
+        }
+
+    @Test
+    fun `save stamps the active account on the stored row`() =
+        runBlocking {
+            seedFullEntry()
+
+            assertEquals(TEST_USER_ID, dao.getAll(TEST_USER_ID).single().userId)
         }
 
     @Test
     fun `save with a word only leaves the nine new fields null`() =
         runBlocking {
-            repository.save("café").getOrThrow()
+            repository.save("café", TEST_USER_ID).getOrThrow()
 
-            val stored = repository.observeAll().first().single()
+            val stored = repository.observeAll(TEST_USER_ID).first().single()
             assertEquals("café", stored.word)
             assertNull(stored.definition)
             assertNull(stored.partOfSpeech)
@@ -109,10 +123,10 @@ class DictionaryRepositoryImplTest {
     @Test
     fun `blank user fields are stored as null`() =
         runBlocking {
-            repository.save("café", definition = "   ").getOrThrow()
+            repository.save("café", TEST_USER_ID, definition = "   ").getOrThrow()
             assertNull(
                 repository
-                    .observeAll()
+                    .observeAll(TEST_USER_ID)
                     .first()
                     .single()
                     .definition,
@@ -128,6 +142,7 @@ class DictionaryRepositoryImplTest {
                 repository
                     .updateUserFields(
                         wordId = saved.id,
+                        userId = TEST_USER_ID,
                         definition = "Nueva definición",
                         partOfSpeech = "sustantivo",
                         phonetic = "nuevo",
@@ -142,7 +157,7 @@ class DictionaryRepositoryImplTest {
             assertEquals(saved.addedAtEpochMillis, updated.addedAtEpochMillis)
             assertEvidenceIntact(updated)
 
-            assertEvidenceIntact(repository.observeAll().first().single())
+            assertEvidenceIntact(repository.observeAll(TEST_USER_ID).first().single())
         }
 
     @Test
@@ -152,7 +167,7 @@ class DictionaryRepositoryImplTest {
 
             val updated =
                 repository
-                    .updateUserFields(saved.id, definition = null, partOfSpeech = null, phonetic = null, example = null)
+                    .updateUserFields(saved.id, TEST_USER_ID, definition = null, partOfSpeech = null, phonetic = null, example = null)
                     .getOrThrow()
 
             assertNull(updated.definition)
@@ -165,36 +180,36 @@ class DictionaryRepositoryImplTest {
     @Test
     fun `exists matches across casing and accents`() =
         runBlocking {
-            repository.save("Café").getOrThrow()
+            repository.save("Café", TEST_USER_ID).getOrThrow()
 
-            assertTrue(repository.exists("Café"))
-            assertTrue(repository.exists("café"))
-            assertTrue(repository.exists("CAFÉ"))
-            assertTrue(repository.exists("Cafe"))
-            assertTrue(repository.exists("  Cafe  "))
-            assertFalse(repository.exists("Cafeína"))
+            assertTrue(repository.exists("Café", TEST_USER_ID))
+            assertTrue(repository.exists("café", TEST_USER_ID))
+            assertTrue(repository.exists("CAFÉ", TEST_USER_ID))
+            assertTrue(repository.exists("Cafe", TEST_USER_ID))
+            assertTrue(repository.exists("  Cafe  ", TEST_USER_ID))
+            assertFalse(repository.exists("Cafeína", TEST_USER_ID))
         }
 
     @Test
     fun `exists folds decomposable letters outside the Latin-1 set`() =
         runBlocking {
-            repository.save("Tōkyō").getOrThrow()
+            repository.save("Tōkyō", TEST_USER_ID).getOrThrow()
 
-            assertTrue(repository.exists("tokyo"))
-            assertTrue(repository.exists("TŌKYŌ"))
+            assertTrue(repository.exists("tokyo", TEST_USER_ID))
+            assertTrue(repository.exists("TŌKYŌ", TEST_USER_ID))
         }
 
     @Test
     fun `exists keeps the punctuation contract and the stored surface form`() =
         runBlocking {
-            repository.save("Abyss").getOrThrow()
+            repository.save("Abyss", TEST_USER_ID).getOrThrow()
 
-            assertTrue(repository.exists("abyss"))
-            assertFalse(repository.exists("Abyss,"))
+            assertTrue(repository.exists("abyss", TEST_USER_ID))
+            assertFalse(repository.exists("Abyss,", TEST_USER_ID))
             assertEquals(
                 "Abyss",
                 repository
-                    .observeAll()
+                    .observeAll(TEST_USER_ID)
                     .first()
                     .single()
                     .word,
@@ -204,13 +219,13 @@ class DictionaryRepositoryImplTest {
     @Test
     fun `exists matches punctuation when the stored form carries it too`() =
         runBlocking {
-            repository.save("Hello,").getOrThrow()
+            repository.save("Hello,", TEST_USER_ID).getOrThrow()
 
-            assertTrue(repository.exists("hello,"))
+            assertTrue(repository.exists("hello,", TEST_USER_ID))
             assertEquals(
                 "Hello,",
                 repository
-                    .observeAll()
+                    .observeAll(TEST_USER_ID)
                     .first()
                     .single()
                     .word,
@@ -226,7 +241,7 @@ class DictionaryRepositoryImplTest {
     fun `indexed exists returns identical results to the retired allWords scan`() =
         runBlocking {
             listOf("Café", "Abyss", "Hello,", "Tōkyō", "Ñandú", "Serendipity").forEach {
-                repository.save(it).getOrThrow()
+                repository.save(it, TEST_USER_ID).getOrThrow()
             }
             val probes =
                 listOf(
@@ -247,20 +262,20 @@ class DictionaryRepositoryImplTest {
                     "missing",
                 )
 
-            val stored = dao.getAll()
+            val stored = dao.getAll(TEST_USER_ID)
             for (probe in probes) {
                 val key = DictionaryNormalizer.normalize(probe)
                 val oldScan = stored.any { DictionaryNormalizer.normalize(it.word) == key }
-                assertEquals("exists($probe) must match the old scan", oldScan, repository.exists(probe))
+                assertEquals("exists($probe) must match the old scan", oldScan, repository.exists(probe, TEST_USER_ID))
             }
         }
 
     @Test
     fun `insert stamps the indexed normalized key`() =
         runBlocking {
-            repository.save("  Tōkyō  ").getOrThrow()
+            repository.save("  Tōkyō  ", TEST_USER_ID).getOrThrow()
 
-            val stored = dao.getAll().single()
+            val stored = dao.getAll(TEST_USER_ID).single()
             assertEquals("tokyo", stored.wordNormalized)
         }
 
@@ -272,14 +287,33 @@ class DictionaryRepositoryImplTest {
     @Test
     fun `indexed search matches by normalized prefix`() =
         runBlocking {
-            repository.save("Café").getOrThrow()
-            repository.save("Serendipity").getOrThrow()
+            repository.save("Café", TEST_USER_ID).getOrThrow()
+            repository.save("Serendipity", TEST_USER_ID).getOrThrow()
 
-            assertEquals(listOf("Café"), repository.search("caf").first().map { it.word })
-            assertEquals(listOf("Café"), repository.search("CAF").first().map { it.word })
-            assertEquals(listOf("Serendipity"), repository.search("Seren").first().map { it.word })
-            assertTrue(repository.search("fé").first().isEmpty())
-            assertTrue(repository.search("endi").first().isEmpty())
+            assertEquals(listOf("Café"), repository.search("caf", TEST_USER_ID).first().map { it.word })
+            assertEquals(listOf("Café"), repository.search("CAF", TEST_USER_ID).first().map { it.word })
+            assertEquals(listOf("Serendipity"), repository.search("Seren", TEST_USER_ID).first().map { it.word })
+            assertTrue(repository.search("fé", TEST_USER_ID).first().isEmpty())
+            assertTrue(repository.search("endi", TEST_USER_ID).first().isEmpty())
+        }
+
+    /**
+     * Account isolation: a second account's rows are never visible to the first,
+     * and a lookup that matches the other account's word returns nothing.
+     */
+    @Test
+    fun `two accounts never see each other's words`() =
+        runBlocking {
+            repository.save("Café", TEST_USER_ID).getOrThrow()
+            repository.save("Té", OTHER_USER_ID).getOrThrow()
+
+            assertEquals(listOf("Café"), repository.observeAll(TEST_USER_ID).first().map { it.word })
+            assertEquals(listOf("Té"), repository.observeAll(OTHER_USER_ID).first().map { it.word })
+
+            assertTrue(repository.exists("Café", TEST_USER_ID))
+            assertFalse(repository.exists("Café", OTHER_USER_ID))
+            assertTrue(repository.exists("Té", OTHER_USER_ID))
+            assertFalse(repository.exists("Té", TEST_USER_ID))
         }
 
     @Test
@@ -289,8 +323,8 @@ class DictionaryRepositoryImplTest {
                 "SELECT EXISTS(SELECT 1 FROM dictionary_words WHERE word_normalized = 'cafe' LIMIT 1)",
             )
         assertTrue(
-            "exists() must use index_dictionary_words_word_normalized but plan was:\n$existsPlan",
-            existsPlan.contains("index_dictionary_words_word_normalized"),
+            "exists() must use a word_normalized index but plan was:\n$existsPlan",
+            existsPlan.contains("index_dictionary_words") && existsPlan.contains("word_normalized"),
         )
 
         val searchPlan =
@@ -299,8 +333,8 @@ class DictionaryRepositoryImplTest {
                     "AND word_normalized < 'cafe' || char(1114111) ORDER BY addedAtEpochMillis DESC",
             )
         assertTrue(
-            "search() must use index_dictionary_words_word_normalized but plan was:\n$searchPlan",
-            searchPlan.contains("index_dictionary_words_word_normalized"),
+            "search() must use a word_normalized index but plan was:\n$searchPlan",
+            searchPlan.contains("index_dictionary_words") && searchPlan.contains("word_normalized"),
         )
     }
 

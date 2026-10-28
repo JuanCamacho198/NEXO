@@ -11,6 +11,7 @@ import com.nexo.data.local.model.DailyReadingMinutes
 import com.nexo.domain.model.DailyReadingActivity
 import com.nexo.domain.repository.ReadingStatsData
 import com.nexo.domain.sync.OutboxDrainScheduler
+import com.nexo.testutil.TEST_USER_ID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -244,12 +245,14 @@ class ReadingStatsRepositoryImplTest {
                                 totalMinutesRead = 60,
                                 lastReadDateEpochMillis = 1000L,
                                 sessionsCount = 4,
+                                userId = TEST_USER_ID,
                             ),
                             ReadingStatsEntity(
                                 bookId = "book-2",
                                 totalMinutesRead = 30,
                                 lastReadDateEpochMillis = 2000L,
                                 sessionsCount = 2,
+                                userId = TEST_USER_ID,
                             ),
                         )
                 }
@@ -260,7 +263,7 @@ class ReadingStatsRepositoryImplTest {
                     zoneId = ZoneId.of("UTC"),
                 )
 
-            val result: List<ReadingStatsData> = repository.observeBookStats().first()
+            val result: List<ReadingStatsData> = repository.observeBookStats(TEST_USER_ID).first()
 
             assertEquals(2, result.size)
             assertEquals("book-1", result[0].bookId)
@@ -291,39 +294,47 @@ class ReadingStatsRepositoryImplTest {
             insertedSessions.add(session)
         }
 
-        override fun getTotalMinutesForDate(date: Long): Flow<Int> = MutableStateFlow(0)
-
         override fun getTotalMinutesForDateAndUser(
             date: Long,
             userId: String,
         ): Flow<Int> = MutableStateFlow(0)
 
-        override fun getTotalMinutes(): Flow<Int> = MutableStateFlow(0)
+        override fun getTotalMinutes(userId: String): Flow<Int> = MutableStateFlow(0)
 
-        override fun getSessionCount(): Flow<Int> = MutableStateFlow(0)
-
-        override fun getSessionCountForDate(date: Long): Flow<Int> = MutableStateFlow(0)
+        override fun getSessionCount(userId: String): Flow<Int> = MutableStateFlow(0)
 
         override fun getSessionCountForDateAndUser(
             date: Long,
             userId: String,
         ): Flow<Int> = MutableStateFlow(0)
 
-        override fun observeSessionsForBook(bookId: String): Flow<List<ReadingSessionEntity>> = MutableStateFlow(emptyList())
+        override fun observeSessionsForBook(
+            bookId: String,
+            userId: String,
+        ): Flow<List<ReadingSessionEntity>> = MutableStateFlow(emptyList())
 
-        override suspend fun deleteSessionsForBook(bookId: String) = Unit
+        override suspend fun deleteSessionsForBook(
+            bookId: String,
+            userId: String,
+        ) = Unit
 
-        override suspend fun count(): Int = 0
+        override suspend fun count(userId: String): Int = insertedSessions.count { it.userId == userId }
 
-        override suspend fun getAll(): List<ReadingSessionEntity> = insertedSessions.toList()
+        override suspend fun getAll(userId: String): List<ReadingSessionEntity> = insertedSessions.filter { it.userId == userId }
 
-        override suspend fun getDailyMinutes(): List<DailyReadingMinutes> = getDailyMinutesResult
+        override suspend fun getDailyMinutes(userId: String): List<DailyReadingMinutes> = getDailyMinutesResult
 
-        override suspend fun getDailyMinutesFromDate(startDate: Long): List<DailyReadingMinutes> = getDailyMinutesFromDateResult
+        override suspend fun getDailyMinutesFromDate(
+            startDate: Long,
+            userId: String,
+        ): List<DailyReadingMinutes> = getDailyMinutesFromDateResult
 
-        override suspend fun getById(id: String): ReadingSessionEntity? = insertedSessions.firstOrNull { it.id == id }
+        override suspend fun getById(
+            id: String,
+            userId: String,
+        ): ReadingSessionEntity? = insertedSessions.firstOrNull { it.id == id && it.userId == userId }
 
-        override suspend fun getDailyMinutesForUser(userId: String?): List<DailyReadingMinutes> {
+        override suspend fun getDailyMinutesForUser(userId: String): List<DailyReadingMinutes> {
             lastUserId = userId
             return getDailyMinutesForUserResult
         }
@@ -334,9 +345,12 @@ class ReadingStatsRepositoryImplTest {
         val totalMinutesState = MutableStateFlow<Long?>(0L)
         val statsForBook = MutableStateFlow<ReadingStatsEntity?>(null)
 
-        override fun observeStatsForBook(bookId: String): Flow<ReadingStatsEntity?> = statsForBook
+        override fun observeStatsForBook(
+            bookId: String,
+            userId: String,
+        ): Flow<ReadingStatsEntity?> = statsForBook
 
-        override fun observeAllStats(): Flow<List<ReadingStatsEntity>> = allStatsState
+        override fun observeAllStats(userId: String): Flow<List<ReadingStatsEntity>> = allStatsState
 
         override suspend fun upsert(stats: ReadingStatsEntity) {
             allStatsState.value =
@@ -345,11 +359,12 @@ class ReadingStatsRepositoryImplTest {
                     .plus(stats)
         }
 
-        override fun observeTotalMinutesRead(): Flow<Long?> = totalMinutesState
-
         override fun observeTotalMinutesReadForUser(userId: String): Flow<Long?> = totalMinutesState
 
-        override suspend fun deleteForBook(bookId: String) {
+        override suspend fun deleteForBook(
+            bookId: String,
+            userId: String,
+        ) {
             allStatsState.value = allStatsState.value.filterNot { it.bookId == bookId }
         }
     }
@@ -357,41 +372,50 @@ class ReadingStatsRepositoryImplTest {
     private class FakeSyncOutboxDao : SyncOutboxDao {
         val items = mutableListOf<SyncOutboxEntity>()
 
-        override suspend fun getPendingItems(): List<SyncOutboxEntity> = items.toList()
+        override suspend fun getPendingItems(userId: String): List<SyncOutboxEntity> = items.filter { it.userId == userId }
 
         override suspend fun insert(item: SyncOutboxEntity) {
             items.add(item)
         }
 
-        override suspend fun deleteById(id: String) {
-            items.removeAll { it.id == id }
+        override suspend fun deleteById(
+            id: String,
+            userId: String,
+        ) {
+            items.removeAll { it.id == id && it.userId == userId }
         }
 
         override suspend fun incrementRetryCount(
             id: String,
+            userId: String,
             error: String,
         ) = Unit
 
-        override suspend fun pruneFailedItems(maxRetries: Int) = Unit
+        override suspend fun pruneFailedItems(
+            userId: String,
+            maxRetries: Int,
+        ) = Unit
 
-        override fun observePendingCount(): Flow<Int> = MutableStateFlow(items.size)
+        override fun observePendingCount(userId: String): Flow<Int> = MutableStateFlow(items.count { it.userId == userId })
 
         override suspend fun getByTypeAndEntityId(
             type: String,
             entityId: String,
-        ): SyncOutboxEntity? = items.firstOrNull { it.entityType == type && it.entityId == entityId }
+            userId: String,
+        ): SyncOutboxEntity? = items.firstOrNull { it.userId == userId && it.entityType == type && it.entityId == entityId }
 
         override suspend fun updatePayload(
             id: String,
+            userId: String,
             payloadJson: String,
         ) {
-            val idx = items.indexOfFirst { it.id == id }
+            val idx = items.indexOfFirst { it.id == id && it.userId == userId }
             if (idx >= 0) items[idx] = items[idx].copy(payloadJson = payloadJson)
         }
 
         override suspend fun upsertCoalesced(item: SyncOutboxEntity) {
-            val existing = item.entityId?.let { getByTypeAndEntityId(item.entityType, it) }
-            if (existing != null) updatePayload(existing.id, item.payloadJson) else items.add(item)
+            val existing = item.entityId?.let { getByTypeAndEntityId(item.entityType, it, item.userId) }
+            if (existing != null) updatePayload(existing.id, item.userId, item.payloadJson) else items.add(item)
         }
     }
 }

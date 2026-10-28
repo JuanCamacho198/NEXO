@@ -10,6 +10,10 @@ data class DailyReadingActivity(
 
 /**
  * Aggregated reading statistics for the user.
+ *
+ * [minutesReadToday] and [sessionsToday] describe the current reading day
+ * only; the session count comes from the repository's daily-session query so
+ * it means exactly what Home used to show before the summary moved here.
  */
 data class Statistics(
     val totalMinutesRead: Long = 0L,
@@ -18,4 +22,6 @@ data class Statistics(
     val weeklyActivity: List<DailyReadingActivity> = emptyList(),
     val goalProgress: Float = 0f,
     val favoriteGenres: List<String> = emptyList(),
+    val minutesReadToday: Int = 0,
+    val sessionsToday: Int = 0,
 )

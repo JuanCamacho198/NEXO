@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.nexo.domain.notification.NotificationPreferences
 import com.nexo.domain.notification.QuietHoursSchedule
+import com.nexo.testutil.TEST_USER_ID
+import com.nexo.testutil.activeUserProviderFor
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,16 +17,17 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class NotificationPreferencesStoreTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
+    private val activeUser = activeUserProviderFor()
 
     @Test
     fun `absent preferences read as defaults`() {
-        val store = NotificationPreferencesStore(context)
+        val store = NotificationPreferencesStore(context, activeUser)
         assertEquals(NotificationPreferences.DEFAULT, store.load())
     }
 
     @Test
     fun `write then read returns the same values`() {
-        val store = NotificationPreferencesStore(context)
+        val store = NotificationPreferencesStore(context, activeUser)
         val preferences =
             NotificationPreferences(
                 system = false,
@@ -33,17 +36,23 @@ class NotificationPreferencesStoreTest {
             )
         store.save(preferences)
 
-        assertEquals(preferences, NotificationPreferencesStore(context).load())
+        assertEquals(preferences, NotificationPreferencesStore(context, activeUser).load())
     }
 
     @Test
     fun `corrupted blob degrades to defaults`() {
         context
-            .getSharedPreferences("nexo_notification_preferences", Context.MODE_PRIVATE)
+            .getSharedPreferences(
+                "nexo_notification_preferences__${TEST_USER_ID}",
+                Context.MODE_PRIVATE,
+            )
             .edit()
             .putString("preferences", "{ this is not json")
             .commit()
 
-        assertEquals(NotificationPreferences.DEFAULT, NotificationPreferencesStore(context).load())
+        assertEquals(
+            NotificationPreferences.DEFAULT,
+            NotificationPreferencesStore(context, activeUser).load(),
+        )
     }
 }

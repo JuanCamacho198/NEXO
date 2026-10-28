@@ -71,7 +71,10 @@ class DownloadAndImportBookUseCase(
     private val booksDir: File,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    suspend operator fun invoke(book: CatalogBook): Flow<DownloadImportState> =
+    suspend operator fun invoke(
+        userId: String,
+        book: CatalogBook,
+    ): Flow<DownloadImportState> =
         channelFlow {
             send(DownloadImportState.Idle)
 
@@ -84,7 +87,7 @@ class DownloadAndImportBookUseCase(
             // Cheap pre-check: never touch the network for a book already owned.
             val existing =
                 withContext(ioDispatcher) {
-                    libraryRepository.findBookByTitleAndAuthor(book.title, book.authors.firstOrNull())
+                    libraryRepository.findBookByTitleAndAuthor(book.title, book.authors.firstOrNull(), userId)
                 }
             if (existing != null) {
                 send(DownloadImportState.Duplicate(DUPLICATE_MESSAGE))
@@ -92,11 +95,14 @@ class DownloadAndImportBookUseCase(
             }
 
             tempDir.mkdirs()
-            booksDir.mkdirs()
+            // T8: the account's own subtree, so two accounts downloading a book
+            // with the same id never resolve the same file.
+            val ownerBooksDir = File(booksDir, userId)
+            ownerBooksDir.mkdirs()
             val key = DriveFilename.canonicalStem(book.id)
             val partFile = File(tempDir, "$key.part")
             val stagedFile = File(tempDir, "$key.epub")
-            val finalFile = File(booksDir, "$key.epub")
+            val finalFile = File(ownerBooksDir, "$key.epub")
             var committed = false
 
             try {
@@ -109,8 +115,8 @@ class DownloadAndImportBookUseCase(
                 }
 
                 // Atomic same-volume move inside the cache staging dir, then a
-                // second same-volume move into the durable `filesDir/books` tree
-                // (WU6, FR-03): staging is disposable, the library file is not.
+                // second same-volume move into the durable `filesDir/books/{userId}`
+                // tree (WU6, FR-03): staging is disposable, the library file is not.
                 if (stagedFile.exists()) stagedFile.delete()
                 if (!partFile.renameTo(stagedFile)) {
                     throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "atomic rename failed")
@@ -123,6 +129,7 @@ class DownloadAndImportBookUseCase(
                 send(DownloadImportState.Importing)
                 val result =
                     importEpubBookUseCase(
+                        userId = userId,
                         request = BookImportRequest(sourcePath = finalFile.path, fallbackTitle = book.title),
                         inputStreamProvider = { finalFile.inputStream() },
                     )

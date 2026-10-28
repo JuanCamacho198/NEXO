@@ -16,6 +16,7 @@ import com.nexo.data.pdf.PdfMetadata
 import com.nexo.data.pdf.PdfParserService
 import com.nexo.data.storage.CoverStorage
 import com.nexo.testutil.FakePagingSource
+import com.nexo.testutil.TEST_USER_ID
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.flow.Flow
@@ -58,6 +59,7 @@ class LibraryRepositoryImplTest {
 
             val result =
                 repository.importBookFromEpub(
+                    userId = TEST_USER_ID,
                     request =
                         com.nexo.domain.model.BookImportRequest(
                             sourcePath = "content://books/ddd.epub",
@@ -104,6 +106,7 @@ class LibraryRepositoryImplTest {
 
             val result =
                 repository.importBookFromPdf(
+                    userId = TEST_USER_ID,
                     request =
                         com.nexo.domain.model.BookImportRequest(
                             sourcePath = "content://books/guide.pdf",
@@ -152,6 +155,7 @@ class LibraryRepositoryImplTest {
 
             val result =
                 repository.importBookFromPdf(
+                    userId = TEST_USER_ID,
                     request =
                         com.nexo.domain.model.BookImportRequest(
                             sourcePath = "content://books/cover.pdf",
@@ -185,6 +189,7 @@ class LibraryRepositoryImplTest {
 
             val result =
                 repository.importBookFromPdf(
+                    userId = TEST_USER_ID,
                     request =
                         com.nexo.domain.model.BookImportRequest(
                             sourcePath = "content://books/broken.pdf",
@@ -222,12 +227,14 @@ class LibraryRepositoryImplTest {
                     filePath = "/meta.epub",
                     format = "epub",
                     updatedAtEpochMillis = 10L,
+                    userId = TEST_USER_ID,
                 ),
             )
 
             val result =
                 repository.updateBookMetadata(
                     bookId = "meta-book",
+                    userId = TEST_USER_ID,
                     title = "Edited",
                     author = "New Author",
                     description = "New description",
@@ -242,7 +249,7 @@ class LibraryRepositoryImplTest {
             assertTrue(result.isSuccess)
 
             // All 10 fields land in the DAO row, including the 5 new metadata fields.
-            val updated = fakeDao.getBookById("meta-book")
+            val updated = fakeDao.getBookById("meta-book", TEST_USER_ID)
             assertEquals("Edited", updated?.title)
             assertEquals("New Author", updated?.author)
             assertEquals("New description", updated?.description)
@@ -282,10 +289,10 @@ class LibraryRepositoryImplTest {
                 )
 
             fakeReadingStatsDao.totalMinutesState.value = null
-            assertEquals(0L, repository.observeTotalReadingTime().first())
+            assertEquals(0L, repository.observeTotalReadingTime(TEST_USER_ID).first())
 
             fakeReadingStatsDao.totalMinutesState.value = 55L
-            assertEquals(55L, repository.observeTotalReadingTime().first())
+            assertEquals(55L, repository.observeTotalReadingTime(TEST_USER_ID).first())
         }
 
     @Test
@@ -314,6 +321,7 @@ class LibraryRepositoryImplTest {
                     format = "epub",
                     updatedAtEpochMillis = 10L,
                     deletedAtEpochMillis = null,
+                    userId = TEST_USER_ID,
                 ),
             )
             fakeDao.upsert(
@@ -326,15 +334,16 @@ class LibraryRepositoryImplTest {
                     format = "epub",
                     updatedAtEpochMillis = 20L,
                     deletedAtEpochMillis = null,
+                    userId = TEST_USER_ID,
                 ),
             )
-            fakeDao.deleteBook("deleted-book", deletedAt = 30L)
+            fakeDao.deleteBook("deleted-book", TEST_USER_ID, deletedAt = 30L)
 
-            val books = repository.observeLibrary().first()
+            val books = repository.observeLibrary(TEST_USER_ID).first()
             assertEquals(1, books.size)
             assertEquals("active-book", books.first().id)
 
-            val deletedById = repository.observeBookById("deleted-book").firstOrNull()
+            val deletedById = repository.observeBookById("deleted-book", TEST_USER_ID).firstOrNull()
             assertEquals("deleted-book", deletedById?.id)
         }
 
@@ -473,10 +482,11 @@ class LibraryRepositoryImplTest {
                     filePath = "/test/book.epub",
                     format = "epub",
                     updatedAtEpochMillis = 100L,
+                    userId = TEST_USER_ID,
                 ),
             )
 
-            val result = repository.getBookById(bookId)
+            val result = repository.getBookById(bookId, TEST_USER_ID)
             assertNotNull(result)
             assertEquals(bookId, result?.id)
             assertEquals("Test Book", result?.title)
@@ -499,7 +509,7 @@ class LibraryRepositoryImplTest {
                     outboxDao = mockk(),
                 )
 
-            val result = repository.getBookById("non-existent-id")
+            val result = repository.getBookById("non-existent-id", TEST_USER_ID)
             assertEquals(null, result)
         }
 
@@ -537,35 +547,45 @@ class LibraryRepositoryImplTest {
     }
 
     private class FakeReadingProgressDao : ReadingProgressDao {
-        override fun observeProgressForBook(bookId: String): Flow<com.nexo.data.local.entity.ReadingProgressEntity?> = MutableStateFlow(null)
+        override fun observeProgressForBook(
+            bookId: String,
+            userId: String,
+        ): Flow<com.nexo.data.local.entity.ReadingProgressEntity?> = MutableStateFlow(null)
 
         override suspend fun upsert(progress: com.nexo.data.local.entity.ReadingProgressEntity) = Unit
 
-        override suspend fun getProgressForBook(bookId: String): com.nexo.data.local.entity.ReadingProgressEntity? = null
+        override suspend fun getProgressForBook(
+            bookId: String,
+            userId: String,
+        ): com.nexo.data.local.entity.ReadingProgressEntity? = null
 
-        override suspend fun getAll(): List<com.nexo.data.local.entity.ReadingProgressEntity> = emptyList()
+        override suspend fun getAll(userId: String): List<com.nexo.data.local.entity.ReadingProgressEntity> = emptyList()
 
-        override fun observeAll(): Flow<List<com.nexo.data.local.entity.ReadingProgressEntity>> = MutableStateFlow(emptyList())
+        override fun observeAll(userId: String): Flow<List<com.nexo.data.local.entity.ReadingProgressEntity>> = MutableStateFlow(emptyList())
 
-        override suspend fun count(): Int = 0
+        override suspend fun count(userId: String): Int = 0
     }
 
     private class FakeBookDao : BookDao {
-        override suspend fun allStoredPaths(): List<StoredBookPath> = emptyList()
+        override suspend fun allStoredPaths(userId: String): List<StoredBookPath> = emptyList()
+
+        override suspend fun distinctStoredPathOwners(): List<String> = booksState.value.map { it.userId }.distinct()
 
         override suspend fun updateFilePath(
             bookId: String,
+            userId: String,
             filePath: String,
         ) = Unit
 
         private val booksState = MutableStateFlow<List<BookEntity>>(emptyList())
         var lastUpserted: BookEntity? = null
 
-        override fun observeAllBooks(): Flow<List<BookEntity>> = booksState.map { books -> books.filter { it.deletedAtEpochMillis == null } }
+        override fun observeAllBooks(userId: String): Flow<List<BookEntity>> =
+            booksState.map { books -> books.filter { it.userId == userId && it.deletedAtEpochMillis == null } }
 
-        override fun observeReadingBooks(): Flow<List<BookEntity>> =
+        override fun observeReadingBooks(userId: String): Flow<List<BookEntity>> =
             booksState.map { books ->
-                books.filter { it.deletedAtEpochMillis == null && it.readingState == "reading" }
+                books.filter { it.userId == userId && it.deletedAtEpochMillis == null && it.readingState == "reading" }
             }
 
         override suspend fun upsert(book: BookEntity) {
@@ -581,17 +601,24 @@ class LibraryRepositoryImplTest {
             books.forEach { upsert(it) }
         }
 
-        override fun observeBookById(bookId: String): Flow<BookEntity?> = MutableStateFlow(booksState.value.firstOrNull { it.id == bookId })
+        override fun observeBookById(
+            bookId: String,
+            userId: String,
+        ): Flow<BookEntity?> = MutableStateFlow(booksState.value.firstOrNull { it.id == bookId && it.userId == userId })
 
-        override suspend fun getBookById(bookId: String): BookEntity? = booksState.value.firstOrNull { it.id == bookId }
+        override suspend fun getBookById(
+            bookId: String,
+            userId: String,
+        ): BookEntity? = booksState.value.firstOrNull { it.id == bookId && it.userId == userId }
 
         override suspend fun deleteBook(
             bookId: String,
+            userId: String,
             deletedAt: Long,
         ) {
             booksState.value =
                 booksState.value.map { book ->
-                    if (book.id == bookId) {
+                    if (book.id == bookId && book.userId == userId) {
                         book.copy(
                             updatedAtEpochMillis = deletedAt,
                             deletedAtEpochMillis = deletedAt,
@@ -604,47 +631,56 @@ class LibraryRepositoryImplTest {
 
         override suspend fun updateRating(
             bookId: String,
+            userId: String,
             rating: Int?,
         ) {
             booksState.value =
                 booksState.value.map { book ->
-                    if (book.id == bookId) book.copy(userRating = rating) else book
+                    if (book.id == bookId && book.userId == userId) book.copy(userRating = rating) else book
                 }
         }
 
         override suspend fun updateStatus(
             bookId: String,
+            userId: String,
             status: String?,
             updatedAt: Long,
         ) {
             booksState.value =
                 booksState.value.map { book ->
-                    if (book.id == bookId) book.copy(status = status, updatedAtEpochMillis = updatedAt) else book
+                    if (book.id == bookId && book.userId == userId) book.copy(status = status, updatedAtEpochMillis = updatedAt) else book
                 }
         }
 
-        override suspend fun deleteById(bookId: String) {
-            booksState.value = booksState.value.filterNot { it.id == bookId }
+        override suspend fun deleteById(
+            bookId: String,
+            userId: String,
+        ) {
+            booksState.value = booksState.value.filterNot { it.id == bookId && it.userId == userId }
         }
 
         override suspend fun startReading(
             bookId: String,
+            userId: String,
             updatedAt: Long,
         ) {}
 
         override suspend fun updateReadingProgress(
             bookId: String,
+            userId: String,
             progress: Float,
             updatedAt: Long,
         ) {}
 
         override suspend fun completeReading(
             bookId: String,
+            userId: String,
             updatedAt: Long,
         ) {}
 
         override suspend fun updateMetadata(
             bookId: String,
+            userId: String,
             title: String,
             author: String?,
             description: String?,
@@ -658,7 +694,7 @@ class LibraryRepositoryImplTest {
         ) {
             booksState.value =
                 booksState.value.map { book ->
-                    if (book.id == bookId) {
+                    if (book.id == bookId && book.userId == userId) {
                         book.copy(
                             title = title,
                             author = author,
@@ -677,9 +713,9 @@ class LibraryRepositoryImplTest {
                 }
         }
 
-        override suspend fun count(): Int = booksState.value.size
+        override suspend fun count(userId: String): Int = booksState.value.count { it.userId == userId }
 
-        override fun observeAllBooksPaged(): PagingSource<Int, BookEntity> = FakePagingSource(emptyList())
+        override fun observeAllBooksPaged(userId: String): PagingSource<Int, BookEntity> = FakePagingSource(emptyList())
     }
 
     private class FakeCoverStorage : CoverStorage {
@@ -703,16 +739,20 @@ class LibraryRepositoryImplTest {
     private class FakeReadingStatsDao : ReadingStatsDao {
         val totalMinutesState = MutableStateFlow<Long?>(0L)
 
-        override fun observeStatsForBook(bookId: String): Flow<ReadingStatsEntity?> = MutableStateFlow(null)
+        override fun observeStatsForBook(
+            bookId: String,
+            userId: String,
+        ): Flow<ReadingStatsEntity?> = MutableStateFlow(null)
 
-        override fun observeAllStats(): Flow<List<ReadingStatsEntity>> = MutableStateFlow(emptyList())
+        override fun observeAllStats(userId: String): Flow<List<ReadingStatsEntity>> = MutableStateFlow(emptyList())
 
         override suspend fun upsert(stats: ReadingStatsEntity) = Unit
 
-        override fun observeTotalMinutesRead(): Flow<Long?> = totalMinutesState
-
         override fun observeTotalMinutesReadForUser(userId: String): Flow<Long?> = totalMinutesState
 
-        override suspend fun deleteForBook(bookId: String) = Unit
+        override suspend fun deleteForBook(
+            bookId: String,
+            userId: String,
+        ) = Unit
     }
 }

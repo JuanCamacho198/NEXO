@@ -3,6 +3,7 @@ package com.nexo.data.session
 import android.content.Context
 import android.content.SharedPreferences
 import com.nexo.domain.model.ReaderSettings
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -39,10 +40,11 @@ class ReaderPreferencesCustomColorsTest {
         // Mock Context to return our fake SharedPreferences
         val context =
             mockk<Context> {
+                every { applicationContext } returns this
                 every { getSharedPreferences(any(), any()) } returns prefs
             }
 
-        return ReaderPreferences(context)
+        return ReaderPreferences(context, activeUserProviderFor())
     }
 
     // ── Load (deserialisation) ──────────────────────────────────────
@@ -84,9 +86,10 @@ class ReaderPreferencesCustomColorsTest {
             }
         val context =
             mockk<Context> {
+                every { applicationContext } returns this
                 every { getSharedPreferences(any(), any()) } returns prefs
             }
-        val rp = ReaderPreferences(context)
+        val rp = ReaderPreferences(context, activeUserProviderFor())
 
         rp.save(ReaderSettings(customHighlightColors = null))
 
@@ -111,9 +114,10 @@ class ReaderPreferencesCustomColorsTest {
             }
         val context =
             mockk<Context> {
+                every { applicationContext } returns this
                 every { getSharedPreferences(any(), any()) } returns prefs
             }
-        val rp = ReaderPreferences(context)
+        val rp = ReaderPreferences(context, activeUserProviderFor())
 
         val colors = listOf("#4ADE80", "#3B82F6", "#F97316", "#EF4444", "#FACC15")
         rp.save(ReaderSettings(customHighlightColors = colors))
