@@ -14,11 +14,12 @@ interface StorageRepository {
      *  - computed off the main thread (`Dispatchers.IO`);
      *  - paths are deduped, so a cover equal to the backing file (or a file
      *    shared by two rows) is counted once;
-     *  - a missing/unreadable path contributes 0 bytes rather than failing.
+     *  - a missing/unreadable path contributes 0 bytes rather than failing;
+     *  - only the given user's books are measured.
      *
      * @return one [BookStorageItem] per live book, in library order.
      */
-    suspend fun bookStorageUsage(): List<BookStorageItem>
+    suspend fun bookStorageUsage(userId: String): List<BookStorageItem>
 
     /**
      * Deletes backing files no live book references (orphans left by deletes
@@ -30,9 +31,10 @@ interface StorageRepository {
      *  - a file modified within the grace window is skipped, so a download
      *    that has just renamed into place is not swept mid-import;
      *  - only files under the managed `catalog`/`pdfs`/`epubs` directories are
-     *    considered.
+     *    considered;
+     *  - a file is only kept alive by a book of the given user.
      *
      * @return the number of files deleted.
      */
-    suspend fun sweepOrphanBookFiles(): Int
+    suspend fun sweepOrphanBookFiles(userId: String): Int
 }

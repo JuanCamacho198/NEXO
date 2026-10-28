@@ -24,6 +24,7 @@ import com.nexo.domain.repository.AuthRepository
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.sync.OutboxDrainScheduler
 import com.nexo.domain.sync.SessionGate
 import com.nexo.domain.sync.SyncSettleGate
@@ -52,6 +53,13 @@ object HiltSingletonsModule {
     fun provideAppContainer(
         @ApplicationContext c: Context,
     ): AppContainer = AppContainer(c)
+
+    /**
+     * The active account id, shared by the app-scoped [AppContainer] holder and
+     * every Hilt-constructed ViewModel that reads account-owned data.
+     */
+    @Provides @Singleton
+    fun provideActiveUserProvider(a: AppContainer): ActiveUserProvider = a.activeUserProvider
 
     @Provides @Singleton
     fun provideLibraryRepository(a: AppContainer): LibraryRepository = a.libraryRepository

@@ -7,7 +7,11 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "sync_outbox",
-    indices = [Index(value = ["entity_id"]), Index(value = ["entity_type", "entity_id"])],
+    indices = [
+        Index(value = ["entity_id"]),
+        Index(value = ["entity_type", "entity_id"]),
+        Index(value = ["user_id"]),
+    ],
 )
 data class SyncOutboxEntity(
     @PrimaryKey
@@ -26,6 +30,8 @@ data class SyncOutboxEntity(
     val retryCount: Int = 0,
     @ColumnInfo(name = "last_error")
     val lastError: String? = null,
+    @ColumnInfo(name = "user_id")
+    val userId: String = "",
 )
 
 enum class SyncOperation {

@@ -36,18 +36,24 @@ class ReaderRepositoryImpl(
      */
     private val drainScheduler: OutboxDrainScheduler? = null,
 ) : ReaderRepository {
-    override fun observeProgress(bookId: String): Flow<ReadingProgress?> =
+    override fun observeProgress(
+        bookId: String,
+        userId: String,
+    ): Flow<ReadingProgress?> =
         readingProgressDao
-            .observeProgressForBook(bookId)
+            .observeProgressForBook(bookId, userId)
             .map { progress -> progress?.toDomain() }
 
-    override suspend fun upsertProgress(progress: ReadingProgress) {
+    override suspend fun upsertProgress(
+        progress: ReadingProgress,
+        userId: String,
+    ) {
         // Guard: reading_progress.book_id has a FK to books.id. After a cloud
         // download (or a stale sync), progress may reference a book that is not
         // present locally — upserting would throw SQLiteConstraintException and
         // crash the app (seen when opening a freshly downloaded book).
-        if (bookDao.getBookById(progress.bookId) == null) return
-        readingProgressDao.upsert(progress.toEntity())
+        if (bookDao.getBookById(progress.bookId, userId) == null) return
+        readingProgressDao.upsert(progress.toEntity(userId))
         val payload = buildProgressPayload(progress)
         ensureValidJson(payload)
         val dao = outboxDao ?: return
@@ -59,12 +65,13 @@ class ReaderRepositoryImpl(
                 operation = SyncOperation.UPDATE.name,
                 payloadJson = payload,
                 createdAtEpochMillis = System.currentTimeMillis(),
+                userId = userId,
             )
         // READING_PROGRESS coalesced by bookId — keep latest per (type, bookId)
         // Mirrors desktop addCoalesced: flood of location events collapses to single row
-        val existing = dao.getByTypeAndEntityId(SyncEntityType.READING_PROGRESS.name, progress.bookId)
+        val existing = dao.getByTypeAndEntityId(SyncEntityType.READING_PROGRESS.name, progress.bookId, userId)
         if (existing != null) {
-            dao.updatePayload(existing.id, payload)
+            dao.updatePayload(existing.id, userId, payload)
         } else {
             dao.insert(entity)
         }
@@ -94,34 +101,45 @@ class ReaderRepositoryImpl(
 
     override suspend fun updateBookReadingState(
         bookId: String,
+        userId: String,
         progressPercent: Float,
         updatedAt: Long,
     ) {
         bookDao.updateReadingProgress(
             bookId = bookId,
+            userId = userId,
             progress = progressPercent.coerceIn(0f, 100f),
             updatedAt = updatedAt,
         )
     }
 
-    override suspend fun getProgressForBook(bookId: String): ReadingProgress? = readingProgressDao.getProgressForBook(bookId)?.toDomain()
+    override suspend fun getProgressForBook(
+        bookId: String,
+        userId: String,
+    ): ReadingProgress? = readingProgressDao.getProgressForBook(bookId, userId)?.toDomain()
 
-    override fun observeAllHighlights(): Flow<List<Highlight>> =
+    override fun observeAllHighlights(userId: String): Flow<List<Highlight>> =
         highlightDao
-            .observeAllHighlights()
+            .observeAllHighlights(userId)
             .map { list -> list.map { it.toDomain() } }
 
-    override fun observeHighlights(bookId: String): Flow<List<Highlight>> =
+    override fun observeHighlights(
+        bookId: String,
+        userId: String,
+    ): Flow<List<Highlight>> =
         highlightDao
-            .observeHighlightsForBook(bookId)
+            .observeHighlightsForBook(bookId, userId)
             .map { list -> list.map { it.toDomain() } }
 
-    override fun observeAllTags(): Flow<List<String>> = highlightDao.observeAllTags()
+    override fun observeAllTags(userId: String): Flow<List<String>> = highlightDao.observeAllTags(userId)
 
-    override suspend fun upsertHighlight(highlight: Highlight) {
+    override suspend fun upsertHighlight(
+        highlight: Highlight,
+        userId: String,
+    ) {
         // Guard: highlights.book_id has a FK to books.id (see upsertProgress).
-        if (bookDao.getBookById(highlight.bookId) == null) return
-        highlightDao.upsert(highlight.toEntity())
+        if (bookDao.getBookById(highlight.bookId, userId) == null) return
+        highlightDao.upsert(highlight.toEntity(userId))
         val payload = buildHighlightPayload(highlight)
         ensureValidJson(payload)
         // HIGHLIGHT per id — atomic enqueue, never coalesced across ids (desktop parity)
@@ -136,6 +154,7 @@ class ReaderRepositoryImpl(
                 operation = operation.name,
                 payloadJson = payload,
                 createdAtEpochMillis = System.currentTimeMillis(),
+                userId = userId,
             ),
         )
         // S6: request a drain after a successful enqueue.
@@ -170,22 +189,31 @@ class ReaderRepositoryImpl(
         return obj.toString()
     }
 
-    override suspend fun getHighlightsForBook(bookId: String): List<Highlight> = highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
+    override suspend fun getHighlightsForBook(
+        bookId: String,
+        userId: String,
+    ): List<Highlight> = highlightDao.getHighlightsForBook(bookId, userId).map { it.toDomain() }
 
-    override fun observeAllBookmarks(): Flow<List<Bookmark>> =
+    override fun observeAllBookmarks(userId: String): Flow<List<Bookmark>> =
         bookmarkDao
-            .observeAllBookmarks()
+            .observeAllBookmarks(userId)
             .map { list -> list.map { it.toDomain() } }
 
-    override fun observeBookmarks(bookId: String): Flow<List<Bookmark>> =
+    override fun observeBookmarks(
+        bookId: String,
+        userId: String,
+    ): Flow<List<Bookmark>> =
         bookmarkDao
-            .observeBookmarksForBook(bookId)
+            .observeBookmarksForBook(bookId, userId)
             .map { list -> list.map { it.toDomain() } }
 
-    override suspend fun upsertBookmark(bookmark: Bookmark) {
+    override suspend fun upsertBookmark(
+        bookmark: Bookmark,
+        userId: String,
+    ) {
         // Guard: bookmarks.book_id has a FK to books.id (see upsertProgress).
-        if (bookDao.getBookById(bookmark.bookId) == null) return
-        bookmarkDao.upsert(bookmark.toEntity())
+        if (bookDao.getBookById(bookmark.bookId, userId) == null) return
+        bookmarkDao.upsert(bookmark.toEntity(userId))
         val payload = buildBookmarkPayload(bookmark)
         ensureValidJson(payload)
         // BOOKMARK per id — atomic enqueue, never coalesced across ids
@@ -198,6 +226,7 @@ class ReaderRepositoryImpl(
                 operation = SyncOperation.UPDATE.name,
                 payloadJson = payload,
                 createdAtEpochMillis = System.currentTimeMillis(),
+                userId = userId,
             ),
         )
         // S6: request a drain after a successful enqueue.
@@ -222,7 +251,10 @@ class ReaderRepositoryImpl(
         return obj.toString()
     }
 
-    override suspend fun getBookmarksForBook(bookId: String): List<Bookmark> = bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
+    override suspend fun getBookmarksForBook(
+        bookId: String,
+        userId: String,
+    ): List<Bookmark> = bookmarkDao.getBookmarksForBook(bookId, userId).map { it.toDomain() }
 
     private fun ReadingProgressEntity.toDomain(): ReadingProgress {
         // Backfill: normalize on read (persist corrected similar to pageNumber fix)
@@ -242,7 +274,7 @@ class ReaderRepositoryImpl(
         )
     }
 
-    private fun ReadingProgress.toEntity(): ReadingProgressEntity =
+    private fun ReadingProgress.toEntity(userId: String): ReadingProgressEntity =
         ReadingProgressEntity(
             id = id,
             bookId = bookId,
@@ -251,6 +283,7 @@ class ReaderRepositoryImpl(
             currentPage = currentPage,
             updatedAtEpochMillis = updatedAtEpochMillis,
             locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson),
+            userId = userId,
         )
 
     private fun HighlightEntity.toDomain(): Highlight {
@@ -270,7 +303,7 @@ class ReaderRepositoryImpl(
         )
     }
 
-    private fun Highlight.toEntity(): HighlightEntity =
+    private fun Highlight.toEntity(userId: String): HighlightEntity =
         HighlightEntity(
             id = id,
             bookId = bookId,
@@ -283,6 +316,7 @@ class ReaderRepositoryImpl(
             locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson),
             type = type,
             tag = tag,
+            userId = userId,
         )
 
     private fun BookmarkEntity.toDomain(): Bookmark {
@@ -298,7 +332,7 @@ class ReaderRepositoryImpl(
         )
     }
 
-    private fun Bookmark.toEntity(): BookmarkEntity =
+    private fun Bookmark.toEntity(userId: String): BookmarkEntity =
         BookmarkEntity(
             id = id,
             bookId = bookId,
@@ -307,5 +341,6 @@ class ReaderRepositoryImpl(
             updatedAtEpochMillis = updatedAtEpochMillis,
             deletedAtEpochMillis = deletedAtEpochMillis,
             locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson),
+            userId = userId,
         )
 }

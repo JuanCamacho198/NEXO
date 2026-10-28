@@ -4,26 +4,34 @@ import com.nexo.domain.model.DailyReadingActivity
 import kotlinx.coroutines.flow.Flow
 
 interface ReadingStatsRepository {
-    fun observeStats(bookId: String): Flow<ReadingStatsData?>
+    fun observeStats(
+        bookId: String,
+        userId: String,
+    ): Flow<ReadingStatsData?>
 
-    fun observeTotalTime(): Flow<Long>
+    fun observeTotalTime(userId: String): Flow<Long>
 
-    fun observeBookStats(): Flow<List<ReadingStatsData>>
+    fun observeBookStats(userId: String): Flow<List<ReadingStatsData>>
 
     /**
      * Aggregated reading minutes grouped by day.
      *
-     * @param userId When non-null, only rows matching `userId = :userId OR userId = ''`
-     *   are counted (legacy pre-auth rows remain visible); when null, all rows count.
+     * @param userId Only rows owned by this user are counted. `null` means no
+     *   account is active, which yields no rows: unowned rows are never visible
+     *   to a signed-in account.
      */
     suspend fun getDailyActivity(userId: String? = null): List<DailyReadingActivity>
 
     suspend fun updateReadingTime(
         bookId: String,
+        userId: String,
         additionalMinutes: Long,
     )
 
-    suspend fun deleteStats(bookId: String)
+    suspend fun deleteStats(
+        bookId: String,
+        userId: String,
+    )
 
     /**
      * Persists a reading session locally (deterministic id) and enqueues a

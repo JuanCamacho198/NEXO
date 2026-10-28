@@ -5,16 +5,22 @@ import com.nexo.domain.model.ReadingStats
 import kotlinx.coroutines.flow.Flow
 
 interface HomeRepository {
-    fun observeBooks(): Flow<List<Book>>
+    fun observeBooks(userId: String): Flow<List<Book>>
 
-    fun observeRecentBooks(limit: Int = 5): Flow<List<Book>>
+    fun observeRecentBooks(
+        userId: String,
+        limit: Int = 5,
+    ): Flow<List<Book>>
 
-    fun observeCurrentBooks(): Flow<List<Book>>
+    fun observeCurrentBooks(userId: String): Flow<List<Book>>
 
     fun observeDailyStats(
         userId: String? = null,
         goalMinutes: Int = 30,
     ): Flow<ReadingStats>
 
-    suspend fun deleteBook(bookId: String): Result<Unit>
+    suspend fun deleteBook(
+        bookId: String,
+        userId: String,
+    ): Result<Unit>
 }

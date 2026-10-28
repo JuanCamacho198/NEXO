@@ -16,7 +16,7 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index(value = ["book_id", "deleted_at"])],
+    indices = [Index(value = ["user_id", "book_id", "deleted_at"])],
 )
 data class BookmarkEntity(
     @PrimaryKey
@@ -33,4 +33,6 @@ data class BookmarkEntity(
     val deletedAtEpochMillis: Long?,
     @ColumnInfo(name = "locator_json")
     val locatorJson: String? = null,
+    @ColumnInfo(name = "user_id")
+    val userId: String = "",
 )

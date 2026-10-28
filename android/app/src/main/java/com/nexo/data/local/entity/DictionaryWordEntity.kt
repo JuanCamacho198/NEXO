@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "dictionary_words",
-    indices = [Index(value = ["word_normalized"])],
+    indices = [Index(value = ["user_id"]), Index(value = ["word_normalized"])],
 )
 data class DictionaryWordEntity(
     @PrimaryKey
@@ -52,4 +52,6 @@ data class DictionaryWordEntity(
      */
     @ColumnInfo(name = "word_normalized")
     val wordNormalized: String = "",
+    @ColumnInfo(name = "user_id")
+    val userId: String = "",
 )

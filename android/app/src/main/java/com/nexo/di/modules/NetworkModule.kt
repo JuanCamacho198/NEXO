@@ -25,6 +25,8 @@ import com.nexo.data.remote.catalog.OpenLibraryCatalogProvider
 import com.nexo.data.remote.catalog.OpenLibraryDataSource
 import com.nexo.data.remote.catalog.RebuildingCatalogProvider
 import com.nexo.data.remote.catalog.RoomDiscoverCache
+import com.nexo.data.remote.catalog.StandardEbooksCatalogProvider
+import com.nexo.data.remote.catalog.StandardEbooksDataSource
 import com.nexo.data.remote.catalog.androidAppIdentityOrNull
 import com.nexo.data.remote.catalog.googleBooksProviderOrNull
 import com.nexo.data.remote.drive.DriveCoordinator
@@ -34,6 +36,7 @@ import com.nexo.data.remote.drive.DriveTokenStore
 import com.nexo.data.remote.drive.EncryptedDriveTokenStore
 import com.nexo.data.remote.drive.GoogleDriveAuthHelper
 import com.nexo.data.remote.drive.InMemoryDriveTokenStore
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.data.remote.drive.KtorAuthApi
 import com.nexo.data.remote.drive.driveOAuthRedirectUri
 import com.nexo.data.remote.supabase.SupabaseBookCatalogDataSource
@@ -80,9 +83,10 @@ class NetworkModule(
     private val context: Context,
     private val databaseModule: DatabaseModule,
     @Suppress("UNUSED_PARAMETER") private val preferencesModule: PreferencesModule,
+    private val activeUserProvider: ActiveUserProvider,
 ) {
     val driveTokenStore: DriveTokenStore by lazy {
-        runCatching { EncryptedDriveTokenStore(context.applicationContext) }
+        runCatching { EncryptedDriveTokenStore(context.applicationContext, activeUserProvider) }
             .getOrElse { InMemoryDriveTokenStore() }
     }
 
@@ -291,7 +295,8 @@ class NetworkModule(
         java.io.File(context.cacheDir, "catalog")
     }
 
-    /** Internal target tree where imported book binaries are stored (WU6, FR-03). */
+    /** Internal target tree where imported book binaries are stored (WU6, FR-03).
+     *  Root of the per-account tree: files land in `books/{userId}/` (T8). */
     val libraryBooksDir: java.io.File by lazy {
         java.io.File(context.filesDir, "books")
     }
@@ -302,6 +307,11 @@ class NetworkModule(
 
     val openLibraryDataSource: OpenLibraryDataSource by lazy {
         OpenLibraryDataSource(catalogTransport)
+    }
+
+    /** Standard Ebooks: the public Atom feed, fetched directly (no CORS on Android). */
+    val standardEbooksDataSource: StandardEbooksDataSource by lazy {
+        StandardEbooksDataSource(catalogTransport)
     }
 
     /**
@@ -387,6 +397,11 @@ class NetworkModule(
                                 OpenLibraryCatalogProvider(openLibraryDataSource),
                                 // Fail-closed: absent/blank GOOGLE_BOOKS_KEY ⇒ null ⇒ omitted.
                                 googleBooksCatalogProvider,
+                                // Before the curated bundle so the real source wins the
+                                // source-id dedupe: the bundle lists the same
+                                // `builtin:standard-ebooks` id as CURATED, and first
+                                // occurrence wins in `listSources()`.
+                                StandardEbooksCatalogProvider(standardEbooksDataSource),
                             ),
                         curated = CuratedCatalogProvider(context),
                         installedAddons = addonRegistry.listInstalled(),

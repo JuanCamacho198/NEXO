@@ -89,6 +89,13 @@ class AppDatabaseMigrationTest {
             .getDatabasePath("migration-31-32")
             .absolutePath
 
+    private fun testDbPath32To33(): String =
+        InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getDatabasePath("migration-32-33")
+            .absolutePath
+
     private fun columnNames(
         db: SupportSQLiteDatabase,
         table: String,
@@ -416,6 +423,59 @@ class AppDatabaseMigrationTest {
         assertTrue("expected index_notifications_created_at, got $indexes", indexes.contains("index_notifications_created_at"))
 
         assertEquals(1L, query(db, "SELECT COUNT(*) FROM installed_addons"))
+        db.close()
+    }
+
+    @Test
+    fun `migration 32 to 33 recreates the six account-scoped tables with user_id`() {
+        val dbPath = testDbPath32To33()
+        helper.createDatabase(dbPath, 32).use { db ->
+            // Nothing is preserved (decision D1), so the pre-existing rows only need
+            // to survive the DROP long enough for the recreate to run.
+            db.execSQL(
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, " +
+                    "state_version, remote_lifecycle, remote_catalog_version) " +
+                    "VALUES ('bk-33', 'Book', '/b.epub', 'epub', 1000, 'reading', 0, 'imported', 0)",
+            )
+            db.execSQL(
+                "INSERT INTO dictionary_words (id, word, addedAtEpochMillis, updated_at_epoch_millis, word_normalized) " +
+                    "VALUES ('dw-33', 'word', 1000, 1000, 'word')",
+            )
+            db.execSQL(
+                "INSERT INTO sync_outbox (id, entity_type, entity_id, operation, payload, created_at, retry_count) " +
+                    "VALUES ('so-33', 'BOOK', 'bk-33', 'CREATE', '{}', 1000, 0)",
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(dbPath, 33, true, AppDatabaseMigrations.MIGRATION_32_33)
+
+        val expectedUserIdIndexes =
+            mapOf(
+                "books" to "index_books_user_id_deleted_at_updated_at",
+                "reading_progress" to "index_reading_progress_user_id_book_id",
+                "highlights" to "index_highlights_user_id_book_id_deleted_at",
+                "bookmarks" to "index_bookmarks_user_id_book_id_deleted_at",
+                "dictionary_words" to "index_dictionary_words_word_normalized",
+                "sync_outbox" to "index_sync_outbox_user_id",
+            )
+
+        for ((table, _) in expectedUserIdIndexes) {
+            assertEquals("$table must gain a user_id column", "user_id", columnNames(db, table).last())
+        }
+
+        val indexes = mutableListOf<String>()
+        db
+            .query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name IN ('books','reading_progress','highlights','bookmarks','dictionary_words','sync_outbox')")
+            .use { cursor ->
+                while (cursor.moveToNext()) indexes.add(cursor.getString(0))
+            }
+        for ((_, index) in expectedUserIdIndexes) {
+            assertTrue("expected $index, got $indexes", indexes.contains(index))
+        }
+
+        assertEquals(0L, query(db, "SELECT COUNT(*) FROM books"))
+        assertEquals(0L, query(db, "SELECT COUNT(*) FROM dictionary_words"))
+        assertEquals(0L, query(db, "SELECT COUNT(*) FROM sync_outbox"))
         db.close()
     }
 }

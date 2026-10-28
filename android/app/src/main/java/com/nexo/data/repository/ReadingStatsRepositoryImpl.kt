@@ -39,8 +39,11 @@ class ReadingStatsRepositoryImpl(
      */
     private val zoneId: ZoneId,
 ) : ReadingStatsRepository {
-    override fun observeStats(bookId: String): Flow<ReadingStatsData?> =
-        readingStatsDao.observeStatsForBook(bookId).map { entity ->
+    override fun observeStats(
+        bookId: String,
+        userId: String,
+    ): Flow<ReadingStatsData?> =
+        readingStatsDao.observeStatsForBook(bookId, userId).map { entity ->
             entity?.let {
                 ReadingStatsData(
                     bookId = it.bookId,
@@ -51,10 +54,10 @@ class ReadingStatsRepositoryImpl(
             }
         }
 
-    override fun observeTotalTime(): Flow<Long> = readingStatsDao.observeTotalMinutesRead().map { it ?: 0L }
+    override fun observeTotalTime(userId: String): Flow<Long> = readingStatsDao.observeTotalMinutesReadForUser(userId).map { it ?: 0L }
 
-    override fun observeBookStats(): Flow<List<ReadingStatsData>> =
-        readingStatsDao.observeAllStats().map { entities ->
+    override fun observeBookStats(userId: String): Flow<List<ReadingStatsData>> =
+        readingStatsDao.observeAllStats(userId).map { entities ->
             entities.map {
                 ReadingStatsData(
                     bookId = it.bookId,
@@ -66,16 +69,17 @@ class ReadingStatsRepositoryImpl(
         }
 
     override suspend fun getDailyActivity(userId: String?): List<DailyReadingActivity> =
-        readingSessionDao.getDailyMinutesForUser(userId).map {
+        readingSessionDao.getDailyMinutesForUser(userId.orEmpty()).map {
             DailyReadingActivity(dateEpochMillis = it.dateEpochMillis, minutesRead = it.totalMinutes)
         }
 
     override suspend fun updateReadingTime(
         bookId: String,
+        userId: String,
         additionalMinutes: Long,
     ) {
         val now = System.currentTimeMillis()
-        val existingEntity = readingStatsDao.observeStatsForBook(bookId).firstOrNull()
+        val existingEntity = readingStatsDao.observeStatsForBook(bookId, userId).firstOrNull()
 
         if (existingEntity != null) {
             readingStatsDao.upsert(
@@ -92,13 +96,17 @@ class ReadingStatsRepositoryImpl(
                     totalMinutesRead = additionalMinutes,
                     lastReadDateEpochMillis = now,
                     sessionsCount = 1,
+                    userId = userId,
                 ),
             )
         }
     }
 
-    override suspend fun deleteStats(bookId: String) {
-        readingStatsDao.deleteForBook(bookId)
+    override suspend fun deleteStats(
+        bookId: String,
+        userId: String,
+    ) {
+        readingStatsDao.deleteForBook(bookId, userId)
     }
 
     override suspend fun recordReadingSession(
@@ -149,6 +157,7 @@ class ReadingStatsRepositoryImpl(
                 operation = SyncOperation.UPDATE.name,
                 payloadJson = payloadJson,
                 createdAtEpochMillis = now,
+                userId = userId,
             ),
         )
         // S6: request a drain after a successful enqueue.
