@@ -31,6 +31,21 @@ private val LatoFontFamily =
         Font(R.font.lato_bold, FontWeight.Bold),
     )
 
+/**
+ * Role for the small signpost above a content group ("Continue reading",
+ * "My bookshelf"). Deliberately a size below [NexoTypography.titleMedium] so a
+ * section label never outranks the content it labels; call sites pair it with
+ * `onSurfaceVariant` to keep it a signpost rather than a heading.
+ */
+val NexoSectionLabel: TextStyle =
+    TextStyle(
+        fontFamily = LatoFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.2.sp,
+    )
+
 val NexoTypography =
     Typography(
         displayLarge =

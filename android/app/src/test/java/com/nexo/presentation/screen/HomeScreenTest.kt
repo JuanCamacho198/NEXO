@@ -15,9 +15,18 @@ import org.junit.Test
 /**
  * Unit tests for the HomeScreen composable's data contract.
  *
- * Compose rendering tests (asserting all 7 sections render with visual elements)
- * belong in androidTest/ with createComposeRule. Here we test the ViewModel
- * state that drives the screen — proving the data contract for all 7 sections.
+ * Compose rendering tests belong in androidTest/ with createComposeRule. Here we
+ * test the ViewModel state that drives the screen — proving the data contract
+ * for every section Home actually renders.
+ *
+ * Populated Home: 1. Header (collapsed hero: NEXO wordmark, `userName`/`avatarUrl`,
+ * streak, search + notifications) · 2. Greeting (`userName`) ·
+ * 3. ContinueReading (`currentBooks`) · 4. MyBookshelf (`recentBooks`) ·
+ * 5. Bottom spacer (structural).
+ * First-session Home: full hero + genres + sync banner, chosen by `isLibraryEmpty`.
+ *
+ * `TodaySummary` and `QuickAccess` are NOT Home sections: the summary moved to
+ * Statistics (`StatisticsScreen`) and QuickAccess was removed.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeScreenTest {
@@ -25,22 +34,24 @@ class HomeScreenTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun homeUiState_supportsAllSevenSections() =
+    fun homeUiState_supportsAllHomeSections() =
         runTest {
-            // This test verifies the HomeUiState data class has ALL fields
-            // needed to render the 7 sections of the Pencil design:
+            // Verifies the HomeUiState data class has the fields needed to render
+            // every Home section:
             //
-            // 1. Header — static "NEXO" title (no data field needed)
+            // 1. Header — NEXO top bar; reads userName and avatarUrl
             // 2. Greeting — userName
-            // 3. TodaySummary — minutesReadToday, sessionsToday, dailyProgressPercent
-            // 4. ContinueReading — currentBooks
-            // 5. MyBookshelf — recentBooks
-            // 6. QuickAccess — static icons (no data field needed)
-            // 7. Bottom spacer — structural (no data field needed)
+            // 3. ContinueReading — currentBooks
+            // 4. MyBookshelf — recentBooks
+            // 5. Bottom spacer — structural (no data field needed)
+            //
+            // TodaySummary and QuickAccess were removed from Home; the daily
+            // summary now lives on the Statistics screen.
 
             val state =
                 HomeUiState(
                     userName = "TestUser",
+                    avatarUrl = "https://example.com/avatar.png",
                     minutesReadToday = 42,
                     sessionsToday = 3,
                     dailyProgressPercent = 0.75f,
@@ -49,18 +60,15 @@ class HomeScreenTest {
                     isLoading = false,
                 )
 
+            // Section 1: Header — identity shown by the top bar and the hero avatar
+            assertEquals("TestUser", state.userName)
+            assertEquals("https://example.com/avatar.png", state.avatarUrl)
+
             // Section 2: Greeting
             assertEquals("TestUser", state.userName)
 
-            // Section 3: TodaySummary — 3 stat cards
-            assertEquals(42, state.minutesReadToday)
-            assertEquals(3, state.sessionsToday)
-            assertEquals(0.75f, state.dailyProgressPercent, 0.001f)
-
-            // Section 4: ContinueReading
+            // Sections 3-4: ContinueReading and MyBookshelf
             assertTrue(state.currentBooks.isEmpty())
-
-            // Section 5: MyBookshelf
             assertTrue(state.recentBooks.isEmpty())
         }
 
@@ -101,6 +109,68 @@ class HomeScreenTest {
             assertEquals(2, state.recentBooks.size)
             assertEquals("Book 1", state.recentBooks[0].title)
             assertEquals("Book 2", state.recentBooks[1].title)
+        }
+
+    @Test
+    fun homeUiState_isLibraryEmpty_falseWhileLoading() =
+        runTest {
+            // Before the first Room emission the library is unknown, not empty —
+            // the skeleton owns that window, so the empty layout must not show.
+            val state = HomeUiState(isLoading = true, allBooks = emptyList())
+
+            assertTrue("Loading is not the same as an empty library", !state.isLibraryEmpty)
+        }
+
+    @Test
+    fun homeUiState_isLibraryEmpty_trueAfterLoadWithNoBooks() =
+        runTest {
+            val state = HomeUiState(isLoading = false, allBooks = emptyList())
+
+            assertTrue(state.isLibraryEmpty)
+        }
+
+    @Test
+    fun homeUiState_isLibraryEmpty_falseOnceAnyBookExists() =
+        runTest {
+            val state =
+                HomeUiState(
+                    isLoading = false,
+                    allBooks =
+                        listOf(
+                            Book(
+                                id = "book-1",
+                                title = "Test Book",
+                                author = "Test Author",
+                                coverPath = null,
+                                filePath = "/path/to/book.epub",
+                                format = "epub",
+                                updatedAtEpochMillis = 1000L,
+                            ),
+                        ),
+                )
+
+            assertTrue(!state.isLibraryEmpty)
+        }
+
+    @Test
+    fun homeUiState_isLibraryEmpty_ignoresCurrentAndRecentBooks() =
+        runTest {
+            // The condition is the library itself (allBooks), not the carousel or
+            // the shelf: a book present only in those derived lists still counts
+            // as a populated library.
+            val book =
+                Book(
+                    id = "book-1",
+                    title = "Test Book",
+                    author = "Test Author",
+                    coverPath = null,
+                    filePath = "/path/to/book.epub",
+                    format = "epub",
+                    updatedAtEpochMillis = 1000L,
+                )
+            val state = HomeUiState(isLoading = false, allBooks = emptyList(), currentBooks = listOf(book), recentBooks = listOf(book))
+
+            assertTrue(state.isLibraryEmpty)
         }
 
     // ── Loading-skeleton gate (LS1-LS3) ────────────────────────────────
