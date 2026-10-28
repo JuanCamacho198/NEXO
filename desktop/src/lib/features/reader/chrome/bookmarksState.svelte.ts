@@ -73,6 +73,8 @@ export function createBookmarksState(
         pageNumber,
         title: `Page ${pageNumber}`,
         createdAt,
+        cfiLocation: location?.cfiLocation ?? null,
+        locatorJson: location?.locatorJson ?? null,
       });
       if (authState.userId) {
         void outboxDao.add(

@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 
-const MIGRATIONS: [(&str, &str); 21] = [
+const MIGRATIONS: [(&str, &str); 22] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
@@ -39,6 +39,7 @@ const MIGRATIONS: [(&str, &str); 21] = [
         include_str!("../migrations/0020_drop_dictionary_favorite.sql"),
     ),
     ("0021_notifications", include_str!("../migrations/0021_notifications.sql")),
+    ("0022_bookmark_locator", include_str!("../migrations/0022_bookmark_locator.sql")),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
@@ -81,7 +82,9 @@ pub fn open_and_migrate(db_path: &Path) -> AppResult<Connection> {
                     || (name == "0010_book_genre" && has_column(&tx, "books", "genre")?)
                     || (name == "0011_book_metadata" && has_column(&tx, "books", "language")?)
                     || (name == "0015_dictionary_sync"
-                        && has_column(&tx, "dictionary_words", "user_id")?) =>
+                        && has_column(&tx, "dictionary_words", "user_id")?)
+                    || (name == "0022_bookmark_locator"
+                        && has_column(&tx, "bookmarks", "cfi_location")?) =>
             {
                 // Existing DBs may already have these columns from pre-tracker launches.
                 // Treat as previously applied once all expected columns are present.

@@ -254,6 +254,9 @@ pub struct BookmarkDto {
     pub position: f64,
     pub title: Option<String>,
     pub created_at: String,
+    pub cfi_location: Option<String>,
+    pub locator_json: Option<String>,
+    pub updated_at: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
