@@ -10,6 +10,9 @@ import com.nexo.data.local.entity.SyncOutboxEntity
 import com.nexo.data.remote.sync.CatalogSyncStatus
 import com.nexo.data.session.SessionManager
 import com.nexo.domain.model.AuthSession
+import com.nexo.testutil.FakeBookDao
+import com.nexo.testutil.FakeSyncOutboxDao
+import com.nexo.testutil.TEST_USER_ID
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -80,6 +83,7 @@ class SupabaseBookCatalogSyncTest {
                     operation = SyncOperation.CREATE.name,
                     payloadJson = "{}",
                     createdAtEpochMillis = 100L,
+                    userId = TEST_USER_ID,
                 ),
             )
 
@@ -89,7 +93,7 @@ class SupabaseBookCatalogSyncTest {
             // Wait for processing to complete (runs on IO dispatcher)
             Thread.sleep(500)
 
-            val pendingItems = fakeOutboxDao.getPendingItems()
+            val pendingItems = fakeOutboxDao.getPendingItems(TEST_USER_ID)
             assertEquals(0, pendingItems.size)
             coVerify { mockDataSource.upsertBook(any()) }
         }
@@ -105,13 +109,14 @@ class SupabaseBookCatalogSyncTest {
                     operation = SyncOperation.UPDATE.name,
                     payloadJson = "{}",
                     createdAtEpochMillis = 100L,
+                    userId = TEST_USER_ID,
                 ),
             )
 
             sync.startProcessing()
             Thread.sleep(500)
 
-            val pendingItems = fakeOutboxDao.getPendingItems()
+            val pendingItems = fakeOutboxDao.getPendingItems(TEST_USER_ID)
             assertEquals(1, pendingItems.size)
             coVerify(inverse = true) { mockDataSource.upsertBook(any()) }
         }
@@ -127,6 +132,7 @@ class SupabaseBookCatalogSyncTest {
                     operation = SyncOperation.DELETE.name,
                     payloadJson = "{}",
                     createdAtEpochMillis = 200L,
+                    userId = TEST_USER_ID,
                 ),
             )
 
@@ -136,7 +142,7 @@ class SupabaseBookCatalogSyncTest {
             sync.startProcessing()
             Thread.sleep(500)
 
-            val pendingItems = fakeOutboxDao.getPendingItems()
+            val pendingItems = fakeOutboxDao.getPendingItems(TEST_USER_ID)
             assertEquals(0, pendingItems.size)
             coVerify { mockDataSource.upsertBook(match { it.id == "book-1" && it.lifecycle == "deleted" }) }
             coVerify(inverse = true) { mockDataSource.deleteUserBook(any(), any()) }
@@ -153,13 +159,14 @@ class SupabaseBookCatalogSyncTest {
                     operation = SyncOperation.CREATE.name,
                     payloadJson = "{}",
                     createdAtEpochMillis = 300L,
+                    userId = TEST_USER_ID,
                 ),
             )
 
             sync.startProcessing()
             Thread.sleep(500)
 
-            val pendingItems = fakeOutboxDao.getPendingItems()
+            val pendingItems = fakeOutboxDao.getPendingItems(TEST_USER_ID)
             assertEquals(0, pendingItems.size)
             coVerify(inverse = true) { mockDataSource.upsertBook(any()) }
         }
@@ -178,6 +185,7 @@ class SupabaseBookCatalogSyncTest {
                     operation = SyncOperation.CREATE.name,
                     payloadJson = "{}",
                     createdAtEpochMillis = 400L,
+                    userId = TEST_USER_ID,
                 ),
             )
 
@@ -186,7 +194,7 @@ class SupabaseBookCatalogSyncTest {
             sync.startProcessing()
             Thread.sleep(500)
 
-            val pendingItems = fakeOutboxDao.getPendingItems()
+            val pendingItems = fakeOutboxDao.getPendingItems(TEST_USER_ID)
             assertEquals(1, pendingItems.size)
             assertEquals(1, pendingItems.first().retryCount)
         }
@@ -214,7 +222,7 @@ class SupabaseBookCatalogSyncTest {
             // The surviving book still synced.
             coVerify { mockDataSource.upsertBook(match { it.id == "book-good" }) }
             // The failing book keeps its retry state — outbox resilience unchanged.
-            val pending = fakeOutboxDao.getPendingItems()
+            val pending = fakeOutboxDao.getPendingItems(TEST_USER_ID)
             assertEquals(1, pending.size)
             assertEquals("book-bad", pending.first().entityId)
             assertEquals(1, pending.first().retryCount)
@@ -267,6 +275,7 @@ class SupabaseBookCatalogSyncTest {
                     operation = SyncOperation.CREATE.name,
                     payloadJson = "{}",
                     createdAtEpochMillis = 500L,
+                    userId = TEST_USER_ID,
                 ),
             )
 
@@ -292,7 +301,7 @@ class SupabaseBookCatalogSyncTest {
             Thread.sleep(500)
 
             // Outbox entry should be deleted without calling upsert
-            val pendingItems = fakeOutboxDao.getPendingItems()
+            val pendingItems = fakeOutboxDao.getPendingItems(TEST_USER_ID)
             assertEquals(0, pendingItems.size)
             coVerify(inverse = true) { mockDataSource.upsertBook(any()) }
             coVerify { mockDataSource.getUserBookByHash("test-user", "sha256:abc123") }
@@ -312,6 +321,7 @@ class SupabaseBookCatalogSyncTest {
                     operation = SyncOperation.CREATE.name,
                     payloadJson = "{}",
                     createdAtEpochMillis = 600L,
+                    userId = TEST_USER_ID,
                 ),
             )
 
@@ -322,7 +332,7 @@ class SupabaseBookCatalogSyncTest {
             sync.startProcessing()
             Thread.sleep(500)
 
-            val pendingItems = fakeOutboxDao.getPendingItems()
+            val pendingItems = fakeOutboxDao.getPendingItems(TEST_USER_ID)
             assertEquals(0, pendingItems.size)
             coVerify { mockDataSource.upsertBook(any()) }
             coVerify { mockDataSource.getUserBookByHash("test-user", "sha256:def456") }
@@ -344,6 +354,7 @@ class SupabaseBookCatalogSyncTest {
                     operation = SyncOperation.CREATE.name,
                     payloadJson = "{}",
                     createdAtEpochMillis = 700L,
+                    userId = TEST_USER_ID,
                 ),
             )
 
@@ -352,7 +363,7 @@ class SupabaseBookCatalogSyncTest {
             sync.startProcessing()
             Thread.sleep(500)
 
-            val pendingItems = fakeOutboxDao.getPendingItems()
+            val pendingItems = fakeOutboxDao.getPendingItems(TEST_USER_ID)
             assertEquals(0, pendingItems.size)
             coVerify { mockDataSource.upsertBook(any()) }
             // Should NOT call getUserBookByHash when contentHash is null
@@ -376,6 +387,7 @@ class SupabaseBookCatalogSyncTest {
                     operation = SyncOperation.UPDATE.name,
                     payloadJson = "{}",
                     createdAtEpochMillis = 800L,
+                    userId = TEST_USER_ID,
                 ),
             )
 
@@ -401,7 +413,7 @@ class SupabaseBookCatalogSyncTest {
             sync.startProcessing()
             Thread.sleep(500)
 
-            val pendingItems = fakeOutboxDao.getPendingItems()
+            val pendingItems = fakeOutboxDao.getPendingItems(TEST_USER_ID)
             assertEquals(0, pendingItems.size)
             coVerify { mockDataSource.upsertBook(match { it.id == "book-own-update" }) }
             coVerify { mockDataSource.getUserBookByHash("test-user", "sha256:own123") }
@@ -616,7 +628,7 @@ class SupabaseBookCatalogSyncTest {
                 )
             sync.applyRemoteBook(row)
 
-            assertEquals(0, fakeBookDao.count()) // no local row created, never a deletion
+            assertEquals(0, fakeBookDao.count(TEST_USER_ID)) // no local row created, never a deletion
             coVerify(inverse = true) { mockDataSource.deleteUserBook(any(), any()) }
         }
 
@@ -640,7 +652,7 @@ class SupabaseBookCatalogSyncTest {
                 ),
             )
 
-            val local = fakeBookDao.getBookById("book-v5")
+            val local = fakeBookDao.getBookById("book-v5", TEST_USER_ID)
             assertEquals(5L, local?.remoteCatalogVersion)
             assertEquals(null, local?.coverPath) // stale cover not applied
         }
@@ -665,7 +677,7 @@ class SupabaseBookCatalogSyncTest {
                 ),
             )
 
-            val local = fakeBookDao.getBookById("book-v5")
+            val local = fakeBookDao.getBookById("book-v5", TEST_USER_ID)
             assertEquals(null, local?.coverPath) // no change on equal version
         }
 
@@ -688,7 +700,7 @@ class SupabaseBookCatalogSyncTest {
                 ),
             )
 
-            assertTrue(fakeBookDao.getBookById("book-del")?.deletedAtEpochMillis != null)
+            assertTrue(fakeBookDao.getBookById("book-del", TEST_USER_ID)?.deletedAtEpochMillis != null)
         }
 
     @Test
@@ -714,7 +726,7 @@ class SupabaseBookCatalogSyncTest {
                 ),
             )
 
-            val local = fakeBookDao.getBookById("book-cov")
+            val local = fakeBookDao.getBookById("book-cov", TEST_USER_ID)
             assertEquals(2L, local?.remoteCatalogVersion)
             assertEquals("https://cdn.example/c.jpg", local?.coverPath)
             assertEquals("user-1/book-cov/cover.jpg", local?.remoteCoverRef)
@@ -749,7 +761,7 @@ class SupabaseBookCatalogSyncTest {
                 ),
             )
 
-            val local = fakeBookDao.getBookById("book-cov")
+            val local = fakeBookDao.getBookById("book-cov", TEST_USER_ID)
             assertEquals(2L, local?.remoteCatalogVersion)
             // Working local cover wins over the remote URL.
             assertEquals("/data/user/0/com.nexo/files/covers/book-cov.jpg", local?.coverPath)
@@ -770,6 +782,7 @@ class SupabaseBookCatalogSyncTest {
             operation = SyncOperation.UPDATE.name,
             payloadJson = "{}",
             createdAtEpochMillis = 100L,
+            userId = TEST_USER_ID,
         )
 
     private fun createSampleBook(id: String): BookEntity =
@@ -787,183 +800,7 @@ class SupabaseBookCatalogSyncTest {
             // Catalog upsert requires a remote file (Drive push sets this);
             // without it processBookItem defers the row as local-only.
             remotePath = "books/user-1/$id.epub",
+            userId = TEST_USER_ID,
         )
-
-    // ─── Fake DAOs (inline, same pattern as LibraryRepositoryImplTest) ─
-
-    private class FakeBookDao : BookDao {
-        override suspend fun allStoredPaths(): List<StoredBookPath> = emptyList()
-
-        override suspend fun updateFilePath(
-            bookId: String,
-            filePath: String,
-        ) = Unit
-
-        private val booksState = MutableStateFlow<List<BookEntity>>(emptyList())
-
-        override fun observeAllBooks(): Flow<List<BookEntity>> = booksState.map { books -> books.filter { it.deletedAtEpochMillis == null } }
-
-        override fun observeReadingBooks(): Flow<List<BookEntity>> =
-            booksState.map { books ->
-                books.filter { it.deletedAtEpochMillis == null && it.readingState == "reading" }
-            }
-
-        override suspend fun upsert(book: BookEntity) {
-            booksState.value =
-                booksState.value
-                    .filterNot { it.id == book.id }
-                    .plus(book)
-        }
-
-        override suspend fun upsertAll(books: List<BookEntity>) {
-            books.forEach { upsert(it) }
-        }
-
-        override fun observeBookById(bookId: String): Flow<BookEntity?> = MutableStateFlow(booksState.value.firstOrNull { it.id == bookId })
-
-        override suspend fun getBookById(bookId: String): BookEntity? = booksState.value.firstOrNull { it.id == bookId }
-
-        override suspend fun deleteBook(
-            bookId: String,
-            deletedAt: Long,
-        ) {
-            booksState.value =
-                booksState.value.map { book ->
-                    if (book.id == bookId) {
-                        book.copy(
-                            updatedAtEpochMillis = deletedAt,
-                            deletedAtEpochMillis = deletedAt,
-                        )
-                    } else {
-                        book
-                    }
-                }
-        }
-
-        override suspend fun deleteById(bookId: String) {
-            booksState.value = booksState.value.filterNot { it.id == bookId }
-        }
-
-        override suspend fun updateRating(
-            bookId: String,
-            rating: Int?,
-        ) {
-            booksState.value =
-                booksState.value.map { book ->
-                    if (book.id == bookId) book.copy(userRating = rating) else book
-                }
-        }
-
-        override suspend fun updateStatus(
-            bookId: String,
-            status: String?,
-            updatedAt: Long,
-        ) {
-            booksState.value =
-                booksState.value.map { book ->
-                    if (book.id == bookId) book.copy(status = status, updatedAtEpochMillis = updatedAt) else book
-                }
-        }
-
-        override suspend fun startReading(
-            bookId: String,
-            updatedAt: Long,
-        ) {}
-
-        override suspend fun updateReadingProgress(
-            bookId: String,
-            progress: Float,
-            updatedAt: Long,
-        ) {}
-
-        override suspend fun completeReading(
-            bookId: String,
-            updatedAt: Long,
-        ) {}
-
-        override suspend fun updateMetadata(
-            bookId: String,
-            title: String,
-            author: String?,
-            description: String?,
-            coverPath: String?,
-            genre: String?,
-            language: String?,
-            publisher: String?,
-            tags: String?,
-            publishedDate: String?,
-            updatedAt: Long,
-        ) {
-            booksState.value =
-                booksState.value.map { book ->
-                    if (book.id == bookId) {
-                        book.copy(
-                            title = title,
-                            author = author,
-                            description = description,
-                            coverPath = coverPath,
-                            updatedAtEpochMillis = updatedAt,
-                        )
-                    } else {
-                        book
-                    }
-                }
-        }
-
-        override suspend fun count(): Int = booksState.value.size
-
-        override fun observeAllBooksPaged(): androidx.paging.PagingSource<Int, BookEntity> = com.nexo.testutil.FakePagingSource(emptyList())
-    }
-
-    private class FakeSyncOutboxDao : SyncOutboxDao {
-        private val items = mutableListOf<SyncOutboxEntity>()
-
-        override suspend fun getPendingItems(): List<SyncOutboxEntity> = items.toList().sortedBy { it.createdAtEpochMillis }
-
-        override suspend fun insert(item: SyncOutboxEntity) {
-            items.add(item)
-        }
-
-        override suspend fun deleteById(id: String) {
-            items.removeAll { it.id == id }
-        }
-
-        override suspend fun incrementRetryCount(
-            id: String,
-            error: String,
-        ) {
-            val index = items.indexOfFirst { it.id == id }
-            if (index >= 0) {
-                items[index] =
-                    items[index].copy(
-                        retryCount = items[index].retryCount + 1,
-                        lastError = error,
-                    )
-            }
-        }
-
-        override suspend fun pruneFailedItems(maxRetries: Int) {
-            items.removeAll { it.retryCount >= maxRetries }
-        }
-
-        override fun observePendingCount(): Flow<Int> = MutableStateFlow(items.size)
-
-        override suspend fun getByTypeAndEntityId(
-            type: String,
-            entityId: String,
-        ): SyncOutboxEntity? = items.firstOrNull { it.entityType == type && it.entityId == entityId }
-
-        override suspend fun updatePayload(
-            id: String,
-            payloadJson: String,
-        ) {
-            val idx = items.indexOfFirst { it.id == id }
-            if (idx >= 0) items[idx] = items[idx].copy(payloadJson = payloadJson)
-        }
-
-        override suspend fun upsertCoalesced(item: SyncOutboxEntity) {
-            val existing = item.entityId?.let { getByTypeAndEntityId(item.entityType, it) }
-            if (existing != null) updatePayload(existing.id, item.payloadJson) else items.add(item)
-        }
-    }
 }
+

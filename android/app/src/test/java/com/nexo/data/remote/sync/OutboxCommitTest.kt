@@ -4,6 +4,7 @@ import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.local.entity.SyncOutboxEntity
+import com.nexo.testutil.TEST_USER_ID
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,6 +57,7 @@ class OutboxCommitTest {
             payloadJson = "{}",
             createdAtEpochMillis = 100L,
             retryCount = retryCount,
+            userId = TEST_USER_ID,
         )
 
     // ─── commit: Ok branch (SCEN-OUTBOX-1) ──────────────────────────────
@@ -67,9 +69,9 @@ class OutboxCommitTest {
             val outcome = outbox.commit(i) { ApplyOutcome.Ok }
 
             assertEquals(CommitOutcome.Acked, outcome)
-            coVerify(exactly = 1) { outboxDao.deleteById("outbox-1") }
-            coVerify(exactly = 0) { outboxDao.incrementRetryCount(any(), any()) }
-            coVerify(exactly = 0) { outboxDao.pruneFailedItems(any()) }
+            coVerify(exactly = 1) { outboxDao.deleteById("outbox-1", TEST_USER_ID) }
+            coVerify(exactly = 0) { outboxDao.incrementRetryCount(any(), any(), any()) }
+            coVerify(exactly = 0) { outboxDao.pruneFailedItems(any(), any()) }
         }
 
     // ─── commit: Retryable, below threshold (SCEN-OUTBOX-2) ─────────────
@@ -83,9 +85,9 @@ class OutboxCommitTest {
 
             assertTrue(outcome is CommitOutcome.Retryable)
             assertEquals(cause, (outcome as CommitOutcome.Retryable).cause)
-            coVerify(exactly = 1) { outboxDao.incrementRetryCount("outbox-2", "network") }
-            coVerify(exactly = 0) { outboxDao.pruneFailedItems(any()) }
-            coVerify(exactly = 0) { outboxDao.deleteById(any()) }
+            coVerify(exactly = 1) { outboxDao.incrementRetryCount("outbox-2", TEST_USER_ID, "network") }
+            coVerify(exactly = 0) { outboxDao.pruneFailedItems(any(), any()) }
+            coVerify(exactly = 0) { outboxDao.deleteById(any(), any()) }
         }
 
     @Test
@@ -97,9 +99,9 @@ class OutboxCommitTest {
 
             assertTrue(outcome is CommitOutcome.Poison)
             assertEquals(cause, (outcome as CommitOutcome.Poison).cause)
-            coVerify(exactly = 1) { outboxDao.incrementRetryCount("outbox-3", "network") }
-            coVerify(exactly = 1) { outboxDao.pruneFailedItems(3) }
-            coVerify(exactly = 0) { outboxDao.deleteById(any()) }
+            coVerify(exactly = 1) { outboxDao.incrementRetryCount("outbox-3", TEST_USER_ID, "network") }
+            coVerify(exactly = 1) { outboxDao.pruneFailedItems(TEST_USER_ID, 3) }
+            coVerify(exactly = 0) { outboxDao.deleteById(any(), any()) }
         }
 
     @Test
@@ -109,7 +111,7 @@ class OutboxCommitTest {
             val i = item("outbox-4", retryCount = 0)
             val outcome = outbox.commit(i) { ApplyOutcome.Retryable(RuntimeException("x")) }
             assertTrue(outcome is CommitOutcome.Retryable)
-            coVerify(exactly = 0) { outboxDao.pruneFailedItems(any()) }
+            coVerify(exactly = 0) { outboxDao.pruneFailedItems(any(), any()) }
         }
 
     // ─── commit: immediate Poison (SCEN-OUTBOX-4) ───────────────────────
@@ -123,9 +125,9 @@ class OutboxCommitTest {
 
             assertTrue(outcome is CommitOutcome.Poison)
             assertEquals(cause, (outcome as CommitOutcome.Poison).cause)
-            coVerify(exactly = 1) { outboxDao.pruneFailedItems(3) }
-            coVerify(exactly = 0) { outboxDao.incrementRetryCount(any(), any()) }
-            coVerify(exactly = 0) { outboxDao.deleteById(any()) }
+            coVerify(exactly = 1) { outboxDao.pruneFailedItems(TEST_USER_ID, 3) }
+            coVerify(exactly = 0) { outboxDao.incrementRetryCount(any(), any(), any()) }
+            coVerify(exactly = 0) { outboxDao.deleteById(any(), any()) }
         }
 
     // ─── processOutboxStream: ordering (SCEN-OUTBOX-5) ──────────────────
@@ -150,9 +152,9 @@ class OutboxCommitTest {
                 ),
                 events,
             )
-            coVerify(exactly = 1) { outboxDao.deleteById("A") }
-            coVerify(exactly = 1) { outboxDao.deleteById("B") }
-            coVerify(exactly = 1) { outboxDao.deleteById("C") }
+            coVerify(exactly = 1) { outboxDao.deleteById("A", TEST_USER_ID) }
+            coVerify(exactly = 1) { outboxDao.deleteById("B", TEST_USER_ID) }
+            coVerify(exactly = 1) { outboxDao.deleteById("C", TEST_USER_ID) }
         }
 
     @Test
@@ -203,7 +205,7 @@ class OutboxCommitTest {
             assertNotEquals(CommitOutcome.Acked, outcome)
             // The helper did NOT call incrementRetryCount more than once, did NOT
             // sleep, did NOT call apply again.
-            coVerify(exactly = 1) { outboxDao.incrementRetryCount("outbox-6", "retry") }
+            coVerify(exactly = 1) { outboxDao.incrementRetryCount("outbox-6", TEST_USER_ID, "retry") }
         }
 
     // ─── maxRetries is configurable ─────────────────────────────────────
@@ -218,7 +220,7 @@ class OutboxCommitTest {
                 }
 
             assertTrue(outcome is CommitOutcome.Poison)
-            coVerify(exactly = 1) { outboxDao.pruneFailedItems(1) }
+            coVerify(exactly = 1) { outboxDao.pruneFailedItems(TEST_USER_ID, 1) }
         }
 
     // ─── apply throws → exception bubbles, NOT converted to Retryable ──
@@ -237,9 +239,9 @@ class OutboxCommitTest {
             assertNotNull(caught)
             assertEquals(thrown, caught)
             // The helper must NOT swallow the exception or treat it as Retryable.
-            coVerify(exactly = 0) { outboxDao.deleteById(any()) }
-            coVerify(exactly = 0) { outboxDao.incrementRetryCount(any(), any()) }
-            coVerify(exactly = 0) { outboxDao.pruneFailedItems(any()) }
+            coVerify(exactly = 0) { outboxDao.deleteById(any(), any()) }
+            coVerify(exactly = 0) { outboxDao.incrementRetryCount(any(), any(), any()) }
+            coVerify(exactly = 0) { outboxDao.pruneFailedItems(any(), any()) }
         }
 
     // ─── commit: apply throws after Ok branch is not reachable, sanity ──
@@ -250,7 +252,8 @@ class OutboxCommitTest {
             // Ensure the Acked branch is a clean single DAO call.
             val outcome = outbox.commit(item("A")) { ApplyOutcome.Ok }
             assertEquals(CommitOutcome.Acked, outcome)
-            coVerify(exactly = 1) { outboxDao.deleteById("A") }
-            coVerify(exactly = 0) { outboxDao.incrementRetryCount(any(), any()) }
+            coVerify(exactly = 1) { outboxDao.deleteById("A", TEST_USER_ID) }
+            coVerify(exactly = 0) { outboxDao.incrementRetryCount(any(), any(), any()) }
         }
 }
+

@@ -19,6 +19,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOf
 import java.io.File
 import java.io.IOException
 import java.util.Locale
@@ -54,8 +55,22 @@ class GoogleDriveSyncService(
 ) : SyncService {
     private val state = MutableStateFlow<DriveSyncState>(if (isEnabled()) DriveSyncState.Idle else DriveSyncState.Disabled)
 
+    /**
+     * Owner of the current sync session, or `""` when none is active. Set by
+     * [bootstrap]; used by diagnostics that run before a session is resolved.
+     */
+    @Volatile
+    private var activeUserId: String = ""
+
     override val syncState: Flow<DriveSyncState> = state.asStateFlow()
-    override val pendingCount: Flow<Int> = outboxDao.observePendingCount()
+
+    /**
+     * The Drive facade has no ambient owner: the depth gauge is owned by
+     * [SyncOrchestrator], which subscribes to the outbox already scoped to the
+     * active account. Exposing the raw table count here would report every
+     * account's parked rows, so the facade reports nothing.
+     */
+    override val pendingCount: Flow<Int> = flowOf(0)
 
     override suspend fun bootstrap(userId: String): Result<Unit> {
         val disabledError = ensureDriveAuthorized("bootstrap")
@@ -72,12 +87,17 @@ class GoogleDriveSyncService(
                 ),
             )
         }
-        if (!localBooksDir.exists()) {
-            localBooksDir.mkdirs()
-        }
+        ownerBooksDir(userId).mkdirs()
+        activeUserId = userId
         state.value = DriveSyncState.Idle
         return Result.success(Unit)
     }
+
+    /**
+     * The active account's own subtree of [localBooksDir] (T8). A pull writes
+     * only here, so two accounts sharing a device never resolve the same file.
+     */
+    private fun ownerBooksDir(userId: String): File = File(localBooksDir, userId)
 
     private suspend fun hasLiveSession(): Boolean = sessionManager.getCurrentSession().getOrNull() != null
 
@@ -113,7 +133,7 @@ class GoogleDriveSyncService(
         // reaches the cloud, and it used to fail with NO log at all. The pending
         // count is included so a parked outbox is traceable to its cause and to
         // how many rows it is holding back.
-        val pending = runCatching { outboxDao.getPendingItems().size }.getOrDefault(-1)
+        val pending = runCatching { outboxDao.getPendingItems(activeUserId).size }.getOrDefault(-1)
         DebugLog.warn(
             COMPONENT,
             "$caller skipped: Drive unauthorized (${disabledError.code}); " +
@@ -158,7 +178,9 @@ class GoogleDriveSyncService(
             }
 
         state.value = DriveSyncState.Running
-        val pendingItems = outboxDao.getPendingItems()
+        // Drain only this session's queue: an unscoped drain would consume
+        // another account's parked operations under this user.
+        val pendingItems = outboxDao.getPendingItems(session.userId)
         DebugLog.info(COMPONENT, "schedulePush: ${pendingItems.size} pending outbox item(s) for user ${session.userId}")
 
         for (item in pendingItems) {
@@ -168,12 +190,12 @@ class GoogleDriveSyncService(
                     if (pushResult.isFailure) {
                         val mapped = mapError(pushResult.exceptionOrNull(), defaultCode = "SYNC_BOOK_PUSH_FAILED")
                         DebugLog.error(COMPONENT, "pushBook failed for ${item.entityId}: ${mapped.code} — ${mapped.message}")
-                        outboxDao.incrementRetryCount(item.id, mapped.message)
-                        outboxDao.pruneFailedItems(maxRetries)
+                        outboxDao.incrementRetryCount(item.id, session.userId, mapped.message)
+                        outboxDao.pruneFailedItems(session.userId, maxRetries)
                         state.value = DriveSyncState.Error(mapped.message)
                         return Result.failure(mapped)
                     }
-                    outboxDao.deleteById(item.id)
+                    outboxDao.deleteById(item.id, session.userId)
                 }
                 SyncEntityType.READING_PROGRESS.name,
                 SyncEntityType.HIGHLIGHT.name,
@@ -189,7 +211,7 @@ class GoogleDriveSyncService(
                 }
                 else -> {
                     // Unknown types are silently skipped and removed
-                    outboxDao.deleteById(item.id)
+                    outboxDao.deleteById(item.id, session.userId)
                 }
             }
         }
@@ -218,7 +240,7 @@ class GoogleDriveSyncService(
         }
 
         val book =
-            bookDao.getBookById(entityId)
+            bookDao.getBookById(entityId, userId)
                 ?: run {
                     DebugLog.info(COMPONENT, "pushBook skipped for $entityId: book no longer exists locally")
                     return Result.success(Unit)
@@ -353,11 +375,11 @@ class GoogleDriveSyncService(
             val extension = parsed.extension
 
             // D6: never resurrect a locally DELETE-marked book.
-            if (isTombstoned(bookId)) {
+            if (isTombstoned(bookId, session.userId)) {
                 continue
             }
 
-            val existingBook = bookDao.getBookById(bookId)
+            val existingBook = bookDao.getBookById(bookId, session.userId)
 
             // CRITICAL: do NOT create local books from a raw Drive pull. A remote
             // file without an existing local book or mapping belongs to the Supabase
@@ -375,7 +397,7 @@ class GoogleDriveSyncService(
             val localPath =
                 mapping?.localPath
                     ?: existingBook?.filePath
-                    ?: File(localBooksDir, "$bookId.$extension").absolutePath
+                    ?: File(ownerBooksDir(session.userId), "$bookId.$extension").absolutePath
             val localFile = File(localPath)
 
             if (!localFile.exists()) {
@@ -443,7 +465,10 @@ class GoogleDriveSyncService(
      * Skips a remote book when it is locally DELETE-marked (tombstoned), so
      * schedulePull/downloadRemoteBook never resurrect it (D6).
      */
-    private suspend fun isTombstoned(bookId: String): Boolean = bookDao.getBookById(bookId)?.deletedAtEpochMillis != null
+    private suspend fun isTombstoned(
+        bookId: String,
+        userId: String,
+    ): Boolean = bookDao.getBookById(bookId, userId)?.deletedAtEpochMillis != null
 
     private suspend fun <T> retryable(block: suspend () -> T): Result<T> {
         var attempt = 0

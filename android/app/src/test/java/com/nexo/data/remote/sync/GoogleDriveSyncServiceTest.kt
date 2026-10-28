@@ -65,7 +65,7 @@ class GoogleDriveSyncServiceTest {
     @Test fun pull_skipsDeletedMarkedBookWithoutResurrection() =
         runBlocking {
             coEvery { remote.list(any()) } returns listOf("books/u1/dead.pdf")
-            coEvery { bookDao.getBookById("dead") } returns
+            coEvery { bookDao.getBookById("dead", "u1") } returns
                 BookEntity(
                     id = "dead",
                     title = "T",
@@ -147,3 +147,4 @@ class GoogleDriveSyncServiceTest {
             assertEquals("SYNC_DISABLED", (r.exceptionOrNull() as AppError).code)
         }
 }
+

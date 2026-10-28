@@ -70,38 +70,40 @@ class CompositeCatalogProvider(
             readAllProviderPages(query, page)?.let { return@coroutineScope it }
             val active = activeSourceIds()
             val searches =
-                searchableProviders().map { provider ->
-                    async {
-                        val startedMs = System.currentTimeMillis()
-                        try {
-                            val cached = readProviderPage(provider, query, page, active)
-                            val sourceId = singleSource(provider)?.sourceId ?: "unknown"
-                            if (cached != null) {
-                                emitDiscoverSearch(cached, sourceId, startedMs, true)
-                                cached
-                            } else {
-                                val result = provider.search(query, page)
-                                cacheProviderPage(provider, query, page, result, active)
-                                emitDiscoverSearch(result, sourceId, startedMs, false)
-                                result
+                searchableProviders()
+                    .filter { it.supportsSearch() }
+                    .map { provider ->
+                        async {
+                            val startedMs = System.currentTimeMillis()
+                            try {
+                                val cached = readProviderPage(provider, query, page, active)
+                                val sourceId = singleSource(provider)?.sourceId ?: "unknown"
+                                if (cached != null) {
+                                    emitDiscoverSearch(cached, sourceId, startedMs, true)
+                                    cached
+                                } else {
+                                    val result = provider.search(query, page)
+                                    cacheProviderPage(provider, query, page, result, active)
+                                    emitDiscoverSearch(result, sourceId, startedMs, false)
+                                    result
+                                }
+                            } catch (err: Throwable) {
+                                // Failure isolation (U1): one failing source fails closed to
+                                // an empty page so it can never fail the whole fan-out.
+                                // Cancellation still propagates to respect coroutine scope.
+                                if (err is CancellationException) throw err
+                                val code =
+                                    (err as? CatalogException)?.code?.name
+                                        ?: CatalogErrorCode.UPSTREAM_ERROR.name
+                                val sourceId = singleSource(provider)?.sourceId ?: "unknown"
+                                SentryMetrics.count(
+                                    "discover_search_error",
+                                    mapOf("provider" to sourceId, "code" to code),
+                                )
+                                PagedResult(emptyList(), null, 0)
                             }
-                        } catch (err: Throwable) {
-                            // Failure isolation (U1): one failing source fails closed to
-                            // an empty page so it can never fail the whole fan-out.
-                            // Cancellation still propagates to respect coroutine scope.
-                            if (err is CancellationException) throw err
-                            val code =
-                                (err as? CatalogException)?.code?.name
-                                    ?: CatalogErrorCode.UPSTREAM_ERROR.name
-                            val sourceId = singleSource(provider)?.sourceId ?: "unknown"
-                            SentryMetrics.count(
-                                "discover_search_error",
-                                mapOf("provider" to sourceId, "code" to code),
-                            )
-                            PagedResult(emptyList(), null, 0)
                         }
                     }
-                }
             mergePaged(searches.map { it.await() }, page)
         }
 
@@ -115,7 +117,10 @@ class CompositeCatalogProvider(
     ): PagedResult? {
         val cache = cache ?: return null
         val active = activeSourceIds()
-        val providers = searchableProviders().filter { it.listSources().size == 1 }
+        val providers =
+            searchableProviders()
+                .filter { it.supportsSearch() }
+                .filter { it.listSources().size == 1 }
         if (providers.isEmpty()) return null
         val pages = mutableListOf<PagedResult>()
         for (provider in providers) {
@@ -372,6 +377,92 @@ class CompositeCatalogProvider(
                 provider.listSources().any { it.sourceId == sourceId }
             } ?: return PagedResult(emptyList(), null, 0)
         return owner.search(query, page)
+    }
+
+    /**
+     * Topic rails fan out over the providers that opt in via
+     * [CatalogProvider.supportsTopic], exactly like [featured]. The pages are
+     * cached under their own `t:` namespace: a topic page carries a different
+     * upstream total than the same words passed to `search`, so the two must
+     * never share a key.
+     */
+    override suspend fun topic(
+        term: String,
+        page: Int,
+    ): PagedResult {
+        if (page < 1) throw catalogError(CatalogErrorCode.INVALID_PAGE, "page must be >= 1, got $page")
+        return coroutineScope {
+            val active = activeSourceIds()
+            val pages =
+                searchableProviders()
+                    .filter { it.supportsTopic() }
+                    .map { provider ->
+                        async {
+                            val startedMs = System.currentTimeMillis()
+                            try {
+                                val cached = readProviderTopicPage(provider, term, page, active)
+                                val sourceId = singleSource(provider)?.sourceId ?: "unknown"
+                                if (cached != null) {
+                                    emitDiscoverRail(cached, sourceId, startedMs, true)
+                                    cached
+                                } else {
+                                    val result = provider.topic(term, page)
+                                    cacheProviderTopicPage(provider, term, page, result, active)
+                                    emitDiscoverRail(result, sourceId, startedMs, false)
+                                    result
+                                }
+                            } catch (err: Throwable) {
+                                if (err is CancellationException) throw err
+                                currentCoroutineContext().ensureActive()
+                                val code =
+                                    (err as? CatalogException)?.code?.name
+                                        ?: CatalogErrorCode.UPSTREAM_ERROR.name
+                                val sourceId = singleSource(provider)?.sourceId ?: "unknown"
+                                SentryMetrics.count(
+                                    "discover_search_error",
+                                    mapOf("provider" to sourceId, "code" to code),
+                                )
+                                PagedResult(emptyList(), null, 0)
+                            }
+                        }
+                    }
+            mergePaged(pages.map { it.await() }, page)
+        }
+    }
+
+    override fun supportsTopic(): Boolean = searchableProviders().any { it.supportsTopic() }
+
+    private suspend fun readProviderTopicPage(
+        provider: CatalogProvider,
+        term: String,
+        page: Int,
+        active: Set<String>,
+    ): PagedResult? {
+        val store = cache ?: return null
+        val source = singleSource(provider) ?: return null
+        if (source.sourceId !in active) return null
+        val hit = store.get(topicCacheKey(source.sourceId, term, page), nowEpochSecs()) ?: return null
+        return cacheJson.decodeFromString(PagedResult.serializer(), hit)
+    }
+
+    private suspend fun cacheProviderTopicPage(
+        provider: CatalogProvider,
+        term: String,
+        page: Int,
+        result: PagedResult,
+        active: Set<String>,
+    ) {
+        // Never-cache-empty: empty rails persist nothing and extend no TTL.
+        if (result.results.isEmpty()) return
+        val store = cache ?: return
+        val source = singleSource(provider) ?: return
+        if (source.sourceId !in active) return
+        store.put(
+            topicCacheKey(source.sourceId, term, page),
+            cacheJson.encodeToString(PagedResult.serializer(), result),
+            nowEpochSecs(),
+            FEATURED_TTL_S,
+        )
     }
 
     /**

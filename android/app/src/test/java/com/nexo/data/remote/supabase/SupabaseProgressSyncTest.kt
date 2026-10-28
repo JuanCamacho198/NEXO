@@ -15,6 +15,11 @@ import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.local.entity.SyncOutboxEntity
 import com.nexo.data.session.SessionManager
 import com.nexo.domain.model.AuthSession
+import com.nexo.testutil.FakeBookDao
+import com.nexo.testutil.FakeHighlightDao
+import com.nexo.testutil.FakeReadingSessionDao
+import com.nexo.testutil.FakeSyncOutboxDao
+import com.nexo.testutil.TEST_USER_ID
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -84,6 +89,7 @@ class SupabaseProgressSyncTest {
         id: String,
         sessionId: String,
         bookId: String = "book-1",
+        userId: String = TEST_USER_ID,
     ): SyncOutboxEntity {
         val payload =
             JSONObject()
@@ -101,6 +107,7 @@ class SupabaseProgressSyncTest {
             operation = SyncOperation.UPDATE.name,
             payloadJson = payload.toString(),
             createdAtEpochMillis = 100L,
+            userId = userId,
         )
     }
 
@@ -130,13 +137,14 @@ class SupabaseProgressSyncTest {
     fun processOutbox_progress_emptyBodyTolerantWriteAcksEntry() =
         runBlocking {
             val localProgressDao = mockk<ReadingProgressDao>(relaxed = true)
-            coEvery { localProgressDao.getProgressForBook("book-1") } returns
+            coEvery { localProgressDao.getProgressForBook("book-1", TEST_USER_ID) } returns
                 ReadingProgressEntity(
                     id = "progress-1",
                     bookId = "book-1",
                     cfiLocation = "epubcfi(/6/2)",
                     percentage = 0.5f,
                     updatedAtEpochMillis = 1_000L,
+                    userId = TEST_USER_ID,
                 )
             val tolerantSync =
                 SupabaseProgressSync(
@@ -167,7 +175,7 @@ class SupabaseProgressSyncTest {
 
             assertTrue(
                 "An empty-body-tolerant progress write must ack the outbox entry, not re-queue it",
-                fakeOutboxDao.getPendingItems().none { it.id == item.id },
+                fakeOutboxDao.getPendingItems(TEST_USER_ID).none { it.id == item.id },
             )
             assertEquals(0, fakeOutboxDao.incrementCalls)
         }
@@ -185,7 +193,7 @@ class SupabaseProgressSyncTest {
             sync.startProcessing()
             Thread.sleep(500)
 
-            assertEquals(0, fakeOutboxDao.getPendingItems().size)
+            assertEquals(0, fakeOutboxDao.getPendingItems(TEST_USER_ID).size)
             coVerify { mockDataSource.upsertReadingSession(match { it.id == "sess_abc" && it.userId == "test-user" }) }
         }
 
@@ -224,7 +232,7 @@ class SupabaseProgressSyncTest {
             sync.startProcessing()
             Thread.sleep(500)
 
-            assertEquals(0, fakeOutboxDao.getPendingItems().size)
+            assertEquals(0, fakeOutboxDao.getPendingItems(TEST_USER_ID).size)
             assertEquals(2, upsertedIds.size)
             // Same deterministic id sent both times → remote onConflict=id dedupes.
             assertEquals(listOf("sess_dup", "sess_dup"), upsertedIds)
@@ -241,7 +249,7 @@ class SupabaseProgressSyncTest {
             // Failure 1 → retryCount 1, item retained.
             sync.startProcessing()
             Thread.sleep(500)
-            assertEquals(1, fakeOutboxDao.getPendingItems().single().retryCount)
+            assertEquals(1, fakeOutboxDao.getPendingItems(TEST_USER_ID).single().retryCount)
 
             // Failures 2-3 → retryCount 3 → pruneFailedItems(3) removes it.
             sync.startProcessing()
@@ -249,7 +257,7 @@ class SupabaseProgressSyncTest {
             sync.startProcessing()
             Thread.sleep(500)
 
-            assertEquals(0, fakeOutboxDao.getPendingItems().size)
+            assertEquals(0, fakeOutboxDao.getPendingItems(TEST_USER_ID).size)
         }
 
     @Test
@@ -269,7 +277,7 @@ class SupabaseProgressSyncTest {
             sync.startProcessing()
             Thread.sleep(500)
 
-            assertEquals(0, fakeOutboxDao.getPendingItems().size)
+            assertEquals(0, fakeOutboxDao.getPendingItems(TEST_USER_ID).size)
             coVerify(inverse = true) { mockDataSource.upsertReadingSession(any()) }
         }
 
@@ -282,7 +290,7 @@ class SupabaseProgressSyncTest {
             val applied = sync.applyRemoteSession(remoteRow("sess_ghost", bookId = "ghost"))
 
             assertFalse(applied)
-            assertEquals(0, fakeSessionDao.count())
+            assertEquals(0, fakeSessionDao.count(TEST_USER_ID))
         }
 
     @Test
@@ -310,7 +318,7 @@ class SupabaseProgressSyncTest {
                 )
 
             assertTrue(applied)
-            val local = fakeSessionDao.getById("sess_lww")
+            val local = fakeSessionDao.getById("sess_lww", TEST_USER_ID)
             assertEquals(5, local?.durationMinutes)
             assertTrue("remote clock must be stamped on the local row", (local?.updatedAtEpochMillis ?: 0L) > 100L)
         }
@@ -340,7 +348,7 @@ class SupabaseProgressSyncTest {
                 )
 
             assertFalse(applied)
-            val local = fakeSessionDao.getById("sess_old")
+            val local = fakeSessionDao.getById("sess_old", TEST_USER_ID)
             assertEquals(7, local?.durationMinutes) // unchanged
         }
 
@@ -352,8 +360,8 @@ class SupabaseProgressSyncTest {
             val applied = sync.applyRemoteSession(remoteRow("sess_new"))
 
             assertTrue(applied)
-            assertEquals(1, fakeSessionDao.count())
-            assertEquals("test-user", fakeSessionDao.getById("sess_new")?.userId)
+            assertEquals(1, fakeSessionDao.count(TEST_USER_ID))
+            assertEquals("test-user", fakeSessionDao.getById("sess_new", TEST_USER_ID)?.userId)
         }
 
     // ─── Pending remote progress retention (book-not-ready race) ──
@@ -380,7 +388,7 @@ class SupabaseProgressSyncTest {
             sync.resumeForBook("book-pending")
 
             // No local progress yet (book missing → upsert would violate FK).
-            assertEquals(0, fakeBookDao.count())
+            assertEquals(0, fakeBookDao.count(TEST_USER_ID))
 
             // Now the book becomes available locally (download completed).
             fakeBookDao.upsert(createSampleBook("book-pending"))
@@ -410,7 +418,7 @@ class SupabaseProgressSyncTest {
             // Book never appears; flushing keeps it pending and returns null.
             val applied = sync.applyPendingProgressForBook("book-missing")
             assertTrue(applied == null)
-            assertEquals(0, fakeBookDao.count())
+            assertEquals(0, fakeBookDao.count(TEST_USER_ID))
         }
 
     // ─── AFR-1/2/3: gated flush resilience (WS1) ──────────────────────
@@ -480,7 +488,7 @@ class SupabaseProgressSyncTest {
             runCurrent()
             assertEquals(0, fakeOutboxDao.incrementCalls)
             assertEquals(0, fakeOutboxDao.pruneCalls)
-            assertTrue(fakeOutboxDao.getPendingItems().isNotEmpty())
+            assertTrue(fakeOutboxDao.getPendingItems(TEST_USER_ID).isNotEmpty())
             gatedSync.stop()
         }
 
@@ -601,7 +609,7 @@ class SupabaseProgressSyncTest {
             advanceTimeBy(500L)
             runCurrent()
             assertEquals(listOf("sess_a", "sess_b"), order)
-            assertEquals(0, fakeOutboxDao.getPendingItems().size)
+            assertEquals(0, fakeOutboxDao.getPendingItems(TEST_USER_ID).size)
             // should end Idle after draining, without requiring second startProcessing()
             advanceTimeBy(500L)
             runCurrent()
@@ -653,7 +661,7 @@ class SupabaseProgressSyncTest {
             runCurrent()
             advanceTimeBy(100L)
             runCurrent()
-            assertEquals(2, fakeOutboxDao.getPendingItems().singleOrNull()?.retryCount ?: -1)
+            assertEquals(2, fakeOutboxDao.getPendingItems(TEST_USER_ID).singleOrNull()?.retryCount ?: -1)
             val incrementBeforeGate = fakeOutboxDao.incrementCalls
             val pruneBeforeGate = fakeOutboxDao.pruneCalls
             // Now gate the next flush: make session unavailable
@@ -665,8 +673,8 @@ class SupabaseProgressSyncTest {
             advanceTimeBy(5_000L)
             runCurrent()
             // Gate must NOT increment retry nor prune — item with 2 strikes survives
-            assertEquals(1, fakeOutboxDao.getPendingItems().size)
-            assertEquals(2, fakeOutboxDao.getPendingItems().single().retryCount)
+            assertEquals(1, fakeOutboxDao.getPendingItems(TEST_USER_ID).size)
+            assertEquals(2, fakeOutboxDao.getPendingItems(TEST_USER_ID).single().retryCount)
             assertEquals(incrementBeforeGate, fakeOutboxDao.incrementCalls)
             assertEquals(pruneBeforeGate, fakeOutboxDao.pruneCalls)
             gatedSync.stop()
@@ -688,10 +696,12 @@ class SupabaseProgressSyncTest {
                     dataSource = mockk(relaxed = true),
                 )
             assertEquals(0, freshSync.pendingCount.first())
-            freshOutbox.insert(sessionOutboxItem("outbox-pc1", "sess_pc1"))
-            freshOutbox.insert(sessionOutboxItem("outbox-pc2", "sess_pc2"))
+            // No account is active (no session is started), so the sync's owner is
+            // the empty id and only unowned/blank rows are counted.
+            freshOutbox.insert(sessionOutboxItem("outbox-pc1", "sess_pc1", userId = ""))
+            freshOutbox.insert(sessionOutboxItem("outbox-pc2", "sess_pc2", userId = ""))
             assertEquals(2, freshSync.pendingCount.first())
-            freshOutbox.deleteById("outbox-pc1")
+            freshOutbox.deleteById("outbox-pc1", "")
             assertEquals(1, freshSync.pendingCount.first())
         }
 
@@ -708,6 +718,7 @@ class SupabaseProgressSyncTest {
             totalPages = 100,
             updatedAtEpochMillis = 1000L,
             deletedAtEpochMillis = null,
+            userId = TEST_USER_ID,
         )
 
     // ─── LWW clock parsing (PostgREST offset format regression) ─────────
@@ -781,7 +792,7 @@ class SupabaseProgressSyncTest {
 
             resurrectionSync.resumeForBook("book-1")
 
-            val row = fakeHighlights.byId["h1"]!!
+            val row = fakeHighlights.rows["h1"]!!
             assertTrue("tombstone must survive", row.deletedAtEpochMillis == 1_000L)
         }
 
@@ -829,7 +840,7 @@ class SupabaseProgressSyncTest {
 
             resurrectionSync.resumeForBook("book-1")
 
-            val row = fakeHighlights.byId["h2"]!!
+            val row = fakeHighlights.rows["h2"]!!
             assertTrue("genuinely newer remote must win", row.deletedAtEpochMillis == null)
             assertEquals(2_000L, row.updatedAtEpochMillis)
         }
@@ -843,6 +854,7 @@ class SupabaseProgressSyncTest {
             filePath = "/tmp/x.epub",
             format = "epub",
             updatedAtEpochMillis = 0L,
+            userId = TEST_USER_ID,
         )
 
     private fun highlightEntity(id: String) =
@@ -855,239 +867,10 @@ class SupabaseProgressSyncTest {
             color = "#FACC15",
             updatedAtEpochMillis = 0L,
             deletedAtEpochMillis = null,
+            userId = TEST_USER_ID,
         )
-
-    private class FakeHighlightDao : HighlightDao {
-        val byId = linkedMapOf<String, HighlightEntity>()
-
-        override suspend fun upsert(highlight: HighlightEntity) {
-            byId[highlight.id] = highlight
-        }
-
-        override suspend fun upsertAll(highlights: List<HighlightEntity>) {
-            highlights.forEach { upsert(it) }
-        }
-
-        override suspend fun getHighlightById(id: String): HighlightEntity? = byId[id]
-
-        override suspend fun getHighlightsForBook(bookId: String): List<HighlightEntity> = byId.values.filter { it.bookId == bookId }
-
-        override suspend fun deleteById(id: String) {
-            byId.remove(id)
-        }
-
-        override suspend fun count(): Int = byId.size
-
-        override fun observeAllHighlights(): Flow<List<HighlightEntity>> = kotlinx.coroutines.flow.MutableStateFlow(byId.values.filter { it.deletedAtEpochMillis == null })
-
-        override fun observeAllHighlightsPaged(): androidx.paging.PagingSource<Int, HighlightEntity> = com.nexo.testutil.FakePagingSource(emptyList())
-
-        override fun observeHighlightsForBook(bookId: String): Flow<List<HighlightEntity>> =
-            kotlinx.coroutines.flow.MutableStateFlow(
-                byId.values.filter { it.bookId == bookId && it.deletedAtEpochMillis == null },
-            )
-
-        override fun observeAllTags(): Flow<List<String>> = kotlinx.coroutines.flow.MutableStateFlow(emptyList())
-    }
-
-    private class FakeBookDao : BookDao {
-        override suspend fun allStoredPaths(): List<StoredBookPath> = emptyList()
-
-        override suspend fun updateFilePath(
-            bookId: String,
-            filePath: String,
-        ) = Unit
-
-        private val booksState = MutableStateFlow<List<BookEntity>>(emptyList())
-
-        override fun observeAllBooks(): Flow<List<BookEntity>> = booksState.map { books -> books.filter { it.deletedAtEpochMillis == null } }
-
-        override fun observeReadingBooks(): Flow<List<BookEntity>> = booksState
-
-        override suspend fun upsert(book: BookEntity) {
-            booksState.value =
-                booksState.value
-                    .filterNot { it.id == book.id }
-                    .plus(book)
-        }
-
-        override suspend fun upsertAll(books: List<BookEntity>) {
-            books.forEach { upsert(it) }
-        }
-
-        override fun observeBookById(bookId: String): Flow<BookEntity?> = MutableStateFlow(booksState.value.firstOrNull { it.id == bookId })
-
-        override suspend fun getBookById(bookId: String): BookEntity? = booksState.value.firstOrNull { it.id == bookId }
-
-        override suspend fun deleteBook(
-            bookId: String,
-            deletedAt: Long,
-        ) {
-            booksState.value =
-                booksState.value.map { book ->
-                    if (book.id == bookId) book.copy(updatedAtEpochMillis = deletedAt, deletedAtEpochMillis = deletedAt) else book
-                }
-        }
-
-        override suspend fun deleteById(bookId: String) {
-            booksState.value = booksState.value.filterNot { it.id == bookId }
-        }
-
-        override suspend fun updateRating(
-            bookId: String,
-            rating: Int?,
-        ) = Unit
-
-        override suspend fun updateStatus(
-            bookId: String,
-            status: String?,
-            updatedAt: Long,
-        ) = Unit
-
-        override suspend fun startReading(
-            bookId: String,
-            updatedAt: Long,
-        ) = Unit
-
-        override suspend fun updateReadingProgress(
-            bookId: String,
-            progress: Float,
-            updatedAt: Long,
-        ) = Unit
-
-        override suspend fun completeReading(
-            bookId: String,
-            updatedAt: Long,
-        ) = Unit
-
-        override suspend fun updateMetadata(
-            bookId: String,
-            title: String,
-            author: String?,
-            description: String?,
-            coverPath: String?,
-            genre: String?,
-            language: String?,
-            publisher: String?,
-            tags: String?,
-            publishedDate: String?,
-            updatedAt: Long,
-        ) = Unit
-
-        override suspend fun count(): Int = booksState.value.size
-
-        override fun observeAllBooksPaged(): androidx.paging.PagingSource<Int, BookEntity> = com.nexo.testutil.FakePagingSource(emptyList())
-    }
-
-    private class FakeReadingSessionDao : ReadingSessionDao {
-        private val sessions = mutableMapOf<String, ReadingSessionEntity>()
-
-        override suspend fun insert(session: ReadingSessionEntity) {
-            sessions[session.id] = session
-        }
-
-        override fun getTotalMinutesForDate(date: Long): Flow<Int> = MutableStateFlow(0)
-
-        override fun getTotalMinutesForDateAndUser(
-            date: Long,
-            userId: String,
-        ): Flow<Int> = MutableStateFlow(0)
-
-        override fun getTotalMinutes(): Flow<Int> = MutableStateFlow(0)
-
-        override fun getSessionCount(): Flow<Int> = MutableStateFlow(0)
-
-        override fun getSessionCountForDate(date: Long): Flow<Int> = MutableStateFlow(0)
-
-        override fun getSessionCountForDateAndUser(
-            date: Long,
-            userId: String,
-        ): Flow<Int> = MutableStateFlow(0)
-
-        override fun observeSessionsForBook(bookId: String): Flow<List<ReadingSessionEntity>> = MutableStateFlow(sessions.values.filter { it.bookId == bookId })
-
-        override suspend fun deleteSessionsForBook(bookId: String) {
-            sessions.entries.removeAll { it.value.bookId == bookId }
-        }
-
-        override suspend fun count(): Int = sessions.size
-
-        override suspend fun getAll(): List<ReadingSessionEntity> = sessions.values.toList()
-
-        override suspend fun getDailyMinutes(): List<com.nexo.data.local.model.DailyReadingMinutes> = emptyList()
-
-        override suspend fun getDailyMinutesFromDate(startDate: Long): List<com.nexo.data.local.model.DailyReadingMinutes> = emptyList()
-
-        override suspend fun getById(id: String): ReadingSessionEntity? = sessions[id]
-
-        override suspend fun getDailyMinutesForUser(userId: String?): List<com.nexo.data.local.model.DailyReadingMinutes> = emptyList()
-
-        suspend fun upsert(session: ReadingSessionEntity) {
-            sessions[session.id] = session
-        }
-    }
-
-    private class FakeSyncOutboxDao : SyncOutboxDao {
-        private val items = mutableListOf<SyncOutboxEntity>()
-        var incrementCalls = 0
-        var pruneCalls = 0
-        private val pendingCountFlow = MutableStateFlow(0)
-
-        private fun refreshPending() {
-            pendingCountFlow.value = items.size
-        }
-
-        override suspend fun getPendingItems(): List<SyncOutboxEntity> = items.toList().sortedBy { it.createdAtEpochMillis }
-
-        override suspend fun insert(item: SyncOutboxEntity) {
-            items.add(item)
-            refreshPending()
-        }
-
-        override suspend fun deleteById(id: String) {
-            items.removeAll { it.id == id }
-            refreshPending()
-        }
-
-        override suspend fun incrementRetryCount(
-            id: String,
-            error: String,
-        ) {
-            incrementCalls++
-            val index = items.indexOfFirst { it.id == id }
-            if (index >= 0) {
-                items[index] =
-                    items[index].copy(
-                        retryCount = items[index].retryCount + 1,
-                        lastError = error,
-                    )
-            }
-        }
-
-        override suspend fun pruneFailedItems(maxRetries: Int) {
-            pruneCalls++
-            items.removeAll { it.retryCount >= maxRetries }
-            refreshPending()
-        }
-
-        override fun observePendingCount(): Flow<Int> = pendingCountFlow
-
-        override suspend fun getByTypeAndEntityId(
-            type: String,
-            entityId: String,
-        ): SyncOutboxEntity? = items.firstOrNull { it.entityType == type && it.entityId == entityId }
-
-        override suspend fun updatePayload(
-            id: String,
-            payloadJson: String,
-        ) {
-            val idx = items.indexOfFirst { it.id == id }
-            if (idx >= 0) items[idx] = items[idx].copy(payloadJson = payloadJson)
-        }
-
-        override suspend fun upsertCoalesced(item: SyncOutboxEntity) {
-            val existing = item.entityId?.let { getByTypeAndEntityId(item.entityType, it) }
-            if (existing != null) updatePayload(existing.id, item.payloadJson) else items.add(item)
-        }
-    }
 }
+
+
+
+

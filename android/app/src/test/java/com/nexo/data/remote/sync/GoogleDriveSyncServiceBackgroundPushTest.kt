@@ -85,7 +85,7 @@ class GoogleDriveSyncServiceBackgroundPushTest {
 
     private fun seedPendingBook(): SyncOutboxEntity {
         val file = File(localDir, "book.epub").apply { writeBytes(byteArrayOf(1, 2, 3)) }
-        coEvery { bookDao.getBookById("book-1") } returns
+        coEvery { bookDao.getBookById("book-1", "u1") } returns
             BookEntity(
                 id = "book-1",
                 title = "Prisioneros de la geografía",
@@ -104,8 +104,9 @@ class GoogleDriveSyncServiceBackgroundPushTest {
                 operation = SyncOperation.CREATE.name,
                 payloadJson = """{}""",
                 createdAtEpochMillis = 1,
+                userId = "u1",
             )
-        coEvery { outboxDao.getPendingItems() } returns listOf(item)
+        coEvery { outboxDao.getPendingItems(any()) } returns listOf(item)
         // No legacy canonical object on Drive, so the push takes the readable-name
         // upload path and goes through writeBinary.
         coEvery { remote.readMarker(any()) } returns null
@@ -153,7 +154,7 @@ class GoogleDriveSyncServiceBackgroundPushTest {
         coVerify(exactly = 1) { remote.writeBinary(any(), any(), any()) }
         // The outbox row is acked only when the push ran all the way through,
         // which is what actually persisted the book to Drive.
-        coVerify(exactly = 1) { outboxDao.deleteById(item.id) }
+        coVerify(exactly = 1) { outboxDao.deleteById(item.id, "u1") }
     }
 
     @Test fun backgroundPush_secondTriggerReusesInFlightPush() {
@@ -224,3 +225,4 @@ class GoogleDriveSyncServiceBackgroundPushTest {
         assertTrue("work must run to completion", fixed.isCompleted)
     }
 }
+

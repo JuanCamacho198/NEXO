@@ -84,7 +84,7 @@ class GoogleDriveReadablePullTest {
                 )
             // A book pushed by the OTHER device carries no local file yet, so the
             // pull has to fetch it. The mapping is keyed by the canonical path.
-            coEvery { bookDao.getBookById(bookId) } returns existing
+            coEvery { bookDao.getBookById(bookId, "u1") } returns existing
 
             assertTrue(service().schedulePull().isSuccess)
 
@@ -96,3 +96,4 @@ class GoogleDriveReadablePullTest {
             )
         }
 }
+

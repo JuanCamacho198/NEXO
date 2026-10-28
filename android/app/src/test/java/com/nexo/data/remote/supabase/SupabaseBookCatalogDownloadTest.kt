@@ -9,6 +9,9 @@ import com.nexo.data.session.SessionManager
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
 import com.nexo.domain.model.AuthSession
+import com.nexo.testutil.FakeBookDao
+import com.nexo.testutil.FakeSyncOutboxDao
+import com.nexo.testutil.TEST_USER_ID
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -137,7 +140,7 @@ class SupabaseBookCatalogDownloadTest {
             val result = newSync().downloadRemoteBook("imported-1")
 
             assertTrue(result.isSuccess)
-            val book = fakeBookDao.getBookById("imported-1")
+            val book = fakeBookDao.getBookById("imported-1", TEST_USER_ID)
             assertEquals("Pensar rápido, pensar despacio", book?.title)
             coVerify(exactly = 1) { mockRemote.download("books/test-user/imported-1.epub") }
         }
@@ -160,7 +163,7 @@ class SupabaseBookCatalogDownloadTest {
             val result = newSync().downloadRemoteBook("permission")
             assertEquals("PERMISSION_DENIED", (result.exceptionOrNull() as? AppError)?.code)
             assertEquals(ErrorCategory.STORAGE, (result.exceptionOrNull() as? AppError)?.category)
-            assertTrue(fakeBookDao.getBookById("permission") == null)
+            assertTrue(fakeBookDao.getBookById("permission", TEST_USER_ID) == null)
         }
 
     // ─── D4: refresh-then-retry on 401/403 ──────────────────────────────────
@@ -243,7 +246,7 @@ class SupabaseBookCatalogDownloadTest {
             val result = newSync().downloadRemoteBook("cover-1")
 
             assertTrue(result.isSuccess)
-            assertEquals("https://cdn.example/cover-1.jpg", fakeBookDao.getBookById("cover-1")?.coverPath)
+            assertEquals("https://cdn.example/cover-1.jpg", fakeBookDao.getBookById("cover-1", TEST_USER_ID)?.coverPath)
         }
 
     @Test
@@ -260,7 +263,7 @@ class SupabaseBookCatalogDownloadTest {
             assertEquals("HASH_MISMATCH", (result.exceptionOrNull() as? AppError)?.code)
             assertTrue(!File(localDir, "bad-hash.epub").exists())
             assertTrue(!File(localDir, ".bad-hash.epub.part").exists())
-            assertTrue(fakeBookDao.getBookById("bad-hash") == null)
+            assertTrue(fakeBookDao.getBookById("bad-hash", TEST_USER_ID) == null)
         }
 
     @Test
@@ -270,7 +273,7 @@ class SupabaseBookCatalogDownloadTest {
             coEvery { mockRemote.download(any()) } returns "bytes".toByteArray()
             val result = newSync().downloadRemoteBook("missing-hash")
             assertEquals("HASH_REQUIRED", (result.exceptionOrNull() as? AppError)?.code)
-            assertTrue(fakeBookDao.getBookById("missing-hash") == null)
+            assertTrue(fakeBookDao.getBookById("missing-hash", TEST_USER_ID) == null)
             assertTrue(localDir.listFiles()?.none { it.name.contains("missing-hash") } != false)
         }
 
@@ -305,7 +308,7 @@ class SupabaseBookCatalogDownloadTest {
                 )
             coEvery { mockRemote.download(any()) } returns bytes
             assertTrue(newSync().downloadRemoteBook("mapping").isSuccess)
-            val book = fakeBookDao.getBookById("mapping")!!
+            val book = fakeBookDao.getBookById("mapping", TEST_USER_ID)!!
             assertEquals("google_drive", book.remoteProvider)
             assertEquals(7, book.remoteProtocolVersion)
             assertEquals("drive-1", book.remoteFileId)
@@ -342,7 +345,7 @@ class SupabaseBookCatalogDownloadTest {
                 )
 
             assertTrue(sync.downloadRemoteBook("seed-1").isSuccess)
-            val book = fakeBookDao.getBookById("seed-1")!!
+            val book = fakeBookDao.getBookById("seed-1", TEST_USER_ID)!!
             // WU2b: the retired books.progress_percentage cache no longer carries the
             // cloud-seeded percentage; reading_progress is the canonical store and is
             // populated by the progress sync path, so only the reading state is seeded.
@@ -372,7 +375,7 @@ class SupabaseBookCatalogDownloadTest {
                 )
 
             assertTrue(sync.downloadRemoteBook("noseed-1").isSuccess)
-            val book = fakeBookDao.getBookById("noseed-1")!!
+            val book = fakeBookDao.getBookById("noseed-1", TEST_USER_ID)!!
             assertEquals("to_read", book.readingState)
         }
 
@@ -396,6 +399,7 @@ class SupabaseBookCatalogDownloadTest {
             description = "Description",
             updatedAtEpochMillis = 1000L,
             deletedAtEpochMillis = null,
+            userId = TEST_USER_ID,
         )
 
     private fun catalogRow(
@@ -418,165 +422,4 @@ class SupabaseBookCatalogDownloadTest {
             importedAt = "2026-07-12T12:00:00.000Z",
             updatedAt = "2026-07-12T12:00:00.000Z",
         )
-
-    // ── Fake BookDao ───────────────────────────────────────────────────────
-    private class FakeBookDao : BookDao {
-        override suspend fun allStoredPaths(): List<StoredBookPath> = emptyList()
-
-        override suspend fun updateFilePath(
-            bookId: String,
-            filePath: String,
-        ) = Unit
-
-        private val byId = mutableMapOf<String, BookEntity>()
-        var failUpsert = false
-
-        override suspend fun getBookById(bookId: String): BookEntity? = byId[bookId]
-
-        override suspend fun upsert(book: BookEntity) {
-            if (failUpsert) throw IllegalStateException("db down")
-            byId[book.id] = book
-        }
-
-        override suspend fun upsertAll(books: List<BookEntity>) {
-            books.forEach { upsert(it) }
-        }
-
-        override fun observeAllBooks(): Flow<List<BookEntity>> = MutableStateFlow(byId.values.toList())
-
-        override fun observeReadingBooks(): Flow<List<BookEntity>> =
-            MutableStateFlow(
-                byId.values.filter { it.deletedAtEpochMillis == null && it.readingState == "reading" },
-            )
-
-        override fun observeBookById(bookId: String): Flow<BookEntity?> = MutableStateFlow(byId[bookId])
-
-        override fun observeAllBooksPaged(): androidx.paging.PagingSource<Int, BookEntity> = com.nexo.testutil.FakePagingSource(emptyList())
-
-        override suspend fun deleteBook(
-            bookId: String,
-            deletedAt: Long,
-        ) {
-            val existing = byId[bookId] ?: return
-            byId[bookId] = existing.copy(deletedAtEpochMillis = deletedAt)
-        }
-
-        override suspend fun deleteById(bookId: String) {
-            byId.remove(bookId)
-        }
-
-        override suspend fun updateRating(
-            bookId: String,
-            rating: Int?,
-        ) {
-            val existing = byId[bookId] ?: return
-            byId[bookId] = existing.copy(userRating = rating)
-        }
-
-        override suspend fun updateStatus(
-            bookId: String,
-            status: String?,
-            updatedAt: Long,
-        ) {
-            val existing = byId[bookId] ?: return
-            byId[bookId] = existing.copy(status = status, updatedAtEpochMillis = updatedAt)
-        }
-
-        override suspend fun startReading(
-            bookId: String,
-            updatedAt: Long,
-        ) {
-            val existing = byId[bookId] ?: return
-            byId[bookId] = existing.copy(readingState = "reading", startedAtEpochMillis = updatedAt, updatedAtEpochMillis = updatedAt)
-        }
-
-        override suspend fun updateReadingProgress(
-            bookId: String,
-            progress: Float,
-            updatedAt: Long,
-        ) {
-            val existing = byId[bookId] ?: return
-            val readingState = if (progress >= 100f) "completed" else "reading"
-            byId[bookId] =
-                existing.copy(
-                    readingState = readingState,
-                    progressUpdatedAtEpochMillis = updatedAt,
-                    completedAtEpochMillis = if (progress >= 100f) updatedAt else existing.completedAtEpochMillis,
-                    updatedAtEpochMillis = updatedAt,
-                )
-        }
-
-        override suspend fun completeReading(
-            bookId: String,
-            updatedAt: Long,
-        ) {
-            val existing = byId[bookId] ?: return
-            byId[bookId] =
-                existing.copy(
-                    readingState = "completed",
-                    completedAtEpochMillis = updatedAt,
-                    updatedAtEpochMillis = updatedAt,
-                )
-        }
-
-        override suspend fun updateMetadata(
-            bookId: String,
-            title: String,
-            author: String?,
-            description: String?,
-            coverPath: String?,
-            genre: String?,
-            language: String?,
-            publisher: String?,
-            tags: String?,
-            publishedDate: String?,
-            updatedAt: Long,
-        ) {
-            val existing = byId[bookId] ?: return
-            byId[bookId] =
-                existing.copy(
-                    title = title,
-                    author = author,
-                    description = description,
-                    coverPath = coverPath,
-                    genre = genre,
-                    language = language,
-                    publisher = publisher,
-                    tags = tags,
-                    publishedDate = publishedDate,
-                    updatedAtEpochMillis = updatedAt,
-                )
-        }
-
-        override suspend fun count(): Int = byId.size
-    }
-
-    private class FakeSyncOutboxDao : com.nexo.data.local.dao.SyncOutboxDao {
-        override suspend fun getPendingItems(): List<com.nexo.data.local.entity.SyncOutboxEntity> = emptyList()
-
-        override suspend fun insert(item: com.nexo.data.local.entity.SyncOutboxEntity) {}
-
-        override suspend fun deleteById(id: String) {}
-
-        override suspend fun incrementRetryCount(
-            id: String,
-            error: String,
-        ) {}
-
-        override suspend fun pruneFailedItems(maxRetries: Int) {}
-
-        override fun observePendingCount(): Flow<Int> = MutableStateFlow(0)
-
-        override suspend fun getByTypeAndEntityId(
-            type: String,
-            entityId: String,
-        ): com.nexo.data.local.entity.SyncOutboxEntity? = null
-
-        override suspend fun updatePayload(
-            id: String,
-            payloadJson: String,
-        ) {}
-
-        override suspend fun upsertCoalesced(item: com.nexo.data.local.entity.SyncOutboxEntity) {}
-    }
 }

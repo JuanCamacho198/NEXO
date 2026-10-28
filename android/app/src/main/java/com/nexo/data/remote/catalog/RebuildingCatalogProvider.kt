@@ -51,6 +51,14 @@ class LiveCatalogProvider(
      */
     override fun supportsFeatured(): Boolean = supplier.peek()?.supportsFeatured() ?: false
 
+    /** Topic rails resolve through the current composite, like every other door. */
+    override suspend fun topic(
+        term: String,
+        page: Int,
+    ): PagedResult = supplier.provider().topic(term, page)
+
+    override fun supportsTopic(): Boolean = supplier.peek()?.supportsTopic() ?: false
+
     override suspend fun searchSource(
         sourceId: String,
         query: String,

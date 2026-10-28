@@ -81,6 +81,7 @@ class DictionarySyncServiceTest {
         sourceBookAuthor = "Author",
         sourceChapter = "Ch1",
         sourceLocator = "epubcfi(/6/4)",
+        userId = USER,
     )
 
     private fun remoteRow(
@@ -197,8 +198,8 @@ class DictionarySyncServiceTest {
                 remoteRow(id = "server-2", word = "Lumen", normalized = "lumen", updatedAtMillis = 3_000L)
 
             assertEquals(2, service(remote).pullRemote())
-            assertEquals(2, dao.getAll().size)
-            assertEquals(setOf("Abyss", "Lumen"), dao.getAll().map { it.word }.toSet())
+            assertEquals(2, dao.getAll(USER).size)
+            assertEquals(setOf("Abyss", "Lumen"), dao.getAll(USER).map { it.word }.toSet())
         }
 
     @Test
@@ -231,7 +232,7 @@ class DictionarySyncServiceTest {
 
             service(remote).pullRemote()
 
-            val stored = dao.getAll().single()
+            val stored = dao.getAll(USER).single()
             assertEquals("Remote", stored.word)
             // The write clock advances to the remote time; the local "first added"
             // time is preserved because a remote update does not re-add the word.
@@ -249,7 +250,7 @@ class DictionarySyncServiceTest {
 
             service(remote).pullRemote()
 
-            assertEquals("Local", dao.getAll().single().word)
+            assertEquals("Local", dao.getAll(USER).single().word)
         }
 
     @Test
@@ -268,7 +269,7 @@ class DictionarySyncServiceTest {
 
             service(remote).pullRemote()
 
-            assertTrue(dao.getAll().isEmpty())
+            assertTrue(dao.getAll(USER).isEmpty())
         }
 
     @Test
@@ -287,7 +288,7 @@ class DictionarySyncServiceTest {
 
             service(remote).pullRemote()
 
-            assertEquals("Local", dao.getAll().single().word)
+            assertEquals("Local", dao.getAll(USER).single().word)
         }
 
     @Test
@@ -322,7 +323,7 @@ class DictionarySyncServiceTest {
 
             service(remote).pullRemote()
 
-            val stored = dao.getAll().single()
+            val stored = dao.getAll(USER).single()
             assertEquals("edited offline", stored.definition)
             assertEquals(9_000L, stored.updatedAtEpochMillis)
             assertEquals(1_000L, stored.addedAtEpochMillis)
@@ -335,6 +336,7 @@ class DictionarySyncServiceTest {
 
             dao.updateUserFields(
                 wordId = "local-1",
+                userId = USER,
                 definition = "edited",
                 partOfSpeech = "noun",
                 phonetic = null,
@@ -342,7 +344,7 @@ class DictionarySyncServiceTest {
                 updatedAtEpochMillis = 9_000L,
             )
 
-            val stored = dao.findById("local-1")!!
+            val stored = dao.findById("local-1", USER)!!
             assertEquals("edited", stored.definition)
             assertEquals(9_000L, stored.updatedAtEpochMillis)
             assertEquals(1_000L, stored.addedAtEpochMillis)
@@ -436,3 +438,4 @@ class DictionarySyncServiceTest {
         ) = "$userId|$normalized"
     }
 }
+

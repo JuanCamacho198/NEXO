@@ -157,11 +157,11 @@ class DictionarySyncService(
             val rows = remote.listChanges(session.userId, since)
             val localByNormalized =
                 dao
-                    .getAll()
+                    .getAll(session.userId)
                     .associateBy { DictionaryNormalizer.normalize(it.word) }
                     .toMutableMap()
             for (row in rows) {
-                mergeRemote(row, localByNormalized)
+                mergeRemote(row, session.userId, localByNormalized)
             }
             // TODO(sync-cursor): the cursor is the device wall clock; if the clock
             // jumps forward, remote rows written in the skipped window are not
@@ -176,6 +176,7 @@ class DictionarySyncService(
 
     private suspend fun mergeRemote(
         row: DictionaryWordRemoteRow,
+        userId: String,
         localByNormalized: MutableMap<String, DictionaryWordEntity>,
     ) {
         if (row.normalizedWord.isBlank()) return
@@ -188,14 +189,14 @@ class DictionarySyncService(
             // the local change; a newer local edit must not be resurrected away.
             val remoteDeleted = parseTimestamp(deletedAt)
             if (local != null && remoteDeleted > local.updatedAtEpochMillis) {
-                dao.delete(local.id)
+                dao.delete(local.id, userId)
                 localByNormalized.remove(row.normalizedWord)
             }
             return
         }
 
         if (local == null) {
-            val inserted = row.toEntity(remoteTime)
+            val inserted = row.toEntity(userId, remoteTime)
             dao.insert(inserted)
             localByNormalized[row.normalizedWord] = inserted
             return
@@ -244,23 +245,26 @@ class DictionarySyncService(
         deletedAt = null,
     )
 
-    private fun DictionaryWordRemoteRow.toEntity(updatedAtEpochMillis: Long) =
-        DictionaryWordEntity(
-            id = id ?: UUID.randomUUID().toString(),
-            word = word,
-            addedAtEpochMillis = updatedAtEpochMillis,
-            updatedAtEpochMillis = updatedAtEpochMillis,
-            definition = definition,
-            partOfSpeech = partOfSpeech,
-            phonetic = phonetic,
-            example = example,
-            quote = quote,
-            sourceBookId = sourceBookId,
-            sourceBookTitle = sourceBookTitle,
-            sourceBookAuthor = sourceBookAuthor,
-            sourceChapter = sourceChapter,
-            sourceLocator = sourceLocator,
-        )
+    private fun DictionaryWordRemoteRow.toEntity(
+        userId: String,
+        updatedAtEpochMillis: Long,
+    ) = DictionaryWordEntity(
+        id = id ?: UUID.randomUUID().toString(),
+        word = word,
+        addedAtEpochMillis = updatedAtEpochMillis,
+        updatedAtEpochMillis = updatedAtEpochMillis,
+        definition = definition,
+        partOfSpeech = partOfSpeech,
+        phonetic = phonetic,
+        example = example,
+        quote = quote,
+        sourceBookId = sourceBookId,
+        sourceBookTitle = sourceBookTitle,
+        sourceBookAuthor = sourceBookAuthor,
+        sourceChapter = sourceChapter,
+        sourceLocator = sourceLocator,
+        userId = userId,
+    )
 
     private fun isoUtc(epochMillis: Long): String = Instant.ofEpochMilli(epochMillis).toString()
 

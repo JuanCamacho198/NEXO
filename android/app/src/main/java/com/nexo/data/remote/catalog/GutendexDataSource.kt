@@ -46,6 +46,35 @@ open class GutendexDataSource(
         val res = transport.getWithRetry("$baseUrl/books/?$sortParam&page=$page")
         val data = json.decodeFromString<GutendexSearchResponse>(res.body)
         val books = data.results.mapNotNull(::mapGutendexBook).take(size)
+        CatalogRailLog.responded(
+            "gutendex:featured:$sort",
+            "$sortParam&page=$page",
+            res.status,
+            data.results.size,
+            books.size,
+        )
+        return CatalogSearchResult(books, data.count ?: books.size)
+    }
+
+    /**
+     * Topic shelf page: Gutendex's own `?topic=` selector. This is a DIFFERENT
+     * parameter from `search` and it is not interchangeable: measured live,
+     * `?topic=science%20fiction` answers 3 530 books while
+     * `?search=science%20fiction` answers 6. The term must come from the closed
+     * [com.nexo.domain.discover.TOPIC_ROTATION] table — like `sort`, `topic` is a
+     * parameter where an unverified literal is not a filter but a full scan.
+     */
+    open suspend fun topic(
+        term: String,
+        page: Int,
+        pageSize: Int = DEFAULT_PAGE_SIZE,
+    ): CatalogSearchResult {
+        val size = clampPageSize(pageSize)
+        val params = "topic=${term.encode()}&page=$page"
+        val res = transport.getWithRetry("$baseUrl/books/?$params")
+        val data = json.decodeFromString<GutendexSearchResponse>(res.body)
+        val books = data.results.mapNotNull(::mapGutendexBook).take(size)
+        CatalogRailLog.responded("gutendex:topic:$term", params, res.status, data.results.size, books.size)
         return CatalogSearchResult(books, data.count ?: books.size)
     }
 
