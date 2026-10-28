@@ -9,6 +9,7 @@ import com.nexo.domain.model.HighlightColor
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.presentation.UiEvent
+import com.nexo.testutil.activeUserProviderFor
 import com.nexo.testutil.MainDispatcherRule
 import io.mockk.coVerify
 import io.mockk.every
@@ -68,7 +69,7 @@ class ReaderInteractionStateHolderTest {
 
         highlightsFlow = MutableStateFlow(emptyList())
         readerRepository = mockk(relaxed = true)
-        every { readerRepository.observeHighlights(any()) } returns highlightsFlow
+        every { readerRepository.observeHighlights(any(), any()) } returns highlightsFlow
         dictionaryRepository = mockk(relaxed = true)
         capturedEvents.clear()
     }
@@ -260,7 +261,7 @@ class ReaderInteractionStateHolderTest {
 
             // Then: repository was called to upsert the updated highlight
             val slot = slot<Highlight>()
-            coVerify { readerRepository.upsertHighlight(capture(slot)) }
+            coVerify { readerRepository.upsertHighlight(capture(slot), any()) }
 
             val captured = slot.captured
             assertEquals("should be the same highlight", "h1", captured.id)
@@ -289,7 +290,7 @@ class ReaderInteractionStateHolderTest {
 
             // Then: repository was called
             val slot = slot<Highlight>()
-            coVerify { readerRepository.upsertHighlight(capture(slot)) }
+            coVerify { readerRepository.upsertHighlight(capture(slot), any()) }
             assertEquals("tag should be saved", "ficción", slot.captured.tag)
 
             // And: tag input dismissed
@@ -316,6 +317,7 @@ class ReaderInteractionStateHolderTest {
                 ReaderInteractionStateHolder(
                     readerRepository = readerRepository,
                     dictionaryRepository = dictionaryRepository,
+                    activeUser = activeUserProviderFor(),
                     scope = this,
                     onEvent = { events.add(it) },
                 )
@@ -373,6 +375,7 @@ class ReaderInteractionStateHolderTest {
                 ReaderInteractionStateHolder(
                     readerRepository = readerRepository,
                     dictionaryRepository = dictionaryRepository,
+                    activeUser = activeUserProviderFor(),
                     scope = this,
                     onEvent = { events.add(it) },
                 )
@@ -400,6 +403,7 @@ class ReaderInteractionStateHolderTest {
                 ReaderInteractionStateHolder(
                     readerRepository = readerRepository,
                     dictionaryRepository = dictionaryRepository,
+                    activeUser = activeUserProviderFor(),
                     scope = this,
                     onEvent = { events.add(it) },
                 )
@@ -435,7 +439,7 @@ class ReaderInteractionStateHolderTest {
             advanceUntilIdle()
 
             val slot = slot<com.nexo.domain.model.Bookmark>()
-            coVerify { readerRepository.upsertBookmark(capture(slot)) }
+            coVerify { readerRepository.upsertBookmark(capture(slot), any()) }
 
             assertEquals("test-book", slot.captured.bookId)
             assertEquals("epubcfi(/6/4)", slot.captured.cfiLocation)
@@ -491,6 +495,7 @@ class ReaderInteractionStateHolderTest {
         return ReaderInteractionStateHolder(
             readerRepository = readerRepository,
             dictionaryRepository = dictionaryRepository,
+            activeUser = activeUserProviderFor(),
             scope = scope,
             onEvent = { capturedEvents.add(it) },
             mainDispatcher = testDispatcher,
@@ -510,3 +515,4 @@ class ReaderInteractionStateHolderTest {
             locatorJson = null,
         )
 }
+

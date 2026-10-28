@@ -15,6 +15,7 @@ import com.nexo.domain.repository.CacheRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.StorageRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.presentation.debug.DebugViewModel
 import com.nexo.presentation.feature.discover.DiscoverSectionViewModel
@@ -94,6 +95,7 @@ internal fun rememberNavHostViewModels(
                     defaultBookId = selectedBookId,
                     dictionaryRepository = appContainer.dictionaryRepository,
                     libraryRepository = appContainer.libraryRepository,
+                    activeUser = appContainer.activeUserProvider,
                     supabaseProgressSync = appContainer.supabaseProgressSync,
                 ),
         )
@@ -157,7 +159,8 @@ internal fun rememberDiscoverSectionViewModel(
     sectionTitle: String,
     sort: CatalogFeaturedSort?,
     sourceId: String?,
-    authorTerm: String? = null,
+    term: String = "",
+    topicTerm: String? = null,
     downloadAndImportBookUseCase: DownloadAndImportBookUseCase?,
 ): DiscoverSectionViewModel =
     viewModel(
@@ -167,7 +170,8 @@ internal fun rememberDiscoverSectionViewModel(
                 sectionTitle = sectionTitle,
                 sort = sort,
                 sourceId = sourceId,
-                authorTerm = authorTerm,
+                term = term,
+                topicTerm = topicTerm,
                 downloadAndImportBookUseCase = downloadAndImportBookUseCase,
             ),
     )
@@ -185,9 +189,10 @@ internal fun rememberDiscoverSectionViewModel(
 internal fun rememberBookDetailViewModel(
     bookId: String,
     libraryRepository: LibraryRepository,
+    activeUser: ActiveUserProvider,
 ): BookDetailViewModel =
     viewModel(
-        factory = BookDetailViewModel.Factory(bookId, libraryRepository),
+        factory = BookDetailViewModel.Factory(bookId, libraryRepository, activeUser),
     )
 
 /**
@@ -201,6 +206,7 @@ internal fun rememberBookDetailViewModel(
 internal fun rememberEditBookMetadataViewModel(
     bookId: String,
     libraryRepository: LibraryRepository,
+    activeUser: ActiveUserProvider,
     coverStorage: CoverStorage,
     onSaved: () -> Unit,
 ): EditBookMetadataViewModel {
@@ -210,6 +216,7 @@ internal fun rememberEditBookMetadataViewModel(
             EditBookMetadataViewModel.Factory(
                 bookId = bookId,
                 libraryRepository = libraryRepository,
+                activeUser = activeUser,
                 coverStorage = coverStorage,
                 appContext = context.applicationContext,
                 onSaved = onSaved,
@@ -269,9 +276,12 @@ internal fun rememberAddonSettingsViewModel(
  * unrendered.
  */
 @Composable
-internal fun rememberDictionaryViewModel(dictionaryRepository: DictionaryRepository?): DictionaryViewModel? =
+internal fun rememberDictionaryViewModel(
+    dictionaryRepository: DictionaryRepository?,
+    activeUser: ActiveUserProvider,
+): DictionaryViewModel? =
     remember(dictionaryRepository) {
-        dictionaryRepository?.let { DictionaryViewModel(it) }
+        dictionaryRepository?.let { DictionaryViewModel(it, activeUser) }
     }
 
 /**
@@ -286,10 +296,11 @@ internal fun rememberStorageViewModel(
     storageRepository: StorageRepository?,
     cacheRepository: CacheRepository?,
     libraryRepository: LibraryRepository?,
+    activeUser: ActiveUserProvider,
 ): StorageViewModel? =
     remember(storageRepository, cacheRepository, libraryRepository) {
         if (storageRepository != null && cacheRepository != null && libraryRepository != null) {
-            StorageViewModel(storageRepository, cacheRepository, libraryRepository, Dispatchers.Main)
+            StorageViewModel(storageRepository, cacheRepository, libraryRepository, activeUser, Dispatchers.Main)
         } else {
             null
         }

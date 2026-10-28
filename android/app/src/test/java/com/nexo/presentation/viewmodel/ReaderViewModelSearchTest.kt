@@ -3,6 +3,7 @@ package com.nexo.presentation.viewmodel
 import android.app.Application
 import com.nexo.domain.model.SearchResult
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
+import com.nexo.testutil.activeUserProviderFor
 import com.nexo.testutil.FakeReaderRepository
 import com.nexo.testutil.FakeReadingStatsRepository
 import com.nexo.testutil.MainDispatcherRule
@@ -102,6 +103,7 @@ class ReaderViewModelSearchTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
                     defaultBookId = null,
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -137,6 +139,7 @@ class ReaderViewModelSearchTest {
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
             defaultBookId = null,
+            activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
         )
     }

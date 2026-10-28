@@ -55,16 +55,19 @@
     <string name="home_continue_reading">Continue reading</string>
     <string name="home_no_book_in_progress">No book in progress</string>
     <string name="home_my_bookshelf">My bookshelf</string>
-    <string name="home_quick_actions">Quick actions</string>
     <string name="home_action_import_epub">Import EPUB</string>
     <string name="home_action_import_pdf">Import PDF</string>
-    <string name="home_action_import_book">Import book</string>
     <string name="home_action_notes">Notes</string>
-    <string name="home_action_stats">Stats</string>
     <string name="home_view_all">View all</string>
     <string name="home_greeting">Hello, %1$s</string>
     <string name="home_subtitle">What will you read today?</string>
     <string name="home_continuar">Continue</string>
+    <string name="home_last_read_just_now">Last read: just now</string>
+    <string name="home_last_read_hours_ago">Last read: %1$d h ago</string>
+    <string name="home_last_read_yesterday">Last read: yesterday</string>
+    <string name="home_last_read_days_ago">Last read: %1$d days ago</string>
+    <string name="home_progress_percent">%1$d%%</string>
+    <string name="home_chapter_count">Chapter %1$d</string>
     <string name="home_sessions">Sessions</string>
     <string name="home_progress">Progress</string>
     <string name="home_minutes">Minutes</string>
@@ -72,8 +75,6 @@
     <string name="home_ver_todo">View all</string>
     <string name="home_import_epub">Import EPUB</string>
     <string name="home_import_pdf">Import PDF</string>
-    <string name="home_highlights">Highlights</string>
-    <string name="home_settings">Settings</string>
     <string name="home_no_current_book">No current book</string>
     <string name="home_today_summary_title">Today\'s summary</string>
     <string name="home_streak_days">days</string>
@@ -97,11 +98,33 @@
     <string name="onboarding_goal_footer_note">You can change this later in Settings.</string>
     <string name="home_nexo_title">NEXO</string>
     <string name="home_avatar_content_description">Open account settings</string>
+    <string name="home_streak_badge_content_description">Reading streak: %1$d days</string>
     <string name="home_search_results">Results</string>
     <string name="home_close_search">Close search</string>
     <string name="home_bookshelf_empty_title">Your bookshelf is empty</string>
     <string name="home_bookshelf_empty_subtitle">Import a book to start your library.</string>
     <string name="home_version_format">v%1$s \u2022 %2$s \u2022 %3$s</string>
+
+    <!-- Home empty / first session -->
+    <string name="home_brand_tagline">Your books, always with you</string>
+    <string name="home_hero_title">Discover new stories</string>
+    <string name="home_hero_subtitle">Read, save and pick up where you left off.</string>
+    <string name="home_hero_cta">Explore</string>
+    <string name="home_hero_cta_content_description">Explore the catalog</string>
+    <string name="home_genres_title">Genres you may like</string>
+    <string name="home_genres_content_description">Browse genres</string>
+    <string name="home_streak_content_description">Reading streak</string>
+    <string name="home_sync_banner_title">Save your books and keep reading anywhere</string>
+    <string name="home_sync_banner_subtitle">Sign in with Google Drive to sync your progress and your highlights.</string>
+    <string name="home_sync_banner_content_description">Set up cloud sync</string>
+    <string name="home_hero_image_content_description">Cozy cabin interior at dusk overlooking snowy mountains</string>
+    <string name="home_genre_fiction">Fiction</string>
+    <string name="home_genre_classics">Classics</string>
+    <string name="home_genre_adventure">Adventure</string>
+    <string name="home_genre_mystery">Mystery</string>
+    <string name="home_genre_romance">Romance</string>
+    <string name="home_genre_science_fiction">Science fiction</string>
+    <string name="home_genre_history">History</string>
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>
@@ -153,17 +176,24 @@
     <string name="discover_back">Back</string>
     <string name="discover_rail_newest">Recently added to the catalog</string>
     <string name="discover_rail_popular">Popular in the catalog</string>
-    <!-- S2: author shelf titles (rotation roster; proper nouns, identical in both locales) -->
-    <string name="discover_rail_author_doyle">Arthur Conan Doyle</string>
-    <string name="discover_rail_author_poe">Edgar Allan Poe</string>
-    <string name="discover_rail_author_wilde">Oscar Wilde</string>
-    <string name="discover_rail_author_verne">Jules Verne</string>
-    <string name="discover_rail_author_kafka">Franz Kafka</string>
-    <string name="discover_rail_author_dickens">Charles Dickens</string>
-    <string name="discover_rail_author_london">Jack London</string>
-    <string name="discover_rail_author_wells">H. G. Wells</string>
-    <string name="discover_rail_author_twain">Mark Twain</string>
-    <string name="discover_rail_author_melville">Herman Melville</string>
+    <string name="discover_rail_gutendex_popular">Most downloaded classics</string>
+    <string name="discover_rail_standard_ebooks">Standard Ebooks: new releases</string>
+    <string name="discover_error_rate_limited">The catalog is throttling requests. Try again in a moment.</string>
+    <string name="discover_rail_group_google_books">Google Books</string>
+    <string name="discover_rail_group_gutendex">Gutendex</string>
+    <string name="discover_rail_group_standard_ebooks">Standard Ebooks</string>
+    <string name="discover_rail_group_failed">%1$s couldn\'t load its shelves.</string>
+    <!-- S2: Gutendex topic shelf titles (rotation roster; terms probed live) -->
+    <string name="discover_rail_topic_science_fiction">Science fiction</string>
+    <string name="discover_rail_topic_adventure">Adventure</string>
+    <string name="discover_rail_topic_history">History</string>
+    <string name="discover_rail_topic_travel">Travel</string>
+    <string name="discover_rail_topic_poetry">Poetry</string>
+    <string name="discover_rail_topic_philosophy">Philosophy</string>
+    <string name="discover_rail_topic_drama">Drama</string>
+    <string name="discover_rail_topic_romance">Romance</string>
+    <string name="discover_rail_topic_mystery">Mystery</string>
+    <string name="discover_rail_topic_horror">Horror</string>
     <string name="discover_section_subtitle">“%1$s” · %2$d results</string>
     <string name="discover_detail_subjects_label">SUBJECTS</string>
     <string name="discover_detail_description_label">DESCRIPTION</string>
@@ -970,6 +1000,7 @@
     <string name="discover_source_addon_fallback">Addon</string>
     <string name="discover_rail_from">From %1$s</string>
     <string name="discover_manage_addons">Manage addons</string>
+    <string name="settings_manage_addons">Manage addons (beta)</string>
     <string name="discover_idle_source_empty">Nothing featured from %1$s. Pick another source to see the shelves.</string>
     <!-- U2: Google Books attribution (required where Google results render) + fail-closed key notice -->
     <string name="google_books_attribution">Powered by Google</string>
@@ -1046,4 +1077,6 @@
     <string name="update_error_unreachable">Couldn\'t reach the update server. Try again later.</string>
     <string name="update_error_malformed">The update feed is invalid. Try again later.</string>
     <string name="update_error_offline">You\'re offline. Connect and try again.</string>
+    <string name="import_requires_account">Sign in to import books into your library</string>
+    <string name="import_failed">Import failed: %1$s</string>
 </resources>

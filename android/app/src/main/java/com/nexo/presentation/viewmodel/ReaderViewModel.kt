@@ -15,6 +15,7 @@ import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.ReadingStatsRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.presentation.UiEvent
 import com.nexo.presentation.viewmodel.reader.AnnotationUiState
@@ -83,6 +84,7 @@ class ReaderViewModel(
     defaultBookId: String?,
     private val dictionaryRepository: DictionaryRepository? = null,
     private val libraryRepository: LibraryRepository? = null,
+    private val activeUser: ActiveUserProvider,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val supabaseProgressSync: SupabaseProgressSync? = null,
 ) : AndroidViewModel(application) {
@@ -171,6 +173,7 @@ class ReaderViewModel(
             readerRepository = readerRepository,
             updateReadingProgressUseCase = updateReadingProgressUseCase,
             readingStatsRepository = readingStatsRepository,
+            activeUser = activeUser,
             scope = viewModelScope,
             onChapterChanged = { sleepTimerManager.onChapterChanged() },
             onErrorEvent = { _uiEvent.tryEmit(it) },
@@ -196,6 +199,7 @@ class ReaderViewModel(
         ReaderInteractionStateHolder(
             readerRepository = readerRepository,
             dictionaryRepository = dictionaryRepository,
+            activeUser = activeUser,
             scope = viewModelScope,
             onEvent = { _uiEvent.tryEmit(it) },
             mainDispatcher = mainDispatcher,
@@ -355,7 +359,7 @@ class ReaderViewModel(
         viewModelScope.launch(mainDispatcher) {
             val resolved =
                 try {
-                    libraryRepository?.getBookById(bookId)?.filePath?.takeIf { it.isNotBlank() }
+                    libraryRepository?.getBookById(bookId, activeUser.requireUserId())?.filePath?.takeIf { it.isNotBlank() }
                 } catch (_: Exception) {
                     null
                 }
@@ -573,6 +577,7 @@ class ReaderViewModelFactory(
     private val defaultBookId: String?,
     private val dictionaryRepository: DictionaryRepository? = null,
     private val libraryRepository: LibraryRepository? = null,
+    private val activeUser: ActiveUserProvider,
     private val supabaseProgressSync: SupabaseProgressSync? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
@@ -587,6 +592,7 @@ class ReaderViewModelFactory(
                 defaultBookId = defaultBookId,
                 dictionaryRepository = dictionaryRepository,
                 libraryRepository = libraryRepository,
+                activeUser = activeUser,
                 supabaseProgressSync = supabaseProgressSync,
             ) as T
         }

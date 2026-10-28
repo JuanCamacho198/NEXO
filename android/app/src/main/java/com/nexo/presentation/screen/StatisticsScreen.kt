@@ -128,6 +128,14 @@ fun StatisticsScreen(
 
             else -> {
                 item {
+                    TodaySummarySection(
+                        minutesReadToday = uiState.minutesReadToday,
+                        sessionsToday = uiState.sessionsToday,
+                        currentStreak = uiState.currentStreak,
+                    )
+                }
+
+                item {
                     StreakHeroSection(currentStreak = uiState.currentStreak)
                 }
 
@@ -457,6 +465,8 @@ private fun StatisticsScreenPreviewContent() {
                 },
             goalProgress = 0.8f,
             favoriteGenres = listOf("Sci-Fi", "Fantasy", "Non-fiction"),
+            minutesReadToday = 42,
+            sessionsToday = 3,
         )
     LazyColumn(
         modifier =
@@ -489,6 +499,7 @@ private fun StatisticsScreenPreviewContent() {
                 )
             }
         }
+        item { TodaySummarySection(minutesReadToday = uiState.minutesReadToday, sessionsToday = uiState.sessionsToday, currentStreak = uiState.currentStreak) }
         item { StreakHeroSection(uiState.currentStreak) }
         item { ReadingActivitySection(uiState.weeklyActivity) }
         item { GoalsSection(uiState.goalProgress) }

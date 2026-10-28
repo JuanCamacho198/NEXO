@@ -4,6 +4,7 @@ import android.os.SystemClock
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.viewmodel.CfiMigrator
 import com.nexo.presentation.viewmodel.reader.BookChapter
 import com.nexo.presentation.viewmodel.reader.HIGHLIGHT_TAP_DEBOUNCE_MS
@@ -25,6 +26,7 @@ internal class AnnotationManager(
     private val store: InteractionStateStore,
     private val selectionManager: SelectionManager,
     private val readerRepository: ReaderRepository,
+    private val activeUser: ActiveUserProvider,
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : Clearable {
@@ -49,7 +51,7 @@ internal class AnnotationManager(
         val activeId = selectionManager.activeHighlightId() ?: return
         val existing = store.value.highlights.find { it.id == activeId } ?: return
         val updated = existing.copy(note = text.ifBlank { null }, updatedAtEpochMillis = System.currentTimeMillis())
-        scope.launch(mainDispatcher) { readerRepository.upsertHighlight(updated) }
+        scope.launch(mainDispatcher) { readerRepository.upsertHighlight(updated, activeUser.requireUserId()) }
         selectionManager.coordinator = SelectionCoordinator.MenuClosed()
         store.update {
             it.copy(
@@ -97,7 +99,7 @@ internal class AnnotationManager(
                         deletedAtEpochMillis = null,
                         locatorJson = locatorJson,
                     )
-                scope.launch(mainDispatcher) { readerRepository.upsertHighlight(highlight) }
+                scope.launch(mainDispatcher) { readerRepository.upsertHighlight(highlight, activeUser.requireUserId()) }
                 selectionManager.coordinator =
                     SelectionCoordinator.ExistingHighlight(
                         highlight = highlight,
@@ -154,7 +156,7 @@ internal class AnnotationManager(
         val activeId = selectionManager.activeHighlightId() ?: return
         val existing = store.value.highlights.find { it.id == activeId } ?: return
         val updated = existing.copy(tag = text.ifBlank { null }, updatedAtEpochMillis = System.currentTimeMillis())
-        scope.launch(mainDispatcher) { readerRepository.upsertHighlight(updated) }
+        scope.launch(mainDispatcher) { readerRepository.upsertHighlight(updated, activeUser.requireUserId()) }
         selectionManager.dismissMenuAndClearSelection()
     }
 

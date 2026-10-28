@@ -29,6 +29,7 @@ import com.nexo.domain.repository.CacheRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.StorageRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.navigation.NexoDestination
 import com.nexo.presentation.navigation.rememberDictionaryViewModel
 import com.nexo.presentation.navigation.rememberPerformanceViewModel
@@ -75,6 +76,8 @@ fun SettingsScreen(
     cacheRepository: CacheRepository? = null,
     libraryRepository: LibraryRepository? = null,
     updateViewModel: UpdateViewModel? = null,
+    onNavigateToAddons: () -> Unit = {},
+    activeUser: ActiveUserProvider,
 ) {
     SettingsScreenContent(
         contentPadding = contentPadding,
@@ -99,6 +102,8 @@ fun SettingsScreen(
         cacheRepository = cacheRepository,
         libraryRepository = libraryRepository,
         updateViewModel = updateViewModel,
+        onNavigateToAddons = onNavigateToAddons,
+        activeUser = activeUser,
     )
 }
 
@@ -126,10 +131,12 @@ private fun SettingsScreenContent(
     cacheRepository: CacheRepository? = null,
     libraryRepository: LibraryRepository? = null,
     updateViewModel: UpdateViewModel? = null,
+    onNavigateToAddons: () -> Unit = {},
+    activeUser: ActiveUserProvider,
 ) {
     val nestedNavController = rememberNavController()
-    val dictionaryViewModel = rememberDictionaryViewModel(dictionaryRepository)
-    val storageViewModel = rememberStorageViewModel(storageRepository, cacheRepository, libraryRepository)
+    val dictionaryViewModel = rememberDictionaryViewModel(dictionaryRepository, activeUser)
+    val storageViewModel = rememberStorageViewModel(storageRepository, cacheRepository, libraryRepository, activeUser)
 
     val start = initialRoute ?: NexoDestination.SettingsList.route
 
@@ -195,6 +202,7 @@ private fun SettingsScreenContent(
                     onNavigateToSync = {
                         nestedNavController.navigate(NexoDestination.SettingsSync.route)
                     },
+                    onNavigateToAddons = onNavigateToAddons,
                 )
             }
 
@@ -402,6 +410,7 @@ private fun SettingsScreenDarkPreview() {
             onDeleteCustomHighlightColor = {},
             onResetCustomHighlightColors = {},
             onNavigateToLogViewer = {},
+            activeUser = ActiveUserProvider().apply { set("local-1") },
         )
     }
 }
@@ -428,6 +437,7 @@ private fun SettingsScreenLightPreview() {
             onDeleteCustomHighlightColor = {},
             onResetCustomHighlightColors = {},
             onNavigateToLogViewer = {},
+            activeUser = ActiveUserProvider().apply { set("local-1") },
         )
     }
 }

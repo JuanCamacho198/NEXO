@@ -89,24 +89,25 @@
     <string name="home_continue_reading">Continuar leyendo</string>
     <string name="home_no_book_in_progress">Sin libro en progreso</string>
     <string name="home_continuar">Continuar</string>
+    <string name="home_last_read_just_now">Última lectura: recién</string>
+    <string name="home_last_read_hours_ago">Última lectura: hace %1$d h</string>
+    <string name="home_last_read_yesterday">Última lectura: ayer</string>
+    <string name="home_last_read_days_ago">Última lectura: hace %1$d días</string>
+    <string name="home_progress_percent">%1$d%%</string>
+    <string name="home_chapter_count">Capítulo %1$d</string>
     <string name="home_sessions">Sesiones</string>
     <string name="home_progress">Progreso</string>
     <string name="home_minutes">Minutos</string>
     <string name="home_minutes_read_today">%1$d minutos leídos hoy</string>
     <string name="home_my_bookshelf">Mi estantería</string>
-    <string name="home_my_bookshelf_title">Mi estantería</string>
+    <string name="home_my_bookshelf_title">Mi biblioteca</string>
     <string name="home_view_all">Ver todo</string>
     <string name="home_ver_todo">Ver todo</string>
     <string name="home_import_epub">Importar EPUB</string>
     <string name="home_import_pdf">Importar PDF</string>
-    <string name="home_quick_actions">Acciones rápidas</string>
     <string name="home_action_import_epub">Importar EPUB</string>
     <string name="home_action_import_pdf">Importar PDF</string>
-    <string name="home_action_import_book">Importar libro</string>
     <string name="home_action_notes">Notas</string>
-    <string name="home_action_stats">Estadísticas</string>
-    <string name="home_highlights">Resaltados</string>
-    <string name="home_settings">Ajustes</string>
     <string name="home_no_current_book">Sin libro en curso</string>
     <string name="home_bookshelf_empty_title">Tu estanter\u00eda est\u00e1 vac\u00eda</string>
     <string name="home_bookshelf_empty_subtitle">Import\u00e1 un libro para empezar tu biblioteca.</string>
@@ -133,6 +134,7 @@
     <string name="onboarding_goal_footer_note">Puedes cambiar esta configuración más tarde en Ajustes.</string>
     <string name="home_nexo_title">NEXO</string>
     <string name="home_avatar_content_description">Abrir cuenta</string>
+    <string name="home_streak_badge_content_description">Racha de lectura: %1$d días</string>
     <string name="home_search_results">Resultados</string>
     <string name="nav_home">Inicio</string>
     <string name="nav_library">Estantería</string>
@@ -184,6 +186,7 @@
     <string name="discover_source_addon_fallback">Complemento</string>
     <string name="discover_rail_from">De %1$s</string>
     <string name="discover_manage_addons">Gestionar addons</string>
+    <string name="settings_manage_addons">Gestionar addons (beta)</string>
     <string name="discover_idle_source_empty">No hay destacados de %1$s. Elegí otra fuente para ver las estanterías.</string>
     <!-- U2: atribución de Google Books + aviso de key ausente (voseo) -->
     <string name="google_books_attribution">Con tecnología de Google</string>
@@ -195,17 +198,24 @@
     <string name="discover_back">Volver</string>
     <string name="discover_rail_newest">Recién agregados al catálogo</string>
     <string name="discover_rail_popular">Populares del catálogo</string>
-    <!-- S2: títulos de los estantes de autor (nombres propios, idénticos en ambos idiomas) -->
-    <string name="discover_rail_author_doyle">Arthur Conan Doyle</string>
-    <string name="discover_rail_author_poe">Edgar Allan Poe</string>
-    <string name="discover_rail_author_wilde">Oscar Wilde</string>
-    <string name="discover_rail_author_verne">Jules Verne</string>
-    <string name="discover_rail_author_kafka">Franz Kafka</string>
-    <string name="discover_rail_author_dickens">Charles Dickens</string>
-    <string name="discover_rail_author_london">Jack London</string>
-    <string name="discover_rail_author_wells">H. G. Wells</string>
-    <string name="discover_rail_author_twain">Mark Twain</string>
-    <string name="discover_rail_author_melville">Herman Melville</string>
+    <string name="discover_rail_gutendex_popular">Clásicos más descargados</string>
+    <string name="discover_rail_standard_ebooks">Standard Ebooks: novedades</string>
+    <string name="discover_error_rate_limited">El catálogo está limitando las solicitudes. Inténtalo de nuevo en un momento.</string>
+    <string name="discover_rail_group_google_books">Google Books</string>
+    <string name="discover_rail_group_gutendex">Gutendex</string>
+    <string name="discover_rail_group_standard_ebooks">Standard Ebooks</string>
+    <string name="discover_rail_group_failed">No se pudieron cargar las estanterías de %1$s.</string>
+    <!-- S2: títulos de los estantes por tema de Gutendex (términos medidos en vivo) -->
+    <string name="discover_rail_topic_science_fiction">Ciencia ficción</string>
+    <string name="discover_rail_topic_adventure">Aventura</string>
+    <string name="discover_rail_topic_history">Historia</string>
+    <string name="discover_rail_topic_travel">Viajes</string>
+    <string name="discover_rail_topic_poetry">Poesía</string>
+    <string name="discover_rail_topic_philosophy">Filosofía</string>
+    <string name="discover_rail_topic_drama">Teatro</string>
+    <string name="discover_rail_topic_romance">Romance</string>
+    <string name="discover_rail_topic_mystery">Misterio</string>
+    <string name="discover_rail_topic_horror">Terror</string>
     <string name="discover_section_subtitle">«%1$s» · %2$d resultados</string>
     <string name="discover_detail_subjects_label">TEMAS</string>
     <string name="discover_detail_description_label">DESCRIPCIÓN</string>
@@ -586,6 +596,27 @@
     <string name="home_version_format">v%1$s \u2022 %2$s \u2022 %3$s</string>
     <string name="library_view_grid">Vista de cuadrícula</string>
     <string name="library_view_list">Vista de lista</string>
+
+    <!-- Home empty / first session -->
+    <string name="home_brand_tagline">Tus libros, siempre contigo</string>
+    <string name="home_hero_title">Descubre nuevas historias</string>
+    <string name="home_hero_subtitle">Empieza tu primera lectura</string>
+    <string name="home_hero_cta">Explorar</string>
+    <string name="home_hero_cta_content_description">Explorar el catálogo</string>
+    <string name="home_genres_title">Géneros que te pueden interesar</string>
+    <string name="home_genres_content_description">Ver géneros</string>
+    <string name="home_streak_content_description">Racha de lectura</string>
+    <string name="home_sync_banner_title">Guarda tus libros y sigue leyendo en cualquier lugar</string>
+    <string name="home_sync_banner_subtitle">Inicia sesión con Google Drive para sincronizar tu progreso y tus resaltados.</string>
+    <string name="home_sync_banner_content_description">Configurar sincronización en la nube</string>
+    <string name="home_hero_image_content_description">Interior de una cabaña al atardecer con montañas nevadas</string>
+    <string name="home_genre_fiction">Ficción</string>
+    <string name="home_genre_classics">Clásicos</string>
+    <string name="home_genre_adventure">Aventura</string>
+    <string name="home_genre_mystery">Misterio</string>
+    <string name="home_genre_romance">Romance</string>
+    <string name="home_genre_science_fiction">Ciencia ficción</string>
+    <string name="home_genre_history">Historia</string>
 
     <!-- Book card -->
     <string name="book_card_options">Opciones</string>
@@ -1037,4 +1068,6 @@
     <string name="update_error_unreachable">No se pudo contactar el servidor de actualizaciones. Inténtelo más tarde.</string>
     <string name="update_error_malformed">El feed de actualización no es válido. Inténtelo más tarde.</string>
     <string name="update_error_offline">Está sin conexión. Conéctese e inténtelo de nuevo.</string>
+    <string name="import_requires_account">Inicie sesión para importar libros a su biblioteca</string>
+    <string name="import_failed">La importación falló: %1$s</string>
 </resources>

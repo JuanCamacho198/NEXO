@@ -6,6 +6,8 @@ import com.nexo.domain.repository.CacheRepository
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.StorageRepository
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.TEST_USER_ID
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -43,7 +45,7 @@ class StorageViewModelTest {
         )
 
     private fun stubMeasurements() {
-        coEvery { storageRepository.bookStorageUsage() } returns books
+        coEvery { storageRepository.bookStorageUsage(any()) } returns books
         coEvery { cacheRepository.discoverCacheSizeBytes() } returns 100L
         coEvery { cacheRepository.imageCacheSizeBytes() } returns 200L
         coEvery { cacheRepository.readerCacheSizeBytes() } returns 300L
@@ -54,6 +56,7 @@ class StorageViewModelTest {
             storageRepository = storageRepository,
             cacheRepository = cacheRepository,
             libraryRepository = libraryRepository,
+            activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
         )
 
@@ -89,8 +92,8 @@ class StorageViewModelTest {
             coVerify(exactly = 1) { cacheRepository.clearImageCache() }
             coVerify(exactly = 1) { cacheRepository.clearReaderCache() }
             // Clear-cache must never remove a book row.
-            coVerify(exactly = 0) { libraryRepository.deleteBook(any()) }
-            coVerify(exactly = 0) { libraryRepository.deleteBookLocalOnly(any()) }
+            coVerify(exactly = 0) { libraryRepository.deleteBook(any(), any()) }
+            coVerify(exactly = 0) { libraryRepository.deleteBookLocalOnly(any(), any()) }
             assertEquals(books, vm.uiState.value.books)
             assertFalse(vm.uiState.value.isClearingCache)
         }
@@ -100,7 +103,7 @@ class StorageViewModelTest {
         runTest(StandardTestDispatcher()) {
             val dispatcher = StandardTestDispatcher(testScheduler)
             stubMeasurements()
-            coEvery { libraryRepository.getBookById("b1") } returns book("b1", "Book One")
+            coEvery { libraryRepository.getBookById("b1", TEST_USER_ID) } returns book("b1", "Book One")
             val vm = viewModel(dispatcher)
             advanceUntilIdle()
 
@@ -112,7 +115,7 @@ class StorageViewModelTest {
                 vm.uiState.value.bookToDelete
                     ?.id,
             )
-            coVerify(exactly = 0) { libraryRepository.deleteBook(any()) }
+            coVerify(exactly = 0) { libraryRepository.deleteBook(any(), any()) }
         }
 
     @Test
@@ -120,8 +123,8 @@ class StorageViewModelTest {
         runTest(StandardTestDispatcher()) {
             val dispatcher = StandardTestDispatcher(testScheduler)
             stubMeasurements()
-            coEvery { libraryRepository.getBookById("b1") } returns book("b1", "Book One")
-            coEvery { libraryRepository.deleteBook("b1") } returns Result.success(Unit)
+            coEvery { libraryRepository.getBookById("b1", TEST_USER_ID) } returns book("b1", "Book One")
+            coEvery { libraryRepository.deleteBook("b1", TEST_USER_ID) } returns Result.success(Unit)
             val vm = viewModel(dispatcher)
             advanceUntilIdle()
 
@@ -130,8 +133,8 @@ class StorageViewModelTest {
             vm.confirmDeleteLocalAndDrive()
             advanceUntilIdle()
 
-            coVerify(exactly = 1) { libraryRepository.deleteBook("b1") }
-            coVerify(exactly = 0) { libraryRepository.deleteBookLocalOnly(any()) }
+            coVerify(exactly = 1) { libraryRepository.deleteBook("b1", TEST_USER_ID) }
+            coVerify(exactly = 0) { libraryRepository.deleteBookLocalOnly(any(), any()) }
             assertNull(vm.uiState.value.bookToDelete)
         }
 
@@ -140,8 +143,8 @@ class StorageViewModelTest {
         runTest(StandardTestDispatcher()) {
             val dispatcher = StandardTestDispatcher(testScheduler)
             stubMeasurements()
-            coEvery { libraryRepository.getBookById("b2") } returns book("b2", "Book Two")
-            coEvery { libraryRepository.deleteBookLocalOnly("b2") } returns Result.success(Unit)
+            coEvery { libraryRepository.getBookById("b2", TEST_USER_ID) } returns book("b2", "Book Two")
+            coEvery { libraryRepository.deleteBookLocalOnly("b2", TEST_USER_ID) } returns Result.success(Unit)
             val vm = viewModel(dispatcher)
             advanceUntilIdle()
 
@@ -150,8 +153,8 @@ class StorageViewModelTest {
             vm.confirmDeleteLocalOnly()
             advanceUntilIdle()
 
-            coVerify(exactly = 1) { libraryRepository.deleteBookLocalOnly("b2") }
-            coVerify(exactly = 0) { libraryRepository.deleteBook(any()) }
+            coVerify(exactly = 1) { libraryRepository.deleteBookLocalOnly("b2", TEST_USER_ID) }
+            coVerify(exactly = 0) { libraryRepository.deleteBook(any(), any()) }
             assertNull(vm.uiState.value.bookToDelete)
         }
 
@@ -168,3 +171,4 @@ class StorageViewModelTest {
         updatedAtEpochMillis = 1L,
     )
 }
+

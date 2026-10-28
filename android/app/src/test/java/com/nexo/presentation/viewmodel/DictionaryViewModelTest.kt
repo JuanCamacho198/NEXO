@@ -4,6 +4,8 @@ import com.nexo.domain.model.DictionaryWord
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.presentation.UiEvent
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.TEST_USER_ID
+import com.nexo.testutil.activeUserProviderFor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -27,7 +29,7 @@ class DictionaryViewModelTest {
     fun `onAddWordConfirm empty term rejected no insert`() =
         runTest {
             val repo = FakeDictionaryRepository()
-            val vm = DictionaryViewModel(repo)
+            val vm = DictionaryViewModel(repo, activeUserProviderFor())
             // Need to wait for initial collect
             vm.uiState.first()
 
@@ -46,8 +48,8 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             // Pre-insert via repository directly
-            repo.save("Hello", null)
-            val vm = DictionaryViewModel(repo)
+            repo.save("Hello", TEST_USER_ID, null)
+            val vm = DictionaryViewModel(repo, activeUserProviderFor())
             vm.uiState.first()
 
             vm.onAddWordTextChanged("  hello  ")
@@ -73,8 +75,8 @@ class DictionaryViewModelTest {
     fun `duplicate guard uses trimmed exists`() =
         runTest {
             val repo = FakeDictionaryRepository()
-            repo.save("TestWord", null)
-            val vm = DictionaryViewModel(repo)
+            repo.save("TestWord", TEST_USER_ID, null)
+            val vm = DictionaryViewModel(repo, activeUserProviderFor())
             vm.uiState.first()
 
             vm.onAddWordTextChanged("TestWord ")
@@ -89,7 +91,7 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             val saved = repo.seedFullEntry()
-            val vm = DictionaryViewModel(repo)
+            val vm = DictionaryViewModel(repo, activeUserProviderFor())
             vm.uiState.first()
 
             vm.onRequestEditWord(saved)
@@ -112,7 +114,7 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             val saved = repo.seedFullEntry()
-            val vm = DictionaryViewModel(repo)
+            val vm = DictionaryViewModel(repo, activeUserProviderFor())
             vm.uiState.first()
 
             vm.onRequestEditWord(saved)
@@ -137,7 +139,7 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             val saved = repo.seedFullEntry()
-            val vm = DictionaryViewModel(repo)
+            val vm = DictionaryViewModel(repo, activeUserProviderFor())
             vm.uiState.first()
 
             vm.onRequestEditWord(saved)
@@ -163,7 +165,7 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             val saved = repo.seedFullEntry()
-            val vm = DictionaryViewModel(repo)
+            val vm = DictionaryViewModel(repo, activeUserProviderFor())
             vm.uiState.first()
 
             vm.onRequestEditWord(saved)
@@ -186,7 +188,7 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             val saved = repo.seedFullEntry()
-            val vm = DictionaryViewModel(repo)
+            val vm = DictionaryViewModel(repo, activeUserProviderFor())
             vm.uiState.first()
 
             vm.onRequestEditWord(saved)
@@ -238,12 +240,16 @@ class DictionaryViewModelTest {
             return entry
         }
 
-        override fun observeAll(): Flow<List<DictionaryWord>> = wordsFlow
+        override fun observeAll(userId: String): Flow<List<DictionaryWord>> = wordsFlow
 
-        override fun search(query: String): Flow<List<DictionaryWord>> = wordsFlow
+        override fun search(
+            query: String,
+            userId: String,
+        ): Flow<List<DictionaryWord>> = wordsFlow
 
         override suspend fun save(
             word: String,
+            userId: String,
             definition: String?,
             partOfSpeech: String?,
             phonetic: String?,
@@ -274,6 +280,7 @@ class DictionaryViewModelTest {
 
         override suspend fun updateUserFields(
             wordId: String,
+            userId: String,
             definition: String?,
             partOfSpeech: String?,
             phonetic: String?,
@@ -294,14 +301,22 @@ class DictionaryViewModelTest {
             return Result.success(updated)
         }
 
-        override suspend fun delete(wordId: String) {
+        override suspend fun delete(
+            wordId: String,
+            userId: String,
+        ) {
             wordsFlow.value = wordsFlow.value.filterNot { it.id == wordId }
         }
 
-        override suspend fun exists(word: String): Boolean {
+        override suspend fun exists(
+            word: String,
+            userId: String,
+        ): Boolean {
             existsCalledWords.add(word)
             val trimmed = word.trim()
             return savedWords.any { it.equals(trimmed, ignoreCase = true) }
         }
     }
 }
+
+

@@ -89,7 +89,7 @@ class TypedRoutesNavigationTest {
         val controller = controllerWith(DiscoverSectionRoute()) { composable<DiscoverSectionRoute> { } }
 
         assertEquals(
-            "discover/section?sectionTitle={sectionTitle}&sort={sort}&sourceId={sourceId}&authorTerm={authorTerm}",
+            "discover/section?sectionTitle={sectionTitle}&sort={sort}&sourceId={sourceId}&term={term}&topicTerm={topicTerm}",
             controller.currentDestination?.route,
         )
     }
@@ -117,7 +117,7 @@ class TypedRoutesNavigationTest {
         assertEquals("Nuevos", decoded.sectionTitle)
         assertEquals("NEWEST", decoded.sort)
         assertEquals("", decoded.sourceId)
-        assertEquals("", decoded.authorTerm)
+        assertEquals("", decoded.term)
     }
 
     @Test
@@ -125,14 +125,14 @@ class TypedRoutesNavigationTest {
         val controller = controllerWith(DiscoverSectionRoute()) { composable<DiscoverSectionRoute> { } }
 
         controller.navigate(
-            DiscoverSectionRoute(sectionTitle = "Herman Melville", sort = "", sourceId = "", authorTerm = "herman melville"),
+            DiscoverSectionRoute(sectionTitle = "Science fiction", sort = "", sourceId = "builtin:gutendex", term = "science fiction"),
         )
 
         val decoded = controller.currentBackStackEntry!!.toRoute<DiscoverSectionRoute>()
-        assertEquals("Herman Melville", decoded.sectionTitle)
+        assertEquals("Science fiction", decoded.sectionTitle)
         assertEquals("", decoded.sort)
-        assertEquals("", decoded.sourceId)
-        assertEquals("herman melville", decoded.authorTerm)
+        assertEquals("builtin:gutendex", decoded.sourceId)
+        assertEquals("science fiction", decoded.term)
     }
 }
 

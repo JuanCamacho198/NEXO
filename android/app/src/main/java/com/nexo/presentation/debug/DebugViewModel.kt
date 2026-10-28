@@ -19,6 +19,7 @@ import com.nexo.debug.CacheClearReport
 import com.nexo.debug.DebugSyncStatusStore
 import com.nexo.debug.DebugToolkit
 import com.nexo.domain.model.AuthSession
+import com.nexo.domain.session.ActiveUserProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +50,7 @@ class DebugViewModel
         private val bookmarkDao: BookmarkDao,
         private val readingSessionDao: ReadingSessionDao,
         private val readingProgressDao: ReadingProgressDao,
+        private val activeUser: ActiveUserProvider,
         private val clearAllData: @kotlin.jvm.JvmSuppressWildcards () -> Unit,
         private val syncServiceProvider: @kotlin.jvm.JvmSuppressWildcards () -> SyncService,
     ) : ViewModel() {
@@ -185,11 +187,11 @@ class DebugViewModel
                 try {
                     val counts =
                         DbCountsSection(
-                            books = bookDao.count(),
-                            highlights = highlightDao.count(),
-                            bookmarks = bookmarkDao.count(),
-                            readingSessions = readingSessionDao.count(),
-                            readingProgress = readingProgressDao.count(),
+                            books = bookDao.count(activeUser.requireUserId()),
+                            highlights = highlightDao.count(activeUser.requireUserId()),
+                            bookmarks = bookmarkDao.count(activeUser.requireUserId()),
+                            readingSessions = readingSessionDao.count(activeUser.requireUserId()),
+                            readingProgress = readingProgressDao.count(activeUser.requireUserId()),
                         )
                     _debugInfo.update {
                         it.copy(dbCounts = counts, isLoadingDbCounts = false)
@@ -314,6 +316,7 @@ class DebugViewModel
             private val bookmarkDao: BookmarkDao,
             private val readingSessionDao: ReadingSessionDao,
             private val readingProgressDao: ReadingProgressDao,
+            private val activeUser: ActiveUserProvider,
             private val clearAllData: () -> Unit,
             private val syncServiceProvider: () -> SyncService,
         ) : ViewModelProvider.Factory {
@@ -327,6 +330,7 @@ class DebugViewModel
                     bookmarkDao = bookmarkDao,
                     readingSessionDao = readingSessionDao,
                     readingProgressDao = readingProgressDao,
+                    activeUser = activeUser,
                     clearAllData = clearAllData,
                     syncServiceProvider = syncServiceProvider,
                 ) as T

@@ -27,6 +27,8 @@ data class StatisticsUiState(
     val weeklyActivity: List<com.nexo.domain.model.DailyReadingActivity> = emptyList(),
     val goalProgress: Float = 0f,
     val favoriteGenres: List<String> = emptyList(),
+    val minutesReadToday: Int = 0,
+    val sessionsToday: Int = 0,
     val errorMessage: String? = null,
 )
 
@@ -50,6 +52,8 @@ class StatisticsViewModel
                         weeklyActivity = statistics.weeklyActivity,
                         goalProgress = statistics.goalProgress,
                         favoriteGenres = statistics.favoriteGenres,
+                        minutesReadToday = statistics.minutesReadToday,
+                        sessionsToday = statistics.sessionsToday,
                     )
                 }.catch { error ->
                     _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to load statistics"))

@@ -4,6 +4,7 @@ import android.app.Application
 import com.nexo.debug.DebugDual
 import com.nexo.debug.DebugEvent
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.presentation.UiEvent
 import com.nexo.presentation.viewmodel.CfiMigrator
@@ -31,6 +32,7 @@ class ReadingProgressTracker(
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher,
     private val readerRepository: ReaderRepository,
+    private val activeUser: ActiveUserProvider,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
     private val onSelectionCleared: () -> Unit = {},
     private val onErrorEvent: (UiEvent) -> Unit = {},
@@ -68,6 +70,7 @@ class ReadingProgressTracker(
         scope.launch(mainDispatcher) {
             updateReadingProgressUseCase(
                 bookId = bookId,
+                userId = activeUser.requireUserId(),
                 cfiLocation = "readium:${locator.href}",
                 percentage = progressPercent,
                 locatorJson = locatorJson,
@@ -125,6 +128,7 @@ class ReadingProgressTracker(
         scope.launch(mainDispatcher) {
             updateReadingProgressUseCase(
                 bookId = bookId,
+                userId = activeUser.requireUserId(),
                 cfiLocation = cfiLocation,
                 percentage = percentage.coerceIn(0f, 100f),
             )
@@ -136,7 +140,7 @@ class ReadingProgressTracker(
         state.update { it.copy(selectedBookId = bookId, isLoading = true) }
         observeProgressJob =
             scope.launch(mainDispatcher) {
-                readerRepository.observeProgress(bookId).collect { progress ->
+                readerRepository.observeProgress(bookId, activeUser.requireUserId()).collect { progress ->
                     state.update { s ->
                         var newState = s.copy(readingProgress = progress, isLoading = false)
                         if (progress != null) {
@@ -332,7 +336,7 @@ class ReadingProgressTracker(
             val percentage = (((currentPage + 1).toFloat() / totalPages) * 100f).coerceIn(0f, 100f)
             val cfiLocation = "pdfpage:$currentPage"
             scope.launch(mainDispatcher) {
-                updateReadingProgressUseCase(bookId = bookId, cfiLocation = cfiLocation, percentage = percentage)
+                updateReadingProgressUseCase(bookId = bookId, userId = activeUser.requireUserId(), cfiLocation = cfiLocation, percentage = percentage)
             }
         }
     }
@@ -346,7 +350,7 @@ class ReadingProgressTracker(
             val spineIndex = chapter?.let { it.index + 1 } ?: (chapterIndex + 1)
             val cfiLocation = "epubcfi(/6/$spineIndex)"
             scope.launch(mainDispatcher) {
-                updateReadingProgressUseCase(bookId = bookId, cfiLocation = cfiLocation, percentage = percentage)
+                updateReadingProgressUseCase(bookId = bookId, userId = activeUser.requireUserId(), cfiLocation = cfiLocation, percentage = percentage)
             }
         }
     }

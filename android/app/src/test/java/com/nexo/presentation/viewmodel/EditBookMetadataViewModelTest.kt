@@ -7,6 +7,8 @@ import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.presentation.UiEvent
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.TEST_USER_ID
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -76,7 +78,7 @@ class EditBookMetadataViewModelTest {
     fun `loads book and seeds form fields from comma separated metadata`() =
         runTest {
             val repository = mockk<LibraryRepository>()
-            coEvery { repository.observeBookById("book-1") } returns flowOf(sampleBook)
+            coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
 
             val viewModel = createViewModel(repository)
             advanceUntilIdle()
@@ -98,7 +100,7 @@ class EditBookMetadataViewModelTest {
     fun `addGenre sanitizes values and caps at 5`() =
         runTest {
             val repository = mockk<LibraryRepository>()
-            coEvery { repository.observeBookById("book-1") } returns flowOf(sampleBook)
+            coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
 
             val viewModel = createViewModel(repository)
             advanceUntilIdle()
@@ -126,7 +128,7 @@ class EditBookMetadataViewModelTest {
     fun `addGenre ignores duplicates case-insensitively`() =
         runTest {
             val repository = mockk<LibraryRepository>()
-            coEvery { repository.observeBookById("book-1") } returns flowOf(sampleBook)
+            coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
 
             val viewModel = createViewModel(repository)
             advanceUntilIdle()
@@ -139,7 +141,7 @@ class EditBookMetadataViewModelTest {
     fun `addTag caps at 10`() =
         runTest {
             val repository = mockk<LibraryRepository>()
-            coEvery { repository.observeBookById("book-1") } returns flowOf(sampleBook)
+            coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
 
             val viewModel = createViewModel(repository)
             advanceUntilIdle()
@@ -161,7 +163,7 @@ class EditBookMetadataViewModelTest {
     fun `removeGenre removes matching value case-insensitively`() =
         runTest {
             val repository = mockk<LibraryRepository>()
-            coEvery { repository.observeBookById("book-1") } returns flowOf(sampleBook)
+            coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
 
             val viewModel = createViewModel(repository)
             advanceUntilIdle()
@@ -177,8 +179,8 @@ class EditBookMetadataViewModelTest {
         runTest {
             val repository = mockk<LibraryRepository>()
             val context = mockk<Context>()
-            coEvery { repository.observeBookById("book-1") } returns flowOf(sampleBook)
-            coEvery { repository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+            coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
+            coEvery { repository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
                 Result.success(Unit)
             every { context.getString(R.string.library_snackbar_metadata_saved) } returns "Metadata updated"
 
@@ -191,6 +193,7 @@ class EditBookMetadataViewModelTest {
                     coverStorage = mockk(),
                     appContext = context,
                     onSaved = { saved = true },
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = UnconfinedTestDispatcher(testScheduler),
                 )
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -207,6 +210,7 @@ class EditBookMetadataViewModelTest {
             coVerify {
                 repository.updateBookMetadata(
                     bookId = "book-1",
+                    userId = TEST_USER_ID,
                     title = "New Title",
                     author = "Author",
                     description = null,
@@ -225,8 +229,8 @@ class EditBookMetadataViewModelTest {
         runTest {
             val repository = mockk<LibraryRepository>()
             val context = mockk<Context>()
-            coEvery { repository.observeBookById("book-1") } returns flowOf(sampleBook)
-            coEvery { repository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+            coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
+            coEvery { repository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
                 Result.failure(IllegalStateException("update failed"))
             every { context.getString(R.string.edit_metadata_save_failed) } returns "Could not save changes"
 
@@ -239,6 +243,7 @@ class EditBookMetadataViewModelTest {
                     coverStorage = mockk(),
                     appContext = context,
                     onSaved = { saved = true },
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = UnconfinedTestDispatcher(testScheduler),
                 )
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -259,8 +264,8 @@ class EditBookMetadataViewModelTest {
             val repository = mockk<LibraryRepository>()
             val context = mockk<Context>()
             val coverStorage = mockk<CoverStorage>()
-            coEvery { repository.observeBookById("book-1") } returns flowOf(sampleBook)
-            coEvery { repository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+            coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
+            coEvery { repository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
                 Result.success(Unit)
             coEvery { coverStorage.saveCover("book-1", any()) } returns Result.success("/covers/book-1.jpg")
             every { context.getString(R.string.library_snackbar_metadata_saved) } returns "Metadata updated"
@@ -272,6 +277,7 @@ class EditBookMetadataViewModelTest {
                     coverStorage = coverStorage,
                     appContext = context,
                     onSaved = {},
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = UnconfinedTestDispatcher(testScheduler),
                 )
             advanceUntilIdle()
@@ -284,6 +290,7 @@ class EditBookMetadataViewModelTest {
             coVerify {
                 repository.updateBookMetadata(
                     bookId = "book-1",
+                    userId = TEST_USER_ID,
                     title = "Test Book",
                     author = "Author",
                     description = null,
@@ -309,6 +316,8 @@ class EditBookMetadataViewModelTest {
             coverStorage = mockk(),
             appContext = mockk(),
             onSaved = onSaved,
+            activeUser = activeUserProviderFor(),
             mainDispatcher = UnconfinedTestDispatcher(),
         )
 }
+

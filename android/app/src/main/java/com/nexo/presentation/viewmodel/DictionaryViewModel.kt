@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexo.domain.model.DictionaryWord
 import com.nexo.domain.repository.DictionaryRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -12,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -31,8 +34,10 @@ data class DictionaryUiState(
     val editExampleText: String = "",
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DictionaryViewModel(
     private val dictionaryRepository: DictionaryRepository,
+    private val activeUser: ActiveUserProvider,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(DictionaryUiState())
     val uiState: StateFlow<DictionaryUiState> = _uiState.asStateFlow()
@@ -45,7 +50,9 @@ class DictionaryViewModel(
     init {
         viewModelScope.launch {
             combine(
-                dictionaryRepository.observeAll(),
+                activeUser.userId.flatMapLatest { userId ->
+                    dictionaryRepository.observeAll(userId.orEmpty())
+                },
                 searchQuery,
             ) { words, query ->
                 val filtered =
@@ -95,14 +102,15 @@ class DictionaryViewModel(
                 .takeIf { it.isNotBlank() }
 
         viewModelScope.launch {
-            if (dictionaryRepository.exists(trimmed)) {
+            val userId = activeUser.requireUserId()
+            if (dictionaryRepository.exists(trimmed, userId)) {
                 _uiEvent.emit(
                     UiEvent.ShowSnackbar(
                         "\"$trimmed\" is already in your dictionary.",
                     ),
                 )
             } else {
-                dictionaryRepository.save(trimmed, definition).fold(
+                dictionaryRepository.save(trimmed, userId, definition).fold(
                     onSuccess = {
                         _uiEvent.emit(
                             UiEvent.ShowSnackbar(
@@ -134,7 +142,7 @@ class DictionaryViewModel(
     fun onConfirmDeleteWord() {
         val word = _uiState.value.wordToDelete ?: return
         viewModelScope.launch {
-            dictionaryRepository.delete(word.id)
+            dictionaryRepository.delete(word.id, activeUser.requireUserId())
             _uiState.update { it.copy(wordToDelete = null) }
         }
     }
@@ -197,6 +205,7 @@ class DictionaryViewModel(
             dictionaryRepository
                 .updateUserFields(
                     wordId = word.id,
+                    userId = activeUser.requireUserId(),
                     definition = state.editDefinitionText.trimmedOrNull(),
                     partOfSpeech = state.editPartOfSpeechText.trimmedOrNull(),
                     phonetic = state.editPhoneticText.trimmedOrNull(),

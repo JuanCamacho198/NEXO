@@ -1,6 +1,7 @@
 package com.nexo.presentation.viewmodel.reader.interaction
 
 import com.nexo.domain.repository.DictionaryRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
 import com.nexo.presentation.viewmodel.reader.lifecycle.Clearable
 import kotlinx.coroutines.CoroutineDispatcher
@@ -15,6 +16,7 @@ internal class ShareDictionaryManager(
     private val store: InteractionStateStore,
     private val selectionManager: SelectionManager,
     private val dictionaryRepository: DictionaryRepository?,
+    private val activeUser: ActiveUserProvider,
     private val scope: CoroutineScope,
     private val onEvent: (UiEvent) -> Unit,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
@@ -42,10 +44,11 @@ internal class ShareDictionaryManager(
                 ?.trim()
                 ?.takeIf { it.isNotBlank() } ?: return
         scope.launch(mainDispatcher) {
-            if (repo.exists(text)) {
+            val userId = activeUser.requireUserId()
+            if (repo.exists(text, userId)) {
                 onEvent(UiEvent.ShowSnackbar("\"$text\" ya está en tu diccionario"))
             } else {
-                val result = repo.save(text)
+                val result = repo.save(text, userId)
                 if (result.isSuccess) {
                     onEvent(UiEvent.ShowSnackbar("\"$text\" guardada en tu diccionario"))
                 } else {
@@ -63,10 +66,11 @@ internal class ShareDictionaryManager(
         if (text.isNullOrBlank()) return
         val trimmedDefinition = definition.trim().takeIf { it.isNotBlank() }
         scope.launch(mainDispatcher) {
-            if (repo.exists(text)) {
+            val userId = activeUser.requireUserId()
+            if (repo.exists(text, userId)) {
                 onEvent(UiEvent.ShowSnackbar("Already in dictionary"))
             } else {
-                repo.save(text, trimmedDefinition).fold(
+                repo.save(text, userId, trimmedDefinition).fold(
                     onSuccess = { onEvent(UiEvent.ShowSnackbar("Added to dictionary")) },
                     onFailure = { e -> onEvent(UiEvent.ShowSnackbar(e.message ?: "Failed to add to dictionary")) },
                 )

@@ -10,6 +10,8 @@ import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.presentation.viewmodel.reader.BookChapter
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.TEST_USER_ID
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -41,6 +43,7 @@ class ReaderViewModelProgressTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
                     defaultBookId = "book-10",
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -57,6 +60,8 @@ class ReaderViewModelProgressTest {
             assertEquals("epubcfi(/6/2[chapter-1]!/4/1:0)", saved?.cfiLocation)
             assertEquals(25f, saved?.percentage)
             assertTrue((saved?.updatedAtEpochMillis ?: 0L) > 0L)
+            // Account isolation: the write is attributed to the active account.
+            assertEquals(TEST_USER_ID, repository.lastUserId)
         }
 
     @Test
@@ -71,6 +76,7 @@ class ReaderViewModelProgressTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
                     defaultBookId = null,
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -103,6 +109,7 @@ class ReaderViewModelProgressTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
                     defaultBookId = null,
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -126,6 +133,7 @@ class ReaderViewModelProgressTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
                     defaultBookId = null,
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -158,6 +166,7 @@ class ReaderViewModelProgressTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
                     defaultBookId = null,
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -183,6 +192,7 @@ class ReaderViewModelProgressTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
                     defaultBookId = null,
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -208,6 +218,7 @@ class ReaderViewModelProgressTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
                     defaultBookId = null,
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
             val chapters =
@@ -247,6 +258,7 @@ class ReaderViewModelProgressTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
                     defaultBookId = null,
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -278,6 +290,7 @@ class ReaderViewModelProgressTest {
                     readingStatsRepository = FakeReadingStatsRepository(),
                     updateReadingProgressUseCase = UpdateReadingProgressUseCase(repository),
                     defaultBookId = null,
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -323,54 +336,91 @@ class ReaderViewModelProgressTest {
     private class FakeReaderRepository : ReaderRepository {
         private val progressFlow = MutableStateFlow<ReadingProgress?>(null)
         var lastUpserted: ReadingProgress? = null
+        var lastUserId: String? = null
 
-        override fun observeProgress(bookId: String): Flow<ReadingProgress?> = progressFlow
+        override fun observeProgress(
+            bookId: String,
+            userId: String,
+        ): Flow<ReadingProgress?> = progressFlow
 
-        override suspend fun upsertProgress(progress: ReadingProgress) {
+        override suspend fun upsertProgress(
+            progress: ReadingProgress,
+            userId: String,
+        ) {
             lastUpserted = progress
+            lastUserId = userId
             progressFlow.value = progress
         }
 
         override suspend fun updateBookReadingState(
             bookId: String,
+            userId: String,
             progressPercent: Float,
             updatedAt: Long,
         ) {
             // No-op in fake
         }
 
-        override fun observeAllHighlights(): Flow<List<Highlight>> = MutableStateFlow(emptyList())
+        override fun observeAllHighlights(userId: String): Flow<List<Highlight>> = MutableStateFlow(emptyList())
 
-        override fun observeHighlights(bookId: String): Flow<List<Highlight>> = MutableStateFlow(emptyList())
+        override fun observeHighlights(
+            bookId: String,
+            userId: String,
+        ): Flow<List<Highlight>> = MutableStateFlow(emptyList())
 
-        override suspend fun upsertHighlight(highlight: Highlight) = Unit
+        override suspend fun upsertHighlight(
+            highlight: Highlight,
+            userId: String,
+        ) = Unit
 
-        override fun observeAllBookmarks(): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
+        override fun observeAllBookmarks(userId: String): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
 
-        override fun observeBookmarks(bookId: String): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
+        override fun observeBookmarks(
+            bookId: String,
+            userId: String,
+        ): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
 
-        override suspend fun upsertBookmark(bookmark: Bookmark) = Unit
+        override suspend fun upsertBookmark(
+            bookmark: Bookmark,
+            userId: String,
+        ) = Unit
 
-        override suspend fun getProgressForBook(bookId: String): com.nexo.domain.model.ReadingProgress? = null
+        override suspend fun getProgressForBook(
+            bookId: String,
+            userId: String,
+        ): com.nexo.domain.model.ReadingProgress? = null
 
-        override suspend fun getHighlightsForBook(bookId: String): List<com.nexo.domain.model.Highlight> = emptyList()
+        override suspend fun getHighlightsForBook(
+            bookId: String,
+            userId: String,
+        ): List<com.nexo.domain.model.Highlight> = emptyList()
 
-        override suspend fun getBookmarksForBook(bookId: String): List<com.nexo.domain.model.Bookmark> = emptyList()
+        override suspend fun getBookmarksForBook(
+            bookId: String,
+            userId: String,
+        ): List<com.nexo.domain.model.Bookmark> = emptyList()
     }
 
     private class FakeReadingStatsRepository : ReadingStatsRepository {
-        override fun observeStats(bookId: String): Flow<ReadingStatsData?> = MutableStateFlow(null)
+        override fun observeStats(
+            bookId: String,
+            userId: String,
+        ): Flow<ReadingStatsData?> = MutableStateFlow(null)
 
-        override fun observeTotalTime(): Flow<Long> = MutableStateFlow(0L)
+        override fun observeTotalTime(userId: String): Flow<Long> = MutableStateFlow(0L)
 
         override suspend fun updateReadingTime(
             bookId: String,
+            userId: String,
             additionalMinutes: Long,
         ) = Unit
 
-        override suspend fun deleteStats(bookId: String) = Unit
+        override suspend fun deleteStats(
+            bookId: String,
+            userId: String,
+        ) = Unit
 
-        override fun observeBookStats(): kotlinx.coroutines.flow.Flow<List<com.nexo.domain.repository.ReadingStatsData>> = kotlinx.coroutines.flow.MutableStateFlow(emptyList())
+        override fun observeBookStats(userId: String): kotlinx.coroutines.flow.Flow<List<com.nexo.domain.repository.ReadingStatsData>> = kotlinx.coroutines.flow.MutableStateFlow(emptyList())
 
         override suspend fun getDailyActivity(userId: String?): List<com.nexo.domain.model.DailyReadingActivity> = emptyList()
     }

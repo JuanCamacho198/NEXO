@@ -51,6 +51,12 @@ class AppDatabaseQueryValidationTest {
     private lateinit var db: AppDatabase
 
     /**
+     * Owner attributed to every row this suite seeds. Every user-owned table is
+     * queried with `WHERE user_id = :userId`, so a row without it is invisible.
+     */
+    private val SEED_USER = "query-validation-user"
+
+    /**
      * The ten shared evidence columns named by REQ-DRE-001 / REQ-DRE-011. Android already had
      * `definition`, so it gains nine of them; the parity set is the same ten names on all stores.
      */
@@ -164,7 +170,7 @@ class AppDatabaseQueryValidationTest {
     @Test
     fun explainQueryPlan_books_usesIndex() =
         runTest {
-            // Seed 2 books with distinct updated_at timestamps
+            // Seed 2 books for one account with distinct updated_at timestamps
             db.bookDao().upsert(
                 BookEntity(
                     id = "b-1",
@@ -174,6 +180,7 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/b1.epub",
                     format = "epub",
                     updatedAtEpochMillis = 100L,
+                    userId = SEED_USER,
                 ),
             )
             db.bookDao().upsert(
@@ -185,20 +192,21 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/b2.epub",
                     format = "epub",
                     updatedAtEpochMillis = 200L,
+                    userId = SEED_USER,
                 ),
             )
 
-            // R1: observeAllBooks query
+            // R1: observeAllBooks query (user-scoped since the account isolation refactor)
             assertUsesIndex(
-                query = "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-                expectedIndex = "index_books_deleted_at_updated_at",
+                query = "SELECT * FROM books WHERE user_id = '$SEED_USER' AND deleted_at IS NULL ORDER BY updated_at DESC",
+                expectedIndex = "index_books_user_id_deleted_at_updated_at",
             )
         }
 
     @Test
     fun explainQueryPlan_highlights_usesIndex() =
         runTest {
-            // Seed 3 highlights for the same book with distinct updated_at
+            // Seed 3 highlights for the same book/account with distinct updated_at
             val bookId = "b-h"
             db.bookDao().upsert(
                 BookEntity(
@@ -209,6 +217,7 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/hb.epub",
                     format = "epub",
                     updatedAtEpochMillis = 100L,
+                    userId = SEED_USER,
                 ),
             )
             for (i in 1..3) {
@@ -222,22 +231,23 @@ class AppDatabaseQueryValidationTest {
                         color = "yellow",
                         updatedAtEpochMillis = i.toLong() * 100L,
                         deletedAtEpochMillis = null,
+                        userId = SEED_USER,
                     ),
                 )
             }
 
             // R2: observeAllHighlights
             assertUsesIndex(
-                query = "SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-                expectedIndex = "index_highlights_book_id_deleted_at",
+                query = "SELECT * FROM highlights WHERE user_id = '$SEED_USER' AND deleted_at IS NULL ORDER BY updated_at DESC",
+                expectedIndex = "index_highlights_user_id_book_id_deleted_at",
             )
 
             // R3: observeHighlightsForBook (per-book query)
             assertUsesIndex(
                 query =
-                    "SELECT * FROM highlights WHERE book_id = '$bookId' " +
+                    "SELECT * FROM highlights WHERE user_id = '$SEED_USER' AND book_id = '$bookId' " +
                         "AND deleted_at IS NULL ORDER BY updated_at DESC",
-                expectedIndex = "index_highlights_book_id_deleted_at",
+                expectedIndex = "index_highlights_user_id_book_id_deleted_at",
             )
         }
 
@@ -254,6 +264,7 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/bmb.epub",
                     format = "epub",
                     updatedAtEpochMillis = 100L,
+                    userId = SEED_USER,
                 ),
             )
             for (i in 1..3) {
@@ -265,29 +276,30 @@ class AppDatabaseQueryValidationTest {
                         titleOrSnippet = "bookmark $i",
                         updatedAtEpochMillis = i.toLong() * 100L,
                         deletedAtEpochMillis = null,
+                        userId = SEED_USER,
                     ),
                 )
             }
 
             // R4: observeAllBookmarks
             assertUsesIndex(
-                query = "SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-                expectedIndex = "index_bookmarks_book_id_deleted_at",
+                query = "SELECT * FROM bookmarks WHERE user_id = '$SEED_USER' AND deleted_at IS NULL ORDER BY updated_at DESC",
+                expectedIndex = "index_bookmarks_user_id_book_id_deleted_at",
             )
 
             // R5: observeBookmarksForBook
             assertUsesIndex(
                 query =
-                    "SELECT * FROM bookmarks WHERE book_id = '$bookId' " +
+                    "SELECT * FROM bookmarks WHERE user_id = '$SEED_USER' AND book_id = '$bookId' " +
                         "AND deleted_at IS NULL ORDER BY updated_at DESC",
-                expectedIndex = "index_bookmarks_book_id_deleted_at",
+                expectedIndex = "index_bookmarks_user_id_book_id_deleted_at",
             )
         }
 
     @Test
     fun explainQueryPlan_readingSessions_usesIndex() =
         runTest {
-            // Seed 3 reading_sessions with mixed userId (one empty, one specific)
+            // Seed 3 reading_sessions for one account
             val bookId = "b-rs"
             db.bookDao().upsert(
                 BookEntity(
@@ -298,6 +310,7 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/rsb.epub",
                     format = "epub",
                     updatedAtEpochMillis = 100L,
+                    userId = SEED_USER,
                 ),
             )
             val date = 20240101L
@@ -309,16 +322,16 @@ class AppDatabaseQueryValidationTest {
                         startTimeEpochMillis = 500L + i,
                         durationMinutes = 10 + i,
                         date = date,
-                        userId = if (i == 1) "" else "user-$i",
+                        userId = SEED_USER,
                     ),
                 )
             }
 
-            // R6: OR-pattern query on date + userId
+            // R6: per-date, per-user aggregation query
             assertUsesIndex(
                 query =
                     "SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions " +
-                        "WHERE date = $date AND (userId = 'user-2' OR userId = '')",
+                        "WHERE date = $date AND userId = '$SEED_USER'",
                 expectedIndex = "index_reading_sessions_date_userId",
             )
         }
@@ -343,16 +356,17 @@ class AppDatabaseQueryValidationTest {
                     sourceBookAuthor = "A. Author",
                     sourceChapter = "Chapter 1",
                     sourceLocator = "epubcfi(/6/4!/4/2/2)",
+                     userId = SEED_USER,
                 ),
             )
 
             // R7a: MATCH on inserted word returns 1
-            val helloResults = db.dictionaryWordDao().searchFts("hello")
+            val helloResults = db.dictionaryWordDao().searchFts("hello", SEED_USER)
             assertEquals(1, helloResults.size)
             assertEquals("hello", helloResults[0].word)
 
             // R7b: MATCH on missing word returns 0
-            val missResults = db.dictionaryWordDao().searchFts("xyz")
+            val missResults = db.dictionaryWordDao().searchFts("xyz", SEED_USER)
             assertTrue("Expected no matches for 'xyz' but got ${missResults.size}", missResults.isEmpty())
         }
 
@@ -372,6 +386,7 @@ class AppDatabaseQueryValidationTest {
                     sourceBookAuthor = "T. Author",
                     sourceChapter = "Chapter 2",
                     sourceLocator = "epubcfi(/6/8!/4/2/2)",
+                     userId = SEED_USER,
                 ),
             )
 
@@ -403,6 +418,7 @@ class AppDatabaseQueryValidationTest {
                     partOfSpeech = "noun",
                     phonetic = "/ˈtrɪɡər/",
                     example = "delete the row",
+                     userId = SEED_USER,
                 ),
             )
 
@@ -417,7 +433,7 @@ class AppDatabaseQueryValidationTest {
             assertTrue("Word should be present in FTS5 after insert", presentAfterInsert)
 
             // R9: delete via DAO, then verify the FTS5 row is gone
-            db.dictionaryWordDao().delete(wordId)
+            db.dictionaryWordDao().delete(wordId, SEED_USER)
 
             var presentAfterDelete = false
             db.openHelper.writableDatabase
@@ -442,6 +458,7 @@ class AppDatabaseQueryValidationTest {
                     partOfSpeech = "noun",
                     phonetic = "/oʊld/",
                     example = "an old example",
+                     userId = SEED_USER,
                 ),
             )
 
@@ -517,10 +534,11 @@ class AppDatabaseQueryValidationTest {
                     sourceBookAuthor = "Homero",
                     sourceChapter = "Capítulo III",
                     sourceLocator = "epubcfi(/6/10!/4/2/4)",
+                     userId = SEED_USER,
                 ),
             )
 
-            val stored = db.dictionaryWordDao().findById("dw-rich")
+            val stored = db.dictionaryWordDao().findById("dw-rich", SEED_USER)
             assertNotNull("the rich row should be readable back", stored)
             assertEquals("that lasts a very short time", stored!!.definition)
             assertEquals("adjective", stored.partOfSpeech)
@@ -550,11 +568,12 @@ class AppDatabaseQueryValidationTest {
                         filePath = "/pb$i.epub",
                         format = "epub",
                         updatedAtEpochMillis = i.toLong() * 1000L,
+                         userId = SEED_USER,
                     )
                 }
             db.bookDao().upsertAll(books)
 
-            val pagingSource = db.bookDao().observeAllBooksPaged()
+            val pagingSource = db.bookDao().observeAllBooksPaged(SEED_USER)
 
             // Refresh with loadSize=5 — Room's PagingSource interprets null key as start
             val refreshResult =
@@ -605,6 +624,7 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/hpb.epub",
                     format = "epub",
                     updatedAtEpochMillis = 1L,
+                     userId = SEED_USER,
                 ),
             )
             val highlights =
@@ -618,11 +638,12 @@ class AppDatabaseQueryValidationTest {
                         color = "yellow",
                         updatedAtEpochMillis = i.toLong() * 1000L,
                         deletedAtEpochMillis = null,
+                         userId = SEED_USER,
                     )
                 }
             db.highlightDao().upsertAll(highlights)
 
-            val pagingSource = db.highlightDao().observeAllHighlightsPaged()
+            val pagingSource = db.highlightDao().observeAllHighlightsPaged(SEED_USER)
 
             val refreshResult =
                 pagingSource.load(
@@ -867,15 +888,15 @@ class AppDatabaseQueryValidationTest {
         // All 4 index plan assertions on the LIVE migrated data
         assertMigratedIndex(
             "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_books_deleted_at_updated_at",
+            "index_books_user_id_deleted_at_updated_at",
         )
         assertMigratedIndex(
             "SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_highlights_book_id_deleted_at",
+            "index_highlights_user_id_book_id_deleted_at",
         )
         assertMigratedIndex(
             "SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_bookmarks_book_id_deleted_at",
+            "index_bookmarks_user_id_book_id_deleted_at",
         )
         assertMigratedIndex(
             "SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions " +
@@ -920,13 +941,13 @@ class AppDatabaseQueryValidationTest {
         runTest {
             val repository = DictionaryRepositoryImpl(db.dictionaryWordDao())
 
-            val result = repository.save("readerword")
+            val result = repository.save("readerword", SEED_USER)
 
             assertTrue("the reader save path must not surface a capture error", result.isSuccess)
 
             val saved = result.getOrThrow()
             val stored =
-                checkNotNull(db.dictionaryWordDao().findById(saved.id)) {
+                checkNotNull(db.dictionaryWordDao().findById(saved.id, SEED_USER)) {
                     "the saved row should be readable back"
                 }
             assertNull("quote must stay NULL — Android captures no evidence", stored.quote)
@@ -954,3 +975,5 @@ class AppDatabaseQueryValidationTest {
         assertNotNull(db.dictionaryWordDao())
     }
 }
+
+

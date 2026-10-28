@@ -5,6 +5,7 @@ import com.nexo.R
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.BookStatus
 import com.nexo.domain.repository.LibraryRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -35,6 +36,7 @@ import kotlinx.coroutines.launch
  */
 class BookActionStateHolder(
     private val libraryRepository: LibraryRepository,
+    private val activeUser: ActiveUserProvider,
     private val appContext: Context,
     private val scope: CoroutineScope,
     private val onUiEvent: (UiEvent) -> Unit,
@@ -73,7 +75,7 @@ class BookActionStateHolder(
         val book = _state.value.bookToDelete ?: return
 
         scope.launch(mainDispatcher) {
-            val result = libraryRepository.deleteBookLocalOnly(book.id)
+            val result = libraryRepository.deleteBookLocalOnly(book.id, activeUser.requireUserId())
             _state.update { it.copy(bookToDelete = null) }
             onStateChanged(_state.value)
 
@@ -93,7 +95,7 @@ class BookActionStateHolder(
         val book = _state.value.bookToDelete ?: return
 
         scope.launch(mainDispatcher) {
-            val result = libraryRepository.deleteBook(book.id)
+            val result = libraryRepository.deleteBook(book.id, activeUser.requireUserId())
             _state.update { it.copy(bookToDelete = null) }
             onStateChanged(_state.value)
 
@@ -126,7 +128,7 @@ class BookActionStateHolder(
         successMessageRes: Int,
     ) {
         scope.launch(mainDispatcher) {
-            val result = libraryRepository.updateBookStatus(book.id, status)
+            val result = libraryRepository.updateBookStatus(book.id, activeUser.requireUserId(), status)
             result.fold(
                 onSuccess = {
                     onUiEvent(UiEvent.ShowSnackbar(appContext.getString(successMessageRes)))

@@ -6,6 +6,7 @@ import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.usecase.ImportEpubBookUseCase
 import com.nexo.presentation.viewmodel.LibraryImportEvent
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -54,7 +55,7 @@ class BookImportStateHolderTest {
             val scope = CoroutineScope(dispatcher + SupervisorJob())
 
             coEvery {
-                mockUseCase(any<BookImportRequest>(), any<suspend () -> InputStream?>())
+                mockUseCase(any<String>(), any<BookImportRequest>(), any<suspend () -> InputStream?>())
             } returns
                 Result.success(
                     Book(
@@ -75,6 +76,7 @@ class BookImportStateHolderTest {
                     libraryRepository = mockRepository,
                     scope = scope,
                     onImportEvent = { emittedEvent = it },
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -105,7 +107,7 @@ class BookImportStateHolderTest {
             val scope = CoroutineScope(dispatcher + SupervisorJob())
 
             coEvery {
-                mockUseCase(any<BookImportRequest>(), any<suspend () -> InputStream?>())
+                mockUseCase(any<String>(), any<BookImportRequest>(), any<suspend () -> InputStream?>())
             } returns Result.failure(IllegalStateException("bad epub"))
 
             var emittedEvent: LibraryImportEvent? = null
@@ -115,6 +117,7 @@ class BookImportStateHolderTest {
                     libraryRepository = mockRepository,
                     scope = scope,
                     onImportEvent = { emittedEvent = it },
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -144,7 +147,7 @@ class BookImportStateHolderTest {
             val scope = CoroutineScope(dispatcher + SupervisorJob())
 
             coEvery {
-                mockRepository.importBookFromPdf(any<BookImportRequest>(), any<File>())
+                mockRepository.importBookFromPdf(any<String>(), any<BookImportRequest>(), any<File>())
             } returns
                 Result.success(
                     Book(
@@ -165,6 +168,7 @@ class BookImportStateHolderTest {
                     libraryRepository = mockRepository,
                     scope = scope,
                     onImportEvent = { emittedEvent = it },
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -195,7 +199,7 @@ class BookImportStateHolderTest {
             val scope = CoroutineScope(dispatcher + SupervisorJob())
 
             coEvery {
-                mockRepository.importBookFromPdf(any<BookImportRequest>(), any<File>())
+                mockRepository.importBookFromPdf(any<String>(), any<BookImportRequest>(), any<File>())
             } returns Result.failure(IllegalStateException("bad pdf"))
 
             var emittedEvent: LibraryImportEvent? = null
@@ -205,6 +209,7 @@ class BookImportStateHolderTest {
                     libraryRepository = mockRepository,
                     scope = scope,
                     onImportEvent = { emittedEvent = it },
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -239,7 +244,7 @@ class BookImportStateHolderTest {
                 )
 
             coEvery {
-                mockUseCase(any<BookImportRequest>(), any<suspend () -> InputStream?>())
+                mockUseCase(any<String>(), any<BookImportRequest>(), any<suspend () -> InputStream?>())
             } throws IllegalStateException("use case exploded")
 
             var emittedEvent: LibraryImportEvent? = null
@@ -249,6 +254,7 @@ class BookImportStateHolderTest {
                     libraryRepository = mockRepository,
                     scope = scope,
                     onImportEvent = { emittedEvent = it },
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -285,7 +291,7 @@ class BookImportStateHolderTest {
                 )
 
             coEvery {
-                mockRepository.importBookFromPdf(any<BookImportRequest>(), any<File>())
+                mockRepository.importBookFromPdf(any<String>(), any<BookImportRequest>(), any<File>())
             } throws IllegalStateException("repository exploded")
 
             var emittedEvent: LibraryImportEvent? = null
@@ -295,6 +301,7 @@ class BookImportStateHolderTest {
                     libraryRepository = mockRepository,
                     scope = scope,
                     onImportEvent = { emittedEvent = it },
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 )
 
@@ -315,6 +322,72 @@ class BookImportStateHolderTest {
 
     // ── Helpers ────────────────────────────────────────────────────────
 
+    // ── T7 / D5: the anonymous path performs no write ──────────────────
+
+    @Test
+    fun `importBookFromEpub refuses on the anonymous session without writing`() =
+        runTest(StandardTestDispatcher()) {
+            testScheduler.advanceUntilIdle()
+
+            val mockUseCase = mockk<ImportEpubBookUseCase>()
+            val mockRepository = mockk<LibraryRepository>(relaxed = true)
+            var emittedEvent: LibraryImportEvent? = null
+            val holder =
+                BookImportStateHolder(
+                    importEpubBookUseCase = mockUseCase,
+                    libraryRepository = mockRepository,
+                    scope = this,
+                    onImportEvent = { emittedEvent = it },
+                    activeUser = activeUserProviderFor(null),
+                    mainDispatcher = StandardTestDispatcher(testScheduler),
+                )
+
+            holder.importBookFromEpub(
+                sourcePath = "content://books/book.epub",
+                fallbackTitle = "Imported EPUB",
+                inputStreamProvider = { mockk() },
+            )
+
+            advanceUntilIdle()
+
+            io.mockk.coVerify(exactly = 0) {
+                mockUseCase(any<String>(), any<BookImportRequest>(), any<suspend () -> InputStream?>())
+            }
+            assertTrue("the anonymous import is refused", emittedEvent is LibraryImportEvent.Failure)
+            assertFalse(holder.state.value.isImporting)
+        }
+
+    @Test
+    fun `importPdfBook refuses on the anonymous session without writing`() =
+        runTest(StandardTestDispatcher()) {
+            testScheduler.advanceUntilIdle()
+
+            val mockRepository = mockk<LibraryRepository>(relaxed = true)
+            var emittedEvent: LibraryImportEvent? = null
+            val holder =
+                BookImportStateHolder(
+                    importEpubBookUseCase = mockk(),
+                    libraryRepository = mockRepository,
+                    scope = this,
+                    onImportEvent = { emittedEvent = it },
+                    activeUser = activeUserProviderFor("local-ephemeral"),
+                    mainDispatcher = StandardTestDispatcher(testScheduler),
+                )
+
+            holder.importPdfBook(
+                sourcePath = "/tmp/book.pdf",
+                fallbackTitle = "Book",
+                pdfFile = File("/tmp/book.pdf"),
+            )
+
+            advanceUntilIdle()
+
+            io.mockk.coVerify(exactly = 0) {
+                mockRepository.importBookFromPdf(any(), any(), any())
+            }
+            assertTrue(emittedEvent is LibraryImportEvent.Failure)
+        }
+
     private fun createHolder(scheduler: TestCoroutineScheduler): TestComponents {
         val dispatcher = UnconfinedTestDispatcher(scheduler)
         val scope = CoroutineScope(dispatcher + SupervisorJob())
@@ -327,6 +400,7 @@ class BookImportStateHolderTest {
                     libraryRepository = mockRepository,
                     scope = scope,
                     onImportEvent = {},
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 ),
             mockUseCase = mockUseCase,
@@ -342,3 +416,5 @@ class BookImportStateHolderTest {
         val scope: CoroutineScope,
     )
 }
+
+

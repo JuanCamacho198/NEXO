@@ -10,6 +10,7 @@ import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.presentation.UiEvent
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.activeUserProviderFor
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -253,7 +254,7 @@ class HighlightsViewModelTest {
         runTest {
             val highlight = createHighlight(color = HighlightColor.YELLOW.hex)
             val readerRepo = FakeReaderRepository(listOf(highlight))
-            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository())
+            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository(), activeUserProviderFor())
             viewModel.uiState.first()
 
             viewModel.onChangeHighlightColor(highlight)
@@ -277,7 +278,7 @@ class HighlightsViewModelTest {
         runTest {
             val highlight = createHighlight(tag = null)
             val readerRepo = FakeReaderRepository(listOf(highlight))
-            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository())
+            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository(), activeUserProviderFor())
             viewModel.uiState.first()
 
             viewModel.onAddHighlightTag(highlight)
@@ -349,7 +350,7 @@ class HighlightsViewModelTest {
     ): HighlightsViewModel {
         val readerRepo = FakeReaderRepository(highlights)
         val homeRepo = FakeHomeRepository(books)
-        return HighlightsViewModel(readerRepo, homeRepo)
+        return HighlightsViewModel(readerRepo, homeRepo, activeUserProviderFor())
     }
 
     private class FakeReaderRepository(
@@ -359,40 +360,68 @@ class HighlightsViewModelTest {
         var lastUpsertedHighlight: Highlight? = null
             private set
 
-        override fun observeProgress(bookId: String): Flow<com.nexo.domain.model.ReadingProgress?> = MutableStateFlow(null)
+        override fun observeProgress(
+            bookId: String,
+            userId: String,
+        ): Flow<com.nexo.domain.model.ReadingProgress?> = MutableStateFlow(null)
 
-        override suspend fun upsertProgress(progress: com.nexo.domain.model.ReadingProgress) = Unit
+        override suspend fun upsertProgress(
+            progress: com.nexo.domain.model.ReadingProgress,
+            userId: String,
+        ) = Unit
 
         override suspend fun updateBookReadingState(
             bookId: String,
+            userId: String,
             progressPercent: Float,
             updatedAt: Long,
         ) = Unit
 
-        override suspend fun getProgressForBook(bookId: String): com.nexo.domain.model.ReadingProgress? = null
+        override suspend fun getProgressForBook(
+            bookId: String,
+            userId: String,
+        ): com.nexo.domain.model.ReadingProgress? = null
 
-        override fun observeAllHighlights(): Flow<List<Highlight>> = highlightsFlow
+        override fun observeAllHighlights(userId: String): Flow<List<Highlight>> = highlightsFlow
 
-        override fun observeHighlights(bookId: String): Flow<List<Highlight>> = highlightsFlow
+        override fun observeHighlights(
+            bookId: String,
+            userId: String,
+        ): Flow<List<Highlight>> = highlightsFlow
 
-        override suspend fun upsertHighlight(highlight: Highlight) {
+        override suspend fun upsertHighlight(
+            highlight: Highlight,
+            userId: String,
+        ) {
             lastUpsertedHighlight = highlight
         }
 
-        override suspend fun getHighlightsForBook(bookId: String): List<Highlight> = highlights
+        override suspend fun getHighlightsForBook(
+            bookId: String,
+            userId: String,
+        ): List<Highlight> = highlights
 
-        override fun observeAllTags(): Flow<List<String>> =
+        override fun observeAllTags(userId: String): Flow<List<String>> =
             MutableStateFlow(
                 highlights.mapNotNull { it.tag }.distinct().sorted(),
             )
 
-        override fun observeAllBookmarks(): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
+        override fun observeAllBookmarks(userId: String): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
 
-        override fun observeBookmarks(bookId: String): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
+        override fun observeBookmarks(
+            bookId: String,
+            userId: String,
+        ): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
 
-        override suspend fun upsertBookmark(bookmark: Bookmark) = Unit
+        override suspend fun upsertBookmark(
+            bookmark: Bookmark,
+            userId: String,
+        ) = Unit
 
-        override suspend fun getBookmarksForBook(bookId: String): List<Bookmark> = emptyList()
+        override suspend fun getBookmarksForBook(
+            bookId: String,
+            userId: String,
+        ): List<Bookmark> = emptyList()
     }
 
     private class FakeHomeRepository(
@@ -400,17 +429,24 @@ class HighlightsViewModelTest {
     ) : HomeRepository {
         private val booksFlow = MutableStateFlow(books)
 
-        override fun observeBooks(): Flow<List<Book>> = booksFlow
+        override fun observeBooks(userId: String): Flow<List<Book>> = booksFlow
 
-        override fun observeRecentBooks(limit: Int): Flow<List<Book>> = booksFlow
+        override fun observeRecentBooks(
+            userId: String,
+            limit: Int,
+        ): Flow<List<Book>> = booksFlow
 
-        override fun observeCurrentBooks(): Flow<List<Book>> = booksFlow
+        override fun observeCurrentBooks(userId: String): Flow<List<Book>> = booksFlow
 
         override fun observeDailyStats(
             userId: String?,
             goalMinutes: Int,
         ): Flow<ReadingStats> = MutableStateFlow(ReadingStats())
 
-        override suspend fun deleteBook(bookId: String): Result<Unit> = Result.success(Unit)
+        override suspend fun deleteBook(
+            bookId: String,
+            userId: String,
+        ): Result<Unit> = Result.success(Unit)
     }
 }
+

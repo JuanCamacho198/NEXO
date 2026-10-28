@@ -15,7 +15,10 @@ import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.presentation.viewmodel.reader.ReaderInteractionState
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
+import com.nexo.testutil.FakeReaderRepository
+import com.nexo.testutil.FakeReadingStatsRepository
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -350,56 +353,8 @@ class ReaderViewModelSelectionTest {
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(FakeReaderRepository()),
             defaultBookId = defaultBookId,
+            activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
         )
-    }
-
-    private class FakeReaderRepository : ReaderRepository {
-        override fun observeProgress(bookId: String): Flow<ReadingProgress?> = MutableStateFlow(null)
-
-        override suspend fun upsertProgress(progress: ReadingProgress) = Unit
-
-        override suspend fun updateBookReadingState(
-            bookId: String,
-            progressPercent: Float,
-            updatedAt: Long,
-        ) = Unit
-
-        override suspend fun getProgressForBook(bookId: String): ReadingProgress? = null
-
-        override fun observeAllHighlights(): Flow<List<Highlight>> = MutableStateFlow(emptyList())
-
-        override fun observeHighlights(bookId: String): Flow<List<Highlight>> = MutableStateFlow(emptyList())
-
-        override suspend fun upsertHighlight(highlight: Highlight) = Unit
-
-        override suspend fun getHighlightsForBook(bookId: String): List<Highlight> = emptyList()
-
-        override fun observeAllBookmarks(): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
-
-        override fun observeBookmarks(bookId: String): Flow<List<Bookmark>> = MutableStateFlow(emptyList())
-
-        override suspend fun upsertBookmark(bookmark: Bookmark) = Unit
-
-        override suspend fun getBookmarksForBook(bookId: String): List<Bookmark> = emptyList()
-
-        override fun observeAllTags(): Flow<List<String>> = MutableStateFlow(emptyList())
-    }
-
-    private class FakeReadingStatsRepository : ReadingStatsRepository {
-        override fun observeStats(bookId: String): Flow<ReadingStatsData?> = MutableStateFlow(null)
-
-        override fun observeTotalTime(): Flow<Long> = MutableStateFlow(0L)
-
-        override suspend fun updateReadingTime(
-            bookId: String,
-            additionalMinutes: Long,
-        ) = Unit
-
-        override suspend fun deleteStats(bookId: String) = Unit
-
-        override fun observeBookStats(): Flow<List<ReadingStatsData>> = MutableStateFlow(emptyList())
-
-        override suspend fun getDailyActivity(userId: String?): List<com.nexo.domain.model.DailyReadingActivity> = emptyList()
     }
 }

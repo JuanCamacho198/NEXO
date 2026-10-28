@@ -2,6 +2,7 @@ package com.nexo.presentation.viewmodel
 
 import android.app.Application
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
+import com.nexo.testutil.activeUserProviderFor
 import com.nexo.testutil.FakeReaderRepository
 import com.nexo.testutil.FakeReadingStatsRepository
 import com.nexo.testutil.MainDispatcherRule
@@ -238,6 +239,7 @@ class ReaderViewModelFinalSweepTest {
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(fake),
             defaultBookId = null,
+            activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
         )
     }

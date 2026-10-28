@@ -60,8 +60,7 @@ fun NavGraphBuilder.settingsGraph(
             onInitialRouteConsumed = onSettingsInitialRouteConsumed,
             appThemeMode = appThemeMode,
             onAppThemeModeChanged = onAppThemeModeChanged,
-            onLogout = {
-                authViewModel.signOut()
+            onLogout = {                authViewModel.signOut()
                 navController.navigate(NexoDestination.Auth.route) {
                     popUpTo(0) { inclusive = true }
                 }
@@ -120,7 +119,11 @@ fun NavGraphBuilder.settingsGraph(
             storageRepository = appContainer.storageRepository,
             cacheRepository = appContainer.cacheRepository,
             libraryRepository = appContainer.libraryRepository,
+            activeUser = appContainer.activeUserProvider,
             updateViewModel = updateViewModel,
+            onNavigateToAddons = {
+                navController.navigate(NexoDestination.SettingsAddons.route)
+            },
         )
     }
 
