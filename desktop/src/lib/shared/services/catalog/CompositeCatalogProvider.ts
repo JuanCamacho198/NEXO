@@ -28,6 +28,7 @@ import {
   detailCacheKey,
   featuredCacheKey,
   pageCacheKey,
+  topicCacheKey,
   type DiscoverCacheStore,
   type PreloadableCache,
 } from './DiscoverCache';
@@ -551,6 +552,80 @@ export class CompositeCatalogProvider implements CatalogProvider {
         this.featuredRefreshes.delete(key);
       }
     })();
+  }
+
+  /**
+   * Topic rails fan out over the providers that opt in via `supportsTopic`,
+   * exactly like `featured`. Pages are cached under their own `t:` namespace: a
+   * topic page carries a different upstream total than the same words passed to
+   * `search`, so the two must never share a key. A provider failure PROPAGATES,
+   * so the rail settles `Error`; an empty successful page merges to `Hidden`.
+   * Mirrors Android.
+   */
+  async topic(term: string, page: number): Promise<PagedResult> {
+    if (!Number.isInteger(page) || page < 1) {
+      throw catalogError('INVALID_PAGE', `page must be >= 1, got ${page}`);
+    }
+    const active = this.activeSourceIds();
+    const pages = await Promise.all(
+      this.searchableProviders()
+        .filter((provider) => provider.supportsTopic())
+        .map(async (provider) => {
+          const cached = this.readTopicHit(provider, term, page, active);
+          if (cached !== null) return cached;
+          const result = await provider.topic(term, page);
+          this.cacheTopic(provider, term, page, result, active);
+          return result;
+        }),
+    );
+    return this.mergePaged(pages, page);
+  }
+
+  supportsTopic(): boolean {
+    return this.searchableProviders().some((provider) => provider.supportsTopic());
+  }
+
+  /**
+   * Topic read-through under `t:v2:{sourceId}:{term}:{page}`. Same existence
+   * check as every other cache read: an inactive or unroutable source is never
+   * served, and a corrupt payload is a miss (refetch).
+   */
+  private readTopicHit(
+    provider: CatalogProvider,
+    term: string,
+    page: number,
+    active: Set<string>,
+  ): PagedResult | null {
+    if (!this.cache) return null;
+    const source = singleSource(provider);
+    if (!source || !active.has(source.sourceId)) return null;
+    const hit = this.cache.get(topicCacheKey(source.sourceId, term, page), this.nowEpochSecs());
+    if (!hit) return null;
+    try {
+      return JSON.parse(hit) as PagedResult;
+    } catch {
+      return null;
+    }
+  }
+
+  private cacheTopic(
+    provider: CatalogProvider,
+    term: string,
+    page: number,
+    result: PagedResult,
+    active: Set<string>,
+  ): void {
+    // Never-cache-empty: empty rails persist nothing and extend no TTL.
+    if (result.results.length === 0) return;
+    if (!this.cache) return;
+    const source = singleSource(provider);
+    if (!source || !active.has(source.sourceId)) return;
+    this.cache.put(
+      topicCacheKey(source.sourceId, term, page),
+      JSON.stringify(result),
+      this.nowEpochSecs(),
+      FEATURED_TTL_S,
+    );
   }
 
   /**

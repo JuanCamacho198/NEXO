@@ -107,6 +107,15 @@ describe('composite integration', () => {
       return false;
     }
 
+    /** Test fake: no topic capability (fail-closed). */
+    async topic(): Promise<PagedResult> {
+      return { results: [], nexoPage: null, totalCount: 0 };
+    }
+
+    supportsTopic(): boolean {
+      return false;
+    }
+
     async searchSource(): Promise<PagedResult> {
       return { results: [], nexoPage: null, totalCount: 0 };
     }

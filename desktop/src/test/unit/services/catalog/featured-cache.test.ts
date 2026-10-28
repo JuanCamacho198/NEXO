@@ -72,6 +72,15 @@ class FakeFeaturedProvider implements CatalogProvider {
     return this.supports;
   }
 
+  /** Topic rails opt out here: this fake only exercises the featured seam. */
+  async topic(): Promise<PagedResult> {
+    return { results: [], nexoPage: null, totalCount: 0 };
+  }
+
+  supportsTopic(): boolean {
+    return false;
+  }
+
   async featured(_sort: CatalogFeaturedSort, _limit: number): Promise<PagedResult> {
     this.featuredCalls += 1;
     if (this.featuredImpl) return this.featuredImpl();

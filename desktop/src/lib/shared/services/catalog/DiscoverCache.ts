@@ -31,6 +31,13 @@ const DISCOVER_CACHE_VERSION = 'v2';
 const PAGE_KEY_PREFIX = `p:${DISCOVER_CACHE_VERSION}:`;
 const DETAIL_KEY_PREFIX = `d:${DISCOVER_CACHE_VERSION}:`;
 const FEATURED_KEY_PREFIX = `f:${DISCOVER_CACHE_VERSION}:`;
+/**
+ * Topic-rail namespace. It mirrors the featured one and lives under its own
+ * prefix because a topic page is NOT a search page: keying it as
+ * `p:…:{term}` is precisely how a `?topic=` page and a `?search=` page would
+ * collide once both exist.
+ */
+const TOPIC_KEY_PREFIX = `t:${DISCOVER_CACHE_VERSION}:`;
 
 /** Page cache key: `p:v2:{sourceId}:{query}:{page}` (24h). Query is normalized. */
 export function pageCacheKey(sourceId: string, query: string, page: number): string {
@@ -45,6 +52,15 @@ export function detailCacheKey(sourceId: string, id: string): string {
 /** Featured rail cache key: `f:v2:{sourceId}:{sort}` (6h, stale-while-revalidate). */
 export function featuredCacheKey(sourceId: string, sort: CatalogFeaturedSort): string {
   return `${FEATURED_KEY_PREFIX}${sourceId}:${sort}`;
+}
+
+/**
+ * Topic rail cache key: `t:v2:{sourceId}:{term}:{page}` (6h, same TTL as a
+ * featured rail). The term is normalized exactly like `pageCacheKey` so a
+ * rotation entry always maps to one row.
+ */
+export function topicCacheKey(sourceId: string, term: string, page: number): string {
+  return `${TOPIC_KEY_PREFIX}${sourceId}:${term.trim().toLowerCase()}:${page}`;
 }
 
 /**

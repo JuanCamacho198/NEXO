@@ -163,6 +163,21 @@ export interface CatalogProvider {
   supportsFeatured(sort: CatalogFeaturedSort): boolean;
 
   /**
+   * Closed topic filter, NOT free text. Gutendex's `?topic=` selector is a
+   * different parameter from `?search=`: measured live, `topic=science fiction`
+   * answers 3 530 books while `search=science fiction` answers 6. `term` must be
+   * a member of the closed `TOPIC_ROTATION` table; a raw string must never reach
+   * the upstream, exactly like `CatalogFeaturedSort`.
+   *
+   * Fail-closed: a provider with no topic capability resolves an empty page, so
+   * its rail auto-hides instead of erroring.
+   */
+  topic(term: string, page: number): Promise<PagedResult>;
+
+  /** Fail-closed capability probe: false ⇒ "do not build a topic rail here". */
+  supportsTopic(): boolean;
+
+  /**
    * Per-source search scoped to one `sourceId`. Fail-closed: an unsupported
    * id yields an empty page rather than a crash. `page` is 1-based and
    * rejects INVALID_PAGE before any I/O.

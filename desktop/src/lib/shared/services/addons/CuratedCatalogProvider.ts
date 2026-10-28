@@ -75,6 +75,18 @@ export class CuratedCatalogProvider implements CatalogProvider {
     return false;
   }
 
+  /** Browse-only bundle: no `?topic=` selector either, the rail auto-hides. */
+  async topic(_term: string, page: number): Promise<PagedResult> {
+    if (!Number.isInteger(page) || page < 1) {
+      throw catalogError('INVALID_PAGE', `page must be >= 1, got ${page}`);
+    }
+    return EMPTY_PAGE;
+  }
+
+  supportsTopic(): boolean {
+    return false;
+  }
+
   /** Curated sources serve no per-source search; fail closed, no I/O. */
   async searchSource(
     _sourceId: CatalogSource,

@@ -305,6 +305,18 @@ export class AddonCatalogProvider implements CatalogProvider {
     return false;
   }
 
+  /** Addons expose a search template only; no Gutendex-style topic selector. */
+  async topic(_term: string, page: number): Promise<PagedResult> {
+    if (!Number.isInteger(page) || page < 1) {
+      throw catalogError('INVALID_PAGE', `page must be >= 1, got ${page}`);
+    }
+    return EMPTY_PAGE;
+  }
+
+  supportsTopic(): boolean {
+    return false;
+  }
+
   /**
    * Per-source search scoped to this addon's own source; anything else fails
    * closed with an empty page (never a crash, never a silent composite search).

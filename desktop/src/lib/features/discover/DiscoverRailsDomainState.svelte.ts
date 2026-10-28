@@ -1,5 +1,4 @@
 import {
-  BUILTIN_GOOGLEBOOKS,
   DEFAULT_PAGE_SIZE,
   GOOGLE_BOOKS_MAX_START_INDEX,
   isCatalogError,
@@ -9,6 +8,7 @@ import {
   type CatalogBook,
   type CatalogErrorCode,
   type CatalogProvider,
+  type CatalogSource,
 } from '$lib/shared/services/catalog';
 import type { MessageKey } from '$lib/shared/i18n/messages.en';
 import {
@@ -16,10 +16,24 @@ import {
   buildRailSpecs,
   DISCOVER_RAIL_FETCH_LIMIT,
   loadRail,
-  matchesAuthorQuery,
+  railSourceOf,
   withDeadline,
+  type DiscoverRailSource,
   type DiscoverRailSpec,
 } from './railPlan';
+import { logRailHidden, logRailLoaded, type RailLogContext } from './railLog';
+
+/** Rail diagnostics identity: the kind, the upstream, and the selector term. */
+function railLogContext(spec: DiscoverRailSpec): RailLogContext {
+  switch (spec.kind) {
+    case 'topic':
+      return { rail: 'topic', source: 'gutendex', term: spec.term };
+    case 'popular':
+      return { rail: 'popular', source: 'gutendex', term: 'sort=popular' };
+    case 'opds':
+      return { rail: 'standard-ebooks', source: 'standard-ebooks', term: null };
+  }
+}
 
 /**
  * Per-rail machine: `Hidden` renders nothing (empty or unserved), `Loaded`
@@ -34,12 +48,21 @@ export type DiscoverRailState =
 
 /**
  * Rail-scoped browse target opened from a rail header ("Ver todo"): the
- * shelf's author term, browsed against Google Books.
+ * shelf's own term, browsed against the source that served the shelf.
  */
 export interface DiscoverBrowseScope {
   kind: 'term';
   term: string;
   titleKey: MessageKey;
+  /** Source the scope pages through; defaults to the Gutendex topic source. */
+  sourceId: CatalogSource;
+  /**
+   * True when this scope must page the Gutendex `?topic=` selector instead of a
+   * free-text search. A topic shelf's "Ver todo" has to keep asking the same
+   * question its rail asked: the same words through `search` answer 6 books
+   * where `?topic=` answers 3 530.
+   */
+  topic?: boolean;
 }
 
 /**
@@ -76,6 +99,30 @@ export function catalogCodeOf(err: unknown): CatalogErrorCode {
 }
 
 /**
+ * Sources whose EVERY rail settled as `Error`: the only condition that earns a
+ * grouped notice. A single failing rail keeps its own inline error and retry,
+ * so it deliberately never appears here — repeating the same sentence in a
+ * page-level box would say nothing the rail did not already say.
+ *
+ * Rails still `Loading` are not `Error`, so a group in flight can never be
+ * reported as failed. Order follows the plan, so the notice never reshuffles.
+ */
+export function failedRailGroupsOf(
+  specs: readonly DiscoverRailSpec[],
+  rails: readonly DiscoverRailState[],
+): DiscoverRailSource[] {
+  const groups = specs.map(railSourceOf);
+  const seen: DiscoverRailSource[] = [];
+  for (const source of groups) if (!seen.includes(source)) seen.push(source);
+  return seen.filter((source) => {
+    const indexes = groups
+      .map((group, index) => (group === source ? index : -1))
+      .filter((i) => i >= 0);
+    return indexes.length > 0 && indexes.every((index) => rails[index]?.kind === 'Error');
+  });
+}
+
+/**
  * Owns the 3-rail set and everything a rail needs: the index-stable plan, the
  * per-rail machine, isolated retry, remount dedup, and the rail-scoped browse
  * state. There is deliberately no screen-level rail status.
@@ -103,6 +150,18 @@ export class DiscoverRailsDomainState {
    * results). False on natural exhaustion.
    */
   scopeAtDepthCap = $state(false);
+  /**
+   * Sources whose every rail settled as `Error`. Empty while any rail of the
+   * source is still `Loading`, so the grouped notice can never appear over a
+   * shelf that may still land.
+   */
+  failedGroups = $state<DiscoverRailSource[]>([]);
+  /**
+   * Groups whose notice the reader dismissed, for this session only, so a
+   * permanently rate-limited source does not become permanent noise. Cleared
+   * when the group starts failing again on a fresh refresh.
+   */
+  dismissedGroups = $state<DiscoverRailSource[]>([]);
 
   private readonly provider: CatalogProvider;
   private readonly now: () => Date;
@@ -158,6 +217,54 @@ export class DiscoverRailsDomainState {
     return this.retryAttempts[index] ?? 0;
   }
 
+  /** Groups whose single notice is currently shown (failed and not dismissed). */
+  get visibleFailedGroups(): DiscoverRailSource[] {
+    return this.failedGroups.filter((group) => !this.dismissedGroups.includes(group));
+  }
+
+  /** Hide one grouped notice for the rest of the session; no I/O, no refetch. */
+  dismissRailGroup(group: DiscoverRailSource): void {
+    if (!this.dismissedGroups.includes(group)) this.dismissedGroups.push(group);
+  }
+
+  /**
+   * Re-resolve ONLY the rails of `group` that are currently in `Error`; every
+   * other rail — including a sibling of the same source that is working — keeps
+   * its state and is never refetched. The two topic rails share one Gutendex
+   * quota, so refetching a rail that already answered would burn a request for
+   * nothing. A manual retry re-arms the group's notice, since the reader asked
+   * to see the outcome again.
+   */
+  async retryRailGroup(group: DiscoverRailSource): Promise<void> {
+    const failed = this.specs
+      .map((spec, index) => (railSourceOf(spec) === group ? index : -1))
+      .filter((index) => index >= 0 && this.rails[index]?.kind === 'Error');
+    // Nothing failed in this group: a retry has no rail to re-resolve and must
+    // not touch the sibling that is already serving books.
+    if (failed.length === 0) return;
+    this.dismissedGroups = this.dismissedGroups.filter((dismissed) => dismissed !== group);
+    const generation = this.generation;
+    for (const index of failed) {
+      // Supersede any pending automatic retry so a manual attempt never leaves
+      // a duplicate timer behind for the same rail.
+      this.clearAutoRetry(index);
+      this.rails[index] = { kind: 'Loading' };
+    }
+    this.publishFailedGroups();
+    // Every failed rail goes in flight together (the `map` starts them), and each
+    // is then awaited in turn: no `Promise.all` gate, so the group notice is
+    // published only once all of them settled, without serializing them.
+    const pending = failed.map((index) => this.loadOne(this.specs[index]!));
+    const settled: DiscoverRailState[] = [];
+    for (const rail of pending) settled.push(await rail);
+    if (generation !== this.generation) return;
+    failed.forEach((index, position) => {
+      this.rails[index] = settled[position]!;
+    });
+    this.recomputeConnectivity();
+    this.publishFailedGroups();
+  }
+
   /**
    * Mount hook. Remount dedup (spec: "Remount does not refetch resolved rails"):
    * a settled rail set is reused, and a load already in flight is joined, so the
@@ -197,6 +304,9 @@ export class DiscoverRailsDomainState {
     this.clearAllAutoRetries();
     this.isOnline = true;
     this.settled = false;
+    // A refresh starts from a clean slate: no group is failed while its rails
+    // are Loading, so the notice cannot survive a reload it no longer describes.
+    this.failedGroups = [];
     const generation = (this.generation += 1);
     // Every rail is in flight immediately; awaiting them one by one lets
     // `refreshRails` settle the whole set without gating any publish on the
@@ -232,9 +342,9 @@ export class DiscoverRailsDomainState {
   }
 
   /**
-   * Open a rail-scoped browse view: term scopes page through the Google Books
-   * source search. A failure lands in `scopeError` instead of throwing at the
-   * caller.
+   * Open a rail-scoped browse view: a term scope pages through the source that
+   * served its rail (Gutendex for the topic shelves). A failure lands in
+   * `scopeError` instead of throwing at the caller.
    */
   async openScope(scope: DiscoverBrowseScope): Promise<void> {
     this.scope = scope;
@@ -248,9 +358,9 @@ export class DiscoverRailsDomainState {
   }
 
   /**
-   * Append the scope's next page through the Google Books source. The scope
-   * stops once a page reports no next page, once the next page would start
-   * past `GOOGLE_BOOKS_MAX_START_INDEX` (no request is issued — the prod
+   * Append the scope's next page through the scope's own source. The scope
+   * stops once a page reports no next page, once the next page would start past
+   * `GOOGLE_BOOKS_MAX_START_INDEX` (no request is issued — the prod
    * `startIndex=216` is unreachable), and concurrent calls join the page in
    * flight instead of duplicating it. When the cap truncates a scope the
    * provider would still extend, `scopeAtDepthCap` tells the UI to say so.
@@ -266,10 +376,12 @@ export class DiscoverRailsDomainState {
     this.scopeLoading = true;
     this.scopeError = null;
     try {
-      const page = await withDeadline(
-        this.provider.searchSource(BUILTIN_GOOGLEBOOKS, scope.term, this.scopePage + 1),
-        this.timeoutMs,
-      );
+      // A topic scope keeps asking the `?topic=` selector the rail used; every
+      // other scope pages its own source's free-text search.
+      const request = scope.topic
+        ? this.provider.topic(scope.term, this.scopePage + 1)
+        : this.provider.searchSource(scope.sourceId, scope.term, this.scopePage + 1);
+      const page = await withDeadline(request, this.timeoutMs);
       if (this.scope !== scope) return;
       const seen = new Set(this.scopeBooks.map((book) => book.id));
       for (const book of page.results) {
@@ -323,6 +435,9 @@ export class DiscoverRailsDomainState {
     // `settled`), so an offline rail cannot be masked by a later Loaded rail
     // and a retry that decays to a non-offline error can clear it again.
     this.recomputeConnectivity();
+    // Same reason for the grouped notice: it is a projection of the whole
+    // group, so it is republished on every settle rather than on the last one.
+    this.publishFailedGroups();
     if (settled.kind === 'Loaded') {
       this.retryAttempts[index] = 0;
       this.clearAutoRetry(index);
@@ -331,6 +446,18 @@ export class DiscoverRailsDomainState {
     if (settled.kind === 'Error' && isRetryableCatalogCode(settled.code)) {
       this.scheduleAutoRetry(index);
     }
+  }
+
+  /**
+   * Republish the failed-group set from the current rail states. Derived from
+   * the published rails, never tracked incrementally, so a rail that recovers
+   * clears its notice with no second source of truth.
+   */
+  private publishFailedGroups(): void {
+    this.failedGroups = failedRailGroupsOf(this.specs, this.rails);
+    // A dismissal only outlives the failure it hid. Once nothing is failing the
+    // slate is clean, so the same group failing again later speaks up again.
+    if (this.failedGroups.length === 0) this.dismissedGroups = [];
   }
 
   /**
@@ -394,21 +521,24 @@ export class DiscoverRailsDomainState {
         this.timeoutMs,
       );
       const bounded = boundRailPage(page, DISCOVER_RAIL_FETCH_LIMIT);
-      // Free-text rail search ranks criticism and biographies above the works,
-      // so the author shelf is the attributed subset. The fixed-source rails
-      // carry no term to attribute against, so they are never filtered this way.
-      const books =
-        spec.kind === 'author'
-          ? bounded.results.filter((book) => matchesAuthorQuery(book, spec.term))
-          : bounded.results;
-      // Coverless books are dropped from RAILS only (search keeps them): a rail
-      // card is an image-first grid, so a book with no cover renders as a blank
-      // tile. All-coverless collapses to `Hidden`, which renders no section.
-      const withCovers = books.filter((book) => book.coverUrl !== null);
-      if (withCovers.length === 0) return { kind: 'Hidden' };
-      return { kind: 'Loaded', books: withCovers, totalCount: page.totalCount };
+      // Coverless books are KEPT: a rail card degrades to a text card (title and
+      // author on a theme surface) instead of rendering an empty frame. Only a
+      // genuinely empty page hides the shelf, so an all-coverless rail still has
+      // something to show. Search is untouched by any of this.
+      if (bounded.results.length === 0) {
+        // Say WHY the shelf disappears: an empty page is not an exception, and
+        // without this line a hidden rail is indistinguishable from a failure.
+        logRailHidden(
+          railLogContext(spec),
+          `empty page (upstream returned ${page.results.length})`,
+        );
+        return { kind: 'Hidden' };
+      }
+      logRailLoaded(railLogContext(spec), bounded.results.length);
+      return { kind: 'Loaded', books: bounded.results, totalCount: page.totalCount };
     } catch (err) {
       const code = catalogCodeOf(err);
+      logRailHidden(railLogContext(spec), `exception ${code}: ${String(err)}`);
       return { kind: 'Error', code, offline: isOfflineCatalogCode(code) };
     }
   }

@@ -133,6 +133,15 @@ class FakeAddonProvider implements CatalogProvider {
     return false;
   }
 
+  /** Test fake: no topic capability (fail-closed, never called by the fan-out). */
+  async topic(): Promise<PagedResult> {
+    return { results: [], nexoPage: null, totalCount: 0 };
+  }
+
+  supportsTopic(): boolean {
+    return false;
+  }
+
   async searchSource(): Promise<PagedResult> {
     return this.search('', 1);
   }
@@ -160,6 +169,15 @@ class DisabledProvider implements CatalogProvider {
   }
 
   supportsFeatured(): boolean {
+    return false;
+  }
+
+  /** Test fake: no topic capability (fail-closed, never called by the fan-out). */
+  async topic(): Promise<PagedResult> {
+    return { results: [], nexoPage: null, totalCount: 0 };
+  }
+
+  supportsTopic(): boolean {
     return false;
   }
 

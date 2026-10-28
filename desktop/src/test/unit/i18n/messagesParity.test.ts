@@ -150,7 +150,11 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
   });
 
   it('includes the addons route keys in both locales', () => {
-    const addonsKeys = ['sidebar.addons', 'discover.manageAddons'] as const;
+    const addonsKeys = [
+      'sidebar.addons',
+      'discover.manageAddons',
+      'settings.manageAddons',
+    ] as const;
 
     for (const key of addonsKeys) {
       expect(messagesEn[key]).toBeDefined();
@@ -163,6 +167,9 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
     expect(messagesEs['sidebar.addons']).toBe('Addons');
     expect(messagesEn['discover.manageAddons']).toBe('Manage addons');
     expect(messagesEs['discover.manageAddons']).toBe('Gestionar addons');
+    // The Settings entry is the reader-facing one and carries the beta tag.
+    expect(messagesEn['settings.manageAddons']).toBe('Manage addons (beta)');
+    expect(messagesEs['settings.manageAddons']).toBe('Gestionar addons (beta)');
   });
 
   it('includes the addons screen keys in both locales', () => {

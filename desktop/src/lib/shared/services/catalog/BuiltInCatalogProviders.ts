@@ -86,6 +86,19 @@ export class GutendexCatalogProvider implements CatalogProvider {
     return true;
   }
 
+  /** Topic rails are served by the Gutendex `?topic=` selector. */
+  async topic(term: string, page: number): Promise<PagedResult> {
+    if (!Number.isInteger(page) || page < 1) {
+      throw catalogError('INVALID_PAGE', `page must be >= 1, got ${page}`);
+    }
+    const { books, totalCount } = await this.ds.topic(term, page);
+    return toPagedResult(books, page, totalCount);
+  }
+
+  supportsTopic(): boolean {
+    return true;
+  }
+
   /**
    * Gutendex owns exactly one source; anything else fails closed with an
    * empty page (never a crash, never a silent composite search).
@@ -149,6 +162,18 @@ export class OpenLibraryCatalogProvider implements CatalogProvider {
   }
 
   supportsFeatured(_sort: CatalogFeaturedSort): boolean {
+    return false;
+  }
+
+  /** No topic capability: the `?topic=` selector is not part of this catalog. */
+  async topic(_term: string, page: number): Promise<PagedResult> {
+    if (!Number.isInteger(page) || page < 1) {
+      throw catalogError('INVALID_PAGE', `page must be >= 1, got ${page}`);
+    }
+    return EMPTY_PAGE;
+  }
+
+  supportsTopic(): boolean {
     return false;
   }
 
@@ -228,6 +253,18 @@ export class GoogleBooksCatalogProvider implements CatalogProvider {
     return false;
   }
 
+  /** No topic capability: Google Books exposes no Gutendex-style topic selector. */
+  async topic(_term: string, page: number): Promise<PagedResult> {
+    if (!Number.isInteger(page) || page < 1) {
+      throw catalogError('INVALID_PAGE', `page must be >= 1, got ${page}`);
+    }
+    return EMPTY_PAGE;
+  }
+
+  supportsTopic(): boolean {
+    return false;
+  }
+
   /**
    * Google Books owns exactly one source; anything else fails closed with an
    * empty page (never a crash, never a silent composite search).
@@ -299,6 +336,18 @@ export class StandardEbooksCatalogProvider implements CatalogProvider {
   }
 
   supportsFeatured(_sort: CatalogFeaturedSort): boolean {
+    return false;
+  }
+
+  /** No topic capability: the feed is one fixed shelf with no query parameter. */
+  async topic(_term: string, page: number): Promise<PagedResult> {
+    if (!Number.isInteger(page) || page < 1) {
+      throw catalogError('INVALID_PAGE', `page must be >= 1, got ${page}`);
+    }
+    return EMPTY_PAGE;
+  }
+
+  supportsTopic(): boolean {
     return false;
   }
 

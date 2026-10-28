@@ -1,36 +1,77 @@
 import {
-  BUILTIN_GOOGLEBOOKS,
   BUILTIN_STANDARD_EBOOKS,
   catalogError,
-  type CatalogBook,
   type CatalogProvider,
   type PagedResult,
 } from '$lib/shared/services/catalog';
 import type { MessageKey } from '$lib/shared/i18n/messages.en';
-import { authorEntriesFor } from './railRotation';
+import { topicEntriesFor } from './railRotation';
 
 /**
  * One rail, as a discriminated union so each source is reached through the
  * resolution its upstream actually supports:
  *
- * - `author` — a Google Books term search of a curated author surname.
+ * - `topic` — a Gutendex `?topic=` search of a curated, closed topic term.
  * - `popular` — the Gutendex all-time download ordering (`?sort=popular`).
  * - `opds` — the Standard Ebooks newest-releases OPDS/Atom shelf.
  *
  * The union is the reason `loadRail` needs no capability probing at the call
  * site: the spec already names the source that can answer it.
+ *
+ * Google Books LEFT the rail plan (its `author` kind is gone) but stays a
+ * registered provider: it is still a search source, still detail-routable, and
+ * still what a rail scope browses. Deleting the provider would break search.
  */
 export type DiscoverRailSpec =
-  | { kind: 'author'; term: string; titleKey: MessageKey }
+  | { kind: 'topic'; term: string; titleKey: MessageKey }
   | { kind: 'popular'; titleKey: MessageKey }
   | { kind: 'opds'; titleKey: MessageKey };
 
-/** The two rotating author shelves' share of the plan. */
-export const DISCOVER_AUTHOR_RAIL_COUNT = 2;
 /**
- * Four rails: two rotating authors, one Gutendex popular, one Standard Ebooks.
- * Fixed count so the plan's length never depends on which sources happen to
- * answer — a failing source hides its own section, it never renumbers the row.
+ * The upstream a rail is served from. Rails of one source share that source's
+ * quota and outage, so they are reported together: when every rail of a source
+ * fails the page shows ONE notice naming it, instead of one identical sentence
+ * per shelf.
+ */
+export type DiscoverRailSource = 'googlebooks' | 'gutendex' | 'standard-ebooks';
+
+/** Source of a rail spec; the fixed-source shelves are one rail each. */
+export function railSourceOf(spec: DiscoverRailSpec): DiscoverRailSource {
+  switch (spec.kind) {
+    case 'topic':
+      return 'gutendex';
+    case 'popular':
+      return 'gutendex';
+    case 'opds':
+      return 'standard-ebooks';
+  }
+}
+
+/**
+ * The source a rail is fetched THROUGH. It is the same as `railSourceOf`
+ * except on a degraded build: when Google Books is absent, the topic and
+ * popular shelves are served by the provider's in-memory Gutendex fallback,
+ * whose identifier carries that fallback's own tag. Reporting it honestly keeps
+ * a grouped notice from naming a source the build did not actually call.
+ */
+export function railServingSourceOf(spec: DiscoverRailSpec): DiscoverRailSource {
+  return railSourceOf(spec);
+}
+
+/** i18n key naming the source in a grouped failure notice. */
+export const RAIL_SOURCE_LABEL_KEYS: Record<DiscoverRailSource, MessageKey> = {
+  googlebooks: 'discover.rail.group.googlebooks',
+  gutendex: 'discover.rail.group.gutendex',
+  'standard-ebooks': 'discover.rail.group.standardEbooks',
+};
+
+/** The two rotating topic shelves' share of the plan. */
+export const DISCOVER_TOPIC_RAIL_COUNT = 2;
+/**
+ * Four rails: two rotating Gutendex topics, one Gutendex popular, one Standard
+ * Ebooks. Fixed count so the plan's length never depends on which sources
+ * happen to answer — a failing source hides its own section, it never
+ * renumbers the row.
  */
 export const DISCOVER_RAIL_COUNT = 4;
 /**
@@ -76,22 +117,22 @@ export function deriveVisibleRailCount(containerWidth: number): number {
 }
 
 /**
- * Index-stable rail plan: the day's two rotating author shelves first, then the
+ * Index-stable rail plan: the day's two rotating topic shelves first, then the
  * two fixed-source shelves. Rebuilt per refresh, so crossing local midnight
- * rolls the author window forward; the selection formula lives in
+ * rolls the topic window forward; the selection formula lives in
  * `railRotation.ts`. The fixed rails never move, so a refresh can only change
  * positions 0–1 and a settled rail is never renumbered by a neighbour's failure.
  */
 export function buildRailSpecs(now: Date = new Date()): readonly DiscoverRailSpec[] {
-  const authorRails: DiscoverRailSpec[] = authorEntriesFor(now, DISCOVER_AUTHOR_RAIL_COUNT).map(
+  const topicRails: DiscoverRailSpec[] = topicEntriesFor(now, DISCOVER_TOPIC_RAIL_COUNT).map(
     (entry) => ({
-      kind: 'author',
+      kind: 'topic',
       term: entry.term,
       titleKey: entry.titleKey,
     }),
   );
   return [
-    ...authorRails,
+    ...topicRails,
     { kind: 'popular', titleKey: 'discover.rail.gutendexPopular' },
     { kind: 'opds', titleKey: 'discover.rail.standardEbooks' },
   ];
@@ -99,9 +140,12 @@ export function buildRailSpecs(now: Date = new Date()): readonly DiscoverRailSpe
 
 /**
  * Resolve one rail through the provider named by its own kind. The `limit` is
- * used by the fixed-source rails, which ask for exactly one row; the author
- * path keeps passing it for call-site compatibility, because the Google Books
- * datasource owns its own page size and the state layer slices.
+ * used by the fixed-source rails, which ask for exactly one row; the topic
+ * path keeps passing it for call-site compatibility, because the Gutendex page
+ * is fetched at the courtesy size and the state layer slices.
+ *
+ * A provider rejection propagates, so the caller settles that rail `Error`. An
+ * empty successful page stays an empty page: the caller hides the shelf.
  */
 export function loadRail(
   provider: CatalogProvider,
@@ -109,11 +153,14 @@ export function loadRail(
   limit: number = DISCOVER_RAIL_FETCH_LIMIT,
 ): Promise<PagedResult> {
   switch (spec.kind) {
-    case 'author':
-      // Non-ordering author shelf: a per-source search of a non-empty term.
-      // `searchSource` read-through-caches the page, so a cold fan-out stays
-      // within the shared page cache and never multiplies quota pressure.
-      return provider.searchSource(BUILTIN_GOOGLEBOOKS, spec.term, 1);
+    case 'topic':
+      // The Gutendex `?topic=` selector of a term from the closed table in
+      // `railRotation.ts` — NEVER `searchSource`. Measured live, the same words
+      // through `?search=` answer 6 books where `?topic=` answers 3 530, so the
+      // free-text door turns a full shelf into an empty one. `topic()` caches
+      // read-through under its own `t:` namespace, so a cold fan-out of two topic
+      // rails never multiplies upstream pressure.
+      return provider.topic(spec.term, 1);
     case 'popular':
       // The featured POPULAR ordering, never an empty term search: measured
       // against the live API, `?search=&page=1` is an unfiltered full scan that
@@ -138,43 +185,6 @@ const STANDARD_EBOOKS_RAIL_QUERY = '';
 export function boundRailPage(page: PagedResult, limit: number): PagedResult {
   if (page.results.length <= limit) return page;
   return { ...page, results: page.results.slice(0, limit) };
-}
-
-/**
- * Accent- and case-insensitive fold used for author comparison. NFD splits a
- * precomposed character into base + combining mark, and the `\u0300`–`\u036f`
- * block is exactly Unicode's combining diacritical marks, so stripping it
- * degrades "Pérez" to "perez" without touching ASCII letters.
- */
-function foldAuthorText(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-}
-
-/** Whole words of an author string, so "melvilles" never matches "melville". */
-function authorWords(author: string): readonly string[] {
-  return foldAuthorText(author)
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean);
-}
-
-/**
- * True iff `book` is attributed to the rail term's author. The surname is the
- * LAST whitespace-separated token of the term (`herman melville` → `melville`,
- * `arthur conan doyle` → `doyle`, `h g wells` → `wells`), and it must appear as
- * a whole word in one of the book's authors after case folding and accent
- * stripping. Free-text rail search ranks criticism, study guides and
- * biographies above the works themselves; this is the client-side guarantee
- * that a `Loaded` rail never carries a foreign book. A book with no authors, or
- * a term with no surname, never passes. Pure: no I/O, total over any input.
- */
-export function matchesAuthorQuery(book: CatalogBook, term: string): boolean {
-  const surname = term.trim().split(/\s+/).pop();
-  if (surname === undefined || surname === '') return false;
-  const needle = foldAuthorText(surname);
-  return book.authors.some((author) => authorWords(author).includes(needle));
 }
 
 /**

@@ -9,9 +9,9 @@ import {
   createRebuildingCatalogProvider,
   type CatalogProviderSupplier,
 } from './CompositeCatalogProvider';
-import { PersistentDiscoverCache, TauriDiscoverCachePort, pageCacheKey } from './DiscoverCache';
+import { PersistentDiscoverCache, TauriDiscoverCachePort, topicCacheKey } from './DiscoverCache';
 import {
-  BUILTIN_GOOGLEBOOKS,
+  BUILTIN_GUTENDEX,
   type CatalogBook,
   type CatalogFeaturedSort,
   type CatalogProvider,
@@ -24,8 +24,8 @@ import { googleBooksKeyFromEnv } from './BuiltInCatalogProviders';
 import { resolveDownloadUrl } from './mappers';
 import { AddonRegistry, getAddonRegistry } from '../addons/AddonRegistry';
 import { addonConsent } from '../addons/AddonConsent';
-import { authorEntriesFor } from '$lib/features/discover/railRotation';
-import { DISCOVER_AUTHOR_RAIL_COUNT } from '$lib/features/discover/railPlan';
+import { topicEntriesFor } from '$lib/features/discover/railRotation';
+import { DISCOVER_TOPIC_RAIL_COUNT } from '$lib/features/discover/railPlan';
 
 // Slice 7 single-state-source: the live composite listens on the SHARED
 // registry instance (the same one the addons singleton mutates), so screen
@@ -42,19 +42,22 @@ const registry: AddonRegistry = getAddonRegistry();
 export const discoverCache = new PersistentDiscoverCache(new TauriDiscoverCachePort());
 
 /**
- * Deterministic startup preload for the author rails: exactly the current day's
- * two page-1 keys (`DISCOVER_AUTHOR_RAIL_COUNT`), one per rotating rail, all
- * under Google Books. The rotation terms are the only enumerable rail queries,
- * so this stays two keys and disk growth remains bounded. The Gutendex popular
- * and Standard Ebooks shelves are deliberately not preloaded: they are one
- * unpaged feed each, already warmed by the rail itself, and keying them would
- * add durable rows that never change.
+ * Deterministic startup preload for the topic rails: exactly the current day's
+ * two page-1 keys (`DISCOVER_TOPIC_RAIL_COUNT`), one per rotating topic shelf,
+ * all under Gutendex, all in the `t:` topic namespace the rail actually reads.
+ * Warming `p:` keys would seed durable rows nothing in the shipping app reads —
+ * the topic rail resolves through `topic()`, never `searchSource()`.
+ * The rotation terms are the only enumerable rail queries, so this stays two
+ * keys and disk growth remains bounded. The Gutendex popular and Standard Ebooks
+ * shelves are deliberately not preloaded: they are one unpaged feed each, already
+ * warmed by the rail itself. Google Books is no longer preloaded at all: it
+ * stopped being a rail source.
  * Reads stay fresh-only — preloading only makes an already-valid page reachable
  * sooner.
  */
 export function discoverPreloadPageKeys(now: Date = new Date()): readonly string[] {
-  return authorEntriesFor(now, DISCOVER_AUTHOR_RAIL_COUNT).map((entry) =>
-    pageCacheKey(BUILTIN_GOOGLEBOOKS, entry.term, 1),
+  return topicEntriesFor(now, DISCOVER_TOPIC_RAIL_COUNT).map((entry) =>
+    topicCacheKey(BUILTIN_GUTENDEX, entry.term, 1),
   );
 }
 
@@ -92,6 +95,14 @@ class LiveCatalogProvider implements CatalogProvider {
 
   supportsFeatured(sort: CatalogFeaturedSort): boolean {
     return supplier.peek()?.supportsFeatured(sort) ?? false;
+  }
+
+  topic(term: string, page: number): Promise<PagedResult> {
+    return supplier.current().then((c) => c.topic(term, page));
+  }
+
+  supportsTopic(): boolean {
+    return supplier.peek()?.supportsTopic() ?? false;
   }
 
   searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {

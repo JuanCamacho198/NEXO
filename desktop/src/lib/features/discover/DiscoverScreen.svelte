@@ -3,13 +3,13 @@
   import { discoverErrorKey } from './discoverErrorCopy';
   import { DISCOVER_RAIL_LIMIT } from './railPlan';
   import type { DiscoverRailState } from './DiscoverRailsDomainState.svelte';
-  import type {
-    CatalogBook,
-    CatalogErrorCode,
-    CatalogSourceInfo,
+  import {
+    BUILTIN_GUTENDEX,
+    type CatalogBook,
+    type CatalogErrorCode,
+    type CatalogSourceInfo,
   } from '$lib/shared/services/catalog';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
-  import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
   import type { ReaderBook } from '$lib/shared/types';
   import { openableLibraryBook } from './discoverLibraryMatch';
@@ -18,6 +18,7 @@
   import DiscoverDetail from './DiscoverDetail.svelte';
   import DiscoverHero from './DiscoverHero.svelte';
   import DiscoverOfflineState from './DiscoverOfflineState.svelte';
+  import DiscoverRailGroupNotice from './DiscoverRailGroupNotice.svelte';
   import DiscoverRailSection from './DiscoverRailSection.svelte';
   import DiscoverSkeletonCard from './DiscoverSkeletonCard.svelte';
   import DiscoverSourceRow from './DiscoverSourceRow.svelte';
@@ -131,24 +132,27 @@
     }),
   );
 
-  /** "Ver todo" is only expressible for a term shelf: only `author` has a term. */
+  /**
+   * "Ver todo" is only expressible for a shelf that carries a term the source
+   * can page. The two fixed-source shelves (`popular`, `opds`) have no query, so
+   * opening a scope for them could only ever reopen the same page.
+   */
   function openRailScope(index: number): void {
     const spec = discoverState.railsState.specs[index];
-    if (!spec || spec.kind !== 'author') return;
+    if (!spec || spec.kind !== 'topic') return;
     void discoverState.openRailScope({
       kind: 'term',
       term: spec.term,
       titleKey: spec.titleKey,
+      sourceId: BUILTIN_GUTENDEX,
+      // The shelf was built from `?topic=`; "Ver todo" must keep asking that.
+      topic: true,
     });
   }
 
-  /**
-   * A fixed-source rail (`popular`, `opds`) has no query to page through, so
-   * "Ver todo" would open a scope that can never return more than the rail.
-   * The section omits the control instead of offering a dead end.
-   */
+  /** Only a `topic` rail has a term to page through; the fixed shelves do not. */
   function railHasScope(index: number): boolean {
-    return discoverState.railsState.specs[index]?.kind === 'author';
+    return discoverState.railsState.specs[index]?.kind === 'topic';
   }
 
   const scopeView = $derived.by<ScopeView | null>(() => {
@@ -229,13 +233,6 @@
       {:else if discoverState.status === 'empty'}
         <div class="flex max-w-2xl flex-col items-start gap-2">
           <p class="m-0 text-sm text-(--color-text-muted)">{t('discover.empty')}</p>
-          <button
-            type="button"
-            class="rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-            onclick={() => navigationState.navigateToAddons()}
-          >
-            {t('discover.manageAddons')}
-          </button>
         </div>
       {:else if discoverState.status === 'offline' || discoverState.status === 'error'}
         <div class="flex max-w-2xl flex-col items-start gap-2">
@@ -343,6 +340,19 @@
         onPrefetch={(book) => discoverState.prefetchDetail(book)}
         onRetry={() => void discoverState.retryRail(index)}
         onViewAll={() => openRailScope(index)}
+      />
+    {/each}
+    <!--
+      Grouped failure notices go BELOW every rail: the shelves that worked must
+      stay on the first screen, so the reader scrolls to the notice instead of
+      being told about a failure before seeing anything.
+    -->
+    {#each discoverState.railsState.visibleFailedGroups as group (group)}
+      <DiscoverRailGroupNotice
+        {group}
+        {t}
+        onRetry={() => void discoverState.retryRailGroup(group)}
+        onDismiss={() => discoverState.dismissRailGroup(group)}
       />
     {/each}
   {/if}

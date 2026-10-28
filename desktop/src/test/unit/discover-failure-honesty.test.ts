@@ -73,6 +73,12 @@ function scriptedProvider(onSearch: (query: string) => Promise<PagedResult>) {
     supportsFeatured(): boolean {
       return false;
     },
+    async topic(): Promise<PagedResult> {
+      return paged([]);
+    },
+    supportsTopic(): boolean {
+      return false;
+    },
     resolveDownloadUrl(): string {
       throw catalogError('UNAVAILABLE_DOWNLOAD', 'no usable url');
     },
@@ -165,10 +171,13 @@ describe('Discover failure honesty — rail state', () => {
 
   function railsWith(outcome: (query: string) => Promise<PagedResult>) {
     const { provider } = scriptedProvider(outcome);
-    // The plan has four rails and the popular one resolves via `featured`, so
-    // the scripted outcome must cover that path too or it alone would hide.
+    // The plan has four rails: two topic shelves (the `?topic=` door), the popular
+    // shelf (via `featured`) and the opds shelf. The scripted outcome must cover
+    // every door, or a rail would hide instead of failing.
     const withFeatured: CatalogProvider = {
       ...provider,
+      supportsTopic: () => true,
+      topic: (term) => outcome(term),
       featured: () => outcome('featured'),
     };
     return new DiscoverRailsDomainState({ provider: withFeatured, now: pinnedNow });

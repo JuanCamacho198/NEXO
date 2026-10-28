@@ -26,6 +26,7 @@ import {
   type DiscoverRailState,
   type DiscoverRailsDeps,
 } from './DiscoverRailsDomainState.svelte';
+import type { DiscoverRailSource } from './railPlan';
 import { logger } from '$lib/shared/logger/Logger';
 
 export type DiscoverStatus =
@@ -434,6 +435,16 @@ class DiscoverDomainState {
   /** Re-resolve only the rail at `index`; other rails keep their content. */
   async retryRail(index: number): Promise<void> {
     await this.railsState.retryRail(index);
+  }
+
+  /** Re-resolve only the rails of one failed source; other rails are untouched. */
+  async retryRailGroup(group: DiscoverRailSource): Promise<void> {
+    await this.railsState.retryRailGroup(group);
+  }
+
+  /** Hide one grouped failure notice for the rest of the session. */
+  dismissRailGroup(group: DiscoverRailSource): void {
+    this.railsState.dismissRailGroup(group);
   }
 
   /** Open the rail-scoped browse view for a rail header ("Ver todo"). */

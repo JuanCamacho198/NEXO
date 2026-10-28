@@ -40,6 +40,12 @@ function fakeProvider(getDetails: (id: string) => Promise<CatalogBook>): Catalog
     supportsFeatured() {
       return false;
     },
+    async topic() {
+      return { results: [], nexoPage: null, totalCount: 0 };
+    },
+    supportsTopic() {
+      return false;
+    },
     async searchSource() {
       return { results: [], nexoPage: null, totalCount: 0 };
     },
