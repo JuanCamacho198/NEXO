@@ -39,8 +39,6 @@ fun AddonCapabilityBadges(
         DiscoverChipRow(
             chips = capabilities.map { DiscoverChip(label = capabilityLabel(it)) },
             onChipClick = { },
-            chipBackground = NexoColors.surfaceVariant,
-            chipLabelColor = NexoColors.textSecondary,
         )
     }
 }

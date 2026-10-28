@@ -3,7 +3,6 @@ package com.nexo.presentation.feature.discover
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.nexo.data.remote.catalog.BUILTIN_GOOGLEBOOKS
 import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogException
@@ -12,6 +11,7 @@ import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.PagedResult
 import com.nexo.debug.DebugLog
 import com.nexo.debug.SentryMetrics
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.domain.usecase.DownloadImportState
 import com.nexo.presentation.viewmodel.DiscoverDetailStatus
@@ -44,11 +44,15 @@ data class DiscoverSectionUiState(
 /**
  * Backing ViewModel for [DiscoverSectionScreen].
  *
- * Pages through exactly one selector: [sort] (featured rail), [authorTerm]
- * (author shelf, `builtin:googlebooks` search) or [sourceId] (per-source list).
- * Zero or more than one present fails closed with an empty page, so a malformed
- * route can never trigger a composite search or a crash. [term] is the
- * per-source query; U3b drives it, v1 passes nothing.
+ * Pages through exactly one selector: [sort] (featured rail), a Gutendex
+ * [topicTerm] (a rotating topic shelf) or [sourceId] (a per-source list,
+ * optionally narrowed by [term]). Zero or more than one present fails closed
+ * with an empty page, so a malformed route can never trigger a composite search
+ * or a crash.
+ *
+ * [topicTerm] is deliberately NOT [term]: the shelf it pages must go back through
+ * Gutendex's `?topic=` selector, and handing the same words to a free-text search
+ * answers a different (far smaller) page. [term] stays the per-source query.
  */
 class DiscoverSectionViewModel(
     private val catalogProvider: CatalogProvider,
@@ -56,9 +60,10 @@ class DiscoverSectionViewModel(
     private val sort: CatalogFeaturedSort?,
     private val sourceId: String?,
     private val term: String = "",
-    private val authorTerm: String? = null,
+    private val topicTerm: String? = null,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null,
+    private val activeUser: ActiveUserProvider = ActiveUserProvider(),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(DiscoverSectionUiState(sectionTitle = sectionTitle))
     val uiState: StateFlow<DiscoverSectionUiState> = _uiState.asStateFlow()
@@ -168,7 +173,7 @@ class DiscoverSectionViewModel(
         _uiState.update { it.copy(download = DownloadImportState.Downloading(0L, null)) }
         downloadJob =
             viewModelScope.launch(mainDispatcher) {
-                useCase(book).collect { state ->
+                useCase(activeUser.requireUserId(), book).collect { state ->
                     // The synchronous preset above already rendered progress; the
                     // flow's leading Idle would flicker back, so skip it.
                     if (state is DownloadImportState.Idle) return@collect
@@ -266,10 +271,12 @@ class DiscoverSectionViewModel(
 
     private suspend fun fetchPage(page: Int): PagedResult =
         when {
-            sourceId != null && sort == null && authorTerm == null -> catalogProvider.searchSource(sourceId, term, page)
-            sort != null && sourceId == null && authorTerm == null -> catalogProvider.featured(sort, page)
-            authorTerm != null && sourceId == null && sort == null ->
-                catalogProvider.searchSource(BUILTIN_GOOGLEBOOKS, authorTerm, page)
+            // Exactly one selector decides the request. A topic section pages the
+            // SAME `?topic=` selector its rail used: sending those words to a
+            // free-text search would answer a different, far smaller page.
+            topicTerm != null && sourceId == null && sort == null -> catalogProvider.topic(topicTerm, page)
+            sourceId != null && sort == null -> catalogProvider.searchSource(sourceId, term, page)
+            sort != null && sourceId == null -> catalogProvider.featured(sort, page)
             // Zero or multiple selectors: fail closed, never a composite-wide search.
             else -> PagedResult(emptyList(), null, 0)
         }
@@ -286,9 +293,10 @@ class DiscoverSectionViewModelFactory(
     private val sort: CatalogFeaturedSort?,
     private val sourceId: String?,
     private val term: String = "",
-    private val authorTerm: String? = null,
+    private val topicTerm: String? = null,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null,
+    private val activeUser: ActiveUserProvider = ActiveUserProvider(),
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -299,9 +307,10 @@ class DiscoverSectionViewModelFactory(
                 sort = sort,
                 sourceId = sourceId,
                 term = term,
-                authorTerm = authorTerm,
+                topicTerm = topicTerm,
                 mainDispatcher = mainDispatcher,
                 downloadAndImportBookUseCase = downloadAndImportBookUseCase,
+                activeUser = activeUser,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

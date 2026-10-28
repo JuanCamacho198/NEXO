@@ -7,29 +7,48 @@ import org.junit.Test
 import java.time.LocalDate
 
 /**
- * S1: the author rail rotation is a pure function of the LOCAL calendar day.
+ * S1: the topic rail rotation is a pure function of the LOCAL calendar day.
  * The index advances exactly one slot per day, is stable within a day, and the
- * three-entry window wraps at the end of the curated list.
+ * two-entry window wraps at the end of the curated list.
  */
-class AuthorRotationTest {
+class TopicRotationTest {
     @Test
-    fun rotation_hasTenCuratedAuthorsInDesktopOrder() {
-        assertEquals(10, AUTHOR_ROTATION.size)
+    fun rotation_hasTenCuratedTopicsInDesktopOrder() {
+        assertEquals(10, TOPIC_ROTATION.size)
         assertEquals(
             listOf(
-                "doyle",
-                "poe",
-                "wilde",
-                "verne",
-                "kafka",
-                "dickens",
-                "london",
-                "wells",
-                "twain",
-                "melville",
+                "science-fiction",
+                "adventure",
+                "history",
+                "travel",
+                "poetry",
+                "philosophy",
+                "drama",
+                "romance",
+                "mystery",
+                "horror",
             ),
-            AUTHOR_ROTATION.map { it.slug },
+            TOPIC_ROTATION.map { it.slug },
         )
+    }
+
+    @Test
+    fun rotation_pinsTheTwoRequiredLeadingShelves() {
+        // The target names these two explicitly; both are members and both lead.
+        assertEquals("science fiction", TOPIC_ROTATION[0].term)
+        assertEquals("adventure", TOPIC_ROTATION[1].term)
+        // Measured-thinnest term stays last so it never leads a day.
+        assertEquals("horror", TOPIC_ROTATION.last().term)
+    }
+
+    @Test
+    fun rotation_termsAreCleanTopicValues() {
+        for (entry in TOPIC_ROTATION) {
+            assertTrue("term must not be blank", entry.term.isNotBlank())
+            assertTrue("term must not carry a colon: ${entry.term}", ':' !in entry.term)
+            assertNotEquals("popular", entry.term)
+            assertTrue("key must be namespaced: ${entry.titleKey}", entry.titleKey.startsWith("discover_rail_topic_"))
+        }
     }
 
     @Test
@@ -62,22 +81,21 @@ class AuthorRotationTest {
     }
 
     @Test
-    fun entriesFor_returnsThreeConsecutiveAuthorsFromTheStartIndex() {
+    fun entriesFor_returnsTwoConsecutiveTopicsFromTheStartIndex() {
         val date = LocalDate.of(2026, 1, 1)
         val start = startIndexFor(date)
         val entries = entriesFor(date)
         assertEquals(DISCOVER_RAIL_COUNT, entries.size)
-        assertEquals(3, DISCOVER_RAIL_COUNT)
-        assertEquals(AUTHOR_ROTATION[start], entries[0])
-        assertEquals(AUTHOR_ROTATION[(start + 1) % 10], entries[1])
-        assertEquals(AUTHOR_ROTATION[(start + 2) % 10], entries[2])
+        assertEquals(2, DISCOVER_RAIL_COUNT)
+        assertEquals(TOPIC_ROTATION[start], entries[0])
+        assertEquals(TOPIC_ROTATION[(start + 1) % 10], entries[1])
     }
 
     @Test
     fun entriesFor_windowWrapsAroundTheEndOfTheList() {
-        // Day 10 -> index 9 (melville); the window must wrap to doyle and poe.
+        // Day 10 -> index 9 (horror); the window must wrap to science fiction.
         val entries = entriesFor(LocalDate.of(2026, 1, 10))
-        assertEquals(listOf("melville", "doyle", "poe"), entries.map { it.slug })
+        assertEquals(listOf("horror", "science-fiction"), entries.map { it.slug })
     }
 
     @Test
@@ -88,10 +106,10 @@ class AuthorRotationTest {
     }
 
     @Test
-    fun entriesFor_neverRepeatsAnAuthorWithinADay() {
+    fun entriesFor_neverRepeatsATopicWithinADay() {
         for (dayOfYear in 1..20) {
             val slugs = entriesFor(LocalDate.ofYearDay(2026, dayOfYear)).map { it.slug }
-            assertEquals(3, slugs.toSet().size)
+            assertEquals(DISCOVER_RAIL_COUNT, slugs.toSet().size)
         }
     }
 
@@ -100,19 +118,19 @@ class AuthorRotationTest {
         val today = entriesFor(LocalDate.of(2026, 5, 20)).map { it.slug }
         val tomorrow = entriesFor(LocalDate.of(2026, 5, 21)).map { it.slug }
         assertNotEquals(today, tomorrow)
-        assertEquals(today.drop(1), tomorrow.take(2))
+        assertEquals(today.drop(1), tomorrow.take(1))
     }
 
     @Test
     fun entriesFor_supportsACustomCount() {
         val entries = entriesFor(LocalDate.of(2026, 1, 1), count = 1)
         assertEquals(1, entries.size)
-        assertTrue(entries.size <= AUTHOR_ROTATION.size)
+        assertTrue(entries.size <= TOPIC_ROTATION.size)
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun entriesFor_rejectsACountAboveTheListLength() {
-        entriesFor(LocalDate.of(2026, 1, 1), count = AUTHOR_ROTATION.size + 1)
+        entriesFor(LocalDate.of(2026, 1, 1), count = TOPIC_ROTATION.size + 1)
     }
 
     @Test(expected = IllegalArgumentException::class)

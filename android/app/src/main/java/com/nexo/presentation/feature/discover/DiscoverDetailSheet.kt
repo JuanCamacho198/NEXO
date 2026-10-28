@@ -658,8 +658,6 @@ private fun DiscoverDetailChipRow(
         chips = labels.map { DiscoverChip(label = it) },
         onChipClick = { },
         contentPadding = contentPadding,
-        chipBackground = NexoColors.surfaceVariant,
-        chipLabelColor = NexoColors.textSecondary,
     )
 }
 

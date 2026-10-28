@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,14 +21,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
 import com.nexo.data.remote.catalog.CatalogSources
 import com.nexo.data.session.LegalDisclaimerPrefs
 import com.nexo.presentation.feature.legal.LegalNoticeDialog
 import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.NexoDimens
+import com.nexo.presentation.viewmodel.DiscoverRailGroup
 import com.nexo.presentation.viewmodel.DiscoverSourceFilter
 import com.nexo.presentation.viewmodel.DiscoverStatus
 import com.nexo.presentation.viewmodel.DiscoverUiState
@@ -54,7 +62,6 @@ fun DiscoverScreen(
     viewModel: DiscoverViewModel,
     userInitial: String? = null,
     onOpenSection: (DiscoverRailState.Loaded, String) -> Unit = { _, _ -> },
-    onNavigateToSettingsAddons: () -> Unit = {},
     onNavigateToLegalPolicy: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -77,9 +84,7 @@ fun DiscoverScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(contentPadding)
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(contentPadding),
     ) {
         DiscoverHeader(
             title = stringResource(R.string.discover_title),
@@ -88,123 +93,139 @@ fun DiscoverScreen(
             avatarContentDescription = stringResource(R.string.discover_avatar_content_desc),
         )
 
-        DiscoverSearchField(
-            query = uiState.query,
-            isSearching = uiState.isSearching,
-            onQueryChange = viewModel::onQueryChange,
-            onClear = { viewModel.onQueryChange("") },
-            onSearch = viewModel::searchFirstPage,
-        )
-
-        if (uiState.status == DiscoverStatus.IDLE) {
-            DiscoverChipRow(
-                chips = trendingChips,
-                onChipClick = { index ->
-                    val term = trendingChips[index].label
-                    viewModel.onQueryChange(term)
-                    viewModel.searchFirstPage()
-                },
-            )
-        }
-
-        // Source narrowing applies to the merged result list, so the chips are
-        // only meaningful once a search has produced results — plus IDLE, where
-        // the same selection narrows the featured rails instead.
-        if (
-            uiState.sources.isNotEmpty() &&
-            (
-                uiState.status == DiscoverStatus.LOADED ||
-                    uiState.status == DiscoverStatus.LOADING_MORE ||
-                    uiState.status == DiscoverStatus.EMPTY ||
-                    uiState.status == DiscoverStatus.IDLE
-            )
-        ) {
-            DiscoverSourceFilterRow(
-                sources = uiState.sources,
-                selected = uiState.sourceFilter,
-                onSelect = viewModel::setSourceFilter,
-            )
-        }
-
-        Box(
+        Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    .padding(horizontal = NexoDimens.spacingMd, vertical = NexoDimens.spacingMd),
+            verticalArrangement = Arrangement.spacedBy(NexoDimens.spacingMd),
         ) {
-            when (uiState.status) {
-                DiscoverStatus.IDLE ->
-                    DiscoverIdleRails(
-                        rails = uiState.visibleRails,
-                        attributionNames = uiState.attributionNames,
-                        onOpenBook = viewModel::openDetail,
-                        onSeeAll = onOpenSection,
-                        onNavigateToSettingsAddons = onNavigateToSettingsAddons,
-                        sourceName = idleSourceName(uiState),
-                    )
-                DiscoverStatus.LOADING -> DiscoverSkeletonState()
-                DiscoverStatus.EMPTY ->
-                    DiscoverEmptyState(
-                        query = uiState.query,
-                        onSuggestionClick = { term ->
-                            viewModel.onQueryChange(term)
-                            viewModel.searchFirstPage()
-                        },
-                        legalEmpty = isLegalEmpty(uiState),
-                        sourceName = legalEmptySourceName(uiState),
-                    )
-                DiscoverStatus.ERROR -> DiscoverErrorState(onRetry = viewModel::retry)
-                DiscoverStatus.OFFLINE -> DiscoverOfflineState(onRetry = viewModel::retry)
-                DiscoverStatus.LOADED, DiscoverStatus.LOADING_MORE ->
-                    DiscoverResultsGrid(
-                        books = uiState.visibleBooks,
-                        nextPage = uiState.nextPage,
-                        isLoadingMore = uiState.status == DiscoverStatus.LOADING_MORE,
-                        onOpen = viewModel::openDetail,
-                        onLoadNext = viewModel::loadNextPage,
-                        attributionNames = uiState.attributionNames,
-                    )
+            DiscoverSearchField(
+                query = uiState.query,
+                isSearching = uiState.isSearching,
+                onQueryChange = viewModel::onQueryChange,
+                onClear = { viewModel.onQueryChange("") },
+                onSearch = viewModel::searchFirstPage,
+            )
+
+            if (uiState.status == DiscoverStatus.IDLE) {
+                DiscoverChipRow(
+                    chips = trendingChips,
+                    onChipClick = { index ->
+                        val term = trendingChips[index].label
+                        viewModel.onQueryChange(term)
+                        viewModel.searchFirstPage()
+                    },
+                )
+            }
+
+            // Source narrowing applies to the merged result list, so the chips are
+            // only meaningful once a search has produced results — plus IDLE, where
+            // the same selection narrows the featured rails instead.
+            if (
+                uiState.sources.isNotEmpty() &&
+                (
+                    uiState.status == DiscoverStatus.LOADED ||
+                        uiState.status == DiscoverStatus.LOADING_MORE ||
+                        uiState.status == DiscoverStatus.EMPTY ||
+                        uiState.status == DiscoverStatus.IDLE
+                )
+            ) {
+                DiscoverSourceFilterRow(
+                    sources = uiState.sources,
+                    selected = uiState.sourceFilter,
+                    onSelect = viewModel::setSourceFilter,
+                )
+            }
+
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+            ) {
+                when (uiState.status) {
+                    DiscoverStatus.IDLE ->
+                        DiscoverIdleRails(
+                            rails = uiState.visibleRails,
+                            attributionNames = uiState.attributionNames,
+                            onOpenBook = viewModel::openDetail,
+                            onSeeAll = onOpenSection,
+                            sourceName = idleSourceName(uiState),
+                            notices = uiState.visibleRailGroupNotices,
+                            onRetryGroup = viewModel::retryRailGroup,
+                            onDismissGroup = viewModel::dismissRailGroup,
+                            onRetryRail = viewModel::retryRail,
+                        )
+                    DiscoverStatus.LOADING -> DiscoverSkeletonState()
+                    DiscoverStatus.EMPTY ->
+                        DiscoverEmptyState(
+                            query = uiState.query,
+                            onSuggestionClick = { term ->
+                                viewModel.onQueryChange(term)
+                                viewModel.searchFirstPage()
+                            },
+                            legalEmpty = isLegalEmpty(uiState),
+                            sourceName = legalEmptySourceName(uiState),
+                        )
+                    DiscoverStatus.ERROR -> DiscoverErrorState(onRetry = viewModel::retry)
+                    DiscoverStatus.OFFLINE -> DiscoverOfflineState(onRetry = viewModel::retry)
+                    DiscoverStatus.LOADED, DiscoverStatus.LOADING_MORE ->
+                        DiscoverResultsGrid(
+                            books = uiState.visibleBooks,
+                            nextPage = uiState.nextPage,
+                            isLoadingMore = uiState.status == DiscoverStatus.LOADING_MORE,
+                            onOpen = viewModel::openDetail,
+                            onLoadNext = viewModel::loadNextPage,
+                            attributionNames = uiState.attributionNames,
+                        )
+                }
             }
         }
-
-        DiscoverDetailSheet(
-            detail = uiState.detail,
-            detailStatus = uiState.detailStatus,
-            download = uiState.download,
-            onDownload = viewModel::startDownload,
-            onCancelDownload = viewModel::cancelDownload,
-            onDismiss = viewModel::dismissDetail,
-            accessState = uiState.accessState,
-            addonRead = uiState.addonRead,
-            addonReadName = uiState.addonReadName,
-            addonName = detailAddonName(uiState),
-            onOpenAddonRead = { addonId ->
-                viewModel.openAddonRead(
-                    addonId,
-                    uiState.attributionNames[addonId] ?: addonId,
-                )
-            },
-            onAllowAccessConsent = {
-                (uiState.accessState as? AccessResolverState.ConsentRequired)
-                    ?.addonId
-                    ?.let(viewModel::grantAccessConsent)
-            },
-            onDenyAccessConsent = viewModel::denyAccessConsent,
-            onAllowAddonConsent = viewModel::grantAddonReadConsent,
-            onDenyAddonConsent = viewModel::denyAccessConsent,
-            onDismissAddonRead = viewModel::dismissAddonRead,
-            onRetryAddonRead = viewModel::retryAddonRead,
-            onRetryAccess = {
-                uiState.detail?.id?.let(viewModel::openDetail)
-            },
-        )
     }
+
+    DiscoverDetailSheet(
+        detail = uiState.detail,
+        detailStatus = uiState.detailStatus,
+        download = uiState.download,
+        onDownload = viewModel::startDownload,
+        onCancelDownload = viewModel::cancelDownload,
+        onDismiss = viewModel::dismissDetail,
+        accessState = uiState.accessState,
+        addonRead = uiState.addonRead,
+        addonReadName = uiState.addonReadName,
+        addonName = detailAddonName(uiState),
+        onOpenAddonRead = { addonId ->
+            viewModel.openAddonRead(
+                addonId,
+                uiState.attributionNames[addonId] ?: addonId,
+            )
+        },
+        onAllowAccessConsent = {
+            (uiState.accessState as? AccessResolverState.ConsentRequired)
+                ?.addonId
+                ?.let(viewModel::grantAccessConsent)
+        },
+        onDenyAccessConsent = viewModel::denyAccessConsent,
+        onAllowAddonConsent = viewModel::grantAddonReadConsent,
+        onDenyAddonConsent = viewModel::denyAccessConsent,
+        onDismissAddonRead = viewModel::dismissAddonRead,
+        onRetryAddonRead = viewModel::retryAddonRead,
+        onRetryAccess = {
+            uiState.detail?.id?.let(viewModel::openDetail)
+        },
+    )
 }
 
 /**
  * IDLE body: vertically scrollable stack of featured rails. A Hidden rail
  * composes nothing, so a partially servable IDLE shows only the rails that
  * actually resolved.
+ *
+ * The grouped failure notices come LAST, after every shelf: the shelves that
+ * worked must stay on the first screen, so the reader scrolls to the notice
+ * instead of being told about failure before seeing anything.
  *
  * @param sourceName Non-null when a source filter hid every rail: the column
  *   then says so instead of rendering only the addons entry.
@@ -214,9 +235,12 @@ private fun DiscoverIdleRails(
     rails: List<DiscoverRailState>,
     onOpenBook: (String) -> Unit,
     onSeeAll: (DiscoverRailState.Loaded, String) -> Unit,
-    onNavigateToSettingsAddons: () -> Unit,
     attributionNames: Map<String, String> = emptyMap(),
     sourceName: String? = null,
+    notices: List<DiscoverRailGroup> = emptyList(),
+    onRetryGroup: (DiscoverRailGroup) -> Unit = {},
+    onDismissGroup: (DiscoverRailGroup) -> Unit = {},
+    onRetryRail: (Int) -> Unit = {},
 ) {
     Column(
         modifier =
@@ -225,12 +249,13 @@ private fun DiscoverIdleRails(
                 .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        rails.forEach { rail ->
+        rails.forEachIndexed { index, rail ->
             DiscoverRailSection(
                 state = rail,
                 onBookClick = onOpenBook,
                 onSeeAll = onSeeAll,
                 attributionNames = attributionNames,
+                onRetry = { onRetryRail(index) },
             )
         }
         if (sourceName != null && rails.all { it is DiscoverRailState.Hidden }) {
@@ -245,7 +270,60 @@ private fun DiscoverIdleRails(
                         .padding(horizontal = 24.dp),
             )
         }
-        DiscoverManageAddonsEntry(onClick = onNavigateToSettingsAddons)
+        notices.forEach { group ->
+            DiscoverRailGroupNotice(
+                group = group,
+                onRetry = { onRetryGroup(group) },
+                onDismiss = { onDismissGroup(group) },
+            )
+        }
+    }
+}
+
+/**
+ * ONE grouped failure notice: every rail of [group] failed, so the reader is
+ * told which source is down instead of watching the page silently get shorter.
+ *
+ * The copy is real [Text] inside a `role = "status"` live region, so TalkBack
+ * announces the failure without the reader having to hunt for a coloured box.
+ */
+@Composable
+private fun DiscoverRailGroupNotice(
+    group: DiscoverRailGroup,
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val source = stringResource(group.labelRes)
+    val body = stringResource(R.string.discover_rail_group_failed, source)
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = NexoColors.textSecondary,
+        )
+        Row {
+            TextButton(onClick = onRetry) {
+                Text(
+                    text = stringResource(R.string.discover_retry),
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp),
+                    color = NexoColors.textAccent,
+                )
+            }
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.discover_dismiss),
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp),
+                    color = NexoColors.textSecondary,
+                )
+            }
+        }
     }
 }
 
