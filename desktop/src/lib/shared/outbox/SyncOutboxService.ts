@@ -61,12 +61,22 @@ export type OutboxHandler = (
  */
 export type SessionGate = () => Promise<boolean>;
 
+/**
+ * Active owner for the queue. Injected (not imported) so this service stays
+ * free of the auth store; the flush must read it AFTER the session gate, since
+ * the owner changes when an account signs in over another's session.
+ */
+export type UserIdProvider = () => string | null;
+
 const defaultSessionGate: SessionGate = async () => recheckLiveSession();
+
+export const defaultSyncOutboxSessionGate = defaultSessionGate;
 
 export class SyncOutboxService {
   constructor(
     private readonly dao: SyncOutboxDao = new SyncOutboxDao(),
     private readonly gate: SessionGate = defaultSessionGate,
+    private readonly currentUserId: UserIdProvider = () => null,
   ) {}
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private handler: OutboxHandler | null = null;
@@ -167,9 +177,15 @@ export class SyncOutboxService {
       // (60–300s backoff) absorbs RLS-400/401 storms without a hot retry loop.
       if (this.isBreakerPaused()) return;
 
+      // Owner is read after the gate: it must be the account this flush is
+      // authenticated as, not whichever account queued the writes. No owner
+      // means no drain — same skip contract as the gate.
+      const userId = this.currentUserId();
+      if (!userId) return;
+
       gatePassed = true;
 
-      const items = await this.dao.listReady();
+      const items = await this.dao.listReady(userId);
       let hadAnyFailure = false;
 
       // D7 - outbox depth gauge: bucketed, emitted only on bucket change.

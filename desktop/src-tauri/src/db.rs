@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 
-const MIGRATIONS: [(&str, &str); 22] = [
+const MIGRATIONS: [(&str, &str); 23] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
@@ -40,6 +40,7 @@ const MIGRATIONS: [(&str, &str); 22] = [
     ),
     ("0021_notifications", include_str!("../migrations/0021_notifications.sql")),
     ("0022_bookmark_locator", include_str!("../migrations/0022_bookmark_locator.sql")),
+    ("0023_outbox_owner", include_str!("../migrations/0023_outbox_owner.sql")),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
@@ -84,7 +85,9 @@ pub fn open_and_migrate(db_path: &Path) -> AppResult<Connection> {
                     || (name == "0015_dictionary_sync"
                         && has_column(&tx, "dictionary_words", "user_id")?)
                     || (name == "0022_bookmark_locator"
-                        && has_column(&tx, "bookmarks", "cfi_location")?) =>
+                        && has_column(&tx, "bookmarks", "cfi_location")?)
+                    || (name == "0023_outbox_owner"
+                        && has_column(&tx, "sync_outbox", "user_id")?) =>
             {
                 // Existing DBs may already have these columns from pre-tracker launches.
                 // Treat as previously applied once all expected columns are present.

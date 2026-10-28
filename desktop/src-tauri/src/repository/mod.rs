@@ -608,6 +608,7 @@ mod tests {
         connection
             .execute_batch(include_str!("../../migrations/0022_bookmark_locator.sql"))
             .unwrap();
+        connection.execute_batch(include_str!("../../migrations/0023_outbox_owner.sql")).unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {

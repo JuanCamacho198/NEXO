@@ -93,7 +93,7 @@ pub fn add_coalesced_sync_outbox_item_internal(
         "UPDATE sync_outbox
          SET payload_json = ?1, operation = ?2, retry_count = 0, last_error = NULL, next_retry_at = ?3
          WHERE entity_type = ?4 AND entity_id = ?5
-           AND json_extract(payload_json, '$.userId') = ?6
+           AND user_id = ?6
            AND json_extract(payload_json, '$.updatedAt') <= ?7",
         rusqlite::params![payload_json, operation, now, entity_type, entity_id, user_id, updated_at],
     )?;
@@ -101,7 +101,7 @@ pub fn add_coalesced_sync_outbox_item_internal(
     let id = if updated > 0 {
         tx.query_row(
             "SELECT id FROM sync_outbox
-             WHERE entity_type = ?1 AND entity_id = ?2 AND json_extract(payload_json, '$.userId') = ?3
+             WHERE entity_type = ?1 AND entity_id = ?2 AND user_id = ?3
              LIMIT 1",
             rusqlite::params![entity_type, entity_id, user_id],
             |row| row.get::<_, String>(0),
@@ -109,11 +109,11 @@ pub fn add_coalesced_sync_outbox_item_internal(
     } else {
         let id = uuid::Uuid::new_v4().to_string();
         tx.execute(
-            "INSERT INTO sync_outbox (id, entity_type, entity_id, operation, payload_json, created_at, next_retry_at)
-             SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?6
+            "INSERT INTO sync_outbox (id, entity_type, entity_id, operation, payload_json, user_id, created_at, next_retry_at)
+             SELECT ?1, ?2, ?3, ?4, ?5, ?7, ?6, ?6
              WHERE NOT EXISTS (
                SELECT 1 FROM sync_outbox
-               WHERE entity_type = ?2 AND entity_id = ?3 AND json_extract(payload_json, '$.userId') = ?7
+               WHERE entity_type = ?2 AND entity_id = ?3 AND user_id = ?7
              )",
             rusqlite::params![id, entity_type, entity_id, operation, payload_json, now, user_id],
         )?;
@@ -150,20 +150,42 @@ pub fn addCoalescedSyncOutboxItem(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn listSyncOutboxReady(state: State<'_, AppState>) -> Result<Vec<SyncOutboxRowDto>, String> {
+pub fn listSyncOutboxReady(
+    state: State<'_, AppState>,
+    user_id: String,
+) -> Result<Vec<SyncOutboxRowDto>, String> {
+    if user_id.trim().is_empty() {
+        return Err("userId must be a non-empty string".to_string());
+    }
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     let conn = repository.connection();
+    list_sync_outbox_ready_for_user(conn, &user_id)
+}
+
+/// Ready-row read for one owner. Extracted from the command so the owner filter
+/// is testable without a Tauri `State`.
+fn list_sync_outbox_ready_for_user(
+    conn: &rusqlite::Connection,
+    user_id: &str,
+) -> Result<Vec<SyncOutboxRowDto>, String> {
     let now = chrono::Utc::now().to_rfc3339();
+
+    // Rows with no owner are never drained: their payload's `userId` decides who
+    // they belong to, and a row that lacks one may belong to somebody else. The
+    // drain must not block on them either, so they are counted, reported and
+    // left in place.
+    report_ownerless_outbox_rows(conn, &now)?;
+
     let mut statement = conn
         .prepare(
             "SELECT id, entity_type, entity_id, operation, payload_json, retry_count, last_error, created_at, next_retry_at
              FROM sync_outbox
-             WHERE next_retry_at <= ?1 AND retry_count < 50
+             WHERE user_id = ?1 AND next_retry_at <= ?2 AND retry_count < 50
              ORDER BY created_at ASC",
         )
         .map_err(|e| format!("Failed to prepare: {}", e))?;
     let rows = statement
-        .query_map(rusqlite::params![now], |row| {
+        .query_map(rusqlite::params![user_id, now], |row| {
             Ok(SyncOutboxRowDto {
                 id: row.get(0)?,
                 entity_type: row.get(1)?,
@@ -179,6 +201,40 @@ pub fn listSyncOutboxReady(state: State<'_, AppState>) -> Result<Vec<SyncOutboxR
         .map_err(|e| format!("Failed to query: {}", e))?;
     let items = rows.collect::<Result<Vec<_>, _>>().map_err(|e| format!("{}", e))?;
     Ok(items)
+}
+
+/// Count ready rows that have no owner and surface them through the same
+/// failure channel as a failed push (`last_error` + backoff), so an ownerless
+/// row is findable instead of silently invisible. The row is kept: a silent
+/// failure is worse than a visible one, and dropping it would destroy data.
+fn report_ownerless_outbox_rows(conn: &rusqlite::Connection, now: &str) -> Result<(), String> {
+    let ownerless: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM sync_outbox
+             WHERE (user_id IS NULL OR user_id = '')
+               AND next_retry_at <= ?1
+               AND retry_count < 50",
+            rusqlite::params![now],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Failed to count ownerless outbox rows: {}", e))?;
+    if ownerless == 0 {
+        return Ok(());
+    }
+    let next_retry_at = (chrono::Utc::now() + chrono::Duration::seconds(60)).to_rfc3339();
+    conn.execute(
+        "UPDATE sync_outbox
+         SET retry_count = retry_count + 1,
+             last_error = 'outbox row has no owner (payload userId missing); skipped',
+             next_retry_at = ?1
+         WHERE (user_id IS NULL OR user_id = '')
+           AND next_retry_at <= ?2
+           AND retry_count < 50",
+        rusqlite::params![next_retry_at, now],
+    )
+    .map_err(|e| format!("Failed to mark ownerless outbox rows: {}", e))?;
+    eprintln!("sync_outbox: skipped {} ownerless row(s) with no payload userId", ownerless);
+    Ok(())
 }
 
 #[allow(non_snake_case)]
@@ -246,6 +302,7 @@ mod outbox_tests {
     fn outbox_connection() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(include_str!("../../migrations/0013_sync_outbox.sql")).unwrap();
+        conn.execute_batch(include_str!("../../migrations/0023_outbox_owner.sql")).unwrap();
         conn
     }
 
@@ -473,5 +530,95 @@ mod outbox_tests {
             &huge,
         )
         .is_err());
+    }
+
+    fn ready_ids_for(conn: &Connection, user_id: &str) -> Vec<String> {
+        list_sync_outbox_ready_for_user(conn, user_id)
+            .unwrap()
+            .into_iter()
+            .map(|row| row.id)
+            .collect()
+    }
+
+    /// The defect this migration closes: account B's drain must never pick up
+    /// account A's queued writes. Both rows are ready and in the same table.
+    #[test]
+    fn list_sync_outbox_ready_is_scoped_to_one_owner() {
+        let conn = outbox_connection();
+        let a_id = add_coalesced_sync_outbox_item_internal(
+            &conn,
+            "READING_PROGRESS",
+            "book-1",
+            "UPSERT",
+            &progress_payload("user-a", "book-1", "2026-08-07T10:00:00Z"),
+        )
+        .unwrap();
+        let b_id = add_coalesced_sync_outbox_item_internal(
+            &conn,
+            "READING_PROGRESS",
+            "book-2",
+            "UPSERT",
+            &progress_payload("user-b", "book-2", "2026-08-07T10:00:00Z"),
+        )
+        .unwrap();
+
+        assert_eq!(ready_ids_for(&conn, "user-a"), vec![a_id.clone()]);
+        assert_eq!(ready_ids_for(&conn, "user-b"), vec![b_id]);
+        assert_eq!(count_rows(&conn), 2, "a scoped read must never delete another owner's row");
+    }
+
+    /// Ownerless rows are skipped, not drained, and not dropped: the drain stays
+    /// unblocked and the failure is recorded where it can be found.
+    #[test]
+    fn ownerless_rows_are_skipped_and_recorded() {
+        let conn = outbox_connection();
+        conn.execute(
+            "INSERT INTO sync_outbox (id, entity_type, entity_id, operation, payload_json, created_at, next_retry_at)
+             VALUES ('orphan', 'READING_PROGRESS', 'book-9', 'UPSERT', '{\"bookId\":\"book-9\"}', '2026-08-07T09:00:00Z', '2026-08-07T09:00:00Z')",
+            [],
+        )
+        .unwrap();
+        let owned = add_coalesced_sync_outbox_item_internal(
+            &conn,
+            "READING_PROGRESS",
+            "book-1",
+            "UPSERT",
+            &progress_payload("user-a", "book-1", "2026-08-07T10:00:00Z"),
+        )
+        .unwrap();
+
+        assert_eq!(ready_ids_for(&conn, "user-a"), vec![owned], "the orphan must not be drained");
+        let (retry, last_error): (i32, Option<String>) = conn
+            .query_row(
+                "SELECT retry_count, last_error FROM sync_outbox WHERE id = 'orphan'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(retry, 1, "the skipped row must be counted as a failed attempt");
+        assert!(
+            last_error.unwrap_or_default().contains("no owner"),
+            "a skipped row must leave a findable last_error"
+        );
+        assert_eq!(count_rows(&conn), 2, "the orphan must survive the drain");
+    }
+
+    /// Backfill: a row written before 0023 has no `user_id`, but its payload
+    /// names the owner, and that owner must be able to drain it.
+    #[test]
+    fn migration_backfills_owner_from_payload() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(include_str!("../../migrations/0013_sync_outbox.sql")).unwrap();
+        conn.execute(
+            "INSERT INTO sync_outbox (id, entity_type, entity_id, operation, payload_json, created_at, next_retry_at)
+             VALUES ('legacy', 'READING_PROGRESS', 'book-1', 'UPSERT', ?1, '2026-08-07T09:00:00Z', '2026-08-07T09:00:00Z')",
+            [progress_payload("user-a", "book-1", "2026-08-07T09:00:00Z")],
+        )
+        .unwrap();
+
+        conn.execute_batch(include_str!("../../migrations/0023_outbox_owner.sql")).unwrap();
+
+        assert_eq!(ready_ids_for(&conn, "user-a"), vec!["legacy".to_string()]);
+        assert!(ready_ids_for(&conn, "user-b").is_empty());
     }
 }

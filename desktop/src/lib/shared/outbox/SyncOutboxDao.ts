@@ -101,11 +101,13 @@ export class SyncOutboxDao {
   }
 
   /**
-   * Return all rows that are ready for retry (next_retry_at <= now),
-   * ordered by created_at ASC (FIFO). Excludes items with retry_count >= 50.
+   * Return all rows owned by `userId` that are ready for retry
+   * (next_retry_at <= now), ordered by created_at ASC (FIFO). Excludes items
+   * with retry_count >= 50. Scoping the read to one owner is what keeps
+   * account A's queued writes from being flushed under account B's session.
    */
-  async listReady(): Promise<SyncOutboxRow[]> {
-    const rows = await invoke<SyncOutboxRow[]>('listSyncOutboxReady');
+  async listReady(userId: string): Promise<SyncOutboxRow[]> {
+    const rows = await invoke<SyncOutboxRow[]>('listSyncOutboxReady', { userId });
     return rows.map((r) => ({
       ...r,
       operation: r.operation as 'UPSERT' | 'DELETE',

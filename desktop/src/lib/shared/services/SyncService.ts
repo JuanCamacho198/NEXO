@@ -38,7 +38,7 @@ import {
   recordCatalogSyncSuccess,
 } from '$lib/shared/stores/catalogSyncStatus.svelte';
 import { notify } from '$lib/shared/stores/notificationCenter.svelte';
-import { SyncOutboxService } from '../outbox/SyncOutboxService';
+import { SyncOutboxService, defaultSyncOutboxSessionGate } from '../outbox/SyncOutboxService';
 import { SyncOutboxDao } from '../outbox/SyncOutboxDao';
 import type { SyncHealth, RealtimeStatus } from '$lib/shared/types/book';
 import type {
@@ -155,7 +155,11 @@ export class SyncService {
   static setupOutboxProcessor(): void {
     if (this.outboxService) return;
 
-    this.outboxService = new SyncOutboxService();
+    this.outboxService = new SyncOutboxService(
+      new SyncOutboxDao(),
+      defaultSyncOutboxSessionGate,
+      () => authState.userId,
+    );
     this.outboxService.setHandler(async (entityType, entityId, operation, payloadJson) => {
       // Gate (SR-1): never process a row without a live session. Silent skip —
       // no throw (a throw would markFailed + backoff, feeding the retry loop)
@@ -499,8 +503,11 @@ export class SyncService {
 
   static async getSyncHealth(): Promise<SyncHealth> {
     let pendingCount = 0;
+    const pendingUserId = authState.userId;
     try {
-      const rows = await this.healthDao.listReady();
+      // Pending count is this owner's queue: counting another account's rows
+      // would report a sync backlog the user cannot act on.
+      const rows = pendingUserId ? await this.healthDao.listReady(pendingUserId) : [];
       pendingCount = rows.length;
     } catch {
       pendingCount = 0;

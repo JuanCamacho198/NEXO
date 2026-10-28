@@ -44,6 +44,18 @@ function makeDao(items: SyncOutboxRow[]): SyncOutboxDao {
 /** Gate always open — the default per-test stance so existing flush behavior is unchanged. */
 const gateOpen = async () => true;
 
+/** Owner of the queue under test. A flush with no owner drains nothing. */
+const owner = () => 'user-test';
+
+/** Test factory: every construction wants an owner; only the gate varies. */
+function makeService(
+  dao: SyncOutboxDao,
+  gate: () => Promise<boolean> = gateOpen,
+  userId: () => string | null = owner,
+): SyncOutboxService {
+  return new SyncOutboxService(dao, gate, userId);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockRecheckLiveSession.mockResolvedValue(true);
@@ -56,7 +68,7 @@ describe('SyncOutboxService', () => {
     const handler: OutboxHandler = vi
       .fn()
       .mockRejectedValue(new Error('Unsupported outbox entity: UNSUPPORTED'));
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     service.setHandler(handler);
 
     await service.flush();
@@ -69,7 +81,7 @@ describe('SyncOutboxService', () => {
   it('deletes an item only after its handler succeeds', async () => {
     const dao = makeDao([row('BOOK')]);
     const handler: OutboxHandler = vi.fn().mockResolvedValue(undefined);
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     service.setHandler(handler);
 
     await service.flush();
@@ -83,7 +95,7 @@ describe('SyncOutboxService — live-session flush gate (SR-1.1)', () => {
   it('skips the ENTIRE flush when gated: rows keep retry state, no request, no markFailed, no prune', async () => {
     const dao = makeDao([row('READING_PROGRESS')]);
     const handler: OutboxHandler = vi.fn();
-    const service = new SyncOutboxService(dao, async () => false);
+    const service = makeService(dao, async () => false);
     service.setHandler(handler);
 
     await service.flush();
@@ -98,7 +110,7 @@ describe('SyncOutboxService — live-session flush gate (SR-1.1)', () => {
   it('skips the flush when the re-check finds no live session (stale without event, DA-1.2)', async () => {
     mockRecheckLiveSession.mockResolvedValue(false);
     const dao = makeDao([row('READING_PROGRESS')]);
-    const service = new SyncOutboxService(dao); // default gate → recheckLiveSession
+    const service = new SyncOutboxService(dao, undefined, owner); // default gate → recheckLiveSession
     service.setHandler(vi.fn());
 
     await service.flush();
@@ -111,7 +123,7 @@ describe('SyncOutboxService — live-session flush gate (SR-1.1)', () => {
     let sessionAlive = false;
     const dao = makeDao([row('BOOK')]);
     const handler: OutboxHandler = vi.fn().mockResolvedValue(undefined);
-    const service = new SyncOutboxService(dao, async () => sessionAlive);
+    const service = makeService(dao, async () => sessionAlive);
     service.setHandler(handler);
 
     await service.flush(); // gated → skip
@@ -134,7 +146,7 @@ describe('SyncOutboxService — live-session flush gate (SR-1.1)', () => {
         retryable: false,
       },
     );
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     service.setHandler(vi.fn().mockRejectedValue(authError));
 
     await service.flush();
@@ -146,7 +158,7 @@ describe('SyncOutboxService — live-session flush gate (SR-1.1)', () => {
 
   it('leaves non-auth failures to the existing backoff path without touching the banner', async () => {
     const dao = makeDao([row('BOOK')]);
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     service.setHandler(vi.fn().mockRejectedValue(new Error('network drop')));
 
     await service.flush();
@@ -174,7 +186,7 @@ describe('SyncOutboxService — auth circuit breaker (D4, SR-2.1/4.2)', () => {
 
   it('arms the breaker on a PostgrestError 400 and pauses the next flush entirely (SR-2.1)', async () => {
     const dao = makeDao([row('READING_PROGRESS')]);
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     service.setHandler(vi.fn().mockRejectedValue(authError400()));
 
     await service.flush();
@@ -195,7 +207,7 @@ describe('SyncOutboxService — auth circuit breaker (D4, SR-2.1/4.2)', () => {
 
   it('backs off 60 → 120 → 240 → 300s cap (D4 pause formula)', async () => {
     const dao = makeDao([row('READING_PROGRESS')]);
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     const failingHandler = vi.fn().mockRejectedValue(authError401());
     service.setHandler(failingHandler);
 
@@ -234,7 +246,7 @@ describe('SyncOutboxService — auth circuit breaker (D4, SR-2.1/4.2)', () => {
 
   it('resets on a fully-successful flush (D4)', async () => {
     const dao = makeDao([row('READING_PROGRESS')]);
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     service.setHandler(vi.fn().mockRejectedValue(authExpired()));
 
     await service.flush();
@@ -252,7 +264,7 @@ describe('SyncOutboxService — auth circuit breaker (D4, SR-2.1/4.2)', () => {
 
   it('resets via resetAuthBreaker() — wired to SIGNED_IN/TOKEN_REFRESHED (D4)', async () => {
     const dao = makeDao([row('READING_PROGRESS')]);
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     service.setHandler(vi.fn().mockRejectedValue(authError400()));
 
     await service.flush();
@@ -271,7 +283,7 @@ describe('SyncOutboxService — auth circuit breaker (D4, SR-2.1/4.2)', () => {
   it('never drops rows while the breaker pauses (SR-4.2)', async () => {
     const items = [row('READING_PROGRESS'), row('BOOK')];
     const dao = makeDao(items);
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     // First row auth-fails; second row would succeed if reached.
     let calls = 0;
     service.setHandler(async () => {
@@ -292,7 +304,7 @@ describe('SyncOutboxService — auth circuit breaker (D4, SR-2.1/4.2)', () => {
 
   it('does NOT arm the breaker on non-auth failures (R2 narrow classification)', async () => {
     const dao = makeDao([row('BOOK')]);
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     service.setHandler(vi.fn().mockRejectedValue(new Error('network drop')));
 
     await service.flush();
@@ -303,7 +315,7 @@ describe('SyncOutboxService — auth circuit breaker (D4, SR-2.1/4.2)', () => {
 
   it('does NOT arm on PostgrestError 500 (only 400/401 are auth-class)', async () => {
     const dao = makeDao([row('BOOK')]);
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     service.setHandler(
       vi.fn().mockRejectedValue(Object.assign(new Error('server error'), { status: 500 })),
     );
@@ -321,7 +333,7 @@ describe('SyncOutboxService — BOOK catalog failure status (aggregate, retry un
 
   it('records a BOOK handler failure with its typed code and clears it on a later success', async () => {
     const dao = makeDao([row('BOOK')]);
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     service.setHandler(vi.fn().mockRejectedValue(new Error('network drop')));
 
     await service.flush();
@@ -340,12 +352,35 @@ describe('SyncOutboxService — BOOK catalog failure status (aggregate, retry un
 
   it('leaves the catalog status alone for non-BOOK failures', async () => {
     const dao = makeDao([row('READING_PROGRESS')]);
-    const service = new SyncOutboxService(dao, gateOpen);
+    const service = makeService(dao);
     service.setHandler(vi.fn().mockRejectedValue(new Error('network drop')));
 
     await service.flush();
 
     expect(dao.markFailed).toHaveBeenCalledWith('row-1', 'network drop');
     expect(catalogSyncStatus.report).toBeNull();
+  });
+
+  it('scopes the drain to the active owner', async () => {
+    const dao = makeDao([]);
+    const service = makeService(dao, gateOpen, () => 'user-b');
+    service.setHandler(vi.fn().mockResolvedValue(undefined));
+
+    await service.flush();
+
+    // The owner is what the DAO is asked for — never "everything".
+    expect(dao.listReady).toHaveBeenCalledWith('user-b');
+  });
+
+  it('drains nothing when there is no active owner', async () => {
+    const dao = makeDao([row('BOOK')]);
+    const handler = vi.fn().mockResolvedValue(undefined);
+    const service = makeService(dao, gateOpen, () => null);
+    service.setHandler(handler);
+
+    await service.flush();
+
+    expect(dao.listReady).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
   });
 });
