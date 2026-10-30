@@ -470,6 +470,10 @@ dependencies {
 
     implementation(libs.bundles.room)
     ksp(libs.room.compiler)
+    // Bundled SQLite driver (SQLite compiled with FTS5). The platform SQLite has
+    // no fts5 module, so MIGRATION_15_16 fails at open time on every real device;
+    // this driver is set on the production and test Room builders.
+    implementation(libs.androidx.sqlite.bundled)
     // SDD android-tooling-hygiene WS2a slice 4: Hilt compiler via KSP ALONGSIDE
     // (not replacing) the Room compiler — one processor addition per the
     // KSP-ordering rule; both processors must run on assemble.

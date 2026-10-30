@@ -3,6 +3,7 @@ package com.nexo.di.modules
 import android.content.Context
 import android.util.Log
 import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.nexo.BuildConfig
 import com.nexo.data.local.AppDatabase
 import com.nexo.data.local.AppDatabaseMigrations
@@ -35,6 +36,10 @@ class DatabaseModule(
                 klass = AppDatabase::class.java,
                 name = "nexo.db",
             ).addMigrations(*AppDatabaseMigrations.ALL)
+            // Bundled SQLite is compiled with SQLITE_ENABLE_FTS5; Android's
+            // platform SQLite is not, so MIGRATION_15_16's fts5 virtual table
+            // cannot be created on any API level without this driver.
+            .setDriver(BundledSQLiteDriver())
             .let { builder ->
                 if (BuildConfig.DEBUG) {
                     builder.fallbackToDestructiveMigration(dropAllTables = true)

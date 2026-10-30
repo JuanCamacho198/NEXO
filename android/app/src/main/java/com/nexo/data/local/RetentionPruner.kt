@@ -1,5 +1,7 @@
 package com.nexo.data.local
 
+import androidx.room.execSQL
+import androidx.room.useWriterConnection
 import androidx.room.withTransaction
 
 /**
@@ -40,7 +42,7 @@ class RetentionPruner(
                 }
                 Report(books = books, highlights = highlights, bookmarks = bookmarks)
             }
-        database.openHelper.writableDatabase.execSQL("VACUUM")
+        database.useWriterConnection { it.execSQL("VACUUM") }
         return report
     }
 

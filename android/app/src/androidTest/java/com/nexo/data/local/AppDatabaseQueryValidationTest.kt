@@ -4,8 +4,11 @@ import androidx.paging.PagingSource
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.testing.MigrationTestHelper
+import androidx.room.useReaderConnection
+import androidx.room.useWriterConnection
 import androidx.sqlite.db.SupportSQLiteDatabase
-import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.execSQL
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.nexo.data.local.entity.BookEntity
@@ -44,8 +47,9 @@ class AppDatabaseQueryValidationTest {
     val migrationHelper =
         MigrationTestHelper(
             InstrumentationRegistry.getInstrumentation(),
-            AppDatabase::class.java.canonicalName,
-            FrameworkSQLiteOpenHelperFactory(),
+            InstrumentationRegistry.getInstrumentation().targetContext.getDatabasePath("query-validation-migration"),
+            BundledSQLiteDriver(),
+            AppDatabase::class,
         )
 
     private lateinit var db: AppDatabase
@@ -98,7 +102,8 @@ class AppDatabaseQueryValidationTest {
             .inMemoryDatabaseBuilder(
                 InstrumentationRegistry.getInstrumentation().targetContext,
                 AppDatabase::class.java,
-            ).allowMainThreadQueries()
+            ).setDriver(BundledSQLiteDriver())
+            .allowMainThreadQueries()
             .addCallback(
                 object : RoomDatabase.Callback() {
                     override fun onCreate(connection: SupportSQLiteDatabase) {
@@ -144,16 +149,18 @@ class AppDatabaseQueryValidationTest {
      * Asserts that EXPLAIN QUERY PLAN for [query] uses [expectedIndex] in its detail column.
      * Uses substring match on `USING INDEX <expectedIndex>` to be robust to formatting variations.
      */
-    private fun assertUsesIndex(
+    private suspend fun assertUsesIndex(
         query: String,
         expectedIndex: String,
     ) {
         val details = mutableListOf<String>()
-        db.openHelper.writableDatabase.query("EXPLAIN QUERY PLAN $query").use { cursor ->
-            val detailCol = cursor.getColumnIndex("detail")
-            check(detailCol >= 0) { "EXPLAIN QUERY PLAN did not return a 'detail' column" }
-            while (cursor.moveToNext()) {
-                details += cursor.getString(detailCol)
+        db.useReaderConnection { connection ->
+            connection.usePrepared("EXPLAIN QUERY PLAN $query") { statement ->
+                val detailCol = statement.getColumnNames().indexOf("detail")
+                check(detailCol >= 0) { "EXPLAIN QUERY PLAN did not return a 'detail' column" }
+                while (statement.step()) {
+                    details += statement.getText(detailCol)
+                }
             }
         }
         val planOutput = details.joinToString("\n")
@@ -163,6 +170,15 @@ class AppDatabaseQueryValidationTest {
                 "but got plan:\n$planOutput",
             details.any { it.contains(needle) },
         )
+    }
+
+    private suspend fun anyRow(sql: String): Boolean =
+        db.useReaderConnection { connection ->
+            connection.usePrepared(sql) { it.step() }
+        }
+
+    private suspend fun execWriter(sql: String) {
+        db.useWriterConnection { it.usePrepared(sql) { statement -> statement.step() } }
     }
 
     // ────────────────────── Phase 2: Composite Indexes ──────────────────────
@@ -390,17 +406,10 @@ class AppDatabaseQueryValidationTest {
                 ),
             )
 
-            var found = false
-            db.openHelper.writableDatabase
-                .query(
+            val found =
+                anyRow(
                     "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'triggerInsert'",
-                ).use { cursor ->
-                    while (cursor.moveToNext()) {
-                        if ("triggerInsert" == cursor.getString(0)) {
-                            found = true
-                        }
-                    }
-                }
+                )
             assertTrue("dict_ai trigger should populate dictionary_words_fts on INSERT", found)
         }
 
@@ -423,25 +432,19 @@ class AppDatabaseQueryValidationTest {
             )
 
             // Sanity: present in FTS5 after insert
-            var presentAfterInsert = false
-            db.openHelper.writableDatabase
-                .query(
+            val presentAfterInsert =
+                anyRow(
                     "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH '$word'",
-                ).use { cursor ->
-                    if (cursor.moveToFirst()) presentAfterInsert = true
-                }
+                )
             assertTrue("Word should be present in FTS5 after insert", presentAfterInsert)
 
             // R9: delete via DAO, then verify the FTS5 row is gone
             db.dictionaryWordDao().delete(wordId, SEED_USER)
 
-            var presentAfterDelete = false
-            db.openHelper.writableDatabase
-                .query(
+            val presentAfterDelete =
+                anyRow(
                     "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH '$word'",
-                ).use { cursor ->
-                    if (cursor.moveToFirst()) presentAfterDelete = true
-                }
+                )
             assertFalse("dict_ad trigger should remove word from FTS5 on DELETE", presentAfterDelete)
         }
 
@@ -463,26 +466,18 @@ class AppDatabaseQueryValidationTest {
             )
 
             // R10: update word column, assert old value gone, new value present
-            db.openHelper.writableDatabase.execSQL(
-                "UPDATE dictionary_words SET word = 'newword' WHERE id = '$wordId'",
-            )
+            execWriter("UPDATE dictionary_words SET word = 'newword' WHERE id = '$wordId'")
 
-            var oldFound = false
-            db.openHelper.writableDatabase
-                .query(
+            val oldFound =
+                anyRow(
                     "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'oldword'",
-                ).use { cursor ->
-                    if (cursor.moveToFirst()) oldFound = true
-                }
+                )
             assertFalse("dict_au trigger should remove old value from FTS5 on UPDATE", oldFound)
 
-            var newFound = false
-            db.openHelper.writableDatabase
-                .query(
+            val newFound =
+                anyRow(
                     "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'newword'",
-                ).use { cursor ->
-                    if (cursor.moveToFirst()) newFound = true
-                }
+                )
             assertTrue("dict_au trigger should add new value to FTS5 on UPDATE", newFound)
         }
 
@@ -497,13 +492,16 @@ class AppDatabaseQueryValidationTest {
     fun dictionaryWords_exposeTheTenEvidenceColumnsAsNullableText() =
         runTest {
             val columns = mutableMapOf<String, Pair<String, Boolean>>()
-            db.openHelper.writableDatabase.query("PRAGMA table_info(dictionary_words)").use { cursor ->
-                val nameIndex = cursor.getColumnIndex("name")
-                val typeIndex = cursor.getColumnIndex("type")
-                val notNullIndex = cursor.getColumnIndex("notnull")
-                while (cursor.moveToNext()) {
-                    columns[cursor.getString(nameIndex)] =
-                        cursor.getString(typeIndex).uppercase() to (cursor.getInt(notNullIndex) != 0)
+            db.useReaderConnection { connection ->
+                connection.usePrepared("PRAGMA table_info(dictionary_words)") { statement ->
+                    val names = statement.getColumnNames()
+                    val nameIndex = names.indexOf("name")
+                    val typeIndex = names.indexOf("type")
+                    val notNullIndex = names.indexOf("notnull")
+                    while (statement.step()) {
+                        columns[statement.getText(nameIndex)] =
+                            statement.getText(typeIndex).uppercase() to (statement.getInt(notNullIndex) != 0)
+                    }
                 }
             }
 
@@ -681,9 +679,8 @@ class AppDatabaseQueryValidationTest {
     fun migrate15To16_indexPlansOnMigratedData() {
         // R13: run MIGRATION_15_16 from a v15 schema with seed data,
         // then verify index plans on the migrated DB.
-        val dbName = "query-validation-migration"
 
-        migrationHelper.createDatabase(dbName, 15).apply {
+        migrationHelper.createDatabase(15).apply {
             // Minimal v15 schema — must include ALL tables the MIGRATION_15_16
             // touches (CREATE INDEX / DROP INDEX / INSERT...SELECT). Tables
             // missing from the seed would cause the migration to fail with
@@ -824,7 +821,7 @@ class AppDatabaseQueryValidationTest {
                 """.trimIndent(),
             )
 
-            // Defensive v15→v28 fixture. `createDatabase(dbName, 15)` materializes the real v15
+            // Defensive v15→v28 fixture. `createDatabase(15)` materializes the real v15
             // table from 15.json, so this `IF NOT EXISTS` statement is a no-op on device; it is kept
             // in step with the current `DictionaryWordEntity` (the nine rich-entry columns) and the
             // seed INSERT names its columns explicitly so it stays valid either way.
@@ -858,10 +855,8 @@ class AppDatabaseQueryValidationTest {
 
         val migrated =
             migrationHelper.runMigrationsAndValidate(
-                dbName,
                 16,
-                true,
-                AppDatabaseMigrations.MIGRATION_15_16,
+                listOf(AppDatabaseMigrations.MIGRATION_15_16),
             )
 
         // Helper local to the test: run EXPLAIN QUERY PLAN on the migrated DB
@@ -870,11 +865,11 @@ class AppDatabaseQueryValidationTest {
             expectedIndex: String,
         ) {
             val details = mutableListOf<String>()
-            migrated.query("EXPLAIN QUERY PLAN $query").use { cursor ->
-                val detailCol = cursor.getColumnIndex("detail")
+            migrated.prepare("EXPLAIN QUERY PLAN $query").use { statement ->
+                val detailCol = statement.getColumnNames().indexOf("detail")
                 check(detailCol >= 0) { "EXPLAIN QUERY PLAN did not return a 'detail' column" }
-                while (cursor.moveToNext()) {
-                    details += cursor.getString(detailCol)
+                while (statement.step()) {
+                    details += statement.getText(detailCol)
                 }
             }
             val needle = "USING INDEX $expectedIndex"
@@ -912,13 +907,11 @@ class AppDatabaseQueryValidationTest {
                 "VALUES ('md-2', 'postmigration', 7000, 'inserted after migration')",
         )
 
-        var ftsFound = false
-        migrated
-            .query(
-                "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'postmigration'",
-            ).use { cursor ->
-                if (cursor.moveToFirst()) ftsFound = true
-            }
+        val ftsFound =
+            migrated
+                .prepare(
+                    "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'postmigration'",
+                ).use { it.step() }
         assertTrue(
             "After migration, FTS5 triggers should fire on new INSERTs into dictionary_words",
             ftsFound,
