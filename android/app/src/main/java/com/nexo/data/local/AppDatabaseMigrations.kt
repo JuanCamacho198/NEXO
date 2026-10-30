@@ -144,6 +144,11 @@ object AppDatabaseMigrations {
                 db.execSQL("DROP INDEX IF EXISTS index_highlights_book_id")
                 db.execSQL("DROP INDEX IF EXISTS index_bookmarks_book_id")
 
+                // 16.json (and every schema from v16 on) declares index_reading_stats_book_id,
+                // but nothing created it before MIGRATION_33_34. Every validation between v16
+                // and v33 therefore expected an index that did not exist.
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_reading_stats_book_id ON reading_stats(book_id)")
+
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_highlights_book_id_deleted_at ON highlights(book_id, deleted_at)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_bookmarks_book_id_deleted_at ON bookmarks(book_id, deleted_at)")
@@ -356,6 +361,42 @@ object AppDatabaseMigrations {
         object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE books ADD COLUMN deleted_at INTEGER")
+
+                // The v5 schema (5.json) declares these four tables, but the migration chain
+                // never created them. A v4 database upgraded through this migration therefore
+                // lacked highlights/bookmarks/sync_outbox/sync_file_mappings, and every
+                // runMigrationsAndValidate at v5+ failed with "Migration didn't properly
+                // handle: highlights". These are the v5 shapes, not the current ones:
+                // later migrations (6, 9, 10, 11, 15, ...) reshape them further.
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `highlights` (`id` TEXT NOT NULL, `book_id` TEXT NOT NULL, `cfi_range` TEXT NOT NULL, `text_content` TEXT NOT NULL, `note` TEXT, `color` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_highlights_book_id ON highlights(book_id)",
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `bookmarks` (`id` TEXT NOT NULL, `book_id` TEXT NOT NULL, `cfi_location` TEXT NOT NULL, `title_or_snippet` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_bookmarks_book_id ON bookmarks(book_id)",
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `sync_outbox` (`id` TEXT NOT NULL, `entity_type` TEXT NOT NULL, `entity_id` TEXT NOT NULL, `operation` TEXT NOT NULL, `payload` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `retry_count` INTEGER NOT NULL, `last_error` TEXT, PRIMARY KEY(`id`))
+                    """.trimIndent(),
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `sync_file_mappings` (`remote_path` TEXT NOT NULL, `user_id` TEXT NOT NULL, `book_id` TEXT NOT NULL, `local_path` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`remote_path`))
+                    """.trimIndent(),
+                )
             }
         }
 
