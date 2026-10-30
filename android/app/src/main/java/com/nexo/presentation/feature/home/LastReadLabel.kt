@@ -17,13 +17,23 @@ sealed interface LastReadLabel {
     enum class Kind { JustNow, HoursAgo, Yesterday, DaysAgo }
 
     data object JustNow : LastReadLabel
-    data class HoursAgo(val hours: Int) : LastReadLabel
+
+    data class HoursAgo(
+        val hours: Int,
+    ) : LastReadLabel
+
     data object Yesterday : LastReadLabel
-    data class DaysAgo(val days: Int) : LastReadLabel
+
+    data class DaysAgo(
+        val days: Int,
+    ) : LastReadLabel
 
     /** Null when there is nothing to show — no progress timestamp at all. */
     companion object {
-        fun from(updatedAtEpochMillis: Long?, nowEpochMillis: Long): LastReadLabel? {
+        fun from(
+            updatedAtEpochMillis: Long?,
+            nowEpochMillis: Long,
+        ): LastReadLabel? {
             if (updatedAtEpochMillis == null) return null
             // Clock skew: a future timestamp is treated as "just now", never a negative count.
             val elapsed = (nowEpochMillis - updatedAtEpochMillis).coerceAtLeast(0L)
@@ -38,16 +48,18 @@ sealed interface LastReadLabel {
 }
 
 @StringRes
-fun LastReadLabel.stringRes(): Int = when (this) {
-    is LastReadLabel.JustNow -> R.string.home_last_read_just_now
-    is LastReadLabel.HoursAgo -> R.string.home_last_read_hours_ago
-    is LastReadLabel.Yesterday -> R.string.home_last_read_yesterday
-    is LastReadLabel.DaysAgo -> R.string.home_last_read_days_ago
-}
+fun LastReadLabel.stringRes(): Int =
+    when (this) {
+        is LastReadLabel.JustNow -> R.string.home_last_read_just_now
+        is LastReadLabel.HoursAgo -> R.string.home_last_read_hours_ago
+        is LastReadLabel.Yesterday -> R.string.home_last_read_yesterday
+        is LastReadLabel.DaysAgo -> R.string.home_last_read_days_ago
+    }
 
 /** Format arg for [stringRes], or null for the arg-less buckets. */
-fun LastReadLabel.formatArg(): Int? = when (this) {
-    is LastReadLabel.HoursAgo -> hours
-    is LastReadLabel.DaysAgo -> days
-    else -> null
-}
+fun LastReadLabel.formatArg(): Int? =
+    when (this) {
+        is LastReadLabel.HoursAgo -> hours
+        is LastReadLabel.DaysAgo -> days
+        else -> null
+    }

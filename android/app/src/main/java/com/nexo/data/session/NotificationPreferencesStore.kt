@@ -27,8 +27,9 @@ class NotificationPreferencesStore(
 
     /** @return the stored preferences, or defaults when absent/corrupted/no owner. */
     fun load(): NotificationPreferences {
-        val prefs = AccountPreferences.open(appContext, PREFS_NAME, activeUser)
-            ?: return NotificationPreferences.DEFAULT
+        val prefs =
+            AccountPreferences.open(appContext, PREFS_NAME, activeUser)
+                ?: return NotificationPreferences.DEFAULT
         val raw = prefs.getString(KEY_PREFERENCES, null) ?: return NotificationPreferences.DEFAULT
         val parsed =
             runCatching { jsonToMap(JSONObject(raw)) }.getOrNull()

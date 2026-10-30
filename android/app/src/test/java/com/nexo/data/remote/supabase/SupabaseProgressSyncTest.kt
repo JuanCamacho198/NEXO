@@ -1,11 +1,6 @@
 package com.nexo.data.remote.supabase
 
-import com.nexo.data.local.dao.BookDao
-import com.nexo.data.local.dao.HighlightDao
 import com.nexo.data.local.dao.ReadingProgressDao
-import com.nexo.data.local.dao.ReadingSessionDao
-import com.nexo.data.local.dao.StoredBookPath
-import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.HighlightEntity
 import com.nexo.data.local.entity.ReadingProgressEntity
@@ -24,10 +19,7 @@ import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -870,7 +862,3 @@ class SupabaseProgressSyncTest {
             userId = TEST_USER_ID,
         )
 }
-
-
-
-

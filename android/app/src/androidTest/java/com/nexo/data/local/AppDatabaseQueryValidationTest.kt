@@ -356,7 +356,7 @@ class AppDatabaseQueryValidationTest {
                     sourceBookAuthor = "A. Author",
                     sourceChapter = "Chapter 1",
                     sourceLocator = "epubcfi(/6/4!/4/2/2)",
-                     userId = SEED_USER,
+                    userId = SEED_USER,
                 ),
             )
 
@@ -386,7 +386,7 @@ class AppDatabaseQueryValidationTest {
                     sourceBookAuthor = "T. Author",
                     sourceChapter = "Chapter 2",
                     sourceLocator = "epubcfi(/6/8!/4/2/2)",
-                     userId = SEED_USER,
+                    userId = SEED_USER,
                 ),
             )
 
@@ -418,7 +418,7 @@ class AppDatabaseQueryValidationTest {
                     partOfSpeech = "noun",
                     phonetic = "/ˈtrɪɡər/",
                     example = "delete the row",
-                     userId = SEED_USER,
+                    userId = SEED_USER,
                 ),
             )
 
@@ -458,7 +458,7 @@ class AppDatabaseQueryValidationTest {
                     partOfSpeech = "noun",
                     phonetic = "/oʊld/",
                     example = "an old example",
-                     userId = SEED_USER,
+                    userId = SEED_USER,
                 ),
             )
 
@@ -534,7 +534,7 @@ class AppDatabaseQueryValidationTest {
                     sourceBookAuthor = "Homero",
                     sourceChapter = "Capítulo III",
                     sourceLocator = "epubcfi(/6/10!/4/2/4)",
-                     userId = SEED_USER,
+                    userId = SEED_USER,
                 ),
             )
 
@@ -568,7 +568,7 @@ class AppDatabaseQueryValidationTest {
                         filePath = "/pb$i.epub",
                         format = "epub",
                         updatedAtEpochMillis = i.toLong() * 1000L,
-                         userId = SEED_USER,
+                        userId = SEED_USER,
                     )
                 }
             db.bookDao().upsertAll(books)
@@ -624,7 +624,7 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/hpb.epub",
                     format = "epub",
                     updatedAtEpochMillis = 1L,
-                     userId = SEED_USER,
+                    userId = SEED_USER,
                 ),
             )
             val highlights =
@@ -638,7 +638,7 @@ class AppDatabaseQueryValidationTest {
                         color = "yellow",
                         updatedAtEpochMillis = i.toLong() * 1000L,
                         deletedAtEpochMillis = null,
-                         userId = SEED_USER,
+                        userId = SEED_USER,
                     )
                 }
             db.highlightDao().upsertAll(highlights)
@@ -975,5 +975,3 @@ class AppDatabaseQueryValidationTest {
         assertNotNull(db.dictionaryWordDao())
     }
 }
-
-

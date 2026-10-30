@@ -147,4 +147,3 @@ class GoogleDriveSyncServiceTest {
             assertEquals("SYNC_DISABLED", (r.exceptionOrNull() as AppError).code)
         }
 }
-

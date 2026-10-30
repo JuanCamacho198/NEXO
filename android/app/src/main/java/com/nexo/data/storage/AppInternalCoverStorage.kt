@@ -31,8 +31,9 @@ class AppInternalCoverStorage(
     ): Result<String> =
         runCatching {
             withContext(Dispatchers.IO) {
-                val userId = activeUser.currentUserId()
-                    ?: throw IllegalStateException("No active account: covers are not persisted on the anonymous path (D5)")
+                val userId =
+                    activeUser.currentUserId()
+                        ?: throw IllegalStateException("No active account: covers are not persisted on the anonymous path (D5)")
                 val coverFile = layout.coverFile(userId, bookId)
                 coverFile.parentFile?.mkdirs()
                 coverFile.writeBytes(coverBytes)

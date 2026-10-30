@@ -374,4 +374,3 @@ class StorageRepositoryImplTest {
         override suspend fun awaitSettled(): Boolean = settled
     }
 }
-

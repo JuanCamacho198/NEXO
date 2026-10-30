@@ -45,8 +45,7 @@ class NotificationPreferencesStoreTest {
             .getSharedPreferences(
                 "nexo_notification_preferences__${TEST_USER_ID}",
                 Context.MODE_PRIVATE,
-            )
-            .edit()
+            ).edit()
             .putString("preferences", "{ this is not json")
             .commit()
 

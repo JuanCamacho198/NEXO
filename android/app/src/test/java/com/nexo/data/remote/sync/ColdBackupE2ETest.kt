@@ -5,15 +5,11 @@ import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.HighlightDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingSessionDao
-import com.nexo.data.local.dao.StoredBookPath
-import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.BookmarkEntity
 import com.nexo.data.local.entity.HighlightEntity
 import com.nexo.data.local.entity.ReadingProgressEntity
-import com.nexo.data.local.entity.ReadingSessionEntity
 import com.nexo.data.local.entity.SyncEntityType
-import com.nexo.data.local.entity.SyncOutboxEntity
 import com.nexo.data.remote.supabase.SupabaseBookCatalogDataSource
 import com.nexo.data.remote.supabase.SupabaseProgressDataSource
 import com.nexo.data.session.SessionManager
@@ -439,5 +435,3 @@ class ColdBackupE2ETest {
             assertTrue(result.failures.isEmpty())
         }
 }
-
-

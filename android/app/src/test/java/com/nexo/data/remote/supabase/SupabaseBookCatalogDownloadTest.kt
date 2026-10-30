@@ -1,9 +1,6 @@
 package com.nexo.data.remote.supabase
 
-import com.nexo.data.local.dao.BookDao
-import com.nexo.data.local.dao.StoredBookPath
 import com.nexo.data.local.entity.BookEntity
-import com.nexo.data.local.entity.SyncOutboxEntity
 import com.nexo.data.remote.sync.StorageSyncRemoteDataSource
 import com.nexo.data.session.SessionManager
 import com.nexo.domain.error.AppError
@@ -15,8 +12,6 @@ import com.nexo.testutil.TEST_USER_ID
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals

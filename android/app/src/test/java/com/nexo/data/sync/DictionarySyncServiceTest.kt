@@ -438,4 +438,3 @@ class DictionarySyncServiceTest {
         ) = "$userId|$normalized"
     }
 }
-

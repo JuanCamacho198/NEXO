@@ -1,7 +1,6 @@
 package com.nexo.data.sync
 
 import com.nexo.testutil.TEST_USER_ID
-
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals

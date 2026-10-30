@@ -580,8 +580,7 @@ class LibraryRepositoryImplTest {
         private val booksState = MutableStateFlow<List<BookEntity>>(emptyList())
         var lastUpserted: BookEntity? = null
 
-        override fun observeAllBooks(userId: String): Flow<List<BookEntity>> =
-            booksState.map { books -> books.filter { it.userId == userId && it.deletedAtEpochMillis == null } }
+        override fun observeAllBooks(userId: String): Flow<List<BookEntity>> = booksState.map { books -> books.filter { it.userId == userId && it.deletedAtEpochMillis == null } }
 
         override fun observeReadingBooks(userId: String): Flow<List<BookEntity>> =
             booksState.map { books ->

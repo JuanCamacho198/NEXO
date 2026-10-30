@@ -60,7 +60,8 @@ fun NavGraphBuilder.settingsGraph(
             onInitialRouteConsumed = onSettingsInitialRouteConsumed,
             appThemeMode = appThemeMode,
             onAppThemeModeChanged = onAppThemeModeChanged,
-            onLogout = {                authViewModel.signOut()
+            onLogout = {
+                authViewModel.signOut()
                 navController.navigate(NexoDestination.Auth.route) {
                     popUpTo(0) { inclusive = true }
                 }

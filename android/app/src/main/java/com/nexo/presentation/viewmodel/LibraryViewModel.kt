@@ -382,8 +382,7 @@ class LibraryViewModel
                 activeUser.userId
                     .flatMapLatest { userId ->
                         libraryRepository.observeLibrary(userId.orEmpty())
-                    }
-                    .flatMapLatest { books ->
+                    }.flatMapLatest { books ->
                         if (books.isEmpty()) {
                             flowOf(emptyMap())
                         } else {
@@ -402,27 +401,30 @@ class LibraryViewModel
             }
             // ── Lifecycle observations (Room flows) ──
             viewModelScope.launch(mainDispatcher) {
-                activeUser.userId.flatMapLatest { userId ->
-                    libraryRepository.observeLibrary(userId.orEmpty())
-                }.collect { books ->
-                    mutableUiState.update { it.copy(books = books, isLoading = false) }
-                }
+                activeUser.userId
+                    .flatMapLatest { userId ->
+                        libraryRepository.observeLibrary(userId.orEmpty())
+                    }.collect { books ->
+                        mutableUiState.update { it.copy(books = books, isLoading = false) }
+                    }
             }
 
             viewModelScope.launch(mainDispatcher) {
-                activeUser.userId.flatMapLatest { userId ->
-                    libraryRepository.observeTotalReadingTime(userId.orEmpty())
-                }.collect { totalMinutes ->
-                    mutableUiState.update { it.copy(totalMinutesRead = totalMinutes) }
-                }
+                activeUser.userId
+                    .flatMapLatest { userId ->
+                        libraryRepository.observeTotalReadingTime(userId.orEmpty())
+                    }.collect { totalMinutes ->
+                        mutableUiState.update { it.copy(totalMinutesRead = totalMinutes) }
+                    }
             }
 
             viewModelScope.launch(mainDispatcher) {
-                activeUser.userId.flatMapLatest { userId ->
-                    libraryRepository.observeReadingTimeByBook(userId.orEmpty())
-                }.collect { readingMinutesByBook ->
-                    mutableUiState.update { it.copy(readingMinutesByBook = readingMinutesByBook) }
-                }
+                activeUser.userId
+                    .flatMapLatest { userId ->
+                        libraryRepository.observeReadingTimeByBook(userId.orEmpty())
+                    }.collect { readingMinutesByBook ->
+                        mutableUiState.update { it.copy(readingMinutesByBook = readingMinutesByBook) }
+                    }
             }
 
             // ── Sync service observations ──

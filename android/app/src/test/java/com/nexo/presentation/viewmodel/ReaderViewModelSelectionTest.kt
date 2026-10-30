@@ -5,13 +5,8 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.os.SystemClock
 import android.util.Log
-import com.nexo.domain.model.Bookmark
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
-import com.nexo.domain.model.ReadingProgress
-import com.nexo.domain.repository.ReaderRepository
-import com.nexo.domain.repository.ReadingStatsData
-import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.presentation.viewmodel.reader.ReaderInteractionState
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
@@ -24,7 +19,6 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher

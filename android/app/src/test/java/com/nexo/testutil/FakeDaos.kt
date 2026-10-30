@@ -39,7 +39,9 @@ const val OTHER_USER_ID: String = "other-user"
  * [userId] so a ViewModel under test reads the account it expects.
  */
 fun activeUserProviderFor(userId: String? = TEST_USER_ID): com.nexo.domain.session.ActiveUserProvider =
-    com.nexo.domain.session.ActiveUserProvider().apply { set(userId) }
+    com.nexo.domain.session
+        .ActiveUserProvider()
+        .apply { set(userId) }
 
 /** In-memory [BookDao] scoped by `userId`, mirroring the SQL predicate. */
 open class FakeBookDao : BookDao {
@@ -50,14 +52,11 @@ open class FakeBookDao : BookDao {
 
     private val state = MutableStateFlow(0)
 
-    private fun rows(userId: String) =
-        books.values.filter { it.userId == userId && it.deletedAtEpochMillis == null }
+    private fun rows(userId: String) = books.values.filter { it.userId == userId && it.deletedAtEpochMillis == null }
 
-    override fun observeAllBooks(userId: String): Flow<List<BookEntity>> =
-        state.map { rows(userId).sortedByDescending { it.updatedAtEpochMillis } }
+    override fun observeAllBooks(userId: String): Flow<List<BookEntity>> = state.map { rows(userId).sortedByDescending { it.updatedAtEpochMillis } }
 
-    override fun observeReadingBooks(userId: String): Flow<List<BookEntity>> =
-        state.map { rows(userId).filter { it.readingState == "reading" } }
+    override fun observeReadingBooks(userId: String): Flow<List<BookEntity>> = state.map { rows(userId).filter { it.readingState == "reading" } }
 
     override fun observeAllBooksPaged(userId: String) = com.nexo.testutil.FakePagingSource(listOf<BookEntity>())
 
@@ -193,11 +192,13 @@ open class FakeBookDao : BookDao {
 
     override suspend fun count(userId: String): Int = rows(userId).size
 
-    override suspend fun allStoredPaths(userId: String): List<StoredBookPath> =
-        rows(userId).filter { it.filePath.isNotBlank() }.map { StoredBookPath(it.id, it.filePath) }
+    override suspend fun allStoredPaths(userId: String): List<StoredBookPath> = rows(userId).filter { it.filePath.isNotBlank() }.map { StoredBookPath(it.id, it.filePath) }
 
     override suspend fun distinctStoredPathOwners(): List<String> =
-        books.values.filter { it.filePath.isNotBlank() }.map { it.userId }.distinct()
+        books.values
+            .filter { it.filePath.isNotBlank() }
+            .map { it.userId }
+            .distinct()
 
     override suspend fun updateFilePath(
         bookId: String,
@@ -232,8 +233,7 @@ open class FakeReadingProgressDao : ReadingProgressDao {
 
     override suspend fun getAll(userId: String): List<ReadingProgressEntity> = rows.values.filter { it.userId == userId }
 
-    override fun observeAll(userId: String): Flow<List<ReadingProgressEntity>> =
-        state.map { rows.values.filter { it.userId == userId } }
+    override fun observeAll(userId: String): Flow<List<ReadingProgressEntity>> = state.map { rows.values.filter { it.userId == userId } }
 
     override suspend fun count(userId: String): Int = rows.values.count { it.userId == userId }
 }
@@ -249,16 +249,14 @@ open class FakeReadingStatsDao : ReadingStatsDao {
         userId: String,
     ): Flow<ReadingStatsEntity?> = state.map { rows[bookId]?.takeIf { it.userId == userId } }
 
-    override fun observeAllStats(userId: String): Flow<List<ReadingStatsEntity>> =
-        state.map { rows.values.filter { it.userId == userId } }
+    override fun observeAllStats(userId: String): Flow<List<ReadingStatsEntity>> = state.map { rows.values.filter { it.userId == userId } }
 
     override suspend fun upsert(stats: ReadingStatsEntity) {
         rows[stats.bookId] = stats
         state.value++
     }
 
-    override fun observeTotalMinutesReadForUser(userId: String): Flow<Long?> =
-        state.map { rows.values.filter { it.userId == userId }.sumOf { it.totalMinutesRead } }
+    override fun observeTotalMinutesReadForUser(userId: String): Flow<Long?> = state.map { rows.values.filter { it.userId == userId }.sumOf { it.totalMinutesRead } }
 
     override suspend fun deleteForBook(
         bookId: String,
@@ -288,8 +286,7 @@ open class FakeReadingSessionDao : ReadingSessionDao {
         userId: String,
     ): Flow<Int> = state.map { rows.values.filter { it.userId == userId && it.date == date }.sumOf { it.durationMinutes } }
 
-    override fun getTotalMinutes(userId: String): Flow<Int> =
-        state.map { rows.values.filter { it.userId == userId }.sumOf { it.durationMinutes } }
+    override fun getTotalMinutes(userId: String): Flow<Int> = state.map { rows.values.filter { it.userId == userId }.sumOf { it.durationMinutes } }
 
     override fun getSessionCount(userId: String): Flow<Int> = state.map { rows.values.count { it.userId == userId } }
 
@@ -301,8 +298,7 @@ open class FakeReadingSessionDao : ReadingSessionDao {
     override fun observeSessionsForBook(
         bookId: String,
         userId: String,
-    ): Flow<List<ReadingSessionEntity>> =
-        state.map { rows.values.filter { it.userId == userId && it.bookId == bookId }.sortedByDescending { it.startTimeEpochMillis } }
+    ): Flow<List<ReadingSessionEntity>> = state.map { rows.values.filter { it.userId == userId && it.bookId == bookId }.sortedByDescending { it.startTimeEpochMillis } }
 
     override suspend fun deleteSessionsForBook(
         bookId: String,
@@ -315,7 +311,9 @@ open class FakeReadingSessionDao : ReadingSessionDao {
     override suspend fun count(userId: String): Int = rows.values.count { it.userId == userId }
 
     override suspend fun getDailyMinutes(userId: String): List<DailyReadingMinutes> =
-        rows.values.filter { it.userId == userId }.groupBy { it.date }
+        rows.values
+            .filter { it.userId == userId }
+            .groupBy { it.date }
             .map { (date, list) -> DailyReadingMinutes(dateEpochMillis = date, totalMinutes = list.sumOf { it.durationMinutes }) }
             .sortedByDescending { it.dateEpochMillis }
 
@@ -323,7 +321,9 @@ open class FakeReadingSessionDao : ReadingSessionDao {
         startDate: Long,
         userId: String,
     ): List<DailyReadingMinutes> =
-        rows.values.filter { it.userId == userId && it.date >= startDate }.groupBy { it.date }
+        rows.values
+            .filter { it.userId == userId && it.date >= startDate }
+            .groupBy { it.date }
             .map { (date, list) -> DailyReadingMinutes(dateEpochMillis = date, totalMinutes = list.sumOf { it.durationMinutes }) }
             .sortedBy { it.dateEpochMillis }
 
@@ -345,8 +345,7 @@ open class FakeHighlightDao : HighlightDao {
 
     private fun live(userId: String) = rows.values.filter { it.userId == userId && it.deletedAtEpochMillis == null }
 
-    override fun observeAllHighlights(userId: String): Flow<List<HighlightEntity>> =
-        state.map { live(userId).sortedByDescending { it.updatedAtEpochMillis } }
+    override fun observeAllHighlights(userId: String): Flow<List<HighlightEntity>> = state.map { live(userId).sortedByDescending { it.updatedAtEpochMillis } }
 
     override fun observeAllHighlightsPaged(userId: String) = com.nexo.testutil.FakePagingSource(listOf<HighlightEntity>())
 
@@ -386,7 +385,13 @@ open class FakeHighlightDao : HighlightDao {
     override suspend fun count(userId: String): Int = rows.values.count { it.userId == userId }
 
     override fun observeAllTags(userId: String): Flow<List<String>> =
-        state.map { live(userId).mapNotNull { it.tag }.filter { it.isNotBlank() }.distinct().sorted() }
+        state.map {
+            live(userId)
+                .mapNotNull { it.tag }
+                .filter { it.isNotBlank() }
+                .distinct()
+                .sorted()
+        }
 }
 
 /** In-memory [BookmarkDao] scoped by `userId`. */
@@ -397,8 +402,7 @@ open class FakeBookmarkDao : BookmarkDao {
 
     private fun live(userId: String) = rows.values.filter { it.userId == userId && it.deletedAtEpochMillis == null }
 
-    override fun observeAllBookmarks(userId: String): Flow<List<BookmarkEntity>> =
-        state.map { live(userId).sortedByDescending { it.updatedAtEpochMillis } }
+    override fun observeAllBookmarks(userId: String): Flow<List<BookmarkEntity>> = state.map { live(userId).sortedByDescending { it.updatedAtEpochMillis } }
 
     override fun observeBookmarksForBook(
         bookId: String,
@@ -447,8 +451,7 @@ open class FakeDictionaryWordDao : DictionaryWordDao {
         state.value++
     }
 
-    override fun observeAll(userId: String): Flow<List<DictionaryWordEntity>> =
-        state.map { rows.values.filter { it.userId == userId }.sortedByDescending { it.addedAtEpochMillis } }
+    override fun observeAll(userId: String): Flow<List<DictionaryWordEntity>> = state.map { rows.values.filter { it.userId == userId }.sortedByDescending { it.addedAtEpochMillis } }
 
     override fun search(
         normalizedQuery: String,
@@ -524,8 +527,7 @@ open class FakeSyncOutboxDao : SyncOutboxDao {
 
     private val state = MutableStateFlow(0)
 
-    override suspend fun getPendingItems(userId: String): List<SyncOutboxEntity> =
-        items.filter { it.userId == userId }.sortedBy { it.createdAtEpochMillis }
+    override suspend fun getPendingItems(userId: String): List<SyncOutboxEntity> = items.filter { it.userId == userId }.sortedBy { it.createdAtEpochMillis }
 
     override suspend fun insert(item: SyncOutboxEntity) {
         items.add(item)

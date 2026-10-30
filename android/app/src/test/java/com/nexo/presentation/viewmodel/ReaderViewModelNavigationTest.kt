@@ -1,12 +1,6 @@
 package com.nexo.presentation.viewmodel
 
 import android.app.Application
-import com.nexo.domain.model.Bookmark
-import com.nexo.domain.model.Highlight
-import com.nexo.domain.model.ReadingProgress
-import com.nexo.domain.repository.ReaderRepository
-import com.nexo.domain.repository.ReadingStatsData
-import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.presentation.viewmodel.reader.BookChapter
 import com.nexo.testutil.FakeReaderRepository
@@ -15,8 +9,6 @@ import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.activeUserProviderFor
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -164,5 +156,4 @@ class ReaderViewModelNavigationTest {
             assertNull("Pending CFI should be cleared after immediate apply", viewModel.lifecycleHolder.pendingCfiAfterLoad)
             assertEquals("Should navigate to chapter index 2 (third chapter)", 2, viewModel.sessionUiState.value.currentChapterIndex)
         }
-
 }

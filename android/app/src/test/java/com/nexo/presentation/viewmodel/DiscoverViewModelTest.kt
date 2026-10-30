@@ -2139,5 +2139,3 @@ class DiscoverViewModelTest {
             assertEquals(AddonReadState.Hidden, vm.uiState.value.addonRead)
         }
 }
-
-

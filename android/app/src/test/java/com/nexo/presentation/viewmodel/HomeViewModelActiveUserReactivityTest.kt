@@ -154,7 +154,11 @@ class HomeViewModelActiveUserReactivityTest {
                 "An import after the session resolves must leave the empty state",
                 viewModel.uiState.value.isLibraryEmpty,
             )
-            assertEquals(listOf("imported"), viewModel.uiState.value.allBooks.map { it.id })
+            assertEquals(
+                listOf("imported"),
+                viewModel.uiState.value.allBooks
+                    .map { it.id },
+            )
         }
 
     @Test
@@ -166,7 +170,11 @@ class HomeViewModelActiveUserReactivityTest {
             provider.set(TEST_USER)
             allBooks.value = listOf(book("mine"))
             advanceUntilIdle()
-            assertEquals(listOf("mine"), viewModel.uiState.value.allBooks.map { it.id })
+            assertEquals(
+                listOf("mine"),
+                viewModel.uiState.value.allBooks
+                    .map { it.id },
+            )
 
             // Sign-out clears the owner, so the previous account's rows must not
             // survive in the state. The last resolved emission is already "no
@@ -227,6 +235,7 @@ class HomeViewModelActiveUserReactivityTest {
             )
             assertEquals("U", viewModel.uiState.value.userName)
         }
+
     private fun book(id: String) =
         Book(
             id = id,

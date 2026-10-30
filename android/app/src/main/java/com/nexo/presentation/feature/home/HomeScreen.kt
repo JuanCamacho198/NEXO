@@ -154,7 +154,12 @@ fun HomeScreenContent(
                 // First-session Home: full-bleed hero, then the genre row and the
                 // cloud-sync banner. No "continue reading" carousel and no shelf —
                 // there is nothing in the library to continue or to shelve.
-                item { HomeHeroSection(onExplore = onNavigateToDiscover, avatarUrl = uiState.avatarUrl, userName = uiState.userName, streakDays = uiState.currentStreak, onAvatarClick = onOpenAccount, onStreakClick = onNavigateToStatistics, onNotificationsClick = { showNotifications = true; onNotificationsOpened() }) }
+                item {
+                    HomeHeroSection(onExplore = onNavigateToDiscover, avatarUrl = uiState.avatarUrl, userName = uiState.userName, streakDays = uiState.currentStreak, onAvatarClick = onOpenAccount, onStreakClick = onNavigateToStatistics, onNotificationsClick = {
+                        showNotifications = true
+                        onNotificationsOpened()
+                    })
+                }
                 item { HomeGenresSection(modifier = Modifier.padding(horizontal = ScreenHorizontalInset), onBrowseAll = onNavigateToDiscover) }
                 item { HomeSyncBanner(onClick = onNavigateToDriveSetup, modifier = Modifier.padding(horizontal = ScreenHorizontalInset)) }
             } else {

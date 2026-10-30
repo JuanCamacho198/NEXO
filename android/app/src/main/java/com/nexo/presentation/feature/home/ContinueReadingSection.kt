@@ -189,8 +189,7 @@ fun ContinueReadingCard(
                     Brush.radialGradient(
                         colors = listOf(NexoColors.backgroundBlueTransparent, NexoColors.surfaceVariant),
                     ),
-                )
-                .border(1.dp, ContinueCardStroke, RoundedCornerShape(CardRadius))
+                ).border(1.dp, ContinueCardStroke, RoundedCornerShape(CardRadius))
                 .clickable { onBookSelected(book.id, book.filePath, book.format) }
                 .padding(NexoDimens.spacingMd),
     ) {
@@ -266,7 +265,9 @@ fun ContinueReadingCard(
 }
 
 /** Amber hairline around the card (`.pen` stroke `#14489c`). */
-private val ContinueCardStroke = androidx.compose.ui.graphics.Color(0xFF14489C)
+private val ContinueCardStroke =
+    androidx.compose.ui.graphics
+        .Color(0xFF14489C)
 
 /**
  * Chapter line: a book glyph plus the chapter label.

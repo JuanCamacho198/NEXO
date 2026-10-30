@@ -120,9 +120,10 @@ class HomeViewModel
                 // Also demonstrate direct ReaderRepository.observeProgress and readingProgressDao usage for spec compliance
                 readerRepository.let { repo ->
                     viewModelScope.launch {
-                        activeUser.userId.flatMapLatest { userId ->
-                            repo.observeProgress("dummy-book-id", userId.orEmpty())
-                        }.collect {}
+                        activeUser.userId
+                            .flatMapLatest { userId ->
+                                repo.observeProgress("dummy-book-id", userId.orEmpty())
+                            }.collect {}
                     }
                 }
             }

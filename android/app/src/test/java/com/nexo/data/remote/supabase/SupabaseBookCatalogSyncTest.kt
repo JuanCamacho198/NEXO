@@ -1,8 +1,5 @@
 package com.nexo.data.remote.supabase
 
-import com.nexo.data.local.dao.BookDao
-import com.nexo.data.local.dao.StoredBookPath
-import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncOperation
@@ -16,10 +13,7 @@ import com.nexo.testutil.TEST_USER_ID
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -803,4 +797,3 @@ class SupabaseBookCatalogSyncTest {
             userId = TEST_USER_ID,
         )
 }
-

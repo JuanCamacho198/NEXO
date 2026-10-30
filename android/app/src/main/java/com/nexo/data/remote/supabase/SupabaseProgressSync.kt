@@ -91,6 +91,7 @@ class SupabaseProgressSync(
 
     val pendingCount: kotlinx.coroutines.flow.Flow<Int> =
         activeUserId.flatMapLatest { outboxDao.observePendingCount(it) }
+
     sealed class State {
         data object Idle : State()
 

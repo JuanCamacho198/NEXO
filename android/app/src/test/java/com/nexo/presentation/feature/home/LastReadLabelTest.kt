@@ -5,7 +5,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class LastReadLabelTest {
-
     private val now = 1_700_000_000_000L
     private val minute = 60_000L
     private val hour = 60 * minute

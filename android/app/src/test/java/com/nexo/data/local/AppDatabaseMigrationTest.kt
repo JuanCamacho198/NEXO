@@ -537,18 +537,20 @@ class AppDatabaseMigrationTest {
         )
         assertEquals(2L, query(db, "SELECT COUNT(*) FROM reading_stats"))
 
-        db.query(
-            "SELECT totalMinutesRead FROM reading_stats WHERE book_id = 'bk-stats' AND user_id = 'user-a'",
-        ).use { cursor ->
-            assertTrue(cursor.moveToFirst())
-            assertEquals(30L, cursor.getLong(0))
-        }
-        db.query(
-            "SELECT totalMinutesRead FROM reading_stats WHERE book_id = 'bk-stats' AND user_id = 'user-b'",
-        ).use { cursor ->
-            assertTrue(cursor.moveToFirst())
-            assertEquals(45L, cursor.getLong(0))
-        }
+        db
+            .query(
+                "SELECT totalMinutesRead FROM reading_stats WHERE book_id = 'bk-stats' AND user_id = 'user-a'",
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(30L, cursor.getLong(0))
+            }
+        db
+            .query(
+                "SELECT totalMinutesRead FROM reading_stats WHERE book_id = 'bk-stats' AND user_id = 'user-b'",
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(45L, cursor.getLong(0))
+            }
 
         // A same-owner re-upsert still REPLACEs its own row, not the other's.
         db.execSQL(

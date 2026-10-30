@@ -198,4 +198,3 @@ class LibraryRepositoryImplDeleteFileTest {
         override suspend fun deleteCover(bookId: String): Result<Unit> = Result.success(Unit)
     }
 }
-

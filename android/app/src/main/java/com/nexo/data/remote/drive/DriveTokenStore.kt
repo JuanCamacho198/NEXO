@@ -192,9 +192,9 @@ class EncryptedDriveTokenStore(
     context: Context,
     activeUser: ActiveUserProvider,
 ) : DriveTokenStore by PerAccountDriveTokenStore(
-    activeUser = activeUser,
-    openForOwner = encryptedFileOpener(context.applicationContext),
-) {
+        activeUser = activeUser,
+        openForOwner = encryptedFileOpener(context.applicationContext),
+    ) {
     companion object {
         /** Base name; the owner segment is appended per account. */
         const val PREFS_NAME: String = "nexo_drive_token_store"

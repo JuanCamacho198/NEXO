@@ -13,7 +13,6 @@ import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -115,33 +114,34 @@ class EditBookMetadataViewModel(
 
     init {
         viewModelScope.launch {
-            activeUser.userId.flatMapLatest { userId ->
-                libraryRepository.observeBookById(bookId, userId.orEmpty())
-            }.collect { book ->
-                if (book == null) {
-                    _uiState.update { it.copy(isLoading = false) }
-                    return@collect
-                }
-                if (!seeded) {
-                    seeded = true
-                    _uiState.update {
-                        it.copy(
-                            book = book,
-                            isLoading = false,
-                            title = book.title,
-                            author = book.author.orEmpty(),
-                            description = book.description.orEmpty(),
-                            genres = sanitizeChipList(parseChipList(book.genre), MAX_GENRES),
-                            tags = sanitizeChipList(parseChipList(book.tags), MAX_TAGS),
-                            language = book.language,
-                            publisher = book.publisher.orEmpty(),
-                            publishedDate = book.publishedDate,
-                        )
+            activeUser.userId
+                .flatMapLatest { userId ->
+                    libraryRepository.observeBookById(bookId, userId.orEmpty())
+                }.collect { book ->
+                    if (book == null) {
+                        _uiState.update { it.copy(isLoading = false) }
+                        return@collect
                     }
-                } else {
-                    _uiState.update { it.copy(book = book, isLoading = false) }
+                    if (!seeded) {
+                        seeded = true
+                        _uiState.update {
+                            it.copy(
+                                book = book,
+                                isLoading = false,
+                                title = book.title,
+                                author = book.author.orEmpty(),
+                                description = book.description.orEmpty(),
+                                genres = sanitizeChipList(parseChipList(book.genre), MAX_GENRES),
+                                tags = sanitizeChipList(parseChipList(book.tags), MAX_TAGS),
+                                language = book.language,
+                                publisher = book.publisher.orEmpty(),
+                                publishedDate = book.publishedDate,
+                            )
+                        }
+                    } else {
+                        _uiState.update { it.copy(book = book, isLoading = false) }
+                    }
                 }
-            }
         }
     }
 

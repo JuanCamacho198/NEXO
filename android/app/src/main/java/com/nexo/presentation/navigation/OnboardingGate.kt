@@ -32,6 +32,5 @@ object OnboardingGate {
      * True when the account [readingGoalPreferences] is scoped to already has a
      * daily goal, i.e. it completed onboarding and should start at Home.
      */
-    fun hasDailyGoal(readingGoalPreferences: ReadingGoalPreferences): Boolean =
-        readingGoalPreferences.load() != null
+    fun hasDailyGoal(readingGoalPreferences: ReadingGoalPreferences): Boolean = readingGoalPreferences.load() != null
 }

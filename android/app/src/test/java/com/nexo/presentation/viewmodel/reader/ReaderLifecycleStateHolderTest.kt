@@ -7,9 +7,9 @@ import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.ReadingStatsData
 import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
-import com.nexo.testutil.activeUserProviderFor
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.TEST_USER_ID
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk

@@ -171,4 +171,3 @@ class StorageViewModelTest {
         updatedAtEpochMillis = 1L,
     )
 }
-

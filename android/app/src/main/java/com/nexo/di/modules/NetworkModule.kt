@@ -36,7 +36,6 @@ import com.nexo.data.remote.drive.DriveTokenStore
 import com.nexo.data.remote.drive.EncryptedDriveTokenStore
 import com.nexo.data.remote.drive.GoogleDriveAuthHelper
 import com.nexo.data.remote.drive.InMemoryDriveTokenStore
-import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.data.remote.drive.KtorAuthApi
 import com.nexo.data.remote.drive.driveOAuthRedirectUri
 import com.nexo.data.remote.supabase.SupabaseBookCatalogDataSource
@@ -66,6 +65,7 @@ import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
 import com.nexo.domain.repository.AuthRepository
+import com.nexo.domain.session.ActiveUserProvider
 import io.github.jan.supabase.auth.MemorySessionManager
 import io.github.jan.supabase.auth.SettingsSessionManager
 import io.ktor.client.HttpClient

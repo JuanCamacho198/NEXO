@@ -449,4 +449,3 @@ class HighlightsViewModelTest {
         ): Result<Unit> = Result.success(Unit)
     }
 }
-

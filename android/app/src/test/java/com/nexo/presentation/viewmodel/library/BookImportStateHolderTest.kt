@@ -416,5 +416,3 @@ class BookImportStateHolderTest {
         val scope: CoroutineScope,
     )
 }
-
-

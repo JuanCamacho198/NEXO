@@ -231,4 +231,3 @@ class DownloadAndImportBookUseCaseTest {
             assertTrue(names[0].startsWith("gutendex1342"))
         }
 }
-

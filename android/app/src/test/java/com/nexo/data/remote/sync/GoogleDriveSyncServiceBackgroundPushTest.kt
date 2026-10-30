@@ -225,4 +225,3 @@ class GoogleDriveSyncServiceBackgroundPushTest {
         assertTrue("work must run to completion", fixed.isCompleted)
     }
 }
-

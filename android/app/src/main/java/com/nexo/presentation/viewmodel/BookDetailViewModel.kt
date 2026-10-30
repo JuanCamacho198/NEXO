@@ -22,7 +22,6 @@ data class BookDetailUiState(
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
-
 class BookDetailViewModel(
     private val bookId: String,
     private val libraryRepository: LibraryRepository,

@@ -320,4 +320,3 @@ class EditBookMetadataViewModelTest {
             mainDispatcher = UnconfinedTestDispatcher(),
         )
 }
-

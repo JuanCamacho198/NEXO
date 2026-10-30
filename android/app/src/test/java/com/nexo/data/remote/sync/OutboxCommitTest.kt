@@ -256,4 +256,3 @@ class OutboxCommitTest {
             coVerify(exactly = 0) { outboxDao.incrementRetryCount(any(), any(), any()) }
         }
 }
-

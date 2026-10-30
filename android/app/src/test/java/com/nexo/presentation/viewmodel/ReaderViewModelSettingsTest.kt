@@ -2,16 +2,10 @@ package com.nexo.presentation.viewmodel
 
 import android.app.Application
 import com.nexo.data.session.ReaderPreferences
-import com.nexo.domain.model.Bookmark
 import com.nexo.domain.model.FontSizePreset
-import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.LineHeightPreset
 import com.nexo.domain.model.ReaderSettings
 import com.nexo.domain.model.ReaderTheme
-import com.nexo.domain.model.ReadingProgress
-import com.nexo.domain.repository.ReaderRepository
-import com.nexo.domain.repository.ReadingStatsData
-import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.testutil.FakeReaderRepository
 import com.nexo.testutil.FakeReadingStatsRepository
@@ -21,8 +15,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -197,6 +189,4 @@ class ReaderViewModelSettingsTest {
             assertEquals(ReaderTheme.DARK, slice.readerSettings.theme)
             assertEquals(LineHeightPreset.NORMAL, slice.readerSettings.lineHeight)
         }
-
 }
-
