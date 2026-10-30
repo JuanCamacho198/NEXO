@@ -44,7 +44,7 @@ import com.nexo.data.local.entity.SyncOutboxEntity
         AddonEntity::class,
         NotificationEntity::class,
     ],
-    version = 33,
+    version = 34,
     exportSchema = true,
 )
 @TypeConverters(NotificationConverters::class)

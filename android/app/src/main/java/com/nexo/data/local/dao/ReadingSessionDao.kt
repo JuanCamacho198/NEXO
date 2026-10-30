@@ -13,63 +13,63 @@ interface ReadingSessionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(session: ReadingSessionEntity)
 
-    @Query("SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions WHERE date = :date AND userId = :userId")
+    @Query("SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions WHERE date = :date AND user_id = :userId")
     fun getTotalMinutesForDateAndUser(
         date: Long,
         userId: String,
     ): Flow<Int>
 
-    @Query("SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions WHERE userId = :userId")
+    @Query("SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions WHERE user_id = :userId")
     fun getTotalMinutes(userId: String): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM reading_sessions WHERE userId = :userId")
+    @Query("SELECT COUNT(*) FROM reading_sessions WHERE user_id = :userId")
     fun getSessionCount(userId: String): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM reading_sessions WHERE date = :date AND userId = :userId")
+    @Query("SELECT COUNT(*) FROM reading_sessions WHERE date = :date AND user_id = :userId")
     fun getSessionCountForDateAndUser(
         date: Long,
         userId: String,
     ): Flow<Int>
 
-    @Query("SELECT * FROM reading_sessions WHERE book_id = :bookId AND userId = :userId ORDER BY start_time DESC")
+    @Query("SELECT * FROM reading_sessions WHERE book_id = :bookId AND user_id = :userId ORDER BY start_time DESC")
     fun observeSessionsForBook(
         bookId: String,
         userId: String,
     ): Flow<List<ReadingSessionEntity>>
 
-    @Query("DELETE FROM reading_sessions WHERE book_id = :bookId AND userId = :userId")
+    @Query("DELETE FROM reading_sessions WHERE book_id = :bookId AND user_id = :userId")
     suspend fun deleteSessionsForBook(
         bookId: String,
         userId: String,
     )
 
-    @Query("SELECT COUNT(*) FROM reading_sessions WHERE userId = :userId")
+    @Query("SELECT COUNT(*) FROM reading_sessions WHERE user_id = :userId")
     suspend fun count(userId: String): Int
 
     @Query(
-        "SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions WHERE userId = :userId GROUP BY date ORDER BY date DESC",
+        "SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions WHERE user_id = :userId GROUP BY date ORDER BY date DESC",
     )
     suspend fun getDailyMinutes(userId: String): List<DailyReadingMinutes>
 
     @Query(
-        "SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions WHERE date >= :startDate AND userId = :userId GROUP BY date ORDER BY date ASC",
+        "SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions WHERE date >= :startDate AND user_id = :userId GROUP BY date ORDER BY date ASC",
     )
     suspend fun getDailyMinutesFromDate(
         startDate: Long,
         userId: String,
     ): List<DailyReadingMinutes>
 
-    @Query("SELECT * FROM reading_sessions WHERE id = :id AND userId = :userId LIMIT 1")
+    @Query("SELECT * FROM reading_sessions WHERE id = :id AND user_id = :userId LIMIT 1")
     suspend fun getById(
         id: String,
         userId: String,
     ): ReadingSessionEntity?
 
-    @Query("SELECT * FROM reading_sessions WHERE userId = :userId")
+    @Query("SELECT * FROM reading_sessions WHERE user_id = :userId")
     suspend fun getAll(userId: String): List<ReadingSessionEntity>
 
     @Query(
-        "SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions WHERE userId = :userId GROUP BY date ORDER BY date DESC",
+        "SELECT date, COALESCE(SUM(duration_minutes), 0) as total_minutes FROM reading_sessions WHERE user_id = :userId GROUP BY date ORDER BY date DESC",
     )
     suspend fun getDailyMinutesForUser(userId: String): List<DailyReadingMinutes>
 }

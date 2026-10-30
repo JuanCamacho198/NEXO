@@ -96,6 +96,27 @@ class AppDatabaseMigrationTest {
             .getDatabasePath("migration-32-33")
             .absolutePath
 
+    private fun testDbPath33To34(): String =
+        InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getDatabasePath("migration-33-34")
+            .absolutePath
+
+    private fun testDbPath33To34Sessions(): String =
+        InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getDatabasePath("migration-33-34-sessions")
+            .absolutePath
+
+    private fun testDbPath33To34Dictionary(): String =
+        InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getDatabasePath("migration-33-34-dictionary")
+            .absolutePath
+
     private fun columnNames(
         db: SupportSQLiteDatabase,
         table: String,
@@ -476,6 +497,174 @@ class AppDatabaseMigrationTest {
         assertEquals(0L, query(db, "SELECT COUNT(*) FROM books"))
         assertEquals(0L, query(db, "SELECT COUNT(*) FROM dictionary_words"))
         assertEquals(0L, query(db, "SELECT COUNT(*) FROM sync_outbox"))
+        db.close()
+    }
+
+    @Test
+    fun `migration 33 to 34 gives reading_stats an owner-scoped primary key`() {
+        val dbPath = testDbPath33To34()
+        helper.createDatabase(dbPath, 33).use { db ->
+            db.execSQL(
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, " +
+                    "state_version, remote_lifecycle, remote_catalog_version, user_id) " +
+                    "VALUES ('bk-stats', 'Book', '/b.epub', 'epub', 1000, 'reading', 0, 'imported', 0, 'user-a')",
+            )
+            // The v33 primary key is `book_id` alone, so a second owner's row for
+            // the same book cannot even be inserted here — that IS the defect.
+            db.execSQL(
+                "INSERT INTO reading_stats (book_id, totalMinutesRead, lastReadDateEpochMillis, sessionsCount, userId) " +
+                    "VALUES ('bk-stats', 30, 2000, 2, 'user-a')",
+            )
+        }
+
+        // No rows are carried over (decision: discard existing reading_stats).
+        val db = helper.runMigrationsAndValidate(dbPath, 34, true, AppDatabaseMigrations.MIGRATION_33_34)
+
+        assertEquals(0L, query(db, "SELECT COUNT(*) FROM reading_stats"))
+        assertEquals(
+            listOf("book_id", "totalMinutesRead", "lastReadDateEpochMillis", "sessionsCount", "user_id"),
+            columnNames(db, "reading_stats"),
+        )
+
+        // Both owners can now hold stats for the same book simultaneously.
+        db.execSQL(
+            "INSERT INTO reading_stats (book_id, totalMinutesRead, lastReadDateEpochMillis, sessionsCount, user_id) " +
+                "VALUES ('bk-stats', 30, 2000, 2, 'user-a')",
+        )
+        db.execSQL(
+            "INSERT INTO reading_stats (book_id, totalMinutesRead, lastReadDateEpochMillis, sessionsCount, user_id) " +
+                "VALUES ('bk-stats', 45, 3000, 3, 'user-b')",
+        )
+        assertEquals(2L, query(db, "SELECT COUNT(*) FROM reading_stats"))
+
+        db.query(
+            "SELECT totalMinutesRead FROM reading_stats WHERE book_id = 'bk-stats' AND user_id = 'user-a'",
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(30L, cursor.getLong(0))
+        }
+        db.query(
+            "SELECT totalMinutesRead FROM reading_stats WHERE book_id = 'bk-stats' AND user_id = 'user-b'",
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(45L, cursor.getLong(0))
+        }
+
+        // A same-owner re-upsert still REPLACEs its own row, not the other's.
+        db.execSQL(
+            "INSERT OR REPLACE INTO reading_stats (book_id, totalMinutesRead, lastReadDateEpochMillis, sessionsCount, user_id) " +
+                "VALUES ('bk-stats', 99, 4000, 4, 'user-a')",
+        )
+        assertEquals(2L, query(db, "SELECT COUNT(*) FROM reading_stats"))
+        assertEquals(
+            45L,
+            query(db, "SELECT totalMinutesRead FROM reading_stats WHERE book_id = 'bk-stats' AND user_id = 'user-b'"),
+        )
+
+        db.close()
+    }
+
+    @Test
+    fun `migration 33 to 34 renames the owner column on both reading tables`() {
+        val dbPath = testDbPath33To34Sessions()
+        helper.createDatabase(dbPath, 33).use { db ->
+            db.execSQL(
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, " +
+                    "state_version, remote_lifecycle, remote_catalog_version, user_id) " +
+                    "VALUES ('bk-sess', 'Book', '/b.epub', 'epub', 1000, 'reading', 0, 'imported', 0, 'user-a')",
+            )
+            db.execSQL(
+                "INSERT INTO reading_sessions (id, book_id, start_time, duration_minutes, date, userId, updated_at_epoch_millis) " +
+                    "VALUES ('rs-1', 'bk-sess', 500, 10, 20240101, 'user-a', 7000)",
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(dbPath, 34, true, AppDatabaseMigrations.MIGRATION_33_34)
+
+        assertFalse("reading_sessions.userId is gone", columnNames(db, "reading_sessions").contains("userId"))
+        assertTrue("reading_sessions.user_id exists", columnNames(db, "reading_sessions").contains("user_id"))
+        assertFalse("reading_stats.userId is gone", columnNames(db, "reading_stats").contains("userId"))
+        assertTrue("reading_stats.user_id exists", columnNames(db, "reading_stats").contains("user_id"))
+
+        // Existing sessions survive the recreate with their owner intact.
+        db.query("SELECT user_id, duration_minutes FROM reading_sessions WHERE id = 'rs-1'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("user-a", cursor.getString(0))
+            assertEquals(10, cursor.getInt(1))
+        }
+        assertEquals(1L, query(db, "SELECT COUNT(*) FROM reading_sessions"))
+
+        val indexes = mutableListOf<String>()
+        db
+            .query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'reading_sessions'")
+            .use { cursor ->
+                while (cursor.moveToNext()) indexes.add(cursor.getString(0))
+            }
+        assertTrue(
+            "expected index_reading_sessions_date_user_id, got $indexes",
+            indexes.contains("index_reading_sessions_date_user_id"),
+        )
+
+        db.close()
+    }
+
+    @Test
+    fun `migration 33 to 34 deduplicates dictionary words before the unique index`() {
+        val dbPath = testDbPath33To34Dictionary()
+        helper.createDatabase(dbPath, 33).use { db ->
+            // Three rows collapse to one: the newest write clock wins, and a tie
+            // on the clock falls back to the newest "first added" time.
+            db.execSQL(
+                "INSERT INTO dictionary_words (id, word, addedAtEpochMillis, updated_at_epoch_millis, word_normalized, user_id) " +
+                    "VALUES ('dw-old', 'cafe', 1000, 1000, 'cafe', 'user-a')",
+            )
+            db.execSQL(
+                "INSERT INTO dictionary_words (id, word, addedAtEpochMillis, updated_at_epoch_millis, word_normalized, user_id) " +
+                    "VALUES ('dw-new', 'café', 2000, 5000, 'cafe', 'user-a')",
+            )
+            db.execSQL(
+                "INSERT INTO dictionary_words (id, word, addedAtEpochMillis, updated_at_epoch_millis, word_normalized, user_id) " +
+                    "VALUES ('dw-tie', 'cafe', 3000, 5000, 'cafe', 'user-a')",
+            )
+            // A different owner keeps the same normalized word.
+            db.execSQL(
+                "INSERT INTO dictionary_words (id, word, addedAtEpochMillis, updated_at_epoch_millis, word_normalized, user_id) " +
+                    "VALUES ('dw-other', 'cafe', 1500, 1500, 'cafe', 'user-b')",
+            )
+            // A different word is untouched.
+            db.execSQL(
+                "INSERT INTO dictionary_words (id, word, addedAtEpochMillis, updated_at_epoch_millis, word_normalized, user_id) " +
+                    "VALUES ('dw-tea', 'tea', 1000, 1000, 'tea', 'user-a')",
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(dbPath, 34, true, AppDatabaseMigrations.MIGRATION_33_34)
+
+        assertEquals(3L, query(db, "SELECT COUNT(*) FROM dictionary_words"))
+        db.query("SELECT id, word FROM dictionary_words WHERE user_id = 'user-a' AND word_normalized = 'cafe'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("dw-tie", cursor.getString(0))
+            assertEquals("cafe", cursor.getString(1))
+        }
+        assertEquals(
+            1L,
+            query(db, "SELECT COUNT(*) FROM dictionary_words WHERE user_id = 'user-b' AND word_normalized = 'cafe'"),
+        )
+
+        // The index is now unique for (user_id, word_normalized).
+        db.query("PRAGMA index_list(dictionary_words)").use { cursor ->
+            val nameCol = cursor.getColumnIndex("name")
+            val uniqueCol = cursor.getColumnIndex("unique")
+            var found = false
+            while (cursor.moveToNext()) {
+                if (cursor.getString(nameCol) == "index_dictionary_words_user_id_word_normalized") {
+                    found = true
+                    assertEquals(1, cursor.getInt(uniqueCol))
+                }
+            }
+            assertTrue("expected index_dictionary_words_user_id_word_normalized", found)
+        }
+
         db.close()
     }
 }

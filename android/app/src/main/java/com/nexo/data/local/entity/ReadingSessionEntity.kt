@@ -16,7 +16,7 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index(value = ["book_id"]), Index(value = ["date"]), Index(value = ["date", "userId"])],
+    indices = [Index(value = ["book_id"]), Index(value = ["date"]), Index(value = ["date", "user_id"])],
 )
 data class ReadingSessionEntity(
     @PrimaryKey
@@ -28,6 +28,7 @@ data class ReadingSessionEntity(
     @ColumnInfo(name = "duration_minutes")
     val durationMinutes: Int,
     val date: Long, // Date only (no time) - epoch days or epoch millis at midnight
+    @ColumnInfo(name = "user_id")
     val userId: String = "",
     @ColumnInfo(name = "updated_at_epoch_millis")
     val updatedAtEpochMillis: Long = 0L,

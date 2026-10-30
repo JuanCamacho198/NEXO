@@ -331,8 +331,8 @@ class AppDatabaseQueryValidationTest {
             assertUsesIndex(
                 query =
                     "SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions " +
-                        "WHERE date = $date AND userId = '$SEED_USER'",
-                expectedIndex = "index_reading_sessions_date_userId",
+                        "WHERE date = $date AND user_id = '$SEED_USER'",
+                expectedIndex = "index_reading_sessions_date_user_id",
             )
         }
 

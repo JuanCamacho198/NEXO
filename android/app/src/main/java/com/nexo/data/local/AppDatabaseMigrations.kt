@@ -897,6 +897,132 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * Integrity fixes for the account-scoped tables, all in one migration
+     * because they overlap on `reading_stats`:
+     *
+     * 1. `reading_stats` primary key becomes `(user_id, book_id)`. It was
+     *    `book_id` alone, so `@Insert(REPLACE)` made a second account's stats
+     *    for the same book delete the first account's row. The table is
+     *    recreated empty — no production users, no rows to carry over.
+     * 2. `dictionary_words` gains a UNIQUE `(user_id, word_normalized)` index.
+     *    Supabase declares `unique (user_id, normalized_word)` and Rust creates
+     *    `CREATE UNIQUE INDEX idx_dict_user_norm`; Android had plain indexes, so
+     *    it could persist a duplicate only to have the remote upsert reject it.
+     *    Existing duplicates are collapsed to the newest row per key (by
+     *    `updated_at_epoch_millis`, then `addedAtEpochMillis`) so the index
+     *    cannot fail on a dirty table.
+     * 3. `reading_sessions.userId` and `reading_stats.userId` are renamed to
+     *    `user_id` (SQLite cannot rename a column in place, so both tables are
+     *    recreated). They were the only two of nine owner columns left in
+     *    camelCase, added as `userId` by MIGRATION_25_26.
+     *
+     * The `(user_id, book_id)` primary key covers every DAO query, which always
+     * supplies both columns. It does NOT cover the `book_id`-only lookup SQLite
+     * runs for the FK cascade: measured on SQLite 3.35, `DELETE FROM books`
+     * resolves child rows via `SEARCH reading_stats USING COVERING INDEX
+     * index_reading_stats_book_id (book_id=?)`. Without that index the cascade
+     * degrades to a full table scan. It is kept, and is not redundant.
+     */
+    val MIGRATION_33_34 =
+        object : Migration(33, 34) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("PRAGMA defer_foreign_keys = ON")
+
+                // ── Fix 1 + Fix 3: reading_stats — new PK, renamed owner column ──
+                db.execSQL("DROP TABLE IF EXISTS reading_stats")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS reading_stats (
+                        book_id TEXT NOT NULL,
+                        totalMinutesRead INTEGER NOT NULL,
+                        lastReadDateEpochMillis INTEGER NOT NULL,
+                        sessionsCount INTEGER NOT NULL,
+                        user_id TEXT NOT NULL,
+                        PRIMARY KEY(user_id, book_id),
+                        FOREIGN KEY(book_id) REFERENCES books(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_reading_stats_book_id ON reading_stats(book_id)",
+                )
+
+                // ── Fix 3: reading_sessions — renamed owner column ──
+                db.execSQL("ALTER TABLE reading_sessions RENAME TO reading_sessions_old")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS reading_sessions (
+                        id TEXT NOT NULL,
+                        book_id TEXT NOT NULL,
+                        start_time INTEGER NOT NULL,
+                        duration_minutes INTEGER NOT NULL,
+                        date INTEGER NOT NULL,
+                        user_id TEXT NOT NULL,
+                        updated_at_epoch_millis INTEGER NOT NULL,
+                        PRIMARY KEY(id),
+                        FOREIGN KEY(book_id) REFERENCES books(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "INSERT INTO reading_sessions (id, book_id, start_time, duration_minutes, date, user_id, updated_at_epoch_millis) " +
+                        "SELECT id, book_id, start_time, duration_minutes, date, userId, updated_at_epoch_millis " +
+                        "FROM reading_sessions_old",
+                )
+                db.execSQL("DROP TABLE reading_sessions_old")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_reading_sessions_book_id ON reading_sessions(book_id)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_reading_sessions_date ON reading_sessions(date)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_reading_sessions_date_user_id ON reading_sessions(date, user_id)",
+                )
+
+                // ── Fix 2: dictionary_words — collapse duplicates, then enforce uniqueness ──
+                // No window function here: ROW_NUMBER() OVER (...) needs SQLite 3.25
+                // (2018), but minSdk = 26 (Android 8.0) ships SQLite 3.18, where the
+                // same statement is a syntax error and would crash the app on open.
+                // The correlated NOT EXISTS below is equivalent and works on 3.18.
+                // The trailing `d.id > keep.id` tiebreak makes the ordering total:
+                // two rows sharing both timestamps can no longer delete each other.
+                db.execSQL(
+                    """
+                    DELETE FROM dictionary_words
+                    WHERE EXISTS (
+                        SELECT 1 FROM dictionary_words AS keep
+                        WHERE keep.user_id = dictionary_words.user_id
+                          AND keep.word_normalized = dictionary_words.word_normalized
+                          AND (
+                              keep.updated_at_epoch_millis > dictionary_words.updated_at_epoch_millis
+                              OR (
+                                  keep.updated_at_epoch_millis = dictionary_words.updated_at_epoch_millis
+                                  AND keep.addedAtEpochMillis > dictionary_words.addedAtEpochMillis
+                              )
+                              OR (
+                                  keep.updated_at_epoch_millis = dictionary_words.updated_at_epoch_millis
+                                  AND keep.addedAtEpochMillis = dictionary_words.addedAtEpochMillis
+                                  AND keep.id > dictionary_words.id
+                              )
+                          )
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_dictionary_words_user_id_word_normalized " +
+                        "ON dictionary_words(user_id, word_normalized)",
+                )
+                // The unique composite index cannot replace the plain one: the
+                // DAO's prefix `search()` keeps its range on `word_normalized`,
+                // and a composite index leading with `user_id` was measured to
+                // fall back to a full table scan there.
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_dictionary_words_word_normalized " +
+                        "ON dictionary_words(word_normalized)",
+                )
+
+                db.execSQL("PRAGMA defer_foreign_keys = OFF")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -931,5 +1057,6 @@ object AppDatabaseMigrations {
             MIGRATION_30_31,
             MIGRATION_31_32,
             MIGRATION_32_33,
+            MIGRATION_33_34,
         )
 }
