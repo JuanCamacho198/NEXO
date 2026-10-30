@@ -23,8 +23,8 @@ class HomeRepositoryImpl(
      */
     private val zoneId: ZoneId,
 ) : HomeRepository {
-    override fun observeBooks(): Flow<List<Book>> =
-        combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { entities, progresses ->
+    override fun observeBooks(userId: String): Flow<List<Book>> =
+        combine(bookDao.observeAllBooks(userId), readingProgressDao.observeAll(userId)) { entities, progresses ->
             val progressById = progresses.associateBy { it.bookId }
             entities.map { entity ->
                 val canonical = progressById[entity.id]
@@ -32,8 +32,11 @@ class HomeRepositoryImpl(
             }
         }
 
-    override fun observeRecentBooks(limit: Int): Flow<List<Book>> =
-        combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { entities, progresses ->
+    override fun observeRecentBooks(
+        userId: String,
+        limit: Int,
+    ): Flow<List<Book>> =
+        combine(bookDao.observeAllBooks(userId), readingProgressDao.observeAll(userId)) { entities, progresses ->
             val progressById = progresses.associateBy { it.bookId }
             entities.take(limit).map { entity ->
                 val canonical = progressById[entity.id]
@@ -41,8 +44,8 @@ class HomeRepositoryImpl(
             }
         }
 
-    override fun observeCurrentBooks(): Flow<List<Book>> =
-        combine(bookDao.observeReadingBooks(), readingProgressDao.observeAll()) { entities, progresses ->
+    override fun observeCurrentBooks(userId: String): Flow<List<Book>> =
+        combine(bookDao.observeReadingBooks(userId), readingProgressDao.observeAll(userId)) { entities, progresses ->
             val progressById = progresses.associateBy { it.bookId }
             entities
                 .map { entity ->
@@ -68,9 +71,12 @@ class HomeRepositoryImpl(
                 )
             }
         } else {
+            // No account is active: nothing is owned by anyone, so nothing is
+            // reported. The previous unscoped branch counted every account's
+            // rows (and every unowned legacy row) for whoever was signed in.
             combine(
-                readingSessionDao.getTotalMinutesForDate(todayStart),
-                readingSessionDao.getSessionCountForDate(todayStart),
+                readingSessionDao.getTotalMinutesForDateAndUser(todayStart, NO_USER),
+                readingSessionDao.getSessionCountForDateAndUser(todayStart, NO_USER),
             ) { minutes, sessions ->
                 ReadingStats(
                     minutesRead = minutes,
@@ -81,11 +87,14 @@ class HomeRepositoryImpl(
         }
     }
 
-    override suspend fun deleteBook(bookId: String): Result<Unit> =
+    override suspend fun deleteBook(
+        bookId: String,
+        userId: String,
+    ): Result<Unit> =
         runCatching {
             val now = System.currentTimeMillis()
-            bookDao.deleteBook(bookId, now)
-            readingSessionDao.deleteSessionsForBook(bookId)
+            bookDao.deleteBook(bookId, userId, now)
+            readingSessionDao.deleteSessionsForBook(bookId, userId)
         }
 
     private fun getTodayStartMillis(): Long = ReadingDay.todayStartMillis(zoneId)
@@ -140,4 +149,9 @@ class HomeRepositoryImpl(
             progressUpdatedAtEpochMillis = canonical.updatedAtEpochMillis,
             stateVersion = stateVersion,
         )
+
+    private companion object {
+        /** Sentinel used when no account is active: no row ever carries it. */
+        const val NO_USER = ""
+    }
 }

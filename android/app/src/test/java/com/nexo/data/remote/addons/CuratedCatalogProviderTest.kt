@@ -23,7 +23,7 @@ import org.junit.Test
 
 /**
  * Curated first-party bundle parity suite. Mirrors desktop
- * curated-catalog-provider.test.ts: exactly six sources, every entry passes
+ * curated-catalog-provider.test.ts: exactly three sources, every entry passes
  * ManifestValidator, browse-only behavior, stable not-routable errors.
  */
 class CuratedCatalogProviderTest {
@@ -32,9 +32,6 @@ class CuratedCatalogProviderTest {
             "gutendex",
             "openlibrary",
             "standard-ebooks",
-            "librivox",
-            "wikisource",
-            "faded-page",
         )
 
     private val curatedNames =
@@ -42,9 +39,6 @@ class CuratedCatalogProviderTest {
             "Gutendex",
             "Open Library",
             "Standard Ebooks",
-            "LibriVox",
-            "Wikisource",
-            "Faded Page",
         )
 
     private fun providerFromBundle(): CuratedCatalogProvider {
@@ -62,19 +56,19 @@ class CuratedCatalogProviderTest {
     }
 
     @Test
-    fun `bundle contains exactly the six first-party manifests in order`() {
+    fun `bundle contains exactly the three first-party manifests in order`() {
         val provider = providerFromBundle()
         val sources = provider.listSources()
-        assertEquals(6, sources.size)
+        assertEquals(3, sources.size)
         assertEquals(curatedIds.map { "builtin:$it" }, sources.map { it.sourceId })
         assertEquals(curatedNames, sources.map { it.name })
-        assertEquals(List(6) { CURATED }, sources.map { it.kind })
+        assertEquals(List(3) { CURATED }, sources.map { it.kind })
     }
 
     @Test
     fun `every bundled entry passes ManifestValidator`() {
         // fromBundle validates each entry; a malformed bundle throws AddonFetchException.
-        assertEquals(6, providerFromBundle().listSources().size)
+        assertEquals(3, providerFromBundle().listSources().size)
     }
 
     @Test
@@ -130,7 +124,7 @@ class CuratedCatalogProviderTest {
             val sources = composite.listSources()
             assertEquals(BUILTIN_GUTENDEX, sources.first().sourceId)
             assertEquals(CatalogSourceKind.BUILTIN, sources.first().kind)
-            assertEquals(4, sources.count { it.kind == CatalogSourceKind.CURATED })
+            assertEquals(1, sources.count { it.kind == CatalogSourceKind.CURATED })
         }
 
     @Test

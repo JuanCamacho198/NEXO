@@ -7,6 +7,7 @@ import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.GetStatisticsUseCase
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,9 +30,9 @@ class HomeViewModelTest {
         val allBooksFlow = MutableStateFlow<List<Book>>(emptyList())
 
         io.mockk.every { mockRepo.observeDailyStats(any(), any()) } returns dailyStatsFlow
-        io.mockk.every { mockRepo.observeCurrentBooks() } returns currentBooksFlow
-        io.mockk.every { mockRepo.observeRecentBooks(any()) } returns recentBooksFlow
-        io.mockk.every { mockRepo.observeBooks() } returns allBooksFlow
+        io.mockk.every { mockRepo.observeCurrentBooks(any()) } returns currentBooksFlow
+        io.mockk.every { mockRepo.observeRecentBooks(any(), any()) } returns recentBooksFlow
+        io.mockk.every { mockRepo.observeBooks(any()) } returns allBooksFlow
 
         val useCase =
             statsUseCase ?: GetStatisticsUseCase(
@@ -47,6 +48,7 @@ class HomeViewModelTest {
             dailyGoalProvider = { 30 },
             readerRepository = mockk<ReaderRepository>(relaxed = true),
             getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true),
+            activeUser = activeUserProviderFor(),
         )
     }
 
@@ -140,9 +142,9 @@ class HomeViewModelTest {
             val allBooksFlow = MutableStateFlow<List<Book>>(emptyList())
 
             io.mockk.every { mockRepo.observeDailyStats(any(), any()) } returns dailyStatsFlow
-            io.mockk.every { mockRepo.observeCurrentBooks() } returns currentBooksFlow
-            io.mockk.every { mockRepo.observeRecentBooks(any()) } returns recentBooksFlow
-            io.mockk.every { mockRepo.observeBooks() } returns allBooksFlow
+            io.mockk.every { mockRepo.observeCurrentBooks(any()) } returns currentBooksFlow
+            io.mockk.every { mockRepo.observeRecentBooks(any(), any()) } returns recentBooksFlow
+            io.mockk.every { mockRepo.observeBooks(any()) } returns allBooksFlow
 
             val statsUseCase =
                 GetStatisticsUseCase(
@@ -158,6 +160,7 @@ class HomeViewModelTest {
                     dailyGoalProvider = { 30 },
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
                     getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true),
+                    activeUser = activeUserProviderFor(),
                 )
             kotlinx.coroutines.delay(100)
 
@@ -180,9 +183,9 @@ class HomeViewModelTest {
             val allBooksFlow = MutableStateFlow<List<Book>>(emptyList())
 
             io.mockk.every { mockRepo.observeDailyStats(any(), any()) } returns dailyStatsFlow
-            io.mockk.every { mockRepo.observeCurrentBooks() } returns currentBooksFlow
-            io.mockk.every { mockRepo.observeRecentBooks(any()) } returns recentBooksFlow
-            io.mockk.every { mockRepo.observeBooks() } returns allBooksFlow
+            io.mockk.every { mockRepo.observeCurrentBooks(any()) } returns currentBooksFlow
+            io.mockk.every { mockRepo.observeRecentBooks(any(), any()) } returns recentBooksFlow
+            io.mockk.every { mockRepo.observeBooks(any()) } returns allBooksFlow
 
             // The 5th flow (statistics) carries the streak.
             val statsUseCase =
@@ -199,6 +202,7 @@ class HomeViewModelTest {
                     dailyGoalProvider = { 30 },
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
                     getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true),
+                    activeUser = activeUserProviderFor(),
                 )
             kotlinx.coroutines.delay(100)
 
@@ -216,9 +220,9 @@ class HomeViewModelTest {
             val allBooksFlow = MutableStateFlow<List<Book>>(emptyList())
 
             io.mockk.every { mockRepo.observeDailyStats(any(), any()) } returns dailyStatsFlow
-            io.mockk.every { mockRepo.observeCurrentBooks() } returns currentBooksFlow
-            io.mockk.every { mockRepo.observeRecentBooks(any()) } returns recentBooksFlow
-            io.mockk.every { mockRepo.observeBooks() } returns allBooksFlow
+            io.mockk.every { mockRepo.observeCurrentBooks(any()) } returns currentBooksFlow
+            io.mockk.every { mockRepo.observeRecentBooks(any(), any()) } returns recentBooksFlow
+            io.mockk.every { mockRepo.observeBooks(any()) } returns allBooksFlow
 
             val statsUseCase =
                 GetStatisticsUseCase(
@@ -227,6 +231,10 @@ class HomeViewModelTest {
                     dailyGoalProvider = { 30 },
                     zoneId = java.time.ZoneId.of("UTC"),
                 )
+            // The account id comes from ActiveUserProvider — the single source of
+            // truth SessionSyncEffect writes. setActiveSession only carries the
+            // presentation identity, so it must NOT scope the queries.
+            val provider = activeUserProviderFor()
             val viewModel =
                 HomeViewModel(
                     homeRepository = mockRepo,
@@ -234,37 +242,39 @@ class HomeViewModelTest {
                     dailyGoalProvider = { 45 },
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
                     getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true),
+                    activeUser = provider,
                 )
             kotlinx.coroutines.delay(100)
 
-            // Set an active session → the daily-stats flow must be re-collected with
-            // the user's id and the injected goal (45), not the hardcoded 30.
-            viewModel.setActiveSession(
-                com.nexo.domain.model.AuthSession(
-                    userId = "user-42",
-                    email = "u@example.com",
-                    displayName = "U",
-                ),
-            )
+            // The session resolves → the daily-stats flow must be re-collected
+            // with the user's id and the injected goal (45), not the hardcoded 30.
+            provider.set("user-42")
             kotlinx.coroutines.delay(100)
 
             io.mockk.verify { mockRepo.observeDailyStats("user-42", 45) }
         }
 
     private class FakeReadingStatsRepository : com.nexo.domain.repository.ReadingStatsRepository {
-        override fun observeStats(bookId: String): kotlinx.coroutines.flow.Flow<com.nexo.domain.repository.ReadingStatsData?> = MutableStateFlow(null)
+        override fun observeStats(
+            bookId: String,
+            userId: String,
+        ): kotlinx.coroutines.flow.Flow<com.nexo.domain.repository.ReadingStatsData?> = MutableStateFlow(null)
 
-        override fun observeTotalTime(): kotlinx.coroutines.flow.Flow<Long> = MutableStateFlow(0L)
+        override fun observeTotalTime(userId: String): kotlinx.coroutines.flow.Flow<Long> = MutableStateFlow(0L)
 
-        override fun observeBookStats(): kotlinx.coroutines.flow.Flow<List<com.nexo.domain.repository.ReadingStatsData>> = MutableStateFlow(emptyList())
+        override fun observeBookStats(userId: String): kotlinx.coroutines.flow.Flow<List<com.nexo.domain.repository.ReadingStatsData>> = MutableStateFlow(emptyList())
 
         override suspend fun getDailyActivity(userId: String?): List<com.nexo.domain.model.DailyReadingActivity> = emptyList()
 
         override suspend fun updateReadingTime(
             bookId: String,
+            userId: String,
             additionalMinutes: Long,
         ) = Unit
 
-        override suspend fun deleteStats(bookId: String) = Unit
+        override suspend fun deleteStats(
+            bookId: String,
+            userId: String,
+        ) = Unit
     }
 }

@@ -350,6 +350,10 @@ interface FakeProviderOptions {
   featuredBySort?: Partial<Record<CatalogFeaturedSort, CatalogBook[] | Error>>;
   featuredError?: Error;
   supports?: boolean;
+  topicByTerm?: (term: string) => CatalogBook[] | Error;
+  topicBooks?: CatalogBook[];
+  topicError?: Error;
+  supportsTopic?: boolean;
   searchSourceError?: Error;
   searchSourceBooks?: CatalogBook[];
   /** Per-query outcome for `searchSource`; an Error value is thrown. */
@@ -357,9 +361,9 @@ interface FakeProviderOptions {
 }
 
 function fakeProvider(opts: FakeProviderOptions = {}): CatalogProvider & {
-  calls: { featured: number; search: number; searchSource: number };
+  calls: { featured: number; search: number; searchSource: number; topic: number };
 } {
-  const calls = { featured: 0, search: 0, searchSource: 0 };
+  const calls = { featured: 0, search: 0, searchSource: 0, topic: 0 };
   const sources: CatalogSourceInfo[] = opts.sources ?? [
     { sourceId: 'builtin:fake' as CatalogSource, name: 'Fake', kind: 'builtin' },
   ];
@@ -387,6 +391,16 @@ function fakeProvider(opts: FakeProviderOptions = {}): CatalogProvider & {
     },
     supportsFeatured(_sort: CatalogFeaturedSort): boolean {
       return opts.supports ?? true;
+    },
+    async topic(term: string, _page: number): Promise<PagedResult> {
+      calls.topic += 1;
+      if (opts.topicError) throw opts.topicError;
+      const outcome = opts.topicByTerm?.(term);
+      if (outcome instanceof Error) throw outcome;
+      return paged(outcome ?? opts.topicBooks ?? []);
+    },
+    supportsTopic(): boolean {
+      return opts.supportsTopic ?? false;
     },
     async searchSource(
       _sourceId: CatalogSource,
@@ -600,19 +614,21 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
     }
   });
 
-  it('per-rail fail-closed: a failing author shelf fails only that rail', async () => {
+  it('per-rail fail-closed: a failing topic shelf fails only that rail', async () => {
     const provider = fakeProvider({
-      searchSourceByQuery: (query) =>
-        query === 'edgar allan poe'
+      supportsTopic: true,
+      topicByTerm: (term) =>
+        term === 'adventure'
           ? catalogError('UPSTREAM_ERROR', 'boom')
-          : [fakeBook('googlebooks:ok', ['Fiction'], [railAuthor(query)])],
+          : [fakeBook('gutendex:ok', ['Fiction'])],
+      searchSourceBooks: [fakeBook('gutendex:ok', ['Fiction'])],
     });
     const state = new DiscoverDomainState(provider, {}, { now: () => new Date(2026, 5, 10) });
     await state.refreshRails();
     expect(state.rails).toHaveLength(4);
     expect(state.rails[0]?.kind).toBe('Loaded');
     expect(state.rails[1]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
-    // The fixed-source rails are untouched by an author shelf's failure.
+    // The fixed-source rails are untouched by a topic shelf's failure.
     expect(state.rails[2]?.kind).toBe('Loaded');
     expect(state.rails[3]?.kind).toBe('Loaded');
     expect(state.isOnline).toBe(true);
@@ -622,6 +638,9 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
     const base = fakeProvider();
     const provider: CatalogProvider = {
       ...base,
+      supportsTopic: () => true,
+      topic: (_term, _page) =>
+        Promise.resolve(paged([fakeBook('gutendex:ok', ['Fiction'], ['Author'])])),
       // Everything but Standard Ebooks answers as a covered author book; the
       // fixed-source rails carry no term, so attribution falls back to an author.
       searchSource: (sourceId, query) =>
@@ -641,17 +660,16 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
   });
 
   it('short rails render as-is and long rails truncate to the fetch limit', async () => {
-    const many = Array.from({ length: 30 }, (_, i) =>
-      fakeBook(`googlebooks:${100 + i}`, ['Fiction'], [railAuthor('arthur conan doyle')]),
-    );
+    const many = Array.from({ length: 30 }, (_, i) => fakeBook(`gutendex:${100 + i}`, ['Fiction']));
     const provider = fakeProvider({
-      searchSourceByQuery: (query) =>
-        query === 'arthur conan doyle'
+      supportsTopic: true,
+      topicByTerm: (term) =>
+        term === 'science fiction'
           ? many
           : [
-              fakeBook('googlebooks:1', ['Fiction'], [railAuthor(query)]),
-              fakeBook('googlebooks:2', ['Fiction'], [railAuthor(query)]),
-              fakeBook('googlebooks:3', ['Fiction'], [railAuthor(query)]),
+              fakeBook('gutendex:1', ['Fiction']),
+              fakeBook('gutendex:2', ['Fiction']),
+              fakeBook('gutendex:3', ['Fiction']),
             ],
     });
     const state = new DiscoverDomainState(provider, {}, { now: () => new Date(2026, 5, 10) });
@@ -690,10 +708,16 @@ describe('desktop-descubrir Phase 3.3 — skeleton, offline retry, discover rout
   it('offline then retry: connectivity failure flips isOnline false and retry recovers', async () => {
     let failing = true;
     const base = fakeProvider({
+      supportsTopic: true,
+      topicBooks: [fakeBook('googlebooks:3', ['Fiction'], ['Arthur Conan Doyle'])],
       searchSourceBooks: [fakeBook('googlebooks:3', ['Fiction'], ['Arthur Conan Doyle'])],
     });
     const flaky: CatalogProvider = {
       ...base,
+      topic: async (term, page) => {
+        if (failing) throw catalogError('NETWORK_ERROR', 'offline');
+        return base.topic(term, page);
+      },
       searchSource: async (sourceId, query, page) => {
         if (failing) throw catalogError('NETWORK_ERROR', 'offline');
         return base.searchSource(sourceId, query, page);

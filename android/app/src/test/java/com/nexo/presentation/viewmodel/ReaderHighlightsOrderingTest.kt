@@ -6,6 +6,7 @@ import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.testutil.FakeReaderRepository
 import com.nexo.testutil.FakeReadingStatsRepository
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,6 +98,7 @@ class ReaderHighlightsOrderingTest {
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(fake),
             defaultBookId = "book-1",
+            activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
         )
     }

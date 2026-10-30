@@ -9,6 +9,7 @@ import com.nexo.domain.model.Book
 import com.nexo.domain.model.BookStatus
 import com.nexo.domain.model.ReadingState
 import com.nexo.domain.model.isActiveReadingCandidate
+import com.nexo.testutil.TEST_USER_ID
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
@@ -187,15 +188,15 @@ class HomeRepositoryImplFilterTest {
         progresses: List<ReadingProgressEntity> = emptyList(),
     ): List<Book> {
         val bookDao = mockk<BookDao>()
-        every { bookDao.observeReadingBooks() } returns flowOf(books)
+        every { bookDao.observeReadingBooks(any()) } returns flowOf(books)
         val readingProgressDao = mockk<ReadingProgressDao>()
-        every { readingProgressDao.observeAll() } returns flowOf(progresses)
+        every { readingProgressDao.observeAll(any()) } returns flowOf(progresses)
         return HomeRepositoryImpl(
             bookDao = bookDao,
             readingProgressDao = readingProgressDao,
             readingSessionDao = mockk<ReadingSessionDao>(),
             zoneId = java.time.ZoneId.of("UTC"),
-        ).observeCurrentBooks().first()
+        ).observeCurrentBooks(TEST_USER_ID).first()
     }
 
     private fun book(
@@ -212,6 +213,7 @@ class HomeRepositoryImplFilterTest {
             updatedAtEpochMillis = 1_000L,
             status = status,
             readingState = ReadingState.READING,
+            userId = TEST_USER_ID,
         )
 
     private fun canonical(
@@ -224,6 +226,7 @@ class HomeRepositoryImplFilterTest {
             cfiLocation = "epubcfi(/6/2)",
             percentage = percentage,
             updatedAtEpochMillis = 2_000L,
+            userId = TEST_USER_ID,
         )
 
     private fun domainBook(

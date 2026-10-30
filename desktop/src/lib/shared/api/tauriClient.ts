@@ -290,10 +290,14 @@ export const upsertProgress = async (progress: ReadingProgressDto): Promise<void
   await invoke('upsertProgress', { progress });
 };
 
-export const getReadingStats = async (bookId?: string): Promise<ReadingStatsSummaryDto> => {
+export const getReadingStats = async (
+  bookId?: string,
+  userId = '',
+): Promise<ReadingStatsSummaryDto> => {
   try {
     return await invoke<ReadingStatsSummaryDto>('getReadingStats', {
       bookId,
+      userId,
     });
   } catch (error) {
     return attachCommandError(error);
@@ -321,9 +325,15 @@ export const getReadingStatsForRange = async (
   from: string,
   to: string,
   bookId?: string,
+  userId = '',
 ): Promise<ReadingStatsSummaryDto> => {
   try {
-    return await invoke<ReadingStatsSummaryDto>('getReadingStatsForRange', { from, to, bookId });
+    return await invoke<ReadingStatsSummaryDto>('getReadingStatsForRange', {
+      from,
+      to,
+      bookId,
+      userId,
+    });
   } catch (error) {
     return attachCommandError(error);
   }

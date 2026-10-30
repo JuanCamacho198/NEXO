@@ -190,17 +190,14 @@ import androidx.lifecycle.viewModelScope
 ## Design System
 
 El diseño de la app está en `design/nextPage-movil.pen` (Pencil, accesible via MCP).
-Incluye Design Tokens y 5 pantallas trazadas.
 
-Para inspeccionar nodos del diseño desde el MCP de Pencil:
-```powershell
-# Node IDs de las pantallas:
-# W29xCr → Welcome Screen (AuthScreen.kt)
-# WDYjT  → Home (HomeScreen.kt)
-# HQRl6  → Bookshelf (LibraryScreen.kt)
-# iSSWb  → Resaltados (HighlightsScreen.kt)
-# EQsNd  → Ajustes (SettingsScreen.kt)
-```
+**El código es la fuente de verdad.** El `.pen` es referencia visual: patrones,
+tokens, jerarquía e intención de diseño. No es un contrato que el código deba
+espejar. Cuando diseño y código difieran, gana el código, y el `.pen` no se
+actualiza para seguirlo ni bloquea un cambio.
+
+Node IDs de referencia para navegar el documento:
+
 
 ## Project Artifacts
 

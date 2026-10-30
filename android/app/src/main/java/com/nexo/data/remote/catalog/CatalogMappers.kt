@@ -2,6 +2,11 @@ package com.nexo.data.remote.catalog
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserException
+import org.xmlpull.v1.XmlPullParserFactory
+import java.io.IOException
+import java.io.StringReader
 import java.text.Normalizer
 
 /**
@@ -337,3 +342,236 @@ fun mapGoogleBooksVolume(item: GoogleBooksVolumeItem): CatalogBook? {
         googleBooksId = item.id,
     )
 }
+
+// ── Standard Ebooks (Atom acquisition feed) ─────────────────────────
+
+/**
+ * Prefix every Standard Ebooks book id carries. Kept here beside the mapper so
+ * the id space and the source that owns it (`builtin:standard-ebooks`, whose
+ * `bookIdPrefixForSource` derives the same string) can never drift.
+ */
+const val STANDARD_EBOOKS_ID_PREFIX = "standard-ebooks:"
+
+/** Atom local names the feed actually uses. Namespace prefixes are stripped. */
+private const val ATOM_ENTRY = "entry"
+private const val ATOM_AUTHOR = "author"
+private const val ATOM_NAME = "name"
+private const val ATOM_TITLE = "title"
+private const val ATOM_ID = "id"
+private const val ATOM_SUMMARY = "summary"
+private const val ATOM_CATEGORY = "category"
+private const val ATOM_LINK = "link"
+private const val MEDIA_THUMBNAIL = "thumbnail"
+
+/** The enclosure title the feed marks as its default EPUB. */
+private const val SE_RECOMMENDED_EPUB = "Recommended compatible epub"
+
+/** The acquisition MIME the rail's EPUB link must carry. */
+private const val SE_EPUB_MIME = "application/epub+zip"
+private const val HTTPS_PREFIX = "https://"
+
+/** At most this many subject terms are kept per book (same bound as Open Library). */
+private const val SE_MAX_SUBJECTS = 8
+
+/**
+ * Feed nesting, counted from the document element: `<feed>` is depth 1, an
+ * `<entry>` depth 2, its direct children depth 3, `<author><name>` depth 4.
+ * The feed also carries a feed-level `<title>`, so entry text is only read at
+ * entry depth — never by tag name alone.
+ */
+private const val FEED_CHILD_DEPTH = 2
+private const val ENTRY_CHILD_DEPTH = 3
+private const val ENTRY_GRANDCHILD_DEPTH = 4
+
+/** Which textual field the parser is currently accumulating. */
+private enum class StandardEbooksField { NONE, TITLE, ID, SUMMARY, AUTHOR }
+
+/**
+ * Namespaced book id from the entry permalink
+ * (`https://standardebooks.org/ebooks/<author-slug>/<book-slug>[/<translator-slug>]`).
+ * The slug pair is stable and unique per work; a third segment is the
+ * translator and is dropped, so the id survives a re-translation.
+ */
+fun standardEbooksSlugOf(permalink: String): String? {
+    val marker = "/ebooks/"
+    val at = permalink.indexOf(marker)
+    if (at < 0) return null
+    val segments =
+        permalink
+            .substring(at + marker.length)
+            .split('/')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+    if (segments.size < 2) return null
+    return "${segments[0]}/${segments[1]}"
+}
+
+/** Mutable per-entry accumulator; [toBook] is the whole validation gate. */
+private class StandardEbooksEntryBuilder {
+    private var title: String = ""
+    private var permalink: String = ""
+    private var summary: String? = null
+    private var coverUrl: String? = null
+    private var downloadUrl: String? = null
+    private val authors = mutableListOf<String>()
+    private val subjects = mutableListOf<String>()
+    private val text = StringBuilder()
+
+    fun capture(chunk: String?) {
+        if (chunk != null) text.append(chunk)
+    }
+
+    fun commit(field: StandardEbooksField) {
+        val value = text.toString().trim()
+        text.setLength(0)
+        when (field) {
+            StandardEbooksField.TITLE -> title = value
+            StandardEbooksField.ID -> permalink = value
+            StandardEbooksField.SUMMARY -> summary = value.takeIf { it.isNotEmpty() }
+            StandardEbooksField.AUTHOR -> if (value.isNotEmpty()) authors.add(value)
+            StandardEbooksField.NONE -> Unit
+        }
+    }
+
+    fun readAttribute(
+        name: String,
+        parser: XmlPullParser,
+    ) {
+        when (name) {
+            ATOM_CATEGORY -> {
+                val term = attribute(parser, "term")?.trim().orEmpty()
+                if (term.isNotEmpty() && subjects.size < SE_MAX_SUBJECTS) subjects.add(term)
+            }
+            MEDIA_THUMBNAIL -> {
+                val url = attribute(parser, "url")?.trim().orEmpty()
+                if (url.startsWith(HTTPS_PREFIX)) coverUrl = url
+            }
+            ATOM_LINK -> {
+                if (downloadUrl == null && isRecommendedEpub(parser)) {
+                    val href = attribute(parser, "href")?.trim().orEmpty()
+                    if (href.startsWith(HTTPS_PREFIX)) downloadUrl = href
+                }
+            }
+        }
+    }
+
+    /**
+     * Entries without a title, an author, a slug or an https EPUB link are
+     * dropped: a rail card needs all three text fields, and a book with no
+     * download could never be read from here. `languages` stays empty rather
+     * than guessed — the feed carries no language element.
+     */
+    fun toBook(): CatalogBook? {
+        val slug = standardEbooksSlugOf(permalink) ?: return null
+        val download = downloadUrl ?: return null
+        if (title.isBlank() || authors.isEmpty()) return null
+        return CatalogBook(
+            id = STANDARD_EBOOKS_ID_PREFIX + slug,
+            provider = BUILTIN_STANDARD_EBOOKS,
+            title = title,
+            authors = authors.toList(),
+            coverUrl = coverUrl,
+            languages = emptyList(),
+            subjects = subjects.toList(),
+            downloadUrl = download,
+            description = summary,
+            isPublicDomain = true,
+        )
+    }
+}
+
+/**
+ * Map the Standard Ebooks Atom feed (`/feeds/atom/new-releases`) to catalog
+ * books using the platform `XmlPullParser` — no XML package is added for one
+ * feed. A malformed document collapses to an empty list (the desktop
+ * `DOMParser` `parsererror` path), so a rail built on it auto-hides instead of
+ * rendering a broken shelf.
+ */
+fun mapStandardEbooksAtomFeed(xml: String): List<CatalogBook> =
+    try {
+        parseStandardEbooksFeed(xml)
+    } catch (err: XmlPullParserException) {
+        emptyList()
+    } catch (err: IOException) {
+        emptyList()
+    }
+
+private fun parseStandardEbooksFeed(xml: String): List<CatalogBook> {
+    val parser = XmlPullParserFactory.newInstance().apply { isNamespaceAware = true }.newPullParser()
+    parser.setInput(StringReader(xml))
+    val books = mutableListOf<CatalogBook>()
+    var depth = 0
+    var builder: StandardEbooksEntryBuilder? = null
+    var directChild: String? = null
+    var field = StandardEbooksField.NONE
+    var event = parser.eventType
+    while (event != XmlPullParser.END_DOCUMENT) {
+        when (event) {
+            XmlPullParser.START_TAG -> {
+                depth++
+                val name = parser.name.substringAfter(':')
+                val current = builder
+                when {
+                    depth == FEED_CHILD_DEPTH && name == ATOM_ENTRY -> builder = StandardEbooksEntryBuilder()
+                    depth == ENTRY_CHILD_DEPTH && current != null -> {
+                        directChild = name
+                        field = fieldFor(name)
+                        current.readAttribute(name, parser)
+                    }
+                    depth == ENTRY_GRANDCHILD_DEPTH &&
+                        current != null &&
+                        directChild == ATOM_AUTHOR &&
+                        name == ATOM_NAME -> field = StandardEbooksField.AUTHOR
+                    else -> Unit
+                }
+            }
+            XmlPullParser.TEXT -> if (field != StandardEbooksField.NONE) builder?.capture(parser.text)
+            XmlPullParser.END_TAG -> {
+                when (depth) {
+                    ENTRY_GRANDCHILD_DEPTH -> {
+                        builder?.commit(field)
+                        field = StandardEbooksField.NONE
+                    }
+                    ENTRY_CHILD_DEPTH -> {
+                        builder?.commit(field)
+                        field = StandardEbooksField.NONE
+                        directChild = null
+                    }
+                    FEED_CHILD_DEPTH -> {
+                        builder?.toBook()?.let(books::add)
+                        builder = null
+                    }
+                }
+                depth--
+            }
+        }
+        event = parser.next()
+    }
+    return books
+}
+
+private fun fieldFor(name: String): StandardEbooksField =
+    when (name) {
+        ATOM_TITLE -> StandardEbooksField.TITLE
+        ATOM_ID -> StandardEbooksField.ID
+        ATOM_SUMMARY -> StandardEbooksField.SUMMARY
+        else -> StandardEbooksField.NONE
+    }
+
+/** First attribute whose local name matches, prefix-stripped (namespace agnostic). */
+private fun attribute(
+    parser: XmlPullParser,
+    localName: String,
+): String? {
+    for (index in 0 until parser.attributeCount) {
+        if (parser.getAttributeName(index).substringAfter(':') == localName) {
+            return parser.getAttributeValue(index)
+        }
+    }
+    return null
+}
+
+private fun isRecommendedEpub(parser: XmlPullParser): Boolean =
+    attribute(parser, "rel") == "enclosure" &&
+        attribute(parser, "type") == SE_EPUB_MIME &&
+        attribute(parser, "title") == SE_RECOMMENDED_EPUB

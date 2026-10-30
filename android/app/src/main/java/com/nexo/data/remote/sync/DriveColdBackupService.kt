@@ -129,12 +129,12 @@ class DriveColdBackupService(
      */
     suspend fun exportColdBackup(userId: String): Result<Unit> =
         runCatching {
-            val books = bookDao.observeAllBooks().first()
-            val highlights = highlightDao.observeAllHighlights().first()
-            val bookmarks = bookmarkDao.observeAllBookmarks().first()
-            val sessions = readingSessionDao.getAll()
+            val books = bookDao.observeAllBooks(userId).first()
+            val highlights = highlightDao.observeAllHighlights(userId).first()
+            val bookmarks = bookmarkDao.observeAllBookmarks(userId).first()
+            val sessions = readingSessionDao.getAll(userId)
             // Progress: one row per book via DAO list or per-book lookup
-            val progressEntities = readingProgressDao.getAll()
+            val progressEntities = readingProgressDao.getAll(userId)
 
             val bookRows =
                 books.map { e ->
@@ -204,20 +204,22 @@ class DriveColdBackupService(
                 }
 
             val sessionRows =
-                sessions.map { e ->
-                    ReadingSessionRow(
-                        id = e.id,
-                        userId = e.userId.ifEmpty { userId },
-                        bookId = e.bookId,
-                        startedAt = millisToIso(e.startTimeEpochMillis),
-                        durationMinutes = e.durationMinutes,
-                        date = millisToIso(e.date),
-                        device = "android",
-                        updatedAt = millisToIso(if (e.updatedAtEpochMillis == 0L) System.currentTimeMillis() else e.updatedAtEpochMillis),
-                        startPercentage = null,
-                        endPercentage = null,
-                    )
-                }
+                sessions
+                    .filter { it.userId == userId }
+                    .map { e ->
+                        ReadingSessionRow(
+                            id = e.id,
+                            userId = e.userId,
+                            bookId = e.bookId,
+                            startedAt = millisToIso(e.startTimeEpochMillis),
+                            durationMinutes = e.durationMinutes,
+                            date = millisToIso(e.date),
+                            device = "android",
+                            updatedAt = millisToIso(if (e.updatedAtEpochMillis == 0L) System.currentTimeMillis() else e.updatedAtEpochMillis),
+                            startPercentage = null,
+                            endPercentage = null,
+                        )
+                    }
 
             val backup =
                 ColdBackupJson(
@@ -356,6 +358,17 @@ class DriveColdBackupService(
         }
     }
 
+    /**
+     * Writes the backup rows for [userId].
+     *
+     * The backup file is stored under `books/{userId}/`, so its rows were
+     * exported from that account. Every write is still gated on the row's own
+     * owner: a row carrying a *different* `userId` came from a foreign backup
+     * (shared file, renamed account, or a hand-edited JSON) and is dropped
+     * instead of being re-stamped with [userId], which would move another
+     * account's data into this one. A row with no owner is adopted, since that
+     * is the pre-ownership export shape.
+     */
     private suspend fun importInFkOrder(
         backup: ColdBackupJson,
         userId: String,
@@ -366,9 +379,12 @@ class DriveColdBackupService(
         var bm = 0
         var s = 0
         val failures = mutableListOf<ImportFailure>()
+
+        fun belongsToActiveUser(rowUserId: String): Boolean = rowUserId.isBlank() || rowUserId == userId
         // 1. books first (FK parent)
         for (chunk in backup.books.chunked(CHUNK_SIZE)) {
             for (row in chunk) {
+                if (!belongsToActiveUser(row.userId)) continue
                 try {
                     bookCatalogDataSource.upsertBook(row.copy(userId = userId))
                     b++
@@ -380,6 +396,7 @@ class DriveColdBackupService(
         // 2. progress (depends on books)
         for (chunk in backup.progress.chunked(CHUNK_SIZE)) {
             for (row in chunk) {
+                if (!belongsToActiveUser(row.userId)) continue
                 try {
                     progressDataSource.upsertProgress(row.copy(userId = userId))
                     p++
@@ -391,6 +408,7 @@ class DriveColdBackupService(
         // 3. highlights
         for (chunk in backup.highlights.chunked(CHUNK_SIZE)) {
             for (row in chunk) {
+                if (!belongsToActiveUser(row.userId)) continue
                 try {
                     progressDataSource.upsertHighlight(row.copy(userId = userId))
                     h++
@@ -403,6 +421,7 @@ class DriveColdBackupService(
         // 4. bookmarks (unique cfi_location)
         for (chunk in backup.bookmarks.chunked(CHUNK_SIZE)) {
             for (row in chunk) {
+                if (!belongsToActiveUser(row.userId)) continue
                 try {
                     progressDataSource.upsertBookmark(row.copy(userId = userId))
                     bm++
@@ -415,6 +434,7 @@ class DriveColdBackupService(
         // 5. sessions last
         for (chunk in backup.sessions.chunked(CHUNK_SIZE)) {
             for (row in chunk) {
+                if (!belongsToActiveUser(row.userId)) continue
                 try {
                     progressDataSource.upsertReadingSession(row.copy(userId = userId))
                     s++

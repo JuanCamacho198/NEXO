@@ -2,6 +2,7 @@ package com.nexo.presentation.viewmodel.library
 
 import com.nexo.domain.model.BookImportRequest
 import com.nexo.domain.repository.LibraryRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.ImportEpubBookUseCase
 import com.nexo.presentation.viewmodel.LibraryImportEvent
 import kotlinx.coroutines.CoroutineDispatcher
@@ -34,6 +35,7 @@ import java.io.InputStream
 class BookImportStateHolder(
     private val importEpubBookUseCase: ImportEpubBookUseCase,
     private val libraryRepository: LibraryRepository,
+    private val activeUser: ActiveUserProvider,
     private val scope: CoroutineScope,
     private val onImportEvent: (LibraryImportEvent) -> Unit,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
@@ -47,6 +49,9 @@ class BookImportStateHolder(
         const val ANALYZING_PROGRESS = 0.6f
         const val SAVING_PROGRESS = 0.9f
         const val STAGE_DELAY_MS = 200L
+
+        /** Shown when an import is attempted without a persistent account (D5). */
+        const val ANONYMOUS_IMPORT_REFUSED = "Sign in to import books into your library"
     }
 
     init {
@@ -56,12 +61,20 @@ class BookImportStateHolder(
     /**
      * Import an EPUB book from a content URI.
      * Transitions: Extracting → Analyzing → Saving → Idle, then emits success/failure.
+     *
+     * Refuses when no account is active (decision D5): the anonymous/local
+     * session must not write to the DB or the filesystem.
      */
     fun importBookFromEpub(
         sourcePath: String,
         fallbackTitle: String?,
         inputStreamProvider: suspend () -> InputStream?,
     ) {
+        if (activeUser.isAnonymous()) {
+            onImportEvent(LibraryImportEvent.Failure(ANONYMOUS_IMPORT_REFUSED))
+            return
+        }
+
         _state.update { BookImportState.Extracting(EXTRACTING_PROGRESS) }
         onStateChanged(_state.value)
 
@@ -77,6 +90,7 @@ class BookImportStateHolder(
 
                 val result =
                     importEpubBookUseCase(
+                        userId = activeUser.requireUserId(),
                         request =
                             BookImportRequest(
                                 sourcePath = sourcePath,
@@ -110,12 +124,20 @@ class BookImportStateHolder(
     /**
      * Import a PDF book from a local file.
      * Transitions: Extracting → Analyzing → Saving → Idle, then emits success/failure.
+     *
+     * Refuses when no account is active (decision D5): the anonymous/local
+     * session must not write to the DB or the filesystem.
      */
     fun importPdfBook(
         sourcePath: String,
         fallbackTitle: String?,
         pdfFile: File,
     ) {
+        if (activeUser.isAnonymous()) {
+            onImportEvent(LibraryImportEvent.Failure(ANONYMOUS_IMPORT_REFUSED))
+            return
+        }
+
         _state.update { BookImportState.Extracting(EXTRACTING_PROGRESS) }
         onStateChanged(_state.value)
 
@@ -131,6 +153,7 @@ class BookImportStateHolder(
 
                 val result =
                     libraryRepository.importBookFromPdf(
+                        userId = activeUser.requireUserId(),
                         request =
                             BookImportRequest(
                                 sourcePath = sourcePath,

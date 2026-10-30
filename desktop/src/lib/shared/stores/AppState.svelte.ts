@@ -58,7 +58,7 @@ export class AppState {
     // without this seam the library singleton stays on its boot-time snapshot.
     this.discover.onLibraryRefreshNeeded = () => this.loadLibrary();
     this.reader.onStatsRefreshNeeded = async (bookId) => {
-      await this.statsDomain.loadStats(bookId);
+      await this.statsDomain.loadStats(bookId, authState.userId ?? '');
       await this.statsDomain.loadStreak(bookId, authState.userId ?? '');
     };
   }
@@ -102,7 +102,7 @@ export class AppState {
     this.search.resetSearch();
     this.library.recordReaderOpenMetric(book.format);
     await this.reader.startReading(book);
-    void this.statsDomain.loadStats(book.id);
+    void this.statsDomain.loadStats(book.id, authState.userId ?? '');
   }
 
   handleEpubLocationChange = async (
@@ -234,7 +234,7 @@ export class AppState {
           if (this.navigation.route === 'welcome') {
             this.navigation.route = 'home';
             this.loadLibrary();
-            this.statsDomain.loadStats(undefined);
+            this.statsDomain.loadStats(undefined, authState.userId ?? '');
           }
         }
         void this.loadDailyGoalForCurrentUser();
@@ -275,7 +275,7 @@ export class AppState {
         i18n.initializeLocale(),
         this.settings.loadReaderSettings(),
         this.loadLibrary(),
-        this.statsDomain.loadStats(undefined),
+        this.statsDomain.loadStats(undefined, authState.userId ?? ''),
         loadNotifications(),
         loadNotificationPreferences(),
       ]);
@@ -291,7 +291,7 @@ export class AppState {
       } catch {}
       this.settings.loadReaderSettings();
       this.loadLibrary();
-      this.statsDomain.loadStats(undefined);
+      this.statsDomain.loadStats(undefined, authState.userId ?? '');
     } finally {
       void this.loadDailyGoalForCurrentUser();
       this.statsDomain.syncDailyGoal(this.settings.dailyGoalMinutes);

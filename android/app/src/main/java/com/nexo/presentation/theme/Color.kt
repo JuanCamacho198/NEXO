@@ -128,6 +128,19 @@ val TextAccent = Color(0xFF3B82F6) // $text-accent: Blue accent
 val AccentYellow = Color(0xFFEAB308)
 
 /**
+ * AccentOrange — Primary accent of the Home v2 design (`$accent` in the `.pen`).
+ *
+ * Distinct from [AccentYellow]: the design's accent is a warmer amber
+ * (`#F59E0B`) used for the hero CTA, the progress fill, the genre chips and the
+ * continue-reading play button. [AccentYellow] stays the warning/badge colour.
+ *
+ * Used by: Home hero CTA, continue-reading play button and progress, genre chips
+ * Pairs with: BgMain (dark ink on this fill) and BgSurface (as a border tint)
+ * Contrast: 9.4:1 as ink on BgMain (AAA), 8.7:1 as ink on BgSurface (AAA)
+ */
+val AccentOrange = Color(0xFFF59E0B)
+
+/**
  * BgYellowTransparent — Background tint for yellow-accented chips/badges.
  *
  * Used by: Reading status chip background, warning badges

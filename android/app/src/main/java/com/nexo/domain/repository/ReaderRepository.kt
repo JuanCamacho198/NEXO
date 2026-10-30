@@ -7,11 +7,20 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 interface ReaderRepository {
-    fun observeProgress(bookId: String): Flow<ReadingProgress?>
+    fun observeProgress(
+        bookId: String,
+        userId: String,
+    ): Flow<ReadingProgress?>
 
-    suspend fun upsertProgress(progress: ReadingProgress)
+    suspend fun upsertProgress(
+        progress: ReadingProgress,
+        userId: String,
+    )
 
-    suspend fun getProgressForBook(bookId: String): ReadingProgress?
+    suspend fun getProgressForBook(
+        bookId: String,
+        userId: String,
+    ): ReadingProgress?
 
     /**
      * Marks a book as being read and updates its stored progress percentage.
@@ -20,25 +29,44 @@ interface ReaderRepository {
      */
     suspend fun updateBookReadingState(
         bookId: String,
+        userId: String,
         progressPercent: Float,
         updatedAt: Long,
     )
 
-    fun observeAllHighlights(): Flow<List<Highlight>>
+    fun observeAllHighlights(userId: String): Flow<List<Highlight>>
 
-    fun observeHighlights(bookId: String): Flow<List<Highlight>>
+    fun observeHighlights(
+        bookId: String,
+        userId: String,
+    ): Flow<List<Highlight>>
 
-    suspend fun upsertHighlight(highlight: Highlight)
+    suspend fun upsertHighlight(
+        highlight: Highlight,
+        userId: String,
+    )
 
-    suspend fun getHighlightsForBook(bookId: String): List<Highlight>
+    suspend fun getHighlightsForBook(
+        bookId: String,
+        userId: String,
+    ): List<Highlight>
 
-    fun observeAllTags(): Flow<List<String>> = flowOf(emptyList())
+    fun observeAllTags(userId: String): Flow<List<String>> = flowOf(emptyList())
 
-    fun observeAllBookmarks(): Flow<List<Bookmark>>
+    fun observeAllBookmarks(userId: String): Flow<List<Bookmark>>
 
-    fun observeBookmarks(bookId: String): Flow<List<Bookmark>>
+    fun observeBookmarks(
+        bookId: String,
+        userId: String,
+    ): Flow<List<Bookmark>>
 
-    suspend fun upsertBookmark(bookmark: Bookmark)
+    suspend fun upsertBookmark(
+        bookmark: Bookmark,
+        userId: String,
+    )
 
-    suspend fun getBookmarksForBook(bookId: String): List<Bookmark>
+    suspend fun getBookmarksForBook(
+        bookId: String,
+        userId: String,
+    ): List<Bookmark>
 }

@@ -9,6 +9,7 @@ import com.nexo.R
 import com.nexo.data.storage.CoverStorage
 import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -93,6 +95,7 @@ data class EditBookMetadataUiState(
 class EditBookMetadataViewModel(
     private val bookId: String,
     private val libraryRepository: LibraryRepository,
+    private val activeUser: ActiveUserProvider,
     private val coverStorage: CoverStorage,
     private val appContext: Context,
     private val onSaved: () -> Unit = {},
@@ -111,31 +114,34 @@ class EditBookMetadataViewModel(
 
     init {
         viewModelScope.launch {
-            libraryRepository.observeBookById(bookId).collect { book ->
-                if (book == null) {
-                    _uiState.update { it.copy(isLoading = false) }
-                    return@collect
-                }
-                if (!seeded) {
-                    seeded = true
-                    _uiState.update {
-                        it.copy(
-                            book = book,
-                            isLoading = false,
-                            title = book.title,
-                            author = book.author.orEmpty(),
-                            description = book.description.orEmpty(),
-                            genres = sanitizeChipList(parseChipList(book.genre), MAX_GENRES),
-                            tags = sanitizeChipList(parseChipList(book.tags), MAX_TAGS),
-                            language = book.language,
-                            publisher = book.publisher.orEmpty(),
-                            publishedDate = book.publishedDate,
-                        )
+            activeUser.userId
+                .flatMapLatest { userId ->
+                    libraryRepository.observeBookById(bookId, userId.orEmpty())
+                }.collect { book ->
+                    if (book == null) {
+                        _uiState.update { it.copy(isLoading = false) }
+                        return@collect
                     }
-                } else {
-                    _uiState.update { it.copy(book = book, isLoading = false) }
+                    if (!seeded) {
+                        seeded = true
+                        _uiState.update {
+                            it.copy(
+                                book = book,
+                                isLoading = false,
+                                title = book.title,
+                                author = book.author.orEmpty(),
+                                description = book.description.orEmpty(),
+                                genres = sanitizeChipList(parseChipList(book.genre), MAX_GENRES),
+                                tags = sanitizeChipList(parseChipList(book.tags), MAX_TAGS),
+                                language = book.language,
+                                publisher = book.publisher.orEmpty(),
+                                publishedDate = book.publishedDate,
+                            )
+                        }
+                    } else {
+                        _uiState.update { it.copy(book = book, isLoading = false) }
+                    }
                 }
-            }
         }
     }
 
@@ -202,6 +208,7 @@ class EditBookMetadataViewModel(
             val result =
                 libraryRepository.updateBookMetadata(
                     bookId = book.id,
+                    userId = activeUser.requireUserId(),
                     title = current.title.trim().ifBlank { book.title },
                     author = current.author.trim().ifBlank { null },
                     description = current.description.trim().ifBlank { null },
@@ -236,6 +243,7 @@ class EditBookMetadataViewModel(
     class Factory(
         private val bookId: String,
         private val libraryRepository: LibraryRepository,
+        private val activeUser: ActiveUserProvider,
         private val coverStorage: CoverStorage,
         private val appContext: Context,
         private val onSaved: () -> Unit = {},
@@ -245,6 +253,7 @@ class EditBookMetadataViewModel(
             EditBookMetadataViewModel(
                 bookId = bookId,
                 libraryRepository = libraryRepository,
+                activeUser = activeUser,
                 coverStorage = coverStorage,
                 appContext = appContext,
                 onSaved = onSaved,

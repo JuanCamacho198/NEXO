@@ -6,6 +6,7 @@ import com.nexo.presentation.viewmodel.reader.SleepTimerManager
 import com.nexo.testutil.FakeReaderRepository
 import com.nexo.testutil.FakeReadingStatsRepository
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -99,6 +100,7 @@ class ReaderViewModelSleepTimerTest {
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(fake),
             defaultBookId = null,
+            activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
         )
     }

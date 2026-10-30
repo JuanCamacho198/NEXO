@@ -16,7 +16,7 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index(value = ["book_id"], unique = true)],
+    indices = [Index(value = ["user_id", "book_id"], unique = true)],
 )
 data class ReadingProgressEntity(
     @PrimaryKey
@@ -32,4 +32,6 @@ data class ReadingProgressEntity(
     val updatedAtEpochMillis: Long,
     @ColumnInfo(name = "locator_json")
     val locatorJson: String? = null,
+    @ColumnInfo(name = "user_id")
+    val userId: String = "",
 )

@@ -177,7 +177,7 @@ class SyncOrchestratorTest {
         every { progress.state } returns progressState.asStateFlow()
         every { gate.sessionEvents() } returns gateEvents.asSharedFlow()
         every { gate.hasLiveSession() } answers { gateLive.value }
-        every { outboxDao.observePendingCount() } returns outboxPending.asStateFlow()
+        every { outboxDao.observePendingCount(any()) } returns outboxPending.asStateFlow()
 
         // Shares MainDispatcherRule's scheduler with `runTest`, so
         // `advanceUntilIdle()` drains the orchestrator's own scope.

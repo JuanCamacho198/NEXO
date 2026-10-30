@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,8 @@ fun NexoProgressBar(
     modifier: Modifier = Modifier,
     height: Dp = 4.dp,
     showPercentage: Boolean = true,
+    trackColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    indicatorColor: Color = MaterialTheme.colorScheme.primary,
 ) {
     val clamped = progress.coerceIn(0f, 1f)
     val shape = RoundedCornerShape(height / 2)
@@ -59,7 +62,7 @@ fun NexoProgressBar(
                     .weight(1f)
                     .height(height)
                     .clip(shape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .background(trackColor),
             contentAlignment = Alignment.CenterStart,
         ) {
             if (clamped > 0f) {
@@ -69,7 +72,7 @@ fun NexoProgressBar(
                             .fillMaxWidth(clamped)
                             .height(height)
                             .clip(shape)
-                            .background(MaterialTheme.colorScheme.primary),
+                            .background(indicatorColor),
                 )
             }
         }

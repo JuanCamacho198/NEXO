@@ -27,7 +27,25 @@ private const val PAGE_KEY_PREFIX = "p:$DISCOVER_CACHE_VERSION:"
 private const val DETAIL_KEY_PREFIX = "d:$DISCOVER_CACHE_VERSION:"
 private const val FEATURED_KEY_PREFIX = "f:$DISCOVER_CACHE_VERSION:"
 
-/** Page cache key: `p:v3:{sourceId}:{query}:{page}` (24h). Query is normalized. */
+/**
+ * Topic-rail cache namespace. It mirrors the featured namespace and lives under
+ * its own prefix because a topic page is NOT a search page: keying it as
+ * `p:…:{term}` is precisely how a `?topic=` page and a `?search=` page would
+ * collide once both exist.
+ */
+private const val TOPIC_KEY_PREFIX = "t:$DISCOVER_CACHE_VERSION:"
+
+/**
+ * Topic rail cache key: `t:v3:{sourceId}:{term}:{page}` (6h featured TTL).
+ * The term is normalized exactly like [pageCacheKey] so a rotation entry always
+ * maps to one row.
+ */
+fun topicCacheKey(
+    sourceId: String,
+    term: String,
+    page: Int,
+): String = "$TOPIC_KEY_PREFIX$sourceId:${term.trim().lowercase()}:$page"
+
 fun pageCacheKey(
     sourceId: String,
     query: String,

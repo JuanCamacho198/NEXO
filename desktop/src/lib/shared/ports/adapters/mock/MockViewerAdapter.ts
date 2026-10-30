@@ -174,7 +174,7 @@ export class MockViewerAdapter implements ViewerPort {
     for (const r of rows) this.#rs.push(r);
     return rows.length;
   }
-  async getReadingStats(): Promise<ReadingStatsSummaryDto> {
+  async getReadingStats(_bookId?: string, _userId = ''): Promise<ReadingStatsSummaryDto> {
     return {
       totalMinutesRead: 0,
       totalSessions: 0,
@@ -183,7 +183,12 @@ export class MockViewerAdapter implements ViewerPort {
       avgProgressPercentage: 0,
     };
   }
-  async getReadingStatsForRange(): Promise<ReadingStatsSummaryDto> {
+  async getReadingStatsForRange(
+    _from?: string,
+    _to?: string,
+    _bookId?: string,
+    _userId = '',
+  ): Promise<ReadingStatsSummaryDto> {
     return {
       totalMinutesRead: 0,
       totalSessions: 0,

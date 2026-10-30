@@ -6,18 +6,21 @@ import androidx.lifecycle.viewModelScope
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
 import com.nexo.presentation.feature.highlights.buildHighlightsUiState
 import com.nexo.presentation.viewmodel.highlights.CrudStateHolder
 import com.nexo.presentation.viewmodel.highlights.FilterStateHolder
 import com.nexo.presentation.viewmodel.highlights.SyncStateHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import com.nexo.presentation.feature.highlights.HighlightsUiState as FeatureHighlightsUiState
@@ -26,19 +29,21 @@ import com.nexo.presentation.viewmodel.highlights.HighlightsSyncState as NewHigh
 typealias HighlightsUiState = FeatureHighlightsUiState
 typealias HighlightsSyncState = NewHighlightsSyncState
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HighlightsViewModel
     @Inject
     constructor(
         private val readerRepository: ReaderRepository,
         private val homeRepository: HomeRepository,
+        private val activeUser: ActiveUserProvider,
         private val supabaseSync: com.nexo.data.remote.supabase.SupabaseProgressSync? = null,
     ) : ViewModel() {
         private val _uiEvent = MutableSharedFlow<UiEvent>()
         val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
         val filterHolder = FilterStateHolder()
-        val crudHolder = CrudStateHolder(readerRepository, viewModelScope, _uiEvent)
+        val crudHolder = CrudStateHolder(readerRepository, activeUser, viewModelScope, _uiEvent)
         val syncHolder = SyncStateHolder(supabaseSync, viewModelScope)
 
         val syncState: StateFlow<HighlightsSyncState> = syncHolder.syncState
@@ -46,9 +51,15 @@ class HighlightsViewModel
         val uiState: StateFlow<HighlightsUiState> =
             combine(
                 combine(
-                    readerRepository.observeAllHighlights(),
-                    readerRepository.observeAllBookmarks(),
-                    homeRepository.observeBooks(),
+                    activeUser.userId.flatMapLatest { userId ->
+                        readerRepository.observeAllHighlights(userId.orEmpty())
+                    },
+                    activeUser.userId.flatMapLatest { userId ->
+                        readerRepository.observeAllBookmarks(userId.orEmpty())
+                    },
+                    activeUser.userId.flatMapLatest { userId ->
+                        homeRepository.observeBooks(userId.orEmpty())
+                    },
                 ) { highlights, bookmarks, books -> Triple(highlights, bookmarks, books) },
                 combine(
                     filterHolder.typeFilter,
@@ -155,12 +166,13 @@ class HighlightsViewModel
 class HighlightsViewModelFactory(
     private val readerRepository: ReaderRepository,
     private val homeRepository: HomeRepository,
+    private val activeUser: ActiveUserProvider,
     private val supabaseSync: com.nexo.data.remote.supabase.SupabaseProgressSync? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HighlightsViewModel::class.java)) {
-            return HighlightsViewModel(readerRepository, homeRepository, supabaseSync) as T
+            return HighlightsViewModel(readerRepository, homeRepository, activeUser, supabaseSync) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

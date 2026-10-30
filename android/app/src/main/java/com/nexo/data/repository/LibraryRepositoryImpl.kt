@@ -64,8 +64,8 @@ class LibraryRepositoryImpl(
      */
     private val drainScheduler: OutboxDrainScheduler? = null,
 ) : LibraryRepository {
-    override fun observeLibrary(): Flow<List<Book>> =
-        combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { books, progresses ->
+    override fun observeLibrary(userId: String): Flow<List<Book>> =
+        combine(bookDao.observeAllBooks(userId), readingProgressDao.observeAll(userId)) { books, progresses ->
             val progressById = progresses.associateBy { it.bookId }
             books.map { entity ->
                 val canonical = progressById[entity.id]
@@ -73,21 +73,28 @@ class LibraryRepositoryImpl(
             }
         }
 
-    override fun observeBookById(bookId: String): Flow<Book?> =
-        bookDao.observeBookById(bookId).combine(readingProgressDao.observeProgressForBook(bookId)) { entity, canonical ->
+    override fun observeBookById(
+        bookId: String,
+        userId: String,
+    ): Flow<Book?> =
+        bookDao.observeBookById(bookId, userId).combine(readingProgressDao.observeProgressForBook(bookId, userId)) { entity, canonical ->
             entity?.let { if (canonical != null) it.toDomainWithCanonical(canonical) else it.toDomain() }
         }
 
-    override fun observeProgressForBook(bookId: String): Flow<ReadingProgress?> = readingProgressDao.observeProgressForBook(bookId).map { it?.toDomain() }
+    override fun observeProgressForBook(
+        bookId: String,
+        userId: String,
+    ): Flow<ReadingProgress?> = readingProgressDao.observeProgressForBook(bookId, userId).map { it?.toDomain() }
 
-    override fun observeTotalReadingTime(): Flow<Long> = readingStatsDao.observeTotalMinutesRead().map { it ?: 0L }
+    override fun observeTotalReadingTime(userId: String): Flow<Long> = readingStatsDao.observeTotalMinutesReadForUser(userId).map { it ?: 0L }
 
-    override fun observeReadingTimeByBook(): Flow<Map<String, Long>> =
-        readingStatsDao.observeAllStats().map { stats ->
+    override fun observeReadingTimeByBook(userId: String): Flow<Map<String, Long>> =
+        readingStatsDao.observeAllStats(userId).map { stats ->
             stats.associate { it.bookId to it.totalMinutesRead }
         }
 
     override suspend fun importBookFromEpub(
+        userId: String,
         request: BookImportRequest,
         inputStreamProvider: suspend () -> InputStream?,
     ): Result<Book> =
@@ -132,15 +139,16 @@ class LibraryRepositoryImpl(
             // Duplicate rule: identical bytes already imported are not imported
             // twice. Surfaced as DuplicateBookException so the caller can render a
             // neutral "already in library" outcome instead of a failure.
-            if (contentHash != null && bookDao.observeAllBooks().first().any { it.contentHash == contentHash }) {
+            if (contentHash != null && bookDao.observeAllBooks(userId).first().any { it.contentHash == contentHash }) {
                 throw DuplicateBookException()
             }
-            bookDao.upsert(book.toEntity().copy(contentHash = contentHash))
-            queueBookOutboxEntry(bookId)
+            bookDao.upsert(book.toEntity(userId).copy(contentHash = contentHash))
+            queueBookOutboxEntry(bookId, userId)
             book
         }
 
     override suspend fun importBookFromPdf(
+        userId: String,
         request: BookImportRequest,
         file: java.io.File,
     ): Result<Book> =
@@ -168,20 +176,24 @@ class LibraryRepositoryImpl(
                 )
 
             val contentHash = computeSha256(file.absolutePath)
-            bookDao.upsert(book.toEntity().copy(contentHash = contentHash))
-            queueBookOutboxEntry(bookId)
+            bookDao.upsert(book.toEntity(userId).copy(contentHash = contentHash))
+            queueBookOutboxEntry(bookId, userId)
             book
         }
 
-    override suspend fun getBookById(bookId: String): Book? = bookDao.getBookById(bookId)?.toDomain()
+    override suspend fun getBookById(
+        bookId: String,
+        userId: String,
+    ): Book? = bookDao.getBookById(bookId, userId)?.toDomain()
 
     override suspend fun findBookByTitleAndAuthor(
         title: String,
         author: String?,
+        userId: String,
     ): Book? {
         val requestedAuthor = author?.trim().orEmpty()
         return bookDao
-            .observeAllBooks()
+            .observeAllBooks(userId)
             .first()
             .firstOrNull { candidate ->
                 candidate.title.equals(title, ignoreCase = true) &&
@@ -195,58 +207,71 @@ class LibraryRepositoryImpl(
             }?.toDomain()
     }
 
-    override suspend fun startReading(bookId: String): Result<Unit> =
+    override suspend fun startReading(
+        bookId: String,
+        userId: String,
+    ): Result<Unit> =
         runCatching {
-            bookDao.startReading(bookId, System.currentTimeMillis())
+            bookDao.startReading(bookId, userId, System.currentTimeMillis())
         }
 
     override suspend fun updateReadingProgress(
         bookId: String,
+        userId: String,
         progress: Float,
     ): Result<Unit> =
         runCatching {
             val bounded = progress.coerceIn(0f, 100f)
-            bookDao.updateReadingProgress(bookId, bounded, System.currentTimeMillis())
+            bookDao.updateReadingProgress(bookId, userId, bounded, System.currentTimeMillis())
         }
 
-    override suspend fun completeReading(bookId: String): Result<Unit> =
+    override suspend fun completeReading(
+        bookId: String,
+        userId: String,
+    ): Result<Unit> =
         runCatching {
-            bookDao.completeReading(bookId, System.currentTimeMillis())
+            bookDao.completeReading(bookId, userId, System.currentTimeMillis())
         }
 
-    override suspend fun deleteBook(bookId: String): Result<Unit> =
+    override suspend fun deleteBook(
+        bookId: String,
+        userId: String,
+    ): Result<Unit> =
         runCatching {
             // Capture the local backing path BEFORE the soft-delete — the row is
             // excluded from observeAllBooks() once deleted_at is set.
-            val backingPath = bookDao.getBookById(bookId)?.filePath
+            val backingPath = bookDao.getBookById(bookId, userId)?.filePath
             // Clean up cover file first (idempotent — no-op if missing)
             coverStorage.deleteCover(bookId).getOrNull()
             val now = System.currentTimeMillis()
-            bookDao.deleteBook(bookId, now)
-            readingStatsDao.deleteForBook(bookId)
-            queueBookOutboxEntry(bookId, SyncOperation.DELETE)
-            deleteBackingFileIfSettled(backingPath, bookId)
+            bookDao.deleteBook(bookId, userId, now)
+            readingStatsDao.deleteForBook(bookId, userId)
+            queueBookOutboxEntry(bookId, userId, SyncOperation.DELETE)
+            deleteBackingFileIfSettled(backingPath, bookId, userId)
         }
 
-    override suspend fun deleteBookLocalOnly(bookId: String): Result<Unit> =
+    override suspend fun deleteBookLocalOnly(
+        bookId: String,
+        userId: String,
+    ): Result<Unit> =
         runCatching {
-            val backingPath = bookDao.getBookById(bookId)?.filePath
+            val backingPath = bookDao.getBookById(bookId, userId)?.filePath
             coverStorage.deleteCover(bookId).getOrNull()
             val now = System.currentTimeMillis()
-            bookDao.deleteBook(bookId, now)
-            readingStatsDao.deleteForBook(bookId)
+            bookDao.deleteBook(bookId, userId, now)
+            readingStatsDao.deleteForBook(bookId, userId)
             // Local only — do NOT queue a DELETE tombstone so the Drive file is kept
             // (mirrors desktop handleHideBook). Also drop any pending DELETE for this
             // book so a previously-queued cloud delete does not resurrect.
             try {
                 val pending =
-                    outboxDao.getPendingItems().filter {
+                    outboxDao.getPendingItems(userId).filter {
                         it.entityType == SyncEntityType.BOOK.name && it.entityId == bookId && it.operation == SyncOperation.DELETE.name
                     }
-                pending.forEach { outboxDao.deleteById(it.id) }
+                pending.forEach { outboxDao.deleteById(it.id, userId) }
             } catch (_: Exception) {
             }
-            deleteBackingFileIfSettled(backingPath, bookId)
+            deleteBackingFileIfSettled(backingPath, bookId, userId)
         }
 
     /**
@@ -261,6 +286,7 @@ class LibraryRepositoryImpl(
     private suspend fun deleteBackingFileIfSettled(
         filePath: String?,
         bookId: String,
+        userId: String,
     ) {
         if (filePath.isNullOrBlank()) return
         val file = File(filePath)
@@ -268,7 +294,7 @@ class LibraryRepositoryImpl(
         if (!isInsideAppFilesDir(file)) return
         if (!settleGate.awaitSettled()) return
         val referencedElsewhere =
-            bookDao.observeAllBooks().first().any { other ->
+            bookDao.observeAllBooks(userId).first().any { other ->
                 other.id != bookId && other.filePath == filePath
             }
         if (referencedElsewhere) return
@@ -284,21 +310,24 @@ class LibraryRepositoryImpl(
 
     override suspend fun updateBookRating(
         bookId: String,
+        userId: String,
         rating: Int?,
     ) {
-        bookDao.updateRating(bookId, rating)
+        bookDao.updateRating(bookId, userId, rating)
     }
 
     override suspend fun updateBookStatus(
         bookId: String,
+        userId: String,
         status: String?,
     ): Result<Unit> =
         runCatching {
-            bookDao.updateStatus(bookId, status, System.currentTimeMillis())
+            bookDao.updateStatus(bookId, userId, status, System.currentTimeMillis())
         }
 
     override suspend fun updateBookMetadata(
         bookId: String,
+        userId: String,
         title: String,
         author: String?,
         description: String?,
@@ -312,6 +341,7 @@ class LibraryRepositoryImpl(
         runCatching {
             bookDao.updateMetadata(
                 bookId = bookId,
+                userId = userId,
                 title = title,
                 author = author,
                 description = description,
@@ -326,7 +356,7 @@ class LibraryRepositoryImpl(
             // Queue a BOOK UPDATE so the edited metadata reaches the cloud. The
             // remotePath guard in SupabaseBookCatalogSync.processBookItem still
             // defers books without a remote file to the Drive push.
-            queueBookOutboxEntry(bookId, SyncOperation.UPDATE)
+            queueBookOutboxEntry(bookId, userId, SyncOperation.UPDATE)
         }
 
     /**
@@ -456,7 +486,7 @@ class LibraryRepositoryImpl(
             updatedAtEpochMillis = updatedAtEpochMillis,
         )
 
-    private fun Book.toEntity(): BookEntity =
+    private fun Book.toEntity(userId: String): BookEntity =
         BookEntity(
             id = id,
             title = title,
@@ -480,6 +510,7 @@ class LibraryRepositoryImpl(
             publisher = publisher,
             tags = tags,
             publishedDate = publishedDate,
+            userId = userId,
         )
 
     /**
@@ -491,6 +522,7 @@ class LibraryRepositoryImpl(
      */
     private suspend fun queueBookOutboxEntry(
         bookId: String,
+        userId: String,
         operation: SyncOperation = SyncOperation.CREATE,
     ) {
         val enqueued =
@@ -503,6 +535,7 @@ class LibraryRepositoryImpl(
                         operation = operation.name,
                         payloadJson = """{}""",
                         createdAtEpochMillis = System.currentTimeMillis(),
+                        userId = userId,
                     ),
                 )
                 true

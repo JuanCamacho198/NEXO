@@ -3,6 +3,8 @@ package com.nexo.data.repository
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.domain.sync.SyncSettleGate
+import com.nexo.testutil.OTHER_USER_ID
+import com.nexo.testutil.TEST_USER_ID
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
@@ -38,10 +40,10 @@ class StorageRepositoryImplTest {
     @Test
     fun sweep_deletesUnreferencedFilesPastGrace() =
         runBlocking {
-            val orphan = fileIn("catalog", "orphan.epub", ageMillis = 10 * 60 * 1000L)
+            val orphan = fileIn("books", "orphan.epub", ageMillis = 10 * 60 * 1000L)
             val repository = repository(settled = true, liveBooks = emptyList())
 
-            val deleted = repository.sweepOrphanBookFiles()
+            val deleted = repository.sweepOrphanBookFiles(TEST_USER_ID)
 
             assertEquals(1, deleted)
             assertFalse(orphan.exists())
@@ -50,11 +52,11 @@ class StorageRepositoryImplTest {
     @Test
     fun sweep_excludesPartFiles() =
         runBlocking {
-            val part = fileIn("catalog", "download.part", ageMillis = 10 * 60 * 1000L)
-            val orphan = fileIn("catalog", "orphan.epub", ageMillis = 10 * 60 * 1000L)
+            val part = fileIn("books", "download.part", ageMillis = 10 * 60 * 1000L)
+            val orphan = fileIn("books", "orphan.epub", ageMillis = 10 * 60 * 1000L)
             val repository = repository(settled = true, liveBooks = emptyList())
 
-            val deleted = repository.sweepOrphanBookFiles()
+            val deleted = repository.sweepOrphanBookFiles(TEST_USER_ID)
 
             assertEquals("only the non-part orphan is swept", 1, deleted)
             assertTrue("in-flight .part files must never be swept", part.exists())
@@ -67,7 +69,7 @@ class StorageRepositoryImplTest {
             val fresh = fileIn("pdfs", "fresh.pdf", ageMillis = 60 * 1000L)
             val repository = repository(settled = true, liveBooks = emptyList())
 
-            val deleted = repository.sweepOrphanBookFiles()
+            val deleted = repository.sweepOrphanBookFiles(TEST_USER_ID)
 
             assertEquals(0, deleted)
             assertTrue("a file inside the grace window is skipped", fresh.exists())
@@ -79,7 +81,7 @@ class StorageRepositoryImplTest {
             val orphan = fileIn("epubs", "orphan.epub", ageMillis = 10 * 60 * 1000L)
             val repository = repository(settled = false, liveBooks = emptyList())
 
-            val deleted = repository.sweepOrphanBookFiles()
+            val deleted = repository.sweepOrphanBookFiles(TEST_USER_ID)
 
             assertEquals(0, deleted)
             assertTrue("no sweep while sync has not settled", orphan.exists())
@@ -88,14 +90,14 @@ class StorageRepositoryImplTest {
     @Test
     fun sweep_keepsFilesReferencedByLiveBooks() =
         runBlocking {
-            val referenced = fileIn("catalog", "referenced.epub", ageMillis = 10 * 60 * 1000L)
+            val referenced = fileIn("books", "referenced.epub", ageMillis = 10 * 60 * 1000L)
             val repository =
                 repository(
                     settled = true,
                     liveBooks = listOf(bookEntity(filePath = referenced.absolutePath)),
                 )
 
-            val deleted = repository.sweepOrphanBookFiles()
+            val deleted = repository.sweepOrphanBookFiles(TEST_USER_ID)
 
             assertEquals(0, deleted)
             assertTrue("a file a live book references is not an orphan", referenced.exists())
@@ -110,7 +112,7 @@ class StorageRepositoryImplTest {
             val coverOrphan = fileIn("covers", "orphan.jpg", ageMillis = 10 * 60 * 1000L)
             val repository = repository(settled = true, liveBooks = emptyList())
 
-            val deleted = repository.sweepOrphanBookFiles()
+            val deleted = repository.sweepOrphanBookFiles(TEST_USER_ID)
 
             assertEquals(2, deleted)
             assertFalse(bookOrphan.exists())
@@ -129,7 +131,7 @@ class StorageRepositoryImplTest {
                         listOf(bookEntity(filePath = book.absolutePath, coverPath = cover.absolutePath)),
                 )
 
-            val deleted = repository.sweepOrphanBookFiles()
+            val deleted = repository.sweepOrphanBookFiles(TEST_USER_ID)
 
             assertEquals(0, deleted)
             assertTrue("a referenced cover is never an orphan", cover.exists())
@@ -148,7 +150,7 @@ class StorageRepositoryImplTest {
                         listOf(bookEntity(filePath = book.absolutePath, coverPath = cover.absolutePath)),
                 )
 
-            val deleted = repository.sweepOrphanBookFiles()
+            val deleted = repository.sweepOrphanBookFiles(TEST_USER_ID)
 
             assertEquals("clean library sweeps to zero", 0, deleted)
             assertTrue(book.exists())
@@ -176,7 +178,7 @@ class StorageRepositoryImplTest {
                         ),
                 )
 
-            val usage = repository.bookStorageUsage()
+            val usage = repository.bookStorageUsage(TEST_USER_ID)
 
             assertEquals(1, usage.size)
             assertEquals("b1", usage[0].bookId)
@@ -197,7 +199,7 @@ class StorageRepositoryImplTest {
                         ),
                 )
 
-            val usage = repository.bookStorageUsage()
+            val usage = repository.bookStorageUsage(TEST_USER_ID)
 
             assertEquals("a path counted twice must be deduped", 100L, usage[0].sizeBytes)
         }
@@ -214,7 +216,7 @@ class StorageRepositoryImplTest {
                         ),
                 )
 
-            val usage = repository.bookStorageUsage()
+            val usage = repository.bookStorageUsage(TEST_USER_ID)
 
             assertEquals(0L, usage[0].sizeBytes)
         }
@@ -233,7 +235,7 @@ class StorageRepositoryImplTest {
                         ),
                 )
 
-            val usage = repository.bookStorageUsage()
+            val usage = repository.bookStorageUsage(TEST_USER_ID)
 
             assertEquals(2, usage.size)
             assertEquals("shared bytes are attributed once", 250L, usage.sumOf { it.sizeBytes })
@@ -255,7 +257,7 @@ class StorageRepositoryImplTest {
                         ),
                 )
 
-            val usage = repository.bookStorageUsage()
+            val usage = repository.bookStorageUsage(TEST_USER_ID)
 
             assertEquals(400L, usage.sumOf { it.sizeBytes })
         }
@@ -265,7 +267,50 @@ class StorageRepositoryImplTest {
         runBlocking {
             val repository = repository(settled = true, liveBooks = emptyList())
 
-            assertTrue(repository.bookStorageUsage().isEmpty())
+            assertTrue(repository.bookStorageUsage(TEST_USER_ID).isEmpty())
+        }
+
+    // ── T9: the sweep never crosses accounts ────────────────────────────
+
+    @Test
+    fun sweep_leavesAnotherAccountsFilesAlone() =
+        runBlocking {
+            val mine = fileIn("books", "mine.epub", ageMillis = 10 * 60 * 1000L)
+            val theirs = fileIn("books", "theirs.epub", ageMillis = 10 * 60 * 1000L, userId = OTHER_USER_ID)
+            val repository = repository(settled = true, liveBooks = emptyList())
+
+            val deleted = repository.sweepOrphanBookFiles(TEST_USER_ID)
+
+            assertEquals("only this account's orphan is swept", 1, deleted)
+            assertFalse(mine.exists())
+            assertTrue("another account's file is never touched", theirs.exists())
+        }
+
+    @Test
+    fun sweep_isNotSteeredByAnotherAccountsRows() =
+        runBlocking {
+            // The other account still references a file that sits in OUR subtree
+            // (e.g. a stale copy). Its row must not preserve it for us.
+            val stale = fileIn("books", "stale.epub", ageMillis = 10 * 60 * 1000L)
+            val repository =
+                repository(
+                    settled = true,
+                    liveBooks = listOf(bookEntity(id = "theirs", filePath = stale.absolutePath, userId = OTHER_USER_ID)),
+                )
+
+            val deleted = repository.sweepOrphanBookFiles(TEST_USER_ID)
+
+            assertEquals("another account's row cannot keep our file alive", 1, deleted)
+            assertFalse(stale.exists())
+        }
+
+    @Test
+    fun bookStorageUsage_ignoresAnotherAccountsSubtrees() =
+        runBlocking {
+            fileIn("books", "theirs.epub", ageMillis = 0L, sizeBytes = 999, userId = OTHER_USER_ID)
+            val repository = repository(settled = true, liveBooks = emptyList())
+
+            assertTrue(repository.bookStorageUsage(TEST_USER_ID).isEmpty())
         }
 
     private fun repository(
@@ -273,7 +318,12 @@ class StorageRepositoryImplTest {
         liveBooks: List<BookEntity>,
     ): StorageRepositoryImpl {
         val bookDao = mockk<BookDao>(relaxed = true)
-        every { bookDao.observeAllBooks() } returns flowOf(liveBooks)
+        // Mirror the real DAO: the predicate is part of the query, so a row
+        // owned by another account is never returned for this one.
+        every { bookDao.observeAllBooks(any()) } answers {
+            val userId = firstArg<String>()
+            flowOf(liveBooks.filter { it.userId == userId })
+        }
         return StorageRepositoryImpl(
             appContext = mockk { every { filesDir } returns root },
             bookDao = bookDao,
@@ -282,14 +332,19 @@ class StorageRepositoryImplTest {
         )
     }
 
-    /** Creates an aged regular file under `root/<dir>`; [ageMillis] before [fixedNow]. */
+    /**
+     * Creates an aged regular file under `root/<dir>/<userId>`; [ageMillis]
+     * before [fixedNow]. The sweep only walks the active user's subtree (T9),
+     * so the fixture must live there too.
+     */
     private fun fileIn(
         dir: String,
         name: String,
         ageMillis: Long,
         sizeBytes: Int = 3,
+        userId: String = TEST_USER_ID,
     ): File {
-        val directory = File(root, dir).apply { mkdirs() }
+        val directory = File(File(root, dir), userId).apply { mkdirs() }
         return File(directory, name).apply {
             writeBytes(ByteArray(sizeBytes))
             setLastModified(fixedNow - ageMillis)
@@ -301,6 +356,7 @@ class StorageRepositoryImplTest {
         id: String = "live-book",
         title: String = "Live Book",
         coverPath: String? = null,
+        userId: String = TEST_USER_ID,
     ) = BookEntity(
         id = id,
         title = title,
@@ -309,6 +365,7 @@ class StorageRepositoryImplTest {
         filePath = filePath,
         format = "epub",
         updatedAtEpochMillis = 1L,
+        userId = userId,
     )
 
     private class FakeSettleGate(

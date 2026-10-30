@@ -4,10 +4,10 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
-import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "reading_stats",
+    primaryKeys = ["user_id", "book_id"],
     foreignKeys = [
         ForeignKey(
             entity = BookEntity::class,
@@ -19,11 +19,11 @@ import androidx.room.PrimaryKey
     indices = [Index(value = ["book_id"])],
 )
 data class ReadingStatsEntity(
-    @PrimaryKey
     @ColumnInfo(name = "book_id")
     val bookId: String,
     val totalMinutesRead: Long = 0,
     val lastReadDateEpochMillis: Long = 0,
     val sessionsCount: Int = 0,
+    @ColumnInfo(name = "user_id")
     val userId: String = "",
 )

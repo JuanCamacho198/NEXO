@@ -12,12 +12,6 @@ interface CacheRepository {
     /** Payload bytes currently stored in `discover_cache` (DB pages/index excluded). */
     suspend fun discoverCacheSizeBytes(): Long
 
-    /** Deletes TTL-expired discover rows (`fetched_at + ttl_s < now`); returns rows removed. */
-    suspend fun pruneDiscoverCache(): Int
-
-    /** Deletes discover rows under the legacy `v1`/`v2` key namespaces; returns rows removed. */
-    suspend fun purgeLegacyDiscoverCache(): Int
-
     /** Deletes every discover-cache row; returns rows removed. Never touches books or covers. */
     suspend fun clearDiscoverCache(): Int
 

@@ -3,6 +3,7 @@ package com.nexo.presentation.viewmodel.reader.interaction
 import android.util.Log
 import com.nexo.domain.model.Bookmark
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.viewmodel.CfiMigrator
 import com.nexo.presentation.viewmodel.reader.BookChapter
 import com.nexo.presentation.viewmodel.reader.lifecycle.Clearable
@@ -20,6 +21,7 @@ import java.util.UUID
 internal class BookmarkManager(
     private val store: InteractionStateStore,
     private val readerRepository: ReaderRepository,
+    private val activeUser: ActiveUserProvider,
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : Clearable {
@@ -33,7 +35,7 @@ internal class BookmarkManager(
         observeBookmarksJob?.cancel()
         observeBookmarksJob =
             scope.launch(mainDispatcher) {
-                readerRepository.observeBookmarks(bookId).collect { bookmarks ->
+                readerRepository.observeBookmarks(bookId, activeUser.requireUserId()).collect { bookmarks ->
                     store.update { it.copy(bookmarks = bookmarks) }
                 }
             }
@@ -60,7 +62,7 @@ internal class BookmarkManager(
                     updatedAtEpochMillis = System.currentTimeMillis(),
                     deletedAtEpochMillis = null,
                 )
-            readerRepository.upsertBookmark(bookmark)
+            readerRepository.upsertBookmark(bookmark, activeUser.requireUserId())
             Log.d(TAG, "Bookmark created: ${bookmark.id}")
         }
     }

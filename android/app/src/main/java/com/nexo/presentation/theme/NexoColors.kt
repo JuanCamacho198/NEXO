@@ -51,8 +51,19 @@ object NexoColors {
     /** Warning/attention category color. Alias of [AccentYellow]. */
     val accentYellow: Color = AccentYellow
 
+    /**
+     * Primary Home accent — warmer amber than [accentYellow].
+     *
+     * Alias of [AccentOrange]. Drives the Home hero CTA, the continue-reading
+     * play button and progress fill, and the genre chips.
+     */
+    val accentOrange: Color = AccentOrange
+
     /** Background tint for yellow-accented chips/badges. Alias of [BgYellowTransparent]. */
     val backgroundYellowTransparent: Color = BgYellowTransparent
+
+    /** Reading-streak indicator (flame glyph in the top bar). Alias of [AccentYellow]. */
+    val streak: Color = AccentYellow
 
     /** Success/positive category color ("Completed"). Alias of [AccentGreen]. */
     val accentGreen: Color = AccentGreen

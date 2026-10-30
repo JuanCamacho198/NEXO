@@ -2,6 +2,7 @@ package com.nexo.presentation.viewmodel.reader.lifecycle
 
 import android.util.Log
 import com.nexo.domain.repository.ReadingStatsRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.viewmodel.reader.ReaderLifecycleState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,7 @@ class ReadingSessionRecorder(
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher,
     private val readingStatsRepository: ReadingStatsRepository,
+    private val activeUser: ActiveUserProvider,
 ) : Clearable {
     @Volatile
     var activeUserId: String = ""
@@ -80,13 +82,17 @@ class ReadingSessionRecorder(
             }
         if (additionalMinutes <= 0L) return
         val intervalStart = sessionStartTime
+        // The owner is required for both writes: `reading_stats` and
+        // `reading_sessions` are account-owned, and an empty owner would write a
+        // row nobody can read back.
+        val userId = activeUser.currentUserId() ?: return
         scope.launch(mainDispatcher) {
-            readingStatsRepository.updateReadingTime(bookId, additionalMinutes)
+            readingStatsRepository.updateReadingTime(bookId, userId, additionalMinutes)
             readingStatsRepository.recordReadingSession(
                 bookId = bookId,
                 startTimeEpochMillis = intervalStart,
                 durationMinutes = additionalMinutes.toInt(),
-                userId = activeUserId,
+                userId = userId,
             )
             Log.d(TAG, "Recorded $additionalMinutes minutes for book $bookId")
         }

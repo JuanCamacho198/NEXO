@@ -8,20 +8,32 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BookmarkDao {
-    @Query("SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC")
-    fun observeAllBookmarks(): Flow<List<BookmarkEntity>>
+    @Query("SELECT * FROM bookmarks WHERE user_id = :userId AND deleted_at IS NULL ORDER BY updated_at DESC")
+    fun observeAllBookmarks(userId: String): Flow<List<BookmarkEntity>>
 
-    @Query("SELECT * FROM bookmarks WHERE book_id = :bookId AND deleted_at IS NULL ORDER BY updated_at DESC")
-    fun observeBookmarksForBook(bookId: String): Flow<List<BookmarkEntity>>
+    @Query("SELECT * FROM bookmarks WHERE user_id = :userId AND book_id = :bookId AND deleted_at IS NULL ORDER BY updated_at DESC")
+    fun observeBookmarksForBook(
+        bookId: String,
+        userId: String,
+    ): Flow<List<BookmarkEntity>>
 
-    @Query("SELECT * FROM bookmarks WHERE id = :id LIMIT 1")
-    suspend fun getBookmarkById(id: String): BookmarkEntity?
+    @Query("SELECT * FROM bookmarks WHERE id = :id AND user_id = :userId LIMIT 1")
+    suspend fun getBookmarkById(
+        id: String,
+        userId: String,
+    ): BookmarkEntity?
 
-    @Query("DELETE FROM bookmarks WHERE id = :id")
-    suspend fun deleteById(id: String)
+    @Query("DELETE FROM bookmarks WHERE id = :id AND user_id = :userId")
+    suspend fun deleteById(
+        id: String,
+        userId: String,
+    )
 
-    @Query("SELECT * FROM bookmarks WHERE book_id = :bookId")
-    suspend fun getBookmarksForBook(bookId: String): List<BookmarkEntity>
+    @Query("SELECT * FROM bookmarks WHERE user_id = :userId AND book_id = :bookId")
+    suspend fun getBookmarksForBook(
+        bookId: String,
+        userId: String,
+    ): List<BookmarkEntity>
 
     @Upsert
     suspend fun upsert(bookmark: BookmarkEntity)
@@ -29,6 +41,6 @@ interface BookmarkDao {
     @Upsert
     suspend fun upsertAll(bookmarks: List<BookmarkEntity>)
 
-    @Query("SELECT COUNT(*) FROM bookmarks")
-    suspend fun count(): Int
+    @Query("SELECT COUNT(*) FROM bookmarks WHERE user_id = :userId")
+    suspend fun count(userId: String): Int
 }

@@ -32,9 +32,7 @@ import com.nexo.presentation.viewmodel.HomeUiState
 import com.nexo.presentation.viewmodel.HomeViewModel
 import com.nexo.ui.components.atoms.NexoEmptyState
 import com.nexo.ui.components.molecules.ContinueReadingSkeleton
-import com.nexo.ui.components.molecules.NexoHeader
 import com.nexo.ui.components.molecules.NotificationSheet
-import com.nexo.ui.components.molecules.QuickAccessSkeleton
 import com.nexo.ui.icons.NexoIcons
 
 /**
@@ -45,6 +43,16 @@ import com.nexo.ui.icons.NexoIcons
  * empty state only after loading finished, and its content otherwise.
  */
 internal enum class HomeSectionRenderState { SKELETON, EMPTY, CONTENT }
+
+/**
+ * Standard horizontal inset for Home sections.
+ *
+ * The [LazyColumn] no longer carries this padding itself, because the
+ * first-session hero has to reach both screen edges; each padded section
+ * applies it. Matches the app's 20px-plus-card screen padding convention in
+ * [NexoDimens] terms.
+ */
+private val ScreenHorizontalInset = 24.dp
 
 /**
  * @return [HomeSectionRenderState.SKELETON] while [isLoading] and the section
@@ -70,6 +78,8 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onOpenAccount: () -> Unit = {},
     onNavigateToStatistics: () -> Unit,
+    onNavigateToDiscover: () -> Unit = {},
+    onNavigateToDriveSetup: () -> Unit = {},
     onBookSelected: (String, String, String) -> Unit,
     onContinueReading: (String, String?, String) -> Unit,
     onImportBook: () -> Unit,
@@ -84,7 +94,7 @@ fun HomeScreen(
     onRequestDeleteBook: (Book) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    HomeScreenContent(uiState = uiState, contentPadding = contentPadding, onNavigateToLibrary = onNavigateToLibrary, onNavigateToHighlights = onNavigateToHighlights, onNavigateToSettings = onNavigateToSettings, onOpenAccount = onOpenAccount, onNavigateToStatistics = onNavigateToStatistics, onBookSelected = onBookSelected, onContinueReading = onContinueReading, onImportBook = onImportBook, onSearchQueryChange = viewModel::onSearchQueryChanged, onToggleSearch = viewModel::onToggleSearch, notificationGroups = notificationGroups, unreadNotificationCount = unreadNotificationCount, onOpenNotification = onOpenNotification, onNotificationsOpened = onNotificationsOpened, onEditBook = onEditBook, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShareBook = onShareBook, onRequestDeleteBook = onRequestDeleteBook)
+    HomeScreenContent(uiState = uiState, contentPadding = contentPadding, onNavigateToLibrary = onNavigateToLibrary, onNavigateToHighlights = onNavigateToHighlights, onNavigateToSettings = onNavigateToSettings, onOpenAccount = onOpenAccount, onNavigateToStatistics = onNavigateToStatistics, onNavigateToDiscover = onNavigateToDiscover, onNavigateToDriveSetup = onNavigateToDriveSetup, onBookSelected = onBookSelected, onContinueReading = onContinueReading, onImportBook = onImportBook, onSearchQueryChange = viewModel::onSearchQueryChanged, onToggleSearch = viewModel::onToggleSearch, notificationGroups = notificationGroups, unreadNotificationCount = unreadNotificationCount, onOpenNotification = onOpenNotification, onNotificationsOpened = onNotificationsOpened, onEditBook = onEditBook, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShareBook = onShareBook, onRequestDeleteBook = onRequestDeleteBook)
 }
 
 @Composable
@@ -96,6 +106,8 @@ fun HomeScreenContent(
     onNavigateToSettings: () -> Unit,
     onOpenAccount: () -> Unit = {},
     onNavigateToStatistics: () -> Unit,
+    onNavigateToDiscover: () -> Unit = {},
+    onNavigateToDriveSetup: () -> Unit = {},
     onBookSelected: (String, String, String) -> Unit,
     onContinueReading: (String, String?, String) -> Unit,
     onImportBook: () -> Unit,
@@ -124,51 +136,68 @@ fun HomeScreenContent(
             Modifier
                 .fillMaxSize()
                 .padding(contentPadding)
-                .padding(horizontal = 24.dp)
                 .testTag(HomeTags.SCREEN_ROOT),
         verticalArrangement =
             androidx.compose.foundation.layout.Arrangement
                 .spacedBy(NexoDimens.spacingMd),
     ) {
         if (uiState.showSearch) {
-            item { SearchBarSection(searchQuery = uiState.searchQuery, onSearchQueryChange = onSearchQueryChange, onCloseSearch = onToggleSearch) }
+            item { Box(modifier = Modifier.padding(horizontal = ScreenHorizontalInset)) { SearchBarSection(searchQuery = uiState.searchQuery, onSearchQueryChange = onSearchQueryChange, onCloseSearch = onToggleSearch) } }
             if (uiState.searchResults.isNotEmpty()) {
-                item { SearchResultsList(results = uiState.searchResults, onBookSelected = onBookSelected) }
+                item { Box(modifier = Modifier.padding(horizontal = ScreenHorizontalInset)) { SearchResultsList(results = uiState.searchResults, onBookSelected = onBookSelected) } }
             } else if (uiState.searchQuery.isNotBlank()) {
                 item { Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) { NexoEmptyState(icon = NexoIcons.Search, title = stringResource(R.string.library_search_no_results), subtitle = stringResource(R.string.library_search_empty_subtitle)) } }
             }
         }
         if (!uiState.showSearch) {
-            item {
-                NexoHeader(title = stringResource(R.string.home_nexo_title), avatarImageUrl = uiState.avatarUrl, avatarInitials = uiState.userName.take(1).uppercase(), onAvatarClick = onOpenAccount, avatarContentDescription = stringResource(R.string.home_avatar_content_description), onSearchClick = onToggleSearch, onNotificationsClick = {
-                    showNotifications = true
-                    onNotificationsOpened()
-                }, unreadNotificationsCount = unreadNotificationCount)
-            }
-            item { GreetingSection(userName = uiState.userName) }
-            item { TodaySummarySection(minutesReadToday = uiState.minutesReadToday, sessionsToday = uiState.sessionsToday, currentStreak = uiState.currentStreak) }
-            item {
-                if (homeSectionRenderState(uiState.isLoading, uiState.currentBooks.isEmpty()) == HomeSectionRenderState.SKELETON) {
-                    ContinueReadingSkeleton()
-                } else {
-                    ContinueReadingSection(books = uiState.currentBooks, progressPercentByBook = uiState.progressPercentByBook, onBookSelected = onBookSelected, onContinueReading = onContinueReading, onEdit = onEditBook, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShare = onShareBook, onDelete = onRequestDeleteBook)
+            if (uiState.isLibraryEmpty) {
+                // First-session Home: full-bleed hero, then the genre row and the
+                // cloud-sync banner. No "continue reading" carousel and no shelf —
+                // there is nothing in the library to continue or to shelve.
+                item {
+                    HomeHeroSection(onExplore = onNavigateToDiscover, avatarUrl = uiState.avatarUrl, userName = uiState.userName, streakDays = uiState.currentStreak, onAvatarClick = onOpenAccount, onStreakClick = onNavigateToStatistics, onNotificationsClick = {
+                        showNotifications = true
+                        onNotificationsOpened()
+                    })
                 }
-            }
-            item {
-                if (homeSectionRenderState(uiState.isLoading, uiState.recentBooks.isEmpty()) == HomeSectionRenderState.SKELETON) {
-                    // My Bookshelf is a horizontal card row like the carousel, so it
-                    // reuses the horizontal card skeleton with the shelf's card count.
-                    ContinueReadingSkeleton(cards = 4)
-                } else {
-                    MyBookshelfSection(books = uiState.recentBooks, onViewAll = onNavigateToLibrary, onBookSelected = onBookSelected)
+                item { HomeGenresSection(modifier = Modifier.padding(horizontal = ScreenHorizontalInset), onBrowseAll = onNavigateToDiscover) }
+                item { HomeSyncBanner(onClick = onNavigateToDriveSetup, modifier = Modifier.padding(horizontal = ScreenHorizontalInset)) }
+            } else {
+                item {
+                    CollapsedHomeHeroSection(
+                        onExplore = onNavigateToDiscover,
+                        avatarUrl = uiState.avatarUrl,
+                        userName = uiState.userName,
+                        streakDays = uiState.currentStreak,
+                        onAvatarClick = onOpenAccount,
+                        onStreakClick = onNavigateToStatistics,
+                        onNotificationsClick = {
+                            showNotifications = true
+                            onNotificationsOpened()
+                        },
+                    )
                 }
-            }
-            item {
-                if (uiState.isLoading) {
-                    QuickAccessSkeleton()
-                } else {
-                    QuickAccessSection(onImportBook = onImportBook, onHighlights = onNavigateToHighlights, onStatistics = onNavigateToStatistics, onSettings = onNavigateToSettings)
+                item {
+                    Box(modifier = Modifier.padding(horizontal = ScreenHorizontalInset)) {
+                        if (homeSectionRenderState(uiState.isLoading, uiState.currentBooks.isEmpty()) == HomeSectionRenderState.SKELETON) {
+                            ContinueReadingSkeleton()
+                        } else {
+                            ContinueReadingSection(books = uiState.currentBooks, progressPercentByBook = uiState.progressPercentByBook, onViewAll = onNavigateToLibrary, onBookSelected = onBookSelected, onContinueReading = onContinueReading, onEdit = onEditBook, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShare = onShareBook, onDelete = onRequestDeleteBook)
+                        }
+                    }
                 }
+                item {
+                    Box(modifier = Modifier.padding(horizontal = ScreenHorizontalInset)) {
+                        if (homeSectionRenderState(uiState.isLoading, uiState.recentBooks.isEmpty()) == HomeSectionRenderState.SKELETON) {
+                            // My Bookshelf is a horizontal card row like the carousel, so it
+                            // reuses the horizontal card skeleton with the shelf's card count.
+                            ContinueReadingSkeleton(cards = 4)
+                        } else {
+                            MyBookshelfSection(books = uiState.recentBooks, onViewAll = onNavigateToLibrary, onBookSelected = onBookSelected)
+                        }
+                    }
+                }
+                item { HomeGenresSection(modifier = Modifier.padding(horizontal = ScreenHorizontalInset), onBrowseAll = onNavigateToDiscover) }
             }
         }
         item { Spacer(modifier = Modifier.height(NexoDimens.spacingMd)) }
@@ -179,6 +208,14 @@ fun HomeScreenContent(
             }
             item { Text(text = stringResource(R.string.debug_version_label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)) }
         }
+    }
+}
+
+@Preview(showBackground = true, heightDp = 900)
+@Composable
+private fun HomeScreenEmptyDarkPreview() {
+    NexoTheme(darkTheme = true) {
+        HomeScreenContent(uiState = HomeUiState(userName = "María", currentStreak = 4, allBooks = emptyList(), isLoading = false, showSearch = false), contentPadding = PaddingValues(0.dp), onNavigateToLibrary = {}, onNavigateToHighlights = {}, onNavigateToSettings = {}, onNavigateToStatistics = {}, onBookSelected = { _, _, _ -> }, onContinueReading = { _, _, _ -> }, onImportBook = {}, onSearchQueryChange = {}, onToggleSearch = {})
     }
 }
 

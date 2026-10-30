@@ -48,6 +48,7 @@ fun NavGraphBuilder.bookDetailGraph(
             rememberBookDetailViewModel(
                 bookId = bookId,
                 libraryRepository = appContainer.libraryRepository,
+                activeUser = appContainer.activeUserProvider,
             )
         BookDetailScreen(
             contentPadding = contentPadding,
@@ -76,6 +77,7 @@ fun NavGraphBuilder.bookDetailGraph(
             rememberEditBookMetadataViewModel(
                 bookId = bookId,
                 libraryRepository = appContainer.libraryRepository,
+                activeUser = appContainer.activeUserProvider,
                 coverStorage = appContainer.coverStorage,
                 onSaved = { navController.popBackStack() },
             )

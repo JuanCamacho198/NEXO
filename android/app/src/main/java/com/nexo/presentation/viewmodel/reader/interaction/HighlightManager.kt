@@ -5,6 +5,7 @@ import com.nexo.debug.DebugLog
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.viewmodel.CfiMigrator
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
 import com.nexo.presentation.viewmodel.reader.lifecycle.Clearable
@@ -24,6 +25,7 @@ internal class HighlightManager(
     private val store: InteractionStateStore,
     private val selectionManager: SelectionManager,
     private val readerRepository: ReaderRepository,
+    private val activeUser: ActiveUserProvider,
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : Clearable {
@@ -40,7 +42,7 @@ internal class HighlightManager(
         observeHighlightsJob =
             scope.launch(mainDispatcher) {
                 DebugLog.info(TAG, "observeHighlights collect started for bookId=$bookId")
-                readerRepository.observeHighlights(bookId).collect { highlights ->
+                readerRepository.observeHighlights(bookId, activeUser.requireUserId()).collect { highlights ->
                     DebugLog.info(TAG, "observeHighlights emitted ${highlights.size} highlights")
                     store.update { it.copy(highlights = highlights) }
                 }
@@ -72,7 +74,7 @@ internal class HighlightManager(
                     deletedAtEpochMillis = null,
                     locatorJson = locatorJson,
                 )
-            readerRepository.upsertHighlight(highlight)
+            readerRepository.upsertHighlight(highlight, activeUser.requireUserId())
             Log.d(TAG, "Highlight created: ${highlight.id}")
         }
     }
@@ -114,7 +116,7 @@ internal class HighlightManager(
     fun onReadiumDeleteHighlight(highlightId: String) {
         val existing = store.value.highlights.find { it.id == highlightId } ?: return
         val updated = existing.copy(deletedAtEpochMillis = System.currentTimeMillis(), updatedAtEpochMillis = System.currentTimeMillis())
-        scope.launch(mainDispatcher) { readerRepository.upsertHighlight(updated) }
+        scope.launch(mainDispatcher) { readerRepository.upsertHighlight(updated, activeUser.requireUserId()) }
         selectionManager.dismissMenuAndClearSelection()
     }
 
@@ -124,7 +126,7 @@ internal class HighlightManager(
     ) {
         val existing = store.value.highlights.find { it.id == highlightId } ?: return
         val updated = existing.copy(color = color, updatedAtEpochMillis = System.currentTimeMillis())
-        scope.launch(mainDispatcher) { readerRepository.upsertHighlight(updated) }
+        scope.launch(mainDispatcher) { readerRepository.upsertHighlight(updated, activeUser.requireUserId()) }
     }
 
     fun onSelectHighlightColor(

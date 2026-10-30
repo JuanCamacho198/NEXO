@@ -8,7 +8,10 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "books",
     indices = [
-        Index(value = ["deleted_at", "updated_at"], orders = [Index.Order.ASC, Index.Order.DESC]),
+        Index(
+            value = ["user_id", "deleted_at", "updated_at"],
+            orders = [Index.Order.ASC, Index.Order.ASC, Index.Order.DESC],
+        ),
         Index(value = ["reading_state"]),
     ],
 )
@@ -59,4 +62,5 @@ data class BookEntity(
     @ColumnInfo(name = "publisher") val publisher: String? = null,
     @ColumnInfo(name = "tags") val tags: String? = null,
     @ColumnInfo(name = "published_date") val publishedDate: String? = null,
+    @ColumnInfo(name = "user_id") val userId: String = "",
 )

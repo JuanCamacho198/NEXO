@@ -10,6 +10,7 @@ import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.pdf.PdfParserService
 import com.nexo.data.storage.CoverStorage
 import com.nexo.domain.sync.SyncSettleGate
+import com.nexo.testutil.TEST_USER_ID
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -50,16 +51,16 @@ class LibraryRepositoryImplDeleteFileTest {
             val backing = backingFile("book-1.epub")
             val gate = FakeSettleGate(settled = true)
             val bookDao = mockk<BookDao>(relaxed = true)
-            coEvery { bookDao.getBookById(bookId) } returns bookEntity(bookId, backing.absolutePath)
-            every { bookDao.observeAllBooks() } returns flowOf(emptyList())
+            coEvery { bookDao.getBookById(bookId, TEST_USER_ID) } returns bookEntity(bookId, backing.absolutePath)
+            every { bookDao.observeAllBooks(any()) } returns flowOf(emptyList())
             val outboxDao = mockk<SyncOutboxDao>(relaxed = true)
             val repository = repository(bookDao, outboxDao, gate)
 
-            val result = repository.deleteBook(bookId)
+            val result = repository.deleteBook(bookId, TEST_USER_ID)
 
             assertTrue(result.isSuccess)
             assertFalse("backing file must be deleted once sync has settled", backing.exists())
-            coVerify { bookDao.deleteBook(bookId, any()) }
+            coVerify { bookDao.deleteBook(bookId, any(), any()) }
             coVerify { outboxDao.insert(match { it.operation == SyncOperation.DELETE.name }) }
         }
 
@@ -70,12 +71,12 @@ class LibraryRepositoryImplDeleteFileTest {
             val backing = backingFile("drive-book.epub")
             val gate = FakeSettleGate(settled = true)
             val bookDao = mockk<BookDao>(relaxed = true)
-            coEvery { bookDao.getBookById(bookId) } returns bookEntity(bookId, backing.absolutePath)
-            every { bookDao.observeAllBooks() } returns flowOf(emptyList())
+            coEvery { bookDao.getBookById(bookId, TEST_USER_ID) } returns bookEntity(bookId, backing.absolutePath)
+            every { bookDao.observeAllBooks(any()) } returns flowOf(emptyList())
             val outboxDao = mockk<SyncOutboxDao>(relaxed = true)
             val repository = repository(bookDao, outboxDao, gate)
 
-            val result = repository.deleteBookLocalOnly(bookId)
+            val result = repository.deleteBookLocalOnly(bookId, TEST_USER_ID)
 
             assertTrue(result.isSuccess)
             assertFalse("local bytes are removed for a Drive-backed book", backing.exists())
@@ -92,11 +93,11 @@ class LibraryRepositoryImplDeleteFileTest {
             val backing = backingFile("pending-book.epub")
             val gate = FakeSettleGate(settled = false)
             val bookDao = mockk<BookDao>(relaxed = true)
-            coEvery { bookDao.getBookById(bookId) } returns bookEntity(bookId, backing.absolutePath)
-            every { bookDao.observeAllBooks() } returns flowOf(emptyList())
+            coEvery { bookDao.getBookById(bookId, TEST_USER_ID) } returns bookEntity(bookId, backing.absolutePath)
+            every { bookDao.observeAllBooks(any()) } returns flowOf(emptyList())
             val repository = repository(bookDao, mockk(relaxed = true), gate)
 
-            val result = repository.deleteBook(bookId)
+            val result = repository.deleteBook(bookId, TEST_USER_ID)
 
             assertTrue(result.isSuccess)
             assertTrue("file must be retained when sync has not settled", backing.exists())
@@ -110,15 +111,15 @@ class LibraryRepositoryImplDeleteFileTest {
             val backing = backingFile("shared.epub")
             val gate = FakeSettleGate(settled = true)
             val bookDao = mockk<BookDao>(relaxed = true)
-            coEvery { bookDao.getBookById(bookId) } returns bookEntity(bookId, backing.absolutePath)
+            coEvery { bookDao.getBookById(bookId, TEST_USER_ID) } returns bookEntity(bookId, backing.absolutePath)
             // A second live row still points at the same path.
-            every { bookDao.observeAllBooks() } returns
+            every { bookDao.observeAllBooks(any()) } returns
                 flowOf(
                     listOf(bookEntity("shared-b", backing.absolutePath)),
                 )
             val repository = repository(bookDao, mockk(relaxed = true), gate)
 
-            repository.deleteBook(bookId)
+            repository.deleteBook(bookId, TEST_USER_ID)
 
             assertTrue("a path referenced by another book must not be deleted", backing.exists())
         }
@@ -129,11 +130,11 @@ class LibraryRepositoryImplDeleteFileTest {
             val bookId = "saf-book"
             val gate = FakeSettleGate(settled = true)
             val bookDao = mockk<BookDao>(relaxed = true)
-            coEvery { bookDao.getBookById(bookId) } returns bookEntity(bookId, "content://books/saf.epub")
-            every { bookDao.observeAllBooks() } returns flowOf(emptyList())
+            coEvery { bookDao.getBookById(bookId, TEST_USER_ID) } returns bookEntity(bookId, "content://books/saf.epub")
+            every { bookDao.observeAllBooks(any()) } returns flowOf(emptyList())
             val repository = repository(bookDao, mockk(relaxed = true), gate)
 
-            val result = repository.deleteBook(bookId)
+            val result = repository.deleteBook(bookId, TEST_USER_ID)
 
             assertTrue(result.isSuccess)
             assertEquals("non-file paths never consult the gate", 0, gate.awaitCount)
@@ -173,6 +174,7 @@ class LibraryRepositoryImplDeleteFileTest {
         filePath = filePath,
         format = "epub",
         updatedAtEpochMillis = 1L,
+        userId = TEST_USER_ID,
     )
 
     private class FakeSettleGate(

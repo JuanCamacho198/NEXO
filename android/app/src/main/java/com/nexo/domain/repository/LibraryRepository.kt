@@ -7,43 +7,60 @@ import kotlinx.coroutines.flow.Flow
 import java.io.InputStream
 
 interface LibraryRepository {
-    fun observeLibrary(): Flow<List<Book>>
+    fun observeLibrary(userId: String): Flow<List<Book>>
 
-    fun observeBookById(bookId: String): Flow<Book?>
+    fun observeBookById(
+        bookId: String,
+        userId: String,
+    ): Flow<Book?>
 
-    fun observeProgressForBook(bookId: String): Flow<ReadingProgress?>
+    fun observeProgressForBook(
+        bookId: String,
+        userId: String,
+    ): Flow<ReadingProgress?>
 
-    fun observeTotalReadingTime(): Flow<Long>
+    fun observeTotalReadingTime(userId: String): Flow<Long>
 
-    fun observeReadingTimeByBook(): Flow<Map<String, Long>>
+    fun observeReadingTimeByBook(userId: String): Flow<Map<String, Long>>
 
     suspend fun importBookFromEpub(
+        userId: String,
         request: BookImportRequest,
         inputStreamProvider: suspend () -> InputStream?,
     ): Result<Book>
 
     suspend fun importBookFromPdf(
+        userId: String,
         request: BookImportRequest,
         file: java.io.File,
     ): Result<Book>
 
-    suspend fun deleteBook(bookId: String): Result<Unit>
+    suspend fun deleteBook(
+        bookId: String,
+        userId: String,
+    ): Result<Unit>
 
     /** Local-only delete: soft-delete locally without queuing a cloud tombstone. */
-    suspend fun deleteBookLocalOnly(bookId: String): Result<Unit>
+    suspend fun deleteBookLocalOnly(
+        bookId: String,
+        userId: String,
+    ): Result<Unit>
 
     suspend fun updateBookRating(
         bookId: String,
+        userId: String,
         rating: Int?,
     )
 
     suspend fun updateBookStatus(
         bookId: String,
+        userId: String,
         status: String?,
     ): Result<Unit>
 
     suspend fun updateBookMetadata(
         bookId: String,
+        userId: String,
         title: String,
         author: String?,
         description: String?,
@@ -55,7 +72,10 @@ interface LibraryRepository {
         publishedDate: String?,
     ): Result<Unit>
 
-    suspend fun getBookById(bookId: String): Book?
+    suspend fun getBookById(
+        bookId: String,
+        userId: String,
+    ): Book?
 
     /**
      * Best-effort duplicate lookup used before a catalog download: returns an
@@ -68,14 +88,22 @@ interface LibraryRepository {
     suspend fun findBookByTitleAndAuthor(
         title: String,
         author: String?,
+        userId: String,
     ): Book? = null
 
-    suspend fun startReading(bookId: String): Result<Unit> = Result.success(Unit)
+    suspend fun startReading(
+        bookId: String,
+        userId: String,
+    ): Result<Unit> = Result.success(Unit)
 
     suspend fun updateReadingProgress(
         bookId: String,
+        userId: String,
         progress: Float,
     ): Result<Unit> = Result.success(Unit)
 
-    suspend fun completeReading(bookId: String): Result<Unit> = Result.success(Unit)
+    suspend fun completeReading(
+        bookId: String,
+        userId: String,
+    ): Result<Unit> = Result.success(Unit)
 }

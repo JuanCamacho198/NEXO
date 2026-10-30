@@ -28,6 +28,7 @@ fun NavGraphBuilder.homeGraph(
     navController: NavController,
     homeViewModel: HomeViewModel,
     libraryViewModel: LibraryViewModel,
+    activeUser: com.nexo.domain.session.ActiveUserProvider,
     notificationHistory: com.nexo.domain.notification.NotificationHistory,
     contentPadding: PaddingValues,
     onSelectBook: (String, String?, String) -> Unit,
@@ -41,7 +42,7 @@ fun NavGraphBuilder.homeGraph(
         popEnterTransition = { fadeIn() },
         popExitTransition = { fadeOut() },
     ) {
-        val importLauncher = rememberImportLauncher(libraryViewModel)
+        val importLauncher = rememberImportLauncher(libraryViewModel, activeUser)
         // Delete-dialog state lives in LibraryViewModel (shared shelf menu backend).
         // It must be hosted on the Home route too — LibraryScreen's RemoveBookDialog
         // is only composed on the Library route. Snackbar/share intents need no
@@ -81,6 +82,13 @@ fun NavGraphBuilder.homeGraph(
             },
             onNavigateToStatistics = {
                 navController.navigate(NexoDestination.Statistics.route)
+            },
+            onNavigateToDiscover = {
+                navController.navigate(NexoDestination.Discover.route) { launchSingleTop = true }
+            },
+            onNavigateToDriveSetup = {
+                onSettingsInitialRoute(NexoDestination.SettingsSync.route)
+                navController.navigate(NexoDestination.Settings.route) { launchSingleTop = true }
             },
             onBookSelected = { bookId, filePath, format ->
                 onSelectBook(bookId, filePath, format)

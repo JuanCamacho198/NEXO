@@ -51,6 +51,7 @@ import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.repository.StorageRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.sync.OutboxDrainScheduler
 import com.nexo.domain.sync.SessionGate
 import com.nexo.domain.sync.SyncSettleGate
@@ -73,14 +74,26 @@ class AppContainer(
 
     private val appContext = context.applicationContext
     private val databaseModule = DatabaseModule(context.applicationContext)
-    private val storageModule = StorageModule(context.applicationContext, databaseModule)
-    private val preferencesModule = PreferencesModule(context.applicationContext)
+
+    /**
+     * The single access point for the active account id. Eager and dependency-free
+     * (one StateFlow): repositories read the current owner through it, and
+     * [com.nexo.presentation.navigation.SessionSyncEffect] publishes the session
+     * into it. Not lazy — a lazy holder would be created *after* the session
+     * effect that populates it on a cold start. Declared before the modules that
+     * resolve it (storage resolves per-account cover paths through it).
+     */
+    val activeUserProvider: ActiveUserProvider = ActiveUserProvider()
+
+    private val storageModule = StorageModule(context.applicationContext, databaseModule, activeUserProvider)
+    private val preferencesModule = PreferencesModule(context.applicationContext, activeUserProvider)
 
     // NetworkModule is built BEFORE RepositoryModule so the drain scheduler can
     // resolve the (lazy, dependency-free) SessionManager at container init. The
     // two modules are otherwise independent — NetworkModule does not reference
     // RepositoryModule.
-    private val networkModule = NetworkModule(context.applicationContext, databaseModule, preferencesModule)
+    private val networkModule =
+        NetworkModule(context.applicationContext, databaseModule, preferencesModule, activeUserProvider)
 
     /**
      * Outbox drain scheduler (S6): WorkManager-backed, one-shot unique work per
@@ -121,7 +134,7 @@ class AppContainer(
      */
     val notificationPreferencesStore: com.nexo.data.session.NotificationPreferencesStore by lazy {
         com.nexo.data.session
-            .NotificationPreferencesStore(appContext)
+            .NotificationPreferencesStore(appContext, activeUserProvider)
     }
 
     /** U7: process-wide toast requests the nav host presents. */
@@ -322,12 +335,14 @@ class AppContainer(
             store: com.nexo.presentation.viewmodel.reader.interaction.InteractionStateStore,
             selectionManager: com.nexo.presentation.viewmodel.reader.interaction.SelectionManager,
             readerRepository: ReaderRepository,
+            activeUser: ActiveUserProvider,
             scope: kotlinx.coroutines.CoroutineScope,
             dispatcher: kotlinx.coroutines.CoroutineDispatcher,
         ) = com.nexo.presentation.viewmodel.reader.interaction.HighlightManager(
             store,
             selectionManager,
             readerRepository,
+            activeUser,
             scope,
             dispatcher,
         )
@@ -336,12 +351,14 @@ class AppContainer(
             store: com.nexo.presentation.viewmodel.reader.interaction.InteractionStateStore,
             selectionManager: com.nexo.presentation.viewmodel.reader.interaction.SelectionManager,
             readerRepository: ReaderRepository,
+            activeUser: ActiveUserProvider,
             scope: kotlinx.coroutines.CoroutineScope,
             dispatcher: kotlinx.coroutines.CoroutineDispatcher,
         ) = com.nexo.presentation.viewmodel.reader.interaction.AnnotationManager(
             store,
             selectionManager,
             readerRepository,
+            activeUser,
             scope,
             dispatcher,
         )
@@ -349,15 +366,17 @@ class AppContainer(
         fun bookmarkManager(
             store: com.nexo.presentation.viewmodel.reader.interaction.InteractionStateStore,
             readerRepository: ReaderRepository,
+            activeUser: ActiveUserProvider,
             scope: kotlinx.coroutines.CoroutineScope,
             dispatcher: kotlinx.coroutines.CoroutineDispatcher,
         ) = com.nexo.presentation.viewmodel.reader.interaction
-            .BookmarkManager(store, readerRepository, scope, dispatcher)
+            .BookmarkManager(store, readerRepository, activeUser, scope, dispatcher)
 
         fun shareDictionaryManager(
             store: com.nexo.presentation.viewmodel.reader.interaction.InteractionStateStore,
             selectionManager: com.nexo.presentation.viewmodel.reader.interaction.SelectionManager,
             dictionaryRepository: DictionaryRepository?,
+            activeUser: ActiveUserProvider,
             scope: kotlinx.coroutines.CoroutineScope,
             onEvent: (com.nexo.presentation.UiEvent) -> Unit,
             dispatcher: kotlinx.coroutines.CoroutineDispatcher,
@@ -365,6 +384,7 @@ class AppContainer(
             store,
             selectionManager,
             dictionaryRepository,
+            activeUser,
             scope,
             onEvent,
             dispatcher,

@@ -256,28 +256,38 @@ class GetStatisticsUseCaseTest {
         private val total = MutableStateFlow(0L)
         private val allStats = MutableStateFlow<List<ReadingStatsData>>(emptyList())
 
-        override fun observeStats(bookId: String): Flow<ReadingStatsData?> = stats
+        override fun observeStats(
+            bookId: String,
+            userId: String,
+        ): Flow<ReadingStatsData?> = stats
 
-        override fun observeTotalTime(): Flow<Long> = total
+        override fun observeTotalTime(userId: String): Flow<Long> = total
 
-        override fun observeBookStats(): Flow<List<ReadingStatsData>> = allStats
+        override fun observeBookStats(userId: String): Flow<List<ReadingStatsData>> = allStats
 
         override suspend fun getDailyActivity(userId: String?): List<DailyReadingActivity> = scopedActivity[userId] ?: dailyActivity
 
         override suspend fun updateReadingTime(
             bookId: String,
+            userId: String,
             additionalMinutes: Long,
         ) = Unit
 
-        override suspend fun deleteStats(bookId: String) = Unit
+        override suspend fun deleteStats(
+            bookId: String,
+            userId: String,
+        ) = Unit
     }
 
     private class FakeHomeRepository : HomeRepository {
-        override fun observeBooks(): Flow<List<Book>> = MutableStateFlow(emptyList())
+        override fun observeBooks(userId: String): Flow<List<Book>> = MutableStateFlow(emptyList())
 
-        override fun observeRecentBooks(limit: Int): Flow<List<Book>> = MutableStateFlow(emptyList())
+        override fun observeRecentBooks(
+            userId: String,
+            limit: Int,
+        ): Flow<List<Book>> = MutableStateFlow(emptyList())
 
-        override fun observeCurrentBooks(): Flow<List<Book>> = MutableStateFlow(emptyList())
+        override fun observeCurrentBooks(userId: String): Flow<List<Book>> = MutableStateFlow(emptyList())
 
         override fun observeDailyStats(
             userId: String?,
@@ -288,6 +298,9 @@ class GetStatisticsUseCaseTest {
                     .ReadingStats(0, 0, 0f),
             )
 
-        override suspend fun deleteBook(bookId: String): Result<Unit> = Result.success(Unit)
+        override suspend fun deleteBook(
+            bookId: String,
+            userId: String,
+        ): Result<Unit> = Result.success(Unit)
     }
 }

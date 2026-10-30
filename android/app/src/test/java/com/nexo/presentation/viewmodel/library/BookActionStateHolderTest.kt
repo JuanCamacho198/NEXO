@@ -6,6 +6,7 @@ import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.presentation.UiEvent
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -99,7 +100,7 @@ class BookActionStateHolderTest {
             val scope = CoroutineScope(dispatcher + SupervisorJob())
             val mockRepository = mockk<LibraryRepository>()
 
-            coEvery { mockRepository.deleteBook(any()) } returns Result.success(Unit)
+            coEvery { mockRepository.deleteBook(any(), any()) } returns Result.success(Unit)
 
             var emittedEvent: UiEvent? = null
             val holder =
@@ -126,7 +127,7 @@ class BookActionStateHolderTest {
             val scope = CoroutineScope(dispatcher + SupervisorJob())
             val mockRepository = mockk<LibraryRepository>()
 
-            coEvery { mockRepository.deleteBook(any()) } returns Result.failure(IllegalStateException("delete failed"))
+            coEvery { mockRepository.deleteBook(any(), any()) } returns Result.failure(IllegalStateException("delete failed"))
 
             var emittedEvent: UiEvent? = null
             val holder =
@@ -180,7 +181,7 @@ class BookActionStateHolderTest {
             val mockRepository = mockk<LibraryRepository>()
             val mockContext = mockk<Context>()
 
-            coEvery { mockRepository.updateBookStatus(any(), any()) } returns Result.success(Unit)
+            coEvery { mockRepository.updateBookStatus(any(), any(), any()) } returns Result.success(Unit)
             every { mockContext.getString(R.string.library_snackbar_marked_completed) } returns "Marked as completed"
 
             var emittedEvent: UiEvent? = null
@@ -209,7 +210,7 @@ class BookActionStateHolderTest {
             val mockRepository = mockk<LibraryRepository>()
             val mockContext = mockk<Context>()
 
-            coEvery { mockRepository.updateBookStatus(any(), any()) } returns Result.success(Unit)
+            coEvery { mockRepository.updateBookStatus(any(), any(), any()) } returns Result.success(Unit)
             every { mockContext.getString(R.string.library_snackbar_marked_plan_to_read) } returns "Marked as plan to read"
 
             var emittedEvent: UiEvent? = null
@@ -304,6 +305,7 @@ class BookActionStateHolderTest {
                     appContext = mockContext,
                     scope = scope,
                     onUiEvent = {},
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 ),
             mockRepository = mockRepository,
@@ -323,6 +325,7 @@ class BookActionStateHolderTest {
             appContext = context,
             scope = scope,
             onUiEvent = onUiEvent,
+            activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
         )
 

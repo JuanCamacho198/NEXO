@@ -167,6 +167,7 @@ vi.mock('$lib/shared/sync/SupabaseDictionarySync', () => ({
 }));
 
 vi.mock('$lib/shared/outbox/SyncOutboxService', () => ({
+  defaultSyncOutboxSessionGate: async () => true,
   SyncOutboxService: vi.fn(function (this: {
     setHandler: (h: (typeof capturedOutboxHandler)['value']) => void;
     start: () => void;

@@ -72,3 +72,18 @@ describe('SyncOutboxDao.addCoalesced (IPC wiring)', () => {
     });
   });
 });
+
+describe('SyncOutboxDao.listReady (owner scoping)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('asks the backend for one owner only, as camelCase userId', async () => {
+    mockInvoke.mockResolvedValue([]);
+    const dao = new SyncOutboxDao();
+
+    await dao.listReady('user-b');
+
+    expect(mockInvoke).toHaveBeenCalledWith('listSyncOutboxReady', { userId: 'user-b' });
+  });
+});

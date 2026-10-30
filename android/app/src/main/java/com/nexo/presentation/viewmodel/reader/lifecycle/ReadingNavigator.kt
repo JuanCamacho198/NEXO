@@ -2,6 +2,7 @@ package com.nexo.presentation.viewmodel.reader.lifecycle
 
 import androidx.annotation.VisibleForTesting
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.presentation.viewmodel.reader.BookChapter
 import com.nexo.presentation.viewmodel.reader.ReaderLifecycleState
@@ -23,6 +24,7 @@ class ReadingNavigator(
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher,
     private val readerRepository: ReaderRepository? = null,
+    private val activeUser: ActiveUserProvider = ActiveUserProvider(),
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase? = null,
     private val onChapterChanged: () -> Unit = {},
     private val onNavigateToLocator: (Locator) -> Unit = {},
@@ -240,7 +242,7 @@ class ReadingNavigator(
             val cfiLocation = "pdfpage:$currentPage"
             val useCase = updateReadingProgressUseCase ?: return
             scope.launch(mainDispatcher) {
-                useCase(bookId = bookId, cfiLocation = cfiLocation, percentage = percentage)
+                useCase(bookId = bookId, userId = activeUser.requireUserId(), cfiLocation = cfiLocation, percentage = percentage)
             }
         }
     }
@@ -255,7 +257,7 @@ class ReadingNavigator(
             val cfiLocation = "epubcfi(/6/$spineIndex)"
             val useCase = updateReadingProgressUseCase ?: return
             scope.launch(mainDispatcher) {
-                useCase(bookId = bookId, cfiLocation = cfiLocation, percentage = percentage)
+                useCase(bookId = bookId, userId = activeUser.requireUserId(), cfiLocation = cfiLocation, percentage = percentage)
             }
         }
     }

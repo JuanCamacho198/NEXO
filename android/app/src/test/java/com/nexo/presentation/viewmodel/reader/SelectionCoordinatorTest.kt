@@ -8,6 +8,7 @@ import com.nexo.domain.model.HighlightColor
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -257,6 +258,7 @@ class SelectionCoordinatorTest {
         ReaderInteractionStateHolder(
             readerRepository = readerRepository,
             dictionaryRepository = dictionaryRepository,
+            activeUser = activeUserProviderFor(),
             scope = scope,
             onEvent = {},
         )

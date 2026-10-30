@@ -16,7 +16,7 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index(value = ["book_id", "deleted_at"])],
+    indices = [Index(value = ["user_id", "book_id", "deleted_at"])],
 )
 data class HighlightEntity(
     @PrimaryKey
@@ -39,4 +39,6 @@ data class HighlightEntity(
     val type: String? = null,
     @ColumnInfo(name = "tag")
     val tag: String? = null,
+    @ColumnInfo(name = "user_id")
+    val userId: String = "",
 )

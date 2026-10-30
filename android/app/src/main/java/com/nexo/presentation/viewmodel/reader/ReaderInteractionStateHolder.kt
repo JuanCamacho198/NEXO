@@ -6,6 +6,7 @@ import androidx.annotation.VisibleForTesting
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
 import com.nexo.presentation.viewmodel.reader.interaction.AnnotationManager
 import com.nexo.presentation.viewmodel.reader.interaction.BookmarkManager
@@ -34,6 +35,7 @@ import org.readium.r2.shared.publication.Locator
 class ReaderInteractionStateHolder(
     private val readerRepository: ReaderRepository,
     private val dictionaryRepository: DictionaryRepository?,
+    private val activeUser: ActiveUserProvider,
     private val scope: CoroutineScope,
     private val onEvent: (UiEvent) -> Unit,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
@@ -46,11 +48,11 @@ class ReaderInteractionStateHolder(
 
     private val store = InteractionStateStore(_state, _clearSelectionEvent)
     private val selectionManager = SelectionManager(store, scope, mainDispatcher)
-    private val highlightManager = HighlightManager(store, selectionManager, readerRepository, scope, mainDispatcher)
-    private val annotationManager = AnnotationManager(store, selectionManager, readerRepository, scope, mainDispatcher)
-    private val bookmarkManager = BookmarkManager(store, readerRepository, scope, mainDispatcher)
+    private val highlightManager = HighlightManager(store, selectionManager, readerRepository, activeUser, scope, mainDispatcher)
+    private val annotationManager = AnnotationManager(store, selectionManager, readerRepository, activeUser, scope, mainDispatcher)
+    private val bookmarkManager = BookmarkManager(store, readerRepository, activeUser, scope, mainDispatcher)
     private val shareDictionaryManager =
-        ShareDictionaryManager(store, selectionManager, dictionaryRepository, scope, onEvent, mainDispatcher)
+        ShareDictionaryManager(store, selectionManager, dictionaryRepository, activeUser, scope, onEvent, mainDispatcher)
 
     init {
         store.setCoordinator = { selectionManager.coordinator = it }

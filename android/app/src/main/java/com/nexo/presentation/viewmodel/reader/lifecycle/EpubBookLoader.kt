@@ -6,6 +6,7 @@ import com.nexo.R
 import com.nexo.data.remote.supabase.SupabaseProgressSync
 import com.nexo.debug.DebugLog
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
 import com.nexo.presentation.viewmodel.CfiMigrator
 import com.nexo.presentation.viewmodel.reader.ReaderLifecycleState
@@ -40,6 +41,7 @@ import java.io.File
 class EpubBookLoader(
     private val application: Application,
     private val readerRepository: ReaderRepository,
+    private val activeUser: ActiveUserProvider,
     private val state: MutableStateFlow<ReaderLifecycleState>,
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher,
@@ -94,7 +96,7 @@ class EpubBookLoader(
                     onSuccess = { it },
                     onFailure = { throw Exception("Readium open failed: ${it.message}") },
                 )
-            val savedProgress = readerRepository.getProgressForBook(bookId)
+            val savedProgress = readerRepository.getProgressForBook(bookId, activeUser.requireUserId())
             val initialLocator: Locator? =
                 savedProgress
                     ?.locatorJson
@@ -198,7 +200,7 @@ class EpubBookLoader(
 
                 val chapters = TocBuilder.buildChaptersFromPublication(publication)
 
-                val savedProgress = readerRepository.getProgressForBook(bookId)
+                val savedProgress = readerRepository.getProgressForBook(bookId, activeUser.requireUserId())
                 val initialLocator: Locator? =
                     savedProgress
                         ?.locatorJson
@@ -316,32 +318,32 @@ class EpubBookLoader(
     ) {
         val readingOrderLinks = readingOrder
         if (readingOrderLinks.isEmpty()) return
-        val highlights = readerRepository.getHighlightsForBook(bookId)
+        val highlights = readerRepository.getHighlightsForBook(bookId, activeUser.requireUserId())
         for (highlight in highlights) {
             if (highlight.cfiRange.startsWith("epubcfi(") && highlight.locatorJson == null) {
                 val locator = resolveEpubCfi(highlight.cfiRange, readingOrderLinks)
                 if (locator != null) {
                     val migrated = highlight.copy(locatorJson = CfiMigrator.locatorToJson(locator))
-                    readerRepository.upsertHighlight(migrated)
+                    readerRepository.upsertHighlight(migrated, activeUser.requireUserId())
                 }
             }
         }
-        val bookmarks = readerRepository.getBookmarksForBook(bookId)
+        val bookmarks = readerRepository.getBookmarksForBook(bookId, activeUser.requireUserId())
         for (bookmark in bookmarks) {
             if (bookmark.cfiLocation.startsWith("epubcfi(") && bookmark.locatorJson == null) {
                 val locator = resolveEpubCfi(bookmark.cfiLocation, readingOrderLinks)
                 if (locator != null) {
                     val migrated = bookmark.copy(locatorJson = CfiMigrator.locatorToJson(locator))
-                    readerRepository.upsertBookmark(migrated)
+                    readerRepository.upsertBookmark(migrated, activeUser.requireUserId())
                 }
             }
         }
-        val progress = readerRepository.getProgressForBook(bookId)
+        val progress = readerRepository.getProgressForBook(bookId, activeUser.requireUserId())
         if (progress != null && progress.cfiLocation.startsWith("epubcfi(") && progress.locatorJson == null) {
             val locator = resolveEpubCfi(progress.cfiLocation, readingOrderLinks)
             if (locator != null) {
                 val migrated = progress.copy(locatorJson = CfiMigrator.locatorToJson(locator))
-                readerRepository.upsertProgress(migrated)
+                readerRepository.upsertProgress(migrated, activeUser.requireUserId())
             }
         }
         Log.d(TAG, "CFI migration complete for book $bookId")

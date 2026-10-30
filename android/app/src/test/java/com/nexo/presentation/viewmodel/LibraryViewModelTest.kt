@@ -13,6 +13,8 @@ import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.ImportEpubBookUseCase
 import com.nexo.presentation.UiEvent
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.TEST_USER_ID
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -51,6 +53,7 @@ class LibraryViewModelTest {
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
                     appContext = mockk<Context>(),
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
@@ -84,6 +87,7 @@ class LibraryViewModelTest {
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
                     appContext = mockk<Context>(),
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
@@ -116,6 +120,7 @@ class LibraryViewModelTest {
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
                     appContext = mockk<Context>(),
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
@@ -154,6 +159,7 @@ class LibraryViewModelTest {
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
                     appContext = mockk<Context>(),
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
@@ -193,6 +199,7 @@ class LibraryViewModelTest {
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
                     appContext = mockk<Context>(),
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
@@ -232,6 +239,7 @@ class LibraryViewModelTest {
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
                     appContext = mockk<Context>(),
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
@@ -256,6 +264,7 @@ class LibraryViewModelTest {
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
                     appContext = mockk<Context>(),
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
@@ -332,8 +341,8 @@ class LibraryViewModelTest {
             val book2Progress = MutableStateFlow(0f)
             val getBookProgressUseCase =
                 mockk<GetBookProgressUseCase>(relaxed = true).also {
-                    every { it.observeProgressPercent("book-1") } returns book1Progress
-                    every { it.observeProgressPercent("book-2") } returns book2Progress
+                    every { it.observeProgressPercent("book-1", TEST_USER_ID) } returns book1Progress
+                    every { it.observeProgressPercent("book-2", TEST_USER_ID) } returns book2Progress
                 }
             val viewModel =
                 LibraryViewModel(
@@ -341,6 +350,7 @@ class LibraryViewModelTest {
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
                     appContext = mockk<Context>(),
+                    activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
@@ -403,22 +413,30 @@ class LibraryViewModelTest {
         private val booksFlow = MutableStateFlow<List<Book>>(emptyList())
         private val readingMinutesByBookFlow = MutableStateFlow<Map<String, Long>>(emptyMap())
 
-        override fun observeLibrary(): Flow<List<Book>> = booksFlow
+        override fun observeLibrary(userId: String): Flow<List<Book>> = booksFlow
 
-        override fun observeBookById(bookId: String): Flow<Book?> = MutableStateFlow(null)
+        override fun observeBookById(
+            bookId: String,
+            userId: String,
+        ): Flow<Book?> = MutableStateFlow(null)
 
-        override fun observeProgressForBook(bookId: String): Flow<com.nexo.domain.model.ReadingProgress?> = MutableStateFlow(null)
+        override fun observeProgressForBook(
+            bookId: String,
+            userId: String,
+        ): Flow<com.nexo.domain.model.ReadingProgress?> = MutableStateFlow(null)
 
         override suspend fun updateBookRating(
             bookId: String,
+            userId: String,
             rating: Int?,
         ) = Unit
 
-        override fun observeTotalReadingTime(): Flow<Long> = MutableStateFlow(0L)
+        override fun observeTotalReadingTime(userId: String): Flow<Long> = MutableStateFlow(0L)
 
-        override fun observeReadingTimeByBook(): Flow<Map<String, Long>> = readingMinutesByBookFlow
+        override fun observeReadingTimeByBook(userId: String): Flow<Map<String, Long>> = readingMinutesByBookFlow
 
         override suspend fun importBookFromEpub(
+            userId: String,
             request: BookImportRequest,
             inputStreamProvider: suspend () -> InputStream?,
         ): Result<Book> {
@@ -438,6 +456,7 @@ class LibraryViewModelTest {
         }
 
         override suspend fun importBookFromPdf(
+            userId: String,
             request: BookImportRequest,
             file: File,
         ): Result<Book> {
@@ -458,11 +477,13 @@ class LibraryViewModelTest {
 
         override suspend fun updateBookStatus(
             bookId: String,
+            userId: String,
             status: String?,
         ): Result<Unit> = Result.success(Unit)
 
         override suspend fun updateBookMetadata(
             bookId: String,
+            userId: String,
             title: String,
             author: String?,
             description: String?,
@@ -474,14 +495,23 @@ class LibraryViewModelTest {
             publishedDate: String?,
         ): Result<Unit> = Result.success(Unit)
 
-        override suspend fun getBookById(bookId: String): Book? = null
+        override suspend fun getBookById(
+            bookId: String,
+            userId: String,
+        ): Book? = null
 
-        override suspend fun deleteBook(bookId: String): Result<Unit> {
+        override suspend fun deleteBook(
+            bookId: String,
+            userId: String,
+        ): Result<Unit> {
             deleteFailure?.let { return Result.failure(it) }
             return Result.success(Unit)
         }
 
-        override suspend fun deleteBookLocalOnly(bookId: String): Result<Unit> {
+        override suspend fun deleteBookLocalOnly(
+            bookId: String,
+            userId: String,
+        ): Result<Unit> {
             deleteFailure?.let { return Result.failure(it) }
             return Result.success(Unit)
         }

@@ -8,6 +8,7 @@ import com.nexo.domain.model.CacheUsage
 import com.nexo.domain.repository.CacheRepository
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.StorageRepository
+import com.nexo.domain.session.ActiveUserProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -56,6 +57,7 @@ class StorageViewModel(
     private val storageRepository: StorageRepository,
     private val cacheRepository: CacheRepository,
     private val libraryRepository: LibraryRepository,
+    private val activeUser: ActiveUserProvider,
     private val mainDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(StorageUiState())
@@ -89,7 +91,7 @@ class StorageViewModel(
     /** Stages [bookId] for the shared remove dialog (resolves the full book first). */
     fun requestDeleteBook(bookId: String) {
         viewModelScope.launch(mainDispatcher) {
-            val book = libraryRepository.getBookById(bookId) ?: return@launch
+            val book = libraryRepository.getBookById(bookId, activeUser.requireUserId()) ?: return@launch
             mutableUiState.update { it.copy(bookToDelete = book) }
         }
     }
@@ -108,7 +110,7 @@ class StorageViewModel(
     /** Deletes orphan book files left by timed-out deletes or failed imports. */
     fun sweepOrphans() {
         viewModelScope.launch(mainDispatcher) {
-            storageRepository.sweepOrphanBookFiles()
+            storageRepository.sweepOrphanBookFiles(activeUser.requireUserId())
             load()
         }
     }
@@ -116,10 +118,11 @@ class StorageViewModel(
     private fun confirmDelete(localOnly: Boolean) {
         val book = mutableUiState.value.bookToDelete ?: return
         viewModelScope.launch(mainDispatcher) {
+            val userId = activeUser.requireUserId()
             if (localOnly) {
-                libraryRepository.deleteBookLocalOnly(book.id)
+                libraryRepository.deleteBookLocalOnly(book.id, userId)
             } else {
-                libraryRepository.deleteBook(book.id)
+                libraryRepository.deleteBook(book.id, userId)
             }
             mutableUiState.update { it.copy(bookToDelete = null) }
             load()
@@ -129,7 +132,7 @@ class StorageViewModel(
     private suspend fun load() {
         coroutineScope {
             val cacheDeferred = async { loadCache() }
-            val booksDeferred = async { storageRepository.bookStorageUsage() }
+            val booksDeferred = async { storageRepository.bookStorageUsage(activeUser.requireUserId()) }
             val cache = cacheDeferred.await()
             val books = booksDeferred.await()
             mutableUiState.update {

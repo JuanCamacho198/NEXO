@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -81,7 +82,15 @@ class SupabaseProgressSync(
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
 
-    val pendingCount: kotlinx.coroutines.flow.Flow<Int> = outboxDao.observePendingCount()
+    /**
+     * Owner of the current sync session, or `""` when none is active. Set by
+     * [startProcessing]'s session lookup; the outbox count is scoped to it so the
+     * depth gauge never reports another account's parked rows.
+     */
+    private val activeUserId = MutableStateFlow("")
+
+    val pendingCount: kotlinx.coroutines.flow.Flow<Int> =
+        activeUserId.flatMapLatest { outboxDao.observePendingCount(it) }
 
     sealed class State {
         data object Idle : State()
@@ -151,7 +160,7 @@ class SupabaseProgressSync(
         // otherwise the remote value is dropped and the local 0% wins (LWW),
         // wiping the "continue reading" position. Retry briefly with a small
         // delay instead of giving up on the first attempt.
-        val bookReady = bookDao.getBookById(bookId) != null
+        val bookReady = bookDao.getBookById(bookId, session.userId) != null
         var attempts = 0
         while (!bookReady && attempts < PULL_BOOK_READY_MAX_ATTEMPTS) {
             delay(PULL_BOOK_READY_RETRY_DELAY_MS)
@@ -176,7 +185,7 @@ class SupabaseProgressSync(
      */
     internal suspend fun applyPendingProgressForBook(bookId: String): ReadingProgressRow? {
         val row = pendingRemoteProgress.remove(bookId) ?: return null
-        if (bookDao.getBookById(bookId) == null) {
+        if (bookDao.getBookById(bookId, row.userId) == null) {
             // Book still missing — keep it pending for a later flush.
             pendingRemoteProgress[bookId] = row
             return null
@@ -230,12 +239,12 @@ class SupabaseProgressSync(
             return
         }
         when (val outcome = apply()) {
-            is ApplyOutcome.Ok -> outboxDao.deleteById(item.id)
+            is ApplyOutcome.Ok -> outboxDao.deleteById(item.id, item.userId)
             is ApplyOutcome.Retryable -> {
-                outboxDao.incrementRetryCount(item.id, outcome.cause.message ?: "Unknown error")
-                outboxDao.pruneFailedItems(3)
+                outboxDao.incrementRetryCount(item.id, item.userId, outcome.cause.message ?: "Unknown error")
+                outboxDao.pruneFailedItems(item.userId, 3)
             }
-            is ApplyOutcome.Poison -> outboxDao.pruneFailedItems(3)
+            is ApplyOutcome.Poison -> outboxDao.pruneFailedItems(item.userId, 3)
         }
     }
 
@@ -315,7 +324,10 @@ class SupabaseProgressSync(
         val authSession = session ?: return
 
         _state.value = State.Running
-        val pendingItems = outboxDao.getPendingItems()
+        activeUserId.value = authSession.userId
+        // Drain only this session's queue: an unscoped drain would pick up
+        // another account's parked operations and push them under this user.
+        val pendingItems = outboxDao.getPendingItems(authSession.userId)
 
         // A4 - sync flush duration: timestamps around the drain loop only
         // (background path; the session-gate backoff loop above is excluded).
@@ -353,7 +365,7 @@ class SupabaseProgressSync(
     ) {
         if (!hasLiveSession()) return
         val bookId = item.entityId ?: return
-        val localProgress = readingProgressDao.getProgressForBook(bookId) ?: return
+        val localProgress = readingProgressDao.getProgressForBook(bookId, userId) ?: return
 
         val row =
             ReadingProgressRow(
@@ -394,7 +406,7 @@ class SupabaseProgressSync(
         // for the next pass (preserves pre-PR-3 semantics: no delete, no
         // retry increment — the item just waits for a future pass).
         if (operation != SyncOperation.DELETE) {
-            val localBookmark = bookmarkDao.getBookmarkById(bookmarkId) ?: return
+            val localBookmark = bookmarkDao.getBookmarkById(bookmarkId, userId) ?: return
             commitOutbox(item) {
                 try {
                     val row =
@@ -449,7 +461,7 @@ class SupabaseProgressSync(
         // they would re-send deleted rows and cause resurrection. Clean them up
         // by ack-via-OutboxCommit (Ok outcome).
         if (operation != SyncOperation.DELETE) {
-            val localHighlight = highlightDao.getHighlightById(entityId)
+            val localHighlight = highlightDao.getHighlightById(entityId, userId)
             if (localHighlight == null) {
                 commitOutbox(item) { ApplyOutcome.Ok }
                 return
@@ -623,12 +635,13 @@ class SupabaseProgressSync(
     }
 
     private suspend fun applyRemoteProgress(row: ReadingProgressRow): Boolean {
-        if (bookDao.getBookById(row.bookId) == null) {
+        if (row.userId.isBlank()) return false
+        if (bookDao.getBookById(row.bookId, row.userId) == null) {
             pendingRemoteProgress[row.bookId] = row
             return false
         }
 
-        val localProgress = readingProgressDao.getProgressForBook(row.bookId)
+        val localProgress = readingProgressDao.getProgressForBook(row.bookId, row.userId)
         val remoteTime = parseRemoteTimestamp(row.updatedAt)
 
         // LWW with version+1 and recordId tie (PR2): remote wins if newer; tie → recordId lexicographic.
@@ -654,6 +667,7 @@ class SupabaseProgressSync(
                     currentPage = localProgress?.currentPage,
                     updatedAtEpochMillis = remoteTime,
                     locatorJson = normalizedLocator,
+                    userId = row.userId,
                 ),
             )
             return true
@@ -662,10 +676,11 @@ class SupabaseProgressSync(
     }
 
     private suspend fun applyRemoteBookmark(row: BookmarkRow) {
+        if (row.userId.isBlank()) return
         val isDeleted = row.deletedAt != null
-        val localBookmark = bookmarkDao.getBookmarkById(row.id ?: return)
+        val localBookmark = bookmarkDao.getBookmarkById(row.id ?: return, row.userId)
 
-        if (!isDeleted && bookDao.getBookById(row.bookId) == null) return
+        if (!isDeleted && bookDao.getBookById(row.bookId, row.userId) == null) return
 
         if (isDeleted) {
             if (localBookmark != null) {
@@ -709,6 +724,7 @@ class SupabaseProgressSync(
                         updatedAtEpochMillis = remoteTime,
                         deletedAtEpochMillis = if (isDeleted) remoteTime else null,
                         locatorJson = LocatorCodec.normalizeLocatorJson(row.locatorJson),
+                        userId = row.userId,
                     ),
                 )
             }
@@ -716,10 +732,11 @@ class SupabaseProgressSync(
     }
 
     private suspend fun applyRemoteHighlight(row: HighlightRow) {
+        if (row.userId.isBlank()) return
         val isDeleted = row.deletedAt != null
-        val localHighlight = highlightDao.getHighlightById(row.id ?: return)
+        val localHighlight = highlightDao.getHighlightById(row.id ?: return, row.userId)
 
-        if (!isDeleted && bookDao.getBookById(row.bookId) == null) return
+        if (!isDeleted && bookDao.getBookById(row.bookId, row.userId) == null) return
 
         if (isDeleted) {
             if (localHighlight != null) {
@@ -762,6 +779,7 @@ class SupabaseProgressSync(
                         deletedAtEpochMillis = if (isDeleted) remoteTime else null,
                         locatorJson = LocatorCodec.normalizeLocatorJson(row.locatorJson) ?: row.locatorJson,
                         type = row.type,
+                        userId = row.userId,
                     ),
                 )
             }
@@ -832,7 +850,8 @@ class SupabaseProgressSync(
      * row (insert REPLACE by PK — SCEN-sync-7).
      */
     internal suspend fun applyRemoteSession(row: ReadingSessionRow): Boolean {
-        if (bookDao.getBookById(row.bookId) == null) return false
+        if (row.userId.isBlank()) return false
+        if (bookDao.getBookById(row.bookId, row.userId) == null) return false
 
         val remoteTime =
             try {
@@ -841,7 +860,7 @@ class SupabaseProgressSync(
                 0L
             }
 
-        val local = readingSessionDao.getById(row.id)
+        val local = readingSessionDao.getById(row.id, row.userId)
         val shouldApply =
             when {
                 local == null -> true

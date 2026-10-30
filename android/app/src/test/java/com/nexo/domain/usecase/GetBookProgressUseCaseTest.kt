@@ -2,6 +2,7 @@ package com.nexo.domain.usecase
 
 import com.nexo.domain.model.ReadingProgress
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.testutil.TEST_USER_ID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -31,7 +32,7 @@ class GetBookProgressUseCaseTest {
                     ),
                 )
 
-            val pct = useCase.observeProgressPercent(bookId).first()
+            val pct = useCase.observeProgressPercent(bookId, TEST_USER_ID).first()
             assertEquals(60f, pct, 0.001f)
         }
 
@@ -40,7 +41,7 @@ class GetBookProgressUseCaseTest {
         runBlocking {
             val useCase = GetBookProgressUseCase(FakeReaderRepo(null))
 
-            val pct = useCase.observeProgressPercent("book-2").first()
+            val pct = useCase.observeProgressPercent("book-2", TEST_USER_ID).first()
             assertEquals(0f, pct, 0.001f)
         }
 
@@ -62,8 +63,8 @@ class GetBookProgressUseCaseTest {
                     ),
                 )
 
-            val homePct = useCase.observeProgressPercent(bookId).first()
-            val libraryPct = useCase.observeProgressPercent(bookId).first()
+            val homePct = useCase.observeProgressPercent(bookId, TEST_USER_ID).first()
+            val libraryPct = useCase.observeProgressPercent(bookId, TEST_USER_ID).first()
 
             assertEquals(homePct, libraryPct, 0.001f)
             assertEquals(77f, homePct, 0.001f)
@@ -72,34 +73,62 @@ class GetBookProgressUseCaseTest {
     private class FakeReaderRepo(
         private val progress: ReadingProgress?,
     ) : ReaderRepository {
-        override fun observeProgress(bookId: String): Flow<ReadingProgress?> = MutableStateFlow(progress)
+        override fun observeProgress(
+            bookId: String,
+            userId: String,
+        ): Flow<ReadingProgress?> = MutableStateFlow(progress)
 
-        override suspend fun upsertProgress(progress: ReadingProgress) {}
+        override suspend fun upsertProgress(
+            progress: ReadingProgress,
+            userId: String,
+        ) {}
 
         override suspend fun updateBookReadingState(
             bookId: String,
+            userId: String,
             progressPercent: Float,
             updatedAt: Long,
         ) {}
 
-        override suspend fun getProgressForBook(bookId: String): ReadingProgress? = progress
+        override suspend fun getProgressForBook(
+            bookId: String,
+            userId: String,
+        ): ReadingProgress? = progress
 
-        override fun observeAllHighlights(): Flow<List<com.nexo.domain.model.Highlight>> = MutableStateFlow(emptyList())
+        override fun observeAllHighlights(userId: String): Flow<List<com.nexo.domain.model.Highlight>> = MutableStateFlow(emptyList())
 
-        override fun observeHighlights(bookId: String): Flow<List<com.nexo.domain.model.Highlight>> = MutableStateFlow(emptyList())
+        override fun observeHighlights(
+            bookId: String,
+            userId: String,
+        ): Flow<List<com.nexo.domain.model.Highlight>> = MutableStateFlow(emptyList())
 
-        override fun observeAllTags(): Flow<List<String>> = MutableStateFlow(emptyList())
+        override fun observeAllTags(userId: String): Flow<List<String>> = MutableStateFlow(emptyList())
 
-        override suspend fun upsertHighlight(highlight: com.nexo.domain.model.Highlight) {}
+        override suspend fun upsertHighlight(
+            highlight: com.nexo.domain.model.Highlight,
+            userId: String,
+        ) {}
 
-        override suspend fun getHighlightsForBook(bookId: String): List<com.nexo.domain.model.Highlight> = emptyList()
+        override suspend fun getHighlightsForBook(
+            bookId: String,
+            userId: String,
+        ): List<com.nexo.domain.model.Highlight> = emptyList()
 
-        override fun observeAllBookmarks(): Flow<List<com.nexo.domain.model.Bookmark>> = MutableStateFlow(emptyList())
+        override fun observeAllBookmarks(userId: String): Flow<List<com.nexo.domain.model.Bookmark>> = MutableStateFlow(emptyList())
 
-        override fun observeBookmarks(bookId: String): Flow<List<com.nexo.domain.model.Bookmark>> = MutableStateFlow(emptyList())
+        override fun observeBookmarks(
+            bookId: String,
+            userId: String,
+        ): Flow<List<com.nexo.domain.model.Bookmark>> = MutableStateFlow(emptyList())
 
-        override suspend fun upsertBookmark(bookmark: com.nexo.domain.model.Bookmark) {}
+        override suspend fun upsertBookmark(
+            bookmark: com.nexo.domain.model.Bookmark,
+            userId: String,
+        ) {}
 
-        override suspend fun getBookmarksForBook(bookId: String): List<com.nexo.domain.model.Bookmark> = emptyList()
+        override suspend fun getBookmarksForBook(
+            bookId: String,
+            userId: String,
+        ): List<com.nexo.domain.model.Bookmark> = emptyList()
     }
 }

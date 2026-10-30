@@ -44,6 +44,8 @@ import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.FormatAlignCenter
 import androidx.compose.material.icons.rounded.FormatAlignJustify
@@ -62,6 +64,7 @@ import androidx.compose.material.icons.rounded.Monitor
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.ShowChart
@@ -404,6 +407,18 @@ object NexoIcons {
 
     /** Chevron (settings row affordance). Source: `Icons.Rounded.ChevronRight`. */
     val ChevronRight = Icons.Rounded.ChevronRight
+
+    /** Play — resume affordance on the continue-reading card. Source: `Icons.Rounded.PlayArrow`. */
+    val Play = Icons.Rounded.PlayArrow
+
+    /** Explore — compass glyph for the Adventure genre chip. Source: `Icons.Rounded.Explore`. */
+    val Explore = Icons.Rounded.Explore
+
+    /** Favorite — heart glyph for the Romance genre chip. Source: `Icons.Rounded.Favorite`. */
+    val Favorite = Icons.Rounded.Favorite
+
+    /** AutoAwesome — sparkle glyph for the Science fiction genre chip. Source: `Icons.Rounded.AutoAwesome`. */
+    val AutoAwesome = Icons.Rounded.AutoAwesome
 
     /** Back arrow. RTL mirrors. Source: `Icons.AutoMirrored.Rounded.ArrowBack`. */
     val ArrowBack = Icons.AutoMirrored.Rounded.ArrowBack

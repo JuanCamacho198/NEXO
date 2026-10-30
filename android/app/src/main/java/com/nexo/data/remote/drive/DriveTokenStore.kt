@@ -1,11 +1,14 @@
 package com.nexo.data.remote.drive
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.nexo.data.remote.google.GoogleDriveConfig
+import com.nexo.data.session.AccountPreferences
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
+import com.nexo.domain.session.ActiveUserProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.forms.FormDataContent
@@ -162,36 +165,97 @@ interface DriveTokenStore {
 }
 
 /**
- * [DriveTokenStore] backed by EncryptedSharedPreferences.
+ * [DriveTokenStore] backed by EncryptedSharedPreferences, scoped to the active
+ * account (T10 of `aislamiento-datos-por-cuenta`).
+ *
+ * ## The security defect this closes
+ *
+ * The file was one global `nexo_drive_token_store`. Two accounts on the same
+ * device therefore shared one token pair, so account B silently inherited
+ * account A's Google Drive access. The file is now
+ * `nexo_drive_token_store__{userId}`: tokens are encrypted exactly as before
+ * (Keystore-backed MasterKey, AES-256 SIV/GCM — unchanged) but stored per owner,
+ * so B reads nothing of A's.
+ *
+ * ## Construction still touches the Keystore
+ *
+ * The [MasterKey] is built in the CONSTRUCTOR, not on first token access. The
+ * `NetworkModule` wiring does `runCatching { EncryptedDriveTokenStore(...) }` and
+ * falls back to [InMemoryDriveTokenStore] when the Keystore entry cannot be
+ * built; building the key lazily would move that failure to the first Drive call,
+ * where no fallback exists.
+ *
+ * All scoping behavior lives in [PerAccountDriveTokenStore]; this class only
+ * supplies the encrypted per-account file. It is the production entry point.
  */
 class EncryptedDriveTokenStore(
     context: Context,
-) : DriveTokenStore {
-    private val prefs =
-        runCatching {
+    activeUser: ActiveUserProvider,
+) : DriveTokenStore by PerAccountDriveTokenStore(
+        activeUser = activeUser,
+        openForOwner = encryptedFileOpener(context.applicationContext),
+    ) {
+    companion object {
+        /** Base name; the owner segment is appended per account. */
+        const val PREFS_NAME: String = "nexo_drive_token_store"
+
+        /**
+         * Builds the per-owner encrypted file. The [MasterKey] is created eagerly
+         * here so a Keystore failure surfaces during store construction, where the
+         * caller's fallback catches it.
+         */
+        private fun encryptedFileOpener(appContext: Context): (String) -> SharedPreferences {
             val masterKey =
                 MasterKey
-                    .Builder(context)
+                    .Builder(appContext)
                     .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
                     .build()
-            EncryptedSharedPreferences.create(
-                context,
-                PREFS_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
-        }.getOrElse {
-            throw IllegalStateException("Failed to build EncryptedSharedPreferences for Drive tokens", it)
+            return { owner ->
+                EncryptedSharedPreferences.create(
+                    appContext,
+                    requireNotNull(AccountPreferences.fileNameForOwner(PREFS_NAME, owner)) {
+                        "No owner segment for Drive token file"
+                    },
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                )
+            }
         }
+    }
+}
 
-    override fun accessToken(): String? = prefs.getString(KEY_ACCESS, null)
+/**
+ * [DriveTokenStore] over an injected per-owner [SharedPreferences] resolver.
+ *
+ * Owns the account-scoping rules (read at call time, per-owner file cache, the
+ * anonymous path storing nothing). Production composes it with the encrypted
+ * resolver inside [EncryptedDriveTokenStore]; the injectable resolver is what
+ * makes the isolation rule provable on the JVM, where the Android Keystore is
+ * unavailable — the encryption itself is Android's, and is not what this class
+ * is about.
+ */
+class PerAccountDriveTokenStore(
+    private val activeUser: ActiveUserProvider,
+    private val openForOwner: (String) -> SharedPreferences,
+) : DriveTokenStore {
+    /** Cached per owner id; a single container instance serves every account. */
+    private val prefsCache = mutableMapOf<String, SharedPreferences>()
 
-    override fun refreshToken(): String? = prefs.getString(KEY_REFRESH, null)
+    /** The active account's file, or `null` when no account is active (D5). */
+    private fun prefs(): SharedPreferences? {
+        val owner = activeUser.currentUserId() ?: return null
+        return prefsCache.getOrPut(owner) { openForOwner(owner) }
+    }
+
+    override fun accessToken(): String? = prefs()?.getString(KEY_ACCESS, null)
+
+    override fun refreshToken(): String? = prefs()?.getString(KEY_REFRESH, null)
 
     override fun isAuthorized(): Boolean = !accessToken().isNullOrBlank()
 
     override fun persist(pair: DriveTokenPair) {
+        val prefs = prefs() ?: return
         val editor = prefs.edit().putString(KEY_ACCESS, pair.accessToken)
         if (pair.refreshToken != null) {
             editor.putString(KEY_REFRESH, pair.refreshToken)
@@ -200,12 +264,11 @@ class EncryptedDriveTokenStore(
     }
 
     override fun clear() {
-        prefs.edit().clear().apply()
+        prefs()?.edit()?.clear()?.apply()
     }
 
-    companion object {
-        private const val PREFS_NAME = "nexo_drive_token_store"
-        private const val KEY_ACCESS = "drive_access_token"
-        private const val KEY_REFRESH = "drive_refresh_token"
+    private companion object {
+        const val KEY_ACCESS = "drive_access_token"
+        const val KEY_REFRESH = "drive_refresh_token"
     }
 }

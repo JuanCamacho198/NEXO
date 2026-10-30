@@ -19,19 +19,8 @@
   import { createEpubPagination } from '$lib/features/reader/viewer-epub/useEpubPagination.svelte';
   import type { PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
   import { resolveFootnoteNote } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
-  import {
-    bookPagePosition,
-    chapterPageForBookPage,
-    type BookPagePosition,
-  } from '$lib/features/reader/viewer-epub/bookPagePosition';
-  import { bookPageCounts } from '$lib/features/reader/viewer-epub/bookPageCounts.svelte';
-  import { READER_PROGRESS_INDICATOR_BOOK_PAGES } from '$lib/shared/types/settings';
   import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
   import { attachFrameZoomWheel } from '$lib/features/reader/viewer-epub/epubZoomWheel';
-  import {
-    createEpubPageWheelGesture,
-    resolveEpubPageWheelIntent,
-  } from '$lib/features/reader/viewer-epub/epubPageWheel';
   import {
     contentImageFromEvent,
     isSelectionClick,
@@ -356,31 +345,6 @@
     isPaginated: () => paginated,
     refreshReaderStyles: () => render.refreshReaderStyles(),
     getPageBox: () => (paginated ? pageBox : null),
-    // Everything the injected stylesheet is built from. `refresh()` restyles only
-    // when this moved (or the page box did), so an observer re-run with nothing
-    // changed cannot write the stylesheet back and re-enter the layout it was
-    // measured from. `untrack`: the composable asks for it from an observer
-    // callback, and tracking these settings there would make the observer a
-    // dependency of the settings graph it feeds.
-    getStylesKey: () =>
-      untrack(() =>
-        JSON.stringify({
-          fontSize,
-          fontFamily,
-          themeMode,
-          lineHeight,
-          letterSpacing,
-          paragraphSpacing,
-          textAlign,
-          direction,
-          hyphenation,
-          margins,
-          zoom: zoomTheme.zoomLevel,
-          // The box is written into the stylesheet (`column-width`, the page
-          // height), so it is part of "what the last write was built from".
-          pageBox: pagination.pageBox,
-        }),
-      ),
     // The composable is the only writer of the box; the viewer holds the only
     // reactive copy. A pull (`pageBox = pagination.pageBox` in an $effect) would
     // read and write the same state graph and Svelte aborts with
@@ -421,72 +385,36 @@
   // address, so the document path answers instead.
   const paginatedMeasured = $derived(paginated && pagination.pageCount > 0);
 
-  /**
-   * The reader's `progressIndicator` = "count the whole book in the page field".
-   * Off — the default, and every other stored value — leaves the field counting
-   * the chapter, exactly as it did before this setting meant anything.
-   */
-  const bookTotalsOn = $derived(
-    readerSettings.progressIndicator === READER_PROGRESS_INDICATOR_BOOK_PAGES,
-  );
+  // Paginated mode replaces the total outright. Leaving the document count here
+  // is what let the field claim "of 43" while the chapter on screen had 37
+  // columns.
+  let displayTotal = $derived(paginatedMeasured ? pagination.pageCount : documentTotal);
 
-  // The chapter that is committed ON SCREEN, as a reading-order position. A Next
-  // at a chapter's last page bumps the requested index synchronously and falls
-  // through to chapter navigation, but the new chapter only reaches the screen
-  // when its `srcdoc` has loaded (`markReady` -> `setLastRenderedChapter`).
-  // Reading the requested index made the number advance through 9, 10, 11 while
-  // `scrollLeft` stayed pinned to the old chapter — the measured "header
-  // advances, screen does not" desync. Before the first render commits (`< 0`)
-  // the requested index is the only answer available, so it is the fallback.
-  const committedOrder = $derived(
-    lastRenderedChapter >= 0 ? lastRenderedChapter : navigation.currentChapterIndex,
-  );
-
-  /** Measured column counts per reading-order position, for this book. */
-  const bookColumnCounts = $derived(bookPageCounts.countsFor(bookId));
-
-  /**
-   * Where the reader is in the BOOK, in the unit their reading mode counts — or
-   * null when nothing usable is measured yet, so the caller falls back instead of
-   * printing a zero.
-   *
-   * Scrolling mode needs no cache: a document IS a page there, and the reading
-   * order names every one of them the moment the book opens, so that total is
-   * exact from the first frame. Paginated mode is the opposite — a column count
-   * only exists once a chapter has been laid out — so its total is the sum of the
-   * chapters measured so far. That is why it grows as the reader walks, and why
-   * paginating the whole book up front (a multi-second open) is not done.
-   */
-  const bookPosition = $derived.by((): BookPagePosition | null => {
-    if (!paginated) {
-      if (documentTotal <= 0) return null;
-      const page = navigation.resolve(committedOrder).order + 1;
-      return { page: Math.min(page, documentTotal), total: documentTotal };
-    }
-    return bookPagePosition(bookColumnCounts, committedOrder, pagination.currentPage);
+  // The header reports the chapter that is ON SCREEN, not the one navigation has
+  // requested. A Next at a chapter's last page bumps `currentChapterIndex`
+  // synchronously and falls through to chapter navigation, but the new chapter
+  // only reaches the screen when its `srcdoc` has loaded (`markReady` ->
+  // `setLastRenderedChapter`). Reading the requested index made the number
+  // advance through 9, 10, 11… while `scrollLeft` stayed pinned to the old
+  // chapter's maximum and the visible text never changed — the measured
+  // "header advances, screen does not" desync. `lastRenderedChapter` is
+  // committed-render state (the pagination lifecycle and the highlights overlay
+  // already key on it), so it is the number that matches what the reader sees.
+  // Before the first render commits (`< 0`) the requested index is the only
+  // answer available, so it is the fallback. Both are reading-order positions.
+  //
+  // Paginated mode replaces this number too: the reader is not on a document
+  // there, it is on a COLUMN of one, and `pagination.currentPage` is the only
+  // thing that knows which. Measured before this was wired up — chapter at
+  // reading order 16, 25 columns, viewport 1200x779 — `scrollLeft` walked
+  // 0 -> 6660 -> 3330 across five forward and three backward turns while this
+  // field sat on 16 for all eight. The count existed and nobody asked for it.
+  let displayCurrentPage = $derived.by(() => {
+    if (paginatedMeasured) return pagination.currentPage;
+    const committed =
+      lastRenderedChapter >= 0 ? lastRenderedChapter : navigation.currentChapterIndex;
+    return navigation.resolve(committed).order + 1;
   });
-
-  /**
-   * The chapter's own numbers: what the field shows with the switch off, and the
-   * fallback with it on. In paginated mode the reader is not on a document, they
-   * are on a COLUMN of one, and `pagination.currentPage` is the only thing that
-   * knows which — measured before that was wired up, `scrollLeft` walked 0 ->
-   * 6660 -> 3330 across eight turns while the field sat on the chapter index.
-   */
-  const chapterPosition = $derived.by((): BookPagePosition => {
-    if (paginatedMeasured) return { page: pagination.currentPage, total: pagination.pageCount };
-    return { page: navigation.resolve(committedOrder).order + 1, total: documentTotal };
-  });
-
-  // Paginated mode replaces the total outright: leaving the document count here is
-  // what let the field claim "of 43" while the chapter on screen had 37 columns.
-  // The book total replaces it in turn, and only when it exists.
-  let displayTotal = $derived(
-    bookTotalsOn && bookPosition ? bookPosition.total : chapterPosition.total,
-  );
-  let displayCurrentPage = $derived(
-    bookTotalsOn && bookPosition ? bookPosition.page : chapterPosition.page,
-  );
 
   function emitPreciseLocation(): void {
     bridge.emitPreciseLocation();
@@ -518,6 +446,48 @@
   function refreshReaderStyles(): void {
     render.refreshReaderStyles();
   }
+  /**
+   * "The layout changed." The one signal every trigger shares: a text setting,
+   * the zoom, a window resize, a fullscreen toggle, mode entry.
+   *
+   * It hands off to `pagination.refresh()` rather than measuring anything
+   * itself, so the count keeps exactly one derivation path and one ordering
+   * (restyle, THEN read `scrollWidth`). In scrolling mode there is no page box,
+   * `refresh()` returns at its own `isPaginated()` guard, and the stylesheet is
+   * still rebuilt for the new text settings — the same restyle scrolling mode
+   * always did.
+   */
+  function emitLayoutChanged(): void {
+    pagination.refresh();
+  }
+  // A viewport resize is a layout change even though the page box is re-measured
+  // for it: the observer that used to be the only listener is coalesced onto a
+  // frame, and a coalesced `refresh()` landing mid-reflow would sample a
+  // half-applied layout. Reading the live box first makes this call a no-op when
+  // the observer is about to make the same one.
+  $effect(() => {
+    void viewportWidth;
+    void viewportHeight;
+    void isFullscreen;
+    if (!metadata || isLoading || !iframeEl) return;
+    untrack(emitLayoutChanged);
+  });
+
+  // ── The reader's size, as reactive inputs to the signal above ─────────────
+  // `innerWidth`/`innerHeight` are not reactive, so a resize is published by an
+  // event into `$state`. Fullscreen is read as well, even though it reaches the
+  // `<div>`'s classes and not the iframe: the parent's chrome is hidden while it
+  // is on, so the box a page is measured against moves.
+  let viewportWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 0);
+  let viewportHeight = $state(typeof window !== 'undefined' ? window.innerHeight : 0);
+  $effect(() => {
+    const onResize = (): void => {
+      viewportWidth = window.innerWidth;
+      viewportHeight = window.innerHeight;
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  });
   // The parent's restore path still calls `renderChapter(id)`, and a chapter id
   // names a spine document — so it goes through the order like every other jump.
   // `void` keeps it visibly reachable despite having no in-file caller today.
@@ -526,17 +496,7 @@
   }
   void renderChapter;
 
-  /**
-   * A "go to page" that names a page in ANOTHER chapter, waiting for that
-   * chapter to lay out. The page inside a chapter does not exist until its
-   * columns are measured, so the number is remembered here and applied by the
-   * effect below once the target chapter reports a count.
-   */
-  let pendingBookPage = $state<{ chapter: number; page: number } | null>(null);
-
   export function goToPrev(): void {
-    // A press is a new position: it outranks a queued jump to a book page.
-    pendingBookPage = null;
     // A restore in flight owns the offset. The press is QUEUED rather than
     // applied (from a position the restore is about to overwrite) or dropped
     // (which loses the reader's input): it runs once the restore has landed, so
@@ -552,7 +512,6 @@
     navigation.goToPrev();
   }
   export function goToNext(): void {
-    pendingBookPage = null;
     if (paginated && (pagination.isRestoring() || pagination.isLayoutSettling())) {
       deferTurn(1);
       return;
@@ -615,33 +574,16 @@
     navigation.goToChapter(index);
   }
   /**
-   * The page field's "go to", resolved in the unit the field is DISPLAYING.
+   * The page field's "go to": in paginated mode the number typed is a column of
+   * the chapter on screen, so it must move the chapter's own offset. Handing it
+   * to `navigation.handleGoToPage` would read the same number as a reading-order
+   * position and jump the reader to a different document — the same unit
+   * confusion the field itself had, one layer down.
    *
-   * With the whole-book switch on, the number the reader typed is a page of the
-   * BOOK: a column (paginated) or a document (scrolling). Handing it to
-   * `navigation.handleGoToPage` would read it as a reading-order position and
-   * jump to a different chapter — the same unit confusion the field itself had,
-   * one layer down. With the switch off (or with nothing measured, which is when
-   * the field falls back to the chapter's numbers) the old chapter-local
-   * behaviour is exactly what the number means.
-   *
-   * The document path needs no resolution: page N of the book IS reading-order
-   * position N-1, which is precisely what `navigation.handleGoToPage` does.
+   * The document path is kept for scroll mode and for a chapter whose layout is
+   * not measured yet, where a column number has nothing to address.
    */
   export async function handleGoToPage(page: number): Promise<boolean> {
-    if (bookTotalsOn && bookPosition && paginated) {
-      const target = chapterPageForBookPage(bookColumnCounts, page);
-      // Past the measured part of the book. Refusing is what keeps the field
-      // honest: the number reverts instead of landing somewhere it did not name.
-      if (!target) return false;
-      if (target.chapter === committedOrder && pagination.pageCount > 0) {
-        return pagination.goToPage(target.page);
-      }
-      pendingBookPage = target;
-      navigation.goToChapter(target.chapter);
-      return true;
-    }
-    if (bookTotalsOn && bookPosition) return navigation.handleGoToPage(page);
     if (paginatedMeasured && pagination.goToPage(page)) return true;
     return navigation.handleGoToPage(page);
   }
@@ -659,46 +601,6 @@
   }
   export function getTotalPages(): number {
     return displayTotal;
-  }
-  /**
-   * Whether a forward turn can still do something.
-   *
-   * The page field's own numbers cannot answer this. In paginated mode they
-   * count the columns of the chapter on screen, so `page === total` holds at the
-   * last column of EVERY chapter — and a page turn at that point is not the end
-   * of anything: it renders the chapter's next document or the next chapter.
-   * Gating Next on the field disabled the control exactly where the reader needed
-   * it, and measured on *Prisioneros de la geografía* it was disabled on all 22
-   * multi-column documents at their last column (the wheel, which never consulted
-   * it, kept working, which is why the defect read as "the arrows do nothing").
-   *
-   * The whole-book total has the same flaw from the other side: it is the sum of
-   * the chapters measured SO FAR, so `page === total` again holds at the last page
-   * of every chapter on the way through the book. Neither total is the reader's
-   * boundary; the reading order is.
-   */
-  export function getCanGoNext(): boolean {
-    if (paginated && pagination.pageCount > 0) {
-      if (pagination.currentPage < pagination.chapterTotal) return true;
-      return committedOrder < documentTotal - 1;
-    }
-    if (bookTotalsOn) return committedOrder < documentTotal - 1;
-    return displayCurrentPage < displayTotal;
-  }
-
-  /**
-   * Whether a backward turn can still do something.
-   *
-   * The mirror of `getCanGoNext`, and the same defect: on the first column of any
-   * chapter the field reads page 1, so `page <= 1` disabled Prev on the first page
-   * of every chapter — the one place a reader going back needs it. A backward
-   * turn there renders the previous chapter's last document.
-   */
-  export function getCanGoPrev(): boolean {
-    if (paginated && pagination.pageCount > 0) {
-      return pagination.currentPage > 1 || committedOrder > 0;
-    }
-    return displayCurrentPage > 1;
   }
   /**
    * Read-only snapshot for the opt-in diagnostic panel (`ReaderDiagnosticPanel`).
@@ -752,14 +654,6 @@
   function getThemeBgColor(): string {
     return zoomTheme.getThemeBgColor();
   }
-  /**
-   * The scrolling mode's only continuous position indicator. Painted with the
-   * READING theme's thumb colour, not the app's: the surface behind it is the
-   * book page, and the app palette can be the opposite brightness.
-   */
-  function getThemeScrollbarColor(): string {
-    return zoomTheme.getThemeScrollbarColor();
-  }
 
   $effect(() => {
     debugState.epub.currentChapterIndex = navigation.currentChapterIndex;
@@ -805,32 +699,29 @@
       render.renderChapter(navigation.currentChapterIndex);
       return;
     }
-    // Every setting that changes the text layout lands here, because this
-    // effect already voids them to make them reactive (see the `void` list
-    // above). `column-width` is pinned to the page box but the TEXT SIZE is not,
-    // so a font-size or spacing change reflows the chapter into a different
-    // number of columns while leaving the root's own border box — and therefore
-    // its `ResizeObserver` — untouched. Nothing else would notice: measured
-    // live, a step from 100% to 50% left the page field claiming "of 20" over a
-    // chapter that had reflowed to 7 columns.
+    // ── The layout-changed signal ──────────────────────────────────────────
+    // Every settings value this effect voids above (zoom/size/family, spacing,
+    // alignment, hyphens, margins, theme) changes how the chapter reflows, and
+    // none of them changes the root's BORDER BOX — so the two `ResizeObserver`s
+    // in the scheduler never fire for them, and the box key `refresh()` compares
+    // is unchanged too. That is the whole reason the page count used to go
+    // stale: measured on *Don Quijote*, in paginated mode on column 16 of 37,
+    // the field kept its previous total across every such edit — font size +20
+    // read "of 32" over 33 columns, paragraph spacing "of 47" over 52 170/1110
+    // columns, and a ctrl+wheel burst read "of 45" over 47. Nothing re-measured
+    // because nothing fired.
     //
-    // The recount goes through `pagination.refresh()` rather than being written
-    // here, so there is ONE path that restyles and derives the count: `refresh`
-    // owns the restyle-then-measure order, the coalescing for a zoom burst, and
-    // the re-read that catches a layout the browser had not committed yet.
-    // Calling `recount()` directly would restyle here and then measure through
-    // the composable's own cached box, which skips that re-read — which is how
-    // a step to 75% came to print "of 37" over 38 columns and stay there.
-    if (paginated) {
-      // `refresh` restyles only because a key in its `getStylesKey` moved: this
-      // effect runs for a settings change, but it can also re-run for a chapter
-      // or loading transition that changed none of them, and a restyle is a
-      // layout write. Skipping it there is what keeps the write out of the
-      // observer's path.
-      pagination.refresh();
-      return;
-    }
-    refreshReaderStyles();
+    // So this is a published signal, not a second measurement: `refresh()`
+    // restyles and then reads `scrollWidth`, and it is kept as the ONE path that
+    // derives the count. A recount that bypassed it would re-derive the page
+    // from the offset and reintroduce "thrown back to page 1" — `recount()` only
+    // CLAMPS, on purpose. `refresh()` with an unchanged box falls through to
+    // `recount()`, which is exactly the clamp-only behaviour wanted here.
+    //
+    // Called synchronously, before the effect returns: the restyle and the read
+    // must stay in the same task, or a zoom burst would measure a layout the
+    // next step has already replaced.
+    emitLayoutChanged();
   });
 
   // Paginated-mode lifecycle. One effect, two edges:
@@ -838,11 +729,9 @@
   //  - a chapter render re-measures, because the new chapter is a new layout
   //    with its own page count, and the reader restarts at its first page.
   //
-  // A layout change on an ALREADY-open chapter is the settings effect above:
-  // zoom, font size, font family, line height, letter spacing, paragraph
-  // spacing, margins, alignment, direction, hyphenation and theme all change
-  // the column count without changing the page box, so none of them produces a
-  // resize for the observer below to see.
+  // Deliberately NOT in scope here: zoom, font-size and orientation changes as
+  // their own triggers. Those belong to phase 3, and the composable's guarded
+  // box observer already covers a window resize on an already-laid-out chapter.
   let paginationMode = $state(false);
   // The chapter index the pagination state currently describes. A render of a
   // *different* chapter resets paging; a re-render of the same one does not.
@@ -856,63 +745,12 @@
     // `untrack`: entering/leaving publishes a measured box, and letting that
     // write feed back into this effect's dependencies would loop.
     untrack(() => {
-      // A mode change invalidates every cached page count. Columns and documents
-      // are different units, and a column total (`/ 345`) left standing over 43
-      // documents is the contradiction the whole-book switch exists to avoid.
-      // Cleared on both edges: the column counts are only valid for the layout
-      // they were measured from, and the reader may have changed the type size
-      // while scrolling.
-      bookPageCounts.clear(bookId);
       if (active) {
         paginationChapter = lastRenderedChapter;
         pagination.enter();
       } else {
         pagination.exit();
       }
-    });
-  });
-
-  // Record the chapter's measured column count, which is what the book total is
-  // a sum of. This runs on every measurement (first layout, chapter change, a
-  // zoom or font change that reflows the columns) and `record` ignores an
-  // unchanged value, so a measurement can never re-invalidate the graph that
-  // asked for it.
-  $effect(() => {
-    if (!paginated) return;
-    const position = committedOrder;
-    const count = pagination.pageCount;
-    if (position < 0 || count <= 0) return;
-    bookPageCounts.record(bookId, position, count);
-  });
-
-  // A different book in the same viewer instance must not inherit the previous
-  // one's cache: the counts are per layout, and the store is keyed by book id.
-  // A fresh open (the common case, where this component is mounted for the book)
-  // starts already in step and keeps whatever was measured last session.
-  let cachedBookId = untrack(() => bookId);
-  $effect(() => {
-    const id = bookId;
-    untrack(() => {
-      if (id === cachedBookId) return;
-      cachedBookId = id;
-      pendingBookPage = null;
-      bookPageCounts.clear(id);
-    });
-  });
-
-  // Apply a queued "go to book page" that named another chapter. The page inside
-  // that chapter only exists once its columns are measured, so the jump waits for
-  // the first count instead of writing a `scrollLeft` the layout would overwrite.
-  $effect(() => {
-    const pending = pendingBookPage;
-    if (!pending) return;
-    void lastRenderedChapter;
-    void pagination.pageCount;
-    untrack(() => {
-      if (pendingBookPage !== pending) return;
-      if (lastRenderedChapter !== pending.chapter || pagination.pageCount <= 0) return;
-      pendingBookPage = null;
-      if (pending.page <= pagination.pageCount) pagination.goToPage(pending.page);
     });
   });
 
@@ -1004,52 +842,6 @@
      * a `srcdoc` swap cannot leave a second listener counting the same notch.
      */
     let detachFrameWheel: (() => void) | null = null;
-    /**
-     * The coalescing state for "one wheel notch is one page".
-     *
-     * One per effect run, next to the listener that owns it: a `srcdoc` swap
-     * re-attaches into a NEW document, and a window shared across documents
-     * would let the last notch of the outgoing chapter swallow the first notch
-     * of the incoming one.
-     */
-    const pageWheelGesture = createEpubPageWheelGesture();
-    /**
-     * A plain (unmodified) wheel over the chapter turns the page in paginated
-     * mode.
-     *
-     * In this mode the chapter is columns on `documentElement` and the root has
-     * `overflow-y: hidden` on purpose, so a vertical wheel has nothing to scroll
-     * and used to do nothing at all — measured live, `scrollLeft` stayed at 1276
-     * across a gesture while the Next control moved it by a column.
-     *
-     * The decision is pure (`epubPageWheel.ts`) and excludes ctrl/meta, so this
-     * never competes with `attachFrameZoomWheel` below: a zoom gesture is left
-     * completely untouched for it. `defaultPrevented` is honoured because the
-     * zoom listener runs first on this same document.
-     *
-     * The turn itself is delegated to `goToNext`/`goToPrev` — the functions the
-     * Next control and the arrow keys call — rather than writing `scrollLeft`
-     * here. Those own the restore gate, the queued press and the claimed page,
-     * and a second writer of the offset is how a page turn comes to disagree
-     * with the header.
-     */
-    const onPageWheel = (event: Event): void => {
-      const wheel = event as WheelEvent;
-      if (wheel.defaultPrevented) return;
-      const intent = resolveEpubPageWheelIntent(
-        wheel,
-        { paginated, pageCount: pagination.pageCount },
-        pageWheelGesture,
-        performance.now(),
-      );
-      if (intent === 'none') return;
-      // Claimed so the browser's own scroll cannot also act on this notch. Safe
-      // to do only after the decision said "turn": in scrolling mode this
-      // returns 'none' and the gesture is never touched.
-      wheel.preventDefault();
-      if (intent === 'next') goToNext();
-      else goToPrev();
-    };
     const onFrameScroll = (): void => {
       // Only meaningful in paginated mode; scrolling mode already reports
       // through the parent container's own listener.
@@ -1114,10 +906,6 @@
       doc.addEventListener('mousemove', onMove as EventListener);
       doc.addEventListener('mouseleave', onLeave);
       doc.addEventListener('click', onClick as EventListener);
-      // Removed first for the same reason as the listeners above: a duplicate
-      // wheel listener would count one notch twice.
-      doc.removeEventListener('wheel', onPageWheel, { capture: false });
-      doc.addEventListener('wheel', onPageWheel, { passive: false });
       // Paginated mode scrolls the chapter document itself, so a page turn
       // fires `scroll` here and never on the (pinned) parent container. Without
       // this listener the footer percentage and the highlight anchors would not
@@ -1160,7 +948,6 @@
       doc.removeEventListener('mouseleave', onLeave);
       doc.removeEventListener('click', onClick as EventListener);
       doc.removeEventListener('scroll', onFrameScroll, true);
-      doc.removeEventListener('wheel', onPageWheel, { capture: false });
       for (const img of Array.from(doc.querySelectorAll('img'))) {
         img.removeEventListener('load', onPlateLoad);
       }
@@ -1210,12 +997,12 @@
     <div
       data-testid="epub-scroll-container"
       bind:this={scrollContainerEl}
-      class="reader-scroll-surface flex-1 w-full min-h-0"
+      class="flex-1 w-full min-h-0"
       class:overflow-y-auto={!paginated}
       class:pb-16={!paginated}
       class:overflow-x-auto={paginated}
       class:overflow-y-hidden={paginated}
-      style="background: {getThemeBgColor()}; --reader-scrollbar-thumb: {getThemeScrollbarColor()};"
+      style="background: {getThemeBgColor()};"
       bind:this={zoomContainerEl}
       onscroll={handleContainerScroll}
     >

@@ -9,6 +9,7 @@ class ImportEpubBookUseCase(
     private val libraryRepository: LibraryRepository,
 ) {
     suspend operator fun invoke(
+        userId: String,
         request: BookImportRequest,
         inputStreamProvider: suspend () -> InputStream?,
     ): Result<Book> {
@@ -19,6 +20,7 @@ class ImportEpubBookUseCase(
         val start = System.nanoTime()
         val result =
             libraryRepository.importBookFromEpub(
+                userId = userId,
                 request = request,
                 inputStreamProvider = inputStreamProvider,
             )

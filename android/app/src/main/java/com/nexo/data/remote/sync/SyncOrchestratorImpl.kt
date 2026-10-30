@@ -153,11 +153,12 @@ class SyncOrchestratorImpl(
             }
         }
 
-        // Start the pendingCount collector (single shared DAO table).
+        // Start the pendingCount collector, scoped to the active account so the
+        // depth gauge never reports another user's parked operations.
         pendingCountJob?.cancel()
         pendingCountJob =
             outboxDao
-                .observePendingCount()
+                .observePendingCount(userId)
                 .distinctUntilChanged()
                 .onEach { count ->
                     _pendingCount.value = count

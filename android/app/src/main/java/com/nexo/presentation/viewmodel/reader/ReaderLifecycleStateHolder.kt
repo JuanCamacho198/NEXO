@@ -5,6 +5,7 @@ import androidx.annotation.VisibleForTesting
 import com.nexo.data.remote.supabase.SupabaseProgressSync
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.ReadingStatsRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.presentation.UiEvent
 import com.nexo.presentation.viewmodel.CfiMigrator
@@ -41,6 +42,7 @@ class ReaderLifecycleStateHolder(
     private val readerRepository: ReaderRepository,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
     private val readingStatsRepository: ReadingStatsRepository,
+    private val activeUser: ActiveUserProvider,
     private val scope: CoroutineScope,
     private val onChapterChanged: () -> Unit,
     private val onErrorEvent: (UiEvent) -> Unit,
@@ -77,6 +79,7 @@ class ReaderLifecycleStateHolder(
             scope = scope,
             mainDispatcher = mainDispatcher,
             readerRepository = readerRepository,
+            activeUser = activeUser,
             updateReadingProgressUseCase = updateReadingProgressUseCase,
             onSelectionCleared = onSelectionCleared,
             onErrorEvent = onErrorEvent,
@@ -86,6 +89,7 @@ class ReaderLifecycleStateHolder(
         EpubBookLoader(
             application = application,
             readerRepository = readerRepository,
+            activeUser = activeUser,
             state = _state,
             scope = scope,
             mainDispatcher = mainDispatcher,
@@ -113,6 +117,7 @@ class ReaderLifecycleStateHolder(
             scope = scope,
             mainDispatcher = mainDispatcher,
             readerRepository = readerRepository,
+            activeUser = activeUser,
             updateReadingProgressUseCase = updateReadingProgressUseCase,
             onChapterChanged = onChapterChanged,
             onNavigateToLocator = onNavigateToLocator,
@@ -126,6 +131,7 @@ class ReaderLifecycleStateHolder(
             scope = scope,
             mainDispatcher = mainDispatcher,
             readingStatsRepository = readingStatsRepository,
+            activeUser = activeUser,
         )
 
     // loadEpoch preserved via epubLoader epoch (single source; pdf path increments separately but facade exposes unified)

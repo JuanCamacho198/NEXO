@@ -139,7 +139,7 @@ fn restart_roundtrip_preserves_settings_and_stats() {
         assert_eq!(settings[0].key, "ui.theme");
         assert_eq!(settings[0].value_json, "\"sepia\"");
 
-        let stats = repository.get_reading_stats(Some("book-restart")).unwrap();
+        let stats = repository.get_reading_stats(Some("book-restart"), "u-parity").unwrap();
         assert_eq!(stats.total_sessions, 1);
         assert_eq!(stats.total_minutes_read, 5);
     }
@@ -423,7 +423,7 @@ fn save_reading_session_returns_deterministic_id_and_dto_roundtrip() {
 }
 
 #[test]
-fn reading_streak_counts_legacy_and_user_scoped_rows_union() {
+fn reading_streak_ignores_legacy_rows_without_an_owner() {
     use chrono::Duration;
 
     let db_path = temp_db_path();
@@ -435,7 +435,8 @@ fn reading_streak_counts_legacy_and_user_scoped_rows_union() {
     let yesterday = (today - Duration::days(1)).to_rfc3339();
     let today_rfc = today.to_rfc3339();
 
-    // Legacy ('' user) session yesterday — still counted for any user.
+    // Legacy ('' user) session yesterday — belongs to no account, so it must
+    // not bridge the gap for anyone.
     repository
         .save_reading_session(ReadingSessionInput {
             user_id: "".to_string(),
@@ -471,9 +472,9 @@ fn reading_streak_counts_legacy_and_user_scoped_rows_union() {
         })
         .unwrap();
 
-    // u1: today (u1) + yesterday (legacy '') -> 2-day streak.
+    // u1: today only; the legacy yesterday row no longer extends it -> 1.
     let streak = repository.get_reading_streak(None, "u1", 0).unwrap();
-    assert_eq!(streak, 2);
+    assert_eq!(streak, 1);
 
     let _ = fs::remove_file(db_path);
 }

@@ -4,8 +4,11 @@ import androidx.paging.PagingSource
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.testing.MigrationTestHelper
+import androidx.room.useReaderConnection
+import androidx.room.useWriterConnection
 import androidx.sqlite.db.SupportSQLiteDatabase
-import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.execSQL
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.nexo.data.local.entity.BookEntity
@@ -44,11 +47,18 @@ class AppDatabaseQueryValidationTest {
     val migrationHelper =
         MigrationTestHelper(
             InstrumentationRegistry.getInstrumentation(),
-            AppDatabase::class.java.canonicalName,
-            FrameworkSQLiteOpenHelperFactory(),
+            InstrumentationRegistry.getInstrumentation().targetContext.getDatabasePath("query-validation-migration"),
+            BundledSQLiteDriver(),
+            AppDatabase::class,
         )
 
     private lateinit var db: AppDatabase
+
+    /**
+     * Owner attributed to every row this suite seeds. Every user-owned table is
+     * queried with `WHERE user_id = :userId`, so a row without it is invisible.
+     */
+    private val SEED_USER = "query-validation-user"
 
     /**
      * The ten shared evidence columns named by REQ-DRE-001 / REQ-DRE-011. Android already had
@@ -92,7 +102,8 @@ class AppDatabaseQueryValidationTest {
             .inMemoryDatabaseBuilder(
                 InstrumentationRegistry.getInstrumentation().targetContext,
                 AppDatabase::class.java,
-            ).allowMainThreadQueries()
+            ).setDriver(BundledSQLiteDriver())
+            .allowMainThreadQueries()
             .addCallback(
                 object : RoomDatabase.Callback() {
                     override fun onCreate(connection: SupportSQLiteDatabase) {
@@ -138,16 +149,18 @@ class AppDatabaseQueryValidationTest {
      * Asserts that EXPLAIN QUERY PLAN for [query] uses [expectedIndex] in its detail column.
      * Uses substring match on `USING INDEX <expectedIndex>` to be robust to formatting variations.
      */
-    private fun assertUsesIndex(
+    private suspend fun assertUsesIndex(
         query: String,
         expectedIndex: String,
     ) {
         val details = mutableListOf<String>()
-        db.openHelper.writableDatabase.query("EXPLAIN QUERY PLAN $query").use { cursor ->
-            val detailCol = cursor.getColumnIndex("detail")
-            check(detailCol >= 0) { "EXPLAIN QUERY PLAN did not return a 'detail' column" }
-            while (cursor.moveToNext()) {
-                details += cursor.getString(detailCol)
+        db.useReaderConnection { connection ->
+            connection.usePrepared("EXPLAIN QUERY PLAN $query") { statement ->
+                val detailCol = statement.getColumnNames().indexOf("detail")
+                check(detailCol >= 0) { "EXPLAIN QUERY PLAN did not return a 'detail' column" }
+                while (statement.step()) {
+                    details += statement.getText(detailCol)
+                }
             }
         }
         val planOutput = details.joinToString("\n")
@@ -159,12 +172,21 @@ class AppDatabaseQueryValidationTest {
         )
     }
 
+    private suspend fun anyRow(sql: String): Boolean =
+        db.useReaderConnection { connection ->
+            connection.usePrepared(sql) { it.step() }
+        }
+
+    private suspend fun execWriter(sql: String) {
+        db.useWriterConnection { it.usePrepared(sql) { statement -> statement.step() } }
+    }
+
     // ────────────────────── Phase 2: Composite Indexes ──────────────────────
 
     @Test
     fun explainQueryPlan_books_usesIndex() =
         runTest {
-            // Seed 2 books with distinct updated_at timestamps
+            // Seed 2 books for one account with distinct updated_at timestamps
             db.bookDao().upsert(
                 BookEntity(
                     id = "b-1",
@@ -174,6 +196,7 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/b1.epub",
                     format = "epub",
                     updatedAtEpochMillis = 100L,
+                    userId = SEED_USER,
                 ),
             )
             db.bookDao().upsert(
@@ -185,20 +208,21 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/b2.epub",
                     format = "epub",
                     updatedAtEpochMillis = 200L,
+                    userId = SEED_USER,
                 ),
             )
 
-            // R1: observeAllBooks query
+            // R1: observeAllBooks query (user-scoped since the account isolation refactor)
             assertUsesIndex(
-                query = "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-                expectedIndex = "index_books_deleted_at_updated_at",
+                query = "SELECT * FROM books WHERE user_id = '$SEED_USER' AND deleted_at IS NULL ORDER BY updated_at DESC",
+                expectedIndex = "index_books_user_id_deleted_at_updated_at",
             )
         }
 
     @Test
     fun explainQueryPlan_highlights_usesIndex() =
         runTest {
-            // Seed 3 highlights for the same book with distinct updated_at
+            // Seed 3 highlights for the same book/account with distinct updated_at
             val bookId = "b-h"
             db.bookDao().upsert(
                 BookEntity(
@@ -209,6 +233,7 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/hb.epub",
                     format = "epub",
                     updatedAtEpochMillis = 100L,
+                    userId = SEED_USER,
                 ),
             )
             for (i in 1..3) {
@@ -222,22 +247,23 @@ class AppDatabaseQueryValidationTest {
                         color = "yellow",
                         updatedAtEpochMillis = i.toLong() * 100L,
                         deletedAtEpochMillis = null,
+                        userId = SEED_USER,
                     ),
                 )
             }
 
             // R2: observeAllHighlights
             assertUsesIndex(
-                query = "SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-                expectedIndex = "index_highlights_book_id_deleted_at",
+                query = "SELECT * FROM highlights WHERE user_id = '$SEED_USER' AND deleted_at IS NULL ORDER BY updated_at DESC",
+                expectedIndex = "index_highlights_user_id_book_id_deleted_at",
             )
 
             // R3: observeHighlightsForBook (per-book query)
             assertUsesIndex(
                 query =
-                    "SELECT * FROM highlights WHERE book_id = '$bookId' " +
+                    "SELECT * FROM highlights WHERE user_id = '$SEED_USER' AND book_id = '$bookId' " +
                         "AND deleted_at IS NULL ORDER BY updated_at DESC",
-                expectedIndex = "index_highlights_book_id_deleted_at",
+                expectedIndex = "index_highlights_user_id_book_id_deleted_at",
             )
         }
 
@@ -254,6 +280,7 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/bmb.epub",
                     format = "epub",
                     updatedAtEpochMillis = 100L,
+                    userId = SEED_USER,
                 ),
             )
             for (i in 1..3) {
@@ -265,29 +292,30 @@ class AppDatabaseQueryValidationTest {
                         titleOrSnippet = "bookmark $i",
                         updatedAtEpochMillis = i.toLong() * 100L,
                         deletedAtEpochMillis = null,
+                        userId = SEED_USER,
                     ),
                 )
             }
 
             // R4: observeAllBookmarks
             assertUsesIndex(
-                query = "SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-                expectedIndex = "index_bookmarks_book_id_deleted_at",
+                query = "SELECT * FROM bookmarks WHERE user_id = '$SEED_USER' AND deleted_at IS NULL ORDER BY updated_at DESC",
+                expectedIndex = "index_bookmarks_user_id_book_id_deleted_at",
             )
 
             // R5: observeBookmarksForBook
             assertUsesIndex(
                 query =
-                    "SELECT * FROM bookmarks WHERE book_id = '$bookId' " +
+                    "SELECT * FROM bookmarks WHERE user_id = '$SEED_USER' AND book_id = '$bookId' " +
                         "AND deleted_at IS NULL ORDER BY updated_at DESC",
-                expectedIndex = "index_bookmarks_book_id_deleted_at",
+                expectedIndex = "index_bookmarks_user_id_book_id_deleted_at",
             )
         }
 
     @Test
     fun explainQueryPlan_readingSessions_usesIndex() =
         runTest {
-            // Seed 3 reading_sessions with mixed userId (one empty, one specific)
+            // Seed 3 reading_sessions for one account
             val bookId = "b-rs"
             db.bookDao().upsert(
                 BookEntity(
@@ -298,6 +326,7 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/rsb.epub",
                     format = "epub",
                     updatedAtEpochMillis = 100L,
+                    userId = SEED_USER,
                 ),
             )
             val date = 20240101L
@@ -309,17 +338,17 @@ class AppDatabaseQueryValidationTest {
                         startTimeEpochMillis = 500L + i,
                         durationMinutes = 10 + i,
                         date = date,
-                        userId = if (i == 1) "" else "user-$i",
+                        userId = SEED_USER,
                     ),
                 )
             }
 
-            // R6: OR-pattern query on date + userId
+            // R6: per-date, per-user aggregation query
             assertUsesIndex(
                 query =
                     "SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions " +
-                        "WHERE date = $date AND (userId = 'user-2' OR userId = '')",
-                expectedIndex = "index_reading_sessions_date_userId",
+                        "WHERE date = $date AND user_id = '$SEED_USER'",
+                expectedIndex = "index_reading_sessions_date_user_id",
             )
         }
 
@@ -343,16 +372,17 @@ class AppDatabaseQueryValidationTest {
                     sourceBookAuthor = "A. Author",
                     sourceChapter = "Chapter 1",
                     sourceLocator = "epubcfi(/6/4!/4/2/2)",
+                    userId = SEED_USER,
                 ),
             )
 
             // R7a: MATCH on inserted word returns 1
-            val helloResults = db.dictionaryWordDao().searchFts("hello")
+            val helloResults = db.dictionaryWordDao().searchFts("hello", SEED_USER)
             assertEquals(1, helloResults.size)
             assertEquals("hello", helloResults[0].word)
 
             // R7b: MATCH on missing word returns 0
-            val missResults = db.dictionaryWordDao().searchFts("xyz")
+            val missResults = db.dictionaryWordDao().searchFts("xyz", SEED_USER)
             assertTrue("Expected no matches for 'xyz' but got ${missResults.size}", missResults.isEmpty())
         }
 
@@ -372,20 +402,14 @@ class AppDatabaseQueryValidationTest {
                     sourceBookAuthor = "T. Author",
                     sourceChapter = "Chapter 2",
                     sourceLocator = "epubcfi(/6/8!/4/2/2)",
+                    userId = SEED_USER,
                 ),
             )
 
-            var found = false
-            db.openHelper.writableDatabase
-                .query(
+            val found =
+                anyRow(
                     "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'triggerInsert'",
-                ).use { cursor ->
-                    while (cursor.moveToNext()) {
-                        if ("triggerInsert" == cursor.getString(0)) {
-                            found = true
-                        }
-                    }
-                }
+                )
             assertTrue("dict_ai trigger should populate dictionary_words_fts on INSERT", found)
         }
 
@@ -403,29 +427,24 @@ class AppDatabaseQueryValidationTest {
                     partOfSpeech = "noun",
                     phonetic = "/ˈtrɪɡər/",
                     example = "delete the row",
+                    userId = SEED_USER,
                 ),
             )
 
             // Sanity: present in FTS5 after insert
-            var presentAfterInsert = false
-            db.openHelper.writableDatabase
-                .query(
+            val presentAfterInsert =
+                anyRow(
                     "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH '$word'",
-                ).use { cursor ->
-                    if (cursor.moveToFirst()) presentAfterInsert = true
-                }
+                )
             assertTrue("Word should be present in FTS5 after insert", presentAfterInsert)
 
             // R9: delete via DAO, then verify the FTS5 row is gone
-            db.dictionaryWordDao().delete(wordId)
+            db.dictionaryWordDao().delete(wordId, SEED_USER)
 
-            var presentAfterDelete = false
-            db.openHelper.writableDatabase
-                .query(
+            val presentAfterDelete =
+                anyRow(
                     "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH '$word'",
-                ).use { cursor ->
-                    if (cursor.moveToFirst()) presentAfterDelete = true
-                }
+                )
             assertFalse("dict_ad trigger should remove word from FTS5 on DELETE", presentAfterDelete)
         }
 
@@ -442,30 +461,23 @@ class AppDatabaseQueryValidationTest {
                     partOfSpeech = "noun",
                     phonetic = "/oʊld/",
                     example = "an old example",
+                    userId = SEED_USER,
                 ),
             )
 
             // R10: update word column, assert old value gone, new value present
-            db.openHelper.writableDatabase.execSQL(
-                "UPDATE dictionary_words SET word = 'newword' WHERE id = '$wordId'",
-            )
+            execWriter("UPDATE dictionary_words SET word = 'newword' WHERE id = '$wordId'")
 
-            var oldFound = false
-            db.openHelper.writableDatabase
-                .query(
+            val oldFound =
+                anyRow(
                     "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'oldword'",
-                ).use { cursor ->
-                    if (cursor.moveToFirst()) oldFound = true
-                }
+                )
             assertFalse("dict_au trigger should remove old value from FTS5 on UPDATE", oldFound)
 
-            var newFound = false
-            db.openHelper.writableDatabase
-                .query(
+            val newFound =
+                anyRow(
                     "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'newword'",
-                ).use { cursor ->
-                    if (cursor.moveToFirst()) newFound = true
-                }
+                )
             assertTrue("dict_au trigger should add new value to FTS5 on UPDATE", newFound)
         }
 
@@ -480,13 +492,16 @@ class AppDatabaseQueryValidationTest {
     fun dictionaryWords_exposeTheTenEvidenceColumnsAsNullableText() =
         runTest {
             val columns = mutableMapOf<String, Pair<String, Boolean>>()
-            db.openHelper.writableDatabase.query("PRAGMA table_info(dictionary_words)").use { cursor ->
-                val nameIndex = cursor.getColumnIndex("name")
-                val typeIndex = cursor.getColumnIndex("type")
-                val notNullIndex = cursor.getColumnIndex("notnull")
-                while (cursor.moveToNext()) {
-                    columns[cursor.getString(nameIndex)] =
-                        cursor.getString(typeIndex).uppercase() to (cursor.getInt(notNullIndex) != 0)
+            db.useReaderConnection { connection ->
+                connection.usePrepared("PRAGMA table_info(dictionary_words)") { statement ->
+                    val names = statement.getColumnNames()
+                    val nameIndex = names.indexOf("name")
+                    val typeIndex = names.indexOf("type")
+                    val notNullIndex = names.indexOf("notnull")
+                    while (statement.step()) {
+                        columns[statement.getText(nameIndex)] =
+                            statement.getText(typeIndex).uppercase() to (statement.getInt(notNullIndex) != 0)
+                    }
                 }
             }
 
@@ -517,10 +532,11 @@ class AppDatabaseQueryValidationTest {
                     sourceBookAuthor = "Homero",
                     sourceChapter = "Capítulo III",
                     sourceLocator = "epubcfi(/6/10!/4/2/4)",
+                    userId = SEED_USER,
                 ),
             )
 
-            val stored = db.dictionaryWordDao().findById("dw-rich")
+            val stored = db.dictionaryWordDao().findById("dw-rich", SEED_USER)
             assertNotNull("the rich row should be readable back", stored)
             assertEquals("that lasts a very short time", stored!!.definition)
             assertEquals("adjective", stored.partOfSpeech)
@@ -550,11 +566,12 @@ class AppDatabaseQueryValidationTest {
                         filePath = "/pb$i.epub",
                         format = "epub",
                         updatedAtEpochMillis = i.toLong() * 1000L,
+                        userId = SEED_USER,
                     )
                 }
             db.bookDao().upsertAll(books)
 
-            val pagingSource = db.bookDao().observeAllBooksPaged()
+            val pagingSource = db.bookDao().observeAllBooksPaged(SEED_USER)
 
             // Refresh with loadSize=5 — Room's PagingSource interprets null key as start
             val refreshResult =
@@ -605,6 +622,7 @@ class AppDatabaseQueryValidationTest {
                     filePath = "/hpb.epub",
                     format = "epub",
                     updatedAtEpochMillis = 1L,
+                    userId = SEED_USER,
                 ),
             )
             val highlights =
@@ -618,11 +636,12 @@ class AppDatabaseQueryValidationTest {
                         color = "yellow",
                         updatedAtEpochMillis = i.toLong() * 1000L,
                         deletedAtEpochMillis = null,
+                        userId = SEED_USER,
                     )
                 }
             db.highlightDao().upsertAll(highlights)
 
-            val pagingSource = db.highlightDao().observeAllHighlightsPaged()
+            val pagingSource = db.highlightDao().observeAllHighlightsPaged(SEED_USER)
 
             val refreshResult =
                 pagingSource.load(
@@ -660,9 +679,8 @@ class AppDatabaseQueryValidationTest {
     fun migrate15To16_indexPlansOnMigratedData() {
         // R13: run MIGRATION_15_16 from a v15 schema with seed data,
         // then verify index plans on the migrated DB.
-        val dbName = "query-validation-migration"
 
-        migrationHelper.createDatabase(dbName, 15).apply {
+        migrationHelper.createDatabase(15).apply {
             // Minimal v15 schema — must include ALL tables the MIGRATION_15_16
             // touches (CREATE INDEX / DROP INDEX / INSERT...SELECT). Tables
             // missing from the seed would cause the migration to fail with
@@ -803,7 +821,7 @@ class AppDatabaseQueryValidationTest {
                 """.trimIndent(),
             )
 
-            // Defensive v15→v28 fixture. `createDatabase(dbName, 15)` materializes the real v15
+            // Defensive v15→v28 fixture. `createDatabase(15)` materializes the real v15
             // table from 15.json, so this `IF NOT EXISTS` statement is a no-op on device; it is kept
             // in step with the current `DictionaryWordEntity` (the nine rich-entry columns) and the
             // seed INSERT names its columns explicitly so it stays valid either way.
@@ -837,10 +855,8 @@ class AppDatabaseQueryValidationTest {
 
         val migrated =
             migrationHelper.runMigrationsAndValidate(
-                dbName,
                 16,
-                true,
-                AppDatabaseMigrations.MIGRATION_15_16,
+                listOf(AppDatabaseMigrations.MIGRATION_15_16),
             )
 
         // Helper local to the test: run EXPLAIN QUERY PLAN on the migrated DB
@@ -849,11 +865,11 @@ class AppDatabaseQueryValidationTest {
             expectedIndex: String,
         ) {
             val details = mutableListOf<String>()
-            migrated.query("EXPLAIN QUERY PLAN $query").use { cursor ->
-                val detailCol = cursor.getColumnIndex("detail")
+            migrated.prepare("EXPLAIN QUERY PLAN $query").use { statement ->
+                val detailCol = statement.getColumnNames().indexOf("detail")
                 check(detailCol >= 0) { "EXPLAIN QUERY PLAN did not return a 'detail' column" }
-                while (cursor.moveToNext()) {
-                    details += cursor.getString(detailCol)
+                while (statement.step()) {
+                    details += statement.getText(detailCol)
                 }
             }
             val needle = "USING INDEX $expectedIndex"
@@ -867,15 +883,15 @@ class AppDatabaseQueryValidationTest {
         // All 4 index plan assertions on the LIVE migrated data
         assertMigratedIndex(
             "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_books_deleted_at_updated_at",
+            "index_books_user_id_deleted_at_updated_at",
         )
         assertMigratedIndex(
             "SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_highlights_book_id_deleted_at",
+            "index_highlights_user_id_book_id_deleted_at",
         )
         assertMigratedIndex(
             "SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_bookmarks_book_id_deleted_at",
+            "index_bookmarks_user_id_book_id_deleted_at",
         )
         assertMigratedIndex(
             "SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions " +
@@ -891,13 +907,11 @@ class AppDatabaseQueryValidationTest {
                 "VALUES ('md-2', 'postmigration', 7000, 'inserted after migration')",
         )
 
-        var ftsFound = false
-        migrated
-            .query(
-                "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'postmigration'",
-            ).use { cursor ->
-                if (cursor.moveToFirst()) ftsFound = true
-            }
+        val ftsFound =
+            migrated
+                .prepare(
+                    "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'postmigration'",
+                ).use { it.step() }
         assertTrue(
             "After migration, FTS5 triggers should fire on new INSERTs into dictionary_words",
             ftsFound,
@@ -920,13 +934,13 @@ class AppDatabaseQueryValidationTest {
         runTest {
             val repository = DictionaryRepositoryImpl(db.dictionaryWordDao())
 
-            val result = repository.save("readerword")
+            val result = repository.save("readerword", SEED_USER)
 
             assertTrue("the reader save path must not surface a capture error", result.isSuccess)
 
             val saved = result.getOrThrow()
             val stored =
-                checkNotNull(db.dictionaryWordDao().findById(saved.id)) {
+                checkNotNull(db.dictionaryWordDao().findById(saved.id, SEED_USER)) {
                     "the saved row should be readable back"
                 }
             assertNull("quote must stay NULL — Android captures no evidence", stored.quote)

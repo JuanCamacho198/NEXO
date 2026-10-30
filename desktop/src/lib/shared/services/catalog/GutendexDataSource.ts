@@ -64,6 +64,36 @@ export class GutendexDataSource {
     return { books, totalCount: typeof data.count === 'number' ? data.count : books.length };
   }
 
+  /**
+   * Topic shelf page: Gutendex's own `?topic=` selector (prettier-normalized to
+   * `/books/?topic=…`). This is a DIFFERENT parameter from `search` and is not
+   * interchangeable: measured live, `?topic=science fiction` answers 3 530 books
+   * while `?search=science fiction` answers 6. The term must come from the closed
+   * `TOPIC_ROTATION` table in `railRotation.ts` — like `sort`, an unverified
+   * `topic` literal is not a filter but a full scan.
+   * Mirrors Android `GutendexDataSource.topic`.
+   */
+  async topic(
+    term: string,
+    page: number,
+    pageSize = 24,
+  ): Promise<{
+    books: CatalogBook[];
+    totalCount: number;
+  }> {
+    const size = clampPageSize(pageSize);
+    const params = new URLSearchParams({ topic: term, page: String(page) });
+    const data = (await this.getJson(
+      `/books/?${params.toString()}`,
+      SEARCH_DEADLINE_MS,
+    )) as GutendexSearchResponse;
+    const books = (data.results ?? [])
+      .map(mapGutendexBook)
+      .filter((b): b is CatalogBook => b !== null)
+      .slice(0, size);
+    return { books, totalCount: typeof data.count === 'number' ? data.count : books.length };
+  }
+
   /** Fetch one book by numeric id; unknown ids surface NOT_FOUND. */
   async getById(numericId: number): Promise<CatalogBook> {
     const data = (await this.getJson(`/books/${numericId}/`, DETAIL_DEADLINE_MS)) as GutendexRecord;

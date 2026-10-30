@@ -315,6 +315,52 @@ describe('datasources (offline stubs)', () => {
     expect(books.map((b) => b.id)).toEqual(['gutendex:1342', 'gutendex:11']);
   });
 
+  /**
+   * The regression the topic rails shipped with: they asked
+   * `?search=science fiction` (6 books upstream) instead of
+   * `?topic=science fiction` (3 530). Asserted on the built URL, not on the
+   * result, so a fallback back to free-text search fails here.
+   */
+  it('Gutendex topic issues the topic parameter, never a free-text search', async () => {
+    const urls: string[] = [];
+    const ds = new GutendexDataSource(
+      stubFetch((url) => {
+        urls.push(url);
+        return { status: 200, body: gutendexFixture };
+      }),
+    );
+
+    await ds.topic('science fiction', 1);
+
+    expect(urls).toEqual(['https://gutendex.com/books/?topic=science+fiction&page=1']);
+    expect(urls[0]).not.toContain('search=');
+    expect(urls[0]).not.toContain('sort=');
+  });
+
+  it('Gutendex topic encodes the term and carries the page', async () => {
+    const urls: string[] = [];
+    const ds = new GutendexDataSource(
+      stubFetch((url) => {
+        urls.push(url);
+        return { status: 200, body: gutendexFixture };
+      }),
+    );
+
+    await ds.topic('science fiction', 3);
+
+    expect(urls).toEqual(['https://gutendex.com/books/?topic=science+fiction&page=3']);
+  });
+
+  it('Gutendex topic maps the page like any other catalog page', async () => {
+    const ds = new GutendexDataSource(stubFetch(() => ({ status: 200, body: gutendexFixture })));
+
+    const { books, totalCount } = await ds.topic('adventure', 1);
+
+    // The fixture `count` is the authority, and in-copyright rows still drop.
+    expect(totalCount).toBe(3);
+    expect(books.map((b) => b.id)).toEqual(['gutendex:1342', 'gutendex:11']);
+  });
+
   it('Open Library search drops borrowable docs', async () => {
     const fetchFn = stubFetch(() => ({ status: 200, body: openLibraryFixture }));
     const ds = new OpenLibraryDataSource(fetchFn);

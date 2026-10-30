@@ -20,6 +20,7 @@
   import { driveState } from '$lib/shared/stores/driveState.svelte';
   import { beginDriveConnect } from '$lib/shared/services/DriveConnectService';
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
+  import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
 
   let {
@@ -216,6 +217,7 @@
             onExportDictionary={(format) => void data.handleExportDictionary(format)}
             onImportDictionary={(file) => void data.handleImportDictionary(file)}
             onNavigateToStorage={() => void handleTabChange('almacenamiento')}
+            onNavigateToAddons={() => navigationState.navigateToAddons()}
             onSelectedExportBookChange={(v: string) => data.handleSelectedExportBookChange(v)}
             onSelectedExportFormatChange={(v: 'json' | 'markdown') =>
               data.handleSelectedExportFormatChange(v)}

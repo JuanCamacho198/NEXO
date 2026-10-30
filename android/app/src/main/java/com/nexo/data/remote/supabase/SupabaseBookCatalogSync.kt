@@ -123,7 +123,9 @@ class SupabaseBookCatalogSync(
             }
 
         _state.value = State.Running
-        val pendingItems = outboxDao.getPendingItems()
+        // Drain only this session's queue. An unscoped drain would pick up
+        // another account's parked operations and push them under this user.
+        val pendingItems = outboxDao.getPendingItems(session.userId)
         DebugLog.info(TAG, "processOutbox: ${pendingItems.size} pending items for user ${session.userId}")
 
         for (item in pendingItems) {
@@ -152,7 +154,7 @@ class SupabaseBookCatalogSync(
         // were originally `outboxDao.deleteById(item.id); return` / plain
         // `return` — wrapping in Ok normalises persistence.
         if (operation != SyncOperation.DELETE) {
-            val localBook = bookDao.getBookById(bookId)
+            val localBook = bookDao.getBookById(bookId, userId)
             if (localBook == null) {
                 DebugLog.warn(TAG, "processBookItem: local book $bookId not found — deleting outbox entry")
                 commitOutbox(item) { ApplyOutcome.Ok }
@@ -209,7 +211,7 @@ class SupabaseBookCatalogSync(
         // DELETE: tombstones the remote row and acks via OutboxCommit.
         commitOutbox(item) {
             try {
-                val localBook = bookDao.getBookById(bookId)
+                val localBook = bookDao.getBookById(bookId, userId)
                 val remoteBook = dataSource.getUserBook(userId, bookId)
                 val tombstone =
                     (
@@ -273,12 +275,12 @@ class SupabaseBookCatalogSync(
             return
         }
         when (val outcome = apply()) {
-            is ApplyOutcome.Ok -> outboxDao.deleteById(item.id)
+            is ApplyOutcome.Ok -> outboxDao.deleteById(item.id, item.userId)
             is ApplyOutcome.Retryable -> {
-                outboxDao.incrementRetryCount(item.id, outcome.cause.message ?: "Unknown error")
-                outboxDao.pruneFailedItems(3)
+                outboxDao.incrementRetryCount(item.id, item.userId, outcome.cause.message ?: "Unknown error")
+                outboxDao.pruneFailedItems(item.userId, 3)
             }
-            is ApplyOutcome.Poison -> outboxDao.pruneFailedItems(3)
+            is ApplyOutcome.Poison -> outboxDao.pruneFailedItems(item.userId, 3)
         }
     }
 
@@ -297,7 +299,10 @@ class SupabaseBookCatalogSync(
             }
         val userId = session.userId
 
-        val localBooks = bookDao.observeAllBooks().first()
+        // Only this account's local books are reconciled. Reading the whole table
+        // and re-stamping every row with [userId] would move another account's
+        // library into this one.
+        val localBooks = bookDao.observeAllBooks(userId).first()
         DebugLog.info(TAG, "reconcileLocalBooks: ${localBooks.size} local books, user $userId")
         val remoteBooks =
             try {
@@ -361,6 +366,9 @@ class SupabaseBookCatalogSync(
     /**
      * When a remote catalog change arrives via Realtime, apply it locally using
      * monotonic version ordering (PR5 convergence):
+     * - Only the owning account's local row is considered: a remote row for a
+     *   different user is ignored rather than merged into a local book that
+     *   belongs to someone else.
      * - Missing local state never becomes deletion: no local row means no-op.
      * - A locally tombstoned book is never resurrected.
      * - Stale events (lower version) are ignored; equal events are idempotent.
@@ -368,14 +376,15 @@ class SupabaseBookCatalogSync(
      * - Otherwise newer metadata/cover fields are merged into the local row.
      */
     internal suspend fun applyRemoteBook(row: UserBookRow) {
-        val existing = bookDao.getBookById(row.id) ?: return
+        if (row.userId.isBlank()) return
+        val existing = bookDao.getBookById(row.id, row.userId) ?: return
         if (existing.deletedAtEpochMillis != null) return
 
         if (row.catalogVersion < existing.remoteCatalogVersion) return
         if (row.catalogVersion == existing.remoteCatalogVersion) return
 
         if (row.lifecycle == "deleted") {
-            bookDao.deleteBook(row.id, System.currentTimeMillis())
+            bookDao.deleteBook(row.id, row.userId, System.currentTimeMillis())
             return
         }
 
@@ -462,7 +471,7 @@ class SupabaseBookCatalogSync(
         val userId = session.userId
         return try {
             val catalog = dataSource.listUserBooks(userId)
-            val localBooks = bookDao.observeAllBooks().first()
+            val localBooks = bookDao.observeAllBooks(userId).first()
             val localBookIds = localBooks.map { it.id }.toSet()
             // A remote book is "downloadable" when it is not deleted/unavailable and
             // not already local. Desktop uploads with lifecycle "imported"; the strict
@@ -536,7 +545,7 @@ class SupabaseBookCatalogSync(
         }
 
         // D6: never resurrect a locally DELETE-marked book.
-        if (bookDao.getBookById(bookId)?.deletedAtEpochMillis != null) {
+        if (bookDao.getBookById(bookId, userId)?.deletedAtEpochMillis != null) {
             DebugLog.warn(TAG, "downloadRemoteBook: rejected $bookId — locally tombstoned")
             return Result.failure(
                 AppError(ErrorCategory.NOT_FOUND, "BOOK_TOMBSTONED", "Book $bookId was deleted and cannot be downloaded again without re-importing", "SupabaseBookCatalogSync"),
@@ -572,6 +581,9 @@ class SupabaseBookCatalogSync(
 
         val bookFormat = row.format.ifBlank { "epub" }
         val drivePath = row.remotePath ?: "books/$userId/$bookId.$bookFormat"
+        // T8: the active account's own subtree, so two accounts never resolve
+        // the same backing file.
+        val ownerBooksDir = File(localBooksDir, userId)
 
         return try {
             // D4: 401/403 -> refresh token -> retry once. Refresh failure surfaces
@@ -584,11 +596,11 @@ class SupabaseBookCatalogSync(
                         AppError(ErrorCategory.VALIDATION, "INVALID_BOOK_ID", "Invalid book id", "SupabaseBookCatalogSync"),
                     )
                 }
-            val targetFile = File(localBooksDir, "$bookId.$bookFormat")
-            val tempFile = File(localBooksDir, ".${targetFile.name}.part")
-            val backupFile = File(localBooksDir, ".${targetFile.name}.backup")
+            val targetFile = File(ownerBooksDir, "$bookId.$bookFormat")
+            val tempFile = File(ownerBooksDir, ".${targetFile.name}.part")
+            val backupFile = File(ownerBooksDir, ".${targetFile.name}.backup")
 
-            if (!localBooksDir.exists()) localBooksDir.mkdirs()
+            if (!ownerBooksDir.exists()) ownerBooksDir.mkdirs()
             recoverInterruptedImport(targetFile, tempFile, backupFile)
             tempFile.writeBytes(bytes)
             val actualHash = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
@@ -601,7 +613,7 @@ class SupabaseBookCatalogSync(
             if (!expectedHash.matches(Regex("[0-9a-fA-F]{64}")) || actualHash != expectedHash.lowercase()) {
                 throw AppError(ErrorCategory.VALIDATION, "HASH_MISMATCH", "Downloaded content does not match catalog", "SupabaseBookCatalogSync")
             }
-            val previousBook = bookDao.getBookById(bookId)
+            val previousBook = bookDao.getBookById(bookId, userId)
             if (targetFile.exists() && !targetFile.renameTo(backupFile)) throw IOException("Import backup failed")
             try {
                 bookDao.upsert(
@@ -628,6 +640,7 @@ class SupabaseBookCatalogSync(
                         remoteCoverRef = row.coverObjectPath,
                         remoteProvider = row.remoteProvider,
                         remoteProtocolVersion = row.protocolVersion?.toIntOrNull(),
+                        userId = userId,
                     ),
                 )
                 if (!tempFile.renameTo(targetFile)) throw IOException("Atomic import rename failed")
@@ -636,7 +649,7 @@ class SupabaseBookCatalogSync(
                 tempFile.delete()
                 targetFile.delete()
                 if (backupFile.exists()) backupFile.renameTo(targetFile)
-                if (previousBook != null) bookDao.upsert(previousBook) else bookDao.deleteById(bookId)
+                if (previousBook != null) bookDao.upsert(previousBook) else bookDao.deleteById(bookId, userId)
                 throw failure
             }
             // Seed the "Continue reading" state from the cloud: if this book
@@ -657,7 +670,7 @@ class SupabaseBookCatalogSync(
                                 } catch (_: Exception) {
                                     System.currentTimeMillis()
                                 }
-                            bookDao.updateReadingProgress(bookId, pct.toFloat(), updatedAt)
+                            bookDao.updateReadingProgress(bookId, sessionId, pct.toFloat(), updatedAt)
                         }
                     }
                 }
@@ -666,8 +679,8 @@ class SupabaseBookCatalogSync(
             Result.success(Unit)
         } catch (e: AppError) {
             DebugLog.error(TAG, "downloadRemoteBook: FAILED for $bookId (${e.code}) — ${e.message}")
-            File(localBooksDir, ".$bookId.$bookFormat.part").delete()
-            File(localBooksDir, ".$bookId.$bookFormat.backup").delete()
+            File(ownerBooksDir, ".$bookId.$bookFormat.part").delete()
+            File(ownerBooksDir, ".$bookId.$bookFormat.backup").delete()
             if (e.category == ErrorCategory.AUTH) {
                 Result.failure(
                     AppError(ErrorCategory.AUTH, "DOWNLOAD_ERROR", e.message, "SupabaseBookCatalogSync"),
@@ -677,8 +690,8 @@ class SupabaseBookCatalogSync(
             }
         } catch (e: IOException) {
             DebugLog.error(TAG, "downloadRemoteBook: FAILED for $bookId (IOException) — ${e.message}")
-            File(localBooksDir, ".$bookId.$bookFormat.part").delete()
-            File(localBooksDir, ".$bookId.$bookFormat.backup").delete()
+            File(ownerBooksDir, ".$bookId.$bookFormat.part").delete()
+            File(ownerBooksDir, ".$bookId.$bookFormat.backup").delete()
             Result.failure(
                 AppError(ErrorCategory.STORAGE, "DOWNLOAD_FAILED", "Failed to download/save book $bookId: ${e.message}", "SupabaseBookCatalogSync"),
             )

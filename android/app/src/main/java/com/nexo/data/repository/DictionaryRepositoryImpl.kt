@@ -20,18 +20,22 @@ class DictionaryRepositoryImpl(
     private val dao: DictionaryWordDao,
     private val sync: DictionarySyncService? = null,
 ) : DictionaryRepository {
-    override fun observeAll(): Flow<List<DictionaryWord>> =
-        dao.observeAll().map { entities ->
+    override fun observeAll(userId: String): Flow<List<DictionaryWord>> =
+        dao.observeAll(userId).map { entities ->
             entities.map { it.toDomain() }
         }
 
-    override fun search(query: String): Flow<List<DictionaryWord>> =
-        dao.search(DictionaryNormalizer.normalize(query)).map { entities ->
+    override fun search(
+        query: String,
+        userId: String,
+    ): Flow<List<DictionaryWord>> =
+        dao.search(DictionaryNormalizer.normalize(query), userId).map { entities ->
             entities.map { it.toDomain() }
         }
 
     override suspend fun save(
         word: String,
+        userId: String,
         definition: String?,
         partOfSpeech: String?,
         phonetic: String?,
@@ -61,6 +65,7 @@ class DictionaryRepositoryImpl(
                     sourceBookAuthor = sourceBookAuthor.cleaned(),
                     sourceChapter = sourceChapter.cleaned(),
                     sourceLocator = sourceLocator.cleaned(),
+                    userId = userId,
                 )
             dao.insert(entity)
             sync?.pushWord(entity)
@@ -69,6 +74,7 @@ class DictionaryRepositoryImpl(
 
     override suspend fun updateUserFields(
         wordId: String,
+        userId: String,
         definition: String?,
         partOfSpeech: String?,
         phonetic: String?,
@@ -78,22 +84,26 @@ class DictionaryRepositoryImpl(
             val now = System.currentTimeMillis()
             dao.updateUserFields(
                 wordId = wordId,
+                userId = userId,
                 definition = definition.cleaned(),
                 partOfSpeech = partOfSpeech.cleaned(),
                 phonetic = phonetic.cleaned(),
                 example = example.cleaned(),
                 updatedAtEpochMillis = now,
             )
-            val updated = dao.findById(wordId) ?: error("Word $wordId not found after update")
+            val updated = dao.findById(wordId, userId) ?: error("Word $wordId not found after update")
             // The edit advances the local LWW write clock, so a later pull of an
             // older remote row cannot win the merge and discard this change.
             sync?.pushWord(updated, now)
             updated.toDomain()
         }
 
-    override suspend fun delete(wordId: String) {
-        val word = dao.findById(wordId)?.word
-        dao.delete(wordId)
+    override suspend fun delete(
+        wordId: String,
+        userId: String,
+    ) {
+        val word = dao.findById(wordId, userId)?.word
+        dao.delete(wordId, userId)
         if (word != null) sync?.deleteWord(word)
     }
 
@@ -102,7 +112,10 @@ class DictionaryRepositoryImpl(
      * indexed equality on `dictionary_words.word_normalized`; the previous
      * in-memory scan over every stored word is gone.
      */
-    override suspend fun exists(word: String): Boolean = dao.existsNormalized(DictionaryNormalizer.normalize(word))
+    override suspend fun exists(
+        word: String,
+        userId: String,
+    ): Boolean = dao.existsNormalized(DictionaryNormalizer.normalize(word), userId)
 
     private fun String?.cleaned(): String? = this?.trim()?.takeIf { it.isNotBlank() }
 

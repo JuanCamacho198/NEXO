@@ -1,7 +1,10 @@
 package com.nexo.data.local
 
 import androidx.room.testing.MigrationTestHelper
-import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.SQLiteStatement
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.execSQL
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -15,15 +18,65 @@ class AppDatabaseMigrationTest {
     val helper =
         MigrationTestHelper(
             InstrumentationRegistry.getInstrumentation(),
-            AppDatabase::class.java.canonicalName,
-            FrameworkSQLiteOpenHelperFactory(),
+            InstrumentationRegistry.getInstrumentation().targetContext.getDatabasePath("migration-test"),
+            BundledSQLiteDriver(),
+            AppDatabase::class,
         )
+
+    private fun SQLiteConnection.count(sql: String): Long =
+        prepare(sql).use { statement ->
+            check(statement.step()) { "count query returned no row: $sql" }
+            statement.getLong(0)
+        }
+
+    private fun SQLiteConnection.columnNames(table: String): List<String> =
+        prepare("PRAGMA table_info($table)").use { statement ->
+            val nameIndex = statement.getColumnNames().indexOf("name")
+            buildList {
+                while (statement.step()) add(statement.getText(nameIndex))
+            }
+        }
+
+    /** PRAGMA table_info rows as `name` to `notnull` (0/1). */
+    private fun SQLiteConnection.tableInfo(table: String): Map<String, Int> =
+        prepare("PRAGMA table_info($table)").use { statement ->
+            val nameIndex = statement.getColumnNames().indexOf("name")
+            val notNullIndex = statement.getColumnNames().indexOf("notnull")
+            buildMap {
+                while (statement.step()) {
+                    put(statement.getText(nameIndex), statement.getInt(notNullIndex))
+                }
+            }
+        }
+
+    private data class ForeignKey(
+        val table: String,
+        val from: String,
+        val to: String?,
+        val onDelete: String,
+    )
+
+    private fun SQLiteConnection.foreignKeys(
+        table: String,
+        releaser: (SQLiteStatement) -> ForeignKey,
+    ): List<ForeignKey> =
+        prepare("PRAGMA foreign_key_list($table)").use { statement ->
+            buildList {
+                while (statement.step()) add(releaser(statement))
+            }
+        }
+
+    private fun SQLiteConnection.indexNames(table: String): List<String> =
+        prepare("PRAGMA index_list($table)").use { statement ->
+            val nameIndex = statement.getColumnNames().indexOf("name")
+            buildList {
+                while (statement.step()) add(statement.getText(nameIndex))
+            }
+        }
 
     @Test
     fun migrate4To5_preservesExistingBookRows() {
-        val dbName = "migration-test"
-
-        helper.createDatabase(dbName, 4).apply {
+        helper.createDatabase(4).apply {
             execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS books (
@@ -48,25 +101,19 @@ class AppDatabaseMigrationTest {
         }
 
         helper
-            .runMigrationsAndValidate(
-                dbName,
-                5,
-                true,
-                AppDatabaseMigrations.MIGRATION_4_5,
-            ).query("SELECT id, deleted_at FROM books WHERE id = 'book-1'")
-            .use { cursor ->
-                check(cursor.moveToFirst()) { "Expected migrated book row to exist" }
-                val deletedAtColumn = cursor.getColumnIndex("deleted_at")
-                check(deletedAtColumn >= 0) { "Expected deleted_at column to exist" }
-                check(cursor.isNull(deletedAtColumn)) { "Expected deleted_at to be null for existing rows" }
+            .runMigrationsAndValidate(5, listOf(AppDatabaseMigrations.MIGRATION_4_5))
+            .prepare("SELECT id, deleted_at FROM books WHERE id = 'book-1'")
+            .use { statement ->
+                check(statement.step()) { "Expected migrated book row to exist" }
+                val deletedAtIndex = statement.getColumnNames().indexOf("deleted_at")
+                check(deletedAtIndex >= 0) { "Expected deleted_at column to exist" }
+                check(statement.isNull(deletedAtIndex)) { "Expected deleted_at to be null for existing rows" }
             }
     }
 
     @Test
     fun migrate4To5_usingRegisteredMigrations_succeeds() {
-        val dbName = "migration-test-all"
-
-        helper.createDatabase(dbName, 4).apply {
+        helper.createDatabase(4).apply {
             execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS books (
@@ -85,32 +132,17 @@ class AppDatabaseMigrationTest {
         }
 
         helper
-            .runMigrationsAndValidate(
-                dbName,
-                5,
-                true,
-                *AppDatabaseMigrations.ALL,
-            ).query("PRAGMA table_info(books)")
-            .use { cursor ->
-                var hasDeletedAt = false
-                val nameColumn = cursor.getColumnIndex("name")
-                while (cursor.moveToNext()) {
-                    if (cursor.getString(nameColumn) == "deleted_at") {
-                        hasDeletedAt = true
-                        break
-                    }
-                }
-                assertEquals(true, hasDeletedAt)
+            .runMigrationsAndValidate(5, AppDatabaseMigrations.ALL.toList())
+            .let { db ->
+                assertEquals(true, db.columnNames("books").contains("deleted_at"))
             }
     }
 
     @Test
     fun migrate15To16_renamesReadingStatsColumnAndAddsFk() {
-        val dbName = "migration-test-15-16"
-
         // Seed v15 with: book, reading_stats row using the old camelCase column,
         // a sync_file_mappings row, a sync_outbox row, and a reading_sessions row.
-        helper.createDatabase(dbName, 15).apply {
+        helper.createDatabase(15).apply {
             execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS books (
@@ -223,153 +255,88 @@ class AppDatabaseMigrationTest {
         // Run v15 → v16 migration
         val db =
             helper.runMigrationsAndValidate(
-                dbName,
                 16,
-                true,
-                AppDatabaseMigrations.MIGRATION_15_16,
+                listOf(AppDatabaseMigrations.MIGRATION_15_16),
             )
 
         // ── R3: reading_stats column renamed, no camelCase remains
-        db.query("PRAGMA table_info(reading_stats)").use { cursor ->
-            val nameColumn = cursor.getColumnIndex("name")
-            var hasBookIdCamel = false
-            var hasBookIdSnake = false
-            while (cursor.moveToNext()) {
-                when (cursor.getString(nameColumn)) {
-                    "bookId" -> hasBookIdCamel = true
-                    "book_id" -> hasBookIdSnake = true
-                }
-            }
-            assertEquals(false, hasBookIdCamel)
-            assertEquals(true, hasBookIdSnake)
-        }
+        val readingStatsColumns = db.columnNames("reading_stats")
+        assertEquals(false, readingStatsColumns.contains("bookId"))
+        assertEquals(true, readingStatsColumns.contains("book_id"))
 
         // ── R3 continued: row count preserved
-        db.query("SELECT COUNT(*) FROM reading_stats").use { cursor ->
-            check(cursor.moveToFirst())
-            assertEquals(1L, cursor.getLong(0))
-        }
+        assertEquals(1L, db.count("SELECT COUNT(*) FROM reading_stats"))
 
         // ── R1: reading_stats has FK → books(id) ON DELETE CASCADE
-        db.query("PRAGMA foreign_key_list(reading_stats)").use { cursor ->
-            val tableCol = cursor.getColumnIndex("table")
-            val fromCol = cursor.getColumnIndex("from")
-            val toCol = cursor.getColumnIndex("to")
-            val onDeleteCol = cursor.getColumnIndex("on_delete")
-            var found = false
-            while (cursor.moveToNext()) {
-                if (cursor.getString(tableCol) == "books" &&
-                    cursor.getString(fromCol) == "book_id" &&
-                    cursor.getString(toCol) == "id" &&
-                    cursor.getString(onDeleteCol) == "CASCADE"
-                ) {
-                    found = true
-                    break
-                }
+        val readingStatsFks =
+            db.foreignKeys("reading_stats") {
+                val tableIndex = it.getColumnNames().indexOf("table")
+                val fromIndex = it.getColumnNames().indexOf("from")
+                val toIndex = it.getColumnNames().indexOf("to")
+                val onDeleteIndex = it.getColumnNames().indexOf("on_delete")
+                ForeignKey(
+                    table = it.getText(tableIndex),
+                    from = it.getText(fromIndex),
+                    to = it.getText(toIndex),
+                    onDelete = it.getText(onDeleteIndex),
+                )
             }
-            assertEquals(true, found)
-        }
+        assertEquals(
+            true,
+            readingStatsFks.any { it.table == "books" && it.from == "book_id" && it.to == "id" && it.onDelete == "CASCADE" },
+        )
 
         // ── R1 continued: sync_file_mappings has FK → books(id) ON DELETE CASCADE
-        db.query("PRAGMA foreign_key_list(sync_file_mappings)").use { cursor ->
-            val tableCol = cursor.getColumnIndex("table")
-            val fromCol = cursor.getColumnIndex("from")
-            val onDeleteCol = cursor.getColumnIndex("on_delete")
-            var found = false
-            while (cursor.moveToNext()) {
-                if (cursor.getString(tableCol) == "books" &&
-                    cursor.getString(fromCol) == "book_id" &&
-                    cursor.getString(onDeleteCol) == "CASCADE"
-                ) {
-                    found = true
-                    break
-                }
+        val mappingFks =
+            db.foreignKeys("sync_file_mappings") {
+                ForeignKey(
+                    table = it.getText(it.getColumnNames().indexOf("table")),
+                    from = it.getText(it.getColumnNames().indexOf("from")),
+                    to = null,
+                    onDelete = it.getText(it.getColumnNames().indexOf("on_delete")),
+                )
             }
-            assertEquals(true, found)
-        }
+        assertEquals(
+            true,
+            mappingFks.any { it.table == "books" && it.from == "book_id" && it.onDelete == "CASCADE" },
+        )
 
         // ── R7: sync_outbox has FK → books(id) ON DELETE SET NULL on entity_id
-        db.query("PRAGMA foreign_key_list(sync_outbox)").use { cursor ->
-            val tableCol = cursor.getColumnIndex("table")
-            val fromCol = cursor.getColumnIndex("from")
-            val onDeleteCol = cursor.getColumnIndex("on_delete")
-            var found = false
-            while (cursor.moveToNext()) {
-                if (cursor.getString(tableCol) == "books" &&
-                    cursor.getString(fromCol) == "entity_id" &&
-                    cursor.getString(onDeleteCol) == "SET NULL"
-                ) {
-                    found = true
-                    break
-                }
+        val outboxFks =
+            db.foreignKeys("sync_outbox") {
+                ForeignKey(
+                    table = it.getText(it.getColumnNames().indexOf("table")),
+                    from = it.getText(it.getColumnNames().indexOf("from")),
+                    to = null,
+                    onDelete = it.getText(it.getColumnNames().indexOf("on_delete")),
+                )
             }
-            assertEquals(true, found)
-        }
+        assertEquals(
+            true,
+            outboxFks.any { it.table == "books" && it.from == "entity_id" && it.onDelete == "SET NULL" },
+        )
 
         // ── R2: composite indexes exist
-        db.query("PRAGMA index_list(books)").use { cursor ->
-            val nameCol = cursor.getColumnIndex("name")
-            var hasBooksIdx = false
-            while (cursor.moveToNext()) {
-                if (cursor.getString(nameCol) == "index_books_deleted_at_updated_at") {
-                    hasBooksIdx = true
-                    break
-                }
-            }
-            assertEquals(true, hasBooksIdx)
-        }
-        db.query("PRAGMA index_list(highlights)").use { cursor ->
-            val nameCol = cursor.getColumnIndex("name")
-            var hasIdx = false
-            while (cursor.moveToNext()) {
-                if (cursor.getString(nameCol) == "index_highlights_book_id_deleted_at") {
-                    hasIdx = true
-                    break
-                }
-            }
-            assertEquals(true, hasIdx)
-        }
-        db.query("PRAGMA index_list(reading_sessions)").use { cursor ->
-            val nameCol = cursor.getColumnIndex("name")
-            var hasIdx = false
-            while (cursor.moveToNext()) {
-                if (cursor.getString(nameCol) == "index_reading_sessions_date_userId") {
-                    hasIdx = true
-                    break
-                }
-            }
-            assertEquals(true, hasIdx)
-        }
+        assertEquals(true, db.indexNames("books").contains("index_books_deleted_at_updated_at"))
+        assertEquals(true, db.indexNames("highlights").contains("index_highlights_book_id_deleted_at"))
+        assertEquals(true, db.indexNames("reading_sessions").contains("index_reading_sessions_date_userId"))
 
         // ── R6: FTS5 virtual table exists
-        db
-            .query(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='dictionary_words_fts'",
-            ).use { cursor ->
-                check(cursor.moveToFirst()) { "Expected dictionary_words_fts virtual table to exist" }
-            }
+        db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='dictionary_words_fts'").use {
+            check(it.step()) { "Expected dictionary_words_fts virtual table to exist" }
+        }
 
         // ── All tables preserved with row counts
-        db.query("SELECT COUNT(*) FROM sync_file_mappings").use { c ->
-            check(c.moveToFirst())
-            assertEquals(1L, c.getLong(0))
-        }
-        db.query("SELECT COUNT(*) FROM sync_outbox").use { c ->
-            check(c.moveToFirst())
-            assertEquals(1L, c.getLong(0))
-        }
-        db.query("SELECT COUNT(*) FROM reading_sessions").use { c ->
-            check(c.moveToFirst())
-            assertEquals(1L, c.getLong(0))
-        }
+        assertEquals(1L, db.count("SELECT COUNT(*) FROM sync_file_mappings"))
+        assertEquals(1L, db.count("SELECT COUNT(*) FROM sync_outbox"))
+        assertEquals(1L, db.count("SELECT COUNT(*) FROM reading_sessions"))
 
         db.close()
     }
 
     @Test
     fun migrate17To18_backfillsCanonicalReadingState() {
-        val dbName = "migration-test-17-18"
-        helper.createDatabase(dbName, 17).apply {
+        helper.createDatabase(17).apply {
             execSQL(
                 """
                 CREATE TABLE books (
@@ -387,12 +354,13 @@ class AppDatabaseMigrationTest {
         }
 
         helper
-            .runMigrationsAndValidate(dbName, 18, true, AppDatabaseMigrations.MIGRATION_17_18)
-            .query("SELECT id, reading_state FROM books ORDER BY id")
-            .use { cursor ->
+            .runMigrationsAndValidate(18, listOf(AppDatabaseMigrations.MIGRATION_17_18))
+            .prepare("SELECT id, reading_state FROM books ORDER BY id")
+            .use { statement ->
+                val readingStateIndex = statement.getColumnNames().indexOf("reading_state")
                 val states =
                     buildList {
-                        while (cursor.moveToNext()) add(cursor.getString(1))
+                        while (statement.step()) add(statement.getText(readingStateIndex))
                     }
                 assertEquals(listOf("completed", "reading", "to_read"), states)
             }
@@ -400,10 +368,8 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun migrate22To23_addsUpdatedAtColumnAndPreservesRows() {
-        val dbName = "migration-test-22-23"
-
         // Seed a v22 database with a book + a legacy reading_sessions row.
-        helper.createDatabase(dbName, 22).apply {
+        helper.createDatabase(22).apply {
             execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS books (
@@ -460,29 +426,20 @@ class AppDatabaseMigrationTest {
 
         val db =
             helper.runMigrationsAndValidate(
-                dbName,
                 23,
-                true,
-                AppDatabaseMigrations.MIGRATION_22_23,
+                listOf(AppDatabaseMigrations.MIGRATION_22_23),
             )
 
         // R1: the LWW column exists after migration.
-        db.query("PRAGMA table_info(reading_sessions)").use { cursor ->
-            var hasColumn = false
-            val nameColumn = cursor.getColumnIndex("name")
-            while (cursor.moveToNext()) {
-                if (cursor.getString(nameColumn) == "updated_at_epoch_millis") {
-                    hasColumn = true
-                }
-            }
-            assertEquals(true, hasColumn)
-        }
+        assertEquals(true, db.columnNames("reading_sessions").contains("updated_at_epoch_millis"))
 
         // R2: existing rows are preserved with the default clock (0).
-        db.query("SELECT id, updated_at_epoch_millis FROM reading_sessions").use { cursor ->
-            check(cursor.moveToFirst()) { "Expected migrated reading_sessions row to exist" }
-            assertEquals("sess-1", cursor.getString(0))
-            assertEquals(0L, cursor.getLong(1))
+        db.prepare("SELECT id, updated_at_epoch_millis FROM reading_sessions").use { statement ->
+            check(statement.step()) { "Expected migrated reading_sessions row to exist" }
+            val idIndex = statement.getColumnNames().indexOf("id")
+            val clockIndex = statement.getColumnNames().indexOf("updated_at_epoch_millis")
+            assertEquals("sess-1", statement.getText(idIndex))
+            assertEquals(0L, statement.getLong(clockIndex))
         }
 
         db.close()
@@ -490,11 +447,9 @@ class AppDatabaseMigrationTest {
 
     @Test
     fun migrate23To24_addsMetadataColumnsAndDoublesRatings() {
-        val dbName = "migration-test-23-24"
-
         // Seed a v23 database with the exact books schema exported in 23.json,
         // plus rows covering rated (1..5) and unrated (NULL) books.
-        helper.createDatabase(dbName, 23).apply {
+        helper.createDatabase(23).apply {
             execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS books (
@@ -547,51 +502,42 @@ class AppDatabaseMigrationTest {
 
         val db =
             helper.runMigrationsAndValidate(
-                dbName,
                 24,
-                true,
-                AppDatabaseMigrations.MIGRATION_23_24,
+                listOf(AppDatabaseMigrations.MIGRATION_23_24),
             )
 
         // R1: the 5 new metadata columns exist and are nullable.
-        db.query("PRAGMA table_info(books)").use { cursor ->
-            val nameColumn = cursor.getColumnIndex("name")
-            val notNullColumn = cursor.getColumnIndex("notnull")
-            val expected =
-                mapOf(
-                    "genre" to false,
-                    "language" to false,
-                    "publisher" to false,
-                    "tags" to false,
-                    "published_date" to false,
-                )
-            val actual = mutableMapOf<String, Boolean>()
-            while (cursor.moveToNext()) {
-                val name = cursor.getString(nameColumn)
-                if (expected.containsKey(name)) {
-                    actual[name] = cursor.getInt(notNullColumn) == 1
-                }
-            }
-            assertEquals(expected.keys, actual.keys)
-            assertEquals(expected.values, expected.keys.map { actual[it] })
-        }
+        val info = db.tableInfo("books")
+        val expected =
+            mapOf(
+                "genre" to false,
+                "language" to false,
+                "publisher" to false,
+                "tags" to false,
+                "published_date" to false,
+            )
+        val actual = expected.keys.associateWith { info[it] == 1 }
+        assertEquals(expected.keys, actual.keys)
+        assertEquals(expected.values, expected.keys.map { actual[it] })
 
         // R2: ratings reinterpreted as half-units (1→2, 3→6, 5→10); NULL stays NULL.
-        db.query("SELECT id, user_rating FROM books ORDER BY id").use { cursor ->
+        db.prepare("SELECT id, user_rating FROM books ORDER BY id").use { statement ->
+            val idIndex = statement.getColumnNames().indexOf("id")
+            val ratingIndex = statement.getColumnNames().indexOf("user_rating")
             val ratings =
                 buildList {
-                    while (cursor.moveToNext()) {
-                        add(cursor.getString(0) to cursor.getLong(1).let { if (cursor.isNull(1)) null else it })
+                    while (statement.step()) {
+                        add(
+                            statement.getText(idIndex) to
+                                if (statement.isNull(ratingIndex)) null else statement.getLong(ratingIndex),
+                        )
                     }
                 }
             assertEquals(listOf("r0" to null, "r1" to 2L, "r3" to 6L, "r5" to 10L), ratings)
         }
 
         // R3: no row loss across the migration.
-        db.query("SELECT COUNT(*) FROM books").use { cursor ->
-            check(cursor.moveToFirst())
-            assertEquals(4L, cursor.getLong(0))
-        }
+        assertEquals(4L, db.count("SELECT COUNT(*) FROM books"))
 
         db.close()
     }

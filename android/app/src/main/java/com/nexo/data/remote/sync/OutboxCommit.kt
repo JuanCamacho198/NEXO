@@ -47,16 +47,16 @@ class OutboxCommit(
     ): CommitOutcome =
         when (val outcome = apply()) {
             is ApplyOutcome.Ok -> {
-                outboxDao.deleteById(item.id)
+                outboxDao.deleteById(item.id, item.userId)
                 CommitOutcome.Acked
             }
 
             is ApplyOutcome.Retryable -> {
                 val error = outcome.cause.message ?: outcome.cause::class.simpleName.orEmpty()
-                outboxDao.incrementRetryCount(item.id, error)
+                outboxDao.incrementRetryCount(item.id, item.userId, error)
                 // Threshold check is AFTER the increment — the 3rd failure poisons.
                 if (item.retryCount + 1 >= maxRetries) {
-                    outboxDao.pruneFailedItems(maxRetries)
+                    outboxDao.pruneFailedItems(item.userId, maxRetries)
                     CommitOutcome.Poison(outcome.cause)
                 } else {
                     CommitOutcome.Retryable(outcome.cause)
@@ -65,7 +65,7 @@ class OutboxCommit(
 
             is ApplyOutcome.Poison -> {
                 // Immediate poison: caller has decided the item is unrecoverable.
-                outboxDao.pruneFailedItems(maxRetries)
+                outboxDao.pruneFailedItems(item.userId, maxRetries)
                 CommitOutcome.Poison(outcome.cause)
             }
         }

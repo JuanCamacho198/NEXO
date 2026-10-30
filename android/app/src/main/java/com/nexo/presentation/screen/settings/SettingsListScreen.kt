@@ -74,6 +74,7 @@ fun SettingsListScreen(
     onNavigateToLogViewer: () -> Unit = {},
     onNavigateToStorage: () -> Unit = onNavigateToDataStorage,
     onNavigateToSync: () -> Unit = {},
+    onNavigateToAddons: () -> Unit = {},
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val langPrefs = androidx.compose.runtime.remember { AppLanguagePreferences(context = context) }
@@ -187,6 +188,11 @@ fun SettingsListScreen(
                             labelRes = R.string.settings_dictionary_label,
                             icon = NexoIcons.LibraryBooks,
                             onClick = onNavigateToDictionary,
+                        ),
+                        SettingsRow(
+                            labelRes = R.string.settings_manage_addons,
+                            icon = NexoIcons.GridView,
+                            onClick = onNavigateToAddons,
                         ),
                     ) +
                         if (BuildConfig.DEBUG) {

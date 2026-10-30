@@ -46,8 +46,14 @@ proguard/
 *.seeds.txt
 *.usage.txt
 
+# Build log redirects from manual gradle runs (never versioned)
+build_out.txt
+build_t.txt
+build_*.txt
+
 # ─── Design Tokens Cache ───────────────────────────────────────────
 design/*.pen.bak
+design/generated*.png
 .*docs
 *images
 *_*exports

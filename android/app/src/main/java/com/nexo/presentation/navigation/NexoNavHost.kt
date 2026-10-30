@@ -59,6 +59,28 @@ import kotlinx.coroutines.launch
  */
 private const val IMPORT_OVERLAY_WATCHDOG_TIMEOUT_MS = 120_000L
 
+/**
+ * The host's start destination, or `null` while it cannot be decided yet.
+ *
+ * @param isAuthenticated the auth state has a session.
+ * @param hasDailyGoal whether the *active* account has a stored goal; `null`
+ *   when the active account is not resolved yet. That distinction is the whole
+ *   point: an unresolved account answers no question about goals, and reading
+ *   `null` as "no goal" is what sent a returning user to the onboarding step for
+ *   a split second on every launch. A `null` result keeps the host's spinner up
+ *   until the real answer arrives.
+ */
+internal fun resolveStartDestination(
+    isAuthenticated: Boolean,
+    hasDailyGoal: Boolean?,
+): String? =
+    when {
+        !isAuthenticated -> NexoDestination.Auth.route
+        hasDailyGoal == null -> null
+        !hasDailyGoal -> NexoDestination.OnboardingGoal.route
+        else -> NexoDestination.Home.route
+    }
+
 @Composable
 fun NexoNavHost(
     appContainer: AppContainer,
@@ -101,6 +123,7 @@ fun NexoNavHost(
         homeViewModel = homeViewModel,
         getStatisticsUseCase = appContainer.getStatisticsUseCase,
         readerViewModel = readerViewModel,
+        activeUserProvider = appContainer.activeUserProvider,
     )
 
     // Resolved here (not inside the screen) so the Discover surface no longer
@@ -123,7 +146,7 @@ fun NexoNavHost(
         snackbarHostState = snackbarHostState,
         context = context,
         onOpenBookAtLocation = { event ->
-            val book = appContainer.libraryRepository.getBookById(event.bookId)
+            val book = appContainer.libraryRepository.getBookById(event.bookId, appContainer.activeUserProvider.requireUserId())
             if (book != null) {
                 selectedBookId = book.id
                 selectedBookFilePath = book.filePath
@@ -197,16 +220,24 @@ fun NexoNavHost(
 
     // Onboarding goal gating (REQ-daily-reading-goal-2, SCEN-daily-reading-goal-1/2):
     // authenticated users with no stored goal land on onboarding/goal first.
-    // Reactive: bump dailyGoalVersion after save so hasDailyGoal recomputes without needing process restart.
+    // Reactive on TWO keys: dailyGoalVersion (bumped after save, so the gate
+    // recomputes without a process restart) and the active account id (so
+    // switching accounts re-evaluates the gate instead of reusing the previous
+    // account's answer). See [OnboardingGate] for why no extra flag exists.
     var dailyGoalVersion by remember { mutableStateOf(0) }
-    val hasDailyGoal = remember(dailyGoalVersion) { appContainer.readingGoalPreferences.load() != null }
+    val activeUserId by appContainer.activeUserProvider.userId.collectAsStateWithLifecycle()
+    // The goal belongs to an account, and the account is only known once
+    // SessionSyncEffect has published it. A null id therefore means "not yet
+    // resolved" — NOT "this account has no goal": the latter answer would send a
+    // returning user to the goal step for the split second before the id lands,
+    // which is the flash the gate must not produce. Hold the spinner instead.
+    val hasDailyGoal =
+        remember(dailyGoalVersion, activeUserId) {
+            activeUserId?.let { OnboardingGate.hasDailyGoal(appContainer.readingGoalPreferences) }
+        }
 
     val startDestination =
-        when {
-            !isAuthenticated -> NexoDestination.Auth.route
-            !hasDailyGoal -> NexoDestination.OnboardingGoal.route
-            else -> NexoDestination.Home.route
-        }
+        resolveStartDestination(isAuthenticated = isAuthenticated, hasDailyGoal = hasDailyGoal)
 
     // ── Password-reset deep link (nextpage://auth/reset-password) ──────
     // Cold-start resolution: if the app was opened from a reset-password
@@ -217,11 +248,13 @@ fun NexoNavHost(
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (isCheckingSession) {
-            // Fallback while session is being restored. The native splash
-            // screen (MainActivity) normally covers this window via
-            // setKeepOnScreenCondition; this centered spinner guards against
-            // any gap after the splash dismisses before navigation settles.
+        if (isCheckingSession || startDestination == null) {
+            // Fallback while the session is being restored, and while the
+            // active account is still unknown (see `startDestination` above).
+            // The native splash screen (MainActivity) normally covers the first
+            // window via setKeepOnScreenCondition; this centered spinner guards
+            // against any gap after the splash dismisses before navigation
+            // settles and before the account id lands.
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center),
                 color = MaterialTheme.colorScheme.primary,
@@ -277,6 +310,7 @@ fun NexoNavHost(
                             navController = navController,
                             homeViewModel = homeViewModel,
                             libraryViewModel = libraryViewModel,
+                            activeUser = appContainer.activeUserProvider,
                             notificationHistory = appContainer.notificationRepository,
                             contentPadding = innerPadding,
                             onSelectBook = { id, path, format ->
@@ -289,7 +323,7 @@ fun NexoNavHost(
                                     when (destination) {
                                         is ResolvedNotificationTarget.Book -> {
                                             scope.launch {
-                                                val book = appContainer.libraryRepository.getBookById(destination.bookId)
+                                                val book = appContainer.libraryRepository.getBookById(destination.bookId, appContainer.activeUserProvider.requireUserId())
                                                 if (book != null) {
                                                     selectedBookId = book.id
                                                     selectedBookFilePath = book.filePath

@@ -144,6 +144,11 @@ object AppDatabaseMigrations {
                 db.execSQL("DROP INDEX IF EXISTS index_highlights_book_id")
                 db.execSQL("DROP INDEX IF EXISTS index_bookmarks_book_id")
 
+                // 16.json (and every schema from v16 on) declares index_reading_stats_book_id,
+                // but nothing created it before MIGRATION_33_34. Every validation between v16
+                // and v33 therefore expected an index that did not exist.
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_reading_stats_book_id ON reading_stats(book_id)")
+
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_highlights_book_id_deleted_at ON highlights(book_id, deleted_at)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_bookmarks_book_id_deleted_at ON bookmarks(book_id, deleted_at)")
@@ -356,6 +361,42 @@ object AppDatabaseMigrations {
         object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE books ADD COLUMN deleted_at INTEGER")
+
+                // The v5 schema (5.json) declares these four tables, but the migration chain
+                // never created them. A v4 database upgraded through this migration therefore
+                // lacked highlights/bookmarks/sync_outbox/sync_file_mappings, and every
+                // runMigrationsAndValidate at v5+ failed with "Migration didn't properly
+                // handle: highlights". These are the v5 shapes, not the current ones:
+                // later migrations (6, 9, 10, 11, 15, ...) reshape them further.
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `highlights` (`id` TEXT NOT NULL, `book_id` TEXT NOT NULL, `cfi_range` TEXT NOT NULL, `text_content` TEXT NOT NULL, `note` TEXT, `color` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_highlights_book_id ON highlights(book_id)",
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `bookmarks` (`id` TEXT NOT NULL, `book_id` TEXT NOT NULL, `cfi_location` TEXT NOT NULL, `title_or_snippet` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_bookmarks_book_id ON bookmarks(book_id)",
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `sync_outbox` (`id` TEXT NOT NULL, `entity_type` TEXT NOT NULL, `entity_id` TEXT NOT NULL, `operation` TEXT NOT NULL, `payload` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `retry_count` INTEGER NOT NULL, `last_error` TEXT, PRIMARY KEY(`id`))
+                    """.trimIndent(),
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `sync_file_mappings` (`remote_path` TEXT NOT NULL, `user_id` TEXT NOT NULL, `book_id` TEXT NOT NULL, `local_path` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`remote_path`))
+                    """.trimIndent(),
+                )
             }
         }
 
@@ -706,6 +747,323 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * Per-account isolation (decision D1): every user-owned table gains a
+     * `user_id` column so a second Google account on the same device stops
+     * seeing the first account's library.
+     *
+     * This project has no user table and explicitly does not preserve data, so
+     * each affected table is dropped and recreated with the new column plus its
+     * `user_id`-leading index. `sync_outbox` is recreated from its current
+     * definition (v26 shape) and `books` from the v29→v30 shape; the remaining
+     * tables are recreated from their current entity definitions so the
+     * exported schema matches exactly.
+     */
+    val MIGRATION_32_33 =
+        object : Migration(32, 33) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("PRAGMA defer_foreign_keys = ON")
+
+                db.execSQL("DROP TABLE IF EXISTS books")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS books (
+                        id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        author TEXT,
+                        cover_path TEXT,
+                        file_path TEXT NOT NULL,
+                        format TEXT NOT NULL,
+                        total_pages INTEGER,
+                        chapter_count INTEGER,
+                        description TEXT,
+                        user_rating INTEGER,
+                        updated_at INTEGER NOT NULL,
+                        deleted_at INTEGER,
+                        status TEXT,
+                        content_hash TEXT,
+                        reading_state TEXT NOT NULL,
+                        started_at INTEGER,
+                        completed_at INTEGER,
+                        progress_updated_at INTEGER,
+                        state_version INTEGER NOT NULL,
+                        remote_file_id TEXT,
+                        remote_path TEXT,
+                        remote_lifecycle TEXT NOT NULL,
+                        remote_catalog_version INTEGER NOT NULL,
+                        remote_cover_ref TEXT,
+                        remote_provider TEXT,
+                        remote_protocol_version INTEGER,
+                        genre TEXT,
+                        language TEXT,
+                        publisher TEXT,
+                        tags TEXT,
+                        published_date TEXT,
+                        user_id TEXT NOT NULL,
+                        PRIMARY KEY(id)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_books_reading_state ON books(reading_state)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_books_user_id_deleted_at_updated_at " +
+                        "ON books(user_id, deleted_at, updated_at DESC)",
+                )
+
+                db.execSQL("DROP TABLE IF EXISTS reading_progress")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS reading_progress (
+                        id TEXT NOT NULL,
+                        book_id TEXT NOT NULL,
+                        cfi_location TEXT NOT NULL,
+                        percentage REAL NOT NULL,
+                        current_page INTEGER,
+                        updated_at INTEGER NOT NULL,
+                        locator_json TEXT,
+                        user_id TEXT NOT NULL,
+                        PRIMARY KEY(id),
+                        FOREIGN KEY(book_id) REFERENCES books(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_reading_progress_user_id_book_id " +
+                        "ON reading_progress(user_id, book_id)",
+                )
+
+                db.execSQL("DROP TABLE IF EXISTS highlights")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS highlights (
+                        id TEXT NOT NULL,
+                        book_id TEXT NOT NULL,
+                        cfi_range TEXT NOT NULL,
+                        text_content TEXT NOT NULL,
+                        note TEXT,
+                        color TEXT NOT NULL,
+                        updated_at INTEGER NOT NULL,
+                        deleted_at INTEGER,
+                        locator_json TEXT,
+                        type TEXT,
+                        tag TEXT,
+                        user_id TEXT NOT NULL,
+                        PRIMARY KEY(id),
+                        FOREIGN KEY(book_id) REFERENCES books(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_highlights_user_id_book_id_deleted_at " +
+                        "ON highlights(user_id, book_id, deleted_at)",
+                )
+
+                db.execSQL("DROP TABLE IF EXISTS bookmarks")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS bookmarks (
+                        id TEXT NOT NULL,
+                        book_id TEXT NOT NULL,
+                        cfi_location TEXT NOT NULL,
+                        title_or_snippet TEXT NOT NULL,
+                        updated_at INTEGER NOT NULL,
+                        deleted_at INTEGER,
+                        locator_json TEXT,
+                        user_id TEXT NOT NULL,
+                        PRIMARY KEY(id),
+                        FOREIGN KEY(book_id) REFERENCES books(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_bookmarks_user_id_book_id_deleted_at " +
+                        "ON bookmarks(user_id, book_id, deleted_at)",
+                )
+
+                db.execSQL("DROP TABLE IF EXISTS dictionary_words")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS dictionary_words (
+                        id TEXT NOT NULL,
+                        word TEXT NOT NULL,
+                        addedAtEpochMillis INTEGER NOT NULL,
+                        definition TEXT,
+                        part_of_speech TEXT,
+                        phonetic TEXT,
+                        example TEXT,
+                        quote TEXT,
+                        source_book_id TEXT,
+                        source_book_title TEXT,
+                        source_book_author TEXT,
+                        source_chapter TEXT,
+                        source_locator TEXT,
+                        updated_at_epoch_millis INTEGER NOT NULL DEFAULT 0,
+                        word_normalized TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        PRIMARY KEY(id)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_dictionary_words_user_id ON dictionary_words(user_id)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_dictionary_words_word_normalized " +
+                        "ON dictionary_words(word_normalized)",
+                )
+
+                db.execSQL("DROP TABLE IF EXISTS sync_outbox")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS sync_outbox (
+                        id TEXT NOT NULL,
+                        entity_type TEXT NOT NULL,
+                        entity_id TEXT,
+                        operation TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        retry_count INTEGER NOT NULL,
+                        last_error TEXT,
+                        user_id TEXT NOT NULL,
+                        PRIMARY KEY(id)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_id ON sync_outbox(entity_id)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_type_entity_id " +
+                        "ON sync_outbox(entity_type, entity_id)",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_user_id ON sync_outbox(user_id)")
+
+                db.execSQL("PRAGMA defer_foreign_keys = OFF")
+            }
+        }
+
+    /**
+     * Integrity fixes for the account-scoped tables, all in one migration
+     * because they overlap on `reading_stats`:
+     *
+     * 1. `reading_stats` primary key becomes `(user_id, book_id)`. It was
+     *    `book_id` alone, so `@Insert(REPLACE)` made a second account's stats
+     *    for the same book delete the first account's row. The table is
+     *    recreated empty — no production users, no rows to carry over.
+     * 2. `dictionary_words` gains a UNIQUE `(user_id, word_normalized)` index.
+     *    Supabase declares `unique (user_id, normalized_word)` and Rust creates
+     *    `CREATE UNIQUE INDEX idx_dict_user_norm`; Android had plain indexes, so
+     *    it could persist a duplicate only to have the remote upsert reject it.
+     *    Existing duplicates are collapsed to the newest row per key (by
+     *    `updated_at_epoch_millis`, then `addedAtEpochMillis`) so the index
+     *    cannot fail on a dirty table.
+     * 3. `reading_sessions.userId` and `reading_stats.userId` are renamed to
+     *    `user_id` (SQLite cannot rename a column in place, so both tables are
+     *    recreated). They were the only two of nine owner columns left in
+     *    camelCase, added as `userId` by MIGRATION_25_26.
+     *
+     * The `(user_id, book_id)` primary key covers every DAO query, which always
+     * supplies both columns. It does NOT cover the `book_id`-only lookup SQLite
+     * runs for the FK cascade: measured on SQLite 3.35, `DELETE FROM books`
+     * resolves child rows via `SEARCH reading_stats USING COVERING INDEX
+     * index_reading_stats_book_id (book_id=?)`. Without that index the cascade
+     * degrades to a full table scan. It is kept, and is not redundant.
+     */
+    val MIGRATION_33_34 =
+        object : Migration(33, 34) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("PRAGMA defer_foreign_keys = ON")
+
+                // ── Fix 1 + Fix 3: reading_stats — new PK, renamed owner column ──
+                db.execSQL("DROP TABLE IF EXISTS reading_stats")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS reading_stats (
+                        book_id TEXT NOT NULL,
+                        totalMinutesRead INTEGER NOT NULL,
+                        lastReadDateEpochMillis INTEGER NOT NULL,
+                        sessionsCount INTEGER NOT NULL,
+                        user_id TEXT NOT NULL,
+                        PRIMARY KEY(user_id, book_id),
+                        FOREIGN KEY(book_id) REFERENCES books(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_reading_stats_book_id ON reading_stats(book_id)",
+                )
+
+                // ── Fix 3: reading_sessions — renamed owner column ──
+                db.execSQL("ALTER TABLE reading_sessions RENAME TO reading_sessions_old")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS reading_sessions (
+                        id TEXT NOT NULL,
+                        book_id TEXT NOT NULL,
+                        start_time INTEGER NOT NULL,
+                        duration_minutes INTEGER NOT NULL,
+                        date INTEGER NOT NULL,
+                        user_id TEXT NOT NULL,
+                        updated_at_epoch_millis INTEGER NOT NULL,
+                        PRIMARY KEY(id),
+                        FOREIGN KEY(book_id) REFERENCES books(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "INSERT INTO reading_sessions (id, book_id, start_time, duration_minutes, date, user_id, updated_at_epoch_millis) " +
+                        "SELECT id, book_id, start_time, duration_minutes, date, userId, updated_at_epoch_millis " +
+                        "FROM reading_sessions_old",
+                )
+                db.execSQL("DROP TABLE reading_sessions_old")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_reading_sessions_book_id ON reading_sessions(book_id)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_reading_sessions_date ON reading_sessions(date)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_reading_sessions_date_user_id ON reading_sessions(date, user_id)",
+                )
+
+                // ── Fix 2: dictionary_words — collapse duplicates, then enforce uniqueness ──
+                // No window function here: ROW_NUMBER() OVER (...) needs SQLite 3.25
+                // (2018), but minSdk = 26 (Android 8.0) ships SQLite 3.18, where the
+                // same statement is a syntax error and would crash the app on open.
+                // The correlated NOT EXISTS below is equivalent and works on 3.18.
+                // The trailing `d.id > keep.id` tiebreak makes the ordering total:
+                // two rows sharing both timestamps can no longer delete each other.
+                db.execSQL(
+                    """
+                    DELETE FROM dictionary_words
+                    WHERE EXISTS (
+                        SELECT 1 FROM dictionary_words AS keep
+                        WHERE keep.user_id = dictionary_words.user_id
+                          AND keep.word_normalized = dictionary_words.word_normalized
+                          AND (
+                              keep.updated_at_epoch_millis > dictionary_words.updated_at_epoch_millis
+                              OR (
+                                  keep.updated_at_epoch_millis = dictionary_words.updated_at_epoch_millis
+                                  AND keep.addedAtEpochMillis > dictionary_words.addedAtEpochMillis
+                              )
+                              OR (
+                                  keep.updated_at_epoch_millis = dictionary_words.updated_at_epoch_millis
+                                  AND keep.addedAtEpochMillis = dictionary_words.addedAtEpochMillis
+                                  AND keep.id > dictionary_words.id
+                              )
+                          )
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_dictionary_words_user_id_word_normalized " +
+                        "ON dictionary_words(user_id, word_normalized)",
+                )
+                // The unique composite index cannot replace the plain one: the
+                // DAO's prefix `search()` keeps its range on `word_normalized`,
+                // and a composite index leading with `user_id` was measured to
+                // fall back to a full table scan there.
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_dictionary_words_word_normalized " +
+                        "ON dictionary_words(word_normalized)",
+                )
+
+                db.execSQL("PRAGMA defer_foreign_keys = OFF")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -739,5 +1097,7 @@ object AppDatabaseMigrations {
             MIGRATION_29_30,
             MIGRATION_30_31,
             MIGRATION_31_32,
+            MIGRATION_32_33,
+            MIGRATION_33_34,
         )
 }

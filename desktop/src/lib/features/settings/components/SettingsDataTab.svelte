@@ -43,6 +43,7 @@
     onImportDictionary?: (file: File) => void;
     onConnectDrive?: () => void;
     onNavigateToStorage?: () => void;
+    onNavigateToAddons?: () => void;
     onSelectedExportBookChange: (value: string) => void;
     onSelectedExportFormatChange: (value: 'json' | 'markdown') => void;
     onAnnotationsOnlyWithNoteChange?: (value: boolean) => void;
@@ -83,6 +84,7 @@
     onImportDictionary = () => {},
     onConnectDrive = () => {},
     onNavigateToStorage,
+    onNavigateToAddons = () => {},
     onSelectedExportBookChange,
     onSelectedExportFormatChange,
     onAnnotationsOnlyWithNoteChange = () => {},
@@ -529,6 +531,16 @@
   </Panel>
 
   {@render groupHeading('settings-group-privacy-addons', t('settings.data.group.privacyAddons'))}
+  <Panel title={t('settings.manageAddons.title')} subtitle={t('settings.manageAddons.description')}>
+    <Button
+      variant="secondary"
+      size="md"
+      onclick={onNavigateToAddons}
+      data-testid="settings-manage-addons-button"
+    >
+      {t('settings.manageAddons')}
+    </Button>
+  </Panel>
   <SettingsPrivacySection {t} />
   <SettingsDebugSection {t} />
   {@render groupHeading('settings-group-notifications', t('settings.data.group.notifications'))}

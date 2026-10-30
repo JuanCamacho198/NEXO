@@ -293,6 +293,7 @@ pub fn save_reading_session(
 pub fn get_reading_stats(
     repo: &LibraryRepository,
     book_id: Option<&str>,
+    user_id: &str,
 ) -> AppResult<ReadingStatsSummaryDto> {
     if let Some(id) = book_id {
         if id.trim().is_empty() {
@@ -300,10 +301,21 @@ pub fn get_reading_stats(
         }
     }
 
-    let mut stats = repo.recompute_reading_stats_from_sessions(book_id)?;
+    // Empty owner is nobody's: a blank id must never match the `''` bucket.
+    if user_id.trim().is_empty() {
+        return Ok(ReadingStatsSummaryDto {
+            total_minutes_read: 0,
+            total_sessions: 0,
+            books_started: 0,
+            books_completed: 0,
+            avg_progress_percentage: 0.0,
+        });
+    }
+
+    let mut stats = repo.recompute_reading_stats_from_sessions(book_id, user_id)?;
 
     if repo.reading_stats_drift_over_threshold(book_id, stats.avg_progress_percentage)? {
-        stats = repo.recompute_reading_stats_from_sessions(book_id)?;
+        stats = repo.recompute_reading_stats_from_sessions(book_id, user_id)?;
     }
 
     Ok(stats)
@@ -514,6 +526,7 @@ pub fn get_reading_stats_for_range(
     from_rfc3339: &str,
     to_rfc3339: &str,
     book_id: Option<&str>,
+    user_id: &str,
 ) -> AppResult<ReadingStatsSummaryDto> {
     if let Some(id) = book_id {
         if id.trim().is_empty() {
@@ -528,6 +541,17 @@ pub fn get_reading_stats_for_range(
         .map_err(|_| AppError::InvalidInput(format!("to is not RFC3339: {}", to_rfc3339)))?
         .with_timezone(&Utc);
 
+    // Empty owner is nobody's: a blank id must never match the `''` bucket.
+    if user_id.trim().is_empty() {
+        return Ok(ReadingStatsSummaryDto {
+            total_minutes_read: 0,
+            total_sessions: 0,
+            books_started: 0,
+            books_completed: 0,
+            avg_progress_percentage: 0.0,
+        });
+    }
+
     let from_str = from.to_rfc3339();
     let to_str = to.to_rfc3339();
 
@@ -535,16 +559,16 @@ pub fn get_reading_stats_for_range(
         repo.connection.query_row(
             "SELECT COALESCE(SUM(duration_seconds), 0)
              FROM reading_sessions
-             WHERE book_id = ?1 AND started_at BETWEEN ?2 AND ?3",
-            params![book_id, from_str, to_str],
+             WHERE user_id = ?1 AND book_id = ?2 AND started_at BETWEEN ?3 AND ?4",
+            params![user_id, book_id, from_str, to_str],
             |row| row.get(0),
         )?
     } else {
         repo.connection.query_row(
             "SELECT COALESCE(SUM(duration_seconds), 0)
              FROM reading_sessions
-             WHERE started_at BETWEEN ?1 AND ?2",
-            params![from_str, to_str],
+             WHERE user_id = ?1 AND started_at BETWEEN ?2 AND ?3",
+            params![user_id, from_str, to_str],
             |row| row.get(0),
         )?
     };
@@ -552,14 +576,15 @@ pub fn get_reading_stats_for_range(
     let total_sessions: i64 = if book_id.is_some() {
         repo.connection.query_row(
             "SELECT COUNT(*) FROM reading_sessions
-             WHERE book_id = ?1 AND started_at BETWEEN ?2 AND ?3",
-            params![book_id, from_str, to_str],
+             WHERE user_id = ?1 AND book_id = ?2 AND started_at BETWEEN ?3 AND ?4",
+            params![user_id, book_id, from_str, to_str],
             |row| row.get(0),
         )?
     } else {
         repo.connection.query_row(
-            "SELECT COUNT(*) FROM reading_sessions WHERE started_at BETWEEN ?1 AND ?2",
-            params![from_str, to_str],
+            "SELECT COUNT(*) FROM reading_sessions
+             WHERE user_id = ?1 AND started_at BETWEEN ?2 AND ?3",
+            params![user_id, from_str, to_str],
             |row| row.get(0),
         )?
     };
@@ -569,8 +594,8 @@ pub fn get_reading_stats_for_range(
             .query_row(
                 "SELECT MAX(COALESCE(end_percentage, start_percentage))
                  FROM reading_sessions
-                 WHERE book_id = ?1 AND started_at BETWEEN ?2 AND ?3",
-                params![book_id, from_str, to_str],
+                 WHERE user_id = ?1 AND book_id = ?2 AND started_at BETWEEN ?3 AND ?4",
+                params![user_id, book_id, from_str, to_str],
                 |row| row.get(0),
             )
             .optional()?
@@ -588,8 +613,8 @@ pub fn get_reading_stats_for_range(
     } else {
         repo.connection.query_row(
             "SELECT COUNT(DISTINCT book_id) FROM reading_sessions
-             WHERE started_at BETWEEN ?1 AND ?2",
-            params![from_str, to_str],
+             WHERE user_id = ?1 AND started_at BETWEEN ?2 AND ?3",
+            params![user_id, from_str, to_str],
             |row| row.get(0),
         )?
     };
@@ -606,11 +631,11 @@ pub fn get_reading_stats_for_range(
              FROM (
                 SELECT book_id, MAX(COALESCE(end_percentage, start_percentage, 0)) AS max_progress
                 FROM reading_sessions
-                WHERE started_at BETWEEN ?1 AND ?2
+                WHERE user_id = ?1 AND started_at BETWEEN ?2 AND ?3
                 GROUP BY book_id
              ) x
              WHERE x.max_progress >= 100.0",
-            params![from_str, to_str],
+            params![user_id, from_str, to_str],
             |row| row.get(0),
         )?
     };
@@ -623,10 +648,10 @@ pub fn get_reading_stats_for_range(
              FROM (
                 SELECT MAX(COALESCE(end_percentage, start_percentage, 0.0)) AS max_progress
                 FROM reading_sessions
-                WHERE started_at BETWEEN ?1 AND ?2
+                WHERE user_id = ?1 AND started_at BETWEEN ?2 AND ?3
                 GROUP BY book_id
              )",
-            params![from_str, to_str],
+            params![user_id, from_str, to_str],
             |row| row.get(0),
         )?
     };
@@ -652,6 +677,13 @@ pub fn get_reading_streak(
         }
     }
 
+    // Empty owner is nobody's, matching `get_today_minutes`. Without this the
+    // blank id would literally match the legacy `''` rows and the two screens
+    // would disagree about the same day.
+    if user_id.trim().is_empty() {
+        return Ok(0);
+    }
+
     const CAP: i64 = 45;
     let since_dt = Utc::now() - Duration::days(CAP);
     let since_str = since_dt.to_rfc3339();
@@ -661,7 +693,7 @@ pub fn get_reading_streak(
          FROM reading_sessions
          WHERE started_at >= ?1
            AND (?2 IS NULL OR book_id = ?2)
-           AND (user_id = ?3 OR user_id = '')
+           AND user_id = ?3
          ORDER BY day DESC",
     )?;
 
@@ -1124,7 +1156,7 @@ mod tests {
     }
 
     #[test]
-    fn get_reading_streak_filters_by_user_and_includes_legacy_rows() {
+    fn get_reading_streak_filters_by_user_and_excludes_legacy_rows() {
         use chrono::Duration;
 
         let repo = new_repository();
@@ -1150,25 +1182,37 @@ mod tests {
         )
         .unwrap();
 
-        // Legacy (''): yesterday only — visible to every user via OR user_id = ''.
-        // Same timestamp as u1's yesterday row but different user -> different id.
+        // Legacy (''): yesterday only — belongs to no account, so it must not
+        // extend any user's streak. Same timestamp as u1's yesterday row but
+        // different user -> different id.
         let _ =
             save_reading_session(&repo, session_input("", "book-iso", &yesterday, 300)).unwrap();
 
-        // u1: {D, D-1, D-2} (+ legacy D-1) -> 3.
+        // u1: {D, D-1, D-2} -> 3.
         assert_eq!(get_reading_streak(&repo, None, "u1", 0).unwrap(), 3);
-        // u2: {D} + legacy {D-1} -> 2 (today-alive walk-back).
-        assert_eq!(get_reading_streak(&repo, None, "u2", 0).unwrap(), 2);
-        // Other user: only legacy {D-1} -> yesterday-alive counts that day -> 1.
-        assert_eq!(get_reading_streak(&repo, None, "u-other", 0).unwrap(), 1);
+        // u2: {D} only; the legacy row no longer bridges the gap -> 1.
+        assert_eq!(get_reading_streak(&repo, None, "u2", 0).unwrap(), 1);
+        // Other user: no rows of its own, and '' is nobody's -> 0.
+        assert_eq!(get_reading_streak(&repo, None, "u-other", 0).unwrap(), 0);
     }
 
     /// Raw INSERT helper for `reading_sessions` that bypasses the validated
     /// `save_reading_session` path so the new tests can seed arbitrary
     /// `started_at` values (including historical dates) without triggering
-    /// the "session in the past" rejection.
+    /// the "session in the past" rejection. Owner `""` seeds a legacy or
+    /// anonymous row, which counts for no account.
     fn insert_reading_session(
         repository: &LibraryRepository,
+        book_id: &str,
+        started_at: &str,
+        duration_seconds: i64,
+    ) {
+        insert_reading_session_for(repository, "", book_id, started_at, duration_seconds);
+    }
+
+    fn insert_reading_session_for(
+        repository: &LibraryRepository,
+        user_id: &str,
         book_id: &str,
         started_at: &str,
         duration_seconds: i64,
@@ -1176,11 +1220,12 @@ mod tests {
         repository
             .connection
             .execute(
-                "INSERT INTO reading_sessions (id, book_id, started_at, ended_at, duration_seconds, start_percentage, end_percentage, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                "INSERT INTO reading_sessions (id, book_id, user_id, started_at, ended_at, duration_seconds, start_percentage, end_percentage, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                 params![
                     Uuid::new_v4().to_string(),
                     book_id,
+                    user_id,
                     started_at,
                     started_at,
                     duration_seconds,
@@ -1297,7 +1342,7 @@ mod tests {
             })
             .unwrap();
 
-        let stats = repository.get_reading_stats(None).unwrap();
+        let stats = repository.get_reading_stats(None, "u-test").unwrap();
         assert_eq!(stats.total_sessions, 2);
         assert_eq!(stats.books_started, 2);
         assert_eq!(stats.total_minutes_read, 5);
@@ -1373,15 +1418,17 @@ mod tests {
         insert_book(&repository, "book-range", "C:/library/book-range.epub");
 
         let base = Utc::now().date_naive().and_hms_opt(12, 0, 0).unwrap().and_utc();
-        insert_reading_session(&repository, "book-range", &base.to_rfc3339(), 600);
-        insert_reading_session(
+        insert_reading_session_for(&repository, "u-range", "book-range", &base.to_rfc3339(), 600);
+        insert_reading_session_for(
             &repository,
+            "u-range",
             "book-range",
             &(base - Duration::days(1)).to_rfc3339(),
             1200,
         );
-        insert_reading_session(
+        insert_reading_session_for(
             &repository,
+            "u-range",
             "book-range",
             &(base - Duration::days(2)).to_rfc3339(),
             1800,
@@ -1389,7 +1436,9 @@ mod tests {
 
         let from = (base - Duration::days(1)).to_rfc3339();
         let to = (base - Duration::days(1) + Duration::seconds(1)).to_rfc3339();
-        let stats = repository.get_reading_stats_for_range(&from, &to, Some("book-range")).unwrap();
+        let stats = repository
+            .get_reading_stats_for_range(&from, &to, Some("book-range"), "u-range")
+            .unwrap();
 
         assert_eq!(stats.total_sessions, 1);
         assert_eq!(stats.total_minutes_read, 20);
@@ -1397,8 +1446,12 @@ mod tests {
     #[test]
     fn get_reading_stats_for_range_rejects_malformed_rfc3339() {
         let repository = new_repository();
-        let result =
-            repository.get_reading_stats_for_range("not-a-date", "2026-01-01T00:00:00Z", None);
+        let result = repository.get_reading_stats_for_range(
+            "not-a-date",
+            "2026-01-01T00:00:00Z",
+            None,
+            "u-test",
+        );
         assert!(matches!(result, Err(AppError::InvalidInput(_))));
     }
     #[test]
@@ -1408,13 +1461,29 @@ mod tests {
         assert_eq!(streak, 0);
     }
     #[test]
+    fn get_reading_streak_ignores_legacy_rows_with_empty_owner() {
+        let repository = new_repository();
+        insert_book(&repository, "book-streak-legacy", "C:/library/book-streak-legacy.epub");
+        let now = Utc::now().date_naive().and_hms_opt(10, 0, 0).unwrap().and_utc();
+        insert_reading_session(&repository, "book-streak-legacy", &now.to_rfc3339(), 600);
+
+        assert_eq!(repository.get_reading_streak(None, "u-real", 0).unwrap(), 0);
+        assert_eq!(repository.get_reading_streak(None, "", 0).unwrap(), 0);
+    }
+    #[test]
     fn get_reading_streak_returns_one_for_single_session_today() {
         let repository = new_repository();
         insert_book(&repository, "book-streak-1", "C:/library/book-streak-1.epub");
         let now = Utc::now().date_naive().and_hms_opt(10, 0, 0).unwrap().and_utc();
-        insert_reading_session(&repository, "book-streak-1", &now.to_rfc3339(), 600);
+        insert_reading_session_for(
+            &repository,
+            "u-streak",
+            "book-streak-1",
+            &now.to_rfc3339(),
+            600,
+        );
 
-        let streak = repository.get_reading_streak(None, "", 0).unwrap();
+        let streak = repository.get_reading_streak(None, "u-streak", 0).unwrap();
         assert_eq!(streak, 1);
     }
     #[test]
@@ -1429,10 +1498,16 @@ mod tests {
                 .and_hms_opt(9, 0, 0)
                 .unwrap()
                 .and_utc();
-            insert_reading_session(&repository, "book-streak-3", &at.to_rfc3339(), 600);
+            insert_reading_session_for(
+                &repository,
+                "u-streak",
+                "book-streak-3",
+                &at.to_rfc3339(),
+                600,
+            );
         }
 
-        let streak = repository.get_reading_streak(None, "", 0).unwrap();
+        let streak = repository.get_reading_streak(None, "u-streak", 0).unwrap();
         assert_eq!(streak, 3);
     }
     #[test]
@@ -1447,12 +1522,24 @@ mod tests {
                 .and_hms_opt(9, 0, 0)
                 .unwrap()
                 .and_utc();
-            insert_reading_session(&repository, "book-streak-gap", &at.to_rfc3339(), 600);
+            insert_reading_session_for(
+                &repository,
+                "u-streak",
+                "book-streak-gap",
+                &at.to_rfc3339(),
+                600,
+            );
         }
         let today = Utc::now().date_naive().and_hms_opt(9, 0, 0).unwrap().and_utc();
-        insert_reading_session(&repository, "book-streak-gap", &today.to_rfc3339(), 600);
+        insert_reading_session_for(
+            &repository,
+            "u-streak",
+            "book-streak-gap",
+            &today.to_rfc3339(),
+            600,
+        );
 
-        let streak = repository.get_reading_streak(None, "", 0).unwrap();
+        let streak = repository.get_reading_streak(None, "u-streak", 0).unwrap();
         assert_eq!(streak, 1);
     }
     #[test]
@@ -1467,10 +1554,16 @@ mod tests {
                 .and_hms_opt(9, 0, 0)
                 .unwrap()
                 .and_utc();
-            insert_reading_session(&repository, "book-streak-cap", &at.to_rfc3339(), 600);
+            insert_reading_session_for(
+                &repository,
+                "u-streak",
+                "book-streak-cap",
+                &at.to_rfc3339(),
+                600,
+            );
         }
 
-        let streak = repository.get_reading_streak(None, "", 0).unwrap();
+        let streak = repository.get_reading_streak(None, "u-streak", 0).unwrap();
         assert_eq!(streak, 45);
     }
 }

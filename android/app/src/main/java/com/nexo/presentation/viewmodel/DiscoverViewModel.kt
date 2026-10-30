@@ -1,14 +1,18 @@
 package com.nexo.presentation.viewmodel
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nexo.R
-import com.nexo.data.remote.catalog.BUILTIN_GOOGLEBOOKS
+import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
+import com.nexo.data.remote.catalog.BUILTIN_STANDARD_EBOOKS
 import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogException
+import com.nexo.data.remote.catalog.CatalogFeaturedSort
 import com.nexo.data.remote.catalog.CatalogProvider
+import com.nexo.data.remote.catalog.CatalogRailLog
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.CatalogSourceKind
 import com.nexo.data.remote.catalog.CatalogSources
@@ -19,9 +23,10 @@ import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.access.resolveAccess
 import com.nexo.domain.connectivity.AlwaysOnlineConnectivityObserver
 import com.nexo.domain.connectivity.ConnectivityObserver
-import com.nexo.domain.discover.AuthorEntry
+import com.nexo.domain.discover.TOPIC_ROTATION
+import com.nexo.domain.discover.TopicEntry
 import com.nexo.domain.discover.entriesFor
-import com.nexo.domain.discover.matchesAuthor
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.domain.usecase.DownloadImportState
 import com.nexo.presentation.feature.discover.AccessResolverState
@@ -52,6 +57,24 @@ enum class DiscoverStatus {
     EMPTY,
     ERROR,
     OFFLINE,
+}
+
+/**
+ * Rails sharing one upstream. When every rail of a group fails together the
+ * reader gets ONE notice instead of an identical inline error per rail: the
+ * author shelves share the Google Books quota and fail as a unit. Standard
+ * Ebooks is a group of one, so its grouped notice and its inline error agree.
+ *
+ * A group never names its rails: [DiscoverViewModel.retryRailGroup] rebuilds
+ * them from the same deterministic plan, so a retry re-resolves exactly its own
+ * group and never refetches a shelf that worked.
+ */
+enum class DiscoverRailGroup(
+    @param:StringRes val labelRes: Int,
+) {
+    GoogleBooks(R.string.discover_rail_group_google_books),
+    Gutendex(R.string.discover_rail_group_gutendex),
+    StandardEbooks(R.string.discover_rail_group_standard_ebooks),
 }
 
 /** Detail pane status, independent from the search-list status. */
@@ -103,12 +126,24 @@ data class DiscoverUiState(
     /** Display name of the addon owning [addonRead] (manifest name). */
     val addonReadName: String = "",
     /**
-     * IDLE author rails from the day's rotation, in design order, followed by
-     * any per-addon rails. Empty while a search flow owns the screen; each rail
-     * independently resolves to Hidden so a failed rail never renders a
-     * placeholder section.
+     * IDLE rails, in design order: the day's two author shelves, the Gutendex
+     * popular shelf and the Standard Ebooks shelf, followed by any per-addon
+     * rails. Empty while a search flow owns the screen; each rail independently
+     * resolves to Hidden so a failed rail never renders a placeholder section.
      */
     val rails: List<DiscoverRailState> = emptyList(),
+    /**
+     * Sources whose rails ALL failed. Non-empty only once the rail set settled
+     * as errors — never while a rail is still [DiscoverRailState.Loading] — so
+     * the grouped notice can never appear over a shelf that may still land.
+     */
+    val failedRailGroups: List<DiscoverRailGroup> = emptyList(),
+    /**
+     * Groups whose notice the reader dismissed, for this session only. A
+     * permanently rate-limited source therefore never becomes permanent noise,
+     * while a fresh failure of another group still speaks up.
+     */
+    val dismissedRailGroups: Set<DiscoverRailGroup> = emptySet(),
     /** Mirrors [ConnectivityObserver.isOnline]; drives the pre-emptive OFFLINE state. */
     val isOnline: Boolean = true,
     /** True while a page fetch is in flight; drives the spinner in the search field. */
@@ -142,6 +177,27 @@ data class DiscoverUiState(
                 DiscoverSourceFilter.AllSources -> rails
                 is DiscoverSourceFilter.Source -> rails.map { rail -> rail.narrowTo(filter.sourceId) }
             }
+
+    /**
+     * Rail groups whose single notice the IDLE body renders below the shelves.
+     * Undismissed groups only, and only for failures the current source filter
+     * still lets through: a filter that hides every rail of a group must not
+     * leave a notice about shelves the reader cannot see.
+     */
+    val visibleRailGroupNotices: List<DiscoverRailGroup>
+        get() {
+            // Only a group whose notice was dismissed is filtered below. An empty
+            // `failedRailGroups` is already an empty result; an empty dismissal
+            // set must NOT short-circuit, or no notice could ever appear.
+            if (failedRailGroups.isEmpty()) return emptyList()
+            val visible = visibleRails
+            val filter = sourceFilter
+            return failedRailGroups.filter { group ->
+                if (group in dismissedRailGroups) return@filter false
+                if (filter !is DiscoverSourceFilter.Source) return@filter true
+                groupMatches(visible, filter.sourceId)
+            }
+        }
 }
 
 /** Rails carry no source filter of their own, so narrowing is a presentation concern. */
@@ -153,12 +209,34 @@ private fun DiscoverRailState.narrowTo(sourceId: String): DiscoverRailState =
         if (matching.isEmpty()) DiscoverRailState.Hidden else copy(books = matching)
     }
 
+/**
+ * True when [filtered] (a source-narrowed rail list) still carries a rail from
+ * [sourceId]. A failed rail narrows to itself, so the notice survives a filter
+ * that has nothing to show for it; a Loaded rail must actually keep a book.
+ */
+private fun groupMatches(
+    filtered: List<DiscoverRailState>,
+    sourceId: String,
+): Boolean =
+    filtered.any { rail ->
+        when (rail) {
+            is DiscoverRailState.Loaded -> rail.books.isNotEmpty() && rail.sourceId == sourceId
+            is DiscoverRailState.Error -> rail.sourceId == sourceId
+            DiscoverRailState.Hidden, DiscoverRailState.Loading -> false
+        }
+    }
+
 class DiscoverViewModel(
     private val catalogProvider: CatalogProvider,
     private val connectivityObserver: ConnectivityObserver = AlwaysOnlineConnectivityObserver,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val debounceMillis: Long = DEFAULT_DEBOUNCE_MS,
     private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null,
+    /**
+     * Active account id source. Defaults to a standalone provider so tests and
+     * non-wired callers compile; production passes the app-scoped instance.
+     */
+    private val activeUser: ActiveUserProvider = ActiveUserProvider(),
     /**
      * addonId → display name used to resolve source attribution. Injectable so
      * tests can pin attribution without a live registry; production leaves it
@@ -513,7 +591,7 @@ class DiscoverViewModel(
         _uiState.update { it.copy(download = DownloadImportState.Downloading(0L, null)) }
         downloadJob =
             viewModelScope.launch(mainDispatcher) {
-                useCase(book).collect { state ->
+                useCase(activeUser.requireUserId(), book).collect { state ->
                     // The synchronous preset above already rendered progress; the
                     // flow's leading Idle would flicker back, so skip it.
                     if (state is DownloadImportState.Idle) return@collect
@@ -720,20 +798,22 @@ class DiscoverViewModel(
      * in parallel. Offline IDLE never starts rails at all - the OFFLINE state
      * governs the screen.
      *
-     * The author rotation is the only rail source: each shelf is a Google Books
-     * search for the day's author term, filtered client-side by [matchesAuthor].
-     * Per-addon rails are appended afterwards, once `listSources()` can report
-     * the installed set.
+     * The plan is index-stable and fixed-length: the day's two rotating Gutendex
+     * topic shelves first, then the Gutendex popular shelf, then the Standard
+     * Ebooks newest-releases shelf. A failing source keeps its own inline error;
+     * a source whose every rail failed adds ONE grouped notice below the
+     * shelves. Either way it never renumbers the row. Per-addon rails are
+     * appended afterwards, once `listSources()` can report the installed set.
      */
     private fun refreshRails() {
         railsJob?.cancel()
         railsJob = null
         val state = _uiState.value
         if (!state.isOnline || state.status != DiscoverStatus.IDLE) {
-            _uiState.update { it.copy(rails = emptyList()) }
+            _uiState.update { it.copy(rails = emptyList(), failedRailGroups = emptyList()) }
             return
         }
-        val specs = authorRailSpecs()
+        val specs = railSpecs()
         _uiState.update { it.copy(rails = specs.map { DiscoverRailState.Loading }) }
         railsJob =
             viewModelScope.launch(mainDispatcher) {
@@ -754,50 +834,208 @@ class DiscoverViewModel(
                             .awaitAll()
                     }
                 applySources(sources)
-                _uiState.update { it.copy(rails = loaded + addonRails) }
+                val groupNotices = failedGroupsOf(specs, loaded)
+                _uiState.update {
+                    it.copy(
+                        rails = loaded + addonRails,
+                        failedRailGroups = groupNotices,
+                        // A dismissal only survives while its group is still failing:
+                        // a fresh failure of the same group speaks up again.
+                        dismissedRailGroups = it.dismissedRailGroups.intersect(groupNotices.toSet()),
+                    )
+                }
             }
     }
 
     /**
-     * The day's author shelves. [LocalDate.now] is read here, at rail-refresh
-     * time, so a session that crosses local midnight picks up the new rotation on
-     * the next refresh — the rotation is never frozen at construction.
-     *
-     * The title mapping lives in this layer deliberately: `AuthorEntry.titleKey`
-     * is a stable string key because the domain layer must not carry Android
-     * resource ids, and [R.string] ids are resolved here.
+     * Groups whose every rail settled as [DiscoverRailState.Error]. A single
+     * failing rail is deliberately excluded: it keeps its own inline error and
+     * retry, so the group notice never repeats the same sentence about it.
+     * Loading rails are never [DiscoverRailState.Error], so a group still in
+     * flight can never be reported as failed.
      */
-    private fun authorRailSpecs(date: LocalDate = LocalDate.now()): List<RailSpec> =
-        entriesFor(date).mapNotNull { entry ->
-            AUTHOR_TITLE_RES[entry.titleKey]?.let { RailSpec(it, entry.term) }
+    private fun failedGroupsOf(
+        specs: List<RailSpec>,
+        rails: List<DiscoverRailState>,
+    ): List<DiscoverRailGroup> {
+        val groups = specs.map(::groupOf)
+        return DiscoverRailGroup.entries.filter { group ->
+            val indexes = groups.indices.filter { groups[it] == group }
+            indexes.isNotEmpty() && indexes.all { rails.getOrNull(it) is DiscoverRailState.Error }
         }
+    }
 
     /**
-     * Fail-closed author rail resolution: an upstream error, an empty page, or a
-     * page whose every book is credited to somebody else yields
-     * [DiscoverRailState.Hidden], so the section is skipped entirely instead of
-     * rendering an empty rail or a shelf full of criticism and biography.
+     * Retry for a grouped notice: re-resolves ONLY the rails of [group] that
+     * are currently failed and leaves every other shelf exactly as it was —
+     * including a sibling of the same source that is already serving books. The
+     * two author rails share one Google Books quota, so refetching a working
+     * rail would burn a request for nothing.
+     */
+    fun retryRailGroup(group: DiscoverRailGroup) {
+        val specs = railSpecs()
+        val retried =
+            specs.indices.filter { index ->
+                groupOf(specs[index]) == group &&
+                    _uiState.value.rails.getOrNull(index) is DiscoverRailState.Error
+            }
+        // Nothing failed in this group has a rail in today's plan: a retry has
+        // no rail to re-resolve and must not touch a working sibling.
+        if (retried.isEmpty()) return
+        railsJob?.cancel()
+        railsJob =
+            viewModelScope.launch(mainDispatcher) {
+                _uiState.update { state ->
+                    val rails = state.rails.toMutableList()
+                    retried.forEach { index ->
+                        if (index < rails.size) rails[index] = DiscoverRailState.Loading
+                    }
+                    state.copy(rails = rails, failedRailGroups = emptyList())
+                }
+                coroutineScope {
+                    retried.forEach { index ->
+                        launch {
+                            val settled = loadRail(specs[index])
+                            _uiState.update { state ->
+                                val rails = state.rails.toMutableList()
+                                if (index < rails.size) rails[index] = settled
+                                state.copy(rails = rails)
+                            }
+                        }
+                    }
+                }
+                _uiState.update { state ->
+                    state.copy(failedRailGroups = failedGroupsOf(specs, state.rails))
+                }
+            }
+    }
+
+    /**
+     * Retry for ONE rail's own inline error: re-resolves exactly that rail and
+     * never its siblings, so a failing author shelf cannot drag a working one
+     * back through the shared Google Books quota. A rail that is not currently
+     * [DiscoverRailState.Error] (or an index outside the plan) is left alone.
+     */
+    fun retryRail(index: Int) {
+        val specs = railSpecs()
+        if (index !in specs.indices) return
+        if (_uiState.value.rails.getOrNull(index) !is DiscoverRailState.Error) return
+        railsJob?.cancel()
+        railsJob =
+            viewModelScope.launch(mainDispatcher) {
+                _uiState.update { state ->
+                    val rails = state.rails.toMutableList()
+                    if (index < rails.size) rails[index] = DiscoverRailState.Loading
+                    state.copy(rails = rails, failedRailGroups = emptyList())
+                }
+                val settled = loadRail(specs[index])
+                _uiState.update { state ->
+                    val rails = state.rails.toMutableList()
+                    if (index < rails.size) rails[index] = settled
+                    state.copy(rails = rails)
+                }
+                _uiState.update { state ->
+                    state.copy(failedRailGroups = failedGroupsOf(specs, state.rails))
+                }
+            }
+    }
+
+    /** The group a plan rail belongs to; Standard Ebooks is a group of one. */
+    private fun groupOf(spec: RailSpec): DiscoverRailGroup =
+        when (spec) {
+            is RailSpec.Topic -> DiscoverRailGroup.Gutendex
+            is RailSpec.Popular -> DiscoverRailGroup.Gutendex
+            is RailSpec.StandardEbooks -> DiscoverRailGroup.StandardEbooks
+        }
+
+    /** Hides one grouped notice for the rest of the session; no I/O, no refetch. */
+    fun dismissRailGroup(group: DiscoverRailGroup) {
+        _uiState.update { it.copy(dismissedRailGroups = it.dismissedRailGroups + group) }
+    }
+
+    /**
+     * The IDLE rail plan: the day's topic shelves followed by the two
+     * fixed-source shelves. [LocalDate.now] is read here, at rail-refresh time,
+     * so a session that crosses local midnight picks up the new rotation on the
+     * next refresh — the rotation is never frozen at construction.
+     *
+     * The title mapping lives in this layer deliberately: `TopicEntry.titleKey`
+     * is a stable string key because the domain layer must not carry Android
+     * resource ids, and [R.string] ids are resolved here.
+     *
+     * Fail closed on the title: a rotation entry whose title key has no resource
+     * is DROPPED rather than carried with an unresolved title, and its term is
+     * consequently never handed to the upstream either. [TOPIC_ROTATION] is a
+     * closed, probed table and only a member of it can become a topic rail.
+     */
+    private fun railSpecs(date: LocalDate = LocalDate.now()): List<RailSpec> {
+        val topics =
+            entriesFor(date).mapNotNull { entry ->
+                val term = entry.term.takeIf { it in TOPIC_ROTATION_TERMS } ?: return@mapNotNull null
+                val titleRes = TOPIC_TITLE_RES[entry.titleKey] ?: return@mapNotNull null
+                RailSpec.Topic(titleRes, term)
+            }
+        return topics +
+            RailSpec.Popular(R.string.discover_rail_gutendex_popular) +
+            RailSpec.StandardEbooks(R.string.discover_rail_standard_ebooks)
+    }
+
+    /**
+     * Fail-closed rail resolution: an empty page yields
+     * [DiscoverRailState.Hidden] — the section is skipped entirely instead of
+     * rendering an empty rail. An upstream failure is different: it yields
+     * [DiscoverRailState.Error] with the stable [CatalogErrorCode], so a failed
+     * shelf keeps its own retry, and a source whose every rail failed can report
+     * itself once as a group.
+     *
+     * An EMPTY page is never an error and never a connectivity failure: the
+     * source answered and had nothing to give, which is not the same statement as
+     * "you are offline". Only a thrown transport/upstream failure reaches the
+     * [DiscoverRailState.Error] branch below.
+     *
+     * Coverless books are KEPT: the rail card degrades to a text card (title and
+     * author on a theme surface) instead of an empty frame. Only a genuinely
+     * empty page hides the shelf, so an all-coverless rail still has content.
+     * This is rail-only on purpose: search keeps showing every match.
      */
     private suspend fun loadRail(spec: RailSpec): DiscoverRailState =
         try {
-            val result = catalogProvider.searchSource(BUILTIN_GOOGLEBOOKS, spec.authorTerm, page = 1)
-            val authored = result.results.filter { book -> matchesAuthor(book.authors, spec.authorTerm) }
-            if (authored.isEmpty()) {
+            val result =
+                when (spec) {
+                    // The `?topic=` selector, never a free-text search: the same words
+                    // passed to `search` answer 6 books against 3 530 from `topic`.
+                    is RailSpec.Topic -> catalogProvider.topic(spec.topicTerm, page = 1)
+                    is RailSpec.Popular -> catalogProvider.featured(CatalogFeaturedSort.POPULAR, page = 1)
+                    is RailSpec.StandardEbooks ->
+                        catalogProvider.searchSource(BUILTIN_STANDARD_EBOOKS, STANDARD_EBOOKS_RAIL_TERM, page = 1)
+                }
+            if (result.results.isEmpty()) {
+                // An empty page is not an error: say so, and say which rail and
+                // which upstream term produced it. Without this a hidden shelf is
+                // indistinguishable from a swallowed exception.
+                CatalogRailLog.hidden(spec.railLogId, spec.railLogSource, spec.railLogTerm, "empty page")
                 DiscoverRailState.Hidden
             } else {
+                CatalogRailLog.loaded(spec.railLogId, spec.railLogSource, spec.railLogTerm, result.results.size)
                 DiscoverRailState.Loaded(
                     sectionTitleRes = spec.sectionTitleRes,
-                    sort = null,
-                    sourceId = null,
-                    books = authored,
-                    totalCount = authored.size,
-                    authorTerm = spec.authorTerm,
+                    sort = spec.sort,
+                    sourceId = spec.sourceId,
+                    books = result.results,
+                    totalCount = result.totalCount,
+                    topicTerm = spec.topicTerm,
                 )
             }
         } catch (err: CancellationException) {
             throw err
         } catch (err: Throwable) {
-            DiscoverRailState.Hidden
+            CatalogRailLog.hidden(
+                spec.railLogId,
+                spec.railLogSource,
+                spec.railLogTerm,
+                "exception ${err.javaClass.simpleName}: ${err.message}",
+            )
+            DiscoverRailState.Error(codeOf(err), spec.sourceId ?: BUILTIN_GUTENDEX)
         }
 
     /**
@@ -810,8 +1048,10 @@ class DiscoverViewModel(
         try {
             val result = catalogProvider.searchSource(source.sourceId, ADDON_RAIL_TERM, page = 1)
             if (result.results.isEmpty()) {
+                CatalogRailLog.hidden("addon:${source.sourceId}", source.sourceId, ADDON_RAIL_TERM, "empty page")
                 DiscoverRailState.Hidden
             } else {
+                CatalogRailLog.loaded("addon:${source.sourceId}", source.sourceId, ADDON_RAIL_TERM, result.results.size)
                 DiscoverRailState.Loaded(
                     sectionTitleRes = R.string.discover_rail_from,
                     sort = null,
@@ -824,13 +1064,83 @@ class DiscoverViewModel(
         } catch (err: CancellationException) {
             throw err
         } catch (err: Throwable) {
+            CatalogRailLog.hidden(
+                "addon:${source.sourceId}",
+                source.sourceId,
+                ADDON_RAIL_TERM,
+                "exception ${err.javaClass.simpleName}: ${err.message}",
+            )
             DiscoverRailState.Hidden
         }
 
-    private data class RailSpec(
-        val sectionTitleRes: Int,
-        val authorTerm: String,
-    )
+    /**
+     * One IDLE rail, as a closed union so each upstream is reached through the
+     * resolution it actually supports: a topic shelf through a per-source
+     * Gutendex `topic` search of a term from [TOPIC_ROTATION], the popular shelf
+     * through the closed [CatalogFeaturedSort] ordering, the Standard Ebooks
+     * shelf through its own source. The union is why [loadRail] needs no
+     * capability probing.
+     */
+    private sealed interface RailSpec {
+        val sectionTitleRes: Int
+
+        /** Featured ordering for a rail served by `featured`; null otherwise. */
+        val sort: CatalogFeaturedSort? get() = null
+
+        /** Per-source selector for a rail served by `searchSource`; null otherwise. */
+        val sourceId: String? get() = null
+
+        /** Topic term carried so "See all" can page the same query. */
+        val topicTerm: String? get() = null
+
+        /** Stable rail name for [CatalogRailLog] — never a resource id. */
+        val railLogId: String
+
+        /** Upstream this rail is served by, for [CatalogRailLog]. */
+        val railLogSource: String
+
+        /** Selector term sent upstream, for [CatalogRailLog]; null when none. */
+        val railLogTerm: String? get() = null
+
+        data class Topic(
+            override val sectionTitleRes: Int,
+            override val topicTerm: String,
+        ) : RailSpec {
+            override val sourceId: String get() = BUILTIN_GUTENDEX
+
+            override val railLogId: String get() = "topic"
+
+            override val railLogSource: String get() = BUILTIN_GUTENDEX
+
+            override val railLogTerm: String get() = topicTerm
+        }
+
+        data class Popular(
+            override val sectionTitleRes: Int,
+        ) : RailSpec {
+            override val sort: CatalogFeaturedSort get() = CatalogFeaturedSort.POPULAR
+
+            override val sourceId: String get() = BUILTIN_GUTENDEX
+
+            override val railLogId: String get() = "popular"
+
+            override val railLogSource: String get() = BUILTIN_GUTENDEX
+
+            override val railLogTerm: String get() = "sort=popular"
+        }
+
+        data class StandardEbooks(
+            override val sectionTitleRes: Int,
+        ) : RailSpec {
+            override val sourceId: String get() = BUILTIN_STANDARD_EBOOKS
+
+            override val railLogId: String get() = "standard-ebooks"
+
+            override val railLogSource: String get() = BUILTIN_STANDARD_EBOOKS
+
+            override val railLogTerm: String get() = STANDARD_EBOOKS_RAIL_TERM
+        }
+    }
 
     /**
      * OFFLINE precedence (design PART 1 Decision 4): the pre-emptive observer
@@ -865,23 +1175,35 @@ class DiscoverViewModel(
         const val ADDON_RAIL_TERM = "the"
 
         /**
-         * Author rail title keys (S1's [AuthorEntry.titleKey] strings) to their
+         * Term passed for the Standard Ebooks shelf. The feed publishes one
+         * newest-releases page and has no query parameter, so the blank term is
+         * the only query it can answer — the provider treats a real keyword as
+         * unsupported and answers only blank. Same value as desktop's
+         * `STANDARD_EBOOKS_RAIL_QUERY`.
+         */
+        private const val STANDARD_EBOOKS_RAIL_TERM = ""
+
+        /** The closed rotation terms; only a member may ever reach `?topic=`. */
+        private val TOPIC_ROTATION_TERMS: Set<String> = TOPIC_ROTATION.map { it.term }.toSet()
+
+        /**
+         * Topic rail title keys (S1's [TopicEntry.titleKey] strings) to their
          * string resources. Kept beside the rails so a key with no resource is
-         * caught by AuthorRailTitlesTest instead of surfacing an unresolved
+         * caught by TopicRailTitlesTest instead of surfacing an unresolved
          * shelf.
          */
-        private val AUTHOR_TITLE_RES: Map<String, Int> =
+        private val TOPIC_TITLE_RES: Map<String, Int> =
             mapOf(
-                "discover_rail_author_doyle" to R.string.discover_rail_author_doyle,
-                "discover_rail_author_poe" to R.string.discover_rail_author_poe,
-                "discover_rail_author_wilde" to R.string.discover_rail_author_wilde,
-                "discover_rail_author_verne" to R.string.discover_rail_author_verne,
-                "discover_rail_author_kafka" to R.string.discover_rail_author_kafka,
-                "discover_rail_author_dickens" to R.string.discover_rail_author_dickens,
-                "discover_rail_author_london" to R.string.discover_rail_author_london,
-                "discover_rail_author_wells" to R.string.discover_rail_author_wells,
-                "discover_rail_author_twain" to R.string.discover_rail_author_twain,
-                "discover_rail_author_melville" to R.string.discover_rail_author_melville,
+                "discover_rail_topic_science_fiction" to R.string.discover_rail_topic_science_fiction,
+                "discover_rail_topic_adventure" to R.string.discover_rail_topic_adventure,
+                "discover_rail_topic_history" to R.string.discover_rail_topic_history,
+                "discover_rail_topic_travel" to R.string.discover_rail_topic_travel,
+                "discover_rail_topic_poetry" to R.string.discover_rail_topic_poetry,
+                "discover_rail_topic_philosophy" to R.string.discover_rail_topic_philosophy,
+                "discover_rail_topic_drama" to R.string.discover_rail_topic_drama,
+                "discover_rail_topic_romance" to R.string.discover_rail_topic_romance,
+                "discover_rail_topic_mystery" to R.string.discover_rail_topic_mystery,
+                "discover_rail_topic_horror" to R.string.discover_rail_topic_horror,
             )
     }
 }
@@ -892,6 +1214,7 @@ class DiscoverViewModelFactory(
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val debounceMillis: Long = DiscoverViewModel.DEFAULT_DEBOUNCE_MS,
     private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null,
+    private val activeUser: ActiveUserProvider = ActiveUserProvider(),
     private val addonNames: (String) -> String? = { null },
     private val registerAddonChangeListener: (((Int) -> Unit) -> Unit)? = null,
     private val addonConsent: (String) -> Boolean = { true },
@@ -907,6 +1230,7 @@ class DiscoverViewModelFactory(
                 mainDispatcher = mainDispatcher,
                 debounceMillis = debounceMillis,
                 downloadAndImportBookUseCase = downloadAndImportBookUseCase,
+                activeUser = activeUser,
                 addonNames = addonNames,
                 registerAddonChangeListener = registerAddonChangeListener,
                 addonConsent = addonConsent,

@@ -8,6 +8,7 @@ class UpdateReadingProgressUseCase(
 ) {
     suspend operator fun invoke(
         bookId: String,
+        userId: String,
         cfiLocation: String,
         percentage: Float,
         locatorJson: String? = null,
@@ -22,11 +23,12 @@ class UpdateReadingProgressUseCase(
                 updatedAtEpochMillis = System.currentTimeMillis(),
                 locatorJson = locatorJson,
             )
-        readerRepository.upsertProgress(progress)
+        readerRepository.upsertProgress(progress, userId)
         // Keep the book's reading_state in sync so the Home "Continue reading"
         // section (which filters on reading_state == "reading") shows it.
         readerRepository.updateBookReadingState(
             bookId = bookId,
+            userId = userId,
             progressPercent = clamped,
             updatedAt = System.currentTimeMillis(),
         )

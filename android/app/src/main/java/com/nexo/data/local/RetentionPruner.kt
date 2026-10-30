@@ -1,5 +1,7 @@
 package com.nexo.data.local
 
+import androidx.room.execSQL
+import androidx.room.useWriterConnection
 import androidx.room.withTransaction
 
 /**
@@ -26,13 +28,21 @@ class RetentionPruner(
         val report =
             database.withTransaction {
                 val dao = database.retentionDao()
-                Report(
-                    books = dao.pruneBooks(cutoff),
-                    highlights = dao.pruneHighlights(cutoff),
-                    bookmarks = dao.pruneBookmarks(cutoff),
-                )
+                // Retention is a device-wide background job, but each delete must
+                // stay inside one account: `prune*(userId, ...)` scopes every
+                // statement, and the owners are enumerated explicitly so a bug in
+                // one account's rows can never remove another's.
+                var books = 0
+                var highlights = 0
+                var bookmarks = 0
+                for (owner in dao.distinctPrunableOwners()) {
+                    books += dao.pruneBooks(owner, cutoff)
+                    highlights += dao.pruneHighlights(owner, cutoff)
+                    bookmarks += dao.pruneBookmarks(owner, cutoff)
+                }
+                Report(books = books, highlights = highlights, bookmarks = bookmarks)
             }
-        database.openHelper.writableDatabase.execSQL("VACUUM")
+        database.useWriterConnection { it.execSQL("VACUUM") }
         return report
     }
 

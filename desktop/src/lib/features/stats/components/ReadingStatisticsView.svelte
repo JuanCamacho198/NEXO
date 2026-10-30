@@ -77,8 +77,9 @@
   $effect(() => {
     const { from, to } = periodWindow(activePeriod);
     const { from: prevFrom, to: prevTo } = previousWindow(activePeriod);
-    void statsState.loadRangeStats(from, to, undefined, 'current');
-    void statsState.loadRangeStats(prevFrom, prevTo, undefined, 'previous');
+    const userId = authState.userId ?? '';
+    void statsState.loadRangeStats(from, to, undefined, 'current', userId);
+    void statsState.loadRangeStats(prevFrom, prevTo, undefined, 'previous', userId);
   });
   $effect(() => {
     void statsState.loadStreak(undefined, authState.userId ?? '');

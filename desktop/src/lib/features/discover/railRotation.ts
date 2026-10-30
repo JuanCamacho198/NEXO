@@ -1,58 +1,63 @@
 import type { MessageKey } from '$lib/shared/i18n/messages.en';
 
-/** One curated author shelf: the i18n title key plus its Google Books search term. */
-export interface AuthorRailEntry {
-  /** Stable key fragment used by `discover.rail.author.<slug>`. */
+/** One curated topic shelf: the i18n title key plus its Gutendex `topic` term. */
+export interface TopicRailEntry {
+  /** Stable key fragment used by `discover.rail.topic.<slug>`. */
   readonly slug: string;
   readonly titleKey: MessageKey;
+  /** `topic` query value. Always a member of the closed table, never free text. */
   readonly term: string;
 }
 
 /**
- * Curated author rail rotation.
+ * Curated topic rail rotation.
  *
- * Vetting metric: share of the top 20 live Google Books hits whose
- * `volumeInfo.authors` contains the queried surname. Measured by-author share,
- * best first: doyle 100%, poe 95%, wilde 90%, verne 85%, kafka 70%, dickens
- * 65%, london 65%, wells 60%, twain 55%, melville 55%. These shares are the
- * vetting input for this list; since the author-filter feature they are no
- * longer a user-visible defect, because attribution is now ENFORCED on the rail
- * load path: `matchesAuthorQuery` (railPlan.ts) drops every book whose authors
- * miss the queried surname, and an all-foreign page hides the rail. Keep using
- * these numbers to vet author candidates — the filter removes the visible junk,
- * not the reason to measure. Public-domain-era authors are deliberate:
- * DISC-04c resolves downloads from Gutendex, and every one of these ten has
- * Project Gutenberg editions.
+ * Every term is a Gutendex `topic` value, measured live against
+ * `https://gutendex.com/books/?topic=<term>&page=1` before it entered this
+ * table, sorted best-first so the most plentiful shelves are the ones a reader
+ * sees most often. `count` is the upstream total the probe returned:
  *
- * The former plain-word subject rails (`fiction`, `adventure`, `science`, …)
- * are NOT used here: measured on the live API, `fiction` returned only 10%
- * Fiction-categorised hits (first hit *The Art of Fiction*) and `classic`,
- * `science` and `history` returned 0%, i.e. a textbook/criticism shelf. The
- * operator that expresses "fiction in this genre" is `subject:`, and every
- * Google Books colon operator returns `totalItems: 0` with this key at every
- * encoding, so genre shelves are not expressible on this API. Never emit a
- * colon operator.
+ *  - history        23 577
+ *  - adventure       9 005
+ *  - travel          5 620
+ *  - poetry          5 599
+ *  - philosophy      3 538
+ *  - science fiction 3 530
+ *  - drama           3 249
+ *  - romance         3 050
+ *  - mystery         2 910
+ *  - horror            283
  *
- * Deliberately EXCLUDED after measuring them bad — do not "complete" the list
- * by adding famous names without re-measuring:
- *  - `jane austen` (35%; first hit *Jane Austen's Erotic Advice*, criticism)
- *  - `leo tolstoy` (30%; first hit is a biography titled *Leo Tolstoy*)
+ * Every term answered HTTP 200 with a full first page (32 records), so each one
+ * can fill the widest rail. `horror` is deliberately LAST despite being alive:
+ * 283 books is ample for one rail but the thinnest shelf here — an acceptable
+ * member, not a lead.
+ *
+ * The first two entries are pinned as the required shelves: `science fiction`
+ * and `adventure` are always present on their own, and the rotation is an
+ * offset into this same list, so neither can disappear from a day's plan.
+ *
+ * Why a closed table and not a free string: the codebase already documents the
+ * failure mode on `CatalogFeaturedSort` — an unrecognized upstream `sort`
+ * literal hangs the request. `topic` is the same class of parameter, so the
+ * domain passes a value from this table and nothing else. Do NOT add a term
+ * without re-running the probe above and updating the counts in this comment.
  */
-export const AUTHOR_ROTATION: readonly AuthorRailEntry[] = [
+export const TOPIC_ROTATION: readonly TopicRailEntry[] = [
   {
-    slug: 'conan-doyle',
-    titleKey: 'discover.rail.author.conan-doyle',
-    term: 'arthur conan doyle',
+    slug: 'science-fiction',
+    titleKey: 'discover.rail.topic.science-fiction',
+    term: 'science fiction',
   },
-  { slug: 'poe', titleKey: 'discover.rail.author.poe', term: 'edgar allan poe' },
-  { slug: 'wilde', titleKey: 'discover.rail.author.wilde', term: 'oscar wilde' },
-  { slug: 'verne', titleKey: 'discover.rail.author.verne', term: 'jules verne' },
-  { slug: 'kafka', titleKey: 'discover.rail.author.kafka', term: 'franz kafka' },
-  { slug: 'dickens', titleKey: 'discover.rail.author.dickens', term: 'charles dickens' },
-  { slug: 'london', titleKey: 'discover.rail.author.london', term: 'jack london' },
-  { slug: 'wells', titleKey: 'discover.rail.author.wells', term: 'h g wells' },
-  { slug: 'twain', titleKey: 'discover.rail.author.twain', term: 'mark twain' },
-  { slug: 'melville', titleKey: 'discover.rail.author.melville', term: 'herman melville' },
+  { slug: 'adventure', titleKey: 'discover.rail.topic.adventure', term: 'adventure' },
+  { slug: 'history', titleKey: 'discover.rail.topic.history', term: 'history' },
+  { slug: 'travel', titleKey: 'discover.rail.topic.travel', term: 'travel' },
+  { slug: 'poetry', titleKey: 'discover.rail.topic.poetry', term: 'poetry' },
+  { slug: 'philosophy', titleKey: 'discover.rail.topic.philosophy', term: 'philosophy' },
+  { slug: 'drama', titleKey: 'discover.rail.topic.drama', term: 'drama' },
+  { slug: 'romance', titleKey: 'discover.rail.topic.romance', term: 'romance' },
+  { slug: 'mystery', titleKey: 'discover.rail.topic.mystery', term: 'mystery' },
+  { slug: 'horror', titleKey: 'discover.rail.topic.horror', term: 'horror' },
 ];
 
 /** 1-based local day-of-year; UTC arithmetic over local parts keeps it DST-proof. */
@@ -63,41 +68,38 @@ export function dayOfYear(date: Date): number {
 }
 
 /**
- * Index into `AUTHOR_ROTATION` of the day's first (top) shelf.
+ * Index into `TOPIC_ROTATION` of the day's first (top) shelf.
  *
  * Formula: `(dayOfYear - 1) mod length`. The minus one makes the very first
  * local calendar day start at index 0, so the rotation is anchored to the top
  * of the curated list rather than already slid forward. The base advances by
  * exactly one slot per local calendar day, so the day's window of shelves
- * slides one author forward daily, is stable for a whole local day (no re-roll
+ * slides one topic forward daily, is stable for a whole local day (no re-roll
  * across renders, retries or remounts), and wraps cleanly at the list length.
  * `mod` is normalized so a negative or fractional day index cannot escape the
  * list bounds.
  */
-export function authorStartIndex(
-  dayIndex: number,
-  length: number = AUTHOR_ROTATION.length,
-): number {
+export function topicStartIndex(dayIndex: number, length: number = TOPIC_ROTATION.length): number {
   if (!Number.isInteger(length) || length < 1) {
-    throw new Error(`invalid author rotation length: ${length}`);
+    throw new Error(`invalid topic rotation length: ${length}`);
   }
   return (((Math.floor(dayIndex) - 1) % length) + length) % length;
 }
 
 /**
- * The day's shelves: `count` consecutive entries starting at
- * `authorStartIndex(dayOfYear(date))`, wrapping at the list end. Consecutive
- * offsets are always distinct while `count <= length`, so the three rails of a
- * day never repeat an author.
+ * The day's topic shelves: `count` consecutive entries starting at
+ * `topicStartIndex(dayOfYear(date))`, wrapping at the list end. Consecutive
+ * offsets are always distinct while `count <= length`, so the two topic rails
+ * of a day never repeat a topic.
  */
-export function authorEntriesFor(
+export function topicEntriesFor(
   date: Date = new Date(),
-  count: number = 3,
-): readonly AuthorRailEntry[] {
-  const length = AUTHOR_ROTATION.length;
+  count: number = 2,
+): readonly TopicRailEntry[] {
+  const length = TOPIC_ROTATION.length;
   if (!Number.isInteger(count) || count < 1 || count > length) {
-    throw new Error(`invalid author rail count: ${count} for ${length} authors`);
+    throw new Error(`invalid topic rail count: ${count} for ${length} topics`);
   }
-  const start = authorStartIndex(dayOfYear(date), length);
-  return Array.from({ length: count }, (_, offset) => AUTHOR_ROTATION[(start + offset) % length]!);
+  const start = topicStartIndex(dayOfYear(date), length);
+  return Array.from({ length: count }, (_, offset) => TOPIC_ROTATION[(start + offset) % length]!);
 }

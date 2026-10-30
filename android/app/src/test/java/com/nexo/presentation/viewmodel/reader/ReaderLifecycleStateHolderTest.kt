@@ -8,6 +8,8 @@ import com.nexo.domain.repository.ReadingStatsData
 import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.TEST_USER_ID
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -259,6 +261,7 @@ class ReaderLifecycleStateHolderTest {
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
                     updateReadingProgressUseCase = mockk<UpdateReadingProgressUseCase>(relaxed = true),
                     readingStatsRepository = readingStatsRepo,
+                    activeUser = activeUserProviderFor(),
                     scope = this,
                     onChapterChanged = {},
                     onErrorEvent = {},
@@ -270,7 +273,7 @@ class ReaderLifecycleStateHolderTest {
             holder.onReaderPaused()
             testScheduler.advanceUntilIdle()
 
-            coVerify { readingStatsRepo.updateReadingTime("test-book", 1) }
+            coVerify { readingStatsRepo.updateReadingTime("test-book", TEST_USER_ID, 1) }
         }
 
     @Test
@@ -283,6 +286,7 @@ class ReaderLifecycleStateHolderTest {
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
                     updateReadingProgressUseCase = mockk<UpdateReadingProgressUseCase>(relaxed = true),
                     readingStatsRepository = readingStatsRepo,
+                    activeUser = activeUserProviderFor(),
                     scope = this,
                     onChapterChanged = {},
                     onErrorEvent = {},
@@ -296,7 +300,7 @@ class ReaderLifecycleStateHolderTest {
             holder.onReaderPaused()
             testScheduler.advanceUntilIdle()
 
-            coVerify(exactly = 1) { readingStatsRepo.updateReadingTime("test-book", 1) }
+            coVerify(exactly = 1) { readingStatsRepo.updateReadingTime("test-book", TEST_USER_ID, 1) }
         }
 
     // ── Reading Session Recording (REQ-reading-sessions-sync-1, SCEN-sync-1/2) ──
@@ -311,6 +315,7 @@ class ReaderLifecycleStateHolderTest {
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
                     updateReadingProgressUseCase = mockk<UpdateReadingProgressUseCase>(relaxed = true),
                     readingStatsRepository = readingStatsRepo,
+                    activeUser = activeUserProviderFor("user-42"),
                     scope = this,
                     onChapterChanged = {},
                     onErrorEvent = {},
@@ -332,7 +337,7 @@ class ReaderLifecycleStateHolderTest {
         }
 
     @Test
-    fun `flushReadingTime records blank user session when no active user`() =
+    fun `flushReadingTime records no session when no active user`() =
         runTest {
             val readingStatsRepo = FakeCountingReadingStatsRepository()
             val holder =
@@ -341,6 +346,7 @@ class ReaderLifecycleStateHolderTest {
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
                     updateReadingProgressUseCase = mockk<UpdateReadingProgressUseCase>(relaxed = true),
                     readingStatsRepository = readingStatsRepo,
+                    activeUser = activeUserProviderFor(null),
                     scope = this,
                     onChapterChanged = {},
                     onErrorEvent = {},
@@ -352,8 +358,9 @@ class ReaderLifecycleStateHolderTest {
             holder.onReaderPaused()
             testScheduler.advanceUntilIdle()
 
-            assertEquals(1, readingStatsRepo.recordedSessions.size)
-            assertEquals("", readingStatsRepo.recordedSessions.single().userId)
+            // With no account active there is no owner to attribute the row to, so
+            // nothing is written — an unowned row nobody could read back is never created.
+            assertTrue(readingStatsRepo.recordedSessions.isEmpty())
         }
 
     // ── Chapter callback ─────────────────────────────────────────────
@@ -368,6 +375,7 @@ class ReaderLifecycleStateHolderTest {
                     readerRepository = mockk<ReaderRepository>(relaxed = true),
                     updateReadingProgressUseCase = mockk<UpdateReadingProgressUseCase>(relaxed = true),
                     readingStatsRepository = mockk<ReadingStatsRepository>(relaxed = true),
+                    activeUser = activeUserProviderFor(),
                     scope = this,
                     onChapterChanged = { callbackCount++ },
                     onErrorEvent = {},
@@ -397,6 +405,7 @@ class ReaderLifecycleStateHolderTest {
             readerRepository = mockk<ReaderRepository>(relaxed = true),
             updateReadingProgressUseCase = mockk<UpdateReadingProgressUseCase>(relaxed = true),
             readingStatsRepository = mockk<ReadingStatsRepository>(relaxed = true),
+            activeUser = activeUserProviderFor(),
             scope = scope,
             onChapterChanged = {},
             onErrorEvent = {},
@@ -419,20 +428,27 @@ class ReaderLifecycleStateHolderTest {
 
         val recordedSessions = mutableListOf<RecordedSession>()
 
-        override fun observeStats(bookId: String): Flow<ReadingStatsData?> = MutableStateFlow(null)
+        override fun observeStats(
+            bookId: String,
+            userId: String,
+        ): Flow<ReadingStatsData?> = MutableStateFlow(null)
 
-        override fun observeTotalTime(): Flow<Long> = MutableStateFlow(0L)
+        override fun observeTotalTime(userId: String): Flow<Long> = MutableStateFlow(0L)
 
-        override fun observeBookStats(): Flow<List<ReadingStatsData>> = MutableStateFlow(emptyList())
+        override fun observeBookStats(userId: String): Flow<List<ReadingStatsData>> = MutableStateFlow(emptyList())
 
         override suspend fun getDailyActivity(userId: String?): List<DailyReadingActivity> = emptyList()
 
         override suspend fun updateReadingTime(
             bookId: String,
+            userId: String,
             additionalMinutes: Long,
         ) = Unit
 
-        override suspend fun deleteStats(bookId: String) = Unit
+        override suspend fun deleteStats(
+            bookId: String,
+            userId: String,
+        ) = Unit
 
         override suspend fun recordReadingSession(
             bookId: String,

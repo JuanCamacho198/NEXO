@@ -174,30 +174,3 @@ private fun BookGridCardSkeleton(modifier: Modifier = Modifier) {
         }
     }
 }
-
-/**
- * Home Quick Access placeholder: a section-title bar above a 2x2 tile grid
- * mirroring the four [QuickAccessButton] tiles.
- */
-@Composable
-fun QuickAccessSkeleton(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        NexoSkeletonBox(modifier = Modifier.width(120.dp).height(20.dp))
-        Spacer(modifier = Modifier.height(NexoDimens.spacingSm))
-        Column(verticalArrangement = Arrangement.spacedBy(NexoDimens.spacingSm)) {
-            repeat(2) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(NexoDimens.spacingSm),
-                ) {
-                    repeat(2) {
-                        NexoSkeletonBox(
-                            modifier = Modifier.weight(1f).height(108.dp),
-                            radius = NexoDimens.spacingSm,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}

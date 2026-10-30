@@ -20,6 +20,7 @@ object CatalogSources {
     const val GUTENDEX = "builtin:gutendex"
     const val OPENLIBRARY = "builtin:openlibrary"
     const val GOOGLEBOOKS = "builtin:googlebooks"
+    const val STANDARD_EBOOKS = "builtin:standard-ebooks"
 
     /** Closed registry of first-party built-in source names. */
     private val KNOWN_BUILTIN_NAMES =
@@ -50,6 +51,7 @@ object CatalogSources {
 const val BUILTIN_GUTENDEX = CatalogSources.GUTENDEX
 const val BUILTIN_OPENLIBRARY = CatalogSources.OPENLIBRARY
 const val BUILTIN_GOOGLEBOOKS = CatalogSources.GOOGLEBOOKS
+const val BUILTIN_STANDARD_EBOOKS = CatalogSources.STANDARD_EBOOKS
 
 /**
  * User-facing brand names for the first-party providers. Brand names are not
@@ -59,6 +61,7 @@ const val BUILTIN_GOOGLEBOOKS = CatalogSources.GOOGLEBOOKS
  */
 const val PROVIDER_LABEL_GUTENDEX = "Gutenberg"
 const val PROVIDER_LABEL_OPENLIBRARY = "Open Library"
+const val PROVIDER_LABEL_STANDARD_EBOOKS = "Standard Ebooks"
 
 fun addonSource(addonId: String): String = CatalogSources.addonSource(addonId)
 
@@ -180,6 +183,22 @@ interface CatalogProvider {
     fun supportsFeatured(): Boolean = false
 
     /**
+     * Fail-closed capability probe for the composite keyword fan-out: false
+     * means "this provider cannot answer a keyword query", so it is never
+     * called by a search and never participates in the whole-composite cache
+     * pre-read. Its source stays browsable and detail-routable through
+     * [searchSource] / [getDetails].
+     *
+     * Standard Ebooks is the only provider that opts out: the site publishes a
+     * single newest-releases feed with no query parameter, so a keyword search
+     * has nothing to return. Leaving it in the fan-out would not change any
+     * result (it yields an empty page), but it would permanently defeat the
+     * "every provider page is cached, serve without I/O" fast path, because an
+     * empty page is never cached.
+     */
+    fun supportsSearch(): Boolean = true
+
+    /**
      * Per-source search scoped to one [sourceId]. Fail-closed default: an
      * unsupported id yields an empty page rather than a crash.
      */
@@ -188,6 +207,24 @@ interface CatalogProvider {
         query: String,
         page: Int,
     ): PagedResult = PagedResult(emptyList(), null, 0)
+
+    /**
+     * Closed topic filter, NOT free text. Gutendex's `?topic=` selector is a
+     * different parameter from `?search=`: measured live, `topic=science fiction`
+     * answers 3 530 books while `search=science fiction` answers 6. [term] must be
+     * a member of the closed `TOPIC_ROTATION` table; a raw string must never reach
+     * the upstream, exactly like [CatalogFeaturedSort].
+     *
+     * Fail-closed default: a provider with no topic capability returns an empty
+     * page, so its rail auto-hides instead of erroring.
+     */
+    suspend fun topic(
+        term: String,
+        page: Int,
+    ): PagedResult = PagedResult(emptyList(), null, 0)
+
+    /** Fail-closed capability probe: false means "do not build a topic rail". */
+    fun supportsTopic(): Boolean = false
 }
 
 enum class CatalogSourceKind {

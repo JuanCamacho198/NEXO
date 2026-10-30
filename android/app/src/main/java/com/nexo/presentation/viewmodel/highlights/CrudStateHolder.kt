@@ -2,6 +2,7 @@ package com.nexo.presentation.viewmodel.highlights
 
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -11,6 +12,7 @@ import kotlinx.coroutines.launch
 
 class CrudStateHolder(
     private val readerRepository: ReaderRepository,
+    private val activeUser: ActiveUserProvider,
     private val scope: CoroutineScope,
     private val uiEvent: MutableSharedFlow<UiEvent>,
 ) {
@@ -38,7 +40,7 @@ class CrudStateHolder(
                 note = text.ifBlank { null },
                 updatedAtEpochMillis = System.currentTimeMillis(),
             )
-        scope.launch { readerRepository.upsertHighlight(updated) }
+        scope.launch { readerRepository.upsertHighlight(updated, activeUser.requireUserId()) }
         highlightToEdit.update { null }
         editNoteText.update { "" }
     }
@@ -59,7 +61,7 @@ class CrudStateHolder(
                 updatedAtEpochMillis = System.currentTimeMillis(),
             )
         scope.launch {
-            readerRepository.upsertHighlight(updated)
+            readerRepository.upsertHighlight(updated, activeUser.requireUserId())
             uiEvent.emit(UiEvent.ShowSnackbar("Highlight deleted"))
         }
         highlightToDelete.update { null }
@@ -85,7 +87,7 @@ class CrudStateHolder(
                 updatedAtEpochMillis = System.currentTimeMillis(),
             )
         scope.launch {
-            readerRepository.upsertHighlight(updated)
+            readerRepository.upsertHighlight(updated, activeUser.requireUserId())
             uiEvent.emit(UiEvent.ShowSnackbar("Color changed"))
         }
         highlightToChangeColor.update { null }
@@ -113,7 +115,7 @@ class CrudStateHolder(
                 updatedAtEpochMillis = System.currentTimeMillis(),
             )
         scope.launch {
-            readerRepository.upsertHighlight(updated)
+            readerRepository.upsertHighlight(updated, activeUser.requireUserId())
             uiEvent.emit(UiEvent.ShowSnackbar("Tag saved"))
         }
         highlightToEditTag.update { null }

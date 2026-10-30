@@ -8,6 +8,7 @@ import com.nexo.data.remote.catalog.CatalogFileDownloader
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.DuplicateBookException
 import com.nexo.domain.repository.LibraryRepository
+import com.nexo.testutil.TEST_USER_ID
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -111,16 +112,16 @@ class DownloadAndImportBookUseCaseTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
-            coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns importedBook()
+            coEvery { repo.findBookByTitleAndAuthor(any(), any(), any()) } returns importedBook()
             val downloader = FakeDownloader()
             val importUseCase = mockk<ImportEpubBookUseCase>()
             val tempDir = tempFolder.newFolder("catalog")
 
-            val states = useCase(downloader, importUseCase, repo, tempDir, dispatcher)(catalogBook()).toList()
+            val states = useCase(downloader, importUseCase, repo, tempDir, dispatcher)(TEST_USER_ID, catalogBook()).toList()
 
             assertTrue(states.last() is DownloadImportState.Duplicate)
             assertEquals(0, downloader.invocations)
-            coVerify(exactly = 0) { importUseCase.invoke(any(), any()) }
+            coVerify(exactly = 0) { importUseCase.invoke(any(), any(), any()) }
         }
 
     @Test
@@ -128,13 +129,13 @@ class DownloadAndImportBookUseCaseTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
-            coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns null
+            coEvery { repo.findBookByTitleAndAuthor(any(), any(), any()) } returns null
             val downloader = FakeDownloader()
             val importUseCase = mockk<ImportEpubBookUseCase>()
-            coEvery { importUseCase.invoke(any(), any()) } returns Result.success(importedBook())
+            coEvery { importUseCase.invoke(any(), any(), any()) } returns Result.success(importedBook())
             val tempDir = tempFolder.newFolder("catalog")
 
-            val states = useCase(downloader, importUseCase, repo, tempDir, dispatcher)(catalogBook()).toList()
+            val states = useCase(downloader, importUseCase, repo, tempDir, dispatcher)(TEST_USER_ID, catalogBook()).toList()
 
             assertEquals(DownloadImportState.Idle, states.first())
             assertTrue(states.getOrNull(1) is DownloadImportState.Downloading)
@@ -151,19 +152,19 @@ class DownloadAndImportBookUseCaseTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
-            coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns null
+            coEvery { repo.findBookByTitleAndAuthor(any(), any(), any()) } returns null
             val downloader = FakeDownloader(failAtChunk = 1)
             val importUseCase = mockk<ImportEpubBookUseCase>()
             val tempDir = tempFolder.newFolder("catalog")
 
-            val states = useCase(downloader, importUseCase, repo, tempDir, dispatcher)(catalogBook()).toList()
+            val states = useCase(downloader, importUseCase, repo, tempDir, dispatcher)(TEST_USER_ID, catalogBook()).toList()
 
             val failure = states.last()
             assertTrue(failure is DownloadImportState.Failure)
             assertEquals(CatalogErrorCode.NETWORK_ERROR, (failure as DownloadImportState.Failure).error)
             assertTrue(tempDir.listFiles().orEmpty().none { it.name.endsWith(".part") })
             assertTrue(tempDir.listFiles().orEmpty().none { it.name.endsWith(".epub") })
-            coVerify(exactly = 0) { importUseCase.invoke(any(), any()) }
+            coVerify(exactly = 0) { importUseCase.invoke(any(), any(), any()) }
         }
 
     @Test
@@ -171,7 +172,7 @@ class DownloadAndImportBookUseCaseTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
-            coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns null
+            coEvery { repo.findBookByTitleAndAuthor(any(), any(), any()) } returns null
             val downloader = FakeDownloader(hangAfterFirstChunk = true)
             val importUseCase = mockk<ImportEpubBookUseCase>()
             val tempDir = tempFolder.newFolder("catalog")
@@ -179,7 +180,7 @@ class DownloadAndImportBookUseCaseTest {
             val states = mutableListOf<DownloadImportState>()
             val job =
                 launch(dispatcher) {
-                    useCase(downloader, importUseCase, repo, tempDir, dispatcher)(catalogBook()).collect {
+                    useCase(downloader, importUseCase, repo, tempDir, dispatcher)(TEST_USER_ID, catalogBook()).collect {
                         states += it
                     }
                 }
@@ -189,7 +190,7 @@ class DownloadAndImportBookUseCaseTest {
 
             assertTrue(states.none { it is DownloadImportState.Failure })
             assertTrue(tempDir.listFiles().orEmpty().none { it.name.endsWith(".part") })
-            coVerify(exactly = 0) { importUseCase.invoke(any(), any()) }
+            coVerify(exactly = 0) { importUseCase.invoke(any(), any(), any()) }
         }
 
     @Test
@@ -197,13 +198,13 @@ class DownloadAndImportBookUseCaseTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
-            coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns null
+            coEvery { repo.findBookByTitleAndAuthor(any(), any(), any()) } returns null
             val downloader = FakeDownloader()
             val importUseCase = mockk<ImportEpubBookUseCase>()
-            coEvery { importUseCase.invoke(any(), any()) } returns Result.failure(DuplicateBookException())
+            coEvery { importUseCase.invoke(any(), any(), any()) } returns Result.failure(DuplicateBookException())
             val tempDir = tempFolder.newFolder("catalog")
 
-            val states = useCase(downloader, importUseCase, repo, tempDir, dispatcher)(catalogBook()).toList()
+            val states = useCase(downloader, importUseCase, repo, tempDir, dispatcher)(TEST_USER_ID, catalogBook()).toList()
 
             assertTrue(states.last() is DownloadImportState.Duplicate)
             assertTrue(states.none { it is DownloadImportState.Failure })
@@ -214,14 +215,14 @@ class DownloadAndImportBookUseCaseTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val repo = mockk<LibraryRepository>()
-            coEvery { repo.findBookByTitleAndAuthor(any(), any()) } returns null
+            coEvery { repo.findBookByTitleAndAuthor(any(), any(), any()) } returns null
             val downloader = FakeDownloader()
             val importUseCase = mockk<ImportEpubBookUseCase>()
-            coEvery { importUseCase.invoke(any(), any()) } returns Result.success(importedBook())
+            coEvery { importUseCase.invoke(any(), any(), any()) } returns Result.success(importedBook())
             val tempDir = tempFolder.newFolder("catalog")
 
-            useCase(downloader, importUseCase, repo, tempDir, dispatcher)(catalogBook()).toList()
-            useCase(downloader, importUseCase, repo, tempDir, dispatcher)(catalogBook()).toList()
+            useCase(downloader, importUseCase, repo, tempDir, dispatcher)(TEST_USER_ID, catalogBook()).toList()
+            useCase(downloader, importUseCase, repo, tempDir, dispatcher)(TEST_USER_ID, catalogBook()).toList()
 
             val names = downloader.destinations.map { it.name }
             assertEquals(2, names.size)

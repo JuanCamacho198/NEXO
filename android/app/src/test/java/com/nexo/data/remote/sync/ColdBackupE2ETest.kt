@@ -5,19 +5,21 @@ import com.nexo.data.local.dao.BookmarkDao
 import com.nexo.data.local.dao.HighlightDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingSessionDao
-import com.nexo.data.local.dao.StoredBookPath
-import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.BookmarkEntity
 import com.nexo.data.local.entity.HighlightEntity
 import com.nexo.data.local.entity.ReadingProgressEntity
-import com.nexo.data.local.entity.ReadingSessionEntity
 import com.nexo.data.local.entity.SyncEntityType
-import com.nexo.data.local.entity.SyncOutboxEntity
 import com.nexo.data.remote.supabase.SupabaseBookCatalogDataSource
 import com.nexo.data.remote.supabase.SupabaseProgressDataSource
 import com.nexo.data.session.SessionManager
 import com.nexo.domain.model.AuthSession
+import com.nexo.testutil.FakeBookDao
+import com.nexo.testutil.FakeBookmarkDao
+import com.nexo.testutil.FakeHighlightDao
+import com.nexo.testutil.FakeReadingProgressDao
+import com.nexo.testutil.FakeReadingSessionDao
+import com.nexo.testutil.FakeSyncOutboxDao
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -85,11 +87,11 @@ class ColdBackupE2ETest {
             // We verify export uses exactly one upload, and that no extra Drive call is
             // implied by progress/highlight/bookmark upserts (those go to Supabase).
             val svc = service(hasSession = true)
-            coEvery { bookDao.observeAllBooks() } returns MutableStateFlow(emptyList())
-            coEvery { highlightDao.observeAllHighlights() } returns MutableStateFlow(emptyList())
-            coEvery { bookmarkDao.observeAllBookmarks() } returns MutableStateFlow(emptyList())
-            coEvery { readingProgressDao.getAll() } returns emptyList()
-            coEvery { readingSessionDao.getAll() } returns emptyList()
+            coEvery { bookDao.observeAllBooks("u1") } returns MutableStateFlow(emptyList())
+            coEvery { highlightDao.observeAllHighlights("u1") } returns MutableStateFlow(emptyList())
+            coEvery { bookmarkDao.observeAllBookmarks("u1") } returns MutableStateFlow(emptyList())
+            coEvery { readingProgressDao.getAll("u1") } returns emptyList()
+            coEvery { readingSessionDao.getAll("u1") } returns emptyList()
             coEvery { remote.upload(any(), any()) } returns Unit
 
             val result = svc.exportColdBackup("u1")
@@ -199,9 +201,10 @@ class ColdBackupE2ETest {
                     filePath = "/tmp/b1.epub",
                     format = "epub",
                     updatedAtEpochMillis = 1,
+                    userId = "u1",
                 )
             val fakeProgressDao = FakeReadingProgressDao()
-            fakeProgressDao.progress["b1"] =
+            fakeProgressDao.rows["b1"] =
                 ReadingProgressEntity(
                     id = "rp1",
                     bookId = "b1",
@@ -209,9 +212,10 @@ class ColdBackupE2ETest {
                     percentage = 42f,
                     updatedAtEpochMillis = 1000L,
                     locatorJson = """{"href":"ch.xhtml","type":"app/xhtml+xml","locations":{"fragment":"epubcfi(/6/4!/4/2)","progression":0.42}}""",
+                    userId = "u1",
                 )
             val fakeHighlightDao = FakeHighlightDao()
-            fakeHighlightDao.highlights["h1"] =
+            fakeHighlightDao.rows["h1"] =
                 HighlightEntity(
                     id = "h1",
                     bookId = "b1",
@@ -224,9 +228,10 @@ class ColdBackupE2ETest {
                     locatorJson = null,
                     type = null,
                     tag = null,
+                    userId = "u1",
                 )
             val fakeBookmarkDao = FakeBookmarkDao()
-            fakeBookmarkDao.bookmarks["bm1"] =
+            fakeBookmarkDao.rows["bm1"] =
                 BookmarkEntity(
                     id = "bm1",
                     bookId = "b1",
@@ -235,6 +240,7 @@ class ColdBackupE2ETest {
                     updatedAtEpochMillis = 1002L,
                     deletedAtEpochMillis = null,
                     locatorJson = null,
+                    userId = "u1",
                 )
             val fakeOutboxDao = FakeSyncOutboxDao()
             val repo =
@@ -256,9 +262,9 @@ class ColdBackupE2ETest {
                     updatedAtEpochMillis = 1000L,
                     locatorJson = """{"href":"ch","type":"x","locations":{"fragment":"epubcfi(/6/4!/4/2)"}}""",
                 )
-            repo.upsertProgress(progress)
+            repo.upsertProgress(progress, "u1")
             val progress2 = progress.copy(percentage = 55f, updatedAtEpochMillis = 2000L)
-            repo.upsertProgress(progress2)
+            repo.upsertProgress(progress2, "u1")
 
             // Queue two highlights with distinct ids — must create two rows (per-id)
             val hl1 =
@@ -276,8 +282,8 @@ class ColdBackupE2ETest {
                     type = null,
                 )
             val hl2 = hl1.copy(id = "h2", textContent = "b")
-            repo.upsertHighlight(hl1)
-            repo.upsertHighlight(hl2)
+            repo.upsertHighlight(hl1, "u1")
+            repo.upsertHighlight(hl2, "u1")
 
             // Queue two bookmarks distinct ids — per-id
             val bm1 =
@@ -290,8 +296,8 @@ class ColdBackupE2ETest {
                     deletedAtEpochMillis = null,
                 )
             val bm2 = bm1.copy(id = "bm2")
-            repo.upsertBookmark(bm1)
-            repo.upsertBookmark(bm2)
+            repo.upsertBookmark(bm1, "u1")
+            repo.upsertBookmark(bm2, "u1")
 
             // Valid JSON asserts
             for (row in fakeOutboxDao.items) {
@@ -428,247 +434,4 @@ class ColdBackupE2ETest {
             assertEquals(1, result.books)
             assertTrue(result.failures.isEmpty())
         }
-
-    // ── Fakes ───────────────────────────────────────────────────────────
-    private class FakeBookDao : BookDao {
-        override suspend fun allStoredPaths(): List<StoredBookPath> = emptyList()
-
-        override suspend fun updateFilePath(
-            bookId: String,
-            filePath: String,
-        ) = Unit
-
-        val books = mutableMapOf<String, BookEntity>()
-
-        override suspend fun getBookById(id: String) = books[id]
-
-        override suspend fun upsert(book: BookEntity) {
-            books[book.id] = book
-        }
-
-        override suspend fun upsertAll(books: List<BookEntity>) {
-            books.forEach { this.books[it.id] = it }
-        }
-
-        override fun observeAllBooks() = MutableStateFlow(books.values.toList())
-
-        override fun observeReadingBooks() = MutableStateFlow(books.values.toList())
-
-        override fun observeAllBooksPaged() = throw NotImplementedError()
-
-        override fun observeBookById(id: String) = MutableStateFlow(books[id])
-
-        override suspend fun deleteBook(
-            id: String,
-            deletedAt: Long,
-        ) {
-            books.remove(id)
-        }
-
-        override suspend fun deleteById(bookId: String) {
-            books.remove(bookId)
-        }
-
-        override suspend fun count(): Int = books.size
-
-        override suspend fun updateRating(
-            id: String,
-            rating: Int?,
-        ) {}
-
-        override suspend fun updateStatus(
-            id: String,
-            status: String?,
-            updatedAt: Long,
-        ) {}
-
-        override suspend fun updateMetadata(
-            bookId: String,
-            title: String,
-            author: String?,
-            description: String?,
-            coverPath: String?,
-            genre: String?,
-            language: String?,
-            publisher: String?,
-            tags: String?,
-            publishedDate: String?,
-            updatedAt: Long,
-        ) {}
-
-        override suspend fun startReading(
-            id: String,
-            startedAt: Long,
-        ) {}
-
-        override suspend fun updateReadingProgress(
-            bookId: String,
-            progress: Float,
-            updatedAt: Long,
-        ) {}
-
-        override suspend fun completeReading(
-            id: String,
-            completedAt: Long,
-        ) {}
-    }
-
-    private class FakeReadingProgressDao : ReadingProgressDao {
-        val progress = mutableMapOf<String, ReadingProgressEntity>()
-
-        override fun observeProgressForBook(bookId: String) = MutableStateFlow(progress[bookId])
-
-        override suspend fun getProgressForBook(bookId: String) = progress[bookId]
-
-        override suspend fun upsert(p: ReadingProgressEntity) {
-            progress[p.bookId] = p
-        }
-
-        override suspend fun getAll() = progress.values.toList()
-
-        override fun observeAll() = MutableStateFlow(progress.values.toList())
-
-        override suspend fun count() = progress.size
-    }
-
-    private class FakeHighlightDao : HighlightDao {
-        val highlights = mutableMapOf<String, HighlightEntity>()
-
-        override fun observeAllHighlights() = MutableStateFlow(highlights.values.toList())
-
-        override fun observeAllHighlightsPaged() = throw NotImplementedError()
-
-        override fun observeHighlightsForBook(bookId: String) = MutableStateFlow(highlights.values.filter { it.bookId == bookId })
-
-        override suspend fun getHighlightById(id: String) = highlights[id]
-
-        override suspend fun deleteById(id: String) {
-            highlights.remove(id)
-        }
-
-        override suspend fun getHighlightsForBook(bookId: String) = highlights.values.filter { it.bookId == bookId }
-
-        override suspend fun upsert(h: HighlightEntity) {
-            highlights[h.id] = h
-        }
-
-        override suspend fun upsertAll(list: List<HighlightEntity>) {
-            list.forEach { highlights[it.id] = it }
-        }
-
-        override suspend fun count() = highlights.size
-
-        override fun observeAllTags() = MutableStateFlow(emptyList<String>())
-    }
-
-    private class FakeBookmarkDao : BookmarkDao {
-        val bookmarks = mutableMapOf<String, BookmarkEntity>()
-
-        override fun observeAllBookmarks() = MutableStateFlow(bookmarks.values.toList())
-
-        override fun observeBookmarksForBook(bookId: String) = MutableStateFlow(bookmarks.values.filter { it.bookId == bookId })
-
-        override suspend fun getBookmarkById(id: String) = bookmarks[id]
-
-        override suspend fun getBookmarksForBook(bookId: String) = bookmarks.values.filter { it.bookId == bookId }
-
-        override suspend fun upsert(b: BookmarkEntity) {
-            bookmarks[b.id] = b
-        }
-
-        override suspend fun upsertAll(list: List<BookmarkEntity>) {
-            list.forEach { bookmarks[it.id] = it }
-        }
-
-        override suspend fun count() = bookmarks.size
-
-        override suspend fun deleteById(id: String) {
-            bookmarks.remove(id)
-        }
-    }
-
-    private class FakeReadingSessionDao : ReadingSessionDao {
-        val sessions = mutableListOf<ReadingSessionEntity>()
-
-        override suspend fun insert(session: ReadingSessionEntity) {
-            sessions.add(session)
-        }
-
-        override fun getTotalMinutesForDate(date: Long) = MutableStateFlow(0)
-
-        override fun getTotalMinutesForDateAndUser(
-            date: Long,
-            userId: String,
-        ) = MutableStateFlow(0)
-
-        override fun getTotalMinutes() = MutableStateFlow(0)
-
-        override fun getSessionCount() = MutableStateFlow(0)
-
-        override fun getSessionCountForDate(date: Long) = MutableStateFlow(0)
-
-        override fun getSessionCountForDateAndUser(
-            date: Long,
-            userId: String,
-        ) = MutableStateFlow(0)
-
-        override fun observeSessionsForBook(bookId: String) = MutableStateFlow(sessions.filter { it.bookId == bookId })
-
-        override suspend fun deleteSessionsForBook(bookId: String) {
-            sessions.removeAll { it.bookId == bookId }
-        }
-
-        override suspend fun count() = sessions.size
-
-        override suspend fun getAll() = sessions.toList()
-
-        override suspend fun getDailyMinutes() = emptyList<com.nexo.data.local.model.DailyReadingMinutes>()
-
-        override suspend fun getDailyMinutesFromDate(startDate: Long) = emptyList<com.nexo.data.local.model.DailyReadingMinutes>()
-
-        override suspend fun getById(id: String) = sessions.firstOrNull { it.id == id }
-
-        override suspend fun getDailyMinutesForUser(userId: String?) = emptyList<com.nexo.data.local.model.DailyReadingMinutes>()
-    }
-
-    private class FakeSyncOutboxDao : SyncOutboxDao {
-        val items = mutableListOf<SyncOutboxEntity>()
-
-        override suspend fun getPendingItems() = items.toList()
-
-        override suspend fun insert(item: SyncOutboxEntity) {
-            items.add(item)
-        }
-
-        override suspend fun deleteById(id: String) {
-            items.removeAll { it.id == id }
-        }
-
-        override suspend fun incrementRetryCount(
-            id: String,
-            error: String,
-        ) {}
-
-        override suspend fun pruneFailedItems(maxRetries: Int) {}
-
-        override fun observePendingCount() = MutableStateFlow(items.size)
-
-        override suspend fun getByTypeAndEntityId(
-            type: String,
-            entityId: String,
-        ) = items.firstOrNull { it.entityType == type && it.entityId == entityId }
-
-        override suspend fun updatePayload(
-            id: String,
-            payloadJson: String,
-        ) {
-            val idx = items.indexOfFirst { it.id == id }
-            if (idx >= 0) items[idx] = items[idx].copy(payloadJson = payloadJson)
-        }
-
-        override suspend fun upsertCoalesced(item: SyncOutboxEntity) {
-            val existing = item.entityId?.let { getByTypeAndEntityId(item.entityType, it) }
-            if (existing != null) updatePayload(existing.id, item.payloadJson) else insert(item)
-        }
-    }
 }

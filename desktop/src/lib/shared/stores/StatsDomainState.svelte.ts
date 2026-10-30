@@ -52,11 +52,11 @@ class StatsDomainState {
 
   // ─── Methods ───
 
-  async loadStats(bookId?: string): Promise<void> {
+  async loadStats(bookId?: string, userId = ''): Promise<void> {
     this.isLoadingStats = true;
 
     try {
-      this.stats = await this.viewerPort.getReadingStats(bookId);
+      this.stats = await this.viewerPort.getReadingStats(bookId, userId);
       this.statsUnavailableReason = null;
     } catch (error) {
       const typed = error as MaybeCommandError;
@@ -91,6 +91,7 @@ class StatsDomainState {
     to: string,
     bookId?: string,
     target: 'current' | 'previous' = 'current',
+    userId = '',
   ): Promise<void> {
     if (target === 'current') {
       this.isLoadingRange = true;
@@ -98,7 +99,7 @@ class StatsDomainState {
     }
 
     try {
-      const stats = await this.viewerPort.getReadingStatsForRange(from, to, bookId);
+      const stats = await this.viewerPort.getReadingStatsForRange(from, to, bookId, userId);
       if (target === 'current') {
         this.currentStats = stats;
       } else {

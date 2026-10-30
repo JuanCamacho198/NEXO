@@ -6,21 +6,52 @@ import com.nexo.domain.model.LayoutPreferences
 import com.nexo.domain.model.LineHeightPreset
 import com.nexo.domain.model.ReaderSettings
 import com.nexo.domain.model.ReaderTheme
+import com.nexo.domain.session.ActiveUserProvider
 import org.json.JSONArray
 
 /**
- * Persists reader settings (font size, theme, line height) to SharedPreferences.
+ * Persists reader settings (font size, theme, line height, layout, custom
+ * highlight palette) to an account-scoped SharedPreferences file.
+ *
  * Uses enum [name] for stable persistence across enum reordering.
+ *
+ * ## Per-account (T10 of `aislamiento-datos-por-cuenta`)
+ *
+ * The file is `nexo_reader_prefs__{userId}` — one file per account, resolved at
+ * call time from [ActiveUserProvider] (see [AccountPreferences] for why the file
+ * name, not the keys, carries isolation). Before this, two accounts shared
+ * `nexo_reader_prefs` and the second inherited the first's font size, theme and
+ * highlight palette.
+ *
+ * With no active account (signed out, or the anonymous session of decision D5)
+ * [load] returns defaults and [save] is a no-op: the anonymous path persists
+ * nothing.
+ *
+ * ## Drive tokens are NOT here
+ *
+ * This class used to also read/write `drive_access_token` /
+ * `drive_refresh_token` in plain preferences — a second, unencrypted token
+ * surface that nothing called. It was removed: the Drive OAuth tokens live only
+ * in [com.nexo.data.remote.drive.EncryptedDriveTokenStore], which is encrypted
+ * and now per-account too. Token storage was not downgraded; the plaintext copy
+ * was deleted.
  */
 class ReaderPreferences(
     context: Context,
+    private val activeUser: ActiveUserProvider,
 ) {
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+
+    /** The active account's file, or `null` when no account owns this state. */
+    private fun prefs() = AccountPreferences.open(appContext, PREFS_NAME, activeUser)
 
     /**
-     * Load saved settings or return defaults.
+     * Load saved settings or return defaults. Returns defaults when no account is
+     * active rather than crashing.
      */
     fun load(): ReaderSettings {
+        val prefs = prefs() ?: return ReaderSettings()
+
         val fontSizeName =
             prefs.getString(KEY_FONT_SIZE, FontSizePreset.M.name)
                 ?: FontSizePreset.M.name
@@ -70,9 +101,11 @@ class ReaderPreferences(
     }
 
     /**
-     * Persist settings.
+     * Persist settings for the active account. A no-op when no account is active
+     * (decision D5: the anonymous path writes nothing).
      */
     fun save(settings: ReaderSettings) {
+        val prefs = prefs() ?: return
         val editor =
             prefs
                 .edit()
@@ -103,54 +136,9 @@ class ReaderPreferences(
         default: T,
     ): T = entries.find { it.name == name } ?: default
 
-    // ── Drive token persistence ─────────────────────────────────────
-
-    /**
-     * The stored Google Drive access token. Null when not authorized.
-     * Persisted via SharedPreferences (backed by EncryptedSharedPreferences on API 23+).
-     */
-    var driveAccessToken: String?
-        get() = prefs.getString(KEY_DRIVE_ACCESS_TOKEN, null)
-        set(value) {
-            prefs.edit().putString(KEY_DRIVE_ACCESS_TOKEN, value).apply()
-        }
-
-    /**
-     * The stored Google Drive refresh token. Null when not available.
-     */
-    var driveRefreshToken: String?
-        get() = prefs.getString(KEY_DRIVE_REFRESH_TOKEN, null)
-        set(value) {
-            prefs.edit().putString(KEY_DRIVE_REFRESH_TOKEN, value).apply()
-        }
-
-    /**
-     * Save both Drive tokens atomically.
-     */
-    fun saveDriveTokens(
-        accessToken: String,
-        refreshToken: String?,
-    ) {
-        prefs
-            .edit()
-            .putString(KEY_DRIVE_ACCESS_TOKEN, accessToken)
-            .putString(KEY_DRIVE_REFRESH_TOKEN, refreshToken)
-            .apply()
-    }
-
-    /**
-     * Clear all stored Drive tokens.
-     */
-    fun clearDriveTokens() {
-        prefs
-            .edit()
-            .remove(KEY_DRIVE_ACCESS_TOKEN)
-            .remove(KEY_DRIVE_REFRESH_TOKEN)
-            .apply()
-    }
-
     companion object {
-        private const val PREFS_NAME = "nexo_reader_prefs"
+        /** Base name; [AccountPreferences] appends the owner segment. */
+        const val PREFS_NAME = "nexo_reader_prefs"
         private const val KEY_FONT_SIZE = "font_size"
         private const val KEY_THEME = "theme"
         private const val KEY_LINE_HEIGHT = "line_height"
@@ -158,7 +146,5 @@ class ReaderPreferences(
         private const val KEY_LEFT_MARGIN = "left_margin"
         private const val KEY_RIGHT_MARGIN = "right_margin"
         private const val KEY_PALETTE = "highlight_palette"
-        private const val KEY_DRIVE_ACCESS_TOKEN = "drive_access_token"
-        private const val KEY_DRIVE_REFRESH_TOKEN = "drive_refresh_token"
     }
 }

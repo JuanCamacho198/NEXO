@@ -1,5 +1,6 @@
 package com.nexo.presentation.feature.discover
 
+import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogException
@@ -32,11 +33,22 @@ class DiscoverSectionViewModelTest {
     ) : CatalogProvider {
         val featuredCalls = mutableListOf<Pair<CatalogFeaturedSort, Int>>()
         val searchSourceCalls = mutableListOf<Triple<String, String, Int>>()
+        val topicCalls = mutableListOf<Pair<String, Int>>()
 
         override suspend fun search(
             query: String,
             page: Int,
         ): PagedResult = PagedResult(emptyList(), null, 0)
+
+        override suspend fun topic(
+            term: String,
+            page: Int,
+        ): PagedResult {
+            topicCalls.add(term to page)
+            return if (page == 1) firstPage else secondPage
+        }
+
+        override fun supportsTopic(): Boolean = true
 
         override suspend fun getDetails(id: String): CatalogBook = throw CatalogException(CatalogErrorCode.NOT_FOUND, "unused")
 
@@ -140,44 +152,44 @@ class DiscoverSectionViewModelTest {
         }
 
     @Test
-    fun authorSelectorRoutesToGoogleBooksSearchSource() =
+    fun topicSelectorRoutesToItsOwnSourceWithTheTopicTerm() =
         runTest {
             val provider =
                 FakeSectionProvider(
-                    firstPage = PagedResult(listOf(book("googlebooks:1", "One")), null, 1),
+                    firstPage = PagedResult(listOf(book("gutendex:1", "One")), null, 1),
                 )
             val vm =
                 DiscoverSectionViewModel(
                     catalogProvider = provider,
-                    sectionTitle = "Herman Melville",
+                    sectionTitle = "Science fiction",
                     sort = null,
-                    sourceId = null,
-                    authorTerm = "herman melville",
+                    sourceId = BUILTIN_GUTENDEX,
+                    term = "science fiction",
                 )
 
             assertEquals(DiscoverStatus.LOADED, vm.uiState.value.status)
             assertEquals(
-                listOf(Triple("builtin:googlebooks", "herman melville", 1)),
+                listOf(Triple(BUILTIN_GUTENDEX, "science fiction", 1)),
                 provider.searchSourceCalls,
             )
             assertTrue(provider.featuredCalls.isEmpty())
         }
 
     @Test
-    fun authorSelectorPaginatesAndStopsAtTheEnd() =
+    fun topicSelectorPaginatesAndStopsAtTheEnd() =
         runTest {
             val provider =
                 FakeSectionProvider(
-                    firstPage = PagedResult(listOf(book("googlebooks:1", "One")), nexoPage = 2, totalCount = 2),
-                    secondPage = PagedResult(listOf(book("googlebooks:2", "Two")), nexoPage = null, totalCount = 2),
+                    firstPage = PagedResult(listOf(book("gutendex:1", "One")), nexoPage = 2, totalCount = 2),
+                    secondPage = PagedResult(listOf(book("gutendex:2", "Two")), nexoPage = null, totalCount = 2),
                 )
             val vm =
                 DiscoverSectionViewModel(
                     catalogProvider = provider,
-                    sectionTitle = "Herman Melville",
+                    sectionTitle = "Science fiction",
                     sort = null,
-                    sourceId = null,
-                    authorTerm = "herman melville",
+                    sourceId = BUILTIN_GUTENDEX,
+                    term = "science fiction",
                 )
 
             assertEquals(2, vm.uiState.value.nextPage)
@@ -197,6 +209,7 @@ class DiscoverSectionViewModelTest {
             assertEquals(DiscoverStatus.EMPTY, neither.uiState.value.status)
             assertNull(neither.uiState.value.nextPage)
 
+            // Sort plus a source selector is malformed and must not pick a seam.
             val both =
                 DiscoverSectionViewModel(
                     provider,
@@ -206,19 +219,40 @@ class DiscoverSectionViewModelTest {
                 )
             assertEquals(DiscoverStatus.EMPTY, both.uiState.value.status)
 
-            // Author selector plus a source selector is equally malformed.
-            val authorAndSource =
-                DiscoverSectionViewModel(
-                    provider,
-                    "Ambiguous",
-                    sort = null,
-                    sourceId = "builtin:gutendex",
-                    authorTerm = "herman melville",
-                )
-            assertEquals(DiscoverStatus.EMPTY, authorAndSource.uiState.value.status)
-
             assertTrue(provider.featuredCalls.isEmpty())
             assertTrue(provider.searchSourceCalls.isEmpty())
+            assertTrue(provider.topicCalls.isEmpty())
+        }
+
+    /**
+     * "Ver todo" on a topic shelf must page the SAME `?topic=` selector the rail
+     * used. Handing the term to `searchSource` would answer 6 books for a shelf
+     * whose topic query answers 3 530 — the rail bug, one screen deeper.
+     */
+    @Test
+    fun topicSectionPagesTheTopicDoorNeverTheFreeTextSearch() =
+        runTest {
+            val provider =
+                FakeSectionProvider(
+                    firstPage = PagedResult(listOf(book("gutendex:1", "Dune")), 2, 3_530),
+                    secondPage = PagedResult(listOf(book("gutendex:2", "Solaris")), null, 3_530),
+                )
+            val vm =
+                DiscoverSectionViewModel(
+                    provider,
+                    "Ciencia ficción",
+                    sort = null,
+                    sourceId = null,
+                    topicTerm = "science fiction",
+                )
+            assertEquals(DiscoverStatus.LOADED, vm.uiState.value.status)
+            assertEquals(1, vm.uiState.value.books.size)
+            vm.loadNextPage()
+
+            assertEquals(listOf("science fiction" to 1, "science fiction" to 2), provider.topicCalls)
+            assertTrue(provider.searchSourceCalls.isEmpty())
+            assertTrue(provider.featuredCalls.isEmpty())
+            assertEquals(3_530, vm.uiState.value.totalCount)
         }
 
     @Test

@@ -1,4 +1,4 @@
-package com.nexo.presentation.feature.home
+package com.nexo.presentation.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,8 +27,14 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.nexo.R
 import com.nexo.presentation.theme.NexoDimens
+import com.nexo.presentation.theme.NexoSectionLabel
 import com.nexo.ui.icons.NexoIcons
 
+/**
+ * Today's reading scoreboard: minutes, sessions and streak as three equal
+ * tiles. Lives on the Statistics screen — it reports on the habit rather than
+ * resuming it, which is why it is not part of Home.
+ */
 @Composable
 fun TodaySummarySection(
     minutesReadToday: Int,
@@ -36,7 +42,7 @@ fun TodaySummarySection(
     currentStreak: Int,
 ) {
     Column {
-        Text(text = stringResource(R.string.home_today_summary_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(text = stringResource(R.string.home_today_summary_title), style = NexoSectionLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(NexoDimens.spacingSm))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NexoDimens.spacingSm)) {
             StatCard(icon = NexoIcons.Clock, value = "$minutesReadToday", label = stringResource(R.string.home_minutes), modifier = Modifier.weight(1f))

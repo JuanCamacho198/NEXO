@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 
-const MIGRATIONS: [(&str, &str); 21] = [
+const MIGRATIONS: [(&str, &str); 23] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
@@ -39,6 +39,8 @@ const MIGRATIONS: [(&str, &str); 21] = [
         include_str!("../migrations/0020_drop_dictionary_favorite.sql"),
     ),
     ("0021_notifications", include_str!("../migrations/0021_notifications.sql")),
+    ("0022_bookmark_locator", include_str!("../migrations/0022_bookmark_locator.sql")),
+    ("0023_outbox_owner", include_str!("../migrations/0023_outbox_owner.sql")),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
@@ -81,10 +83,33 @@ pub fn open_and_migrate(db_path: &Path) -> AppResult<Connection> {
                     || (name == "0010_book_genre" && has_column(&tx, "books", "genre")?)
                     || (name == "0011_book_metadata" && has_column(&tx, "books", "language")?)
                     || (name == "0015_dictionary_sync"
-                        && has_column(&tx, "dictionary_words", "user_id")?) =>
+                        && has_column(&tx, "dictionary_words", "user_id")?)
+                    || (name == "0022_bookmark_locator"
+                        && has_column(&tx, "bookmarks", "cfi_location")?)
+                    || (name == "0023_outbox_owner"
+                        && has_column(&tx, "sync_outbox", "user_id")?)
+                    // 0014/0019 are all-or-nothing batches of ADD COLUMN statements, so the
+                    // last column is the completion marker: SQLite applies a batch with
+                    // execute_batch atomically, so either every column landed or none did.
+                    // The incomplete non-replayable branches (batch aborted part-way) cannot
+                    // be repaired here without table surgery; they fall through and surface
+                    // the original error instead of being silently accepted.
+                    || (name == "0014_reading_sessions_sync"
+                        && has_column(&tx, "reading_sessions", "updated_at_epoch_millis")?)
+                    || (name == "0019_dictionary_rich_entries"
+                        && has_column(&tx, "dictionary_words", "source_locator")?)
+                    // 0020 DROPS a column, so its guard is inverted: already-applied means
+                    // is_favorite is ABSENT. A positive has_column probe here would be exactly
+                    // backwards and would mask the real "no such column" failure.
+                    || (name == "0020_drop_dictionary_favorite"
+                        && !has_column(&tx, "dictionary_words", "is_favorite")?) =>
             {
-                // Existing DBs may already have these columns from pre-tracker launches.
-                // Treat as previously applied once all expected columns are present.
+                // These migrations are re-runnable because a crash between the batch and the
+                // ledger insert leaves the schema changed with schema_migrations still empty,
+                // replaying them on the next launch. ADDs then fail on "duplicate column name"
+                // and 0020's DROP fails on "no such column"; both are benign replays once the
+                // column probe confirms the migration's end state. Without the arms the error
+                // propagates out of open_and_migrate and the app cannot open its database.
                 let _ = error;
             }
             Err(error) => return Err(error.into()),
@@ -797,5 +822,69 @@ mod tests {
             })
             .unwrap();
         assert_eq!(word, "pride", "the drop must preserve the existing row");
+    }
+
+    /// Replay path for the inverted 0020 guard: the batch landed but the ledger row
+    /// never did, which is precisely the crash-between-batch-and-ledger window.
+    #[test]
+    fn test_open_and_migrate_replays_all_migrations_over_partially_applied_schema() {
+        let dir =
+            std::env::temp_dir().join(format!("nexo-migration-replay-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("temp dir");
+        let db_path = dir.join("nexo.db");
+
+        // First launch: real tracker writes the ledger, so the schema is fully migrated.
+        {
+            let connection = open_and_migrate(&db_path).expect("first launch migrates cleanly");
+            assert!(
+                !has_column(&connection, "dictionary_words", "is_favorite").unwrap(),
+                "0020 must have dropped is_favorite"
+            );
+        }
+
+        // Simulate the ledger losing rows for the three unguarded migrations while the
+        // schema keeps their effect: exactly what a crash between batch and ledger leaves.
+        {
+            let connection = Connection::open(&db_path).expect("reopen");
+            for name in [
+                "0014_reading_sessions_sync",
+                "0019_dictionary_rich_entries",
+                "0020_drop_dictionary_favorite",
+            ] {
+                connection
+                    .execute("DELETE FROM schema_migrations WHERE name = ?1", [name])
+                    .expect("ledger row dropped");
+            }
+        }
+
+        // Second launch must replay them without erroring out of open_and_migrate.
+        let connection =
+            open_and_migrate(&db_path).expect("replay over an applied schema must succeed");
+        assert!(
+            !has_column(&connection, "dictionary_words", "is_favorite").unwrap(),
+            "0020 replay must be a no-op, not a failure"
+        );
+        assert!(
+            has_column(&connection, "reading_sessions", "updated_at_epoch_millis").unwrap(),
+            "0014 replay must be a no-op, not a failure"
+        );
+        let replayed: Vec<String> = connection
+            .prepare("SELECT name FROM schema_migrations WHERE name IN (?1, ?2, ?3)")
+            .expect("prepare")
+            .query_map(
+                [
+                    "0014_reading_sessions_sync",
+                    "0019_dictionary_rich_entries",
+                    "0020_drop_dictionary_favorite",
+                ],
+                |row| row.get(0),
+            )
+            .expect("query")
+            .map(|row| row.expect("row"))
+            .collect();
+        assert_eq!(replayed.len(), 3, "the ledger must be repaired after a tolerated replay");
+
+        let _ = fs::remove_dir_all(&dir);
     }
 }

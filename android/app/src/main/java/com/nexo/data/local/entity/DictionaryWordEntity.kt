@@ -7,7 +7,19 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "dictionary_words",
-    indices = [Index(value = ["word_normalized"])],
+    indices = [
+        Index(value = ["user_id"]),
+        // Backs the DAO's prefix `search()`: its range stays on
+        // `word_normalized`, and a composite index leading with `user_id` was
+        // measured to fall back to a full table scan there.
+        Index(value = ["word_normalized"]),
+        // (user_id, normalized word) is the dictionary's natural key on every
+        // store: Supabase declares `unique (user_id, normalized_word)` and Rust
+        // creates `CREATE UNIQUE INDEX idx_dict_user_norm`. Without the same
+        // constraint here Android can persist a duplicate the remote upsert
+        // then rejects.
+        Index(value = ["user_id", "word_normalized"], unique = true),
+    ],
 )
 data class DictionaryWordEntity(
     @PrimaryKey
@@ -52,4 +64,6 @@ data class DictionaryWordEntity(
      */
     @ColumnInfo(name = "word_normalized")
     val wordNormalized: String = "",
+    @ColumnInfo(name = "user_id")
+    val userId: String = "",
 )

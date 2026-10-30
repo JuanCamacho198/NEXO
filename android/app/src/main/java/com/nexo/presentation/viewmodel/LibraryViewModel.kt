@@ -14,6 +14,7 @@ import com.nexo.domain.model.BookStatus
 import com.nexo.domain.model.effectiveStatus
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.ImportEpubBookUseCase
 import com.nexo.presentation.UiEvent
@@ -209,6 +210,7 @@ class LibraryViewModel
         private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
         private val readerRepository: ReaderRepository,
         private val getBookProgressUseCase: GetBookProgressUseCase,
+        private val activeUser: ActiveUserProvider,
     ) : ViewModel() {
         private val mutableUiState = MutableStateFlow(LibraryUiState())
 
@@ -311,6 +313,7 @@ class LibraryViewModel
             BookImportStateHolder(
                 importEpubBookUseCase = importEpubBookUseCase,
                 libraryRepository = libraryRepository,
+                activeUser = activeUser,
                 scope = viewModelScope,
                 onImportEvent = { mutableImportEvents.tryEmit(it) },
                 mainDispatcher = mainDispatcher,
@@ -331,6 +334,7 @@ class LibraryViewModel
         private val bookActionStateHolder =
             BookActionStateHolder(
                 libraryRepository = libraryRepository,
+                activeUser = activeUser,
                 appContext = appContext,
                 scope = viewModelScope,
                 onUiEvent = { _uiEvent.tryEmit(it) },
@@ -375,15 +379,16 @@ class LibraryViewModel
         init {
             // Canonical progress map — live Flow via GetBookProgressUseCase.observeProgressPercent (distinctUntilChanged in use case)
             viewModelScope.launch {
-                libraryRepository
-                    .observeLibrary()
-                    .flatMapLatest { books ->
+                activeUser.userId
+                    .flatMapLatest { userId ->
+                        libraryRepository.observeLibrary(userId.orEmpty())
+                    }.flatMapLatest { books ->
                         if (books.isEmpty()) {
                             flowOf(emptyMap())
                         } else {
                             combine(
                                 books.map { book ->
-                                    getBookProgressUseCase.observeProgressPercent(book.id).map { pct ->
+                                    getBookProgressUseCase.observeProgressPercent(book.id, activeUser.requireUserId()).map { pct ->
                                         book.id to pct
                                     }
                                 },
@@ -396,21 +401,30 @@ class LibraryViewModel
             }
             // ── Lifecycle observations (Room flows) ──
             viewModelScope.launch(mainDispatcher) {
-                libraryRepository.observeLibrary().collect { books ->
-                    mutableUiState.update { it.copy(books = books, isLoading = false) }
-                }
+                activeUser.userId
+                    .flatMapLatest { userId ->
+                        libraryRepository.observeLibrary(userId.orEmpty())
+                    }.collect { books ->
+                        mutableUiState.update { it.copy(books = books, isLoading = false) }
+                    }
             }
 
             viewModelScope.launch(mainDispatcher) {
-                libraryRepository.observeTotalReadingTime().collect { totalMinutes ->
-                    mutableUiState.update { it.copy(totalMinutesRead = totalMinutes) }
-                }
+                activeUser.userId
+                    .flatMapLatest { userId ->
+                        libraryRepository.observeTotalReadingTime(userId.orEmpty())
+                    }.collect { totalMinutes ->
+                        mutableUiState.update { it.copy(totalMinutesRead = totalMinutes) }
+                    }
             }
 
             viewModelScope.launch(mainDispatcher) {
-                libraryRepository.observeReadingTimeByBook().collect { readingMinutesByBook ->
-                    mutableUiState.update { it.copy(readingMinutesByBook = readingMinutesByBook) }
-                }
+                activeUser.userId
+                    .flatMapLatest { userId ->
+                        libraryRepository.observeReadingTimeByBook(userId.orEmpty())
+                    }.collect { readingMinutesByBook ->
+                        mutableUiState.update { it.copy(readingMinutesByBook = readingMinutesByBook) }
+                    }
             }
 
             // ── Sync service observations ──
@@ -687,6 +701,7 @@ class LibraryViewModelFactory(
     private val catalogSync: SupabaseBookCatalogSync,
     private val readerRepository: ReaderRepository,
     private val getBookProgressUseCase: GetBookProgressUseCase,
+    private val activeUser: ActiveUserProvider,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -699,6 +714,7 @@ class LibraryViewModelFactory(
                 catalogSync = catalogSync,
                 readerRepository = readerRepository,
                 getBookProgressUseCase = getBookProgressUseCase,
+                activeUser = activeUser,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

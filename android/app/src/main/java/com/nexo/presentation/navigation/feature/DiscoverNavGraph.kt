@@ -53,13 +53,13 @@ fun NavGraphBuilder.discoverGraph(
                     DiscoverSectionRoute(
                         sectionTitle = sectionTitle,
                         sort = rail.sort?.name.orEmpty(),
-                        sourceId = rail.sourceId.orEmpty(),
-                        authorTerm = rail.authorTerm.orEmpty(),
+                        // A topic shelf keeps its `?topic=` selector; only a plain
+                        // per-source rail carries a free-text term.
+                        sourceId = if (rail.topicTerm != null) "" else rail.sourceId.orEmpty(),
+                        term = if (rail.topicTerm != null) "" else rail.topicTerm.orEmpty(),
+                        topicTerm = rail.topicTerm.orEmpty(),
                     ),
                 )
-            },
-            onNavigateToSettingsAddons = {
-                navController.navigate(NexoDestination.SettingsAddons.route)
             },
             onNavigateToLegalPolicy = {
                 navController.navigate(NexoDestination.SettingsLegal.route)
@@ -76,7 +76,8 @@ fun NavGraphBuilder.discoverGraph(
         val route = entry.toRoute<DiscoverSectionRoute>()
         val sectionTitle = route.sectionTitle
         val sourceId = route.sourceId.ifBlank { null }
-        val authorTerm = route.authorTerm.ifBlank { null }
+        val term = route.term
+        val topicTerm = route.topicTerm.ifBlank { null }
         val sort = CatalogFeaturedSort.entries.firstOrNull { it.name == route.sort }
 
         val sectionViewModel =
@@ -85,7 +86,8 @@ fun NavGraphBuilder.discoverGraph(
                 sectionTitle = sectionTitle,
                 sort = sort,
                 sourceId = sourceId,
-                authorTerm = authorTerm,
+                term = term,
+                topicTerm = topicTerm,
                 downloadAndImportBookUseCase = downloadAndImportBookUseCase,
             )
         DiscoverSectionScreen(

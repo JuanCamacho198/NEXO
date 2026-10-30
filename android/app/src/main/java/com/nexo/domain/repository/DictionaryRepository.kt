@@ -4,9 +4,12 @@ import com.nexo.domain.model.DictionaryWord
 import kotlinx.coroutines.flow.Flow
 
 interface DictionaryRepository {
-    fun observeAll(): Flow<List<DictionaryWord>>
+    fun observeAll(userId: String): Flow<List<DictionaryWord>>
 
-    fun search(query: String): Flow<List<DictionaryWord>>
+    fun search(
+        query: String,
+        userId: String,
+    ): Flow<List<DictionaryWord>>
 
     /**
      * Creates the full row. The four user-authored fields and the six evidence fields are all
@@ -14,6 +17,7 @@ interface DictionaryRepository {
      */
     suspend fun save(
         word: String,
+        userId: String,
         definition: String? = null,
         partOfSpeech: String? = null,
         phonetic: String? = null,
@@ -29,13 +33,20 @@ interface DictionaryRepository {
     /** Rewrites the four user-authored fields; the six evidence columns are not addressable here. */
     suspend fun updateUserFields(
         wordId: String,
+        userId: String,
         definition: String?,
         partOfSpeech: String?,
         phonetic: String?,
         example: String?,
     ): Result<DictionaryWord>
 
-    suspend fun delete(wordId: String)
+    suspend fun delete(
+        wordId: String,
+        userId: String,
+    )
 
-    suspend fun exists(word: String): Boolean
+    suspend fun exists(
+        word: String,
+        userId: String,
+    ): Boolean
 }

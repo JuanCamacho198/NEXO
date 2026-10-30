@@ -50,6 +50,9 @@ export type BookmarkDto = {
   pageNumber: number;
   title?: string;
   createdAt: string;
+  cfiLocation?: string | null;
+  locatorJson?: string | null;
+  updatedAt?: string;
 };
 
 export type SaveHighlightInput = {
@@ -73,6 +76,8 @@ export type SaveBookmarkInput = {
   pageNumber: number;
   title?: string;
   createdAt: string;
+  cfiLocation?: string | null;
+  locatorJson?: string | null;
 };
 
 export type TagDto = {

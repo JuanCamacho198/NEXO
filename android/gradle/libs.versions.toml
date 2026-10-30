@@ -25,6 +25,14 @@ activityCompose = "1.9.2"
 fragmentKtx = "1.8.5"
 navigation = "2.8.2"
 room = "2.8.4"
+# androidx.sqlite bundled driver (SQLite compiled from source WITH FTS5). Pinned
+# to 2.6.2 — the exact version room-runtime:2.8.4 declares in its Gradle module
+# metadata for androidx.sqlite:sqlite / sqlite-framework, so the driver cannot
+# drift against Room. Android's platform SQLite is compiled without
+# SQLITE_ENABLE_FTS5, so MIGRATION_15_16's `CREATE VIRTUAL TABLE ... USING fts5`
+# throws "no such module: fts5" on every real device; the bundled driver supplies
+# the fts5 module (see DatabaseModule).
+androidxSqlite = "2.6.2"
 paging = "3.3.6"
 playServicesAuth = "21.3.0"
 googleApiClient = "2.7.2"
@@ -144,6 +152,8 @@ room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+# Bundled SQLite driver for Room (SQLite compiled with FTS5 enabled).
+androidx-sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "androidxSqlite" }
 paging-runtime = { group = "androidx.paging", name = "paging-runtime-ktx", version.ref = "paging" }
 paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
 

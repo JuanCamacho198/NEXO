@@ -10,6 +10,7 @@ import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
 import com.nexo.testutil.FakeReaderRepository
 import com.nexo.testutil.FakeReadingStatsRepository
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.activeUserProviderFor
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -236,6 +237,7 @@ class ReaderViewModelAnnotationTest {
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(fake),
             defaultBookId = defaultBookId,
+            activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
         )
     }

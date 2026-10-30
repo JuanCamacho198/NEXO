@@ -14,7 +14,14 @@
   } = $props();
 
   let coverFailed = $state(false);
-  const showCover = $derived(book.coverUrl !== null && !coverFailed);
+  /**
+   * A coverless book (or one whose image failed) is not dropped and not left as
+   * an empty frame: the cover slot becomes a TEXT CARD — the title and author
+   * set on the theme's subtle surface, so the tile reads as a deliberately
+   * typographic card rather than a broken image.
+   */
+  const showCover = $derived(book.coverUrl !== null && book.coverUrl !== '' && !coverFailed);
+  const authors = $derived(book.authors.join(', '));
 </script>
 
 <button
@@ -37,10 +44,20 @@
         onerror={() => (coverFailed = true)}
       />
     {:else}
-      <div class="flex h-full w-full items-center justify-center">
-        <span class="text-3xl font-bold text-(--color-primary)/30"
-          >{book.title.trim()[0]?.toUpperCase() || '?'}</span
-        >
+      <div
+        class="flex h-full w-full flex-col justify-between gap-2 border border-(--color-border)/60 bg-(--color-surface) p-3"
+        data-testid="discover-text-card"
+      >
+        <p class="m-0 line-clamp-4 text-sm font-semibold text-(--color-primary)">
+          {book.title}
+        </p>
+        <div class="flex min-w-0 flex-col gap-1">
+          {#if authors}
+            <p class="m-0 line-clamp-2 text-xs text-(--color-text-muted)">{authors}</p>
+          {/if}
+          <span class="h-0.5 w-8 shrink-0 rounded-full bg-(--color-primary)/40" aria-hidden="true"
+          ></span>
+        </div>
       </div>
     {/if}
     <span
@@ -52,7 +69,7 @@
   <div class="min-w-0">
     <p class="truncate text-sm font-medium text-(--color-primary)">{book.title}</p>
     <p class="truncate text-xs text-(--color-text-muted)">
-      {book.authors.join(', ')}
+      {authors}
     </p>
   </div>
 </button>
