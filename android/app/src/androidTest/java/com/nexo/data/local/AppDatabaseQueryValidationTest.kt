@@ -43,13 +43,27 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class AppDatabaseQueryValidationTest {
+    private val migrationDbFile =
+        InstrumentationRegistry.getInstrumentation().targetContext.getDatabasePath("query-validation-migration")
+
     @get:Rule
     val migrationHelper =
         MigrationTestHelper(
             InstrumentationRegistry.getInstrumentation(),
-            InstrumentationRegistry.getInstrumentation().targetContext.getDatabasePath("query-validation-migration"),
+            migrationDbFile,
             BundledSQLiteDriver(),
             AppDatabase::class,
+            // Without an explicit factory the helper reflectively instantiates AppDatabase_Impl
+            // with no driver and no configuration, so runMigrationsAndValidate resolves
+            // auto-migration specs against an unconfigured instance.
+            {
+                Room
+                    .inMemoryDatabaseBuilder(
+                        InstrumentationRegistry.getInstrumentation().targetContext,
+                        AppDatabase::class.java,
+                    ).setDriver(BundledSQLiteDriver())
+                    .build()
+            },
         )
 
     private lateinit var db: AppDatabase
@@ -80,6 +94,10 @@ class AppDatabaseQueryValidationTest {
 
     @Before
     fun setUp() {
+        // The helper opens one fixed path and never deletes it, so a version written by an
+        // earlier test method in this class survives into the next one and Room tries to
+        // migrate backwards instead of seeding the requested version.
+        migrationDbFile.delete()
         db = createInMemoryDb()
     }
 
