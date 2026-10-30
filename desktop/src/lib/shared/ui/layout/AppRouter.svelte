@@ -6,6 +6,7 @@
   import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
   import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
   import { getNavItems, getDataNavItems } from '$lib/shared/stores/NavigationState.svelte';
@@ -148,8 +149,11 @@
                 onNavigateSettings={() => navigationState.navigateToSettings()}
                 onNavigateLibrary={() => navigationState.navigateToLibrary()}
                 onRefreshStats={() => {
-                  void statsState.loadStats(navigationState.previewBookId ?? undefined);
-                  void statsState.loadStreak();
+                  void statsState.loadStats(
+                    navigationState.previewBookId ?? undefined,
+                    authState.userId ?? '',
+                  );
+                  void statsState.loadStreak(undefined, authState.userId ?? '');
                 }}
                 t={appState.t}
               >

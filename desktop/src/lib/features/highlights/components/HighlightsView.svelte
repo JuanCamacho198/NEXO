@@ -12,6 +12,7 @@
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
   import SafeCover from '$lib/features/library/components/SafeCover.svelte';
   import Pagination from '$lib/shared/ui/navigation/Pagination.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
@@ -107,7 +108,7 @@
     searchState.resetSearch();
     libraryState.recordReaderOpenMetric(book.format);
     await readerState.startReading(book);
-    void statsState.loadStats(book.id);
+    void statsState.loadStats(book.id, authState.userId ?? '');
     searchState.searchTargetLocator = highlight.cfi
       ? highlight.cfi
       : book.format.toLowerCase() === 'pdf'

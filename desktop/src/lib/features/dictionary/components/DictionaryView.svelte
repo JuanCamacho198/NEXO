@@ -10,6 +10,7 @@
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
+  import { authState } from '$lib/shared/stores/AuthState.svelte';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
   import SearchBar from '$lib/shared/ui/navigation/SearchBar.svelte';
   import Plus from 'lucide-svelte/icons/plus';
@@ -62,7 +63,7 @@
     recordReaderOpenMetric: (format) => libraryState.recordReaderOpenMetric(format),
     startReading: (book) => readerState.startReading(book),
     loadStats: (bookId) => {
-      void statsState.loadStats(bookId);
+      void statsState.loadStats(bookId, authState.userId ?? '');
     },
     setSearchTargetLocator: (locator) => {
       searchState.searchTargetLocator = locator;

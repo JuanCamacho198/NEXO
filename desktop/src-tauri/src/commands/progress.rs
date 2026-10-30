@@ -48,6 +48,7 @@ pub fn saveReadingSession(
 pub fn getReadingStats(
     state: State<'_, AppState>,
     book_id: Option<String>,
+    user_id: String,
 ) -> Result<ReadingStatsSummaryDto, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     // Return default stats if schema not ready
@@ -60,5 +61,5 @@ pub fn getReadingStats(
             avg_progress_percentage: 0.0,
         });
     }
-    repository.get_reading_stats(book_id.as_deref()).map_err(map_command_error)
+    repository.get_reading_stats(book_id.as_deref(), &user_id).map_err(map_command_error)
 }

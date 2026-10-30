@@ -12,6 +12,7 @@ import {
   getDefaultReaderSettings,
   getReaderSettings,
   getReadingActivity,
+  getReadingStats,
   getReadingStatsForRange,
   getReadingStreak,
   listDictionaryWords,
@@ -491,6 +492,23 @@ describe('tauriClient reading stats commands', () => {
     await expect(getReadingActivity('week', 'day')).rejects.toThrow();
   });
 
+  it('getReadingStats forwards userId so totals are owner-scoped', async () => {
+    invokeMock.mockResolvedValueOnce({
+      totalMinutesRead: 0,
+      totalSessions: 0,
+      booksStarted: 0,
+      booksCompleted: 0,
+      avgProgressPercentage: 0,
+    });
+
+    await getReadingStats('book-1', 'u-7');
+
+    expect(invokeMock).toHaveBeenCalledWith('getReadingStats', {
+      bookId: 'book-1',
+      userId: 'u-7',
+    });
+  });
+
   it('getReadingStatsForRange invokes the command with from, to, and bookId', async () => {
     const expected = {
       totalMinutesRead: 120,
@@ -507,8 +525,28 @@ describe('tauriClient reading stats commands', () => {
       from: '2026-06-01T00:00:00Z',
       to: '2026-06-30T23:59:59Z',
       bookId: undefined,
+      userId: '',
     });
     expect(result).toEqual(expected);
+  });
+
+  it('getReadingStatsForRange forwards an explicit userId (owner scoping)', async () => {
+    invokeMock.mockResolvedValueOnce({
+      totalMinutesRead: 0,
+      totalSessions: 0,
+      booksStarted: 0,
+      booksCompleted: 0,
+      avgProgressPercentage: 0,
+    });
+
+    await getReadingStatsForRange('2026-06-01T00:00:00Z', '2026-06-30T23:59:59Z', undefined, 'u-9');
+
+    expect(invokeMock).toHaveBeenCalledWith('getReadingStatsForRange', {
+      from: '2026-06-01T00:00:00Z',
+      to: '2026-06-30T23:59:59Z',
+      bookId: undefined,
+      userId: 'u-9',
+    });
   });
 
   it('getReadingStatsForRange throws on rejection', async () => {

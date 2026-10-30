@@ -90,16 +90,20 @@ export class TauriViewerAdapter implements ViewerPort {
     return tauriClient.upsertRemoteReadingSessions(rows);
   }
 
-  getReadingStats(bookId?: string): Promise<import('$lib/shared/types').ReadingStatsSummaryDto> {
-    return tauriClient.getReadingStats(bookId);
+  getReadingStats(
+    bookId?: string,
+    userId = '',
+  ): Promise<import('$lib/shared/types').ReadingStatsSummaryDto> {
+    return tauriClient.getReadingStats(bookId, userId);
   }
 
   getReadingStatsForRange(
     from: string,
     to: string,
     bookId?: string,
+    userId = '',
   ): Promise<import('$lib/shared/types').ReadingStatsSummaryDto> {
-    return tauriClient.getReadingStatsForRange(from, to, bookId);
+    return tauriClient.getReadingStatsForRange(from, to, bookId, userId);
   }
 
   getReadingActivity(

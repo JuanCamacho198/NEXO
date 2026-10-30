@@ -44,11 +44,12 @@ export interface ViewerPort {
   searchBookText(payload: SearchBookTextInput): Promise<SearchBookTextResponse>;
   upsertRemoteHighlights(rows: RemoteHighlightRow[]): Promise<UpsertRemoteSummary>;
   upsertRemoteReadingSessions(rows: RemoteReadingSessionRow[]): Promise<number>;
-  getReadingStats(bookId?: string): Promise<ReadingStatsSummaryDto>;
+  getReadingStats(bookId?: string, userId?: string): Promise<ReadingStatsSummaryDto>;
   getReadingStatsForRange(
     from: string,
     to: string,
     bookId?: string,
+    userId?: string,
   ): Promise<ReadingStatsSummaryDto>;
   getReadingActivity(
     period: string,

@@ -28,6 +28,7 @@ pub fn getReadingStatsForRange(
     from: String,
     to: String,
     book_id: Option<String>,
+    user_id: String,
 ) -> Result<ReadingStatsSummaryDto, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     if !repository.has_desktop_parity_schema().unwrap_or(true) {
@@ -40,7 +41,7 @@ pub fn getReadingStatsForRange(
         });
     }
     repository
-        .get_reading_stats_for_range(&from, &to, book_id.as_deref())
+        .get_reading_stats_for_range(&from, &to, book_id.as_deref(), &user_id)
         .map_err(map_command_error)
 }
 

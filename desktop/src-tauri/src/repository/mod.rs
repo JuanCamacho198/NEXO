@@ -305,8 +305,12 @@ impl LibraryRepository {
         progress::save_reading_session(self, session)
     }
 
-    pub fn get_reading_stats(&self, book_id: Option<&str>) -> AppResult<ReadingStatsSummaryDto> {
-        progress::get_reading_stats(self, book_id)
+    pub fn get_reading_stats(
+        &self,
+        book_id: Option<&str>,
+        user_id: &str,
+    ) -> AppResult<ReadingStatsSummaryDto> {
+        progress::get_reading_stats(self, book_id, user_id)
     }
 
     pub fn get_reading_activity(
@@ -324,8 +328,9 @@ impl LibraryRepository {
         from: &str,
         to: &str,
         book_id: Option<&str>,
+        user_id: &str,
     ) -> AppResult<ReadingStatsSummaryDto> {
-        progress::get_reading_stats_for_range(self, from, to, book_id)
+        progress::get_reading_stats_for_range(self, from, to, book_id, user_id)
     }
 
     pub fn get_reading_streak(
@@ -527,8 +532,9 @@ impl LibraryRepository {
     fn recompute_reading_stats_from_sessions(
         &self,
         book_id: Option<&str>,
+        user_id: &str,
     ) -> AppResult<ReadingStatsSummaryDto> {
-        reading_stats::recompute_reading_stats_from_sessions(self, book_id)
+        reading_stats::recompute_reading_stats_from_sessions(self, book_id, user_id)
     }
 
     fn reading_stats_drift_over_threshold(
