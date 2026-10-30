@@ -3,7 +3,6 @@ package com.nexo.data.local
 import androidx.paging.PagingSource
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.testing.MigrationTestHelper
 import androidx.room.useReaderConnection
 import androidx.room.useWriterConnection
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -43,28 +42,10 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class AppDatabaseQueryValidationTest {
-    private val migrationDbFile =
-        InstrumentationRegistry.getInstrumentation().targetContext.getDatabasePath("query-validation-migration")
+    private val migrationDbFilePrefix = "query-validation-migration"
 
     @get:Rule
-    val migrationHelper =
-        MigrationTestHelper(
-            InstrumentationRegistry.getInstrumentation(),
-            migrationDbFile,
-            BundledSQLiteDriver(),
-            AppDatabase::class,
-            // Without an explicit factory the helper reflectively instantiates AppDatabase_Impl
-            // with no driver and no configuration, so runMigrationsAndValidate resolves
-            // auto-migration specs against an unconfigured instance.
-            {
-                Room
-                    .inMemoryDatabaseBuilder(
-                        InstrumentationRegistry.getInstrumentation().targetContext,
-                        AppDatabase::class.java,
-                    ).setDriver(BundledSQLiteDriver())
-                    .build()
-            },
-        )
+    val migrationHelper = MigrationHelperFactory.create(migrationDbFilePrefix)
 
     private lateinit var db: AppDatabase
 
@@ -94,10 +75,8 @@ class AppDatabaseQueryValidationTest {
 
     @Before
     fun setUp() {
-        // The helper opens one fixed path and never deletes it, so a version written by an
-        // earlier test method in this class survives into the next one and Room tries to
-        // migrate backwards instead of seeding the requested version.
-        migrationDbFile.delete()
+        // Each test method now gets its own migration database file via `migrationHelper`, so no
+        // cross-method state survives into this class's helper.
         db = createInMemoryDb()
     }
 
@@ -898,18 +877,22 @@ class AppDatabaseQueryValidationTest {
             )
         }
 
-        // All 4 index plan assertions on the LIVE migrated data
+        // All 4 index plan assertions on the LIVE migrated data. The index names here are the
+        // v16 ones MIGRATION_15_16 creates: user scoping (and therefore the `user_id` composite
+        // indexes) does not exist yet at v16 — `index_books_user_id_deleted_at_updated_at`,
+        // `index_highlights_user_id_book_id_deleted_at` and
+        // `index_bookmarks_user_id_book_id_deleted_at` are first created by MIGRATION_32_33.
         assertMigratedIndex(
             "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_books_user_id_deleted_at_updated_at",
+            "index_books_deleted_at_updated_at",
         )
         assertMigratedIndex(
             "SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_highlights_user_id_book_id_deleted_at",
+            "index_highlights_book_id_deleted_at",
         )
         assertMigratedIndex(
             "SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_bookmarks_user_id_book_id_deleted_at",
+            "index_bookmarks_book_id_deleted_at",
         )
         assertMigratedIndex(
             "SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions " +

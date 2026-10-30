@@ -1,51 +1,18 @@
 package com.nexo.data.local
 
-import androidx.room.Room
-import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteStatement
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AppDatabaseMigrationTest {
-    private val migrationDbFile =
-        InstrumentationRegistry.getInstrumentation().targetContext.getDatabasePath("migration-test")
-
     @get:Rule
-    val helper =
-        MigrationTestHelper(
-            InstrumentationRegistry.getInstrumentation(),
-            migrationDbFile,
-            BundledSQLiteDriver(),
-            AppDatabase::class,
-            // Without an explicit factory the helper reflectively instantiates AppDatabase_Impl
-            // with no driver and no configuration, so runMigrationsAndValidate resolves
-            // auto-migration specs against an unconfigured instance.
-            {
-                Room
-                    .inMemoryDatabaseBuilder(
-                        InstrumentationRegistry.getInstrumentation().targetContext,
-                        AppDatabase::class.java,
-                    ).setDriver(BundledSQLiteDriver())
-                    .build()
-            },
-        )
-
-    @Before
-    fun resetMigrationDatabase() {
-        // The helper opens one fixed path and never deletes it, so a version written by an
-        // earlier test method in this class survives into the next one and Room tries to
-        // migrate backwards (e.g. "from 23 to 15").
-        migrationDbFile.delete()
-    }
+    val helper = MigrationHelperFactory.create("migration-test")
 
     private fun SQLiteConnection.count(sql: String): Long =
         prepare(sql).use { statement ->
