@@ -23,10 +23,6 @@ class CacheRepositoryImpl(
 ) : CacheRepository {
     override suspend fun discoverCacheSizeBytes(): Long = discoverCacheDao.payloadBytes()
 
-    override suspend fun pruneDiscoverCache(): Int = discoverCacheDao.deleteExpired(nowEpochSecs())
-
-    override suspend fun purgeLegacyDiscoverCache(): Int = discoverCacheDao.deleteLegacyNamespaces()
-
     override suspend fun clearDiscoverCache(): Int = discoverCacheDao.deleteAll()
 
     override suspend fun imageCacheSizeBytes(): Long = imageLoader.diskCache?.size ?: 0L
@@ -51,8 +47,6 @@ class CacheRepositoryImpl(
         if (!dir.exists()) return 0L
         return dir.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
     }
-
-    private fun nowEpochSecs(): Long = System.currentTimeMillis() / 1000
 
     private companion object {
         const val EPUB_CACHE_DIR = "epub_cache"

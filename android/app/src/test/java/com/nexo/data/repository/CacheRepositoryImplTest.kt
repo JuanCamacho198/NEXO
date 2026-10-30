@@ -51,23 +51,6 @@ class CacheRepositoryImplTest {
         }
 
     @Test
-    fun pruneDiscoverCache_usesExpiryCutoff() =
-        runTest {
-            coEvery { dao.deleteExpired(any()) } returns 4
-
-            assertEquals(4, repository().pruneDiscoverCache())
-            coVerify(exactly = 1) { dao.deleteExpired(any()) }
-        }
-
-    @Test
-    fun purgeLegacyDiscoverCache_deletesLegacyNamespaces() =
-        runTest {
-            coEvery { dao.deleteLegacyNamespaces() } returns 7
-
-            assertEquals(7, repository().purgeLegacyDiscoverCache())
-        }
-
-    @Test
     fun clearDiscoverCache_deletesCacheRowsOnly() =
         runTest {
             coEvery { dao.deleteAll() } returns 3
