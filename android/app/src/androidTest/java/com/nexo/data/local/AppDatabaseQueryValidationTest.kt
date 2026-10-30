@@ -5,7 +5,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.useReaderConnection
 import androidx.room.useWriterConnection
-import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -103,7 +103,7 @@ class AppDatabaseQueryValidationTest {
             .allowMainThreadQueries()
             .addCallback(
                 object : RoomDatabase.Callback() {
-                    override fun onCreate(connection: SupportSQLiteDatabase) {
+                    override fun onCreate(connection: SQLiteConnection) {
                         super.onCreate(connection)
                         connection.execSQL(
                             """
