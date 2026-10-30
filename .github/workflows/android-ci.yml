@@ -233,6 +233,47 @@ jobs:
     name: Android instrumentation (emulator)
     if: github.event_name == 'workflow_dispatch' || github.base_ref == 'main'
     runs-on: ubuntu-latest
+    # ── Resident-memory budget (7 GB runner) ─────────────────────────────────
+    # Run 41117195119 died in `:app:processDebugAndroidTestResources` with
+    # `OutOfMemoryError thrown from the UncaughtExceptionHandler in thread
+    # "main"` BEFORE any test ran. The cause was arithmetic, not a bug: the
+    # runner has 7 GB, but the emulator (booted first and resident for the
+    # whole Gradle phase) plus the daemons summed to ~9.5 GB:
+    #
+    #   emulator (its own default 2560 MB, no `-memory` was set)
+    # + Gradle daemon 4096 MB + metaspace 768 MB
+    # + Kotlin daemon 2048 MB
+    # = ~9.5 GB  →  ~2.5 GB overshoot.
+    #
+    # These caps are CI-ONLY on purpose. `android/gradle.properties` is shared
+    # with local Windows builds on a 7.3 GB machine where the current values
+    # work and were tuned against a documented daemon-hang (see
+    # `android/AGENTS.md` § "Gradle Daemon & Verify Hang"): lowering them in
+    # the shared file would change local behaviour that is currently green.
+    # An env override here keeps local byte-identical.
+    #
+    # New resident total: emulator 2048 + Gradle 2560 + metaspace 768
+    # + Kotlin 1024 = ~6.4 GB, leaving ~0.6 GB for the OS, adb, the JVM
+    # non-heap and native allocations.
+    env:
+      # `GRADLE_OPTS`/`JAVA_OPTS` are read by the wrapper before Gradle's own
+      # fork, and `-D` here wins over `org.gradle.jvmargs` for the daemon the
+      # wrapper starts. Metaspace stays at the shared 768m: the documented
+      # hang was a METASPACE exhaustion, so 768m is the floor this job must
+      # keep, not a value to trim.
+      GRADLE_OPTS: >-
+        -Dorg.gradle.jvmargs=-Xmx2560m -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=768m
+      # Kotlin runs out-of-process (`kotlin.compiler.execution.strategy=daemon`);
+      # 1024m is enough for this module's androidTest source set, which only
+      # adds testing libs on top of `main`.
+      JAVA_OPTS: -Dkotlin.daemon.jvmargs=-Xmx1024m
+      # `HeapDumpOnOutOfMemoryError` (set in `android/gradle.properties`) is
+      # deliberately NOT carried into this override. A multi-GB `.hprof` on a
+      # runner with limited free disk turns a clean OOM into a disk-full
+      # cascade, and the dump is unusable without SSH access to the runner.
+      # With the daemon capped at 2560m the dump could not exceed that, so the
+      # diagnostic value is low and the disk cost is pure downside. It stays
+      # enabled for local runs via the shared file.
     # Dedicated budget — never the 30m `Android checks` timeout, so a long
     # device run cannot eat the gate job's allowance (they are separate jobs
     # with separate budgets). Cold path: system-image install ~3–6m (the AVD
@@ -288,11 +329,19 @@ jobs:
         # timeout — and the stale snapshot then fails to load as well
         # (`Failed to load snapshot 'default_boot'`). Emulator-runner's own
         # guidance is to cache the AVD dir and let adb keys regenerate.
+        # `-ram2048` is part of the key because `ram-size` writes `hw.ramSize`
+        # into the AVD's `config.ini`: a snapshot taken from a 2560 MB AVD is a
+        # different artifact from one taken at 2048 MB and restoring the wrong
+        # one is the `Failed to load snapshot` class of failure this comment
+        # already documents. Changing the key costs ONE cold path (~3–6m system
+        # image install, which is not cached either way, + ~2–5m boot) on the
+        # first run after this change; every run after that re-caches under the
+        # new key and keeps the ~30–90s warm boot.
         uses: actions/cache@v6
         id: avd-cache
         with:
           path: ~/.android/avd/*
-          key: avd-${{ runner.os }}-api${{ env.EMULATOR_API_LEVEL }}-${{ env.EMULATOR_TARGET }}-${{ env.EMULATOR_ARCH }}-${{ env.EMULATOR_PROFILE }}
+          key: avd-${{ runner.os }}-api${{ env.EMULATOR_API_LEVEL }}-${{ env.EMULATOR_TARGET }}-${{ env.EMULATOR_ARCH }}-${{ env.EMULATOR_PROFILE }}-ram2048
 
       - name: Create AVD and generate a snapshot for caching
         # Cache miss only: boot the AVD once and persist a clean snapshot. No
@@ -308,6 +357,15 @@ jobs:
           profile: ${{ env.EMULATOR_PROFILE }}
           avd-name: ${{ env.EMULATOR_AVD_NAME }}
           force-avd-creation: false
+          # `ram-size` (not a raw `-memory` flag) is the action's supported input
+          # for AVD RAM: it writes `hw.ramSize` into `config.ini` at creation
+          # time, so the snapshot is created for a 2048 MB AVD. Must match the
+          # test run below. The emulator's own default is 2560 MB, which alone
+          # was a third of the 7 GB runner and is what tipped the resident total
+          # over the edge in run 41117195119. Do NOT go below 2048 — an
+          # under-provisioned AVD OOM-kills the app under test and surfaces as
+          # bogus test failures.
+          ram-size: 2048M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
           script: echo "Generated AVD snapshot for caching."
@@ -317,6 +375,10 @@ jobs:
         # must never mutate the artifact the next run boots from.
         # `disable-animations: true` is required for the Compose UI assertions
         # (the app sets no `testOptions.animationsDisabled`).
+        # `ram-size: 2048M` must match the snapshot-creation step above: it sets
+        # `hw.ramSize` in the AVD's `config.ini`, so the booted emulator is the
+        # same 2048 MB shape the snapshot was taken from. The emulator default of
+        # 2560 MB is what OOMed this job.
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ env.EMULATOR_API_LEVEL }}
@@ -325,6 +387,7 @@ jobs:
           profile: ${{ env.EMULATOR_PROFILE }}
           avd-name: ${{ env.EMULATOR_AVD_NAME }}
           force-avd-creation: false
+          ram-size: 2048M
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: android
@@ -333,10 +396,16 @@ jobs:
           # Gradle as a task name and the job died with `Task '\' not found`
           # in ~54s without ever running a test. Keep this on ONE line.
           #
+          # `--max-workers=2` caps Gradle's parallel workers (the file still
+          # sets `org.gradle.parallel=true`). The runner has 4 cores, the
+          # emulator wants its own, and `kspDebugKotlin` / `mergeExtDexDebug` /
+          # `mergeExtDexDebugAndroidTest` each run twice here (app APK, then
+          # test APK). Fewer concurrent workers lowers the peak that OOMed.
+          #
           # `--configuration-cache` is deliberately omitted here: connected
           # device tasks are not reliably config-cache compatible, and a cache
           # failure would masquerade as a test failure.
-          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :app:connectedDebugAndroidTest
+          script: ./gradlew --build-cache --max-workers=2 -Dorg.gradle.vfs.watch=false :app:connectedDebugAndroidTest
 
       - name: Print failed instrumentation reports
         if: failure()
