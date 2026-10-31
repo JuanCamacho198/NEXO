@@ -33,6 +33,34 @@ android {
         // benchmark-macro-junit4 does not ship `benchmark-junit4`. Every
         // androidx.test coordinate resolves transitively from the macro artifact.
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Suppress EXACTLY ONE configuration error: `EMULATOR`.
+        //
+        // `EMULATOR` is not a runtime-fault signal. It is the benchmark library's
+        // static classification of *any* emulator, computed from `Build.*`
+        // fingerprints (fingerprint/hardware `generic`/`unknown`, model `google_sdk`
+        // etc.) in `androidx.benchmark.Errors` / `DeviceInfo.isEmulator`. It fires on
+        // every emulator regardless of `-no-window`/`-gpu swiftshader_indirect`, and
+        // it has nothing to do with frame stats, GPU health, or `gfxinfo`. Without
+        // suppression it turns the run into
+        // `AssertionError: ERRORS (not suppressed): EMULATOR` on every journey — the
+        // 8/8 failures seen on run 41166911083 — even though the measurements
+        // themselves completed.
+        //
+        // The CI job deliberately runs on an emulator (it is the only device a
+        // GitHub-hosted runner can boot), so the classification is true but not
+        // actionable here. Suppressing it turns THAT error into a warning; it does
+        // not relax measurement. Any OTHER error id — DEBUGGABLE, NOT-PROFILEABLE,
+        // LOW-BATTERY, DEVICE-TRACING-MISCONFIGURED, METHOD-TRACING-ENABLED — is
+        // left unsuppressed and still fails the run.
+        //
+        // The trade-off is explicit: the numbers this job emits describe a
+        // SwiftShader emulator, not a real device, and are only meaningful as a
+        // relative regression tripwire. The library says as much in its own warning.
+        // `androidx.benchmark.skipBenchmarksOnEmulator=true` was rejected as the
+        // alternative: it SKIPS every journey on an emulator, which would leave
+        // `metrics-current.json` empty and defeat this job's deliverable.
+        testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "EMULATOR"
     }
 
     compileOptions {
