@@ -388,11 +388,16 @@ jobs:
         # image install, which is not cached either way, + ~2–5m boot) on the
         # first run after this change; every run after that re-caches under the
         # new key and keeps the ~30–90s warm boot.
+        #
+        # `-c4` is in the key for the same reason: `cores` writes
+        # `hw.cpu.ncore` beside it, so a 2-core AVD is a different artifact from
+        # a 4-core one. Missing this would reintroduce the exact failure the
+        # `-ram2048` segment was added to prevent.
         uses: actions/cache@v6
         id: avd-cache
         with:
           path: ~/.android/avd/*
-          key: avd-${{ runner.os }}-api${{ env.EMULATOR_API_LEVEL }}-${{ env.EMULATOR_TARGET }}-${{ env.EMULATOR_ARCH }}-${{ env.EMULATOR_PROFILE }}-ram2048
+          key: avd-${{ runner.os }}-api${{ env.EMULATOR_API_LEVEL }}-${{ env.EMULATOR_TARGET }}-${{ env.EMULATOR_ARCH }}-${{ env.EMULATOR_PROFILE }}-ram2048-c4
 
       - name: Create AVD and generate a snapshot for caching
         # Cache miss only: boot the AVD once and persist a clean snapshot. No
@@ -417,6 +422,15 @@ jobs:
           # under-provisioned AVD OOM-kills the app under test and surfaces as
           # bogus test failures.
           ram-size: 2048M
+          # The AVD shape change above forced a cold boot on the next run, and
+          # 2048 MB with the default 2 cores did not finish in the action's
+          # 600 s budget: run 41157644582 polled `sys.boot_completed` 301 times
+          # and then gave up. More time and more cores, not more RAM — the
+          # memory budget is deliberate and raising it reintroduces the OOM this
+          # whole change exists to fix. The runner has 4 cores; the emulator had
+          # 2 because that is the action's default.
+          emulator-boot-timeout: 1200
+          cores: 4
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
           script: echo "Generated AVD snapshot for caching."
@@ -439,6 +453,12 @@ jobs:
           avd-name: ${{ env.EMULATOR_AVD_NAME }}
           force-avd-creation: false
           ram-size: 2048M
+          # Must match the snapshot-creation step above: the AVD's shape has to
+          # be identical or the cached snapshot is not reusable. Same reasoning
+          # for the timeout and cores — the cold boot that failed took more than
+          # 600 s at 2 cores.
+          emulator-boot-timeout: 1200
+          cores: 4
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: android
