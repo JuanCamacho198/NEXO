@@ -24,6 +24,10 @@ import org.junit.runner.RunWith
  * the install controller instead of supabase handleDeeplinks (an auth URI
  * parse of nextpage://install would never render this dialog).
  *
+ * The intent is delivered by calling `MainActivity.onNewIntent` directly, which
+ * is how a singleTop warm start reaches the Activity anyway — see the comment
+ * at the delivery site for why a self-`startActivity` breaks Scenario teardown.
+ *
  * Confirm-path with an injected fake transport (dao write assertions) requires
  * a test transport injection seam and a device/emulator — pending manual QA.
  */
@@ -51,6 +55,30 @@ class InstallDeepLinkTest {
     fun warmStart_installIntent_showsInstallFlowDialog_andDismissAborts() {
         waitForText("Continue with Google", SIGN_IN_BUTTON_TIMEOUT_MS)
 
+        // Warm-start deep links arrive through `onNewIntent` (singleTop), so the
+        // test injects the intent there instead of launching MainActivity at
+        // itself. A self-`startActivity` makes the platform re-deliver the
+        // intent outside `ActivityScenario`'s own lifecycle bookkeeping: the
+        // Activity does reach DESTROYED on teardown, but the Scenario's stage
+        // machine never records it (`ActivityScenario$1.onActivityLifecycleChanged`
+        // bails out when the received Activity is not its `currentActivity`) and
+        // `close()` then blocks for `ActivityLifecycleTimeout` (~45 s) before
+        // failing with "Activity never becomes requested state [DESTROYED]".
+        //
+        // The override is still the real routing entry point — `Intent` is an
+        // opaque parcelable (no equals/hashCode), so `Activity.setIntent`
+        // swapping the instance cannot affect the match. The call chain under
+        // test is unchanged: `MainActivity.onNewIntent` → install branch first
+        // → `InstallDeepLinkParser.isInstallUri` →
+        // `appContainer.installDeepLinkController.onInstallUri`, returning
+        // before `handleAuthDeepLink`/supabase.
+        //
+        // `onNewIntent` is `protected`, and the test lives in a different
+        // package (`com.nexo.presentation`), so the reflective virtual call
+        // below is the only way to reach a subclass override without adding a
+        // production-visible seam. It resolves to the most-derived override
+        // (MainActivity's) and runs the same method a singleTop redelivery
+        // would.
         composeRule.activityRule.scenario.onActivity { activity ->
             val installIntent =
                 Intent(
@@ -60,7 +88,10 @@ class InstallDeepLinkTest {
                     setClass(activity, MainActivity::class.java)
                     addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 }
-            activity.startActivity(installIntent)
+            MainActivity::class.java
+                .getDeclaredMethod("onNewIntent", Intent::class.java)
+                .apply { isAccessible = true }
+                .invoke(activity, installIntent)
         }
 
         // The install flow reaches either the confirm dialog (preview succeeded)
