@@ -518,8 +518,14 @@ class AppDatabaseMigrationTest {
                 "published_date" to false,
             )
         val actual = expected.keys.associateWith { info[it] == 1 }
-        assertEquals(expected.keys, actual.keys)
-        assertEquals(expected.values, expected.keys.map { actual[it] })
+        assertEquals(
+            expected.keys.toList(),
+            actual.keys.toList(),
+        )
+        assertEquals(
+            expected.keys.map { expected.getValue(it) },
+            expected.keys.map { actual.getValue(it) },
+        )
 
         // R2: ratings reinterpreted as half-units (1→2, 3→6, 5→10); NULL stays NULL.
         db.prepare("SELECT id, user_rating FROM books ORDER BY id").use { statement ->

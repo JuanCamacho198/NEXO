@@ -877,7 +877,34 @@ class AppDatabaseQueryValidationTest {
             )
         }
 
-        // All 4 index plan assertions on the LIVE migrated data. The index names here are the
+        // Helper local to the test: assert the plan neither picks an index nor reports
+        // `USING COVERING INDEX` for the given table scan.
+        fun assertMigratedNoIndex(
+            breakdown: String,
+            query: String,
+        ) {
+            val details = mutableListOf<String>()
+            migrated.prepare("EXPLAIN QUERY PLAN $query").use { statement ->
+                val detailCol = statement.getColumnNames().indexOf("detail")
+                check(detailCol >= 0) { "EXPLAIN QUERY PLAN did not return a 'detail' column" }
+                while (statement.step()) {
+                    details += statement.getText(detailCol)
+                }
+            }
+            val plan = details.joinToString("\n")
+            assertTrue(
+                "On migrated v16 DB, expected a '$breakdown' scan for query:\n  $query\n" +
+                    "but got plan:\n$plan",
+                details.any { it.contains(breakdown) },
+            )
+            assertTrue(
+                "On migrated v16 DB, expected no index to be used for query:\n  $query\n" +
+                    "but got plan:\n$plan",
+                details.none { it.contains("USING INDEX") || it.contains("USING COVERING INDEX") },
+            )
+        }
+
+        // Index plan assertions on the LIVE migrated data. The index names here are the
         // v16 ones MIGRATION_15_16 creates: user scoping (and therefore the `user_id` composite
         // indexes) does not exist yet at v16 — `index_books_user_id_deleted_at_updated_at`,
         // `index_highlights_user_id_book_id_deleted_at` and
@@ -886,13 +913,23 @@ class AppDatabaseQueryValidationTest {
             "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC",
             "index_books_deleted_at_updated_at",
         )
-        assertMigratedIndex(
-            "SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_highlights_book_id_deleted_at",
+        // highlights and bookmarks have no index matching the deleted_at-only predicate.
+        // 16.json declares exactly one index each (same in 15.json):
+        //   highlights: index_highlights_book_id_deleted_at (book_id, deleted_at)
+        //   bookmarks:  index_bookmarks_book_id_deleted_at (book_id, deleted_at)
+        // Neither is usable here: without an equality constraint on the leading `book_id`
+        // column SQLite cannot use the index to seek, and it cannot satisfy the ORDER BY
+        // updated_at DESC from it either. `index_books_deleted_at_updated_at` is usable
+        // because `deleted_at` is that index's leading column. So on these two tables SQLite
+        // is correct to scan and sort. This documents the DataSource contract the DAOs rely
+        // on, not an index preference.
+        assertMigratedNoIndex(
+            breakdown = "SCAN highlights",
+            query = "SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC",
         )
-        assertMigratedIndex(
-            "SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_bookmarks_book_id_deleted_at",
+        assertMigratedNoIndex(
+            breakdown = "SCAN bookmarks",
+            query = "SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC",
         )
         assertMigratedIndex(
             "SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions " +
