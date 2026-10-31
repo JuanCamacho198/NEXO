@@ -21,12 +21,12 @@ import org.junit.runner.RunWith
  * The design flags this as the hardest journey: the Reader is a Readium-hosted
  * fragment, not a plain Compose destination. It is therefore guarded by EXPLICIT
  * assumptions instead of environment-dependent text matching:
+ *  - an authenticated session is required to reach the Library tab at all — without
+ *    one the bottom bar is not composed (NexoNavHost.kt:270) and the journey SKIPS;
  *  - the library must hold at least one book (a clickable node inside the grid) —
  *    without a seeded library there is nothing to open, so the journey SKIPS;
  *  - the BookDetail read CTA must be present — if the detail screen renders without
  *    it the journey also SKIPS rather than reporting a fake metric.
- * A missing authenticated session still FAILS (via [navigateTo]) for every journey
- * alike, because that is a broken benchmark environment, not an infeasible journey.
  *
  * Seeding the library belongs to the device workstream (S10/S11).
  */
@@ -46,6 +46,7 @@ class ReaderOpenBenchmark {
             setupBlock = { pressHome() },
         ) {
             startActivityAndWait()
+            assumeAuthenticatedSession()
             navigateTo(BottomTab.LIBRARY)
 
             val cover = firstLibraryBook()

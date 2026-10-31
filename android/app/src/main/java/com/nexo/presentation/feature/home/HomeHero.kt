@@ -111,7 +111,9 @@ private const val HeroFadeDimAlpha = 0.85f
  *
  * The photo is cropped (`ContentScale.Crop`) and the [R.drawable.home_hero]
  * asset is `nodpi`, so the hero fills whatever width the phone gives it without
- * the image being resampled per density bucket.
+ * the image being resampled per density bucket. It is a JPEG: Android resolves
+ * the drawable by base name, so the extension carries no meaning for the call
+ * site, and keeping the bytes as they are avoids re-encoding the photo.
  *
  * @param avatarUrl User's profile photo URL, or null to fall back to the
  *   initials disc. Same contract as the populated Home's top bar.

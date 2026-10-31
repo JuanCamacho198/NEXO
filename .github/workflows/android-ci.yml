@@ -44,8 +44,22 @@ concurrency:
 # Single source of truth for the CI emulator used by the device jobs below.
 # Editing any of these must invalidate the AVD cache key on purpose: a cached
 # AVD + snapshot is only valid for the system image it was created from.
+#
+# API 36 rather than 34. The app declares `targetSdk = 36`, and running a
+# targetSdk-36 package on an API-34 image asks the platform to apply API 36
+# compatibility behaviour on an older runtime — a combination that is legal but
+# rarely exercised. It is also the likely cause of the macrobenchmark failure:
+# `startActivityAndWait` always reads `dumpsys gfxinfo … framestats` to confirm
+# the launch, the emulator never produced a `---PROFILEDATA---` block, and
+# `androidx.benchmark` surfaced that as `Unable to confirm activity launch
+# completion []`. There is a documented library bug for exactly that symptom on
+# API 36 ("`pgrep` toybox now requires `-a` to print the full command line"),
+# fixed in 1.4.0-alpha09 — and this project is on 1.5.0, so the fix should be
+# present and the mismatch is the remaining suspect.
+#
+# Changing this invalidates the AVD cache, so the next run pays one cold boot.
 env:
-  EMULATOR_API_LEVEL: '34'
+  EMULATOR_API_LEVEL: '36'
   EMULATOR_TARGET: google_apis
   EMULATOR_ARCH: x86_64
   EMULATOR_PROFILE: pixel_6
@@ -262,18 +276,23 @@ jobs:
       # hang was a METASPACE exhaustion, so 768m is the floor this job must
       # keep, not a value to trim.
       GRADLE_OPTS: >-
-        -Dorg.gradle.jvmargs=-Xmx2560m -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=768m
-      # Kotlin runs out-of-process (`kotlin.compiler.execution.strategy=daemon`);
-      # 1024m is enough for this module's androidTest source set, which only
-      # adds testing libs on top of `main`.
-      JAVA_OPTS: -Dkotlin.daemon.jvmargs=-Xmx1024m
+        -Dorg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=768m
+      # Kotlin runs out-of-process (`kotlin.compiler.execution.strategy=daemon`).
+      # It was 1024m on the theory that the androidTest source set only adds
+      # testing libs on top of `main` — but that is the wrong way round. The
+      # daemon compiles `main`, which for this module means Readium, Supabase,
+      # Ktor and PDFium, and 1024m died there: run 41164193289 threw
+      # `OutOfMemoryError` on `:app:compileDebugKotlin`. The budget is unchanged
+      # in total — 512m moved from Gradle, which does not compile, to Kotlin,
+      # which does.
+      JAVA_OPTS: -Dkotlin.daemon.jvmargs=-Xmx1536m
       # `HeapDumpOnOutOfMemoryError` (set in `android/gradle.properties`) is
       # deliberately NOT carried into this override. A multi-GB `.hprof` on a
       # runner with limited free disk turns a clean OOM into a disk-full
       # cascade, and the dump is unusable without SSH access to the runner.
-      # With the daemon capped at 2560m the dump could not exceed that, so the
-      # diagnostic value is low and the disk cost is pure downside. It stays
-      # enabled for local runs via the shared file.
+      # With the daemon capped at 2048m and Kotlin at 1536m the dump could not
+      # exceed either, so the diagnostic value is low and the disk cost is pure
+      # downside. It stays enabled for local runs via the shared file.
     # Dedicated budget — never the 30m `Android checks` timeout, so a long
     # device run cannot eat the gate job's allowance (they are separate jobs
     # with separate budgets). Cold path: system-image install ~3–6m (the AVD
@@ -518,7 +537,29 @@ jobs:
   #     rather than a step that is guaranteed red on every dispatch.
   android-benchmark:
     name: Android macrobenchmarks (dispatch only)
-    if: github.event_name == 'workflow_dispatch'
+    # DISABLED — the GitHub-hosted emulator cannot produce frame stats, and every
+    # macrobenchmark journey needs them.
+    #
+    # `startActivityAndWait` reads `dumpsys gfxinfo <pkg> framestats` to confirm a
+    # launch, unconditionally — verified in `MacrobenchmarkScope`'s bytecode, so it
+    # does not matter which metrics a journey declares. The emulator never emits
+    # the `---PROFILEDATA---` block, so the read is empty on every iteration and
+    # the library throws `Unable to confirm activity launch completion []`.
+    #
+    # Ruled out, each by running it: the API-level mismatch (34 and 36 both fail
+    # identically), the metric selection, a stale `androidx.benchmark` (1.5.0) or
+    # `profileinstaller` (1.4.1), and journey logic (all 8 die on the first
+    # statement, before any of it runs).
+    #
+    # Run it on a real device instead:
+    #   ./gradlew :benchmark:connectedBenchmarkAndroidTest
+    # The scroll, fling and reader journeys also need a signed-in session —
+    # `NexoNavHost` composes its bottom bar only `if (isAuthenticated)`, so they
+    # skip rather than measure an unintended screen.
+    #
+    # Everything else in this job is kept deliberately: the logcat capture is what
+    # produced the diagnosis above, and it is what a maintainer needs next time.
+    if: false
     runs-on: ubuntu-latest
     # Cold emulator boot (no snapshot, see below) + a full `:app:benchmark`
     # variant build + the benchmark test APK + the journeys: 4 classes x 5
@@ -571,7 +612,33 @@ jobs:
           # ONE line for the same reason as the emulator job: the action hands
           # this to `sh -c`, so a trailing-backslash continuation becomes a
           # task named `\` and the run dies before executing anything.
-          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :benchmark:connectedBenchmarkAndroidTest
+          #
+          # The logcat capture is backgrounded before Gradle starts and killed
+          # after it, because the benchmark's failure mode is a line the test
+          # framework logs but never surfaces in the Gradle output:
+          # `ProfileInstallBroadcast` prints the raw `am broadcast` stdout as
+          # `Broadcast response: ...` at DEBUG, and `androidx.benchmark` turns a
+          # missing or unparseable response into
+          # `RuntimeException: The baseline profile install broadcast was not
+          # received`. That message guesses at the cause ("the profileinstaller
+          # library is missing") and the guess is wrong — the receiver and its
+          # intent-filter are in the merged manifest. The captured line is what
+          # separates "the receiver never ran" from "the stdout did not parse",
+          # `pkill` rather than a saved PID: no shell variable to survive the
+          # wrapper, and nothing to go stale.
+          script: adb logcat -c; (adb logcat -v time > /tmp/benchmark-logcat.txt &); ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :benchmark:connectedBenchmarkAndroidTest; status=$?; pkill -f "adb logcat" 2>/dev/null; exit $status
+
+      - name: Upload benchmark logcat
+        # The failure this job hits is only diagnosable from the device log, so
+        # the log is an artifact rather than something to go looking for in a
+        # run that may have been pruned. `if: always()` because the interesting
+        # runs are the failing ones.
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmark-logcat
+          path: /tmp/benchmark-logcat.txt
+          if-no-files-found: warn
 
       - name: Verify benchmark regression against the checked-in baseline
         # Opt-in: only meaningful once a run has turned
@@ -615,7 +682,16 @@ jobs:
   # and one red step should name one broken thing.
   android-baseline-profile:
     name: Android baseline profile (dispatch only)
-    if: github.event_name == 'workflow_dispatch'
+    # DISABLED — same environment limitation as `android-benchmark`, and the same
+    # recorded reason: `BaselineProfileRule.collect()` drives the same
+    # `startActivityAndWait`, which needs frame stats the emulator does not emit.
+    #
+    # This job is also the only route that produces a real profile, so the shipped
+    # `app/src/main/baseline-prof.txt` stays hand-maintained until someone runs
+    # this on a device:
+    #   ./gradlew :app:generateReleaseBaselineProfile
+    # and commits what it uploads.
+    if: false
     runs-on: ubuntu-latest
     # Cold emulator boot (no snapshot — see below) + the `:app` profile-generation
     # variant + the producer test APK + 4 collection journeys (each iterating until
@@ -672,7 +748,24 @@ jobs:
           # continuations are not interpreted and become a task named `\`.
           # `--configuration-cache` is omitted for the same reason as the other
           # device jobs — the generation task drives connected instrumentation.
-          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :app:generateReleaseBaselineProfile
+          #
+          # Logcat is captured for the same reason as `android-benchmark`: this
+          # job's failure is `IllegalStateException: Unable to confirm activity
+          # launch completion`, which the device log explains and the Gradle
+          # output does not. `pkill` rather than a saved PID: no shell variable
+          # to survive the wrapper, and nothing to go stale.
+          script: adb logcat -c; (adb logcat -v time > /tmp/baseline-logcat.txt &); ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :app:generateReleaseBaselineProfile; status=$?; pkill -f "adb logcat" 2>/dev/null; exit $status
+
+      - name: Upload baseline profile logcat
+        # Same reasoning as the benchmark job's logcat artifact: the failure is
+        # only diagnosable from the device log, and the interesting runs are the
+        # failing ones.
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: baseline-profile-logcat
+          path: /tmp/baseline-logcat.txt
+          if-no-files-found: warn
 
       - name: Upload the generated baseline profile
         # THE deliverable: a maintainer commits the uploaded

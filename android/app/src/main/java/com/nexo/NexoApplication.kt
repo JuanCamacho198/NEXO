@@ -116,8 +116,18 @@ class NexoApplication :
 
         // Sentry must be initialized BEFORE installCrashHandler so the chained
         // UncaughtExceptionHandler can capture to Sentry before the process dies.
-        // SentryAndroid.init is a no-op when DSN is empty (BuildConfig.SENTRY_DSN
-        // comes from local.properties which is gitignored; see app/build.gradle.kts).
+        //
+        // An empty DSN disables the SDK explicitly. It was previously assigned
+        // through `takeIf { isNotEmpty() }`, which yields null — and Sentry treats
+        // a null DSN as a programming error and throws
+        // `IllegalArgumentException: DSN is required` from
+        // `NexoApplication.onCreate`. That killed the process before it could run
+        // anything, including the `profileinstaller` broadcast receiver: the
+        // receiver started, the Application crashed on the way up, and the
+        // framework answered `result=0` for a broadcast it never handled. The
+        // benchmark read that as "the profileinstaller library is missing" and
+        // named the wrong cause for a missing DSN. `options.isEnabled = false` is
+        // the documented way to run without a DSN.
         // We deliberately do NOT attach screenshots or view hierarchy:
         // this is a reader app and we must not leak book content to Sentry.
         // FIX 4 (NEXTPAGE-ANDROID-3): never initialise the real SDK on a JVM test
@@ -125,7 +135,12 @@ class NexoApplication :
         // test failures must not egress to the production project.
         if (SentryInitGuard.shouldInitialize()) {
             SentryAndroid.init(this) { options ->
-                options.dsn = BuildConfig.SENTRY_DSN.takeIf { it.isNotEmpty() }
+                val dsn = BuildConfig.SENTRY_DSN
+                if (dsn.isEmpty()) {
+                    options.isEnabled = false
+                } else {
+                    options.dsn = dsn
+                }
                 // Spec C1 — cross-platform release `<prefix>@<version>+<sha12>`, where
                 // the prefix is BuildConfig.SENTRY_RELEASE_PREFIX (`nexo-android`,
                 // single-sourced from `sentryProject` in app/build.gradle.kts and shared
