@@ -262,18 +262,23 @@ jobs:
       # hang was a METASPACE exhaustion, so 768m is the floor this job must
       # keep, not a value to trim.
       GRADLE_OPTS: >-
-        -Dorg.gradle.jvmargs=-Xmx2560m -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=768m
-      # Kotlin runs out-of-process (`kotlin.compiler.execution.strategy=daemon`);
-      # 1024m is enough for this module's androidTest source set, which only
-      # adds testing libs on top of `main`.
-      JAVA_OPTS: -Dkotlin.daemon.jvmargs=-Xmx1024m
+        -Dorg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=768m
+      # Kotlin runs out-of-process (`kotlin.compiler.execution.strategy=daemon`).
+      # It was 1024m on the theory that the androidTest source set only adds
+      # testing libs on top of `main` — but that is the wrong way round. The
+      # daemon compiles `main`, which for this module means Readium, Supabase,
+      # Ktor and PDFium, and 1024m died there: run 41164193289 threw
+      # `OutOfMemoryError` on `:app:compileDebugKotlin`. The budget is unchanged
+      # in total — 512m moved from Gradle, which does not compile, to Kotlin,
+      # which does.
+      JAVA_OPTS: -Dkotlin.daemon.jvmargs=-Xmx1536m
       # `HeapDumpOnOutOfMemoryError` (set in `android/gradle.properties`) is
       # deliberately NOT carried into this override. A multi-GB `.hprof` on a
       # runner with limited free disk turns a clean OOM into a disk-full
       # cascade, and the dump is unusable without SSH access to the runner.
-      # With the daemon capped at 2560m the dump could not exceed that, so the
-      # diagnostic value is low and the disk cost is pure downside. It stays
-      # enabled for local runs via the shared file.
+      # With the daemon capped at 2048m and Kotlin at 1536m the dump could not
+      # exceed either, so the diagnostic value is low and the disk cost is pure
+      # downside. It stays enabled for local runs via the shared file.
     # Dedicated budget — never the 30m `Android checks` timeout, so a long
     # device run cannot eat the gate job's allowance (they are separate jobs
     # with separate budgets). Cold path: system-image install ~3–6m (the AVD
