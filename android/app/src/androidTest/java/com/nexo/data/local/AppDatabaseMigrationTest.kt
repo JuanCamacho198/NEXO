@@ -1,12 +1,9 @@
 package com.nexo.data.local
 
-import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteStatement
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -15,13 +12,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AppDatabaseMigrationTest {
     @get:Rule
-    val helper =
-        MigrationTestHelper(
-            InstrumentationRegistry.getInstrumentation(),
-            InstrumentationRegistry.getInstrumentation().targetContext.getDatabasePath("migration-test"),
-            BundledSQLiteDriver(),
-            AppDatabase::class,
-        )
+    val helper = MigrationHelperFactory.create("migration-test")
 
     private fun SQLiteConnection.count(sql: String): Long =
         prepare(sql).use { statement ->
@@ -339,7 +330,7 @@ class AppDatabaseMigrationTest {
         helper.createDatabase(17).apply {
             execSQL(
                 """
-                CREATE TABLE books (
+                CREATE TABLE IF NOT EXISTS books (
                     id TEXT NOT NULL PRIMARY KEY, title TEXT NOT NULL, author TEXT,
                     cover_path TEXT, file_path TEXT NOT NULL, format TEXT NOT NULL,
                     updated_at INTEGER NOT NULL, deleted_at INTEGER, status TEXT,
@@ -347,9 +338,18 @@ class AppDatabaseMigrationTest {
                 )
                 """.trimIndent(),
             )
-            execSQL("INSERT INTO books VALUES ('zero', 'Zero', NULL, NULL, '/zero', 'epub', 1, NULL, NULL, NULL)")
-            execSQL("INSERT INTO books VALUES ('reading', 'Reading', NULL, NULL, '/reading', 'epub', 2, NULL, 'reading', NULL)")
-            execSQL("INSERT INTO books VALUES ('done', 'Done', NULL, NULL, '/done', 'epub', 3, NULL, 'completed', NULL)")
+            execSQL(
+                "INSERT INTO books (id, title, author, cover_path, file_path, format, updated_at, deleted_at, status, content_hash) " +
+                    "VALUES ('zero', 'Zero', NULL, NULL, '/zero', 'epub', 1, NULL, NULL, NULL)",
+            )
+            execSQL(
+                "INSERT INTO books (id, title, author, cover_path, file_path, format, updated_at, deleted_at, status, content_hash) " +
+                    "VALUES ('reading', 'Reading', NULL, NULL, '/reading', 'epub', 2, NULL, 'reading', NULL)",
+            )
+            execSQL(
+                "INSERT INTO books (id, title, author, cover_path, file_path, format, updated_at, deleted_at, status, content_hash) " +
+                    "VALUES ('done', 'Done', NULL, NULL, '/done', 'epub', 3, NULL, 'completed', NULL)",
+            )
             close()
         }
 
@@ -404,7 +404,8 @@ class AppDatabaseMigrationTest {
                 """.trimIndent(),
             )
             execSQL(
-                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state) VALUES ('book-1', 'B1', '/b1.epub', 'epub', 100, 'reading')",
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, progress_percentage, state_version, remote_lifecycle, remote_catalog_version) " +
+                    "VALUES ('book-1', 'B1', '/b1.epub', 'epub', 100, 'reading', 0, 0, 'imported', 0)",
             )
 
             // v22 reading_sessions — NO updated_at_epoch_millis column yet.
@@ -486,16 +487,16 @@ class AppDatabaseMigrationTest {
             )
             execSQL("CREATE INDEX IF NOT EXISTS index_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
             execSQL(
-                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r1', 'R1', '/r1.epub', 'epub', 1, 'to_read', 1)",
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating, progress_percentage, state_version, remote_lifecycle, remote_catalog_version) VALUES ('r1', 'R1', '/r1.epub', 'epub', 1, 'to_read', 1, 0, 0, 'imported', 0)",
             )
             execSQL(
-                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r3', 'R3', '/r3.epub', 'epub', 2, 'to_read', 3)",
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating, progress_percentage, state_version, remote_lifecycle, remote_catalog_version) VALUES ('r3', 'R3', '/r3.epub', 'epub', 2, 'to_read', 3, 0, 0, 'imported', 0)",
             )
             execSQL(
-                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r5', 'R5', '/r5.epub', 'epub', 3, 'to_read', 5)",
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating, progress_percentage, state_version, remote_lifecycle, remote_catalog_version) VALUES ('r5', 'R5', '/r5.epub', 'epub', 3, 'to_read', 5, 0, 0, 'imported', 0)",
             )
             execSQL(
-                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r0', 'R0', '/r0.epub', 'epub', 4, 'to_read', NULL)",
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating, progress_percentage, state_version, remote_lifecycle, remote_catalog_version) VALUES ('r0', 'R0', '/r0.epub', 'epub', 4, 'to_read', NULL, 0, 0, 'imported', 0)",
             )
             close()
         }
@@ -517,8 +518,14 @@ class AppDatabaseMigrationTest {
                 "published_date" to false,
             )
         val actual = expected.keys.associateWith { info[it] == 1 }
-        assertEquals(expected.keys, actual.keys)
-        assertEquals(expected.values, expected.keys.map { actual[it] })
+        assertEquals(
+            expected.keys.toList(),
+            actual.keys.toList(),
+        )
+        assertEquals(
+            expected.keys.map { expected.getValue(it) },
+            expected.keys.map { actual.getValue(it) },
+        )
 
         // R2: ratings reinterpreted as half-units (1→2, 3→6, 5→10); NULL stays NULL.
         db.prepare("SELECT id, user_rating FROM books ORDER BY id").use { statement ->

@@ -1,46 +1,50 @@
 package com.nexo.data.local
 
 import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
 
 object AppDatabaseMigrations {
     // No-op migrations for historically missing migration paths
     // These prevent fallbackToDestructiveMigration() on clean installs from old backups
     val MIGRATION_1_2 =
         object : Migration(1, 2) {
-            override fun migrate(db: SupportSQLiteDatabase) {
+            override fun migrate(connection: SQLiteConnection) {
                 // No-op: schema unchanged between v1 and v2
             }
         }
 
     val MIGRATION_2_3 =
         object : Migration(2, 3) {
-            override fun migrate(db: SupportSQLiteDatabase) {
+            override fun migrate(connection: SQLiteConnection) {
                 // No-op: schema unchanged between v2 and v3
             }
         }
 
     val MIGRATION_3_4 =
         object : Migration(3, 4) {
-            override fun migrate(db: SupportSQLiteDatabase) {
+            override fun migrate(connection: SQLiteConnection) {
                 // No-op: schema unchanged between v3 and v4
             }
         }
 
     val MIGRATION_15_16 =
         object : Migration(15, 16) {
-            override fun migrate(db: SupportSQLiteDatabase) {
+            override fun migrate(connection: SQLiteConnection) {
                 // ── Phase 1: Recreate reading_stats (FK + column rename bookId→book_id) ──
-                db.execSQL("PRAGMA foreign_key_checks = OFF")
+                connection.execSQL("PRAGMA foreign_key_checks = OFF")
 
                 // Row count verification
                 val readingStatsCount =
-                    db
-                        .compileStatement(
+                    connection
+                        .prepare(
                             "SELECT COUNT(*) FROM reading_stats",
-                        ).simpleQueryForLong()
+                        ).use { statement ->
+                            check(statement.step()) { "count query returned no row: SELECT COUNT(*) FROM reading_stats" }
+                            statement.getLong(0)
+                        }
 
-                db.execSQL(
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS reading_stats_new (
                         book_id TEXT NOT NULL PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
@@ -51,20 +55,23 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     """
                     INSERT INTO reading_stats_new (book_id, totalMinutesRead, lastReadDateEpochMillis, sessionsCount, userId)
                     SELECT bookId, totalMinutesRead, lastReadDateEpochMillis, sessionsCount, userId FROM reading_stats
                     """.trimIndent(),
                 )
-                db.execSQL("DROP TABLE reading_stats")
-                db.execSQL("ALTER TABLE reading_stats_new RENAME TO reading_stats")
+                connection.execSQL("DROP TABLE reading_stats")
+                connection.execSQL("ALTER TABLE reading_stats_new RENAME TO reading_stats")
 
                 val newReadingStatsCount =
-                    db
-                        .compileStatement(
+                    connection
+                        .prepare(
                             "SELECT COUNT(*) FROM reading_stats",
-                        ).simpleQueryForLong()
+                        ).use { statement ->
+                            check(statement.step()) { "count query returned no row: SELECT COUNT(*) FROM reading_stats" }
+                            statement.getLong(0)
+                        }
                 if (newReadingStatsCount != readingStatsCount) {
                     throw IllegalStateException(
                         "reading_stats row count mismatch: before=$readingStatsCount after=$newReadingStatsCount",
@@ -73,12 +80,15 @@ object AppDatabaseMigrations {
 
                 // ── Phase 2: Recreate sync_file_mappings (add FK) ──
                 val syncFileMappingCount =
-                    db
-                        .compileStatement(
+                    connection
+                        .prepare(
                             "SELECT COUNT(*) FROM sync_file_mappings",
-                        ).simpleQueryForLong()
+                        ).use { statement ->
+                            check(statement.step()) { "count query returned no row: SELECT COUNT(*) FROM sync_file_mappings" }
+                            statement.getLong(0)
+                        }
 
-                db.execSQL(
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS sync_file_mappings_new (
                         drive_file_id TEXT NOT NULL PRIMARY KEY,
@@ -89,15 +99,18 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL("INSERT INTO sync_file_mappings_new SELECT * FROM sync_file_mappings")
-                db.execSQL("DROP TABLE sync_file_mappings")
-                db.execSQL("ALTER TABLE sync_file_mappings_new RENAME TO sync_file_mappings")
+                connection.execSQL("INSERT INTO sync_file_mappings_new SELECT * FROM sync_file_mappings")
+                connection.execSQL("DROP TABLE sync_file_mappings")
+                connection.execSQL("ALTER TABLE sync_file_mappings_new RENAME TO sync_file_mappings")
 
                 val newSyncFileMappingCount =
-                    db
-                        .compileStatement(
+                    connection
+                        .prepare(
                             "SELECT COUNT(*) FROM sync_file_mappings",
-                        ).simpleQueryForLong()
+                        ).use { statement ->
+                            check(statement.step()) { "count query returned no row: SELECT COUNT(*) FROM sync_file_mappings" }
+                            statement.getLong(0)
+                        }
                 if (newSyncFileMappingCount != syncFileMappingCount) {
                     throw IllegalStateException(
                         "sync_file_mappings row count mismatch: before=$syncFileMappingCount after=$newSyncFileMappingCount",
@@ -106,12 +119,15 @@ object AppDatabaseMigrations {
 
                 // ── Phase 3: Recreate sync_outbox (add FK with SET NULL) ──
                 val syncOutboxCount =
-                    db
-                        .compileStatement(
+                    connection
+                        .prepare(
                             "SELECT COUNT(*) FROM sync_outbox",
-                        ).simpleQueryForLong()
+                        ).use { statement ->
+                            check(statement.step()) { "count query returned no row: SELECT COUNT(*) FROM sync_outbox" }
+                            statement.getLong(0)
+                        }
 
-                db.execSQL(
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS sync_outbox_new (
                         id TEXT NOT NULL PRIMARY KEY,
@@ -125,15 +141,18 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL("INSERT INTO sync_outbox_new SELECT * FROM sync_outbox")
-                db.execSQL("DROP TABLE sync_outbox")
-                db.execSQL("ALTER TABLE sync_outbox_new RENAME TO sync_outbox")
+                connection.execSQL("INSERT INTO sync_outbox_new SELECT * FROM sync_outbox")
+                connection.execSQL("DROP TABLE sync_outbox")
+                connection.execSQL("ALTER TABLE sync_outbox_new RENAME TO sync_outbox")
 
                 val newSyncOutboxCount =
-                    db
-                        .compileStatement(
+                    connection
+                        .prepare(
                             "SELECT COUNT(*) FROM sync_outbox",
-                        ).simpleQueryForLong()
+                        ).use { statement ->
+                            check(statement.step()) { "count query returned no row: SELECT COUNT(*) FROM sync_outbox" }
+                            statement.getLong(0)
+                        }
                 if (newSyncOutboxCount != syncOutboxCount) {
                     throw IllegalStateException(
                         "sync_outbox row count mismatch: before=$syncOutboxCount after=$newSyncOutboxCount",
@@ -141,21 +160,21 @@ object AppDatabaseMigrations {
                 }
 
                 // ── Phase 4: Composite indexes ──
-                db.execSQL("DROP INDEX IF EXISTS index_highlights_book_id")
-                db.execSQL("DROP INDEX IF EXISTS index_bookmarks_book_id")
+                connection.execSQL("DROP INDEX IF EXISTS index_highlights_book_id")
+                connection.execSQL("DROP INDEX IF EXISTS index_bookmarks_book_id")
 
                 // 16.json (and every schema from v16 on) declares index_reading_stats_book_id,
                 // but nothing created it before MIGRATION_33_34. Every validation between v16
                 // and v33 therefore expected an index that did not exist.
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_reading_stats_book_id ON reading_stats(book_id)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_reading_stats_book_id ON reading_stats(book_id)")
 
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_highlights_book_id_deleted_at ON highlights(book_id, deleted_at)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_bookmarks_book_id_deleted_at ON bookmarks(book_id, deleted_at)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_reading_sessions_date_userId ON reading_sessions(date, userId)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_highlights_book_id_deleted_at ON highlights(book_id, deleted_at)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_bookmarks_book_id_deleted_at ON bookmarks(book_id, deleted_at)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_reading_sessions_date_userId ON reading_sessions(date, userId)")
 
                 // ── Phase 5: FTS5 virtual table + triggers for dictionary_words ──
-                db.execSQL(
+                connection.execSQL(
                     """
                     CREATE VIRTUAL TABLE IF NOT EXISTS dictionary_words_fts USING fts5(
                         word, definition, content=dictionary_words, content_rowid=rowid
@@ -163,11 +182,11 @@ object AppDatabaseMigrations {
                     """.trimIndent(),
                 )
 
-                db.execSQL("DROP TRIGGER IF EXISTS dict_ai")
-                db.execSQL("DROP TRIGGER IF EXISTS dict_ad")
-                db.execSQL("DROP TRIGGER IF EXISTS dict_au")
+                connection.execSQL("DROP TRIGGER IF EXISTS dict_ai")
+                connection.execSQL("DROP TRIGGER IF EXISTS dict_ad")
+                connection.execSQL("DROP TRIGGER IF EXISTS dict_au")
 
-                db.execSQL(
+                connection.execSQL(
                     """
                     CREATE TRIGGER dict_ai AFTER INSERT ON dictionary_words BEGIN
                         INSERT INTO dictionary_words_fts(rowid, word, definition)
@@ -175,7 +194,7 @@ object AppDatabaseMigrations {
                     END
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     """
                     CREATE TRIGGER dict_ad AFTER DELETE ON dictionary_words BEGIN
                         INSERT INTO dictionary_words_fts(dictionary_words_fts, rowid, word, definition)
@@ -183,7 +202,7 @@ object AppDatabaseMigrations {
                     END
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     """
                     CREATE TRIGGER dict_au AFTER UPDATE ON dictionary_words BEGIN
                         INSERT INTO dictionary_words_fts(dictionary_words_fts, rowid, word, definition)
@@ -194,54 +213,54 @@ object AppDatabaseMigrations {
                     """.trimIndent(),
                 )
 
-                db.execSQL("PRAGMA foreign_key_checks = ON")
+                connection.execSQL("PRAGMA foreign_key_checks = ON")
             }
         }
 
     val MIGRATION_16_17 =
         object : Migration(16, 17) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE books ADD COLUMN content_hash TEXT DEFAULT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN content_hash TEXT DEFAULT NULL")
             }
         }
 
     val MIGRATION_17_18 =
         object : Migration(17, 18) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE books ADD COLUMN reading_state TEXT NOT NULL DEFAULT 'to_read'")
-                db.execSQL("ALTER TABLE books ADD COLUMN started_at INTEGER DEFAULT NULL")
-                db.execSQL("ALTER TABLE books ADD COLUMN completed_at INTEGER DEFAULT NULL")
-                db.execSQL("ALTER TABLE books ADD COLUMN progress_percentage REAL NOT NULL DEFAULT 0")
-                db.execSQL("ALTER TABLE books ADD COLUMN progress_updated_at INTEGER DEFAULT NULL")
-                db.execSQL("ALTER TABLE books ADD COLUMN state_version INTEGER NOT NULL DEFAULT 0")
-                db.execSQL("UPDATE books SET reading_state = CASE WHEN status = 'completed' THEN 'completed' WHEN status = 'reading' THEN 'reading' ELSE 'to_read' END")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN reading_state TEXT NOT NULL DEFAULT 'to_read'")
+                connection.execSQL("ALTER TABLE books ADD COLUMN started_at INTEGER DEFAULT NULL")
+                connection.execSQL("ALTER TABLE books ADD COLUMN completed_at INTEGER DEFAULT NULL")
+                connection.execSQL("ALTER TABLE books ADD COLUMN progress_percentage REAL NOT NULL DEFAULT 0")
+                connection.execSQL("ALTER TABLE books ADD COLUMN progress_updated_at INTEGER DEFAULT NULL")
+                connection.execSQL("ALTER TABLE books ADD COLUMN state_version INTEGER NOT NULL DEFAULT 0")
+                connection.execSQL("UPDATE books SET reading_state = CASE WHEN status = 'completed' THEN 'completed' WHEN status = 'reading' THEN 'reading' ELSE 'to_read' END")
             }
         }
 
     val MIGRATION_18_19 =
         object : Migration(18, 19) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE books ADD COLUMN remote_file_id TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE books ADD COLUMN remote_path TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE books ADD COLUMN remote_lifecycle TEXT NOT NULL DEFAULT 'imported'")
-                db.execSQL("ALTER TABLE books ADD COLUMN remote_catalog_version INTEGER NOT NULL DEFAULT 0")
-                db.execSQL("ALTER TABLE books ADD COLUMN remote_cover_ref TEXT DEFAULT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN remote_file_id TEXT DEFAULT NULL")
+                connection.execSQL("ALTER TABLE books ADD COLUMN remote_path TEXT DEFAULT NULL")
+                connection.execSQL("ALTER TABLE books ADD COLUMN remote_lifecycle TEXT NOT NULL DEFAULT 'imported'")
+                connection.execSQL("ALTER TABLE books ADD COLUMN remote_catalog_version INTEGER NOT NULL DEFAULT 0")
+                connection.execSQL("ALTER TABLE books ADD COLUMN remote_cover_ref TEXT DEFAULT NULL")
             }
         }
 
     val MIGRATION_19_20 =
         object : Migration(19, 20) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE books ADD COLUMN remote_provider TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE books ADD COLUMN remote_protocol_version INTEGER DEFAULT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN remote_provider TEXT DEFAULT NULL")
+                connection.execSQL("ALTER TABLE books ADD COLUMN remote_protocol_version INTEGER DEFAULT NULL")
             }
         }
 
     val MIGRATION_20_21 =
         object : Migration(20, 21) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_id ON sync_outbox(entity_id)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_file_mappings_book_id ON sync_file_mappings(book_id)")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_id ON sync_outbox(entity_id)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_sync_file_mappings_book_id ON sync_file_mappings(book_id)")
             }
         }
 
@@ -255,14 +274,14 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_21_22 =
         object : Migration(21, 22) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("DELETE FROM reading_progress WHERE book_id NOT IN (SELECT id FROM books)")
-                db.execSQL("DELETE FROM bookmarks WHERE book_id NOT IN (SELECT id FROM books)")
-                db.execSQL("DELETE FROM highlights WHERE book_id NOT IN (SELECT id FROM books)")
-                db.execSQL("DELETE FROM reading_stats WHERE book_id NOT IN (SELECT id FROM books)")
-                db.execSQL("DELETE FROM reading_sessions WHERE book_id NOT IN (SELECT id FROM books)")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("DELETE FROM reading_progress WHERE book_id NOT IN (SELECT id FROM books)")
+                connection.execSQL("DELETE FROM bookmarks WHERE book_id NOT IN (SELECT id FROM books)")
+                connection.execSQL("DELETE FROM highlights WHERE book_id NOT IN (SELECT id FROM books)")
+                connection.execSQL("DELETE FROM reading_stats WHERE book_id NOT IN (SELECT id FROM books)")
+                connection.execSQL("DELETE FROM reading_sessions WHERE book_id NOT IN (SELECT id FROM books)")
                 // Sync outbox references may point to a removed book — drop those too.
-                db.execSQL("DELETE FROM sync_outbox WHERE entity_id NOT IN (SELECT id FROM books) AND entity_type IN ('READING_PROGRESS','BOOKMARK','HIGHLIGHT')")
+                connection.execSQL("DELETE FROM sync_outbox WHERE entity_id NOT IN (SELECT id FROM books) AND entity_type IN ('READING_PROGRESS','BOOKMARK','HIGHLIGHT')")
             }
         }
 
@@ -274,8 +293,8 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_22_23 =
         object : Migration(22, 23) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE reading_sessions ADD COLUMN updated_at_epoch_millis INTEGER NOT NULL DEFAULT 0")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE reading_sessions ADD COLUMN updated_at_epoch_millis INTEGER NOT NULL DEFAULT 0")
             }
         }
 
@@ -288,43 +307,43 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_23_24 =
         object : Migration(23, 24) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE books ADD COLUMN genre TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE books ADD COLUMN language TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE books ADD COLUMN publisher TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE books ADD COLUMN tags TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE books ADD COLUMN published_date TEXT DEFAULT NULL")
-                db.execSQL("UPDATE books SET user_rating = user_rating * 2 WHERE user_rating IS NOT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN genre TEXT DEFAULT NULL")
+                connection.execSQL("ALTER TABLE books ADD COLUMN language TEXT DEFAULT NULL")
+                connection.execSQL("ALTER TABLE books ADD COLUMN publisher TEXT DEFAULT NULL")
+                connection.execSQL("ALTER TABLE books ADD COLUMN tags TEXT DEFAULT NULL")
+                connection.execSQL("ALTER TABLE books ADD COLUMN published_date TEXT DEFAULT NULL")
+                connection.execSQL("UPDATE books SET user_rating = user_rating * 2 WHERE user_rating IS NOT NULL")
             }
         }
 
     val MIGRATION_14_15 =
         object : Migration(14, 15) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE books ADD COLUMN status TEXT DEFAULT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN status TEXT DEFAULT NULL")
             }
         }
 
     val MIGRATION_13_14 =
         object : Migration(13, 14) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN definition TEXT DEFAULT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN definition TEXT DEFAULT NULL")
             }
         }
 
     val MIGRATION_12_13 =
         object : Migration(12, 13) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE highlights ADD COLUMN tag TEXT DEFAULT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE highlights ADD COLUMN tag TEXT DEFAULT NULL")
             }
         }
 
     val MIGRATION_11_12 =
         object : Migration(11, 12) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE reading_stats ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
-                db.execSQL("ALTER TABLE reading_sessions ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
-                db.execSQL(
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE reading_stats ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
+                connection.execSQL("ALTER TABLE reading_sessions ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
+                connection.execSQL(
                     """
                 CREATE TABLE IF NOT EXISTS dictionary_words (
                     id TEXT PRIMARY KEY NOT NULL,
@@ -338,29 +357,29 @@ object AppDatabaseMigrations {
 
     val MIGRATION_10_11 =
         object : Migration(10, 11) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE sync_file_mappings RENAME COLUMN remote_path TO drive_file_id")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE sync_file_mappings RENAME COLUMN remote_path TO drive_file_id")
             }
         }
 
     val MIGRATION_9_10 =
         object : Migration(9, 10) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE highlights ADD COLUMN type TEXT DEFAULT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE highlights ADD COLUMN type TEXT DEFAULT NULL")
             }
         }
 
     val MIGRATION_8_9 =
         object : Migration(8, 9) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE books ADD COLUMN chapter_count INTEGER DEFAULT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN chapter_count INTEGER DEFAULT NULL")
             }
         }
 
     val MIGRATION_4_5 =
         object : Migration(4, 5) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE books ADD COLUMN deleted_at INTEGER")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN deleted_at INTEGER")
 
                 // The v5 schema (5.json) declares these four tables, but the migration chain
                 // never created them. A v4 database upgraded through this migration therefore
@@ -368,31 +387,31 @@ object AppDatabaseMigrations {
                 // runMigrationsAndValidate at v5+ failed with "Migration didn't properly
                 // handle: highlights". These are the v5 shapes, not the current ones:
                 // later migrations (6, 9, 10, 11, 15, ...) reshape them further.
-                db.execSQL(
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS `highlights` (`id` TEXT NOT NULL, `book_id` TEXT NOT NULL, `cfi_range` TEXT NOT NULL, `text_content` TEXT NOT NULL, `note` TEXT, `color` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_highlights_book_id ON highlights(book_id)",
                 )
 
-                db.execSQL(
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS `bookmarks` (`id` TEXT NOT NULL, `book_id` TEXT NOT NULL, `cfi_location` TEXT NOT NULL, `title_or_snippet` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, `deleted_at` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_bookmarks_book_id ON bookmarks(book_id)",
                 )
 
-                db.execSQL(
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS `sync_outbox` (`id` TEXT NOT NULL, `entity_type` TEXT NOT NULL, `entity_id` TEXT NOT NULL, `operation` TEXT NOT NULL, `payload` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `retry_count` INTEGER NOT NULL, `last_error` TEXT, PRIMARY KEY(`id`))
                     """.trimIndent(),
                 )
 
-                db.execSQL(
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS `sync_file_mappings` (`remote_path` TEXT NOT NULL, `user_id` TEXT NOT NULL, `book_id` TEXT NOT NULL, `local_path` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`remote_path`))
                     """.trimIndent(),
@@ -402,26 +421,26 @@ object AppDatabaseMigrations {
 
     val MIGRATION_5_6 =
         object : Migration(5, 6) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE books ADD COLUMN total_pages INTEGER DEFAULT NULL")
-                db.execSQL("ALTER TABLE books ADD COLUMN user_rating INTEGER DEFAULT NULL")
-                db.execSQL("ALTER TABLE reading_progress ADD COLUMN current_page INTEGER DEFAULT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN total_pages INTEGER DEFAULT NULL")
+                connection.execSQL("ALTER TABLE books ADD COLUMN user_rating INTEGER DEFAULT NULL")
+                connection.execSQL("ALTER TABLE reading_progress ADD COLUMN current_page INTEGER DEFAULT NULL")
             }
         }
 
     val MIGRATION_6_7 =
         object : Migration(6, 7) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE highlights ADD COLUMN locator_json TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE bookmarks ADD COLUMN locator_json TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE reading_progress ADD COLUMN locator_json TEXT DEFAULT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE highlights ADD COLUMN locator_json TEXT DEFAULT NULL")
+                connection.execSQL("ALTER TABLE bookmarks ADD COLUMN locator_json TEXT DEFAULT NULL")
+                connection.execSQL("ALTER TABLE reading_progress ADD COLUMN locator_json TEXT DEFAULT NULL")
             }
         }
 
     val MIGRATION_7_8 =
         object : Migration(7, 8) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE books ADD COLUMN description TEXT DEFAULT NULL")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN description TEXT DEFAULT NULL")
             }
         }
 
@@ -433,10 +452,16 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_24_25 =
         object : Migration(24, 25) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("PRAGMA foreign_keys = OFF")
-                val count = db.compileStatement("SELECT COUNT(*) FROM sync_outbox").simpleQueryForLong()
-                db.execSQL(
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("PRAGMA foreign_keys = OFF")
+                val count =
+                    connection
+                        .prepare("SELECT COUNT(*) FROM sync_outbox")
+                        .use { statement ->
+                            check(statement.step()) { "count query returned no row: SELECT COUNT(*) FROM sync_outbox" }
+                            statement.getLong(0)
+                        }
+                connection.execSQL(
                     """
                     CREATE TABLE sync_outbox_new (
                         id TEXT NOT NULL PRIMARY KEY,
@@ -450,14 +475,20 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL("INSERT INTO sync_outbox_new (id, entity_type, entity_id, operation, payload, created_at, retry_count, last_error) SELECT id, entity_type, entity_id, operation, payload, created_at, retry_count, last_error FROM sync_outbox")
-                db.execSQL("DROP TABLE sync_outbox")
-                db.execSQL("ALTER TABLE sync_outbox_new RENAME TO sync_outbox")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_id ON sync_outbox(entity_id)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_type_entity_id ON sync_outbox(entity_type, entity_id)")
-                val newCount = db.compileStatement("SELECT COUNT(*) FROM sync_outbox").simpleQueryForLong()
+                connection.execSQL("INSERT INTO sync_outbox_new (id, entity_type, entity_id, operation, payload, created_at, retry_count, last_error) SELECT id, entity_type, entity_id, operation, payload, created_at, retry_count, last_error FROM sync_outbox")
+                connection.execSQL("DROP TABLE sync_outbox")
+                connection.execSQL("ALTER TABLE sync_outbox_new RENAME TO sync_outbox")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_id ON sync_outbox(entity_id)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_type_entity_id ON sync_outbox(entity_type, entity_id)")
+                val newCount =
+                    connection
+                        .prepare("SELECT COUNT(*) FROM sync_outbox")
+                        .use { statement ->
+                            check(statement.step()) { "count query returned no row: SELECT COUNT(*) FROM sync_outbox" }
+                            statement.getLong(0)
+                        }
                 if (newCount != count) throw IllegalStateException("sync_outbox row count mismatch after FK removal: before=$count after=$newCount")
-                db.execSQL("PRAGMA foreign_keys = ON")
+                connection.execSQL("PRAGMA foreign_keys = ON")
             }
         }
 
@@ -472,8 +503,8 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_26_27 =
         object : Migration(26, 27) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS installed_addons (
                         id TEXT NOT NULL PRIMARY KEY,
@@ -484,7 +515,7 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     "CREATE UNIQUE INDEX IF NOT EXISTS index_installed_addons_url ON installed_addons(url)",
                 )
             }
@@ -492,8 +523,8 @@ object AppDatabaseMigrations {
 
     val MIGRATION_25_26 =
         object : Migration(25, 26) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS discover_cache (
                         `key` TEXT NOT NULL PRIMARY KEY,
@@ -503,7 +534,7 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_discover_cache_fetched_at ON discover_cache(fetched_at)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_discover_cache_fetched_at ON discover_cache(fetched_at)")
             }
         }
 
@@ -516,16 +547,16 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_27_28 =
         object : Migration(27, 28) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN part_of_speech TEXT")
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN phonetic TEXT")
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN example TEXT")
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN quote TEXT")
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_book_id TEXT")
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_book_title TEXT")
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_book_author TEXT")
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_chapter TEXT")
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_locator TEXT")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN part_of_speech TEXT")
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN phonetic TEXT")
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN example TEXT")
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN quote TEXT")
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_book_id TEXT")
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_book_title TEXT")
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_book_author TEXT")
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_chapter TEXT")
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_locator TEXT")
             }
         }
 
@@ -539,9 +570,9 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_28_29 =
         object : Migration(28, 29) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN updated_at_epoch_millis INTEGER NOT NULL DEFAULT 0")
-                db.execSQL("UPDATE dictionary_words SET updated_at_epoch_millis = addedAtEpochMillis")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN updated_at_epoch_millis INTEGER NOT NULL DEFAULT 0")
+                connection.execSQL("UPDATE dictionary_words SET updated_at_epoch_millis = addedAtEpochMillis")
             }
         }
 
@@ -562,9 +593,9 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_29_30 =
         object : Migration(29, 30) {
-            override fun migrate(db: SupportSQLiteDatabase) {
+            override fun migrate(connection: SQLiteConnection) {
                 // (1) Cache-only positions: seed a canonical row.
-                db.execSQL(
+                connection.execSQL(
                     """
                     INSERT OR IGNORE INTO reading_progress
                         (id, book_id, cfi_location, percentage, current_page, updated_at, locator_json)
@@ -578,7 +609,7 @@ object AppDatabaseMigrations {
 
                 // (2) Cache wins: a known cache timestamp strictly newer, or a NULL
                 // timestamp carrying real divergent progress. Copy value and clock.
-                db.execSQL(
+                connection.execSQL(
                     """
                     UPDATE reading_progress
                     SET percentage = (SELECT b.progress_percentage FROM books b WHERE b.id = reading_progress.book_id),
@@ -597,8 +628,8 @@ object AppDatabaseMigrations {
 
                 // (3) Verify zero loss before dropping the only remaining copy.
                 val divergent =
-                    db
-                        .compileStatement(
+                    connection
+                        .prepare(
                             """
                             SELECT COUNT(*) FROM books b
                             LEFT JOIN reading_progress rp ON rp.book_id = b.id
@@ -609,7 +640,10 @@ object AppDatabaseMigrations {
                                 OR (b.progress_updated_at IS NULL AND rp.percentage <> b.progress_percentage)
                               )
                             """.trimIndent(),
-                        ).simpleQueryForLong()
+                        ).use { statement ->
+                            check(statement.step()) { "divergence count query returned no row" }
+                            statement.getLong(0)
+                        }
                 if (divergent != 0L) {
                     throw IllegalStateException(
                         "progress backfill incomplete before dropping books.progress_percentage: $divergent divergent row(s)",
@@ -617,8 +651,8 @@ object AppDatabaseMigrations {
                 }
 
                 // (4) Recreate `books` without the retired column.
-                db.execSQL("PRAGMA defer_foreign_keys = ON")
-                db.execSQL(
+                connection.execSQL("PRAGMA defer_foreign_keys = ON")
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS books_new (
                         id TEXT NOT NULL,
@@ -656,7 +690,7 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     """
                     INSERT INTO books_new
                         (id, title, author, cover_path, file_path, format, total_pages, chapter_count,
@@ -673,10 +707,10 @@ object AppDatabaseMigrations {
                     FROM books
                     """.trimIndent(),
                 )
-                db.execSQL("DROP TABLE books")
-                db.execSQL("ALTER TABLE books_new RENAME TO books")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
-                db.execSQL("PRAGMA defer_foreign_keys = OFF")
+                connection.execSQL("DROP TABLE books")
+                connection.execSQL("ALTER TABLE books_new RENAME TO books")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
+                connection.execSQL("PRAGMA defer_foreign_keys = OFF")
             }
         }
 
@@ -693,24 +727,25 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_30_31 =
         object : Migration(30, 31) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN word_normalized TEXT NOT NULL DEFAULT ''")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE dictionary_words ADD COLUMN word_normalized TEXT NOT NULL DEFAULT ''")
 
                 val backfill = mutableListOf<Pair<String, String>>()
-                db.query("SELECT id, word FROM dictionary_words").use { cursor ->
-                    while (cursor.moveToNext()) {
-                        backfill += cursor.getString(0) to DictionaryNormalizer.normalize(cursor.getString(1))
+                connection.prepare("SELECT id, word FROM dictionary_words").use { statement ->
+                    while (statement.step()) {
+                        backfill += statement.getText(0) to DictionaryNormalizer.normalize(statement.getText(1))
                     }
                 }
                 for ((id, normalized) in backfill) {
-                    db.execSQL(
-                        "UPDATE dictionary_words SET word_normalized = ? WHERE id = ?",
-                        arrayOf(normalized, id),
-                    )
+                    connection.prepare("UPDATE dictionary_words SET word_normalized = ? WHERE id = ?").use { statement ->
+                        statement.bindText(1, normalized)
+                        statement.bindText(2, id)
+                        statement.step()
+                    }
                 }
 
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_dictionary_words_word_normalized ON dictionary_words(word_normalized)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_books_reading_state ON books(reading_state)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_dictionary_words_word_normalized ON dictionary_words(word_normalized)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_books_reading_state ON books(reading_state)")
             }
         }
 
@@ -724,8 +759,8 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_31_32 =
         object : Migration(31, 32) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS notifications (
                         id TEXT NOT NULL PRIMARY KEY,
@@ -743,7 +778,7 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_notifications_created_at ON notifications(created_at)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_notifications_created_at ON notifications(created_at)")
             }
         }
 
@@ -761,11 +796,11 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_32_33 =
         object : Migration(32, 33) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("PRAGMA defer_foreign_keys = ON")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("PRAGMA defer_foreign_keys = ON")
 
-                db.execSQL("DROP TABLE IF EXISTS books")
-                db.execSQL(
+                connection.execSQL("DROP TABLE IF EXISTS books")
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS books (
                         id TEXT NOT NULL,
@@ -804,14 +839,14 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_books_reading_state ON books(reading_state)")
-                db.execSQL(
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_books_reading_state ON books(reading_state)")
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_books_user_id_deleted_at_updated_at " +
                         "ON books(user_id, deleted_at, updated_at DESC)",
                 )
 
-                db.execSQL("DROP TABLE IF EXISTS reading_progress")
-                db.execSQL(
+                connection.execSQL("DROP TABLE IF EXISTS reading_progress")
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS reading_progress (
                         id TEXT NOT NULL,
@@ -827,13 +862,13 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     "CREATE UNIQUE INDEX IF NOT EXISTS index_reading_progress_user_id_book_id " +
                         "ON reading_progress(user_id, book_id)",
                 )
 
-                db.execSQL("DROP TABLE IF EXISTS highlights")
-                db.execSQL(
+                connection.execSQL("DROP TABLE IF EXISTS highlights")
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS highlights (
                         id TEXT NOT NULL,
@@ -853,13 +888,13 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_highlights_user_id_book_id_deleted_at " +
                         "ON highlights(user_id, book_id, deleted_at)",
                 )
 
-                db.execSQL("DROP TABLE IF EXISTS bookmarks")
-                db.execSQL(
+                connection.execSQL("DROP TABLE IF EXISTS bookmarks")
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS bookmarks (
                         id TEXT NOT NULL,
@@ -875,13 +910,13 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_bookmarks_user_id_book_id_deleted_at " +
                         "ON bookmarks(user_id, book_id, deleted_at)",
                 )
 
-                db.execSQL("DROP TABLE IF EXISTS dictionary_words")
-                db.execSQL(
+                connection.execSQL("DROP TABLE IF EXISTS dictionary_words")
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS dictionary_words (
                         id TEXT NOT NULL,
@@ -904,14 +939,14 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_dictionary_words_user_id ON dictionary_words(user_id)")
-                db.execSQL(
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_dictionary_words_user_id ON dictionary_words(user_id)")
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_dictionary_words_word_normalized " +
                         "ON dictionary_words(word_normalized)",
                 )
 
-                db.execSQL("DROP TABLE IF EXISTS sync_outbox")
-                db.execSQL(
+                connection.execSQL("DROP TABLE IF EXISTS sync_outbox")
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS sync_outbox (
                         id TEXT NOT NULL,
@@ -927,14 +962,14 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_id ON sync_outbox(entity_id)")
-                db.execSQL(
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_id ON sync_outbox(entity_id)")
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_sync_outbox_entity_type_entity_id " +
                         "ON sync_outbox(entity_type, entity_id)",
                 )
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_user_id ON sync_outbox(user_id)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_sync_outbox_user_id ON sync_outbox(user_id)")
 
-                db.execSQL("PRAGMA defer_foreign_keys = OFF")
+                connection.execSQL("PRAGMA defer_foreign_keys = OFF")
             }
         }
 
@@ -967,12 +1002,12 @@ object AppDatabaseMigrations {
      */
     val MIGRATION_33_34 =
         object : Migration(33, 34) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("PRAGMA defer_foreign_keys = ON")
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("PRAGMA defer_foreign_keys = ON")
 
                 // ── Fix 1 + Fix 3: reading_stats — new PK, renamed owner column ──
-                db.execSQL("DROP TABLE IF EXISTS reading_stats")
-                db.execSQL(
+                connection.execSQL("DROP TABLE IF EXISTS reading_stats")
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS reading_stats (
                         book_id TEXT NOT NULL,
@@ -985,13 +1020,13 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_reading_stats_book_id ON reading_stats(book_id)",
                 )
 
                 // ── Fix 3: reading_sessions — renamed owner column ──
-                db.execSQL("ALTER TABLE reading_sessions RENAME TO reading_sessions_old")
-                db.execSQL(
+                connection.execSQL("ALTER TABLE reading_sessions RENAME TO reading_sessions_old")
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS reading_sessions (
                         id TEXT NOT NULL,
@@ -1006,15 +1041,15 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     "INSERT INTO reading_sessions (id, book_id, start_time, duration_minutes, date, user_id, updated_at_epoch_millis) " +
                         "SELECT id, book_id, start_time, duration_minutes, date, userId, updated_at_epoch_millis " +
                         "FROM reading_sessions_old",
                 )
-                db.execSQL("DROP TABLE reading_sessions_old")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_reading_sessions_book_id ON reading_sessions(book_id)")
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_reading_sessions_date ON reading_sessions(date)")
-                db.execSQL(
+                connection.execSQL("DROP TABLE reading_sessions_old")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_reading_sessions_book_id ON reading_sessions(book_id)")
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_reading_sessions_date ON reading_sessions(date)")
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_reading_sessions_date_user_id ON reading_sessions(date, user_id)",
                 )
 
@@ -1025,7 +1060,7 @@ object AppDatabaseMigrations {
                 // The correlated NOT EXISTS below is equivalent and works on 3.18.
                 // The trailing `d.id > keep.id` tiebreak makes the ordering total:
                 // two rows sharing both timestamps can no longer delete each other.
-                db.execSQL(
+                connection.execSQL(
                     """
                     DELETE FROM dictionary_words
                     WHERE EXISTS (
@@ -1047,7 +1082,7 @@ object AppDatabaseMigrations {
                     )
                     """.trimIndent(),
                 )
-                db.execSQL(
+                connection.execSQL(
                     "CREATE UNIQUE INDEX IF NOT EXISTS index_dictionary_words_user_id_word_normalized " +
                         "ON dictionary_words(user_id, word_normalized)",
                 )
@@ -1055,12 +1090,12 @@ object AppDatabaseMigrations {
                 // DAO's prefix `search()` keeps its range on `word_normalized`,
                 // and a composite index leading with `user_id` was measured to
                 // fall back to a full table scan there.
-                db.execSQL(
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_dictionary_words_word_normalized " +
                         "ON dictionary_words(word_normalized)",
                 )
 
-                db.execSQL("PRAGMA defer_foreign_keys = OFF")
+                connection.execSQL("PRAGMA defer_foreign_keys = OFF")
             }
         }
 
