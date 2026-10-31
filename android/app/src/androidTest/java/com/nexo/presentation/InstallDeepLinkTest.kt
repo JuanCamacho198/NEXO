@@ -8,7 +8,10 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.nexo.MainActivity
+import com.nexo.data.session.NotificationPermissionPrefs
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,8 +34,24 @@ class InstallDeepLinkTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()
 
+    /**
+     * Same `POST_NOTIFICATIONS` prompt as [AuthDeepLinkCallbackTest]: on API 34
+     * CI the dialog pauses MainActivity, so the first `onNodeWithText` sees no
+     * compose hierarchy. Marking the one-shot flag first makes the request a
+     * no-op. See that class for the logcat evidence.
+     */
+    @Before
+    fun suppressNotificationPermissionPrompt() {
+        NotificationPermissionPrefs.markRequested(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+        )
+    }
+
     @Test
     fun warmStart_installIntent_showsInstallFlowDialog_andDismissAborts() {
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule.onAllNodesWithText("Continue with Google").fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithText("Continue with Google").assertIsDisplayed()
 
         composeRule.activityRule.scenario.onActivity { activity ->

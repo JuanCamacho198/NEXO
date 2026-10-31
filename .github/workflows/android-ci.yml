@@ -325,6 +325,23 @@ jobs:
         # URLs embedding a module path (`/auth/v1`, `/rest/v1`, `/storage/v1`,
         # `/realtime/v1`), which is why the `/auth/v1/callback` form is wrong here.
         #
+        # All FIVE remaining config keys are written explicitly, even though every
+        # one is optional at runtime. An absent key and an empty key are different
+        # failures: absent, the Gradle `localProperties.getProperty(...) ?: ""`
+        # default makes the key empty and *looks* identical, so a later reader
+        # cannot tell "deliberately disabled here" from "forgotten". Writing them
+        # makes the job's configuration complete and self-describing.
+        #
+        # Why each is safe as a placeholder:
+        # - GOOGLE_BOOKS_KEY: blank omits the Books provider from the DI list
+        #   (fail-closed); the app stays on Open Library + Gutenberg.
+        # - SENTRY_DSN: blank makes `SentryAndroid.init` a no-op (NexoApplication).
+        # - google.oauth.client.id / google.oauth.android.client.id: only feed
+        #   BuildConfig + the `driveRedirectScheme` manifest placeholder. No
+        #   instrumented test exercises Google sign-in or the Drive PKCE flow.
+        # - update.feed.url: blank disables the app-update self-check (version
+        #   display only), so no test can hang on a dead update feed.
+        #
         # Scoped to this job ONLY. `android-checks` passes today without it (the JVM
         # suite never touches the Supabase client), and the benchmark /
         # baseline-profile jobs measure performance and never assert on auth state.
@@ -333,6 +350,11 @@ jobs:
           cat > local.properties <<'EOF'
           SUPABASE_URL=https://ci-test-project.supabase.co
           SUPABASE_ANON_KEY=sb_publishable_ci_test_placeholder_key_000000000000
+          GOOGLE_BOOKS_KEY=
+          SENTRY_DSN=
+          google.oauth.client.id=
+          google.oauth.android.client.id=
+          update.feed.url=
           EOF
 
       - name: Enable KVM group perms

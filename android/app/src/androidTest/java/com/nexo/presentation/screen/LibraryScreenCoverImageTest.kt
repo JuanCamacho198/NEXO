@@ -31,8 +31,15 @@ class LibraryScreenCoverImageTest {
         }
 
         composeRule.onNodeWithContentDescription(contentDescription).assertIsDisplayed()
+        // A null `coverPath` collapses the ImageRequest data to `null`; Coil
+        // resolves that through `.error(R.drawable.cover_error)` and reports
+        // `AsyncImagePainter.State.Error` — never `Empty`, which Coil only
+        // emits when a request is still unstarted. The placeholder the user
+        // actually sees is drawn by the error drawable, so `Error` is the
+        // correct terminal state for the null path (verified in CI logcat:
+        // "CoverThumbnail: cover load failed for null").
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            states.any { it == "Empty" || it == "Success" }
+            states.any { it == "Error" || it == "Success" }
         }
     }
 
