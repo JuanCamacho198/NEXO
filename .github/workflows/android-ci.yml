@@ -576,7 +576,33 @@ jobs:
           # ONE line for the same reason as the emulator job: the action hands
           # this to `sh -c`, so a trailing-backslash continuation becomes a
           # task named `\` and the run dies before executing anything.
-          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :benchmark:connectedBenchmarkAndroidTest
+          #
+          # The logcat capture is backgrounded before Gradle starts and killed
+          # after it, because the benchmark's failure mode is a line the test
+          # framework logs but never surfaces in the Gradle output:
+          # `ProfileInstallBroadcast` prints the raw `am broadcast` stdout as
+          # `Broadcast response: ...` at DEBUG, and `androidx.benchmark` turns a
+          # missing or unparseable response into
+          # `RuntimeException: The baseline profile install broadcast was not
+          # received`. That message guesses at the cause ("the profileinstaller
+          # library is missing") and the guess is wrong — the receiver and its
+          # intent-filter are in the merged manifest. The captured line is what
+          # separates "the receiver never ran" from "the stdout did not parse",
+          # `pkill` rather than a saved PID: no shell variable to survive the
+          # wrapper, and nothing to go stale.
+          script: adb logcat -c; (adb logcat -v time > /tmp/benchmark-logcat.txt &); ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :benchmark:connectedBenchmarkAndroidTest; status=$?; pkill -f "adb logcat" 2>/dev/null; exit $status
+
+      - name: Upload benchmark logcat
+        # The failure this job hits is only diagnosable from the device log, so
+        # the log is an artifact rather than something to go looking for in a
+        # run that may have been pruned. `if: always()` because the interesting
+        # runs are the failing ones.
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmark-logcat
+          path: /tmp/benchmark-logcat.txt
+          if-no-files-found: warn
 
       - name: Verify benchmark regression against the checked-in baseline
         # Opt-in: only meaningful once a run has turned
@@ -677,7 +703,24 @@ jobs:
           # continuations are not interpreted and become a task named `\`.
           # `--configuration-cache` is omitted for the same reason as the other
           # device jobs — the generation task drives connected instrumentation.
-          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :app:generateReleaseBaselineProfile
+          #
+          # Logcat is captured for the same reason as `android-benchmark`: this
+          # job's failure is `IllegalStateException: Unable to confirm activity
+          # launch completion`, which the device log explains and the Gradle
+          # output does not. `pkill` rather than a saved PID: no shell variable
+          # to survive the wrapper, and nothing to go stale.
+          script: adb logcat -c; (adb logcat -v time > /tmp/baseline-logcat.txt &); ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :app:generateReleaseBaselineProfile; status=$?; pkill -f "adb logcat" 2>/dev/null; exit $status
+
+      - name: Upload baseline profile logcat
+        # Same reasoning as the benchmark job's logcat artifact: the failure is
+        # only diagnosable from the device log, and the interesting runs are the
+        # failing ones.
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: baseline-profile-logcat
+          path: /tmp/baseline-logcat.txt
+          if-no-files-found: warn
 
       - name: Upload the generated baseline profile
         # THE deliverable: a maintainer commits the uploaded
