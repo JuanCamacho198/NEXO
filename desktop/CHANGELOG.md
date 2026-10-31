@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.7.0](https://github.com/JuanCamacho198/NEXO/compare/desktop-v0.6.0...desktop-v0.7.0) (2026-10-31)
+
+
+### Features
+
+* **desktop:** fetch catalogue feeds from Rust, because the feed has no CORS ([261ba28](https://github.com/JuanCamacho198/NEXO/commit/261ba28804f075090267636f126b3b9a7a796a1f))
+* **desktop:** rotate Discover rails by topic, and mirror the rail log ([1063776](https://github.com/JuanCamacho198/NEXO/commit/10637766357f62de39695ac75cd2896402aa90d9))
+* **discover:** four working rails, and remove the sources that could not answer ([cbca0b1](https://github.com/JuanCamacho198/NEXO/commit/cbca0b178af7fccb2a35443f9a6f627f0e328ebb))
+
+
+### Bug Fixes
+
+* **desktop:** keep the bookmark's CFI location in the local row ([07cca7c](https://github.com/JuanCamacho198/NEXO/commit/07cca7c8e92e899d97c1fc27ffc4ed2cd2947797))
+* **desktop:** let three migrations re-run instead of refusing to open the database ([0453ab8](https://github.com/JuanCamacho198/NEXO/commit/0453ab806b910619d36f116332efed56bfb2b9ac))
+* **desktop:** make margins and line spacing reach the text, and stop rebuilding the highlight map ([34e9881](https://github.com/JuanCamacho198/NEXO/commit/34e9881516409a020cd236ba15cc6856ef9c178b))
+* **desktop:** scope reading statistics to the account that read them ([5417108](https://github.com/JuanCamacho198/NEXO/commit/54171081386ab8f12c64f2cd2437da729934ff5a))
+* **desktop:** scope the sync outbox drain to one account ([e3b5b9f](https://github.com/JuanCamacho198/NEXO/commit/e3b5b9fe3be873cae9b8660a0aee28ab2042d4e6))
+* **desktop:** stop a cross-document observer from failing every chapter swap ([29fbabb](https://github.com/JuanCamacho198/NEXO/commit/29fbabbcb463b8f312f12ef880d750d78387c28e))
+
+
+### Reverts
+
+* **desktop:** drop the book-page indicator and the wheel from the reader ([146a2dd](https://github.com/JuanCamacho198/NEXO/commit/146a2ddd912d214c76a839e6d690f3adf7a558c3))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/desktop-v0.2.0...desktop-v0.3.0) (2026-09-17)
 
 

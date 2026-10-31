@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.5.0](https://github.com/JuanCamacho198/NEXO/compare/android-v0.4.1...android-v0.5.0) (2026-10-31)
+
+
+### Features
+
+* **android:** gate onboarding per account and thread the active user through the UI ([3b363ef](https://github.com/JuanCamacho198/NEXO/commit/3b363ef29d80e862a2ed5da068a6eff38d9113b9))
+* **android:** move reader and goal preferences per account ([a0f9649](https://github.com/JuanCamacho198/NEXO/commit/a0f9649db09791304891f8f3b599699fdb8d1b0c))
+* **android:** rebuild Home around resuming the active read ([6fcf824](https://github.com/JuanCamacho198/NEXO/commit/6fcf8246b12b84ebc388980539b5e889d1226b70))
+* **android:** rotate Discover rails by topic, and add Standard Ebooks ([225d4c9](https://github.com/JuanCamacho198/NEXO/commit/225d4c95bddd9b7b5f762750c5220b9f4e1cc249))
+* **android:** scope every local table to the signed-in account ([18b8349](https://github.com/JuanCamacho198/NEXO/commit/18b83493f9bf298706a8e70f89e20a63a8c03d0c))
+* **discover:** four working rails, and remove the sources that could not answer ([cbca0b1](https://github.com/JuanCamacho198/NEXO/commit/cbca0b178af7fccb2a35443f9a6f627f0e328ebb))
+* upload imported books from Android, and make Drive filenames readable ([a405f98](https://github.com/JuanCamacho198/NEXO/commit/a405f987bf3f96427c89f26bf7987d1d4c2512b8))
+
+
+### Bug Fixes
+
+* **android:** create the tables v5 always declared, and the index v16 needs ([98d58b2](https://github.com/JuanCamacho198/NEXO/commit/98d58b21c6ea22be1fc6b170992106bc6ced9a48))
+* **android:** deliver the warm-start intent through onNewIntent instead of launching the Activity at itself ([75f23bf](https://github.com/JuanCamacho198/NEXO/commit/75f23bfe175279492028a1b87b734c616e8f2202))
+* **android:** enable FTS5 via bundled SQLite driver ([58951db](https://github.com/JuanCamacho198/NEXO/commit/58951db974518fd4e38b7abfc1c7c3746659a460))
+* **android:** find Drive files stored under the readable name ([97c9b7d](https://github.com/JuanCamacho198/NEXO/commit/97c9b7d91b1f772538a5866dbb4c82901741d989))
+* **android:** give every migration test its own database ([b032270](https://github.com/JuanCamacho198/NEXO/commit/b032270b32a0ddd4113af939f0c7bd4274f19d93))
+* **android:** give reading_stats an owner-scoped key and enforce the dictionary unique ([62a4c9c](https://github.com/JuanCamacho198/NEXO/commit/62a4c9c7ecc7b349a9dd8f5e0c81e1699704f8ce))
+* **android:** refresh the Drive token before declaring sync disabled ([4c6db76](https://github.com/JuanCamacho198/NEXO/commit/4c6db766b2dce3f4d2219fb7404f2da83884548f))
+* **android:** repair six UI tests that had never run, and one permission prompt behind four of them ([b948ae1](https://github.com/JuanCamacho198/NEXO/commit/b948ae193fa7b3b1f51220c2de3e49b4f7fb612a))
+* **android:** restore the launch intent after delivering the warm start, so Scenario keeps its stage machine ([cb765f4](https://github.com/JuanCamacho198/NEXO/commit/cb765f49d31cef6b862b499d40534ea14a327fc9))
+* **android:** run the migrations under the SQLite driver ([eeff576](https://github.com/JuanCamacho198/NEXO/commit/eeff576f9420ccd28daeb7b03acb39af2736ff32))
+* **android:** stop signing the reader out on a cold start ([dcd0565](https://github.com/JuanCamacho198/NEXO/commit/dcd0565ee99d35a2d7728632e0856f3779052d23))
+* **android:** stop sync rewriting rows that belong to another account ([fd78b96](https://github.com/JuanCamacho198/NEXO/commit/fd78b96126ec2c79b71a648e7d0442232ebeea2d))
+* **android:** stop the migration tests inheriting each other's database ([1827541](https://github.com/JuanCamacho198/NEXO/commit/18275412aa92041c0123099deb9bcb8ebd5e23e9))
+* **android:** suppress the permission prompt before the Activity launches, and ignore one test that asserts what the app does not do ([49e1756](https://github.com/JuanCamacho198/NEXO/commit/49e1756daf3a6f6ea93952638d5cf0513c1d8340))
+* **android:** three test defects the contamination had been hiding ([da71eaa](https://github.com/JuanCamacho198/NEXO/commit/da71eaae21c6de8c833a004cfb8d1bd6bb695f80))
+* **ci:** give the emulator job a test-shaped config, and resolve the import string during composition ([a11d112](https://github.com/JuanCamacho198/NEXO/commit/a11d112ecd2bbbf732843b5647303965d7f633f3))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXO/compare/android-v0.2.0...android-v0.3.0) (2026-09-17)
 
 
