@@ -26,7 +26,8 @@ import org.junit.runner.RunWith
  *
  * The intent is delivered by calling `MainActivity.onNewIntent` directly, which
  * is how a singleTop warm start reaches the Activity anyway — see the comment
- * at the delivery site for why a self-`startActivity` breaks Scenario teardown.
+ * at the delivery site for why production `setIntent` breaks Scenario teardown
+ * and how the launch intent is restored afterwards.
  *
  * Confirm-path with an injected fake transport (dao write assertions) requires
  * a test transport injection seam and a device/emulator — pending manual QA.
@@ -58,20 +59,37 @@ class InstallDeepLinkTest {
         // Warm-start deep links arrive through `onNewIntent` (singleTop), so the
         // test injects the intent there instead of launching MainActivity at
         // itself. A self-`startActivity` makes the platform re-deliver the
-        // intent outside `ActivityScenario`'s own lifecycle bookkeeping: the
-        // Activity does reach DESTROYED on teardown, but the Scenario's stage
-        // machine never records it (`ActivityScenario$1.onActivityLifecycleChanged`
-        // bails out when the received Activity is not its `currentActivity`) and
+        // intent outside `ActivityScenario`'s own lifecycle bookkeeping and
         // `close()` then blocks for `ActivityLifecycleTimeout` (~45 s) before
         // failing with "Activity never becomes requested state [DESTROYED]".
         //
-        // The override is still the real routing entry point — `Intent` is an
-        // opaque parcelable (no equals/hashCode), so `Activity.setIntent`
-        // swapping the instance cannot affect the match. The call chain under
-        // test is unchanged: `MainActivity.onNewIntent` → install branch first
-        // → `InstallDeepLinkParser.isInstallUri` →
+        // The override is the real routing entry point. The call chain under
+        // test: `MainActivity.onNewIntent` → `setIntent(intent)` → install
+        // branch first → `InstallDeepLinkParser.isInstallUri` →
         // `appContainer.installDeepLinkController.onInstallUri`, returning
         // before `handleAuthDeepLink`/supabase.
+        //
+        // That production `setIntent` is what breaks Scenario teardown, and the
+        // reason is NOT Intent identity. `ActivityScenario` guards every
+        // lifecycle callback in `ActivityScenario$1.onActivityLifecycleChanged`
+        // by calling `ActivityScenario.activityMatchesIntent(startActivityIntent,
+        // activity)` — a value comparison of the LAUNCH intent's
+        // action/data/type/package/categories/identifier against
+        // `activity.getIntent()`. `setIntent` replaces exactly the value that
+        // guard reads, so once the install intent is installed the guard
+        // returns false for every later callback (the lifecycle log shows
+        // "startActivityIntent = Intent { act=MAIN ... }" vs
+        // "activity.getIntent() = Intent { act=VIEW ... }"), `currentActivityStage`
+        // freezes at RESUMED, and `close()` never observes the Activity's
+        // DESTROYED transition. The Activity itself dies normally; only the
+        // Scenario fails to record it.
+        //
+        // The fix restores the recorded launch intent immediately after the
+        // override returns. The routing already happened synchronously inside
+        // `onNewIntent` (onInstallUri publishes Fetching and only then launches
+        // the fetch on the controller scope), so re-installing the original
+        // intent here cannot disturb what the test proves — it only hands the
+        // Scenario back the value its guard compares against.
         //
         // `onNewIntent` is `protected`, and the test lives in a different
         // package (`com.nexo.presentation`), so the reflective virtual call
@@ -80,6 +98,7 @@ class InstallDeepLinkTest {
         // (MainActivity's) and runs the same method a singleTop redelivery
         // would.
         composeRule.activityRule.scenario.onActivity { activity ->
+            val launchIntent = activity.intent
             val installIntent =
                 Intent(
                     Intent.ACTION_VIEW,
@@ -92,6 +111,9 @@ class InstallDeepLinkTest {
                 .getDeclaredMethod("onNewIntent", Intent::class.java)
                 .apply { isAccessible = true }
                 .invoke(activity, installIntent)
+            // Hand back the intent ActivityScenario recorded at launch so its
+            // lifecycle guard keeps matching through teardown.
+            activity.intent = launchIntent
         }
 
         // The install flow reaches either the confirm dialog (preview succeeded)
