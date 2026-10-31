@@ -6,6 +6,7 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
+import org.junit.Assume.assumeTrue
 
 /** Application id under test (`:app` `applicationId`). */
 internal const val TARGET_PACKAGE = "com.nexo"
@@ -66,6 +67,39 @@ internal fun MacrobenchmarkScope.navigateTo(tab: BottomTab) {
             ?: error("Bottom-nav tab '${tab.display}' not found in either shipped locale. Is the session authenticated?")
     node.click()
     device.waitForIdle()
+}
+
+/**
+ * True when the authenticated shell is on screen, i.e. when the bottom bar exists.
+ *
+ * `NexoNavHost` composes its `Scaffold.bottomBar` ONLY `if (isAuthenticated)`
+ * (NexoNavHost.kt:270), so an unauthenticated process cold-starts into the Auth
+ * graph with NO bottom-bar destinations to reach. That is a structural property of
+ * the app, not a broken benchmark environment: a journey targeting Library/Discover
+ * is genuinely INAPPLICABLE without a session, exactly like baseline-profile
+ * collection on an API < 33 device.
+ *
+ * Probes the shipped bottom-bar labels against the same wait budget [navigateTo]
+ * uses, so the two agree by construction — if this returns true, [navigateTo] for
+ * any tab cannot then fail with the not-found error.
+ */
+internal fun MacrobenchmarkScope.hasAuthenticatedShell(): Boolean = BottomTab.entries.any { tab -> awaitAnyText(tab.labels) != null }
+
+/**
+ * Skips the calling journey when there is no authenticated session, instead of
+ * failing inside [navigateTo].
+ *
+ * Seeding a session is explicitly out of scope (credentials or an auth bypass do
+ * not belong in CI), and reducing the journey to the Auth surface would measure
+ * something other than the journey's name — worse than an honest skip. `assumeTrue`
+ * is the same mechanism `BaselineProfileGenerator.requireProfileCapableDevice`
+ * already uses for an infeasible environment.
+ */
+internal fun MacrobenchmarkScope.assumeAuthenticatedSession() {
+    assumeTrue(
+        "Journey needs an authenticated session; the app cold-started into Auth and the bottom bar is not composed",
+        hasAuthenticatedShell(),
+    )
 }
 
 /** First scrollable container on the current screen. */

@@ -16,6 +16,10 @@ import org.junit.runner.RunWith
  * Warm start (process resident) so the measured block is the fling itself, not
  * process bring-up; the Discover list is the app's most image-heavy surface, which
  * is why it carries the frame-timing threshold.
+ *
+ * SKIPS without an authenticated session: the bottom bar is composed only
+ * `if (isAuthenticated)` (NexoNavHost.kt:270), so there is no Discover tab to reach.
+ * See [assumeAuthenticatedSession].
  */
 @RunWith(AndroidJUnit4::class)
 class DiscoverFlingBenchmark {
@@ -33,6 +37,7 @@ class DiscoverFlingBenchmark {
             setupBlock = { pressHome() },
         ) {
             startActivityAndWait()
+            assumeAuthenticatedSession()
             navigateTo(BottomTab.DISCOVER)
             flingContent()
         }

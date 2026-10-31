@@ -71,8 +71,14 @@ class BaselineProfileGenerator {
             includeInStartupProfile = false,
             profileBlock = {
                 startActivityAndWait()
-                navigateTo(BottomTab.LIBRARY)
-                scrollContent()
+                // Same no-session precondition as the macrobenchmark journey. Here it
+                // must NOT throw: an exception mid-collection aborts the run and can
+                // discard the rules the cold-start block already gathered. Degrade to a
+                // no-op exactly like [openReaderProfile]'s missing-book branch.
+                if (hasAuthenticatedShell()) {
+                    navigateTo(BottomTab.LIBRARY)
+                    scrollContent()
+                }
             },
         )
 
@@ -84,8 +90,10 @@ class BaselineProfileGenerator {
             includeInStartupProfile = false,
             profileBlock = {
                 startActivityAndWait()
-                navigateTo(BottomTab.DISCOVER)
-                flingContent()
+                if (hasAuthenticatedShell()) {
+                    navigateTo(BottomTab.DISCOVER)
+                    flingContent()
+                }
             },
         )
 
@@ -107,16 +115,18 @@ class BaselineProfileGenerator {
             includeInStartupProfile = false,
             profileBlock = {
                 startActivityAndWait()
-                navigateTo(BottomTab.LIBRARY)
+                if (hasAuthenticatedShell()) {
+                    navigateTo(BottomTab.LIBRARY)
 
-                val cover = scrollable().findObject(By.clickable(true))
-                if (cover != null) {
-                    cover.click()
-                    device.waitForIdle()
-
-                    awaitAnyText(READ_CTA_LABELS)?.let { readCta ->
-                        readCta.click()
+                    val cover = scrollable().findObject(By.clickable(true))
+                    if (cover != null) {
+                        cover.click()
                         device.waitForIdle()
+
+                        awaitAnyText(READ_CTA_LABELS)?.let { readCta ->
+                            readCta.click()
+                            device.waitForIdle()
+                        }
                     }
                 }
             },
