@@ -537,7 +537,29 @@ jobs:
   #     rather than a step that is guaranteed red on every dispatch.
   android-benchmark:
     name: Android macrobenchmarks (dispatch only)
-    if: github.event_name == 'workflow_dispatch'
+    # DISABLED — the GitHub-hosted emulator cannot produce frame stats, and every
+    # macrobenchmark journey needs them.
+    #
+    # `startActivityAndWait` reads `dumpsys gfxinfo <pkg> framestats` to confirm a
+    # launch, unconditionally — verified in `MacrobenchmarkScope`'s bytecode, so it
+    # does not matter which metrics a journey declares. The emulator never emits
+    # the `---PROFILEDATA---` block, so the read is empty on every iteration and
+    # the library throws `Unable to confirm activity launch completion []`.
+    #
+    # Ruled out, each by running it: the API-level mismatch (34 and 36 both fail
+    # identically), the metric selection, a stale `androidx.benchmark` (1.5.0) or
+    # `profileinstaller` (1.4.1), and journey logic (all 8 die on the first
+    # statement, before any of it runs).
+    #
+    # Run it on a real device instead:
+    #   ./gradlew :benchmark:connectedBenchmarkAndroidTest
+    # The scroll, fling and reader journeys also need a signed-in session —
+    # `NexoNavHost` composes its bottom bar only `if (isAuthenticated)`, so they
+    # skip rather than measure an unintended screen.
+    #
+    # Everything else in this job is kept deliberately: the logcat capture is what
+    # produced the diagnosis above, and it is what a maintainer needs next time.
+    if: false
     runs-on: ubuntu-latest
     # Cold emulator boot (no snapshot, see below) + a full `:app:benchmark`
     # variant build + the benchmark test APK + the journeys: 4 classes x 5
@@ -660,7 +682,16 @@ jobs:
   # and one red step should name one broken thing.
   android-baseline-profile:
     name: Android baseline profile (dispatch only)
-    if: github.event_name == 'workflow_dispatch'
+    # DISABLED — same environment limitation as `android-benchmark`, and the same
+    # recorded reason: `BaselineProfileRule.collect()` drives the same
+    # `startActivityAndWait`, which needs frame stats the emulator does not emit.
+    #
+    # This job is also the only route that produces a real profile, so the shipped
+    # `app/src/main/baseline-prof.txt` stays hand-maintained until someone runs
+    # this on a device:
+    #   ./gradlew :app:generateReleaseBaselineProfile
+    # and commits what it uploads.
+    if: false
     runs-on: ubuntu-latest
     # Cold emulator boot (no snapshot — see below) + the `:app` profile-generation
     # variant + the producer test APK + 4 collection journeys (each iterating until
