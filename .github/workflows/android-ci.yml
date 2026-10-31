@@ -44,8 +44,22 @@ concurrency:
 # Single source of truth for the CI emulator used by the device jobs below.
 # Editing any of these must invalidate the AVD cache key on purpose: a cached
 # AVD + snapshot is only valid for the system image it was created from.
+#
+# API 36 rather than 34. The app declares `targetSdk = 36`, and running a
+# targetSdk-36 package on an API-34 image asks the platform to apply API 36
+# compatibility behaviour on an older runtime — a combination that is legal but
+# rarely exercised. It is also the likely cause of the macrobenchmark failure:
+# `startActivityAndWait` always reads `dumpsys gfxinfo … framestats` to confirm
+# the launch, the emulator never produced a `---PROFILEDATA---` block, and
+# `androidx.benchmark` surfaced that as `Unable to confirm activity launch
+# completion []`. There is a documented library bug for exactly that symptom on
+# API 36 ("`pgrep` toybox now requires `-a` to print the full command line"),
+# fixed in 1.4.0-alpha09 — and this project is on 1.5.0, so the fix should be
+# present and the mismatch is the remaining suspect.
+#
+# Changing this invalidates the AVD cache, so the next run pays one cold boot.
 env:
-  EMULATOR_API_LEVEL: '34'
+  EMULATOR_API_LEVEL: '36'
   EMULATOR_TARGET: google_apis
   EMULATOR_ARCH: x86_64
   EMULATOR_PROFILE: pixel_6
