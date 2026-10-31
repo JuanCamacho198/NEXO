@@ -3,6 +3,7 @@ package com.nexo.presentation.navigation
 import androidx.compose.material3.Text
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.testing.TestNavHostController
@@ -41,9 +42,19 @@ class NexoNavHostStackCollapseTest {
 
     private fun launchMiniGraph() {
         composeRule.setContent {
-            navController = TestNavHostController(LocalContext.current)
+            val controller = TestNavHostController(LocalContext.current)
+            // `composable {}` inside `NavHost` resolves its navigator by the
+            // ComposeNavigator NAME from the controller's provider. A bare
+            // TestNavHostController ships a TestNavigatorProvider holding only
+            // its own `TestNavigator`, so the lookup fails with
+            // `ClassCastException: TestNavigatorProvider$navigator$1 cannot be
+            // cast to ComposeNavigator` — thrown from inside setContent, which
+            // also poisons teardown. Registering ComposeNavigator is the
+            // documented setup for a TestNavHostController driving a real NavHost.
+            controller.navigatorProvider.addNavigator(ComposeNavigator())
+            navController = controller
             NavHost(
-                navController = navController,
+                navController = controller,
                 startDestination = NexoDestination.Home.route,
             ) {
                 composable(NexoDestination.Home.route) { Text("Home") }
@@ -113,9 +124,14 @@ class NexoNavHostStackCollapseTest {
         val specialPath = "/files/a+b & cömic/第一章/100% #1?.epub"
 
         composeRule.setContent {
-            navController = TestNavHostController(LocalContext.current)
+            val controller = TestNavHostController(LocalContext.current)
+            // Same ComposeNavigator registration as launchMiniGraph: without it
+            // `composable<ReaderRoute> {}` cannot resolve its navigator and the
+            // composition throws from inside setContent.
+            controller.navigatorProvider.addNavigator(ComposeNavigator())
+            navController = controller
             NavHost(
-                navController = navController,
+                navController = controller,
                 startDestination = ReaderRoute(),
             ) {
                 composable<ReaderRoute> { Text("Reader") }

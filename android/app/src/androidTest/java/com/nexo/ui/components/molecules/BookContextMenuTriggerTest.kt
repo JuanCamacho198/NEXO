@@ -6,7 +6,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.nexo.R
 import org.junit.Assert.assertEquals
@@ -161,7 +160,17 @@ class BookContextMenuTriggerTest {
         openMenu()
         composeRule.onNodeWithText(editLabel).assertIsDisplayed()
 
-        Espresso.pressBack()
+        // Dismiss through the Activity's OnBackPressedDispatcher instead of
+        // Espresso.pressBack(). Espresso resolves its root through
+        // RootViewPicker, which picks the DropdownMenu's popup window
+        // (layout-params-type=1002, APPLICATION_SUB_PANEL). On the CI emulator
+        // that popup never gains window focus, so pressBack() failed with
+        // RootViewWithoutFocusException after a 10s wait — a property of the
+        // emulator's window focus, not of the menu. A back dispatch on the UI
+        // thread reaches the same onDismissRequest path with no root picking.
+        composeRule.runOnUiThread {
+            composeRule.activity.onBackPressedDispatcher.onBackPressed()
+        }
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText(editLabel).assertDoesNotExist()
