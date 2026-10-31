@@ -1,40 +1,58 @@
 # Baseline Profile for NEXO — AOT-compiled startup paths
-# These rules ensure critical user-facing screens are pre-compiled
-# on first install, reducing cold-start JIT overhead.
+# These rules pre-compile critical user-facing screens on first install,
+# reducing cold-start JIT overhead.
 #
-# STATUS (SDD android-stack-modernization S11): STILL PLACEHOLDER CONTENT.
-# The generation route now EXISTS — the androidx.baselineprofile consumer plugin is
-# applied to :app and `:app:generateReleaseBaselineProfile` drives
-# :benchmark's BaselineProfileGenerator (the four real journeys) — but collection
-# needs a booted device/emulator, which this branch was authored without. This file
-# has therefore NOT been replaced by a generated artifact yet. To produce the real
-# profile, dispatch the `Android baseline profile (dispatch only)` CI job and commit
-# the profile it uploads. Until then these hand-maintained class-only rules are the
-# shipped profile.
+# STATUS: hand-maintained, and CORRECTED. The previous revision was also
+# hand-maintained but its descriptors mostly did not resolve, which made the
+# whole profile unusable — see "Why the previous list was replaced" below.
 #
-# Generated manually (macrobenchmark:generateBaselineProfile pending).
-# Format: <class descriptor>; (AGP class rule — method flags are not
-# supported on class-only rules).
-# NOTE: some descriptors below resolve to top-level function files rather than
-# classes (e.g. BookGridSection/FilterSheetContent/LibraryDialogs/LibraryToolbar live
-# in *Kt classes) and are dropped by profgen; real generation replaces the whole list.
+# Format: <class descriptor>; (AGP class rule — method flags are not supported
+# on class-only rules).
+#
+# Why the previous list was replaced
+# ----------------------------------
+# Every descriptor here is checked against the built APK, not derived from a
+# source file name. The previous revision was written from file names, and file
+# names are not class names in Kotlin:
+#
+#   * A file-level `@Composable fun Foo()` compiles to `FooKt`, so
+#     `Lcom/…/LibraryScreen;` does not exist — `…/LibraryScreenKt;` does.
+#     That alone accounted for five of the eight dead entries.
+#   * `BookGridSection` never existed under any name; the file is
+#     `BookGridContent.kt`, so the class is `BookGridContentKt`.
+#   * `HomeScreen` lives in `presentation.feature.home`, not
+#     `presentation.screen`, so the old descriptor named the wrong package
+#     as well as the wrong kind of class.
+#
+# Why that mattered beyond being untidy: `androidx.benchmark` installs this
+# profile through `profileinstaller`'s broadcast before it measures, and a
+# profile whose rules do not resolve leaves the receiver with nothing to
+# install. It answers `result=0` — "not handled" — and the benchmark aborts
+# with `The baseline profile install broadcast was not received`, which reads
+# as a missing library and is not one. Nothing measured on the device could
+# succeed while this file was wrong.
+#
+# This is still not a generated profile. It compiles the entry points the four
+# benchmark journeys touch, which is what makes `CompilationMode.Partial()`
+# meaningful and lets `:app:generateReleaseBaselineProfile` run to produce the
+# real one. Replace this file with the artifact that job uploads.
 
-# LibraryScreen — first screen most users see
-Lcom/nexo/presentation/screen/LibraryScreen;
-Lcom/nexo/presentation/screen/library/BookGridSection;
-Lcom/nexo/presentation/screen/library/FilterSheetContent;
-Lcom/nexo/presentation/screen/library/LibraryDialogs;
-Lcom/nexo/presentation/screen/library/LibraryToolbar;
+# Library — the first screen most users see
+Lcom/nexo/presentation/feature/library/LibraryScreenKt;
+Lcom/nexo/presentation/screen/library/BookGridContentKt;
+Lcom/nexo/presentation/screen/library/FilterSheetContentKt;
+Lcom/nexo/presentation/screen/library/LibraryDialogsKt;
+Lcom/nexo/presentation/screen/library/LibraryToolbarKt;
 Lcom/nexo/presentation/viewmodel/LibraryViewModel;
 
-# HomeScreen — dashboard after auth or cold start
-Lcom/nexo/presentation/screen/HomeScreen;
+# Home — dashboard after auth or cold start
+Lcom/nexo/presentation/feature/home/HomeScreenKt;
 Lcom/nexo/presentation/viewmodel/HomeViewModel;
 
-# ReaderScreen — reading experience
-Lcom/nexo/presentation/screen/ReaderScreen;
+# Reader — reading experience
+Lcom/nexo/presentation/screen/ReaderScreenKt;
 Lcom/nexo/presentation/viewmodel/ReaderViewModel;
 
-# AuthScreen — login/register
-Lcom/nexo/presentation/screen/AuthScreen;
+# Auth — login and register
+Lcom/nexo/presentation/screen/AuthScreenKt;
 Lcom/nexo/presentation/viewmodel/AuthViewModel;
