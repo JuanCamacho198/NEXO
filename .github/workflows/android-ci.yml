@@ -306,6 +306,35 @@ jobs:
         working-directory: android
         run: chmod +x ./gradlew || true
 
+      - name: Provide test-shaped configuration
+        # Instrumentation boots MainActivity, whose Hilt graph builds the Supabase
+        # client: `SupabaseClientProvider.createClient()` hard-requires a non-blank
+        # SUPABASE_URL/SUPABASE_ANON_KEY and throws otherwise, crashing the process
+        # before any test runs. CI has no local.properties (gitignored), so those
+        # BuildConfig fields are empty.
+        #
+        # These are TEST-SHAPED PLACEHOLDERS, not credentials. The repository is
+        # public and a deep-link test only needs a value that satisfies
+        # `isNotBlank()` plus supabase-kt's URL shape check — it never talks to a
+        # live project. supabase-kt 3.5.0 does NOT parse or validate the key
+        # (`SupabaseClientBuilder` only null-checks it; `decodeJwt` runs on
+        # server-issued tokens, not the configured key), so a short
+        # `sb_publishable_`-style string is sufficient and is the modern key shape.
+        #
+        # The URL must be a bare project origin: `SupabaseClientBuilder` throws on
+        # URLs embedding a module path (`/auth/v1`, `/rest/v1`, `/storage/v1`,
+        # `/realtime/v1`), which is why the `/auth/v1/callback` form is wrong here.
+        #
+        # Scoped to this job ONLY. `android-checks` passes today without it (the JVM
+        # suite never touches the Supabase client), and the benchmark /
+        # baseline-profile jobs measure performance and never assert on auth state.
+        working-directory: android
+        run: |
+          cat > local.properties <<'EOF'
+          SUPABASE_URL=https://ci-test-project.supabase.co
+          SUPABASE_ANON_KEY=sb_publishable_ci_test_placeholder_key_000000000000
+          EOF
+
       - name: Enable KVM group perms
         # GitHub-hosted Ubuntu runners expose /dev/kvm, but the default
         # permissions do not let the runner user open it. Without KVM the

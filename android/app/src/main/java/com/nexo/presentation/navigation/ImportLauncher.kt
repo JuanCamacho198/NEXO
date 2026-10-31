@@ -47,6 +47,10 @@ fun rememberImportLauncher(
     val scope = rememberCoroutineScope()
     val layout = AccountStorageLayout(context.filesDir)
     val refusedMessage = stringResource(R.string.import_requires_account)
+    // Resolved during composition, not read from LocalContext.current inside the
+    // result lambda, so configuration changes are tracked and the Compose lint
+    // rule LocalContextGetResourceValueCall stays clean.
+    val failedMessageTemplate = stringResource(R.string.import_failed)
 
     return rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -98,7 +102,11 @@ fun rememberImportLauncher(
                     android.widget.Toast
                         .makeText(
                             context,
-                            context.getString(R.string.import_failed, error.message.orEmpty()),
+                            String.format(
+                                java.util.Locale.getDefault(),
+                                failedMessageTemplate,
+                                error.message.orEmpty(),
+                            ),
                             android.widget.Toast.LENGTH_SHORT,
                         ).show()
                 }
