@@ -2,18 +2,16 @@ package com.nexo.presentation
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.nexo.MainActivity
-import com.nexo.data.session.NotificationPermissionPrefs
-import org.junit.Before
+import com.nexo.testutil.NotificationPermissionRule
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 
 /**
@@ -31,28 +29,27 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class InstallDeepLinkTest {
-    @get:Rule
-    val composeRule = createAndroidComposeRule<MainActivity>()
+    private val composeRule = createAndroidComposeRule<MainActivity>()
 
     /**
-     * Same `POST_NOTIFICATIONS` prompt as [AuthDeepLinkCallbackTest]: on API 34
-     * CI the dialog pauses MainActivity, so the first `onNodeWithText` sees no
-     * compose hierarchy. Marking the one-shot flag first makes the request a
-     * no-op. See that class for the logcat evidence.
+     * Same `POST_NOTIFICATIONS` prompt as [AuthDeepLinkCallbackTest], and the
+     * same rule-ordering requirement: the flag must be written BEFORE the
+     * Compose rule launches `MainActivity`, or `onCreate` still requests the
+     * permission, `GrantPermissionsActivity` takes focus and the Activity goes
+     * `RESUMED -> PAUSED`. A `@Before` runs too late — the Compose rule starts
+     * the Activity from its own `apply`d statement, ahead of `@Before`. See
+     * [NotificationPermissionRule] and the class doc in
+     * [AuthDeepLinkCallbackTest] for the bytecode evidence.
      */
-    @Before
-    fun suppressNotificationPermissionPrompt() {
-        NotificationPermissionPrefs.markRequested(
-            InstrumentationRegistry.getInstrumentation().targetContext,
-        )
-    }
+    @get:Rule
+    val rule: RuleChain =
+        RuleChain
+            .outerRule(NotificationPermissionRule())
+            .around(composeRule)
 
     @Test
     fun warmStart_installIntent_showsInstallFlowDialog_andDismissAborts() {
-        composeRule.waitUntil(timeoutMillis = 10_000) {
-            composeRule.onAllNodesWithText("Continue with Google").fetchSemanticsNodes().isNotEmpty()
-        }
-        composeRule.onNodeWithText("Continue with Google").assertIsDisplayed()
+        waitForText("Continue with Google", SIGN_IN_BUTTON_TIMEOUT_MS)
 
         composeRule.activityRule.scenario.onActivity { activity ->
             val installIntent =
@@ -66,10 +63,10 @@ class InstallDeepLinkTest {
             activity.startActivity(installIntent)
         }
 
-        composeRule.waitUntil(timeoutMillis = 15_000) {
-            composeRule.onAllNodesWithText("Install addon?").fetchSemanticsNodes().isNotEmpty() ||
-                composeRule.onAllNodesWithText("Couldn't install addon").fetchSemanticsNodes().isNotEmpty()
-        }
+        // The install flow reaches either the confirm dialog (preview succeeded)
+        // or the error dialog (fetch failed, the expected CI outcome) — both
+        // prove the intent routed to the install controller and not to supabase.
+        waitUntilEither("Install addon?", "Couldn't install addon", INSTALL_DIALOG_TIMEOUT_MS)
 
         // Cancel (confirming) or OK (error) dismisses: nothing installed, no crash.
         composeRule
@@ -78,5 +75,50 @@ class InstallDeepLinkTest {
             }.recoverCatching {
                 composeRule.onNodeWithText("OK").performClick()
             }
+    }
+
+    /**
+     * Waits for a node with [text] to enter the semantics tree.
+     *
+     * The lookup is wrapped so that a transiently absent hierarchy (the source
+     * of "No compose hierarchies found in the app") reads as "not ready yet"
+     * instead of failing the test. `waitUntil` retries only on `false`; an
+     * exception inside the lambda escapes and fails immediately.
+     */
+    private fun waitForText(
+        text: String,
+        timeoutMillis: Long,
+    ) {
+        composeRule.waitUntil(timeoutMillis = timeoutMillis) {
+            runCatching {
+                composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+            }.getOrDefault(false)
+        }
+    }
+
+    /** Waits until either dialog title is present. */
+    private fun waitUntilEither(
+        first: String,
+        second: String,
+        timeoutMillis: Long,
+    ) {
+        composeRule.waitUntil(timeoutMillis = timeoutMillis) {
+            runCatching {
+                composeRule.onAllNodesWithText(first).fetchSemanticsNodes().isNotEmpty() ||
+                    composeRule.onAllNodesWithText(second).fetchSemanticsNodes().isNotEmpty()
+            }.getOrDefault(false)
+        }
+    }
+
+    private companion object {
+        /** Startup on the CI emulator is slow; the splash holds until the session restore lands. */
+        const val SIGN_IN_BUTTON_TIMEOUT_MS = 30_000L
+
+        /**
+         * The install preview does a real network fetch that must time out
+         * (example.test is unreachable) before the ERROR dialog appears, so this
+         * budget covers a full request failure on a slow emulator.
+         */
+        const val INSTALL_DIALOG_TIMEOUT_MS = 30_000L
     }
 }
