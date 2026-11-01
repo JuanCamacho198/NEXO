@@ -32,6 +32,8 @@ import com.nexo.domain.model.ThemeMode
 import com.nexo.presentation.navigation.DeepLinkSchemes
 import com.nexo.presentation.navigation.InstallDeepLinkParser
 import com.nexo.presentation.navigation.NexoNavHost
+import com.nexo.presentation.screen.readium.evictRestoredReadiumNavigatorFragments
+import com.nexo.presentation.screen.readium.installReadiumDummyFragmentFactories
 import com.nexo.presentation.theme.NexoTheme
 import com.nexo.presentation.viewmodel.AuthViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -49,7 +51,17 @@ class MainActivity : AppCompatActivity() {
         ) { /* result is informational — we post only if granted */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Must run BEFORE super.onCreate: the FragmentManager restores saved
+        // navigator fragments inside super.onCreate (attachController) and needs
+        // a factory able to construct them. See
+        // installReadiumDummyFragmentFactories for the full rationale.
+        installReadiumDummyFragmentFactories()
+
         super.onCreate(savedInstanceState)
+
+        // Any navigator fragment restored from saved state is a Readium
+        // placeholder that must leave the screen before onResume.
+        evictRestoredReadiumNavigatorFragments()
 
         // Addon install deep links (nexo://install?url=..., legacy
         // nextpage://install?url=...) are checked FIRST: install URIs are never
