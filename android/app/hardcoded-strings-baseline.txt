@@ -1,0 +1,26 @@
+# Baseline of pre-existing hardcoded user-facing string literals.
+#
+# Convention mirrors app/lint-baseline.xml: these findings are frozen legacy
+# debt so that verifyAuthScreenNoHardcodedStrings only fails on NEW violations.
+# Regenerate with:
+#   gradlew.bat updateHardcodedStringsBaseline
+# Do NOT hand-edit. Remove entries only by fixing the underlying string
+# (move it to res/values/strings.xml + res/values-es/strings.xml).
+#
+# Format: <relative-path>:<literal>
+src/main/java/com/nexo/debug/CrashDetailActivity.kt:Message
+src/main/java/com/nexo/debug/CrashDetailActivity.kt:Stack trace
+src/main/java/com/nexo/debug/DebugPanel.kt:[${e.level.name}] ${e.tag}: ${e.message}
+src/main/java/com/nexo/presentation/debug/DebugPanel.kt:Cancel
+src/main/java/com/nexo/presentation/debug/DebugPanel.kt:Clear & Sign Out
+src/main/java/com/nexo/presentation/debug/DebugPanel.kt:Clear Database
+src/main/java/com/nexo/presentation/debug/DebugPanel.kt:Debug Panel
+src/main/java/com/nexo/presentation/debug/DebugPanel.kt:This will delete all local data and sign you out. Continue?
+src/main/java/com/nexo/presentation/feature/discover/DiscoverDetailSheet.kt:${formatFileSize(download.bytesSoFar)} / ${formatFileSize(total)}
+src/main/java/com/nexo/presentation/feature/highlights/components/NexoHighlightCard.kt:\u2014 $attribution
+src/main/java/com/nexo/presentation/screen/DictionaryScreen.kt:/$pronunciation/
+src/main/java/com/nexo/presentation/screen/ReaderChrome.kt:NEXO Reader
+src/main/java/com/nexo/presentation/screen/ReaderChrome.kt:Reader content
+src/main/java/com/nexo/presentation/screen/settings/AddonManagementScreen.kt:v${row.manifest.version} \u00B7 $stateCaption
+src/main/java/com/nexo/presentation/screen/settings/SettingsDevicesScreen.kt:${device.os} \u00B7 ${formatRelativeTime(device.lastActive)}
+src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt:Texto de prueba debug

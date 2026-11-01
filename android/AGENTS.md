@@ -27,8 +27,10 @@
 
 ### Verification Tasks
 ```powershell
-# Verify no hardcoded strings in AuthScreen
+# Verify no hardcoded strings in presentation/ and debug/ (baseline-aware)
 .\gradlew.bat verifyAuthScreenNoHardcodedStrings
+# Regenerate the frozen baseline (same PR as an intentional string change)
+.\gradlew.bat updateHardcodedStringsBaseline
 
 # Verify release mapping (minify enabled by default)
 .\gradlew.bat verifyReleaseMapping
@@ -173,7 +175,13 @@ import androidx.lifecycle.viewModelScope
 ### Strings
 - All user-facing strings in `res/values/strings.xml` (English) and `res/values-es/strings.xml` (Spanish)
 - No hardcoded strings in Compose code
-- Custom Gradle task `verifyAuthScreenNoHardcodedStrings` enforces this
+- Custom Gradle task `verifyAuthScreenNoHardcodedStrings` enforces this.
+  It scans every `.kt` file under `presentation/` and `debug/` (whole-file, so
+  multiline `Text(` calls are caught) and fails only on NEW violations; existing
+  debt is frozen in `app/hardcoded-strings-baseline.txt`, mirroring `lint-baseline.xml`.
+  See `docs/string-hardcode-gate.md`. Regenerate the baseline in the same PR with:
+  `.\gradlew.bat updateHardcodedStringsBaseline`
+  (`verifyNoHardcodedStrings` is the underlying task; the name above is its alias.)
 
 ### Lint baseline
 - `app/lint-baseline.xml` freezes the legacy lint findings; `lint { baseline = file("lint-baseline.xml"); abortOnError = true }`
