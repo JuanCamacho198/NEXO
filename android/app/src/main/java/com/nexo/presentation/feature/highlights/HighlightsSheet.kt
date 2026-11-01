@@ -44,6 +44,7 @@ import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
 import com.nexo.presentation.feature.highlights.components.HighlightCard
 import com.nexo.presentation.feature.highlights.components.HighlightsSheetFilterChips
+import com.nexo.presentation.feature.highlights.utils.ChapterLocation
 import com.nexo.presentation.theme.NexoTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,6 +54,7 @@ fun HighlightsSheet(
     onHighlightSelected: (Highlight) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    chapters: List<ChapterLocation> = emptyList(),
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedColorFilter by remember { mutableStateOf<String?>(null) }
@@ -149,6 +151,7 @@ fun HighlightsSheet(
                         HighlightCard(
                             highlight = highlight,
                             onClick = { onHighlightSelected(highlight) },
+                            chapters = chapters,
                         )
                     }
                 }

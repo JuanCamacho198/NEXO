@@ -1,0 +1,62 @@
+appId: com.nexo
+---
+# Reader highlights sheet — visual + interaction verification.
+#
+# Covers the sheet fixes observable from the UI:
+#   T1 (sheet closes when a highlight is tapped)
+#   T3 (filter chips have a visible container)
+#   T4 (highlight rows look tappable)
+#   T5 (rows show where the highlight lives)
+#
+# Run: maestro test maestro/flows/reader/highlights.yaml
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Library|Biblioteca|Home|Inicio"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 20000
+- tapOn:
+    text: "El extranjero"
+- extendedWaitUntil:
+    visible:
+      text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+    timeout: 30000
+- tapOn:
+    text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+- waitForAnimationToEnd:
+    timeout: 25000
+# The reader opens on the cover; swipe forward to the flowing text where the
+# seeded highlights live.
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 80%, 50%
+          end: 20%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+# Reveal the chrome, then open the highlights sheet from the pencil icon.
+- tapOn:
+    point: 50%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    point: 81%, 8%
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# The sheet is open.
+- assertVisible:
+    text: "Highlights|Resaltados"
+- takeScreenshot: sheet-open
+
+# T1: tapping a highlight navigates underneath and closes the sheet.
+- tapOn:
+    point: 50%, 58%
+- waitForAnimationToEnd:
+    timeout: 10000
+- assertNotVisible:
+    text: "Highlights|Resaltados"
+- takeScreenshot: sheet-closed

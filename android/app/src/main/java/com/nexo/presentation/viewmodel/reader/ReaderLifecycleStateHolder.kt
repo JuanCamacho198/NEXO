@@ -408,7 +408,10 @@ class ReaderLifecycleStateHolder(
                 }
             }
         }
-        _state.update { it.copy(showTocSheet = false) }
+        // Sheet closing is orchestrated by ReaderViewModel.onHighlightSelected,
+        // which owns the interaction slice (`showHighlightsSheet`). This
+        // session-scoped holder has no access to that slice — closing
+        // `showTocSheet` here was a copy-paste bug that dismissed the wrong sheet.
     }
 
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")

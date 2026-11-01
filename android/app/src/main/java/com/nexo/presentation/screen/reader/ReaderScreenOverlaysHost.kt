@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import com.nexo.R
 import com.nexo.presentation.feature.highlights.HighlightsSheet
+import com.nexo.presentation.feature.highlights.utils.ChapterLocation
 import com.nexo.presentation.screen.BookmarkRibbonOverlay
 import com.nexo.presentation.viewmodel.ReaderViewModel
 import com.nexo.presentation.viewmodel.reader.AnnotationUiState
@@ -72,6 +73,7 @@ fun ReaderScreenOverlaysHost(
             highlights = annotationUiState.highlights,
             onHighlightSelected = { viewModel.onHighlightSelected(it) },
             onDismiss = { viewModel.interactionHolder.onToggleHighlightsPanel() },
+            chapters = sessionUiState.chapters.map { ChapterLocation(it.index, it.title, it.href) },
         )
     }
 

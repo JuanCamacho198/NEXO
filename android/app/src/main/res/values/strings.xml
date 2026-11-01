@@ -356,6 +356,8 @@
     <string name="highlights_filter_all_tags">All tags</string>
     <string name="highlights_clear_filters">Clear filters</string>
     <string name="highlight_location">Location: %1$s</string>
+    <string name="highlight_pdf_page">Page %1$d</string>
+    <string name="highlight_reading_progress">%1$d%% through the book</string>
 
     <!-- Bookmarks -->
     <string name="bookmarks_tab">Bookmarks (%1$d)</string>

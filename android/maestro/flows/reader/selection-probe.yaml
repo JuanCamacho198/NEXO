@@ -1,0 +1,35 @@
+appId: com.nexo
+---
+# Reader selection capture — the gesture `adb shell input` could not produce.
+#
+# `input swipe x y x y 900` (same point, long duration) never started a WebView
+# selection: the selection poll stayed on `null` indefinitely. Maestro's
+# longPressOn issues a real press-and-hold, which is what starts the selection.
+#
+# Run: maestro test maestro/flows/reader/selection-probe.yaml
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Library|Biblioteca|Home|Inicio"
+    timeout: 30000
+
+- tapOn:
+    text: "El extranjero"
+# The CTA label depends on stored progress: "Start Reading" at 0%, then
+# "Continue Reading" once the book has been opened. The sheet also loads its
+# metadata asynchronously, so allow a generous window.
+- extendedWaitUntil:
+    visible:
+      text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+    timeout: 30000
+- tapOn:
+    text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+- waitForAnimationToEnd:
+    timeout: 25000
+
+# Long-press a word in the flowing text to raise a selection.
+- longPressOn:
+    point: 30%, 36%
+- waitForAnimationToEnd:
+    timeout: 10000

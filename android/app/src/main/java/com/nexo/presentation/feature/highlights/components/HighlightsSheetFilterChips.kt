@@ -47,6 +47,20 @@ fun HighlightsSheetFilterChips(
                         containerColor = Color.Transparent,
                         selectedContainerColor = Color.Transparent,
                     ),
+                // The chip has no fill (the colour circle is the content), so a
+                // border is what makes the chip read as a tappable container —
+                // without it the circles float unanchored and clip against the
+                // sheet edge. Resting ring matches the sheet palette; selection
+                // brightens it.
+                border =
+                    FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isSelected,
+                        borderColor = Color(0xFF4A5568),
+                        selectedBorderColor = Color(0xFFDDE2F8),
+                        borderWidth = 1.dp,
+                        selectedBorderWidth = 1.5.dp,
+                    ),
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.semantics { contentDescription = label },
             )
