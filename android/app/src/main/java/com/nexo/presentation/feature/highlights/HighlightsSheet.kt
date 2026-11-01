@@ -45,6 +45,7 @@ import com.nexo.domain.model.HighlightColor
 import com.nexo.presentation.feature.highlights.components.HighlightCard
 import com.nexo.presentation.feature.highlights.components.HighlightsSheetFilterChips
 import com.nexo.presentation.feature.highlights.utils.ChapterLocation
+import com.nexo.presentation.feature.highlights.utils.matchesHighlightFilter
 import com.nexo.presentation.theme.NexoTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,7 +79,7 @@ fun HighlightsSheet(
         if (selectedColorFilter == null) {
             highlights
         } else {
-            highlights.filter { it.color.equals(selectedColorFilter, ignoreCase = true) }
+            highlights.filter { matchesHighlightFilter(it.color, selectedColorFilter) }
         }
 
     ModalBottomSheet(
