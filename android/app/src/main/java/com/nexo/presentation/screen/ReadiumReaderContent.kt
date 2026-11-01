@@ -20,6 +20,7 @@ import com.nexo.domain.model.ReaderSettings
 import com.nexo.presentation.screen.readium.FragmentHostView
 import com.nexo.presentation.screen.readium.rememberFragmentHost
 import com.nexo.presentation.screen.readium.rememberSelectionBridge
+import com.nexo.presentation.screen.readium.rememberTapZonesBridge
 import com.nexo.presentation.screen.readium.toEpubPreferences
 import com.nexo.presentation.viewmodel.ReaderViewModel
 import kotlinx.coroutines.delay
@@ -51,6 +52,7 @@ fun ReadiumReaderContent(
     inspectHighlightsHtmlTrigger: SharedFlow<Unit> = MutableSharedFlow(),
     logWebViewTreeTrigger: SharedFlow<Unit> = MutableSharedFlow(),
     onShowChrome: (() -> Unit)? = null,
+    onToggleChrome: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current as FragmentActivity
@@ -73,6 +75,15 @@ fun ReadiumReaderContent(
         publication = publication,
         readingOrder = hostState.readingOrder,
         viewModel = viewModel,
+    )
+
+    // ── Tap zones (lateral navigation + center chrome toggle) ─────
+    // Registered after the selection bridge so the DecorableNavigator
+    // listener keeps first claim on taps. See ReadiumTapZones.
+    val currentOnToggleChrome by rememberUpdatedState(onToggleChrome)
+    rememberTapZonesBridge(
+        navigatorFragment = hostState.navigatorFragment.value,
+        onToggleChrome = { currentOnToggleChrome?.invoke() },
     )
 
     // ── Settings sync (readerSettings → EpubPreferences) ──────────

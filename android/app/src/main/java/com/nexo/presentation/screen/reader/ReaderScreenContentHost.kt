@@ -37,12 +37,14 @@ fun ReaderScreenContentHost(
     viewModel: ReaderViewModel,
     selectionCallbacks: ReaderSelectionCallbacks,
     onShowChrome: () -> Unit,
+    onToggleChrome: () -> Unit,
     inspectHighlightsHtmlTrigger: MutableSharedFlow<Unit>,
     logWebViewTreeTrigger: MutableSharedFlow<Unit>,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentOnShowChrome by rememberUpdatedState(onShowChrome)
+    val currentOnToggleChrome by rememberUpdatedState(onToggleChrome)
 
     val error = sessionUiState.error
     val readiumPublication = sessionUiState.readiumPublication
@@ -113,6 +115,7 @@ fun ReaderScreenContentHost(
                     inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,
                     logWebViewTreeTrigger = logWebViewTreeTrigger,
                     onShowChrome = { currentOnShowChrome() },
+                    onToggleChrome = { currentOnToggleChrome() },
                     modifier = Modifier.fillMaxSize(),
                 )
                 SharedSelectionOverlay()
