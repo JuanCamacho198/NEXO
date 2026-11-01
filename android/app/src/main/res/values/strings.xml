@@ -10,6 +10,7 @@
     <!-- Auth -->
     <string name="auth_config_error_google_unavailable">Configuration error: Google sign-in unavailable because the OAuth client ID is not configured. You can continue using local library features.</string>
     <string name="auth_continue_with_google">Continue with Google</string>
+    <string name="auth_continue_with_email">Continue with email</string>
     <string name="auth_google_disabled_loading">Google sign-in is currently in progress.</string>
     <string name="auth_google_disabled_config_error">Google sign-in is disabled due to a configuration error (missing OAuth client ID).</string>
     <string name="auth_google_disabled_wiring_error">Google sign-in is disabled due to a setup error.</string>
@@ -45,7 +46,11 @@
     <string name="auth_signup_stale_session">This email is already registered or verification is pending — check your inbox or sign in</string>
     <string name="auth_mock_google_button">Mock Google jcamachomolina503</string>
     <string name="auth_google_unexpected_credential">Unexpected credential type: %1$s</string>
-    <string name="auth_google_credential_error">Credential error (%1$s): %2$s</string>
+    <string name="auth_google_no_credential">No Google account is available on this device. Add one in your device settings and try again.</string>
+    <string name="auth_google_credential_interrupted">Sign-in was interrupted. Please try again.</string>
+    <string name="auth_google_credential_network_error">No connection. Check your internet and try again.</string>
+    <string name="auth_google_credential_error_generic">We couldn\'t sign you in with Google. Please try again.</string>
+    <string name="auth_google_credential_unknown">Something went wrong signing in with Google. Please try again.</string>
     <string name="auth_google_unexpected_error">Unexpected error: %1$s</string>
 
     <!-- Home -->
@@ -351,6 +356,8 @@
     <string name="highlights_filter_all_tags">All tags</string>
     <string name="highlights_clear_filters">Clear filters</string>
     <string name="highlight_location">Location: %1$s</string>
+    <string name="highlight_pdf_page">Page %1$d</string>
+    <string name="highlight_reading_progress">%1$d%% through the book</string>
 
     <!-- Bookmarks -->
     <string name="bookmarks_tab">Bookmarks (%1$d)</string>
@@ -961,8 +968,12 @@
     <string name="feedback_mobile_title">Help us fix this</string>
     <string name="feedback_mobile_subtitle">The app closed while you were reading. Your report helps us make sure it doesn\'t happen again.</string>
     <string name="feedback_mobile_auto_context_label">Detected automatically</string>
-    <string name="feedback_mobile_sample_book">La Odisea</string>
-    <string name="feedback_mobile_sample_chapter">Capítulo IX · página 142 de 318</string>
+    <string name="feedback_mobile_context_no_book">The app closed while you were using NEXO.</string>
+    <string name="feedback_mobile_context_unknown_screen">NEXO</string>
+    <string name="feedback_mobile_context_no_title">Untitled book</string>
+    <string name="feedback_mobile_context_chapter_page">%1$s · page %2$d</string>
+    <string name="feedback_mobile_context_page_only">page %1$d</string>
+    <string name="feedback_mobile_context_chapter_only">%1$s</string>
     <string name="feedback_mobile_input_label">What were you doing when it closed?</string>
     <string name="feedback_mobile_helper">Optional · it really helps</string>
     <string name="feedback_mobile_privacy">Only this report is sent — nothing from your library.</string>

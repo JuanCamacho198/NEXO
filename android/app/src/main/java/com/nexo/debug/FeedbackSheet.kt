@@ -1,5 +1,6 @@
 package com.nexo.debug
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,24 +52,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexo.R
 import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.components.atoms.CoverThumbnail
 
 /**
  * Mobile crash-feedback bottom sheet (PR4 / tasks 4.3-4.4).
  *
- * Pixel-faithful port of the njdtk node from `design/nextPage-movil.pen`
- * (per feedback-design contract #2460):
- * - bg #0F1419, card #1A1F26, input #222932/#0F1419, borders #2D3441/#3A4150
+ * Port of the njdtk node from `design/nextPage-movil.pen` (per feedback-design
+ * contract #2460), with the surface colors aligned to NEXO's own dark palette
+ * (`presentation/theme/Color.kt`) — see [FeedbackTokens].
+ * - canvas #0B1120 (NEXO BgMain) with a brand wash at the top
+ * - card #161F33, input #0B1120
  * - text #F5F5F5 / #9CA3AF / #6B7280
- * - accent peach #F5A88C, primary gradient #F5A88C → #E8845F
+ * - accent peach #F5A88C, primary #F5A88C → #E8845F
  * - dark text on primary #1A0F08
  *
  * Layout (top → bottom):
  *  1. Status-bar placeholder (transparent; the system bar paints under the sheet)
- *  2. Card (#1A1F26):
+ *  2. Card (#161F33):
  *       - icon wrap 64x64 (peach tint + Favorite)
  *       - title "Ayúdanos a arreglar esto" (22sp, w700, center)
  *       - subtitle (14sp, w400)
- *       - auto-context card (sparkles + 44x60 cover + "La Odisea" + "Capítulo IX · página 142 de 318")
+ *       - auto-context card (sparkles + optional 44x60 real cover + title + "Capítulo II · página 30").
+ *         Built from [CrashContext]: a book card when the crash happened while
+ *         reading, a plain screen row otherwise — never invented book data.
+ *         The page line carries no total (only the current page is known).
  *       - textarea (cap 240 + live counter "n / 240" + helper)
  *       - privacy shield-check
  *       - Cerrar (secondary) + Enviar reporte (gradient primary)
@@ -109,6 +116,18 @@ fun FeedbackSheet(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .background(
+                        // Brand wash: this Activity cannot show the real screen
+                        // behind it (the previous process is gone), so the sheet
+                        // carries NEXO's own canvas instead of flat black.
+                        Brush.verticalGradient(
+                            colors =
+                                listOf(
+                                    FeedbackTokens.CanvasWash,
+                                    FeedbackTokens.BgCanvas,
+                                ),
+                        ),
+                    )
                     .verticalScroll(rememberScrollState())
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(horizontal = 16.dp)
@@ -116,7 +135,7 @@ fun FeedbackSheet(
         ) {
             FeedbackCard(
                 state = state,
-                book = viewModel.bookMeta,
+                context = viewModel.context,
                 charCount = charCount,
                 canSubmit = canSubmit,
                 onTextChanged = viewModel::onTextChanged,
@@ -133,7 +152,7 @@ fun FeedbackSheet(
 @Composable
 private fun FeedbackCard(
     state: FeedbackEvent.FeedbackSheetState,
-    book: FeedbackEvent.BookMeta,
+    context: CrashContextViewModel,
     charCount: Int,
     canSubmit: Boolean,
     onTextChanged: (String) -> Unit,
@@ -198,7 +217,7 @@ private fun FeedbackCard(
         Spacer(modifier = Modifier.height(20.dp))
 
         // 4. Auto-context card
-        FeedbackAutoContextCard(book = book)
+        FeedbackAutoContextCard(context = context)
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -298,7 +317,7 @@ private fun FeedbackCard(
 }
 
 @Composable
-private fun FeedbackAutoContextCard(book: FeedbackEvent.BookMeta) {
+private fun FeedbackAutoContextCard(context: CrashContextViewModel) {
     Box(
         modifier =
             Modifier
@@ -323,53 +342,76 @@ private fun FeedbackAutoContextCard(book: FeedbackEvent.BookMeta) {
                     fontWeight = FontWeight.Medium,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
-                val title = book.title ?: stringResource(R.string.feedback_mobile_sample_book)
                 Text(
-                    text = title,
+                    text = context.primaryLabel(),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = FeedbackTokens.TextPrimary,
                 )
-                val page = book.page
-                val chapter = book.chapterLabel
-                val chapterText =
-                    if (chapter != null && page != null) {
-                        "$chapter · página $page de 318"
-                    } else if (chapter != null) {
-                        chapter
-                    } else if (page != null) {
-                        "página $page"
-                    } else {
-                        stringResource(R.string.feedback_mobile_sample_chapter)
-                    }
                 Text(
-                    text = chapterText,
+                    text = context.secondaryLabel(),
                     fontSize = 12.sp,
                     color = FeedbackTokens.TextTertiary,
                 )
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            // 44x60 cover (peach gradient mimic per design — design uses book cover; we use
-            // a small placeholder gradient block since the design sample is "La Odisea"
-            // and we don't have cover art bound at runtime in this path).
-            Box(
-                modifier =
-                    Modifier
-                        .size(width = 44.dp, height = 60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                colors =
-                                    listOf(
-                                        FeedbackTokens.CoverTop,
-                                        FeedbackTokens.CoverBottom,
-                                    ),
-                            ),
-                        ),
-            )
+            if (context.hasCover) {
+                Spacer(modifier = Modifier.width(12.dp))
+                // Real cover when the book has one. No cover = no thumbnail:
+                // the old shared brown rectangle claimed every book looked alike.
+                CoverThumbnail(
+                    coverPath = context.coverPath,
+                    modifier = Modifier.size(width = 44.dp, height = 60.dp),
+                )
+            }
         }
     }
 }
+
+/**
+ * Headline of the context card: the book title, or the screen the user was on.
+ * A book without a title falls back to a generic label instead of the previous
+ * hardcoded "La Odisea".
+ */
+@Composable
+private fun CrashContextViewModel.primaryLabel(): String =
+    when {
+        isBook -> bookTitle ?: stringResource(R.string.feedback_mobile_context_no_title)
+        screenRoute != null -> stringResource(screenRouteLabelRes(screenRoute))
+        else -> stringResource(R.string.feedback_mobile_context_unknown_screen)
+    }
+
+/**
+ * Second line: "Capítulo II · página 30" for books (only the parts we actually
+ * know — never an invented total), a plain sentence for non-book screens.
+ */
+@Composable
+private fun CrashContextViewModel.secondaryLabel(): String =
+    if (isBook) {
+        val line = chapterLine
+        when {
+            line?.chapterLabel != null && line.page != null ->
+                stringResource(R.string.feedback_mobile_context_chapter_page, line.chapterLabel, line.page)
+
+            line?.page != null -> stringResource(R.string.feedback_mobile_context_page_only, line.page)
+            line?.chapterLabel != null -> stringResource(R.string.feedback_mobile_context_chapter_only, line.chapterLabel)
+            else -> stringResource(R.string.feedback_mobile_context_no_book)
+        }
+    } else {
+        stringResource(R.string.feedback_mobile_context_no_book)
+    }
+
+/** Map a navigation route onto the existing localized tab labels. */
+@StringRes
+private fun screenRouteLabelRes(route: String): Int =
+    when (route) {
+        "home" -> R.string.nav_home
+        "library" -> R.string.nav_library
+        "discover" -> R.string.nav_discover
+        "highlights" -> R.string.nav_highlights
+        "settings" -> R.string.nav_settings
+        "statistics" -> R.string.nav_statistics
+        else -> R.string.feedback_mobile_context_unknown_screen
+    }
 
 @Composable
 private fun FeedbackTextArea(
@@ -432,15 +474,20 @@ private fun FeedbackTextArea(
 }
 
 /**
- * Mobile-specific design tokens — colors mirror feedback-design #2460 (njdtk).
- * Kept inline (not in Color.kt) because these are crash-feedback-only and
- * would otherwise pollute the global palette.
+ * Mobile-specific design tokens.
+ *
+ * The surface colors were originally the flat near-black `#0F1419` from the
+ * njdtk design node; the sheet is a separate Activity so it could not show the
+ * real screen behind it, and that flat black never matched NEXO. They now
+ * mirror the app's own dark canvas (`BgMain`/`BgSurface` in
+ * `presentation/theme/Color.kt`) so the sheet reads as part of NEXO instead of
+ * an unrelated system dialog. Peach accents are unchanged.
  */
 private object FeedbackTokens {
-    val BgCanvas = Color(0xFF0F1419)
-    val BgCard = Color(0xFF1A1F26)
-    val BgCardAccent = Color(0xFF222932)
-    val BgInput = Color(0xFF0F1419)
+    val BgCanvas = Color(0xFF0B1120)
+    val BgCard = Color(0xFF161F33)
+    val BgCardAccent = Color(0xFF1E293B)
+    val BgInput = Color(0xFF0B1120)
     val BorderDefault = Color(0xFF2D3441)
     val BorderStrong = Color(0xFF3A4150)
     val TextPrimary = Color(0xFFF5F5F5)
@@ -449,13 +496,14 @@ private object FeedbackTokens {
     val AccentPeach = Color(0xFFF5A88C)
     val AccentPeachDeep = Color(0xFFE8845F)
     val OnPrimary = Color(0xFF1A0F08)
-    val CoverTop = Color(0xFF4A3F35)
-    val CoverBottom = Color(0xFF2A2520)
     val Scrim = Color(0x66000000)
+
+    /** Brand wash at the top of the canvas — evokes NEXO without the real screen. */
+    val CanvasWash = Color(0xFF1B2440)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true, backgroundColor = 0xFF0F1419)
+@Preview(showBackground = true, backgroundColor = 0xFF0B1120)
 @Composable
 private fun FeedbackSheetPreview() {
     NexoTheme(darkTheme = true) {
@@ -465,14 +513,33 @@ private fun FeedbackSheetPreview() {
                 FeedbackViewModel(
                     initialQueue = emptyList(),
                     initialDismissed = emptySet(),
-                    initialBook =
-                        FeedbackEvent.BookMeta(
-                            bookId = "odisea",
-                            title = "La Odisea",
-                            chapterLabel = "Capítulo IX",
-                            chapterIndex = 9,
-                            page = 142,
+                    initialContext =
+                        CrashContext.InBook(
+                            bookId = "extranjero",
+                            title = "El extranjero",
+                            chapterLabel = "Capítulo II",
+                            chapterIndex = 2,
+                            page = 30,
                         ),
+                    initialEventId = "abc123def456",
+                    captureFn = { null },
+                )
+            }
+        FeedbackSheet(viewModel = previewVm, onDismiss = {})
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, backgroundColor = 0xFF0B1120, name = "No book context")
+@Composable
+private fun FeedbackSheetNoBookPreview() {
+    NexoTheme(darkTheme = true) {
+        val previewVm =
+            remember {
+                FeedbackViewModel(
+                    initialQueue = emptyList(),
+                    initialDismissed = emptySet(),
+                    initialContext = CrashContext.InScreen(screenRoute = "settings"),
                     initialEventId = "abc123def456",
                     captureFn = { null },
                 )

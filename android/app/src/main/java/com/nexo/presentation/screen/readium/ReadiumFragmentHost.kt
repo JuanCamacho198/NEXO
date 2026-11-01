@@ -68,7 +68,12 @@ fun rememberFragmentHost(
         val tag = "ReadiumNavigator"
         val existing = fragmentManager.findFragmentByTag(tag)
         if (existing != null) {
-            fragmentManager.commit { remove(existing) }
+            // The publication is published asynchronously by a viewModelScope
+            // coroutine, so this effect can observe a new publication while the
+            // host activity is already past onSaveInstanceState. Use the same
+            // state-loss-tolerant commit as onDispose: the stale fragment is
+            // being replaced and its removal state is not worth crashing over.
+            fragmentManager.commit(allowStateLoss = true) { remove(existing) }
             fragmentManager.executePendingTransactions()
         }
         containerReady.value = false
@@ -115,7 +120,12 @@ fun rememberFragmentHost(
         onDispose {
             val frag = navigatorFragment.value
             if (frag != null && frag.isAdded) {
-                fragmentManager.commit { remove(frag) }
+                // onDispose runs while the host activity may already be past
+                // onSaveInstanceState (e.g. during a config-change relaunch), where a
+                // state-saving commit throws IllegalStateException and crashes
+                // onDestroy. The fragment dies with the activity either way, so
+                // there is no state worth preserving here.
+                fragmentManager.commit(allowStateLoss = true) { remove(frag) }
             }
         }
     }

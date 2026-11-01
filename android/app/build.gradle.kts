@@ -560,38 +560,205 @@ dependencies {
     androidTestImplementation(libs.compose.ui.test.junit4)
 }
 
-tasks.register("verifyAuthScreenNoHardcodedStrings") {
-    group = "verification"
-    description = "Fails if AuthScreen contains hardcoded user-facing strings"
+// ---------------------------------------------------------------------------
+// Hardcoded user-facing strings gate.
+//
+// History: this task used to scan exactly one file (presentation/screen/
+// AuthScreen.kt). That file is a thin delegate stub — the real UI lives in
+// presentation/feature/auth/AuthScreen.kt — so the gate never actually looked
+// at any user-facing text. It is now a repo-wide scan over presentation/ and
+// debug/ with a frozen baseline (app/hardcoded-strings-baseline.txt), following
+// the same convention as app/lint-baseline.xml: legacy findings are frozen and
+// only NEW violations fail the build.
+//
+// The task name is kept because AGENTS.md and docs/ reference it.
+// ---------------------------------------------------------------------------
 
-    // Resolve the file at configuration time; RegularFile is a supported
-    // configuration-cache type (Project.file() would capture the script).
-    val authScreenFile =
-        layout.projectDirectory.file(
-            "src/main/java/com/nexo/presentation/screen/AuthScreen.kt",
-        )
+// Scan scope: the UI layer plus the debug tooling that ships in debug builds.
+val hardcodedStringsScanRoots =
+    listOf(
+        "src/main/java/com/nexo/presentation",
+        "src/main/java/com/nexo/debug",
+    )
+
+// Resolve paths at configuration time (java.io.File is configuration-cache
+// safe). The scan logic and helpers live inside doLast on purpose: top-level
+// script functions capture the script object and break the configuration cache.
+val hardcodedStringsProjectDir = layout.projectDirectory.asFile
+val hardcodedStringsBaselineFile = layout.projectDirectory.file("hardcoded-strings-baseline.txt")
+
+tasks.register("verifyNoHardcodedStrings") {
+    group = "verification"
+    description = "Fails if NEW hardcoded user-facing strings appear under presentation/ or debug/"
+
+    val projectDir = hardcodedStringsProjectDir
+    val roots = hardcodedStringsScanRoots
+    val baselineFile = hardcodedStringsBaselineFile.asFile
 
     doLast {
-        if (!authScreenFile.asFile.exists()) {
-            throw GradleException("AuthScreen.kt not found: ${authScreenFile.asFile.path}")
+        // Detects a string literal passed as visible text. Three shapes are covered
+        // because the old line-based single-file scan missed all of them:
+        //   1. Text("...")       — inline first arg
+        //   2. text = "..."      — named argument
+        //   3. Text(\n "..."\n)  — literal on its own line (the old regex required
+        //                          the quote on the same line as `Text(`)
+        // Applied to the WHOLE file (not per line) so shape 3 matches.
+        val textLiteralPattern = Regex("""(?:\bText\(\s*|\btext\s*=\s*)"([^"\n]*)"""")
+
+        // Not translatable prose: blank, symbol/punctuation-only, or a lone
+        // interpolation of a value (e.g. "$streakDays") with no surrounding words.
+        fun isNonProseLiteral(literal: String): Boolean {
+            val value = literal.trim()
+            if (value.isEmpty()) return true
+            if (value.matches(Regex("""^\$\{[^}]*}$"""))) return true
+            if (value.matches(Regex("""^\$[A-Za-z_][A-Za-z0-9_]*$"""))) return true
+            // No run of 3+ letters -> symbols, digits, emoji or separators only.
+            return !value.contains(Regex("""[A-Za-z]{3,}"""))
         }
 
-        val textCallLiteralPattern = Regex("\\bText\\(\\s*\"[^\"]+")
-        val textArgLiteralPattern = Regex("\\btext\\s*=\\s*\"[^\"]+")
+        // Doc examples must not fail the build.
+        fun stripKotlinComments(source: String): String =
+            source
+                .replace(Regex("""^\s*\*.*$""", RegexOption.MULTILINE), "")
+                .replace(Regex("""//.*$""", RegexOption.MULTILINE), "")
 
-        val violations =
-            authScreenFile.asFile.readLines().mapIndexedNotNull { index, line ->
-                val hasViolation =
-                    textCallLiteralPattern.containsMatchIn(line) ||
-                        textArgLiteralPattern.containsMatchIn(line)
-                if (hasViolation) "${index + 1}: ${line.trim()}" else null
+        val findings = mutableListOf<Triple<String, Int, String>>()
+        roots.forEach { root ->
+            val base = projectDir.resolve(root)
+            if (!base.exists()) return@forEach
+            base
+                .walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }
+                .forEach { file ->
+                    val relative = file.relativeTo(projectDir).path.replace('\\', '/')
+                    val source = stripKotlinComments(file.readText())
+                    textLiteralPattern.findAll(source).forEach { match ->
+                        val literal = match.groupValues[1]
+                        if (!isNonProseLiteral(literal)) {
+                            // 1-based line of the literal for a useful message.
+                            val line = source.take(match.range.first).count { it == '\n' } + 1
+                            findings += Triple(relative, line, literal)
+                        }
+                    }
+                }
+        }
+
+        val baseline =
+            if (!baselineFile.exists()) {
+                emptyList()
+            } else {
+                baselineFile
+                    .readLines()
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() && !it.startsWith("#") }
             }
 
-        if (violations.isNotEmpty()) {
+        fun isBaselined(
+            relativePath: String,
+            literal: String,
+        ): Boolean = baseline.any { entry ->
+            val separator = entry.indexOf(':')
+            if (separator <= 0) return@any false
+            entry.substring(0, separator) == relativePath &&
+                entry.substring(separator + 1) == literal
+        }
+
+        val newFindings = findings.filterNot { (path, _, literal) -> isBaselined(path, literal) }
+
+        logger.lifecycle(
+            "Hardcoded-string scan: ${findings.size} total, " +
+                "${findings.size - newFindings.size} baselined, ${newFindings.size} new.",
+        )
+
+        if (newFindings.isNotEmpty()) {
             throw GradleException(
-                "Hardcoded user-facing strings found in AuthScreen.kt:\n" + violations.joinToString("\n"),
+                buildString {
+                    append("New hardcoded user-facing strings found (${newFindings.size}):\n")
+                    newFindings.forEach { (path, line, literal) ->
+                        append("  $path:$line  \"$literal\"\n")
+                    }
+                    append(
+                        "\nMove the text to src/main/res/values/strings.xml and " +
+                            "src/main/res/values-es/strings.xml, then reference it with " +
+                            "stringResource(R.string.<name>).\n" +
+                            "If this is deliberate legacy debt, regenerate the baseline with:\n" +
+                            "  gradlew.bat updateHardcodedStringsBaseline\n",
+                    )
+                },
             )
         }
+    }
+}
+
+// Kept as the public entry point referenced by AGENTS.md and docs/.
+// It now delegates to the repo-wide check above.
+tasks.register("verifyAuthScreenNoHardcodedStrings") {
+    group = "verification"
+    description = "Alias of verifyNoHardcodedStrings (kept for backwards compatibility)"
+    dependsOn("verifyNoHardcodedStrings")
+}
+
+tasks.register("updateHardcodedStringsBaseline") {
+    group = "verification"
+    description = "Regenerates hardcoded-strings-baseline.txt from the current findings"
+
+    val projectDir = hardcodedStringsProjectDir
+    val roots = hardcodedStringsScanRoots
+    val baselineFile = hardcodedStringsBaselineFile.asFile
+
+    doLast {
+        // Applied to the WHOLE file so a literal on the line after `Text(` matches.
+        val textLiteralPattern = Regex("""(?:\bText\(\s*|\btext\s*=\s*)"([^"\n]*)"""")
+
+        fun isNonProseLiteral(literal: String): Boolean {
+            val value = literal.trim()
+            if (value.isEmpty()) return true
+            if (value.matches(Regex("""^\$\{[^}]*}$"""))) return true
+            if (value.matches(Regex("""^\$[A-Za-z_][A-Za-z0-9_]*$"""))) return true
+            return !value.contains(Regex("""[A-Za-z]{3,}"""))
+        }
+
+        fun stripKotlinComments(source: String): String =
+            source
+                .replace(Regex("""^\s*\*.*$""", RegexOption.MULTILINE), "")
+                .replace(Regex("""//.*$""", RegexOption.MULTILINE), "")
+
+        val entries = mutableListOf<String>()
+        roots.forEach { root ->
+            val base = projectDir.resolve(root)
+            if (!base.exists()) return@forEach
+            base
+                .walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }
+                .forEach { file ->
+                    val relative = file.relativeTo(projectDir).path.replace('\\', '/')
+                    val source = stripKotlinComments(file.readText())
+                    textLiteralPattern.findAll(source).forEach { match ->
+                        val literal = match.groupValues[1]
+                        if (!isNonProseLiteral(literal)) {
+                            entries += "$relative:$literal"
+                        }
+                    }
+                }
+        }
+
+        val header =
+            """
+            # Baseline of pre-existing hardcoded user-facing string literals.
+            #
+            # Convention mirrors app/lint-baseline.xml: these findings are frozen legacy
+            # debt so that verifyAuthScreenNoHardcodedStrings only fails on NEW violations.
+            # Regenerate with:
+            #   gradlew.bat updateHardcodedStringsBaseline
+            # Do NOT hand-edit. Remove entries only by fixing the underlying string
+            # (move it to res/values/strings.xml + res/values-es/strings.xml).
+            #
+            # Format: <relative-path>:<literal>
+            """.trimIndent()
+
+        val sorted = entries.distinct().sorted()
+        baselineFile.writeText(header + "\n" + sorted.joinToString("\n") + "\n")
+        logger.lifecycle("Wrote ${sorted.size} entries to hardcoded-strings-baseline.txt")
     }
 }
 

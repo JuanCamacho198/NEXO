@@ -93,6 +93,13 @@ fun ReaderScreen(
         }
     }
 
+    val onToggleChrome: () -> Unit = {
+        if (!sessionUiState.isLoading && !isSelectionActive) {
+            controlsVisible = !controlsVisible
+            lastInteractionAt = SystemClock.elapsedRealtime()
+        }
+    }
+
     val selectionCallbacks = rememberReaderSelectionCallbacks(viewModel, context, annotationUiState)
 
     val inspectHighlightsHtmlTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
@@ -188,6 +195,7 @@ fun ReaderScreen(
                     viewModel = viewModel,
                     selectionCallbacks = selectionCallbacks,
                     onShowChrome = onShowChrome,
+                    onToggleChrome = onToggleChrome,
                     inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,
                     logWebViewTreeTrigger = logWebViewTreeTrigger,
                     onRetry = {

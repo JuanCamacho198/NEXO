@@ -3,18 +3,6 @@ package com.nexo.domain.repository
 import com.nexo.domain.model.AuthSession
 
 interface AuthRepository {
-    /** @deprecated Browser-based OAuth. Use [signInWithGoogleIdToken] instead. */
-    suspend fun startGoogleSignIn(): Result<String>
-
-    /** @deprecated Browser-based OAuth. Use [signInWithGoogleIdToken] instead. */
-    suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?>
-
-    /**
-     * Sign in with Google via browser OAuth.
-     * @deprecated Browser OAuth flow is deprecated. Use [signInWithGoogleIdToken] instead.
-     */
-    suspend fun signInWithGoogle(): Result<AuthSession> = Result.failure(UnsupportedOperationException("Not implemented"))
-
     /**
      * Sign in with a Google ID token obtained from Credential Manager (native).
      * Callers should obtain the ID token via Credential Manager at the UI layer

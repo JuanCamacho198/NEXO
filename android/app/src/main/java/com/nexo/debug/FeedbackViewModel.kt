@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
 class FeedbackViewModel(
     private val initialQueue: List<FeedbackEvent.FeedbackEntry>,
     private val initialDismissed: Set<String>,
-    private val initialBook: FeedbackEvent.BookMeta,
+    private val initialContext: CrashContext,
     private val initialEventId: String?,
     private val captureFn: (FeedbackEvent.FeedbackEntry) -> SentryId? = ::defaultCapture,
     private val maxChars: Int = MAX_CHARS,
@@ -65,8 +65,8 @@ class FeedbackViewModel(
                 }
             }.asStateFlow()
 
-    /** The book context the sheet should display (auto-context card). */
-    val bookMeta: FeedbackEvent.BookMeta = initialBook
+    /** The crash context the sheet should display (auto-context card). */
+    val context: CrashContextViewModel = CrashContextViewModel.from(initialContext)
 
     /** The eventId the sheet should link feedback to (or null when unknown). */
     val eventId: String? = initialEventId
@@ -103,16 +103,17 @@ class FeedbackViewModel(
             _state.value as? FeedbackEvent.FeedbackSheetState.Editing
                 ?: return _state.value
         _state.value = FeedbackEvent.FeedbackSheetState.Sending
+        val fields = initialContext.toEntryFields()
         val entry =
             FeedbackEvent.FeedbackEntry(
                 eventId = initialEventId ?: "",
                 text = editing.text,
                 timestamp = System.currentTimeMillis(),
-                bookId = initialBook.bookId,
-                chapterIndex = initialBook.chapterIndex,
-                page = initialBook.page,
-                title = initialBook.title,
-                chapterLabel = initialBook.chapterLabel,
+                bookId = fields.bookId,
+                chapterIndex = fields.chapterIndex,
+                page = fields.page,
+                title = fields.title,
+                chapterLabel = fields.chapterLabel,
             )
         return try {
             val sentId = captureFn(entry)
@@ -189,7 +190,7 @@ class FeedbackViewModel(
         fun factory(
             initialQueue: List<FeedbackEvent.FeedbackEntry>,
             initialDismissed: Set<String>,
-            book: FeedbackEvent.BookMeta,
+            context: CrashContext,
             eventId: String?,
             captureFn: (FeedbackEvent.FeedbackEntry) -> SentryId? = ::defaultCapture,
         ): ViewModelProvider.Factory =
@@ -199,7 +200,7 @@ class FeedbackViewModel(
                     FeedbackViewModel(
                         initialQueue = initialQueue,
                         initialDismissed = initialDismissed,
-                        initialBook = book,
+                        initialContext = context,
                         initialEventId = eventId,
                         captureFn = captureFn,
                     ) as T

@@ -104,16 +104,16 @@ fun rememberSelectionBridge(
                     lastSelection = false
                     continue
                 }
-                val text: String =
+                val rawText: String =
                     try {
                         val jsResult =
                             frag.evaluateJavascript(
                                 "(function(){var s=window.getSelection();return s?s.toString():'';})()",
                             )
-                        Log.d("SelectionDebug", "evaluateJavascript result: '$jsResult'")
+                        Log.d("SelectionDebug", "evaluateJavascript result: len=${jsResult?.length ?: 0}")
                         if (jsResult.isNullOrBlank()) {
                             val fallback = sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
-                            Log.d("SelectionDebug", "JS result empty, using locator.text fallback: '$fallback'")
+                            Log.d("SelectionDebug", "JS result empty, using locator.text fallback: len=${fallback.length}")
                             fallback
                         } else {
                             jsResult
@@ -121,10 +121,14 @@ fun rememberSelectionBridge(
                     } catch (e: Throwable) {
                         Log.e("SelectionDebug", "evaluateJavascript THREW: ${e::class.simpleName}: ${e.message}", e)
                         val fallback = sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
-                        Log.d("SelectionDebug", "Using locator.text fallback after exception: '$fallback'")
+                        Log.d("SelectionDebug", "Using locator.text fallback after exception: len=${fallback.length}")
                         fallback
                     }
-                Log.d("SelectionDebug", "Calling interactionHolder.onReadiumSelection(text='${text.take(50)}', rect=$selRect)")
+                val text: String = normalizeSelectedText(rawText)
+                if (text != rawText) {
+                    Log.d("SelectionDebug", "Normalized selection text: len=${rawText.length} -> ${text.length}")
+                }
+                Log.d("SelectionDebug", "Calling interactionHolder.onReadiumSelection(len=${text.length}, rect=$selRect)")
                 try {
                     viewModel.interactionHolder.onReadiumSelection(
                         locator = sel.locator,

@@ -4,6 +4,7 @@
     <string name="app_logo_initials">N</string>
     <string name="auth_config_error_google_unavailable">Error de configuracion: el inicio de sesion con Google no esta disponible porque el ID de cliente OAuth no esta configurado. Podes continuar usando funciones de biblioteca local.</string>
     <string name="auth_continue_with_google">Continuar con Google</string>
+    <string name="auth_continue_with_email">Continuar con correo</string>
     <string name="auth_google_disabled_loading">El inicio de sesion con Google esta en progreso.</string>
     <string name="auth_google_disabled_config_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion (falta el ID de cliente OAuth).</string>
     <string name="auth_google_disabled_wiring_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion.</string>
@@ -39,7 +40,11 @@
     <string name="auth_signup_stale_session">Este correo ya está registrado o la verificación está pendiente — revisa tu bandeja o inicia sesión</string>
     <string name="auth_mock_google_button">Mock Google jcamachomolina503</string>
     <string name="auth_google_unexpected_credential">Tipo de credencial inesperado: %1$s</string>
-    <string name="auth_google_credential_error">Error de credencial (%1$s): %2$s</string>
+    <string name="auth_google_no_credential">No hay ninguna cuenta de Google disponible en este dispositivo. Agrega una en los ajustes del dispositivo y vuelve a intentarlo.</string>
+    <string name="auth_google_credential_interrupted">El inicio de sesión se interrumpió. Inténtalo de nuevo.</string>
+    <string name="auth_google_credential_network_error">Sin conexión. Revisa tu internet y vuelve a intentarlo.</string>
+    <string name="auth_google_credential_error_generic">No pudimos iniciar sesión con Google. Inténtalo de nuevo.</string>
+    <string name="auth_google_credential_unknown">Algo salió mal al iniciar sesión con Google. Inténtalo de nuevo.</string>
     <string name="auth_google_unexpected_error">Error inesperado: %1$s</string>
     <string name="highlights_title">Resaltados</string>
     <string name="highlights_subtitle">Tus notas y pasajes destacados</string>
@@ -648,6 +653,8 @@
     <string name="highlights_filter_all_tags">Todas las etiquetas</string>
     <string name="highlights_clear_filters">Borrar filtros</string>
     <string name="highlight_location">Ubicación: %1$s</string>
+    <string name="highlight_pdf_page">Página %1$d</string>
+    <string name="highlight_reading_progress">%1$d%% del libro</string>
 
     <!-- Daily goal (onboarding + settings) -->
     <string name="settings_daily_goal_title">Meta diaria</string>
@@ -965,8 +972,12 @@
     <string name="feedback_mobile_title">Ayúdanos a arreglar esto</string>
     <string name="feedback_mobile_subtitle">La app se cerró mientras leías. Tu reporte nos ayuda a que no vuelva a pasar.</string>
     <string name="feedback_mobile_auto_context_label">Detectamos automáticamente</string>
-    <string name="feedback_mobile_sample_book">La Odisea</string>
-    <string name="feedback_mobile_sample_chapter">Capítulo IX · página 142 de 318</string>
+    <string name="feedback_mobile_context_no_book">La app se cerró mientras usabas NEXO.</string>
+    <string name="feedback_mobile_context_unknown_screen">NEXO</string>
+    <string name="feedback_mobile_context_no_title">Libro sin título</string>
+    <string name="feedback_mobile_context_chapter_page">%1$s · página %2$d</string>
+    <string name="feedback_mobile_context_page_only">página %1$d</string>
+    <string name="feedback_mobile_context_chapter_only">%1$s</string>
     <string name="feedback_mobile_input_label">¿Qué estabas haciendo cuando se cerró?</string>
     <string name="feedback_mobile_helper">Opcional · nos ayuda muchísimo</string>
     <string name="feedback_mobile_privacy">Solo se envía este reporte, nada de tu biblioteca.</string>

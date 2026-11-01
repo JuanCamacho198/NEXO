@@ -24,6 +24,7 @@ import com.nexo.debug.CrashNotificationHelper
 import com.nexo.debug.DebugLog
 import com.nexo.debug.DebugPrefs
 import com.nexo.debug.DebugStateHolder
+import com.nexo.debug.CrashContext
 import com.nexo.debug.FeedbackActivity
 import com.nexo.debug.FeedbackEvent
 import com.nexo.debug.FeedbackPersistence
@@ -32,6 +33,8 @@ import com.nexo.domain.model.ThemeMode
 import com.nexo.presentation.navigation.DeepLinkSchemes
 import com.nexo.presentation.navigation.InstallDeepLinkParser
 import com.nexo.presentation.navigation.NexoNavHost
+import com.nexo.presentation.screen.readium.evictRestoredReadiumNavigatorFragments
+import com.nexo.presentation.screen.readium.installReadiumDummyFragmentFactories
 import com.nexo.presentation.theme.NexoTheme
 import com.nexo.presentation.viewmodel.AuthViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -49,7 +52,17 @@ class MainActivity : AppCompatActivity() {
         ) { /* result is informational — we post only if granted */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Must run BEFORE super.onCreate: the FragmentManager restores saved
+        // navigator fragments inside super.onCreate (attachController) and needs
+        // a factory able to construct them. See
+        // installReadiumDummyFragmentFactories for the full rationale.
+        installReadiumDummyFragmentFactories()
+
         super.onCreate(savedInstanceState)
+
+        // Any navigator fragment restored from saved state is a Readium
+        // placeholder that must leave the screen before onResume.
+        evictRestoredReadiumNavigatorFragments()
 
         // Addon install deep links (nexo://install?url=..., legacy
         // nextpage://install?url=...) are checked FIRST: install URIs are never
@@ -249,14 +262,10 @@ class MainActivity : AppCompatActivity() {
             FeedbackActivity.intent(
                 context = this,
                 eventId = lastEventId,
-                book =
-                    FeedbackEvent.BookMeta(
-                        bookId = "",
-                        title = null,
-                        chapterLabel = null,
-                        chapterIndex = null,
-                        page = null,
-                    ),
+                // The process died before we could record where the user was, so
+                // we claim no book: the sheet shows a neutral screen context
+                // rather than inventing one (T3).
+                crashContext = CrashContext.InScreen(screenRoute = null),
             ),
         )
     }

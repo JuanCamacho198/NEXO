@@ -27,8 +27,10 @@
 
 ### Verification Tasks
 ```powershell
-# Verify no hardcoded strings in AuthScreen
+# Verify no hardcoded strings in presentation/ and debug/ (baseline-aware)
 .\gradlew.bat verifyAuthScreenNoHardcodedStrings
+# Regenerate the frozen baseline (same PR as an intentional string change)
+.\gradlew.bat updateHardcodedStringsBaseline
 
 # Verify release mapping (minify enabled by default)
 .\gradlew.bat verifyReleaseMapping
@@ -40,14 +42,25 @@
 .\gradlew.bat assembleDebug --info --max-workers=2
 ```
 
-### Android
-```powershell
-# Install debug APK to device/emulator
-.\gradlew.bat installDebug
+### Android / Emulador
+Entorno sin Android Studio: SDK `command-line-tools` + emulador oficial + Android CLI (`android.exe`).
+Usar la skill **`nexo-android-emulator`** (`.agents/skills/nexo-android-emulator/SKILL.md`) para el flujo completo, paths exactos y failure modes. Resumen:
 
-# Start emulator (requires ANDROID_HOME)
-emulator -avd <avd_name>
+```powershell
+# Arrancar/parar emulador (AVD: dev_clean, Android 15, sin Play Store)
+android emulator start dev_clean
+android emulator stop dev_clean
+
+# Build + instalar + correr (NO usar adb install directo)
+cmd /c gradlew.bat :app:assembleDebug --console=plain 2>&1 | Select-String "BUILD|FAILED"
+android run --apks=app\build\outputs\apk\debug\app-debug.apk --device=emulator-5554
+
+# Debug
+android screen capture     # screenshot
+android layout --pretty    # árbol de UI en JSON (preferido vs screenshot)
 ```
+
+Nota: `android.exe` vive en `%LOCALAPPDATA%\Android\android-cli\` (global, fuera del repo). `adb`, `emulator`, `sdkmanager` y `android` están en el PATH de usuario — requieren terminal nueva. Actualizar el CLI con `android update`.
 
 ## Project Structure
 
@@ -162,14 +175,20 @@ import androidx.lifecycle.viewModelScope
 ### Strings
 - All user-facing strings in `res/values/strings.xml` (English) and `res/values-es/strings.xml` (Spanish)
 - No hardcoded strings in Compose code
-- Custom Gradle task `verifyAuthScreenNoHardcodedStrings` enforces this
+- Custom Gradle task `verifyAuthScreenNoHardcodedStrings` enforces this.
+  It scans every `.kt` file under `presentation/` and `debug/` (whole-file, so
+  multiline `Text(` calls are caught) and fails only on NEW violations; existing
+  debt is frozen in `app/hardcoded-strings-baseline.txt`, mirroring `lint-baseline.xml`.
+  See `docs/string-hardcode-gate.md`. Regenerate the baseline in the same PR with:
+  `.\gradlew.bat updateHardcodedStringsBaseline`
+  (`verifyNoHardcodedStrings` is the underlying task; the name above is its alias.)
 
 ### Lint baseline
 - `app/lint-baseline.xml` freezes the legacy lint findings; `lint { baseline = file("lint-baseline.xml"); abortOnError = true }`
   in `app/build.gradle.kts` means only NEW findings fail `:app:lintDebug` (and the `Android checks` CI job).
 - Owning-PR convention: when your PR intentionally introduces a finding that is already covered by the baseline
   (or fixes a baselined one), regenerate the baseline in the SAME PR — never in a separate PR:
-  `cmd /c gradlew.bat --no-daemon -Dorg.gradle.vfs.watch=false :app:updateLintBaseline`
+  `& cmd /c "gradlew.bat --no-daemon -Dorg.gradle.vfs.watch=false :app:updateLintBaseline"`
   then commit the updated `app/lint-baseline.xml` alongside the change. Do NOT hand-edit the baseline.
 
 ## Safety
@@ -229,10 +248,12 @@ kotlin.compiler.execution.strategy=daemon
 
 Test teardown rule: every `mockkStatic` must have a matching `@After fun tearDown() = unmockkAll()` (or `@AfterClass` for `@BeforeClass` mocks). Import `io.mockk.unmockkAll` where needed. `MainDispatcherRule` must expose `val dispatcher` and cancel it in `finished()` via `dispatcher.cancel()` + `Dispatchers.resetMain()`.
 
-Verify invocation (avoid pwsh deadlock — use `cmd` + `--no-daemon` + explicit VFS flag):
+Verify invocation (avoid pwsh deadlock — use `cmd` + `--no-daemon` + explicit VFS flag).
+
+**Quoting matters:** in PowerShell the whole `cmd /c` command must be quoted, otherwise the `-D` flag is parsed as a task name and Gradle fails with `Task '.gradle.vfs.watch=false' not found`:
 
 ```powershell
-cmd /c gradlew.bat --no-daemon -Dorg.gradle.vfs.watch=false testDebugUnitTest
+& cmd /c "gradlew.bat --no-daemon -Dorg.gradle.vfs.watch=false testDebugUnitTest"
 ```
 
 Add timeout `10m` for verify tasks. Do not run gradle via `pwsh` without `cmd /c` wrapper for long-running verify.

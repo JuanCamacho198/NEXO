@@ -1,0 +1,94 @@
+appId: com.nexo
+---
+# Reader highlights sheet — colour filter verification.
+#
+# Regression cover for the filter comparing an enum *name* ("BLUE") against a
+# stored hex ("#3B82F6"), which matched nothing. The sheet must now show exactly
+# the highlights of the selected colour.
+#
+# Precondition: the emulator database holds 2 highlights on the same book —
+# one #FACC15 (yellow, excerpt contains "interna en el unive") and one #3B82F6
+# (blue, excerpt "concepto"). See maestro/README if the seed is missing.
+#
+# Run: maestro test maestro/flows/reader/highlights-filter.yaml
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Library|Biblioteca|Home|Inicio"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 20000
+- tapOn:
+    text: "El extranjero"
+- extendedWaitUntil:
+    visible:
+      text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+    timeout: 30000
+- tapOn:
+    text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+- waitForAnimationToEnd:
+    timeout: 25000
+# The reader opens on the cover; swipe forward to the flowing text where the
+# seeded highlights live.
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 80%, 50%
+          end: 20%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+# Reveal the chrome, then open the highlights sheet from the pencil icon.
+- tapOn:
+    point: 50%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    point: 81%, 8%
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "Highlights|Resaltados"
+    timeout: 15000
+- takeScreenshot: filter-sheet-open
+
+# "All" is selected by default: both highlights are visible.
+- assertVisible:
+    text: ".*interna en el unive.*"
+- assertVisible:
+    text: ".*concepto.*"
+
+# Yellow filter: only the yellow highlight survives.
+- tapOn:
+    text: "Amarillo|Yellow"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: filter-yellow
+- assertVisible:
+    text: ".*interna en el unive.*"
+- assertNotVisible:
+    text: ".*concepto.*"
+
+# Blue filter: the inverse.
+- tapOn:
+    text: "Azul|Blue"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: filter-blue
+- assertVisible:
+    text: ".*concepto.*"
+- assertNotVisible:
+    text: ".*interna en el unive.*"
+
+# Back to "All": both are reachable again.
+- tapOn:
+    text: "Todos|All"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: filter-all
+- assertVisible:
+    text: ".*interna en el unive.*"
+- assertVisible:
+    text: ".*concepto.*"

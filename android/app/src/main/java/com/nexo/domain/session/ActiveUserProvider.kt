@@ -30,7 +30,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * ## The anonymous/local rule (decision D5)
  *
- * [com.nexo.data.repository.GoogleAuthRepository.signInLocally] mints a
+ * [com.nexo.data.repository.SupabaseAuthRepository.signInLocally] mints a
  * `local-{UUID}` id **on every launch**, so anything persisted under it becomes
  * orphaned the moment the app restarts. The anonymous path therefore reads only:
  * it must never write to the local DB or the filesystem.
@@ -80,7 +80,7 @@ class ActiveUserProvider {
 
     companion object {
         /**
-         * The prefix [com.nexo.data.repository.GoogleAuthRepository.signInLocally]
+         * The prefix [com.nexo.data.repository.SupabaseAuthRepository.signInLocally]
          * uses for the throwaway, per-launch anonymous id.
          */
         const val LOCAL_USER_PREFIX: String = "local-"

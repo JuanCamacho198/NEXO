@@ -39,20 +39,33 @@ class FeedbackActivity : ComponentActivity() {
         const val EXTRA_CHAPTER_LABEL = "feedback_chapter_label"
         const val EXTRA_CHAPTER_INDEX = "feedback_chapter_index"
         const val EXTRA_PAGE = "feedback_page"
+        const val EXTRA_COVER_PATH = "feedback_cover_path"
+        const val EXTRA_SCREEN_ROUTE = "feedback_screen_route"
 
         fun intent(
             context: Context,
             eventId: String?,
-            book: FeedbackEvent.BookMeta,
+            crashContext: CrashContext,
         ): Intent =
             Intent(context, FeedbackActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 putExtra(EXTRA_EVENT_ID, eventId)
-                putExtra(EXTRA_BOOK_ID, book.bookId)
-                putExtra(EXTRA_BOOK_TITLE, book.title)
-                putExtra(EXTRA_CHAPTER_LABEL, book.chapterLabel)
-                if (book.chapterIndex != null) putExtra(EXTRA_CHAPTER_INDEX, book.chapterIndex)
-                if (book.page != null) putExtra(EXTRA_PAGE, book.page)
+                when (crashContext) {
+                    is CrashContext.InBook -> {
+                        putExtra(EXTRA_BOOK_ID, crashContext.bookId)
+                        putExtra(EXTRA_BOOK_TITLE, crashContext.title)
+                        putExtra(EXTRA_CHAPTER_LABEL, crashContext.chapterLabel)
+                        putExtra(EXTRA_COVER_PATH, crashContext.coverPath)
+                        if (crashContext.chapterIndex != null) {
+                            putExtra(EXTRA_CHAPTER_INDEX, crashContext.chapterIndex)
+                        }
+                        if (crashContext.page != null) putExtra(EXTRA_PAGE, crashContext.page)
+                    }
+
+                    is CrashContext.InScreen -> {
+                        putExtra(EXTRA_SCREEN_ROUTE, crashContext.screenRoute)
+                    }
+                }
             }
     }
 
@@ -62,9 +75,9 @@ class FeedbackActivity : ComponentActivity() {
         persistence = FeedbackPersistence(applicationContext)
         val queue = persistence.readQueue()
         val dismissed = persistence.readDismissed()
-        val book =
-            FeedbackEvent.BookMeta(
-                bookId = intent.getStringExtra(EXTRA_BOOK_ID) ?: "",
+        val crashContext =
+            CrashContext.of(
+                bookId = intent.getStringExtra(EXTRA_BOOK_ID),
                 title = intent.getStringExtra(EXTRA_BOOK_TITLE),
                 chapterLabel = intent.getStringExtra(EXTRA_CHAPTER_LABEL),
                 chapterIndex =
@@ -72,6 +85,8 @@ class FeedbackActivity : ComponentActivity() {
                         .getIntExtra(EXTRA_CHAPTER_INDEX, -1)
                         .takeIf { it >= 0 },
                 page = intent.getIntExtra(EXTRA_PAGE, -1).takeIf { it >= 0 },
+                coverPath = intent.getStringExtra(EXTRA_COVER_PATH),
+                screenRoute = intent.getStringExtra(EXTRA_SCREEN_ROUTE),
             )
         val eventId =
             intent.getStringExtra(EXTRA_EVENT_ID)
@@ -79,7 +94,7 @@ class FeedbackActivity : ComponentActivity() {
         FeedbackViewModel.factory(
             initialQueue = queue,
             initialDismissed = dismissed,
-            book = book,
+            context = crashContext,
             eventId = eventId,
         )
     }

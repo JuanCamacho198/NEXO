@@ -20,6 +20,7 @@ import com.nexo.domain.model.ReaderSettings
 import com.nexo.presentation.screen.readium.FragmentHostView
 import com.nexo.presentation.screen.readium.rememberFragmentHost
 import com.nexo.presentation.screen.readium.rememberSelectionBridge
+import com.nexo.presentation.screen.readium.rememberTapZonesBridge
 import com.nexo.presentation.screen.readium.toEpubPreferences
 import com.nexo.presentation.viewmodel.ReaderViewModel
 import kotlinx.coroutines.delay
@@ -51,6 +52,7 @@ fun ReadiumReaderContent(
     inspectHighlightsHtmlTrigger: SharedFlow<Unit> = MutableSharedFlow(),
     logWebViewTreeTrigger: SharedFlow<Unit> = MutableSharedFlow(),
     onShowChrome: (() -> Unit)? = null,
+    onToggleChrome: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current as FragmentActivity
@@ -73,6 +75,15 @@ fun ReadiumReaderContent(
         publication = publication,
         readingOrder = hostState.readingOrder,
         viewModel = viewModel,
+    )
+
+    // ── Tap zones (lateral navigation + center chrome toggle) ─────
+    // Registered after the selection bridge so the DecorableNavigator
+    // listener keeps first claim on taps. See ReadiumTapZones.
+    val currentOnToggleChrome by rememberUpdatedState(onToggleChrome)
+    rememberTapZonesBridge(
+        navigatorFragment = hostState.navigatorFragment.value,
+        onToggleChrome = { currentOnToggleChrome?.invoke() },
     )
 
     // ── Settings sync (readerSettings → EpubPreferences) ──────────
@@ -113,7 +124,7 @@ fun ReadiumReaderContent(
                                     var a = el.attributes[j];
                                     attrs[a.name] = a.value;
                                 }
-                                results.push({tag: el.tagName, bg: bg, attrs: attrs, text: el.textContent.substring(0, 50)});
+                                results.push({tag: el.tagName, bg: bg, attrs: attrs, textLen: el.textContent.length});
                             }
                         }
                         return JSON.stringify(results);
@@ -138,10 +149,13 @@ fun ReadiumReaderContent(
                         val obj = arr.optJSONObject(i) ?: continue
                         val tag = obj.optString("tag")
                         val bg = obj.optString("bg")
-                        val text = obj.optString("text")
+                        // `textLen` only: the JS dump deliberately does not
+                        // return the highlighted passage, so no book content
+                        // reaches DebugLog (and therefore Sentry).
+                        val textLen = obj.optInt("textLen", 0)
                         val attrs = obj.optJSONObject("attrs")
                         val attrsStr = attrs?.toString() ?: "{}"
-                        DebugLog.info("InspectHL", "tag=$tag, bg=$bg, attrs=$attrsStr, text=$text")
+                        DebugLog.info("InspectHL", "tag=$tag, bg=$bg, attrs=$attrsStr, textLen=$textLen")
                     }
                 } catch (t: Throwable) {
                     DebugLog.error("InspectHL", "Failed: ${t::class.simpleName}: ${t.message}")

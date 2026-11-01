@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.nexo.presentation.feature.highlights.utils.parseColorHex
+import com.nexo.presentation.feature.highlights.utils.resolveFilterHex
 
 @Composable
 fun ColorFilterCircle(
@@ -23,8 +24,11 @@ fun ColorFilterCircle(
     isSelected: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val borderColor = if (isSelected) Color.White else Color(0xFF4A5568)
-    val borderWidth = if (isSelected) 1.5.dp else 1.dp
+    // Swatches sit on the dark sheet surface (#161F33). A dark border
+    // disappears against it and hides the darker swatches (red, blue), so the
+    // resting ring is a light hairline; selection thickens it to near-white.
+    val borderColor = if (isSelected) Color(0xFFDDE2F8) else Color(0xFF718096)
+    val borderWidth = if (isSelected) 2.dp else 1.dp
 
     Box(
         modifier = modifier.size(24.dp),
@@ -44,7 +48,7 @@ fun ColorFilterCircle(
                 )
             }
         } else {
-            val fillColor = parseColorHex(filterValue)
+            val fillColor = parseColorHex(resolveFilterHex(filterValue))
             Box(
                 modifier =
                     Modifier

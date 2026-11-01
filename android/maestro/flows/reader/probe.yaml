@@ -1,0 +1,18 @@
+appId: com.nexo
+---
+# Probe: verifies Maestro can drive the emulator and read the reader UI.
+# Run: maestro test maestro/flows/reader/probe.yaml
+- launchApp:
+    clearState: false
+# Cold start restores the session and lands on Home; give it room.
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 5000
+- waitForAnimationToEnd:
+    timeout: 20000
+# Home shows the bottom nav on every authenticated screen.
+- extendedWaitUntil:
+    visible:
+      text: "Library|Biblioteca|Home|Inicio"
+    timeout: 30000

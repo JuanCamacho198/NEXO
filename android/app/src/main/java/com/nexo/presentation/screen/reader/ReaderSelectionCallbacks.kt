@@ -84,8 +84,12 @@ fun rememberReaderSelectionCallbacks(
     val onCopy =
         remember(viewModel, context) {
             {
+                // S7/reader-bug-3: read the live slice at call time — the
+                // `annotationUiState` parameter is frozen to the composition
+                // that created this lambda, so a selection arriving later left
+                // it null and the clipboard got nothing.
                 viewModel.interactionHolder.onCopySelectedText()
-                annotationUiState.selectedText?.let { text ->
+                viewModel.annotationUiState.value.selectedText?.let { text ->
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(ClipData.newPlainText("highlight", text))
                 }
@@ -96,7 +100,12 @@ fun rememberReaderSelectionCallbacks(
     val onDelete =
         remember(viewModel) {
             {
-                val currentHighlight = (annotationUiState.selectionState as? ReaderSelectionState.Existing)?.highlight
+                // S7/reader-bug-3: read the live slice at call time. Capturing
+                // the parameter meant a highlight selected AFTER first render
+                // never reached `onReadiumDeleteHighlight` and the delete
+                // button silently did nothing.
+                val currentHighlight =
+                    (viewModel.annotationUiState.value.selectionState as? ReaderSelectionState.Existing)?.highlight
                 currentHighlight?.let { viewModel.interactionHolder.onReadiumDeleteHighlight(it.id) }
                 Unit
             }
@@ -120,7 +129,9 @@ fun rememberReaderSelectionCallbacks(
     val onShare =
         remember(viewModel) {
             {
-                when (val sel = annotationUiState.selectionState) {
+                // S7/reader-bug-3: live read at call time (same stale-capture
+                // defect as onCopy/onDelete).
+                when (val sel = viewModel.annotationUiState.value.selectionState) {
                     is ReaderSelectionState.Existing -> viewModel.interactionHolder.onShareSelectedText(sel.highlight.textContent)
                     is ReaderSelectionState.New -> viewModel.interactionHolder.onShareSelectedText(sel.text)
                     ReaderSelectionState.None -> Unit
@@ -131,10 +142,10 @@ fun rememberReaderSelectionCallbacks(
     val onShowColorPicker = remember(viewModel) { { viewModel.interactionHolder.onShowColorPickerPopover() } }
     val onDismissColorPicker = remember(viewModel) { { viewModel.interactionHolder.onDismissColorPickerPopover() } }
     val onTagTextChanged = remember(viewModel) { { text: String -> viewModel.interactionHolder.onTagTextChanged(text) } }
-    val onSaveTag = remember(viewModel) { { viewModel.interactionHolder.onSaveTag(annotationUiState.activeTagText) } }
+    val onSaveTag = remember(viewModel) { { viewModel.interactionHolder.onSaveTag(viewModel.annotationUiState.value.activeTagText) } }
     val onDismissTag = remember(viewModel) { { viewModel.interactionHolder.onDismissTagInput() } }
     val onDefTextChanged = remember(viewModel) { { text: String -> viewModel.interactionHolder.onDefinitionTextChanged(text) } }
-    val onSaveDef = remember(viewModel) { { viewModel.interactionHolder.onSaveDefinition(annotationUiState.activeDefinitionText) } }
+    val onSaveDef = remember(viewModel) { { viewModel.interactionHolder.onSaveDefinition(viewModel.annotationUiState.value.activeDefinitionText) } }
     val onDismissDef = remember(viewModel) { { viewModel.interactionHolder.onDismissDefinitionInput() } }
 
     return ReaderSelectionCallbacks(

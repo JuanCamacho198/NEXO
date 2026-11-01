@@ -150,7 +150,7 @@ class FeedbackQueueTest {
             FeedbackViewModel(
                 initialQueue = emptyList(),
                 initialDismissed = emptySet(),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = null,
             )
         assertEquals(FeedbackEvent.FeedbackSheetState.Idle, vm.state.value)
@@ -162,7 +162,7 @@ class FeedbackQueueTest {
             FeedbackViewModel(
                 initialQueue = emptyList(),
                 initialDismissed = emptySet(),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = newEventId("-evt"),
             )
         val state = vm.state.value
@@ -176,7 +176,7 @@ class FeedbackQueueTest {
             FeedbackViewModel(
                 initialQueue = emptyList(),
                 initialDismissed = setOf(dismissedId),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = dismissedId,
             )
         assertEquals(FeedbackEvent.FeedbackSheetState.Idle, vm.state.value)
@@ -188,7 +188,7 @@ class FeedbackQueueTest {
             FeedbackViewModel(
                 initialQueue = emptyList(),
                 initialDismissed = emptySet(),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = newEventId("-clamp"),
             )
         val huge = "a".repeat(500)
@@ -204,7 +204,7 @@ class FeedbackQueueTest {
             FeedbackViewModel(
                 initialQueue = emptyList(),
                 initialDismissed = emptySet(),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = newEventId("-counter"),
             )
         vm.onTextChanged("hi")
@@ -221,7 +221,7 @@ class FeedbackQueueTest {
             FeedbackViewModel(
                 initialQueue = emptyList(),
                 initialDismissed = emptySet(),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = eventId,
                 captureFn = { entry ->
                     sentIds += entry.eventId
@@ -242,7 +242,7 @@ class FeedbackQueueTest {
             FeedbackViewModel(
                 initialQueue = emptyList(),
                 initialDismissed = emptySet(),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = newEventId("-empty"),
                 captureFn = { entry ->
                     sentIds += entry.eventId
@@ -261,7 +261,7 @@ class FeedbackQueueTest {
             FeedbackViewModel(
                 initialQueue = emptyList(),
                 initialDismissed = emptySet(),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = newEventId("-offline"),
                 captureFn = { null }, // Sentry uninit / offline
             )
@@ -280,7 +280,7 @@ class FeedbackQueueTest {
             FeedbackViewModel(
                 initialQueue = emptyList(),
                 initialDismissed = emptySet(),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = newEventId("-throw"),
                 captureFn = { throw IllegalStateException("boom") },
             )
@@ -297,7 +297,7 @@ class FeedbackQueueTest {
             FeedbackViewModel(
                 initialQueue = emptyList(),
                 initialDismissed = emptySet(),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = dismissedId,
             )
         vm.dismiss()
@@ -323,7 +323,7 @@ class FeedbackQueueTest {
                         entry(eventId = id3),
                     ),
                 initialDismissed = emptySet(),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = null,
                 captureFn = { entry ->
                     if (entry.eventId == id2) {
@@ -357,7 +357,7 @@ class FeedbackQueueTest {
             FeedbackViewModel(
                 initialQueue = q.snapshot(),
                 initialDismissed = q.dismissedSnapshot(),
-                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialContext = CrashContext.InBook("b", "Title", "Cap", 0, 1),
                 initialEventId = dismissedId,
             )
         val (queue, dismissed) = vm.exportForPersistence()
