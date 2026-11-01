@@ -40,7 +40,11 @@
     <string name="auth_signup_stale_session">Este correo ya está registrado o la verificación está pendiente — revisa tu bandeja o inicia sesión</string>
     <string name="auth_mock_google_button">Mock Google jcamachomolina503</string>
     <string name="auth_google_unexpected_credential">Tipo de credencial inesperado: %1$s</string>
-    <string name="auth_google_credential_error">Error de credencial (%1$s): %2$s</string>
+    <string name="auth_google_no_credential">No hay ninguna cuenta de Google disponible en este dispositivo. Agrega una en los ajustes del dispositivo y vuelve a intentarlo.</string>
+    <string name="auth_google_credential_interrupted">El inicio de sesión se interrumpió. Inténtalo de nuevo.</string>
+    <string name="auth_google_credential_network_error">Sin conexión. Revisa tu internet y vuelve a intentarlo.</string>
+    <string name="auth_google_credential_error_generic">No pudimos iniciar sesión con Google. Inténtalo de nuevo.</string>
+    <string name="auth_google_credential_unknown">Algo salió mal al iniciar sesión con Google. Inténtalo de nuevo.</string>
     <string name="auth_google_unexpected_error">Error inesperado: %1$s</string>
     <string name="highlights_title">Resaltados</string>
     <string name="highlights_subtitle">Tus notas y pasajes destacados</string>

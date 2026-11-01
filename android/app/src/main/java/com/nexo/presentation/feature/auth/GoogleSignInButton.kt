@@ -13,7 +13,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -67,6 +71,35 @@ internal fun googleButtonDisabledReasonMessageRes(reason: GoogleButtonDisabledRe
         GoogleButtonDisabledReason.NONE -> null
     }
 
+/**
+ * Every message [googleCredentialErrorMessageRes] can return, resolved to text.
+ *
+ * The coroutine that catches the credential failure is not a composable and cannot call
+ * `stringResource()`, so all candidates are resolved here during composition.
+ *
+ * @throws IllegalStateException if a resource id produced by the mapper is missing from
+ *   [CREDENTIAL_MESSAGE_RES_IDS] — a programming error, surfaced the first time the lookup runs.
+ */
+@Composable
+private fun rememberCredentialMessageResources(): Map<Int, String> =
+    CREDENTIAL_MESSAGE_RES_IDS.associateWith { messageRes -> stringResource(messageRes) }
+
+private fun Map<Int, String>.credentialMessage(messageRes: Int): String =
+    this[messageRes]
+        ?: error(
+            "No resolved message for resource $messageRes. " +
+                "Add it to CREDENTIAL_MESSAGE_RES_IDS in GoogleSignInButton.kt.",
+        )
+
+private val CREDENTIAL_MESSAGE_RES_IDS =
+    listOf(
+        R.string.auth_google_no_credential,
+        R.string.auth_google_credential_interrupted,
+        R.string.auth_google_credential_network_error,
+        R.string.auth_google_credential_error_generic,
+        R.string.auth_google_credential_unknown,
+    )
+
 @Composable
 fun GoogleSignInButton(
     uiState: AuthUiState,
@@ -78,6 +111,11 @@ fun GoogleSignInButton(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    // Neutral (non-error) inline feedback for TYPE_NO_CREDENTIAL: a device without a
+    // Google account is a normal case, not a failure, so it must not be painted with
+    // colorScheme.error like onSetError() does.
+    var neutralMessageRes by remember { mutableStateOf<Int?>(null) }
+
     val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val googleContainerColor =
         if (isDarkBackground) Color.White else NexoTheme.colors.welcomeBrandBlue
@@ -85,11 +123,17 @@ fun GoogleSignInButton(
         if (isDarkBackground) Color(0xFF202124) else Color.White
 
     val unexpectedCredentialTemplate = stringResource(R.string.auth_google_unexpected_credential)
-    val credentialErrorTemplate = stringResource(R.string.auth_google_credential_error)
     val unexpectedErrorTemplate = stringResource(R.string.auth_google_unexpected_error)
+
+    // Resolved up front: the coroutine below cannot call stringResource().
+    // Every message googleCredentialErrorMessageRes() can return is resolved here, so the
+    // catch block only has to pick one by resource id.
+    val credentialMessageRes = rememberCredentialMessageResources()
 
     NexoButton(
         onClick = {
+            // Drop inline feedback from the previous attempt before starting a new one.
+            neutralMessageRes = null
             val googleIdOption =
                 GetGoogleIdOption
                     .Builder()
@@ -131,9 +175,11 @@ fun GoogleSignInButton(
                     Log.d(AUTH_SCREEN_TAG, "Google sign-in cancelled by user")
                 } catch (e: GetCredentialException) {
                     Log.e(AUTH_SCREEN_TAG, "Google credential error: type=${e.type} msg=${e.message}", e)
-                    onSetError(
-                        credentialErrorTemplate.format(Locale.getDefault(), e.type, e.message),
-                    )
+                    when (val messageRes = googleCredentialErrorMessageRes(e.type)) {
+                        null -> Unit
+                        R.string.auth_google_no_credential -> neutralMessageRes = messageRes
+                        else -> onSetError(credentialMessageRes.credentialMessage(messageRes))
+                    }
                 } catch (e: Exception) {
                     Log.e(AUTH_SCREEN_TAG, "Unexpected error in Google sign-in", e)
                     onSetError(
@@ -205,6 +251,18 @@ fun GoogleSignInButton(
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
+        )
+    }
+
+    val neutralMessage = neutralMessageRes?.let { messageRes -> stringResource(messageRes) }
+    if (neutralMessage != null) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = neutralMessage,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.testTag(AuthTags.GOOGLE_DISABLED_REASON),
         )
     }
 }
