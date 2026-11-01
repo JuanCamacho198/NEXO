@@ -10,6 +10,7 @@
     <!-- Auth -->
     <string name="auth_config_error_google_unavailable">Configuration error: Google sign-in unavailable because the OAuth client ID is not configured. You can continue using local library features.</string>
     <string name="auth_continue_with_google">Continue with Google</string>
+    <string name="auth_continue_with_email">Continue with email</string>
     <string name="auth_google_disabled_loading">Google sign-in is currently in progress.</string>
     <string name="auth_google_disabled_config_error">Google sign-in is disabled due to a configuration error (missing OAuth client ID).</string>
     <string name="auth_google_disabled_wiring_error">Google sign-in is disabled due to a setup error.</string>

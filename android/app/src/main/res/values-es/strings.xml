@@ -4,6 +4,7 @@
     <string name="app_logo_initials">N</string>
     <string name="auth_config_error_google_unavailable">Error de configuracion: el inicio de sesion con Google no esta disponible porque el ID de cliente OAuth no esta configurado. Podes continuar usando funciones de biblioteca local.</string>
     <string name="auth_continue_with_google">Continuar con Google</string>
+    <string name="auth_continue_with_email">Continuar con correo</string>
     <string name="auth_google_disabled_loading">El inicio de sesion con Google esta en progreso.</string>
     <string name="auth_google_disabled_config_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion (falta el ID de cliente OAuth).</string>
     <string name="auth_google_disabled_wiring_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion.</string>

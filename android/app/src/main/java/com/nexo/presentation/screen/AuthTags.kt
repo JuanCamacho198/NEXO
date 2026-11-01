@@ -9,6 +9,9 @@ object AuthTags {
     const val SIGNUP = "auth_signup_button"
     const val SEND_RESET = "auth_send_reset_button"
     const val GOOGLE = "auth_google_button"
+
+    /** Toggles the inline email/password form on the login screen. */
+    const val EMAIL_TOGGLE = "auth_email_toggle_button"
     const val FORGOT_LINK = "auth_forgot_link"
     const val REGISTER_LINK = "auth_register_link"
     const val LOGIN_LINK = "auth_login_link"

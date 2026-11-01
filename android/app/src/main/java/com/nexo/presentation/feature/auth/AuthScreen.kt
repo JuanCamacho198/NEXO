@@ -75,6 +75,7 @@ internal fun LoginScreenContent(
     val buttonDisabledReason = resolveGoogleButtonDisabledReason(uiState)
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var emailFormExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(uiState.currentSession) {
         if (uiState.currentSession != null) onAuthenticated()
     }
@@ -94,22 +95,28 @@ internal fun LoginScreenContent(
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = stringResource(R.string.auth_login_subtitle), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         AuthConfigError(uiState)
-        NexoTextField(value = email, onValueChange = { email = it }, label = stringResource(R.string.auth_email_label), leadingIcon = NexoIcons.Email, singleLine = true, modifier = Modifier.fillMaxWidth().testTag(AuthTags.EMAIL))
-        Spacer(modifier = Modifier.height(8.dp))
-        PasswordTextField(value = password, onValueChange = { password = it }, label = stringResource(R.string.auth_password_label))
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onNavigateToForgot, modifier = Modifier.testTag(AuthTags.FORGOT_LINK)) { Text(text = stringResource(R.string.auth_forgot_password), style = MaterialTheme.typography.bodyMedium) }
-        }
-        NexoButton(onClick = { onSignIn(email, password) }, enabled = !uiState.isLoading, variant = NexoButtonVariant.FILLED, shape = RoundedCornerShape(28.dp), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp), modifier = Modifier.fillMaxWidth().height(56.dp).testTag(AuthTags.SIGNIN)) {
-            Text(text = stringResource(R.string.auth_login_action), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(imageVector = NexoIcons.ArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        AuthOrDivider(text = stringResource(R.string.auth_or_login_with))
-        Spacer(modifier = Modifier.height(16.dp))
         GoogleSignInButton(uiState = uiState, onGoogleIdToken = onGoogleIdToken, onSetError = onSetError)
+        Spacer(modifier = Modifier.height(12.dp))
+        NexoButton(onClick = { emailFormExpanded = true }, enabled = !uiState.isLoading, variant = NexoButtonVariant.OUTLINED, shape = RoundedCornerShape(28.dp), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp), modifier = Modifier.fillMaxWidth().height(56.dp).testTag(AuthTags.EMAIL_TOGGLE)) {
+            Text(text = stringResource(R.string.auth_continue_with_email), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+        if (emailFormExpanded) {
+            Spacer(modifier = Modifier.height(24.dp))
+            AuthOrDivider(text = stringResource(R.string.auth_or_login_with))
+            Spacer(modifier = Modifier.height(16.dp))
+            NexoTextField(value = email, onValueChange = { email = it }, label = stringResource(R.string.auth_email_label), leadingIcon = NexoIcons.Email, singleLine = true, modifier = Modifier.fillMaxWidth().testTag(AuthTags.EMAIL))
+            Spacer(modifier = Modifier.height(8.dp))
+            PasswordTextField(value = password, onValueChange = { password = it }, label = stringResource(R.string.auth_password_label))
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onNavigateToForgot, modifier = Modifier.testTag(AuthTags.FORGOT_LINK)) { Text(text = stringResource(R.string.auth_forgot_password), style = MaterialTheme.typography.bodyMedium) }
+            }
+            NexoButton(onClick = { onSignIn(email, password) }, enabled = !uiState.isLoading, variant = NexoButtonVariant.FILLED, shape = RoundedCornerShape(28.dp), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp), modifier = Modifier.fillMaxWidth().height(56.dp).testTag(AuthTags.SIGNIN)) {
+                Text(text = stringResource(R.string.auth_login_action), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(imageVector = NexoIcons.ArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
+            }
+        }
         AuthDevBypass(onContinueLocal)
         AuthErrorText(uiState)
         Spacer(modifier = Modifier.height(24.dp))
