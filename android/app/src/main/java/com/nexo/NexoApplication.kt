@@ -13,6 +13,7 @@ import com.nexo.data.remote.work.WorkManagerRetentionPruneScheduler
 import com.nexo.data.sync.LayoutMigrationRunner
 import com.nexo.debug.CrashLogStore
 import com.nexo.debug.DebugLog
+import com.nexo.debug.FeedbackCapture
 import com.nexo.debug.FeedbackPersistence
 import com.nexo.debug.LogRedaction
 import com.nexo.debug.MetricAggregateStore
@@ -113,6 +114,10 @@ class NexoApplication :
         crashLogStore.cleanup(crashDir)
         feedbackStore = FeedbackPersistence(this)
         DebugLog.init(debugLogScope, crashLogStore)
+        // Attach the log snapshot to Sentry feedback envelopes. The store is
+        // built here, so this is the one place that can hand it over; the
+        // indirection keeps FeedbackCapture free of an Application dependency.
+        FeedbackCapture.installLogSource { crashLogStore.snapshot() }
 
         // Sentry must be initialized BEFORE installCrashHandler so the chained
         // UncaughtExceptionHandler can capture to Sentry before the process dies.

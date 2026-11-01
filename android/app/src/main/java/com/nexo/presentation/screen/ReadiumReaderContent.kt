@@ -124,7 +124,7 @@ fun ReadiumReaderContent(
                                     var a = el.attributes[j];
                                     attrs[a.name] = a.value;
                                 }
-                                results.push({tag: el.tagName, bg: bg, attrs: attrs, text: el.textContent.substring(0, 50)});
+                                results.push({tag: el.tagName, bg: bg, attrs: attrs, textLen: el.textContent.length});
                             }
                         }
                         return JSON.stringify(results);
@@ -149,10 +149,13 @@ fun ReadiumReaderContent(
                         val obj = arr.optJSONObject(i) ?: continue
                         val tag = obj.optString("tag")
                         val bg = obj.optString("bg")
-                        val text = obj.optString("text")
+                        // `textLen` only: the JS dump deliberately does not
+                        // return the highlighted passage, so no book content
+                        // reaches DebugLog (and therefore Sentry).
+                        val textLen = obj.optInt("textLen", 0)
                         val attrs = obj.optJSONObject("attrs")
                         val attrsStr = attrs?.toString() ?: "{}"
-                        DebugLog.info("InspectHL", "tag=$tag, bg=$bg, attrs=$attrsStr, text=$text")
+                        DebugLog.info("InspectHL", "tag=$tag, bg=$bg, attrs=$attrsStr, textLen=$textLen")
                     }
                 } catch (t: Throwable) {
                     DebugLog.error("InspectHL", "Failed: ${t::class.simpleName}: ${t.message}")

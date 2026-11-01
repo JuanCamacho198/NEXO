@@ -176,7 +176,10 @@ internal class SelectionManager(
         text: String,
         rect: Rect,
     ) {
-        Log.d("ReaderVM", "onTextSelection: \"${text.take(DEBUG_LOG_TEXT_LIMIT)}\" rect=$rect")
+        Log.d(
+            "ReaderVM",
+            "onTextSelection: len=${text.length} words=${text.count { it.isWhitespace() } + 1} rect=$rect",
+        )
         coordinator = SelectionCoordinator.NewSelection(text, rect, null)
         store.update {
             it.copy(selectionState = ReaderSelectionState.New(rect, text, null), selectedText = text, selectionRect = rect)
