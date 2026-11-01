@@ -289,17 +289,6 @@
     <issue
         id="CredentialManagerMisuse"
         message="Call to `CredentialManager.getCredential` without use of `NoCredentialException`"
-        errorLine1="                credentialManager.getCredential("
-        errorLine2="                ^">
-        <location
-            file="src/main/java/com/nexo/data/repository/GoogleAuthRepository.kt"
-            line="85"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="CredentialManagerMisuse"
-        message="Call to `CredentialManager.getCredential` without use of `NoCredentialException`"
         errorLine1="                        credentialManager.getCredential("
         errorLine2="                        ^">
         <location

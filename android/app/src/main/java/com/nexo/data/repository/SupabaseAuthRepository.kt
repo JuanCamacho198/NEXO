@@ -21,8 +21,6 @@ import kotlinx.serialization.json.put
 /**
  * AuthRepository backed by Supabase Auth.
  *
- * Replaces [GoogleAuthRepository] (kept as deprecated for 1 release cycle).
- *
  * Google sign-in flow:
  * 1. UI layer obtains a Google ID token via Credential Manager
  *    ([ActivityResultContracts.GetCredential]).
@@ -34,12 +32,6 @@ class SupabaseAuthRepository(
     private val sessionManager: SessionManager = SupabaseSessionManager(),
 ) : AuthRepository {
     private val supabase get() = SupabaseClientProvider.client
-
-    override suspend fun startGoogleSignIn(): Result<String> = Result.failure(UnsupportedOperationException("Deprecated. Use signInWithGoogleIdToken() instead."))
-
-    override suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?> = Result.failure(UnsupportedOperationException("Deprecated. Use signInWithGoogleIdToken() instead."))
-
-    override suspend fun signInWithGoogle(): Result<AuthSession> = Result.failure(UnsupportedOperationException("Deprecated. Use signInWithGoogleIdToken() instead."))
 
     override suspend fun signInWithGoogleIdToken(idToken: String): Result<AuthSession> =
         runCatching {

@@ -264,29 +264,6 @@ class AuthViewModel
         }
 
         /**
-         * @deprecated Use [handleGoogleIdToken] instead. Credential Manager is now
-         * launched from the UI layer; this method throws to prevent accidental use.
-         */
-        @Deprecated("Use handleGoogleIdToken instead")
-        fun startGoogleSignIn() {
-            viewModelScope.launch {
-                _uiState.update {
-                    it.copy(
-                        isLoading = true,
-                        errorMessage = "Google sign-in flow has changed. Please restart the app.",
-                        failureKind = AuthFailureKind.WIRING_ERROR,
-                    )
-                }
-                _uiEvent.emit(UiEvent.ShowSnackbar("Sign-in method updated. Please try again."))
-            }
-        }
-
-        @Deprecated("One Tap handles auth directly; OAuth callback flow is no longer used.")
-        fun onGoogleAuthCallback(callbackUri: String) {
-            // No-op: One Tap no longer uses browser callback
-        }
-
-        /**
          * Signs the user up with email, password, and full name.
          *
          * Side effects:

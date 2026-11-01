@@ -7,6 +7,7 @@ import com.nexo.domain.error.ErrorCategory
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.repository.AuthRepository
 import com.nexo.testutil.MainDispatcherRule
+import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -25,6 +27,9 @@ import org.junit.Test
 class AuthViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @After
+    fun tearDown() = unmockkAll()
 
     @Test
     fun init_mapsConfigErrorKind_whenCurrentSessionFailsWithConfigError() =
@@ -62,7 +67,7 @@ class AuthViewModelTest {
             val session = AuthSession(userId = "u1", email = "u1@test.com")
             val repository =
                 FakeAuthRepository(
-                    signInWithGoogleResult = Result.success(session),
+                    signInWithGoogleIdTokenResult = Result.success(session),
                 )
             val viewModel =
                 AuthViewModel(
@@ -84,7 +89,7 @@ class AuthViewModelTest {
         runTest {
             val repository =
                 FakeAuthRepository(
-                    signInWithGoogleResult =
+                    signInWithGoogleIdTokenResult =
                         Result.failure(
                             AppError(
                                 category = ErrorCategory.AUTH,
@@ -407,7 +412,7 @@ class AuthViewModelTest {
             val session = AuthSession(userId = "user-123", email = "u1@test.com")
             val repository =
                 FakeAuthRepository(
-                    signInWithGoogleResult = Result.success(session),
+                    signInWithGoogleIdTokenResult = Result.success(session),
                 )
             val orchestrator = FakeSyncOrchestrator()
             val viewModel =
@@ -432,10 +437,69 @@ class AuthViewModelTest {
             )
         }
 
+    // ── DEBUG E2E bypass coverage (handleGoogleIdToken) ──────────────────
+    // AuthViewModel short-circuits the repository when BuildConfig.DEBUG and
+    // the token is the exact E2E mock token. Both directions matter: the
+    // positive case proves the bypass works, the negative case proves it is
+    // NOT wider than the single literal.
+
+    @Test
+    fun handleGoogleIdToken_usesMockSession_whenDebugBypassTokenIsUsed() =
+        runTest {
+            val repository =
+                FakeAuthRepository(
+                    signInWithGoogleIdTokenResult =
+                        Result.failure(IllegalStateException("repository must not be called on the mock path")),
+                )
+            val orchestrator = FakeSyncOrchestrator()
+            val viewModel =
+                AuthViewModel(
+                    authRepository = repository,
+                    syncOrchestrator = orchestrator,
+                    isAuthConfigured = true,
+                    hasAuthWiringIssue = false,
+                )
+            advanceUntilIdle()
+
+            viewModel.handleGoogleIdToken("test-token-jcamachomolina503")
+            advanceUntilIdle()
+
+            assertEquals(0, repository.signInWithGoogleIdTokenCallCount)
+            val session = viewModel.uiState.value.currentSession
+            assertEquals("test-jcamachomolina503", session?.userId)
+            assertEquals("jcamachomolina503@gmail.com", session?.email)
+            assertEquals("google", session?.provider)
+            assertEquals("test-token-jcamachomolina503", session?.providerToken)
+            assertEquals(listOf("test-jcamachomolina503"), orchestrator.startedWith)
+        }
+
+    @Test
+    fun handleGoogleIdToken_callsRepository_whenTokenIsNotTheDebugBypassToken() =
+        runTest {
+            val session = AuthSession(userId = "real-user", email = "real@test.com")
+            val repository =
+                FakeAuthRepository(
+                    signInWithGoogleIdTokenResult = Result.success(session),
+                )
+            val viewModel =
+                AuthViewModel(
+                    authRepository = repository,
+                    syncOrchestrator = FakeSyncOrchestrator(),
+                    isAuthConfigured = true,
+                    hasAuthWiringIssue = false,
+                )
+            advanceUntilIdle()
+
+            viewModel.handleGoogleIdToken("some-other-token")
+            advanceUntilIdle()
+
+            assertEquals(1, repository.signInWithGoogleIdTokenCallCount)
+            assertEquals("some-other-token", repository.lastSignInWithGoogleIdToken)
+            assertEquals(session, viewModel.uiState.value.currentSession)
+        }
+
     private class FakeAuthRepository(
-        private val startGoogleResult: Result<String> = Result.failure(IllegalStateException("not set")),
-        private val completeGoogleResult: Result<AuthSession?> = Result.success(null),
-        private val signInWithGoogleResult: Result<AuthSession> = Result.failure(IllegalStateException("not set")),
+        private val signInWithGoogleIdTokenResult: Result<AuthSession> = Result.failure(IllegalStateException("not set")),
         private val currentSessionResult: Result<AuthSession?> = Result.success(null),
         private val signOutResult: Result<Unit> = Result.success(Unit),
         private val signInResult: Result<AuthSession> = Result.failure(UnsupportedOperationException()),
@@ -446,14 +510,16 @@ class AuthViewModelTest {
         var lastSignUpEmail: String? = null
         var lastSignUpFullName: String? = null
         var lastResetPasswordEmail: String? = null
+        var signInWithGoogleIdTokenCallCount: Int = 0
+            private set
+        var lastSignInWithGoogleIdToken: String? = null
+            private set
 
-        override suspend fun startGoogleSignIn(): Result<String> = startGoogleResult
-
-        override suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?> = completeGoogleResult
-
-        override suspend fun signInWithGoogle(): Result<AuthSession> = signInWithGoogleResult
-
-        override suspend fun signInWithGoogleIdToken(idToken: String): Result<AuthSession> = signInWithGoogleResult
+        override suspend fun signInWithGoogleIdToken(idToken: String): Result<AuthSession> {
+            signInWithGoogleIdTokenCallCount += 1
+            lastSignInWithGoogleIdToken = idToken
+            return signInWithGoogleIdTokenResult
+        }
 
         override suspend fun signIn(
             email: String,
