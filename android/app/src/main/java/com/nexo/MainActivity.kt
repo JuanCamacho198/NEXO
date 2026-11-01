@@ -20,13 +20,12 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.nexo.data.remote.supabase.SupabaseClientProvider
 import com.nexo.data.session.AppThemePreferences
 import com.nexo.data.session.NotificationPermissionPrefs
+import com.nexo.debug.CrashContext
 import com.nexo.debug.CrashNotificationHelper
 import com.nexo.debug.DebugLog
 import com.nexo.debug.DebugPrefs
 import com.nexo.debug.DebugStateHolder
-import com.nexo.debug.CrashContext
 import com.nexo.debug.FeedbackActivity
-import com.nexo.debug.FeedbackEvent
 import com.nexo.debug.FeedbackPersistence
 import com.nexo.di.AppContainer
 import com.nexo.domain.model.ThemeMode

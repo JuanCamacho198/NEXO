@@ -127,8 +127,7 @@ fun FeedbackSheet(
                                     FeedbackTokens.BgCanvas,
                                 ),
                         ),
-                    )
-                    .verticalScroll(rememberScrollState())
+                    ).verticalScroll(rememberScrollState())
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 16.dp),

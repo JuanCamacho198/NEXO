@@ -235,8 +235,7 @@ class BookContentLogHygieneTest {
 
     // ── Test seams (used by the positive-control test in this file) ────────
 
-    internal fun parseSubstitutions(template: String): List<String> =
-        substitutionsIn(template).map { "${it.name}.${it.member ?: "-"}" }
+    internal fun parseSubstitutions(template: String): List<String> = substitutionsIn(template).map { "${it.name}.${it.member ?: "-"}" }
 
     internal fun checkInterpolation(template: String): Boolean = interpolatesWholeVariable(template)
 
@@ -279,8 +278,7 @@ class BookContentLogHygieneTest {
      * takes the FIRST substitution, which is the variable the expression is
      * rooted at.
      */
-    private fun interpolatesWholeVariable(argument: String): Boolean =
-        substitutionsIn(argument).any { sub -> isContentVariable(sub.name) && !isMetadataProjection(sub) }
+    private fun interpolatesWholeVariable(argument: String): Boolean = substitutionsIn(argument).any { sub -> isContentVariable(sub.name) && !isMetadataProjection(sub) }
 
     /**
      * Metadata members: they read a *property* of the value rather than the
@@ -381,10 +379,11 @@ class BookContentLogHygieneTest {
                     when (c) {
                         '(' -> depth++
                         ')' -> depth--
-                        ',' -> if (depth == 0) {
-                            parts += body.substring(start, index)
-                            start = index + 1
-                        }
+                        ',' ->
+                            if (depth == 0) {
+                                parts += body.substring(start, index)
+                                start = index + 1
+                            }
                     }
                 }
             }
@@ -416,7 +415,7 @@ class BookContentLogHygieneTest {
                     val line = file.text.take(match.range.first).count { it == '\n' } + 1
                     offenders +=
                         "${file.path.substringAfterLast('/')}:$line → " +
-                            message.replace(Regex("\\s+"), " ").trim().take(140)
+                        message.replace(Regex("\\s+"), " ").trim().take(140)
                 }
             }
 

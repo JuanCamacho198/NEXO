@@ -81,8 +81,7 @@ internal fun googleButtonDisabledReasonMessageRes(reason: GoogleButtonDisabledRe
  *   [CREDENTIAL_MESSAGE_RES_IDS] — a programming error, surfaced the first time the lookup runs.
  */
 @Composable
-private fun rememberCredentialMessageResources(): Map<Int, String> =
-    CREDENTIAL_MESSAGE_RES_IDS.associateWith { messageRes -> stringResource(messageRes) }
+private fun rememberCredentialMessageResources(): Map<Int, String> = CREDENTIAL_MESSAGE_RES_IDS.associateWith { messageRes -> stringResource(messageRes) }
 
 private fun Map<Int, String>.credentialMessage(messageRes: Int): String =
     this[messageRes]

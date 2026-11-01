@@ -73,11 +73,21 @@ object HighlightLocationResolver {
 
     /** Returns the href with any fragment and query removed, lowercased. */
     private fun normalizeHref(href: String): String =
-        href.substringBefore('#').substringBefore('?').replace("//", "/").trim().lowercase()
+        href
+            .substringBefore('#')
+            .substringBefore('?')
+            .replace("//", "/")
+            .trim()
+            .lowercase()
 
     /** Returns the last path segment of [href], lowercased. */
     private fun filenameOf(href: String): String =
-        href.substringBefore('#').substringBefore('?').substringAfterLast('/').trim().lowercase()
+        href
+            .substringBefore('#')
+            .substringBefore('?')
+            .substringAfterLast('/')
+            .trim()
+            .lowercase()
 
     /**
      * Resolves a position to the title of the matching chapter in [chapters],

@@ -656,12 +656,13 @@ tasks.register("verifyNoHardcodedStrings") {
         fun isBaselined(
             relativePath: String,
             literal: String,
-        ): Boolean = baseline.any { entry ->
-            val separator = entry.indexOf(':')
-            if (separator <= 0) return@any false
-            entry.substring(0, separator) == relativePath &&
-                entry.substring(separator + 1) == literal
-        }
+        ): Boolean =
+            baseline.any { entry ->
+                val separator = entry.indexOf(':')
+                if (separator <= 0) return@any false
+                entry.substring(0, separator) == relativePath &&
+                    entry.substring(separator + 1) == literal
+            }
 
         val newFindings = findings.filterNot { (path, _, literal) -> isBaselined(path, literal) }
 

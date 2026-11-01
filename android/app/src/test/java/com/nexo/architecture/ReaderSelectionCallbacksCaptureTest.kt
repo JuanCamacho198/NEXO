@@ -82,32 +82,33 @@ class ReaderSelectionCallbacksCaptureTest {
      * matching closing brace. Brace-depth counting is enough for this file:
      * the bodies contain no braces inside string literals or comments.
      */
-    private fun rememberBlockBodies(source: String): Sequence<String> = sequence {
-        var index = 0
-        while (index < source.length) {
-            val callStart = source.indexOf("remember(", index)
-            if (callStart == -1) break
+    private fun rememberBlockBodies(source: String): Sequence<String> =
+        sequence {
+            var index = 0
+            while (index < source.length) {
+                val callStart = source.indexOf("remember(", index)
+                if (callStart == -1) break
 
-            val bodyStart = source.indexOf('{', callStart)
-            if (bodyStart == -1) break
+                val bodyStart = source.indexOf('{', callStart)
+                if (bodyStart == -1) break
 
-            var depth = 0
-            var cursor = bodyStart
-            while (cursor < source.length) {
-                when (source[cursor]) {
-                    '{' -> depth++
-                    '}' -> {
-                        depth--
-                        if (depth == 0) break
+                var depth = 0
+                var cursor = bodyStart
+                while (cursor < source.length) {
+                    when (source[cursor]) {
+                        '{' -> depth++
+                        '}' -> {
+                            depth--
+                            if (depth == 0) break
+                        }
                     }
+                    cursor++
                 }
-                cursor++
-            }
 
-            if (depth == 0 && cursor > bodyStart) {
-                yield(source.substring(bodyStart + 1, cursor))
+                if (depth == 0 && cursor > bodyStart) {
+                    yield(source.substring(bodyStart + 1, cursor))
+                }
+                index = if (cursor > callStart) cursor + 1 else callStart + 1
             }
-            index = if (cursor > callStart) cursor + 1 else callStart + 1
         }
-    }
 }
