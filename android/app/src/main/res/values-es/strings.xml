@@ -972,8 +972,12 @@
     <string name="feedback_mobile_title">Ayúdanos a arreglar esto</string>
     <string name="feedback_mobile_subtitle">La app se cerró mientras leías. Tu reporte nos ayuda a que no vuelva a pasar.</string>
     <string name="feedback_mobile_auto_context_label">Detectamos automáticamente</string>
-    <string name="feedback_mobile_sample_book">La Odisea</string>
-    <string name="feedback_mobile_sample_chapter">Capítulo IX · página 142 de 318</string>
+    <string name="feedback_mobile_context_no_book">La app se cerró mientras usabas NEXO.</string>
+    <string name="feedback_mobile_context_unknown_screen">NEXO</string>
+    <string name="feedback_mobile_context_no_title">Libro sin título</string>
+    <string name="feedback_mobile_context_chapter_page">%1$s · página %2$d</string>
+    <string name="feedback_mobile_context_page_only">página %1$d</string>
+    <string name="feedback_mobile_context_chapter_only">%1$s</string>
     <string name="feedback_mobile_input_label">¿Qué estabas haciendo cuando se cerró?</string>
     <string name="feedback_mobile_helper">Opcional · nos ayuda muchísimo</string>
     <string name="feedback_mobile_privacy">Solo se envía este reporte, nada de tu biblioteca.</string>

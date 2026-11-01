@@ -968,8 +968,12 @@
     <string name="feedback_mobile_title">Help us fix this</string>
     <string name="feedback_mobile_subtitle">The app closed while you were reading. Your report helps us make sure it doesn\'t happen again.</string>
     <string name="feedback_mobile_auto_context_label">Detected automatically</string>
-    <string name="feedback_mobile_sample_book">La Odisea</string>
-    <string name="feedback_mobile_sample_chapter">Capítulo IX · página 142 de 318</string>
+    <string name="feedback_mobile_context_no_book">The app closed while you were using NEXO.</string>
+    <string name="feedback_mobile_context_unknown_screen">NEXO</string>
+    <string name="feedback_mobile_context_no_title">Untitled book</string>
+    <string name="feedback_mobile_context_chapter_page">%1$s · page %2$d</string>
+    <string name="feedback_mobile_context_page_only">page %1$d</string>
+    <string name="feedback_mobile_context_chapter_only">%1$s</string>
     <string name="feedback_mobile_input_label">What were you doing when it closed?</string>
     <string name="feedback_mobile_helper">Optional · it really helps</string>
     <string name="feedback_mobile_privacy">Only this report is sent — nothing from your library.</string>

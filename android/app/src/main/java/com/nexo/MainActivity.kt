@@ -24,6 +24,7 @@ import com.nexo.debug.CrashNotificationHelper
 import com.nexo.debug.DebugLog
 import com.nexo.debug.DebugPrefs
 import com.nexo.debug.DebugStateHolder
+import com.nexo.debug.CrashContext
 import com.nexo.debug.FeedbackActivity
 import com.nexo.debug.FeedbackEvent
 import com.nexo.debug.FeedbackPersistence
@@ -261,14 +262,10 @@ class MainActivity : AppCompatActivity() {
             FeedbackActivity.intent(
                 context = this,
                 eventId = lastEventId,
-                book =
-                    FeedbackEvent.BookMeta(
-                        bookId = "",
-                        title = null,
-                        chapterLabel = null,
-                        chapterIndex = null,
-                        page = null,
-                    ),
+                // The process died before we could record where the user was, so
+                // we claim no book: the sheet shows a neutral screen context
+                // rather than inventing one (T3).
+                crashContext = CrashContext.InScreen(screenRoute = null),
             ),
         )
     }
