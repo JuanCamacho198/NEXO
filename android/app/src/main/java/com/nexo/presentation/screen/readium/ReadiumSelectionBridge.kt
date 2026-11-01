@@ -104,7 +104,7 @@ fun rememberSelectionBridge(
                     lastSelection = false
                     continue
                 }
-                val text: String =
+                val rawText: String =
                     try {
                         val jsResult =
                             frag.evaluateJavascript(
@@ -124,6 +124,10 @@ fun rememberSelectionBridge(
                         Log.d("SelectionDebug", "Using locator.text fallback after exception: '$fallback'")
                         fallback
                     }
+                val text: String = normalizeSelectedText(rawText)
+                if (text != rawText) {
+                    Log.d("SelectionDebug", "Normalized selection text: '$rawText' → '$text'")
+                }
                 Log.d("SelectionDebug", "Calling interactionHolder.onReadiumSelection(text='${text.take(50)}', rect=$selRect)")
                 try {
                     viewModel.interactionHolder.onReadiumSelection(
