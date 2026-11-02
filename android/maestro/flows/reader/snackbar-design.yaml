@@ -1,0 +1,24 @@
+appId: com.nexo
+---
+# Verification: the redesigned reader snackbar, on screen.
+#
+# Precondition: the app is already inside the reader, on the credits page.
+#
+# The selection menu floats above the selected word as a rounded bar holding
+# five colour swatches, a divider, then Copy and Share icons. Copy is the
+# left-hand glyph after the divider, at roughly 63% across and 23% down.
+#
+# Run: maestro test maestro/flows/reader/snackbar-design.yaml
+- takeScreenshot: d0-before-select
+
+- longPressOn:
+    point: 35%, 31%
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: d1-selection-menu
+
+- tapOn:
+    point: 63%, 23%
+- waitForAnimationToEnd:
+    timeout: 2500
+- takeScreenshot: d2-snackbar
