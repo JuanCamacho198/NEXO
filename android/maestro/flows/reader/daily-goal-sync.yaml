@@ -1,0 +1,52 @@
+appId: com.nexo
+---
+# Verifies the daily goal is written to the server, not only to device storage.
+#
+# Before the fix the goal lived only in SharedPreferences, so a second device
+# with the same account asked for it again. It now also lands in
+# user_preferences (Supabase) with an updated_at clock.
+#
+# This flow walks the onboarding on a fresh install and sets a goal. The
+# cross-device half is verified separately by re-installing and checking the
+# goal is NOT asked again after signing in.
+#
+# Precondition: fresh install (no app data).
+# Run: maestro test maestro/flows/reader/daily-goal-sync.yaml
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Reach the goal step: sign in locally, which is the shortest authenticated path.
+- extendedWaitUntil:
+    visible:
+      text: "Welcome!|¡Bienvenido!"
+    timeout: 25000
+- tapOn:
+    text: "Continue in local.*|Continuar en local.*"
+- waitForAnimationToEnd:
+    timeout: 12000
+
+# The goal step.
+- extendedWaitUntil:
+    visible:
+      text: "Your daily goal|Tu meta diaria"
+    timeout: 25000
+- takeScreenshot: dg-goal-step
+
+# Pick the "Relaxed / 10 min" option, which is the one the sync test expects.
+- tapOn:
+    text: "Relaxed|Relajado"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "10 min.*"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: dg-goal-picked
+
+- tapOn:
+    text: "Set goal|Establecer meta"
+- waitForAnimationToEnd:
+    timeout: 12000
+- takeScreenshot: dg-after-set

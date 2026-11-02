@@ -1,0 +1,62 @@
+appId: com.nexo
+---
+# Walks the full onboarding on a fresh install: Google sign-in, daily goal,
+# then the new notifications step.
+#
+# Covers two fixes at once:
+#  1. The goal is set while authenticated, so it can reach the server.
+#  2. The notifications screen must appear AFTER the goal, and only there.
+#
+# Precondition: fresh install (no app data), Google account on the device.
+# Run: maestro test maestro/flows/reader/onboarding-goal-and-notifications.yaml
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd:
+    timeout: 12000
+
+- extendedWaitUntil:
+    visible:
+      text: "Welcome!|¡Bienvenido!"
+    timeout: 25000
+- takeScreenshot: ob-login
+
+# Real account: the goal only syncs when authenticated.
+- tapOn:
+    text: "Continue with Google|Continuar con Google"
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: ob-google-picker
+
+# The account picker is a system surface; pick the seeded account.
+- tapOn:
+    text: "jcamachomolina503@gmail.com"
+- waitForAnimationToEnd:
+    timeout: 15000
+- takeScreenshot: ob-after-signin
+
+# Goal step.
+- extendedWaitUntil:
+    visible:
+      text: "Your daily goal|Tu meta diaria"
+    timeout: 30000
+- takeScreenshot: ob-goal-step
+
+- tapOn:
+    text: "Relaxed|Relajado"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "10 min.*"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "Set goal|Establecer meta"
+- waitForAnimationToEnd:
+    timeout: 12000
+
+# The NEW step: notifications, after the goal, never before.
+- extendedWaitUntil:
+    visible:
+      text: ".*streak.*|.*racha.*|Activate notifications|Activa las notificaciones"
+    timeout: 20000
+- takeScreenshot: ob-notifications-step

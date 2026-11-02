@@ -1,0 +1,32 @@
+appId: com.nexo
+---
+# Verifies the notification permission is no longer requested on app launch.
+#
+# Before the fix, POST_NOTIFICATIONS was requested in MainActivity.onCreate,
+# so the system dialog appeared before the user had seen anything. It is now
+# requested at the end of onboarding, behind a screen that explains what the
+# permission buys.
+#
+# This flow asserts the negative on a fresh install: the app opens and reaches
+# the first screen WITHOUT the system permission dialog appearing.
+#
+# Precondition: fresh install (no app data).
+# Run: maestro test maestro/flows/reader/notification-permission.yaml
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: np-launch
+
+# The system permission dialog must NOT be on screen at launch.
+- assertNotVisible:
+    text: "Allow NEXO to send you notifications?|¿Permitir que NEXO te envíe notificaciones?"
+- assertNotVisible:
+    text: "Don't allow|No permitir"
+
+# The app should have reached its first real screen instead.
+- extendedWaitUntil:
+    visible:
+      text: "Welcome!|¡Bienvenido!|Sign in to keep your library in sync|Inicia sesión para mantener"
+    timeout: 25000
+- takeScreenshot: np-first-screen-past-dialog

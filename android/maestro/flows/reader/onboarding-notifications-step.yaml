@@ -1,0 +1,53 @@
+appId: com.nexo
+---
+# Verifies the notifications step appears AFTER the goal in onboarding.
+#
+# Uses the local path because Google sign-in cannot complete on this emulator
+# image: it has no Play Store, so Credential Manager returns TYPE_NO_CREDENTIAL
+# even with an account present and the right signing fingerprint. The
+# notifications step itself is what this flow is about, and it does not depend
+# on how the user authenticated.
+#
+# Precondition: fresh install (no app data).
+# Run: maestro test maestro/flows/reader/onboarding-notifications-step.yaml
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd:
+    timeout: 12000
+
+- extendedWaitUntil:
+    visible:
+      text: "Welcome!|¡Bienvenido!"
+    timeout: 25000
+- takeScreenshot: ns-login
+
+- tapOn:
+    text: "Continue in local.*|Continuar en local.*"
+- waitForAnimationToEnd:
+    timeout: 12000
+
+# Goal step must come first.
+- extendedWaitUntil:
+    visible:
+      text: "Your daily goal|Tu meta diaria"
+    timeout: 25000
+- takeScreenshot: ns-goal-step
+- tapOn:
+    text: "Relaxed|Relajado"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "10 min.*"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "Set goal|Establecer meta"
+- waitForAnimationToEnd:
+    timeout: 12000
+
+# And then the notifications step, which the goal used to skip entirely.
+- extendedWaitUntil:
+    visible:
+      text: "(?i).*(notifications|notificaciones).*"
+    timeout: 20000
+- takeScreenshot: ns-notifications-step

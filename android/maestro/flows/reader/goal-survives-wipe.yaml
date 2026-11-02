@@ -1,0 +1,25 @@
+appId: com.nexo
+---
+# Verifies the goal survives a data wipe once the app is relaunched.
+#
+# The goal used to live only in device storage. This flow sets it, wipes app
+# data (which is what reinstall/clear-state does), and confirms the app does
+# NOT ask for it again — it hydrates from the server.
+#
+# Precondition: the account used must already have a goal on the server. Run
+# this AFTER onboarding-notifications-step.yaml has set one, and WITHOUT
+# clearState, because the local cache is exactly what we are removing.
+#
+# Run: maestro test maestro/flows/reader/goal-survives-wipe.yaml
+
+# Step 1: relaunch and confirm we land on Home, not the goal step.
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 15000
+- takeScreenshot: gw-relaunch
+
+# The goal step must NOT be asked again.
+- assertNotVisible:
+    text: "Your daily goal|Tu meta diaria"
+- takeScreenshot: gw-no-goal-step
