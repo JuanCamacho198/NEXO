@@ -21,6 +21,7 @@ import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
 import com.nexo.presentation.theme.NexoTheme
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
+import com.nexo.presentation.viewmodel.reader.TranslationPanelState
 
 /** Thin orchestrator — delegates anchoring to AnchoredOverlayBox + computeAnchor. */
 @Composable
@@ -32,6 +33,8 @@ fun SelectionOverlay(
     activeTagText: String = "",
     showDefinitionInput: Boolean = false,
     activeDefinitionText: String = "",
+    showTranslationPanel: Boolean = false,
+    translationPanelState: TranslationPanelState = TranslationPanelState.Idle,
     selectionRect: Rect?,
     selectedText: String?,
     highlights: List<Highlight>,
@@ -45,6 +48,7 @@ fun SelectionOverlay(
     onAnnotate: () -> Unit,
     onShare: () -> Unit,
     onDictionary: () -> Unit,
+    onTranslate: () -> Unit = {},
     onShowColorPickerPopover: () -> Unit = {},
     onDismissColorPickerPopover: () -> Unit = {},
     onTagTextChanged: (String) -> Unit = {},
@@ -53,22 +57,23 @@ fun SelectionOverlay(
     onDefinitionTextChanged: (String) -> Unit = {},
     onSaveDefinition: () -> Unit = {},
     onDismissDefinitionInput: () -> Unit = {},
+    onDismissTranslation: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val anyMenuVisible = selectionState != ReaderSelectionState.None || showColorPickerPopover || showTagInput || showDefinitionInput
+    val anyMenuVisible = selectionState != ReaderSelectionState.None || showColorPickerPopover || showTagInput || showDefinitionInput || showTranslationPanel
     if (selectionRect == null) return
     val viewportWidth = LocalView.current.width
     val viewportHeight = LocalView.current.height
     if (anyMenuVisible) {
         Box(modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismissContextMenu() })
     }
-    if (selectionState is ReaderSelectionState.New && !showTagInput && !showDefinitionInput && !showColorPickerPopover) {
+    if (selectionState is ReaderSelectionState.New && !showTagInput && !showDefinitionInput && !showColorPickerPopover && !showTranslationPanel) {
         AnchoredOverlayBox(selectionRect = selectionRect, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
             val palette = customHighlightColors ?: HighlightColor.defaultHexList()
-            TextSelectionMenu(paletteColors = palette, selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex, onColorSelected = onColorSelected, onCopy = onCopy, onDictionary = onDictionary, onShare = onShare)
+            TextSelectionMenu(paletteColors = palette, selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex, onColorSelected = onColorSelected, onCopy = onCopy, onDictionary = onDictionary, onTranslate = onTranslate, onShare = onShare)
         }
     }
-    if (selectionState is ReaderSelectionState.Existing && !showTagInput && !showDefinitionInput && !showColorPickerPopover) {
+    if (selectionState is ReaderSelectionState.Existing && !showTagInput && !showDefinitionInput && !showColorPickerPopover && !showTranslationPanel) {
         AnchoredOverlayBox(selectionRect = selectionRect, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
             FloatingContextMenu(selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex, onColorSelected = onShowColorPickerPopover, onCopy = onCopy, onAddTag = onAddTag, onAnnotate = onAnnotate, onShare = onShare, onDelete = onDelete)
         }
@@ -84,6 +89,11 @@ fun SelectionOverlay(
     if (showDefinitionInput) {
         AnchoredOverlayBox(selectionRect = selectionRect, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
             AnchoredDefinitionInput(word = selectedText ?: "", definition = activeDefinitionText, onDefinitionChange = onDefinitionTextChanged, onSave = onSaveDefinition, onDismiss = onDismissDefinitionInput)
+        }
+    }
+    if (showTranslationPanel) {
+        AnchoredOverlayBox(selectionRect = selectionRect, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
+            AnchoredTranslationPanel(sourceWord = selectedText ?: "", state = translationPanelState, onDismiss = onDismissTranslation)
         }
     }
     if (showColorPickerPopover) {
@@ -138,6 +148,7 @@ private fun SelectionOverlayHost(surface: SelectionSurface) {
             onAnnotate = {},
             onShare = {},
             onDictionary = {},
+            onTranslate = {},
         )
     }
 }

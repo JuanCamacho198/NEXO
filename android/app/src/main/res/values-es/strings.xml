@@ -443,6 +443,11 @@
 
     <!-- Reader / Text Selection -->
     <string name="text_selection_copy">Copiar</string>
+    <string name="text_selection_translate">Traducir</string>
+    <string name="translation_loading">Traduciendo…</string>
+    <string name="translation_no_result">No hay traducción disponible para este texto.</string>
+    <string name="translation_offline">La traducción necesita conexión.</string>
+    <string name="translation_close">Cerrar</string>
     <string name="context_menu_color">Color</string>
     <string name="context_menu_tag">Etiqueta</string>
     <string name="context_menu_note">Nota</string>

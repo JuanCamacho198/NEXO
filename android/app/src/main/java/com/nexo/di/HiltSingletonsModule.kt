@@ -151,6 +151,14 @@ object HiltSingletonsModule {
     @Provides @Singleton
     fun provideNotificationDao(a: AppContainer): NotificationDao = a.notificationDao
 
+    /** Reader-selection translation cache DAO (device-local, never synced). */
+    @Provides @Singleton
+    fun provideTranslationCacheDao(a: AppContainer): com.nexo.data.local.dao.TranslationCacheDao = a.appDatabase.translationCacheDao()
+
+    /** Reader-selection translation (MyMemory, cache-first). */
+    @Provides @Singleton
+    fun provideTranslationRepository(a: AppContainer): com.nexo.domain.repository.TranslationRepository = a.translationRepository
+
     @Provides @Singleton
     fun provideNotificationRepository(a: AppContainer): NotificationRepository = a.notificationRepository
 

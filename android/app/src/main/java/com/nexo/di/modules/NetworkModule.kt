@@ -463,4 +463,43 @@ class NetworkModule(
     val updateDownloader: UpdateDownloader by lazy {
         UpdateDownloader(context.applicationContext)
     }
+
+    // ── reader-selection-translation: MyMemory client ──────────────────
+    // Direct-from-app, no API key (anonymous 5.000 chars/day quota). Its own
+    // OkHttp stack so translation traffic is isolated from catalog/updates,
+    // mirroring the catalog client's UA + timeouts + JSON shape.
+    val translationHttpClient: HttpClient by lazy {
+        HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        isLenient = true
+                    },
+                )
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 15_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 15_000
+            }
+            defaultRequest {
+                header(HttpHeaders.UserAgent, com.nexo.data.remote.translation.NEXO_TRANSLATION_USER_AGENT)
+            }
+        }
+    }
+
+    val translationClient: com.nexo.data.remote.translation.MyMemoryTranslationClient by lazy {
+        com.nexo.data.remote.translation.MyMemoryTranslationClient(
+            com.nexo.data.remote.translation
+                .KtorTranslationHttpTransport(translationHttpClient),
+        )
+    }
+
+    val translationRepository: com.nexo.domain.repository.TranslationRepository by lazy {
+        com.nexo.data.repository.RoomTranslationRepository(
+            client = translationClient,
+            cacheDao = databaseModule.translationCacheDao,
+        )
+    }
 }

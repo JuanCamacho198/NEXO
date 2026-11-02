@@ -249,6 +249,9 @@ class AppContainer(
     val dictionarySyncService: com.nexo.data.sync.DictionarySyncService by lazy { networkModule.dictionarySyncService }
     val catalogProvider: CatalogProvider by lazy { networkModule.catalogProvider }
 
+    /** Reader-selection translation (MyMemory, cache-first). */
+    val translationRepository: com.nexo.domain.repository.TranslationRepository by lazy { networkModule.translationRepository }
+
     // SDD android-tooling-hygiene WS2a slice 4: delegated — NetworkModule builds
     // this via createConnectivityObserver, the shared factory also used by
     // HiltFoundationModule. Manual container retained until slices 5-6 migrate

@@ -475,6 +475,11 @@
 
     <!-- Reader / Text Selection -->
     <string name="text_selection_copy">Copy</string>
+    <string name="text_selection_translate">Translate</string>
+    <string name="translation_loading">Translating…</string>
+    <string name="translation_no_result">No translation available for this text.</string>
+    <string name="translation_offline">Translation needs a connection.</string>
+    <string name="translation_close">Close</string>
     <string name="context_menu_color">Color</string>
     <string name="context_menu_tag">Tag</string>
     <string name="context_menu_note">Note</string>

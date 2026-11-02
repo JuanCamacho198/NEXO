@@ -57,6 +57,8 @@ import com.nexo.ui.icons.NexoIcons
  * @param onCopy Copy the selected text to the clipboard.
  * @param onDictionary Open the [AnchoredDefinitionInput] for the
  *   selected word.
+ * @param onTranslate Open the [AnchoredTranslationPanel] for the
+ *   selected word (machine translation, MyMemory).
  * @param onShare Share the selected text via the system share
  *   sheet.
  * @param modifier Modifier applied to the outer `Row`.
@@ -81,6 +83,7 @@ fun TextSelectionMenu(
     onColorSelected: (String) -> Unit,
     onCopy: () -> Unit,
     onDictionary: () -> Unit,
+    onTranslate: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -124,6 +127,13 @@ fun TextSelectionMenu(
             contentDescription = stringResource(R.string.context_menu_dictionary),
             tint = contentColor,
             onClick = onDictionary,
+        )
+
+        SelectionMenuIcon(
+            icon = NexoIcons.Language,
+            contentDescription = stringResource(R.string.text_selection_translate),
+            tint = contentColor,
+            onClick = onTranslate,
         )
 
         SelectionMenuIcon(
@@ -197,6 +207,7 @@ private fun TextSelectionMenuDarkPreview() {
             onColorSelected = {},
             onCopy = {},
             onDictionary = {},
+            onTranslate = {},
             onShare = {},
         )
     }
@@ -212,6 +223,7 @@ private fun TextSelectionMenuLightPreview() {
             onColorSelected = {},
             onCopy = {},
             onDictionary = {},
+            onTranslate = {},
             onShare = {},
         )
     }

@@ -38,6 +38,18 @@ import io.sentry.protocol.SentryId
  * Sentry. It is applied unconditionally, including when the
  * [BookContentLogHygieneTest] source gate is green.
  *
+ * ## The one deliberate exception: reader selection translation
+ *
+ * Book content never leaves the device through the feedback or logging paths
+ * above. The single, explicit exception is the reader's **Translate** action
+ * (`AnchoredTranslationPanel` → `MyMemoryTranslationClient`): when the user
+ * taps it, the selected word or phrase is sent to the public MyMemory API
+ * (`https://api.mymemory.translated.net/get`) to obtain a translation. It is
+ * initiated by the user, scoped to the selection (never the chapter), and no
+ * API key or account identifier is attached. The translation is cached locally
+ * in `translation_cache` so a repeat does not re-send. Every other egress path
+ * in this file keeps the "book content never leaves" guarantee.
+ *
  * Captures are wrapped in `runCatching` so the feedback sheet stays usable
  * when Sentry is uninitialized (DSN empty / before init) — same defensive
  * pattern as `DebugLog`.

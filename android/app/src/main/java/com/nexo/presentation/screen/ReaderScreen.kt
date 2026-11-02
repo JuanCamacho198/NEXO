@@ -86,6 +86,7 @@ fun ReaderScreen(
         annotationUiState.selectionState != ReaderSelectionState.None ||
             annotationUiState.showTagInput ||
             annotationUiState.showDefinitionInput ||
+            annotationUiState.showTranslationPanel ||
             annotationUiState.showColorPickerPopover
 
     val onShowChrome: () -> Unit = {

@@ -7,6 +7,7 @@ import androidx.annotation.VisibleForTesting
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.repository.TranslationRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
 import com.nexo.presentation.viewmodel.reader.interaction.AnnotationManager
@@ -15,6 +16,7 @@ import com.nexo.presentation.viewmodel.reader.interaction.HighlightManager
 import com.nexo.presentation.viewmodel.reader.interaction.InteractionStateStore
 import com.nexo.presentation.viewmodel.reader.interaction.SelectionManager
 import com.nexo.presentation.viewmodel.reader.interaction.ShareDictionaryManager
+import com.nexo.presentation.viewmodel.reader.interaction.TranslationManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +43,7 @@ class ReaderInteractionStateHolder(
     private val onEvent: (UiEvent) -> Unit,
     private val appContext: Context,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val translationRepository: TranslationRepository? = null,
 ) {
     private val _state = MutableStateFlow(ReaderInteractionState())
     val state: StateFlow<ReaderInteractionState> = _state.asStateFlow()
@@ -55,6 +58,8 @@ class ReaderInteractionStateHolder(
     private val bookmarkManager = BookmarkManager(store, readerRepository, activeUser, scope, mainDispatcher)
     private val shareDictionaryManager =
         ShareDictionaryManager(store, selectionManager, dictionaryRepository, activeUser, scope, onEvent, appContext, mainDispatcher)
+    private val translationManager =
+        TranslationManager(store, translationRepository, appContext, scope, mainDispatcher)
 
     init {
         store.setCoordinator = { selectionManager.coordinator = it }
@@ -199,6 +204,14 @@ class ReaderInteractionStateHolder(
 
     fun onAddToDictionary() = shareDictionaryManager.onAddToDictionary()
 
+    // ── Translation ───────────────────────────────────────────────
+    fun onTranslate(
+        sourceLanguage: String,
+        targetLanguage: String,
+    ) = translationManager.onTranslate(sourceLanguage, targetLanguage)
+
+    fun onDismissTranslationPanel() = translationManager.onDismissTranslationPanel()
+
     // ── Share / Copy ──────────────────────────────────────────────
     fun onShareSelectedText(selectedText: String?) = shareDictionaryManager.onShareSelectedText(selectedText)
 
@@ -253,5 +266,6 @@ class ReaderInteractionStateHolder(
         annotationManager.onCleared()
         bookmarkManager.onCleared()
         shareDictionaryManager.onCleared()
+        translationManager.onCleared()
     }
 }

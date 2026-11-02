@@ -20,6 +20,8 @@ data class ReaderSelectionCallbacks(
     val onAnnotate: () -> Unit,
     val onShare: () -> Unit,
     val onDictionary: () -> Unit,
+    val onTranslate: () -> Unit,
+    val onDismissTranslation: () -> Unit,
     val onShowColorPicker: () -> Unit,
     val onDismissColorPicker: () -> Unit,
     val onTagTextChanged: (String) -> Unit,
@@ -139,6 +141,8 @@ fun rememberReaderSelectionCallbacks(
             }
         }
     val onDictionary = remember(viewModel) { { viewModel.interactionHolder.onAddToDictionary() } }
+    val onTranslate = remember(viewModel) { { viewModel.onTranslateSelection() } }
+    val onDismissTranslation = remember(viewModel) { { viewModel.interactionHolder.onDismissTranslationPanel() } }
     val onShowColorPicker = remember(viewModel) { { viewModel.interactionHolder.onShowColorPickerPopover() } }
     val onDismissColorPicker = remember(viewModel) { { viewModel.interactionHolder.onDismissColorPickerPopover() } }
     val onTagTextChanged = remember(viewModel) { { text: String -> viewModel.interactionHolder.onTagTextChanged(text) } }
@@ -157,6 +161,8 @@ fun rememberReaderSelectionCallbacks(
         onAnnotate = onAnnotate,
         onShare = onShare,
         onDictionary = onDictionary,
+        onTranslate = onTranslate,
+        onDismissTranslation = onDismissTranslation,
         onShowColorPicker = onShowColorPicker,
         onDismissColorPicker = onDismissColorPicker,
         onTagTextChanged = onTagTextChanged,

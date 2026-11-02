@@ -16,6 +16,7 @@ import com.nexo.data.local.dao.ReadingStatsDao
 import com.nexo.data.local.dao.RetentionDao
 import com.nexo.data.local.dao.SyncFileMappingDao
 import com.nexo.data.local.dao.SyncOutboxDao
+import com.nexo.data.local.dao.TranslationCacheDao
 import com.nexo.data.local.entity.AddonEntity
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.BookmarkEntity
@@ -28,6 +29,7 @@ import com.nexo.data.local.entity.ReadingSessionEntity
 import com.nexo.data.local.entity.ReadingStatsEntity
 import com.nexo.data.local.entity.SyncFileMappingEntity
 import com.nexo.data.local.entity.SyncOutboxEntity
+import com.nexo.data.local.entity.TranslationCacheEntity
 
 @Database(
     entities = [
@@ -43,8 +45,9 @@ import com.nexo.data.local.entity.SyncOutboxEntity
         DiscoverCacheEntity::class,
         AddonEntity::class,
         NotificationEntity::class,
+        TranslationCacheEntity::class,
     ],
-    version = 34,
+    version = 35,
     exportSchema = true,
 )
 @TypeConverters(NotificationConverters::class)
@@ -72,6 +75,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun addonDao(): AddonDao
 
     abstract fun notificationDao(): NotificationDao
+
+    abstract fun translationCacheDao(): TranslationCacheDao
 
     abstract fun retentionDao(): RetentionDao
 }

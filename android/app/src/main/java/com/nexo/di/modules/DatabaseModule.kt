@@ -19,6 +19,7 @@ import com.nexo.data.local.dao.ReadingSessionDao
 import com.nexo.data.local.dao.ReadingStatsDao
 import com.nexo.data.local.dao.SyncFileMappingDao
 import com.nexo.data.local.dao.SyncOutboxDao
+import com.nexo.data.local.dao.TranslationCacheDao
 
 class DatabaseModule(
     context: Context,
@@ -66,6 +67,7 @@ class DatabaseModule(
     val discoverCacheDao: DiscoverCacheDao get() = appDatabase.discoverCacheDao()
     val installedAddonDao: AddonDao get() = appDatabase.addonDao()
     val notificationDao: NotificationDao get() = appDatabase.notificationDao()
+    val translationCacheDao: TranslationCacheDao get() = appDatabase.translationCacheDao()
 
     fun clearAllTables() {
         appDatabase.clearAllTables()

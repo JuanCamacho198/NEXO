@@ -54,6 +54,8 @@ class ReaderInteractionState(
     val activeDefinitionText: String = "",
     val showHighlightsSheet: Boolean = false,
     val debugForceMenu: Boolean = false,
+    val showTranslationPanel: Boolean = false,
+    val translationPanelState: TranslationPanelState = TranslationPanelState.Idle,
 ) {
     fun copy(
         highlights: List<Highlight> = this.highlights,
@@ -71,6 +73,8 @@ class ReaderInteractionState(
         activeDefinitionText: String = this.activeDefinitionText,
         showHighlightsSheet: Boolean = this.showHighlightsSheet,
         debugForceMenu: Boolean = this.debugForceMenu,
+        showTranslationPanel: Boolean = this.showTranslationPanel,
+        translationPanelState: TranslationPanelState = this.translationPanelState,
     ): ReaderInteractionState =
         ReaderInteractionState(
             highlights = highlights,
@@ -88,6 +92,8 @@ class ReaderInteractionState(
             activeDefinitionText = activeDefinitionText,
             showHighlightsSheet = showHighlightsSheet,
             debugForceMenu = debugForceMenu,
+            showTranslationPanel = showTranslationPanel,
+            translationPanelState = translationPanelState,
         )
 
     override fun equals(other: Any?): Boolean {
@@ -106,7 +112,9 @@ class ReaderInteractionState(
             showDefinitionInput == other.showDefinitionInput &&
             activeDefinitionText == other.activeDefinitionText &&
             showHighlightsSheet == other.showHighlightsSheet &&
-            debugForceMenu == other.debugForceMenu
+            debugForceMenu == other.debugForceMenu &&
+            showTranslationPanel == other.showTranslationPanel &&
+            translationPanelState == other.translationPanelState
         // selectionRect intentionally omitted — not mockable in JVM unit tests
     }
 
@@ -125,6 +133,8 @@ class ReaderInteractionState(
         result = 31 * result + activeDefinitionText.hashCode()
         result = 31 * result + showHighlightsSheet.hashCode()
         result = 31 * result + debugForceMenu.hashCode()
+        result = 31 * result + showTranslationPanel.hashCode()
+        result = 31 * result + translationPanelState.hashCode()
         return result
     }
 

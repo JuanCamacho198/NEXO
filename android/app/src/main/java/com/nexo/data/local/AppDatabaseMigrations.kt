@@ -1099,6 +1099,37 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * Reader selection translation (MyMemory). Isolated `translation_cache`
+     * table — device-local machine translations keyed by `(lang_pair,
+     * word_normalized)`, never synced and never account-scoped. Additive only.
+     */
+    val MIGRATION_34_35 =
+        object : Migration(34, 35) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS translation_cache (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        original_text TEXT NOT NULL,
+                        word_normalized TEXT NOT NULL,
+                        lang_pair TEXT NOT NULL,
+                        translated_text TEXT NOT NULL,
+                        created_at INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_translation_cache_lang_pair_word_normalized " +
+                        "ON translation_cache(lang_pair, word_normalized)",
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_translation_cache_created_at " +
+                        "ON translation_cache(created_at)",
+                )
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -1134,5 +1165,6 @@ object AppDatabaseMigrations {
             MIGRATION_31_32,
             MIGRATION_32_33,
             MIGRATION_33_34,
+            MIGRATION_34_35,
         )
 }

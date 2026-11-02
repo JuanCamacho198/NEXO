@@ -41,6 +41,8 @@ internal class InteractionStateStore(
                 showNoteModal = false,
                 showTagInput = false,
                 showDefinitionInput = false,
+                showTranslationPanel = false,
+                translationPanelState = com.nexo.presentation.viewmodel.reader.TranslationPanelState.Idle,
                 activeNoteText = "",
                 activeTagText = "",
                 activeDefinitionText = "",

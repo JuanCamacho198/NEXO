@@ -15,6 +15,7 @@ import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.ReadingStatsRepository
+import com.nexo.domain.repository.TranslationRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.presentation.UiEvent
@@ -100,6 +101,7 @@ class ReaderViewModel(
     private val activeUser: ActiveUserProvider,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val supabaseProgressSync: SupabaseProgressSync? = null,
+    private val translationRepository: TranslationRepository? = null,
 ) : AndroidViewModel(application) {
     /**
      * Sleep timer manager — timer slice owner (SDD reader-facade-split, slice 3).
@@ -224,6 +226,7 @@ class ReaderViewModel(
             onEvent = { _uiEvent.tryEmit(it) },
             appContext = application,
             mainDispatcher = mainDispatcher,
+            translationRepository = translationRepository,
         )
 
     /**
@@ -313,6 +316,59 @@ class ReaderViewModel(
     // the VM (`viewModel.lifecycleHolder.navigateToCfiAfterLoad(...)`).
     // [loadBook] below stays: it orchestrates holders + fullscreen + the
     // pending-CFI wait, it is not a pass-through.
+
+    // ── Selection translation ─────────────────────────────────────────
+
+    /**
+     * Translates the current reader selection into the app's language and
+     * opens the anchored translation panel.
+     *
+     * **Language decision** (documented product choice):
+     * - **Target** = the app/system UI locale (what the user reads the app in).
+     * - **Source** = the book's `language` when known, else a heuristic guess
+     *   from the selected text ([TranslationPolicy.guessSourceLanguage]).
+     *
+     * When the book language equals the app language the request is a no-op
+     * upstream (`NO_LANGPAIR`), and the panel surfaces "no translation" — the
+     * feature never shows a pointless `X → X`. The book lookup is best-effort:
+     * a missing repository or book falls back to the heuristic source.
+     */
+    fun onTranslateSelection() {
+        val target =
+            java.util.Locale
+                .getDefault()
+                .language
+        val bookId = sessionUiState.value.selectedBookId
+        val repo = libraryRepository
+        val selectedText =
+            interactionHolder.state.value.selectedText
+                .orEmpty()
+        if (bookId == null || repo == null) {
+            interactionHolder.onTranslate(
+                sourceLanguage =
+                    com.nexo.domain.translation.TranslationPolicy
+                        .guessSourceLanguage(selectedText, fallback = fallbackFor(target)),
+                targetLanguage = target,
+            )
+            return
+        }
+        viewModelScope.launch {
+            val bookLanguage =
+                runCatching { repo.getBookById(bookId, activeUser.requireUserId()) }
+                    .getOrNull()
+                    ?.language
+            val source =
+                com.nexo.domain.translation.TranslationPolicy
+                    .normalizeLanguage(bookLanguage, fallback = "")
+                    .takeIf { it.isNotEmpty() }
+                    ?: com.nexo.domain.translation.TranslationPolicy
+                        .guessSourceLanguage(selectedText, fallback = fallbackFor(target))
+            interactionHolder.onTranslate(sourceLanguage = source, targetLanguage = target)
+        }
+    }
+
+    /** For a Spanish app, guess English (the common case for Spanish readers). */
+    private fun fallbackFor(target: String): String = if (target == "es") "en" else "es"
 
     /**
      * Loads a new book into the reader, replacing any current selection.
@@ -600,6 +656,7 @@ class ReaderViewModelFactory(
     private val libraryRepository: LibraryRepository? = null,
     private val activeUser: ActiveUserProvider,
     private val supabaseProgressSync: SupabaseProgressSync? = null,
+    private val translationRepository: TranslationRepository? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -615,6 +672,7 @@ class ReaderViewModelFactory(
                 libraryRepository = libraryRepository,
                 activeUser = activeUser,
                 supabaseProgressSync = supabaseProgressSync,
+                translationRepository = translationRepository,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
