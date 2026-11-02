@@ -1,5 +1,6 @@
 package com.nexo.presentation.viewmodel.reader
 
+import android.content.Context
 import android.graphics.Rect
 import android.graphics.RectF
 import androidx.annotation.VisibleForTesting
@@ -38,6 +39,7 @@ class ReaderInteractionStateHolder(
     private val activeUser: ActiveUserProvider,
     private val scope: CoroutineScope,
     private val onEvent: (UiEvent) -> Unit,
+    private val appContext: Context,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) {
     private val _state = MutableStateFlow(ReaderInteractionState())
@@ -52,7 +54,7 @@ class ReaderInteractionStateHolder(
     private val annotationManager = AnnotationManager(store, selectionManager, readerRepository, activeUser, scope, mainDispatcher)
     private val bookmarkManager = BookmarkManager(store, readerRepository, activeUser, scope, mainDispatcher)
     private val shareDictionaryManager =
-        ShareDictionaryManager(store, selectionManager, dictionaryRepository, activeUser, scope, onEvent, mainDispatcher)
+        ShareDictionaryManager(store, selectionManager, dictionaryRepository, activeUser, scope, onEvent, appContext, mainDispatcher)
 
     init {
         store.setCoordinator = { selectionManager.coordinator = it }

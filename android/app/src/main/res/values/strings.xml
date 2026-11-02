@@ -1090,4 +1090,24 @@
     <string name="update_error_offline">You\'re offline. Connect and try again.</string>
     <string name="import_requires_account">Sign in to import books into your library</string>
     <string name="import_failed">Import failed: %1$s</string>
+
+    <!-- Reader selection / clipboard feedback -->
+    <string name="reader_selection_no_text">No text selected</string>
+    <string name="reader_snackbar_save_error">Couldn\'t save. Try again.</string>
+
+    <!-- Highlight CRUD snackbars -->
+    <string name="highlights_snackbar_added_to_dictionary">Added to dictionary</string>
+    <string name="highlights_snackbar_add_to_dictionary_failed">Couldn\'t add to dictionary</string>
+
+    <!-- Dictionary snackbars -->
+    <string name="dictionary_snackbar_definition_saved">Definition saved</string>
+    <string name="dictionary_snackbar_save_failed">Couldn\'t save word</string>
+
+    <!-- Library snackbars -->
+    <string name="library_snackbar_book_deleted">Deleted "%1$s"</string>
+    <string name="library_snackbar_book_delete_failed">Couldn\'t delete book</string>
+    <string name="library_snackbar_status_failed">Couldn\'t update status</string>
+
+    <!-- Auth snackbars -->
+    <string name="auth_snackbar_reset_email_sent">Reset email sent</string>
 </resources>

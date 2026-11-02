@@ -1,5 +1,7 @@
 package com.nexo.presentation.viewmodel
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.Bookmark
@@ -21,6 +23,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * Tests for [HighlightsViewModel].
@@ -28,11 +33,18 @@ import org.junit.Test
  * NOTE: [HighlightsViewModel.uiState] uses `stateIn(WhileSubscribed(5000))`,
  * which only emits AFTER the first subscriber starts collecting.  Every test
  * must launch a background collection before reading `.value`.
+ *
+ * Robolectric is required because the CRUD snackbars resolve their copy from
+ * string resources: the assertions read the real English text.
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 @OptIn(ExperimentalCoroutinesApi::class)
 class HighlightsViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    private val appContext: Context = ApplicationProvider.getApplicationContext()
 
     /** Start collecting uiState in the background so `stateIn` emits. */
     private fun <T> collectUiState(viewModel: HighlightsViewModel) {
@@ -254,7 +266,7 @@ class HighlightsViewModelTest {
         runTest {
             val highlight = createHighlight(color = HighlightColor.YELLOW.hex)
             val readerRepo = FakeReaderRepository(listOf(highlight))
-            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository(), activeUserProviderFor())
+            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository(), activeUserProviderFor(), appContext)
             viewModel.uiState.first()
 
             viewModel.onChangeHighlightColor(highlight)
@@ -278,7 +290,7 @@ class HighlightsViewModelTest {
         runTest {
             val highlight = createHighlight(tag = null)
             val readerRepo = FakeReaderRepository(listOf(highlight))
-            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository(), activeUserProviderFor())
+            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository(), activeUserProviderFor(), appContext)
             viewModel.uiState.first()
 
             viewModel.onAddHighlightTag(highlight)
@@ -350,7 +362,7 @@ class HighlightsViewModelTest {
     ): HighlightsViewModel {
         val readerRepo = FakeReaderRepository(highlights)
         val homeRepo = FakeHomeRepository(books)
-        return HighlightsViewModel(readerRepo, homeRepo, activeUserProviderFor())
+        return HighlightsViewModel(readerRepo, homeRepo, activeUserProviderFor(), appContext)
     }
 
     private class FakeReaderRepository(

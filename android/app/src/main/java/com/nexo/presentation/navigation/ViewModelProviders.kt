@@ -279,10 +279,12 @@ internal fun rememberAddonSettingsViewModel(
 internal fun rememberDictionaryViewModel(
     dictionaryRepository: DictionaryRepository?,
     activeUser: ActiveUserProvider,
-): DictionaryViewModel? =
-    remember(dictionaryRepository) {
-        dictionaryRepository?.let { DictionaryViewModel(it, activeUser) }
+): DictionaryViewModel? {
+    val appContext = LocalContext.current.applicationContext
+    return remember(dictionaryRepository, appContext) {
+        dictionaryRepository?.let { DictionaryViewModel(it, activeUser, appContext) }
     }
+}
 
 /**
  * Resolves the Settings-screen [StorageViewModel].

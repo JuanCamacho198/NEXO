@@ -379,6 +379,7 @@ class AppContainer(
             activeUser: ActiveUserProvider,
             scope: kotlinx.coroutines.CoroutineScope,
             onEvent: (com.nexo.presentation.UiEvent) -> Unit,
+            appContext: android.content.Context,
             dispatcher: kotlinx.coroutines.CoroutineDispatcher,
         ) = com.nexo.presentation.viewmodel.reader.interaction.ShareDictionaryManager(
             store,
@@ -387,6 +388,7 @@ class AppContainer(
             activeUser,
             scope,
             onEvent,
+            appContext,
             dispatcher,
         )
     }

@@ -1,5 +1,6 @@
 package com.nexo.presentation.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -13,6 +14,7 @@ import com.nexo.presentation.viewmodel.highlights.CrudStateHolder
 import com.nexo.presentation.viewmodel.highlights.FilterStateHolder
 import com.nexo.presentation.viewmodel.highlights.SyncStateHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -37,13 +39,14 @@ class HighlightsViewModel
         private val readerRepository: ReaderRepository,
         private val homeRepository: HomeRepository,
         private val activeUser: ActiveUserProvider,
+        @ApplicationContext private val appContext: Context,
         private val supabaseSync: com.nexo.data.remote.supabase.SupabaseProgressSync? = null,
     ) : ViewModel() {
         private val _uiEvent = MutableSharedFlow<UiEvent>()
         val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
         val filterHolder = FilterStateHolder()
-        val crudHolder = CrudStateHolder(readerRepository, activeUser, viewModelScope, _uiEvent)
+        val crudHolder = CrudStateHolder(readerRepository, activeUser, appContext, viewModelScope, _uiEvent)
         val syncHolder = SyncStateHolder(supabaseSync, viewModelScope)
 
         val syncState: StateFlow<HighlightsSyncState> = syncHolder.syncState
@@ -167,12 +170,13 @@ class HighlightsViewModelFactory(
     private val readerRepository: ReaderRepository,
     private val homeRepository: HomeRepository,
     private val activeUser: ActiveUserProvider,
+    private val appContext: Context,
     private val supabaseSync: com.nexo.data.remote.supabase.SupabaseProgressSync? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HighlightsViewModel::class.java)) {
-            return HighlightsViewModel(readerRepository, homeRepository, activeUser, supabaseSync) as T
+            return HighlightsViewModel(readerRepository, homeRepository, activeUser, appContext, supabaseSync) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

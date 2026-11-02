@@ -1,0 +1,38 @@
+appId: com.nexo
+---
+# Verification: reader shows an in-app snackbar after Copy.
+#
+# No launchApp: the app is already in the reader, and launching restarts the
+# process away from the deep route this needs to test.
+#
+# The reader opens on the cover, which is an image and has no selectable text,
+# so advance into the flowing text before selecting.
+#
+# Run with the reader already open:
+#   maestro test maestro/flows/reader/snackbar-only.yaml
+- takeScreenshot: v0-reader-open
+
+# Cover -> flowing text. Tap the right band repeatedly (the lateral tap zones
+# turn a screen at a time) so we land on real text, not the cover art.
+- repeat:
+    times: 5
+    commands:
+      - tapOn:
+          point: 92%, 50%
+      - waitForAnimationToEnd:
+          timeout: 3000
+- takeScreenshot: v1-past-cover
+
+- longPressOn:
+    point: 30%, 36%
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: v2-selection-menu
+- tapOn:
+    text: "Copiar|Copy"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: v3-after-copy
+- assertVisible:
+    text: "(?i).*(copiad|clipboard).*"
+- takeScreenshot: v4-snackbar-visible

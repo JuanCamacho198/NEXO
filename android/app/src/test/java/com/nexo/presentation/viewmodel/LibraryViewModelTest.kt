@@ -1,6 +1,5 @@
 package com.nexo.presentation.viewmodel
 
-import android.content.Context
 import app.cash.turbine.test
 import com.nexo.data.remote.supabase.SupabaseBookCatalogSync
 import com.nexo.data.remote.sync.DriveSyncState
@@ -15,6 +14,7 @@ import com.nexo.presentation.UiEvent
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.TEST_USER_ID
 import com.nexo.testutil.activeUserProviderFor
+import com.nexo.testutil.mockAppContext
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -52,7 +52,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockk<Context>(),
+                    appContext = mockAppContext(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -86,7 +86,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockk<Context>(),
+                    appContext = mockAppContext(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -119,7 +119,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockk<Context>(),
+                    appContext = mockAppContext(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -158,7 +158,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockk<Context>(),
+                    appContext = mockAppContext(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -198,7 +198,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockk<Context>(),
+                    appContext = mockAppContext(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -238,7 +238,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockk<Context>(),
+                    appContext = mockAppContext(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -263,7 +263,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockk<Context>(),
+                    appContext = mockAppContext(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -349,7 +349,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockk<Context>(),
+                    appContext = mockAppContext(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),

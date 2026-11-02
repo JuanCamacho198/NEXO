@@ -1,0 +1,19 @@
+appId: com.nexo
+---
+# Reach the reader and stop. The auto-probe fires 6 s after ReaderScreen's
+# LaunchedEffect starts, so the caller bursts screenshots right after this flow
+# returns.
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 15000
+- tapOn:
+    text: "Library"
+- waitForAnimationToEnd:
+    timeout: 6000
+- tapOn:
+    text: "El extranjero"
+- waitForAnimationToEnd:
+    timeout: 15000
+- tapOn:
+    text: "(Start|Continue) Reading"

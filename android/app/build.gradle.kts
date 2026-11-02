@@ -596,14 +596,25 @@ tasks.register("verifyNoHardcodedStrings") {
     val baselineFile = hardcodedStringsBaselineFile.asFile
 
     doLast {
-        // Detects a string literal passed as visible text. Three shapes are covered
+        // Detects a string literal passed as visible text. Five shapes are covered
         // because the old line-based single-file scan missed all of them:
-        //   1. Text("...")       — inline first arg
-        //   2. text = "..."      — named argument
-        //   3. Text(\n "..."\n)  — literal on its own line (the old regex required
-        //                          the quote on the same line as `Text(`)
+        //   1. Text("...")          — inline first arg
+        //   2. text = "..."         — named argument
+        //   3. Text(\n "..."\n)     — literal on its own line (the old regex required
+        //                             the quote on the same line as `Text(`)
+        //   4. ShowSnackbar("...")  — message literal for the in-app snackbar
+        //   5. ShowToast("...")     — message literal for the system toast
+        // The event variants cover the `onEvent(UiEvent.ShowSnackbar("..."))` shape
+        // through the same `ShowSnackbar\(\s*` prefix (the qualifier before it is
+        // irrelevant to the match).
         // Applied to the WHOLE file (not per line) so shape 3 matches.
-        val textLiteralPattern = Regex("""(?:\bText\(\s*|\btext\s*=\s*)"([^"\n]*)"""")
+        // The literal body allows escaped quotes (`\"`) so a message that wraps
+        // an interpolated value in quotes — `"\"$title\" deleted"` — is captured
+        // whole instead of stopping at the first backslash.
+        val textLiteralPattern =
+            Regex(
+                """(?:\bText\(\s*|\btext\s*=\s*|\bShowSnackbar\(\s*|\bShowToast\(\s*)"((?:\\.|[^"\\\n])*)"""",
+            )
 
         // Not translatable prose: blank, symbol/punctuation-only, or a lone
         // interpolation of a value (e.g. "$streakDays") with no surrounding words.
@@ -709,7 +720,12 @@ tasks.register("updateHardcodedStringsBaseline") {
 
     doLast {
         // Applied to the WHOLE file so a literal on the line after `Text(` matches.
-        val textLiteralPattern = Regex("""(?:\bText\(\s*|\btext\s*=\s*)"([^"\n]*)"""")
+        // Same five shapes and escaped-quote handling as `verifyNoHardcodedStrings`
+        // — keep in sync.
+        val textLiteralPattern =
+            Regex(
+                """(?:\bText\(\s*|\btext\s*=\s*|\bShowSnackbar\(\s*|\bShowToast\(\s*)"((?:\\.|[^"\\\n])*)"""",
+            )
 
         fun isNonProseLiteral(literal: String): Boolean {
             val value = literal.trim()

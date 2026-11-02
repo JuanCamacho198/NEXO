@@ -1,5 +1,7 @@
 package com.nexo.presentation.viewmodel.reader.interaction
 
+import android.content.Context
+import com.nexo.R
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
@@ -19,12 +21,13 @@ internal class ShareDictionaryManager(
     private val activeUser: ActiveUserProvider,
     private val scope: CoroutineScope,
     private val onEvent: (UiEvent) -> Unit,
+    private val appContext: Context,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : Clearable {
     fun onShareSelectedText(selectedText: String?) {
         val text = selectedText
         if (text.isNullOrBlank()) {
-            onEvent(UiEvent.ShowToast("No text selected"))
+            onEvent(UiEvent.ShowToast(appContext.getString(R.string.reader_selection_no_text)))
             return
         }
         onEvent(UiEvent.ShareText(text))
@@ -33,7 +36,7 @@ internal class ShareDictionaryManager(
 
     fun onCopySelectedText() {
         if (store.value.selectedText == null) return
-        onEvent(UiEvent.ShowSnackbar("Copiado al portapapeles"))
+        onEvent(UiEvent.ShowSnackbar(appContext.getString(R.string.highlights_snackbar_copied)))
         selectionManager.dismissMenuAndClearSelection()
     }
 
@@ -46,13 +49,19 @@ internal class ShareDictionaryManager(
         scope.launch(mainDispatcher) {
             val userId = activeUser.requireUserId()
             if (repo.exists(text, userId)) {
-                onEvent(UiEvent.ShowSnackbar("\"$text\" ya está en tu diccionario"))
+                onEvent(
+                    UiEvent.ShowSnackbar(appContext.getString(R.string.dictionary_duplicate, text)),
+                )
             } else {
                 val result = repo.save(text, userId)
                 if (result.isSuccess) {
-                    onEvent(UiEvent.ShowSnackbar("\"$text\" guardada en tu diccionario"))
+                    onEvent(
+                        UiEvent.ShowSnackbar(appContext.getString(R.string.dictionary_added, text)),
+                    )
                 } else {
-                    val msg = result.exceptionOrNull()?.message ?: "Error al guardar"
+                    val msg =
+                        result.exceptionOrNull()?.message
+                            ?: appContext.getString(R.string.reader_snackbar_save_error)
                     onEvent(UiEvent.ShowSnackbar(msg))
                 }
             }
@@ -68,11 +77,26 @@ internal class ShareDictionaryManager(
         scope.launch(mainDispatcher) {
             val userId = activeUser.requireUserId()
             if (repo.exists(text, userId)) {
-                onEvent(UiEvent.ShowSnackbar("Already in dictionary"))
+                onEvent(
+                    UiEvent.ShowSnackbar(appContext.getString(R.string.dictionary_duplicate, text)),
+                )
             } else {
                 repo.save(text, userId, trimmedDefinition).fold(
-                    onSuccess = { onEvent(UiEvent.ShowSnackbar("Added to dictionary")) },
-                    onFailure = { e -> onEvent(UiEvent.ShowSnackbar(e.message ?: "Failed to add to dictionary")) },
+                    onSuccess = {
+                        onEvent(
+                            UiEvent.ShowSnackbar(
+                                appContext.getString(R.string.highlights_snackbar_added_to_dictionary),
+                            ),
+                        )
+                    },
+                    onFailure = { e ->
+                        onEvent(
+                            UiEvent.ShowSnackbar(
+                                e.message
+                                    ?: appContext.getString(R.string.highlights_snackbar_add_to_dictionary_failed),
+                            ),
+                        )
+                    },
                 )
             }
         }

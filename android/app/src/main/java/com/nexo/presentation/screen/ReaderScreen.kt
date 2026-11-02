@@ -41,9 +41,11 @@ import com.nexo.debug.DebugPrefs
 import com.nexo.presentation.screen.reader.ReaderScreenContentHost
 import com.nexo.presentation.screen.reader.ReaderScreenEffects
 import com.nexo.presentation.screen.reader.ReaderScreenOverlaysHost
+import com.nexo.presentation.screen.reader.readerSnackbarMessage
 import com.nexo.presentation.screen.reader.rememberReaderSelectionCallbacks
 import com.nexo.presentation.viewmodel.ReaderViewModel
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
+import com.nexo.ui.components.atoms.NexoSnackbar
 import com.nexo.ui.components.molecules.ReadingProgressBar
 import kotlinx.coroutines.flow.MutableSharedFlow
 
@@ -115,9 +117,9 @@ fun ReaderScreen(
                         .show()
                 }
                 is com.nexo.presentation.UiEvent.ShowSnackbar -> {
-                    android.widget.Toast
-                        .makeText(context, event.message, android.widget.Toast.LENGTH_SHORT)
-                        .show()
+                    // Immersive fullscreen: a system Toast is drawn behind the
+                    // WebView surface. Route through the in-app host instead.
+                    readerSnackbarMessage(event)?.let { snackbarHostState.showSnackbar(it) }
                 }
                 is com.nexo.presentation.UiEvent.ShareText -> {
                     val shareIntent =
@@ -296,6 +298,11 @@ fun ReaderScreen(
             )
         }
 
-        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) { data ->
+            NexoSnackbar(snackbarData = data)
+        }
     }
 }

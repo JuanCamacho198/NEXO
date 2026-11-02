@@ -9,6 +9,7 @@ import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.activeUserProviderFor
+import com.nexo.testutil.mockAppContext
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -261,6 +262,7 @@ class SelectionCoordinatorTest {
             activeUser = activeUserProviderFor(),
             scope = scope,
             onEvent = {},
+            appContext = mockAppContext(),
         )
 
     private fun createSampleHighlight(id: String): Highlight =

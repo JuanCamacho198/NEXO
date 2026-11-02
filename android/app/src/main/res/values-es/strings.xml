@@ -1081,4 +1081,24 @@
     <string name="update_error_offline">Está sin conexión. Conéctese e inténtelo de nuevo.</string>
     <string name="import_requires_account">Inicie sesión para importar libros a su biblioteca</string>
     <string name="import_failed">La importación falló: %1$s</string>
+
+    <!-- Reader selection / clipboard feedback -->
+    <string name="reader_selection_no_text">Ningún texto seleccionado</string>
+    <string name="reader_snackbar_save_error">No se pudo guardar. Inténtelo de nuevo.</string>
+
+    <!-- Highlight CRUD snackbars -->
+    <string name="highlights_snackbar_added_to_dictionary">Agregado al diccionario</string>
+    <string name="highlights_snackbar_add_to_dictionary_failed">No se pudo agregar al diccionario</string>
+
+    <!-- Dictionary snackbars -->
+    <string name="dictionary_snackbar_definition_saved">Definición guardada</string>
+    <string name="dictionary_snackbar_save_failed">No se pudo guardar la palabra</string>
+
+    <!-- Library snackbars -->
+    <string name="library_snackbar_book_deleted">Se eliminó "%1$s"</string>
+    <string name="library_snackbar_book_delete_failed">No se pudo eliminar el libro</string>
+    <string name="library_snackbar_status_failed">No se pudo actualizar el estado</string>
+
+    <!-- Auth snackbars -->
+    <string name="auth_snackbar_reset_email_sent">Correo de restablecimiento enviado</string>
 </resources>

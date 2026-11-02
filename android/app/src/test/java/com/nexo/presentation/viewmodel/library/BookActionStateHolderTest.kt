@@ -7,6 +7,7 @@ import com.nexo.domain.repository.LibraryRepository
 import com.nexo.presentation.UiEvent
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.activeUserProviderFor
+import com.nexo.testutil.mockAppContext
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -317,7 +318,7 @@ class BookActionStateHolderTest {
         scope: CoroutineScope,
         dispatcher: TestDispatcher,
         libraryRepository: LibraryRepository = mockk(),
-        context: Context = mockk(),
+        context: Context = mockAppContext(),
         onUiEvent: (UiEvent) -> Unit,
     ): BookActionStateHolder =
         BookActionStateHolder(

@@ -1,5 +1,7 @@
 package com.nexo.presentation.viewmodel
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.nexo.domain.model.DictionaryWord
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.presentation.UiEvent
@@ -19,17 +21,33 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+/**
+ * Robolectric is required from the moment [DictionaryViewModel] resolves its
+ * snackbar copy from string resources: the assertions below read real English
+ * text, not a mock's placeholder.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 @OptIn(ExperimentalCoroutinesApi::class)
 class DictionaryViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private val appContext: Context = ApplicationProvider.getApplicationContext()
+
+    private fun viewModel(
+        repo: DictionaryRepository,
+    ) = DictionaryViewModel(repo, activeUserProviderFor(), appContext)
+
     @Test
     fun `onAddWordConfirm empty term rejected no insert`() =
         runTest {
             val repo = FakeDictionaryRepository()
-            val vm = DictionaryViewModel(repo, activeUserProviderFor())
+            val vm = viewModel(repo)
             // Need to wait for initial collect
             vm.uiState.first()
 
@@ -49,7 +67,7 @@ class DictionaryViewModelTest {
             val repo = FakeDictionaryRepository()
             // Pre-insert via repository directly
             repo.save("Hello", TEST_USER_ID, null)
-            val vm = DictionaryViewModel(repo, activeUserProviderFor())
+            val vm = viewModel(repo)
             vm.uiState.first()
 
             vm.onAddWordTextChanged("  hello  ")
@@ -76,7 +94,7 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             repo.save("TestWord", TEST_USER_ID, null)
-            val vm = DictionaryViewModel(repo, activeUserProviderFor())
+            val vm = viewModel(repo)
             vm.uiState.first()
 
             vm.onAddWordTextChanged("TestWord ")
@@ -91,7 +109,7 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             val saved = repo.seedFullEntry()
-            val vm = DictionaryViewModel(repo, activeUserProviderFor())
+            val vm = viewModel(repo)
             vm.uiState.first()
 
             vm.onRequestEditWord(saved)
@@ -114,7 +132,7 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             val saved = repo.seedFullEntry()
-            val vm = DictionaryViewModel(repo, activeUserProviderFor())
+            val vm = viewModel(repo)
             vm.uiState.first()
 
             vm.onRequestEditWord(saved)
@@ -139,7 +157,7 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             val saved = repo.seedFullEntry()
-            val vm = DictionaryViewModel(repo, activeUserProviderFor())
+            val vm = viewModel(repo)
             vm.uiState.first()
 
             vm.onRequestEditWord(saved)
@@ -165,7 +183,7 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             val saved = repo.seedFullEntry()
-            val vm = DictionaryViewModel(repo, activeUserProviderFor())
+            val vm = viewModel(repo)
             vm.uiState.first()
 
             vm.onRequestEditWord(saved)
@@ -188,7 +206,7 @@ class DictionaryViewModelTest {
         runTest {
             val repo = FakeDictionaryRepository()
             val saved = repo.seedFullEntry()
-            val vm = DictionaryViewModel(repo, activeUserProviderFor())
+            val vm = viewModel(repo)
             vm.uiState.first()
 
             vm.onRequestEditWord(saved)

@@ -1,10 +1,12 @@
 package com.nexo.presentation.viewmodel
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nexo.BuildConfig
+import com.nexo.R
 import com.nexo.data.remote.sync.SyncOrchestrator
 import com.nexo.data.repository.SupabaseAuthRepository
 import com.nexo.domain.error.AppError
@@ -14,6 +16,7 @@ import com.nexo.domain.repository.AuthRepository
 import com.nexo.domain.sync.OutboxDrainScheduler
 import com.nexo.presentation.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -97,6 +100,7 @@ class AuthViewModel
         private val syncOrchestrator: SyncOrchestrator,
         @Named("isAuthConfigured") private val isAuthConfigured: Boolean,
         @Named("hasAuthWiringIssue") private val hasAuthWiringIssue: Boolean,
+        @ApplicationContext private val appContext: Context,
         /**
          * S6: schedules an outbox drain at app start for a restored session.
          * Defaults to a no-op so direct VM tests stay free of WorkManager.
@@ -388,7 +392,7 @@ class AuthViewModel
                 result.fold(
                     onSuccess = {
                         _uiState.update { it.copy(errorMessage = null, failureKind = AuthFailureKind.NONE) }
-                        _uiEvent.emit(UiEvent.ShowSnackbar("Reset email sent"))
+                        _uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.auth_snackbar_reset_email_sent)))
                     },
                     onFailure = { error ->
                         _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to send reset email"))
@@ -543,6 +547,7 @@ class AuthViewModel
             private val syncOrchestrator: SyncOrchestrator,
             private val isAuthConfigured: Boolean,
             private val hasAuthWiringIssue: Boolean,
+            private val appContext: Context,
             private val outboxDrainScheduler: OutboxDrainScheduler = OutboxDrainScheduler.NoOp,
         ) : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
@@ -552,6 +557,7 @@ class AuthViewModel
                     syncOrchestrator = syncOrchestrator,
                     isAuthConfigured = isAuthConfigured,
                     hasAuthWiringIssue = hasAuthWiringIssue,
+                    appContext = appContext,
                     outboxDrainScheduler = outboxDrainScheduler,
                 ) as T
         }

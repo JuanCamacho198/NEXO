@@ -74,6 +74,19 @@ typealias BookChapter = com.nexo.presentation.viewmodel.reader.BookChapter
 + *   (e.g. a stale Continuar snapshot). `null` in tests without a library.
  * @param mainDispatcher Dispatcher for state-collection coroutines. Defaults to [Dispatchers.Main].
  */
+
+/**
+ * Buffer capacity of the reader's one-shot UI event flow.
+ *
+ * The reader's event flow is written through `tryEmit` (the holder `onEvent` /
+ * `onErrorEvent` callbacks are non-suspending). A zero-capacity
+ * `MutableSharedFlow` makes `tryEmit` return `false` — silently dropping the
+ * event — unless a collector is suspended in `collect` at that exact instant.
+ * That dropped every reader snackbar, including the clipboard confirmation, so
+ * the user saw no feedback after tapping Copy.
+ */
+internal const val READER_UI_EVENT_BUFFER_CAPACITY = 8
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderViewModel(
     application: Application,
@@ -99,7 +112,14 @@ class ReaderViewModel(
      */
     val sleepTimerManager = SleepTimerManager(viewModelScope)
 
-    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    /**
+     * One-shot UI events for the reader (snackbars, toasts).
+     *
+     * **Buffer**: [READER_UI_EVENT_BUFFER_CAPACITY] slots. Emitters reach this
+     * flow through `tryEmit`; see that constant for why zero capacity drops the
+     * event instead of queueing it.
+     */
+    private val _uiEvent = MutableSharedFlow<UiEvent>(extraBufferCapacity = READER_UI_EVENT_BUFFER_CAPACITY)
 
     /**
      * One-shot UI events for the reader (snackbars, toasts).
@@ -202,6 +222,7 @@ class ReaderViewModel(
             activeUser = activeUser,
             scope = viewModelScope,
             onEvent = { _uiEvent.tryEmit(it) },
+            appContext = application,
             mainDispatcher = mainDispatcher,
         )
 

@@ -1,5 +1,7 @@
 package com.nexo.presentation.viewmodel.highlights
 
+import android.content.Context
+import com.nexo.R
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
@@ -13,6 +15,7 @@ import kotlinx.coroutines.launch
 class CrudStateHolder(
     private val readerRepository: ReaderRepository,
     private val activeUser: ActiveUserProvider,
+    private val appContext: Context,
     private val scope: CoroutineScope,
     private val uiEvent: MutableSharedFlow<UiEvent>,
 ) {
@@ -62,7 +65,7 @@ class CrudStateHolder(
             )
         scope.launch {
             readerRepository.upsertHighlight(updated, activeUser.requireUserId())
-            uiEvent.emit(UiEvent.ShowSnackbar("Highlight deleted"))
+            uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.highlights_deleted_snackbar)))
         }
         highlightToDelete.update { null }
     }
@@ -88,7 +91,7 @@ class CrudStateHolder(
             )
         scope.launch {
             readerRepository.upsertHighlight(updated, activeUser.requireUserId())
-            uiEvent.emit(UiEvent.ShowSnackbar("Color changed"))
+            uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.highlights_snackbar_color_changed)))
         }
         highlightToChangeColor.update { null }
     }
@@ -116,7 +119,7 @@ class CrudStateHolder(
             )
         scope.launch {
             readerRepository.upsertHighlight(updated, activeUser.requireUserId())
-            uiEvent.emit(UiEvent.ShowSnackbar("Tag saved"))
+            uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.highlights_snackbar_tag_saved)))
         }
         highlightToEditTag.update { null }
         editTagText.update { "" }

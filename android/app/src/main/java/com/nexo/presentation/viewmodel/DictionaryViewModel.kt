@@ -1,7 +1,9 @@
 package com.nexo.presentation.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nexo.R
 import com.nexo.domain.model.DictionaryWord
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.session.ActiveUserProvider
@@ -38,6 +40,7 @@ data class DictionaryUiState(
 class DictionaryViewModel(
     private val dictionaryRepository: DictionaryRepository,
     private val activeUser: ActiveUserProvider,
+    private val appContext: Context,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(DictionaryUiState())
     val uiState: StateFlow<DictionaryUiState> = _uiState.asStateFlow()
@@ -106,7 +109,7 @@ class DictionaryViewModel(
             if (dictionaryRepository.exists(trimmed, userId)) {
                 _uiEvent.emit(
                     UiEvent.ShowSnackbar(
-                        "\"$trimmed\" is already in your dictionary.",
+                        appContext.getString(R.string.dictionary_duplicate, trimmed),
                     ),
                 )
             } else {
@@ -114,14 +117,14 @@ class DictionaryViewModel(
                     onSuccess = {
                         _uiEvent.emit(
                             UiEvent.ShowSnackbar(
-                                "\"$trimmed\" added to your dictionary.",
+                                appContext.getString(R.string.dictionary_added, trimmed),
                             ),
                         )
                     },
                     onFailure = { e ->
                         _uiEvent.emit(
                             UiEvent.ShowSnackbar(
-                                e.message ?: "Failed to add word",
+                                e.message ?: appContext.getString(R.string.dictionary_snackbar_save_failed),
                             ),
                         )
                     },
@@ -212,7 +215,7 @@ class DictionaryViewModel(
                     example = state.editExampleText.trimmedOrNull(),
                 ).fold(
                     onSuccess = {
-                        _uiEvent.emit(UiEvent.ShowSnackbar("Definición guardada"))
+                        _uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.dictionary_snackbar_definition_saved)))
                         _uiState.update {
                             it.copy(
                                 selectedWord = null,
@@ -226,7 +229,7 @@ class DictionaryViewModel(
                     onFailure = { e ->
                         _uiEvent.emit(
                             UiEvent.ShowSnackbar(
-                                e.message ?: "Failed to save word",
+                                e.message ?: appContext.getString(R.string.dictionary_snackbar_save_failed),
                             ),
                         )
                     },

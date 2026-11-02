@@ -81,10 +81,10 @@ class BookActionStateHolder(
 
             result.fold(
                 onSuccess = {
-                    onUiEvent(UiEvent.ShowSnackbar("Deleted \"${book.title}\""))
+                    onUiEvent(UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_book_deleted, book.title)))
                 },
                 onFailure = { error ->
-                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: "Failed to delete book"))
+                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: appContext.getString(R.string.library_snackbar_book_delete_failed)))
                 },
             )
         }
@@ -101,10 +101,10 @@ class BookActionStateHolder(
 
             result.fold(
                 onSuccess = {
-                    onUiEvent(UiEvent.ShowSnackbar("Deleted \"${book.title}\""))
+                    onUiEvent(UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_book_deleted, book.title)))
                 },
                 onFailure = { error ->
-                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: "Failed to delete book"))
+                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: appContext.getString(R.string.library_snackbar_book_delete_failed)))
                 },
             )
         }
@@ -134,7 +134,7 @@ class BookActionStateHolder(
                     onUiEvent(UiEvent.ShowSnackbar(appContext.getString(successMessageRes)))
                 },
                 onFailure = { error ->
-                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: "Failed to update status"))
+                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: appContext.getString(R.string.library_snackbar_status_failed)))
                 },
             )
         }

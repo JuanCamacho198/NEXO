@@ -11,6 +11,7 @@ import com.nexo.domain.repository.ReaderRepository
 import com.nexo.presentation.UiEvent
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.activeUserProviderFor
+import com.nexo.testutil.mockAppContext
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -320,6 +321,7 @@ class ReaderInteractionStateHolderTest {
                     activeUser = activeUserProviderFor(),
                     scope = this,
                     onEvent = { events.add(it) },
+                    appContext = mockAppContext(),
                 )
             // Set up a selection so onAddToDictionary has text to save
             val locator = mockk<Locator>(relaxed = true)
@@ -378,6 +380,7 @@ class ReaderInteractionStateHolderTest {
                     activeUser = activeUserProviderFor(),
                     scope = this,
                     onEvent = { events.add(it) },
+                    appContext = mockAppContext(),
                 )
             // Set up a selection first so there's text to share
             val locator = mockk<Locator>(relaxed = true)
@@ -406,6 +409,7 @@ class ReaderInteractionStateHolderTest {
                     activeUser = activeUserProviderFor(),
                     scope = this,
                     onEvent = { events.add(it) },
+                    appContext = mockAppContext(),
                 )
             // Set up a selection
             val locator = mockk<Locator>(relaxed = true)
@@ -498,6 +502,7 @@ class ReaderInteractionStateHolderTest {
             activeUser = activeUserProviderFor(),
             scope = scope,
             onEvent = { capturedEvents.add(it) },
+            appContext = mockAppContext(),
             mainDispatcher = testDispatcher,
         )
     }

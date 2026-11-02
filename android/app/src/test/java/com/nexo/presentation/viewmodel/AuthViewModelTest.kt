@@ -7,6 +7,7 @@ import com.nexo.domain.error.ErrorCategory
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.repository.AuthRepository
 import com.nexo.testutil.MainDispatcherRule
+import com.nexo.testutil.mockAppContext
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -53,6 +54,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = false,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
 
             advanceUntilIdle()
@@ -75,6 +77,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -105,6 +108,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -129,6 +133,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = true,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -148,6 +153,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -182,6 +188,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -215,6 +222,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -249,6 +257,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -271,6 +280,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -303,6 +313,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -333,6 +344,7 @@ class AuthViewModelTest {
                     syncOrchestrator = orchestrator,
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -362,6 +374,7 @@ class AuthViewModelTest {
                     syncOrchestrator = orchestrator,
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -390,6 +403,7 @@ class AuthViewModelTest {
                     syncOrchestrator = orchestrator,
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -421,6 +435,7 @@ class AuthViewModelTest {
                     syncOrchestrator = orchestrator,
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -458,6 +473,7 @@ class AuthViewModelTest {
                     syncOrchestrator = orchestrator,
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
@@ -487,6 +503,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
+                    appContext = mockAppContext(),
                 )
             advanceUntilIdle()
 
