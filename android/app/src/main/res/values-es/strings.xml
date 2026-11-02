@@ -137,6 +137,16 @@
     <string name="onboarding_goal_option_intense_value">Más de 40 min/día</string>
     <string name="onboarding_goal_action">Establecer meta</string>
     <string name="onboarding_goal_footer_note">Puedes cambiar esta configuración más tarde en Ajustes.</string>
+    <!-- Onboarding notifications (post-goal, Duolingo-style) -->
+    <string name="onboarding_notifications_title">No pierdas tu racha</string>
+    <string name="onboarding_notifications_body">Activa los recordatorios y te avisaremos antes de que termine el día, para que tu racha de lectura siga viva.</string>
+    <string name="onboarding_notifications_benefit_reminders">Un recordatorio diario a la hora adecuada</string>
+    <string name="onboarding_notifications_benefit_streak">Alertas de racha antes de perderla</string>
+    <string name="onboarding_notifications_benefit_quiet">Puedes cambiar esto cuando quieras en Ajustes</string>
+    <string name="onboarding_notifications_enable">Activar notificaciones</string>
+    <string name="onboarding_notifications_skip">Ahora no</string>
+    <string name="onboarding_notifications_open_settings">Abrir ajustes del sistema</string>
+    <string name="onboarding_notifications_blocked_hint">Las notificaciones están desactivadas para NEXO. Actívalas en los ajustes del sistema.</string>
     <string name="home_nexo_title">NEXO</string>
     <string name="home_avatar_content_description">Abrir cuenta</string>
     <string name="home_streak_badge_content_description">Racha de lectura: %1$d días</string>

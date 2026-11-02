@@ -21,6 +21,7 @@ import com.nexo.data.remote.supabase.SupabaseBookCatalogDataSource
 import com.nexo.data.remote.supabase.SupabaseBookCatalogSync
 import com.nexo.data.remote.supabase.SupabaseProgressDataSource
 import com.nexo.data.remote.supabase.SupabaseProgressSync
+import com.nexo.data.remote.supabase.SupabaseReadingGoalDataSource
 import com.nexo.data.remote.sync.DriveColdBackupService
 import com.nexo.data.remote.sync.StorageSyncRemoteDataSource
 import com.nexo.data.remote.sync.SyncOrchestrator
@@ -28,6 +29,7 @@ import com.nexo.data.remote.sync.SyncService
 import com.nexo.data.remote.work.WorkManagerOutboxDrainScheduler
 import com.nexo.data.remote.work.WorkManagerRetentionPruneScheduler
 import com.nexo.data.repository.NotificationRepository
+import com.nexo.data.repository.ReadingGoalRepository
 import com.nexo.data.session.ReaderPreferences
 import com.nexo.data.session.ReadingGoalPreferences
 import com.nexo.data.session.SessionManager
@@ -213,6 +215,19 @@ class AppContainer(
     val readingGoalPreferences: ReadingGoalPreferences get() = preferencesModule.readingGoalPreferences
     val dailyGoalProvider: () -> Int get() = preferencesModule.dailyGoalProvider
 
+    /**
+     * Cross-device daily goal: local cache ([readingGoalPreferences]) + the
+     * remote `user_preferences` row. Lazy — the Supabase client must not be
+     * touched while the container is being constructed.
+     */
+    val readingGoalRepository: ReadingGoalRepository by lazy {
+        ReadingGoalRepository(
+            local = preferencesModule.readingGoalPreferences,
+            remote = supabaseReadingGoalDataSource,
+            activeUserIdProvider = { activeUserProvider.currentUserId() },
+        )
+    }
+
     // ── Lazy delegation — preserves cold-start partition ───────────────
     val updateReadingProgressUseCase: UpdateReadingProgressUseCase by lazy { useCaseModule.updateReadingProgressUseCase }
     val getStatisticsUseCase: GetStatisticsUseCase by lazy { useCaseModule.getStatisticsUseCase }
@@ -226,6 +241,9 @@ class AppContainer(
     val syncService: SyncService by lazy { networkModule.syncService }
     val supabaseProgressDataSource: SupabaseProgressDataSource by lazy { networkModule.supabaseProgressDataSource }
     val supabaseProgressSync: SupabaseProgressSync by lazy { networkModule.supabaseProgressSync }
+    val supabaseReadingGoalDataSource: SupabaseReadingGoalDataSource by lazy {
+        SupabaseReadingGoalDataSource()
+    }
     val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy { networkModule.supabaseBookCatalogDataSource }
     val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy { networkModule.supabaseBookCatalogSync }
     val dictionarySyncService: com.nexo.data.sync.DictionarySyncService by lazy { networkModule.dictionarySyncService }

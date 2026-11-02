@@ -231,13 +231,31 @@ fun NexoNavHost(
     // resolved" — NOT "this account has no goal": the latter answer would send a
     // returning user to the goal step for the split second before the id lands,
     // which is the flash the gate must not produce. Hold the spinner instead.
-    val hasDailyGoal =
+    //
+    // T3: the answer must also cross devices. The local cache is empty on a
+    // second device, so the synchronous read would report "no goal" and flash
+    // onboarding before the remote row arrives. [ReadingGoalGate.resolve] runs
+    // the cross-device sync and only answers `false` when the remote confirmed
+    // the absence; while unresolved (id not landed, or offline with no cache)
+    // the state stays `null` and the spinner below stays up.
+    var hasDailyGoal by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(activeUserId, dailyGoalVersion) {
+        hasDailyGoal =
+            when (activeUserId) {
+                null -> null
+                else -> ReadingGoalGate.resolve(appContainer.readingGoalRepository, activeUserId)
+            }
+    }
+    // Keep a synchronous fallback for the local, already-resolved case so a
+    // returning user on a warm cache never waits on the effect to run.
+    val localHasDailyGoal =
         remember(dailyGoalVersion, activeUserId) {
             activeUserId?.let { OnboardingGate.hasDailyGoal(appContainer.readingGoalPreferences) }
         }
+    val effectiveHasDailyGoal = hasDailyGoal ?: localHasDailyGoal
 
     val startDestination =
-        resolveStartDestination(isAuthenticated = isAuthenticated, hasDailyGoal = hasDailyGoal)
+        resolveStartDestination(isAuthenticated = isAuthenticated, hasDailyGoal = effectiveHasDailyGoal)
 
     // ── Password-reset deep link (nextpage://auth/reset-password) ──────
     // Cold-start resolution: if the app was opened from a reset-password
@@ -303,7 +321,7 @@ fun NexoNavHost(
                         onboardingGraph(
                             navController = navController,
                             appContainer = appContainer,
-                            onGoalSaved = { dailyGoalVersion++ },
+                            onOnboardingCompleted = { dailyGoalVersion++ },
                         )
 
                         homeGraph(

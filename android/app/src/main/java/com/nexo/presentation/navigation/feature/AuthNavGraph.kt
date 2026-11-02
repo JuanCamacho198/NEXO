@@ -12,6 +12,7 @@ import com.nexo.presentation.feature.auth.AuthScreen
 import com.nexo.presentation.feature.auth.ForgotScreen
 import com.nexo.presentation.feature.auth.RegisterScreen
 import com.nexo.presentation.navigation.NexoDestination
+import com.nexo.presentation.navigation.ReadingGoalGate
 import com.nexo.presentation.viewmodel.AuthViewModel
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -127,7 +128,14 @@ private suspend fun navigateAfterAuthentication(
             .map { it.currentSession?.userId }
             .filterNotNull()
             .first()
-    val hasGoal = appContainer.readingGoalPreferences.load(userId) != null
+    // T3: resolve across devices, not just the local cache. On a second device
+    // the cache is empty and a local-only read would send a returning user
+    // through onboarding. The gate answers `false` only when the remote
+    // confirmed the account has no goal; an unresolved answer (`null`) means
+    // offline-with-empty-cache, and there the local read is the best we have —
+    // a genuinely new account still has no cache, so it correctly lands on the
+    // goal step.
+    val hasGoal = ReadingGoalGate.resolve(appContainer.readingGoalRepository, userId) ?: false
     val destination = if (hasGoal) NexoDestination.Home.route else NexoDestination.OnboardingGoal.route
     navController.navigate(destination) {
         popUpTo(NexoDestination.Auth.route) { inclusive = true }

@@ -116,6 +116,7 @@ fun NavGraphBuilder.settingsGraph(
             dictionaryRepository = dictionaryRepository,
             driveAuthHelper = driveAuthHelper,
             readingGoalPreferences = appContainer.readingGoalPreferences,
+            readingGoalRepository = appContainer.readingGoalRepository,
             notificationPreferencesStore = appContainer.notificationPreferencesStore,
             storageRepository = appContainer.storageRepository,
             cacheRepository = appContainer.cacheRepository,

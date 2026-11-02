@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -51,6 +52,7 @@ import com.nexo.presentation.screen.settings.SyncScreen
 import com.nexo.presentation.theme.NexoTheme
 import com.nexo.presentation.viewmodel.StatisticsViewModel
 import com.nexo.presentation.viewmodel.UpdateViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
@@ -71,6 +73,7 @@ fun SettingsScreen(
     dictionaryRepository: DictionaryRepository? = null,
     driveAuthHelper: GoogleDriveAuthHelper? = null,
     readingGoalPreferences: ReadingGoalPreferences? = null,
+    readingGoalRepository: com.nexo.data.repository.ReadingGoalRepository? = null,
     notificationPreferencesStore: NotificationPreferencesStore? = null,
     storageRepository: StorageRepository? = null,
     cacheRepository: CacheRepository? = null,
@@ -97,6 +100,7 @@ fun SettingsScreen(
         dictionaryRepository = dictionaryRepository,
         driveAuthHelper = driveAuthHelper,
         readingGoalPreferences = readingGoalPreferences,
+        readingGoalRepository = readingGoalRepository,
         notificationPreferencesStore = notificationPreferencesStore,
         storageRepository = storageRepository,
         cacheRepository = cacheRepository,
@@ -126,6 +130,7 @@ private fun SettingsScreenContent(
     dictionaryRepository: DictionaryRepository? = null,
     driveAuthHelper: GoogleDriveAuthHelper? = null,
     readingGoalPreferences: ReadingGoalPreferences? = null,
+    readingGoalRepository: com.nexo.data.repository.ReadingGoalRepository? = null,
     notificationPreferencesStore: NotificationPreferencesStore? = null,
     storageRepository: StorageRepository? = null,
     cacheRepository: CacheRepository? = null,
@@ -363,11 +368,19 @@ private fun SettingsScreenContent(
                 val prefs = readingGoalPreferences
                 if (prefs != null) {
                     val current = prefs.load() ?: 30
+                    val saveScope = rememberCoroutineScope()
                     // Reuse onboarding screen for editing; back button pops to Settings list.
                     OnboardingGoalScreen(
                         initialMinutes = current,
                         onSave = { minutes ->
+                            // Local first (instant UI consistency), then push the
+                            // same value remote so an edit also travels across
+                            // devices. Local write is synchronous; the remote
+                            // push does not block the pop.
                             prefs.save(minutes)
+                            readingGoalRepository?.let { repository ->
+                                saveScope.launch { repository.sync(activeUser.currentUserId()) }
+                            }
                             nestedNavController.popBackStack()
                         },
                         onNavigateBack = { nestedNavController.popBackStack() },

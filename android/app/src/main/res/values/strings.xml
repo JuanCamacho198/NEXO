@@ -101,6 +101,16 @@
     <string name="onboarding_goal_option_intense_value">More than 40 min/day</string>
     <string name="onboarding_goal_action">Set goal</string>
     <string name="onboarding_goal_footer_note">You can change this later in Settings.</string>
+    <!-- Onboarding notifications (post-goal, Duolingo-style) -->
+    <string name="onboarding_notifications_title">Don\'t lose your streak</string>
+    <string name="onboarding_notifications_body">Turn on reminders and we\'ll nudge you before the day ends, so your reading streak stays alive.</string>
+    <string name="onboarding_notifications_benefit_reminders">A daily reminder at the right time</string>
+    <string name="onboarding_notifications_benefit_streak">Streak alerts before you lose it</string>
+    <string name="onboarding_notifications_benefit_quiet">You can change this anytime in Settings</string>
+    <string name="onboarding_notifications_enable">Turn on notifications</string>
+    <string name="onboarding_notifications_skip">Not now</string>
+    <string name="onboarding_notifications_open_settings">Open system settings</string>
+    <string name="onboarding_notifications_blocked_hint">Notifications are off for NEXO. Turn them on in system settings.</string>
     <string name="home_nexo_title">NEXO</string>
     <string name="home_avatar_content_description">Open account settings</string>
     <string name="home_streak_badge_content_description">Reading streak: %1$d days</string>

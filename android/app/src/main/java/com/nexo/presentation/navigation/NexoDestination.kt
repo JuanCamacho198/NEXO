@@ -18,6 +18,12 @@ sealed class NexoDestination(
 
     data object OnboardingGoal : NexoDestination("onboarding/goal")
 
+    /**
+     * Post-goal onboarding step that sells notifications before the OS dialog
+     * (Duolingo pattern). Not a bottom-nav destination.
+     */
+    data object OnboardingNotifications : NexoDestination("onboarding/notifications")
+
     data object Home : NexoDestination("home", R.string.nav_home, NexoIcons.Home)
 
     data object Library : NexoDestination("library", R.string.nav_library, NexoIcons.Library)
