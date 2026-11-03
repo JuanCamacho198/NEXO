@@ -122,6 +122,8 @@ fun NavGraphBuilder.settingsGraph(
             cacheRepository = appContainer.cacheRepository,
             libraryRepository = appContainer.libraryRepository,
             activeUser = appContainer.activeUserProvider,
+            translationPreferences = appContainer.translationPreferences,
+            translationHistoryRepository = appContainer.translationHistoryRepository,
             updateViewModel = updateViewModel,
             onNavigateToAddons = {
                 navController.navigate(NexoDestination.SettingsAddons.route)

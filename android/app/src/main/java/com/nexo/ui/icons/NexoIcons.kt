@@ -52,6 +52,7 @@ import androidx.compose.material.icons.rounded.FormatAlignJustify
 import androidx.compose.material.icons.rounded.FormatQuote
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Laptop
@@ -75,6 +76,7 @@ import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.TextFields
+import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -380,6 +382,12 @@ object NexoIcons {
 
     /** Globe with meridians. Source: `Icons.Rounded.Language`. */
     val Language = Icons.Rounded.Language
+
+    /** Two overlapping speech bubbles with A/文 — machine translation. Source: `Icons.Rounded.Translate`. */
+    val Translate = Icons.Rounded.Translate
+
+    /** Clock with a rewind arc. Source: `Icons.Rounded.History`. */
+    val History = Icons.Rounded.History
 
     /** Storage cylinder. Source: `Icons.Rounded.Storage`. */
     val Storage = Icons.Rounded.Storage

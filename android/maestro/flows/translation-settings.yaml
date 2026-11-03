@@ -1,0 +1,48 @@
+# T6(a)+T4 verification: the reader can choose a target translation language,
+# and the history section is reachable.
+#
+# Preconditions: signed in (or anonymous), a book imported. The emulator's
+# system locale is en-US and the imported book is Spanish, so with no
+# preference set the resolved pair is es|en (works). The bug this ODD closes is
+# book-lang == system-lang (en|en); picking Spanish here forces a workable pair
+# regardless of the book's language.
+appId: com.nexo
+---
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 15000
+- tapOn:
+    text: "Settings"
+- scrollUntilVisible:
+    element:
+      text: "Translation"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    text: "Translation"
+- extendedWaitUntil:
+    visible:
+      text: "Translate into"
+    timeout: 10000
+- assertVisible:
+    text: "Follow the device"
+- assertVisible:
+    text: "Translate from"
+- assertVisible:
+    text: "Detect automatically"
+# Choose Spanish as the target.
+- tapOn:
+    text: "Spanish"
+- scrollUntilVisible:
+    element:
+      text: "History"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    text: "History"
+- takeScreenshot: translation-settings

@@ -60,6 +60,8 @@ sealed class NexoDestination(
 
     data object SettingsLanguage : NexoDestination("settings/language")
 
+    data object SettingsTranslation : NexoDestination("settings/translation")
+
     data object SettingsPalette : NexoDestination("settings/palette")
 
     data object SettingsAbout : NexoDestination("settings/about")

@@ -1,0 +1,66 @@
+appId: com.nexo
+---
+# T6(b)/T5 — Translate on an EXISTING highlight, fully through the UI.
+#
+# 1. Long-press "Sentimientos" to select it.
+# 2. Tap a colour swatch to persist a real highlight.
+# 3. Tap the highlight to raise FloatingContextMenu.
+# 4. Assert the menu carries Translate, then tap it.
+#
+# Run: maestro --device emulator-5554 test maestro/flows/reader/translation-highlight.yaml
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Library|Biblioteca|Home|Inicio"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 15000
+- tapOn:
+    text: "Library|Biblioteca"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "El extranjero"
+- extendedWaitUntil:
+    visible:
+      text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+    timeout: 30000
+- tapOn:
+    text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+- waitForAnimationToEnd:
+    timeout: 25000
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 80%, 50%
+          end: 20%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+# 1. Select the word "Sentimientos" (line 3 of chapter 1).
+- longPressOn:
+    point: 11%, 36%
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: selection-menu
+# 2. First colour swatch persists the highlight (menu closes at y≈29.5%).
+- tapOn:
+    point: 5%, 29%
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: highlight-created
+# 3. Tap the now-existing highlight to raise the context menu.
+- tapOn:
+    point: 11%, 36%
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: highlight-menu
+# 4. The menu now carries Translate alongside the six existing actions.
+- assertVisible: "Translate|Traducir"
+- assertVisible: "Copy|Copiar"
+- assertVisible: "Delete|Eliminar"
+- tapOn: "Translate|Traducir"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: highlight-translation

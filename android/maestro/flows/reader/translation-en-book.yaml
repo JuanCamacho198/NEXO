@@ -1,0 +1,50 @@
+appId: com.nexo
+---
+# T6(a) — the case that shipped broken: an English book on an English device.
+#
+# With no language preference the resolution is en|en (book language == system
+# locale). Before the fix the app asked MyMemory for en|en, MyMemory echoed the
+# source, and the panel said "No translation available". After the fix the app
+# does NOT ask at all: resolveLanguages returns null (NO_LANGPAIR) and the panel
+# still reports "no translation", but as an intentional answer.
+#
+# Run: maestro --device emulator-5554 test maestro/flows/reader/translation-en-book.yaml
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Library|Biblioteca|Home|Inicio"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 15000
+- tapOn:
+    text: "El extranjero"
+- extendedWaitUntil:
+    visible:
+      text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+    timeout: 30000
+- tapOn:
+    text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+- waitForAnimationToEnd:
+    timeout: 25000
+# Reader opens on the cover; swipe into the flowing text.
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 80%, 50%
+          end: 20%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+# Long-press starts a real WebView selection (see selection-probe.yaml).
+- longPressOn:
+    point: 30%, 36%
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: selection-menu
+# The new-selection menu carries Translate (globe/A文 icon).
+- tapOn:
+    text: "Translate|Traducir"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: translation-panel

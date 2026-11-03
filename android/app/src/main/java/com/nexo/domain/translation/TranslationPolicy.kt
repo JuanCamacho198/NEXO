@@ -75,6 +75,69 @@ object TranslationPolicy {
         return translated
     }
 
+    /**
+     * Resolves the MyMemory `langpair` for a reader selection, or `null` when
+     * there is nothing sensible to ask for.
+     *
+     * ## Why this exists (T1 of `translation-preferences`)
+     *
+     * The previous inline resolution in `ReaderViewModel.onTranslateSelection`
+     * took the target from the system locale and the source from the book, with
+     * no identity check at this layer. A book in English on an English phone
+     * therefore produced `en|en`: MyMemory echoed the source, [isRealTranslation]
+     * (server-side) reported no change, and the panel showed "No translation
+     * available" to a user the feature should have served.
+     *
+     * ## Resolution order
+     *
+     * - **Target**: [TranslationSettings.targetLanguage] when set, else
+     *   [systemLanguage].
+     * - **Source**: [TranslationSettings.sourceLanguage] when set, else
+     *   [bookLanguage] when usable, else [guessSourceLanguage] of [selectedText]
+     *   with the target as fallback.
+     *
+     * Both are normalised to a 2-letter code. When the resolved codes are equal
+     * the call returns `null` — the caller must inform rather than ask, because
+     * a self-pair is always an echo.
+     */
+    fun resolveLangPair(
+        settings: TranslationSettings,
+        bookLanguage: String?,
+        systemLanguage: String,
+        selectedText: String,
+    ): String? {
+        val resolved = resolveLanguages(settings, bookLanguage, systemLanguage, selectedText)
+        return resolved?.let { langPair(it.source, it.target) }
+    }
+
+    /**
+     * Same resolution as [resolveLangPair] but keeping source and target apart,
+     * because [com.nexo.domain.repository.TranslationRepository.translate] takes
+     * them as two arguments. The repository re-joins them into the `langpair`,
+     * so the pair string a caller reads back is identical.
+     */
+    fun resolveLanguages(
+        settings: TranslationSettings,
+        bookLanguage: String?,
+        systemLanguage: String,
+        selectedText: String,
+    ): ResolvedLanguages? {
+        val target = normalizeLanguage(settings.targetLanguage ?: systemLanguage)
+        val source =
+            normalizeLanguage(
+                tag = settings.sourceLanguage,
+                fallback = "",
+            ).takeIf { it.isNotEmpty() }
+                ?: normalizeLanguage(
+                    tag = bookLanguage,
+                    fallback = "",
+                ).takeIf { it.isNotEmpty() }
+                ?: guessSourceLanguage(selectedText, fallback = target)
+
+        if (source == target) return null
+        return ResolvedLanguages(source = source, target = target)
+    }
+
     private val BASE_LANGUAGE_REGEX = Regex("[a-z]{2}")
 
     /**
@@ -112,4 +175,10 @@ data class CachedTranslation(
     val original: String,
     val langPair: String,
     val translated: String,
+)
+
+/** A resolved, non-identical source/target pair produced by [TranslationPolicy.resolveLanguages]. */
+data class ResolvedLanguages(
+    val source: String,
+    val target: String,
 )

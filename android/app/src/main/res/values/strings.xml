@@ -480,6 +480,24 @@
     <string name="translation_no_result">No translation available for this text.</string>
     <string name="translation_offline">Translation needs a connection.</string>
     <string name="translation_close">Close</string>
+
+    <!-- Translation settings (per-account source/target languages + history) -->
+    <string name="settings_translation_title">Translation</string>
+    <string name="settings_translation_target_label">Translate into</string>
+    <string name="settings_translation_source_label">Translate from</string>
+    <string name="settings_translation_language_system">Follow the device</string>
+    <string name="settings_translation_language_auto">Detect automatically</string>
+    <string name="settings_translation_spanish">Spanish</string>
+    <string name="settings_translation_english">English</string>
+    <string name="settings_translation_french">French</string>
+    <string name="settings_translation_german">German</string>
+    <string name="settings_translation_italian">Italian</string>
+    <string name="settings_translation_portuguese">Portuguese</string>
+    <string name="settings_translation_same_language_warning">Source and target are the same language, so nothing would change.</string>
+    <string name="settings_translation_history_title">History</string>
+    <string name="settings_translation_history_empty">No translations yet.</string>
+    <string name="settings_translation_history_clear">Clear history</string>
+    <string name="settings_translation_history_cleared">History cleared.</string>
     <string name="context_menu_color">Color</string>
     <string name="context_menu_tag">Tag</string>
     <string name="context_menu_note">Note</string>

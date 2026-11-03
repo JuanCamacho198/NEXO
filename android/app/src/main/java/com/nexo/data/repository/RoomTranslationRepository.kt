@@ -6,6 +6,7 @@ import com.nexo.data.local.entity.TranslationCacheEntity
 import com.nexo.data.remote.translation.MyMemoryTranslationClient
 import com.nexo.data.remote.translation.TranslationResult
 import com.nexo.domain.repository.TranslationRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.translation.CachedTranslation
 import com.nexo.domain.translation.TranslationOutcome
 import com.nexo.domain.translation.TranslationPolicy
@@ -15,9 +16,19 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /**
- * Cache-first translation. Reads the local `translation_cache` for an exact
- * `(lang_pair, word)` hit and only calls MyMemory on a miss; a real
- * translation is written back so the next selection is free (and offline).
+ * Cache-first translation, scoped to the active account.
+ *
+ * Reads the local `translation_cache` for an exact `(owner, lang_pair, word)`
+ * hit and only calls MyMemory on a miss; a real translation is written back so
+ * the next selection is free (and offline). The owner comes from
+ * [ActiveUserProvider] and is resolved at call time, never captured.
+ *
+ * ## The anonymous path (decision D5)
+ *
+ * When [ActiveUserProvider.isAnonymous] the repository is read-only: the lookup
+ * is skipped (nothing could match an empty owner anyway) and nothing is stored.
+ * An anonymous translation still works — it just is not remembered, and it
+ * cannot observe another account's cached lookups.
  *
  * Room I/O runs on [ioDispatcher]; the network call inherits the caller's
  * context. The repository never throws.
@@ -25,6 +36,7 @@ import java.util.UUID
 class RoomTranslationRepository(
     private val client: MyMemoryTranslationClient,
     private val cacheDao: TranslationCacheDao,
+    private val activeUser: ActiveUserProvider,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val nowMillis: () -> Long = { System.currentTimeMillis() },
 ) : TranslationRepository {
@@ -38,16 +50,21 @@ class RoomTranslationRepository(
         if (trimmed.isEmpty()) return TranslationOutcome.Error("empty text")
         val langPair = TranslationPolicy.langPair(sourceLanguage, targetLanguage)
         val normalizedKey = DictionaryNormalizer.normalize(trimmed)
+        val owner = activeUser.currentUserId()
 
-        cachedOrNull(langPair, normalizedKey, trimmed)?.let {
-            return TranslationOutcome.Translated(text = it, fromCache = true)
+        if (owner != null) {
+            cachedOrNull(owner, langPair, normalizedKey, trimmed)?.let {
+                return TranslationOutcome.Translated(text = it, fromCache = true)
+            }
         }
 
         if (!allowNetwork) return TranslationOutcome.Offline
 
         return when (val result = client.translate(trimmed, sourceLanguage, targetLanguage)) {
             is TranslationResult.Success -> {
-                store(langPair, normalizedKey, trimmed, result.translated)
+                if (owner != null) {
+                    store(owner, langPair, normalizedKey, trimmed, result.translated)
+                }
                 TranslationOutcome.Translated(text = result.translated, fromCache = false)
             }
             TranslationResult.NotTranslated -> TranslationOutcome.NoTranslation
@@ -57,12 +74,13 @@ class RoomTranslationRepository(
     }
 
     private suspend fun cachedOrNull(
+        userId: String,
         langPair: String,
         normalizedKey: String,
         original: String,
     ): String? =
         withContext(ioDispatcher) {
-            val row = cacheDao.get(langPair, normalizedKey)
+            val row = cacheDao.get(userId, langPair, normalizedKey)
             TranslationPolicy.cachedTranslationOrNull(
                 cached =
                     row?.let {
@@ -78,6 +96,7 @@ class RoomTranslationRepository(
         }
 
     private suspend fun store(
+        userId: String,
         langPair: String,
         normalizedKey: String,
         original: String,
@@ -86,6 +105,7 @@ class RoomTranslationRepository(
         cacheDao.put(
             TranslationCacheEntity(
                 id = UUID.randomUUID().toString(),
+                userId = userId,
                 originalText = original,
                 wordNormalized = normalizedKey,
                 langPair = langPair,

@@ -75,7 +75,7 @@ fun SelectionOverlay(
     }
     if (selectionState is ReaderSelectionState.Existing && !showTagInput && !showDefinitionInput && !showColorPickerPopover && !showTranslationPanel) {
         AnchoredOverlayBox(selectionRect = selectionRect, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
-            FloatingContextMenu(selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex, onColorSelected = onShowColorPickerPopover, onCopy = onCopy, onAddTag = onAddTag, onAnnotate = onAnnotate, onShare = onShare, onDelete = onDelete)
+            FloatingContextMenu(selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex, onColorSelected = onShowColorPickerPopover, onCopy = onCopy, onTranslate = onTranslate, onAddTag = onAddTag, onAnnotate = onAnnotate, onShare = onShare, onDelete = onDelete)
         }
     }
     if (showTagInput) {

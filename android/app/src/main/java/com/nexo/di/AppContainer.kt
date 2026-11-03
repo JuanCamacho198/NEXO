@@ -213,6 +213,7 @@ class AppContainer(
     val readerPreferences: ReaderPreferences get() = preferencesModule.readerPreferences
     val updatePrefs: UpdatePrefs get() = preferencesModule.updatePrefs
     val readingGoalPreferences: ReadingGoalPreferences get() = preferencesModule.readingGoalPreferences
+    val translationPreferences: com.nexo.data.session.TranslationPreferences get() = preferencesModule.translationPreferences
     val dailyGoalProvider: () -> Int get() = preferencesModule.dailyGoalProvider
 
     /**
@@ -251,6 +252,14 @@ class AppContainer(
 
     /** Reader-selection translation (MyMemory, cache-first). */
     val translationRepository: com.nexo.domain.repository.TranslationRepository by lazy { networkModule.translationRepository }
+
+    /** Translation history for settings — cache-backed, account-scoped. */
+    val translationHistoryRepository: com.nexo.domain.repository.TranslationHistoryRepository by lazy {
+        com.nexo.data.repository.RoomTranslationHistoryRepository(
+            cacheDao = databaseModule.translationCacheDao,
+            activeUser = activeUserProvider,
+        )
+    }
 
     // SDD android-tooling-hygiene WS2a slice 4: delegated — NetworkModule builds
     // this via createConnectivityObserver, the shared factory also used by

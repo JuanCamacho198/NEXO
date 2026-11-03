@@ -1,0 +1,48 @@
+appId: com.nexo
+---
+# Criterion 4 — cache isolation by account (data-level proof).
+#
+# Two rows share (lang_pair=es|fr, word_normalized="entierro"): one owned by the
+# active account (translated "Enterrement") and one by another account
+# (translated "POISON"). If the lookup were not owner-scoped the POISON row could
+# win; the panel must show Enterrement.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Library|Biblioteca|Home|Inicio"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 15000
+- tapOn:
+    text: "Library|Biblioteca"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "El extranjero"
+- extendedWaitUntil:
+    visible:
+      text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+    timeout: 30000
+- tapOn:
+    text: "(Start|Continue) Reading|(Empezar|Continuar) (a )?leer"
+- waitForAnimationToEnd:
+    timeout: 25000
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 80%, 50%
+          end: 20%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+- longPressOn:
+    point: 38%, 27%
+- waitForAnimationToEnd:
+    timeout: 6000
+# Translate from the new-selection menu (translate icon).
+- tapOn:
+    point: 70%, 29%
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: isolation-result

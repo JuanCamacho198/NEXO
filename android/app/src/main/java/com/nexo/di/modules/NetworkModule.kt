@@ -500,6 +500,7 @@ class NetworkModule(
         com.nexo.data.repository.RoomTranslationRepository(
             client = translationClient,
             cacheDao = databaseModule.translationCacheDao,
+            activeUser = activeUserProvider,
         )
     }
 }

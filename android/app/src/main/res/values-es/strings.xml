@@ -448,6 +448,24 @@
     <string name="translation_no_result">No hay traducción disponible para este texto.</string>
     <string name="translation_offline">La traducción necesita conexión.</string>
     <string name="translation_close">Cerrar</string>
+
+    <!-- Translation settings (per-account source/target languages + history) -->
+    <string name="settings_translation_title">Traducción</string>
+    <string name="settings_translation_target_label">Traducir a</string>
+    <string name="settings_translation_source_label">Traducir desde</string>
+    <string name="settings_translation_language_system">Seguir el dispositivo</string>
+    <string name="settings_translation_language_auto">Detectar automáticamente</string>
+    <string name="settings_translation_spanish">Español</string>
+    <string name="settings_translation_english">Inglés</string>
+    <string name="settings_translation_french">Francés</string>
+    <string name="settings_translation_german">Alemán</string>
+    <string name="settings_translation_italian">Italiano</string>
+    <string name="settings_translation_portuguese">Portugués</string>
+    <string name="settings_translation_same_language_warning">El idioma de entrada y el de salida son el mismo, así que nada cambiaría.</string>
+    <string name="settings_translation_history_title">Historial</string>
+    <string name="settings_translation_history_empty">Todavía no hay traducciones.</string>
+    <string name="settings_translation_history_clear">Borrar historial</string>
+    <string name="settings_translation_history_cleared">Historial borrado.</string>
     <string name="context_menu_color">Color</string>
     <string name="context_menu_tag">Etiqueta</string>
     <string name="context_menu_note">Nota</string>

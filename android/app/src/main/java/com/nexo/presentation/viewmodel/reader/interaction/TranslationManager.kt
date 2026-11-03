@@ -76,6 +76,31 @@ internal class TranslationManager(
             }
     }
 
+    /**
+     * Opens the panel reporting that no translation is possible for this
+     * selection — the resolved source equals the resolved target, so any request
+     * would only echo the text back. The panel is opened (not silently ignored)
+     * so the reader gets an answer instead of a tap that seems to do nothing.
+     */
+    fun onTranslationUnavailable() {
+        val text =
+            store.value.selectedText
+                ?.trim()
+                ?.takeIf { it.isNotBlank() } ?: return
+        inFlight?.cancel()
+        inFlight = null
+        store.update {
+            it.copy(
+                showTranslationPanel = true,
+                translationPanelState = TranslationPanelState.NoTranslation,
+                showNoteModal = false,
+                showTagInput = false,
+                showDefinitionInput = false,
+                showColorPickerPopover = false,
+            )
+        }
+    }
+
     /** Closes the panel but keeps the selection so the menu can return. */
     fun onDismissTranslationPanel() {
         inFlight?.cancel()

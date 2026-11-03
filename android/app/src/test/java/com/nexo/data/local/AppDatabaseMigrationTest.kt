@@ -669,4 +669,64 @@ class AppDatabaseMigrationTest {
 
         db.close()
     }
+
+    @Test
+    fun `migration 35 to 36 scopes the translation cache by account and discards the legacy rows`() {
+        val dbPath =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+                .getDatabasePath("migration-35-36")
+                .absolutePath
+        helper.createDatabase(dbPath, 35).use { db ->
+            // A pre-T3 cache row has no owner. It cannot be attributed, so it must
+            // not survive — keeping it is how account A's lookups reached account B.
+            db.execSQL(
+                "INSERT INTO translation_cache (id, original_text, word_normalized, lang_pair, translated_text, created_at) " +
+                    "VALUES ('tc-1', 'reverberación', 'reverberacion', 'es|en', 'reverberation', 1000)",
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(dbPath, 36, true, AppDatabaseMigrations.MIGRATION_35_36)
+
+        assertEquals("legacy rows are discarded", 0L, query(db, "SELECT COUNT(*) FROM translation_cache"))
+        assertEquals("user_id", columnNames(db, "translation_cache")[1])
+
+        val indexes = mutableListOf<String>()
+        db
+            .query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'translation_cache'")
+            .use { cursor ->
+                while (cursor.moveToNext()) indexes.add(cursor.getString(0))
+            }
+        assertTrue(
+            "expected index_translation_cache_user_id_lang_pair_word_normalized, got $indexes",
+            indexes.contains("index_translation_cache_user_id_lang_pair_word_normalized"),
+        )
+        assertTrue(
+            "expected index_translation_cache_user_id_created_at, got $indexes",
+            indexes.contains("index_translation_cache_user_id_created_at"),
+        )
+        assertFalse(
+            "the owner-less lookup index must be gone, got $indexes",
+            indexes.contains("index_translation_cache_lang_pair_word_normalized"),
+        )
+
+        // The same word may now be cached for two owners without collision.
+        db.execSQL(
+            "INSERT INTO translation_cache (id, user_id, original_text, word_normalized, lang_pair, translated_text, created_at) " +
+                "VALUES ('tc-a', 'user-a', 'reverberación', 'reverberacion', 'es|en', 'reverberation', 1000)",
+        )
+        db.execSQL(
+            "INSERT INTO translation_cache (id, user_id, original_text, word_normalized, lang_pair, translated_text, created_at) " +
+                "VALUES ('tc-b', 'user-b', 'reverberación', 'reverberacion', 'es|en', 'echo', 2000)",
+        )
+        assertEquals(2L, query(db, "SELECT COUNT(*) FROM translation_cache"))
+        db
+            .query("SELECT translated_text FROM translation_cache WHERE user_id = 'user-b'")
+            .use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("echo", cursor.getString(0))
+            }
+        db.close()
+    }
 }

@@ -1,0 +1,41 @@
+appId: com.nexo
+---
+# T4 — translation settings + history with real entries.
+#
+# The account already has two cached translations, so the history section must
+# list them (not the empty state) and the Clear-history control must appear.
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 15000
+- tapOn:
+    text: "Settings"
+- scrollUntilVisible:
+    element:
+      text: "Translation"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    text: "Translation"
+- extendedWaitUntil:
+    visible:
+      text: "Translate into"
+    timeout: 10000
+- tapOn:
+    text: "Spanish"
+- scrollUntilVisible:
+    element:
+      text: "History"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    text: "History"
+- assertVisible:
+    text: "Clear history"
+- assertVisible:
+    text: "Sentiments"
+- takeScreenshot: translation-history

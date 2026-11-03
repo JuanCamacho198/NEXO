@@ -210,6 +210,9 @@ class ReaderInteractionStateHolder(
         targetLanguage: String,
     ) = translationManager.onTranslate(sourceLanguage, targetLanguage)
 
+    /** No translatable pair exists (source == target after resolution). */
+    fun onTranslationUnavailable() = translationManager.onTranslationUnavailable()
+
     fun onDismissTranslationPanel() = translationManager.onDismissTranslationPanel()
 
     // ── Share / Copy ──────────────────────────────────────────────

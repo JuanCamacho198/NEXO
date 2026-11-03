@@ -23,16 +23,19 @@ import com.nexo.ui.icons.NexoIcons
 /**
  * Horizontal pill of icon actions shown when the user taps an
  * existing highlight. Sibling of [TextSelectionMenu] but with a
- * different action set: color, copy, tag, annotate, share, delete
- * (the "new selection" menu has Dictionary + no Tag/Delete).
+ * different action set: color, copy, translate, tag, annotate, share,
+ * delete (the "new selection" menu has Dictionary instead of Tag/Delete).
  *
  * Design node `FaPN3` — single pill with thin vertical dividers
  * between action groups:
  * ```
- * [Palette] | [Copy] | [Tag] | [Annotate] | [Share] | [Delete]
+ * [Palette] | [Copy] [Translate] [Tag] [Annotate] | [Share] [Delete]
  * ```
- * All colors come from [MaterialTheme.colorScheme] so the menu
- * adapts to light/dark themes.
+ * The groups read as *appearance* | *act on the text* | *send or destroy*.
+ * Translate sits with the text actions because it consumes the same text the
+ * highlight already holds; it does not open an input, so it is not grouped with
+ * the Palette trigger. All colors come from [MaterialTheme.colorScheme] so the
+ * menu adapts to light/dark themes.
  *
  * @param selectedColor Currently active highlight color (hex with or
  *   without `#`). Drives the Palette icon tint via
@@ -40,6 +43,8 @@ import com.nexo.ui.icons.NexoIcons
  * @param onColorSelected Invoked when the Palette icon is tapped.
  *   Typically opens the [HighlightColorPickerPopover].
  * @param onCopy Copy the highlight text to the clipboard.
+ * @param onTranslate Open the [AnchoredTranslationPanel] for the
+ *   highlighted text (machine translation, MyMemory).
  * @param onAddTag Open the [AnchoredTagInput] for this highlight.
  * @param onAnnotate Open the [HighlightAnnotationModal] for this
  *   highlight.
@@ -50,8 +55,9 @@ import com.nexo.ui.icons.NexoIcons
  *
  * **Visual**: pill-shaped `Row` with 12dp shadow, 6dp padding,
  *   50%-radius corners. Each icon is 40dp clickable circle; vertical
- *   dividers (1dp × 20dp) are placed between the Palette group and
- *   the Share group. Delete icon uses `colorScheme.error` tint.
+ *   dividers (1dp × 20dp) are placed between the Palette group and the
+ *   TextActions group and between TextActions and the Share/Delete group.
+ *   Delete uses `colorScheme.error` tint.
  * **Behavior**: each icon calls its respective callback. No internal
  *   state, no animation.
  * **Recomposition**: recomposes when `selectedColor` or any callback
@@ -62,6 +68,7 @@ fun FloatingContextMenu(
     selectedColor: String,
     onColorSelected: () -> Unit,
     onCopy: () -> Unit,
+    onTranslate: () -> Unit,
     onAddTag: () -> Unit,
     onAnnotate: () -> Unit,
     onShare: () -> Unit,
@@ -95,6 +102,13 @@ fun FloatingContextMenu(
             contentDescription = stringResource(R.string.text_selection_copy),
             tint = contentColor,
             onClick = onCopy,
+        )
+
+        SelectionMenuIcon(
+            icon = NexoIcons.Translate,
+            contentDescription = stringResource(R.string.text_selection_translate),
+            tint = contentColor,
+            onClick = onTranslate,
         )
 
         SelectionMenuIcon(
@@ -151,6 +165,7 @@ private fun FloatingContextMenuDarkPreview() {
             selectedColor = HighlightColor.YELLOW.hex,
             onColorSelected = {},
             onCopy = {},
+            onTranslate = {},
             onAddTag = {},
             onAnnotate = {},
             onShare = {},
@@ -167,6 +182,7 @@ private fun FloatingContextMenuLightPreview() {
             selectedColor = HighlightColor.YELLOW.hex,
             onColorSelected = {},
             onCopy = {},
+            onTranslate = {},
             onAddTag = {},
             onAnnotate = {},
             onShare = {},

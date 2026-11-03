@@ -1130,6 +1130,55 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * Account-scopes the translation cache (T3 of `translation-preferences`).
+     *
+     * The table gains `user_id` and swaps its lookup index for one that leads
+     * with the owner, so a query can never read another account's row.
+     *
+     * ## Existing rows are discarded
+     *
+     * The v35 table was global and carried no owner. A translation result is
+     * owner-neutral, but the row records *which word an account looked up*, and
+     * there is no way to attribute a pre-existing row to an account after the
+     * fact — guessing would leak one account's history into another, the exact
+     * defect this migration exists to close. The data is a regenerable cache, so
+     * the honest move is to drop it and refill on the next lookup. This mirrors
+     * the same call made for `reading_stats` in MIGRATION_33_34.
+     *
+     * The table is recreated rather than ALTERed because SQLite cannot add a
+     * NOT NULL column with a non-constant-less index in one step here, and a
+     * recreate keeps `PRAGMA table_info` and the exported schema identical.
+     */
+    val MIGRATION_35_36 =
+        object : Migration(35, 36) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("DROP TABLE IF EXISTS translation_cache")
+                connection.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS translation_cache (
+                        id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        original_text TEXT NOT NULL,
+                        word_normalized TEXT NOT NULL,
+                        lang_pair TEXT NOT NULL,
+                        translated_text TEXT NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        PRIMARY KEY(id)
+                    )
+                    """.trimIndent(),
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_translation_cache_user_id_lang_pair_word_normalized " +
+                        "ON translation_cache(user_id, lang_pair, word_normalized)",
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_translation_cache_user_id_created_at " +
+                        "ON translation_cache(user_id, created_at)",
+                )
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -1166,5 +1215,6 @@ object AppDatabaseMigrations {
             MIGRATION_32_33,
             MIGRATION_33_34,
             MIGRATION_34_35,
+            MIGRATION_35_36,
         )
 }

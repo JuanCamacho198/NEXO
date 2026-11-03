@@ -98,6 +98,7 @@ internal fun rememberNavHostViewModels(
                     activeUser = appContainer.activeUserProvider,
                     supabaseProgressSync = appContainer.supabaseProgressSync,
                     translationRepository = appContainer.translationRepository,
+                    translationPreferences = appContainer.translationPreferences,
                 ),
         )
 
