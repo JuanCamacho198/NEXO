@@ -114,4 +114,34 @@ class RoomTranslationRepository(
             ),
         )
     }
+
+    /**
+     * Caps the cache for the active account at
+     * [MAX_CACHED_TRANSLATIONS_PER_USER] rows, oldest first.
+     *
+     * A row limit rather than a day-based cutoff (decision D2): the point is a
+     * predictable ceiling on disk, and a cutoff would evict the whole history
+     * of a reader who is heavy one week and idle the next. The sweep is
+     * deliberately not run per translation — it runs at the session boundary
+     * that `TranslationManager.onBookOpened` provides.
+     *
+     * The anonymous path owns no cache, so it does nothing. Never throws.
+     */
+    override suspend fun pruneCache(): Int =
+        withContext(ioDispatcher) {
+            val owner = activeUser.currentUserId() ?: return@withContext 0
+            if (cacheDao.count(owner) <= MAX_CACHED_TRANSLATIONS_PER_USER) return@withContext 0
+            cacheDao.deleteOldestBeyond(owner, MAX_CACHED_TRANSLATIONS_PER_USER)
+        }
+
+    companion object {
+        /**
+         * Per-account ceiling for the translation cache. 500 rows is roughly
+         * the size of a long novel's worth of repeated lookups and stays far
+         * below anything that would show up as disk use, while leaving the
+         * common case — a reader re-selecting words within a book — entirely
+         * cached.
+         */
+        const val MAX_CACHED_TRANSLATIONS_PER_USER = 500
+    }
 }

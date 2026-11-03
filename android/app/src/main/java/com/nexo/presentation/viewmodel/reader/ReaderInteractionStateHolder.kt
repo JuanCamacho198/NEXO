@@ -81,6 +81,9 @@ class ReaderInteractionStateHolder(
     fun observeBook(bookId: String) {
         highlightManager.observeBook(bookId)
         bookmarkManager.observeBook(bookId)
+        // Session boundary for translation-cache retention: once per book
+        // open, never per translation (T4 of `translation-guards-and-cache-pruning`).
+        translationManager.onBookOpened()
     }
 
     // ── Selection pipeline ────────────────────────────────────────

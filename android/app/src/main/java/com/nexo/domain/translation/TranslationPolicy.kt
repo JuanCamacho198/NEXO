@@ -20,6 +20,12 @@ object TranslationPolicy {
      * Returns false when the API echoed the source back (the `francés` defect),
      * comparing trimmed and case-insensitively so `"Francés "` still counts as
      * an echo. An empty or blank output is never a real translation.
+     *
+     * Also returns false when the output is HTML markup rather than text. The
+     * `«` → `&laquo;` defect was measured against the live API: an entity is
+     * not a translation, and rendering it in the panel shows `&laquo;` to the
+     * reader. The check is on the entity PATTERN, not on `&` itself, so `AT&T`
+     * and `R&D` are unaffected.
      */
     fun isRealTranslation(
         original: String,
@@ -27,7 +33,46 @@ object TranslationPolicy {
     ): Boolean {
         val out = translated.trim()
         if (out.isEmpty()) return false
+        if (HTML_ENTITY_REGEX.containsMatchIn(out)) return false
         return !out.equals(original.trim(), ignoreCase = true)
+    }
+
+    /**
+     * Whether [text] deserves a translation request at all.
+     *
+     * ## Why this exists (measured against the live MyMemory API)
+     *
+     * Eight nonsensical selections were sent. Five were pure waste and two
+     * produced actively bad output: `.` came back as `bility` (an invented
+     * word) and `«` as `&laquo;` (markup). [isRealTranslation] cannot catch
+     * either, because it only asks whether the output *changed* — and both
+     * did. The guard has to run BEFORE the request, on the input.
+     *
+     * ## Rules
+     *
+     * - Blank, or shorter than [MIN_TRANSLATABLE_LENGTH] after trim → false.
+     * - Contains no letter at all (`.`, `—`, `123`, `¿?`, `«`) → false.
+     * - Looks like a URL or an email address → false. A selection of
+     *   `https://…` is not book prose, and it is cheap to recognise.
+     *
+     * ## The `y` trade-off (documented decision)
+     *
+     * `y` → `and` is a CORRECT translation, and the length rule rejects it. The
+     * rule was kept: a one-character selection is dominated by accidental
+     * drag-handle selections, and an allowlist of one-letter words would need
+     * to be maintained per source language. The cost of the miss is one
+     * untranslated connector; the cost of the alternative is a growing
+     * exception list for a case a reader will almost never intend.
+     * `TranslationPolicyTest` pins this explicitly rather than leaving it
+     * implicit.
+     */
+    fun isWorthTranslating(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.length < MIN_TRANSLATABLE_LENGTH) return false
+        if (!trimmed.any { it.isLetter() }) return false
+        if (URL_REGEX.containsMatchIn(trimmed)) return false
+        if (EMAIL_REGEX.containsMatchIn(trimmed)) return false
+        return true
     }
 
     /**
@@ -139,6 +184,22 @@ object TranslationPolicy {
     }
 
     private val BASE_LANGUAGE_REGEX = Regex("[a-z]{2}")
+
+    /** A selection shorter than this is treated as an accidental grab. */
+    const val MIN_TRANSLATABLE_LENGTH = 2
+
+    /**
+     * Matches an HTML entity: `&laquo;`, `&#171;`, `&#xAB;`. A bare `&` with no
+     * closing semicolon (`AT&T`, `R&D`, `&amp`) does not match — that is the
+     * false positive this pattern exists to avoid.
+     */
+    private val HTML_ENTITY_REGEX = Regex("&(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#[xX][0-9a-fA-F]+);")
+
+    /** `http://`, `https://`, or a bare `www.` host — none of it is book prose. */
+    private val URL_REGEX = Regex("""(?i)(?:https?://|www\.)\S+""")
+
+    /** Deliberately loose: a local part, an `@`, a dotted domain. */
+    private val EMAIL_REGEX = Regex("""[^\s@]+@[^\s@]+\.[^\s@]+""")
 
     /**
      * Cheap heuristic language detector used only when [Book.language] is

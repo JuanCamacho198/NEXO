@@ -38,6 +38,25 @@ interface TranslationCacheDao {
         cutoffEpochMillis: Long,
     ): Int
 
+    /**
+     * Bounded retention for one owner: keeps the [keep] newest rows and deletes
+     * the rest. Used by the row-limit sweep (T4 of
+     * `translation-guards-and-cache-pruning`), which caps disk use predictably
+     * instead of by calendar age — a day-based cutoff punishes the occasional
+     * heavy reader, a row limit does not.
+     *
+     * Scoped to [userId] like every other method here: one account's sweep must
+     * never delete another account's rows.
+     */
+    @Query(
+        "DELETE FROM translation_cache WHERE user_id = :userId AND id NOT IN (" +
+            "SELECT id FROM translation_cache WHERE user_id = :userId ORDER BY `created_at` DESC LIMIT :keep)",
+    )
+    suspend fun deleteOldestBeyond(
+        userId: String,
+        keep: Int,
+    ): Int
+
     @Query("SELECT COUNT(*) FROM translation_cache WHERE user_id = :userId")
     suspend fun count(userId: String): Int
 

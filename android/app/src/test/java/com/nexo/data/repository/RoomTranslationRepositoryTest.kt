@@ -41,6 +41,16 @@ class RoomTranslationRepositoryTest {
             return before - rows.size
         }
 
+        override suspend fun deleteOldestBeyond(
+            userId: String,
+            keep: Int,
+        ): Int {
+            val owned = rows.values.filter { it.userId == userId }.sortedByDescending { it.createdAtEpochMillis }
+            val doomed = owned.drop(keep)
+            rows.entries.removeAll { (_, row) -> doomed.any { it.id == row.id } }
+            return doomed.size
+        }
+
         override suspend fun count(userId: String): Int = rows.values.count { it.userId == userId }
 
         override fun history(userId: String): Flow<List<TranslationCacheEntity>> = flowOf(rows.values.filter { it.userId == userId })
@@ -210,23 +220,96 @@ class RoomTranslationRepositoryTest {
             assertEquals(0, dao.puts)
         }
 
+    // ── Cache pruning (T4 of `translation-guards-and-cache-pruning`) ──
+    //
+    // The cache is capped per account by row count, not by age: a row limit is
+    // predictable on disk, and a day-based cutoff punishes the reader who is
+    // occasionally heavy. The sweep runs at a session boundary (see
+    // `TranslationManager.onBookOpened`), never per translation, so no query
+    // pays an extra write.
+
+    private fun seedRows(
+        dao: FakeDao,
+        userId: String,
+        count: Int,
+    ) {
+        repeat(count) { index ->
+            // The key must carry the account, or seeding B would overwrite A's
+            // rows and the isolation tests would pass for the wrong reason.
+            val id = "$userId-seed-$index"
+            dao.rows["$userId::es|en::$id"] =
+                TranslationCacheEntity(
+                    id = id,
+                    userId = userId,
+                    originalText = "palabra$index",
+                    wordNormalized = id,
+                    langPair = "es|en",
+                    translatedText = "word$index",
+                    createdAtEpochMillis = index.toLong(),
+                )
+        }
+    }
+
     @Test
-    fun `the anonymous path never reads a persisted row`() =
+    fun `pruneCache deletes the oldest rows once the account is over the cap`() =
         runTest {
             val dao = FakeDao()
-            dao.rows["::es|en::hola"] =
-                TranslationCacheEntity(
-                    id = "x",
-                    userId = "",
-                    originalText = "hola",
-                    wordNormalized = "hola",
-                    langPair = "es|en",
-                    translatedText = "hello",
-                    createdAtEpochMillis = 0,
-                )
-            val transport = FakeTransport()
-            val outcome = repo(dao, transport, activeUser(null)).translate("hola", "es", "en")
-            assertTrue(outcome is TranslationOutcome.Translated)
-            assertEquals("anonymous must not serve an owner-less row", 1, transport.calls)
+            seedRows(dao, "user-a", RoomTranslationRepository.MAX_CACHED_TRANSLATIONS_PER_USER + 10)
+            val deleted = repo(dao, FakeTransport()).pruneCache()
+            assertEquals(10, deleted)
+            assertEquals(
+                RoomTranslationRepository.MAX_CACHED_TRANSLATIONS_PER_USER,
+                dao.count("user-a"),
+            )
+        }
+
+    @Test
+    fun `pruneCache keeps the newest rows`() =
+        runTest {
+            val dao = FakeDao()
+            seedRows(dao, "user-a", RoomTranslationRepository.MAX_CACHED_TRANSLATIONS_PER_USER + 1)
+            repo(dao, FakeTransport()).pruneCache()
+            val survivingNewest = dao.rows.values.maxByOrNull { it.createdAtEpochMillis }
+            assertEquals(
+                "the newest row must survive the sweep",
+                RoomTranslationRepository.MAX_CACHED_TRANSLATIONS_PER_USER.toLong(),
+                survivingNewest?.createdAtEpochMillis,
+            )
+        }
+
+    @Test
+    fun `pruneCache does nothing while the account is under the cap`() =
+        runTest {
+            val dao = FakeDao()
+            seedRows(dao, "user-a", 5)
+            assertEquals(0, repo(dao, FakeTransport()).pruneCache())
+            assertEquals(5, dao.count("user-a"))
+        }
+
+    @Test
+    fun `pruneCache never touches another account`() =
+        runTest {
+            val dao = FakeDao()
+            seedRows(dao, "user-a", RoomTranslationRepository.MAX_CACHED_TRANSLATIONS_PER_USER + 10)
+            seedRows(dao, "user-b", 7)
+            repo(dao, FakeTransport(), activeUser("user-a")).pruneCache()
+            assertEquals(
+                "account B's rows are not account A's to prune",
+                7,
+                dao.count("user-b"),
+            )
+        }
+
+    @Test
+    fun `pruneCache is a no-op for the anonymous path`() =
+        runTest {
+            val dao = FakeDao()
+            seedRows(dao, "user-a", RoomTranslationRepository.MAX_CACHED_TRANSLATIONS_PER_USER + 10)
+            assertEquals(0, repo(dao, FakeTransport(), activeUser(null)).pruneCache())
+            assertEquals(
+                "an anonymous session owns no cache",
+                RoomTranslationRepository.MAX_CACHED_TRANSLATIONS_PER_USER + 10,
+                dao.count("user-a"),
+            )
         }
 }
