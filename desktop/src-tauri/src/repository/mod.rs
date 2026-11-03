@@ -17,6 +17,7 @@ pub mod search;
 pub mod settings;
 pub mod sql_text;
 pub mod tags;
+pub mod translation;
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -32,8 +33,8 @@ use crate::models::{
     IndexBookTextInput, LibraryBookDto, NotificationDto, ReadingProgressDto, ReadingSessionInput,
     ReadingSessionSavedDto, ReadingStatsSummaryDto, RemoteHighlightRow, RemoteReadingSessionRow,
     SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput, SaveProgressInput,
-    ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse, TagDto, UpdateHighlightInput,
-    UpsertRemoteSummary,
+    ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse, TagDto,
+    TranslationCacheEntryDto, TranslationPreferencesDto, UpdateHighlightInput, UpsertRemoteSummary,
 };
 
 const MAX_SETTING_BATCH: usize = 100;
@@ -162,6 +163,80 @@ impl LibraryRepository {
         user_id: Option<&str>,
     ) -> AppResult<()> {
         settings::save_daily_goal_minutes(self, minutes, user_id)
+    }
+
+    /// The stored pair for one account, or `None` when there is no row.
+    ///
+    /// `None` covers both "no active account" and "this account never chose a
+    /// pair" — the caller treats both as "infer", which is why no default row is
+    /// ever created.
+    pub fn get_translation_preferences(
+        &self,
+        user_id: &str,
+    ) -> AppResult<Option<TranslationPreferencesDto>> {
+        translation::get_translation_preferences(self, user_id)
+    }
+
+    pub fn save_translation_preferences(
+        &self,
+        user_id: &str,
+        source_language: Option<&str>,
+        target_language: Option<&str>,
+    ) -> AppResult<TranslationPreferencesDto> {
+        translation::save_translation_preferences(self, user_id, source_language, target_language)
+    }
+
+    // ─── Translation cache / history (T4) ───
+    //
+    // Every method below short-circuits to "nothing" when `user_id` is empty.
+    // That is the option-A product decision and it is applied in
+    // `repository::translation`, not here: see `cache_owner` there. Anonymous
+    // translations still work, they are simply never persisted.
+
+    pub fn read_cached_translation(
+        &self,
+        user_id: &str,
+        source_language: &str,
+        target_language: &str,
+        original_text: &str,
+    ) -> AppResult<Option<String>> {
+        translation::read_cached_translation(
+            self,
+            user_id,
+            source_language,
+            target_language,
+            original_text,
+        )
+    }
+
+    pub fn cache_translation(
+        &self,
+        user_id: &str,
+        source_language: &str,
+        target_language: &str,
+        original_text: &str,
+        translated_text: &str,
+    ) -> AppResult<bool> {
+        translation::cache_translation(
+            self,
+            user_id,
+            source_language,
+            target_language,
+            original_text,
+            translated_text,
+        )
+    }
+
+    pub fn list_translation_history(
+        &self,
+        user_id: &str,
+    ) -> AppResult<Vec<TranslationCacheEntryDto>> {
+        translation::list_translation_history(self, user_id)
+    }
+
+    /// Sweep one account's translation cache back to the documented cap.
+    pub fn prune_translation_cache(&self, user_id: &str) -> AppResult<i64> {
+        translation::prune_translation_cache(self, user_id, translation::TRANSLATION_CACHE_MAX_ROWS)
     }
 
     // ─── Notification history (NOTIF-02) ───
@@ -567,7 +642,7 @@ impl LibraryRepository {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use chrono::Utc;
     use rusqlite::params;
 
@@ -615,6 +690,11 @@ mod tests {
             .execute_batch(include_str!("../../migrations/0022_bookmark_locator.sql"))
             .unwrap();
         connection.execute_batch(include_str!("../../migrations/0023_outbox_owner.sql")).unwrap();
+        connection
+            .execute_batch(include_str!(
+                "../../migrations/0024_translation_preferences_and_cache.sql"
+            ))
+            .unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {

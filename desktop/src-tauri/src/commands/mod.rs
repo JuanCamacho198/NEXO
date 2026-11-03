@@ -32,6 +32,7 @@ pub mod session;
 pub mod settings;
 pub mod storage;
 pub mod translate;
+pub mod translation;
 pub mod update_feed;
 
 #[allow(unused_imports)]
@@ -86,6 +87,8 @@ pub use settings::*;
 pub use storage::*;
 #[allow(unused_imports)]
 pub use translate::*;
+#[allow(unused_imports)]
+pub use translation::*;
 #[allow(unused_imports)]
 pub use update_feed::*;
 

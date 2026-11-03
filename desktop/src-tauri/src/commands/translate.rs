@@ -7,25 +7,50 @@
 //! with a high `match` when it has nothing to say, and returns HTML entities.
 //! Every test below pins a case that was MEASURED against the live API.
 //!
-//! There is deliberately NO cache: the desktop has no active-account
-//! mechanism, and a translation cache is reading history — on Android that
-//! cache was global and leaked between accounts. Shipping without one repeats
-//! none of that risk. See `TRANSLATE_ENDPOINT`.
+//! There is deliberately NO in-memory cache, but there IS a per-account
+//! persisted one. The distinction matters: on Android the translation cache was
+//! GLOBAL, so it leaked one account's reading history to another — that is the
+//! bug this design avoids, not caching itself. The cache now lives in the
+//! `translation_cache` table (migration 0024), keyed by
+//! `(user_id, sha256(owner|source|target|text))`, and it is written and read
+//! ONLY while an account is active. Without an account, translation still works
+//! and nothing is persisted: see `ACTIVE_ACCOUNT_REQUIRED_NOTE` below.
 
 /// Longest selection the toolbar will translate. A selection past this is
 /// almost always a whole-page drag, not a lookup.
 pub const TRANSLATE_MAX_LEN: usize = 2000;
 
-/// MyMemory is a public endpoint and needs no key. There is deliberately NO
-/// cache here: the desktop has no active-account mechanism, and on Android the
-/// translation cache WAS reading history — global, shared across accounts, and
-/// a real leak. Shipping without a cache repeats none of that risk (MyMemory is
-/// free and unauthenticated). Adding one would replicate the Android bug.
+/// MyMemory is a public endpoint and needs no key.
+///
+/// Caching posture, in one paragraph, because two earlier comments in this repo
+/// argued the opposite: on Android the translation cache WAS reading history —
+/// global, shared across accounts, and a real leak. The fix is not "no cache",
+/// it is "a cache that cannot be read across accounts". The desktop now has an
+/// active-account mechanism (`AppState.active_user`), so the cache is scoped by
+/// `user_id` and the anonymous case is handled by refusing to persist at all
+/// (`ACTIVE_ACCOUNT_REQUIRED_NOTE`). MyMemory is free and unauthenticated, so a
+/// cache is a latency and quota win, not a requirement.
 pub const TRANSLATE_ENDPOINT: &str = "https://api.mymemory.translated.net/get";
 pub const TRANSLATE_USER_AGENT: &str = "Nexo/Desktop (contact: TBD)";
 pub const TRANSLATE_MAX_REDIRECTS: usize = 5;
 pub const TRANSLATE_CONNECT_TIMEOUT_S: u64 = 15;
 pub const TRANSLATE_READ_TIMEOUT_S: u64 = 30;
+
+/// Product decision (option A), stated where it is applied.
+///
+/// With NO active account, a translation is neither cached nor read from the
+/// cache. The user still gets their translation — the request is identical —
+/// but nothing is persisted, so the history stays empty. `require_user_id()`
+/// returns `""` when anonymous, and `""` is exactly the owner that would be
+/// written if the cache were unconditional; every later anonymous session would
+/// then share that row. Refusing to write is what makes the empty owner
+/// unrepresentable rather than merely unusual.
+///
+/// The enforcement lives one layer down, in
+/// `repository::translation::cache_owner`, so no caller can opt out of it.
+/// This constant exists so the rule is greppable from the command that obeys it.
+pub const ACTIVE_ACCOUNT_REQUIRED_NOTE: &str =
+    "translation cache is read and written only with an active account; anonymous translations are not persisted";
 
 /// True when the string is too short, has no letter, or is a URL/email — the
 /// shapes MyMemory answers with fabricated or markup output.
@@ -107,7 +132,8 @@ fn is_html_entity(text: &str) -> bool {
 //
 // Same posture as `catalog_fetch.rs`: HTTPS pre-check, bounded redirects,
 // explicit timeouts, no cookie store, typed error codes returned as `String`.
-// Nothing is persisted — see the NO-CACHE note on `TRANSLATE_ENDPOINT`.
+// Nothing is persisted here — the per-account cache is written by the command
+// layer (`translateSelection`), which is the only place that knows the account.
 
 // Module-private on purpose: `commands/mod.rs` globs every command module and
 // `catalog_fetch` already exports `ERR_HTTPS_REQUIRED` / `ERR_NETWORK` with
@@ -269,16 +295,119 @@ async fn request_from(
     parse_translation(text, &body)
 }
 
+/// Translate a reader selection, consulting the per-account cache first.
+///
+/// The lookup/write lives HERE, in the command, and not in the HTTP layer,
+/// because the account is command-level state (`AppState.active_user`): the
+/// transport functions deliberately know nothing about the database, which is
+/// what makes them testable against a loopback port. It is not in the
+/// repository either, because a repository that called out to MyMemory would
+/// invert the layering. The command is the one place that is allowed to own
+/// both halves.
+///
+/// A cache hit returns the stored translation without a network request, so it
+/// cannot be affected by quota, offline state or the output guards — the value
+/// was already accepted by every guard before it was stored. Storage failures
+/// are non-fatal on purpose: a full or missing table must not turn a successful
+/// translation into an error for the reader, so the write is best-effort and a
+/// hit is best-effort. Only the request itself can fail this command.
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
 pub async fn translateSelection(
+    state: tauri::State<'_, crate::state::AppState>,
     text: String,
     sourceLang: String,
     targetLang: String,
 ) -> Result<String, String> {
-    request_translation(&translate_client(), &text, &sourceLang, &targetLang)
+    let user_id = state.active_user.require_user_id();
+
+    // Empty owner ⇒ no cache at all (option A): the lookup returns `None` and
+    // the write is a no-op. Nothing here branches on anonymity.
+    if let Ok(Some(cached)) = {
+        let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+        repository.read_cached_translation(&user_id, &sourceLang, &targetLang, &text)
+    } {
+        return Ok(cached);
+    }
+
+    let translated = request_translation(&translate_client(), &text, &sourceLang, &targetLang)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    // Only a real translation reaches this point: the guards already rejected
+    // echoes, entities and empty output, so a "no translation" is never cached.
+    if let Ok(repository) = state.repository.lock() {
+        let _ =
+            repository.cache_translation(&user_id, &sourceLang, &targetLang, &text, &translated);
+    }
+
+    Ok(translated)
+}
+
+/// The account-resolution half of the cache, which is the half that cannot be
+/// tested through `translateSelection`: `tauri::State<'_, AppState>` needs a
+/// live app (repository, queue worker, logger on disk), so the command body is
+/// not constructible in a unit test. What IS constructible is the pair that
+/// actually decides caching behavior — `require_user_id()` and the repository —
+/// and that pair is exercised below against a real migrated database.
+///
+/// The three facts pinned here are exactly the ones a regression would break:
+/// an account caches, a second identical request hits without the network, and
+/// signing out makes both the read and the write silent no-ops instead of
+/// writing a row owned by `''`.
+#[cfg(test)]
+mod translate_cache_contract_tests {
+    use crate::repository::tests::new_repository;
+    use crate::state::ActiveUser;
+
+    #[test]
+    fn an_active_account_gets_a_cache_hit_on_the_second_identical_request() {
+        let repo = new_repository();
+        let active_user = ActiveUser::new();
+        active_user.set(Some("user-7".to_string()));
+        let owner = active_user.require_user_id();
+
+        // First request: miss, then the command stores what the guards accepted.
+        assert_eq!(repo.read_cached_translation(&owner, "es", "en", "hola").unwrap(), None);
+        assert!(repo.cache_translation(&owner, "es", "en", "hola", "hello").unwrap());
+
+        // Second request: hit, and MyMemory is never consulted.
+        let hit = repo.read_cached_translation(&owner, "es", "en", "hola").unwrap();
+        assert_eq!(hit.as_deref(), Some("hello"));
+    }
+
+    #[test]
+    fn a_different_selection_does_not_reuse_the_cached_answer() {
+        let repo = new_repository();
+        let owner = "user-7";
+        repo.cache_translation(owner, "es", "en", "hola", "hello").unwrap();
+
+        assert_eq!(repo.read_cached_translation(owner, "es", "en", "adios").unwrap(), None);
+    }
+
+    #[test]
+    fn after_sign_out_the_same_request_neither_hits_nor_stores() {
+        let repo = new_repository();
+        let active_user = ActiveUser::new();
+        active_user.set(Some("user-7".to_string()));
+        repo.cache_translation(&active_user.require_user_id(), "es", "en", "hola", "hello")
+            .unwrap();
+
+        active_user.clear();
+        let owner = active_user.require_user_id();
+        assert_eq!(owner, "");
+
+        // No hit for the anonymous session, even though the row exists.
+        assert_eq!(repo.read_cached_translation(&owner, "es", "en", "hola").unwrap(), None);
+        // No write either: the translation still happens, it is just not stored.
+        assert!(!repo.cache_translation(&owner, "es", "en", "hola", "hello").unwrap());
+        // And the row count is unchanged — the anonymous write created nothing.
+        let count: i64 = repo
+            .connection()
+            .query_row("SELECT COUNT(*) FROM translation_cache", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+    }
 }
 
 #[cfg(test)]

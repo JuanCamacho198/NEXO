@@ -599,6 +599,44 @@ pub struct HideBookInput {
     pub book_id: String,
 }
 
+/// Per-account translation language preferences (T3).
+///
+/// Both sides are optional and mirror the Android model consumed by the
+/// frontend `translationLanguageResolution.ts`: `None` means "infer" —
+/// source from the book, target from the app locale. The pair lives in its own
+/// table rather than two `app_settings` keys so it cannot desynchronise, and
+/// because `validate_setting` rejects the nested object that would be needed to
+/// keep it atomic there.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TranslationPreferencesDto {
+    /// ISO 639-1 code, or `None` to infer the source from the book.
+    #[serde(default)]
+    pub source_language: Option<String>,
+    /// ISO 639-1 code, or `None` to use the app locale.
+    #[serde(default)]
+    pub target_language: Option<String>,
+    /// RFC 3339 write timestamp; empty when no preference has ever been saved.
+    #[serde(default)]
+    pub updated_at: String,
+}
+
+/// One cached translation, which is also the per-account translation history
+/// (T4). There is deliberately no second history table: a duplicate would mean
+/// two writers for one fact.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TranslationCacheEntryDto {
+    /// SHA-256 of the canonical `owner|source|target|text` key, lowercase hex.
+    pub cache_key: String,
+    pub source_language: String,
+    pub target_language: String,
+    pub original_text: String,
+    pub translated_text: String,
+    /// RFC 3339.
+    pub created_at: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CollectionDto {
