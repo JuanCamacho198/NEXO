@@ -4,6 +4,7 @@ import SelectionToolbar, {
   type SelectionData,
 } from '$lib/features/reader/highlight/SelectionToolbar.svelte';
 import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
+import type { TranslationOutcome } from '$lib/shared/ports/TranslationPort';
 
 const t = (key: string, params?: Record<string, string | number>) => {
   const translations: Record<string, string> = {
@@ -22,6 +23,11 @@ const t = (key: string, params?: Record<string, string | number>) => {
     'reader.dictionaryNoMatch': 'No dictionary entry matches this selection',
     'reader.dictionarySeveralMatches': 'Several entries match - select a single word',
     'reader.dictionaryAlreadyInDictionary': 'Already in your dictionary',
+    'reader.translate': 'Translate',
+    'reader.translating': 'Translating…',
+    'reader.translationNoResult': 'No translation available for this selection',
+    'reader.translationUnavailable': 'Translation service unavailable',
+    'reader.dismissTranslation': 'Close translation',
     'error.somethingWrong': 'Something went wrong',
   };
   let value = translations[key] ?? key;
@@ -51,6 +57,7 @@ const baseProps = () => ({
   selectionData: makeSelectionData(),
   onCopy: () => undefined,
   onAddToDictionary: async (): Promise<DictionaryCaptureFeedback> => 'created',
+  onTranslate: async (): Promise<TranslationOutcome> => ({ status: 'ok', text: 'Translated' }),
   onColorSelect: () => undefined,
   t,
 });
@@ -193,21 +200,23 @@ describe('SelectionToolbar', () => {
     expect(queryByText('Copied to clipboard')).toBeTruthy();
   });
 
-  it('renders SVG icons and tooltips for copy and dictionary actions', () => {
+  it('renders SVG icons and tooltips for copy, dictionary and translate actions', () => {
     const { getByLabelText, getAllByRole } = render(SelectionToolbar, {
       ...baseProps(),
       selectedText: 'hello',
     });
 
-    // Both action buttons must be present with proper aria-labels
+    // All action buttons must be present with proper aria-labels
     expect(getByLabelText('Copy')).toBeTruthy();
     expect(getByLabelText('Add to Dictionary')).toBeTruthy();
+    expect(getByLabelText('Translate')).toBeTruthy();
 
     // Each icon-only button has an associated tooltip
     const tooltips = getAllByRole('tooltip');
-    expect(tooltips).toHaveLength(2);
+    expect(tooltips).toHaveLength(3);
     expect(tooltips[0]).toHaveTextContent('Copy');
     expect(tooltips[1]).toHaveTextContent('Add to Dictionary');
+    expect(tooltips[2]).toHaveTextContent('Translate');
   });
 
   // ── Selection data forwarding (race-condition fix) ─────────────────────
@@ -254,5 +263,104 @@ describe('SelectionToolbar', () => {
     await fireEvent.click(yellowBtn);
 
     expect(onColorSelect).not.toHaveBeenCalled();
+  });
+
+  // ── Translation (T5) ───────────────────────────────────────────────────
+  // The toolbar is presentational: it forwards the selection to `onTranslate`
+  // and maps the discriminated outcome to localized copy. `no-result` and
+  // `unavailable` must stay distinct — one is the service answering, the other
+  // is the service failing.
+
+  it('forwards the whole SelectionData to onTranslate and shows the result', async () => {
+    const onTranslate = vi.fn(async () => ({ status: 'ok', text: 'and' }) as TranslationOutcome);
+    const data = makeSelectionData({ text: 'y' });
+    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      selectionData: data,
+      onTranslate,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+
+    expect(onTranslate).toHaveBeenCalledOnce();
+    expect(onTranslate).toHaveBeenCalledWith(data);
+    expect(queryByText('and')).toBeTruthy();
+  });
+
+  it('shows the no-result copy when the service answered without a translation', async () => {
+    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      onTranslate: async () => ({ status: 'no-result' }) as TranslationOutcome,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+
+    expect(queryByText('No translation available for this selection')).toBeTruthy();
+  });
+
+  it('shows the unavailable copy — not no-result — when the request failed', async () => {
+    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      onTranslate: async () => ({ status: 'unavailable' }) as TranslationOutcome,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+
+    expect(queryByText('Translation service unavailable')).toBeTruthy();
+    expect(queryByText('No translation available for this selection')).toBeNull();
+  });
+
+  it('does not call onTranslate when there is no selection', async () => {
+    const onTranslate = vi.fn(async () => ({ status: 'ok', text: 'x' }) as TranslationOutcome);
+    const { getByLabelText } = render(SelectionToolbar, {
+      ...baseProps(),
+      selectionData: null,
+      onTranslate,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+
+    expect(onTranslate).not.toHaveBeenCalled();
+  });
+
+  it('does not call onTranslate for a whitespace-only selection', async () => {
+    const onTranslate = vi.fn(async () => ({ status: 'ok', text: 'x' }) as TranslationOutcome);
+    const { getByLabelText } = render(SelectionToolbar, {
+      ...baseProps(),
+      selectionData: makeSelectionData({ text: '   ' }),
+      onTranslate,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+
+    expect(onTranslate).not.toHaveBeenCalled();
+  });
+
+  it('a second click clears the panel without re-requesting', async () => {
+    const onTranslate = vi.fn(async () => ({ status: 'ok', text: 'and' }) as TranslationOutcome);
+    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      onTranslate,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+    expect(queryByText('and')).toBeTruthy();
+
+    await fireEvent.click(getByLabelText('Translate'));
+    expect(queryByText('and')).toBeNull();
+    expect(onTranslate).toHaveBeenCalledOnce();
+  });
+
+  it('closes the result panel from its dismiss button', async () => {
+    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      onTranslate: async () => ({ status: 'ok', text: 'and' }) as TranslationOutcome,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+    expect(queryByText('and')).toBeTruthy();
+
+    await fireEvent.click(getByLabelText('Close translation'));
+    expect(queryByText('and')).toBeNull();
   });
 });

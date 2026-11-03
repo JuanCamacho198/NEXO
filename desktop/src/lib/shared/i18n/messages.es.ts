@@ -1282,6 +1282,13 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.dictionaryNoMatch': 'Ninguna entrada del diccionario coincide con esta selección',
   'reader.dictionarySeveralMatches': 'Varias entradas coinciden, selecciona una sola palabra',
   'reader.dictionaryAlreadyInDictionary': 'Ya está en tu diccionario',
+  // Traducción de la selección del lector. Sin caché ni historial: ver
+  // TranslationPort. Elegir los idiomas es otra feature.
+  'reader.translate': 'Traducir',
+  'reader.translating': 'Traduciendo…',
+  'reader.translationNoResult': 'No hay traducción disponible para esta selección',
+  'reader.translationUnavailable': 'Servicio de traducción no disponible',
+  'reader.dismissTranslation': 'Cerrar traducción',
   'reader.nota': 'Nota',
   'reader.eliminar_destacado': 'Eliminar resaltado',
   'reader.seleccion_no_disponible': 'Selección no disponible en este formato',

@@ -28,8 +28,10 @@ pub mod reading_stats;
 pub mod reading_status;
 pub mod search;
 pub mod secrets;
+pub mod session;
 pub mod settings;
 pub mod storage;
+pub mod translate;
 pub mod update_feed;
 
 #[allow(unused_imports)]
@@ -77,9 +79,13 @@ pub use search::*;
 #[allow(unused_imports)]
 pub use secrets::*;
 #[allow(unused_imports)]
+pub use session::*;
+#[allow(unused_imports)]
 pub use settings::*;
 #[allow(unused_imports)]
 pub use storage::*;
+#[allow(unused_imports)]
+pub use translate::*;
 #[allow(unused_imports)]
 pub use update_feed::*;
 

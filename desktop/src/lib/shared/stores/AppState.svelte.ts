@@ -37,6 +37,8 @@ import {
 import { SyncService } from '$lib/shared/services/SyncService';
 import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
 import { syncHealthState } from '$lib/shared/stores/SyncHealthState.svelte';
+import type { ActiveUserPort } from '$lib/shared/ports/ActiveUserPort';
+import { TauriActiveUserAdapter } from '$lib/shared/ports/adapters/tauri/TauriActiveUserAdapter';
 import type { CommandErrorDto, ReaderBook } from '$lib/shared/types';
 import { createShelfQueryState, type AppRoute } from '$lib/shared/stores/HomeState';
 
@@ -52,7 +54,15 @@ export class AppState {
   settings = settingsState;
   statsDomain = statsState;
 
-  constructor() {
+  /**
+   * The backend's active-user slot is what DB-layer queries scope on, so it
+   * must track the session exactly: set on sign-in and session restore, cleared
+   * on sign-out. The default is the Tauri adapter; tests inject a double.
+   */
+  readonly #activeUserPort: ActiveUserPort;
+
+  constructor(activeUserPort: ActiveUserPort = new TauriActiveUserAdapter()) {
+    this.#activeUserPort = activeUserPort;
     this.bulkImport.onLibraryRefreshNeeded = () => this.loadLibrary();
     // The Discover download imports through the same pipeline as a file import;
     // without this seam the library singleton stays on its boot-time snapshot.
@@ -164,6 +174,11 @@ export class AppState {
     this.bulkImport.importProgress = null;
     let initialRoute: AppRoute = 'welcome';
     let restoredSupabaseSession = false;
+    // The active-user slot is decided by the auth flow but written AFTER it.
+    // Doing the write inside the auth `try` made a slot failure land in the
+    // auth `catch`, where it was reported as an auth-cache failure and could
+    // abort session restore. `undefined` means "the auth flow did not decide".
+    let activeUserToSync: string | null | undefined = undefined;
     try {
       const supabaseSession = await restoreSession();
       if (supabaseSession) {
@@ -174,6 +189,7 @@ export class AppState {
         restoredSupabaseSession = true;
         setLiveSession(supabaseSession);
         this.hydrateAuthState(supabaseSession);
+        activeUserToSync = supabaseSession.user.id;
         this.startAuthenticatedSync();
         initialRoute = isAnonymousSession(supabaseSession) ? 'welcome' : 'home';
       } else {
@@ -181,6 +197,9 @@ export class AppState {
         if (cached) {
           if (cached.kind === 'local') {
             authState.setLocalUser(cached.profile satisfies LocalUserProfile);
+            // Local profiles have no Supabase id: the backend's active-user
+            // slot must be cleared, not left holding a previous session's id.
+            activeUserToSync = null;
             initialRoute = 'home';
           }
         } else {
@@ -189,7 +208,7 @@ export class AppState {
       }
     } catch (error) {
       logger.error(
-        'Failed to read auth cache during init:',
+        'Auth restore during init failed:',
         { error: error instanceof Error ? error.message : String(error) },
         'app_shell',
       );
@@ -197,6 +216,20 @@ export class AppState {
         try {
           await signInAnonymously();
         } catch {}
+      }
+    }
+    // Best-effort and deliberately outside the auth `try`: the slot is a
+    // query-scoping hint, so a backend write failure must degrade to a stale
+    // slot, never to "session restore did not happen".
+    if (activeUserToSync !== undefined) {
+      try {
+        await this.syncActiveUser(activeUserToSync);
+      } catch (error) {
+        logger.error(
+          'Active user slot sync failed during init:',
+          { error: error instanceof Error ? error.message : String(error) },
+          'app_shell',
+        );
       }
     }
     // Login–Drive separation: seed drive.json once from any pre-separation
@@ -218,6 +251,7 @@ export class AppState {
         const anonymous = isAnonymousSession(session);
         setLiveSession(session);
         SyncService.resetOutboxBreaker();
+        void this.syncActiveUserGuarded(session.user.id);
         this.startAuthenticatedSync();
         try {
           SyncService.setupAutoSync();
@@ -243,6 +277,7 @@ export class AppState {
       if (event === 'SIGNED_OUT') {
         clearLiveSession();
         authState.clearSupabaseSession();
+        this.clearActiveUserGuarded();
         try {
           SyncService.teardownAutoSync();
           syncHealthState.stopPoll();
@@ -306,6 +341,7 @@ export class AppState {
   signOutAndReturnToWelcome = async (): Promise<void> => {
     authState.clearLocalUser();
     authState.clearSupabaseSession();
+    await this.clearActiveUser();
     await clearPersistedAuth();
     await signOut();
     try {
@@ -322,6 +358,75 @@ export class AppState {
     this.navigateToWelcome();
     pushToast('success', this.t('welcome.signedOutToast'));
   };
+
+  /**
+   * Mirrors the session onto the backend's active-user slot.
+   *
+   * Best-effort: a backend write failure must not abort sign-in or session
+   * restore. The slot is a query-scoping hint, so degrading to "stale slot"
+   * beats degrading to "cannot sign in".
+   */
+  private async syncActiveUser(userId: string | null): Promise<void> {
+    try {
+      await this.#activeUserPort.setActiveUser(userId);
+    } catch (error) {
+      logger.error(
+        'Failed to set the active user:',
+        { error: error instanceof Error ? error.message : String(error) },
+        'app_shell',
+      );
+    }
+  }
+
+  /**
+   * Call-safe wrapper around {@link syncActiveUser} for fire-and-forget sites.
+   *
+   * `syncActiveUser` guards its own port call, but the *invocation* itself can
+   * still throw if `this` is not the `AppState` instance. `void someExpr()`
+   * does not catch that, so it escaped as an uncaught rejection and left the
+   * active-user slot silently empty. This wrapper guarantees the failure is
+   * logged and contained.
+   */
+  private syncActiveUserGuarded(userId: string | null): void {
+    try {
+      void this.syncActiveUser(userId);
+    } catch (error) {
+      logger.error(
+        'Active user slot sync failed:',
+        { error: error instanceof Error ? error.message : String(error) },
+        'app_shell',
+      );
+    }
+  }
+
+  /**
+   * Call-safe wrapper around {@link clearActiveUser} for fire-and-forget sites.
+   * See {@link syncActiveUserGuarded} for why the invocation needs its own guard.
+   */
+  private clearActiveUserGuarded(): void {
+    try {
+      void this.clearActiveUser();
+    } catch (error) {
+      logger.error(
+        'Active user slot clear failed:',
+        { error: error instanceof Error ? error.message : String(error) },
+        'app_shell',
+      );
+    }
+  }
+
+  /** Best-effort clear of the backend's active-user slot. See `syncActiveUser`. */
+  private async clearActiveUser(): Promise<void> {
+    try {
+      await this.#activeUserPort.clearActiveUser();
+    } catch (error) {
+      logger.error(
+        'Failed to clear the active user:',
+        { error: error instanceof Error ? error.message : String(error) },
+        'app_shell',
+      );
+    }
+  }
 
   private startAuthenticatedSync(): void {
     SyncService.setupOutboxProcessor();

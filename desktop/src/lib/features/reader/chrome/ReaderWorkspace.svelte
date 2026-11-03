@@ -20,8 +20,13 @@
   import { debugState as defaultDebugState } from '$lib/shared/debug/debugState.svelte';
   import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
   import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
+  import type { TranslationPort, TranslationOutcome } from '$lib/shared/ports/TranslationPort';
   import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
   import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+  import { TauriTranslationAdapter } from '$lib/shared/ports/adapters/tauri/TauriTranslationAdapter';
+  import { resolveTranslationLanguages } from '$lib/shared/services/translation/translationLanguages';
+  import { translationFailureOutcome } from '$lib/shared/services/translation/translationOutcome';
+  import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import HighlightContextMenu from '../highlight/HighlightContextMenu.svelte';
   import ColorPickerPopover from '../highlight/ColorPickerPopover.svelte';
   import TagPopover from '../highlight/TagPopover.svelte';
@@ -89,6 +94,7 @@
     viewerPort?: ViewerPort;
     dictionaryActions?: DictionaryActions;
     libraryPort?: LibraryPort;
+    translationPort?: TranslationPort;
   };
 
   let {
@@ -116,6 +122,7 @@
     viewerPort: viewerPortProp = undefined,
     dictionaryActions: dictionaryActionsProp = undefined,
     libraryPort: libraryPortProp = undefined,
+    translationPort: translationPortProp = undefined,
   }: Props = $props();
 
   // svelte-ignore state_referenced_locally
@@ -134,6 +141,9 @@
   const dictionaryActions = dictionaryActionsProp ?? dictionaryState;
   // svelte-ignore state_referenced_locally
   const libraryPort = libraryPortProp ?? new TauriLibraryAdapter();
+  // Translation is transport-only: no cache, no history (see TranslationPort).
+  // svelte-ignore state_referenced_locally
+  const translationPort = translationPortProp ?? new TauriTranslationAdapter();
 
   let pdfRef: PdfViewer | null = $state(null);
   let epubRef: EpubNativeViewer | null = $state(null);
@@ -529,6 +539,33 @@
       evidence: buildEvidence(data, activeReadingBook, viewer.kind),
     });
   }
+  /**
+   * Translate a selection. Source language is the book's (with a fallback),
+   * target is the UI locale; picking them is a separate feature — this only
+   * resolves the pair. The port is transport-only: nothing is cached, because
+   * translated selections are reading history and the desktop has no active
+   * account to scope a cache to (the Android cache leaked across accounts).
+   *
+   * A rejection is split into two honest outcomes: `no-result` when the
+   * service answered without a usable translation (echo, entity, untranslatable
+   * input), `unavailable` when the request itself failed (offline, quota, HTTP).
+   */
+  async function handleTranslate(data: SelectionData): Promise<TranslationOutcome> {
+    const { sourceLang, targetLang } = resolveTranslationLanguages(
+      activeReadingBook?.language,
+      settingsState.locale,
+    );
+    try {
+      const text = await translationPort.translate({
+        text: data.text,
+        sourceLang,
+        targetLang,
+      });
+      return { status: 'ok', text };
+    } catch (error) {
+      return translationFailureOutcome(error);
+    }
+  }
   async function handleColorSelect(color: string, data: SelectionData): Promise<void> {
     await highlightsState.handleColorSelect(color, data);
     // Case 5 (menu must not reopen): the write appends to `persistedHighlights`
@@ -741,6 +778,7 @@
         selectionData={lastSelectionData}
         onCopy={handleCopy}
         onAddToDictionary={handleAddToDictionary}
+        onTranslate={handleTranslate}
         onColorSelect={handleColorSelect}
         {t}
       />

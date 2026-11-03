@@ -842,6 +842,12 @@ export const messagesEn = {
   'reader.dictionaryNoMatch': 'No dictionary entry matches this selection',
   'reader.dictionarySeveralMatches': 'Several entries match - select a single word',
   'reader.dictionaryAlreadyInDictionary': 'Already in your dictionary',
+  // Reader selection translation. No cache, no history — see TranslationPort.
+  'reader.translate': 'Translate',
+  'reader.translating': 'Translating…',
+  'reader.translationNoResult': 'No translation available for this selection',
+  'reader.translationUnavailable': 'Translation service unavailable',
+  'reader.dismissTranslation': 'Close translation',
   'reader.nota': 'Note',
   'reader.eliminar_destacado': 'Delete highlight',
   'reader.seleccion_no_disponible': 'Selection unavailable for this format',

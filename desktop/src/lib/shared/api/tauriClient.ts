@@ -1470,3 +1470,46 @@ export const removeStaleDevice = async (deviceId: string, userId: string): Promi
     return attachCommandError(error);
   }
 };
+
+/**
+ * Translates a reader selection through the Rust `translateSelection` command.
+ *
+ * No cache, no history: the command is a straight request to MyMemory. The
+ * Rust side rejects untranslatable input, echoes and HTML entities before this
+ * ever resolves, so a rejection here is a real "no translation" answer.
+ */
+export const translateSelection = async (payload: {
+  text: string;
+  sourceLang: string;
+  targetLang: string;
+}): Promise<string> => {
+  try {
+    return await invoke<string>('translateSelection', payload);
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+/**
+ * Writes the backend's active-user slot, which DB-layer queries scope on.
+ *
+ * The session lifecycle is the only caller: sign-in and session restore set it,
+ * sign-out clears it. `null` is forwarded as-is — the Rust command takes
+ * `Option<String>`, so it is a valid "no active user" write.
+ */
+export const setActiveUser = async (userId: string | null): Promise<void> => {
+  try {
+    await invoke<void>('setActiveUser', { userId });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+/** Drops the backend's active user. See `setActiveUser`. */
+export const clearActiveUser = async (): Promise<void> => {
+  try {
+    await invoke<void>('clearActiveUser');
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};

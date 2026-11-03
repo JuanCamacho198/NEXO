@@ -4,6 +4,7 @@
   import type { MessageKey } from '$lib/shared/i18n';
   import { HIGHLIGHT_COLORS } from '$lib/features/reader/highlight/highlightColors';
   import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
+  import type { TranslationOutcome } from '$lib/shared/ports/TranslationPort';
 
   // The full data we need to persist a highlight. The parent captures this at
   // selection time and passes it back to us as a prop so that the click on a
@@ -33,6 +34,7 @@
     selectionData: SelectionData | null;
     onCopy: () => void;
     onAddToDictionary: (data: SelectionData) => Promise<DictionaryCaptureFeedback>;
+    onTranslate: (data: SelectionData) => Promise<TranslationOutcome>;
     onColorSelect: (color: string, data: SelectionData) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
@@ -43,6 +45,7 @@
     selectionData,
     onCopy,
     onAddToDictionary,
+    onTranslate,
     onColorSelect,
     t,
   }: Props = $props();
@@ -52,6 +55,9 @@
   let dictionaryFeedback = $state<string | null>(null);
   let copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
   let dictionaryFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
+  let translation = $state<TranslationOutcome | null>(null);
+  let translating = $state(false);
+  const translationActive = $derived(translation !== null ? 'bg-white/10' : '');
 
   const TOOLBAR_HEIGHT_ESTIMATE = 56;
   const TOOLBAR_WIDTH_ESTIMATE = 260;
@@ -124,6 +130,27 @@
       dictionaryFeedback = null;
       dictionaryFeedbackTimer = null;
     }, 1500);
+  }
+
+  /**
+   * Translate toggles a result panel. A second click (or the panel's close
+   * button) clears it, so the selection stays usable while the result is up.
+   * The request itself lives in the parent: the toolbar is presentational and
+   * owns no port.
+   */
+  async function handleTranslate(): Promise<void> {
+    if (translation) {
+      translation = null;
+      return;
+    }
+    if (!selectionData || !selectionData.text.trim()) return;
+
+    translating = true;
+    try {
+      translation = await onTranslate(selectionData);
+    } finally {
+      translating = false;
+    }
   }
 </script>
 
@@ -228,6 +255,41 @@
         {t('reader.addToDictionary')}
       </span>
     </div>
+
+    <!-- Translate -->
+    <div class="group relative">
+      <button
+        type="button"
+        class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky) {translationActive}"
+        onclick={handleTranslate}
+        disabled={translating}
+        aria-label={t('reader.translate')}
+        title={t('reader.translate')}
+      >
+        <svg
+          class="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M4 5h12"></path>
+          <path d="M10 5v2c0 4-2.5 7-6 9"></path>
+          <path d="M6 11c1.5 2.5 4 4 7 4.5"></path>
+          <path d="M14 21l4-9 4 9"></path>
+          <path d="M15.5 18h5"></path>
+        </svg>
+      </button>
+      <span
+        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+        role="tooltip"
+      >
+        {t('reader.translate')}
+      </span>
+    </div>
   </div>
 
   <!-- Action feedback (copy / dictionary) -->
@@ -238,6 +300,38 @@
       aria-live="polite"
     >
       {copyFeedback ?? dictionaryFeedback}
+    </div>
+  {/if}
+
+  <!-- Translation result. `no-result` (echo / entity / untranslatable) and
+       `unavailable` (offline / quota / HTTP) are shown apart on purpose: one
+       is the service answering, the other is the service failing. -->
+  {#if translating || translation}
+    <div
+      class="mt-2 max-w-80 rounded-lg bg-(--color-highlight-menu-bg) px-3 py-2 text-(--color-text-inverse) shadow-lg"
+      role="status"
+      aria-live="polite"
+    >
+      {#if translating}
+        <p class="text-xs text-(--color-text-auxiliary)">{t('reader.translating')}</p>
+      {:else if translation?.status === 'ok'}
+        <div class="flex items-start gap-2">
+          <p class="min-w-0 grow text-sm wrap-break-word">{translation.text}</p>
+          <button
+            type="button"
+            class="shrink-0 cursor-pointer rounded text-xs text-(--color-text-auxiliary) hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
+            onclick={() => (translation = null)}
+            aria-label={t('reader.dismissTranslation')}
+            title={t('reader.dismissTranslation')}
+          >
+            ✕
+          </button>
+        </div>
+      {:else if translation?.status === 'no-result'}
+        <p class="text-xs text-(--color-text-auxiliary)">{t('reader.translationNoResult')}</p>
+      {:else if translation?.status === 'unavailable'}
+        <p class="text-xs text-(--color-text-auxiliary)">{t('reader.translationUnavailable')}</p>
+      {/if}
     </div>
   {/if}
 </div>

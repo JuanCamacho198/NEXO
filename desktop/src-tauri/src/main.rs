@@ -295,7 +295,10 @@ fn main() {
             commands::protectSecret,
             commands::unprotectSecret,
             commands::fetchUpdateFeed,
-            commands::fetchCatalogFeed
+            commands::fetchCatalogFeed,
+            commands::translateSelection,
+            commands::setActiveUser,
+            commands::clearActiveUser
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
