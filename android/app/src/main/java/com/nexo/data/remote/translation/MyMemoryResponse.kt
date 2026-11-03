@@ -46,7 +46,7 @@ internal fun parseMyMemoryResponse(
     original: String,
     json: Json,
 ): TranslationResult {
-    if (httpStatus !in 200..299) {
+    if (httpStatus !in HTTP_SUCCESS_RANGE) {
         return TranslationResult.Failure(
             TranslationErrorCode.HTTP_ERROR,
             "HTTP $httpStatus",
@@ -65,7 +65,7 @@ internal fun parseMyMemoryResponse(
             )
         }
     val status = parsed.responseStatus
-    if (status != null && status != 200) {
+    if (status != null && status != HTTP_OK) {
         return TranslationResult.Failure(
             TranslationErrorCode.UPSTREAM_STATUS,
             parsed.responseDetails ?: "responseStatus $status",
@@ -82,3 +82,9 @@ internal fun parseMyMemoryResponse(
     }
     return TranslationResult.Success(translated = translated, match = parsed.responseData.match)
 }
+
+/** HTTP 2xx — MyMemory answers 200 on success and 4xx/5xx otherwise. */
+private val HTTP_SUCCESS_RANGE = 200..299
+
+/** The status MyMemory puts in its own envelope when the request was accepted. */
+private const val HTTP_OK = 200
