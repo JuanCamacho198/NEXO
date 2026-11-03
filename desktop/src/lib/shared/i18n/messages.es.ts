@@ -145,6 +145,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.tab.about': 'Acerca de',
   'settings.tab.general': 'General',
   'settings.tab.data': 'Datos',
+  'settings.tab.translation': 'Traducción',
   'settings.theme': 'Tema',
   'settings.authDescription': 'Inicia sesión para sincronizar tus datos',
   'settings.account.subtitle': 'Gestiona tu cuenta, el idioma y el tema de la app.',
@@ -1288,6 +1289,13 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.translating': 'Traduciendo…',
   'reader.translationNoResult': 'No hay traducción disponible para esta selección',
   'reader.translationUnavailable': 'Servicio de traducción no disponible',
+  // Rechazos que el resolvedor produce ANTES de cualquier petición: cada uno
+  // indica la solución, para no dejar al lector con un "sin traducción" seco.
+  'reader.translationSameLanguage': 'El libro ya está en este idioma, no hay nada que traducir',
+  'reader.translationUnknownSource':
+    'Este libro no tiene idioma. Elige un idioma de origen en Ajustes › Traducción.',
+  'reader.translationInvalidSource': 'El idioma de origen de Ajustes no es válido. Elige otro.',
+  'reader.translationInvalidTarget': 'El idioma de destino de Ajustes no es válido. Elige otro.',
   'reader.dismissTranslation': 'Cerrar traducción',
   'reader.nota': 'Nota',
   'reader.eliminar_destacado': 'Eliminar resaltado',
@@ -1371,6 +1379,38 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.debug.showDebug': 'Mostrar herramientas de depuración',
   'settings.debug.debugOn': 'Las herramientas de depuración están visibles.',
   'settings.debug.debugOff': 'Las herramientas de depuración están ocultas.',
+
+  // Pestaña de traducción (T3/T4): el par de idiomas y el historial.
+  'settings.translation.title': 'Traducción',
+  'settings.translation.subtitle':
+    'Elige los idiomas que se usan al traducir una selección y revisa lo que ya has traducido.',
+  'settings.translation.sourceLabel': 'Idioma de origen',
+  'settings.translation.sourceHint':
+    'Automático lo infiere del libro. Elige uno cuando el libro no tenga idioma.',
+  'settings.translation.targetLabel': 'Idioma de destino',
+  'settings.translation.targetHint': 'Automático usa el idioma de la aplicación.',
+  'settings.translation.sourceAuto': 'Automático (del libro)',
+  'settings.translation.targetAuto': 'Automático (idioma de la app)',
+  'settings.translation.save': 'Guardar',
+  'settings.translation.loading': 'Cargando historial de traducciones…',
+  'settings.translation.historyTitle': 'Historial',
+  'settings.translation.historyEmpty': 'Todavía no has traducido nada.',
+  'settings.translation.clearHistory': 'Borrar historial',
+  'settings.translation.language.en': 'Inglés',
+  'settings.translation.language.es': 'Español',
+  'settings.translation.language.pt': 'Portugués',
+  'settings.translation.language.fr': 'Francés',
+  'settings.translation.language.de': 'Alemán',
+  'settings.translation.language.it': 'Italiano',
+  'settings.translation.language.nl': 'Neerlandés',
+  'settings.translation.language.pl': 'Polaco',
+  'settings.translation.language.ru': 'Ruso',
+  'settings.translation.language.tr': 'Turco',
+  'settings.translation.language.ar': 'Árabe',
+  'settings.translation.language.zh': 'Chino',
+  'settings.translation.language.ja': 'Japonés',
+  'settings.translation.language.ko': 'Coreano',
+  'settings.translation.language.hi': 'Hindi',
 
   // App auto-update (release-update-feed contract, desktop slice)
   'update.check': 'Buscar actualizaciones',

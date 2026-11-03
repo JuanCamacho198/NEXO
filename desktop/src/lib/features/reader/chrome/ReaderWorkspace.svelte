@@ -24,7 +24,7 @@
   import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
   import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
   import { TauriTranslationAdapter } from '$lib/shared/ports/adapters/tauri/TauriTranslationAdapter';
-  import { resolveTranslationLanguages } from '$lib/shared/services/translation/translationLanguages';
+  import { resolveLanguagePreferencePair } from '$lib/shared/services/translation/translationLanguageResolution';
   import { translationFailureOutcome } from '$lib/shared/services/translation/translationOutcome';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import HighlightContextMenu from '../highlight/HighlightContextMenu.svelte';
@@ -540,26 +540,40 @@
     });
   }
   /**
-   * Translate a selection. Source language is the book's (with a fallback),
-   * target is the UI locale; picking them is a separate feature — this only
-   * resolves the pair. The port is transport-only: nothing is cached, because
-   * translated selections are reading history and the desktop has no active
-   * account to scope a cache to (the Android cache leaked across accounts).
+   * Translate a selection.
    *
-   * A rejection is split into two honest outcomes: `no-result` when the
-   * service answered without a usable translation (echo, entity, untranslatable
-   * input), `unavailable` when the request itself failed (offline, quota, HTTP).
+   * The pair comes from the reader's saved preferences through
+   * `resolveLanguagePreferencePair`, which REFUSES to form a degenerate pair
+   * instead of guessing one. The old resolver fell back to the target when the
+   * book carried no language, producing `en -> en`, which the service answers
+   * with a 403 — the reader saw a bland "no translation" and no way to fix it.
+   * Now a refusal is a typed reason rendered as its own message, and the
+   * translate command is never called for it (`no-result` would be a lie: the
+   * request was never made).
+   *
+   * The port is transport-only: nothing is cached here, because translated
+   * selections are reading history scoped to the account in Rust.
    */
   async function handleTranslate(data: SelectionData): Promise<TranslationOutcome> {
-    const { sourceLang, targetLang } = resolveTranslationLanguages(
+    const preferences = await translationPort.getPreferences().catch(() => null);
+    const resolution = resolveLanguagePreferencePair(
+      {
+        sourceLanguage: preferences?.sourceLanguage ?? null,
+        targetLanguage: preferences?.targetLanguage ?? null,
+      },
       activeReadingBook?.language,
       settingsState.locale,
     );
+
+    if (resolution.kind === 'no-translation') {
+      return { status: 'refused', reason: resolution.reason };
+    }
+
     try {
       const text = await translationPort.translate({
         text: data.text,
-        sourceLang,
-        targetLang,
+        sourceLang: resolution.source,
+        targetLang: resolution.target,
       });
       return { status: 'ok', text };
     } catch (error) {

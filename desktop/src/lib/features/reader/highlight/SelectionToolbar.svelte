@@ -5,6 +5,19 @@
   import { HIGHLIGHT_COLORS } from '$lib/features/reader/highlight/highlightColors';
   import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
   import type { TranslationOutcome } from '$lib/shared/ports/TranslationPort';
+  import type { NoTranslationReason } from '$lib/shared/services/translation/translationLanguageResolution';
+
+  /**
+   * One message per refusal reason. Each names the fix rather than the failure:
+   * "the book has no language, choose one in Settings" is actionable, a bare
+   * "no translation available" is not.
+   */
+  const TRANSLATION_REFUSAL_KEYS: Record<NoTranslationReason, MessageKey> = {
+    'same-language': 'reader.translationSameLanguage',
+    'unknown-source': 'reader.translationUnknownSource',
+    'invalid-source': 'reader.translationInvalidSource',
+    'invalid-target': 'reader.translationInvalidTarget',
+  };
 
   // The full data we need to persist a highlight. The parent captures this at
   // selection time and passes it back to us as a prop so that the click on a
@@ -331,6 +344,10 @@
         <p class="text-xs text-(--color-text-auxiliary)">{t('reader.translationNoResult')}</p>
       {:else if translation?.status === 'unavailable'}
         <p class="text-xs text-(--color-text-auxiliary)">{t('reader.translationUnavailable')}</p>
+      {:else if translation?.status === 'refused'}
+        <p class="text-xs text-(--color-text-auxiliary)">
+          {t(TRANSLATION_REFUSAL_KEYS[translation.reason])}
+        </p>
       {/if}
     </div>
   {/if}

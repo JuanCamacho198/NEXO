@@ -142,6 +142,7 @@ export const messagesEn = {
   'settings.tab.about': 'About',
   'settings.tab.general': 'General',
   'settings.tab.data': 'Data',
+  'settings.tab.translation': 'Translation',
   'settings.theme': 'Theme',
   'settings.authDescription': 'Sign in to sync your data',
   'settings.account.subtitle': 'Manage your account, language and app theme.',
@@ -847,6 +848,16 @@ export const messagesEn = {
   'reader.translating': 'Translating…',
   'reader.translationNoResult': 'No translation available for this selection',
   'reader.translationUnavailable': 'Translation service unavailable',
+  // Refusals the resolver produces BEFORE any request: each names the fix, so
+  // the reader is never left with a bland "no translation" and no way out.
+  'reader.translationSameLanguage':
+    'The book is already in this language, so there is nothing to translate',
+  'reader.translationUnknownSource':
+    'This book has no language. Choose a source language in Settings › Translation.',
+  'reader.translationInvalidSource':
+    'The source language in Settings is not valid. Choose another one.',
+  'reader.translationInvalidTarget':
+    'The target language in Settings is not valid. Choose another one.',
   'reader.dismissTranslation': 'Close translation',
   'reader.nota': 'Note',
   'reader.eliminar_destacado': 'Delete highlight',
@@ -1352,6 +1363,38 @@ export const messagesEn = {
   'settings.debug.showDebug': 'Show debug tools',
   'settings.debug.debugOn': 'Debug tools are visible.',
   'settings.debug.debugOff': 'Debug tools are hidden.',
+
+  // Translation settings tab (T3/T4): the language pair and the history.
+  'settings.translation.title': 'Translation',
+  'settings.translation.subtitle':
+    'Choose the languages used when you translate a selection, and review what you have translated.',
+  'settings.translation.sourceLabel': 'Source language',
+  'settings.translation.sourceHint':
+    'Automatic infers the language from the book. Pick one when the book has no language metadata.',
+  'settings.translation.targetLabel': 'Target language',
+  'settings.translation.targetHint': 'Automatic uses the app language.',
+  'settings.translation.sourceAuto': 'Automatic (from the book)',
+  'settings.translation.targetAuto': 'Automatic (app language)',
+  'settings.translation.save': 'Save',
+  'settings.translation.loading': 'Loading translation history…',
+  'settings.translation.historyTitle': 'History',
+  'settings.translation.historyEmpty': 'You have not translated anything yet.',
+  'settings.translation.clearHistory': 'Clear history',
+  'settings.translation.language.en': 'English',
+  'settings.translation.language.es': 'Spanish',
+  'settings.translation.language.pt': 'Portuguese',
+  'settings.translation.language.fr': 'French',
+  'settings.translation.language.de': 'German',
+  'settings.translation.language.it': 'Italian',
+  'settings.translation.language.nl': 'Dutch',
+  'settings.translation.language.pl': 'Polish',
+  'settings.translation.language.ru': 'Russian',
+  'settings.translation.language.tr': 'Turkish',
+  'settings.translation.language.ar': 'Arabic',
+  'settings.translation.language.zh': 'Chinese',
+  'settings.translation.language.ja': 'Japanese',
+  'settings.translation.language.ko': 'Korean',
+  'settings.translation.language.hi': 'Hindi',
 
   // App auto-update (release-update-feed contract, desktop slice)
   'update.check': 'Check for updates',

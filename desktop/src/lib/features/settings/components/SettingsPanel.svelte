@@ -2,12 +2,14 @@
   import { createSettingsRouter, type SettingsTab } from '../useSettingsRouter.svelte';
   import { createSettingsLocale } from '../useSettingsLocale.svelte';
   import { createSettingsData } from '../useSettingsData.svelte';
+  import { createTranslationSettings } from '../useTranslationSettings.svelte';
   import { addonsState, bindAddonsNotifier } from '$lib/features/addons/addonsStore.svelte';
   import SettingsAddonsSection from './SettingsAddonsSection.svelte';
   import { createSettingsProfile } from '../useSettingsProfile.svelte';
   import SettingsTabs from './SettingsTabs.svelte';
   import SettingsCuentaTab from './SettingsCuentaTab.svelte';
   import SettingsDataTab from './SettingsDataTab.svelte';
+  import SettingsTranslationTab from './SettingsTranslationTab.svelte';
   import SettingsStorageTab from './SettingsStorageTab.svelte';
   import SettingsSyncTab from './SettingsSyncTab.svelte';
   import SettingsShortcutsTab from './SettingsShortcutsTab.svelte';
@@ -58,6 +60,12 @@
   const profile = createSettingsProfile({ t });
   // svelte-ignore state_referenced_locally
   const data = createSettingsData({ t });
+  const translation = createTranslationSettings();
+  // The pair and the history are account-scoped and only read when the tab is
+  // shown, so loading them costs nothing until the reader opens the tab.
+  $effect(() => {
+    if (isOpen && router.activeTab === 'traduccion') void translation.load();
+  });
   // Single shared addon state (slice 7): this surface and the Addons screen
   // mutate the same instance, so either surface updates the other.
   $effect(() => {
@@ -236,6 +244,22 @@
             onUninstall={(id: string) => void addonsState.handleUninstall(id)}
           />
         </div>
+      {:else if router.activeTab === 'traduccion'}
+        <SettingsTranslationTab
+          {t}
+          sourceLanguage={translation.sourceLanguage}
+          targetLanguage={translation.targetLanguage}
+          history={translation.history}
+          isLoading={translation.isLoading}
+          isSaving={translation.isSaving}
+          isClearingHistory={translation.isClearingHistory}
+          error={translation.error}
+          onSourceChange={(v) => (translation.sourceLanguage = v)}
+          onTargetChange={(v) => (translation.targetLanguage = v)}
+          onSave={() =>
+            void translation.save(translation.sourceLanguage, translation.targetLanguage)}
+          onClearHistory={() => void translation.clearHistory()}
+        />
       {:else if router.activeTab === 'almacenamiento'}
         <SettingsStorageTab {t} />
       {:else if router.activeTab === 'sincronizacion'}

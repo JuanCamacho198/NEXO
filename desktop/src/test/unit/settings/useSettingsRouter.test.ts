@@ -25,11 +25,12 @@ describe('useSettingsRouter', () => {
     expect(router.activeTab).toBe('datos');
   });
 
-  it('SETTINGS_TABS has 6 entries', () => {
-    expect(SETTINGS_TABS).toHaveLength(6);
+  it('SETTINGS_TABS has 7 entries', () => {
+    expect(SETTINGS_TABS).toHaveLength(7);
     expect(SETTINGS_TABS).toEqual([
       'cuenta',
       'datos',
+      'traduccion',
       'almacenamiento',
       'sincronizacion',
       'atajos',

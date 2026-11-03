@@ -3,6 +3,7 @@
   import CloudCheck from 'lucide-svelte/icons/cloud-check';
   import Database from 'lucide-svelte/icons/database';
   import Info from 'lucide-svelte/icons/info';
+  import Languages from 'lucide-svelte/icons/languages';
   import User from 'lucide-svelte/icons/user';
   import type { Icon as LucideIcon } from 'lucide-svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
@@ -30,6 +31,12 @@
   const tabs: TabMeta[] = [
     { id: 'cuenta', icon: User, labelKey: 'settings.tab.account', fallback: 'Cuenta' },
     { id: 'datos', icon: Database, labelKey: 'settings.tab.data', fallback: 'Datos' },
+    {
+      id: 'traduccion',
+      icon: Languages,
+      labelKey: 'settings.tab.translation',
+      fallback: 'Traducción',
+    },
     {
       id: 'almacenamiento',
       icon: Database,

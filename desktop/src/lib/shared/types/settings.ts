@@ -111,6 +111,29 @@ export type ReaderSettings = {
 
 export type TranslationKey = string;
 
+/**
+ * Per-account translation language preferences.
+ *
+ * Both sides are `null` by default, which means "infer": the source comes from
+ * the book and the target from the app locale. A `null` here is NOT "unset and
+ * therefore broken" — it is the documented default pair.
+ */
+export type TranslationPreferencesDto = {
+  sourceLanguage: string | null;
+  targetLanguage: string | null;
+  updatedAt: string;
+};
+
+/** One cached translation. This table IS the per-account translation history. */
+export type TranslationCacheEntryDto = {
+  cacheKey: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  originalText: string;
+  translatedText: string;
+  createdAt: string;
+};
+
 // Reader Layout Settings (margins, spacing, header/footer)
 // Deprecated: These fields are now merged directly into ReaderSettings.
 // Kept for backward compat with AppConfigExport.

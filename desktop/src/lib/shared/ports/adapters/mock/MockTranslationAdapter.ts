@@ -1,4 +1,5 @@
 import type { TranslationPort } from '$lib/shared/ports/TranslationPort';
+import type { TranslationCacheEntryDto, TranslationPreferencesDto } from '$lib/shared/types';
 
 /**
  * In-memory translation double for tests.
@@ -32,5 +33,36 @@ export class MockTranslationAdapter implements TranslationPort {
     if (pinned instanceof Error) throw pinned;
     if (typeof pinned === 'string') return pinned;
     return `[${input.targetLang}] ${input.text.trim()}`;
+  }
+
+  // Preferences and history are account-scoped in Rust; the double keeps them
+  // in memory so a test can drive both sides of the pair without a database.
+  #preferences: TranslationPreferencesDto | null = null;
+  #history: TranslationCacheEntryDto[] = [];
+
+  async getPreferences(): Promise<TranslationPreferencesDto | null> {
+    return this.#preferences;
+  }
+
+  async savePreferences(input: {
+    sourceLanguage: string | null;
+    targetLanguage: string | null;
+  }): Promise<TranslationPreferencesDto> {
+    this.#preferences = {
+      sourceLanguage: input.sourceLanguage,
+      targetLanguage: input.targetLanguage,
+      updatedAt: '1970-01-01T00:00:00Z',
+    };
+    return this.#preferences;
+  }
+
+  async listHistory(): Promise<TranslationCacheEntryDto[]> {
+    return [...this.#history];
+  }
+
+  async clearHistory(): Promise<number> {
+    const removed = this.#history.length;
+    this.#history = [];
+    return removed;
   }
 }

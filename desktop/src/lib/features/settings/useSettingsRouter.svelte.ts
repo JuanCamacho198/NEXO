@@ -1,9 +1,10 @@
 export type SettingsTab =
-  'cuenta' | 'datos' | 'almacenamiento' | 'sincronizacion' | 'atajos' | 'acerca';
+  'cuenta' | 'datos' | 'traduccion' | 'almacenamiento' | 'sincronizacion' | 'atajos' | 'acerca';
 
 export const SETTINGS_TABS: SettingsTab[] = [
   'cuenta',
   'datos',
+  'traduccion',
   'almacenamiento',
   'sincronizacion',
   'atajos',

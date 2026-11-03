@@ -11,6 +11,9 @@
  * Source language comes from the book, target language from the UI locale.
  * Picking them is a separate concern; the port only carries them.
  */
+import type { NoTranslationReason } from '$lib/shared/services/translation/translationLanguageResolution';
+import type { TranslationCacheEntryDto, TranslationPreferencesDto } from '$lib/shared/types';
+
 export interface TranslationPort {
   /**
    * Translates `text` from `sourceLang` to `targetLang` (ISO 639-1 codes).
@@ -21,6 +24,24 @@ export interface TranslationPort {
    * unreachable. Callers must show "no translation" rather than the original.
    */
   translate(input: { text: string; sourceLang: string; targetLang: string }): Promise<string>;
+
+  /**
+   * The active account's saved language pair, or `null` when none was ever
+   * saved. The account is resolved in Rust; nothing here is caller-scoped.
+   */
+  getPreferences(): Promise<TranslationPreferencesDto | null>;
+
+  /** Persists the pair for the active account and returns what was stored. */
+  savePreferences(input: {
+    sourceLanguage: string | null;
+    targetLanguage: string | null;
+  }): Promise<TranslationPreferencesDto>;
+
+  /** The account's translation history, newest first. */
+  listHistory(): Promise<TranslationCacheEntryDto[]>;
+
+  /** Forgets every cached translation of the active account. */
+  clearHistory(): Promise<number>;
 }
 
 /**
@@ -31,6 +52,16 @@ export interface TranslationPort {
  * translation (an echo, an HTML entity, untranslatable input); `unavailable`
  * means the request itself failed (offline, quota, HTTP error). Showing the
  * same copy for both would hide a real outage behind a bland "no result".
+ *
+ * `refused` is a third truth and is decided BEFORE any request: the language
+ * pair could not be formed (the book has no language and no source preference
+ * was set, both sides are the same language, a preference is unusable). There
+ * is no service involved, so each reason gets its own copy naming the fix —
+ * previously these all collapsed into `no-result`, which told the reader
+ * nothing and offered no way out.
  */
 export type TranslationOutcome =
-  { status: 'ok'; text: string } | { status: 'no-result' } | { status: 'unavailable' };
+  | { status: 'ok'; text: string }
+  | { status: 'no-result' }
+  | { status: 'unavailable' }
+  | { status: 'refused'; reason: NoTranslationReason };

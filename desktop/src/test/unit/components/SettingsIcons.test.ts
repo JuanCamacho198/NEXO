@@ -28,7 +28,7 @@ function expectShimContract(icon: Element): void {
 }
 
 describe('settings icon migration', () => {
-  it('renders the six settings tabs through direct lucide components', () => {
+  it('renders the seven settings tabs through direct lucide components', () => {
     render(SettingsTabs, {
       activeTab: 'cuenta',
       onTabChange: () => {},
@@ -40,6 +40,7 @@ describe('settings icon migration', () => {
     expect(icons.map(glyphOf)).toEqual([
       'lucide-user',
       'lucide-database',
+      'lucide-languages',
       'lucide-database',
       'lucide-cloud-check',
       'lucide-bookmark',
@@ -60,7 +61,7 @@ describe('settings icon migration', () => {
     });
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(6);
+    expect(tabs).toHaveLength(7);
     for (const tab of tabs) {
       expect(tab.tagName).toBe('BUTTON');
       expect(tab).toHaveClass('text-sm', 'font-medium', 'rounded-none', 'inline-flex');
@@ -72,7 +73,7 @@ describe('settings icon migration', () => {
     expect(selected).toHaveClass('bg-(--color-accent-soft)', 'border-(--color-accent-start)');
 
     const idle = tabs.filter((tab) => tab.getAttribute('aria-selected') === 'false');
-    expect(idle).toHaveLength(5);
+    expect(idle).toHaveLength(6);
     for (const tab of idle) {
       expect(tab).toHaveClass('border-transparent');
     }

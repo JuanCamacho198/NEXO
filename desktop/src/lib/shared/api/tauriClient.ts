@@ -37,6 +37,8 @@ import type {
   ReaderSettings,
   ReaderThemeMode,
   DiagnoseResult,
+  TranslationPreferencesDto,
+  TranslationCacheEntryDto,
 } from '$lib/shared/types';
 import {
   UI_LOCALE_SETTING_KEY,
@@ -1485,6 +1487,63 @@ export const translateSelection = async (payload: {
 }): Promise<string> => {
   try {
     return await invoke<string>('translateSelection', payload);
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+/**
+ * Per-account translation language preferences (T3).
+ *
+ * Both sides are optional: `null` means "infer" — source from the book, target
+ * from the app locale. The pair is resolved by
+ * `resolveLanguagePreferencePair`, which this module only feeds.
+ */
+export const getTranslationPreferences = async (): Promise<TranslationPreferencesDto | null> => {
+  try {
+    return await invoke<TranslationPreferencesDto | null>('getTranslationPreferences');
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+/**
+ * Persists the preference pair for the active account.
+ *
+ * The account is resolved in Rust from `AppState.active_user`, never sent from
+ * here: a caller cannot write another account's preferences. An anonymous
+ * session makes the backend REJECT the write rather than drop it silently.
+ */
+export const saveTranslationPreferences = async (payload: {
+  sourceLanguage: string | null;
+  targetLanguage: string | null;
+}): Promise<TranslationPreferencesDto> => {
+  try {
+    return await invoke<TranslationPreferencesDto>('saveTranslationPreferences', payload);
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+/**
+ * The account's translation history, newest first.
+ *
+ * The history IS the `translation_cache` table — there is no second table, and
+ * a second writer would be a second truth. An anonymous session degrades to an
+ * empty list rather than an error, because an empty history is just the truth.
+ */
+export const listTranslationHistory = async (): Promise<TranslationCacheEntryDto[]> => {
+  try {
+    return await invoke<TranslationCacheEntryDto[]>('listTranslationHistory');
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+/** Forgets every cached translation of the active account. Returns rows deleted. */
+export const clearTranslationHistory = async (): Promise<number> => {
+  try {
+    return await invoke<number>('clearTranslationHistory');
   } catch (error) {
     return attachCommandError(error);
   }
