@@ -20,14 +20,17 @@ import kotlinx.coroutines.flow.map
  *
  * ## The retention caveat
  *
- * The cache is a candidate for a retention sweep (`created_at` is indexed for
- * it). Today NO sweep is wired for `translation_cache` — `deleteOlderThan` is
- * only exercised by tests — so the history is currently unbounded. If a sweep is
- * ever enabled it will also prune the history, which is acceptable for a cache-
- * backed translation log and is why this repository is named for the history but
- * documented as cache-backed rather than pretending otherwise. A user who wants
- * the log gone NOW has [clearHistory], which is the privacy control that
- * actually matters.
+ * The cache is pruned by row count, and that sweep is wired:
+ * `TranslationManager` calls `pruneCache()` after a lookup, and
+ * `RoomTranslationRepository.pruneCache()` keeps only the
+ * `MAX_CACHED_TRANSLATIONS_PER_USER` newest rows for the owner via
+ * `deleteOldestBeyond`. Because the history shares this table, that sweep also
+ * prunes the history, which is acceptable for a cache-backed translation log and
+ * is why this repository is named for the history but documented as cache-backed
+ * rather than pretending otherwise. (An earlier age-based sweep,
+ * `TranslationCacheDao.deleteOlderThan`, was never wired and has been removed —
+ * one retention policy, not two.) A user who wants the log gone NOW has
+ * [clearHistory], which is the privacy control that actually matters.
  *
  * Anonymous accounts have no owner, so the flow is empty and [clearHistory] is a
  * no-op: the same decision D5 rule the rest of the app follows.

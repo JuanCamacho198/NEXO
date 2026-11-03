@@ -31,13 +31,6 @@ interface TranslationCacheDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun put(entry: TranslationCacheEntity)
 
-    /** Retention sweep for one owner: rows older than the cutoff are pruned. */
-    @Query("DELETE FROM translation_cache WHERE user_id = :userId AND `created_at` < :cutoffEpochMillis")
-    suspend fun deleteOlderThan(
-        userId: String,
-        cutoffEpochMillis: Long,
-    ): Int
-
     /**
      * Bounded retention for one owner: keeps the [keep] newest rows and deletes
      * the rest. Used by the row-limit sweep (T4 of

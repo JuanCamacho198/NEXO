@@ -30,17 +30,6 @@ class RoomTranslationRepositoryTest {
             rows["${entry.userId}::${entry.langPair}::${entry.wordNormalized}"] = entry
         }
 
-        override suspend fun deleteOlderThan(
-            userId: String,
-            cutoffEpochMillis: Long,
-        ): Int {
-            val before = rows.size
-            rows.entries.removeAll { (_, row) ->
-                row.userId == userId && row.createdAtEpochMillis < cutoffEpochMillis
-            }
-            return before - rows.size
-        }
-
         override suspend fun deleteOldestBeyond(
             userId: String,
             keep: Int,
