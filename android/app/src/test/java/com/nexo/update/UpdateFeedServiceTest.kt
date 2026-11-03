@@ -24,10 +24,10 @@ import java.net.SocketTimeoutException
 private const val FEED_URL = "https://example.com/latest-android.json"
 
 private const val VALID_FEED_BODY =
-    "{\"version\":\"0.4.1\",\"versionCode\":401," +
-        "\"notes\":\"Mock release notes.\",\"pubDate\":\"2026-09-28T12:00:00Z\"," +
+    "{\"version\":\"0.5.0\",\"versionCode\":500," +
+        "\"notes\":\"Mock release notes.\",\"pubDate\":\"2026-11-02T12:00:00Z\"," +
         "\"channel\":\"stable\",\"assets\":[{\"url\":" +
-        "\"https://github.com/nexo/nexo/releases/download/v0.4.1/nexo-android-v0.4.1.apk\"," +
+        "\"https://github.com/nexo/nexo/releases/download/v0.5.0/nexo-android-v0.5.0.apk\"," +
         "\"abi\":\"universal\",\"size\":12345678}]}"
 
 class UpdateFeedServiceTest {
@@ -53,10 +53,10 @@ class UpdateFeedServiceTest {
 
             assertTrue(result is UpdateFeedFetch.Found)
             val found = result as UpdateFeedFetch.Found
-            assertEquals("0.4.1", found.version)
-            assertEquals(401, found.versionCode)
+            assertEquals("0.5.0", found.version)
+            assertEquals(500, found.versionCode)
             assertEquals("stable", found.channel)
-            assertTrue(found.assetUrl.endsWith("nexo-android-v0.4.1.apk"))
+            assertTrue(found.assetUrl.endsWith("nexo-android-v0.5.0.apk"))
         }
 
     @Test
@@ -82,7 +82,7 @@ class UpdateFeedServiceTest {
     @Test
     fun missingVersionCode_isMalformed(): Unit =
         runBlocking {
-            val body = "{\"version\":\"0.4.1\",\"notes\":\"x\",\"assets\":[{\"url\":\"https://example.com/a.apk\"}]}"
+            val body = "{\"version\":\"0.5.0\",\"notes\":\"x\",\"assets\":[{\"url\":\"https://example.com/a.apk\"}]}"
             val result = service(okEngine(body)).fetch()
 
             assertEquals(UpdateFeedFetch.Failed(UpdateFeedFailure.MALFORMED), result)
@@ -99,7 +99,7 @@ class UpdateFeedServiceTest {
     @Test
     fun emptyAssets_isMalformed(): Unit =
         runBlocking {
-            val body = "{\"version\":\"0.4.1\",\"versionCode\":401,\"assets\":[]}"
+            val body = "{\"version\":\"0.5.0\",\"versionCode\":500,\"assets\":[]}"
             val result = service(okEngine(body)).fetch()
 
             assertEquals(UpdateFeedFetch.Failed(UpdateFeedFailure.MALFORMED), result)

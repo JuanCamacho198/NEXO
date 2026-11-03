@@ -81,7 +81,7 @@ class MyMemoryTranslationClient(
         buildString {
             for (byte in value.toByteArray(Charsets.UTF_8)) {
                 val c = byte.toInt().toChar()
-                if (c.isLetterOrDigit() && c.code < 128 || c in "-._~") {
+                if (c.isLetterOrDigit() && c.code < ASCII_MAX || c in "-._~") {
                     append(c)
                 } else {
                     append('%')
@@ -93,6 +93,9 @@ class MyMemoryTranslationClient(
 
     private companion object {
         const val HEX = "0123456789ABCDEF"
+
+        /** Highest code point of 7-bit ASCII; percent-encoding only escapes above it. */
+        private const val ASCII_MAX = 128
     }
 }
 
