@@ -215,8 +215,30 @@ fn parse_translation(original: &str, body: &str) -> Result<String, TranslateErro
     Ok(translated.trim().to_string())
 }
 
+/// Every `reqwest` failure — DNS, refused connection, timeout, a truncated
+/// body — collapses to `ERR_NETWORK`. The transport is the only layer that can
+/// produce it, and the caller shows one honest "network failed" message
+/// instead of leaking a transport detail the user cannot act on.
+fn map_network_error(stage: &str, e: &reqwest::Error) -> TranslateError {
+    error(ERR_NETWORK, format!("translation {stage} failed: {e}"))
+}
+
 async fn request_translation(
     client: &reqwest::Client,
+    text: &str,
+    source: &str,
+    target: &str,
+) -> Result<String, TranslateError> {
+    request_from(client, TRANSLATE_ENDPOINT, text, source, target).await
+}
+
+/// One request path for the whole feature. The endpoint is a parameter so the
+/// loopback-port test can exercise the real error mapping without reaching the
+/// network; `request_translation` is the only caller in production and it
+/// always passes the hardcoded `TRANSLATE_ENDPOINT`.
+async fn request_from(
+    client: &reqwest::Client,
+    endpoint: &str,
     text: &str,
     source: &str,
     target: &str,
@@ -224,7 +246,7 @@ async fn request_translation(
     if !is_translatable_input(text) {
         return Err(error(ERR_UNTRANSLATABLE_INPUT, "selection is not translatable".to_string()));
     }
-    let url = url::Url::parse(TRANSLATE_ENDPOINT)
+    let url = url::Url::parse(endpoint)
         .map_err(|e| error(ERR_HTTPS_REQUIRED, format!("translate endpoint invalid: {e}")))?;
     if url.scheme() != "https" {
         return Err(error(ERR_HTTPS_REQUIRED, "translate endpoint must be https".to_string()));
@@ -235,7 +257,7 @@ async fn request_translation(
         .query(&[("q", text), ("langpair", langpair.as_str())])
         .send()
         .await
-        .map_err(|e| error(ERR_NETWORK, format!("translation request failed: {e}")))?;
+        .map_err(|e| map_network_error("request", &e))?;
     let status = response.status();
     if !status.is_success() {
         return Err(error(
@@ -243,10 +265,7 @@ async fn request_translation(
             format!("translation service responded {status}"),
         ));
     }
-    let body = response
-        .text()
-        .await
-        .map_err(|e| error(ERR_NETWORK, format!("translation read failed: {e}")))?;
+    let body = response.text().await.map_err(|e| map_network_error("read", &e))?;
     parse_translation(text, &body)
 }
 
@@ -382,6 +401,60 @@ mod translate_guards_tests {
     fn keeps_a_translation_containing_a_bare_ampersand() {
         assert!(is_usable_output("AT&T", "AT&T Corporation"));
         assert!(is_usable_output("Tom & Jerry", "Tom y Jerry"));
+    }
+}
+
+#[cfg(test)]
+mod translate_network_tests {
+    use super::*;
+
+    /// A `reqwest::Error` cannot be constructed by hand, so the only honest
+    /// source is a real transport failure. The scheme must be `https` for the
+    /// request path to reach the transport at all, and port 1 on loopback
+    /// refuses immediately — no DNS, no internet, no timeout wait.
+    const REFUSED_ENDPOINT: &str = "https://127.0.0.1:1/";
+
+    fn refused_connection_error() -> reqwest::Error {
+        tauri::async_runtime::block_on(async {
+            reqwest::Client::new()
+                .get(REFUSED_ENDPOINT)
+                .send()
+                .await
+                .expect_err("loopback port 1 must refuse the connection")
+        })
+    }
+
+    #[test]
+    fn maps_a_transport_failure_to_the_network_code() {
+        let err = map_network_error("request", &refused_connection_error());
+        assert_eq!(err.code, ERR_NETWORK);
+    }
+
+    #[test]
+    fn keeps_the_failing_stage_in_the_message() {
+        let err = map_network_error("read", &refused_connection_error());
+        assert!(
+            err.detail.starts_with("translation read failed:"),
+            "detail lost the stage: {}",
+            err.detail
+        );
+    }
+
+    /// The contract the user-facing message depends on: the request path
+    /// against a closed port must surface `ERR_NETWORK`, never another
+    /// translate code and never a bare transport string.
+    #[test]
+    fn request_from_reports_network_failure_on_a_closed_port() {
+        let client = reqwest::Client::builder().build().expect("test client build");
+        let err = tauri::async_runtime::block_on(request_from(
+            &client,
+            REFUSED_ENDPOINT,
+            "hello",
+            "en",
+            "es",
+        ))
+        .unwrap_err();
+        assert_eq!(err.code, ERR_NETWORK);
     }
 }
 
