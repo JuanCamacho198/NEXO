@@ -4,6 +4,7 @@
 pub mod bookmarks;
 pub mod collections;
 pub mod covers;
+pub mod definition;
 pub mod dictionary;
 pub mod files;
 pub mod highlights;
@@ -29,13 +30,15 @@ use rusqlite::Connection;
 use crate::error::{AppError, AppResult};
 use crate::models::{
     ActivityPoint, AddDictionaryWordInput, AppSettingDto, BookCoverDto, BookDeleteInput, BookDto,
-    BookImportInput, BookmarkDto, CollectionDto, CreateTagInput, DictionaryWordDto, HighlightDto,
-    IndexBookTextInput, LibraryBookDto, NotificationDto, ReadingProgressDto, ReadingSessionInput,
-    ReadingSessionSavedDto, ReadingStatsSummaryDto, RemoteHighlightRow, RemoteReadingSessionRow,
-    SaveBookmarkInput, SaveHighlightInput, SaveHighlightTagsInput, SaveProgressInput,
-    ScanFolderResultDto, SearchBookTextInput, SearchBookTextResponse, TagDto,
-    TranslationCacheEntryDto, TranslationPreferencesDto, UpdateHighlightInput, UpsertRemoteSummary,
+    BookImportInput, BookmarkDto, CollectionDto, CreateTagInput, DefinitionCacheEntryDto,
+    DictionaryWordDto, HighlightDto, IndexBookTextInput, LibraryBookDto, NotificationDto,
+    ReadingProgressDto, ReadingSessionInput, ReadingSessionSavedDto, ReadingStatsSummaryDto,
+    RemoteHighlightRow, RemoteReadingSessionRow, SaveBookmarkInput, SaveHighlightInput,
+    SaveHighlightTagsInput, SaveProgressInput, ScanFolderResultDto, SearchBookTextInput,
+    SearchBookTextResponse, TagDto, TranslationCacheEntryDto, TranslationPreferencesDto,
+    UpdateHighlightInput, UpsertRemoteSummary,
 };
+pub use crate::models::{LibraryDefinitionResult, LibraryDefinitionSource};
 
 const MAX_SETTING_BATCH: usize = 100;
 const MAX_SEARCH_PAGE_SIZE: i64 = 200;
@@ -186,6 +189,18 @@ impl LibraryRepository {
         translation::save_translation_preferences(self, user_id, source_language, target_language)
     }
 
+    /// The language a definition is written in, for one account (D6).
+    ///
+    /// Separate from `save_translation_preferences` because the two are written
+    /// from different controls; see the repository function for the reasoning.
+    pub fn save_definition_language(
+        &self,
+        user_id: &str,
+        definition_language: Option<&str>,
+    ) -> AppResult<TranslationPreferencesDto> {
+        translation::save_definition_language(self, user_id, definition_language)
+    }
+
     // ─── Translation cache / history (T4) ───
     //
     // Every method below short-circuits to "nothing" when `user_id` is empty.
@@ -237,6 +252,53 @@ impl LibraryRepository {
     /// Sweep one account's translation cache back to the documented cap.
     pub fn prune_translation_cache(&self, user_id: &str) -> AppResult<i64> {
         translation::prune_translation_cache(self, user_id, translation::TRANSLATION_CACHE_MAX_ROWS)
+    }
+
+    // ─── Definition cache (D4) ───
+    //
+    // Same option-A contract as the translation cache above, and the same place
+    // it is enforced: `repository::definition::cache_owner`, not here. With an
+    // empty `user_id` every method below is a silent no-op returning "nothing",
+    // so no caller has to remember the rule and none can opt out of it.
+
+    /// The cached definition for one account, or `None` on a miss.
+    ///
+    /// `None` covers both "no active account" and "this account never looked up
+    /// this exact word in this reader language" — the caller treats both as
+    /// "run the cascade".
+    pub fn read_cached_definition(
+        &self,
+        user_id: &str,
+        word: &str,
+        reader_language: &str,
+        word_language: &str,
+    ) -> AppResult<Option<LibraryDefinitionResult>> {
+        definition::read_cached_definition(self, user_id, word, reader_language, word_language)
+    }
+
+    /// Persist one resolved definition result for one account. Returns `false`
+    /// — not an error — when there is no active account, and `false` again when
+    /// the result is empty (see `repository::definition` for why an empty result
+    /// is deliberately never cached).
+    pub fn cache_definition(
+        &self,
+        user_id: &str,
+        word: &str,
+        reader_language: &str,
+        word_language: &str,
+        result: &LibraryDefinitionResult,
+    ) -> AppResult<bool> {
+        definition::cache_definition(self, user_id, word, reader_language, word_language, result)
+    }
+
+    /// The account's definition history, newest first. Empty for an anonymous
+    /// caller, for the same option-A reason.
+    pub fn list_definition_history(
+        &self,
+        user_id: &str,
+        limit: i64,
+    ) -> AppResult<Vec<DefinitionCacheEntryDto>> {
+        definition::list_definition_history(self, user_id, limit)
     }
 
     // ─── Notification history (NOTIF-02) ───
@@ -694,6 +756,12 @@ pub(crate) mod tests {
             .execute_batch(include_str!(
                 "../../migrations/0024_translation_preferences_and_cache.sql"
             ))
+            .unwrap();
+        connection
+            .execute_batch(include_str!("../../migrations/0025_definition_cache.sql"))
+            .unwrap();
+        connection
+            .execute_batch(include_str!("../../migrations/0026_definition_language.sql"))
             .unwrap();
     }
 

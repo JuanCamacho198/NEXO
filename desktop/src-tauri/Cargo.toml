@@ -48,3 +48,9 @@ custom-protocol = ["tauri/custom-protocol"]
 
 [dev-dependencies]
 tempfile = "3.10"
+# The `define` cascade tests drive the production shape — a task awaiting a
+# source that does real I/O — which needs a runtime that is NOT started inside a
+# conventional `#[test]`. `tokio` is the runtime Tauri itself uses, so the test
+# exercises the real thing rather than a stand-in. Test-only: production never
+# names it (it reaches the runtime through `tauri`).
+tokio = { version = "1", features = ["rt", "macros", "net", "time"] }

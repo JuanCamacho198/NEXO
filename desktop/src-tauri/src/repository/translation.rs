@@ -133,22 +133,25 @@ pub fn get_translation_preferences(
         return Ok(None);
     };
 
-    let stored: Option<(Option<String>, Option<String>, String)> = repo
+    let stored = repo
         .connection
         .prepare(
-            "SELECT source_language, target_language, updated_at
+            "SELECT source_language, target_language, definition_language, updated_at
              FROM translation_preferences
              WHERE user_id = ?1
              LIMIT 1",
         )?
-        .query_row(params![owner], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+        .query_row(params![owner], |row| {
+            Ok(TranslationPreferencesDto {
+                source_language: row.get(0)?,
+                target_language: row.get(1)?,
+                definition_language: row.get(2)?,
+                updated_at: row.get(3)?,
+            })
+        })
         .optional()?;
 
-    Ok(stored.map(|(source_language, target_language, updated_at)| TranslationPreferencesDto {
-        source_language,
-        target_language,
-        updated_at,
-    }))
+    Ok(stored)
 }
 
 /// Upsert the pair for one account. `None` on a side is a real value: it
@@ -180,9 +183,82 @@ pub fn save_translation_preferences(
         params![owner, source, target, now],
     )?;
 
+    // The definition language is read back, not assumed: this update does not
+    // touch it (see `save_definition_language` for why the writes are split),
+    // so an account that already chose one must get it back here or the
+    // settings form would drop it on every save of the pair.
+    let definition: Option<String> = repo
+        .connection
+        .query_row(
+            "SELECT definition_language FROM translation_preferences WHERE user_id = ?1 LIMIT 1",
+            params![owner],
+            |row| row.get(0),
+        )
+        .optional()?
+        .flatten();
+
     Ok(TranslationPreferencesDto {
         source_language: source,
         target_language: target,
+        definition_language: definition,
+        updated_at: now,
+    })
+}
+
+/// Persist the language a definition is written in, for one account (D6).
+///
+/// Split from `save_translation_preferences` rather than folded into it because
+/// the two are written from different controls by different gestures: the pair
+/// has one "Guardar" button for both sides, while the definition language is a
+/// single selector that saves the moment it changes. Folded together, changing
+/// one would rewrite the other with whatever the UI happened to hold — a stale
+/// value silently overwriting a fresh one.
+///
+/// It upserts, so it works on an account that has never saved a pair: the row
+/// is created with the pair NULL (infer), which is exactly the default the
+/// reader already had. `None` clears back to "the app locale" — a real value,
+/// not a missing one.
+pub fn save_definition_language(
+    repo: &LibraryRepository,
+    user_id: &str,
+    definition_language: Option<&str>,
+) -> AppResult<TranslationPreferencesDto> {
+    let Some(owner) = cache_owner(user_id) else {
+        return Err(AppError::InvalidInput(
+            "Definition language requires an active account".to_string(),
+        ));
+    };
+
+    let definition = normalize_preference(definition_language, "definitionLanguage")?;
+    let now = Utc::now().to_rfc3339();
+
+    repo.connection.execute(
+        "INSERT INTO translation_preferences
+           (user_id, source_language, target_language, definition_language, updated_at)
+         VALUES (?1, NULL, NULL, ?2, ?3)
+         ON CONFLICT(user_id) DO UPDATE SET
+           definition_language = excluded.definition_language,
+           updated_at = excluded.updated_at",
+        params![owner, definition, now],
+    )?;
+
+    // The pair is read back rather than assumed: the upsert above leaves an
+    // existing row's pair untouched, and answering with `NULL` for a pair the
+    // account had set would be a lie the settings UI would then render.
+    let (source_language, target_language): (Option<String>, Option<String>) =
+        repo.connection.query_row(
+            "SELECT source_language, target_language
+             FROM translation_preferences
+             WHERE user_id = ?1
+             LIMIT 1",
+            params![owner],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+
+    Ok(TranslationPreferencesDto {
+        source_language,
+        target_language,
+        definition_language: definition,
         updated_at: now,
     })
 }
@@ -409,6 +485,117 @@ mod tests {
         let read = get_translation_preferences(&repo, OWNER).unwrap().unwrap();
         assert_eq!(read.source_language.as_deref(), Some("es"));
         assert_eq!(read.target_language.as_deref(), Some("en"));
+    }
+
+    /// D6: a fresh account, or an account that saved a pair before the column
+    /// existed, reads `None` — which the frontend treats as "the app locale",
+    /// exactly the behaviour that predates the column. No backfill is needed
+    /// precisely because `None` is a working value.
+    #[test]
+    fn definition_language_is_absent_until_an_account_picks_one() {
+        let repo = new_repository();
+        save_translation_preferences(&repo, OWNER, Some("es"), Some("en")).unwrap();
+
+        let read = get_translation_preferences(&repo, OWNER).unwrap().unwrap();
+        assert_eq!(read.definition_language, None);
+    }
+
+    /// D6 round trip, including the normalisation the pair already gets: the
+    /// stored code is lowercased, because the cascade builds a wiki hostname
+    /// out of it (`{lang}.wiktionary.org`) and `ES` would be a different host.
+    #[test]
+    fn definition_language_round_trips_and_is_normalised() {
+        let repo = new_repository();
+
+        let saved = save_definition_language(&repo, OWNER, Some("ES")).unwrap();
+        assert_eq!(saved.definition_language.as_deref(), Some("es"));
+
+        let read = get_translation_preferences(&repo, OWNER).unwrap().unwrap();
+        assert_eq!(read.definition_language.as_deref(), Some("es"));
+    }
+
+    /// DECISION under test: writing the definition language must not disturb the
+    /// pair, and writing the pair must not disturb the definition language. Both
+    /// directions are asserted, because either regression would silently reset a
+    /// preference the reader had set from the other control.
+    #[test]
+    fn the_definition_language_and_the_pair_do_not_overwrite_each_other() {
+        let repo = new_repository();
+
+        // Definition first, on an account with no row at all: the row is
+        // created with the pair NULL (infer), which is the documented default.
+        let created = save_definition_language(&repo, OWNER, Some("fr")).unwrap();
+        assert_eq!(created.source_language, None);
+        assert_eq!(created.target_language, None);
+        assert_eq!(created.definition_language.as_deref(), Some("fr"));
+
+        // The pair lands on that same row and keeps the definition language.
+        let pair = save_translation_preferences(&repo, OWNER, Some("es"), Some("en")).unwrap();
+        assert_eq!(pair.definition_language.as_deref(), Some("fr"));
+
+        // ...and the other way round.
+        let changed = save_definition_language(&repo, OWNER, Some("de")).unwrap();
+        assert_eq!(changed.source_language.as_deref(), Some("es"));
+        assert_eq!(changed.target_language.as_deref(), Some("en"));
+        assert_eq!(changed.definition_language.as_deref(), Some("de"));
+
+        // Still one row for the account, not three.
+        let count: i64 = repo
+            .connection
+            .query_row("SELECT COUNT(*) FROM translation_preferences", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    /// `None` is the "use the app locale" value, and it must be storable AFTER
+    /// a language was chosen — otherwise the reader can never go back to the
+    /// default they started on.
+    #[test]
+    fn the_definition_language_can_be_cleared_back_to_the_app_locale() {
+        let repo = new_repository();
+
+        save_definition_language(&repo, OWNER, Some("fr")).unwrap();
+        let cleared = save_definition_language(&repo, OWNER, None).unwrap();
+        assert_eq!(cleared.definition_language, None);
+
+        let read = get_translation_preferences(&repo, OWNER).unwrap().unwrap();
+        assert_eq!(read.definition_language, None);
+    }
+
+    /// A blank or padded value collapses to `None` rather than being written as
+    /// `""`, which would read back as a set-but-unusable preference.
+    #[test]
+    fn a_blank_definition_language_reads_as_infer() {
+        let repo = new_repository();
+
+        let saved = save_definition_language(&repo, OWNER, Some("   ")).unwrap();
+        assert_eq!(saved.definition_language, None);
+    }
+
+    /// The account scoping applies to the new write exactly as it does to the
+    /// pair: without an account the write is refused, not silently dropped.
+    #[test]
+    fn saving_a_definition_language_without_an_account_is_refused() {
+        let repo = new_repository();
+        assert!(save_definition_language(&repo, "", Some("es")).is_err());
+    }
+
+    /// And it is `user_id` that scopes it, not the process: two accounts pick
+    /// different languages and neither sees the other's.
+    #[test]
+    fn the_definition_language_is_scoped_per_account() {
+        let repo = new_repository();
+        save_definition_language(&repo, "user-1", Some("es")).unwrap();
+        save_definition_language(&repo, "user-2", Some("de")).unwrap();
+
+        assert_eq!(
+            get_translation_preferences(&repo, "user-1").unwrap().unwrap().definition_language,
+            Some("es".to_string())
+        );
+        assert_eq!(
+            get_translation_preferences(&repo, "user-2").unwrap().unwrap().definition_language,
+            Some("de".to_string())
+        );
     }
 
     #[test]

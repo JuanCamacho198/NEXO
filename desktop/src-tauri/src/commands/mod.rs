@@ -12,6 +12,7 @@ pub mod addon_registry;
 pub mod bookmarks;
 pub mod catalog_fetch;
 pub mod collections;
+pub mod define;
 pub mod devtools;
 pub mod diagnostics;
 pub mod dictionary;
@@ -34,6 +35,7 @@ pub mod storage;
 pub mod translate;
 pub mod translation;
 pub mod update_feed;
+pub mod wiktionary;
 
 #[allow(unused_imports)]
 pub use addon_consent::*;
@@ -47,6 +49,8 @@ pub use bookmarks::*;
 pub use catalog_fetch::*;
 #[allow(unused_imports)]
 pub use collections::*;
+#[allow(unused_imports)]
+pub use define::*;
 #[allow(unused_imports)]
 pub use devtools::*;
 #[allow(unused_imports)]
@@ -91,6 +95,8 @@ pub use translate::*;
 pub use translation::*;
 #[allow(unused_imports)]
 pub use update_feed::*;
+#[allow(unused_imports)]
+pub use wiktionary::*;
 
 use crate::error::AppError;
 use crate::models::{CommandErrorDto, LibraryBookDto, ListLibraryBooksInput};

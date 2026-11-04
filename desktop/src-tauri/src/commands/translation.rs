@@ -44,6 +44,24 @@ pub fn saveTranslationPreferences(
         .map_err(map_command_error)
 }
 
+/// Persists the definition language for the active account (D6).
+///
+/// Its own command rather than an extra argument on `saveTranslationPreferences`
+/// because it is saved by a different gesture: the pair has one Save button for
+/// both sides, this selector saves on change. See the repository function.
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn saveDefinitionLanguage(
+    state: State<'_, AppState>,
+    definition_language: Option<String>,
+) -> Result<TranslationPreferencesDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let user_id = state.active_user.require_user_id();
+    repository
+        .save_definition_language(&user_id, definition_language.as_deref())
+        .map_err(map_command_error)
+}
+
 /// The account's translation history, newest first.
 ///
 /// This is the cache table itself, not a separate history: there is only one

@@ -599,14 +599,19 @@ pub struct HideBookInput {
     pub book_id: String,
 }
 
-/// Per-account translation language preferences (T3).
+/// Per-account selection-menu language preferences (T3, D6).
 ///
-/// Both sides are optional and mirror the Android model consumed by the
-/// frontend `translationLanguageResolution.ts`: `None` means "infer" —
-/// source from the book, target from the app locale. The pair lives in its own
-/// table rather than two `app_settings` keys so it cannot desynchronise, and
-/// because `validate_setting` rejects the nested object that would be needed to
-/// keep it atomic there.
+/// The sides are optional and mirror the Android model consumed by the
+/// frontend `translationLanguageResolution.ts`: `None` means "infer" — source
+/// from the book, target from the app locale. The pair lives in its own table
+/// rather than two `app_settings` keys so it cannot desynchronise, and because
+/// `validate_setting` rejects the nested object that would be needed to keep it
+/// atomic there.
+///
+/// `definition_language` (D6) rides the SAME row rather than a second table:
+/// it is per-account, singular, and read on the same event as the pair — the
+/// selection menu. A second table would be a second place for the
+/// account-scoping rule to be forgotten.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TranslationPreferencesDto {
@@ -616,6 +621,11 @@ pub struct TranslationPreferencesDto {
     /// ISO 639-1 code, or `None` to use the app locale.
     #[serde(default)]
     pub target_language: Option<String>,
+    /// ISO 639-1 code the "Definir" result is written in, or `None` to use the
+    /// app locale. This is the `readerLang` the frontend sends to
+    /// `defineSelection`; before D6 that value was always the app locale.
+    #[serde(default)]
+    pub definition_language: Option<String>,
     /// RFC 3339 write timestamp; empty when no preference has ever been saved.
     #[serde(default)]
     pub updated_at: String,
@@ -633,6 +643,93 @@ pub struct TranslationCacheEntryDto {
     pub target_language: String,
     pub original_text: String,
     pub translated_text: String,
+    /// RFC 3339.
+    pub created_at: String,
+}
+
+/// One definition line, in the shape the reader renders it (D4).
+///
+/// This mirrors `commands::define::DefinitionItem` and is the STORED shape: the
+/// cache serialises a `Vec` of these to JSON in `definition_cache.definitions`.
+/// It is a separate type from the command's DTO because the repository must not
+/// depend on a command module — the command maps between the two, which is the
+/// same boundary `translate.rs` keeps with MyMemory.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DefinitionItemDto {
+    pub text: String,
+    #[serde(default)]
+    pub part_of_speech: Option<String>,
+}
+
+/// Where a cached definition came from, persisted with it (D4).
+///
+/// The value is stored as the SAME lowercase string the frontend receives
+/// (`native` / `translated`), so the wire format and the storage format cannot
+/// drift apart. It is kept as a small enum rather than a bare `String` because
+/// the distinction is meaningful to the reader — a machine-translated gloss is
+/// flagged in the UI — and an unknown value from a hand-edited row must not be
+/// silently presented as native. `from_stored` maps anything unrecognised to
+/// `Unknown`, which the UI can only render as "we do not know".
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LibraryDefinitionSource {
+    Native,
+    Translated,
+    /// A stored value this build does not recognise. Never written; it exists so
+    /// an unreadable row degrades to "unknown" instead of claiming `native`.
+    #[serde(other)]
+    Unknown,
+}
+
+impl LibraryDefinitionSource {
+    /// The exact string stored in `definition_cache.source`.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Native => "native",
+            Self::Translated => "translated",
+            Self::Unknown => "",
+        }
+    }
+
+    /// Parse a stored value. An empty or unrecognised string is `Unknown`, never
+    /// a guess.
+    pub fn from_stored(value: &str) -> Self {
+        match value {
+            "native" => Self::Native,
+            "translated" => Self::Translated,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+/// A resolved definition result as the repository persists and returns it (D4).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryDefinitionResult {
+    pub word: String,
+    pub definitions: Vec<DefinitionItemDto>,
+    /// `None` is the honest "every source missed" — the empty result. It is a
+    /// legitimate value to BUILD but one the cache refuses to store.
+    #[serde(default)]
+    pub source: Option<LibraryDefinitionSource>,
+    /// CC BY-SA attribution. Stored rather than re-derived, because the license
+    /// requires it to accompany the text.
+    #[serde(default)]
+    pub attribution: String,
+}
+
+/// One cached definition, which is also the per-account definition history (D4).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DefinitionCacheEntryDto {
+    /// SHA-256 of the canonical `owner|reader|wordLanguage|word` key, hex.
+    pub cache_key: String,
+    pub word: String,
+    pub word_language: String,
+    pub reader_language: String,
+    /// The stored `source` string, verbatim.
+    pub source: String,
     /// RFC 3339.
     pub created_at: String,
 }

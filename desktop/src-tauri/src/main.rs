@@ -297,8 +297,10 @@ fn main() {
             commands::fetchUpdateFeed,
             commands::fetchCatalogFeed,
             commands::translateSelection,
+            commands::defineSelection,
             commands::getTranslationPreferences,
             commands::saveTranslationPreferences,
+            commands::saveDefinitionLanguage,
             commands::listTranslationHistory,
             commands::setActiveUser,
             commands::clearActiveUser

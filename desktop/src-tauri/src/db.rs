@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 
-const MIGRATIONS: [(&str, &str); 24] = [
+const MIGRATIONS: [(&str, &str); 26] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
@@ -45,6 +45,8 @@ const MIGRATIONS: [(&str, &str); 24] = [
         "0024_translation_preferences_and_cache",
         include_str!("../migrations/0024_translation_preferences_and_cache.sql"),
     ),
+    ("0025_definition_cache", include_str!("../migrations/0025_definition_cache.sql")),
+    ("0026_definition_language", include_str!("../migrations/0026_definition_language.sql")),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {

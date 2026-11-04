@@ -148,7 +148,7 @@ const ERR_NO_TRANSLATION: &str = "TRANSLATE_NO_TRANSLATION";
 const ERR_BAD_RESPONSE: &str = "TRANSLATE_BAD_RESPONSE";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct TranslateError {
+pub(crate) struct TranslateError {
     code: String,
     detail: String,
 }
@@ -187,7 +187,7 @@ struct MyMemoryData {
     match_confidence: Option<f64>,
 }
 
-fn translate_client() -> reqwest::Client {
+pub(crate) fn translate_client() -> reqwest::Client {
     static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
     CLIENT
         .get_or_init(|| {
@@ -249,7 +249,7 @@ fn map_network_error(stage: &str, e: &reqwest::Error) -> TranslateError {
     error(ERR_NETWORK, format!("translation {stage} failed: {e}"))
 }
 
-async fn request_translation(
+pub(crate) async fn request_translation(
     client: &reqwest::Client,
     text: &str,
     source: &str,
