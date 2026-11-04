@@ -156,6 +156,189 @@ export async function selectTextInChapter(
   return text;
 }
 
+/**
+ * Selects a run at the END of the widest line in the chapter's visible band, so
+ * the selection's right edge is as close to the right border as the chapter
+ * allows.
+ *
+ * ## Why {@link selectTextInChapter} is not enough
+ *
+ * That helper selects the FIRST on-screen text node, which is the start of a
+ * paragraph — measured on *Don Quijote*, that puts the selection's right edge
+ * around 40% of the window width, where the toolbar is nowhere near an edge and
+ * a broken clamp still lands inside the viewport. `readerSelection.spec.ts`
+ * carries a containment assertion that passed BEFORE the clamp was fixed for
+ * exactly this reason: it was measuring the easy case. This helper exists so the
+ * assertion has something to fail on.
+ *
+ * ## Why the candidate must be visible on BOTH axes
+ *
+ * The reader lays a chapter out as horizontal PAGES: measured on *Don Quijote*,
+ * `documentElement.scrollWidth` is 40 622px while the frame's `innerWidth` is
+ * 1 069, so the columns sit at x = 32, 1101, 2170 … and everything past the
+ * first column is off screen. {@link chapterVisibleBand} constrains the VERTICAL
+ * axis only (that is the axis the toolbar's flip cares about), so a candidate
+ * chosen on "largest right" without a horizontal test lands in a column tens of
+ * thousands of pixels away — measured: a selection with `lineRight` 40 584
+ * against a 1 149px window, i.e. an off-screen anchor whose toolbar placement
+ * says nothing about the edge this helper exists to probe. Hence the horizontal
+ * test below.
+ *
+ * ## How the line is chosen
+ *
+ * The chapter's paragraphs are laid out as normal text, so a `Range` per text
+ * node gives each node's client rects — one per wrapped line. The rect with the
+ * largest `right` among the VISIBLE nodes is the right-most line end on screen,
+ * and the selection is made over the last few characters of that node. The
+ * frame's own `Selection` is used, as everywhere in this harness: a Range cannot
+ * span two documents, and the parent reports nothing about a child frame's
+ * selection.
+ *
+ * Returns null when nothing in the band has a line to select, which is the
+ * honest "this chapter cannot pose the question" answer — the caller skips on it
+ * rather than asserting against easy geometry.
+ */
+export async function selectTextAtRightEdge(
+  frame: Frame,
+  options: { chars?: number } = {},
+): Promise<{ text: string; lineRight: number; reach: number } | null> {
+  const band = await chapterVisibleBand(frame);
+  if (!band) return null;
+  const chars = options.chars ?? 6;
+
+  const result = await frame.evaluate(
+    ([charCount, visible]) => {
+      const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE']);
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          let el: Node | null = node.parentElement;
+          while (el) {
+            if (SKIP.has(el.nodeName)) return NodeFilter.FILTER_REJECT;
+            el = el.parentElement;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
+
+      const frameEl = (globalThis as unknown as { frameElement: Element | null }).frameElement;
+      const frameRect = frameEl?.getBoundingClientRect() ?? { left: 0, top: 0 };
+      const viewportWidth = (globalThis as unknown as { parent: Window }).parent.innerWidth;
+      // The frame's own box is the widget the reader sees, so a node is on
+      // screen only when it falls inside BOTH of its axes. `innerWidth` is not
+      // the bound for the horizontal test: the document is 40 622px wide and
+      // `innerWidth` reports only the visible column.
+      const visibleLeft = -frameRect.left;
+      const visibleRight = visibleLeft + window.innerWidth;
+
+      // The right-most line end among every VISIBLE text node, with the node that
+      // owns it. `selectNodeContents` yields one rect per wrapped line, so this
+      // measures the actual layout rather than guessing from character counts.
+      let best: { node: Text; right: number; top: number; bottom: number } | null = null;
+
+      let node = walker.nextNode();
+      while (node) {
+        const value = node.nodeValue ?? '';
+        const nodeRect = (node as Text).parentElement?.getBoundingClientRect();
+        const onScreen =
+          nodeRect &&
+          nodeRect.top >= visible.top &&
+          nodeRect.bottom <= visible.bottom &&
+          nodeRect.left >= visibleLeft &&
+          nodeRect.right <= visibleRight;
+        if (onScreen && value.trim().length >= charCount + 2) {
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          const rects = Array.from(range.getClientRects()).filter((r) => r.width > 1);
+          const last = rects.reduce<(DOMRect | null)>(
+            (acc, r) => (acc === null || r.right > acc.right ? r : acc),
+            null,
+          );
+          if (last && (best === null || last.right > best.right)) {
+            best = { node: node as Text, right: last.right, top: last.top, bottom: last.bottom };
+          }
+        }
+        node = walker.nextNode();
+      }
+
+      if (!best) return null;
+
+      // The END characters of the right-most LINE, not of the node's string.
+      //
+      // Those are different, and conflating them is what made an earlier version
+      // of this helper report a `lineRight` of 1 037 while the run it had actually
+      // selected sat at window x 72–154: the paragraph is many wrapped lines, so
+      // `data.slice(-6)` is the end of the paragraph, while the rect belongs to
+      // the widest line. The run is located by walking the node's characters from
+      // the end until one lands on that line, which needs no assumption about
+      // word boundaries or line length.
+      const data = best.node.nodeValue ?? '';
+
+      /** A one-character Range carries its own rect, so a character's line is
+       * the vertical span of its rect. */
+      const rectAt = (index: number): DOMRect | null => {
+        const probe = document.createRange();
+        probe.setStart(best!.node, index);
+        probe.setEnd(best!.node, Math.min(data.length, index + 1));
+        const rect = probe.getBoundingClientRect();
+        return rect.width === 0 && rect.height === 0 ? null : rect;
+      };
+
+      // The target line's vertical span, from the rect this node was chosen by.
+      const lineTop = best.top;
+      const lineBottom = best.bottom;
+
+      let end = -1;
+      for (let i = data.length - 1; i >= 0; i--) {
+        const rect = rectAt(i);
+        if (!rect) continue;
+        // On the target line: the spans overlap rather than merely touching.
+        if (rect.top < lineBottom - 1 && rect.bottom > lineTop + 1) {
+          end = i + 1;
+          break;
+        }
+      }
+      if (end < 0) return null;
+
+      // Walk back to the start of the word, or `charCount` characters.
+      let start = end - 1;
+      let taken = 1;
+      while (start > 0 && taken < charCount && !/\s/.test(data[start - 1])) {
+        start -= 1;
+        taken += 1;
+      }
+      if (start >= end) start = Math.max(0, end - 1);
+
+      const range = document.createRange();
+      range.setStart(best.node, start);
+      range.setEnd(best.node, end);
+
+      const selection = document.getSelection();
+      if (!selection) return null;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      // The run's OWN right edge, measured from the range that was just created —
+      // not the line's. The containment assertion is about where the selection
+      // put the toolbar, so the number the spec gates on has to be the run.
+      const runRect = range.getBoundingClientRect();
+      const lineRight = frameRect.left + runRect.right;
+
+      return { text: range.toString(), lineRight, reach: viewportWidth - lineRight };
+    },
+    [chars, band] as const,
+  );
+
+  if (!result) return null;
+
+  // The gesture the chapter's script waits for, exactly as `selectTextInChapter`
+  // dispatches it: it debounces `mouseup` before posting `epub-selection`.
+  await frame.evaluate(() => {
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+  });
+
+  return result;
+}
+
 /** The frame's own current selection text (the parent cannot see it). */
 export async function readFrameSelection(frame: Frame): Promise<string> {
   return frame.evaluate(() => (document.getSelection()?.toString() ?? '').trim()).catch(() => '');

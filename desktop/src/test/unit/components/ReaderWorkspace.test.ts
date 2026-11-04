@@ -95,8 +95,19 @@ describe('ReaderWorkspace', () => {
     await fireEvent.click(screen.getByTestId('mock-pdfviewer-select'));
     const toolbar = document.querySelector('.selection-toolbar');
     expect(toolbar).toBeTruthy();
-    expect(toolbar?.getAttribute('style')).toContain('left: 116px');
-    expect(toolbar?.getAttribute('style')).toContain('top: 296px');
+    // The mock emits bounds (20,40)-(180,80) inside a container at (100,200).
+    // In WINDOW space the selection spans (120,240)-(280,280): center 200, so
+    // the 380px menu would span 10..390 — inside the 16px edge padding on the
+    // left, so the clamp pins it to 16. The toolbar is `position: fixed`, so
+    // these are window coordinates, not container ones.
+    //
+    // Y goes ABOVE the anchor: with no result panel open the placement reserves
+    // the row alone — the MEASURED 46px pill — plus 8px of offset, so the box
+    // starts at 240 - 46 - 8 = 186. The panel's 120px is reserved only while a
+    // panel is on screen; budgeting it unconditionally is what parked the menu
+    // ~130px above the word with nothing open.
+    expect(toolbar?.getAttribute('style')).toContain('left: 16px');
+    expect(toolbar?.getAttribute('style')).toContain('top: 186px');
   });
   it('windowed root fits its parent box instead of the viewport (U1.1)', () => {
     const { container } = render(ReaderWorkspace, {

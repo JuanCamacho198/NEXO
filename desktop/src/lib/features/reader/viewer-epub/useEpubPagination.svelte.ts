@@ -204,6 +204,36 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    */
   let claimedPage = 0;
   /**
+   * The page box a resize moved AWAY from, or 0 when no resize is outstanding.
+   *
+   * A resize is not always observed by `refresh()` alone. The render pipeline
+   * also re-measures on `lastRenderedChapter`, and a re-render that lands in the
+   * same window as a resize calls `restoreAfterRerender()` — which clears
+   * `lastKey`, the flag `refresh()` uses to tell a first measure from a resize.
+   * The resize was then re-derived as a FIRST measure, its page re-read from an
+   * offset that belongs to the OLD box, and the reader thrown back to page 1.
+   *
+   * Measured on the real app: widening after a narrow left `currentPage` at 1
+   * before the snap could run, because `publishCount` derived it from the 780px
+   * offset (780) against the new 1200px box. Keeping the intent in its own field
+   * — rather than inferring it from `lastKey` — is what makes the resize survive
+   * a re-render arriving alongside it.
+   */
+  let pendingResize = false;
+  /**
+   * True from the moment a resize is seen until the page has been snapped onto
+   * the new grid. Broader than `pendingResize`, which `refresh()` consumes and
+   * clears on its own first line: a reflow of the page box also makes the browser
+   * CLAMP `scrollLeft` to the new extent, and that clamp fires a scroll event.
+   * The scroll listener treats any on-grid offset as a user position and adopts
+   * it — measured on the widen leg: the clamp landed on 0, which is on the new
+   * grid, so the reader was moved to page 1 by a scroll they did not perform, and
+   * the snap then restored page 1 in good faith. This stays true across the frames
+   * the snap runs on, so the scroll listener leaves the offset alone until the
+   * real position is written.
+   */
+  let resizeSettling = false;
+  /**
    * When this chapter's layout last changed, on `performance.now()`'s clock: a
    * document swap, an entry, or a column count that moved. The turn gate reads
    * the age of it to decide whether a one-column reading is a layout that has not
@@ -348,14 +378,33 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     const stylesKey = deps.getStylesKey?.() ?? `volatile:${++volatileStylesKey}`;
     const boxChanged = key !== lastKey;
     const stylesChanged = lastWrittenStylesKey === null || stylesKey !== lastWrittenStylesKey;
+    // A box that moved on an ALREADY-LAID-OUT chapter is a resize (a window
+    // drag, a fullscreen toggle). It is not the first measure of a chapter, and
+    // it is the case the reader's page has to survive: the old offset is a whole
+    // number of OLD page boxes and means nothing on the new grid. `enter()` and
+    // `restoreAfterRerender()` clear `lastKey` first, so they read as first
+    // measures rather than as resizes — that is the whole reason `first` exists.
+    // A resize is either one THIS call saw move the box, or one a re-render
+    // reported while it was in flight (`pendingResize`). Both mean the reader's
+    // page has to be re-derived onto the new grid, so they are folded into one
+    // signal here rather than inferred from `lastKey` alone.
+    let resize = pendingResize;
+    pendingResize = false;
     if (boxChanged) {
       const first = lastKey === '';
       lastKey = key;
       pageBox = box;
       deps.setPageBox(box);
+      // The page the reader is READING, captured BEFORE the count is republished:
+      // a page they turned to outranks one navigation merely holds, which is the
+      // same precedence `restoreAfterRerender` uses.
+      if (!first) resize = true;
+      // A resize keeps the reader's page out of the scroll listener's reach until
+      // the offset has been written for the new grid. See `resizeSettling`.
+      if (resize) resizeSettling = true;
       // Reading the extent before the box is published would measure the
       // PREVIOUS chapter's layout: `column-width` is read from the box.
-      publishCount(box.width);
+      publishCount(box.width, resize);
       logger.debug(
         'epub-pagination: page box changed',
         {
@@ -368,51 +417,153 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
         'reader',
       );
     }
-    // A box change alone does not reflow the text into different columns (the
-    // injected `column-width` follows the box through the restyle), so the
-    // restyle is gated on the settings/zoom key and on the first write only.
-    if (stylesChanged) {
+    // A RESIZE is a styles reason in its own right: the injected `column-width`
+    // is read from the page box, so a moved box means the stylesheet has to be
+    // rewritten or the chapter keeps the PREVIOUS page width and every column
+    // after the first is the wrong size. A caller whose styles key does not
+    // include the box (or provides none) therefore still gets the restyle.
+    if (stylesChanged || resize) {
       lastWrittenStylesKey = stylesKey;
       deps.refreshReaderStyles();
-      publishCount(box.width);
-      scheduleCommitRecount();
+      // While a resize is settling the page must NOT be re-derived from the
+      // offset: it still belongs to the previous page box, and re-reading it here
+      // against the new width is what answered page 1 for a reader on page 2.
+      // Measured: after the box change this second `refresh` ran with
+      // `boxChanged: false` and a styles key that had moved, so it took THIS
+      // branch — and `publishCount` derived `pageFromScrollLeft(780, 1200, …)`.
+      publishCount(box.width, resize || resizeSettling);
+      scheduleCommitRecount(resize);
       return;
     }
     if (!boxChanged) recount();
   }
 
   /**
-   * Derive the count from the live extent and, on a box change, place the page
-   * from the offset.
+   * Derive the count from the live extent, and place the page.
    *
-   * That placement is the one exception to "a recount never touches the page":
-   * it runs on the box change that follows entering the mode or a window resize,
-   * where the offset IS the reader's position, and it keeps a page turn from
-   * being re-derived on every layout tick (see `recount`).
+   * Without a resize the page is derived from the container's offset, which is
+   * the reader's live position — the exception to "a recount never touches the
+   * page", kept so a layout tick cannot re-derive a page a turn just set (see
+   * `recount`).
+   *
+   * On a RESIZE that derivation is exactly the wrong answer, and it is the
+   * reported defect: the offset is still a whole number of the PREVIOUS page
+   * boxes, so measuring it against the new width lands the reader a fraction
+   * through a new page. So a resize KEEPS the logical page it is given and does
+   * not re-derive — `snapPageOntoResizedGrid` re-derives it later, against the
+   * grid the new `column-width` actually laid out.
    */
-  function publishCount(width: number): void {
+  function publishCount(width: number, keepPage = false): void {
     const el = scroller();
     if (!el || width <= 0) return;
     const count = derivePageCount(el.scrollWidth, width);
     if (count !== pageCount) markLayoutChange();
     pageCount = count;
     lastContentWidth = el.scrollWidth;
-    currentPage = pageFromScrollLeft(el.scrollLeft, width, count);
+    if (!keepPage) currentPage = pageFromScrollLeft(el.scrollLeft, width, count);
+    if (currentPage > count && count > 0) currentPage = count;
+    if (currentPage < 1) currentPage = 1;
   }
 
   /**
-   * Ask for one re-read of the count once the layout committed.
+   * Ask for one re-read of the count once the layout committed, and — after a
+   * resize — snap the reader onto the NEW page grid.
    *
-   * Only a restyle needs this: without a write the synchronous read already sees
-   * the committed layout. The re-read is what catches a column layout the
-   * browser had not committed when the synchronous read ran (see `refresh`).
-   * Coalesced by key, so a zoom burst that passes through several stops within
-   * one frame costs a single re-read rather than one per stop.
+   * Only a restyle needs the re-read: without a write the synchronous read
+   * already sees the committed layout. The re-read is what catches a column
+   * layout the browser had not committed when the synchronous read ran (see
+   * `refresh`). Coalesced by key, so a zoom burst that passes through several
+   * stops within one frame costs a single re-read rather than one per stop.
    */
-  function scheduleCommitRecount(): void {
+  function scheduleCommitRecount(resize = false): void {
     scheduler.coalesce('commit-recount', () => {
-      if (deps.isPaginated() && recount()) deps.emitPreciseLocation();
+      if (!deps.isPaginated()) return;
+      if (resize) {
+        snapPageOntoResizedGrid();
+        return;
+      }
+      if (recount()) deps.emitPreciseLocation();
     });
+  }
+
+  /**
+   * Put the reader back on a whole page after the page box changed size.
+   *
+   * ## Why this runs on the commit frame and not synchronously
+   *
+   * A resize is a TWO-part change: the box moves, and the injected
+   * `column-width` has to be rewritten to follow it. The stylesheet write is
+   * applied to computed style synchronously, but the COLUMN layout it implies is
+   * not always committed by the next statement (measured on a 100% -> 75% zoom:
+   * the synchronous read returned 41070 and the same root read 42180 one frame
+   * later). Snapping against the uncommitted layout would compute the page index
+   * from a column set that is about to be replaced — the same class of error as
+   * reading the PREVIOUS chapter's extent. So the snap waits for the frame where
+   * the new grid exists.
+   *
+   * ## Why the reader keeps their PAGE NUMBER and not their offset
+   *
+   * `scrollLeft` is a whole number of page boxes, and the box changed size, so
+   * the old offset names a different (usually fractional) position. The reader's
+   * INTENT is "I am on page N of this chapter", so N is what survives and the
+   * offset is recomputed for the new box. Preserving the offset instead is what
+   * left the reader a fraction through a page — the "se corta el texto" symptom,
+   * where the text is clipped at both edges because the viewport is showing the
+   * join between two columns.
+   *
+   * The page is re-derived from the LIVE extent, so a resize that makes the
+   * chapter shorter clamps onto the new last page rather than past its end.
+   *
+   * ## Why it participates in the turn's re-assertion
+   *
+   * The offset has MORE than one writer: the CFI/fragment restore scrolls to a
+   * stored position on up to three nested animation frames, and a re-render
+   * restore can land a second later. `turnReassert` exists because a plain
+   * assignment loses that race (measured: a turn to page 6 moved to 11100, five
+   * pages past its target). A resize is the same race — its assignment can be
+   * overtaken by the same restore writers — so it claims through the same
+   * mechanism and is re-asserted over the same frames. `turnReassert.claim` bump
+   * the generation, so the newest claim (a turn OR a resize) wins and every
+   * older chain drops out.
+   */
+  function snapPageOntoResizedGrid(): void {
+    const el = scroller();
+    const box = pageBox;
+    if (!el || !box || box.width <= 0) return;
+    const count = derivePageCount(el.scrollWidth, box.width);
+    pageCount = count;
+    lastContentWidth = el.scrollWidth;
+    // This is a reflow, so the settle window restarts: a press that arrives while
+    // the new column set is still arriving must wait for it, exactly as after a
+    // chapter render (see `createTurnGate`).
+    markLayoutChange();
+    // The page the reader is on, clamped into the new count: widening a window
+    // fits more prose per column, so a deep page can fall past the new end.
+    const wanted = Math.min(Math.max(currentPage, 1), Math.max(count, 1));
+    const target = scrollLeftForPage(wanted, box.width, count);
+    el.scrollLeft = target;
+    // Snapping against the live client box upholds the same acceptance criterion
+    // a turn does: `scrollLeft % clientWidth === 0` after the layout settles.
+    el.scrollLeft = snapToGrid(el.scrollLeft, el.clientWidth || box.width);
+    currentPage = pageFromScrollLeft(el.scrollLeft, box.width, count);
+    // A resize is a claim on the page the reader is on, exactly as a turn is.
+    // The reader asked to keep reading this page; a restore that lands afterwards
+    // must not move them off it.
+    claimedPage = currentPage;
+    turnReassert.claim(el.scrollLeft, (claimed) => {
+      if (!deps.isPaginated()) return;
+      const live = scroller();
+      if (live && live.scrollLeft !== claimed) {
+        live.scrollLeft = claimed;
+        currentPage = pageFromScrollLeft(live.scrollLeft, pageBox?.width ?? 0, pageCount);
+      }
+    });
+    // The offset for the new grid is written and the reader's page is settled, so
+    // the scroll listener may adopt user positions again. Done LAST, after the
+    // assignment above: clearing it earlier would let the browser's own clamp
+    // event through in the window between the write and the next frame.
+    resizeSettling = false;
+    deps.emitPreciseLocation();
   }
 
   /** Enter paginated mode: pin the height, measure, observe, restyle. */
@@ -450,22 +601,49 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     // from the metadata), so a re-render is also a chance to learn how many
     // documents this chapter still has.
     syncLaterDocuments();
-    const box = pageBox;
     const el = scroller();
     // A page the reader chose wins over wherever a restore wants to put them.
-    const wanted = claimedPage > 0 ? claimedPage : currentPage;
+    // Written into `currentPage` (rather than kept as a local) because `refresh`
+    // below re-reads it: the new chapter document starts at offset 0, and the page
+    // index is what has to survive the swap.
+    currentPage = claimedPage > 0 ? claimedPage : currentPage;
+    // A re-render that arrives while the page box has MOVED is a resize wearing a
+    // re-render's clothes — the render pipeline re-measures on
+    // `lastRenderedChapter`, and that measure lands in the same window as the
+    // viewport change. `lastKey` is cleared below (the new document takes the
+    // injected `<style>` with it), so `refresh` would read this as a FIRST measure
+    // and re-derive the page from an offset belonging to the previous box. The
+    // intent is handed over explicitly instead, so the page survives. See
+    // `pendingResize`.
+    const liveBox = measurePageBox(deps.getContainerEl());
+    if (pageBox && pageBoxKey(liveBox) !== pageBoxKey(pageBox)) pendingResize = true;
+    // The pre-write is against the OLD box and the OLD count, and it exists only
+    // so the reader is not left at the new document's offset 0 for the frame
+    // between the swap and the restyle. It must NOT clamp against `pageCount`
+    // when that count is stale and SMALLER than the page being restored: a resize
+    // that arrives together with a re-render measured here as `pageCount` 1 while
+    // the reader was on page 2, and `scrollLeftForPage(2, 1200, 1)` collapsed the
+    // offset to 0 — the reader was thrown to the chapter's front by a re-render
+    // they never asked for. `Math.max(pageCount, currentPage)` keeps the target
+    // page, and the count is corrected below from the live layout.
+    if (!pendingResize && el && pageBox) {
+      const provisional = Math.max(pageCount, currentPage);
+      el.scrollLeft = scrollLeftForPage(currentPage, pageBox.width, provisional);
+    }
     lastKey = '';
     lastContentWidth = 0;
     // A re-render replaces the chapter document, taking its injected `<style>`
     // with it, so the well-known "already written" state is gone even when no
     // setting moved.
     lastWrittenStylesKey = null;
-    if (el && box) el.scrollLeft = scrollLeftForPage(wanted, box.width, pageCount || wanted);
     refresh();
     // Re-apply now that the count is known: the clamp depends on the new count.
+    // A pending resize owns the offset instead — the snap below recomputes it
+    // against the committed new grid, which is strictly more correct than a
+    // restore against a count that is about to change.
     const after = scroller();
-    if (after && pageBox && wanted > 1) {
-      after.scrollLeft = scrollLeftForPage(wanted, pageBox.width, pageCount);
+    if (!pendingResize && after && pageBox && currentPage > 1) {
+      after.scrollLeft = scrollLeftForPage(currentPage, pageBox.width, pageCount);
       currentPage = pageFromScrollLeft(after.scrollLeft, pageBox.width, pageCount);
     }
   }
@@ -483,6 +661,8 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     pageCount = 0;
     currentPage = 1;
     claimedPage = 0;
+    pendingResize = false;
+    resizeSettling = false;
     deps.onHeightModeChange(false);
     deps.refreshReaderStyles();
   }
@@ -505,6 +685,10 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     lastWrittenStylesKey = null;
     syncLaterDocuments();
     currentPage = 1;
+    // A chapter change supersedes any resize that was in flight: the page it was
+    // going to preserve belongs to the chapter that is now gone.
+    pendingResize = false;
+    resizeSettling = false;
     // A new chapter clears the claim: the reader has not turned a page here yet,
     // so the CFI/fragment restore that places them within this chapter is free
     // to land wherever the book says.
@@ -653,6 +837,14 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     const container = scroller();
     const box = pageBox;
     if (!container || !box || pageCount <= 0) return;
+    // A resize in flight owns the offset. Changing the page box makes the browser
+    // CLAMP `scrollLeft` to the new extent, which fires a scroll event carrying an
+    // offset the reader never chose — measured on the widen leg: the clamp landed
+    // on 0, which IS on the new grid, so this function adopted it as page 1 and
+    // wrote `claimedPage = 1` before the resize could re-assert the reader's page.
+    // The snap that follows then faithfully restored page 1. Ignoring scroll events
+    // until that snap has run is what keeps the reader's page their own.
+    if (resizeSettling) return;
     const live = container.clientWidth || box.width;
     if (live <= 0 || !isOnGrid(container.scrollLeft, live)) return;
     currentPage = pageFromScrollLeft(container.scrollLeft, box.width, pageCount);

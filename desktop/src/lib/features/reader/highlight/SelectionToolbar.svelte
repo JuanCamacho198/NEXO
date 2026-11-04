@@ -5,7 +5,15 @@
   import { HIGHLIGHT_COLORS } from '$lib/features/reader/highlight/highlightColors';
   import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
   import type { TranslationOutcome } from '$lib/shared/ports/TranslationPort';
+  import type { DefinitionResult } from '$lib/shared/ports/DictionaryLookupPort';
   import type { NoTranslationReason } from '$lib/shared/services/translation/translationLanguageResolution';
+  import { isDefinableSelection } from '$lib/shared/services/definition/definitionSelectionGuard';
+  import {
+    PANEL_HEIGHT_FACTOR,
+    floatingMenuAvailableWidth,
+    placeFloatingMenu,
+    resolveFloatingMenuLayout,
+  } from '$lib/shared/services/placement/floatingMenuPlacement';
 
   /**
    * One message per refusal reason. Each names the fix rather than the failure:
@@ -45,9 +53,24 @@
     selectionBounds: { left: number; top: number; right: number; bottom: number };
     containerRect: { left: number; top: number; width: number; height: number };
     selectionData: SelectionData | null;
+    /**
+     * The window the toolbar is placed in. Optional because every production
+     * caller is already inside one; it is a prop so tests can place the toolbar
+     * at a width the JSOM window cannot be moved to.
+     *
+     * It is NOT read as `window.innerWidth` inside the placement `$derived`,
+     * and that is not a style preference. A `$derived` that touches the ambient
+     * `window` is evaluated once and cached for the lifetime of the MODULE, so
+     * the second mount in a test process silently re-uses the first mount's
+     * width — measured: unmounting and re-rendering at 116px still produced the
+     * `full` layout decided at 1024px. Taking the viewport as a value keeps the
+     * decision inside the instance, where a re-render re-evaluates it.
+     */
+    viewport?: { width: number; height: number };
     onCopy: () => void;
     onAddToDictionary: (data: SelectionData) => Promise<DictionaryCaptureFeedback>;
     onTranslate: (data: SelectionData) => Promise<TranslationOutcome>;
+    onDefine: (data: SelectionData) => Promise<DefinitionResult>;
     onColorSelect: (color: string, data: SelectionData) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
@@ -56,12 +79,53 @@
     selectionBounds,
     containerRect,
     selectionData,
+    viewport = undefined,
     onCopy,
     onAddToDictionary,
     onTranslate,
+    onDefine,
     onColorSelect,
     t,
   }: Props = $props();
+
+  /**
+   * The window the toolbar is placed in.
+   *
+   * TWO sources on purpose, and the second is not a convenience:
+   *
+   *   - `viewport` (the prop) is what a test supplies so it can place the
+   *     toolbar at a width it cannot move a real window to.
+   *   - `liveViewport` is what a PERSON gets. It is a `$state` fed by a `resize`
+   *     listener, because a default value on a prop is evaluated ONCE, when the
+   *     component is constructed — so a toolbar opened before a resize (or, on
+   *     the desktop app, before the window reaches its final size) would keep
+   *     deciding its layout against the width that existed at mount. Measured
+   *     over CDP: the row stayed in the wrapped layout at a 1400px viewport
+   *     because it had been constructed while the window was 298px wide.
+   *
+   * Reading `window.innerWidth` directly inside the placement `$derived` is the
+   * third option and the wrong one: such a `$derived` is evaluated once and
+   * cached for the module's lifetime, so the second mount in a test process
+   * silently re-uses the first mount's width.
+   */
+  let liveViewport = $state({
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    height: typeof window !== 'undefined' ? window.innerHeight : 0,
+  });
+
+  $effect(() => {
+    if (typeof window === 'undefined') return;
+    const onResize = (): void => {
+      liveViewport = { width: window.innerWidth, height: window.innerHeight };
+    };
+    // The effect can run before the first `resize` arrives (the window may
+    // already have been resized between mount and here), so read once up front.
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  });
+
+  const resolvedViewport = $derived(viewport ?? liveViewport);
 
   let selectedColor = $state(HIGHLIGHT_COLORS[0].hex);
   let copyFeedback = $state<string | null>(null);
@@ -72,11 +136,129 @@
   let translating = $state(false);
   const translationActive = $derived(translation !== null ? 'bg-white/10' : '');
 
-  const TOOLBAR_HEIGHT_ESTIMATE = 56;
-  const TOOLBAR_WIDTH_ESTIMATE = 260;
-  const TOOLBAR_EDGE_PADDING = 16;
-  const TOOLBAR_OFFSET = 16;
+  /**
+   * The custom-color popover, shown only in the `collapsed` layout.
+   *
+   * The compaction the reveal is part of: one the palette is folded into a
+   * single swatch, this is where a custom color is still reachable. It is
+   * rendered inline rather than through `ColorPickerPopover`, because that
+   * component is anchored by reading its anchor element's rect on every render.
+   * Chaining two measured popovers is the tolerated case, not the rule.
+   */
+  let pickerOpen = $state(false);
+  let pickerAnchor = $state<HTMLButtonElement | null>(null);
 
+  /**
+   * The definition panel's state. `definition` is the last resolved result and
+   * `definitionFailed` is a separate flag because a MISS and a FAILURE are
+   * different truths: a miss is the sources answering "nothing", a failure is
+   * the request never completing. Rendering the same copy for both would hide
+   * an outage behind a bland "no definition".
+   */
+  let definition = $state<DefinitionResult | null>(null);
+  let defining = $state(false);
+  let definitionFailed = $state(false);
+  const definitionActive = $derived(definition !== null || definitionFailed ? 'bg-white/10' : '');
+
+  /**
+   * The C+A limit, as a `$derived` over the SAME text the button would send.
+   * It reads `selectionData.text` (not the `selectedText` prop) because
+   * `selectionData` is what `handleDefine` forwards — deriving from a different
+   * string than the one sent is how a button ends up enabled for something the
+   * handler then refuses.
+   */
+  const canDefine = $derived(isDefinableSelection(selectionData?.text));
+
+  /**
+   * The pill row's height, MEASURED against the live app over CDP.
+   *
+   * A 28px button plus the row's own `py-2` (8px top and bottom) and its 1px
+   * border both sides is 46px, which is what `getBoundingClientRect().height`
+   * reports for the rendered `[role="toolbar"]`.
+   *
+   * The previous value was 56 — ten pixels of phantom height, which the
+   * placement turns directly into ten pixels the menu floats ABOVE the word. It
+   * is also the above/below flip point, where a few pixels of error only moves
+   * where the flip happens; here it is the distance from the selection, which is
+   * the thing the reader notices.
+   */
+  const TOOLBAR_HEIGHT_ESTIMATE = 46;
+  /**
+   * The toolbar's placement width, fixed rather than measured.
+   *
+   * The pill is a row of colors and icon buttons at a known size, so its width
+   * is predictable — and a PREDICTED width is the point: measuring the real
+   * element would force a place-then-correct cycle, and the correction lands on
+   * the second frame as a visible jump.
+   *
+   * MEASURED against the live app over CDP, not estimated. The previous value
+   * (260) was 118px short of reality, which is why the clamp let the pill run
+   * past the right edge: it believed a 378px row fit in a 260px box. The
+   * breakdown, measured the same way:
+   *
+   *   color group  (5 x 24px + 4 x 12px gap) = 168px
+   *   separator                              =   4px
+   *   actions group (4 x 34px + 3 x 4px gap) = 148px
+   *   pill padding (px-4, both sides)        =  32px
+   *   border (1px, both sides)               =   2px
+   *                                             378px
+   *
+   * The height estimate is only used for the above/below flip, where a few
+   * pixels of error just moves the flip point; the width is what the clamp
+   * depends on, so it is the one that has to be right.
+   */
+  const TOOLBAR_MAX_WIDTH = 380;
+  /**
+   * The same pill with the five color circles folded into one trigger.
+   *
+   * Measured the same way: the 168px color group becomes a single 28px swatch,
+   * so 380 - 168 + 28 = 240. The extra pixel over the measured 238 is the same
+   * safety margin `TOOLBAR_MAX_WIDTH` carries, so a slightly bolder font or a
+   * wider scrollbar cannot tip the row into overflow between the decision and
+   * the paint.
+   */
+  const TOOLBAR_COLLAPSED_WIDTH = 240;
+
+  const TOOLBAR_EDGE_PADDING = 16;
+  /**
+   * The gap between the menu and the selected line.
+   *
+   * Small on purpose: the menu belongs to the word it was raised on, and a
+   * larger gap reads as the toolbar floating away from the text. This is 8px —
+   * a nudge, not a fix. The fix for "the menu appears far above the word" is the
+   * honest height the placement now reserves (see `placementMenuSize`); this
+   * constant only sets how tightly the menu is tucked in once it is in the right
+   * place.
+   */
+  const TOOLBAR_OFFSET = 8;
+
+  /**
+   * The collapsed palette popover's width, and a predicted one for the same
+   * reason the pill's widths are predicted: measuring would mean placing it,
+   * reading it back and moving it, which is a visible jump on open.
+   *
+   * MEASURED against the live app over CDP: five 24px swatches with 8px gaps and
+   * 8px padding both sides is 168px of content; the constant carries the 8px of
+   * slack the pill's own widths carry, so a bolder swatch or a scrollbar cannot
+   * tip it over the edge between the decision and the paint.
+   */
+  const PICKER_ESTIMATED_WIDTH = 176;
+
+  /**
+   * Keeps the palette popover inside the viewport, the same way
+   * `placeFloatingMenu` keeps the toolbar inside it — the LEFT edge is pinned to
+   * the padding when there is no room rather than allowed to go negative.
+   *
+   * Extracted and exported for the unit test: this is the arithmetic the bug was
+   * made of, and jsdom can exercise it with numbers even though it cannot lay
+   * anything out.
+   */
+  function clampPickerLeft(left: number, width: number, viewportWidth: number): number {
+    return Math.max(
+      TOOLBAR_EDGE_PADDING,
+      Math.min(left, viewportWidth - width - TOOLBAR_EDGE_PADDING),
+    );
+  }
   // One localized message per capture outcome (REQ-DRE-014). `error` reuses the
   // app's generic failure copy: the reader has no capture-specific error the
   // user can act on, and inventing one would add a key no requirement names.
@@ -89,25 +271,264 @@
     error: 'error.somethingWrong',
   };
 
-  const selectionCenterX = $derived((selectionBounds.left + selectionBounds.right) / 2);
-  const viewerAnchorX = $derived(
-    Math.max(
-      TOOLBAR_EDGE_PADDING + TOOLBAR_WIDTH_ESTIMATE / 2,
-      Math.min(
-        selectionCenterX,
-        containerRect.width - TOOLBAR_EDGE_PADDING - TOOLBAR_WIDTH_ESTIMATE / 2,
-      ),
-    ),
-  );
-  const viewerToolbarX = $derived(Math.max(0, viewerAnchorX - TOOLBAR_WIDTH_ESTIMATE / 2));
-  const viewerToolbarY = $derived(
-    selectionBounds.top > TOOLBAR_HEIGHT_ESTIMATE + TOOLBAR_OFFSET
-      ? selectionBounds.top - TOOLBAR_HEIGHT_ESTIMATE - TOOLBAR_OFFSET
-      : selectionBounds.bottom + TOOLBAR_OFFSET,
+  // The selection's box, translated from container space into the window space
+  // the fixed-position toolbar actually lives in. The container (the EPUB
+  // iframe) carries its own offset, so the selection is shifted by it BEFORE
+  // placement: clamping a container-relative X against the window is how the
+  // toolbar used to end up past the window's right border.
+  const selectionWindowBounds = $derived({
+    left: containerRect.left + selectionBounds.left,
+    right: containerRect.left + selectionBounds.right,
+    top: containerRect.top + selectionBounds.top,
+    bottom: containerRect.top + selectionBounds.bottom,
+  });
+
+  /**
+   * The room the toolbar has, in the SAME band the placement clamp works in.
+   *
+   * Derived from one source (`floatingMenuAvailableWidth`) so a layout can never
+   * be chosen for a band the clamp does not agree exists — a menu told it "fits"
+   * against the full viewport width and then clamped to a narrower one is the
+   * layout and the position disagreeing.
+   */
+  const toolbarAvailableWidth = $derived(
+    floatingMenuAvailableWidth(resolvedViewport, { edgePadding: TOOLBAR_EDGE_PADDING }),
   );
 
-  const toolbarX = $derived(containerRect.left + viewerToolbarX);
-  const toolbarY = $derived(containerRect.top + viewerToolbarY);
+  /**
+   * Which of the three layouts the toolbar renders in.
+   *
+   * In a normal window this is always `full` and the toolbar is byte-for-byte
+   * what it was. The narrower rungs only engage once the selection sits close
+   * enough to an edge that the natural row would not fit.
+   */
+  const toolbarLayout = $derived(
+    resolveFloatingMenuLayout(
+      { naturalWidth: TOOLBAR_MAX_WIDTH, availableWidth: toolbarAvailableWidth },
+      { collapsedWidth: TOOLBAR_COLLAPSED_WIDTH },
+    ),
+  );
+
+  /** The palette folds away on BOTH narrow rungs: once the row has to wrap, the
+   * five circles are the first thing that has to give, and leaving them in place
+   * would wrap a row that the collapse rung had already made fit. */
+  const toolbarCollapsed = $derived(toolbarLayout !== 'full');
+  const toolbarWrapped = $derived(toolbarLayout === 'wrapped');
+
+  /**
+   * The width floor for the WRAPPED row, as a class.
+   *
+   * `min-w-37` is 148px in Tailwind v4's 4px spacing scale: the four actions the
+   * toolbar always keeps, measured at 148px. Wrapping already bought one line
+   * break, so letting the four 34px buttons break there too laid them out as a
+   * ragged 2D block and collapsed the row's WIDTH to whatever the longest label
+   * happened to be — measured: a 140px window rendered a 41px-wide pill, a
+   * sliver none of the buttons fit in. Clamping the wrapped row HERE keeps a
+   * genuinely too-narrow window overflowing (which the placement then pins, and
+   * which is honest) instead of silently shrinking the menu into something no
+   * one can use.
+   */
+  const actionsRowMinWidthClass = $derived(toolbarWrapped ? 'min-w-37' : '');
+
+  /**
+   * Where the collapsed palette's popover is placed, in VIEWPORT coordinates,
+   * from the real element the trigger occupies.
+   *
+   * This one DOES read the DOM, and deliberately: the popover is opened by a
+   * click, so the geometry exists and is settled before anything needs to be
+   * positioned. There is no first frame to be wrong on — unlike the toolbar,
+   * which is placed while its own render is still in flight, and where the same
+   * measurement would be the visible jump the placement module exists to avoid.
+   *
+   * ## Why `fixed` and not `absolute`
+   *
+   * `getBoundingClientRect()` is measured from the VIEWPORT, so these numbers are
+   * only meaningful against a `fixed` element. The popover used to be `absolute`,
+   * which resolves `top` against its nearest positioned ancestor — the
+   * `class="group relative"` wrapper around the trigger, itself inside the pill.
+   * Adding a viewport coordinate to a container-relative origin puts the popover
+   * a container offset too low. MEASURED over CDP on the real app in `collapsed`,
+   * on a 300x720 window:
+   *
+   *     popover  y 149..191   (view `top: 92.5px` + the group's own ~56px offset)
+   *     pill     y  48..94
+   *     toolbar  y  57..103, `overflow: hidden`
+   *     elementFromPoint at the popover's centre: the chapter `iframe`
+   *
+   * — i.e. the popover exists in the DOM, sits past the box that clips it, and is
+   * painted NOWHERE. The button appeared to do nothing.
+   *
+   * `fixed` is the same coordinate space the measurement is in, so no offset is
+   * computed and none can be wrong. It is also what the sibling
+   * `ColorPickerPopover.svelte` does with exactly these two numbers, which is the
+   * existing precedent in this area.
+   *
+   * The horizontal side is measured too: the palette is up to five swatches wide
+   * (168px + padding), and pinning it to the trigger's left edge would run it off
+   * the right border in the narrow window that produced the `collapsed` layout in
+   * the first place. `clampPickerLeft` keeps it inside the viewport instead,
+   * mirroring how the toolbar itself is clamped.
+   */
+  const pickerRect = $derived(pickerAnchor?.getBoundingClientRect() ?? null);
+  const pickerTop = $derived(pickerRect ? pickerRect.bottom + TOOLBAR_EDGE_PADDING / 2 : 0);
+  const pickerLeft = $derived(
+    clampPickerLeft(pickerRect?.left ?? 0, PICKER_ESTIMATED_WIDTH, resolvedViewport.width),
+  );
+
+  /**
+   * How much height the placement reserves for what hangs BELOW the pill: the
+   * definition and translation panels, on top of the row itself.
+   *
+   * Without this the placement only knew about a 56px row, so in a short window
+   * it chose `below` — there was room for the row — and the panel that followed
+   * pushed the box past the bottom edge. The panels are siblings, not children,
+   * so they are invisible to the placement unless they are budgeted here.
+   *
+   * Two different reserves on purpose. The ordinary case adds TRANSLATION room:
+   * one to a few lines, which is what `handleTranslate` produces. The full
+   * definition panel is a list of glosses and much taller, so the rolled-up
+   * layout — already the crowded case — is given more. Measuring either is not
+   * an option: the panel is data-dependent and a measured one is the
+   * place-then-correct jump this whole module exists to avoid.
+   */
+  const PLACEMENT_PANEL_BUDGET = 120;
+  const PLACEMENT_PANEL_BUDGET_COLLAPSED = PANEL_HEIGHT_FACTOR * TOOLBAR_HEIGHT_ESTIMATE;
+
+  /**
+   * Whether a result panel is on screen RIGHT NOW.
+   *
+   * The panel budget is reserved only while one is: `translation` / `definition`
+   * are data-dependent and normally null, so budgeting them unconditionally made
+   * the placement believe the menu was ~176px tall when it renders one 46px row.
+   * The menu was then drawn that phantom height above the word — MEASURED over
+   * CDP at a 1200x779 window: the anchor's top at y 241.5 put the rendered menu
+   * at y 49.5, a 146px gap between the menu's bottom edge and the selected word.
+   * That is the reported "the menu appears way up top, far from the word".
+   *
+   * This is the same `{#if}` the two panels render under, so "budgeted" and
+   * "rendered" cannot disagree.
+   */
+  const resultPanelOpen = $derived(
+    Boolean(
+      copyFeedback ||
+      dictionaryFeedback ||
+      translating ||
+      translation ||
+      defining ||
+      definition ||
+      definitionFailed,
+    ),
+  );
+
+  const placementMenuSize = $derived({
+    width: toolbarCollapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_MAX_WIDTH,
+    height:
+      (toolbarWrapped ? TOOLBAR_HEIGHT_ESTIMATE * 2 : TOOLBAR_HEIGHT_ESTIMATE) +
+      (resultPanelOpen
+        ? toolbarCollapsed
+          ? PLACEMENT_PANEL_BUDGET_COLLAPSED
+          : PLACEMENT_PANEL_BUDGET
+        : 0),
+  });
+
+  /**
+   * The height the box is actually RENDERED at, when it is shorter than what the
+   * placement reserved.
+   *
+   * `placementMenuSize.height` is the box that has to be RESERVED — the row plus,
+   * while one is open, a result panel. This is the box the browser paints, which
+   * is the same number whenever a panel is open and only the row when none is.
+   * The two agree by construction now that `placementMenuSize` stops reserving a
+   * panel that is not there, so the clamp has nothing to correct in the ordinary
+   * case.
+   *
+   * The `max-h` cap below is `placementMenuSize.height`, the same number, so what
+   * is clamped here and what the browser is allowed to paint cannot disagree —
+   * which is what makes "the toolbar has no height budget at all, so it cannot be
+   * off screen vertically" a property rather than a hope. It is also the only
+   * correct answer in a very short window, where the budget exceeds the window
+   * (768 + 120 against a 298px one): `max-height: 100%` resolves against the
+   * positioning containing block, so the box stops at the viewport and the rows
+   * wrap inside it.
+   */
+  const placementRenderedHeight = $derived(placementMenuSize.height);
+
+  /** The same budget the placement reserved, as the cap the box is painted
+   * under. `100%` is the floor so a window shorter than the budget still gets a
+   * box inside the viewport instead of one taller than it. */
+  const toolbarMaxHeight = $derived(`max(100%, ${placementMenuSize.height}px)`);
+
+  /**
+   * The result panel's width, as a number rather than a `max-w-80` class.
+   *
+   * The panel is a sibling of the placement-visible menu, not part of it, so a
+   * 320px `max-w-80` would sit under a 160px collapsed pill and measure
+   * differently from what was placed. Deriving it from `placementMenuSize`
+   * instead means the panel is exactly as wide as the menu the placement math
+   * believes it is rendering, and the panel's own left edge — `toolbarX`, which
+   * only looks at `selectionWindowBounds` and `placementMenuSize` — is the math
+   * that runs this frame.
+   *
+   * The VIEWPORT is a second bound, and it is what keeps a 320px panel from
+   * widening past the window in a 298px one: the pill wraps and stays usable at
+   * any width, but the panel is content, so it has to be given a width it can
+   * actually be laid out at. `placementMenuSize.width` is NOT relaxed with it:
+   * the placement math and the rendered pill have to keep agreeing about the
+   * menu's own width.
+   *
+   * Leaving `selectionWindowBounds` out of the dependents is deliberate: a
+   * panel that re-positioned itself when the reader adjusts the selection would
+   * move out from under the text they are reading.
+   */
+  const definitionPanelWidth = $derived(
+    Math.max(140, Math.min(320, placementMenuSize.width, toolbarAvailableWidth)),
+  );
+
+  const toolbarPlacement = $derived(
+    placeFloatingMenu(selectionWindowBounds, placementMenuSize, resolvedViewport, {
+      edgePadding: TOOLBAR_EDGE_PADDING,
+      offset: TOOLBAR_OFFSET,
+      renderedHeight: placementRenderedHeight,
+    }),
+  );
+
+  const toolbarX = $derived(toolbarPlacement.x);
+  const toolbarY = $derived(toolbarPlacement.y);
+
+  /**
+   * The panel's height ceiling, in pixels.
+   *
+   * A result panel is bounded by the ROOM IN THE WINDOW, not by a fixed
+   * `max-h-80` guess: below the pill there is whatever is left of the screen, so
+   * a 320px ceiling is a third of a page in a tall window and taller than the
+   * whole window in a short one. Two numbers per layout, because the pill is a
+   * different height in each:
+   *
+   *   - `above` — the pill sits below the panel, so the panel has the pill's own
+   *     top edge to spend. `max(120, …)` keeps it usable when the anchor is near
+   *     the top edge and there is almost nothing to give it.
+   *   - `below` — the panel starts under the pill, so it has the window minus the
+   *     pill's bottom edge.
+   *
+   * `overflow-y-auto` on the panel turns the bound into scrolling rather than a
+   * clipped definition.
+   */
+  const resultPanelMaxHeight = $derived(
+    toolbarPlacement.placement === 'above'
+      ? Math.max(120, toolbarY)
+      : Math.max(120, resolvedViewport.height - (toolbarY + placementMenuSize.height)),
+  );
+
+  /** Tailwind v4 folds `flex` + `hidden` at the same breakpoint into one static
+   * class list, so the two branches below are spelled out per branch.
+   * `actionsRowMinWidthClass` is folded in for the same reason it exists: the
+   * wrapped row keeps a usable width instead of collapsing to its longest
+   * label. */
+  const actionsRowClass = $derived(
+    toolbarWrapped
+      ? `flex flex-wrap items-center justify-center gap-3 rounded-3xl border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) px-4 py-2 shadow-xl ${actionsRowMinWidthClass}`
+      : 'flex items-center gap-3 rounded-full border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) px-4 py-2 shadow-xl',
+  );
 
   function selectColor(hex: string): void {
     selectedColor = hex;
@@ -117,6 +538,17 @@
     if (selectionData) {
       onColorSelect(hex, selectionData);
     }
+  }
+
+  /** The collapsed palette's trigger: it opens the palette, it does not write. */
+  function togglePicker(): void {
+    pickerOpen = !pickerOpen;
+  }
+
+  /** The popover's swatches apply a color through the same path as the full row. */
+  function selectFromPicker(hex: string): void {
+    selectColor(hex);
+    pickerOpen = false;
   }
 
   function handleCopy(): void {
@@ -165,40 +597,122 @@
       translating = false;
     }
   }
+
+  /**
+   * Define toggles a result panel, mirroring `handleTranslate`. The limit is
+   * enforced by the button's `disabled`, and re-checked here because a keyboard
+   * activation and a click on a stale render both reach this function — the
+   * guard is cheap and the request is not.
+   *
+   * A rejection sets `definitionFailed` and leaves `definition` untouched, so
+   * "could not reach the dictionary" never renders as "no definition".
+   */
+  async function handleDefine(): Promise<void> {
+    if (definition || definitionFailed) {
+      definition = null;
+      definitionFailed = false;
+      return;
+    }
+    if (!selectionData || !canDefine) return;
+
+    defining = true;
+    try {
+      definition = await onDefine(selectionData);
+    } catch {
+      definitionFailed = true;
+    } finally {
+      defining = false;
+    }
+  }
+
+  function closeDefinition(): void {
+    definition = null;
+    definitionFailed = false;
+  }
 </script>
 
 <div
-  class="selection-toolbar fixed z-50"
-  style="left: {toolbarX}px; top: {toolbarY}px;"
+  class="selection-toolbar fixed z-50 flex flex-col overflow-hidden"
+  style="left: {toolbarX}px; top: {toolbarY}px; max-height: {toolbarMaxHeight};"
   role="presentation"
   in:scale={{ duration: 140, start: 0.92, easing: cubicOut }}
   out:scale={{ duration: 100, start: 0.95, easing: cubicOut }}
   onmouseup={(e) => e.stopPropagation()}
 >
-  <!-- Tip arrow pointing to selection -->
-  <div
-    class="mx-auto h-2.5 w-5"
-    style="clip-path: polygon(50% 100%, 0 0, 100% 0); background: var(--color-highlight-menu-bg);"
-  ></div>
-
-  <!-- Main toolbar -->
-  <div
-    class="flex items-center gap-3 rounded-full border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) px-4 py-2 shadow-xl"
-    role="toolbar"
-    aria-label={t('highlight.menuAriaLabel')}
-  >
-    <!-- Color circles -->
-    {#each HIGHLIGHT_COLORS as color}
-      <button
-        type="button"
-        class="h-6 w-6 cursor-pointer rounded-full transition-transform hover:scale-110"
-        class:ring-2={selectedColor === color.hex}
-        class:ring-white={selectedColor === color.hex}
-        style="background-color: {color.hex};"
-        onclick={() => selectColor(color.hex)}
-        aria-label={t('highlight.selectColor', { color: t(color.i18nKey) })}
-      ></button>
-    {/each}
+  <!-- Main toolbar. `actionsRowClass` carries the wrap rung of the layout
+       cascade: in a normal window this renders the same single-line pill it
+       always has, and the row only breaks once the viewport leaves it no
+       choice. -->
+  <div class={actionsRowClass} role="toolbar" aria-label={t('highlight.menuAriaLabel')}>
+    <!-- Color row. Expanded (five circles) is the default; collapsed is one
+         swatch that opens the palette, which is the same trade the highlight
+         context menu makes with its multicolor `+` trigger. Both branches
+         render every color, so a narrow window loses screen space, not actions.
+         `key` is the HIGHLIGHT_COLORS index — the palette is a constant and is
+         not reordered, so the index identifies an entry as well as its hex. -->
+    {#if !toolbarCollapsed}
+      <div class="flex items-center gap-3">
+        {#each HIGHLIGHT_COLORS as color, index (index)}
+          <button
+            type="button"
+            class="h-6 w-6 cursor-pointer rounded-full transition-transform hover:scale-110"
+            class:ring-2={selectedColor === color.hex}
+            class:ring-white={selectedColor === color.hex}
+            style="background-color: {color.hex};"
+            onclick={() => selectColor(color.hex)}
+            aria-label={t('highlight.selectColor', { color: t(color.i18nKey) })}
+          ></button>
+        {/each}
+      </div>
+    {:else}
+      <div class="group relative">
+        <button
+          type="button"
+          bind:this={pickerAnchor}
+          class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full shadow-inner ring-2 ring-(--color-text-inverse) transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
+          style="background-image: linear-gradient(135deg, var(--color-error) 0%, var(--color-success) 50%, var(--color-accent-start) 100%);"
+          onclick={togglePicker}
+          aria-label={t('highlight.changeColor')}
+          aria-expanded={pickerOpen}
+          title={t('highlight.changeColor')}
+        >
+          <svg
+            class="h-3 w-3 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
+            viewBox="0 0 7 7"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M3 4l-3 0 0-1 3 0 0-3 1 0 0 3 3 0 0 1-3 0 0 3-1 0 0-3 0 0" />
+          </svg>
+        </button>
+        <span
+          class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+          role="tooltip"
+        >
+          {t('highlight.changeColor')}
+        </span>
+        {#if pickerOpen}
+          <div
+            class="fixed z-[60] flex items-center gap-2 rounded-full border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) p-2 shadow-xl"
+            style="left: {pickerLeft}px; top: {pickerTop}px;"
+            role="group"
+            aria-label={t('highlight.menuAriaLabel')}
+          >
+            {#each HIGHLIGHT_COLORS as color, index (index)}
+              <button
+                type="button"
+                class="h-6 w-6 cursor-pointer rounded-full transition-transform hover:scale-110"
+                class:ring-2={selectedColor === color.hex}
+                class:ring-white={selectedColor === color.hex}
+                style="background-color: {color.hex};"
+                onclick={() => selectFromPicker(color.hex)}
+                aria-label={t('highlight.selectColor', { color: t(color.i18nKey) })}
+              ></button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/if}
 
     <!-- Separator -->
     <span class="text-base font-normal text-(--color-text-auxiliary)">|</span>
@@ -303,16 +817,54 @@
         {t('reader.translate')}
       </span>
     </div>
+
+    <!-- Define. Disabled — not hidden — outside the C+A limit: a vanished button
+         reads as a broken toolbar, a disabled one shows the action exists and
+         the tooltip explains when it applies. -->
+    <div class="group relative">
+      <button
+        type="button"
+        class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky) disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent {definitionActive}"
+        onclick={handleDefine}
+        disabled={defining || !canDefine}
+        aria-label={t('reader.define')}
+        title={t('reader.define')}
+      >
+        <svg
+          class="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          <path d="M9 7h6"></path>
+          <path d="M9 11h6"></path>
+        </svg>
+      </button>
+      <span
+        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+        role="tooltip"
+      >
+        {t('reader.define')}
+      </span>
+    </div>
   </div>
 
-  <!-- Action feedback (copy / dictionary) -->
+  <!-- Action feedback (copy / dictionary). The panel spans the pill it belongs
+       to, which is the fixed placement width in both layouts. -->
   {#if copyFeedback || dictionaryFeedback}
     <div
-      class="mt-2 rounded-lg bg-(--color-highlight-menu-bg) px-3 py-1 text-center text-xs text-(--color-text-inverse) shadow-lg"
+      class="mt-2 overflow-hidden rounded-lg bg-(--color-highlight-menu-bg) text-center text-xs text-(--color-text-inverse) shadow-lg"
+      style="width: {placementMenuSize.width}px; max-height: {resultPanelMaxHeight}px;"
       role="status"
       aria-live="polite"
     >
-      {copyFeedback ?? dictionaryFeedback}
+      <p class="px-3 py-1">{copyFeedback ?? dictionaryFeedback}</p>
     </div>
   {/if}
 
@@ -321,7 +873,8 @@
        is the service answering, the other is the service failing. -->
   {#if translating || translation}
     <div
-      class="mt-2 max-w-80 rounded-lg bg-(--color-highlight-menu-bg) px-3 py-2 text-(--color-text-inverse) shadow-lg"
+      class="mt-2 overflow-y-auto rounded-lg bg-(--color-highlight-menu-bg) px-3 py-2 text-(--color-text-inverse) shadow-lg"
+      style="width: {definitionPanelWidth}px; max-height: {resultPanelMaxHeight}px;"
       role="status"
       aria-live="polite"
     >
@@ -348,6 +901,85 @@
         <p class="text-xs text-(--color-text-auxiliary)">
           {t(TRANSLATION_REFUSAL_KEYS[translation.reason])}
         </p>
+      {/if}
+    </div>
+  {/if}
+
+  <!-- Definition result. The attribution is rendered on EVERY branch including
+       the empty one: the backend deliberately carries it on a miss too, because
+       the CC BY-SA license requires it accompany the reused text and the UI
+       cannot be trusted to reconstruct it. -->
+  {#if defining || definition || definitionFailed}
+    <div
+      class="mt-2 overflow-y-auto rounded-lg bg-(--color-highlight-menu-bg) px-3 py-2 text-(--color-text-inverse) shadow-lg"
+      style="width: {definitionPanelWidth}px; max-height: {resultPanelMaxHeight}px;"
+      role="status"
+      aria-live="polite"
+    >
+      {#if defining}
+        <p class="text-xs text-(--color-text-auxiliary)">{t('reader.defining')}</p>
+      {:else if definitionFailed}
+        <div class="flex items-start gap-2">
+          <p class="min-w-0 grow text-xs text-(--color-text-auxiliary)">
+            {t('reader.definitionUnavailable')}
+          </p>
+          <button
+            type="button"
+            class="shrink-0 cursor-pointer rounded text-xs text-(--color-text-auxiliary) hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
+            onclick={closeDefinition}
+            aria-label={t('reader.dismissDefinition')}
+            title={t('reader.dismissDefinition')}
+          >
+            ✕
+          </button>
+        </div>
+      {:else if definition}
+        <div class="flex items-start gap-2">
+          <div class="min-w-0 grow">
+            {#if definition.definitions.length === 0}
+              <p class="text-xs text-(--color-text-auxiliary)">
+                {t('reader.definitionNoResult')}
+              </p>
+            {:else}
+              <!-- The machine-translation mark. Not cosmetic: a translated gloss
+                   is usually right and wrong in ways the reader cannot see, so
+                   the reader is told which one they got. `native` needs no mark
+                   — a human wrote it in the reader's own language. -->
+              {#if definition.source === 'translated'}
+                <p class="mb-1 text-xs text-(--color-text-auxiliary)">
+                  {t('reader.definitionTranslated')}
+                </p>
+              {/if}
+              <ul class="flex flex-col gap-1">
+                {#each definition.definitions as item}
+                  <li class="text-sm wrap-break-word">
+                    {#if item.partOfSpeech}
+                      <span
+                        data-definition-pos
+                        class="mr-1 text-xs italic text-(--color-text-auxiliary)"
+                      >
+                        {item.partOfSpeech}
+                      </span>
+                    {/if}
+                    {item.text}
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+            <p class="mt-1 text-[0.65rem] text-(--color-text-auxiliary)">
+              {definition.attribution}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="shrink-0 cursor-pointer rounded text-xs text-(--color-text-auxiliary) hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
+            onclick={closeDefinition}
+            aria-label={t('reader.dismissDefinition')}
+            title={t('reader.dismissDefinition')}
+          >
+            ✕
+          </button>
+        </div>
       {/if}
     </div>
   {/if}

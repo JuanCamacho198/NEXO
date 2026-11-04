@@ -30,12 +30,19 @@ describe('useSettingsRouter', () => {
     expect(SETTINGS_TABS).toEqual([
       'cuenta',
       'datos',
-      'traduccion',
+      'seleccion',
       'almacenamiento',
       'sincronizacion',
       'atajos',
       'acerca',
     ]);
+  });
+
+  it('exposes the selection-menu tab instead of a separate translation tab', () => {
+    expect(SETTINGS_TABS).toContain('seleccion');
+    // D6: translation is an option INSIDE the selection menu, not a tab. A
+    // second tab for it would be a second place to configure the same menu.
+    expect(SETTINGS_TABS).not.toContain('traduccion');
   });
 
   function mockFocus() {
@@ -54,6 +61,16 @@ describe('useSettingsRouter', () => {
     expect(e.preventDefault).toHaveBeenCalled();
     expect(router.activeTab).toBe('datos');
     expect(spy).toHaveBeenCalledWith('tab-datos');
+    expect(focus).toHaveBeenCalled();
+  });
+
+  it('reaches the selection-menu tab from its neighbour and focuses it', () => {
+    const router = createSettingsRouter({ initialTab: 'datos' });
+    const { focus, spy } = mockFocus();
+    const e = { key: 'ArrowRight', preventDefault: vi.fn() } as unknown as KeyboardEvent;
+    router.handleTabKeydown(e);
+    expect(router.activeTab).toBe('seleccion');
+    expect(spy).toHaveBeenCalledWith('tab-seleccion');
     expect(focus).toHaveBeenCalled();
   });
 

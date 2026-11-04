@@ -84,4 +84,39 @@ describe('buildChapterSelectionScript', () => {
     // ...and a timeout must end the drag in case no mouseup ever arrives.
     expect(script).toContain('DRAG_IDLE_MS');
   });
+
+  /**
+   * The blur handler must distinguish "focus moved into the parent's chrome"
+   * from "focus left the reader".
+   *
+   * The toolbar lives in the PARENT document, so pressing one of its buttons
+   * blurs the chapter frame. Treating that blur as "the selection is over"
+   * dismissed the toolbar between the `pointerdown` and the `click`, and the
+   * click landed on a button that no longer existed — "every button needs two
+   * clicks". The guard is `document.hasFocus()`: only a blur that takes the
+   * focus out of the window clears, and a blur into the parent leaves
+   * `hasFocus()` true.
+   */
+  it('does not treat a blur into the parent chrome as the end of the selection', () => {
+    const script = build();
+    expect(script).toContain('document.hasFocus()');
+    // The guard has to sit in the blur handler, before the clear it gates.
+    const blurStart = script.indexOf("window.addEventListener('blur'");
+    expect(blurStart, 'the blur listener is missing').toBeGreaterThan(-1);
+    const blurBody = script.slice(blurStart, blurStart + 600);
+    expect(blurBody).toContain('document.hasFocus()');
+    expect(blurBody.indexOf('document.hasFocus()')).toBeLessThan(
+      blurBody.indexOf("postClear('iframe-blur')"),
+    );
+  });
+
+  it('emits every other dismissal path unconditionally, so nothing legitimate is lost', () => {
+    // The blur guard must not have narrowed the paths that DO know the selection
+    // ended: a click inside the chapter, a scroll, Escape and teardown each still
+    // post their clear from this frame.
+    const script = build();
+    for (const reason of ['inside-click', 'scroll', 'escape', 'pagehide']) {
+      expect(script, `the ${reason} clear went missing`).toContain(`'${reason}'`);
+    }
+  });
 });

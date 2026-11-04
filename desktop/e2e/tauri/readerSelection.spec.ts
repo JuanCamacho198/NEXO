@@ -79,6 +79,7 @@ import {
   waitForChapterFrame,
 } from './harness/readerFlows';
 import { openUsableEpub } from './harness/readerCapacity';
+import { selectTextAtRightEdge } from './harness/readerSelection';
 import type { LibraryRow } from './harness/readerFlows';
 import type { Frame, Page } from '@playwright/test';
 
@@ -117,6 +118,64 @@ async function openProseChapter(
   const frame = await waitForChapterFrame(page);
   return { frame, bookId: opened.book.id, bookTitle: opened.book.title };
 }
+
+test('a selection near the RIGHT EDGE keeps the toolbar inside the viewport', async ({ appPage }) => {
+  test.setTimeout(300_000);
+
+  const { frame: chapter } = await openProseChapter(appPage);
+
+  // The existing containment case selects the FIRST on-screen text node, which
+  // is the start of a paragraph — its right edge lands around 40% of the window,
+  // where a broken clamp still lands inside the viewport. Measured: that case
+  // passed BEFORE the clamp was fixed, so it was proving the easy geometry. This
+  // one forces the selection to the right-most line end the chapter offers.
+  const selected = await selectTextAtRightEdge(chapter);
+  if (selected === null || selected.text.trim().length === 0) {
+    test.skip(true, 'The chapter has no text node in the visible band to select at the right edge.');
+    return;
+  }
+
+  await expect(appPage.locator(TOOLBAR)).toBeVisible({ timeout: 10_000 });
+
+  // The toolbar enters with an `in:scale` transition; `boundingBox()` is null
+  // while it is mid-flight, so poll for a measurable rect.
+  await expect
+    .poll(async () => (await readToolbarRect(appPage)) !== null, { timeout: 5_000 })
+    .toBe(true);
+  const rect = (await readToolbarRect(appPage))!;
+
+  // The premise of the case: the selection really is near the right border.
+  //
+  // Measured on *Don Quijote*: the right-most visible line ends 129px from the
+  // border, so the run lands at window x 986–1020 on a 1149px window — about 11%
+  // of the width away, which is inside this gate. If a different book lays its
+  // text out narrower, the case cannot pose the question and says so rather than
+  // passing against easy geometry.
+  test.skip(
+    selected.reach > rect.viewportWidth * 0.25,
+    `The right-most line in this chapter ends ${Math.round(selected.reach)}px from the border ` +
+      `(more than a quarter of the ${rect.viewportWidth}px window), so this chapter cannot pose ` +
+      `the question.`,
+  );
+
+  // Containment is the property the clamp exists to guarantee: the toolbar must
+  // never escape any of the four edges.
+  expect(
+    rect.x,
+    `the toolbar's left edge is at ${rect.x}px, outside the ${rect.viewportWidth}px window`,
+  ).toBeGreaterThanOrEqual(0);
+  expect(
+    rect.x + rect.width,
+    `the toolbar spans ${rect.x}..${rect.x + rect.width}px, past the ${rect.viewportWidth}px ` +
+      `right border`,
+  ).toBeLessThanOrEqual(rect.viewportWidth);
+  expect(rect.y).toBeGreaterThanOrEqual(0);
+  expect(
+    rect.y + rect.height,
+    `the toolbar's bottom edge is at ${rect.y + rect.height}px, past the ${rect.viewportHeight}px ` +
+      `window`,
+  ).toBeLessThanOrEqual(rect.viewportHeight);
+});
 
 test('a real chapter selection surfaces the toolbar inside the viewport', async ({ appPage }) => {
   test.setTimeout(180_000);

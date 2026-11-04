@@ -1,12 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('$lib/shared/api/tauriClient', () => ({
-  saveHighlightTags: vi.fn().mockResolvedValue([]),
-  createTag: vi.fn().mockResolvedValue({ id: 't-new', name: 'new', color: '#fff' }),
-  listTags: vi.fn().mockResolvedValue([{ id: 't1', name: 'tag1' }]),
-  listTagsForHighlight: vi.fn().mockResolvedValue([{ id: 't1', name: 'tag1' }]),
-}));
-
+// One mock per module: registering `tauriClient` twice (once sparsely, once
+// spread over the real module) made the effective mock depend on registration
+// order, so a later change to who imports what flipped which one won.
 vi.mock('$lib/features/reader/highlight/highlightColors', async () => {
   const actual = await vi.importActual<
     typeof import('$lib/features/reader/highlight/highlightColors')

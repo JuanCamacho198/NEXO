@@ -16,16 +16,24 @@
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, SearchBookTextResponse } from '$lib/shared/types';
   import type { LibraryBookDto } from '$lib/shared/types/library';
+  import type { TranslationPreferencesDto } from '$lib/shared/types/settings';
   import type { HighlightActionKind, HighlightActionOpts } from '$lib/shared/types/book';
   import { debugState as defaultDebugState } from '$lib/shared/debug/debugState.svelte';
   import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
   import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
   import type { TranslationPort, TranslationOutcome } from '$lib/shared/ports/TranslationPort';
+  import type {
+    DefinitionResult,
+    DictionaryLookupPort,
+  } from '$lib/shared/ports/DictionaryLookupPort';
   import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
   import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
   import { TauriTranslationAdapter } from '$lib/shared/ports/adapters/tauri/TauriTranslationAdapter';
+  import { TauriDictionaryLookupAdapter } from '$lib/shared/ports/adapters/tauri/TauriDictionaryLookupAdapter';
   import { resolveLanguagePreferencePair } from '$lib/shared/services/translation/translationLanguageResolution';
+  import { resolveDefinitionLanguage } from '$lib/shared/services/translation/definitionLanguage';
   import { translationFailureOutcome } from '$lib/shared/services/translation/translationOutcome';
+  import { normalizeLanguageTag } from '$lib/shared/services/translation/translationLanguages';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import HighlightContextMenu from '../highlight/HighlightContextMenu.svelte';
   import ColorPickerPopover from '../highlight/ColorPickerPopover.svelte';
@@ -95,6 +103,7 @@
     dictionaryActions?: DictionaryActions;
     libraryPort?: LibraryPort;
     translationPort?: TranslationPort;
+    dictionaryLookupPort?: DictionaryLookupPort;
   };
 
   let {
@@ -123,6 +132,7 @@
     dictionaryActions: dictionaryActionsProp = undefined,
     libraryPort: libraryPortProp = undefined,
     translationPort: translationPortProp = undefined,
+    dictionaryLookupPort: dictionaryLookupPortProp = undefined,
   }: Props = $props();
 
   // svelte-ignore state_referenced_locally
@@ -144,6 +154,10 @@
   // Translation is transport-only: no cache, no history (see TranslationPort).
   // svelte-ignore state_referenced_locally
   const translationPort = translationPortProp ?? new TauriTranslationAdapter();
+  // The definition cascade and its per-account cache live in Rust; this port is
+  // transport-only and holds no state (see DictionaryLookupPort).
+  // svelte-ignore state_referenced_locally
+  const dictionaryLookupPort = dictionaryLookupPortProp ?? new TauriDictionaryLookupAdapter();
 
   let pdfRef: PdfViewer | null = $state(null);
   let epubRef: EpubNativeViewer | null = $state(null);
@@ -580,6 +594,57 @@
       return translationFailureOutcome(error);
     }
   }
+
+  /**
+   * Define a selection.
+   *
+   * Two languages travel, and they are DIFFERENT things:
+   *
+   * - `readerLang` is the language the definition must be WRITTEN in. It comes
+   *   from the account's `definitionLanguage` preference (D6), falling back to
+   *   the UI locale when that preference is `null` — which is the behaviour this
+   *   had before the preference existed, so an account that never chose one is
+   *   unaffected. It is never inferred from the book.
+   * - `wordLang` is the language the SELECTED WORD is in. It comes from
+   *   `Book.language`, because the backend uses it to pick the
+   *   `{{lengua|XX}}` section of the Wiktionary page — the wrong section yields
+   *   the wrong gloss, or none.
+   *
+   * When the book carries no language, `normalizeLanguageTag` returns `null` and
+   * `null` is sent. That is not a silent failure: `SourceLanguage::from_optional`
+   * in `commands/define.rs` documents the behaviour — the native step is SKIPPED
+   * and the cascade assumes `en`, which is the measured worst case and the
+   * fallback that keeps the answer non-empty. A reader with an unlabelled book
+   * still gets a definition; they just lose the best step. The port's doc
+   * comment carries the same note so a future caller cannot "fix" it by
+   * guessing a language.
+   *
+   * The preference is read per request, not cached in the component: the reader
+   * may change it in Settings and come straight back, and a definition that
+   * ignored a just-chosen language would read as the setting being broken.
+   *
+   * The backend trims and can answer with an empty result; a rejection here is a
+   * genuine transport or storage failure, which the toolbar renders as
+   * "unreachable", distinct from "no definition".
+   */
+  async function handleDefine(data: SelectionData): Promise<DefinitionResult> {
+    // Wrapped, not chained: an adapter whose `getPreferences` is missing or
+    // throws synchronously would otherwise take the whole definition down with
+    // it, and a preference lookup is never a reason to refuse to define a word.
+    const preferences = await readDefinitionPreferences();
+    return dictionaryLookupPort.define({
+      text: data.text,
+      readerLang: resolveDefinitionLanguage(preferences?.definitionLanguage, settingsState.locale),
+      wordLang: normalizeLanguageTag(activeReadingBook?.language),
+    });
+  }
+  async function readDefinitionPreferences(): Promise<TranslationPreferencesDto | null> {
+    try {
+      return await translationPort.getPreferences();
+    } catch {
+      return null;
+    }
+  }
   async function handleColorSelect(color: string, data: SelectionData): Promise<void> {
     await highlightsState.handleColorSelect(color, data);
     // Case 5 (menu must not reopen): the write appends to `persistedHighlights`
@@ -637,9 +702,21 @@
    * observable before, because this function's only trace was a debug counter
    * the reader cannot see. Every path that closes the menu funnels through here
    * with a `reason`, and the reason reaches the log.
+   *
+   * The reason is ALSO pushed onto `window.__toolbarDismissals`, a bounded
+   * ring the CDP specs read. It is not decoration: "the toolbar went away" is
+   * satisfied both by a colour being applied and by a stray blur killing the
+   * menu first, and the two are identical in the DOM. A spec that only asserts
+   * the toolbar is gone passes against the bug — `readerSelectionFirstPress`
+   * reads this list to tell the two apart.
    */
   function dismissToolbar(reason = 'unknown'): void {
     const wasOpen = showToolbar;
+    const ring = ((window as unknown as { __toolbarDismissals?: string[] }).__toolbarDismissals ??=
+      []);
+    ring.push(reason);
+    // Bounded so a long reading session cannot grow it without limit.
+    if (ring.length > 200) ring.splice(0, ring.length - 200);
     dbg.epub.dismissToolbarCallCount++;
     dbg.epub.lastDismissTrigger = reason;
     showToolbar = false;
@@ -793,6 +870,7 @@
         onCopy={handleCopy}
         onAddToDictionary={handleAddToDictionary}
         onTranslate={handleTranslate}
+        onDefine={handleDefine}
         onColorSelect={handleColorSelect}
         {t}
       />

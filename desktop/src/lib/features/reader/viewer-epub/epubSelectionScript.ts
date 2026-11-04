@@ -141,8 +141,42 @@ export function buildChapterSelectionScript(opts: {
           }, 0);
         }, true);
 
+        // ─── Blur ─────────────────────────────────────────────────────────
+        // A blur is NOT "the reader clicked the parent chrome".
+        //
+        // The frame blurs for at least three different reasons, and only one of
+        // them means the selection is over: focus moved into the parent's own
+        // chrome, focus left the window entirely, or the frame is being torn
+        // down (pagehide covers that one). Because the toolbar lives in the
+        // PARENT document, pressing any menu button is in the first group — the
+        // frame loses focus the instant a toolbar button is pressed, the blur
+        // fires, this clear dismisses the toolbar, and the click that was
+        // already on its way lands on a button that no longer exists. That is
+        // the reported "every button needs two clicks", and the second click
+        // works only because the selection is already collapsed by then and
+        // there is nothing left to clear.
+        //
+        // Every dismissal the reader actually expects is already covered by a
+        // path that knows more than this event does:
+        //
+        //   - a click inside the chapter   -> inside-click (this document saw it)
+        //   - a scroll                     -> scroll
+        //   - Escape                       -> escape
+        //   - a click on the parent chrome -> the parent's own pointerdown
+        //     (handleWorkspacePointerDown), which also collapses this frame's
+        //     selection so the two stay in step
+        //   - the chapter being replaced   -> pagehide / beforeunload
+        //
+        // What is left for blur is the one case nothing else can see: focus
+        // genuinely leaving the reader while a selection is still live. That is
+        // decided by document.hasFocus() — false once the window itself is no
+        // longer focused — rather than by the mere fact that the frame lost the
+        // caret. A blur into the parent chrome leaves hasFocus() true and is
+        // therefore ignored, which is exactly the click that must reach its
+        // button.
         window.addEventListener('blur', function() {
           if (dragState === 'dragging') return;
+          if (document.hasFocus()) return;
           postClear('iframe-blur');
         });
 

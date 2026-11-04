@@ -10,6 +10,19 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createEpubPagination } from '$lib/features/reader/viewer-epub/useEpubPagination.svelte';
 
 /** A stand-in for the chapter root: layout numbers the test controls directly. */
+/**
+ * Runs every queued frame, including the ones those frames queue in turn.
+ *
+ * The scheduler chains a re-assert over several frames, re-registering the next
+ * one from inside the current callback, so a single `splice` leaves work behind.
+ * Draining to empty is what "the frames have passed" means here.
+ */
+function drain(frames: Array<() => void>): void {
+  for (let guard = 0; frames.length > 0 && guard < 50; guard++) {
+    for (const frame of frames.splice(0)) frame();
+  }
+}
+
 function makeScroller(opts: { clientWidth: number; scrollWidth: number; scrollLeft?: number }) {
   const el = {
     clientWidth: opts.clientWidth,
@@ -157,6 +170,167 @@ describe('createEpubPagination', () => {
     expect(p.goToNextPage()).toBe(true);
     expect(root.scrollLeft).toBe(1100 * 8);
     expect(emitPreciseLocation).toHaveBeenCalled();
+  });
+
+  it('re-derives the reader’s page onto the new grid after a resize', () => {
+    // The reported defect: "si cambio el tamaño de la página la paginación se
+    // daña, solo una página pero lo hace". A resize changes the page box, so the
+    // old `scrollLeft` (a whole number of 1100px pages) is no longer a whole
+    // number of 900px pages. `publishCount` derived `currentPage` from that stale
+    // offset against the NEW width and `recount()` only clamps, so the reader
+    // landed mid-page and stayed there.
+    //
+    // The fix: a resize participates in the re-assertion the turn already uses —
+    // the logical page is captured, and `scrollLeft` is snapped to the new grid
+    // for it once the layout has committed.
+    const frames: Array<() => void> = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: () => void) => {
+      frames.push(cb);
+      return frames.length;
+    });
+
+    const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+    const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 * 10 });
+    const made = makeDeps(root, container);
+    const p = createEpubPagination(made.deps);
+    p.enter();
+    drain(frames);
+    p.goToPage(4);
+    drain(frames);
+    expect(p.currentPage).toBe(4);
+    expect(root.scrollLeft).toBe(1100 * 3);
+
+    // The window narrows. The box follows, and the column set re-flows: the same
+    // prose now occupies more, narrower columns.
+    (container as unknown as { clientWidth: number }).clientWidth = 900;
+    (container as unknown as { clientHeight: number }).clientHeight = 500;
+    (root as unknown as { clientWidth: number }).clientWidth = 900;
+    // The stale offset is the PAGE 4 offset of the OLD grid: 3300px, which is
+    // 3.67 pages of the new 900px box.
+    p.refresh();
+
+    // Flush the commit frames, which is where the new grid exists.
+    drain(frames);
+
+    // The reader keeps page 4 — the page they were READING — on the new grid.
+    expect(p.currentPage, 'the reader must stay on the page they were reading').toBe(4);
+    expect(root.scrollLeft, 'and the offset must snap to the new grid for that page').toBe(900 * 3);
+
+    // The invariant a turn upholds, upheld by a resize too.
+    const live = root.clientWidth;
+    expect(root.scrollLeft % live, 'a settled offset sits on the page grid').toBe(0);
+  });
+
+  it('keeps a claimed page across a resize, not a page a restore chose', () => {
+    // The same precedence a chapter re-render uses: a page the reader TURNED to
+    // outranks one a later restore wrote, so a resize must preserve it.
+    const frames: Array<() => void> = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: () => void) => {
+      frames.push(cb);
+      return frames.length;
+    });
+
+    const container = makeScroller({ clientWidth: 1100, scrollWidth: 1100 });
+    const root = makeScroller({ clientWidth: 1100, scrollWidth: 1100 * 12 });
+    const made = makeDeps(root, container);
+    const p = createEpubPagination(made.deps);
+    p.enter();
+    drain(frames);
+    p.goToPage(7);
+    drain(frames);
+
+    // The reader then drags to a different page; that is their position now.
+    root.scrollLeft = 1100 * 9;
+    p.syncPageFromScroll();
+    expect(p.currentPage).toBe(10);
+
+    (container as unknown as { clientWidth: number }).clientWidth = 1000;
+    (root as unknown as { clientWidth: number }).clientWidth = 1000;
+    p.refresh();
+    drain(frames);
+
+    expect(p.currentPage, 'the resize keeps the page the reader is on').toBe(10);
+    expect(root.scrollLeft % 1000).toBe(0);
+  });
+
+  it('a resize that shrinks the chapter clamps the page onto the new grid', () => {
+    // Widening a window fits more prose per column, so a deep page can fall past
+    // the new end. The resize must clamp like a recount does — and then SNAP, so
+    // the reader is on a page rather than between two.
+    const frames: Array<() => void> = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: () => void) => {
+      frames.push(cb);
+      return frames.length;
+    });
+
+    const container = makeScroller({ clientWidth: 900, scrollWidth: 900 });
+    const root = makeScroller({ clientWidth: 900, scrollWidth: 900 * 12 });
+    const made = makeDeps(root, container);
+    const p = createEpubPagination(made.deps);
+    p.enter();
+    drain(frames);
+    p.goToPage(11);
+    drain(frames);
+    expect(p.currentPage).toBe(11);
+
+    // The window widens: the same prose now needs only 5 columns.
+    (container as unknown as { clientWidth: number }).clientWidth = 1100;
+    (root as unknown as { clientWidth: number }).clientWidth = 1100;
+    (root as unknown as { scrollWidth: number }).scrollWidth = 1100 * 5;
+    p.refresh();
+    drain(frames);
+
+    expect(p.currentPage, 'a page past the new end clamps to the last page').toBe(5);
+    expect(root.scrollLeft, 'and the offset is the last page, not a fraction of one').toBe(
+      1100 * 4,
+    );
+  });
+
+  it('keeps the page when a re-render lands in the same window as a resize', () => {
+    // The measured defect on the widen leg. The render pipeline re-measures on
+    // `lastRenderedChapter` and calls `restoreAfterRerender()`, which clears
+    // `lastKey` — the very flag `refresh()` uses to tell a first measure from a
+    // resize. The resize was then re-derived as a FIRST measure: `publishCount`
+    // read the reader's 780px-grid offset (780) against the new 1200px box and
+    // answered page 1, before the snap could run. Measured live: widening after a
+    // narrow left the field on page 1 with `scrollLeft` 0.
+    const frames: Array<() => void> = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: () => void) => {
+      frames.push(cb);
+      return frames.length;
+    });
+
+    const container = makeScroller({ clientWidth: 1200, scrollWidth: 1200 });
+    const root = makeScroller({ clientWidth: 1200, scrollWidth: 1200 * 12 });
+    const made = makeDeps(root, container);
+    const p = createEpubPagination(made.deps);
+    p.enter();
+    drain(frames);
+    p.goToPage(4);
+    drain(frames);
+    expect(p.currentPage).toBe(4);
+
+    // Narrow: the box moves, and the page is snapped onto the 900px grid.
+    (container as unknown as { clientWidth: number }).clientWidth = 900;
+    (root as unknown as { clientWidth: number }).clientWidth = 900;
+    // The column set re-flows: the same prose now takes more, narrower columns.
+    (root as unknown as { scrollWidth: number }).scrollWidth = 900 * 16;
+    p.refresh();
+    drain(frames);
+    expect(p.currentPage, 'the narrow leg keeps the reader on page 4').toBe(4);
+    expect(root.scrollLeft).toBe(900 * 3);
+
+    // Widen, and let the render pipeline re-measure the SAME chapter in the same
+    // window — which is what the viewer does when a re-render commits alongside a
+    // viewport change.
+    (container as unknown as { clientWidth: number }).clientWidth = 1200;
+    (root as unknown as { clientWidth: number }).clientWidth = 1200;
+    (root as unknown as { scrollWidth: number }).scrollWidth = 1200 * 11;
+    p.restoreAfterRerender();
+    drain(frames);
+
+    expect(p.currentPage, 'the widen leg must not throw the reader back to page 1').toBe(4);
+    expect(root.scrollLeft, 'and the offset must be page 4 of the NEW 1200px grid').toBe(1200 * 3);
   });
 
   it('recount is a no-op when nothing changed', () => {

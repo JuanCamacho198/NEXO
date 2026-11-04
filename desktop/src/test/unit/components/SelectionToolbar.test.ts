@@ -28,6 +28,12 @@ const t = (key: string, params?: Record<string, string | number>) => {
     'reader.translationNoResult': 'No translation available for this selection',
     'reader.translationUnavailable': 'Translation service unavailable',
     'reader.dismissTranslation': 'Close translation',
+    'reader.define': 'Define',
+    'reader.defining': 'Looking up…',
+    'reader.definitionNoResult': 'No definition found for this selection.',
+    'reader.definitionUnavailable': 'The dictionary could not be reached.',
+    'reader.definitionTranslated': 'Machine-translated definition',
+    'reader.dismissDefinition': 'Close definition',
     'error.somethingWrong': 'Something went wrong',
   };
   let value = translations[key] ?? key;
@@ -58,21 +64,41 @@ const baseProps = () => ({
   onCopy: () => undefined,
   onAddToDictionary: async (): Promise<DictionaryCaptureFeedback> => 'created',
   onTranslate: async (): Promise<TranslationOutcome> => ({ status: 'ok', text: 'Translated' }),
+  onDefine: async () => ({
+    word: 'Selection text',
+    definitions: [{ text: 'a definition', partOfSpeech: null }],
+    source: 'native' as const,
+    attribution: 'Wiktionary, CC BY-SA 4.0 (https://www.wiktionary.org/)',
+  }),
   onColorSelect: () => undefined,
   t,
 });
 
 describe('SelectionToolbar', () => {
-  it('positions within container using viewerSpace bounds', () => {
+  it('positions within the window using the container-offset selection bounds', () => {
+    // Selection center in window space = ((100+40) + (100+160)) / 2 = 200.
+    // jsdom's 1024px window leaves 992px of room, so the full 380px row fits and
+    // no collapse happens. Centered at 200 it would span 10..390 — and 10 is
+    // inside the 16px edge padding, so the clamp pins it to 16.
+    // Y keeps the above-the-selection rule, against the height the placement
+    // actually reserves: with no result panel open that is the row alone — the
+    // MEASURED 46px pill — plus the 8px gap: 320 - 46 - 8 = 266.
+    //
+    // The panel's 120px is reserved only while a panel is on screen. Budgeting it
+    // unconditionally is what pushed the menu ~130px away from the word (the
+    // reported "the menu appears way up top, far from the selection").
     const { container } = render(SelectionToolbar, baseProps());
 
     const toolbar = container.querySelector('.selection-toolbar');
     expect(toolbar).toBeTruthy();
-    expect(toolbar?.getAttribute('style')).toContain('left: 116px');
-    expect(toolbar?.getAttribute('style')).toContain('top: 248px');
+    expect(toolbar?.getAttribute('style')).toContain('left: 16px');
+    expect(toolbar?.getAttribute('style')).toContain('top: 266px');
   });
 
-  it('clamps toolbar inside container width', () => {
+  it('clamps the toolbar to the window edge padding', () => {
+    // Selection sits at the far left of the window: center = (25 + 45) / 2 =
+    // 35, so a centered menu would start at 35 - 190 = -155. It pins to the
+    // 16px edge padding instead of going negative.
     const { container } = render(SelectionToolbar, {
       ...baseProps(),
       selectionBounds: { left: 5, top: 140, right: 25, bottom: 160 },
@@ -81,26 +107,22 @@ describe('SelectionToolbar', () => {
 
     const toolbar = container.querySelector('.selection-toolbar');
     expect(toolbar).toBeTruthy();
-    expect(toolbar?.getAttribute('style')).toContain('left: 36px');
+    expect(toolbar?.getAttribute('style')).toContain('left: 16px');
   });
 
-  it('translates container offset to parent-viewport when containerRect.left > 0 (EPUB coords)', () => {
-    // EPUB scenario: the iframe lives at left=200 inside the parent
-    // viewport. The selection math (viewerAnchorX / viewerToolbarX)
-    // runs against container-relative coords, and the toolbar's
-    // parent-viewport X must be `containerRect.left + viewerToolbarX`.
+  it('translates container offset into window space when containerRect.left > 0 (EPUB coords)', () => {
+    // EPUB scenario: the iframe lives at left=200 inside the parent window and
+    // the toolbar is `position: fixed`, so it is placed in WINDOW space. The
+    // selection must be shifted by the container offset BEFORE clamping —
+    // clamping container-relative coordinates against the window is the bug
+    // this file's sibling (SelectionToolbarPlacement.test.ts) pins down.
     //
     // In this fixture:
-    //   selectionCenterX   = (100 + 160) / 2 = 130
-    //   viewerAnchorX      = max(176, min(130, 144)) = 176
-    //   viewerToolbarX     = max(0, 176 - 160)      = 16
-    //   viewerToolbarY     = 120 - 56 - 16          = 48 (selection has room above)
-    //   toolbarX (parent)  = containerRect.left + 16 = 216
-    //   toolbarY (parent)  = containerRect.top  + 48 = 248
-    //
-    // Without the parent-viewport translation (the Menu 1 fix) the
-    // toolbar would land at left=16 (purely container-relative), the
-    // top-left of the iframe.
+    //   selection center in window space = ((100+100) + (200+160)) / 2 = 280
+    //   centered menu starts at           280 - 140                   = 140
+    //   140 is past the 16px edge padding, so no clamp
+    //   toolbarY = 320 - 46 - 8 = 266, where 46 is the MEASURED row height and
+    //   the 120px panel budget is not reserved because no panel is open
     const { container } = render(SelectionToolbar, {
       ...baseProps(),
       selectionBounds: { left: 100, top: 120, right: 160, bottom: 140 },
@@ -110,8 +132,8 @@ describe('SelectionToolbar', () => {
     const toolbar = container.querySelector('.selection-toolbar');
     expect(toolbar).toBeTruthy();
     const style = toolbar?.getAttribute('style') ?? '';
-    expect(style).toContain('left: 216px');
-    expect(style).toContain('top: 248px');
+    expect(style).toContain('left: 140px');
+    expect(style).toContain('top: 266px');
   });
 
   it('forwards the whole SelectionData — text and evidence — to onAddToDictionary', async () => {
@@ -200,23 +222,26 @@ describe('SelectionToolbar', () => {
     expect(queryByText('Copied to clipboard')).toBeTruthy();
   });
 
-  it('renders SVG icons and tooltips for copy, dictionary and translate actions', () => {
+  it('renders SVG icons and tooltips for copy, dictionary, translate and define actions', () => {
     const { getByLabelText, getAllByRole } = render(SelectionToolbar, {
       ...baseProps(),
       selectedText: 'hello',
+      selectionData: makeSelectionData({ text: 'hello' }),
     });
 
     // All action buttons must be present with proper aria-labels
     expect(getByLabelText('Copy')).toBeTruthy();
     expect(getByLabelText('Add to Dictionary')).toBeTruthy();
     expect(getByLabelText('Translate')).toBeTruthy();
+    expect(getByLabelText('Define')).toBeTruthy();
 
     // Each icon-only button has an associated tooltip
     const tooltips = getAllByRole('tooltip');
-    expect(tooltips).toHaveLength(3);
+    expect(tooltips).toHaveLength(4);
     expect(tooltips[0]).toHaveTextContent('Copy');
     expect(tooltips[1]).toHaveTextContent('Add to Dictionary');
     expect(tooltips[2]).toHaveTextContent('Translate');
+    expect(tooltips[3]).toHaveTextContent('Define');
   });
 
   // ── Selection data forwarding (race-condition fix) ─────────────────────
