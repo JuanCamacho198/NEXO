@@ -69,6 +69,7 @@ import {
 
 import type { ReaderTextAlign, ReaderDirection, ReaderProgressIndicator } from '$lib/shared/types';
 import type { Notification } from '$lib/shared/types/notification';
+import type { DefinitionResult } from '$lib/shared/ports/DictionaryLookupPort';
 
 type MaybeCommandError = Error & { commandError?: CommandErrorDto };
 
@@ -1493,6 +1494,31 @@ export const translateSelection = async (payload: {
 };
 
 /**
+ * Looks up a definition through the Rust `defineSelection` command.
+ *
+ * The command runs the whole cascade and its per-account cache; this wrapper
+ * carries the three inputs and returns the DTO. An empty `definitions` array is
+ * a legitimate answer ("nothing anywhere"), not an error — only a transport or
+ * storage failure rejects.
+ *
+ * `wordLang` is forwarded as `null` when the book has no language. Rust's
+ * `SourceLanguage::from_optional` reads `""` as unknown too, so both spellings
+ * mean "skip the native step"; `null` is used here because it is the honest
+ * representation of "the book did not say".
+ */
+export const defineSelection = async (payload: {
+  text: string;
+  readerLang: string;
+  wordLang: string | null;
+}): Promise<DefinitionResult> => {
+  try {
+    return await invoke<DefinitionResult>('defineSelection', payload);
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+/**
  * Per-account translation language preferences (T3).
  *
  * Both sides are optional: `null` means "infer" — source from the book, target
@@ -1520,6 +1546,25 @@ export const saveTranslationPreferences = async (payload: {
 }): Promise<TranslationPreferencesDto> => {
   try {
     return await invoke<TranslationPreferencesDto>('saveTranslationPreferences', payload);
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+/**
+ * Persists the language a "Definir" result is written in (D6).
+ *
+ * This is the `readerLang` the reader's next definition is written in, stored
+ * per account like the pair beside it. `null` means "the app locale", which is
+ * what the feature used before this preference existed. The account is resolved
+ * in Rust from `AppState.active_user`; an anonymous session makes the write
+ * REJECT rather than silently drop it.
+ */
+export const saveDefinitionLanguage = async (payload: {
+  definitionLanguage: string | null;
+}): Promise<TranslationPreferencesDto> => {
+  try {
+    return await invoke<TranslationPreferencesDto>('saveDefinitionLanguage', payload);
   } catch (error) {
     return attachCommandError(error);
   }

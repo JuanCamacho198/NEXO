@@ -18,6 +18,7 @@ export type TranslationSettingsDeps = {
 export function createTranslationSettings(deps: TranslationSettingsDeps = {}): {
   sourceLanguage: string | null;
   targetLanguage: string | null;
+  definitionLanguage: string | null;
   history: TranslationCacheEntryDto[];
   isLoading: boolean;
   isSaving: boolean;
@@ -25,12 +26,14 @@ export function createTranslationSettings(deps: TranslationSettingsDeps = {}): {
   error: string | null;
   load: () => Promise<void>;
   save: (sourceLanguage: string | null, targetLanguage: string | null) => Promise<void>;
+  saveDefinitionLanguage: (definitionLanguage: string | null) => Promise<void>;
   clearHistory: () => Promise<void>;
 } {
   const port: TranslationPort = deps.port ?? new TauriTranslationAdapter();
 
   let sourceLanguage = $state<string | null>(null);
   let targetLanguage = $state<string | null>(null);
+  let definitionLanguage = $state<string | null>(null);
   let history = $state<TranslationCacheEntryDto[]>([]);
   let isLoading = $state(false);
   let isSaving = $state(false);
@@ -47,6 +50,7 @@ export function createTranslationSettings(deps: TranslationSettingsDeps = {}): {
       const [preferences, entries] = await Promise.all([port.getPreferences(), port.listHistory()]);
       sourceLanguage = preferences?.sourceLanguage ?? null;
       targetLanguage = preferences?.targetLanguage ?? null;
+      definitionLanguage = preferences?.definitionLanguage ?? null;
       history = entries;
     } catch (cause) {
       error = toMessage(cause);
@@ -65,6 +69,32 @@ export function createTranslationSettings(deps: TranslationSettingsDeps = {}): {
       });
       sourceLanguage = saved.sourceLanguage ?? nextSource;
       targetLanguage = saved.targetLanguage ?? nextTarget;
+      // The backend returns the whole row, definition language included. It is
+      // read back rather than left alone because the value is the truth about
+      // what is stored, not what this hook happens to remember.
+      definitionLanguage = saved.definitionLanguage ?? null;
+    } catch (cause) {
+      error = toMessage(cause);
+      throw cause;
+    } finally {
+      isSaving = false;
+    }
+  }
+
+  /**
+   * Persist the language a definition is written in (D6).
+   *
+   * Deliberately NOT gated behind the pair's Save button: a selector that
+   * appears to save and does not is the failure mode this whole preference
+   * would otherwise ship with. It is written the moment it changes, so a reader
+   * who picks a language and defines a word immediately gets that language.
+   */
+  async function saveDefinitionLanguage(nextDefinition: string | null): Promise<void> {
+    isSaving = true;
+    error = null;
+    try {
+      const saved = await port.saveDefinitionLanguage({ definitionLanguage: nextDefinition });
+      definitionLanguage = saved.definitionLanguage ?? nextDefinition;
     } catch (cause) {
       error = toMessage(cause);
       throw cause;
@@ -104,6 +134,12 @@ export function createTranslationSettings(deps: TranslationSettingsDeps = {}): {
     set targetLanguage(v: string | null) {
       targetLanguage = v;
     },
+    get definitionLanguage() {
+      return definitionLanguage;
+    },
+    set definitionLanguage(v: string | null) {
+      definitionLanguage = v;
+    },
     get history() {
       return history;
     },
@@ -121,6 +157,7 @@ export function createTranslationSettings(deps: TranslationSettingsDeps = {}): {
     },
     load,
     save,
+    saveDefinitionLanguage,
     clearHistory,
   };
 }

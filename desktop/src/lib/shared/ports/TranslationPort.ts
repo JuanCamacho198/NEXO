@@ -37,6 +37,19 @@ export interface TranslationPort {
     targetLanguage: string | null;
   }): Promise<TranslationPreferencesDto>;
 
+  /**
+   * Persists the language a "Definir" result is written in (D6) and returns
+   * what was stored.
+   *
+   * Its own call rather than a third field on `savePreferences` because it is
+   * saved by a different gesture: the pair has one button for both sides, this
+   * is a selector that saves on change. Sending the pair along would let a
+   * stale source/target in the form overwrite a fresh one.
+   */
+  saveDefinitionLanguage(input: {
+    definitionLanguage: string | null;
+  }): Promise<TranslationPreferencesDto>;
+
   /** The account's translation history, newest first. */
   listHistory(): Promise<TranslationCacheEntryDto[]>;
 

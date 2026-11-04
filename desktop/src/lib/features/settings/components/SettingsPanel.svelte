@@ -9,7 +9,7 @@
   import SettingsTabs from './SettingsTabs.svelte';
   import SettingsCuentaTab from './SettingsCuentaTab.svelte';
   import SettingsDataTab from './SettingsDataTab.svelte';
-  import SettingsTranslationTab from './SettingsTranslationTab.svelte';
+  import SettingsSelectionMenuTab from './SettingsSelectionMenuTab.svelte';
   import SettingsStorageTab from './SettingsStorageTab.svelte';
   import SettingsSyncTab from './SettingsSyncTab.svelte';
   import SettingsShortcutsTab from './SettingsShortcutsTab.svelte';
@@ -64,7 +64,7 @@
   // The pair and the history are account-scoped and only read when the tab is
   // shown, so loading them costs nothing until the reader opens the tab.
   $effect(() => {
-    if (isOpen && router.activeTab === 'traduccion') void translation.load();
+    if (isOpen && router.activeTab === 'seleccion') void translation.load();
   });
   // Single shared addon state (slice 7): this surface and the Addons screen
   // mutate the same instance, so either surface updates the other.
@@ -244,11 +244,13 @@
             onUninstall={(id: string) => void addonsState.handleUninstall(id)}
           />
         </div>
-      {:else if router.activeTab === 'traduccion'}
-        <SettingsTranslationTab
+      {:else if router.activeTab === 'seleccion'}
+        <SettingsSelectionMenuTab
           {t}
+          {locale}
           sourceLanguage={translation.sourceLanguage}
           targetLanguage={translation.targetLanguage}
+          definitionLanguage={translation.definitionLanguage}
           history={translation.history}
           isLoading={translation.isLoading}
           isSaving={translation.isSaving}
@@ -256,6 +258,7 @@
           error={translation.error}
           onSourceChange={(v) => (translation.sourceLanguage = v)}
           onTargetChange={(v) => (translation.targetLanguage = v)}
+          onDefinitionLanguageChange={(v) => void translation.saveDefinitionLanguage(v)}
           onSave={() =>
             void translation.save(translation.sourceLanguage, translation.targetLanguage)}
           onClearHistory={() => void translation.clearHistory()}

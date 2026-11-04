@@ -112,15 +112,17 @@ export type ReaderSettings = {
 export type TranslationKey = string;
 
 /**
- * Per-account translation language preferences.
+ * Per-account selection-menu language preferences (T3, D6).
  *
- * Both sides are `null` by default, which means "infer": the source comes from
- * the book and the target from the app locale. A `null` here is NOT "unset and
- * therefore broken" — it is the documented default pair.
+ * Every side is optional: `null` means "infer". For the pair that is source
+ * from the book and target from the app locale; for `definitionLanguage` it is
+ * the app locale, which is what "Definir" used before D6 gave it its own
+ * setting.
  */
 export type TranslationPreferencesDto = {
   sourceLanguage: string | null;
   targetLanguage: string | null;
+  definitionLanguage: string | null;
   updatedAt: string;
 };
 

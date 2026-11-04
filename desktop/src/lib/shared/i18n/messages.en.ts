@@ -143,6 +143,7 @@ export const messagesEn = {
   'settings.tab.general': 'General',
   'settings.tab.data': 'Data',
   'settings.tab.translation': 'Translation',
+  'settings.tab.selectionMenu': 'Selection menu',
   'settings.theme': 'Theme',
   'settings.authDescription': 'Sign in to sync your data',
   'settings.account.subtitle': 'Manage your account, language and app theme.',
@@ -859,6 +860,15 @@ export const messagesEn = {
   'reader.translationInvalidTarget':
     'The target language in Settings is not valid. Choose another one.',
   'reader.dismissTranslation': 'Close translation',
+  // Reader selection definitions. The word language comes from the book and the
+  // reader language from the UI locale; the mark is a license-adjacent honesty
+  // requirement, not decoration — see DictionaryLookupPort.
+  'reader.define': 'Define',
+  'reader.defining': 'Looking up…',
+  'reader.definitionNoResult': 'No definition found for this selection.',
+  'reader.definitionUnavailable': 'The dictionary could not be reached.',
+  'reader.definitionTranslated': 'Machine-translated definition',
+  'reader.dismissDefinition': 'Close definition',
   'reader.nota': 'Note',
   'reader.eliminar_destacado': 'Delete highlight',
   'reader.seleccion_no_disponible': 'Selection unavailable for this format',
@@ -1395,6 +1405,25 @@ export const messagesEn = {
   'settings.translation.language.ja': 'Japanese',
   'settings.translation.language.ko': 'Korean',
   'settings.translation.language.hi': 'Hindi',
+
+  // Selection-menu settings tab (D6). The tab is the home of every option the
+  // selection menu offers; the translation block below lives inside it, and
+  // `settings.translation.*` above keeps the pair's own copy untouched.
+  'settings.selectionMenu.title': 'Selection menu',
+  'settings.selectionMenu.subtitle':
+    'Configure what the menu offers when you select text or open a saved highlight.',
+  'settings.selectionMenu.translation.title': 'Translation',
+  'settings.selectionMenu.translation.subtitle':
+    'Choose the languages used when you translate a selection, and review what you have translated.',
+  'settings.selectionMenu.definition.title': 'Definition',
+  'settings.selectionMenu.definition.subtitle':
+    'Choose the language your definitions are written in.',
+  'settings.selectionMenu.definition.languageLabel': 'Definition language',
+  'settings.selectionMenu.definition.languageHint':
+    'The language the definition text is written in. Choosing the app language keeps the default.',
+  'settings.selectionMenu.definition.languageApp': 'App language',
+  // Where the next block goes: add a `settings.selectionMenu.<option>.*` group
+  // here and a matching block in SettingsSelectionMenuTab.svelte.
 
   // App auto-update (release-update-feed contract, desktop slice)
   'update.check': 'Check for updates',

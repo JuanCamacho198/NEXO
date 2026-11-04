@@ -18,6 +18,12 @@ export class TauriTranslationAdapter implements TranslationPort {
     return tauriClient.saveTranslationPreferences(input);
   }
 
+  saveDefinitionLanguage(input: {
+    definitionLanguage: string | null;
+  }): Promise<TranslationPreferencesDto> {
+    return tauriClient.saveDefinitionLanguage(input);
+  }
+
   listHistory(): Promise<TranslationCacheEntryDto[]> {
     return tauriClient.listTranslationHistory();
   }

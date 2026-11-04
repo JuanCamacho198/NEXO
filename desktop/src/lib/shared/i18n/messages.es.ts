@@ -146,6 +146,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.tab.general': 'General',
   'settings.tab.data': 'Datos',
   'settings.tab.translation': 'Traducción',
+  'settings.tab.selectionMenu': 'Menú de selección',
   'settings.theme': 'Tema',
   'settings.authDescription': 'Inicia sesión para sincronizar tus datos',
   'settings.account.subtitle': 'Gestiona tu cuenta, el idioma y el tema de la app.',
@@ -1297,6 +1298,15 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.translationInvalidSource': 'El idioma de origen de Ajustes no es válido. Elige otro.',
   'reader.translationInvalidTarget': 'El idioma de destino de Ajustes no es válido. Elige otro.',
   'reader.dismissTranslation': 'Cerrar traducción',
+  // Definiciones de la selección del lector. El idioma de la palabra viene del
+  // libro y el del lector del locale de la interfaz; la marca de traducción es
+  // una obligación de honestidad, no decoración: ver DictionaryLookupPort.
+  'reader.define': 'Definir',
+  'reader.defining': 'Buscando…',
+  'reader.definitionNoResult': 'No se encontró ninguna definición para esta selección.',
+  'reader.definitionUnavailable': 'No se pudo contactar con el diccionario.',
+  'reader.definitionTranslated': 'Definición traducida automáticamente',
+  'reader.dismissDefinition': 'Cerrar definición',
   'reader.nota': 'Nota',
   'reader.eliminar_destacado': 'Eliminar resaltado',
   'reader.seleccion_no_disponible': 'Selección no disponible en este formato',
@@ -1411,6 +1421,25 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.translation.language.ja': 'Japonés',
   'settings.translation.language.ko': 'Coreano',
   'settings.translation.language.hi': 'Hindi',
+
+  // Pestaña del menú de selección (D6). La pestaña reúne cada opción que ofrece
+  // el menú de selección; el bloque de traducción vive dentro y las claves
+  // `settings.translation.*` de arriba conservan su propio texto.
+  'settings.selectionMenu.title': 'Menú de selección',
+  'settings.selectionMenu.subtitle':
+    'Configura lo que ofrece el menú al seleccionar texto o al abrir un resaltado guardado.',
+  'settings.selectionMenu.translation.title': 'Traducción',
+  'settings.selectionMenu.translation.subtitle':
+    'Elige los idiomas que se usan al traducir una selección y revisa lo que ya has traducido.',
+  'settings.selectionMenu.definition.title': 'Definición',
+  'settings.selectionMenu.definition.subtitle':
+    'Elige el idioma en que se escriben tus definiciones.',
+  'settings.selectionMenu.definition.languageLabel': 'Idioma de la definición',
+  'settings.selectionMenu.definition.languageHint':
+    'El idioma en que se escribe el texto de la definición. Elegir el idioma de la app mantiene el valor por defecto.',
+  'settings.selectionMenu.definition.languageApp': 'Idioma de la app',
+  // Dónde va el siguiente bloque: añade un grupo `settings.selectionMenu.<opción>.*`
+  // aquí y el bloque correspondiente en SettingsSelectionMenuTab.svelte.
 
   // App auto-update (release-update-feed contract, desktop slice)
   'update.check': 'Buscar actualizaciones',

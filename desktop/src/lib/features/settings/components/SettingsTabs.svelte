@@ -32,10 +32,10 @@
     { id: 'cuenta', icon: User, labelKey: 'settings.tab.account', fallback: 'Cuenta' },
     { id: 'datos', icon: Database, labelKey: 'settings.tab.data', fallback: 'Datos' },
     {
-      id: 'traduccion',
+      id: 'seleccion',
       icon: Languages,
-      labelKey: 'settings.tab.translation',
-      fallback: 'Traducción',
+      labelKey: 'settings.tab.selectionMenu',
+      fallback: 'Menú de selección',
     },
     {
       id: 'almacenamiento',

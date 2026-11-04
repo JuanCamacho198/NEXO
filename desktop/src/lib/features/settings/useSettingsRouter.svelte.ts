@@ -1,10 +1,18 @@
 export type SettingsTab =
-  'cuenta' | 'datos' | 'traduccion' | 'almacenamiento' | 'sincronizacion' | 'atajos' | 'acerca';
+  'cuenta' | 'datos' | 'seleccion' | 'almacenamiento' | 'sincronizacion' | 'atajos' | 'acerca';
 
+/**
+ * The tab strip, in order.
+ *
+ * `seleccion` (D6) replaced the old `traduccion` tab: the selection menu is one
+ * surface, and translation is one option inside it. Keeping a separate
+ * translation tab would mean two places to configure the same menu, and the
+ * next option (highlighting, copy, note…) would each want a tab of its own.
+ */
 export const SETTINGS_TABS: SettingsTab[] = [
   'cuenta',
   'datos',
-  'traduccion',
+  'seleccion',
   'almacenamiento',
   'sincronizacion',
   'atajos',

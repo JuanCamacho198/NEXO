@@ -51,6 +51,28 @@ export class MockTranslationAdapter implements TranslationPort {
     this.#preferences = {
       sourceLanguage: input.sourceLanguage,
       targetLanguage: input.targetLanguage,
+      // The pair's write does not touch the definition language: it is sent by
+      // a different control (see `saveDefinitionLanguage`), and the double
+      // mirrors that so a test cannot pass on a combined write the app never
+      // performs.
+      definitionLanguage: this.#preferences?.definitionLanguage ?? null,
+      updatedAt: '1970-01-01T00:00:00Z',
+    };
+    return this.#preferences;
+  }
+
+  /**
+   * The definition language is written on its own (D6), leaving the pair as it
+   * was — the same split the repository enforces, so the double cannot let a
+   * test pass on behaviour the backend would not produce.
+   */
+  async saveDefinitionLanguage(input: {
+    definitionLanguage: string | null;
+  }): Promise<TranslationPreferencesDto> {
+    this.#preferences = {
+      sourceLanguage: this.#preferences?.sourceLanguage ?? null,
+      targetLanguage: this.#preferences?.targetLanguage ?? null,
+      definitionLanguage: input.definitionLanguage,
       updatedAt: '1970-01-01T00:00:00Z',
     };
     return this.#preferences;
