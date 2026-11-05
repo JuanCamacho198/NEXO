@@ -30,7 +30,7 @@
   import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
   import { TauriTranslationAdapter } from '$lib/shared/ports/adapters/tauri/TauriTranslationAdapter';
   import { TauriDictionaryLookupAdapter } from '$lib/shared/ports/adapters/tauri/TauriDictionaryLookupAdapter';
-  import { resolveLanguagePreferencePair } from '$lib/shared/services/translation/translationLanguageResolution';
+  import { resolveTranslationSourceWithDetection } from '$lib/shared/services/translation/translationLanguageResolution';
   import { resolveDefinitionLanguage } from '$lib/shared/services/translation/definitionLanguage';
   import { translationFailureOutcome } from '$lib/shared/services/translation/translationOutcome';
   import { normalizeLanguageTag } from '$lib/shared/services/translation/translationLanguages';
@@ -618,25 +618,31 @@
    * Translate a selection.
    *
    * The pair comes from the reader's saved preferences through
-   * `resolveLanguagePreferencePair`, which REFUSES to form a degenerate pair
-   * instead of guessing one. The old resolver fell back to the target when the
-   * book carried no language, producing `en -> en`, which the service answers
-   * with a 403 — the reader saw a bland "no translation" and no way to fix it.
-   * Now a refusal is a typed reason rendered as its own message, and the
+   * `resolveTranslationSourceWithDetection`, which REFUSES to form a degenerate
+   * pair instead of guessing one. The old resolver fell back to the target when
+   * the book carried no language, producing `en -> en`, which the service
+   * answers with a 403 — the reader saw a bland "no translation" and no way to
+   * fix it. Now a refusal is a typed reason rendered as its own message, and the
    * translate command is never called for it (`no-result` would be a lie: the
    * request was never made).
+   *
+   * The source cascade is: explicit preference -> `Book.language` -> LOCAL
+   * detection over the selected text -> `unknown-source`. The detection step is
+   * what makes prediction work for an unlabelled book (the common case:
+   * `books.language` is nullable and in practice missing). MyMemory rejects
+   * `auto` as a source with a 403, so the guess has to be ours and offline.
+   * `data.text` is passed verbatim: the detector refuses to guess on thin
+   * evidence (under four words, a tie, no marker hits) and then the panel asks.
    *
    * The port is transport-only: nothing is cached here, because translated
    * selections are reading history scoped to the account in Rust.
    */
   async function handleTranslate(data: SelectionData): Promise<TranslationOutcome> {
     const preferences = await translationPort.getPreferences().catch(() => null);
-    const resolution = resolveLanguagePreferencePair(
-      {
-        sourceLanguage: preferences?.sourceLanguage ?? null,
-        targetLanguage: preferences?.targetLanguage ?? null,
-      },
+    const resolution = resolveTranslationSourceWithDetection(
+      preferences?.sourceLanguage ?? null,
       activeReadingBook?.language,
+      data.text,
       settingsState.locale,
     );
 

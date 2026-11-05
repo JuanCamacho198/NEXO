@@ -12,6 +12,7 @@
  * "no translation" and no way to understand or fix it. Every way the pair can
  * end up degenerate therefore returns a typed reason instead of a pair.
  */
+import { detectLanguage } from './translationLanguageDetection';
 import { normalizeLanguageTag } from './translationLanguages';
 
 /**
@@ -89,11 +90,67 @@ function resolveSource(
   bookLanguage: string | null | undefined,
 ): SideResolution {
   if (preferred !== null && preferred !== undefined) {
-    const normalized = normalizeLanguageTag(preferred);
-    return normalized ?? { reason: 'invalid-source' };
+    return normalizeOrRefuse(preferred, 'invalid-source');
+  }
+  return normalizeOrRefuse(bookLanguage, 'unknown-source');
+}
+
+/**
+ * The SOURCE cascade with a local detection step, for a caller that has the
+ * selected text in hand.
+ *
+ * Same resolution as {@link resolveLanguagePreferencePair}, except that when
+ * neither an explicit source preference nor the book's language can name the
+ * source, the language is DETECTED locally from `text` before giving up. The
+ * detection exists because MyMemory does not accept `auto` as a source
+ * (`langpair=auto|es` answers `403 "'AUTO' IS AN INVALID SOURCE LANGUAGE..."`,
+ * measured), so this is the only fallback available.
+ *
+ * Order, and why:
+ * 1. Explicit source preference — the reader's word beats every inference.
+ * 2. `Book.language`, when usable. When it exists it WINS, even when detection
+ *    would disagree: the metadata is declared by whoever produced the book, and
+ *    detection is a heuristic guess over a handful of function words. A wrong
+ *    guess is silently fluent, so the declared value is the honest one to trust.
+ * 3. `detectLanguage(text)` — the real fallback for a book with no language.
+ * 4. `unknown-source`, which the panel turns into a question.
+ *
+ * The target side is deliberately untouched here: its cascade (secondary
+ * language, etc.) is a separate concern that layers on top by passing the
+ * resolved pair through. Keeping the two sides apart means adding to the target
+ * cascade does not require rewriting the source one.
+ *
+ * `bookLanguage` that is present but unusable (`'  '`, `'1'`) normalises to
+ * `null`, which is "the book said nothing" — NOT a hard refusal — so step 3
+ * still runs.
+ */
+export function resolveTranslationSourceWithDetection(
+  sourceLanguage: string | null | undefined,
+  bookLanguage: string | null | undefined,
+  text: string,
+  appLocale: string | null | undefined,
+): LanguageResolution {
+  const source = resolveSourceWithDetection(sourceLanguage, bookLanguage, text);
+  if (typeof source !== 'string') return { kind: 'no-translation', reason: source.reason };
+
+  const target = resolveTarget(null, appLocale);
+  if (typeof target !== 'string') return { kind: 'no-translation', reason: target.reason };
+
+  if (source === target) return { kind: 'no-translation', reason: 'same-language' };
+  return { kind: 'translate', source, target };
+}
+
+function resolveSourceWithDetection(
+  preferred: string | null | undefined,
+  bookLanguage: string | null | undefined,
+  text: string,
+): SideResolution {
+  if (preferred !== null && preferred !== undefined) {
+    return normalizeOrRefuse(preferred, 'invalid-source');
   }
   const fromBook = normalizeLanguageTag(bookLanguage);
-  return fromBook ?? { reason: 'unknown-source' };
+  if (fromBook !== null) return fromBook;
+  return detectLanguage(text) ?? { reason: 'unknown-source' };
 }
 
 function resolveTarget(
@@ -101,8 +158,18 @@ function resolveTarget(
   appLocale: string | null | undefined,
 ): SideResolution {
   if (preferred !== null && preferred !== undefined) {
-    const normalized = normalizeLanguageTag(preferred);
-    return normalized ?? { reason: 'invalid-target' };
+    return normalizeOrRefuse(preferred, 'invalid-target');
   }
   return normalizeLanguageTag(appLocale) ?? FALLBACK_TARGET;
+}
+
+/**
+ * Normalises a tag, or reports the side-specific reason it could not be used.
+ * Shared so the cascade variants never re-implement the reason mapping.
+ */
+function normalizeOrRefuse(
+  raw: string | null | undefined,
+  reason: NoTranslationReason,
+): SideResolution {
+  return normalizeLanguageTag(raw) ?? { reason };
 }
