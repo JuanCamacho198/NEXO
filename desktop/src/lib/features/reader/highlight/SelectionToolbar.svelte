@@ -14,7 +14,11 @@
     placeFloatingMenu,
     resolveFloatingMenuLayout,
   } from '$lib/shared/services/placement/floatingMenuPlacement';
-  import { reservesResultPanelSpace, showsShortFeedback } from './selectionPanelReservation';
+  import {
+    reservesResultPanelSpace,
+    showsShortFeedback,
+    showsTooltips,
+  } from './selectionPanelReservation';
 
   /**
    * One message per refusal reason. Each names the fix rather than the failure:
@@ -455,6 +459,21 @@
   const reservesPanelSpace = $derived(reservesResultPanelSpace(panelState));
   const shortFeedbackOpen = $derived(showsShortFeedback(panelState));
 
+  /**
+   * Whether the button tooltips are allowed to reveal.
+   *
+   * They reveal on `group-hover` AND `group-focus-within` — and the `focus-within`
+   * half is what made them stick: pressing a button focuses it, so the tooltip
+   * stayed visible exactly where the feedback / result panel is drawn, and
+   * "Copiar" and "Copiado al portapapeles" landed on the same pixels.
+   *
+   * The reveal is kept — `group-focus-within` is the keyboard reader's only way
+   * to see a tooltip — and the tooltip is simply suppressed while an answer is on
+   * screen, because a hint about what a button DOES has nothing to add once the
+   * button has answered.
+   */
+  const tooltipsAllowed = $derived(showsTooltips(panelState));
+
   const placementMenuSize = $derived({
     width: toolbarCollapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_MAX_WIDTH,
     height:
@@ -782,7 +801,9 @@
           </svg>
         </button>
         <span
-          class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+          class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
+            ? 'group-hover:opacity-100 group-focus-within:opacity-100 opacity-0'
+            : 'opacity-0'}"
           role="tooltip"
         >
           {t('highlight.changeColor')}
@@ -837,7 +858,9 @@
         </svg>
       </button>
       <span
-        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
+          ? 'group-hover:opacity-100 group-focus-within:opacity-100 opacity-0'
+          : 'opacity-0'}"
         role="tooltip"
       >
         {t('reader.copiar')}
@@ -872,7 +895,9 @@
         </svg>
       </button>
       <span
-        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
+          ? 'group-hover:opacity-100 group-focus-within:opacity-100 opacity-0'
+          : 'opacity-0'}"
         role="tooltip"
       >
         {t('reader.addToDictionary')}
@@ -907,7 +932,9 @@
         </svg>
       </button>
       <span
-        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
+          ? 'group-hover:opacity-100 group-focus-within:opacity-100 opacity-0'
+          : 'opacity-0'}"
         role="tooltip"
       >
         {t('reader.translate')}
@@ -916,7 +943,9 @@
 
     <!-- Define. Disabled — not hidden — outside the C+A limit: a vanished button
          reads as a broken toolbar, a disabled one shows the action exists and
-         the tooltip explains when it applies. -->
+         the tooltip explains when it applies. The tooltip is suppressed while any
+         panel is below the pill, so a disabled Define and a definition result
+         never fight for the same pixels. -->
     <div class="group relative">
       <button
         type="button"
@@ -943,7 +972,9 @@
         </svg>
       </button>
       <span
-        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
+          ? 'group-hover:opacity-100 group-focus-within:opacity-100 opacity-0'
+          : 'opacity-0'}"
         role="tooltip"
       >
         {t('reader.define')}

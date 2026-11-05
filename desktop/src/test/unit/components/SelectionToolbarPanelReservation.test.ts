@@ -6,6 +6,7 @@ import SelectionToolbar, {
 import {
   reservesResultPanelSpace,
   showsShortFeedback,
+  showsTooltips,
   type SelectionPanelState,
 } from '$lib/features/reader/highlight/selectionPanelReservation';
 import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
@@ -109,6 +110,69 @@ describe('selectionPanelReservation — the residence table', () => {
     ]) {
       const rendered = showsShortFeedback(state) || reservesResultPanelSpace(state);
       expect(rendered, `a state renders nothing: ${JSON.stringify(state)}`).toBe(true);
+    }
+  });
+});
+
+// The reported defect: "cuando le doy clic... se combina el mensaje de la acción
+// con el del resultado". The tooltips revealed on `group-hover` AND
+// `group-focus-within`, and pressing a button focuses it — so "Copiar" (the
+// hint) and "Copiado al portapapeles" (the answer) were drawn in the same band
+// below the pill and read as one unreadable smear.
+//
+// The rule the reader decided: the tooltip may show while there is nothing below
+// the pill (that is what hovering a button is for, and `group-focus-within` is
+// the keyboard reader's only way to see it), and it must NOT show while any
+// panel — feedback or result — is up. The reveal stays; the overlap goes.
+
+describe('selectionPanelReservation — when a tooltip may show', () => {
+  it('allows the tooltip while nothing is below the pill', () => {
+    expect(
+      showsTooltips(noPanel()),
+      'with no answer on screen the tooltip must be allowed — otherwise hovering a button tells ' +
+        'the reader nothing, and `group-focus-within` cannot serve the keyboard at all',
+    ).toBe(true);
+  });
+
+  it('suppresses the tooltip while Copy feedback is up', () => {
+    // THE reported case. Pressing Copy sets `copyFeedback`; the button keeps
+    // focus, `group-focus-within` would hold the tooltip open, and the message
+    // below the pill collides with it.
+    expect(showsTooltips({ ...noPanel(), copyFeedback: true })).toBe(false);
+  });
+
+  it('suppresses the tooltip while Dictionary feedback is up', () => {
+    expect(showsTooltips({ ...noPanel(), dictionaryFeedback: true })).toBe(false);
+  });
+
+  it('suppresses the tooltip while Translate is working or showing its result', () => {
+    expect(showsTooltips({ ...noPanel(), translating: true })).toBe(false);
+    expect(showsTooltips({ ...noPanel(), translation: true })).toBe(false);
+  });
+
+  it('suppresses the tooltip while Define is working, succeeds or fails', () => {
+    expect(showsTooltips({ ...noPanel(), defining: true })).toBe(false);
+    expect(showsTooltips({ ...noPanel(), definition: true })).toBe(false);
+    expect(showsTooltips({ ...noPanel(), definitionFailed: true })).toBe(false);
+  });
+
+  it('suppresses the tooltip for EVERY state that draws something below the pill', () => {
+    // The table above is the rule; this is the rule stated as the invariant the
+    // rule has to satisfy: a box is on screen exactly when the tooltip is off.
+    for (const state of [
+      { ...noPanel(), copyFeedback: true },
+      { ...noPanel(), dictionaryFeedback: true },
+      { ...noPanel(), translating: true },
+      { ...noPanel(), translation: true },
+      { ...noPanel(), defining: true },
+      { ...noPanel(), definition: true },
+      { ...noPanel(), definitionFailed: true },
+    ]) {
+      const drawsSomething = showsShortFeedback(state) || reservesResultPanelSpace(state);
+      expect(
+        showsTooltips(state),
+        `a tooltip is allowed over a panel that drew something: ${JSON.stringify(state)}`,
+      ).toBe(!drawsSomething);
     }
   });
 });
@@ -316,6 +380,106 @@ describe('SelectionToolbar — the placement transition', () => {
       ).not.toContain('transition-[top]');
     } finally {
       window.matchMedia = original;
+    }
+  });
+});
+
+/**
+ * The reveal classes on the tooltip spans, read straight from the DOM.
+ *
+ * These are the regression guard for the fix: the suppression must be a
+ * CONDITION on the panel and not a deletion of the reveal, so the test asserts
+ * both halves — present with no panel (hover works, and `group-focus-within`
+ * still serves the keyboard), gone once a panel is up.
+ */
+function tooltipClasses(container: HTMLElement): string[] {
+  return [...container.querySelectorAll('[role="tooltip"]')].map((el) => el.className);
+}
+
+describe('SelectionToolbar — the tooltip reveal follows the panel', () => {
+  it('keeps the hover and focus-within reveal while nothing is below the pill', () => {
+    const { container } = render(SelectionToolbar, baseProps());
+    const classes = tooltipClasses(container);
+
+    // Four action buttons in the full layout; the collapsed layout adds a fifth
+    // for the color trigger. The point of the assertion is that tooltips are
+    // PRESENT, not that the layout picker chose a specific rung.
+    expect(classes.length, 'the toolbar rendered no tooltips at all').toBeGreaterThan(0);
+    for (const className of classes) {
+      // Hover is what the reader uses with a pointer...
+      expect(
+        className,
+        `a tooltip lost its hover reveal — hovering the button would show nothing: ${className}`,
+      ).toContain('group-hover:opacity-100');
+      // ...and `focus-within` is the ONLY reveal a Tab reader gets. Removing it
+      // to fix the overlap is the tempting shortcut and the accessibility
+      // regression this assertion exists to block.
+      expect(
+        className,
+        `a tooltip lost its focus reveal — a keyboard reader could never see it: ${className}`,
+      ).toContain('group-focus-within:opacity-100');
+    }
+  });
+
+  it('drops the reveal for every tooltip once Copy feedback is up', async () => {
+    const { container, getByLabelText } = render(SelectionToolbar, baseProps());
+
+    await fireEvent.click(getByLabelText('Copy'));
+
+    // The answer is on screen...
+    expect(container.querySelector('[role="status"]')).not.toBeNull();
+    // ...and no tooltip is left revealing into the same band. The press left the
+    // button focused, so without this the `group-focus-within` span would still
+    // be at `opacity-100` on top of the message — the reported overlap.
+    for (const className of tooltipClasses(container)) {
+      expect(
+        className,
+        `a tooltip is still revealing while the Copy message is up: ${className}`,
+      ).not.toContain('group-focus-within:opacity-100');
+      expect(className).not.toContain('group-hover:opacity-100');
+    }
+  });
+
+  it('drops the reveal once a Translate result is up', async () => {
+    const { container, getByLabelText } = render(SelectionToolbar, baseProps());
+
+    await fireEvent.click(getByLabelText('Translate'));
+    await vi.waitFor(() => {
+      expect(container.querySelector('[role="status"]')).not.toBeNull();
+    });
+
+    for (const className of tooltipClasses(container)) {
+      expect(className).not.toContain('group-hover:opacity-100');
+      expect(className).not.toContain('group-focus-within:opacity-100');
+    }
+  });
+
+  it('restores the reveal when the Copy message clears itself', async () => {
+    // The other half of "the tooltip must not stick": the focus left by the press
+    // must not keep it suppressed forever. Once the message expires and the band
+    // below the pill is empty again, the reveal is back — so the keyboard reader
+    // who stays on the button gets their tooltip when the answer is gone.
+    vi.useFakeTimers();
+    try {
+      const { container, getByLabelText } = render(SelectionToolbar, baseProps());
+
+      await fireEvent.click(getByLabelText('Copy'));
+      expect(tooltipClasses(container)[0]).not.toContain('group-focus-within:opacity-100');
+
+      await vi.advanceTimersByTimeAsync(1_600);
+
+      expect(
+        container.querySelector('[role="status"]'),
+        'the Copy message never cleared — the toolbar would keep suppressing tooltips',
+      ).toBeNull();
+      for (const className of tooltipClasses(container)) {
+        expect(
+          className,
+          `the reveal did not come back after the message cleared: ${className}`,
+        ).toContain('group-focus-within:opacity-100');
+      }
+    } finally {
+      vi.useRealTimers();
     }
   });
 });

@@ -77,3 +77,33 @@ export function reservesResultPanelSpace(state: SelectionPanelState): boolean {
 export function showsShortFeedback(state: SelectionPanelState): boolean {
   return Boolean(state.copyFeedback || state.dictionaryFeedback);
 }
+
+/**
+ * Whether a button tooltip may be shown right now.
+ *
+ * ## The defect this answers
+ *
+ * The tooltips used to reveal on `group-hover` AND `group-focus-within`. Pressing
+ * a button gives it focus, so the tooltip stayed up — and it sits in the same
+ * band below the pill as the feedback / result panel, so "Copiar" and "Copiado al
+ * portapapeles" were drawn on top of each other and neither could be read.
+ *
+ * The reveal itself is not the bug, so it is NOT removed: `group-focus-within` is
+ * what makes the tooltip visible to someone navigating with Tab, and that reader
+ * has no hover. The bug is the tooltip sharing the screen with an ANSWER. So the
+ * rule is about the answer, not about the press:
+ *
+ *   - nothing below the pill  -> the tooltip may show (hover, focus, both)
+ *   - something below the pill -> no tooltip, whatever the pointer and focus do
+ *
+ * "Something below the pill" is every state the pane can render — feedback and
+ * result alike — which is exactly the union the two predicates above already
+ * describe. Written as that union so a new panel state cannot be added to one
+ * list and forgotten in the other.
+ *
+ * It is here, and pure, for the usual reason: jsdom cannot decide "would these
+ * two boxes overlap?", but it can execute this table.
+ */
+export function showsTooltips(state: SelectionPanelState): boolean {
+  return !showsShortFeedback(state) && !reservesResultPanelSpace(state);
+}
