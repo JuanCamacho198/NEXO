@@ -14,6 +14,7 @@
     placeFloatingMenu,
     resolveFloatingMenuLayout,
   } from '$lib/shared/services/placement/floatingMenuPlacement';
+  import { reservesResultPanelSpace, showsShortFeedback } from './selectionPanelReservation';
 
   /**
    * One message per refusal reason. Each names the fix rather than the failure:
@@ -126,6 +127,30 @@
   });
 
   const resolvedViewport = $derived(viewport ?? liveViewport);
+
+  /**
+   * The reader's reduced-motion preference, read here for the same reason
+   * `ReaderTocPanel` and four siblings read it: a Svelte transition (and, for
+   * the placement move below, the CSS transition) must be zeroed by hand when
+   * the user asked for no motion.
+   *
+   * The global `@media (prefers-reduced-motion: reduce)` block in `tokens.css`
+   * already forces `transition-duration: 1ms !important` on every element, so
+   * the CSS half would be covered without this. It is read explicitly anyway so
+   * the behaviour is stated in the component that owns it, matches the pattern
+   * the rest of the reader follows, and is testable without a real browser.
+   */
+  let reducedMotion = $state(false);
+  $effect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const apply = (): void => {
+      reducedMotion = mq.matches;
+    };
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  });
 
   let selectedColor = $state(HIGHLIGHT_COLORS[0].hex);
   let copyFeedback = $state<string | null>(null);
@@ -395,36 +420,46 @@
   const PLACEMENT_PANEL_BUDGET_COLLAPSED = PANEL_HEIGHT_FACTOR * TOOLBAR_HEIGHT_ESTIMATE;
 
   /**
-   * Whether a result panel is on screen RIGHT NOW.
+   * WHICH of the two things below the pill is on screen, and — for the
+   * placement — whether that thing RESERVES space.
    *
-   * The panel budget is reserved only while one is: `translation` / `definition`
-   * are data-dependent and normally null, so budgeting them unconditionally made
-   * the placement believe the menu was ~176px tall when it renders one 46px row.
-   * The menu was then drawn that phantom height above the word — MEASURED over
-   * CDP at a 1200x779 window: the anchor's top at y 241.5 put the rendered menu
-   * at y 49.5, a 146px gap between the menu's bottom edge and the selected word.
-   * That is the reported "the menu appears way up top, far from the word".
+   * The panel budget is reserved only for a RESULT panel (`translation` /
+   * `definition`), which is data-dependent, usually null, and many lines tall.
+   * Feedback (`copyFeedback` / `dictionaryFeedback`) is a single short line that
+   * disappears after 1.5s, so it renders exactly as before but reserves nothing.
    *
-   * This is the same `{#if}` the two panels render under, so "budgeted" and
-   * "rendered" cannot disagree.
+   * The earlier code put all six states in ONE bag (`resultPanelOpen`) and
+   * reserved whenever any of them was set. That is the reported defect, in
+   * numbers: pressing Copy raised a one-line message, the placement believed the
+   * menu was ~120px taller, the menu was moved UP to make room for a panel that
+   * was never going to need it, and when the message expired (1.5s later) it
+   * moved back DOWN. MEASURED over CDP: the pill's `top` moved on the press and
+   * moved back on the expiry, which is the "el menú sube hacia arriba y luego
+   * vuelve hacia abajo" the reader reported.
+   *
+   * The two predicates live in `selectionPanelReservation.ts` so the table is a
+   * unit test rather than a comment: `showsShortFeedback` is what the feedback
+   * panel renders under, `reservesResultPanelSpace` is what the placement
+   * budgets. A state in neither is a defect the tests make loud.
    */
-  const resultPanelOpen = $derived(
-    Boolean(
-      copyFeedback ||
-      dictionaryFeedback ||
-      translating ||
-      translation ||
-      defining ||
-      definition ||
-      definitionFailed,
-    ),
-  );
+  const panelState = $derived({
+    copyFeedback: Boolean(copyFeedback),
+    dictionaryFeedback: Boolean(dictionaryFeedback),
+    translating,
+    translation: Boolean(translation),
+    defining,
+    definition: Boolean(definition),
+    definitionFailed,
+  });
+
+  const reservesPanelSpace = $derived(reservesResultPanelSpace(panelState));
+  const shortFeedbackOpen = $derived(showsShortFeedback(panelState));
 
   const placementMenuSize = $derived({
     width: toolbarCollapsed ? TOOLBAR_COLLAPSED_WIDTH : TOOLBAR_MAX_WIDTH,
     height:
       (toolbarWrapped ? TOOLBAR_HEIGHT_ESTIMATE * 2 : TOOLBAR_HEIGHT_ESTIMATE) +
-      (resultPanelOpen
+      (reservesPanelSpace
         ? toolbarCollapsed
           ? PLACEMENT_PANEL_BUDGET_COLLAPSED
           : PLACEMENT_PANEL_BUDGET
@@ -517,6 +552,66 @@
     toolbarPlacement.placement === 'above'
       ? Math.max(120, toolbarY)
       : Math.max(120, resolvedViewport.height - (toolbarY + placementMenuSize.height)),
+  );
+
+  /**
+   * The SHORT feedback panel's height ceiling: the room the pill leaves BELOW
+   * itself, and nothing more.
+   *
+   * Feedback no longer reserves space, so the pill is no longer lifted to make
+   * room for it — and a selection near the bottom edge is therefore the case
+   * where the one-line message can hang past the window. The ceiling is the
+   * window minus the pill's own bottom edge and the `mt-2` gap the panel sits
+   * below it: the last coordinate that keeps the panel's bottom edge on screen.
+   *
+   * It is derived from the pill's REAL row height rather than from
+   * `placementMenuSize.height`, which is the point: that is the box the
+   * placement RESERVED, and for feedback the reservation is deliberately zero.
+   * Bounding the feedback panel by it would let a 120px panel be drawn where 20px
+   * of room exists, which is the overflow this constant exists to prevent.
+   *
+   * No `max(120, …)` floor, unlike the result panel. A result panel is content
+   * the reader asked for and must stay usable; feedback is a transient one-line
+   * message and a bound that is genuinely small there is honest. The floor is the
+   * panel's own natural line height, so a message is never cut to a sliver.
+   */
+  const FEEDBACK_PANEL_MIN_HEIGHT = 26;
+  const feedbackPanelMaxHeight = $derived(
+    Math.max(
+      FEEDBACK_PANEL_MIN_HEIGHT,
+      resolvedViewport.height - (toolbarY + placementRenderedHeight + TOOLBAR_OFFSET),
+    ),
+  );
+
+  /**
+   * The placement-move transition, as a class, and why it is conditional.
+   *
+   * The menu is repositioned by writing `top` — and before this, that write was
+   * INSTANT. For Translate and Define the budget genuinely changes when the
+   * panel opens, so the menu genuinely has to move; the reader asked for that
+   * move to be a small transition rather than a jump.
+   *
+   * Only `top` is transitioned. `left` moves at most a few pixels (the clamp
+   * against the window edge) and animating it buys nothing, while `top` is the
+   * axis the reported defect was on.
+   *
+   * The values are the PROJECT's tokens, not invented: `--duration-fast` is
+   * 150ms and `--ease-smooth` is `cubic-bezier(0.4, 0, 0.2, 1)`, both declared
+   * in `tokens.css` under `@theme`, so Tailwind v4 exposes them as
+   * `duration-fast` and `ease-smooth`. 150ms is the "short transition" the
+   * request named: long enough to read as movement, short enough that the menu is
+   * not seen travelling.
+   *
+   * Zeroed under `prefers-reduced-motion`: no class, no transition, the same
+   * instant reposition as before.
+   *
+   * It is NOT an entrance animation. The element is a fresh node on mount with
+   * its final `top` already written, and a CSS transition only interpolates
+   * between two values on the same element — so the first paint cannot animate
+   * the menu into place. The existing `in:scale` transition owns the entrance.
+   */
+  const placementMoveTransitionClass = $derived(
+    reducedMotion ? '' : 'transition-[top] duration-fast ease-smooth',
   );
 
   /** Tailwind v4 folds `flex` + `hidden` at the same breakpoint into one static
@@ -632,7 +727,7 @@
 </script>
 
 <div
-  class="selection-toolbar fixed z-50 flex flex-col overflow-hidden"
+  class="selection-toolbar fixed z-50 flex flex-col overflow-hidden {placementMoveTransitionClass}"
   data-floating-menu="true"
   style="left: {toolbarX}px; top: {toolbarY}px; max-height: {toolbarMaxHeight};"
   role="presentation"
@@ -857,11 +952,18 @@
   </div>
 
   <!-- Action feedback (copy / dictionary). The panel spans the pill it belongs
-       to, which is the fixed placement width in both layouts. -->
-  {#if copyFeedback || dictionaryFeedback}
+       to, which is the fixed placement width in both layouts.
+
+       It renders under `shortFeedbackOpen` and NOT under the panel-budget
+       condition: the message still appears exactly as it always did, it simply
+       no longer reserves room in the placement (see `reservesPanelSpace`), so it
+       no longer moves the menu on every press. Its own ceiling is the room the
+       pill leaves below itself, so a selection at the bottom edge cannot push the
+       message off the window. -->
+  {#if shortFeedbackOpen}
     <div
       class="mt-2 overflow-hidden rounded-lg bg-(--color-highlight-menu-bg) text-center text-xs text-(--color-text-inverse) shadow-lg"
-      style="width: {placementMenuSize.width}px; max-height: {resultPanelMaxHeight}px;"
+      style="width: {placementMenuSize.width}px; max-height: {feedbackPanelMaxHeight}px;"
       role="status"
       aria-live="polite"
     >
