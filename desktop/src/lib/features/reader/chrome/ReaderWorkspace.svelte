@@ -56,6 +56,13 @@
   import BookmarkSidebar from './BookmarkSidebar.svelte';
   import { createViewerSelection, type ViewerSelection } from '../viewer-shared/Viewer';
   import type { SelectionData } from '../highlight/SelectionToolbar.svelte';
+  import {
+    closeMenu,
+    openMenu as nextOpenMenu,
+    type OpenMenu,
+    type OpenMenuReason,
+  } from './openMenu';
+  import { FLOATING_MENU_SELECTOR } from './floatingMenu';
   import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
   import { logger } from '$lib/shared/logger/Logger';
   import {
@@ -178,7 +185,17 @@
     getUserId: getUserIdFn,
     getDebugState: () => dbg,
   });
-  const highlightMenuState = createHighlightMenu({ highlights: highlightsState, viewerPort });
+  const highlightMenuState = createHighlightMenu({
+    highlights: highlightsState,
+    viewerPort,
+    // The workspace owns the single "which menu is open" state. The highlight
+    // menu only REPORTS intent; this is where that intent becomes the state
+    // change that closes the selection toolbar in the same step. Both callbacks
+    // are set below, because `showToolbar`/`openMenuState` are declared after
+    // this composable.
+    onIntentOpen: () => raiseMenu('highlight'),
+    onIntentClose: () => dismissToolbar('highlight-menu-closed'),
+  });
   const bookmarksPanel = createBookmarksPanel({ outboxDao, viewerPort });
 
   const zoom = createReaderZoom({
@@ -215,8 +232,41 @@
     width: number;
     height: number;
   } | null>(null);
-  let showToolbar = $state(false);
+  /**
+   * THE single source of truth for "which floating menu is open".
+   *
+   * The reader has exactly two menu surfaces — `SelectionToolbar` and
+   * `HighlightContextMenu` — and they must never be on screen together. They used
+   * to be owned separately (this component's `showToolbar` and
+   * `highlightMenuState.highlightMenu.open`), and the reported defect was that
+   * separation failing: a selection that CONTAINS a highlight raised both, and
+   * then each closed the other. Now `openMenuState` names the one menu that is
+   * shown; `showToolbar` is derived from it, so a second open menu is not a
+   * representable state. The transitions live in `./openMenu` (pure, unit
+   * tested); this component is the only writer.
+   */
+  let openMenuState = $state<OpenMenu>('none');
+  let showToolbar = $derived(openMenuState === 'selection');
   let lastSelectionData = $state<SelectionData | null>(null);
+
+  /**
+   * Raise a menu, closing the other in the SAME step (ADR: one menu at a time).
+   *
+   * `nextOpenMenu` is total: whichever menu was open is not open in the result,
+   * so the invariant does not depend on the other component reacting in time.
+   * The highlight menu's own visibility is pushed from `openMenuState` (see the
+   * `$effect` below), so setting the state here is all that is needed.
+   */
+  function raiseMenu(kind: 'selection' | 'highlight'): void {
+    openMenuState = nextOpenMenu(openMenuState, kind);
+  }
+
+  // The highlight menu is a pure function of the single state: when the state
+  // stops being 'highlight' the menu hides, including its sub-popovers. This is
+  // what makes the two menus mutually exclusive rather than merely cooperative.
+  $effect(() => {
+    highlightMenuState.setOpen(openMenuState === 'highlight');
+  });
 
   // highlights triggers
   $effect(() => {
@@ -318,7 +368,13 @@
   function handleWorkspacePointerDown(e: PointerEvent): void {
     if (viewer.kind !== 'epub') return;
     const target = e.target as Element | null;
-    if (target?.closest?.('.selection-toolbar')) return;
+    // A press INSIDE a floating menu is not a press OUTSIDE it: the click that is
+    // already on its way has to reach the button it was aimed at. Measured with
+    // the highlight menu left out of this guard — the `pointerdown` dismissed it,
+    // the menu was gone by the `pointerup`, and the `click` landed on the
+    // backdrop behind it, so every one of its actions did nothing. See
+    // `./floatingMenu` for the trace and for which surfaces carry the marker.
+    if (target?.closest?.(FLOATING_MENU_SELECTOR)) return;
     dismissToolbar('workspace-pointerdown');
     // typeof-guard: bind:this may hold a viewer without this export (mocks,
     // torn-down chapters).
@@ -498,7 +554,12 @@
       quote: event.quote ?? null,
       chapterTitle: event.chapterTitle ?? null,
     };
-    showToolbar = true;
+    // A selection is a request for the selection toolbar, and the single state
+    // closes the highlight menu in the same step. A highlight whose own click
+    // raised the highlight menu is on the other branch (the frame suppresses the
+    // selection post for a run that overlaps a highlight), so the two cannot
+    // race.
+    raiseMenu('selection');
   }
 
   const DEBUG_TOOLBAR_WIDTH_ESTIMATE = 320;
@@ -710,8 +771,9 @@
    * the toolbar is gone passes against the bug — `readerSelectionFirstPress`
    * reads this list to tell the two apart.
    */
-  function dismissToolbar(reason = 'unknown'): void {
+  function dismissToolbar(reason: string = 'unknown'): void {
     const wasOpen = showToolbar;
+    const wasHighlight = openMenuState === 'highlight';
     const ring = ((window as unknown as { __toolbarDismissals?: string[] }).__toolbarDismissals ??=
       []);
     ring.push(reason);
@@ -719,13 +781,16 @@
     if (ring.length > 200) ring.splice(0, ring.length - 200);
     dbg.epub.dismissToolbarCallCount++;
     dbg.epub.lastDismissTrigger = reason;
-    showToolbar = false;
+    // ONE state, so a dismissal of either menu closes BOTH surfaces. The
+    // highlight menu follows through its `$effect`, which is what makes "the
+    // selection toolbar closed" and "the highlight menu closed" the same fact.
+    openMenuState = closeMenu(openMenuState, reason as OpenMenuReason);
     selectedText = '';
     selectionBounds = null;
     selectionContainer = null;
     logger.debug(
       'RW: dismissToolbar',
-      { reason, wasOpen, count: dbg.epub.dismissToolbarCallCount },
+      { reason, wasOpen, wasHighlight, count: dbg.epub.dismissToolbarCallCount },
       'reader',
     );
   }

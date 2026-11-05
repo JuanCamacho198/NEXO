@@ -633,6 +633,7 @@
 
 <div
   class="selection-toolbar fixed z-50 flex flex-col overflow-hidden"
+  data-floating-menu="true"
   style="left: {toolbarX}px; top: {toolbarY}px; max-height: {toolbarMaxHeight};"
   role="presentation"
   in:scale={{ duration: 140, start: 0.92, easing: cubicOut }}

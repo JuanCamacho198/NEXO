@@ -55,6 +55,42 @@ export function buildChapterSelectionScript(opts: {
         var dragState = 'idle';
         var DRAG_IDLE_MS = 1500;
         var dragIdleTimer = null;
+        // U2b: the click handler below collapses the selection ITSELF when the
+        // caret lands on a highlight, because that gesture belongs to the
+        // highlight menu and the selection must not be left painted under it.
+        // The \`selectionchange\` that collapse fires is NOT "the reader ended the
+        // selection" — it is the frame's own doing — and read as a clear it
+        // arrives 200 ms later and dismisses the menu the click just raised.
+        // MEASURED over CDP, on the reported gesture (a selection over a coloured
+        // run, then a caret landing on it):
+        //
+        //   t+1224.3ms  epub-highlight-click  id=b5d950b8…      (menu raised)
+        //   t+1253.6ms  menus toolbar=1 highlight=1            (both, one frame)
+        //   t+1354.5ms  menus toolbar=0 highlight=1
+        //   t+1424.4ms  epub-selection  textLen=0 reason=selection-collapsed
+        //   t+1424.6ms  dismissToolbar  onselectionclear:selection-collapsed
+        //   t+1553.3ms  menus toolbar=0 highlight=0            ("y no sale ninguno")
+        //
+        // Bounded, like DRAG_IDLE_MS: a genuine collapse is ignored for at most
+        // this long after the frame collapsed the selection itself.
+        var SELF_COLLAPSE_MS = 400;
+        var selfCollapseUntil = 0;
+        function nowMs() {
+          return (typeof performance !== 'undefined' && performance.now)
+            ? performance.now()
+            : Date.now();
+        }
+        function suppressOwnCollapse(ms) {
+          selfCollapseUntil = nowMs() + ms;
+        }
+        function ownCollapsePending() {
+          if (!selfCollapseUntil) return false;
+          if (nowMs() >= selfCollapseUntil) {
+            selfCollapseUntil = 0;
+            return false;
+          }
+          return true;
+        }
         var CHAPTER_HREF = ${JSON.stringify(opts.chapterHref)};
         var CHAPTER_INDEX = ${opts.chapterIndex};
         var CHAPTER_TITLE = ${JSON.stringify(opts.chapterTitle ?? null)};
@@ -117,6 +153,9 @@ export function buildChapterSelectionScript(opts: {
               clearTimeout(timer);
               timer = null;
             }
+            // The collapse below is ours: flag it before it fires so its
+            // \`selectionchange\` cannot be read as "the selection ended".
+            suppressOwnCollapse(SELF_COLLAPSE_MS);
             var selHit = window.getSelection();
             if (selHit) selHit.removeAllRanges();
             window.parent.postMessage({
@@ -149,15 +188,40 @@ export function buildChapterSelectionScript(opts: {
         // chrome, focus left the window entirely, or the frame is being torn
         // down (pagehide covers that one). Because the toolbar lives in the
         // PARENT document, pressing any menu button is in the first group — the
-        // frame loses focus the instant a toolbar button is pressed, the blur
-        // fires, this clear dismisses the toolbar, and the click that was
-        // already on its way lands on a button that no longer exists. That is
-        // the reported "every button needs two clicks", and the second click
-        // works only because the selection is already collapsed by then and
-        // there is nothing left to clear.
+        // frame loses focus the instant a toolbar button is pressed — and that
+        // one must NOT dismiss anything: the click that was already on its way
+        // has to reach the button it was aimed at.
         //
-        // Every dismissal the reader actually expects is already covered by a
-        // path that knows more than this event does:
+        // So the question this handler asks is "is the READER still focused",
+        // and it is asked of the TOP document on purpose. Asking THIS document
+        // instead (\`document.hasFocus()\`, what this used to do) answers "does
+        // this frame hold the caret", which is false the moment the reader
+        // presses anything in the parent's chrome — the toolbar included.
+        // MEASURED over CDP with the frame focused, pressing the toolbar:
+        //
+        //   t+ 34.2ms  pointerdown      span  <<IN-TOOLBAR>>   (parent's guard holds)
+        //   t+ 34.5ms  mousedown        span  <<IN-TOOLBAR>>
+        //   t+ 39.6ms  epub-selection   textLen=0 reason=iframe-blur
+        //   t+ 40.2ms  dismissToolbar   onselectionclear:iframe-blur
+        //   t+ 50.4ms  epub-selection   textLen=12 fast=true   (selection still live)
+        //
+        //   frame document.hasFocus(): true -> FALSE across the press
+        //   top   document.hasFocus(): true -> TRUE
+        //
+        // — i.e. the window never lost focus, the frame did, and the handler
+        // reported it as "the selection ended" while the selection was still
+        // there. The toolbar was torn down between the \`pointerdown\` and the
+        // \`click\`, the colour was not applied, and the live selection re-raised
+        // the menu a moment later: the reported "el menú desaparece por un
+        // momento y luego vuelve a aparecer". The SECOND press works only because
+        // the frame no longer holds the caret, so the blur never fires again —
+        // the reported "y presiono otra vez ese mismo color y ahora sí se aplica".
+        //
+        // The top document's answer is true whenever the app window is active,
+        // whichever frame holds the caret inside it, so the only case left for
+        // this handler is the one it was written for: focus genuinely leaving
+        // the reader. Every in-app dismissal is already covered by a path that
+        // knows more than a blur does:
         //
         //   - a click inside the chapter   -> inside-click (this document saw it)
         //   - a scroll                     -> scroll
@@ -166,17 +230,21 @@ export function buildChapterSelectionScript(opts: {
         //     (handleWorkspacePointerDown), which also collapses this frame's
         //     selection so the two stay in step
         //   - the chapter being replaced   -> pagehide / beforeunload
-        //
-        // What is left for blur is the one case nothing else can see: focus
-        // genuinely leaving the reader while a selection is still live. That is
-        // decided by document.hasFocus() — false once the window itself is no
-        // longer focused — rather than by the mere fact that the frame lost the
-        // caret. A blur into the parent chrome leaves hasFocus() true and is
-        // therefore ignored, which is exactly the click that must reach its
-        // button.
+        function appWindowHasFocus() {
+          try {
+            var topDoc = window.top && window.top.document;
+            if (topDoc) return topDoc.hasFocus();
+          } catch (eTop) {}
+          // Unreadable: the frame is not same-origin with the reader, which
+          // cannot happen for a chapter — \`buildSelectionPayload\` already reads
+          // \`window.frameElement\`, which needs the same access. Rather than
+          // guess, report nothing: a menu that stays up is recoverable, a menu
+          // dismissed under the reader's press is the defect.
+          return true;
+        }
         window.addEventListener('blur', function() {
           if (dragState === 'dragging') return;
-          if (document.hasFocus()) return;
+          if (appWindowHasFocus()) return;
           postClear('iframe-blur');
         });
 
@@ -303,6 +371,9 @@ export function buildChapterSelectionScript(opts: {
 
         document.addEventListener('selectionchange', function() {
           if (dragState === 'dragging') return;
+          // A collapse this frame caused itself (the highlight click) is not the
+          // reader ending the selection — see SELF_COLLAPSE_MS above.
+          if (ownCollapsePending()) return;
           var sel = window.getSelection();
           if (!sel || sel.isCollapsed) {
             if (timer) clearTimeout(timer);

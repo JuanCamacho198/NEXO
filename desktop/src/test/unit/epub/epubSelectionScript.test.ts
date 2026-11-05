@@ -86,6 +86,43 @@ describe('buildChapterSelectionScript', () => {
   });
 
   /**
+   * The frame must not read its OWN collapse as "the reader ended the selection".
+   *
+   * The click that lands on a highlight collapses the selection itself, on
+   * purpose: that gesture belongs to the highlight menu, and the coloured run
+   * must not stay painted under it. But the `selectionchange` that collapse fires
+   * posts a clear 200 ms later, and the parent dismisses the menu the click just
+   * raised with it. MEASURED over CDP on the reported gesture: the click posted
+   * `epub-highlight-click` at t+1224.3 ms and the menu was up, the clear arrived
+   * at t+1424.4 ms as `reason=selection-collapsed`, and the settled count was
+   * zero — "aparece por un mini segundo y luego desaparece".
+   */
+  it('does not read its own collapse as the end of the selection', () => {
+    const script = build();
+    expect(script).toContain('SELF_COLLAPSE_MS');
+    expect(script).toContain('suppressOwnCollapse');
+    expect(script).toContain('ownCollapsePending()');
+
+    // Raised by the click handler, before the collapse it is about to cause.
+    const clickStart = script.indexOf("document.addEventListener('click'");
+    expect(clickStart, 'the click listener is missing').toBeGreaterThan(-1);
+    const clickBody = script.slice(clickStart, clickStart + 1400);
+    expect(clickBody).toContain('suppressOwnCollapse(SELF_COLLAPSE_MS)');
+    expect(clickBody.indexOf('suppressOwnCollapse(SELF_COLLAPSE_MS)')).toBeLessThan(
+      clickBody.indexOf('selHit.removeAllRanges()'),
+    );
+
+    // ...and consulted by the handler that would otherwise post the clear.
+    const selectionChangeStart = script.indexOf("document.addEventListener('selectionchange'");
+    expect(selectionChangeStart, 'the selectionchange listener is missing').toBeGreaterThan(-1);
+    const selectionChangeBody = script.slice(selectionChangeStart, selectionChangeStart + 620);
+    expect(selectionChangeBody).toContain('ownCollapsePending()');
+    expect(selectionChangeBody.indexOf('ownCollapsePending()')).toBeLessThan(
+      selectionChangeBody.indexOf("postClear('selection-collapsed')"),
+    );
+  });
+
+  /**
    * The blur handler must distinguish "focus moved into the parent's chrome"
    * from "focus left the reader".
    *
@@ -93,21 +130,44 @@ describe('buildChapterSelectionScript', () => {
    * blurs the chapter frame. Treating that blur as "the selection is over"
    * dismissed the toolbar between the `pointerdown` and the `click`, and the
    * click landed on a button that no longer existed — "every button needs two
-   * clicks". The guard is `document.hasFocus()`: only a blur that takes the
-   * focus out of the window clears, and a blur into the parent leaves
-   * `hasFocus()` true.
+   * clicks".
+   *
+   * The guard has to be the TOP document's answer, and asking THIS document
+   * (`document.hasFocus()`) is the measured defect rather than the fix: it
+   * answers "does this frame hold the caret", which goes false the instant the
+   * reader presses anything in the parent's chrome. MEASURED over CDP with the
+   * frame focused — pressing the toolbar moved the frame's `hasFocus()` from
+   * `true` to `false` while the top document's stayed `true`, so the frame
+   * posted `iframe-blur`, the parent tore the toolbar down mid-press, and the
+   * live selection re-raised it a moment later: "el menú desaparece por un
+   * momento y luego vuelve a aparecer". The second press worked only because the
+   * frame no longer held the caret.
    */
   it('does not treat a blur into the parent chrome as the end of the selection', () => {
     const script = build();
-    expect(script).toContain('document.hasFocus()');
+
+    // The guard is the TOP document's focus state: that is true whenever the app
+    // window is active, whichever frame holds the caret inside it.
+    expect(script).toContain('function appWindowHasFocus()');
+    expect(script).toContain('window.top');
+    expect(script).toContain('topDoc.hasFocus()');
+
     // The guard has to sit in the blur handler, before the clear it gates.
     const blurStart = script.indexOf("window.addEventListener('blur'");
     expect(blurStart, 'the blur listener is missing').toBeGreaterThan(-1);
-    const blurBody = script.slice(blurStart, blurStart + 600);
-    expect(blurBody).toContain('document.hasFocus()');
-    expect(blurBody.indexOf('document.hasFocus()')).toBeLessThan(
+    const blurBody = script.slice(blurStart, blurStart + 300);
+    expect(blurBody).toContain('appWindowHasFocus()');
+    expect(blurBody.indexOf('appWindowHasFocus()')).toBeLessThan(
       blurBody.indexOf("postClear('iframe-blur')"),
     );
+
+    // ...and it must NOT be this frame's own focus state, which is false the
+    // moment the reader presses a button of the menu.
+    expect(
+      blurBody,
+      'the blur handler went back to asking THIS document, which reports "the caret left the ' +
+        'frame" for every press on the parent-rendered toolbar — the defect this gates',
+    ).not.toContain('document.hasFocus()');
   });
 
   it('emits every other dismissal path unconditionally, so nothing legitimate is lost', () => {

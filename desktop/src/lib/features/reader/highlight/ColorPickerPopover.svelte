@@ -68,6 +68,7 @@
   <div
     bind:this={popoverEl}
     class="fixed z-[110] w-52 rounded-xl border border-(--color-highlight-menu-border) bg-(--color-color-picker-bg) p-3 shadow-xl"
+    data-floating-menu="true"
     style="left: {Math.max(
       8,
       Math.min(anchor.getBoundingClientRect().left, window.innerWidth - 224),

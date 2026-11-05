@@ -90,8 +90,10 @@
 
 <div
   class="fixed z-[100] rounded-xl border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) p-2 shadow-xl"
+  data-floating-menu="true"
   style="left: {menuX}px; top: {menuY}px; width: {MENU_WIDTH}px;"
   role="menu"
+  data-testid="highlight-context-menu"
   aria-label={t('highlight.contextMenuAriaLabel')}
   in:scale={{ duration: 140, start: 0.94, easing: cubicOut }}
   out:scale={{ duration: 100, start: 0.97, easing: cubicOut }}

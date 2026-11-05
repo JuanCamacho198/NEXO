@@ -22,6 +22,21 @@ export type HighlightMenuDeps = {
   listTagsForHighlightFn?: (id: string) => Promise<TagDto[]>;
   createTagFn?: (args: { name: string; color?: string }) => Promise<TagDto>;
   saveHighlightTagsFn?: (args: { highlightId: string; tagIds: string[] }) => Promise<TagDto[]>;
+  /**
+   * "The reader asked for the highlight menu."
+   *
+   * The composable does NOT decide that the menu is open: the workspace owns the
+   * single `OpenMenu` state and calls back here (through `setOpen`) once it has
+   * raised the menu. This callback is the workspace's chance to close the
+   * selection toolbar in the SAME step, so the two cannot both be on screen —
+   * the reported defect where selecting a run that contains a highlight raised
+   * both menus. Optional so a caller that has only one menu (tests, embeddings)
+   * keeps working.
+   */
+  onIntentOpen?: () => void;
+  /** "The reader dismissed the highlight menu." The workspace folds this into
+   * the same single state, so closing here cannot leave the other menu up. */
+  onIntentClose?: () => void;
 };
 
 export function createHighlightMenu(deps: HighlightMenuDeps): {
@@ -52,6 +67,17 @@ export function createHighlightMenu(deps: HighlightMenuDeps): {
   handleTagToggle(tagId: string): Promise<void>;
   handleColorPickerSelect(color: string): void;
   scheduleToolbarDismiss(dismiss: () => void): void;
+  /**
+   * Raise or drop this menu's own open flag.
+   *
+   * The workspace is the single owner of "which menu is open" and drives this:
+   * `setOpen(true)` shows the menu (after the workspace has closed the
+   * selection toolbar), `setOpen(false)` hides it and resets the sub-popovers.
+   * It is deliberately separate from `openHighlightMenu`, which ALSO loads the
+   * menu's data — the workspace calls `openHighlightMenu` for the intent, and
+   * this for the final visibility decision.
+   */
+  setOpen(open: boolean): void;
   cleanup(): void;
 } {
   const highlights = deps.highlights;
@@ -116,6 +142,9 @@ export function createHighlightMenu(deps: HighlightMenuDeps): {
             },
       assignedTags: [],
     };
+    // Notify the single owner BEFORE the data loads: the workspace closes the
+    // selection toolbar in the same step, so the two menus are never both up.
+    deps.onIntentOpen?.();
     void refreshTags();
     if (hl) {
       void refreshHighlightTags(id);
@@ -123,6 +152,31 @@ export function createHighlightMenu(deps: HighlightMenuDeps): {
   }
 
   function closeHighlightMenu(): void {
+    highlightMenu = {
+      open: false,
+      highlightId: null,
+      color: HIGHLIGHT_COLORS[0].hex,
+      text: '',
+      position: null,
+      assignedTags: [],
+    };
+    showColorPicker = false;
+    showTagPopover = false;
+    showNoteModal = false;
+    deps.onIntentClose?.();
+  }
+
+  /**
+   * The final visibility decision, driven BY the workspace's single `OpenMenu`
+   * state. `open` false hides the menu (and its popovers); `open` true is a
+   * no-op because `openHighlightMenu` already loaded the data and set the flag.
+   * Kept idempotent so the workspace may call it on every state change.
+   */
+  function setOpen(open: boolean): void {
+    if (open) return;
+    if (!highlightMenu.open && !showColorPicker && !showTagPopover && !showNoteModal) {
+      return;
+    }
     highlightMenu = {
       open: false,
       highlightId: null,
@@ -344,6 +398,7 @@ export function createHighlightMenu(deps: HighlightMenuDeps): {
     handleTagToggle,
     handleColorPickerSelect,
     scheduleToolbarDismiss,
+    setOpen,
     cleanup,
   };
 }
