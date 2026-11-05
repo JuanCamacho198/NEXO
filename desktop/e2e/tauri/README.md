@@ -57,10 +57,18 @@ CDP specs.
 
 ## How it works
 
-- `scripts/tauriDevDebug.mjs` — sets `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`
-  (which WebView2 reads) to `--remote-debugging-port=<port>`, then spawns
-  `tauri dev`. It exists as a script because `VAR=x cmd` is POSIX shell syntax
-  and does not work in `cmd.exe`/`pwsh`, which is what npm/bun use on Windows.
+- `scripts/tauriDevDebug.mjs` — generates a `tauri.conf.json` with
+  `additionalBrowserArgs` set to `--remote-debugging-port=<port>` (plus the
+  arguments the app already runs with, which setting the key replaces) and starts
+  `tauri dev --config` with it. It exists as a script because the *other* route —
+  the `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` environment variable — cannot work
+  on this stack: `wry` (0.55.1) always calls
+  `set_additional_browser_arguments` with its own defaults, and WebView2 ignores
+  the variable whenever that property is set. Measured: with the variable
+  exported, the app's browser process command line carried wry's defaults, no
+  `--remote-debugging-port`, and nothing listened on 9222. The config key is the
+  path that reaches it: `tauri-runtime-2.11.3/src/webview.rs:483` forwards
+  `WindowConfig.additional_browser_args` to the builder.
 - `e2e/tauri/harness/connectApp.ts` — resolves the endpoint, waits for the CDP
   server, attaches with `connectOverCDP`, finds **the app page** among the CDP
   targets, waits for the shell to mount, and exposes it as the `appPage`
@@ -68,6 +76,11 @@ CDP specs.
 - `e2e/tauri/smoke.spec.ts` — the viability gate. It calls `diagnose`, a
   command implemented in Rust that queries the real database, so a passing run
   proves the backend is genuinely behind the page.
+- `e2e/tauri/harness/readerTrace.ts` — the recorder the menu specs share: every
+  input in the capture phase, every raw `postMessage` from the chapter frame,
+  every `dismissToolbar` with the caller that ran it, and an optional 50 ms
+  sample of how many floating menus are on screen. Install it idempotently — the
+  app page is never reloaded between specs.
 
 ### Finding the right page
 
