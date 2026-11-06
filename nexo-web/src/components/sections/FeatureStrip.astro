@@ -29,12 +29,15 @@ const features = [
 ---
 
 <!-- ══════════════ FEATURE STRIP ══════════════ -->
-<section id="caracteristicas" class="border-t border-border bg-surface-alt py-24 max-[640px]:py-16">
-  <div class="shell grid grid-cols-4 gap-12 max-[900px]:grid-cols-2 max-[900px]:gap-10 max-[640px]:grid-cols-1 max-[640px]:gap-8">
+<section
+  id="caracteristicas"
+  class="feature-strip border-y border-border bg-surface-alt py-14 max-[640px]:py-10"
+>
+  <div class="shell grid grid-cols-4 gap-10 max-[900px]:grid-cols-2 max-[640px]:grid-cols-1 max-[640px]:gap-7">
     {features.map((feature) => (
       <div class="min-w-0">
         <svg
-          class="mb-4 block h-5 w-5 text-ink"
+          class="feature-icon mb-5 block h-11 w-11 rounded-xl border border-border bg-surface p-2.5 text-sync"
           viewBox="0 0 24 24"
           aria-hidden="true"
           fill="none"
