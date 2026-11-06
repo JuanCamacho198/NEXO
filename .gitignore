@@ -80,3 +80,6 @@ tauri-debug-err.log
 
 # License attributions are kept locally, not versioned.
 THIRD-PARTY-NOTICES.md
+
+# Design review captures (local scratch, not part of the repo)
+nexo-web/.design-review*.png
