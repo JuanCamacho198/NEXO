@@ -1294,7 +1294,7 @@ export const messagesEs: Record<MessageKey, string> = {
   // indica la solución, para no dejar al lector con un "sin traducción" seco.
   'reader.translationSameLanguage': 'El libro ya está en este idioma, no hay nada que traducir',
   'reader.translationUnknownSource':
-    'Este libro no tiene idioma. Elige un idioma de origen en Ajustes › Traducción.',
+    'No pudimos detectar el idioma del texto seleccionado. Elige un idioma de origen en Ajustes › Traducción.',
   'reader.translationInvalidSource': 'El idioma de origen de Ajustes no es válido. Elige otro.',
   'reader.translationInvalidTarget': 'El idioma de destino de Ajustes no es válido. Elige otro.',
   'reader.dismissTranslation': 'Cerrar traducción',

@@ -854,7 +854,7 @@ export const messagesEn = {
   'reader.translationSameLanguage':
     'The book is already in this language, so there is nothing to translate',
   'reader.translationUnknownSource':
-    'This book has no language. Choose a source language in Settings › Translation.',
+    'We could not detect the language of the selected text. Choose a source language in Settings › Translation.',
   'reader.translationInvalidSource':
     'The source language in Settings is not valid. Choose another one.',
   'reader.translationInvalidTarget':
