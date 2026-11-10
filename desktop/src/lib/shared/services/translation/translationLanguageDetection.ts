@@ -18,19 +18,30 @@
 /**
  * Function-word markers per supported language.
  *
- * Function words (articles, prepositions, conjunctions, common verbs) are the
- * cheapest honest signal: they are high-frequency, they are language-specific,
- * and a longer text hits several of them. The lists are deliberately SHORT —
- * every marker that is shared between languages (`la`, `de`, `un`, `o` in
- * Spanish/Italian/Portuguese) makes a tie more likely, and a tie is a refusal.
+ * Function words (articles, prepositions, conjunctions, common verb forms) are
+ * the cheapest honest signal: they are high-frequency, they are
+ * language-specific, and a longer text hits several of them.
+ *
+ * INVARIANT — every marker belongs to EXACTLY ONE language. A word that is
+ * shared between two lists (`la`, `de`, `un`, `o`, `que`, `para`) scores for
+ * both, so real selections can MATCH and the detector refuses by design. That
+ * is what made the previous lists unusable: a Spanish sentence scored the same
+ * as its Italian twin and the answer was always `null`. A marker that cannot
+ * separate the supported languages carries no information, so it is not a
+ * marker — it is noise. Keep every word exclusive to one list.
+ *
+ * The lists are deliberately SHORT and roughly the same size, so no language
+ * collects a systematic advantage from list length. Genuinely ambiguous text —
+ * no marker hits at all, or an exact tie between the best two languages — still
+ * refuses: not guessing beats guessing wrong.
  */
 const LANGUAGE_MARKERS: ReadonlyArray<readonly [string, readonly string[]]> = [
-  ['en', ['the', 'and', 'of', 'to', 'is', 'that', 'with']],
-  ['es', ['el', 'la', 'de', 'que', 'los', 'una', 'por', 'para']],
-  ['fr', ['le', 'la', 'les', 'des', 'une', 'est', 'pour']],
-  ['de', ['der', 'die', 'das', 'und', 'ist', 'nicht', 'mit']],
-  ['it', ['il', 'la', 'di', 'che', 'un', 'per']],
-  ['pt', ['o', 'a', 'de', 'que', 'um', 'para']],
+  ['en', ['the', 'and', 'of', 'with', 'this', 'there']],
+  ['es', ['un', 'la', 'y', 'con', 'del', 'pero', 'puede']],
+  ['fr', ['et', 'les', 'dans', 'avec', 'pour', 'cette']],
+  ['de', ['und', 'ist', 'nicht', 'mit', 'der', 'die', 'das']],
+  ['it', ['il', 'di', 'per', 'che', 'questo', 'sono']],
+  ['pt', ['voce', 'nao', 'com', 'para', 'muito', 'onde']],
 ];
 
 /**
