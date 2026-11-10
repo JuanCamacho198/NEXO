@@ -25,8 +25,8 @@
    * `Dropdown`'s DEFAULT look is styled on the SETTINGS tokens (`--color-surface`,
    * `--color-primary`, `--color-border`), while this menu is a dark surface
    * (`--color-highlight-menu-bg`, `--color-text-inverse`). The component is left
-   * untouched — other callers depend on its appearance — and both its seams are
-   * used instead:
+   * untouched — other callers depend on its appearance — and all three of its
+   * seams are used instead:
    *
    * - `trigger` / `option` snippets replace what is RENDERED. The default trigger
    *   prints `Select.Value` and a fixed 16px chevron; the default option prints
@@ -37,6 +37,20 @@
    *   order in the generated stylesheet, NOT by their order in the class
    *   attribute — without the suffix the light `bg-(--color-surface)` from the
    *   component's own base classes would win roughly half the time.
+   * - `contentClass` reaches the PORTALLED panel, which the trigger's `class`
+   *   cannot: it is mounted under `document.body`, outside this component's
+   *   scope. Without it the panel kept `Dropdown`'s light `bg-(--color-elevated)`
+   *   and rendered a white slab over the dark menu.
+   *
+   * `markAsFloatingMenu` is what keeps the panel ALIVE. `ReaderWorkspace`
+   * dismisses every floating menu on a capture-phase `pointerdown` unless the
+   * press landed inside one, recognised by the `[data-floating-menu]` marker.
+   * The panel is portalled OUT of the menu that owns it, so before this marker a
+   * press on one of its options read as a press outside and closed the language
+   * bar — the chosen language never landed. Measured on the running app: the
+   * dismissal ring gained `workspace-pointerdown` and the menu count fell to
+   * zero; with the marker, the same press produced no dismissal and the menu
+   * stayed up.
    *
    * The trigger does NOT truncate: the label is `whitespace-nowrap` and the row
    * wraps (`flex-wrap`), so a wide pair moves the target side to a second line
@@ -161,6 +175,36 @@
    * colour there would make the list unreadable, so the span restates it.
    */
   const optionLabelClass = 'text-(--color-text-inverse) whitespace-nowrap';
+
+  /**
+   * Dark chrome for the PORTALLED panel.
+   *
+   * The panel is mounted under `document.body`, so none of the consuming tree's
+   * scope reaches it and `Dropdown`'s own panel class stands unless overridden
+   * here. Each conflict is suffixed `!` for the same reason the trigger's are:
+   * Tailwind decides two utilities for one property by stylesheet order, not by
+   * class-attribute order, and `Dropdown`'s base panel already paints
+   * `bg-(--color-elevated)`, which in the READER's theme is the LIGHT surface.
+   * Without the suffix a white slab lands over the dark floating menu.
+   *
+   * The option rows are repainted too, not just the panel: `Select.Item` carries
+   * its own `text-(--color-primary)` and a `data-[highlighted]:bg-(--color-surface-hover)`
+   * highlight, so the selected/keyboard-active row would otherwise be
+   * light-on-dark and indistinguishable from the rest. Here the panel is the
+   * menu's own `--color-highlight-menu-bg`, the label is the inverse text, and
+   * the active row lifts with a translucent white wash — which reads as a
+   * highlight against a dark panel in BOTH themes, where a themed
+   * `--color-surface-hover` would not.
+   */
+  const contentClass =
+    'bg-(--color-highlight-menu-bg)! ring-(--color-highlight-menu-border)! ' +
+    'text-(--color-text-inverse)! border border-(--color-highlight-menu-border)! ' +
+    'p-1 ' +
+    '**:data-[highlighted]:bg-white/15! ' +
+    '**:data-[selected]:bg-white/20! ' +
+    '**:data-[selected]:font-semibold!' +
+    ' **:data-[selected]:text-(--color-text-inverse)!' +
+    ' **:hover:bg-white/12!';
 </script>
 
 <div class="flex flex-wrap items-center gap-2">
@@ -169,6 +213,8 @@
     value={sourceValue}
     onchange={(detail) => handleSourceChange(detail.value)}
     class={triggerClass}
+    {contentClass}
+    markAsFloatingMenu
     {disabled}
   >
     {#snippet trigger()}
@@ -190,6 +236,8 @@
     value={targetValue}
     onchange={(detail) => handleTargetChange(detail.value)}
     class={triggerClass}
+    {contentClass}
+    markAsFloatingMenu
     {disabled}
   >
     {#snippet trigger()}
