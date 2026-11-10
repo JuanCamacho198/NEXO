@@ -166,4 +166,66 @@ describe('SettingsSelectionMenuTab', () => {
 
     expect(screen.getByText('settings.translation.loading')).toBeTruthy();
   });
+
+  /**
+   * The degenerate pair (`es` / `es`) is ALLOWED but announced: the pair
+   * produces no translation, and a reader who saved it must be able to see why
+   * before the reader panel tells them "already in this language".
+   */
+  it('warns when both sides of the pair name the same language', () => {
+    render(SettingsSelectionMenuTab, {
+      ...baseProps,
+      sourceLanguage: 'es',
+      targetLanguage: 'es',
+    });
+
+    expect(screen.getByText('settings.translation.sameLanguageWarning')).toBeTruthy();
+  });
+
+  /**
+   * `en-US` and `en-GB` are the SAME language to the service, which keys on the
+   * primary subtag — the warning must agree with the resolver, not with string
+   * equality.
+   */
+  it('warns across regional variants of one language', () => {
+    render(SettingsSelectionMenuTab, {
+      ...baseProps,
+      sourceLanguage: 'en-US',
+      targetLanguage: 'en-GB',
+    });
+
+    expect(screen.getByText('settings.translation.sameLanguageWarning')).toBeTruthy();
+  });
+
+  /**
+   * "Automatic" is NOT a same-language statement: the unresolved side is
+   * inferred elsewhere (book / app locale), and warning there would fire on
+   * pairs that translate perfectly well.
+   */
+  it('does not warn when either side is automatic', () => {
+    const { unmount } = render(SettingsSelectionMenuTab, {
+      ...baseProps,
+      sourceLanguage: null,
+      targetLanguage: 'es',
+    });
+    expect(screen.queryByText('settings.translation.sameLanguageWarning')).toBeNull();
+    unmount();
+
+    render(SettingsSelectionMenuTab, {
+      ...baseProps,
+      sourceLanguage: 'es',
+      targetLanguage: null,
+    });
+    expect(screen.queryByText('settings.translation.sameLanguageWarning')).toBeNull();
+  });
+
+  it('does not warn for a genuinely distinct pair', () => {
+    render(SettingsSelectionMenuTab, {
+      ...baseProps,
+      sourceLanguage: 'es',
+      targetLanguage: 'en',
+    });
+
+    expect(screen.queryByText('settings.translation.sameLanguageWarning')).toBeNull();
+  });
 });

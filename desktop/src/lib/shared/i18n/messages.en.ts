@@ -1387,6 +1387,8 @@ export const messagesEn = {
     'Automatic infers the language from the book. Pick one when the book has no language metadata.',
   'settings.translation.targetLabel': 'Target language',
   'settings.translation.targetHint': 'Automatic uses the app language.',
+  'settings.translation.sameLanguageWarning':
+    'Both sides are the same language, so nothing can be translated: a selection in {{language}} would translate into {{language}}.',
   'settings.translation.sourceAuto': 'Automatic (from the book)',
   'settings.translation.targetAuto': 'Automatic (app language)',
   'settings.translation.save': 'Save',

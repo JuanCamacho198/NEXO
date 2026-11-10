@@ -1403,6 +1403,8 @@ export const messagesEs: Record<MessageKey, string> = {
     'Automático lo infiere del libro. Elige uno cuando el libro no tenga idioma.',
   'settings.translation.targetLabel': 'Idioma de destino',
   'settings.translation.targetHint': 'Automático usa el idioma de la aplicación.',
+  'settings.translation.sameLanguageWarning':
+    'Ambos lados usan el mismo idioma, así que no se puede traducir nada: una selección en {{language}} se traduciría a {{language}}.',
   'settings.translation.sourceAuto': 'Automático (del libro)',
   'settings.translation.targetAuto': 'Automático (idioma de la app)',
   'settings.translation.save': 'Guardar',

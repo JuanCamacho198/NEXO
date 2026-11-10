@@ -7,6 +7,7 @@
     TRANSLATION_LANGUAGE_OPTIONS,
     languageLabel,
   } from '$lib/shared/services/translation/translationLanguageOptions';
+  import { normalizeLanguageTag } from '$lib/shared/services/translation/translationLanguages';
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -76,6 +77,42 @@
     (sourceLanguage ?? null) !== (draftSource === INFER_VALUE ? null : draftSource) ||
       (targetLanguage ?? null) !== (draftTarget === INFER_VALUE ? null : draftTarget),
   );
+
+  /**
+   * True when both sides name the SAME language, which is the pair the service
+   * refuses (`same-language`): nothing can be translated from a language into
+   * itself.
+   *
+   * It reports the resolver's verdict, not a guess of its own, so it uses the
+   * SAME normalisation the resolver uses (`normalizeLanguageTag`): `en-US` and
+   * `en-GB` are one language, exactly as they are for MyMemory, which keys on
+   * the primary subtag.
+   *
+   * "Automatic" (`null`) is NOT degenerate. An unresolved side is a statement
+   * about the app's inference, not about the pair: the source may still come
+   * from the book and the target from the app locale, and those are resolved
+   * elsewhere. Calling that a collision would warn about a pair that may
+   * translate perfectly well.
+   */
+  const isDegeneratePair = $derived.by(() => {
+    if (sourceLanguage === null || targetLanguage === null) return false;
+    const normalizedSource = normalizeLanguageTag(sourceLanguage);
+    const normalizedTarget = normalizeLanguageTag(targetLanguage);
+    if (normalizedSource === null || normalizedTarget === null) return false;
+    return normalizedSource === normalizedTarget;
+  });
+
+  /**
+   * The shared language, named for the reader: the normalised code maps to a
+   * catalogue option, and falls back to the bare code when the pair was stored
+   * with a variant the option list does not carry (`en-GB`).
+   */
+  const degenerateLanguageLabel = $derived.by(() => {
+    if (!isDegeneratePair) return '';
+    const normalized = normalizeLanguageTag(sourceLanguage);
+    if (normalized === null) return '';
+    return languageLabel(normalized, (key) => t(key as MessageKey));
+  });
 
   function handleSourceChange(value: string): void {
     onSourceChange(value === INFER_VALUE ? null : value);
@@ -149,6 +186,14 @@
       />
       <p class="text-xs text-(--color-text-muted)">{t('settings.translation.targetHint')}</p>
     </div>
+
+    {#if isDegeneratePair}
+      <p
+        class="rounded-lg border border-(--color-warning)/40 bg-(--color-warning)/10 px-3 py-2 text-sm text-(--color-primary)"
+      >
+        {t('settings.translation.sameLanguageWarning', { language: degenerateLanguageLabel })}
+      </p>
+    {/if}
 
     <Button variant="primary" loading={isSaving} onclick={onSave} disabled={!isDirty}>
       {t('settings.translation.save')}
