@@ -72,9 +72,24 @@ export interface TranslationPort {
  * is no service involved, so each reason gets its own copy naming the fix —
  * previously these all collapsed into `no-result`, which told the reader
  * nothing and offered no way out.
+ *
+ * `ok` and `refused` carry the PAIR the request ran (or would have run) with,
+ * as the resolution resolved it — `null` on a side the cascade could not name.
+ * Two reasons it travels on the outcome rather than being re-derived by the
+ * panel: a refusal that names the pair cannot offer to fix it without showing
+ * which side is missing, and re-resolving downstream would re-run detection and
+ * could resolve a DIFFERENT pair than the one the result was produced with.
+ * `no-result` and `unavailable` carry no pair: one is a service answer, the
+ * other a transport failure, and neither is a statement about languages — a
+ * selector there would offer to change something that was not the problem.
  */
 export type TranslationOutcome =
-  | { status: 'ok'; text: string }
+  | { status: 'ok'; text: string; source: string; target: string }
   | { status: 'no-result' }
   | { status: 'unavailable' }
-  | { status: 'refused'; reason: NoTranslationReason };
+  | {
+      status: 'refused';
+      reason: NoTranslationReason;
+      source: string | null;
+      target: string | null;
+    };

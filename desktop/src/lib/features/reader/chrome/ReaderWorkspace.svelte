@@ -647,7 +647,12 @@
     );
 
     if (resolution.kind === 'no-translation') {
-      return { status: 'refused', reason: resolution.reason };
+      return {
+        status: 'refused',
+        reason: resolution.reason,
+        source: resolution.source,
+        target: resolution.target,
+      };
     }
 
     try {
@@ -656,9 +661,39 @@
         sourceLang: resolution.source,
         targetLang: resolution.target,
       });
-      return { status: 'ok', text };
+      return { status: 'ok', text, source: resolution.source, target: resolution.target };
     } catch (error) {
       return translationFailureOutcome(error);
+    }
+  }
+
+  /**
+   * Persist a language pair chosen inside the selection menu (T6).
+   *
+   * The write is the SAME call the settings tab makes — `savePreferences` — so
+   * a pair chosen while reading is the pair Settings shows afterwards; a second
+   * write path would be a second truth. It is deliberately NOT read back into a
+   * local copy: `handleTranslate` re-reads preferences per request, which is
+   * what makes the retranslation that follows pick the new pair up.
+   *
+   * `null` means "automatic" and is a real value, not an error: it clears the
+   * preference and lets the cascade fall back to the book's language and to
+   * local detection. A degenerate pair chosen here is not intercepted — the
+   * next resolution refuses it with its own reason, which is the behaviour a
+   * refusal already had.
+   */
+  async function handleChangeLanguages(next: {
+    source: string | null;
+    target: string | null;
+  }): Promise<void> {
+    try {
+      await translationPort.savePreferences({
+        sourceLanguage: next.source,
+        targetLanguage: next.target,
+      });
+    } catch {
+      // Best effort: a failed write must not stop the reader from reading the
+      // retranslation with the pair they just picked.
     }
   }
 
@@ -941,6 +976,7 @@
         onCopy={handleCopy}
         onAddToDictionary={handleAddToDictionary}
         onTranslate={handleTranslate}
+        onChangeLanguages={handleChangeLanguages}
         onDefine={handleDefine}
         onColorSelect={handleColorSelect}
         {t}

@@ -43,7 +43,13 @@ const baseProps = () => ({
   } satisfies SelectionData,
   onCopy: () => undefined,
   onAddToDictionary: async (): Promise<DictionaryCaptureFeedback> => 'created',
-  onTranslate: async (): Promise<TranslationOutcome> => ({ status: 'ok', text: 'x' }),
+  onTranslate: async (): Promise<TranslationOutcome> => ({
+    status: 'ok',
+    text: 'x',
+    source: 'en',
+    target: 'es',
+  }),
+  onChangeLanguages: async () => undefined,
   onDefine: async () => ({
     word: 'w',
     definitions: [],

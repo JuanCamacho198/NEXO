@@ -63,7 +63,13 @@ const baseProps = () => ({
   selectionData: makeSelectionData(),
   onCopy: () => undefined,
   onAddToDictionary: async (): Promise<DictionaryCaptureFeedback> => 'created',
-  onTranslate: async (): Promise<TranslationOutcome> => ({ status: 'ok', text: 'Translated' }),
+  onTranslate: async (): Promise<TranslationOutcome> => ({
+    status: 'ok',
+    text: 'Translated',
+    source: 'en',
+    target: 'es',
+  }),
+  onChangeLanguages: async () => undefined,
   onDefine: async () => ({
     word: 'Selection text',
     definitions: [{ text: 'a definition', partOfSpeech: null }],
@@ -297,7 +303,9 @@ describe('SelectionToolbar', () => {
   // is the service failing.
 
   it('forwards the whole SelectionData to onTranslate and shows the result', async () => {
-    const onTranslate = vi.fn(async () => ({ status: 'ok', text: 'and' }) as TranslationOutcome);
+    const onTranslate = vi.fn(
+      async () => ({ status: 'ok', text: 'and', source: 'en', target: 'es' }) as TranslationOutcome,
+    );
     const data = makeSelectionData({ text: 'y' });
     const { getByLabelText, queryByText } = render(SelectionToolbar, {
       ...baseProps(),
@@ -336,7 +344,9 @@ describe('SelectionToolbar', () => {
   });
 
   it('does not call onTranslate when there is no selection', async () => {
-    const onTranslate = vi.fn(async () => ({ status: 'ok', text: 'x' }) as TranslationOutcome);
+    const onTranslate = vi.fn(
+      async () => ({ status: 'ok', text: 'x', source: 'en', target: 'es' }) as TranslationOutcome,
+    );
     const { getByLabelText } = render(SelectionToolbar, {
       ...baseProps(),
       selectionData: null,
@@ -349,7 +359,9 @@ describe('SelectionToolbar', () => {
   });
 
   it('does not call onTranslate for a whitespace-only selection', async () => {
-    const onTranslate = vi.fn(async () => ({ status: 'ok', text: 'x' }) as TranslationOutcome);
+    const onTranslate = vi.fn(
+      async () => ({ status: 'ok', text: 'x', source: 'en', target: 'es' }) as TranslationOutcome,
+    );
     const { getByLabelText } = render(SelectionToolbar, {
       ...baseProps(),
       selectionData: makeSelectionData({ text: '   ' }),
@@ -362,7 +374,9 @@ describe('SelectionToolbar', () => {
   });
 
   it('a second click clears the panel without re-requesting', async () => {
-    const onTranslate = vi.fn(async () => ({ status: 'ok', text: 'and' }) as TranslationOutcome);
+    const onTranslate = vi.fn(
+      async () => ({ status: 'ok', text: 'and', source: 'en', target: 'es' }) as TranslationOutcome,
+    );
     const { getByLabelText, queryByText } = render(SelectionToolbar, {
       ...baseProps(),
       onTranslate,
@@ -379,7 +393,8 @@ describe('SelectionToolbar', () => {
   it('closes the result panel from its dismiss button', async () => {
     const { getByLabelText, queryByText } = render(SelectionToolbar, {
       ...baseProps(),
-      onTranslate: async () => ({ status: 'ok', text: 'and' }) as TranslationOutcome,
+      onTranslate: async () =>
+        ({ status: 'ok', text: 'and', source: 'en', target: 'es' }) as TranslationOutcome,
     });
 
     await fireEvent.click(getByLabelText('Translate'));

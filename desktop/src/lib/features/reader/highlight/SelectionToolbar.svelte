@@ -8,6 +8,7 @@
   import type { DefinitionResult } from '$lib/shared/ports/DictionaryLookupPort';
   import type { NoTranslationReason } from '$lib/shared/services/translation/translationLanguageResolution';
   import { isDefinableSelection } from '$lib/shared/services/definition/definitionSelectionGuard';
+  import TranslationLanguageBar from './TranslationLanguageBar.svelte';
   import {
     PANEL_HEIGHT_FACTOR,
     floatingMenuAvailableWidth,
@@ -75,6 +76,12 @@
     onCopy: () => void;
     onAddToDictionary: (data: SelectionData) => Promise<DictionaryCaptureFeedback>;
     onTranslate: (data: SelectionData) => Promise<TranslationOutcome>;
+    /**
+     * Persists a language pair chosen in the result panel. Separate from
+     * `onTranslate` because it is a WRITE, not a read: the request itself stays
+     * `onTranslate`, and the toolbar re-runs it after this resolves.
+     */
+    onChangeLanguages: (next: { source: string | null; target: string | null }) => Promise<void>;
     onDefine: (data: SelectionData) => Promise<DefinitionResult>;
     onColorSelect: (color: string, data: SelectionData) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -88,6 +95,7 @@
     onCopy,
     onAddToDictionary,
     onTranslate,
+    onChangeLanguages,
     onDefine,
     onColorSelect,
     t,
@@ -163,7 +171,44 @@
   let dictionaryFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
   let translation = $state<TranslationOutcome | null>(null);
   let translating = $state(false);
-  const translationActive = $derived(translation !== null ? 'bg-white/10' : '');
+  let translationActive = $state(false);
+  const translationHighlight = $derived(
+    translation !== null || translationActive ? 'bg-white/10' : '',
+  );
+  /**
+   * The pair the panel's selector shows, or `null` when the bar must not render
+   * at all. It is a `$derived` over BOTH `translation` and `pickedLanguages` so
+   * the picked pair can never OUTLIVE the outcome it was chosen for.
+   *
+   * `pickedLanguages` is the overlay, and it is not redundant: the select is a
+   * controlled input, so between the `change` and the fresh outcome the bar
+   * would otherwise snap back to the old pair and read as an ignored click.
+   *
+   * But the overlay alone is not enough, and letting it win unconditionally is
+   * the bug this shape fixes. `no-result` and `unavailable` carry NO pair on
+   * purpose (see `TranslationOutcome`): one is a service answer, the other a
+   * transport failure, and neither is a statement about languages — a selector
+   * there would offer to change something that was not the problem. With the
+   * overlay as the unconditional first branch, a change that landed on either
+   * outcome left `pickedLanguages` set — nothing clears it — so the bar kept
+   * rendering a pair beside "no translation" / "service unavailable", a pair
+   * that belonged to a request that is no longer on screen.
+   *
+   * So the outcome decides FIRST, and the overlay only overrides a pair the
+   * outcome already justified:
+   *
+   *   ok / refused     -> the outcome's own pair; `pickedLanguages` while a
+   *                       change is in flight, so the bar holds the pair just
+   *                       chosen instead of snapping back to the old one.
+   *   no-result /
+   *   unavailable      -> `null`, always. The overlay is not consulted.
+   */
+  let pickedLanguages = $state<{ source: string | null; target: string | null } | null>(null);
+  const shownLanguages = $derived(
+    translation?.status === 'ok' || translation?.status === 'refused'
+      ? (pickedLanguages ?? { source: translation.source, target: translation.target })
+      : null,
+  );
 
   /**
    * The custom-color popover, shown only in the `collapsed` layout.
@@ -700,6 +745,7 @@
   async function handleTranslate(): Promise<void> {
     if (translation) {
       translation = null;
+      pickedLanguages = null;
       return;
     }
     if (!selectionData || !selectionData.text.trim()) return;
@@ -709,6 +755,43 @@
       translation = await onTranslate(selectionData);
     } finally {
       translating = false;
+    }
+  }
+
+  /**
+   * Persist a language change and retranslate the SAME selection in place.
+   *
+   * It re-uses the request path `handleTranslate` uses instead of inventing a
+   * second one, so a retranslation cannot drift from a first translation. It
+   * does NOT call `handleTranslate`, though: that function's first branch CLEARS
+   * the panel, and it would also skip the request for the same-language pair the
+   * reader is asking to be told about — the refusal has to come from the
+   * resolver, which is the only thing that knows the book's language and the
+   * detected one.
+   *
+   * The pair is held in `pickedLanguages` while the request is in flight, so the
+   * selector shows what the reader just chose instead of snapping back. It
+   * outranks the outcome's own pair only for an outcome that carries one anyway
+   * (`ok`, or a refusal naming the pair the resolution REFUSED) — see
+   * `shownLanguages`. An outcome that says nothing about languages
+   * (`no-result`, `unavailable`) hides the selector entirely rather than leaving
+   * it advertising the pair that was picked.
+   */
+  async function handleLanguagesChange(next: {
+    source: string | null;
+    target: string | null;
+  }): Promise<void> {
+    pickedLanguages = next;
+    await onChangeLanguages(next);
+    if (!selectionData || !selectionData.text.trim()) return;
+
+    translating = true;
+    translationActive = true;
+    try {
+      translation = await onTranslate(selectionData);
+    } finally {
+      translating = false;
+      translationActive = false;
     }
   }
 
@@ -908,7 +991,7 @@
     <div class="group relative">
       <button
         type="button"
-        class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky) {translationActive}"
+        class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky) {translationHighlight}"
         onclick={handleTranslate}
         disabled={translating}
         aria-label={t('reader.translate')}
@@ -1020,7 +1103,10 @@
           <button
             type="button"
             class="shrink-0 cursor-pointer rounded text-xs text-(--color-text-auxiliary) hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
-            onclick={() => (translation = null)}
+            onclick={() => {
+              translation = null;
+              pickedLanguages = null;
+            }}
             aria-label={t('reader.dismissTranslation')}
             title={t('reader.dismissTranslation')}
           >
@@ -1035,6 +1121,16 @@
         <p class="text-xs text-(--color-text-auxiliary)">
           {t(TRANSLATION_REFUSAL_KEYS[translation.reason])}
         </p>
+      {/if}
+      {#if !translating && shownLanguages}
+        <div class="mt-2">
+          <TranslationLanguageBar
+            source={shownLanguages.source}
+            target={shownLanguages.target}
+            {t}
+            onChange={handleLanguagesChange}
+          />
+        </div>
       {/if}
     </div>
   {/if}
