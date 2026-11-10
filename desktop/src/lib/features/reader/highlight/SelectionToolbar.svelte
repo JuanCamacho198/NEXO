@@ -202,11 +202,24 @@
    *                       chosen instead of snapping back to the old one.
    *   no-result /
    *   unavailable      -> `null`, always. The overlay is not consulted.
+   *
+   * The source ORIGIN rides along with the pair and is deliberately NOT part of
+   * the overlay: `pickedLanguages` is a pair the reader just chose, so its source
+   * is by definition explicit (`preference`) — showing "Auto (español)" over a
+   * language they picked would be a lie. Only the outcome can say the source was
+   * inferred, and only the outcome is consulted for it.
    */
   let pickedLanguages = $state<{ source: string | null; target: string | null } | null>(null);
   const shownLanguages = $derived(
     translation?.status === 'ok' || translation?.status === 'refused'
       ? (pickedLanguages ?? { source: translation.source, target: translation.target })
+      : null,
+  );
+  const shownSourceOrigin = $derived(
+    translation?.status === 'ok' || translation?.status === 'refused'
+      ? pickedLanguages === null
+        ? translation.sourceOrigin
+        : 'preference'
       : null,
   );
 
@@ -1127,6 +1140,7 @@
           <TranslationLanguageBar
             source={shownLanguages.source}
             target={shownLanguages.target}
+            sourceOrigin={shownSourceOrigin}
             {t}
             onChange={handleLanguagesChange}
           />

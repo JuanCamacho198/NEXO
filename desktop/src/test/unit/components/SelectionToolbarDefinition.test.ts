@@ -71,6 +71,7 @@ const baseProps = () => ({
     text: 'Translated',
     source: 'en',
     target: 'es',
+    sourceOrigin: 'book',
   }),
   onChangeLanguages: async () => undefined,
   onDefine: async (): Promise<DefinitionResult> =>

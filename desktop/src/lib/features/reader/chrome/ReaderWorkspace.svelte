@@ -652,6 +652,7 @@
         reason: resolution.reason,
         source: resolution.source,
         target: resolution.target,
+        sourceOrigin: resolution.sourceOrigin,
       };
     }
 
@@ -661,7 +662,13 @@
         sourceLang: resolution.source,
         targetLang: resolution.target,
       });
-      return { status: 'ok', text, source: resolution.source, target: resolution.target };
+      return {
+        status: 'ok',
+        text,
+        source: resolution.source,
+        target: resolution.target,
+        sourceOrigin: resolution.sourceOrigin,
+      };
     } catch (error) {
       return translationFailureOutcome(error);
     }

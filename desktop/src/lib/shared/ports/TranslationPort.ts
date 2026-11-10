@@ -11,7 +11,10 @@
  * Source language comes from the book, target language from the UI locale.
  * Picking them is a separate concern; the port only carries them.
  */
-import type { NoTranslationReason } from '$lib/shared/services/translation/translationLanguageResolution';
+import type {
+  NoTranslationReason,
+  SourceOrigin,
+} from '$lib/shared/services/translation/translationLanguageResolution';
 import type { TranslationCacheEntryDto, TranslationPreferencesDto } from '$lib/shared/types';
 
 export interface TranslationPort {
@@ -82,9 +85,15 @@ export interface TranslationPort {
  * `no-result` and `unavailable` carry no pair: one is a service answer, the
  * other a transport failure, and neither is a statement about languages — a
  * selector there would offer to change something that was not the problem.
+ *
+ * `sourceOrigin` travels with the pair for the same reason the pair does: the
+ * panel labels an INFERRED source (`book`, `detected`) as "Auto (español)" and
+ * an explicit `preference` as the bare language name, and re-deriving the origin
+ * downstream would mean re-running the cascade. It is `null` on a refusal whose
+ * source never resolved — there is no provenance for a side that does not exist.
  */
 export type TranslationOutcome =
-  | { status: 'ok'; text: string; source: string; target: string }
+  | { status: 'ok'; text: string; source: string; target: string; sourceOrigin: SourceOrigin }
   | { status: 'no-result' }
   | { status: 'unavailable' }
   | {
@@ -92,4 +101,5 @@ export type TranslationOutcome =
       reason: NoTranslationReason;
       source: string | null;
       target: string | null;
+      sourceOrigin: SourceOrigin | null;
     };

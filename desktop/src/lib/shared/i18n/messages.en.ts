@@ -849,6 +849,10 @@ export const messagesEn = {
   'reader.translating': 'Translating…',
   'reader.translationNoResult': 'No translation available for this selection',
   'reader.translationUnavailable': 'Translation service unavailable',
+  // The compact automatic label in the result panel's language bar: the bar has
+  // no room for "Automatic (from the book)", and once a language resolved the
+  // reader wants to know WHICH one. Shown only when the source was inferred.
+  'reader.translation.autoWithLanguage': 'Auto ({{language}})',
   // Refusals the resolver produces BEFORE any request: each names the fix, so
   // the reader is never left with a bland "no translation" and no way out.
   'reader.translationSameLanguage':

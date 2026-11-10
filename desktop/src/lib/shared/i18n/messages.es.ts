@@ -1290,6 +1290,10 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.translating': 'Traduciendo…',
   'reader.translationNoResult': 'No hay traducción disponible para esta selección',
   'reader.translationUnavailable': 'Servicio de traducción no disponible',
+  // La etiqueta automática compacta de la barra de idiomas: la barra no tiene
+  // sitio para "Automático (del libro)", y cuando un idioma se resolvió el lector
+  // quiere saber CUÁL. Solo se muestra cuando el origen se infirió.
+  'reader.translation.autoWithLanguage': 'Auto ({{language}})',
   // Rechazos que el resolvedor produce ANTES de cualquier petición: cada uno
   // indica la solución, para no dejar al lector con un "sin traducción" seco.
   'reader.translationSameLanguage': 'El libro ya está en este idioma, no hay nada que traducir',
