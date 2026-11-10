@@ -56,6 +56,20 @@ describe('resolveTranslationSourceWithDetection', () => {
     expect(resolveTranslationSourceWithDetection(null, null, 'give up', 'en')).toEqual({
       kind: 'no-translation',
       reason: 'unknown-source',
+      source: null,
+      target: 'en',
+    });
+  });
+
+  it('reports the resolved target when only the source is unknown', () => {
+    // The refusal is what the panel turns into a question, and the target it
+    // already resolved is part of the answer: the picker prefills from this
+    // value, so a null here would make the reader re-pick a side that worked.
+    expect(resolveTranslationSourceWithDetection(null, null, 'give up', 'pt-BR')).toEqual({
+      kind: 'no-translation',
+      reason: 'unknown-source',
+      source: null,
+      target: 'pt',
     });
   });
 
@@ -85,6 +99,11 @@ describe('resolveTranslationSourceWithDetection', () => {
         'The man is in the house with the dog and the cat of the neighbour.',
         'en',
       ),
-    ).toEqual({ kind: 'no-translation', reason: 'same-language' });
+    ).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'en',
+      target: 'en',
+    });
   });
 });

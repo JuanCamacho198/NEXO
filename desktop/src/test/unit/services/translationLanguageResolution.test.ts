@@ -60,10 +60,14 @@ describe('resolveLanguagePreferencePair', () => {
     expect(resolveLanguagePreferencePair(prefs(null, 'es'), null, null)).toEqual({
       kind: 'no-translation',
       reason: 'unknown-source',
+      source: null,
+      target: 'es',
     });
     expect(resolveLanguagePreferencePair(prefs(null, 'es'), undefined, 'en')).toEqual({
       kind: 'no-translation',
       reason: 'unknown-source',
+      source: null,
+      target: 'es',
     });
   });
 
@@ -72,14 +76,20 @@ describe('resolveLanguagePreferencePair', () => {
     expect(resolveLanguagePreferencePair(prefs(null, null), 'en', 'en')).toEqual({
       kind: 'no-translation',
       reason: 'same-language',
+      source: 'en',
+      target: 'en',
     });
     expect(resolveLanguagePreferencePair(prefs('en', 'en'), 'en', 'en')).toEqual({
       kind: 'no-translation',
       reason: 'same-language',
+      source: 'en',
+      target: 'en',
     });
     expect(resolveLanguagePreferencePair(prefs('zh-Hans-CN', 'zh-TW'), null, 'en')).toEqual({
       kind: 'no-translation',
       reason: 'same-language',
+      source: 'zh',
+      target: 'zh',
     });
   });
 
@@ -98,10 +108,14 @@ describe('resolveLanguagePreferencePair', () => {
     expect(resolveLanguagePreferencePair(prefs('en-US', 'en-GB'), null, 'en')).toEqual({
       kind: 'no-translation',
       reason: 'same-language',
+      source: 'en',
+      target: 'en',
     });
     expect(resolveLanguagePreferencePair(prefs('es-419', 'es-ES'), null, 'en')).toEqual({
       kind: 'no-translation',
       reason: 'same-language',
+      source: 'es',
+      target: 'es',
     });
   });
 
@@ -110,10 +124,14 @@ describe('resolveLanguagePreferencePair', () => {
     expect(resolveLanguagePreferencePair(prefs('  ', 'en'), 'es', 'en')).toEqual({
       kind: 'no-translation',
       reason: 'invalid-source',
+      source: null,
+      target: 'en',
     });
     expect(resolveLanguagePreferencePair(prefs('es', '1'), 'es', 'en')).toEqual({
       kind: 'no-translation',
       reason: 'invalid-target',
+      source: 'es',
+      target: null,
     });
   });
 

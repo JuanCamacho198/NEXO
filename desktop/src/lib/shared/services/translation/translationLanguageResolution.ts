@@ -41,10 +41,20 @@ export type NoTranslationReason =
 /**
  * Discriminated result: either a concrete pair to hand to the port, or a typed
  * refusal the UI can explain.
+ *
+ * A refusal carries the PARTIAL pair alongside the reason, so the reader is not
+ * left with a bare "no translation": the selection panel can show which side
+ * did resolve and prefill the picker from it to fix the other one. `null` means
+ * that side could not be resolved at all — never "unknown", "auto" or a guess.
  */
 export type LanguageResolution =
   | { kind: 'translate'; source: string; target: string }
-  | { kind: 'no-translation'; reason: NoTranslationReason };
+  | {
+      kind: 'no-translation';
+      reason: NoTranslationReason;
+      source: string | null;
+      target: string | null;
+    };
 
 /** Last-resort target when the app locale itself is unusable. */
 const FALLBACK_TARGET = 'en';
@@ -72,13 +82,34 @@ export function resolveLanguagePreferencePair(
   bookLanguage: string | null | undefined,
   appLocale: string | null | undefined,
 ): LanguageResolution {
+  // Both sides are resolved before either is judged, so a refusal can report
+  // the partial pair even when the source is the side that failed.
   const source = resolveSource(preferences.sourceLanguage, bookLanguage);
-  if (typeof source !== 'string') return { kind: 'no-translation', reason: source.reason };
-
   const target = resolveTarget(preferences.targetLanguage, appLocale);
-  if (typeof target !== 'string') return { kind: 'no-translation', reason: target.reason };
+  const resolvedSource = typeof source === 'string' ? source : null;
+  const resolvedTarget = typeof target === 'string' ? target : null;
 
-  if (source === target) return { kind: 'no-translation', reason: 'same-language' };
+  if (typeof source !== 'string') {
+    return {
+      kind: 'no-translation',
+      reason: source.reason,
+      source: resolvedSource,
+      target: resolvedTarget,
+    };
+  }
+
+  if (typeof target !== 'string') {
+    return {
+      kind: 'no-translation',
+      reason: target.reason,
+      source: resolvedSource,
+      target: resolvedTarget,
+    };
+  }
+
+  if (source === target) {
+    return { kind: 'no-translation', reason: 'same-language', source, target };
+  }
   return { kind: 'translate', source, target };
 }
 
@@ -130,13 +161,24 @@ export function resolveTranslationSourceWithDetection(
   text: string,
   appLocale: string | null | undefined,
 ): LanguageResolution {
-  const source = resolveSourceWithDetection(sourceLanguage, bookLanguage, text);
-  if (typeof source !== 'string') return { kind: 'no-translation', reason: source.reason };
-
+  // The target is resolved FIRST: a refusal on the source side still has to be
+  // able to name the target it resolved, and there is no `invalid-target` on
+  // this path (`appLocale` can only be unusable, which falls back to English).
   const target = resolveTarget(null, appLocale);
-  if (typeof target !== 'string') return { kind: 'no-translation', reason: target.reason };
+  const resolvedTarget = typeof target === 'string' ? target : null;
 
-  if (source === target) return { kind: 'no-translation', reason: 'same-language' };
+  const source = resolveSourceWithDetection(sourceLanguage, bookLanguage, text);
+  if (typeof source !== 'string') {
+    return { kind: 'no-translation', reason: source.reason, source: null, target: resolvedTarget };
+  }
+
+  if (typeof target !== 'string') {
+    return { kind: 'no-translation', reason: target.reason, source, target: resolvedTarget };
+  }
+
+  if (source === target) {
+    return { kind: 'no-translation', reason: 'same-language', source, target };
+  }
   return { kind: 'translate', source, target };
 }
 

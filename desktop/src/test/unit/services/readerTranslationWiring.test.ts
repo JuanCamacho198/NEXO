@@ -18,7 +18,12 @@ describe('reader translation pair resolution', () => {
       'en',
     );
 
-    expect(resolution).toEqual({ kind: 'no-translation', reason: 'unknown-source' });
+    expect(resolution).toEqual({
+      kind: 'no-translation',
+      reason: 'unknown-source',
+      source: null,
+      target: 'en',
+    });
   });
 
   it('resolves from the book when it carries a language and the target is inferred', () => {
@@ -44,7 +49,12 @@ describe('reader translation pair resolution', () => {
   it('refuses a pair that resolves to one language', () => {
     const resolution = resolveLanguagePreferencePair({}, 'en', 'en');
 
-    expect(resolution).toEqual({ kind: 'no-translation', reason: 'same-language' });
+    expect(resolution).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'en',
+      target: 'en',
+    });
   });
 
   it('never calls the port for a refusal', () => {
