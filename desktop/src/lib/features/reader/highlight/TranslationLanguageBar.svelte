@@ -72,7 +72,29 @@
     sourceOrigin: SourceOrigin | null;
     /** Suppresses interaction while a translation is in flight. */
     disabled?: boolean;
-    onChange: (next: { source: string | null; target: string | null }) => void;
+    /**
+     * Reports which side the reader moved, and carries the pair the bar is
+     * SHOWING so the caller can rebuild a complete write.
+     *
+     * `changed` is not decoration — it is the whole point of the field. A side
+     * left automatic is `null`, and `null` is also what a side reads as when the
+     * reader never touched it, so the payload alone cannot say which side moved.
+     * The caller needs it because the persisted pair is a PAIR: only the touched
+     * side may take its new value from here, and the untouched side has to keep
+     * whatever is already stored (see `handleChangeLanguages`).
+     *
+     * Both sides are always populated here, and they are the RESOLVED pair — the
+     * same values the bar renders. This callback is presentational: it says what
+     * the reader picked and what was on screen, and the parent decides what to
+     * write. It does NOT send `null` for the untouched side, because `null` is a
+     * real value downstream ("automatic") and sending it there would clear a
+     * preference the reader never asked to clear.
+     */
+    onChange: (next: {
+      source: string | null;
+      target: string | null;
+      changed: 'source' | 'target';
+    }) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
@@ -153,11 +175,19 @@
   ]);
 
   function handleSourceChange(next: string): void {
-    onChange({ source: next === AUTO_VALUE ? null : next, target });
+    onChange({
+      source: next === AUTO_VALUE ? null : next,
+      target,
+      changed: 'source',
+    });
   }
 
   function handleTargetChange(next: string): void {
-    onChange({ source, target: next === AUTO_VALUE ? null : next });
+    onChange({
+      source,
+      target: next === AUTO_VALUE ? null : next,
+      changed: 'target',
+    });
   }
 
   /** Dark-menu chrome on top of `Dropdown`'s own trigger classes. */

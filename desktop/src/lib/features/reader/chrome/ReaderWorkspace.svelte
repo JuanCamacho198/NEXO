@@ -675,7 +675,7 @@
   }
 
   /**
-   * Persist a language pair chosen inside the selection menu (T6).
+   * Persist the language side chosen inside the selection menu (T6).
    *
    * The write is the SAME call the settings tab makes — `savePreferences` — so
    * a pair chosen while reading is the pair Settings shows afterwards; a second
@@ -685,18 +685,37 @@
    *
    * `null` means "automatic" and is a real value, not an error: it clears the
    * preference and lets the cascade fall back to the book's language and to
-   * local detection. A degenerate pair chosen here is not intercepted — the
-   * next resolution refuses it with its own reason, which is the behaviour a
-   * refusal already had.
+   * local detection.
+   *
+   * ## Only the TOUCHED side is taken from `next`
+   *
+   * `savePreferences` is a full-pair upsert, not a patch: `None` on a side is
+   * written as SQL `NULL` and CLEARS it (see `save_translation_preferences` —
+   * `source_language = excluded.source_language`). There is no "leave this side
+   * unchanged" value in the protocol. So the untouched side is not sent as
+   * `null`, and it is not taken from `next` either — `next.source`/`next.target`
+   * are the RESOLVED pair, and a resolved code is not a preference. The previous
+   * version took both from `next`, which is how touching one side silently wrote
+   * the other: the bar reported `es -> es` and BOTH sides became an explicit
+   * `es`, permanently pinning the source origin to `preference`, disabling the
+   * `book`/detection fallback for the account, and making every Spanish
+   * selection refuse as `same-language` with no way out from the UI.
+   *
+   * The untouched side is therefore read back from storage and echoed verbatim,
+   * which is the only way to keep it: whatever was persisted stays persisted. A
+   * failed read degrades to `null` — the old behaviour — rather than aborting
+   * the write, because the reader's own pick must still land.
    */
   async function handleChangeLanguages(next: {
     source: string | null;
     target: string | null;
+    changed: 'source' | 'target';
   }): Promise<void> {
     try {
+      const stored = await translationPort.getPreferences().catch(() => null);
       await translationPort.savePreferences({
-        sourceLanguage: next.source,
-        targetLanguage: next.target,
+        sourceLanguage: next.changed === 'source' ? next.source : (stored?.sourceLanguage ?? null),
+        targetLanguage: next.changed === 'target' ? next.target : (stored?.targetLanguage ?? null),
       });
     } catch {
       // Best effort: a failed write must not stop the reader from reading the

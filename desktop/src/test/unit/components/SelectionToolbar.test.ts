@@ -1,4 +1,4 @@
-import { render, fireEvent } from '@testing-library/svelte';
+import { render, fireEvent, screen, waitFor } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import SelectionToolbar, {
   type SelectionData,
@@ -35,6 +35,15 @@ const t = (key: string, params?: Record<string, string | number>) => {
     'reader.definitionTranslated': 'Machine-translated definition',
     'reader.dismissDefinition': 'Close definition',
     'error.somethingWrong': 'Something went wrong',
+    // The language bar's own copy. `LanguageBar` reads these and the pair's
+    // automatic labels; the language NAMES are deliberately absent so
+    // `languageLabel` falls back to the uppercased code (`ES`, `FR`, …), which is
+    // deterministic and does not depend on the app's language table.
+    'settings.translation.sourceLabel': 'Source language',
+    'settings.translation.targetLabel': 'Target language',
+    'settings.translation.sourceAuto': 'Automatic',
+    'settings.translation.targetAuto': 'Automatic',
+    'reader.translation.autoWithLanguage': 'Automatic ({{language}})',
   };
   let value = translations[key] ?? key;
   if (params) {
@@ -437,5 +446,160 @@ describe('SelectionToolbar', () => {
 
     await fireEvent.click(getByLabelText('Close translation'));
     expect(queryByText('and')).toBeNull();
+  });
+
+  // ── Language bar: the change payload (T6) ───────────────────────────────
+  //
+  // The bar reports the WHOLE pair it is showing plus `changed`, which names the
+  // side the reader actually moved. Both parts are load-bearing:
+  //
+  //   - the pair is what the caller must be able to reconcile, and
+  //   - `changed` is what it is allowed to persist.
+  //
+  // The regression these pin is a WRITE bug, not a rendering bug: the previous
+  // payload was the resolved pair with no side marker, so the reader's single
+  // change to ONE side was persisted as a choice on BOTH. The measured
+  // consequence was a degenerate `es -> es` stored as an explicit preference,
+  // which pinned `sourceOrigin` to `preference`, disabled the book/detection
+  // fallback for the account, and made every Spanish selection refuse as
+  // `same-language` with no way out from the UI.
+  //
+  // These assert the BAR's half of the contract: it must say which side moved
+  // and must not silently drop a side. What the parent then writes is
+  // `ReaderWorkspace`'s half and is pinned there.
+
+  /**
+   * Drives the bar's selector the way a reader does: open the trigger, then
+   * press the option. bits-ui opens on `pointerdown` and commits on the press,
+   * which is the pattern already used for the settings selectors.
+   */
+  async function pickSide(container: HTMLElement, sideIndex: number, label: string): Promise<void> {
+    const triggers = Array.from(
+      container.querySelectorAll<HTMLElement>('[aria-haspopup="listbox"]'),
+    );
+    expect(triggers.length).toBe(2); // source, then target
+    const trigger = triggers[sideIndex];
+
+    await fireEvent.pointerDown(trigger, { pointerId: 1, pointerType: 'mouse', button: 0 });
+    await fireEvent.pointerUp(trigger, { pointerId: 1, pointerType: 'mouse', button: 0 });
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeNull());
+
+    const option = screen.getAllByRole('option').find((item) => item.textContent?.trim() === label);
+    expect(option, `option "${label}" not found`).toBeTruthy();
+
+    await fireEvent.pointerDown(option as HTMLElement, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+    });
+    await fireEvent.pointerUp(option as HTMLElement, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+    });
+    await fireEvent.click(option as HTMLElement);
+    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
+  }
+
+  /**
+   * The change callback the bar reports through. Typed so a payload assertion is
+   * checked against the real contract rather than against a zero-arg mock.
+   */
+  function languageChangeSpy() {
+    return vi.fn<
+      (next: {
+        source: string | null;
+        target: string | null;
+        changed: 'source' | 'target';
+      }) => Promise<void>
+    >(async () => undefined);
+  }
+
+  /** Opens the translation panel so the bar — and its two selectors — exist. */
+  async function openLanguageBar(
+    onChangeLanguages: (next: {
+      source: string | null;
+      target: string | null;
+      changed: 'source' | 'target';
+    }) => Promise<void>,
+  ): Promise<HTMLElement> {
+    const { container, getByLabelText } = render(SelectionToolbar, {
+      ...baseProps(),
+      onChangeLanguages,
+      onTranslate: async () =>
+        ({
+          status: 'ok',
+          text: 'and',
+          source: 'en',
+          target: 'es',
+          sourceOrigin: 'book',
+        }) as TranslationOutcome,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+    // The bar renders once the outcome lands, which is where the two selectors
+    // come from. Waiting on the triggers is the honest condition — the panel is
+    // open before that, with no bar in it.
+    await waitFor(() =>
+      expect(container.querySelectorAll('[aria-haspopup="listbox"]').length).toBe(2),
+    );
+    return container;
+  }
+
+  it('marks a source change as the source side, carrying the pair shown', async () => {
+    const onChangeLanguages = languageChangeSpy();
+    const container = await openLanguageBar(onChangeLanguages);
+
+    await pickSide(container, 0, 'FR');
+
+    expect(onChangeLanguages).toHaveBeenCalledOnce();
+    expect(onChangeLanguages).toHaveBeenCalledWith({
+      source: 'fr',
+      target: 'es',
+      changed: 'source',
+    });
+  });
+
+  it('marks a target change as the target side, carrying the pair shown', async () => {
+    const onChangeLanguages = languageChangeSpy();
+    const container = await openLanguageBar(onChangeLanguages);
+
+    await pickSide(container, 1, 'FR');
+
+    expect(onChangeLanguages).toHaveBeenCalledOnce();
+    expect(onChangeLanguages).toHaveBeenCalledWith({
+      source: 'en',
+      target: 'fr',
+      changed: 'target',
+    });
+  });
+
+  it('reports Automatic as null on the side the reader cleared', async () => {
+    // The untouched side keeps the resolved code — the bar shows the whole pair,
+    // and the caller separates "moved" from "shown" by `changed`, not by null.
+    const onChangeLanguages = languageChangeSpy();
+    const container = await openLanguageBar(onChangeLanguages);
+
+    await pickSide(container, 0, 'Automatic');
+
+    expect(onChangeLanguages).toHaveBeenCalledWith({
+      source: null,
+      target: 'es',
+      changed: 'source',
+    });
+  });
+
+  it('never sends the same side as changed when the target moved', async () => {
+    const onChangeLanguages = languageChangeSpy();
+    const container = await openLanguageBar(onChangeLanguages);
+
+    await pickSide(container, 1, 'Automatic');
+
+    expect(onChangeLanguages).toHaveBeenCalledOnce();
+    expect(onChangeLanguages).toHaveBeenCalledWith({
+      source: 'en',
+      target: null,
+      changed: 'target',
+    });
   });
 });

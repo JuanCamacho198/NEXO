@@ -80,8 +80,18 @@
      * Persists a language pair chosen in the result panel. Separate from
      * `onTranslate` because it is a WRITE, not a read: the request itself stays
      * `onTranslate`, and the toolbar re-runs it after this resolves.
+     *
+     * The payload carries the WHOLE pair plus `changed`, which names the side the
+     * reader actually moved. Both are needed and neither implies the other: the
+     * pair is what the bar was showing, and `changed` is what the caller may take
+     * from it. Persisting the untouched side straight from here is the defect
+     * this signature exists to prevent — see `handleLanguagesChange`.
      */
-    onChangeLanguages: (next: { source: string | null; target: string | null }) => Promise<void>;
+    onChangeLanguages: (next: {
+      source: string | null;
+      target: string | null;
+      changed: 'source' | 'target';
+    }) => Promise<void>;
     onDefine: (data: SelectionData) => Promise<DefinitionResult>;
     onColorSelect: (color: string, data: SelectionData) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -789,12 +799,18 @@
    * `shownLanguages`. An outcome that says nothing about languages
    * (`no-result`, `unavailable`) hides the selector entirely rather than leaving
    * it advertising the pair that was picked.
+   *
+   * The OVERLAY holds the whole pair — it is what the bar renders, and the bar
+   * renders two sides. The WRITE is a different question and is the caller's:
+   * this function forwards `next` verbatim, `changed` included, so only the side
+   * the reader moved is persisted as a choice.
    */
   async function handleLanguagesChange(next: {
     source: string | null;
     target: string | null;
+    changed: 'source' | 'target';
   }): Promise<void> {
-    pickedLanguages = next;
+    pickedLanguages = { source: next.source, target: next.target };
     await onChangeLanguages(next);
     if (!selectionData || !selectionData.text.trim()) return;
 
