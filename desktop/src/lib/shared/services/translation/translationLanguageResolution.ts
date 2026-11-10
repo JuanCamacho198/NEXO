@@ -9,8 +9,11 @@
  * The refusal path is the point of the feature. An English book read with the
  * app in English used to resolve to `en -> en`, and the service answers that
  * with `403 PLEASE SELECT TWO DISTINCT LANGUAGES`; the reader saw a bland
- * "no translation" and no way to understand or fix it. Every way the pair can
- * end up degenerate therefore returns a typed reason instead of a pair.
+ * "no translation" and no way to understand or fix it. A degenerate pair the APP
+ * inferred is now corrected to English instead (see `resolveLanguagePreferencePair`
+ * and `resolveTranslationSourceWithDetection`), and every pair that is still
+ * degenerate — one the reader chose, or an `en -> en` that English cannot fix —
+ * returns a typed reason instead.
  */
 import { detectLanguage } from './translationLanguageDetection';
 import { normalizeLanguageTag } from './translationLanguages';
@@ -26,6 +29,22 @@ export interface TranslationLanguagePreferences {
   sourceLanguage?: string | null;
   targetLanguage?: string | null;
 }
+
+/**
+ * Where a resolved SOURCE came from.
+ *
+ * The UI needs this to decide whether it may label a language as automatic: a
+ * language the reader picked in Settings is theirs and must be shown as chosen,
+ * while one this module inferred (from the book's metadata or from local
+ * detection over the text) may be shown as "Auto (español)". The two are not
+ * interchangeable to the reader — one is a promise the app is repeating back,
+ * the other is a guess the app made on their behalf.
+ *
+ * - `preference` — an explicit `sourceLanguage` preference resolved.
+ * - `book` — `Book.language` resolved.
+ * - `detected` — `detectLanguage(text)` produced the code.
+ */
+export type SourceOrigin = 'preference' | 'book' | 'detected';
 
 /** Why no translation should be attempted. Each maps to its own user copy. */
 export type NoTranslationReason =
@@ -46,14 +65,20 @@ export type NoTranslationReason =
  * left with a bare "no translation": the selection panel can show which side
  * did resolve and prefill the picker from it to fix the other one. `null` means
  * that side could not be resolved at all — never "unknown", "auto" or a guess.
+ *
+ * Both variants also carry `sourceOrigin`, which says WHERE the source came
+ * from — see {@link SourceOrigin}. On a refusal it is `null` when no source was
+ * resolved at all: there is no provenance to report for a side that does not
+ * exist.
  */
 export type LanguageResolution =
-  | { kind: 'translate'; source: string; target: string }
+  | { kind: 'translate'; source: string; target: string; sourceOrigin: SourceOrigin }
   | {
       kind: 'no-translation';
       reason: NoTranslationReason;
       source: string | null;
       target: string | null;
+      sourceOrigin: SourceOrigin | null;
     };
 
 /** Last-resort target when the app locale itself is unusable. */
@@ -74,8 +99,23 @@ const FALLBACK_TARGET = 'en';
  * Codes are normalised to their ISO 639-1 primary subtag (`pt-BR` -> `pt`,
  * `en_US` -> `en`, `zh-Hans-CN` -> `zh`) because MyMemory keys on the primary
  * subtag. Two variants of one base language (`en-US` vs `en-GB`) are therefore
- * the SAME language and are refused: technically they translate, but the
- * reader asked for a translation and would get back what they already read.
+ * the SAME language; whether that is refused or corrected depends on who chose
+ * it — see the degenerate-pair rule below.
+ *
+ * The degenerate-pair rule. When both sides resolve to the same language:
+ * - An explicit `sourceLanguage` preference is REFUSED (`same-language`). The
+ *   reader deliberately picked it; silently translating their Spanish book into
+ *   English when they asked for Spanish would answer a question they did not
+ *   ask.
+ * - An explicit `targetLanguage` preference is likewise never rewritten: the
+ *   pair is refused instead.
+ * - Otherwise the app INFERRED the source (from the book, or from detection),
+ *   and it was the inference that produced the collision — so it is corrected
+ *   to English (`FALLBACK_TARGET`) and the translation proceeds. The reader
+ *   asked for a translation and gets one.
+ * - EXCEPT when the inferred source is itself English: falling back to English
+ *   would return `en -> en`, the same pair the service rejects. That stays a
+ *   `same-language` refusal.
  */
 export function resolveLanguagePreferencePair(
   preferences: TranslationLanguagePreferences,
@@ -86,15 +126,15 @@ export function resolveLanguagePreferencePair(
   // the partial pair even when the source is the side that failed.
   const source = resolveSource(preferences.sourceLanguage, bookLanguage);
   const target = resolveTarget(preferences.targetLanguage, appLocale);
-  const resolvedSource = typeof source === 'string' ? source : null;
   const resolvedTarget = typeof target === 'string' ? target : null;
 
-  if (typeof source !== 'string') {
+  if (!source.resolved) {
     return {
       kind: 'no-translation',
       reason: source.reason,
-      source: resolvedSource,
+      source: null,
       target: resolvedTarget,
+      sourceOrigin: null,
     };
   }
 
@@ -102,28 +142,84 @@ export function resolveLanguagePreferencePair(
     return {
       kind: 'no-translation',
       reason: target.reason,
-      source: resolvedSource,
+      source: source.source,
       target: resolvedTarget,
+      sourceOrigin: source.origin,
     };
   }
 
-  if (source === target) {
-    return { kind: 'no-translation', reason: 'same-language', source, target };
+  if (source.source === target) {
+    // An INFERRED source that equals the target is not the reader's doing: the
+    // app guessed it, so correcting the guess is a service to the reader. Two
+    // guards stop it from becoming a silent rewrite:
+    // - an explicit `targetLanguage` preference is a decision, not a default;
+    //   the reader asked for that language and only a refusal can tell them why
+    //   it cannot be honoured.
+    // - falling back to English is pointless when English is ALREADY the source
+    //   (`en -> en`), so that pair stays the genuinely degenerate one.
+    const targetWasExplicit =
+      preferences.targetLanguage !== null && preferences.targetLanguage !== undefined;
+    if (source.origin !== 'preference' && !targetWasExplicit && source.source !== FALLBACK_TARGET) {
+      return {
+        kind: 'translate',
+        source: source.source,
+        target: FALLBACK_TARGET,
+        sourceOrigin: source.origin,
+      };
+    }
+    return {
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: source.source,
+      target,
+      sourceOrigin: source.origin,
+    };
   }
-  return { kind: 'translate', source, target };
+  return {
+    kind: 'translate',
+    source: source.source,
+    target,
+    sourceOrigin: source.origin,
+  };
 }
 
 /** A side is either a resolved code or the reason it could not be resolved. */
 type SideResolution = string | { reason: NoTranslationReason };
 
+/**
+ * A source side, plus WHERE it came from.
+ *
+ * The origin is decided by the cascade step that produced the code, not derived
+ * afterwards from the code: `'en'` from the book and `'en'` from a preference are
+ * the same string and different promises, so re-deriving would be a guess.
+ *
+ * Modelled as a union keyed on `resolved` rather than `origin: SourceOrigin |
+ * null`, so a resolved code always carries a non-null origin and a caller gets
+ * one narrowing that covers both fields: there is no provenance to report for a
+ * source that does not exist, and no resolved source without one.
+ */
+type SourceResolution =
+  | { resolved: true; source: string; origin: SourceOrigin }
+  | { resolved: false; reason: NoTranslationReason };
+
 function resolveSource(
   preferred: string | null | undefined,
   bookLanguage: string | null | undefined,
-): SideResolution {
+): SourceResolution {
   if (preferred !== null && preferred !== undefined) {
-    return normalizeOrRefuse(preferred, 'invalid-source');
+    return sourceOrReason(normalizeOrRefuse(preferred, 'invalid-source'), 'preference');
   }
-  return normalizeOrRefuse(bookLanguage, 'unknown-source');
+  return sourceOrReason(normalizeOrRefuse(bookLanguage, 'unknown-source'), 'book');
+}
+
+/**
+ * Attaches the origin of the step that ran, or reports the step's refusal reason.
+ * Shared so both cascades report provenance the same way.
+ */
+function sourceOrReason(resolution: SideResolution, origin: SourceOrigin): SourceResolution {
+  return typeof resolution === 'string'
+    ? { resolved: true, source: resolution, origin }
+    : { resolved: false, reason: resolution.reason };
 }
 
 /**
@@ -168,31 +264,68 @@ export function resolveTranslationSourceWithDetection(
   const resolvedTarget = typeof target === 'string' ? target : null;
 
   const source = resolveSourceWithDetection(sourceLanguage, bookLanguage, text);
-  if (typeof source !== 'string') {
-    return { kind: 'no-translation', reason: source.reason, source: null, target: resolvedTarget };
+  if (!source.resolved) {
+    return {
+      kind: 'no-translation',
+      reason: source.reason,
+      source: null,
+      target: resolvedTarget,
+      sourceOrigin: null,
+    };
   }
 
   if (typeof target !== 'string') {
-    return { kind: 'no-translation', reason: target.reason, source, target: resolvedTarget };
+    return {
+      kind: 'no-translation',
+      reason: target.reason,
+      source: source.source,
+      target: resolvedTarget,
+      sourceOrigin: source.origin,
+    };
   }
 
-  if (source === target) {
-    return { kind: 'no-translation', reason: 'same-language', source, target };
+  if (source.source === target) {
+    // Same rule as the preference path, with one difference: the target here is
+    // always inferred (this function passes `null` as the target preference), so
+    // an explicit target can never block the fallback — only the source origin
+    // and the `en -> en` edge case can.
+    if (source.origin !== 'preference' && source.source !== FALLBACK_TARGET) {
+      return {
+        kind: 'translate',
+        source: source.source,
+        target: FALLBACK_TARGET,
+        sourceOrigin: source.origin,
+      };
+    }
+    return {
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: source.source,
+      target,
+      sourceOrigin: source.origin,
+    };
   }
-  return { kind: 'translate', source, target };
+  return {
+    kind: 'translate',
+    source: source.source,
+    target,
+    sourceOrigin: source.origin,
+  };
 }
 
 function resolveSourceWithDetection(
   preferred: string | null | undefined,
   bookLanguage: string | null | undefined,
   text: string,
-): SideResolution {
+): SourceResolution {
   if (preferred !== null && preferred !== undefined) {
-    return normalizeOrRefuse(preferred, 'invalid-source');
+    return sourceOrReason(normalizeOrRefuse(preferred, 'invalid-source'), 'preference');
   }
   const fromBook = normalizeLanguageTag(bookLanguage);
-  if (fromBook !== null) return fromBook;
-  return detectLanguage(text) ?? { reason: 'unknown-source' };
+  if (fromBook !== null) return { resolved: true, source: fromBook, origin: 'book' };
+  const detected = detectLanguage(text);
+  if (detected !== null) return { resolved: true, source: detected, origin: 'detected' };
+  return { resolved: false, reason: 'unknown-source' };
 }
 
 function resolveTarget(

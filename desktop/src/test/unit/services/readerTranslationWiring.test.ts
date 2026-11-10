@@ -6,6 +6,10 @@
  * `en -> en`, the service answered 403, and the reader saw a bland "no
  * translation" with no way to understand or fix it. Now the pair is resolved
  * with `resolveLanguagePreferencePair` and a refusal NEVER reaches the port.
+ *
+ * `sourceOrigin` travels with the pair because the reader's own choice and the
+ * app's inference are shown differently: only an inferred language is labelled
+ * automatic.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { resolveLanguagePreferencePair } from '$lib/shared/services/translation/translationLanguageResolution';
@@ -23,6 +27,7 @@ describe('reader translation pair resolution', () => {
       reason: 'unknown-source',
       source: null,
       target: 'en',
+      sourceOrigin: null,
     });
   });
 
@@ -33,7 +38,12 @@ describe('reader translation pair resolution', () => {
       'en',
     );
 
-    expect(resolution).toEqual({ kind: 'translate', source: 'es', target: 'en' });
+    expect(resolution).toEqual({
+      kind: 'translate',
+      source: 'es',
+      target: 'en',
+      sourceOrigin: 'book',
+    });
   });
 
   it('lets an explicit source preference win over a silent book', () => {
@@ -43,10 +53,18 @@ describe('reader translation pair resolution', () => {
       'en',
     );
 
-    expect(resolution).toEqual({ kind: 'translate', source: 'fr', target: 'en' });
+    expect(resolution).toEqual({
+      kind: 'translate',
+      source: 'fr',
+      target: 'en',
+      sourceOrigin: 'preference',
+    });
   });
 
   it('refuses a pair that resolves to one language', () => {
+    // The book says English and the app is English: the source is inferred but
+    // the fallback is English too, so the pair is the genuine `en -> en` trap
+    // and stays refused.
     const resolution = resolveLanguagePreferencePair({}, 'en', 'en');
 
     expect(resolution).toEqual({
@@ -54,6 +72,7 @@ describe('reader translation pair resolution', () => {
       reason: 'same-language',
       source: 'en',
       target: 'en',
+      sourceOrigin: 'book',
     });
   });
 
