@@ -162,6 +162,13 @@
   let iframeContentHeight = $state(0);
   let lastRenderedChapter = $state(-1);
   let lastContinueLocation = $state<string | null>(null);
+  /**
+   * The plain text of the chapter on screen, for the translation language
+   * fallback. Set by a committed chapter render (`useEpubRender`), replaced —
+   * never appended — and empty when no chapter with prose is on screen (a PDF
+   * handled elsewhere, a cover, or before the first render).
+   */
+  let pageText = $state('');
   // U5: footnote popover. Viewport-space anchor + parent scroll to restore.
   let footnote = $state<{ x: number; y: number; text: string; returnScroll: number } | null>(null);
   // Image viewer state. The URL is resolved in the chapter frame (its `src` is
@@ -279,6 +286,8 @@
     getTotalChapters: () => totalChapters,
     getIframeContentHeight: () => iframeContentHeight,
     setIframeContentHeight: (v) => (iframeContentHeight = v),
+    getPageText: () => pageText,
+    setPageText: (v) => (pageText = v),
     scrollToCfi: (cfi: string) => bridge.scrollToCfi(cfi),
     scrollToFragment: (f: string | null) => bridge.scrollToFragment(f),
     emitPreciseLocation: () => bridge.emitPreciseLocation(),
@@ -592,6 +601,15 @@
   }
   export function getZoomPercent(): number {
     return fontSize;
+  }
+  /**
+   * The plain text of the chapter on screen, for the translation language
+   * fallback. Empty string means "no page text" — a cover, an image-only plate,
+   * or no chapter rendered yet. Kept in viewer `$state`, so it is written once
+   * per committed chapter render and read back without recomputation.
+   */
+  export function getPageText(): string {
+    return pageText;
   }
   export function getCurrentPage(): number {
     return displayCurrentPage;

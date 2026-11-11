@@ -24,6 +24,15 @@
  * The DESTINATION is never taken from the book: which language the reader wants
  * translations in is a property of the reader, the same answer in every book, so
  * it stays on the account (or the app locale). Only the source is per book.
+ *
+ * The DETECTION fallback has two samples, tried in order and never together: the
+ * reader's SELECTION first, then the PAGE text the selection sits in. The
+ * selection is direct evidence about what is being translated, so its answer
+ * always stands; the page is only consulted when the selection alone yields
+ * nothing (a three-word highlight carries too few marker hits to score). The two
+ * are detected with SEPARATE `detectLanguage` calls — concatenating them is
+ * measured to drown the selection — and the page call is LAZY, so translations
+ * that resolve from the selection never pay for the chapter-sized scan.
  */
 import { detectLanguage } from './translationLanguageDetection';
 import { normalizeLanguageTag } from './translationLanguages';
@@ -59,9 +68,18 @@ export interface TranslationLanguagePreferences {
  *   from the account is not a book-level choice to clear.
  * - `preference` — an explicit `sourceLanguage` preference resolved.
  * - `book` — `Book.language` resolved.
- * - `detected` — `detectLanguage(text)` produced the code.
+ * - `detected` — `detectLanguage(selection)` produced the code, over the
+ *   SELECTION. Its meaning is unchanged by the page fallback: it still means
+ *   "the language the reader highlighted said so".
+ * - `detectedFromPage` — `detectLanguage(pageText)` produced the code, after the
+ *   selection itself yielded nothing. A distinct value from `detected` because
+ *   the two are different evidence: the selection is what is BEING translated,
+ *   the page is the context around it. The UI may later want to label the weaker
+ *   one differently (or offer to correct it), and collapsing the two would make
+ *   that impossible without re-running detection.
  */
-export type SourceOrigin = 'bookPreference' | 'preference' | 'book' | 'detected';
+export type SourceOrigin =
+  'bookPreference' | 'preference' | 'book' | 'detected' | 'detectedFromPage';
 
 /** Why no translation should be attempted. Each maps to its own user copy. */
 export type NoTranslationReason =
@@ -285,8 +303,18 @@ function sourceOrReason(resolution: SideResolution, origin: SourceOrigin): Sourc
  *    would disagree: the metadata is declared by whoever produced the book, and
  *    detection is a heuristic guess over a handful of function words. A wrong
  *    guess is silently fluent, so the declared value is the honest one to trust.
- * 4. `detectLanguage(text)` — the real fallback for a book with no language.
- * 5. `unknown-source`, which the panel turns into a question.
+ * 4. `detectLanguage(text)` over the SELECTION — the real fallback for a book
+ *    with no language.
+ * 5. `detectLanguage(pageText)` over the PAGE, and only when step 4 returned
+ *    nothing. The page is the same run of prose the reader is looking at, so a
+ *    three-word highlight resolves from the chapter it sits in instead of
+ *    refusing. The step is ADDITIVE: it can only turn a refusal into an answer,
+ *    never change one.
+ * 6. `unknown-source`, which the panel turns into a question.
+ *
+ * Steps 4 and 5 are SEPARATE calls, in that order, and the selection's answer is
+ * returned first. See the LAZY PAGE FALLBACK note in the body: concatenating the
+ * two is the measured trap this rule exists to avoid.
  *
  * The target side is deliberately untouched here: its cascade (secondary
  * language, etc.) is a separate concern that layers on top by passing the
@@ -305,6 +333,24 @@ function sourceOrReason(resolution: SideResolution, origin: SourceOrigin): Sourc
  * `null` here used to discard the saved target and resolve every translation to
  * the app locale, so a target chosen in Settings (or in the bar) was stored and
  * then ignored. The two resolvers now take the target preference the same way.
+ *
+ * `pageText` is the chapter on screen, offered as a language-detection FALLBACK
+ * for a selection too short to score. The two are detected SEPARATELY and the
+ * SELECTION's answer wins: it is direct evidence about what is being translated,
+ * while the page is only the context around it. The page is consulted ONLY when
+ * the selection's own detection returns nothing, and it is consulted LAZILY —
+ * `detectLanguage` over the page runs inside that branch alone, never eagerly —
+ * because the call site passes the page unconditionally on every translation and
+ * an eager call would make every translation pay for a chapter-sized scan it does
+ * not need.
+ *
+ * NEVER concatenate the selection and the page into one string. Measured: an
+ * English quote (34 words) alone detects `en`, the Spanish page (4638 words)
+ * alone detects `es`, and the two JOINED detect `es` — the page drowns the
+ * selection and the reader is told their English quote is Spanish. Two separate
+ * calls, selection first, is the whole of the rule.
+ *
+ * It is named `pageText` now that it is no longer deliberately unused.
  */
 export function resolveTranslationSourceWithDetection(
   sourceLanguage: string | null | undefined,
@@ -313,6 +359,7 @@ export function resolveTranslationSourceWithDetection(
   appLocale: string | null | undefined,
   bookSourceLanguage: string | null | undefined = null,
   targetLanguage: string | null | undefined = null,
+  pageText: string | null | undefined = null,
 ): LanguageResolution {
   // The target is resolved FIRST: a refusal on the source side still has to be
   // able to name the target it resolved. An unusable explicit target reports
@@ -320,7 +367,13 @@ export function resolveTranslationSourceWithDetection(
   const target = resolveTarget(targetLanguage, appLocale);
   const resolvedTarget = typeof target === 'string' ? target : null;
 
-  const source = resolveSourceWithDetection(sourceLanguage, bookLanguage, text, bookSourceLanguage);
+  const source = resolveSourceWithDetection(
+    sourceLanguage,
+    bookLanguage,
+    text,
+    bookSourceLanguage,
+    pageText,
+  );
   if (!source.resolved) {
     return {
       kind: 'no-translation',
@@ -379,6 +432,7 @@ function resolveSourceWithDetection(
   bookLanguage: string | null | undefined,
   text: string,
   bookSourceLanguage: string | null | undefined,
+  pageText: string | null | undefined,
 ): SourceResolution {
   if (bookSourceLanguage !== null && bookSourceLanguage !== undefined) {
     return sourceOrReason(
@@ -393,6 +447,19 @@ function resolveSourceWithDetection(
   if (fromBook !== null) return { resolved: true, source: fromBook, origin: 'book' };
   const detected = detectLanguage(text);
   if (detected !== null) return { resolved: true, source: detected, origin: 'detected' };
+  // The PAGE fallback, and its LAZY call. The two detections are SEPARATE calls
+  // on purpose: joining `text` and `pageText` into one string measures `es` for
+  // an English quote inside a Spanish chapter (34-word quote alone -> `en`,
+  // 4638-word page alone -> `es`, the two concatenated -> `es` — the page drowns
+  // the selection). Never join them. The page is a fallback and never a
+  // tie-breaker, so this line is reachable ONLY when the selection above
+  // returned nothing: every other translation skips it and pays nothing for the
+  // chapter-sized scan, which matters because the call site passes the page
+  // unconditionally on every translation.
+  const detectedFromPage = detectLanguage(pageText ?? '');
+  if (detectedFromPage !== null) {
+    return { resolved: true, source: detectedFromPage, origin: 'detectedFromPage' };
+  }
   return { resolved: false, reason: 'unknown-source' };
 }
 

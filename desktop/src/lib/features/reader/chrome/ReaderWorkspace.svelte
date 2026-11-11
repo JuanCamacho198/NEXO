@@ -652,9 +652,21 @@
    *
    * The port is transport-only: nothing is cached here, because translated
    * selections are reading history scoped to the account in Rust.
+   *
+   * The PAGE text is read here, at translate time, rather than carried in
+   * `SelectionData`. The selection event is the port the viewer speaks, and the
+   * page is not part of that selection — baking it in would make every consumer
+   * of `SelectionData` carry a chapter-sized string it never asked for. The
+   * viewer already holds it in `$state`, so `getPageText()` is a synchronous,
+   * cheap read of a stored string (the same pull pattern `getDiagnostics` uses
+   * above). `''` for a PDF, a text-free chapter, or no chapter yet, and the
+   * resolution below treats it as an optional FALLBACK: the selection is detected
+   * first and the page is only consulted when the selection yields nothing, so
+   * today's answers do not change.
    */
   async function handleTranslate(data: SelectionData): Promise<TranslationOutcome> {
     const bookId = activeReadingBook?.id ?? null;
+    const pageText = epubRef?.getPageText?.() ?? '';
     const [preferences, bookSourceLanguage] = await Promise.all([
       translationPort.getPreferences().catch(() => null),
       bookId === null
@@ -668,6 +680,7 @@
       settingsState.locale,
       bookSourceLanguage,
       preferences?.targetLanguage ?? null,
+      pageText,
     );
 
     if (resolution.kind === 'no-translation') {

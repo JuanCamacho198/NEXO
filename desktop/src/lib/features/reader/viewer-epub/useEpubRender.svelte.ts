@@ -42,6 +42,7 @@ import {
 import { setReaderError } from '$lib/stores/readerErrorState.svelte';
 import { logger } from '$lib/shared/logger/Logger';
 import { createCoalescingRenderer } from '$lib/features/reader/viewer-epub/epubRenderCoalescer';
+import { extractPageText } from '$lib/features/reader/viewer-epub/epubPageText';
 
 // ─── Types ─────────────────────────────────────────────────────
 export interface EpubChapterContent {
@@ -426,6 +427,14 @@ export type EpubRenderDeps = {
   getTotalChapters: () => number;
   getIframeContentHeight: () => number;
   setIframeContentHeight: (v: number) => void;
+  /**
+   * The plain text of the chapter currently on screen, for the translation
+   * language fallback. Written once per committed chapter render (see
+   * `runChapterRender`) and REPLACED, never appended, so it always describes one
+   * chapter. `''` means "no page text" — an image-only plate, or no chapter yet.
+   */
+  getPageText: () => string;
+  setPageText: (v: string) => void;
   scrollToCfi: (cfi: string) => void;
   scrollToFragment: (fragment: string) => void;
   emitPreciseLocation: () => void;
@@ -441,6 +450,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
   buildReaderOverrideCss(): string;
   refreshReaderStyles(): void;
   renderChapter(index: number): Promise<void>;
+  pageText(): string;
   resolveResourcePath: typeof resolveResourcePath;
   toAssetUrl: typeof toAssetUrl;
   collectFontFaceAssetUrls: typeof collectFontFaceAssetUrls;
@@ -498,6 +508,14 @@ export function createEpubRender(deps: EpubRenderDeps): {
 
   function iframeContentHeightValue(): number {
     return internalHeight;
+  }
+
+  /**
+   * The plain text of the chapter on screen, as published by the last committed
+   * render. Empty until a chapter with prose has rendered.
+   */
+  function pageText(): string {
+    return deps.getPageText();
   }
 
   /** The page box in paginated mode, `null` in scrolling mode. */
@@ -675,6 +693,12 @@ export function createEpubRender(deps: EpubRenderDeps): {
       deps.setCurrentChapterIndex(index);
       internalHeight = 0;
       deps.setIframeContentHeight(0);
+      // The page text for the translation fallback, extracted from the HTML
+      // already fetched above — not from the live document, which does not exist
+      // until the iframe loads and may by then belong to a chapter the reader has
+      // left. Written here, past the stale guard, so it is replaced exactly when
+      // a chapter truly commits and never appended.
+      deps.setPageText(extractPageText(chapterData.html));
 
       const spineHrefs = deps.getSpineHrefs();
       const tocHrefRaw = tocEntry?.href ?? '';
@@ -836,6 +860,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
     buildReaderOverrideCss: buildReaderOverrideCssLocal,
     refreshReaderStyles,
     renderChapter,
+    pageText,
     // Re-export pure helpers for direct testing without composable
     resolveResourcePath,
     toAssetUrl,

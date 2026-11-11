@@ -64,11 +64,11 @@
     /**
      * Where the resolved source came from, or null when nothing resolved.
      *
-     * Only an INFERRED source (`book`, `detected`) may be labelled "Auto (X)": a
-     * language the reader chose — in Settings (`preference`) or for this book
-     * (`bookPreference`) — is theirs and reads as the bare language name. The
-     * distinction is not cosmetic: one is a promise the app repeats back, the
-     * other a guess it made on their behalf.
+     * Only an INFERRED source (`book`, `detected`, `detectedFromPage`) may be
+     * labelled "Auto (X)". A language the reader chose is theirs and reads as
+     * the bare language name, exactly like a per-book choice. The distinction is
+     * not cosmetic: one is a promise the app repeats back, the other a guess it
+     * made on their behalf. See `SourceOrigin` for which origins count.
      */
     sourceOrigin: SourceOrigin | null;
     /**
@@ -182,7 +182,9 @@
    *   `bookPreference`)     book; both are the reader's own word, so labelling
    *                         either "Auto" would contradict their own choice.
    *   inferred           -> "Auto (español)". The app inferred the language and
-   *   (`book`, `detected`)  names the inference, so the reader can judge it.
+   *   (`book`,                 names the inference, so the reader can judge it.
+   *   `detected`,
+   *   `detectedFromPage`)
    *
    * It takes `code` as a parameter rather than closing over `source` because
    * TypeScript does not narrow a `$state`/prop read across the branches of a
