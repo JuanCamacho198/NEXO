@@ -299,6 +299,12 @@ function sourceOrReason(resolution: SideResolution, origin: SourceOrigin): Sourc
  * still runs. `bookSourceLanguage` is deliberately NOT treated that way: it is
  * only ever `null` when the reader made no choice, so a choice that is present
  * but unusable is an `invalid-source` refusal rather than a fall-through.
+ *
+ * The TARGET side is the reader's own, exactly as on the preference path:
+ * `targetLanguage` wins, then `appLocale`, then English. Passing a hard-coded
+ * `null` here used to discard the saved target and resolve every translation to
+ * the app locale, so a target chosen in Settings (or in the bar) was stored and
+ * then ignored. The two resolvers now take the target preference the same way.
  */
 export function resolveTranslationSourceWithDetection(
   sourceLanguage: string | null | undefined,
@@ -306,11 +312,12 @@ export function resolveTranslationSourceWithDetection(
   text: string,
   appLocale: string | null | undefined,
   bookSourceLanguage: string | null | undefined = null,
+  targetLanguage: string | null | undefined = null,
 ): LanguageResolution {
   // The target is resolved FIRST: a refusal on the source side still has to be
-  // able to name the target it resolved, and there is no `invalid-target` on
-  // this path (`appLocale` can only be unusable, which falls back to English).
-  const target = resolveTarget(null, appLocale);
+  // able to name the target it resolved. An unusable explicit target reports
+  // `invalid-target` — the same refusal the preference path gives.
+  const target = resolveTarget(targetLanguage, appLocale);
   const resolvedTarget = typeof target === 'string' ? target : null;
 
   const source = resolveSourceWithDetection(sourceLanguage, bookLanguage, text, bookSourceLanguage);
@@ -335,14 +342,15 @@ export function resolveTranslationSourceWithDetection(
   }
 
   if (source.source === target) {
-    // Same rule as the preference path, with one difference: the target here is
-    // always inferred (this function passes `null` as the target preference), so
-    // an explicit target can never block the fallback — only the source origin
-    // and the `en -> en` edge case can. A source the reader CHOSE (book or
-    // account) is a decision, so it refuses like the preference path does rather
-    // than being corrected to English.
+    // The SAME rule as the preference path, and deliberately spelled the same
+    // way so the two cannot drift: a source the reader CHOSE (book or account)
+    // is a decision and stays a refusal, an explicit target is likewise never
+    // rewritten, and only an inference the APP made is corrected — to English,
+    // except when English is already the source (`en -> en`), which is the
+    // genuinely degenerate pair.
+    const targetWasExplicit = targetLanguage !== null && targetLanguage !== undefined;
     const sourceWasChosen = source.origin === 'preference' || source.origin === 'bookPreference';
-    if (!sourceWasChosen && source.source !== FALLBACK_TARGET) {
+    if (!sourceWasChosen && !targetWasExplicit && source.source !== FALLBACK_TARGET) {
       return {
         kind: 'translate',
         source: source.source,

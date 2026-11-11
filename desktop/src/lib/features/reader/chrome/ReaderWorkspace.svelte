@@ -643,8 +643,12 @@
    * thin evidence (under four words, a tie, no marker hits) and then the panel
    * asks.
    *
-   * The destination is never taken from the book: it is the account's target
-   * preference or the app locale, the same answer in every book.
+   * The destination is never taken from the book: it is the account's explicit
+   * target preference, then the app locale — the same answer in every book. The
+   * preference is passed through explicitly; omitting it was the defect where a
+   * target chosen in Settings (or in the bar) was stored and then discarded,
+   * leaving every translation on the app locale and the bar's target a dead
+   * control.
    *
    * The port is transport-only: nothing is cached here, because translated
    * selections are reading history scoped to the account in Rust.
@@ -663,6 +667,7 @@
       data.text,
       settingsState.locale,
       bookSourceLanguage,
+      preferences?.targetLanguage ?? null,
     );
 
     if (resolution.kind === 'no-translation') {

@@ -18,6 +18,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   resolveLanguagePreferencePair,
+  resolveTranslationSourceWithDetection,
   type TranslationLanguagePreferences,
 } from '$lib/shared/services/translation/translationLanguageResolution';
 
@@ -356,6 +357,113 @@ describe('resolveLanguagePreferencePair — the per-book source', () => {
       source: 'de',
       target: 'de',
       sourceOrigin: 'bookPreference',
+    });
+  });
+});
+
+/**
+ * The two resolvers must agree on the TARGET side, and on the degenerate-pair
+ * rule that the target feeds.
+ *
+ * They differ only in HOW the source is found (the detection variant adds a
+ * local detection step); the destination is the same decision either way, and
+ * the collision rule is one rule. They were allowed to drift once — the
+ * detection variant took no target preference at all — and the reader's target
+ * became a dead control. These cases pin the parity.
+ */
+describe('the target side is the same on both resolvers', () => {
+  const ENGLISH = 'The man is in the house with the dog and the cat of the neighbour.';
+  const SPANISH = 'El hombre está en la casa con el perro y el gato del vecino.';
+
+  it('resolves the same explicit target on both paths', () => {
+    const viaPreference = resolveLanguagePreferencePair(prefs('de', 'fr'), 'it', 'es');
+    const viaDetection = resolveTranslationSourceWithDetection(
+      'de',
+      'it',
+      ENGLISH,
+      'es',
+      null,
+      'fr',
+    );
+
+    expect(viaPreference).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'fr',
+      sourceOrigin: 'preference',
+    });
+    expect(viaDetection).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'fr',
+      sourceOrigin: 'preference',
+    });
+  });
+
+  it('refuses an explicit target that equals a chosen source on both paths', () => {
+    // Book choice (bookPreference) on each side, colliding with the target.
+    expect(resolveLanguagePreferencePair(prefs(null, 'es'), 'fr', 'es', 'es')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'es',
+      target: 'es',
+      sourceOrigin: 'bookPreference',
+    });
+    expect(resolveTranslationSourceWithDetection(null, 'fr', SPANISH, 'en', 'es', 'es')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'es',
+      target: 'es',
+      sourceOrigin: 'bookPreference',
+    });
+  });
+
+  it('never rewrites an explicit target that equals an inferred source on both paths', () => {
+    expect(resolveLanguagePreferencePair(prefs(null, 'es'), 'es', 'en')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'es',
+      target: 'es',
+      sourceOrigin: 'book',
+    });
+    expect(resolveTranslationSourceWithDetection(null, 'es', SPANISH, 'en', null, 'es')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'es',
+      target: 'es',
+      sourceOrigin: 'book',
+    });
+  });
+
+  it('corrects an inferred collision with an AUTOMATIC target on both paths', () => {
+    expect(resolveLanguagePreferencePair(prefs(null, null), 'es', 'es')).toEqual({
+      kind: 'translate',
+      source: 'es',
+      target: 'en',
+      sourceOrigin: 'book',
+    });
+    expect(resolveTranslationSourceWithDetection(null, 'es', SPANISH, 'es', null, null)).toEqual({
+      kind: 'translate',
+      source: 'es',
+      target: 'en',
+      sourceOrigin: 'book',
+    });
+  });
+
+  it('keeps the en -> en refusal on both paths', () => {
+    expect(resolveLanguagePreferencePair(prefs(null, null), 'en', 'en')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'en',
+      target: 'en',
+      sourceOrigin: 'book',
+    });
+    expect(resolveTranslationSourceWithDetection(null, 'en', ENGLISH, 'en', null, null)).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'en',
+      target: 'en',
+      sourceOrigin: 'book',
     });
   });
 });

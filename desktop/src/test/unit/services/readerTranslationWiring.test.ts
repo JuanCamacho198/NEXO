@@ -172,6 +172,7 @@ describe('reader handleTranslate — en -> en never reaches the service', () => 
     locale: string;
     text: string;
     preferenceSource?: string | null;
+    preferenceTarget?: string | null;
     bookSourceLanguage?: string | null;
   }) {
     const translate = vi.fn().mockResolvedValue('SHOULD NOT BE REACHED');
@@ -181,6 +182,7 @@ describe('reader handleTranslate — en -> en never reaches the service', () => 
       input.text,
       input.locale,
       input.bookSourceLanguage ?? null,
+      input.preferenceTarget ?? null,
     );
 
     const outcome =
@@ -274,5 +276,66 @@ describe('reader handleTranslate — en -> en never reaches the service', () => 
       targetLang: 'en',
     });
     expect(outcome).toMatchObject({ status: 'ok', source: 'es', target: 'en' });
+  });
+
+  it('sends the SAVED target preference to the service, not the app locale', async () => {
+    // The defect: the reader resolved the target from the app locale and threw
+    // the saved preference away, so a target picked in Settings — and the bar's
+    // target control — did nothing. The app is Spanish, the reader asked for
+    // French, and the request must leave as `es -> fr`.
+    const { outcome, translate } = await runHandleTranslate({
+      bookLanguage: 'es',
+      locale: 'es',
+      text: 'la casa es bonita y grande',
+      preferenceTarget: 'fr',
+    });
+
+    expect(translate).toHaveBeenCalledWith({
+      text: 'la casa es bonita y grande',
+      sourceLang: 'es',
+      targetLang: 'fr',
+    });
+    expect(outcome).toMatchObject({ status: 'ok', source: 'es', target: 'fr' });
+  });
+
+  it('moves the resolved target when the preference moves', async () => {
+    // Two different saved targets must produce two different resolved pairs —
+    // the exact regression the reader hit, where both answered the locale.
+    const first = await runHandleTranslate({
+      bookLanguage: 'es',
+      locale: 'es',
+      text: 'la casa es bonita y grande',
+      preferenceTarget: 'fr',
+    });
+    const second = await runHandleTranslate({
+      bookLanguage: 'es',
+      locale: 'es',
+      text: 'la casa es bonita y grande',
+      preferenceTarget: 'it',
+    });
+
+    expect(first.outcome).toMatchObject({ status: 'ok', target: 'fr' });
+    expect(second.outcome).toMatchObject({ status: 'ok', target: 'it' });
+  });
+
+  it('refuses rather than calling the service when a chosen source meets the saved target', async () => {
+    // The reader set the target explicitly AND chose the same source: both are
+    // decisions, so this is the deliberate degenerate pair and stays refused.
+    const { outcome, translate } = await runHandleTranslate({
+      bookLanguage: null,
+      locale: 'en',
+      text: 'la casa es bonita y grande',
+      preferenceSource: 'es',
+      preferenceTarget: 'es',
+    });
+
+    expect(outcome).toEqual({
+      status: 'refused',
+      reason: 'same-language',
+      source: 'es',
+      target: 'es',
+      sourceOrigin: 'preference',
+    });
+    expect(translate).not.toHaveBeenCalled();
   });
 });

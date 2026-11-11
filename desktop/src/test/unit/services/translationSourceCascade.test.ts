@@ -290,3 +290,132 @@ describe('resolveTranslationSourceWithDetection — the per-book source', () => 
     });
   });
 });
+
+/**
+ * The TARGET preference, on the detection path.
+ *
+ * This is the defect that shipped: the reader resolves with the detection
+ * variant, which took no target preference at all and hard-coded the app locale
+ * as the destination. A target chosen in Settings (or in the bar) was persisted
+ * correctly and then DISCARDED — with the default locale `es` and a Spanish
+ * book every translation resolved `es -> es`, and picking another target in the
+ * bar snapped back to Español and read as a dead control. These cases fail on
+ * that code and pass once the preference is threaded through.
+ */
+describe('resolveTranslationSourceWithDetection — the target preference', () => {
+  const ENGLISH = 'The man is in the house with the dog and the cat of the neighbour.';
+  const SPANISH = 'El hombre está en la casa con el perro y el gato del vecino.';
+
+  it('USES an explicit target preference instead of the app locale', () => {
+    // The app is in Spanish and the reader asked for French. The saved target
+    // wins: this is the assertion that would have caught the dead control.
+    expect(resolveTranslationSourceWithDetection(null, 'de', ENGLISH, 'es', null, 'fr')).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'fr',
+      sourceOrigin: 'book',
+    });
+  });
+
+  it('resolves two different explicit targets to two different destinations', () => {
+    // The regression the reader hit, stated directly: changing the target twice
+    // must change the resolved pair twice. A hard-coded locale answers `es` both
+    // times and fails here.
+    expect(resolveTranslationSourceWithDetection(null, 'de', ENGLISH, 'es', null, 'fr')).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'fr',
+      sourceOrigin: 'book',
+    });
+    expect(resolveTranslationSourceWithDetection(null, 'de', ENGLISH, 'es', null, 'it')).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'it',
+      sourceOrigin: 'book',
+    });
+  });
+
+  it('falls back to the app locale when the target is automatic', () => {
+    // `null` is a real value — "use the app locale" — not a missing one.
+    expect(resolveTranslationSourceWithDetection(null, 'de', ENGLISH, 'es', null, null)).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'es',
+      sourceOrigin: 'book',
+    });
+    expect(
+      resolveTranslationSourceWithDetection(null, 'de', ENGLISH, 'es', null, undefined),
+    ).toEqual({ kind: 'translate', source: 'de', target: 'es', sourceOrigin: 'book' });
+  });
+
+  it('refuses an explicit target that equals a CHOSEN source', () => {
+    // The reader chose Spanish for this book and asked for Spanish. Like the
+    // preference path, that deliberate pair is refused rather than corrected.
+    expect(resolveTranslationSourceWithDetection(null, 'fr', SPANISH, 'en', 'es', 'es')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'es',
+      target: 'es',
+      sourceOrigin: 'bookPreference',
+    });
+    // Same for an explicit ACCOUNT source preference.
+    expect(resolveTranslationSourceWithDetection('es', 'fr', SPANISH, 'en', null, 'es')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'es',
+      target: 'es',
+      sourceOrigin: 'preference',
+    });
+  });
+
+  it('never rewrites an explicit target that equals an INFERRED source', () => {
+    // The source was inferred (book metadata), but the TARGET is a decision: the
+    // reader asked for Spanish while the book is in Spanish. The English
+    // fallback does not apply, exactly as on the preference path.
+    expect(resolveTranslationSourceWithDetection(null, 'es', SPANISH, 'en', null, 'es')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'es',
+      target: 'es',
+      sourceOrigin: 'book',
+    });
+    // And when the source came from detection rather than the metadata.
+    expect(resolveTranslationSourceWithDetection(null, null, SPANISH, 'en', null, 'es')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'es',
+      target: 'es',
+      sourceOrigin: 'detected',
+    });
+  });
+
+  it('still falls back to English when an inferred source collides with the LOCALE', () => {
+    // The automatic target keeps the original behaviour: an inferred collision
+    // with the app locale is corrected. The explicit-target guard must not
+    // swallow it.
+    expect(resolveTranslationSourceWithDetection(null, 'es', SPANISH, 'es', null, null)).toEqual({
+      kind: 'translate',
+      source: 'es',
+      target: 'en',
+      sourceOrigin: 'book',
+    });
+  });
+
+  it('refuses an unusable target preference', () => {
+    // A target that is present but unusable is a user error, not "infer me":
+    // the same `invalid-target` refusal the preference path reports.
+    expect(resolveTranslationSourceWithDetection(null, 'de', ENGLISH, 'es', null, '1')).toEqual({
+      kind: 'no-translation',
+      reason: 'invalid-target',
+      source: 'de',
+      target: null,
+      sourceOrigin: 'book',
+    });
+  });
+
+  it('normalises the target preference like every other tag', () => {
+    expect(resolveTranslationSourceWithDetection(null, 'de', ENGLISH, 'es', null, 'PT-BR')).toEqual(
+      { kind: 'translate', source: 'de', target: 'pt', sourceOrigin: 'book' },
+    );
+  });
+});
