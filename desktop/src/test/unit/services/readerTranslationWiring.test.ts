@@ -13,6 +13,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { resolveLanguagePreferencePair } from '$lib/shared/services/translation/translationLanguageResolution';
+import { resolveTranslationSourceWithDetection } from '$lib/shared/services/translation/translationLanguageResolution';
 
 describe('reader translation pair resolution', () => {
   it('refuses instead of guessing when the book has no language and no source is set', () => {
@@ -149,5 +150,129 @@ describe('reader translation pair resolution — per-book source', () => {
       target: 'es',
       sourceOrigin: 'bookPreference',
     });
+  });
+});
+
+/**
+ * Defect A: the `en -> en` case must surface as the honest `same-language`
+ * refusal, never as a transport failure.
+ *
+ * These tests reproduce the READER's own wiring (`handleTranslate` in
+ * `ReaderWorkspace.svelte`) against a stub port, so they measure the path rather
+ * than the resolver alone: the resolver is called with the same five arguments,
+ * the SAME branch decides the outcome, and the port is asserted not to be
+ * called. That last assertion is the defect itself — an `en -> en` pair reaching
+ * the service is what made the reader see "Servicio de traducción no
+ * disponible", which is false: nothing was unavailable.
+ */
+describe('reader handleTranslate — en -> en never reaches the service', () => {
+  /** The reader's exact resolution call, with the port stubbed. */
+  async function runHandleTranslate(input: {
+    bookLanguage: string | null | undefined;
+    locale: string;
+    text: string;
+    preferenceSource?: string | null;
+    bookSourceLanguage?: string | null;
+  }) {
+    const translate = vi.fn().mockResolvedValue('SHOULD NOT BE REACHED');
+    const resolution = resolveTranslationSourceWithDetection(
+      input.preferenceSource ?? null,
+      input.bookLanguage,
+      input.text,
+      input.locale,
+      input.bookSourceLanguage ?? null,
+    );
+
+    const outcome =
+      resolution.kind === 'no-translation'
+        ? {
+            status: 'refused' as const,
+            reason: resolution.reason,
+            source: resolution.source,
+            target: resolution.target,
+            sourceOrigin: resolution.sourceOrigin,
+          }
+        : await (async () => {
+            const text = await translate({
+              text: input.text,
+              sourceLang: resolution.source,
+              targetLang: resolution.target,
+            });
+            return {
+              status: 'ok' as const,
+              text,
+              source: resolution.source,
+              target: resolution.target,
+            };
+          })();
+
+    return { outcome, translate };
+  }
+
+  it('refuses an English book on an English app instead of calling the service', async () => {
+    const { outcome, translate } = await runHandleTranslate({
+      bookLanguage: 'en',
+      locale: 'en',
+      text: 'the quick brown fox jumps over the lazy dog',
+    });
+
+    expect(outcome).toEqual({
+      status: 'refused',
+      reason: 'same-language',
+      source: 'en',
+      target: 'en',
+      sourceOrigin: 'book',
+    });
+    // The whole point: no request was made, so the reader cannot be shown a
+    // transport failure for a pair the app already knows is degenerate.
+    expect(translate).not.toHaveBeenCalled();
+  });
+
+  it('refuses a detected English source on an English app too', async () => {
+    // No book language at all: the source is DETECTED. The B1 correction cannot
+    // help because falling back to English would return the same `en -> en`, so
+    // this stays a `same-language` refusal.
+    const { outcome, translate } = await runHandleTranslate({
+      bookLanguage: undefined,
+      locale: 'en',
+      text: 'the quick brown fox jumps over the lazy dog',
+    });
+
+    expect(outcome).toEqual({
+      status: 'refused',
+      reason: 'same-language',
+      source: 'en',
+      target: 'en',
+      sourceOrigin: 'detected',
+    });
+    expect(translate).not.toHaveBeenCalled();
+  });
+
+  it('refuses rather than reaching the service for a chosen en -> en', async () => {
+    const { outcome, translate } = await runHandleTranslate({
+      bookLanguage: 'en',
+      locale: 'en',
+      text: 'the quick brown fox jumps over the lazy dog',
+      preferenceSource: 'en',
+    });
+
+    expect(outcome).toMatchObject({ status: 'refused', reason: 'same-language' });
+    expect(translate).not.toHaveBeenCalled();
+  });
+
+  it('still translates a pair that is not degenerate', async () => {
+    // The guard must not swallow the ordinary case.
+    const { outcome, translate } = await runHandleTranslate({
+      bookLanguage: 'es',
+      locale: 'en',
+      text: 'la casa es bonita y grande',
+    });
+
+    expect(translate).toHaveBeenCalledWith({
+      text: 'la casa es bonita y grande',
+      sourceLang: 'es',
+      targetLang: 'en',
+    });
+    expect(outcome).toMatchObject({ status: 'ok', source: 'es', target: 'en' });
   });
 });

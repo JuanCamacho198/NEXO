@@ -117,7 +117,37 @@ const normalizeMessage = (error: unknown): string => {
   return 'Command invocation failed';
 };
 
-const parseCommandError = (raw: unknown): CommandErrorDto | null => {
+/**
+ * Recovered `{ code, detail }` from a BARE-STRING command error.
+ *
+ * The Rust `translateSelection` command returns `Result<String, String>` and
+ * stringifies its typed error with `.map_err(|e| e.to_string())`
+ * (`commands/translate.rs`), whose `Display` writes `"{code}: {detail}"` — e.g.
+ * the literal `TRANSLATE_NO_TRANSLATION: no usable translation was returned`.
+ * That shape never JSON-parses, so `parseCommandError` used to return `null`,
+ * `commandError.code` was always absent, and every failure — including an honest
+ * "there is no translation" — collapsed to `unavailable`.
+ *
+ * Parsed on the frontend rather than by converting the backend to structured
+ * JSON: that would touch every command and its tests for one consumer.
+ *
+ * Deliberately conservative, so the fallback stays "what the backend said":
+ * - a known `TRANSLATE_*` code is recovered, plus the `${prefix}${status}`
+ *   form `translate.rs` builds for an HTTP failure (`TRANSLATE_HTTP_500`);
+ * - anything else returns `null` and the caller keeps today's behaviour.
+ */
+const BARE_ERROR_CODE = /^(TRANSLATE_[A-Z0-9_]+): ?([\s\S]*)$/;
+
+const parseBareCommandError = (text: string): CommandErrorDto | null => {
+  const match = BARE_ERROR_CODE.exec(text);
+  if (!match) {
+    return null;
+  }
+  const [, code, detail] = match;
+  return { code, message: detail.length > 0 ? detail : text, recoverable: false };
+};
+
+export const parseCommandError = (raw: unknown): CommandErrorDto | null => {
   const text = normalizeMessage(raw);
   if (text.length === 0) {
     return null;
@@ -134,7 +164,7 @@ const parseCommandError = (raw: unknown): CommandErrorDto | null => {
       return parsed;
     }
   } catch {
-    return null;
+    return parseBareCommandError(text);
   }
 
   return null;
