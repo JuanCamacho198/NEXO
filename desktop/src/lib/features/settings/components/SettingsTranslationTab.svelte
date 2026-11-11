@@ -27,9 +27,11 @@
      * second `role="tabpanel"` inside the tab's own panel.
      */
     showHeader?: boolean;
+    /** Saves immediately: the definition selector is not behind the pair's Save button. */
     onSourceChange: (value: string | null) => void;
     onTargetChange: (value: string | null) => void;
-    onSave: () => void;
+    /** Receives the PAIR AS EDITED, not the stored one: the stored pair is what Save is meant to replace. */
+    onSave: (sourceLanguage: string | null, targetLanguage: string | null) => void;
     onClearHistory: () => void;
   };
 
@@ -70,18 +72,73 @@
     })),
   ]);
 
-  const draftSource = $derived(sourceLanguage ?? INFER_VALUE);
-  const draftTarget = $derived(targetLanguage ?? INFER_VALUE);
+  // ── The draft ────────────────────────────────────────────────────────────
+  // The pair the reader sees, the pair the warning describes and the pair Save
+  // persists are the same two values, so the three cannot disagree — which is
+  // exactly what broke while "the draft" was a `$derived` read of the props, a
+  // value no reader could change: `isDirty` compared the props to a copy of the
+  // props and was permanently `false`, so Save was permanently dead and the
+  // change was lost when the tab unmounted.
+  //
+  // The draft is the stored pair OVERLAID with whatever the reader has changed
+  // and not yet saved. That shape is what makes the seeding question disappear:
+  // a side with no pending edit IS the prop, so a preference load landing — even
+  // one that arrives after mount — needs no syncing at all, and an edit in
+  // progress can never be clobbered by one, because the overlay outranks it.
+  //
+  // `undefined` means "no pending edit"; an explicit `null` is a pending edit to
+  // "Automatic", and the two must not be confused.
+  let pendingSource = $state<string | null | undefined>(undefined);
+  let pendingTarget = $state<string | null | undefined>(undefined);
 
+  /**
+   * A pending edit CLEARS itself the moment the stored pair catches up: the
+   * overlay is only kept while it still differs from what is stored.
+   *
+   * This is the whole of the save round-trip. The parent echoes back the pair it
+   * was given; the stored value becomes that pair; the overlay no longer differs
+   * from it and is dropped by itself. No effect, no settling command, and
+   * nothing to get out of order — and a LATER external change (a preference
+   * load, a rename from elsewhere) then shows through, because the overlay is
+   * already gone by the time it arrives.
+   */
+  const effectivePendingSource = $derived(
+    pendingSource !== undefined && pendingSource !== (sourceLanguage ?? null)
+      ? pendingSource
+      : undefined,
+  );
+  const effectivePendingTarget = $derived(
+    pendingTarget !== undefined && pendingTarget !== (targetLanguage ?? null)
+      ? pendingTarget
+      : undefined,
+  );
+
+  const draftSourceValue = $derived(effectivePendingSource ?? sourceLanguage ?? null);
+  const draftTargetValue = $derived(effectivePendingTarget ?? targetLanguage ?? null);
+
+  /**
+   * The dropdown contract: `''` is the placeholder slot of the underlying
+   * Select, and the stored/edited value is `null`.
+   */
+  const draftSourceOption = $derived(draftSourceValue === null ? INFER_VALUE : draftSourceValue);
+  const draftTargetOption = $derived(draftTargetValue === null ? INFER_VALUE : draftTargetValue);
+
+  const storedSourceValue = $derived(sourceLanguage ?? null);
+  const storedTargetValue = $derived(targetLanguage ?? null);
+
+  /** True (and only true) when the reader has edited something not yet saved. */
   const isDirty = $derived(
-    (sourceLanguage ?? null) !== (draftSource === INFER_VALUE ? null : draftSource) ||
-      (targetLanguage ?? null) !== (draftTarget === INFER_VALUE ? null : draftTarget),
+    draftSourceValue !== storedSourceValue || draftTargetValue !== storedTargetValue,
   );
 
   /**
    * True when both sides name the SAME language, which is the pair the service
    * refuses (`same-language`): nothing can be translated from a language into
    * itself.
+   *
+   * It reads the DRAFT, so it always describes the pair on screen — a warning
+   * about a pair the reader has already changed away from is a warning about
+   * nothing.
    *
    * It reports the resolver's verdict, not a guess of its own, so it uses the
    * SAME normalisation the resolver uses (`normalizeLanguageTag`): `en-US` and
@@ -95,9 +152,9 @@
    * translate perfectly well.
    */
   const isDegeneratePair = $derived.by(() => {
-    if (sourceLanguage === null || targetLanguage === null) return false;
-    const normalizedSource = normalizeLanguageTag(sourceLanguage);
-    const normalizedTarget = normalizeLanguageTag(targetLanguage);
+    if (draftSourceValue === null || draftTargetValue === null) return false;
+    const normalizedSource = normalizeLanguageTag(draftSourceValue);
+    const normalizedTarget = normalizeLanguageTag(draftTargetValue);
     if (normalizedSource === null || normalizedTarget === null) return false;
     return normalizedSource === normalizedTarget;
   });
@@ -109,17 +166,30 @@
    */
   const degenerateLanguageLabel = $derived.by(() => {
     if (!isDegeneratePair) return '';
-    const normalized = normalizeLanguageTag(sourceLanguage);
+    const normalized = normalizeLanguageTag(draftSourceValue);
     if (normalized === null) return '';
     return languageLabel(normalized, (key) => t(key as MessageKey));
   });
 
+  /**
+   * An edit is recorded as an OVERLAY on the stored pair, never as a copy of it:
+   * that is what makes an edit survive anything the parent does, and what makes
+   * an outside change visible for free on the side the reader has not touched.
+   */
   function handleSourceChange(value: string): void {
-    onSourceChange(value === INFER_VALUE ? null : value);
+    const next = value === INFER_VALUE ? null : value;
+    pendingSource = next;
+    onSourceChange(next);
   }
 
   function handleTargetChange(value: string): void {
-    onTargetChange(value === INFER_VALUE ? null : value);
+    const next = value === INFER_VALUE ? null : value;
+    pendingTarget = next;
+    onTargetChange(next);
+  }
+
+  function handleSave(): void {
+    onSave(draftSourceValue, draftTargetValue);
   }
 
   function formatDate(iso: string): string {
@@ -167,7 +237,7 @@
       </label>
       <Dropdown
         options={sourceOptions}
-        value={draftSource}
+        value={draftSourceOption}
         onchange={(detail) => handleSourceChange(detail.value)}
         class="w-full"
       />
@@ -180,7 +250,7 @@
       </label>
       <Dropdown
         options={targetOptions}
-        value={draftTarget}
+        value={draftTargetOption}
         onchange={(detail) => handleTargetChange(detail.value)}
         class="w-full"
       />
@@ -189,13 +259,14 @@
 
     {#if isDegeneratePair}
       <p
+        data-testid="translation-same-language-warning"
         class="rounded-lg border border-(--color-warning)/40 bg-(--color-warning)/10 px-3 py-2 text-sm text-(--color-primary)"
       >
         {t('settings.translation.sameLanguageWarning', { language: degenerateLanguageLabel })}
       </p>
     {/if}
 
-    <Button variant="primary" loading={isSaving} onclick={onSave} disabled={!isDirty}>
+    <Button variant="primary" loading={isSaving} onclick={handleSave} disabled={!isDirty}>
       {t('settings.translation.save')}
     </Button>
   </div>

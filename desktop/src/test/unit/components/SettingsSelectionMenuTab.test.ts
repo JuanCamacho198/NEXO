@@ -145,6 +145,48 @@ describe('SettingsSelectionMenuTab', () => {
     expect(onDefinitionLanguageChange).toHaveBeenCalledWith(null);
   });
 
+  /**
+   * The integration the block's own test cannot cover: the pair's Save crosses
+   * the composed tab on its way up, and the caller reads two arguments — the
+   * pair AS EDITED. A callback left bound to a zero-argument contract would
+   * receive `null` / `null` and overwrite the reader's choice with "Automatic".
+   */
+  it('hands the edited pair to the caller when the translation block saves', async () => {
+    const onSave = vi.fn();
+    const { container } = render(SettingsSelectionMenuTab, { ...baseProps, onSave });
+
+    const triggers = Array.from(
+      container.querySelectorAll<HTMLElement>('[aria-haspopup="listbox"]'),
+    );
+    expect(triggers.length).toBeGreaterThan(1);
+    // The pair's selectors come BEFORE the definition selector in the block.
+    const targetTrigger = triggers[1];
+
+    await fireEvent.pointerDown(targetTrigger, { pointerId: 1, pointerType: 'mouse', button: 0 });
+    await fireEvent.pointerUp(targetTrigger, { pointerId: 1, pointerType: 'mouse', button: 0 });
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeNull());
+    const option = screen.getAllByRole('option').find((item) => item.textContent?.trim() === 'EN');
+    expect(option).toBeTruthy();
+    await fireEvent.pointerDown(option as HTMLElement, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+    });
+    await fireEvent.pointerUp(option as HTMLElement, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+    });
+    await fireEvent.click(option as HTMLElement);
+    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
+
+    const saveTrigger = screen.getByText('settings.translation.save').closest('button');
+    expect(saveTrigger).not.toBeNull();
+    await fireEvent.click(saveTrigger as HTMLElement);
+
+    expect(onSave).toHaveBeenCalledWith(null, 'en');
+  });
+
   it('shows an error when the settings surface reports one', () => {
     render(SettingsSelectionMenuTab, { ...baseProps, error: 'boom' });
 
