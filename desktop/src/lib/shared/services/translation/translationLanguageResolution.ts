@@ -305,6 +305,24 @@ function sourceOrReason(resolution: SideResolution, origin: SourceOrigin): Sourc
  * `null` here used to discard the saved target and resolve every translation to
  * the app locale, so a target chosen in Settings (or in the bar) was stored and
  * then ignored. The two resolvers now take the target preference the same way.
+ *
+ * `pageText` is the chapter on screen, offered as a language-detection FALLBACK
+ * for a selection too short to score. The two are detected SEPARATELY and the
+ * SELECTION's answer wins: it is direct evidence about what is being translated,
+ * while the page is only the context around it. The page is consulted ONLY when
+ * the selection's own detection returns nothing, and it is consulted LAZILY —
+ * `detectLanguage` over the page runs inside that branch alone, never eagerly —
+ * because the call site passes the page unconditionally on every translation and
+ * an eager call would make every translation pay for a chapter-sized scan it does
+ * not need.
+ *
+ * NEVER concatenate the selection and the page into one string. Measured: an
+ * English quote (34 words) alone detects `en`, the Spanish page (4638 words)
+ * alone detects `es`, and the two JOINED detect `es` — the page drowns the
+ * selection and the reader is told their English quote is Spanish. Two separate
+ * calls, selection first, is the whole of the rule.
+ *
+ * It is named `pageText` now that it is no longer deliberately unused.
  */
 export function resolveTranslationSourceWithDetection(
   sourceLanguage: string | null | undefined,
@@ -313,6 +331,7 @@ export function resolveTranslationSourceWithDetection(
   appLocale: string | null | undefined,
   bookSourceLanguage: string | null | undefined = null,
   targetLanguage: string | null | undefined = null,
+  pageText: string | null | undefined = null,
 ): LanguageResolution {
   // The target is resolved FIRST: a refusal on the source side still has to be
   // able to name the target it resolved. An unusable explicit target reports
@@ -320,7 +339,13 @@ export function resolveTranslationSourceWithDetection(
   const target = resolveTarget(targetLanguage, appLocale);
   const resolvedTarget = typeof target === 'string' ? target : null;
 
-  const source = resolveSourceWithDetection(sourceLanguage, bookLanguage, text, bookSourceLanguage);
+  const source = resolveSourceWithDetection(
+    sourceLanguage,
+    bookLanguage,
+    text,
+    bookSourceLanguage,
+    pageText,
+  );
   if (!source.resolved) {
     return {
       kind: 'no-translation',
@@ -379,6 +404,7 @@ function resolveSourceWithDetection(
   bookLanguage: string | null | undefined,
   text: string,
   bookSourceLanguage: string | null | undefined,
+  pageText: string | null | undefined,
 ): SourceResolution {
   if (bookSourceLanguage !== null && bookSourceLanguage !== undefined) {
     return sourceOrReason(
