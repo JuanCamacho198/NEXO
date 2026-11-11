@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import DownloadButton from '@/components/ui/DownloadButton.astro';
+import Button from '@/components/ui/Button.astro';
 import Eyebrow from '@/components/ui/Eyebrow.astro';
 import PlatformIcon from '@/components/ui/PlatformIcon.astro';
 import heroMockup from '@/assets/hero-mockup.png';
@@ -18,28 +19,40 @@ const platforms = [
 ---
 
 <!-- ══════════════ HERO ══════════════ -->
-<section class="pt-10 pb-24" id="top">
-  <div class="shell grid grid-cols-[0.86fr_1.19fr] items-center gap-10 max-[900px]:grid-cols-1">
+<section class="hero-section" id="top">
+  <div class="shell hero-grid">
     <div class="min-w-0 rise rise-1">
       <Eyebrow>{t('hero.eyebrow')}</Eyebrow>
 
-      <h1>{t('hero.heading')}</h1>
+      <h1 class="hero-heading">{t('hero.heading')}</h1>
 
-      <p class="mt-5 max-w-[46ch] text-[1.05rem] leading-[1.75] text-ink-soft text-pretty">
+      <p class="mt-6 max-w-[43ch] text-[1.05rem] leading-[1.8] text-ink-soft text-pretty">
         {t('hero.lead')}
       </p>
 
       <div class="mt-8 flex flex-wrap items-center gap-3.5 max-[640px]:gap-3">
         <DownloadButton />
+        <Button variant="ghost" size="lg" href="#como-funciona">
+          {t('header.navHow')}
+          <svg
+            class="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
+        </Button>
       </div>
 
-      <ul
-        class="mt-[30px] flex flex-wrap items-center gap-7 max-[640px]:gap-[18px]"
-        id="dispositivos"
-      >
+      <ul class="hero-platforms" id="dispositivos">
         {platforms.map((platform) => (
           <li class="inline-flex">
-            <a href="#descargar" class="group inline-flex items-center gap-[9px]">
+            <a href="#descargar" class="group inline-flex min-h-11 items-center gap-2">
               <PlatformIcon name={platform.name} />
               <span class="text-[13px] font-medium text-ink-soft transition-[color] duration-[180ms] ease-[ease] group-hover:text-ink">
                 {platform.label}
@@ -50,12 +63,12 @@ const platforms = [
       </ul>
     </div>
 
-    <div class="rise rise-2 min-w-0 max-[900px]:mt-12 min-[901px]:-translate-y-4 min-[901px]:translate-x-[2%]">
+    <div class="hero-visual rise rise-2">
       <Image
         src={heroMockup}
         alt={t('hero.mockupAlt')}
         widths={[480, 720, 1080, 1600]}
-        sizes="(max-width: 900px) 92vw, 680px"
+        sizes="(max-width: 900px) 92vw, 660px"
         format="webp"
         quality={82}
         loading="eager"

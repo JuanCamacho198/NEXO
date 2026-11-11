@@ -31,9 +31,23 @@ const faqs = [
 
     <div class="border-t border-t-border">
       {faqs.map((faq) => (
-        <details class="border-b border-b-border py-5">
+        <details class="faq-item border-b border-b-border py-6">
           <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-medium text-ink [&::-webkit-details-marker]:hidden">
             {faq.q}
+            <span class="faq-indicator" aria-hidden="true">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+              >
+                <path d="M5 12h14" />
+                <path class="faq-plus" d="M12 5v14" />
+              </svg>
+            </span>
           </summary>
           <p class="mt-3 max-w-[60ch] text-[0.95rem] leading-[1.7] text-ink-soft">{faq.a}</p>
         </details>
