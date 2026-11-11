@@ -154,6 +154,71 @@ describe('reader translation pair resolution — per-book source', () => {
 });
 
 /**
+ * The reader's exact resolution call with the port stubbed — `handleTranslate`
+ * in `ReaderWorkspace.svelte`, reproduced argument for argument.
+ *
+ * Shared by the blocks below so the `en -> en` guard and the page fallback are
+ * measured against the SAME wiring: the resolver's positional arguments (source
+ * preference, book language, selection text, locale, per-book source, target
+ * preference, page text) and the same refusal branch decide both.
+ */
+async function runHandleTranslate(input: {
+  bookLanguage: string | null | undefined;
+  locale: string;
+  text: string;
+  preferenceSource?: string | null;
+  preferenceTarget?: string | null;
+  bookSourceLanguage?: string | null;
+  /**
+   * The chapter text the viewer holds, read at translate time through
+   * `epubRef.getPageText()` — the same positional argument `handleTranslate`
+   * passes last. Defaults to `''`, which is what a PDF, a text-free chapter or
+   * no chapter at all yields.
+   */
+  pageText?: string;
+}) {
+  const translate = vi.fn().mockResolvedValue('SHOULD NOT BE REACHED');
+  const resolution = resolveTranslationSourceWithDetection(
+    input.preferenceSource ?? null,
+    input.bookLanguage,
+    input.text,
+    input.locale,
+    input.bookSourceLanguage ?? null,
+    input.preferenceTarget ?? null,
+    input.pageText ?? '',
+  );
+
+  const outcome =
+    resolution.kind === 'no-translation'
+      ? {
+          status: 'refused' as const,
+          reason: resolution.reason,
+          source: resolution.source,
+          target: resolution.target,
+          sourceOrigin: resolution.sourceOrigin,
+        }
+      : await (async () => {
+          const text = await translate({
+            text: input.text,
+            sourceLang: resolution.source,
+            targetLang: resolution.target,
+          });
+          return {
+            status: 'ok' as const,
+            text,
+            source: resolution.source,
+            target: resolution.target,
+            // Carried through the wiring so a test can assert WHICH step
+            // produced the source — the selection's `detected` or the page's
+            // `detectedFromPage` — rather than only the code both share.
+            sourceOrigin: resolution.sourceOrigin,
+          };
+        })();
+
+  return { outcome, translate };
+}
+
+/**
  * Defect A: the `en -> en` case must surface as the honest `same-language`
  * refusal, never as a transport failure.
  *
@@ -166,51 +231,6 @@ describe('reader translation pair resolution — per-book source', () => {
  * disponible", which is false: nothing was unavailable.
  */
 describe('reader handleTranslate — en -> en never reaches the service', () => {
-  /** The reader's exact resolution call, with the port stubbed. */
-  async function runHandleTranslate(input: {
-    bookLanguage: string | null | undefined;
-    locale: string;
-    text: string;
-    preferenceSource?: string | null;
-    preferenceTarget?: string | null;
-    bookSourceLanguage?: string | null;
-  }) {
-    const translate = vi.fn().mockResolvedValue('SHOULD NOT BE REACHED');
-    const resolution = resolveTranslationSourceWithDetection(
-      input.preferenceSource ?? null,
-      input.bookLanguage,
-      input.text,
-      input.locale,
-      input.bookSourceLanguage ?? null,
-      input.preferenceTarget ?? null,
-    );
-
-    const outcome =
-      resolution.kind === 'no-translation'
-        ? {
-            status: 'refused' as const,
-            reason: resolution.reason,
-            source: resolution.source,
-            target: resolution.target,
-            sourceOrigin: resolution.sourceOrigin,
-          }
-        : await (async () => {
-            const text = await translate({
-              text: input.text,
-              sourceLang: resolution.source,
-              targetLang: resolution.target,
-            });
-            return {
-              status: 'ok' as const,
-              text,
-              source: resolution.source,
-              target: resolution.target,
-            };
-          })();
-
-    return { outcome, translate };
-  }
-
   it('refuses an English book on an English app instead of calling the service', async () => {
     const { outcome, translate } = await runHandleTranslate({
       bookLanguage: 'en',
@@ -337,5 +357,155 @@ describe('reader handleTranslate — en -> en never reaches the service', () => 
       sourceOrigin: 'preference',
     });
     expect(translate).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * T4: the page fallback, measured through the WIRING the reader actually hits.
+ *
+ * T3 pins the resolver in isolation. These cases reproduce `handleTranslate` —
+ * the real selection text, the real page text the viewer extracts, the real
+ * positional call — so a regression in the plumbing (the page dropped, merged
+ * into the selection, consulted too early, or consulted lazily-wrong) fails
+ * here even when the resolver alone still passes.
+ *
+ * The page text below is real Spanish prose of a few hundred words, the size the
+ * viewer's `extractPageText` cap hands over (~800 words / 5000 chars), not a
+ * token string: a one-word "page" would score below the detector's floor and
+ * pin nothing. The detections stay SEPARATE — the selection first, its answer
+ * always winning — so an English quote inside this page still resolves `en`.
+ */
+describe('reader handleTranslate — the page fallback, end to end', () => {
+  /** The reported 3-word fragment: one marker hit, under the detector's floor. */
+  const REPORTED_FRAGMENT = 'Hay un límite';
+
+  /**
+   * A realistic Spanish chapter body (~330 words, within the viewer's cap). Real
+   * prose, not marker words glued together: it carries `un`, `la`, `y`, `con`,
+   * `del`, `pero` at natural frequency, which is exactly the signal the page
+   * fallback is supposed to harvest.
+   */
+  const SPANISH_PAGE = [
+    'Cuando el tren llegó a la estación, la niebla cubría todavía los tejados del pueblo y las luces de la calle',
+    'apenas alcanzaban a verse desde el andén. El hombre bajó con su maleta de cuero, miró alrededor como quien',
+    'busca a alguien que ya no está, y caminó despacio hacia la salida. Había vivido allí veinte años y no',
+    'reconocía ni la mitad de las casas. La panadería de la esquina seguía abierta, pero el cartel era nuevo y el',
+    'olor del pan se mezclaba con el de la lluvia. Recordó que su madre solía decir que un buen pan no necesita',
+    'nada más que harina, agua y tiempo, y que la prisa era la única enemiga de las cosas bien hechas. Subió la',
+    'cuesta con la maleta en la mano izquierda y se detuvo frente a la verja de hierro. La casa estaba pintada',
+    'de blanco, con las ventanas cerradas y las macetas vacías sobre el muro. Por un momento pensó que se había',
+    'equivocado de calle, pero el número de la puerta era el mismo y la higuera del patio continuaba en su sitio,',
+    'más grande de lo que la recordaba, con las ramas apoyadas contra la pared. Sacó la llave del bolsillo y la',
+    'sostuvo un rato sin decidirse. Después del entierro había prometido no volver nunca, y sin embargo allí estaba,',
+    'con la lluvia cayendo sobre los hombros y el peso de los años encima. Abrió la puerta y entró. El pasillo',
+    'olía a madera vieja y a polvo, y al fondo, en la cocina, la mesa seguía puesta con el mantel de lino que su',
+    'abuela había bordado. Se sentó en la silla de siempre, dejó la maleta en el suelo y miró por la ventana. No',
+    'había nadie esperándolo, pero tampoco se sentía solo. Pensó en las cartas que nunca escribió, en las llamadas',
+    'que nunca hizo, en todas las veces que había dicho que volvería y no volvió. Fuera, el viento movía las hojas',
+    'del árbol y la lluvia golpeaba el cristal con una insistencia tranquila. Cerró los ojos y escuchó. Aquel',
+    'silencio no era el mismo que había dejado atrás: era un silencio más hondo, con algo dentro, como si la casa',
+    'guardara las palabras que nadie se había atrevido a decir. Se levantó, encendió la luz de la cocina y abrió',
+    'el grifo para llenar un vaso de agua. El agua salió turbia al principio y después clara. Bebió despacio,',
+    'apoyado en el borde de la mesa, y por primera vez en mucho tiempo sintió que quizá todavía quedaba algo por',
+    'hacer en aquel lugar, algo pequeño y suyo, algo que no dependía de nadie más que de él.',
+  ].join(' ');
+
+  it('resolves the reported fragment from the PAGE, and reports the page as the origin', async () => {
+    // The original failure, end to end: three words of Spanish in a Spanish
+    // chapter, a book whose metadata says nothing. Before T3 the wiring refused
+    // with `unknown-source` and the reader saw "cannot detect the language".
+    // The page through the wiring names `es`, and `sourceOrigin` says the PAGE
+    // produced it — the value the bar uses to tell context from the highlight.
+    const { outcome, translate } = await runHandleTranslate({
+      bookLanguage: null,
+      locale: 'en',
+      text: REPORTED_FRAGMENT,
+      pageText: SPANISH_PAGE,
+    });
+
+    expect(outcome).toEqual({
+      status: 'ok',
+      text: 'SHOULD NOT BE REACHED',
+      source: 'es',
+      target: 'en',
+      sourceOrigin: 'detectedFromPage',
+    });
+    // The pair is what leaves for the service: the selection's own text, in the
+    // language the page named. Nothing about the page is sent as content.
+    expect(translate).toHaveBeenCalledWith({
+      text: REPORTED_FRAGMENT,
+      sourceLang: 'es',
+      targetLang: 'en',
+    });
+  });
+
+  it('still resolves an English quote inside the Spanish page as `en`, never `es`', async () => {
+    // The concatenation trap through the WIRING: if the page were joined to the
+    // selection before detecting — the single most likely way to get this wrong,
+    // and a change the resolver's own tests would not necessarily catch if the
+    // join happened in the call site — the English quote would be drowned by the
+    // page and reported as Spanish. Separate detections keep the quote's answer.
+    const englishQuote =
+      'The question of how the state should be organised was answered in the letters that the author wrote with great care and of which only a few survived.';
+
+    const { outcome, translate } = await runHandleTranslate({
+      bookLanguage: null,
+      locale: 'es',
+      text: englishQuote,
+      pageText: SPANISH_PAGE,
+    });
+
+    expect(outcome).toMatchObject({
+      status: 'ok',
+      source: 'en',
+      target: 'es',
+      sourceOrigin: 'detected',
+    });
+    expect(translate).toHaveBeenCalledWith({
+      text: englishQuote,
+      sourceLang: 'en',
+      targetLang: 'es',
+    });
+  });
+
+  it('behaves exactly as before when there is NO page — a PDF or a text-free chapter', async () => {
+    // The fallback is ADDITIVE. With no page text the wiring passes `''`, the
+    // selection refuses, and the honest `unknown-source` refusal survives with
+    // the same message and the same fix. Same fragment, same book, no page.
+    const { outcome, translate } = await runHandleTranslate({
+      bookLanguage: null,
+      locale: 'en',
+      text: REPORTED_FRAGMENT,
+      pageText: '',
+    });
+
+    expect(outcome).toEqual({
+      status: 'refused',
+      reason: 'unknown-source',
+      source: null,
+      target: 'en',
+      sourceOrigin: null,
+    });
+    expect(translate).not.toHaveBeenCalled();
+  });
+
+  it('never consults the page when the book metadata already names the language', async () => {
+    // The metadata step still OUTRANKS the page fallback. A book declaring its
+    // language resolves from `book` even though the page could name something
+    // else, and the origin proves the page was not the source.
+    const { outcome } = await runHandleTranslate({
+      bookLanguage: 'fr',
+      locale: 'en',
+      text: REPORTED_FRAGMENT,
+      pageText: SPANISH_PAGE,
+    });
+
+    expect(outcome).toEqual({
+      status: 'ok',
+      text: 'SHOULD NOT BE REACHED',
+      source: 'fr',
+      target: 'en',
+      sourceOrigin: 'book',
+    });
   });
 });
