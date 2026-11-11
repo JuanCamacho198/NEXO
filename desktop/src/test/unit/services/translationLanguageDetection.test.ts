@@ -87,3 +87,46 @@ describe('detectLanguage', () => {
     expect(detectLanguage(text)).toBe('en');
   });
 });
+
+/**
+ * The two SAMPLES the page fallback (T3) hands the detector, measured here.
+ *
+ * The resolver does not change this function: it calls it twice, on the
+ * selection and, only if that returns nothing, on the page. This suite pins the
+ * evidence behind that rule so a future "just pass one string" change has the
+ * numbers in front of it.
+ *
+ * The concatenation row is the trap. It is not a rule of the detector, it is the
+ * consequence of DROWNING the selection in the page: the detector is majority
+ * vote over function words, so a 34-word quote inside a 4638-word Spanish
+ * chapter is invisibly English. The resolver therefore never joins the two.
+ */
+describe('detectLanguage — the selection and the page are separate samples', () => {
+  const SHORT_SPANISH = 'Hay un límite';
+  const ENGLISH_QUOTE =
+    'The question of how the state should be organised was answered in the letters that the author wrote with great care and of which only a few survived.';
+  const SPANISH_PAGE =
+    'El hombre llegó a la casa de su madre por la tarde y la encontró con la puerta abierta. ' +
+    'La mesa estaba puesta con un mantel de lino y las sillas de madera junto a la ventana. ' +
+    'Después del almuerzo hablaron del viaje con los vecinos y de los años que habían pasado.';
+
+  it('refuses the SHORT selection that the page rescues', () => {
+    // Three words carries one marker hit and no score, so the floor refuses.
+    expect(detectLanguage(SHORT_SPANISH)).toBeNull();
+  });
+
+  it('resolves the PAGE the same selection sits in', () => {
+    expect(detectLanguage(SPANISH_PAGE)).toBe('es');
+  });
+
+  it('resolves the English QUOTE on its own', () => {
+    expect(detectLanguage(ENGLISH_QUOTE)).toBe('en');
+  });
+
+  it('loses the English quote when it is CONCATENATED with the page', () => {
+    // The regression the resolver must never introduce: joined, the quote is
+    // drowned and the answer flips to the page's language. The assertion is the
+    // documented measurement — `es` here is the WRONG answer for the quote.
+    expect(detectLanguage(`${ENGLISH_QUOTE} ${SPANISH_PAGE}`)).toBe('es');
+  });
+});

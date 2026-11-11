@@ -12,12 +12,20 @@
  * WINS when it exists, even when it contradicts detection — its metadata is
  * declared, detection is a guess.
  *
+ * Detection has two SAMPLES, tried in order and never together: the selection,
+ * then the page text the selection sits in. The selection is direct evidence
+ * about what is being translated, so its answer always stands; the page runs
+ * only when the selection alone yields nothing, and its result is reported as
+ * `detectedFromPage` so the UI can tell the two apart. The page call is lazy.
+ *
  * Every result also carries `sourceOrigin`: `preference` for an explicit source,
- * `book` for the book's metadata, `detected` for the detector. The UI labels a
- * language as automatic only when it was inferred, so the origin must name the
- * step that actually produced the code — not just re-state the code.
+ * `book` for the book's metadata, `detected` for the detector over the selection,
+ * `detectedFromPage` for the detector over the page. The UI labels a language as
+ * automatic only when it was inferred, so the origin must name the step that
+ * actually produced the code — not just re-state the code.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import * as detection from '$lib/shared/services/translation/translationLanguageDetection';
 import { resolveTranslationSourceWithDetection } from '$lib/shared/services/translation/translationLanguageResolution';
 
 describe('resolveTranslationSourceWithDetection', () => {
@@ -417,5 +425,207 @@ describe('resolveTranslationSourceWithDetection — the target preference', () =
     expect(resolveTranslationSourceWithDetection(null, 'de', ENGLISH, 'es', null, 'PT-BR')).toEqual(
       { kind: 'translate', source: 'de', target: 'pt', sourceOrigin: 'book' },
     );
+  });
+});
+
+/**
+ * The PAGE fallback (T3): the chapter text as a SECOND sample for detection.
+ *
+ * The detector's floor is four word tokens, and a highlighted phrase is usually
+ * three or fewer, so a real Spanish selection in a real Spanish chapter refuses
+ * today ("cannot detect the language"). The page around it carries the missing
+ * signal, so it is offered as a fallback — the SELECTION is tried first and its
+ * answer always stands, the page only runs when the selection yields nothing.
+ *
+ * The two are detected with SEPARATE calls. Concatenating them is the measured
+ * trap: an English quote (34 words) alone detects `en`, the Spanish page alone
+ * detects `es`, and the two JOINED detect `es` — the page drowns the selection
+ * and the reader is told their English quote is Spanish. The cases below pin
+ * both halves of that.
+ *
+ * The page call is LAZY: it must not run when the selection already resolved,
+ * because the call site passes the page on EVERY translation and an eager call
+ * would make every translation pay for a chapter-sized scan.
+ */
+describe('resolveTranslationSourceWithDetection — the page fallback', () => {
+  /** A 3-word Spanish fragment: one marker hit, below the detector's floor. */
+  const SHORT_SPANISH = 'Hay un límite';
+  /** An English quote long enough to score on its own. */
+  const ENGLISH_QUOTE =
+    'The question of how the state should be organised was answered in the letters that the author wrote with great care and of which only a few survived.';
+  const SPANISH_PAGE =
+    'El hombre llegó a la casa de su madre por la tarde y la encontró con la puerta abierta. ' +
+    'La mesa estaba puesta con un mantel de lino y las sillas de madera junto a la ventana. ' +
+    'Después del almuerzo hablaron del viaje con los vecinos y de los años que habían pasado.';
+
+  it('resolves a short Spanish selection from the PAGE, and says so', () => {
+    // The reported failure: three words in a Spanish chapter. The selection
+    // alone refuses; the page names `es`. The origin is `detectedFromPage`, a
+    // value DISTINCT from `detected`, so the UI can tell the weaker evidence
+    // (the context) from the direct one (the highlighted text).
+    expect(
+      resolveTranslationSourceWithDetection(
+        null,
+        null,
+        SHORT_SPANISH,
+        'en',
+        null,
+        null,
+        SPANISH_PAGE,
+      ),
+    ).toEqual({
+      kind: 'translate',
+      source: 'es',
+      target: 'en',
+      sourceOrigin: 'detectedFromPage',
+    });
+  });
+
+  it('still refuses the same selection when there is NO page', () => {
+    // The fallback is ADDITIVE: with nothing to fall back to, the old answer is
+    // byte-identical, and `unknown-source` keeps meaning "nothing could name the
+    // source". A PDF or a chapter that has not rendered passes `''` and lands
+    // here.
+    expect(
+      resolveTranslationSourceWithDetection(null, null, SHORT_SPANISH, 'en', null, null, ''),
+    ).toEqual({
+      kind: 'no-translation',
+      reason: 'unknown-source',
+      source: null,
+      target: 'en',
+      sourceOrigin: null,
+    });
+  });
+
+  it('lets an English SELECTION win inside a Spanish page — never concatenating', () => {
+    // The concatenation trap, stated as a test. Joining the quote and the page
+    // would detect `es` (measured) and silently translate the quote as Spanish.
+    // Detected separately, the selection answers `en` and the page is never
+    // consulted for its answer.
+    expect(
+      resolveTranslationSourceWithDetection(
+        null,
+        null,
+        ENGLISH_QUOTE,
+        'es',
+        null,
+        null,
+        SPANISH_PAGE,
+      ),
+    ).toEqual({ kind: 'translate', source: 'en', target: 'es', sourceOrigin: 'detected' });
+  });
+
+  it('refuses when neither the selection nor the page yields a language', () => {
+    expect(
+      resolveTranslationSourceWithDetection(null, null, 'give up', 'en', null, null, 'la de'),
+    ).toEqual({
+      kind: 'no-translation',
+      reason: 'unknown-source',
+      source: null,
+      target: 'en',
+      sourceOrigin: null,
+    });
+  });
+
+  it('does not consult the page when the book metadata already named the language', () => {
+    // The metadata step (3) still OUTRANKS the page fallback (5): a declared
+    // language is honest evidence and a guess over the chapter is not. The
+    // origin stays `book`, never `detectedFromPage`.
+    expect(
+      resolveTranslationSourceWithDetection(
+        null,
+        'fr',
+        SHORT_SPANISH,
+        'en',
+        null,
+        null,
+        SPANISH_PAGE,
+      ),
+    ).toEqual({ kind: 'translate', source: 'fr', target: 'en', sourceOrigin: 'book' });
+  });
+
+  it('does not consult the page when a chosen source already resolved', () => {
+    // The same for the two CHOICE steps: the reader's word is not a sample, so
+    // no detection runs at all.
+    expect(
+      resolveTranslationSourceWithDetection(
+        'de',
+        'fr',
+        SHORT_SPANISH,
+        'en',
+        null,
+        null,
+        SPANISH_PAGE,
+      ),
+    ).toEqual({ kind: 'translate', source: 'de', target: 'en', sourceOrigin: 'preference' });
+    expect(
+      resolveTranslationSourceWithDetection(
+        null,
+        'fr',
+        SHORT_SPANISH,
+        'en',
+        'it',
+        null,
+        SPANISH_PAGE,
+      ),
+    ).toEqual({ kind: 'translate', source: 'it', target: 'en', sourceOrigin: 'bookPreference' });
+  });
+
+  it('runs the page detection LAZILY — not at all when the selection resolves', () => {
+    // The call site passes the page on EVERY translation, so an eager page
+    // `detectLanguage` call would charge every translation for a chapter-sized
+    // scan it does not need. This spies on the detector and asserts the call
+    // count directly: one call when the selection resolves (the selection
+    // only), two when the selection refuses and the page is consulted.
+    const spy = vi.spyOn(detection, 'detectLanguage');
+    try {
+      spy.mockClear();
+      resolveTranslationSourceWithDetection(
+        null,
+        null,
+        ENGLISH_QUOTE,
+        'es',
+        null,
+        null,
+        SPANISH_PAGE,
+      );
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(ENGLISH_QUOTE);
+
+      spy.mockClear();
+      resolveTranslationSourceWithDetection(
+        null,
+        null,
+        SHORT_SPANISH,
+        'en',
+        null,
+        null,
+        SPANISH_PAGE,
+      );
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy).toHaveBeenNthCalledWith(1, SHORT_SPANISH);
+      expect(spy).toHaveBeenNthCalledWith(2, SPANISH_PAGE);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('runs the page detection lazily when a choice wins too — zero calls', () => {
+    const spy = vi.spyOn(detection, 'detectLanguage');
+    try {
+      spy.mockClear();
+      resolveTranslationSourceWithDetection(
+        null,
+        'fr',
+        SHORT_SPANISH,
+        'en',
+        null,
+        null,
+        SPANISH_PAGE,
+      );
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
