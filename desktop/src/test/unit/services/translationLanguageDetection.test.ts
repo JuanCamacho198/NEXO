@@ -41,11 +41,29 @@ describe('detectLanguage', () => {
     expect(detectLanguage('give up')).toBeNull();
   });
 
-  it('refuses to guess on a tie', () => {
-    // "de" and "la" are markers in BOTH Spanish and French (and Italian), so
-    // this two-marker text scores the same for several languages. Not knowing
-    // beats picking one of them.
+  it('refuses to guess from a text below the word-count floor', () => {
+    // "la de": `la` is now a Spanish-only marker, but two tokens is below
+    // MIN_WORDS, so the word-count floor refuses before markers are consulted.
+    // The old reason here — a tie between Spanish, French and Italian from the
+    // shared `la`/`de` markers — no longer exists, because markers are unique
+    // per language now.
     expect(detectLanguage('la de')).toBeNull();
+  });
+
+  it('detects a real Spanish selection that used to tie with Italian', () => {
+    expect(detectLanguage('un gran defensor de la Iglesia')).toBe('es');
+  });
+
+  it('detects a real Spanish selection with a prefix', () => {
+    expect(detectLanguage('Rusia, un gran defensor de la Iglesia ortodoxa rusa')).toBe('es');
+  });
+
+  it('detects a real Spanish selection that used to tie with Portuguese', () => {
+    expect(detectLanguage('De ser cierto, puede que cada')).toBe('es');
+  });
+
+  it('detects a short Spanish selection whose only marker is an article', () => {
+    expect(detectLanguage('la Iglesia ortodoxa rusa')).toBe('es');
   });
 
   it('refuses an empty or whitespace-only text', () => {

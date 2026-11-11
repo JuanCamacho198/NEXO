@@ -30,13 +30,13 @@ use rusqlite::Connection;
 use crate::error::{AppError, AppResult};
 use crate::models::{
     ActivityPoint, AddDictionaryWordInput, AppSettingDto, BookCoverDto, BookDeleteInput, BookDto,
-    BookImportInput, BookmarkDto, CollectionDto, CreateTagInput, DefinitionCacheEntryDto,
-    DictionaryWordDto, HighlightDto, IndexBookTextInput, LibraryBookDto, NotificationDto,
-    ReadingProgressDto, ReadingSessionInput, ReadingSessionSavedDto, ReadingStatsSummaryDto,
-    RemoteHighlightRow, RemoteReadingSessionRow, SaveBookmarkInput, SaveHighlightInput,
-    SaveHighlightTagsInput, SaveProgressInput, ScanFolderResultDto, SearchBookTextInput,
-    SearchBookTextResponse, TagDto, TranslationCacheEntryDto, TranslationPreferencesDto,
-    UpdateHighlightInput, UpsertRemoteSummary,
+    BookImportInput, BookTranslationSourceDto, BookmarkDto, CollectionDto, CreateTagInput,
+    DefinitionCacheEntryDto, DictionaryWordDto, HighlightDto, IndexBookTextInput, LibraryBookDto,
+    NotificationDto, ReadingProgressDto, ReadingSessionInput, ReadingSessionSavedDto,
+    ReadingStatsSummaryDto, RemoteHighlightRow, RemoteReadingSessionRow, SaveBookmarkInput,
+    SaveHighlightInput, SaveHighlightTagsInput, SaveProgressInput, ScanFolderResultDto,
+    SearchBookTextInput, SearchBookTextResponse, TagDto, TranslationCacheEntryDto,
+    TranslationPreferencesDto, UpdateHighlightInput, UpsertRemoteSummary,
 };
 pub use crate::models::{LibraryDefinitionResult, LibraryDefinitionSource};
 
@@ -199,6 +199,49 @@ impl LibraryRepository {
         definition_language: Option<&str>,
     ) -> AppResult<TranslationPreferencesDto> {
         translation::save_definition_language(self, user_id, definition_language)
+    }
+
+    // ─── Per-book source preference (T12/T13) ───
+    //
+    // The second level of the preference model. The book WINS over the account:
+    // `resolve_book_translation_source` reads this table first and only falls
+    // through to `translation_preferences` when the reader has made no choice for
+    // the book. Both are scoped by `user_id`, and the empty-user short-circuit is
+    // applied in `repository::translation`, not here.
+
+    /// This book's own source choice, or `None` when none was made.
+    ///
+    /// `None` also covers "no active account". Whether a language was chosen for
+    /// the BOOK or inherited from the ACCOUNT is provenance the caller needs
+    /// before it may offer to clear a choice, so this is the read that answers
+    /// that question — never a guess derived from the effective value.
+    pub fn get_book_translation_source(
+        &self,
+        user_id: &str,
+        book_id: &str,
+    ) -> AppResult<Option<BookTranslationSourceDto>> {
+        translation::get_book_translation_source(self, user_id, book_id)
+    }
+
+    /// The effective source for this book: the book's choice, else the account's
+    /// general preference, else `None` ("infer" — the frontend's own cascade).
+    pub fn resolve_book_translation_source(
+        &self,
+        user_id: &str,
+        book_id: &str,
+    ) -> AppResult<Option<String>> {
+        translation::resolve_book_translation_source(self, user_id, book_id)
+    }
+
+    /// Upsert this book's source choice. `None` clears it back to the account's
+    /// general preference. Requires an active account.
+    pub fn save_book_translation_source(
+        &self,
+        user_id: &str,
+        book_id: &str,
+        source_language: Option<&str>,
+    ) -> AppResult<BookTranslationSourceDto> {
+        translation::save_book_translation_source(self, user_id, book_id, source_language)
     }
 
     // ─── Translation cache / history (T4) ───
@@ -762,6 +805,12 @@ pub(crate) mod tests {
             .unwrap();
         connection
             .execute_batch(include_str!("../../migrations/0026_definition_language.sql"))
+            .unwrap();
+        connection
+            .execute_batch(include_str!("../../migrations/0027_book_translation_source.sql"))
+            .unwrap();
+        connection
+            .execute_batch(include_str!("../../migrations/0028_backfill_book_language.sql"))
             .unwrap();
     }
 

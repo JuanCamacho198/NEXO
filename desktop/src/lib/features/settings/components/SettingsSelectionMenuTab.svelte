@@ -44,7 +44,12 @@
     onTargetChange: (value: string | null) => void;
     /** Saves immediately: this selector is not behind the pair's Save button. */
     onDefinitionLanguageChange: (value: string | null) => void;
-    onSave: () => void;
+    /**
+     * The translation block hands the pair it is SHOWING, edited but not yet
+     * saved: the stored pair is what Save is meant to replace, so a save that
+     * read it back would persist the value the reader just left behind.
+     */
+    onSave: (sourceLanguage: string | null, targetLanguage: string | null) => void;
     onClearHistory: () => void;
   };
 
@@ -89,6 +94,15 @@
 
   function handleDefinitionChange(value: string): void {
     onDefinitionLanguageChange(value === APP_LANGUAGE_VALUE ? null : value);
+  }
+
+  /**
+   * The translation block already maps its dropdowns back to `null`; it is
+   * restated here because the pair crosses a component boundary on the way to
+   * the caller, and that caller is the one holding the stored value.
+   */
+  function handlePairSave(nextSource: string | null, nextTarget: string | null): void {
+    onSave(nextSource ?? null, nextTarget ?? null);
   }
 </script>
 
@@ -135,7 +149,7 @@
       error={null}
       {onSourceChange}
       {onTargetChange}
-      {onSave}
+      onSave={handlePairSave}
       {onClearHistory}
     />
 

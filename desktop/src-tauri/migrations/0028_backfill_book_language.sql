@@ -1,0 +1,69 @@
+-- 0028_backfill_book_language: repair `books.language` for books that were
+-- downloaded, not imported.
+--
+-- WHY this backfill exists. `books.language` is read at the metadata layer
+-- (`0011_book_metadata`) and consumed by the language resolver, which prefers
+-- it over a heuristic detector. Only ONE of the two code paths that bring a book
+-- into the library ever populated it: `import_book()` extracted
+-- `<dc:language>` from the OPF, while the sync/download path
+-- (`save_book_file_under` → `commit_book_file_row` in `repository/files.rs`)
+-- omitted the column from its INSERT entirely. The result, measured on a real
+-- library: every `synced` book carries NULL language while `local` imports do
+-- not — the same EPUB, resolved by different code, stored different facts. A
+-- short selection in such a book then falls through to the weak heuristic and
+-- is detected wrongly.
+--
+-- The forward fix lands in `repository/files.rs`, which now reads the OPF from
+-- the bytes it already holds and stores the normalised tag. THIS migration
+-- repairs the rows that were written before that fix, because a synced book is
+-- downloaded once: without a backfill the already-stored NULLs would never be
+-- revisited, and the user-visible symptom would persist for every book already
+-- on disk.
+--
+-- WHY it cannot be done in SQL. The declared language lives inside each EPUB's
+-- OPF inside the ZIP at `books.file_path`; SQLite can read only the path string.
+-- There is no `dc:language` column to copy from and no sidecar to join. The
+-- source of truth is the FILE, so only a client that can open a ZIP can read it.
+-- This file therefore carries the column contract and the ownership decision;
+-- the actual per-book reading is performed by `db::backfill_book_language`,
+-- which runs against this schema and is idempotent.
+--
+-- WHAT NULL means, and what this migration deliberately does NOT do.
+--
+--   * NULL is a LEGITIMATE value, not a marker of "not yet processed". A book
+--     whose OPF truly declares no `<dc:language>` is stored NULL on purpose, and
+--     the resolver is supposed to fall through for it. So this backfill must —
+--     and does — leave that row NULL rather than writing a guess.
+--   * The backfill writes ONLY into rows whose `language IS NULL`. A book that
+--     already has a language is never touched, so a value established by a
+--     manual import or by a previous run of this backfill cannot be overwritten
+--     by a re-scan.
+--   * A book whose file is missing, unreadable, or not an EPUB is SKIPPED, not
+--     failed and not guessed: the row keeps NULL and the run continues. A
+--     missing file is a normal state (a hide/remove leaves the row, a sync may
+--     not have downloaded yet), and aborting the whole migration over one such
+--     row would leave the rest of the library unrepaired.
+--   * No language is ever INVENTED. The backfill reuses the same OPF extraction
+--     the import path uses; when that extraction yields nothing, nothing is
+--     written.
+--
+-- OWNERSHIP / ACCOUNT SCOPE. Unlike `0015_dictionary_sync`, `0023_outbox_owner`
+-- and `0024`/`0025`/`0026`/`0027`, `books` carries NO `user_id` / owner column
+-- in this schema: it is a single local library per install (`0001_init`,
+-- `0002_books`, and every later ALTER on `books`). There are therefore no
+-- accounts to scope against here, and no cross-account write is possible — the
+-- backfill is inherently confined to the one library it runs on. This is stated
+-- explicitly rather than left implicit so a future reader does not assume a
+-- forgotten `WHERE user_id = …` predicate was meant to be there. If `books`
+-- ever gains an owner column, the per-book update in
+-- `db::backfill_book_language` is the single place that predicate must be added,
+-- because it addresses each row by `id`.
+--
+-- Idempotent: the UPDATE is predicated on `language IS NULL`, so a second launch
+-- finds nothing to do, which is what lets the runner invoke it unconditionally
+-- after the migration ledger records this file.
+
+-- No schema change: the column and its NULLability are already correct. This
+-- statement exists so the migration has a deterministic, replay-safe body that
+-- touches nothing; the data repair is the Rust runner below.
+SELECT 1 WHERE 0;

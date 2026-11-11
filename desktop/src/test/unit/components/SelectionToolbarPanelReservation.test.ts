@@ -191,7 +191,14 @@ const baseProps = () => ({
   } satisfies SelectionData,
   onCopy: () => undefined,
   onAddToDictionary: async (): Promise<DictionaryCaptureFeedback> => 'created',
-  onTranslate: async (): Promise<TranslationOutcome> => ({ status: 'ok', text: 'casa' }),
+  onTranslate: async (): Promise<TranslationOutcome> => ({
+    status: 'ok',
+    text: 'casa',
+    source: 'en',
+    target: 'es',
+    sourceOrigin: 'book',
+  }),
+  onChangeLanguages: async () => undefined,
   onDefine: async () => ({
     word: 'house',
     definitions: [{ text: 'A building for living in.', partOfSpeech: 'noun' }],

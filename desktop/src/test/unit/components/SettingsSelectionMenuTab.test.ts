@@ -145,6 +145,48 @@ describe('SettingsSelectionMenuTab', () => {
     expect(onDefinitionLanguageChange).toHaveBeenCalledWith(null);
   });
 
+  /**
+   * The integration the block's own test cannot cover: the pair's Save crosses
+   * the composed tab on its way up, and the caller reads two arguments — the
+   * pair AS EDITED. A callback left bound to a zero-argument contract would
+   * receive `null` / `null` and overwrite the reader's choice with "Automatic".
+   */
+  it('hands the edited pair to the caller when the translation block saves', async () => {
+    const onSave = vi.fn();
+    const { container } = render(SettingsSelectionMenuTab, { ...baseProps, onSave });
+
+    const triggers = Array.from(
+      container.querySelectorAll<HTMLElement>('[aria-haspopup="listbox"]'),
+    );
+    expect(triggers.length).toBeGreaterThan(1);
+    // The pair's selectors come BEFORE the definition selector in the block.
+    const targetTrigger = triggers[1];
+
+    await fireEvent.pointerDown(targetTrigger, { pointerId: 1, pointerType: 'mouse', button: 0 });
+    await fireEvent.pointerUp(targetTrigger, { pointerId: 1, pointerType: 'mouse', button: 0 });
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeNull());
+    const option = screen.getAllByRole('option').find((item) => item.textContent?.trim() === 'EN');
+    expect(option).toBeTruthy();
+    await fireEvent.pointerDown(option as HTMLElement, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+    });
+    await fireEvent.pointerUp(option as HTMLElement, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+    });
+    await fireEvent.click(option as HTMLElement);
+    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
+
+    const saveTrigger = screen.getByText('settings.translation.save').closest('button');
+    expect(saveTrigger).not.toBeNull();
+    await fireEvent.click(saveTrigger as HTMLElement);
+
+    expect(onSave).toHaveBeenCalledWith(null, 'en');
+  });
+
   it('shows an error when the settings surface reports one', () => {
     render(SettingsSelectionMenuTab, { ...baseProps, error: 'boom' });
 
@@ -165,5 +207,67 @@ describe('SettingsSelectionMenuTab', () => {
     render(SettingsSelectionMenuTab, { ...baseProps, isLoading: true });
 
     expect(screen.getByText('settings.translation.loading')).toBeTruthy();
+  });
+
+  /**
+   * The degenerate pair (`es` / `es`) is ALLOWED but announced: the pair
+   * produces no translation, and a reader who saved it must be able to see why
+   * before the reader panel tells them "already in this language".
+   */
+  it('warns when both sides of the pair name the same language', () => {
+    render(SettingsSelectionMenuTab, {
+      ...baseProps,
+      sourceLanguage: 'es',
+      targetLanguage: 'es',
+    });
+
+    expect(screen.getByText('settings.translation.sameLanguageWarning')).toBeTruthy();
+  });
+
+  /**
+   * `en-US` and `en-GB` are the SAME language to the service, which keys on the
+   * primary subtag — the warning must agree with the resolver, not with string
+   * equality.
+   */
+  it('warns across regional variants of one language', () => {
+    render(SettingsSelectionMenuTab, {
+      ...baseProps,
+      sourceLanguage: 'en-US',
+      targetLanguage: 'en-GB',
+    });
+
+    expect(screen.getByText('settings.translation.sameLanguageWarning')).toBeTruthy();
+  });
+
+  /**
+   * "Automatic" is NOT a same-language statement: the unresolved side is
+   * inferred elsewhere (book / app locale), and warning there would fire on
+   * pairs that translate perfectly well.
+   */
+  it('does not warn when either side is automatic', () => {
+    const { unmount } = render(SettingsSelectionMenuTab, {
+      ...baseProps,
+      sourceLanguage: null,
+      targetLanguage: 'es',
+    });
+    expect(screen.queryByText('settings.translation.sameLanguageWarning')).toBeNull();
+    unmount();
+
+    render(SettingsSelectionMenuTab, {
+      ...baseProps,
+      sourceLanguage: 'es',
+      targetLanguage: null,
+    });
+    expect(screen.queryByText('settings.translation.sameLanguageWarning')).toBeNull();
+  });
+
+  it('does not warn for a genuinely distinct pair', () => {
+    render(SettingsSelectionMenuTab, {
+      ...baseProps,
+      sourceLanguage: 'es',
+      targetLanguage: 'en',
+    });
+
+    expect(screen.queryByText('settings.translation.sameLanguageWarning')).toBeNull();
   });
 });

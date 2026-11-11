@@ -301,6 +301,9 @@ fn main() {
             commands::getTranslationPreferences,
             commands::saveTranslationPreferences,
             commands::saveDefinitionLanguage,
+            commands::getBookTranslationSource,
+            commands::getBookTranslationSourceChoice,
+            commands::saveBookTranslationSource,
             commands::listTranslationHistory,
             commands::setActiveUser,
             commands::clearActiveUser

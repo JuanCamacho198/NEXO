@@ -849,14 +849,26 @@ export const messagesEn = {
   'reader.translating': 'Translating…',
   'reader.translationNoResult': 'No translation available for this selection',
   'reader.translationUnavailable': 'Translation service unavailable',
+  // The compact automatic label in the result panel's language bar: the bar has
+  // no room for "Automatic (from the book)", and once a language resolved the
+  // reader wants to know WHICH one. Shown only when the source was inferred.
+  'reader.translation.autoWithLanguage': 'Auto ({{language}})',
+  // The per-book source entry. Distinct from the Settings pair on purpose: this
+  // one says "let the app work it out for THIS book" and clears whatever source
+  // was chosen here, so it must not read like the Settings source label.
+  'reader.translation.sourceAuto': 'Automatic (detect)',
   // Refusals the resolver produces BEFORE any request: each names the fix, so
   // the reader is never left with a bland "no translation" and no way out.
   'reader.translationSameLanguage':
     'The book is already in this language, so there is nothing to translate',
+  'reader.translationSameLanguageChosen':
+    'The language you chose for the source is the same as the target. Change either one.',
   'reader.translationUnknownSource':
-    'This book has no language. Choose a source language in Settings › Translation.',
+    'We could not detect the language of the selected text. Choose a source language in Settings › Translation.',
   'reader.translationInvalidSource':
     'The source language in Settings is not valid. Choose another one.',
+  'reader.translationInvalidSourceChosen':
+    'The source language you chose is not valid. Choose another one.',
   'reader.translationInvalidTarget':
     'The target language in Settings is not valid. Choose another one.',
   'reader.dismissTranslation': 'Close translation',
@@ -1383,6 +1395,8 @@ export const messagesEn = {
     'Automatic infers the language from the book. Pick one when the book has no language metadata.',
   'settings.translation.targetLabel': 'Target language',
   'settings.translation.targetHint': 'Automatic uses the app language.',
+  'settings.translation.sameLanguageWarning':
+    'Both sides are the same language, so nothing can be translated: a selection in {{language}} would translate into {{language}}.',
   'settings.translation.sourceAuto': 'Automatic (from the book)',
   'settings.translation.targetAuto': 'Automatic (app language)',
   'settings.translation.save': 'Save',

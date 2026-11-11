@@ -72,7 +72,14 @@ const baseProps = () => ({
   viewport: { width: WINDOW_WIDTH, height: WINDOW_HEIGHT },
   onCopy: () => undefined,
   onAddToDictionary: async (): Promise<DictionaryCaptureFeedback> => 'created',
-  onTranslate: async (): Promise<TranslationOutcome> => ({ status: 'ok', text: 'x' }),
+  onTranslate: async (): Promise<TranslationOutcome> => ({
+    status: 'ok',
+    text: 'x',
+    source: 'en',
+    target: 'es',
+    sourceOrigin: 'book',
+  }),
+  onChangeLanguages: async () => undefined,
   onDefine: async () => ({
     word: 'w',
     definitions: [],

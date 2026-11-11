@@ -6,8 +6,12 @@
   import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
   import type { TranslationOutcome } from '$lib/shared/ports/TranslationPort';
   import type { DefinitionResult } from '$lib/shared/ports/DictionaryLookupPort';
-  import type { NoTranslationReason } from '$lib/shared/services/translation/translationLanguageResolution';
+  import type {
+    NoTranslationReason,
+    SourceOrigin,
+  } from '$lib/shared/services/translation/translationLanguageResolution';
   import { isDefinableSelection } from '$lib/shared/services/definition/definitionSelectionGuard';
+  import TranslationLanguageBar from './TranslationLanguageBar.svelte';
   import {
     PANEL_HEIGHT_FACTOR,
     floatingMenuAvailableWidth,
@@ -21,9 +25,20 @@
   } from './selectionPanelReservation';
 
   /**
-   * One message per refusal reason. Each names the fix rather than the failure:
-   * "the book has no language, choose one in Settings" is actionable, a bare
-   * "no translation available" is not.
+   * One message per refusal reason, and where a reason has more than one
+   * provenance, one per provenance — because the FIX differs.
+   *
+   * `unknown-source` is the only genuine detection failure: nothing could name
+   * the source, so the reader has to name one. `same-language` is told apart
+   * because when the reader CHOSE the source, calling it a detection failure is
+   * both false and useless — there was nothing to detect, and the choice is
+   * theirs to revise. The chosen variant is therefore keyed on the source
+   * ORIGIN, not on the reason alone: the same reason from an inferred source
+   * keeps the existing book copy.
+   *
+   * Each names the fix rather than the failure: "the book has no language,
+   * choose one in Settings" is actionable, a bare "no translation available" is
+   * not.
    */
   const TRANSLATION_REFUSAL_KEYS: Record<NoTranslationReason, MessageKey> = {
     'same-language': 'reader.translationSameLanguage',
@@ -31,6 +46,29 @@
     'invalid-source': 'reader.translationInvalidSource',
     'invalid-target': 'reader.translationInvalidTarget',
   };
+
+  /**
+   * The refusal key for an outcome, which consults the source ORIGIN before the
+   * reason alone.
+   *
+   * A source the reader chose (`preference` in Settings, `bookPreference` for
+   * this book) never reached the detector, so its failure must not be reported
+   * as one: `unknown-source` is unreachable for those origins by construction,
+   * but the two reasons that ARE reachable — a collision with the target and a
+   * value the app cannot use — read as the reader's own setting and say so.
+   * The detected/book origins keep the existing copy untouched.
+   */
+  function translationRefusalKey(
+    reason: NoTranslationReason,
+    sourceOrigin: SourceOrigin | null,
+  ): MessageKey {
+    const originIsAChoice = sourceOrigin === 'preference' || sourceOrigin === 'bookPreference';
+    if (originIsAChoice) {
+      if (reason === 'same-language') return 'reader.translationSameLanguageChosen';
+      if (reason === 'invalid-source') return 'reader.translationInvalidSourceChosen';
+    }
+    return TRANSLATION_REFUSAL_KEYS[reason];
+  }
 
   // The full data we need to persist a highlight. The parent captures this at
   // selection time and passes it back to us as a prop so that the click on a
@@ -75,6 +113,22 @@
     onCopy: () => void;
     onAddToDictionary: (data: SelectionData) => Promise<DictionaryCaptureFeedback>;
     onTranslate: (data: SelectionData) => Promise<TranslationOutcome>;
+    /**
+     * Persists a language pair chosen in the result panel. Separate from
+     * `onTranslate` because it is a WRITE, not a read: the request itself stays
+     * `onTranslate`, and the toolbar re-runs it after this resolves.
+     *
+     * The payload carries the WHOLE pair plus `changed`, which names the side the
+     * reader actually moved. Both are needed and neither implies the other: the
+     * pair is what the bar was showing, and `changed` is what the caller may take
+     * from it. Persisting the untouched side straight from here is the defect
+     * this signature exists to prevent — see `handleLanguagesChange`.
+     */
+    onChangeLanguages: (next: {
+      source: string | null;
+      target: string | null;
+      changed: 'source' | 'target';
+    }) => Promise<void>;
     onDefine: (data: SelectionData) => Promise<DefinitionResult>;
     onColorSelect: (color: string, data: SelectionData) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
@@ -88,6 +142,7 @@
     onCopy,
     onAddToDictionary,
     onTranslate,
+    onChangeLanguages,
     onDefine,
     onColorSelect,
     t,
@@ -163,7 +218,117 @@
   let dictionaryFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
   let translation = $state<TranslationOutcome | null>(null);
   let translating = $state(false);
-  const translationActive = $derived(translation !== null ? 'bg-white/10' : '');
+  let translationActive = $state(false);
+  const translationHighlight = $derived(
+    translation !== null || translationActive ? 'bg-white/10' : '',
+  );
+  /**
+   * The pair the panel's selector shows, or `null` when the bar must not render
+   * at all. It is a `$derived` over BOTH `translation` and `pickedLanguages` so
+   * the picked pair can never OUTLIVE the outcome it was chosen for.
+   *
+   * `pickedLanguages` is the overlay, and it is not redundant: the select is a
+   * controlled input, so between the `change` and the fresh outcome the bar
+   * would otherwise snap back to the old pair and read as an ignored click.
+   *
+   * But the overlay alone is not enough, and letting it win unconditionally is
+   * the bug this shape fixes. `no-result` and `unavailable` carry NO pair on
+   * purpose (see `TranslationOutcome`): one is a service answer, the other a
+   * transport failure, and neither is a statement about languages — a selector
+   * there would offer to change something that was not the problem. With the
+   * overlay as the unconditional first branch, a change that landed on either
+   * outcome left `pickedLanguages` set — nothing clears it — so the bar kept
+   * rendering a pair beside "no translation" / "service unavailable", a pair
+   * that belonged to a request that is no longer on screen.
+   *
+   * So the outcome decides FIRST, and the overlay only overrides a pair the
+   * outcome already justified:
+   *
+   *   ok / refused     -> the outcome's own pair; `pickedLanguages` while a
+   *                       change is in flight, so the bar holds the pair just
+   *                       chosen instead of snapping back to the old one.
+   *   no-result /
+   *   unavailable      -> `null`, always. The overlay is not consulted.
+   *
+   * The source ORIGIN rides along with the pair and is deliberately NOT part of
+   * the overlay: `pickedLanguages` is a pair the reader just chose, so its source
+   * is by definition explicit (`preference`) — showing "Auto (español)" over a
+   * language they picked would be a lie. Only the outcome can say the source was
+   * inferred, and only the outcome is consulted for it.
+   *
+   * ## The overlay counts ONLY while a change is in flight
+   *
+   * `pickedLanguages` is written AND cleared by `handleLanguagesChange` — set
+   * before the request, dropped the moment the answer lands — so its presence
+   * means exactly "a retranslation is in flight". Reading it that way is what
+   * this predicate states, and it is the single rule the pair and its origin are
+   * both derived from.
+   *
+   * They have to share the rule, and the earlier shape is the reason: the pair
+   * read the overlay as `pickedLanguages ?? outcome` (present OR absent) while
+   * the origin read it as `pickedLanguages === null` (present vs absent), so a
+   * single truth was decided by two different predicates. MEASURED on the running
+   * app: a change to the source left the overlay set forever, so the bar printed
+   * the pair the reader had picked (`Español → Inglés`) while the refusal message
+   * beside it was drawn from the outcome and said both sides were the same.
+   *
+   * A change whose request never lands is covered by construction: the overlay is
+   * cleared in the request's `finally`, so a hung request simply keeps showing the
+   * pair the reader picked — which is what they asked for and what the bar was
+   * already holding. No third state exists.
+   */
+  let pickedLanguages = $state<{ source: string | null; target: string | null } | null>(null);
+  /**
+   * The outcome that CARRIES a pair, narrowed to its two variants, or `null`.
+   *
+   * Every value below is derived from THIS rather than from a separate boolean
+   * flag. TypeScript does not narrow a `$state` read across the branches of a
+   * `$derived` that tests a DIFFERENT expression, so a shared `$derived` boolean
+   * cannot make `translation.source` type-check — and, more to the point, a
+   * boolean would let the pair and the flag drift the way `shownLanguages` and
+   * `shownSourceOrigin` did. One narrowed value is the only shape in which the
+   * four dependents below can disagree about nothing.
+   */
+  const pairOutcome = $derived(
+    translation?.status === 'ok' || translation?.status === 'refused' ? translation : null,
+  );
+  /** The ONE overlay predicate. Both the pair and its origin are derived from
+   * it, so they cannot disagree about whether the overlay applies — the drift
+   * between them was the defect this replaces. */
+  const overlayIsAhead = $derived(pairOutcome !== null && pickedLanguages !== null);
+  const shownLanguages = $derived(
+    pairOutcome === null
+      ? null
+      : overlayIsAhead
+        ? pickedLanguages
+        : { source: pairOutcome.source, target: pairOutcome.target },
+  );
+  const shownSourceOrigin = $derived(
+    pairOutcome === null ? null : overlayIsAhead ? 'preference' : pairOutcome.sourceOrigin,
+  );
+  /**
+   * The pair the RESOLVER actually used — the outcome's own, with the overlay
+   * deliberately not consulted.
+   *
+   * This is what the bar reads for the side the reader did NOT move. The two
+   * pairs are the same value whenever no change is in flight, and that is the
+   * ordinary case; they differ exactly while the overlay is ahead, and there the
+   * difference matters. The bar builds its payload as "the side that moved takes
+   * its new value, the untouched side keeps what it had", and the value it had
+   * has to be the one the resolver ran with, not a pair the resolver has not seen
+   * yet. Sending the overlay's other side would hand the caller a pair the
+   * request in flight never resolved, which is the whole of what `changed` exists
+   * to prevent (`handleChangeLanguages` reads storage for exactly this reason —
+   * this keeps the layer that OWNS both values from handing it the wrong one).
+   *
+   * A `null` side is carried through as `null`: it is a real value downstream
+   * ("automatic"), and the caller is the one that decides whether a side is
+   * written at all. This value is a FACT about the last resolution, never an
+   * instruction to write.
+   */
+  const resolvedLanguages = $derived(
+    pairOutcome === null ? null : { source: pairOutcome.source, target: pairOutcome.target },
+  );
 
   /**
    * The custom-color popover, shown only in the `collapsed` layout.
@@ -700,6 +865,7 @@
   async function handleTranslate(): Promise<void> {
     if (translation) {
       translation = null;
+      pickedLanguages = null;
       return;
     }
     if (!selectionData || !selectionData.text.trim()) return;
@@ -709,6 +875,64 @@
       translation = await onTranslate(selectionData);
     } finally {
       translating = false;
+    }
+  }
+
+  /**
+   * Persist a language change and retranslate the SAME selection in place.
+   *
+   * It re-uses the request path `handleTranslate` uses instead of inventing a
+   * second one, so a retranslation cannot drift from a first translation. It
+   * does NOT call `handleTranslate`, though: that function's first branch CLEARS
+   * the panel, and it would also skip the request for the same-language pair the
+   * reader is asking to be told about — the refusal has to come from the
+   * resolver, which is the only thing that knows the book's language and the
+   * detected one.
+   *
+   * ## The overlay lives exactly as long as the request does
+   *
+   * `pickedLanguages` is written here and CLEARED here, the moment the answer
+   * lands. That is what makes the overlay's lifetime mean something: it is ahead
+   * of the outcome precisely while the retranslation is in flight (see
+   * `overlayIsAhead`), and it is dropped the instant the outcome that belongs to
+   * it arrives. Leaving it set — which is what the previous shape did — made the
+   * overlay UNCONDITIONAL and permanent, so the bar kept rendering the pair the
+   * reader picked even after a resolution had answered with a DIFFERENT one, and
+   * the message beside it described the outcome. Two pairs, one panel.
+   *
+   * The OVERLAY holds the whole pair — it is what the bar renders, and the bar
+   * renders two sides. The WRITE is a different question and is the caller's:
+   * this function forwards `next` verbatim, `changed` included, so only the side
+   * the reader moved is persisted as a choice.
+   */
+  async function handleLanguagesChange(next: {
+    source: string | null;
+    target: string | null;
+    changed: 'source' | 'target';
+  }): Promise<void> {
+    pickedLanguages = { source: next.source, target: next.target };
+    await onChangeLanguages(next);
+    if (!selectionData || !selectionData.text.trim()) {
+      // Nothing will replace the outcome, so the overlay has no answer to yield
+      // to. Dropping it would snap the bar back to a pair the reader just moved
+      // away from; keeping it is the honest "this is what you picked".
+      return;
+    }
+
+    translating = true;
+    translationActive = true;
+    try {
+      translation = await onTranslate(selectionData);
+    } finally {
+      translating = false;
+      translationActive = false;
+      // The outcome now belongs to the pair the reader picked, so the overlay has
+      // nothing left to say. Clearing it HERE and not before is what keeps the
+      // bar, the message and the payload reading the same value from the same
+      // place. `no-result` / `unavailable` carry no pair of their own, so this
+      // also hides the bar rather than leaving it advertising a pair the request
+      // did not produce.
+      pickedLanguages = null;
     }
   }
 
@@ -908,7 +1132,7 @@
     <div class="group relative">
       <button
         type="button"
-        class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky) {translationActive}"
+        class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky) {translationHighlight}"
         onclick={handleTranslate}
         disabled={translating}
         aria-label={t('reader.translate')}
@@ -1020,7 +1244,10 @@
           <button
             type="button"
             class="shrink-0 cursor-pointer rounded text-xs text-(--color-text-auxiliary) hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
-            onclick={() => (translation = null)}
+            onclick={() => {
+              translation = null;
+              pickedLanguages = null;
+            }}
             aria-label={t('reader.dismissTranslation')}
             title={t('reader.dismissTranslation')}
           >
@@ -1032,9 +1259,38 @@
       {:else if translation?.status === 'unavailable'}
         <p class="text-xs text-(--color-text-auxiliary)">{t('reader.translationUnavailable')}</p>
       {:else if translation?.status === 'refused'}
-        <p class="text-xs text-(--color-text-auxiliary)">
-          {t(TRANSLATION_REFUSAL_KEYS[translation.reason])}
-        </p>
+        <!-- The message is drawn from the outcome ONLY, and that is why it is
+             suppressed while the overlay is ahead of it. A refusal describes a
+             pair the RESOLVER refused, while the bar beside it would be showing
+             the pair the reader just picked — so for the interval between the
+             change and the answer the two describe DIFFERENT pairs, and the
+             message reads as a contradiction ("source and target are the same")
+             under a bar that plainly shows two different languages. Measured on
+             the running app: the bar read `Español → Inglés` while the message
+             said both sides were the same. Nothing can be rendered that makes a
+             stale outcome consistent with a fresh pair, so nothing is rendered:
+             the panel is already showing "translating", which is the truth.
+             The moment the request resolves, `pickedLanguages` still holds the
+             pair and the outcome now belongs to it, so the message and the bar
+             are consistent by construction. -->
+        {#if !overlayIsAhead}
+          <p class="text-xs text-(--color-text-auxiliary)">
+            {t(translationRefusalKey(translation.reason, translation.sourceOrigin))}
+          </p>
+        {/if}
+      {/if}
+      {#if !translating && shownLanguages}
+        <div class="mt-2">
+          <TranslationLanguageBar
+            source={shownLanguages.source}
+            target={shownLanguages.target}
+            resolvedSource={resolvedLanguages?.source ?? null}
+            resolvedTarget={resolvedLanguages?.target ?? null}
+            sourceOrigin={shownSourceOrigin}
+            {t}
+            onChange={handleLanguagesChange}
+          />
+        </div>
       {/if}
     </div>
   {/if}

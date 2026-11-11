@@ -259,8 +259,7 @@
           onSourceChange={(v) => (translation.sourceLanguage = v)}
           onTargetChange={(v) => (translation.targetLanguage = v)}
           onDefinitionLanguageChange={(v) => void translation.saveDefinitionLanguage(v)}
-          onSave={() =>
-            void translation.save(translation.sourceLanguage, translation.targetLanguage)}
+          onSave={(source, target) => void translation.save(source, target)}
           onClearHistory={() => void translation.clearHistory()}
         />
       {:else if router.activeTab === 'almacenamiento'}
