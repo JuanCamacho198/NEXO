@@ -12,7 +12,9 @@
 //! this module only exposes the history view over the table that call fills.
 
 use super::map_command_error;
-use crate::models::{TranslationCacheEntryDto, TranslationPreferencesDto};
+use crate::models::{
+    BookTranslationSourceDto, TranslationCacheEntryDto, TranslationPreferencesDto,
+};
 use crate::state::AppState;
 use tauri::State;
 
@@ -59,6 +61,69 @@ pub fn saveDefinitionLanguage(
     let user_id = state.active_user.require_user_id();
     repository
         .save_definition_language(&user_id, definition_language.as_deref())
+        .map_err(map_command_error)
+}
+
+/// The effective source language for one book (T13).
+///
+/// This is the ONE extra call the frontend makes before translating: the book's
+/// own choice when the reader set one, otherwise the account's general
+/// preference, otherwise `null` ("infer" — the frontend then uses the book's
+/// metadata language, then local detection, then refuses). It is a read of the
+/// same `translation_preferences` row `getTranslationPreferences` returns, so
+/// there is no second general-preference command to keep in sync.
+///
+/// `null` also covers the anonymous case, for the same reason the history read
+/// degrades to empty: an absent preference is the truth, not a failure.
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn getBookTranslationSource(
+    state: State<'_, AppState>,
+    book_id: String,
+) -> Result<Option<String>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let user_id = state.active_user.require_user_id();
+    repository.resolve_book_translation_source(&user_id, &book_id).map_err(map_command_error)
+}
+
+/// Reads this book's OWN source choice, without the account fallback (T13).
+///
+/// Separate from `getBookTranslationSource` because the two answer different
+/// questions: that one says which source to translate with, this one says
+/// whether the READER made a choice for this book. The UI needs the second to
+/// decide whether it may offer "use the general preference" — a language
+/// inherited from the account is not a book-level choice to clear.
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn getBookTranslationSourceChoice(
+    state: State<'_, AppState>,
+    book_id: String,
+) -> Result<Option<BookTranslationSourceDto>, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let user_id = state.active_user.require_user_id();
+    repository.get_book_translation_source(&user_id, &book_id).map_err(map_command_error)
+}
+
+/// Persists this book's source language (T13).
+///
+/// `sourceLanguage: null` CLEARS the book's choice, which is what returns the
+/// resolution to the account's general preference — the only way back to the
+/// default. Its own command rather than a field on `saveTranslationPreferences`
+/// because it writes a different table at a different scope: sending the
+/// account's general preference along would let a stale value in the form
+/// overwrite a fresh one. An anonymous session makes the backend REJECT the
+/// write (a lost preference is silent data loss), exactly like the general pair.
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn saveBookTranslationSource(
+    state: State<'_, AppState>,
+    book_id: String,
+    source_language: Option<String>,
+) -> Result<BookTranslationSourceDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let user_id = state.active_user.require_user_id();
+    repository
+        .save_book_translation_source(&user_id, &book_id, source_language.as_deref())
         .map_err(map_command_error)
 }
 

@@ -631,6 +631,30 @@ pub struct TranslationPreferencesDto {
     pub updated_at: String,
 }
 
+/// The per-book source preference (T12/T13).
+///
+/// A second level beside [`TranslationPreferencesDto`], and the BOOK wins: the
+/// source for the book being read is consulted before the account's general
+/// preference. Only the SOURCE is per book — the target is a property of the
+/// reader ("which language I want translations in"), is the same answer in every
+/// book, and stays on the account.
+///
+/// `source_language` is `None` when the reader has made NO choice for this book,
+/// which is what makes the cascade fall through to the general preference. It is
+/// NOT the value "automatic": "automatic" would be a decision FOR THIS BOOK that
+/// stops the cascade at the book level. See migration
+/// `0027_book_translation_source.sql` for the full reasoning.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BookTranslationSourceDto {
+    /// ISO 639-1 code, or `None` for "no choice for this book".
+    #[serde(default)]
+    pub source_language: Option<String>,
+    /// RFC 3339 write timestamp; empty when no row exists for this book.
+    #[serde(default)]
+    pub updated_at: String,
+}
+
 /// One cached translation, which is also the per-account translation history
 /// (T4). There is deliberately no second history table: a duplicate would mean
 /// two writers for one fact.

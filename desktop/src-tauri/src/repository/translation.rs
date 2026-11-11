@@ -3,7 +3,9 @@ use rusqlite::{params, OptionalExtension};
 use sha2::{Digest, Sha256};
 
 use crate::error::{AppError, AppResult};
-use crate::models::{TranslationCacheEntryDto, TranslationPreferencesDto};
+use crate::models::{
+    BookTranslationSourceDto, TranslationCacheEntryDto, TranslationPreferencesDto,
+};
 
 use super::LibraryRepository;
 
@@ -280,6 +282,139 @@ fn normalize_preference(value: Option<&str>, label: &str) -> AppResult<Option<St
     Ok(Some(trimmed.to_ascii_lowercase()))
 }
 
+// ── T12/T13: per-book source preference ─────────────────────────────────────
+
+/// The source language stored for one `(account, book)`, or `None` when the
+/// reader has made no choice for this book.
+///
+/// `None` covers three cases that are deliberately one answer: no active
+/// account (option A — see [`cache_owner`]), no row for this book, and a row
+/// whose `source_language` is NULL. All three mean "fall through to the
+/// account's general preference", so the caller does not have to tell them
+/// apart and no default row is ever created.
+///
+/// A malformed `book_id` is NOT rejected here: this is a read, and an id that
+/// matches no row simply has no preference. The write path is the one that
+/// refuses a blank book, where a blank would mean storing a value under a key
+/// that can never be addressed again.
+pub fn get_book_translation_source(
+    repo: &LibraryRepository,
+    user_id: &str,
+    book_id: &str,
+) -> AppResult<Option<BookTranslationSourceDto>> {
+    let Some(owner) = cache_owner(user_id) else {
+        return Ok(None);
+    };
+    if book_id.trim().is_empty() {
+        return Ok(None);
+    }
+
+    let stored = repo
+        .connection
+        .prepare(
+            "SELECT source_language, updated_at
+             FROM book_translation_source
+             WHERE user_id = ?1 AND book_id = ?2
+             LIMIT 1",
+        )?
+        .query_row(params![owner, book_id], |row| {
+            Ok(BookTranslationSourceDto { source_language: row.get(0)?, updated_at: row.get(1)? })
+        })
+        .optional()?;
+
+    Ok(stored)
+}
+
+/// The EFFECTIVE source for one book: the book's own choice when it has one,
+/// otherwise the account's general preference.
+///
+/// This is the resolution order the feature is built around, collapsed into the
+/// one call the frontend makes before a translation:
+///   1. `book_translation_source.source_language` for this `(account, book)`;
+///   2. `translation_preferences.source_language` for the account;
+///   3. `None`, which the frontend reads as "infer" — its own cascade then uses
+///      the book's metadata language, then local detection over the text, and
+///      finally refuses.
+///
+/// It deliberately does NOT merge the two levels into a substituted row: the
+/// result says which source to use, never "this is the book's choice". Whether a
+/// language was chosen for the BOOK or for the ACCOUNT is provenance the caller
+/// must not lose — the UI has to know if it may offer to clear a choice that was
+/// never made for this book — so that question is answered by
+/// [`get_book_translation_source`], not by inferring it from this value.
+///
+/// No separate command duplicates the general preference: this reads the same
+/// `translation_preferences` row the general commands write, so the two can
+/// never disagree.
+pub fn resolve_book_translation_source(
+    repo: &LibraryRepository,
+    user_id: &str,
+    book_id: &str,
+) -> AppResult<Option<String>> {
+    if let Some(book) = get_book_translation_source(repo, user_id, book_id)? {
+        if let Some(source) = book.source_language {
+            return Ok(Some(source));
+        }
+    }
+
+    // The account side reuses the same read the general commands use rather than
+    // a second query, so a change to how the pair is stored cannot desynchronise
+    // the two paths.
+    let general = get_translation_preferences(repo, user_id)?;
+    Ok(general.and_then(|preferences| preferences.source_language))
+}
+
+/// Upsert the source language for one `(account, book)`.
+///
+/// `None` is a REAL value, not a missing one: it CLEARS this book's choice back
+/// to NULL, which is what makes the resolution fall through to the account's
+/// general preference again. That is the only way back to the default the reader
+/// started on, so the parameter is `Option<&str>` rather than a value that has
+/// to be deleted out of band.
+///
+/// It upserts, so the reader can choose a language for a book that never had a
+/// row without a create step, and a second choice updates the same row instead
+/// of conflicting on `idx_book_translation_source_user_book`.
+///
+/// A blank `book_id` is refused rather than stored: the row would be keyed under
+/// an id no caller can address again, so the choice would be silently lost while
+/// appearing to have been saved.
+pub fn save_book_translation_source(
+    repo: &LibraryRepository,
+    user_id: &str,
+    book_id: &str,
+    source_language: Option<&str>,
+) -> AppResult<BookTranslationSourceDto> {
+    let Some(owner) = cache_owner(user_id) else {
+        return Err(AppError::InvalidInput(
+            "A per-book translation source requires an active account".to_string(),
+        ));
+    };
+    if book_id.trim().is_empty() {
+        return Err(AppError::InvalidInput(
+            "A per-book translation source requires a book id".to_string(),
+        ));
+    }
+
+    // Same normalisation as the general preference, and for the same reason: a
+    // blank value collapses to NULL ("no choice for this book") rather than
+    // being written as `''`, which would read back as a set-but-unusable
+    // preference and stop the cascade at step 1 with no language.
+    let source = normalize_preference(source_language, "sourceLanguage")?;
+    let now = Utc::now().to_rfc3339();
+
+    repo.connection.execute(
+        "INSERT INTO book_translation_source (user_id, book_id, source_language, updated_at)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(user_id, book_id) DO UPDATE SET
+           source_language = excluded.source_language,
+           updated_at = excluded.updated_at",
+        params![owner, book_id, source, now],
+    )?;
+
+    Ok(BookTranslationSourceDto { source_language: source, updated_at: now })
+}
+
 // ── T4: per-account translation cache (and history) ──────────────────────────
 
 /// Read the cached translation for an exact `(account, source, target, text)`.
@@ -463,7 +598,7 @@ pub fn list_translation_history(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::repository::tests::new_repository;
+    use crate::repository::tests::{insert_book, new_repository};
 
     const OWNER: &str = "user-1";
 
@@ -867,6 +1002,238 @@ mod tests {
                 "{table} is missing from apply_test_migrations"
             );
         }
+    }
+
+    // ── T12/T13: per-book source preference ──────────────────────────────────
+
+    /// No row is ever created for a book the reader has not chosen for: an
+    /// absent row and a NULL source both mean "fall through to the account".
+    #[test]
+    fn a_book_source_is_absent_until_it_is_chosen() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "/books/one.epub");
+
+        assert_eq!(get_book_translation_source(&repo, OWNER, "book-1").unwrap(), None);
+        // And with no account at all.
+        assert_eq!(get_book_translation_source(&repo, "", "book-1").unwrap(), None);
+    }
+
+    /// The upsert, both halves: a first choice inserts, a second updates the
+    /// same row (the UNIQUE on `(user_id, book_id)` is the target), and the code
+    /// is normalised exactly like the general preference.
+    #[test]
+    fn a_book_source_upserts_and_is_normalised() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "/books/one.epub");
+
+        let saved = save_book_translation_source(&repo, OWNER, "book-1", Some("FR")).unwrap();
+        assert_eq!(saved.source_language.as_deref(), Some("fr"));
+        assert!(!saved.updated_at.is_empty());
+
+        let changed = save_book_translation_source(&repo, OWNER, "book-1", Some("de")).unwrap();
+        assert_eq!(changed.source_language.as_deref(), Some("de"));
+
+        let count: i64 = repo
+            .connection
+            .query_row("SELECT COUNT(*) FROM book_translation_source", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 1, "a second choice must update, not insert");
+
+        let read = get_book_translation_source(&repo, OWNER, "book-1").unwrap().unwrap();
+        assert_eq!(read.source_language.as_deref(), Some("de"));
+    }
+
+    /// `None` is the "no choice for this book" value, and it must be storable
+    /// AFTER a language was chosen — otherwise the reader can never go back to
+    /// the account's general preference.
+    #[test]
+    fn a_book_source_can_be_cleared_back_to_the_general_preference() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "/books/one.epub");
+        save_book_translation_source(&repo, OWNER, "book-1", Some("fr")).unwrap();
+
+        let cleared = save_book_translation_source(&repo, OWNER, "book-1", None).unwrap();
+        assert_eq!(cleared.source_language, None);
+
+        let read = get_book_translation_source(&repo, OWNER, "book-1").unwrap().unwrap();
+        assert_eq!(read.source_language, None);
+    }
+
+    /// A blank value collapses to NULL rather than being written as `''`, which
+    /// would stop the cascade at the book level with no usable language.
+    #[test]
+    fn a_blank_book_source_reads_as_no_choice() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "/books/one.epub");
+
+        let saved = save_book_translation_source(&repo, OWNER, "book-1", Some("   ")).unwrap();
+        assert_eq!(saved.source_language, None);
+    }
+
+    /// DECISION under test, the whole point of the second level: the BOOK wins
+    /// over the ACCOUNT, and clearing the book falls back to the account.
+    #[test]
+    fn the_book_source_wins_over_the_account_preference() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "/books/one.epub");
+        save_translation_preferences(&repo, OWNER, Some("es"), Some("en")).unwrap();
+
+        // No book-level choice yet: the account's preference is the answer.
+        assert_eq!(
+            resolve_book_translation_source(&repo, OWNER, "book-1").unwrap().as_deref(),
+            Some("es")
+        );
+
+        // A book-level choice overrides it...
+        save_book_translation_source(&repo, OWNER, "book-1", Some("fr")).unwrap();
+        assert_eq!(
+            resolve_book_translation_source(&repo, OWNER, "book-1").unwrap().as_deref(),
+            Some("fr")
+        );
+
+        // ...and clearing the book falls back to the account, not to "nothing".
+        save_book_translation_source(&repo, OWNER, "book-1", None).unwrap();
+        assert_eq!(
+            resolve_book_translation_source(&repo, OWNER, "book-1").unwrap().as_deref(),
+            Some("es")
+        );
+    }
+
+    /// With neither level set the answer is `None` — "infer", which the frontend
+    /// resolves from the book's metadata, then local detection, then refuses.
+    #[test]
+    fn the_resolved_book_source_is_none_when_neither_level_is_set() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "/books/one.epub");
+
+        assert_eq!(resolve_book_translation_source(&repo, OWNER, "book-1").unwrap(), None);
+    }
+
+    /// And it is `(user_id, book_id)` that scopes it: two accounts on the same
+    /// physical book pick different languages and neither sees the other's.
+    #[test]
+    fn the_book_source_is_scoped_per_account() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "/books/one.epub");
+        save_book_translation_source(&repo, "user-1", "book-1", Some("es")).unwrap();
+        save_book_translation_source(&repo, "user-2", "book-1", Some("de")).unwrap();
+
+        assert_eq!(
+            get_book_translation_source(&repo, "user-1", "book-1")
+                .unwrap()
+                .unwrap()
+                .source_language
+                .as_deref(),
+            Some("es")
+        );
+        assert_eq!(
+            get_book_translation_source(&repo, "user-2", "book-1")
+                .unwrap()
+                .unwrap()
+                .source_language
+                .as_deref(),
+            Some("de")
+        );
+        assert_eq!(get_book_translation_source(&repo, "user-3", "book-1").unwrap(), None);
+    }
+
+    /// A choice for one book must not leak into another — the bug the second
+    /// level exists to fix.
+    #[test]
+    fn a_book_source_does_not_leak_into_another_book() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "/books/one.epub");
+        insert_book(&repo, "book-2", "/books/two.epub");
+
+        save_book_translation_source(&repo, OWNER, "book-1", Some("fr")).unwrap();
+
+        assert_eq!(get_book_translation_source(&repo, OWNER, "book-2").unwrap(), None);
+        assert_eq!(resolve_book_translation_source(&repo, OWNER, "book-2").unwrap(), None);
+    }
+
+    /// Without an account the write is REFUSED, not silently dropped — a lost
+    /// preference is a silent data loss, the same rule as the general pair.
+    #[test]
+    fn saving_a_book_source_without_an_account_is_refused() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "/books/one.epub");
+
+        assert!(matches!(
+            save_book_translation_source(&repo, "", "book-1", Some("es")),
+            Err(AppError::InvalidInput(_))
+        ));
+        assert!(matches!(
+            save_book_translation_source(&repo, "   ", "book-1", Some("es")),
+            Err(AppError::InvalidInput(_))
+        ));
+    }
+
+    /// A blank book id is refused: the row would be keyed under an id no caller
+    /// can address again, so the choice would be lost while appearing saved.
+    #[test]
+    fn saving_a_book_source_without_a_book_is_refused() {
+        let repo = new_repository();
+        assert!(matches!(
+            save_book_translation_source(&repo, OWNER, "  ", Some("es")),
+            Err(AppError::InvalidInput(_))
+        ));
+    }
+
+    #[test]
+    fn a_book_source_rejects_a_malformed_language_tag() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "/books/one.epub");
+        assert!(matches!(
+            save_book_translation_source(&repo, OWNER, "book-1", Some("1")),
+            Err(AppError::InvalidInput(_))
+        ));
+    }
+
+    /// A blank book id reads as "no choice" rather than erroring: this is a read,
+    /// and an unaddressable id simply has no row.
+    #[test]
+    fn reading_a_blank_book_source_is_none_not_an_error() {
+        let repo = new_repository();
+        assert_eq!(get_book_translation_source(&repo, OWNER, "").unwrap(), None);
+        assert_eq!(resolve_book_translation_source(&repo, OWNER, "   ").unwrap(), None);
+    }
+
+    /// `''` must never reach `user_id` here either — such a row would be the
+    /// book preference of every later anonymous session.
+    #[test]
+    fn no_book_source_row_carries_an_empty_owner() {
+        let repo = new_repository();
+        insert_book(&repo, "book-1", "/books/one.epub");
+        save_book_translation_source(&repo, OWNER, "book-1", Some("es")).unwrap();
+        let _ = save_book_translation_source(&repo, "", "book-1", Some("es"));
+
+        let empty: i64 = repo
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM book_translation_source WHERE user_id = ''",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(empty, 0);
+    }
+
+    /// The migration really reached the database `new_repository()` builds, for
+    /// the same reason as `migration_0024_tables_exist_for_repository_tests`:
+    /// `apply_test_migrations` is a hand-maintained duplicate of `MIGRATIONS`.
+    #[test]
+    fn migration_0027_table_exists_for_repository_tests() {
+        let repo = new_repository();
+        let found: Option<String> = repo
+            .connection
+            .query_row(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?1",
+                params!["book_translation_source"],
+                |row| row.get(0),
+            )
+            .optional()
+            .unwrap();
+        assert_eq!(found.as_deref(), Some("book_translation_source"));
     }
 
     // ── T4: cache pruning (owner-scoped, count-bounded) ──────────────────────
