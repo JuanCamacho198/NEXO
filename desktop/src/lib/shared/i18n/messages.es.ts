@@ -1294,12 +1294,20 @@ export const messagesEs: Record<MessageKey, string> = {
   // sitio para "Automático (del libro)", y cuando un idioma se resolvió el lector
   // quiere saber CUÁL. Solo se muestra cuando el origen se infirió.
   'reader.translation.autoWithLanguage': 'Auto ({{language}})',
+  // La entrada de origen por libro. Distinta a propósito de la del par de
+  // Ajustes: esta dice "que lo averigüe la app para ESTE libro" y borra el
+  // origen elegido aquí, así que no debe leerse como la etiqueta de Ajustes.
+  'reader.translation.sourceAuto': 'Automático (detectar)',
   // Rechazos que el resolvedor produce ANTES de cualquier petición: cada uno
   // indica la solución, para no dejar al lector con un "sin traducción" seco.
   'reader.translationSameLanguage': 'El libro ya está en este idioma, no hay nada que traducir',
+  'reader.translationSameLanguageChosen':
+    'El idioma que elegiste para el origen es el mismo que el destino. Cambia uno de los dos.',
   'reader.translationUnknownSource':
     'No pudimos detectar el idioma del texto seleccionado. Elige un idioma de origen en Ajustes › Traducción.',
   'reader.translationInvalidSource': 'El idioma de origen de Ajustes no es válido. Elige otro.',
+  'reader.translationInvalidSourceChosen':
+    'El idioma de origen que elegiste no es válido. Elige otro.',
   'reader.translationInvalidTarget': 'El idioma de destino de Ajustes no es válido. Elige otro.',
   'reader.dismissTranslation': 'Cerrar traducción',
   // Definiciones de la selección del lector. El idioma de la palabra viene del

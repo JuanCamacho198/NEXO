@@ -126,6 +126,24 @@ export type TranslationPreferencesDto = {
   updatedAt: string;
 };
 
+/**
+ * The per-book source preference (T12/T13).
+ *
+ * A second level beside `TranslationPreferencesDto`, and the BOOK wins: the
+ * source for the book being read is consulted before the account's general
+ * preference. Only the SOURCE is per book — the target is a property of the
+ * reader, is the same answer in every book, and stays on the account.
+ *
+ * `sourceLanguage` is `null` when the reader has made NO choice for this book,
+ * which is what makes the cascade fall through to the general preference. It is
+ * NOT the value "automatic": "automatic" would be a decision FOR THIS BOOK that
+ * stops the cascade at the book level.
+ */
+export type BookTranslationSourceDto = {
+  sourceLanguage: string | null;
+  updatedAt: string;
+};
+
 /** One cached translation. This table IS the per-account translation history. */
 export type TranslationCacheEntryDto = {
   cacheKey: string;

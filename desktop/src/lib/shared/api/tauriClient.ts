@@ -39,6 +39,7 @@ import type {
   DiagnoseResult,
   TranslationPreferencesDto,
   TranslationCacheEntryDto,
+  BookTranslationSourceDto,
 } from '$lib/shared/types';
 import {
   UI_LOCALE_SETTING_KEY,
@@ -1546,6 +1547,66 @@ export const saveTranslationPreferences = async (payload: {
 }): Promise<TranslationPreferencesDto> => {
   try {
     return await invoke<TranslationPreferencesDto>('saveTranslationPreferences', payload);
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+/**
+ * The effective source language for one book (T13).
+ *
+ * The resolution order the feature is built around, collapsed into ONE call:
+ * the book's own choice when the reader set one, otherwise the account's
+ * general preference, otherwise `null` ("infer" — the cascade above then uses
+ * the book's metadata language, then local detection, then refuses).
+ *
+ * It deliberately does not say which of the two levels answered. That
+ * provenance is a different question and `getBookSourceChoice` answers it, so
+ * a caller that needs to know whether the reader chose something for THIS book
+ * must ask that one.
+ */
+export const getBookTranslationSource = async (bookId: string): Promise<string | null> => {
+  try {
+    return await invoke<string | null>('getBookTranslationSource', { bookId });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+/**
+ * This book's OWN source choice, without the account fallback (T13).
+ *
+ * `null` means the reader never chose a source for this book — which is not the
+ * same as "chose automatic". An anonymous session degrades to `null` like the
+ * other reads: an absent preference is the truth, not a failure.
+ */
+export const getBookTranslationSourceChoice = async (
+  bookId: string,
+): Promise<BookTranslationSourceDto | null> => {
+  try {
+    return await invoke<BookTranslationSourceDto | null>('getBookTranslationSourceChoice', {
+      bookId,
+    });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+/**
+ * Persists this book's source language (T13).
+ *
+ * `sourceLanguage: null` CLEARS the book's choice, which is what returns the
+ * resolution to the account's general preference — the only way back to the
+ * default. Its own command rather than a field on `saveTranslationPreferences`
+ * because it writes a different table at a different scope. An anonymous
+ * session makes the backend REJECT the write, exactly like the general pair.
+ */
+export const saveBookTranslationSource = async (payload: {
+  bookId: string;
+  sourceLanguage: string | null;
+}): Promise<BookTranslationSourceDto> => {
+  try {
+    return await invoke<BookTranslationSourceDto>('saveBookTranslationSource', payload);
   } catch (error) {
     return attachCommandError(error);
   }

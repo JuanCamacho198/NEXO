@@ -15,7 +15,11 @@ import type {
   NoTranslationReason,
   SourceOrigin,
 } from '$lib/shared/services/translation/translationLanguageResolution';
-import type { TranslationCacheEntryDto, TranslationPreferencesDto } from '$lib/shared/types';
+import type {
+  BookTranslationSourceDto,
+  TranslationCacheEntryDto,
+  TranslationPreferencesDto,
+} from '$lib/shared/types';
 
 export interface TranslationPort {
   /**
@@ -39,6 +43,45 @@ export interface TranslationPort {
     sourceLanguage: string | null;
     targetLanguage: string | null;
   }): Promise<TranslationPreferencesDto>;
+
+  /**
+   * The source language to translate THIS book with: the book's own choice when
+   * the reader made one, otherwise the account's general preference, otherwise
+   * `null` ("infer" — the cascade then uses the book's metadata language, then
+   * local detection, then refuses).
+   *
+   * Its own call rather than a field on `getPreferences` because it is a
+   * different question at a different scope: the pair is what the account
+   * prefers, this is what one book resolves to. Both levels are collapsed in
+   * Rust so the two can never disagree about which one wins.
+   */
+  getBookSourceLanguage(bookId: string): Promise<string | null>;
+
+  /**
+   * This book's OWN choice, or `null` when the reader never made one for it.
+   *
+   * Separate from `getBookSourceLanguage` because the two answer different
+   * questions: that one says which source to translate with (after the account
+   * fallback), this one says whether the reader CHOSE something for this book.
+   * The UI needs the second to know whether there is a per-book choice to
+   * clear — a language inherited from the account is not one.
+   */
+  getBookSourceChoice(bookId: string): Promise<BookTranslationSourceDto | null>;
+
+  /**
+   * Persists this book's source language and returns what was stored.
+   *
+   * `sourceLanguage: null` CLEARS the choice, which is what returns the book to
+   * the account's general preference — the only way back to the default. Its own
+   * call rather than a field on `savePreferences` because it writes a different
+   * scope: sending the account's pair along would let a stale value overwrite a
+   * fresh one. An anonymous session makes the backend REJECT the write, exactly
+   * like the general pair.
+   */
+  saveBookSourceLanguage(input: {
+    bookId: string;
+    sourceLanguage: string | null;
+  }): Promise<BookTranslationSourceDto>;
 
   /**
    * Persists the language a "Definir" result is written in (D6) and returns

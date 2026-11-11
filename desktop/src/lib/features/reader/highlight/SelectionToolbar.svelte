@@ -6,7 +6,10 @@
   import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
   import type { TranslationOutcome } from '$lib/shared/ports/TranslationPort';
   import type { DefinitionResult } from '$lib/shared/ports/DictionaryLookupPort';
-  import type { NoTranslationReason } from '$lib/shared/services/translation/translationLanguageResolution';
+  import type {
+    NoTranslationReason,
+    SourceOrigin,
+  } from '$lib/shared/services/translation/translationLanguageResolution';
   import { isDefinableSelection } from '$lib/shared/services/definition/definitionSelectionGuard';
   import TranslationLanguageBar from './TranslationLanguageBar.svelte';
   import {
@@ -22,9 +25,20 @@
   } from './selectionPanelReservation';
 
   /**
-   * One message per refusal reason. Each names the fix rather than the failure:
-   * "the book has no language, choose one in Settings" is actionable, a bare
-   * "no translation available" is not.
+   * One message per refusal reason, and where a reason has more than one
+   * provenance, one per provenance — because the FIX differs.
+   *
+   * `unknown-source` is the only genuine detection failure: nothing could name
+   * the source, so the reader has to name one. `same-language` is told apart
+   * because when the reader CHOSE the source, calling it a detection failure is
+   * both false and useless — there was nothing to detect, and the choice is
+   * theirs to revise. The chosen variant is therefore keyed on the source
+   * ORIGIN, not on the reason alone: the same reason from an inferred source
+   * keeps the existing book copy.
+   *
+   * Each names the fix rather than the failure: "the book has no language,
+   * choose one in Settings" is actionable, a bare "no translation available" is
+   * not.
    */
   const TRANSLATION_REFUSAL_KEYS: Record<NoTranslationReason, MessageKey> = {
     'same-language': 'reader.translationSameLanguage',
@@ -32,6 +46,29 @@
     'invalid-source': 'reader.translationInvalidSource',
     'invalid-target': 'reader.translationInvalidTarget',
   };
+
+  /**
+   * The refusal key for an outcome, which consults the source ORIGIN before the
+   * reason alone.
+   *
+   * A source the reader chose (`preference` in Settings, `bookPreference` for
+   * this book) never reached the detector, so its failure must not be reported
+   * as one: `unknown-source` is unreachable for those origins by construction,
+   * but the two reasons that ARE reachable — a collision with the target and a
+   * value the app cannot use — read as the reader's own setting and say so.
+   * The detected/book origins keep the existing copy untouched.
+   */
+  function translationRefusalKey(
+    reason: NoTranslationReason,
+    sourceOrigin: SourceOrigin | null,
+  ): MessageKey {
+    const originIsAChoice = sourceOrigin === 'preference' || sourceOrigin === 'bookPreference';
+    if (originIsAChoice) {
+      if (reason === 'same-language') return 'reader.translationSameLanguageChosen';
+      if (reason === 'invalid-source') return 'reader.translationInvalidSourceChosen';
+    }
+    return TRANSLATION_REFUSAL_KEYS[reason];
+  }
 
   // The full data we need to persist a highlight. The parent captures this at
   // selection time and passes it back to us as a prop so that the click on a
@@ -1148,7 +1185,7 @@
         <p class="text-xs text-(--color-text-auxiliary)">{t('reader.translationUnavailable')}</p>
       {:else if translation?.status === 'refused'}
         <p class="text-xs text-(--color-text-auxiliary)">
-          {t(TRANSLATION_REFUSAL_KEYS[translation.reason])}
+          {t(translationRefusalKey(translation.reason, translation.sourceOrigin))}
         </p>
       {/if}
       {#if !translating && shownLanguages}

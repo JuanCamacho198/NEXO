@@ -626,24 +626,43 @@
    * translate command is never called for it (`no-result` would be a lie: the
    * request was never made).
    *
-   * The source cascade is: explicit preference -> `Book.language` -> LOCAL
-   * detection over the selected text -> `unknown-source`. The detection step is
-   * what makes prediction work for an unlabelled book (the common case:
-   * `books.language` is nullable and in practice missing). MyMemory rejects
-   * `auto` as a source with a 403, so the guess has to be ours and offline.
-   * `data.text` is passed verbatim: the detector refuses to guess on thin
-   * evidence (under four words, a tie, no marker hits) and then the panel asks.
+   * The source cascade is: the BOOK's own choice -> explicit account preference
+   * -> `Book.language` -> LOCAL detection over the selected text ->
+   * `unknown-source`. The BOOK WINS over the account: the reader choosing a
+   * source while reading a particular title is a statement about that title, and
+   * the account preference is only the default for books they never spoke about.
+   * The two are read SEPARATELY (the book's own choice and the account pair)
+   * because they carry different provenance — the resolver reports
+   * `bookPreference` vs `preference`, and the panel has to tell them apart to
+   * know whether there is a per-book choice to offer to clear.
+   *
+   * The detection step is what makes prediction work for an unlabelled book (the
+   * common case: `books.language` is nullable and in practice missing). MyMemory
+   * rejects `auto` as a source with a 403, so the guess has to be ours and
+   * offline. `data.text` is passed verbatim: the detector refuses to guess on
+   * thin evidence (under four words, a tie, no marker hits) and then the panel
+   * asks.
+   *
+   * The destination is never taken from the book: it is the account's target
+   * preference or the app locale, the same answer in every book.
    *
    * The port is transport-only: nothing is cached here, because translated
    * selections are reading history scoped to the account in Rust.
    */
   async function handleTranslate(data: SelectionData): Promise<TranslationOutcome> {
-    const preferences = await translationPort.getPreferences().catch(() => null);
+    const bookId = activeReadingBook?.id ?? null;
+    const [preferences, bookSourceLanguage] = await Promise.all([
+      translationPort.getPreferences().catch(() => null),
+      bookId === null
+        ? Promise.resolve(null)
+        : translationPort.getBookSourceLanguage(bookId).catch(() => null),
+    ]);
     const resolution = resolveTranslationSourceWithDetection(
       preferences?.sourceLanguage ?? null,
       activeReadingBook?.language,
       data.text,
       settingsState.locale,
+      bookSourceLanguage,
     );
 
     if (resolution.kind === 'no-translation') {
@@ -675,36 +694,42 @@
   }
 
   /**
-   * Persist the language side chosen inside the selection menu (T6).
+   * Persist the language side chosen inside the selection menu (T6/T15).
    *
-   * The write is the SAME call the settings tab makes — `savePreferences` — so
-   * a pair chosen while reading is the pair Settings shows afterwards; a second
-   * write path would be a second truth. It is deliberately NOT read back into a
-   * local copy: `handleTranslate` re-reads preferences per request, which is
-   * what makes the retranslation that follows pick the new pair up.
+   * ## The reader writes to the BOOK, not to the account
    *
-   * `null` means "automatic" and is a real value, not an error: it clears the
-   * preference and lets the cascade fall back to the book's language and to
-   * local detection.
+   * When the reader moves a side while reading, the SOURCE is saved for the book
+   * they are reading (`saveBookSourceLanguage`); Settings is a different surface
+   * and keeps owning the account's general preference. Writing the account from
+   * here is what would silently re-point every other book at a language chosen
+   * for one title — the account preference is the DEFAULT for books the reader
+   * never spoke about, and a per-book choice must not overwrite it.
    *
-   * ## Only the TOUCHED side is taken from `next`
+   * The TARGET has no per-book level at all: which language the reader wants
+   * translations in is the same answer in every book, so it stays on the account
+   * and is written through `savePreferences` as before.
    *
-   * `savePreferences` is a full-pair upsert, not a patch: `None` on a side is
-   * written as SQL `NULL` and CLEARS it (see `save_translation_preferences` —
-   * `source_language = excluded.source_language`). There is no "leave this side
-   * unchanged" value in the protocol. So the untouched side is not sent as
-   * `null`, and it is not taken from `next` either — `next.source`/`next.target`
-   * are the RESOLVED pair, and a resolved code is not a preference. The previous
-   * version took both from `next`, which is how touching one side silently wrote
-   * the other: the bar reported `es -> es` and BOTH sides became an explicit
-   * `es`, permanently pinning the source origin to `preference`, disabling the
-   * `book`/detection fallback for the account, and making every Spanish
-   * selection refuse as `same-language` with no way out from the UI.
+   * ## Only the TOUCHED side is written
+   *
+   * Both writes are full-row upserts, not patches: a `null` on a side is written
+   * as SQL `NULL` and CLEARS it, and there is no "leave this side unchanged"
+   * value in the protocol. So the untouched side is not sent as `null`, and it is
+   * not taken from `next` either — `next.source`/`next.target` are the RESOLVED
+   * pair, and a resolved code is not a preference. Taking both from `next` is how
+   * touching one side once silently wrote the other: the bar reported `es -> es`
+   * and BOTH sides became an explicit `es`, permanently pinning the source origin
+   * to a choice, disabling the `book`/detection fallback, and making every
+   * Spanish selection refuse as `same-language` with no way out from the UI.
    *
    * The untouched side is therefore read back from storage and echoed verbatim,
    * which is the only way to keep it: whatever was persisted stays persisted. A
    * failed read degrades to `null` — the old behaviour — rather than aborting
    * the write, because the reader's own pick must still land.
+   *
+   * `null` on the source is a real value, not an error: it CLEARS the book's
+   * choice and lets the cascade fall through to the account preference, the
+   * metadata language and detection. That is what the menu's `Automatic (detect)`
+   * entry sends.
    */
   async function handleChangeLanguages(next: {
     source: string | null;
@@ -712,10 +737,19 @@
     changed: 'source' | 'target';
   }): Promise<void> {
     try {
+      if (next.changed === 'source') {
+        const bookId = activeReadingBook?.id ?? null;
+        if (bookId === null) return;
+        await translationPort.saveBookSourceLanguage({
+          bookId,
+          sourceLanguage: next.source,
+        });
+        return;
+      }
       const stored = await translationPort.getPreferences().catch(() => null);
       await translationPort.savePreferences({
-        sourceLanguage: next.changed === 'source' ? next.source : (stored?.sourceLanguage ?? null),
-        targetLanguage: next.changed === 'target' ? next.target : (stored?.targetLanguage ?? null),
+        sourceLanguage: stored?.sourceLanguage ?? null,
+        targetLanguage: next.target,
       });
     } catch {
       // Best effort: a failed write must not stop the reader from reading the

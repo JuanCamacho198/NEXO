@@ -246,3 +246,116 @@ describe('resolveLanguagePreferencePair', () => {
     });
   });
 });
+
+/**
+ * The per-book level (T14). The BOOK wins over the account, and the two are
+ * reported with DIFFERENT origins because they are different promises: one is a
+ * choice scoped to this title, the other the account's default for every title
+ * the reader never spoke about. A UI that could not tell them apart would offer
+ * to clear a choice that was never made for the book.
+ */
+describe('resolveLanguagePreferencePair — the per-book source', () => {
+  it('lets the book choice win over the account preference', () => {
+    expect(resolveLanguagePreferencePair(prefs('de', 'en'), 'fr', 'en', 'es')).toEqual({
+      kind: 'translate',
+      source: 'es',
+      target: 'en',
+      sourceOrigin: 'bookPreference',
+    });
+  });
+
+  it('falls through to the account preference when the book has no choice', () => {
+    // `null` at the book level means "no choice for THIS book", NOT "automatic":
+    // automatic would be a decision for the book that stops the cascade here and
+    // leaves no source at all. Both spellings below are the same absence.
+    expect(resolveLanguagePreferencePair(prefs('de', 'en'), 'fr', 'en', null)).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'en',
+      sourceOrigin: 'preference',
+    });
+    expect(resolveLanguagePreferencePair(prefs('de', 'en'), 'fr', 'en', undefined)).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'en',
+      sourceOrigin: 'preference',
+    });
+    // And with no account preference either, the cascade continues to the book's
+    // metadata language — the book level does not swallow the inference.
+    expect(resolveLanguagePreferencePair(prefs(null, 'en'), 'fr', 'en', null)).toEqual({
+      kind: 'translate',
+      source: 'fr',
+      target: 'en',
+      sourceOrigin: 'book',
+    });
+  });
+
+  it('normalises the book choice like every other tag', () => {
+    expect(resolveLanguagePreferencePair(prefs(null, 'en'), null, 'en', 'PT-BR')).toEqual({
+      kind: 'translate',
+      source: 'pt',
+      target: 'en',
+      sourceOrigin: 'bookPreference',
+    });
+  });
+
+  it('refuses a book choice that collides with the target instead of correcting it', () => {
+    // B1 (the English fallback) exists for a pair the APP inferred, where the
+    // collision was the inference's own doing. A per-book choice is the reader's
+    // decision about this title, so rewriting it to English would answer a
+    // question they did not ask — the same reasoning that already refuses an
+    // explicit source preference. The refusal names the pair so they can revise
+    // it.
+    expect(resolveLanguagePreferencePair(prefs(null, 'es'), 'fr', 'es', 'es')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'es',
+      target: 'es',
+      sourceOrigin: 'bookPreference',
+    });
+    // The `en -> en` edge case is not special here either: it is the same
+    // collision, refused for the same reason.
+    expect(resolveLanguagePreferencePair(prefs(null, 'en'), 'fr', 'en', 'en')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'en',
+      target: 'en',
+      sourceOrigin: 'bookPreference',
+    });
+  });
+
+  it('refuses an unusable book choice rather than treating it as absent', () => {
+    // The book level is only ever `null` when the reader made no choice, so a
+    // choice that is present but unusable is a user error, not a fall-through —
+    // exactly like the account preference. `normalize`/Rust collapse a blank to
+    // NULL before it is stored, so this is the defensive path.
+    expect(resolveLanguagePreferencePair(prefs('de', 'en'), 'fr', 'en', '  ')).toEqual({
+      kind: 'no-translation',
+      reason: 'invalid-source',
+      source: null,
+      target: 'en',
+      sourceOrigin: null,
+    });
+  });
+
+  it('never takes the target from the book, even when the book has a choice', () => {
+    // Only the SOURCE is per book. The target is a property of the reader and
+    // the same answer in every book, so a book choice with no account target
+    // still resolves the target from the app locale.
+    expect(resolveLanguagePreferencePair(prefs(null, null), 'de', 'it', 'de')).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'it',
+      sourceOrigin: 'bookPreference',
+    });
+    // And a degeneracy the book level created is NOT corrected by B1 when the
+    // target came from the app locale: the choice is still the reader's.
+    expect(resolveLanguagePreferencePair(prefs(null, null), 'de', 'de', 'de')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'de',
+      target: 'de',
+      sourceOrigin: 'bookPreference',
+    });
+  });
+});

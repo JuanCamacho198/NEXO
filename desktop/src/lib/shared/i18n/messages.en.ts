@@ -853,14 +853,22 @@ export const messagesEn = {
   // no room for "Automatic (from the book)", and once a language resolved the
   // reader wants to know WHICH one. Shown only when the source was inferred.
   'reader.translation.autoWithLanguage': 'Auto ({{language}})',
+  // The per-book source entry. Distinct from the Settings pair on purpose: this
+  // one says "let the app work it out for THIS book" and clears whatever source
+  // was chosen here, so it must not read like the Settings source label.
+  'reader.translation.sourceAuto': 'Automatic (detect)',
   // Refusals the resolver produces BEFORE any request: each names the fix, so
   // the reader is never left with a bland "no translation" and no way out.
   'reader.translationSameLanguage':
     'The book is already in this language, so there is nothing to translate',
+  'reader.translationSameLanguageChosen':
+    'The language you chose for the source is the same as the target. Change either one.',
   'reader.translationUnknownSource':
     'We could not detect the language of the selected text. Choose a source language in Settings › Translation.',
   'reader.translationInvalidSource':
     'The source language in Settings is not valid. Choose another one.',
+  'reader.translationInvalidSourceChosen':
+    'The source language you chose is not valid. Choose another one.',
   'reader.translationInvalidTarget':
     'The target language in Settings is not valid. Choose another one.',
   'reader.dismissTranslation': 'Close translation',

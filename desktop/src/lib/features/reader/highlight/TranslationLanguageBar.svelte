@@ -65,9 +65,10 @@
      * Where the resolved source came from, or null when nothing resolved.
      *
      * Only an INFERRED source (`book`, `detected`) may be labelled "Auto (X)": a
-     * language the reader picked in Settings is theirs and reads as the bare
-     * language name. The distinction is not cosmetic — one is a promise the app
-     * repeats back, the other a guess it made on their behalf.
+     * language the reader chose — in Settings (`preference`) or for this book
+     * (`bookPreference`) — is theirs and reads as the bare language name. The
+     * distinction is not cosmetic: one is a promise the app repeats back, the
+     * other a guess it made on their behalf.
      */
     sourceOrigin: SourceOrigin | null;
     /** Suppresses interaction while a translation is in flight. */
@@ -122,8 +123,14 @@
   /**
    * The automatic label for a side: the source reads "from the book", the target
    * "app language", because which one is inferred differs.
+   *
+   * The SOURCE bar is not the Settings pair, though, and its automatic entry is
+   * a different promise: choosing it here CLEARS whatever source was chosen for
+   * this book and lets the cascade work the language out again. Reusing the
+   * Settings wording would have the reader believe they are picking "the
+   * default", when they are actually discarding a choice they made.
    */
-  const sourceAutoLabel = $derived(t('settings.translation.sourceAuto'));
+  const sourceAutoLabel = $derived(t('reader.translation.sourceAuto'));
   const targetAutoLabel = $derived(t('settings.translation.targetAuto'));
 
   /** The source trigger's text, from the resolved code AND where it came from. */
@@ -144,11 +151,12 @@
    *
    *   no code resolved   -> the generic automatic label. The side is automatic
    *                         and the app has nothing to name.
-   *   `preference`       -> the bare language name. The reader picked it in
-   *                         Settings, so labelling it "Auto" would contradict
-   *                         their own choice.
-   *   `book` / `detected`-> "Auto (español)". The app inferred the language and
-   *                         names the inference, so the reader can judge it.
+   *   a CHOICE           -> the bare language name. `preference` was picked in
+   *   (`preference`,        Settings and `bookPreference` while reading this
+   *   `bookPreference`)     book; both are the reader's own word, so labelling
+   *                         either "Auto" would contradict their own choice.
+   *   inferred           -> "Auto (español)". The app inferred the language and
+   *   (`book`, `detected`)  names the inference, so the reader can judge it.
    *
    * It takes `code` as a parameter rather than closing over `source` because
    * TypeScript does not narrow a `$state`/prop read across the branches of a
@@ -161,7 +169,9 @@
     autoLabel: string,
   ): string {
     if (code === null) return autoLabel;
-    if (origin === null || origin === 'preference') return languageLabel(code, translate);
+    if (origin === null || origin === 'preference' || origin === 'bookPreference') {
+      return languageLabel(code, translate);
+    }
     return t('reader.translation.autoWithLanguage', { language: languageLabel(code, translate) });
   }
 

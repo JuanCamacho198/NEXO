@@ -27,6 +27,20 @@ const t = (key: string, params?: Record<string, string | number>) => {
     'reader.translating': 'Translating…',
     'reader.translationNoResult': 'No translation available for this selection',
     'reader.translationUnavailable': 'Translation service unavailable',
+    // The refusal copy, including the per-provenance variants the toolbar picks
+    // through `translationRefusalKey` (T15).
+    'reader.translationSameLanguage':
+      'The book is already in this language, so there is nothing to translate',
+    'reader.translationSameLanguageChosen':
+      'The language you chose for the source is the same as the target. Change either one.',
+    'reader.translationUnknownSource':
+      'We could not detect the language of the selected text. Choose a source language in Settings › Translation.',
+    'reader.translationInvalidSource':
+      'The source language in Settings is not valid. Choose another one.',
+    'reader.translationInvalidSourceChosen':
+      'The source language you chose is not valid. Choose another one.',
+    'reader.translationInvalidTarget':
+      'The target language in Settings is not valid. Choose another one.',
     'reader.dismissTranslation': 'Close translation',
     'reader.define': 'Define',
     'reader.defining': 'Looking up…',
@@ -43,6 +57,7 @@ const t = (key: string, params?: Record<string, string | number>) => {
     'settings.translation.targetLabel': 'Target language',
     'settings.translation.sourceAuto': 'Automatic',
     'settings.translation.targetAuto': 'Automatic',
+    'reader.translation.sourceAuto': 'Automatic (detect)',
     'reader.translation.autoWithLanguage': 'Automatic ({{language}})',
   };
   let value = translations[key] ?? key;
@@ -360,6 +375,122 @@ describe('SelectionToolbar', () => {
     expect(queryByText('No translation available for this selection')).toBeNull();
   });
 
+  // ── Refusal copy, split by provenance (T15) ────────────────────────────
+  // A refusal whose source the READER chose must never be reported as a
+  // detection failure: there was nothing to detect, and the copy has to name
+  // the choice as something they can revise instead.
+
+  it('names a chosen source as a choice when it collides with the target', async () => {
+    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      onTranslate: async () =>
+        ({
+          status: 'refused',
+          reason: 'same-language',
+          source: 'es',
+          target: 'es',
+          sourceOrigin: 'preference',
+        }) as TranslationOutcome,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+
+    expect(
+      queryByText(
+        'The language you chose for the source is the same as the target. Change either one.',
+      ),
+    ).toBeTruthy();
+    expect(
+      queryByText('The book is already in this language, so there is nothing to translate'),
+    ).toBeNull();
+  });
+
+  it('names a per-book choice as a choice when it collides with the target', async () => {
+    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      onTranslate: async () =>
+        ({
+          status: 'refused',
+          reason: 'same-language',
+          source: 'es',
+          target: 'es',
+          sourceOrigin: 'bookPreference',
+        }) as TranslationOutcome,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+
+    expect(
+      queryByText(
+        'The language you chose for the source is the same as the target. Change either one.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('keeps the detection copy for an inferred source that collided', async () => {
+    // The collision was the APP's inference, so the existing book copy stands —
+    // telling the reader to revise a choice they never made would be a lie.
+    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      onTranslate: async () =>
+        ({
+          status: 'refused',
+          reason: 'same-language',
+          source: 'es',
+          target: 'es',
+          sourceOrigin: 'book',
+        }) as TranslationOutcome,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+
+    expect(
+      queryByText('The book is already in this language, so there is nothing to translate'),
+    ).toBeTruthy();
+  });
+
+  it('keeps the settings copy for an unusable source with no provenance', async () => {
+    // No origin resolved, so the toolbar has nothing to call a choice: the copy
+    // points back at Settings, which is the only place that value can live.
+    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      onTranslate: async () =>
+        ({
+          status: 'refused',
+          reason: 'invalid-source',
+          source: null,
+          target: 'es',
+          sourceOrigin: null,
+        }) as TranslationOutcome,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+
+    expect(
+      queryByText('The source language in Settings is not valid. Choose another one.'),
+    ).toBeTruthy();
+  });
+
+  it('names an unusable chosen source as a choice', async () => {
+    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      onTranslate: async () =>
+        ({
+          status: 'refused',
+          reason: 'invalid-source',
+          source: null,
+          target: 'es',
+          sourceOrigin: 'preference',
+        }) as TranslationOutcome,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+
+    expect(
+      queryByText('The source language you chose is not valid. Choose another one.'),
+    ).toBeTruthy();
+  });
+
   it('does not call onTranslate when there is no selection', async () => {
     const onTranslate = vi.fn(
       async () =>
@@ -577,10 +708,14 @@ describe('SelectionToolbar', () => {
   it('reports Automatic as null on the side the reader cleared', async () => {
     // The untouched side keeps the resolved code — the bar shows the whole pair,
     // and the caller separates "moved" from "shown" by `changed`, not by null.
+    //
+    // The SOURCE entry's label is the bar's own (`Automatic (detect)`), not the
+    // Settings pair's: choosing it clears whatever source was picked for THIS
+    // book, so it must not read as the Settings default.
     const onChangeLanguages = languageChangeSpy();
     const container = await openLanguageBar(onChangeLanguages);
 
-    await pickSide(container, 0, 'Automatic');
+    await pickSide(container, 0, 'Automatic (detect)');
 
     expect(onChangeLanguages).toHaveBeenCalledWith({
       source: null,

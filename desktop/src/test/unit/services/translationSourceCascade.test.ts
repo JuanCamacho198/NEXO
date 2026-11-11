@@ -187,3 +187,106 @@ describe('resolveTranslationSourceWithDetection', () => {
     });
   });
 });
+
+/**
+ * The per-book level (T14), on the detection path. It is the FIRST step — ahead
+ * of the account preference — and it is reported as `bookPreference` so the UI
+ * can tell a choice made for this book from the account's default.
+ */
+describe('resolveTranslationSourceWithDetection — the per-book source', () => {
+  const ENGLISH = 'The man is in the house with the dog and the cat of the neighbour.';
+
+  it('lets the book choice win over the account preference and over detection', () => {
+    expect(resolveTranslationSourceWithDetection('de', 'fr', ENGLISH, 'en', 'es')).toEqual({
+      kind: 'translate',
+      source: 'es',
+      target: 'en',
+      sourceOrigin: 'bookPreference',
+    });
+  });
+
+  it('falls through to the account preference when the book has no choice', () => {
+    // `null` is "no choice for this book" and the cascade continues — it is not
+    // the value "automatic", which would stop the resolution with no source.
+    expect(resolveTranslationSourceWithDetection('de', 'fr', ENGLISH, 'en', null)).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'en',
+      sourceOrigin: 'preference',
+    });
+    expect(resolveTranslationSourceWithDetection('de', 'fr', ENGLISH, 'en', undefined)).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'en',
+      sourceOrigin: 'preference',
+    });
+  });
+
+  it('carries on to the book metadata and to detection when nothing was chosen', () => {
+    expect(resolveTranslationSourceWithDetection(null, 'fr', ENGLISH, 'en', null)).toEqual({
+      kind: 'translate',
+      source: 'fr',
+      target: 'en',
+      sourceOrigin: 'book',
+    });
+    expect(resolveTranslationSourceWithDetection(null, null, ENGLISH, 'es', null)).toEqual({
+      kind: 'translate',
+      source: 'en',
+      target: 'es',
+      sourceOrigin: 'detected',
+    });
+  });
+
+  it('refuses a book choice that equals the target, without the English fallback', () => {
+    // B1 corrects a pair the APP inferred. A per-book choice is the reader's own
+    // decision for this title, so it is refused exactly like an explicit account
+    // preference — the panel then says the source is a choice they can revise.
+    expect(
+      resolveTranslationSourceWithDetection(
+        null,
+        'fr',
+        'El hombre está en la casa con el perro y el gato del vecino.',
+        'es',
+        'es',
+      ),
+    ).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'es',
+      target: 'es',
+      sourceOrigin: 'bookPreference',
+    });
+    // The `en -> en` shape is the same collision and the same refusal: here the
+    // book choice is what made the pair degenerate, so it is not "correctable".
+    expect(resolveTranslationSourceWithDetection(null, null, ENGLISH, 'en', 'en-US')).toEqual({
+      kind: 'no-translation',
+      reason: 'same-language',
+      source: 'en',
+      target: 'en',
+      sourceOrigin: 'bookPreference',
+    });
+  });
+
+  it('refuses an unusable book choice instead of falling through', () => {
+    // The step ran and produced no usable code: falling through would silently
+    // ignore the reader's choice and translate in some other language.
+    expect(resolveTranslationSourceWithDetection(null, null, ENGLISH, 'es', '1')).toEqual({
+      kind: 'no-translation',
+      reason: 'invalid-source',
+      source: null,
+      target: 'es',
+      sourceOrigin: null,
+    });
+  });
+
+  it('never takes the target from the book', () => {
+    // The book level is source-only, by design: which language the reader wants
+    // translations IN is the same answer in every book.
+    expect(resolveTranslationSourceWithDetection(null, null, ENGLISH, 'it', 'de')).toEqual({
+      kind: 'translate',
+      source: 'de',
+      target: 'it',
+      sourceOrigin: 'bookPreference',
+    });
+  });
+});
