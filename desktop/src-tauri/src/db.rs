@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 
-const MIGRATIONS: [(&str, &str); 27] = [
+const MIGRATIONS: [(&str, &str); 28] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
@@ -51,6 +51,7 @@ const MIGRATIONS: [(&str, &str); 27] = [
         "0027_book_translation_source",
         include_str!("../migrations/0027_book_translation_source.sql"),
     ),
+    ("0028_backfill_book_language", include_str!("../migrations/0028_backfill_book_language.sql")),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
@@ -135,7 +136,85 @@ pub fn open_and_migrate(db_path: &Path) -> AppResult<Connection> {
     ensure_queue_schema(&connection)?;
     recover_expired_job_leases(&connection)?;
 
+    // The 0028 backfill's data repair: repairing `books.language` for rows the
+    // download path left NULL. It runs AFTER the ledger records the migration,
+    // so it is invoked on every launch; it is idempotent because it only ever
+    // addresses rows whose `language IS NULL`, so a second launch is a no-op.
+    // A failure here must never prevent the app from opening its database — a
+    // library that cannot be listed at all is far worse than a few books whose
+    // language stays unknown — so the outcome is logged and swallowed.
+    if let Err(err) = backfill_book_language(&connection) {
+        eprintln!("backfill_book_language failed: {}", err);
+    }
+
     Ok(connection)
+}
+
+/// Read each book's declared language from the OPF of its EPUB and write it into
+/// `books.language`, but ONLY for rows whose `language IS NULL`.
+///
+/// This is the data half of migration `0028_backfill_book_language`; see that
+/// file for WHY the backfill exists and what NULL means. Its rules, restated in
+/// the shape the code enforces:
+///
+///   * A row that already has a language is never selected, so a manual import's
+///     value (or a previous run's) cannot be overwritten.
+///   * A file that cannot be read, is missing, or is not an EPUB is SKIPPED and
+///     the loop continues: the row keeps NULL rather than aborting the run. This
+///     is the sqlite "one bad row must not stop the sweep" contract.
+///   * A readable OPF that declares NO language leaves the row NULL. That NULL
+///     is CORRECT and is not distinguished from the previous case in the stored
+///     data — both stay NULL, and neither is written with a guess.
+///
+/// Ownership: `books` has no `user_id` / owner column in this schema (a single
+/// local library per install — see the migration header), so there is nothing to
+/// scope by here. If an owner column is ever added, the per-row `UPDATE … WHERE
+/// id = ?` below is the one place a predicate must be added.
+pub fn backfill_book_language(connection: &Connection) -> AppResult<u64> {
+    let candidates: Vec<(String, String)> = {
+        let mut statement = connection.prepare(
+            "SELECT id, file_path
+             FROM books
+             WHERE language IS NULL AND deleted_at IS NULL",
+        )?;
+        let rows = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        rows.collect::<Result<Vec<_>, _>>()?
+    };
+
+    let mut repaired: u64 = 0;
+    for (book_id, file_path) in candidates {
+        // A file that cannot be read is skipped, not fatal: the row keeps NULL
+        // and the sweep moves on.
+        let Ok(data) = fs::read(&file_path) else {
+            continue;
+        };
+        // Same extraction the import path uses, through the same in-memory
+        // seekable reader the sync path now uses — no second parser.
+        let Ok(doc) = epub::doc::EpubDoc::from_reader(std::io::Cursor::new(&data)) else {
+            continue;
+        };
+        let declared = doc
+            .mdata("language")
+            .map(|meta| meta.value.trim().to_string())
+            .filter(|value| !value.is_empty());
+        let Some(language) = declared else {
+            // Read, and genuinely declares no language: NULL is the answer.
+            continue;
+        };
+
+        // The `language IS NULL` guard is repeated here so the write is correct
+        // even if a concurrent writer filled the column between the SELECT and
+        // this UPDATE: the value that arrived first wins, and a re-run is a
+        // no-op.
+        repaired += connection.execute(
+            "UPDATE books
+             SET language = ?1
+             WHERE id = ?2 AND language IS NULL",
+            params![language, book_id],
+        )? as u64;
+    }
+
+    Ok(repaired)
 }
 
 fn ensure_queue_schema(connection: &Connection) -> AppResult<()> {
@@ -896,5 +975,195 @@ mod tests {
         assert_eq!(replayed.len(), 3, "the ledger must be repaired after a tolerated replay");
 
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// The 0028 backfill: a `synced` row whose OPF declares a language must be
+    /// repaired from the file, and a re-run must change nothing (the predicate is
+    /// `language IS NULL`).
+    #[test]
+    fn backfill_book_language_fills_a_null_row_from_its_epub() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let epub_path = dir.path().join("con-lenguaje.epub");
+        fs::write(&epub_path, build_epub_bytes(Some("es"))).expect("fixture epub");
+
+        let connection = migrate_in_memory();
+        connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, language)
+                 VALUES ('synced-book', 'Prisioneros de la geografía', 'Author', ?1, 'epub', 'synced', 0, 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', 1, NULL)",
+                [&epub_path.to_string_lossy().to_string()],
+            )
+            .expect("seed synced row with NULL language");
+
+        let repaired = backfill_book_language(&connection).expect("backfill runs");
+        assert_eq!(repaired, 1, "exactly one NULL row must be repaired");
+
+        let language: Option<String> = connection
+            .query_row("SELECT language FROM books WHERE id = 'synced-book'", [], |row| row.get(0))
+            .expect("row");
+        assert_eq!(language.as_deref(), Some("es"), "the OPF's language must be written");
+
+        // Idempotent: nothing is NULL any more, so a second run is a no-op.
+        let again = backfill_book_language(&connection).expect("second run");
+        assert_eq!(again, 0, "a re-run must not rewrite an already-set language");
+    }
+
+    /// The book whose EPUB declares no language must STAY NULL. Writing a guess
+    /// here would be worse than the unknown it replaces, so the backfill
+    /// deliberately does nothing for it — and it is not counted as repaired.
+    #[test]
+    fn backfill_book_language_leaves_a_no_language_book_null() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let epub_path = dir.path().join("sin-lenguaje.epub");
+        fs::write(&epub_path, build_epub_bytes(None)).expect("fixture epub");
+
+        let connection = migrate_in_memory();
+        connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, language)
+                 VALUES ('supercomunicadores', 'Supercomunicadores', 'Author', ?1, 'epub', 'synced', 0, 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', 1, NULL)",
+                [&epub_path.to_string_lossy().to_string()],
+            )
+            .expect("seed no-language row");
+
+        let repaired = backfill_book_language(&connection).expect("backfill runs");
+        assert_eq!(repaired, 0, "a book with no declared language must not be written");
+
+        let language: Option<String> = connection
+            .query_row("SELECT language FROM books WHERE id = 'supercomunicadores'", [], |row| {
+                row.get(0)
+            })
+            .expect("row");
+        assert_eq!(language, None, "NULL is the CORRECT value here and must survive");
+    }
+
+    /// A missing or unreadable file must never abort the sweep: the bad row is
+    /// skipped, keeps NULL, and every other row is still repaired.
+    #[test]
+    fn backfill_book_language_skips_unreadable_files_and_continues() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let good_epub = dir.path().join("good.epub");
+        fs::write(&good_epub, build_epub_bytes(Some("fr"))).expect("fixture epub");
+
+        let connection = migrate_in_memory();
+        for (id, path) in [
+            ("missing-file", dir.path().join("does-not-exist.epub")),
+            ("not-an-epub", dir.path().join("garbage.epub")),
+            ("healthy", good_epub.clone()),
+        ] {
+            connection
+                .execute(
+                    "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, language)
+                     VALUES (?1, 'Book', 'Author', ?2, 'epub', 'synced', 0, 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', 1, NULL)",
+                    rusqlite::params![id, path.to_string_lossy().to_string()],
+                )
+                .expect("seed row");
+        }
+        fs::write(dir.path().join("garbage.epub"), b"this is not a zip").expect("garbage file");
+
+        let repaired = backfill_book_language(&connection).expect("the sweep must not abort");
+        assert_eq!(repaired, 1, "only the healthy EPUB is repaired");
+
+        let unreadable: Vec<Option<String>> = {
+            let mut statement = connection
+                .prepare(
+                    "SELECT language FROM books WHERE id IN ('missing-file', 'not-an-epub') ORDER BY id",
+                )
+                .expect("prepare");
+            let rows = statement.query_map([], |row| row.get(0)).expect("query");
+            rows.map(|row| row.expect("row")).collect()
+        };
+        assert_eq!(unreadable, vec![None, None], "unreadable files must stay NULL");
+
+        let healthy: Option<String> = connection
+            .query_row("SELECT language FROM books WHERE id = 'healthy'", [], |row| row.get(0))
+            .expect("row");
+        assert_eq!(healthy.as_deref(), Some("fr"), "the sweep must continue past a bad row");
+    }
+
+    /// A book that ALREADY carries a language is never selected, so the backfill
+    /// cannot overwrite a value the manual import (or an earlier run) stored.
+    #[test]
+    fn backfill_book_language_never_overwrites_a_stored_language() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let epub_path = dir.path().join("fr-book.epub");
+        fs::write(&epub_path, build_epub_bytes(Some("fr"))).expect("fixture epub");
+
+        let connection = migrate_in_memory();
+        connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, language)
+                 VALUES ('already-set', 'Book', 'Author', ?1, 'epub', 'local', 0, 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', 1, 'de')",
+                [&epub_path.to_string_lossy().to_string()],
+            )
+            .expect("seed row with a stored language");
+
+        let repaired = backfill_book_language(&connection).expect("backfill runs");
+        assert_eq!(repaired, 0, "an already-set language must not be rewritten");
+
+        let language: Option<String> = connection
+            .query_row("SELECT language FROM books WHERE id = 'already-set'", [], |row| row.get(0))
+            .expect("row");
+        assert_eq!(language.as_deref(), Some("de"), "the stored value must survive");
+    }
+
+    /// The migration must be registered and its body must apply cleanly, so the
+    /// ledger reaches 0028 like every other migration.
+    #[test]
+    fn test_backfill_book_language_migration_is_registered_and_applies() {
+        assert!(
+            MIGRATIONS.iter().any(|(name, _)| *name == "0028_backfill_book_language"),
+            "0028 must be registered in MIGRATIONS"
+        );
+        let connection = migrate_in_memory();
+        let applied: Option<i32> = connection
+            .query_row(
+                "SELECT 1 FROM schema_migrations WHERE name = '0028_backfill_book_language' LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .optional()
+            .expect("query");
+        assert!(applied.is_some(), "the ledger must record 0028");
+    }
+
+    /// Minimal single-chapter EPUB bytes, with `<dc:language>` included only when
+    /// `language` is `Some`. `None` therefore produces a readable OPF that
+    /// declares NO language — the "Supercomunicadores" shape.
+    fn build_epub_bytes(language: Option<&str>) -> Vec<u8> {
+        use std::io::{Cursor, Write};
+        let mut cursor = Cursor::new(Vec::new());
+        {
+            let mut zip = zip::ZipWriter::new(&mut cursor);
+            let stored = zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Stored);
+            let deflated = zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Deflated);
+
+            zip.start_file("mimetype", stored).unwrap();
+            zip.write_all(b"application/epub+zip").unwrap();
+
+            zip.start_file("META-INF/container.xml", deflated).unwrap();
+            zip.write_all(
+                br#"<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>"#,
+            )
+            .unwrap();
+
+            let language_element = language
+                .map(|tag| format!("<dc:language>{}</dc:language>", tag))
+                .unwrap_or_default();
+            let opf = format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="uid">urn:uuid:backfill-test</dc:identifier><dc:title>Backfill Test</dc:title>{}</metadata><manifest><item id="c0" href="Text/chapter0.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="c0"/></spine></package>"#,
+                language_element
+            );
+            zip.start_file("OEBPS/content.opf", deflated).unwrap();
+            zip.write_all(opf.as_bytes()).unwrap();
+
+            zip.start_file("OEBPS/Text/chapter0.xhtml", deflated).unwrap();
+            zip.write_all(br#"<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><body><p>hi</p></body></html>"#).unwrap();
+
+            zip.finish().unwrap();
+        }
+        cursor.into_inner()
     }
 }

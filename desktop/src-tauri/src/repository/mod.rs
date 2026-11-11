@@ -809,6 +809,9 @@ pub(crate) mod tests {
         connection
             .execute_batch(include_str!("../../migrations/0027_book_translation_source.sql"))
             .unwrap();
+        connection
+            .execute_batch(include_str!("../../migrations/0028_backfill_book_language.sql"))
+            .unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {

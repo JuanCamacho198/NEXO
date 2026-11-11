@@ -4,8 +4,50 @@ use crate::filename::{canonical_extension, canonical_stem};
 use chrono::Utc;
 use rusqlite::{params, OptionalExtension};
 use std::fs;
+use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use tauri::Manager;
+
+/// Result of reading a book file's declared metadata, at the seam where the
+/// bytes are already in memory. The three-way shape is the point:
+///
+/// - `NotApplicable` — nothing to read: a non-EPUB format, or bytes that are
+///   not a readable EPUB. The file was not (or could not be) inspected.
+/// - `Read(None)` — the OPF WAS read and declares no `<dc:language>`. The book
+///   genuinely has no language, and storing NULL is the CORRECT answer.
+/// - `Read(Some(tag))` — the OPF declares a language, already normalised.
+///
+/// The distinction between the last two is what keeps a book with no language
+/// out of the "we could not read it" bucket, so the sync path never invents a
+/// language it did not find.
+enum DeclaredLanguage {
+    NotApplicable,
+    Read(Option<String>),
+}
+
+/// Extract the language declared by an EPUB's OPF.
+///
+/// The bytes are read through [`Cursor`], a seekable in-memory reader, so the
+/// ZIP index is walkable without touching the filesystem: the sync/download
+/// path has the bytes in memory at the seam this is called from, not a path.
+/// The extraction itself is the same `EpubDoc::mdata("language")` call the
+/// manual-import path uses — there is deliberately no second parser here.
+fn read_declared_language(format: &str, data: &[u8]) -> DeclaredLanguage {
+    if format != "epub" {
+        return DeclaredLanguage::NotApplicable;
+    }
+    // `from_reader` parses the ZIP from a reader that implements `Read + Seek`;
+    // `Cursor` over the in-memory bytes is exactly that, so no file is opened.
+    let Ok(doc) = epub::doc::EpubDoc::from_reader(Cursor::new(data)) else {
+        // Unreadable bytes are "not inspected", NOT "no language": the two must
+        // never collapse into one, or an unreadable file would be written with a
+        // language it does not declare.
+        return DeclaredLanguage::NotApplicable;
+    };
+    DeclaredLanguage::Read(
+        doc.mdata("language").map(|meta| meta.value.trim().to_string()).filter(|v| !v.is_empty()),
+    )
+}
 
 pub fn update_book_progress(
     repo: &LibraryRepository,
@@ -104,9 +146,28 @@ fn save_book_file_under(
 
     write_book_file(&destination, data)?;
 
-    if let Err(err) =
-        commit_book_file_row(repo, book_id, &destination, repaired, title, author, fmt)
-    {
+    // The OPF language is read HERE, from the bytes already in memory, because
+    // the sync/download path (`saveBookFile` over IPC) never supplies it as
+    // metadata. `Cursor` makes those bytes a seekable reader, so the ZIP is
+    // walkable without a second open of the file we just wrote. Manual import
+    // does not route through here, so its own extraction is unaffected.
+    let declared_language = match read_declared_language(fmt, data) {
+        DeclaredLanguage::Read(language) => language,
+        DeclaredLanguage::NotApplicable => None,
+    };
+
+    if let Err(err) = commit_book_file_row(
+        repo,
+        BookFileRow {
+            book_id,
+            destination: &destination,
+            repaired,
+            title,
+            author,
+            fmt,
+            language: declared_language,
+        },
+    ) {
         if is_new_row {
             let _ = fs::remove_file(&destination);
         }
@@ -157,29 +218,42 @@ fn write_book_file(path: &Path, data: &[u8]) -> AppResult<()> {
 /// destination. The hidden-flag clear is conditional on it, so a write that was
 /// not user-initiated (background sync filling in a missing file) cannot un-hide
 /// a book the user hid.
-fn commit_book_file_row(
-    repo: &LibraryRepository,
-    book_id: &str,
-    destination: &Path,
+///
+/// `language` is the value read from the file's own OPF (see
+/// [`read_declared_language`]). It is filled on INSERT, and on conflict only
+/// when it carries a real value (`COALESCE`-style: a non-empty `excluded.language`
+/// wins, otherwise the stored one survives). That conditional fill is what keeps
+/// an absent language from erasing one an earlier path already stored — e.g. a
+/// manual import's language must not be clobbered by a later metadata-less sync
+/// of the same book when the EPUB itself declares none.
+struct BookFileRow<'a> {
+    book_id: &'a str,
+    destination: &'a Path,
     repaired: bool,
-    title: Option<&str>,
-    author: Option<&str>,
-    fmt: &str,
-) -> AppResult<()> {
+    title: Option<&'a str>,
+    author: Option<&'a str>,
+    fmt: &'a str,
+    language: Option<String>,
+}
+
+fn commit_book_file_row(repo: &LibraryRepository, row: BookFileRow<'_>) -> AppResult<()> {
+    let BookFileRow { book_id, destination, repaired, title, author, fmt, language } = row;
     let now = Utc::now().to_rfc3339();
     // A blank string is treated the same as absent: the caller has no metadata
     // to offer, so the stored value must survive.
     let supplied_title = title.map(str::trim).filter(|v| !v.is_empty());
     let supplied_author = author.map(str::trim).filter(|v| !v.is_empty());
+    let supplied_language = language.as_deref().map(str::trim).filter(|v| !v.is_empty());
     let transaction = repo.connection.unchecked_transaction()?;
     transaction.execute(
-        "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
-             VALUES (?1, ?2, ?3, ?4, ?5, 'local', 0, 0, ?6, ?6, 1)
+        "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, language)
+             VALUES (?1, ?2, ?3, ?4, ?5, 'local', 0, 0, ?6, ?6, 1, ?9)
              ON CONFLICT(id) DO UPDATE SET
                  file_path = excluded.file_path,
                  format = excluded.format,
                  title = CASE WHEN ?7 IS NOT NULL THEN ?7 ELSE books.title END,
                  author = CASE WHEN ?8 IS NOT NULL THEN ?8 ELSE books.author END,
+                 language = CASE WHEN ?9 IS NOT NULL THEN ?9 ELSE books.language END,
                  updated_at = excluded.updated_at,
                  version = version + 1",
         params![
@@ -190,7 +264,8 @@ fn commit_book_file_row(
             fmt,
             now,
             supplied_title,
-            supplied_author
+            supplied_author,
+            supplied_language
         ],
     )?;
     // A cleared flag is warranted only for a repair: a legacy row created before
@@ -551,6 +626,201 @@ mod tests {
             .expect("row");
         assert!(title.contains("sync stub"), "{title:?}");
         assert_eq!(author, "Unknown");
+    }
+
+    /// Regression for the sync/download path: it used to INSERT the book row
+    /// without a `language` column at all, so every downloaded book stored NULL
+    /// even when its OPF declared `<dc:language>` — the manual-import path read
+    /// it, so the same EPUB stored a language when imported and none when synced.
+    #[test]
+    fn save_book_file_stores_the_language_declared_by_the_opf() {
+        let repo = new_repository();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let books_dir = dir.path().join("books");
+        let epub = build_epub_bytes("es");
+
+        // Exactly what the sync path sends: bytes only, no metadata.
+        save_book_file_under(
+            &repo,
+            &books_dir,
+            "5b4ba1c1-1b6f-4301-816a-40385be603fa",
+            &epub,
+            None,
+            None,
+            Some("epub"),
+        )
+        .expect("save");
+
+        let language: Option<String> = repo
+            .connection
+            .query_row(
+                "SELECT language FROM books WHERE id = ?1",
+                params!["5b4ba1c1-1b6f-4301-816a-40385be603fa"],
+                |row| row.get(0),
+            )
+            .expect("row");
+        assert_eq!(
+            language.as_deref(),
+            Some("es"),
+            "the OPF declares `es`, so the synced row must store it"
+        );
+    }
+
+    /// The other half, and the one that must NOT be "fixed": a book whose EPUB
+    /// genuinely declares no `<dc:language>` must stay NULL. NULL here is the
+    /// CORRECT answer, not a missing extraction — inventing a language would be
+    /// worse than the unknown it replaces.
+    #[test]
+    fn save_book_file_leaves_language_null_when_the_opf_declares_none() {
+        let repo = new_repository();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let books_dir = dir.path().join("books");
+        let epub = build_epub_bytes_no_language();
+
+        save_book_file_under(
+            &repo,
+            &books_dir,
+            "supercomunicadores-book-id",
+            &epub,
+            None,
+            None,
+            Some("epub"),
+        )
+        .expect("save");
+
+        let language: Option<String> = repo
+            .connection
+            .query_row(
+                "SELECT language FROM books WHERE id = ?1",
+                params!["supercomunicadores-book-id"],
+                |row| row.get(0),
+            )
+            .expect("row");
+        assert_eq!(language, None, "a book with no declared language must stay NULL");
+    }
+
+    /// `read_declared_language` must tell "not an EPUB" apart from "an EPUB with
+    /// no language". A non-EPUB format is never inspected, and the bytes of a
+    /// truncated/garbage EPUB must not be treated as declaring no language either
+    /// — both are `NotApplicable`, which is distinct from `Read(None)`.
+    #[test]
+    fn read_declared_language_does_not_conflate_unreadable_with_absent() {
+        assert!(matches!(
+            read_declared_language("pdf", b"%PDF-1.7 fake"),
+            DeclaredLanguage::NotApplicable
+        ));
+        assert!(matches!(
+            read_declared_language("epub", b"not a zip at all"),
+            DeclaredLanguage::NotApplicable
+        ));
+        match read_declared_language("epub", &build_epub_bytes_no_language()) {
+            DeclaredLanguage::Read(None) => {}
+            _ => panic!("a readable OPF with no dc:language must be Read(None)"),
+        }
+        match read_declared_language("epub", &build_epub_bytes("es")) {
+            DeclaredLanguage::Read(Some(tag)) => assert_eq!(tag, "es"),
+            _ => panic!("a declared language must be Read(Some(tag))"),
+        }
+    }
+
+    /// A synced row that already carries a language (e.g. from a manual import)
+    /// must not have it clobbered by a later metadata-less sync of an EPUB whose
+    /// OPF declares none — the conditional `language` fill mirrors the title and
+    /// author rules for the same reason.
+    #[test]
+    fn save_book_file_keeps_a_stored_language_when_the_opf_declares_none() {
+        let repo = new_repository();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let books_dir = dir.path().join("books");
+        let book_id = "5b4ba1c1-1b6f-4301-816a-40385be603fa";
+        repo.connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, language)
+                 VALUES (?1, 'Book', 'Author', '', 'epub', 'local', 0, 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', 1, 'fr')",
+                params![book_id],
+            )
+            .expect("seed row with a stored language");
+
+        save_book_file_under(
+            &repo,
+            &books_dir,
+            book_id,
+            &build_epub_bytes_no_language(),
+            None,
+            None,
+            Some("epub"),
+        )
+        .expect("save");
+
+        let language: Option<String> = repo
+            .connection
+            .query_row("SELECT language FROM books WHERE id = ?1", params![book_id], |row| {
+                row.get(0)
+            })
+            .expect("row");
+        assert_eq!(language.as_deref(), Some("fr"), "a stored language must survive");
+    }
+
+    /// The download path has the bytes in memory at this seam (`save_book_file_under`
+    /// receives `data: &[u8]`), and `EpubDoc::from_reader` accepts a `Cursor` over
+    /// them — so the OPF is readable WITHOUT a second open. This proves the ZIP is
+    /// walkable from those bytes alone, which is the constraint the task called out.
+    #[test]
+    fn the_epub_opf_is_readable_from_the_in_memory_bytes() {
+        use std::io::Cursor;
+        let bytes = build_epub_bytes("es");
+        let doc = epub::doc::EpubDoc::from_reader(Cursor::new(&bytes))
+            .expect("the in-memory bytes are a readable EPUB");
+        let language = doc.mdata("language").map(|meta| meta.value.clone());
+        assert_eq!(language.as_deref(), Some("es"));
+    }
+
+    /// Minimal single-chapter EPUB as raw bytes, with `<dc:language>` set to
+    /// `language`. Built in memory so a test can hand the sync seam exactly the
+    /// bytes the download path would supply.
+    fn build_epub_bytes(language: &str) -> Vec<u8> {
+        build_epub_bytes_with_metadata(&format!("<dc:language>{}</dc:language>", language))
+    }
+
+    /// Same EPUB with NO `<dc:language>` element at all — the
+    /// "Supercomunicadores" shape: a readable OPF that declares no language.
+    fn build_epub_bytes_no_language() -> Vec<u8> {
+        build_epub_bytes_with_metadata("")
+    }
+
+    fn build_epub_bytes_with_metadata(metadata_extra: &str) -> Vec<u8> {
+        use std::io::{Cursor, Write};
+        let mut cursor = Cursor::new(Vec::new());
+        {
+            let mut zip = zip::ZipWriter::new(&mut cursor);
+            let stored = zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Stored);
+            let deflated = zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Deflated);
+
+            // `mimetype` must be first and uncompressed.
+            zip.start_file("mimetype", stored).unwrap();
+            zip.write_all(b"application/epub+zip").unwrap();
+
+            zip.start_file("META-INF/container.xml", deflated).unwrap();
+            zip.write_all(
+                br#"<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>"#,
+            )
+            .unwrap();
+
+            let opf = format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="uid">urn:uuid:lang-test</dc:identifier><dc:title>Language Test</dc:title>{}</metadata><manifest><item id="c0" href="Text/chapter0.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="c0"/></spine></package>"#,
+                metadata_extra
+            );
+            zip.start_file("OEBPS/content.opf", deflated).unwrap();
+            zip.write_all(opf.as_bytes()).unwrap();
+
+            zip.start_file("OEBPS/Text/chapter0.xhtml", deflated).unwrap();
+            zip.write_all(br#"<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><body><p>hi</p></body></html>"#).unwrap();
+
+            zip.finish().unwrap();
+        }
+        cursor.into_inner()
     }
 
     /// Seeds a placeholder row exactly as the FK guard left it: a stub title, an
