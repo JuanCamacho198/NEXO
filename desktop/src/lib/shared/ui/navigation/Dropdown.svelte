@@ -62,11 +62,50 @@
    * only when the caller asked for it. Kept as one derived object because
    * `Select.Content` spreads its props onto the inner listbox div, so these are
    * the attributes the guard actually sees.
+   *
+   * ## Why the panel is height-bounded here and not by the caller
+   *
+   * bits-ui measures the space its popper actually has and exposes it as
+   * `--bits-select-content-available-height` (aliased from the floating
+   * layer's `--bits-floating-available-height`). Measured on the running app:
+   * a 16-item list placed with `side="bottom"` off a trigger at y=168 in a
+   * 767px-tall window rendered 586px tall into 560.5px of available height.
+   * Nothing consumed the measurement, so the popup's bottom landed at 793 —
+   * 26px BELOW the viewport. The document grew to 793px, `<html>` acquired a
+   * vertical scrollbar, `documentElement.clientWidth` fell 1366 -> 1356 and
+   * every full-width layout moved 10px left, then back on close.
+   *
+   * Capping the panel against the height bits-ui already measured removes the
+   * overflow at its source: the popup can no longer be taller than the space it
+   * was placed into, so it cannot push the document taller than the viewport.
+   * `overflow-y-auto` keeps the list reachable: a longer list scrolls inside the
+   * panel instead of escaping it, and the keyboard-selected option is scrolled
+   * into view by the browser.
+   *
+   * The `- 1px` is measured, not cosmetic. `availableHeight` is computed from the
+   * anchor's own rect, which is fractional here (trigger bottom 202.5px), and
+   * floating-ui rounds the placement to a whole pixel (popup top 207px). The
+   * published height keeps its fraction, so `top + availableHeight` overshoots
+   * the viewport edge: measured 207 + 560.5 = 767.5 against a 767px window. Half
+   * a pixel past the edge is enough for Chromium to grow the scrollable area and
+   * re-introduce the horizontal shift, so the cap is inset by one pixel. Without
+   * it the shift persisted (measured: clientWidth 1356 while the panel was
+   * clamped to exactly availableHeight); with it, clientWidth stays 1366 and the
+   * document stays 767px.
+   *
+   * Harmless to every existing caller by construction: `max-height` only ever
+   * CLAMPS. A list shorter than the available height, which is every case that
+   * was already correct, resolves to the same rendered box it had before — the
+   * declared cap is never reached. Measured on a 4-item list: rendered 152px
+   * against a 542px cap, `scrollHeight == clientHeight`, geometry untouched. No
+   * caller opts in and none can regress.
    */
   const contentProps = $derived({
     class:
-      'z-(--layer-popover) w-(--bits-select-anchor-width) min-w-[160px] rounded-md ' +
-      `bg-(--color-elevated) py-1 shadow-lg ring-1 ring-(--color-border) ${contentClass}`,
+      'z-(--layer-popover) max-h-[calc(var(--bits-select-content-available-height)-1px)] ' +
+      'w-(--bits-select-anchor-width) ' +
+      'min-w-[160px] overflow-y-auto rounded-md bg-(--color-elevated) py-1 shadow-lg ' +
+      `ring-1 ring-(--color-border) ${contentClass}`,
     ...(markAsFloatingMenu ? { 'data-floating-menu': 'true' } : {}),
   });
 

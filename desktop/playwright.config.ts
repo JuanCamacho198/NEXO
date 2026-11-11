@@ -35,6 +35,38 @@ export default defineConfig({
   workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
+
+  // ## Why every test has a deadline
+  //
+  // A test that waits on a person is a test that never ends. Measured on the
+  // `tauri-cdp` project: a spec that left a floating menu up blocked on a
+  // control no automated gesture could reach and "retried 566 times instead of
+  // failing"; one spec in `readerSelection.spec.ts` burned its own 300s budget
+  // and only then reported `Test timeout of 300000ms exceeded`.
+  //
+  // The per-test budgets inside `e2e/tauri/**` (`test.setTimeout(180_000)` and
+  // up) are what bounded that run — `test.setTimeout` overrides this value for
+  // its own test. This default is the net under the specs that declare nothing:
+  // without it a stuck test blocks the suite FOREVER, because no timeout in this
+  // config used to exist. `tauri/**` specs run in series (`workers: 1`), so one
+  // unbounded wait stops every spec after it.
+  //
+  // 180_000 is chosen from measurement, not taste: it is the budget the majority
+  // of the CDP specs already declare for themselves, it covers the longest
+  // *typical* spec several times over (measured: `readerSmoke.spec.ts` 1.2 min;
+  // the reader selection cases 9-19s), and every spec that genuinely needs
+  // longer already raises it (`300_000`, `420_000`, up to `900_000`). Only
+  // `smoke.spec.ts` (measured 1.3s) relies on this default.
+  timeout: 180_000,
+
+  // The whole-run bound, and a different axis from `timeout`: it is the only
+  // limit a per-test `test.setTimeout` CANNOT extend. 60 min covers a full
+  // `chromium` + `tauri-cdp` pass (measured: 6 CDP tests in 7.8 min including a
+  // 5-min timeout, and the stub suite is faster) with generous headroom, while
+  // still killing a run that has wedged in a way individual deadlines did not
+  // catch — a hung worker, or a webServer that started but never serves.
+  globalTimeout: 60 * 60 * 1000,
+
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: BASE_URL,
@@ -46,6 +78,15 @@ export default defineConfig({
   // shifted overlay or an off-token colour fails (see the deliberate-regression
   // proof in slice 4); `animations: 'disabled'` removes the fly/fade timing as a
   // flake source. Loosening either value is a visible change in review.
+  //
+  // `expect.timeout` is deliberately NOT set. It is the default deadline for
+  // async matchers and Playwright already applies 5s, so a value here could only
+  // WIDEN that deadline, never add a bound that is missing. A bound that is
+  // missing is a missing TEST timeout (`timeout` above) or an action with no
+  // deadline of its own — neither is fixed here. Leaving it out keeps the
+  // screenshot gate above untouched, which is the requirement: `timeout` is a
+  // sibling of `toHaveScreenshot`, not a parent, so this block's pixel settings
+  // are unchanged.
   expect: {
     toHaveScreenshot: {
       maxDiffPixelRatio: 0.002,
