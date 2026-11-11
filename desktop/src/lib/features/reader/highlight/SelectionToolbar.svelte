@@ -525,6 +525,17 @@
   const actionsRowMinWidthClass = $derived(toolbarWrapped ? 'min-w-37' : '');
 
   /**
+   * The `min-w-37` floor above, as the number the arithmetic needs.
+   *
+   * Tailwind v4's 4px spacing scale makes `min-w-37` 148px. The panel's VIEWPORT
+   * bound is floored with this so a panel is never laid out narrower than the row
+   * floating above it, in the one window narrow enough for that bound to engage
+   * (`toolbarAvailableWidth` under 148px). Two values, one meaning: the class is
+   * what the row renders at, this is what the bound is computed against.
+   */
+  const TOOLBAR_WRAPPED_MIN_WIDTH = 148;
+
+  /**
    * Where the collapsed palette's popover is placed, in VIEWPORT coordinates,
    * from the real element the trigger occupies.
    *
@@ -678,29 +689,36 @@
   const toolbarMaxHeight = $derived(`max(100%, ${placementMenuSize.height}px)`);
 
   /**
-   * The result panel's width, as a number rather than a `max-w-80` class.
+   * The RESULT PANEL's width, and why it is the pill's own width and not a
+   * number of its own.
    *
-   * The panel is a sibling of the placement-visible menu, not part of it, so a
-   * 320px `max-w-80` would sit under a 160px collapsed pill and measure
-   * differently from what was placed. Deriving it from `placementMenuSize`
-   * instead means the panel is exactly as wide as the menu the placement math
-   * believes it is rendering, and the panel's own left edge — `toolbarX`, which
-   * only looks at `selectionWindowBounds` and `placementMenuSize` — is the math
-   * that runs this frame.
+   * Both of them share this one value — the translation panel and the definition
+   * panel read it from here — and it is `placementMenuSize.width`, the SAME
+   * value the pill's own class cascade and `placeFloatingMenu` are given
+   * (`TOOLBAR_MAX_WIDTH` = 380 in `full`, `TOOLBAR_COLLAPSED_WIDTH` = 240 in
+   * `collapsed`). A panel narrower than the pill above it is the defect this
+   * replaces: the translated paragraph wrapped into a cramped column beside a
+   * full-width language bar.
    *
-   * The VIEWPORT is a second bound, and it is what keeps a 320px panel from
+   * The panel is a sibling of the placement-visible menu, not part of it, so its
+   * left edge — `toolbarX`, which also reads `placementMenuSize` — lines the two
+   * up only if the widths agree. Deriving it from the placement is what makes
+   * that a property rather than a coincidence.
+   *
+   * The VIEWPORT bound is kept, and it is what keeps a 380px panel from
    * widening past the window in a 298px one: the pill wraps and stays usable at
    * any width, but the panel is content, so it has to be given a width it can
-   * actually be laid out at. `placementMenuSize.width` is NOT relaxed with it:
-   * the placement math and the rendered pill have to keep agreeing about the
-   * menu's own width.
+   * actually be laid out at. It only engages in that narrow band — a band too
+   * narrow for the wrapped row's own 148px floor — so in every ordinary window
+   * the panel IS the pill's fixed width. Fixed on purpose: content-based sizing
+   * would make the panel jump every time the translation length changed.
    *
    * Leaving `selectionWindowBounds` out of the dependents is deliberate: a
    * panel that re-positioned itself when the reader adjusts the selection would
    * move out from under the text they are reading.
    */
-  const definitionPanelWidth = $derived(
-    Math.max(140, Math.min(320, placementMenuSize.width, toolbarAvailableWidth)),
+  const resultPanelWidth = $derived(
+    Math.min(placementMenuSize.width, Math.max(TOOLBAR_WRAPPED_MIN_WIDTH, toolbarAvailableWidth)),
   );
 
   const toolbarPlacement = $derived(
@@ -1231,8 +1249,8 @@
        is the service answering, the other is the service failing. -->
   {#if translating || translation}
     <div
-      class="mt-2 overflow-y-auto rounded-lg bg-(--color-highlight-menu-bg) px-3 py-2 text-(--color-text-inverse) shadow-lg"
-      style="width: {definitionPanelWidth}px; max-height: {resultPanelMaxHeight}px;"
+      class="mt-2 overflow-y-auto rounded-lg bg-(--color-highlight-menu-bg) px-4 py-3 text-(--color-text-inverse) shadow-lg"
+      style="width: {resultPanelWidth}px; max-height: {resultPanelMaxHeight}px;"
       role="status"
       aria-live="polite"
     >
@@ -1243,7 +1261,7 @@
           <p class="min-w-0 grow text-sm wrap-break-word">{translation.text}</p>
           <button
             type="button"
-            class="shrink-0 cursor-pointer rounded text-xs text-(--color-text-auxiliary) hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
+            class="shrink-0 cursor-pointer rounded p-0.5 text-sm leading-none font-medium text-(--color-text-auxiliary) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
             onclick={() => {
               translation = null;
               pickedLanguages = null;
@@ -1301,8 +1319,8 @@
        cannot be trusted to reconstruct it. -->
   {#if defining || definition || definitionFailed}
     <div
-      class="mt-2 overflow-y-auto rounded-lg bg-(--color-highlight-menu-bg) px-3 py-2 text-(--color-text-inverse) shadow-lg"
-      style="width: {definitionPanelWidth}px; max-height: {resultPanelMaxHeight}px;"
+      class="mt-2 overflow-y-auto rounded-lg bg-(--color-highlight-menu-bg) px-4 py-3 text-(--color-text-inverse) shadow-lg"
+      style="width: {resultPanelWidth}px; max-height: {resultPanelMaxHeight}px;"
       role="status"
       aria-live="polite"
     >
@@ -1315,7 +1333,7 @@
           </p>
           <button
             type="button"
-            class="shrink-0 cursor-pointer rounded text-xs text-(--color-text-auxiliary) hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
+            class="shrink-0 cursor-pointer rounded p-0.5 text-sm leading-none font-medium text-(--color-text-auxiliary) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
             onclick={closeDefinition}
             aria-label={t('reader.dismissDefinition')}
             title={t('reader.dismissDefinition')}
@@ -1362,7 +1380,7 @@
           </div>
           <button
             type="button"
-            class="shrink-0 cursor-pointer rounded text-xs text-(--color-text-auxiliary) hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
+            class="shrink-0 cursor-pointer rounded p-0.5 text-sm leading-none font-medium text-(--color-text-auxiliary) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
             onclick={closeDefinition}
             aria-label={t('reader.dismissDefinition')}
             title={t('reader.dismissDefinition')}
