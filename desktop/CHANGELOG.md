@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.7.0](https://github.com/JuanCamacho198/NEXO/compare/desktop-v0.6.0...desktop-v0.7.0) (2026-11-11)
+
+
+### Features
+
+* **desktop:** define a selection from Wiktionary, with a per-account cache ([f54080b](https://github.com/JuanCamacho198/NEXO/commit/f54080b2a8b52766fc1feccb465f885e34152664))
+* **desktop:** Define in the selection menu, and one settings tab for the menu ([239a087](https://github.com/JuanCamacho198/NEXO/commit/239a087a2a5b6d4973760cc4261a83b95c85d2bf))
+* **desktop:** detect the selected language instead of trusting the book ([179ac77](https://github.com/JuanCamacho198/NEXO/commit/179ac77b5cfa30531446c6fb85036a899b8ea4e5))
+* **desktop:** fall back to the page when a selection is too short to detect ([#191](https://github.com/JuanCamacho198/NEXO/issues/191)) ([246b0a5](https://github.com/JuanCamacho198/NEXO/commit/246b0a56556d3ff12a86210140117b98075192b5))
+* **desktop:** fetch catalogue feeds from Rust, because the feed has no CORS ([261ba28](https://github.com/JuanCamacho198/NEXO/commit/261ba28804f075090267636f126b3b9a7a796a1f))
+* **desktop:** rotate Discover rails by topic, and mirror the rail log ([1063776](https://github.com/JuanCamacho198/NEXO/commit/10637766357f62de39695ac75cd2896402aa90d9))
+* **desktop:** scope local data by account and translate reader selections ([d0e4bfc](https://github.com/JuanCamacho198/NEXO/commit/d0e4bfcc9508e03369c998ebf0e997814dae8f01))
+* **desktop:** settings tab for translation, and stop guessing the pair ([8be059d](https://github.com/JuanCamacho198/NEXO/commit/8be059de1cf2d4dffeadccd9a06747b720fa2ef8))
+* **desktop:** translate preferences and per-account cache in the backend ([ca34c79](https://github.com/JuanCamacho198/NEXO/commit/ca34c79c8036b0f9897730f8882b73a75914c81b))
+* **discover:** four working rails, and remove the sources that could not answer ([cbca0b1](https://github.com/JuanCamacho198/NEXO/commit/cbca0b178af7fccb2a35443f9a6f627f0e328ebb))
+
+
+### Bug Fixes
+
+* **desktop:** hide the button tooltip while an answer is on screen ([6ad04fe](https://github.com/JuanCamacho198/NEXO/commit/6ad04fe86fde132fce759b9f16f0a7a5dab4a76e))
+* **desktop:** keep the bookmark's CFI location in the local row ([07cca7c](https://github.com/JuanCamacho198/NEXO/commit/07cca7c8e92e899d97c1fc27ffc4ed2cd2947797))
+* **desktop:** keep the floating menus on screen, and re-paginate after a resize ([8236561](https://github.com/JuanCamacho198/NEXO/commit/8236561e0d81a0632c53c4bed0c8b019a0de0ae6))
+* **desktop:** let three migrations re-run instead of refusing to open the database ([0453ab8](https://github.com/JuanCamacho198/NEXO/commit/0453ab806b910619d36f116332efed56bfb2b9ac))
+* **desktop:** make margins and line spacing reach the text, and stop rebuilding the highlight map ([34e9881](https://github.com/JuanCamacho198/NEXO/commit/34e9881516409a020cd236ba15cc6856ef9c178b))
+* **desktop:** make tauri:dev:debug actually open the CDP port ([899b9e3](https://github.com/JuanCamacho198/NEXO/commit/899b9e32bd05ac5598af5bbc4448a5b9cf58c728))
+* **desktop:** one owner for which floating menu is open, and stop dismissing it ([1555b67](https://github.com/JuanCamacho198/NEXO/commit/1555b67ae9ec528af15641dcb9368f163f35cb4a))
+* **desktop:** repair translation language detection and the reader language bar ([#190](https://github.com/JuanCamacho198/NEXO/issues/190)) ([8024062](https://github.com/JuanCamacho198/NEXO/commit/80240629acb7d92995dbe507b4922b3debaebd78))
+* **desktop:** scope reading statistics to the account that read them ([5417108](https://github.com/JuanCamacho198/NEXO/commit/54171081386ab8f12c64f2cd2437da729934ff5a))
+* **desktop:** scope the sync outbox drain to one account ([e3b5b9f](https://github.com/JuanCamacho198/NEXO/commit/e3b5b9fe3be873cae9b8660a0aee28ab2042d4e6))
+* **desktop:** stop a cross-document observer from failing every chapter swap ([29fbabb](https://github.com/JuanCamacho198/NEXO/commit/29fbabbcb463b8f312f12ef880d750d78387c28e))
+* **desktop:** stop the selection menu jumping when Copy or Dictionary is pressed ([b828cee](https://github.com/JuanCamacho198/NEXO/commit/b828cee5958961b12536915e52fc15c5fa79874e))
+
+
+### Reverts
+
+* **desktop:** drop the book-page indicator and the wheel from the reader ([146a2dd](https://github.com/JuanCamacho198/NEXO/commit/146a2ddd912d214c76a839e6d690f3adf7a558c3))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/desktop-v0.2.0...desktop-v0.3.0) (2026-09-17)
 
 
