@@ -255,19 +255,79 @@
    * is by definition explicit (`preference`) — showing "Auto (español)" over a
    * language they picked would be a lie. Only the outcome can say the source was
    * inferred, and only the outcome is consulted for it.
+   *
+   * ## The overlay counts ONLY while a change is in flight
+   *
+   * `pickedLanguages` is written AND cleared by `handleLanguagesChange` — set
+   * before the request, dropped the moment the answer lands — so its presence
+   * means exactly "a retranslation is in flight". Reading it that way is what
+   * this predicate states, and it is the single rule the pair and its origin are
+   * both derived from.
+   *
+   * They have to share the rule, and the earlier shape is the reason: the pair
+   * read the overlay as `pickedLanguages ?? outcome` (present OR absent) while
+   * the origin read it as `pickedLanguages === null` (present vs absent), so a
+   * single truth was decided by two different predicates. MEASURED on the running
+   * app: a change to the source left the overlay set forever, so the bar printed
+   * the pair the reader had picked (`Español → Inglés`) while the refusal message
+   * beside it was drawn from the outcome and said both sides were the same.
+   *
+   * A change whose request never lands is covered by construction: the overlay is
+   * cleared in the request's `finally`, so a hung request simply keeps showing the
+   * pair the reader picked — which is what they asked for and what the bar was
+   * already holding. No third state exists.
    */
   let pickedLanguages = $state<{ source: string | null; target: string | null } | null>(null);
+  /**
+   * The outcome that CARRIES a pair, narrowed to its two variants, or `null`.
+   *
+   * Every value below is derived from THIS rather than from a separate boolean
+   * flag. TypeScript does not narrow a `$state` read across the branches of a
+   * `$derived` that tests a DIFFERENT expression, so a shared `$derived` boolean
+   * cannot make `translation.source` type-check — and, more to the point, a
+   * boolean would let the pair and the flag drift the way `shownLanguages` and
+   * `shownSourceOrigin` did. One narrowed value is the only shape in which the
+   * four dependents below can disagree about nothing.
+   */
+  const pairOutcome = $derived(
+    translation?.status === 'ok' || translation?.status === 'refused' ? translation : null,
+  );
+  /** The ONE overlay predicate. Both the pair and its origin are derived from
+   * it, so they cannot disagree about whether the overlay applies — the drift
+   * between them was the defect this replaces. */
+  const overlayIsAhead = $derived(pairOutcome !== null && pickedLanguages !== null);
   const shownLanguages = $derived(
-    translation?.status === 'ok' || translation?.status === 'refused'
-      ? (pickedLanguages ?? { source: translation.source, target: translation.target })
-      : null,
+    pairOutcome === null
+      ? null
+      : overlayIsAhead
+        ? pickedLanguages
+        : { source: pairOutcome.source, target: pairOutcome.target },
   );
   const shownSourceOrigin = $derived(
-    translation?.status === 'ok' || translation?.status === 'refused'
-      ? pickedLanguages === null
-        ? translation.sourceOrigin
-        : 'preference'
-      : null,
+    pairOutcome === null ? null : overlayIsAhead ? 'preference' : pairOutcome.sourceOrigin,
+  );
+  /**
+   * The pair the RESOLVER actually used — the outcome's own, with the overlay
+   * deliberately not consulted.
+   *
+   * This is what the bar reads for the side the reader did NOT move. The two
+   * pairs are the same value whenever no change is in flight, and that is the
+   * ordinary case; they differ exactly while the overlay is ahead, and there the
+   * difference matters. The bar builds its payload as "the side that moved takes
+   * its new value, the untouched side keeps what it had", and the value it had
+   * has to be the one the resolver ran with, not a pair the resolver has not seen
+   * yet. Sending the overlay's other side would hand the caller a pair the
+   * request in flight never resolved, which is the whole of what `changed` exists
+   * to prevent (`handleChangeLanguages` reads storage for exactly this reason —
+   * this keeps the layer that OWNS both values from handing it the wrong one).
+   *
+   * A `null` side is carried through as `null`: it is a real value downstream
+   * ("automatic"), and the caller is the one that decides whether a side is
+   * written at all. This value is a FACT about the last resolution, never an
+   * instruction to write.
+   */
+  const resolvedLanguages = $derived(
+    pairOutcome === null ? null : { source: pairOutcome.source, target: pairOutcome.target },
   );
 
   /**
@@ -829,13 +889,16 @@
    * resolver, which is the only thing that knows the book's language and the
    * detected one.
    *
-   * The pair is held in `pickedLanguages` while the request is in flight, so the
-   * selector shows what the reader just chose instead of snapping back. It
-   * outranks the outcome's own pair only for an outcome that carries one anyway
-   * (`ok`, or a refusal naming the pair the resolution REFUSED) — see
-   * `shownLanguages`. An outcome that says nothing about languages
-   * (`no-result`, `unavailable`) hides the selector entirely rather than leaving
-   * it advertising the pair that was picked.
+   * ## The overlay lives exactly as long as the request does
+   *
+   * `pickedLanguages` is written here and CLEARED here, the moment the answer
+   * lands. That is what makes the overlay's lifetime mean something: it is ahead
+   * of the outcome precisely while the retranslation is in flight (see
+   * `overlayIsAhead`), and it is dropped the instant the outcome that belongs to
+   * it arrives. Leaving it set — which is what the previous shape did — made the
+   * overlay UNCONDITIONAL and permanent, so the bar kept rendering the pair the
+   * reader picked even after a resolution had answered with a DIFFERENT one, and
+   * the message beside it described the outcome. Two pairs, one panel.
    *
    * The OVERLAY holds the whole pair — it is what the bar renders, and the bar
    * renders two sides. The WRITE is a different question and is the caller's:
@@ -849,7 +912,12 @@
   }): Promise<void> {
     pickedLanguages = { source: next.source, target: next.target };
     await onChangeLanguages(next);
-    if (!selectionData || !selectionData.text.trim()) return;
+    if (!selectionData || !selectionData.text.trim()) {
+      // Nothing will replace the outcome, so the overlay has no answer to yield
+      // to. Dropping it would snap the bar back to a pair the reader just moved
+      // away from; keeping it is the honest "this is what you picked".
+      return;
+    }
 
     translating = true;
     translationActive = true;
@@ -858,6 +926,13 @@
     } finally {
       translating = false;
       translationActive = false;
+      // The outcome now belongs to the pair the reader picked, so the overlay has
+      // nothing left to say. Clearing it HERE and not before is what keeps the
+      // bar, the message and the payload reading the same value from the same
+      // place. `no-result` / `unavailable` carry no pair of their own, so this
+      // also hides the bar rather than leaving it advertising a pair the request
+      // did not produce.
+      pickedLanguages = null;
     }
   }
 
@@ -1184,15 +1259,33 @@
       {:else if translation?.status === 'unavailable'}
         <p class="text-xs text-(--color-text-auxiliary)">{t('reader.translationUnavailable')}</p>
       {:else if translation?.status === 'refused'}
-        <p class="text-xs text-(--color-text-auxiliary)">
-          {t(translationRefusalKey(translation.reason, translation.sourceOrigin))}
-        </p>
+        <!-- The message is drawn from the outcome ONLY, and that is why it is
+             suppressed while the overlay is ahead of it. A refusal describes a
+             pair the RESOLVER refused, while the bar beside it would be showing
+             the pair the reader just picked — so for the interval between the
+             change and the answer the two describe DIFFERENT pairs, and the
+             message reads as a contradiction ("source and target are the same")
+             under a bar that plainly shows two different languages. Measured on
+             the running app: the bar read `Español → Inglés` while the message
+             said both sides were the same. Nothing can be rendered that makes a
+             stale outcome consistent with a fresh pair, so nothing is rendered:
+             the panel is already showing "translating", which is the truth.
+             The moment the request resolves, `pickedLanguages` still holds the
+             pair and the outcome now belongs to it, so the message and the bar
+             are consistent by construction. -->
+        {#if !overlayIsAhead}
+          <p class="text-xs text-(--color-text-auxiliary)">
+            {t(translationRefusalKey(translation.reason, translation.sourceOrigin))}
+          </p>
+        {/if}
       {/if}
       {#if !translating && shownLanguages}
         <div class="mt-2">
           <TranslationLanguageBar
             source={shownLanguages.source}
             target={shownLanguages.target}
+            resolvedSource={resolvedLanguages?.source ?? null}
+            resolvedTarget={resolvedLanguages?.target ?? null}
             sourceOrigin={shownSourceOrigin}
             {t}
             onChange={handleLanguagesChange}

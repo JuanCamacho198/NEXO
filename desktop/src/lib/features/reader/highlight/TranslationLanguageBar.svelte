@@ -71,6 +71,20 @@
      * other a guess it made on their behalf.
      */
     sourceOrigin: SourceOrigin | null;
+    /**
+     * The source the RESOLVER last ran with, or `null` when it resolved none.
+     *
+     * This is the side to send back when the reader moves the OTHER one, and it
+     * is a separate prop from `source` for exactly that reason. `source` is what
+     * the bar RENDERS (see `TranslationLanguageBar`'s own note on the overlay) and
+     * it can be a value the resolver has not seen yet; the untouched side of a
+     * change must be the RESOLVED one, because writing a pair the resolver never
+     * used is precisely what the payload's `changed` field exists to prevent.
+     */
+    resolvedSource: string | null;
+    /** The target the resolver last ran with — the same distinction as
+     * `resolvedSource`, on the other side. */
+    resolvedTarget: string | null;
     /** Suppresses interaction while a translation is in flight. */
     disabled?: boolean;
     /**
@@ -84,12 +98,15 @@
      * side may take its new value from here, and the untouched side has to keep
      * whatever is already stored (see `handleChangeLanguages`).
      *
-     * Both sides are always populated here, and they are the RESOLVED pair — the
-     * same values the bar renders. This callback is presentational: it says what
-     * the reader picked and what was on screen, and the parent decides what to
-     * write. It does NOT send `null` for the untouched side, because `null` is a
-     * real value downstream ("automatic") and sending it there would clear a
-     * preference the reader never asked to clear.
+     * Both sides are always populated here. The side the reader MOVED carries
+     * their new value; the untouched side carries the RESOLVED one
+     * (`resolvedSource` / `resolvedTarget`), not the rendered one — a rendered
+     * side may be a pair the resolver has not seen yet. This callback is
+     * presentational: it says what the reader picked next to the pair that was
+     * actually resolved, and the parent decides what to write. It does NOT send
+     * `null` for the untouched side, because `null` is a real value downstream
+     * ("automatic") and sending it there would clear a preference the reader
+     * never asked to clear.
      */
     onChange: (next: {
       source: string | null;
@@ -99,7 +116,16 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
-  let { source, target, sourceOrigin, disabled = false, onChange, t }: Props = $props();
+  let {
+    source,
+    target,
+    resolvedSource,
+    resolvedTarget,
+    sourceOrigin,
+    disabled = false,
+    onChange,
+    t,
+  }: Props = $props();
 
   /**
    * The "automatic" entry carries the empty string because bits-ui's `Select`
@@ -184,17 +210,27 @@
     ...languageOptions,
   ]);
 
+  /**
+   * The untouched side of a change is the RESOLVED one, never the rendered one.
+   *
+   * Both callbacks below carry the whole pair, and the caller is what separates
+   * "moved" from "shown" by `changed`. The side that did NOT move therefore has
+   * to be the value the resolver last ran with: the rendered side can be the
+   * OVERLAY — a pair the reader just picked whose request is still in flight —
+   * and echoing that back would hand the caller a pair no resolution has ever
+   * produced. See the `resolvedSource` prop's own note.
+   */
   function handleSourceChange(next: string): void {
     onChange({
       source: next === AUTO_VALUE ? null : next,
-      target,
+      target: resolvedTarget,
       changed: 'source',
     });
   }
 
   function handleTargetChange(next: string): void {
     onChange({
-      source,
+      source: resolvedSource,
       target: next === AUTO_VALUE ? null : next,
       changed: 'target',
     });
