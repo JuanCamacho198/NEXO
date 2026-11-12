@@ -37,6 +37,9 @@ import com.nexo.domain.translation.TranslationSettings
 import com.nexo.presentation.theme.NexoTheme
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 /**
@@ -263,14 +266,33 @@ private fun HistoryRow(entry: TranslationHistoryEntry) {
             Spacer(modifier = Modifier.height(4.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = entry.langPair,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = entry.langPair,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = formatHistoryDate(entry.createdAtEpochMillis),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
+
+/**
+ * `createdAtEpochMillis` is a wall-clock instant, not a reading-day key, so it
+ * is rendered in the device time zone (the default) rather than UTC — unlike the
+ * weekly-activity weekday labels in `StatisticsScreen`.
+ */
+private fun formatHistoryDate(epochMillis: Long): String =
+    SimpleDateFormat("MMM d, yyyy · HH:mm", Locale.getDefault()).format(Date(epochMillis))
 
 // ─── Previews ─────────────────────────────────────────────────────────
 
