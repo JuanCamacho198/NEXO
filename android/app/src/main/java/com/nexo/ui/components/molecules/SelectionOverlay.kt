@@ -58,6 +58,8 @@ fun SelectionOverlay(
     onSaveDefinition: () -> Unit = {},
     onDismissDefinitionInput: () -> Unit = {},
     onDismissTranslation: () -> Unit = {},
+    onTranslationSourceChosen: (String?) -> Unit = {},
+    onTranslationTargetChosen: (String?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val anyMenuVisible = selectionState != ReaderSelectionState.None || showColorPickerPopover || showTagInput || showDefinitionInput || showTranslationPanel
@@ -93,7 +95,13 @@ fun SelectionOverlay(
     }
     if (showTranslationPanel) {
         AnchoredOverlayBox(selectionRect = selectionRect, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
-            AnchoredTranslationPanel(sourceWord = selectedText ?: "", state = translationPanelState, onDismiss = onDismissTranslation)
+            AnchoredTranslationPanel(
+                sourceWord = selectedText ?: "",
+                state = translationPanelState,
+                onDismiss = onDismissTranslation,
+                onSourceChosen = onTranslationSourceChosen,
+                onTargetChosen = onTranslationTargetChosen,
+            )
         }
     }
     if (showColorPickerPopover) {

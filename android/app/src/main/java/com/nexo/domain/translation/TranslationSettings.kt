@@ -14,6 +14,11 @@ package com.nexo.domain.translation
 data class TranslationSettings(
     /** `null` = follow the system locale. */
     val targetLanguage: String? = null,
-    /** `null` = resolve from the book language, then the selected text. */
+    /**
+     * `null` = resolve from the book (its own choice for this book first, then
+     * this value, then the book's metadata, then a detection over the selection
+     * and finally the page). See
+     * [TranslationPolicy.resolveLanguageResolution] for the full order.
+     */
     val sourceLanguage: String? = null,
 )

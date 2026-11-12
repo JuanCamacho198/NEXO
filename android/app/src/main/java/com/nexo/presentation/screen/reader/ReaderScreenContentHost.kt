@@ -76,6 +76,8 @@ fun ReaderScreenContentHost(
             onDictionary = selectionCallbacks.onDictionary,
             onTranslate = selectionCallbacks.onTranslate,
             onDismissTranslation = selectionCallbacks.onDismissTranslation,
+            onTranslationSourceChosen = selectionCallbacks.onTranslationSourceChosen,
+            onTranslationTargetChosen = selectionCallbacks.onTranslationTargetChosen,
             onShowColorPickerPopover = selectionCallbacks.onShowColorPicker,
             onDismissColorPickerPopover = selectionCallbacks.onDismissColorPicker,
             onTagTextChanged = selectionCallbacks.onTagTextChanged,

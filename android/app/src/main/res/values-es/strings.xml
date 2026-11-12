@@ -448,6 +448,30 @@
     <string name="translation_no_result">No hay traducción disponible para este texto.</string>
     <string name="translation_offline">La traducción necesita conexión.</string>
     <string name="translation_close">Cerrar</string>
+    <!--
+      Refusals, one per reason. Each names the cause and the fix the reader can
+      apply, never the failure alone: "the pair is the problem, change one side"
+      is actionable, a bare "no translation available" is not. The collision copy
+      must never claim the text is untranslatable — the text was fine; the pair
+      was the problem.
+    -->
+    <string name="translation_same_language">El idioma de origen y el de destino son el mismo, así que no hay nada que traducir. Cambia uno de los dos en la barra de arriba.</string>
+    <string name="translation_unknown_source">No pudimos detectar el idioma del texto seleccionado. Elige un idioma de origen en la barra de arriba.</string>
+    <string name="translation_invalid_source">El idioma de origen elegido no es válido. Elige otro en la barra de arriba.</string>
+    <string name="translation_invalid_target">El idioma de destino elegido no es válido. Elige otro en la barra de arriba.</string>
+
+    <!--
+      La barra de idiomas (Grupo 2). `source_auto` NO es el "Detectar
+      automáticamente" de Ajustes: elegirlo aquí BORRA la elección de origen de
+      este libro, así que promete "descarta mi elección para este libro" — una
+      acción distinta de restaurar un valor por defecto. `auto_with_language`
+      marca un lado que la app INFIRIÓ, no uno que el lector eligió.
+    -->
+    <string name="translation_bar_source_auto">Automático (detectar)</string>
+    <string name="translation_bar_target_auto">Seguir el dispositivo</string>
+    <string name="translation_bar_auto_with_language">Auto (%1$s)</string>
+    <string name="translation_bar_source_description">Idioma de origen</string>
+    <string name="translation_bar_target_description">Idioma de destino</string>
 
     <!-- Translation settings (per-account source/target languages + history) -->
     <string name="settings_translation_title">Traducción</string>

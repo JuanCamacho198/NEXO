@@ -9,6 +9,8 @@ import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.TranslationRepository
 import com.nexo.domain.session.ActiveUserProvider
+import com.nexo.domain.translation.NoTranslationReason
+import com.nexo.domain.translation.TranslationLanguageSelection
 import com.nexo.presentation.UiEvent
 import com.nexo.presentation.viewmodel.reader.interaction.AnnotationManager
 import com.nexo.presentation.viewmodel.reader.interaction.BookmarkManager
@@ -211,10 +213,24 @@ class ReaderInteractionStateHolder(
     fun onTranslate(
         sourceLanguage: String,
         targetLanguage: String,
-    ) = translationManager.onTranslate(sourceLanguage, targetLanguage)
+        languages: TranslationLanguageSelection = TranslationLanguageSelection.EMPTY,
+    ) = translationManager.onTranslate(sourceLanguage, targetLanguage, languages)
+
+    /**
+     * Re-runs the translation for the SAME selection after a language change in
+     * the bar (invariant 7): same call, new pair, panel stays open.
+     */
+    fun onLanguageChanged(
+        sourceLanguage: String,
+        targetLanguage: String,
+        languages: TranslationLanguageSelection,
+    ) = translationManager.onLanguageChanged(sourceLanguage, targetLanguage, languages)
 
     /** No translatable pair exists (source == target after resolution). */
-    fun onTranslationUnavailable() = translationManager.onTranslationUnavailable()
+    fun onTranslationUnavailable(
+        reason: NoTranslationReason,
+        languages: TranslationLanguageSelection = TranslationLanguageSelection.EMPTY,
+    ) = translationManager.onTranslationUnavailable(reason, languages)
 
     fun onDismissTranslationPanel() = translationManager.onDismissTranslationPanel()
 

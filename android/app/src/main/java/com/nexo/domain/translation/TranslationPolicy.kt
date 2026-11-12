@@ -135,23 +135,32 @@ object TranslationPolicy {
      *
      * ## Resolution order
      *
-     * - **Target**: [TranslationSettings.targetLanguage] when set, else
-     *   [systemLanguage].
-     * - **Source**: [TranslationSettings.sourceLanguage] when set, else
-     *   [bookLanguage] when usable, else [guessSourceLanguage] of [selectedText]
-     *   with the target as fallback.
+     * See [resolveLanguageResolution] for the full cascade. Briefly: the target
+     * is [TranslationSettings.targetLanguage] else [systemLanguage]; the source
+     * is this book's choice, the account choice, [bookLanguage], a detection over
+     * [selectedText], a detection over the page, else a refusal.
      *
-     * Both are normalised to a 2-letter code. When the resolved codes are equal
-     * the call returns `null` — the caller must inform rather than ask, because
-     * a self-pair is always an echo.
+     * Both sides are normalised to a 2-letter code. When the resolved codes are
+     * equal the call returns `null` — the caller must inform rather than ask,
+     * because a self-pair is always an echo.
      */
     fun resolveLangPair(
         settings: TranslationSettings,
         bookLanguage: String?,
         systemLanguage: String,
         selectedText: String,
+        bookSourceLanguage: String? = null,
+        pageText: String? = null,
     ): String? {
-        val resolved = resolveLanguages(settings, bookLanguage, systemLanguage, selectedText)
+        val resolved =
+            resolveLanguages(
+                settings,
+                bookLanguage,
+                systemLanguage,
+                selectedText,
+                bookSourceLanguage,
+                pageText,
+            )
         return resolved?.let { langPair(it.source, it.target) }
     }
 
@@ -160,27 +169,148 @@ object TranslationPolicy {
      * because [com.nexo.domain.repository.TranslationRepository.translate] takes
      * them as two arguments. The repository re-joins them into the `langpair`,
      * so the pair string a caller reads back is identical.
+     *
+     * Kept as the collision-only convenience over [resolveLanguageResolution]:
+     * its `null` is exactly [NoTranslationReason.SAME_LANGUAGE], which is all a
+     * caller with no message to render needs.
      */
     fun resolveLanguages(
         settings: TranslationSettings,
         bookLanguage: String?,
         systemLanguage: String,
         selectedText: String,
-    ): ResolvedLanguages? {
-        val target = normalizeLanguage(settings.targetLanguage ?: systemLanguage)
-        val source =
-            normalizeLanguage(
-                tag = settings.sourceLanguage,
-                fallback = "",
-            ).takeIf { it.isNotEmpty() }
-                ?: normalizeLanguage(
-                    tag = bookLanguage,
-                    fallback = "",
-                ).takeIf { it.isNotEmpty() }
-                ?: guessSourceLanguage(selectedText, fallback = target)
+        bookSourceLanguage: String? = null,
+        pageText: String? = null,
+    ): ResolvedLanguages? =
+        resolveLanguageResolution(
+            settings,
+            bookLanguage,
+            systemLanguage,
+            selectedText,
+            bookSourceLanguage,
+            pageText,
+        ).pair
 
-        if (source == target) return null
-        return ResolvedLanguages(source = source, target = target)
+    /**
+     * Full resolution, KEEPING the reason when there is no pair.
+     *
+     * [resolveLanguages] answers "is there a pair?" and collapses every refusal
+     * to `null`. That is all a caller needs when it has nothing to say, but it is
+     * not enough for a panel that must name the refusal: a language-pair
+     * collision and a target that could not be used are different truths with
+     * different fixes, and `null` cannot tell them apart.
+     *
+     * This is the same cascade as [resolveLanguages] — same inputs, same order,
+     * same normalisation — so the pair it yields is identical and the existing
+     * path is preserved exactly. It only adds the reason the older shape threw
+     * away. The reason space is deliberately larger than the one refusal the
+     * resolver produces today, so a detection that later refuses
+     * ([NoTranslationReason.UNKNOWN_SOURCE]) and an unusable configured side
+     * ([NoTranslationReason.INVALID_SOURCE] / [NoTranslationReason.INVALID_TARGET])
+     * have a place to land WITHOUT changing today's behaviour.
+     *
+     * Today the reachable reasons are [NoTranslationReason.SAME_LANGUAGE] (a
+     * collision) and [NoTranslationReason.UNKNOWN_SOURCE] (nothing could name
+     * the source, once the selection AND the page were both tried). A configured
+     * but unusable language is silently ignored rather than refused.
+     *
+     * ## The source cascade (Group 2)
+     *
+     * Top to bottom, first hit wins:
+     *
+     * 1. **[bookSourceLanguage]** — the reader's choice for THIS book. A
+     *    non-null value here outranks everything else, including the account
+     *    choice: it is the most specific statement of intent, made while looking
+     *    at this book.
+     * 2. **[TranslationSettings.sourceLanguage]** — the account choice.
+     * 3. **[bookLanguage]** — the book's own metadata.
+     * 4. **A guess over [selectedText]** — [guessSourceLanguage], which may now
+     *    return `null` (see its `mayFail` note). This is the SELECTION.
+     * 5. **A guess over [pageText]** — the same detector, run over the page.
+     *    This is a SEPARATE call. Joining the two into one string is forbidden
+     *    (invariant 5); see the block at the call site for the measurement.
+     * 6. **Give up** → [NoTranslationReason.UNKNOWN_SOURCE]. The resolver can
+     *    refuse on a detection failure, not merely on a collision.
+     *
+     * The target cascade is untouched: [TranslationSettings.targetLanguage] when
+     * set, else [systemLanguage]. There is no per-book target and there must
+     * never be one (invariant 1).
+     */
+    fun resolveLanguageResolution(
+        settings: TranslationSettings,
+        bookLanguage: String?,
+        systemLanguage: String,
+        selectedText: String,
+        bookSourceLanguage: String? = null,
+        pageText: String? = null,
+    ): TranslationResolution {
+        val target = normalizeLanguage(settings.targetLanguage ?: systemLanguage)
+
+        val source =
+            sourcedLanguage(bookSourceLanguage, SourceOrigin.BOOK_PREFERENCE)
+                ?: sourcedLanguage(settings.sourceLanguage, SourceOrigin.PREFERENCE)
+                ?: sourcedLanguage(bookLanguage, SourceOrigin.BOOK)
+                ?: detectSource(selectedText)?.let { SourcedLanguage(it, SourceOrigin.DETECTED) }
+                ?: detectSource(pageText)?.let { SourcedLanguage(it, SourceOrigin.DETECTED_FROM_PAGE) }
+                ?: return TranslationResolution(
+                    pair = null,
+                    reason = NoTranslationReason.UNKNOWN_SOURCE,
+                )
+
+        if (source.code == target) {
+            return TranslationResolution(
+                pair = null,
+                reason = NoTranslationReason.SAME_LANGUAGE,
+            )
+        }
+        return TranslationResolution(
+            pair = ResolvedLanguages(source = source.code, target = target),
+            reason = null,
+            sourceOrigin = source.origin,
+        )
+    }
+
+    /**
+     * One configured cascade step: [tag] normalised to a usable code, labelled
+     * with [origin], or `null` when [tag] names nothing so the next step runs.
+     */
+    private fun sourcedLanguage(
+        tag: String?,
+        origin: SourceOrigin,
+    ): SourcedLanguage? = usableLanguage(tag)?.let { SourcedLanguage(it, origin) }
+
+    /** An interim source plus where it came from, kept local to the cascade. */
+    private data class SourcedLanguage(
+        val code: String,
+        val origin: SourceOrigin,
+    )
+
+    /**
+     * Normalises [tag] to a usable 2-letter code, or `null` when it names
+     * nothing. `null`, blank and unusable input all yield `null`, which is what
+     * lets each cascade step fall through to the next instead of pinning a
+     * placeholder.
+     */
+    private fun usableLanguage(tag: String?): String? =
+        normalizeLanguage(tag = tag, fallback = "").takeIf { it.isNotEmpty() }
+
+    /**
+     * One detection attempt, over ONE text. Never joins two texts: the string it
+     * receives is exactly one of the selection or the page.
+     *
+     * ## Why the two detections are separate (measured on desktop)
+     *
+     * A 34-word English quote alone detects `en`; the 4,638-word Spanish page it
+     * sits on alone detects `es`; the two CONCATENATED detect `es` — the page
+     * drowns the quote. The selection is the more specific evidence and must be
+     * asked first, on its own. Calling this twice, once per text, is what keeps a
+     * short quote's answer alive. Passing a joined string here would silently
+     * invert the preference, so the call sites pass one text each.
+     */
+    private fun detectSource(text: String?): String? {
+        val trimmed = text?.trim()
+        if (trimmed.isNullOrEmpty()) return null
+        return guessSourceLanguage(trimmed, fallback = null)
     }
 
     private val BASE_LANGUAGE_REGEX = Regex("[a-z]{2}")
@@ -203,18 +333,38 @@ object TranslationPolicy {
 
     /**
      * Cheap heuristic language detector used only when [Book.language] is
-     * unknown. Deliberately tiny and total: it decides between Spanish and
-     * English (the two languages the app ships) and defaults to English.
+     * unknown. Deliberately tiny: it decides between Spanish and English (the
+     * two languages the app ships) and reports failure when it cannot.
      *
      * Signals typical of Spanish and absent from English: `ñ`, and the
      * high-frequency function words `el/la/los/las/de/que/y/una/por`. A
      * Spanish word like `francés` matches on the accent-bearing suffix; an
-     * English word matches neither and falls to English.
+     * English word matches neither and fails.
+     *
+     * ## Why it can now return `null` (invariant 8)
+     *
+     * It used to end with `return fallback`, defaulting to the TARGET. That is
+     * the exact input that made the page fallback unreachable: if the detector
+     * always answers, the cascade never consults the page, because step 4 has
+     * "succeeded". A detector that guesses is still allowed — but a resolver that
+     * cannot refuse is not, and the page fallback exists precisely for the case
+     * the selection cannot settle.
+     *
+     * Returning `null` is what makes the page fallback meaningful, and it is also
+     * what makes an honest [NoTranslationReason.UNKNOWN_SOURCE] possible when
+     * NEITHER the selection nor the page carries a marker. The old
+     * always-the-target fallback would instead have handed the reader a
+     * confidently wrong pair — the source silently becoming the target, which is
+     * the collision that produces a bogus refusal anyway.
+     *
+     * @param fallback returned when no marker is found. Defaults to `null`, so
+     *   the caller sees a detection FAILURE rather than a guess. Callers that
+     *   genuinely want a guess can still pass a fallback.
      */
     fun guessSourceLanguage(
         text: String,
-        fallback: String = DEFAULT_LANGUAGE,
-    ): String {
+        fallback: String? = null,
+    ): String? {
         val lower = text.lowercase()
         if (lower.isEmpty()) return fallback
         if (SPANISH_MARKERS.any { lower.contains(it) }) return "es"

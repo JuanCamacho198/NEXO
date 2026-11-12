@@ -206,8 +206,14 @@ class TranslationPolicyTest {
     }
 
     @Test
-    fun `guessSourceLanguage defaults to the fallback for a bare word`() {
-        assertEquals("en", TranslationPolicy.guessSourceLanguage("book"))
+    fun `guessSourceLanguage reports failure for a bare word with no marker`() {
+        // Group 2: the detector no longer guesses with the TARGET as its
+        // fallback. A markerless word now answers `null`, which is what lets the
+        // cascade consult the page and, failing that, refuse honestly.
+        assertNull(TranslationPolicy.guessSourceLanguage("book"))
+        assertNull(TranslationPolicy.guessSourceLanguage("reverberation"))
+        assertNull(TranslationPolicy.guessSourceLanguage(""))
+        // An explicit fallback is still honoured when a caller wants a guess.
         assertEquals("fr", TranslationPolicy.guessSourceLanguage("", fallback = "fr"))
     }
 }
