@@ -142,6 +142,21 @@ pub fn listTranslationHistory(
     repository.list_translation_history(&user_id).map_err(map_command_error)
 }
 
+/// Forgets every cached translation of the active account and returns how many
+/// rows were deleted.
+///
+/// The owner comes from `AppState`, never from the payload, so one account
+/// cannot clear another's history. Without an account this is a no-op returning
+/// `0` rather than an error — consistent with `listTranslationHistory`, which
+/// answers an empty list in the same situation.
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn clearTranslationHistory(state: State<'_, AppState>) -> Result<i64, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let user_id = state.active_user.require_user_id();
+    repository.clear_translation_history(&user_id).map_err(map_command_error)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::repository::tests::new_repository;

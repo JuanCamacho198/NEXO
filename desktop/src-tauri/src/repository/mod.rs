@@ -292,6 +292,12 @@ impl LibraryRepository {
         translation::list_translation_history(self, user_id)
     }
 
+    /// Delete every cached translation of ONE account. Returns rows deleted, `0`
+    /// when there is no active account.
+    pub fn clear_translation_history(&self, user_id: &str) -> AppResult<i64> {
+        translation::clear_translation_history(self, user_id)
+    }
+
     /// Sweep one account's translation cache back to the documented cap.
     pub fn prune_translation_cache(&self, user_id: &str) -> AppResult<i64> {
         translation::prune_translation_cache(self, user_id, translation::TRANSLATION_CACHE_MAX_ROWS)

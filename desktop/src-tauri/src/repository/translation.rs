@@ -595,6 +595,29 @@ pub fn list_translation_history(
     Ok(rows.collect::<Result<Vec<_>, _>>()?)
 }
 
+/// Deletes every cached translation of ONE account and reports how many rows
+/// went away.
+///
+/// The scope is that owner and only that owner — the same semantics as Android's
+/// `TranslationCacheDao.deleteAll`. It must never be a table-wide `DELETE`: the
+/// table is shared by every account on this machine and their rows are not
+/// equivalent, they are the same text translated for different people.
+///
+/// `0` — not an error — when there is no active account, for the same option-A
+/// reason as every other function here: an anonymous session owns no rows, so
+/// clearing nothing is the truth rather than a failure.
+pub fn clear_translation_history(repo: &LibraryRepository, user_id: &str) -> AppResult<i64> {
+    let Some(owner) = cache_owner(user_id) else {
+        return Ok(0);
+    };
+
+    let removed = repo
+        .connection
+        .execute("DELETE FROM translation_cache WHERE user_id = ?1", params![owner])?;
+
+    Ok(removed as i64)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -974,6 +997,70 @@ mod tests {
         assert_eq!(history[0].target_language, "en");
         assert_eq!(history[0].cache_key.len(), 64);
         assert!(!history[0].created_at.is_empty());
+    }
+
+    /// The destructive half of the cache scope: clearing deletes the owner's
+    /// rows and NOTHING else.
+    ///
+    /// A table-wide `DELETE` would pass a test written only with one account, so
+    /// a second account is seeded deliberately and asserted to survive. The
+    /// count is asserted too — the caller renders it, and "deleted 3" from a
+    /// command that scoped wrong is how a data-loss bug gets reported as a
+    /// success.
+    #[test]
+    fn clear_history_removes_only_the_owners_rows() {
+        let repo = new_repository();
+        cache_translation(&repo, "user-1", "es", "en", "uno", "one").unwrap();
+        cache_translation(&repo, "user-1", "es", "en", "dos", "two").unwrap();
+        cache_translation(&repo, "user-2", "es", "en", "tres", "three").unwrap();
+
+        assert_eq!(clear_translation_history(&repo, "user-1").unwrap(), 2);
+
+        assert!(list_translation_history(&repo, "user-1").unwrap().is_empty());
+        assert_eq!(list_translation_history(&repo, "user-2").unwrap().len(), 1);
+    }
+
+    /// The anonymous case is a no-op returning 0, not an error — mirroring the
+    /// read and the write. Clearing without an account cannot touch anyone's
+    /// rows.
+    ///
+    /// The two literal rows are the point of this test, not decoration. Without
+    /// the `cache_owner` guard, `""` and `"   "` become the owner and the delete
+    /// is scoped on them — and `""` matches nothing while `"   "` matches only
+    /// itself, so a test asserting `0` would pass either way and prove nothing.
+    /// Asserting those rows SURVIVE is what fails when the guard is removed.
+    #[test]
+    fn anonymous_clear_is_a_no_op_returning_zero() {
+        let repo = new_repository();
+        cache_translation(&repo, "user-2", "es", "en", "tres", "three").unwrap();
+
+        // Rows an unguarded delete would reach, written directly: `cache_translation`
+        // applies the guard itself, so it cannot plant them.
+        for literal_owner in ["", "   "] {
+            repo.connection
+                .execute(
+                    "INSERT INTO translation_cache
+                     (cache_key, user_id, source_language, target_language, original_text, translated_text, created_at)
+                     VALUES (?1, ?2, 'es', 'en', 'leak', 'leak', '2024-01-01T00:00:00Z')",
+                    params![format!("key-{literal_owner}"), literal_owner],
+                )
+                .unwrap();
+        }
+
+        assert_eq!(clear_translation_history(&repo, "").unwrap(), 0);
+        assert_eq!(clear_translation_history(&repo, "   ").unwrap(), 0);
+
+        assert_eq!(list_translation_history(&repo, "user-2").unwrap().len(), 1);
+
+        let survivors: i64 = repo
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM translation_cache WHERE user_id IN ('', '   ')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(survivors, 2);
     }
 
     /// The migration really reached the database `new_repository()` builds.
