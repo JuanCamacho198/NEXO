@@ -151,6 +151,18 @@ interface BookDao {
         filePath: String,
     )
 
+    /**
+     * Cover-only write used by the lazy cover backfill. Deliberately does not
+     * touch `updated_at`, so healing a legacy cover does not reorder the shelf
+     * or queue a spurious sync.
+     */
+    @Query("UPDATE books SET cover_path = :coverPath WHERE id = :bookId AND user_id = :userId")
+    suspend fun updateCoverPath(
+        bookId: String,
+        userId: String,
+        coverPath: String,
+    )
+
     @Transaction
     suspend fun rewriteFilePaths(
         userId: String,

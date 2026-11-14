@@ -87,6 +87,10 @@ class ZipEpubParserService : EpubParserService {
         val manifestById = mutableMapOf<String, String>()
         val allElements = document.getElementsByTagName("*")
         var coverItemId: String? = null
+        var coverItemHref: String? = null
+        var coverImageHref: String? = null
+        val guideCoverHrefs = mutableListOf<String>()
+        val imageHrefs = mutableListOf<String>()
         val spineItemRefs = mutableListOf<String>()
 
         for (index in 0 until allElements.length) {
@@ -95,8 +99,24 @@ class ZipEpubParserService : EpubParserService {
 
             when (node.localTagName()) {
                 "meta" -> {
+                    // EPUB2: <meta name="cover" content="cover-id"/>; content may
+                    // also carry the href directly.
                     if (node.getAttribute("name") == "cover") {
-                        coverItemId = node.getAttribute("content").takeIf { it.isNotBlank() }
+                        val content = node.getAttribute("content").takeIf { it.isNotBlank() }
+                        if (content != null) {
+                            coverItemId = content
+                            if (content.contains('/') || content.contains('.')) {
+                                coverItemHref = content
+                            }
+                        }
+                    }
+                    // EPUB3: <meta property="cover"> (rare legacy variant).
+                    if (node.getAttribute("property") == "cover" && coverItemId == null) {
+                        val content = node.textContent?.trim()?.takeIf { it.isNotBlank() }
+                        coverItemId = content
+                        if (content != null && (content.contains('/') || content.contains('.'))) {
+                            coverItemHref = content
+                        }
                     }
                 }
                 "item" -> {
@@ -104,6 +124,20 @@ class ZipEpubParserService : EpubParserService {
                     val href = node.getAttribute("href").takeIf { it.isNotBlank() }
                     if (id != null && href != null) {
                         manifestById[id] = href
+                    }
+                    // EPUB3 cover declared via item properties.
+                    if (node.getAttribute("properties").splitWhitespace().contains("cover-image")) {
+                        if (coverImageHref == null) coverImageHref = href
+                    }
+                    val mediaType = node.getAttribute("media-type")
+                    if (href != null && mediaType.startsWith("image/")) {
+                        imageHrefs.add(href)
+                    }
+                }
+                "reference" -> {
+                    val type = node.getAttribute("type")
+                    if (type.equals("cover", ignoreCase = true)) {
+                        node.getAttribute("href").takeIf { it.isNotBlank() }?.let(guideCoverHrefs::add)
                     }
                 }
                 "itemref" -> {
@@ -113,6 +147,16 @@ class ZipEpubParserService : EpubParserService {
             }
         }
 
+        // Ordered chain mirroring desktop's `resolve_cover`:
+        // EPUB3 cover-image → EPUB2 meta name=cover (id, then href fallback) →
+        // guide reference type=cover → heuristic (named image, else first image).
+        val coverHref =
+            coverImageHref
+                ?: coverItemId?.let(manifestById::get)
+                ?: coverItemHref
+                ?: guideCoverHrefs.firstOrNull()
+                ?: heuristicCoverHref(imageHrefs)
+
         return ParsedPackageDocument(
             title = title,
             author = author,
@@ -121,12 +165,29 @@ class ZipEpubParserService : EpubParserService {
             publisher = publisher,
             subjects = subjects,
             publishedDate = publishedDate,
-            coverHref = coverItemId?.let(manifestById::get),
+            coverHref = coverHref,
             spineItemCount = spineItemRefs.size,
             spineItemRefs = spineItemRefs,
             manifestById = manifestById,
         )
     }
+
+    /**
+     * Desktop's cover heuristic: prefer an image whose name hints at a cover
+     * (`cover`/`portada`/`cubierta`), else the FIRST image in the manifest.
+     * Returns null when the book ships no image at all — a cover-less book must
+     * stay blank rather than be given an arbitrary image.
+     */
+    private fun heuristicCoverHref(imageHrefs: List<String>): String? {
+        val named =
+            imageHrefs.firstOrNull { href ->
+                val lower = href.lowercase()
+                lower.contains("cover") || lower.contains("portada") || lower.contains("cubierta")
+            }
+        return named ?: imageHrefs.firstOrNull()
+    }
+
+    private fun String.splitWhitespace(): List<String> = trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
 
     private fun readZipEntryBytes(
         zipBytes: ByteArray,

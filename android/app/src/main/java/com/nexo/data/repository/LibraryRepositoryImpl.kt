@@ -22,11 +22,15 @@ import com.nexo.domain.model.ReadingProgress
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.sync.OutboxDrainScheduler
 import com.nexo.domain.sync.SyncSettleGate
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.cover
@@ -64,6 +68,19 @@ class LibraryRepositoryImpl(
      */
     private val drainScheduler: OutboxDrainScheduler? = null,
 ) : LibraryRepository {
+    /**
+     * Books whose cover backfill has already been attempted this process, so a
+     * book with no recoverable cover is not re-opened on every library emission.
+     */
+    private val coverBackfillAttempted = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+
+    /**
+     * Repo-scoped, IO-bound scope for the lazy cover backfill. Independent of
+     * any single collector: if the library screen is left mid-heal, the heal
+     * still completes and persists.
+     */
+    private val backfillScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun observeLibrary(userId: String): Flow<List<Book>> =
         combine(bookDao.observeAllBooks(userId), readingProgressDao.observeAll(userId)) { books, progresses ->
             val progressById = progresses.associateBy { it.bookId }
@@ -71,7 +88,7 @@ class LibraryRepositoryImpl(
                 val canonical = progressById[entity.id]
                 if (canonical != null) entity.toDomainWithCanonical(canonical) else entity.toDomain()
             }
-        }
+        }.onEach { books -> scheduleCoverBackfill(books, userId) }
 
     override fun observeBookById(
         bookId: String,
@@ -358,6 +375,65 @@ class LibraryRepositoryImpl(
             // defers books without a remote file to the Drive push.
             queueBookOutboxEntry(bookId, userId, SyncOperation.UPDATE)
         }
+
+    /**
+     * Lazy cover backfill (T7). Covers resolve at import time, so a book
+     * imported before the extractor learned desktop's steps 3–4 keeps an empty
+     * `cover_path` forever. When the library is actually read, any EPUB book
+     * whose cover is missing is healed once, in the background: the byte is
+     * re-extracted, cached to disk, and the row's `cover_path` is updated.
+     *
+     * Deliberately NOT a bulk migration — that would open every EPUB in
+     * `oebus` on upgrade, be slow and irreversible, and repair books the reader
+     * never opens. This heals only what the library surfaces, is idempotent
+     * (a book with a valid cover is skipped), and remembers attempts in memory
+     * so a cover-less book is not re-opened on every emission.
+     */
+    private fun scheduleCoverBackfill(
+        books: List<Book>,
+        userId: String,
+    ) {
+        val candidates =
+            books.filter { book ->
+                book.format == EPUB_FORMAT &&
+                    book.coverPath.isNullOrBlank() &&
+                    coverBackfillAttempted.add(book.id)
+            }
+        if (candidates.isEmpty()) return
+
+        for (book in candidates) {
+            backfillScope.launch {
+                runCatching { backfillCover(book, userId) }
+            }
+        }
+    }
+
+    private suspend fun backfillCover(
+        book: Book,
+        userId: String,
+    ) {
+        val bytes =
+            extractReadiumCover(book.filePath)
+                ?: extractOpfCoverBytes(book.filePath)
+                ?: return
+        val coverPath = persistCoverNonBlocking(book.id, bytes) ?: return
+        bookDao.updateCoverPath(bookId = book.id, userId = userId, coverPath = coverPath)
+    }
+
+    /**
+     * Re-runs the EPUB OPF cover chain ([ZipEpubParserService] — steps 1–4,
+     * mirroring desktop) against a stored EPUB file, returning the bytes of
+     * whatever image the chain resolves. Null when the book truly has no image,
+     * so a cover-less book stays blank instead of receiving a wrong image.
+     */
+    private suspend fun extractOpfCoverBytes(filePath: String): ByteArray? =
+        runCatching {
+            val file = File(filePath)
+            if (!file.exists()) return@runCatching null
+            file.inputStream().use { stream ->
+                epubParserService.extractMetadata(stream).getOrNull()?.coverImageBytes
+            }
+        }.getOrNull()
 
     /**
      * Attempts to extract cover image bytes using Readium's [Publication.cover]

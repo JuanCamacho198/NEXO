@@ -577,6 +577,17 @@ class LibraryRepositoryImplTest {
             filePath: String,
         ) = Unit
 
+        override suspend fun updateCoverPath(
+            bookId: String,
+            userId: String,
+            coverPath: String,
+        ) {
+            booksState.value =
+                booksState.value.map { book ->
+                    if (book.id == bookId && book.userId == userId) book.copy(coverPath = coverPath) else book
+                }
+        }
+
         private val booksState = MutableStateFlow<List<BookEntity>>(emptyList())
         var lastUpserted: BookEntity? = null
 
