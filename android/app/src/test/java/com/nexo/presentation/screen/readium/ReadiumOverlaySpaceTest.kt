@@ -327,4 +327,118 @@ class ReadiumOverlaySpaceTest {
         assertEquals(688, converted.right)
         assertEquals(528, converted.top)
     }
+
+    /**
+     * A minimal navigator-like fragment: inflates a scroll container at 233px
+     * holding a WebView, exposing them so the test can measure the real chain.
+     */
+    class NavigatorLikeFragment : androidx.fragment.app.Fragment() {
+        lateinit var scrollContainer: android.widget.FrameLayout
+        lateinit var webView: android.webkit.WebView
+
+        override fun onCreateView(
+            inflater: android.view.LayoutInflater,
+            container: android.view.ViewGroup?,
+            savedInstanceState: android.os.Bundle?,
+        ): android.view.View {
+            // 233px of Readium page padding above the WebView.
+            scrollContainer = android.widget.FrameLayout(requireContext()).apply { y = 233f }
+            webView = android.webkit.WebView(requireContext())
+            scrollContainer.addView(webView)
+            return scrollContainer
+        }
+    }
+
+    /**
+     * **The frame derivation: the conversion must measure from the box the
+     * overlay actually occupies, not from the window.**
+     *
+     * Three frames, none of them named by Compose, measured live on the
+     * `dev_clean` AVD (the ancestor chain from the WebView upward):
+     *
+     * ```
+     * R2WebView@361              <- Readium's CSS viewport (233 page padding + 128 inset)
+     * CoordinatorLayout@128
+     * FragmentContainerView@128  <- the box the overlay occupies (place()'s origin)
+     * ViewFactoryHolder@128
+     * AndroidViewsHandler@0      <- LocalView / the window root
+     * DecorView@0
+     * ```
+     *
+     * The conversion must be `webView@361 - fragmentRoot@128 = 233` — Readium's
+     * own page padding only. Using the window origin instead (`361 - 0 = 361`)
+     * adds the reader's 128px inset a second time and lands every surface 128px
+     * low, which is the defect that shipped.
+     *
+     * The chain here is built from real Android views with real offsets, so the
+     * test fails if the origin resolves to the wrong frame.
+     */
+    @Test
+    fun `the translation measures from the fragment host, not the window`() {
+        val activity =
+            org.robolectric.Robolectric
+                .buildActivity(androidx.fragment.app.FragmentActivity::class.java)
+                .setup()
+                .get()
+
+        // The window root: the view `LocalView.current` resolves to, at Y 0.
+        val windowRoot = android.widget.FrameLayout(activity)
+
+        // The reader's content Box, at window Y 128 (the cutout inset).
+        val contentBox = android.widget.FrameLayout(activity).apply { y = 128f }
+        windowRoot.addView(contentBox)
+
+        // The navigator's fragment host, a direct child of that content box.
+        val fragmentContainer = androidx.fragment.app.FragmentContainerView(activity)
+        fragmentContainer.id = 4242
+        contentBox.addView(fragmentContainer)
+        activity.setContentView(windowRoot)
+
+        activity.supportFragmentManager
+            .beginTransaction()
+            .add(4242, NavigatorLikeFragment(), "navigator")
+            .commitNow()
+
+        val fragment = activity.supportFragmentManager.findFragmentById(4242) as NavigatorLikeFragment
+        val webView = fragment.webView
+
+        // Force a layout pass so the offsets reach `getLocationInWindow`.
+        windowRoot.measure(
+            android.view.View.MeasureSpec
+                .makeMeasureSpec(1080, android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec
+                .makeMeasureSpec(2400, android.view.View.MeasureSpec.EXACTLY),
+        )
+        windowRoot.layout(0, 0, 1080, 2400)
+
+        val translation = ReadiumOverlaySpace.translation(webView, windowRoot)
+
+        // The overlay's frame is the fragment host: 128 + 233 = 361 window, minus
+        // the host's own 128 => 233 of page padding only.
+        assertEquals(
+            "the translation must exclude the reader inset (the fragment host's origin)",
+            233,
+            translation.y,
+        )
+
+        // And the host is discovered by walking up the WebView's ancestry, so no
+        // plumbing is needed.
+        assertEquals(
+            "the fragment host must be discovered from the WebView",
+            fragmentContainer,
+            ReadiumOverlaySpace.fragmentRoot(webView),
+        )
+    }
+
+    /**
+     * When the WebView has no fragment host in its ancestry (the PDF path, or a
+     * rect that did not come from a navigator), the supplied fallback resolves
+     * the frame instead of crashing.
+     */
+    @Test
+    fun `the fragment root is absent for a detached WebView`() {
+        val context = org.robolectric.RuntimeEnvironment.getApplication()
+        val webView = android.webkit.WebView(context)
+        assertEquals(null, ReadiumOverlaySpace.fragmentRoot(webView))
+    }
 }

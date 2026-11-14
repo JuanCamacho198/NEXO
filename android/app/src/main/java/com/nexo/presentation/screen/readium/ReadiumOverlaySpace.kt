@@ -18,67 +18,83 @@ import androidx.core.view.ViewCompat
  * `V()` multiplies every edge by `devicePixelRatio` (see
  * [ReadiumSelectionRectRepair]).
  *
- * The overlay places in the **Compose content box of the reader**: the full-size
- * `Box` in `ReaderScreenContentHost` that wraps the navigator fragment and the
- * selection overlay. That box is already inset by the reader chrome's
- * `contentPadding`, so ITS origin is not the WebView's origin either — the
- * status bar pushes the WebView down inside it.
+ * The overlay places in the **box the overlay actually occupies**: the
+ * navigator fragment's root view (`FragmentContainerView`), which sits inside
+ * the reader chrome's `contentPadding`. `Layout.place()` positions the surface
+ * relative to that box, so the rect must be translated from the WebView's
+ * origin into it.
  *
- * The gap between the two origins is a single vector. It is **not** a constant:
- * it depends on the window insets, the display cutout, the reader mode
- * (reflowable scroll vs paginated, which changes Readium's own `paddingTop`),
- * and the orientation. Measured on the `dev_clean` AVD it is 128px in scroll
- * mode with a cutout, 233px in paginated mode with a cutout, and 0 with no
- * cutout — which is exactly why five rounds of magic offsets produced five
- * different numbers.
+ * ## The three frames, none of them named by Compose
  *
- * ## Why the offset is derived, never hard-coded
+ * 1. **The WebView's CSS viewport** — where the text lives; Readium measures here.
+ * 2. **The window** — what `LocalView.current` and `getLocationInWindow` report.
+ * 3. **The box the overlay occupies** — the fragment root, `place()`'s origin.
  *
- * The offset is the vector from the WebView's CSS-viewport origin to the origin
- * of the node that will `place()` the overlay, and both are real, measurable
- * positions:
+ * The gap between (1) and (3) is a single vector, and it is **not** a constant:
+ * it depends only on Readium's own page padding (`paddingTop`, which changes
+ * with reader mode) because both (1) and (3) already include the same reader
+ * inset. Measured on the `dev_clean` AVD the fragment root sits at window 128
+ * (the cutout inset) and the WebView at 256 in scroll mode / 361 in paginated
+ * mode — so the translation is 128 or 233, and 0 with no cutout.
+ *
+ * ## Why the offset is derived, never hard-coded — and never from the window
+ *
+ * The offset is the difference between two live, measurable origins:
  *
  * ```
- * offset = webView.getLocationInWindow() - placingNode.positionInWindow()
+ * offset = webView.getLocationInWindow() - fragmentRoot.getLocationInWindow()
  * ```
  *
- * **Both terms matter, and the second one is easy to get wrong.** The WebView's
- * window origin already contains the inset the reader's Scaffold applied (and,
- * in paginated mode, Readium's own page padding on top). The raw JS rect is
- * measured from that same WebView viewport, so it is *already past* the inset —
- * which means an offset that stops at the window origin adds the inset a
- * second time and pushes every surface down by exactly that inset. Measured on
- * the `dev_clean` AVD: 128px too low, matching the cutout.
- *
- * Subtracting the placing node's own window origin removes that double count
- * without naming the inset anywhere. It stays correct for a cutout-less phone,
- * a rotated screen, and any reader mode, because every input is read from the
- * live hierarchy rather than written down.
+ * **Both terms matter, and the second one is easy to get wrong.** Using the
+ * `LocalView` window root (or the window origin) instead of the fragment root
+ * adds the reader inset to the translation a second time and pushes every
+ * surface down by exactly that inset — measured 128px on the `dev_clean` AVD,
+ * which is the defect that shipped. The fragment root is found by walking UP
+ * from the WebView to the `FragmentContainerView` ancestor; it is read from the
+ * live hierarchy on every conversion, so the same code is correct for a
+ * cutout-less phone, a rotated screen, and any reader mode.
  */
 internal object ReadiumOverlaySpace {
     /**
-     * Returns the vector that maps a Readium-space coordinate into the space a
-     * Compose `Layout` with the given placing origin positions its child in.
+     * Returns the vector that maps a Readium-space coordinate into the box the
+     * overlay is placed in (the navigator fragment's root view).
      *
      * @param webView the navigator's `WebView`, whose viewport Readium measures in
-     * @param contentBox a view used only to resolve the window frame for
-     *   [webView] when no placing origin is supplied
-     * @param placingOriginY window-space Y of the origin `place()` measures
-     *   from; 0 when that origin is the window origin
+     * @param fallback the view used to resolve the frame when the fragment root
+     *   cannot be found in [webView]'s ancestry (kept for callers whose rect is
+     *   already in the overlay's space; the conversion is then skipped anyway)
      */
     internal fun translation(
         webView: View,
-        contentBox: View,
-        placingOriginY: Int = 0,
+        fallback: View,
     ): OffsetPx {
         val webViewLoc = IntArray(2)
         webView.getLocationInWindow(webViewLoc)
-        val contentLoc = IntArray(2)
-        contentBox.getLocationInWindow(contentLoc)
+        val origin = fragmentRoot(webView) ?: fallback
+        val originLoc = IntArray(2)
+        origin.getLocationInWindow(originLoc)
         return OffsetPx(
-            x = webViewLoc[0] - contentLoc[0],
-            y = webViewLoc[1] - contentLoc[1] - placingOriginY,
+            x = webViewLoc[0] - originLoc[0],
+            y = webViewLoc[1] - originLoc[1],
         )
+    }
+
+    /**
+     * The box the overlay occupies: the navigator fragment's root view.
+     *
+     * Found by walking up from the WebView to the first `FragmentContainerView`
+     * ancestor. That view is an `AndroidView` in the Compose tree, placed in the
+     * same padded content box as the overlay, so its window origin equals the
+     * origin `Layout.place()` measures from. `null` when no fragment host exists
+     * (the PDF path, or a rect that did not come from a navigator).
+     */
+    internal fun fragmentRoot(webView: View): View? {
+        var node: View? = webView.parent as? View
+        while (node != null) {
+            if (node is androidx.fragment.app.FragmentContainerView) return node
+            node = node.parent as? View
+        }
+        return null
     }
 
     /**

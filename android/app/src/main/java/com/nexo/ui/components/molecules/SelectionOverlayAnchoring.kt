@@ -2,15 +2,8 @@ package com.nexo.ui.components.molecules
 
 import android.graphics.Rect
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
@@ -54,34 +47,14 @@ value class SelectionOverlaySpace private constructor(
         internal fun of(
             rect: Rect,
             webView: android.view.View?,
-            contentBox: android.view.View,
-        ): SelectionOverlaySpace = of(rect, webView, contentBox, 0)
-
-        /**
-         * Converts [rect] into the space a Compose `Layout` node places in.
-         *
-         * `Layout.place()` positions the child relative to the Box the overlay
-         * lives in, and that Box is inset by the reader chrome — its origin is
-         * NOT the window origin (measured live: 128px on the `dev_clean` AVD,
-         * the status bar / cutout inset).
-         *
-         * The raw JS rect is measured from the WebView's CSS viewport, which is
-         * inset by that same amount and is therefore already past it. Converting
-         * the rect into window space and handing it to `place()` counts the inset
-         * twice; [placingOriginY] removes it. The value comes from the live
-         * hierarchy at the call site, never from a constant.
-         *
-         * @param placingOriginY window-space Y of the origin `place()` measures
-         *   from (0 when the node sits at the window origin)
-         */
-        internal fun of(
-            rect: Rect,
-            webView: android.view.View?,
-            contentBox: android.view.View,
-            placingOriginY: Int,
+            fallbackOrigin: android.view.View,
         ): SelectionOverlaySpace {
             val view = webView ?: return SelectionOverlaySpace(rect)
-            val translation = ReadiumOverlaySpace.translation(view, contentBox, placingOriginY)
+            // The conversion resolves the overlay's frame from the navigator
+            // fragment root found in the WebView's ancestry; `fallbackOrigin` is
+            // only used when that cannot be found. See
+            // [com.nexo.presentation.screen.readium.ReadiumOverlaySpace.translation].
+            val translation = ReadiumOverlaySpace.translation(view, fallbackOrigin)
             val converted =
                 ReadiumOverlaySpace.toOverlayRect(
                     android.graphics.RectF(rect.left.toFloat(), rect.top.toFloat(), rect.right.toFloat(), rect.bottom.toFloat()),
@@ -196,19 +169,21 @@ fun computeAnchor(
  *
  * ## Coordinate space
  *
- * `place()` positions the child in the coordinates reported by the parent
- * layout node, which Compose derives from the window. The conversion in
- * [SelectionOverlaySpace.of] derives its offset from the same frame
- * (`View.getLocationInWindow` on both the WebView and this layout's own view),
- * so the two always agree. The VIEWPORT must agree too: `LocalView.current
- * .height` is the whole window, and using it here made the rule believe the
- * surface fit where it did not. The layout's own constraints are the content
- * box and are used instead when they are bounded.
+ * `place()` positions the child in the coordinates of the box this layout was
+ * placed into. The conversion in [SelectionOverlaySpace.of] resolves that same
+ * box — the navigator fragment's root view — from the WebView's ancestry (see
+ * [com.nexo.presentation.screen.readium.ReadiumOverlaySpace]), so the offset the
+ * rule consumes and the origin `place()` measures from always agree. Using the
+ * window origin here instead is exactly the double-count that landed every
+ * surface 128px low: the fragment root sits inside the reader chrome's
+ * `contentPadding`. The VIEWPORT must agree too: `LocalView.current.height` is
+ * the whole window, and using it here made the rule believe the surface fit
+ * where it did not. The layout's own constraints are the content box and are
+ * used instead when they are bounded.
  *
  * @param selectionRect the selection in **Readium's space**, converted here
  * @param webView the navigator's WebView — the origin of [selectionRect]
  */
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AnchoredOverlayBox(
     selectionRect: Rect,
@@ -216,37 +191,17 @@ fun AnchoredOverlayBox(
     viewportWidth: Int,
     viewportHeight: Int,
     gapDp: Int = 8,
-    onPlacingOriginMeasured: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val contentBox = LocalView.current
-    // `Layout.place()` measures from the parent Box the overlay is placed into,
-    // NOT from the window origin: the reader's Scaffold insets its content by
-    // the status bar / cutout. Measured live on the dev_clean AVD the reader
-    // inset is 128px, recovered as `childWinTop - anchor.y`.
-    //
-    // It is read from the PLACED CHILD rather than the Layout node, because the
-    // node is zero-size and reports `boundsInWindow() == 0,0` — its own bounds
-    // carry no information (verified on device). The derived value is refreshed
-    // every pass from the child's own reported position, so it is always current
-    // and a settled selection never moves.
-    var readerInsetY by remember { mutableStateOf(0) }
-    var lastPlacedChildWinTop by remember { mutableStateOf<Int?>(null) }
+    // Only a fallback: the conversion resolves the overlay's real frame (the
+    // navigator fragment root) from the WebView itself.
+    val fallbackOrigin = LocalView.current
 
     Layout(
         modifier = modifier,
-        content = {
-            androidx.compose.foundation.layout.Box(
-                modifier =
-                    Modifier.onGloballyPositioned { coords ->
-                        lastPlacedChildWinTop = coords.boundsInWindow().top.toInt()
-                    },
-            ) {
-                content()
-            }
-        },
+        content = content,
     ) { measurables, constraints ->
         // Measure the surface with the SAME constraints the parent offered, so
         // the size used for placement is the size that will actually be drawn.
@@ -262,7 +217,7 @@ fun AnchoredOverlayBox(
         val localViewportWidth = constraints.maxWidth.takeIf { it != Constraints.Infinity } ?: viewportWidth
         val localViewportHeight = constraints.maxHeight.takeIf { it != Constraints.Infinity } ?: viewportHeight
 
-        val space = SelectionOverlaySpace.of(selectionRect, webView, contentBox, readerInsetY)
+        val space = SelectionOverlaySpace.of(selectionRect, webView, fallbackOrigin)
         val anchor =
             computeAnchor(
                 space = space,
@@ -273,14 +228,6 @@ fun AnchoredOverlayBox(
                 gapDp = gapDp,
                 density = density,
             )
-        // Recover the origin `place()` measures from, from the placed child
-        // itself: the child lands at `anchor + origin`, so the origin is the
-        // difference. Recorded for the NEXT pass; a settled selection is stable
-        // because the surface's own size drives the anchor and does not change.
-        lastPlacedChildWinTop?.let { measured ->
-            readerInsetY = measured - anchor.y
-            onPlacingOriginMeasured(readerInsetY)
-        }
 
         // The overlay root is a full-size Box, so the layout occupies no space
         // of its own and the child is positioned freely by the anchor.

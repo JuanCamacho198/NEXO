@@ -10,10 +10,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -89,23 +86,18 @@ fun SelectionOverlay(
     if (anyMenuVisible) {
         Box(modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismissContextMenu() })
     }
-    // The origin `place()` measures from, recovered once per composition by
-    // whichever surface is currently placed (see [AnchoredOverlayBox]). Every
-    // surface in this orchestrator shares it, so the popover — the one surface
-    // that positions itself — cannot drift into a different space.
-    var placementOriginY by remember { mutableStateOf(0) }
     if (selectionState is ReaderSelectionState.New && !showTagInput && !showDefinitionInput && !showColorPickerPopover && !showTranslationPanel && !showDefinitionPanel) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, onPlacingOriginMeasured = { placementOriginY = it }, modifier = modifier) {
+        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
             TextSelectionMenu(selectedColor = activeHighlightColor, onColorSelected = onShowColorPickerPopover, onCopy = onCopy, onDictionary = onDictionary, onDefine = onDefine, onTranslate = onTranslate, onShare = onShare)
         }
     }
     if (selectionState is ReaderSelectionState.Existing && !showTagInput && !showDefinitionInput && !showColorPickerPopover && !showTranslationPanel && !showDefinitionPanel) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, onPlacingOriginMeasured = { placementOriginY = it }, modifier = modifier) {
+        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
             FloatingContextMenu(selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex, onColorSelected = onShowColorPickerPopover, onCopy = onCopy, onDefine = onDefine, onTranslate = onTranslate, onAddTag = onAddTag, onAnnotate = onAnnotate, onShare = onShare, onDelete = onDelete)
         }
     }
     if (showTagInput) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, onPlacingOriginMeasured = { placementOriginY = it }, modifier = modifier) {
+        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
             AnchoredTagInput(tag = activeTagText, suggestions = tagSuggestions, onTagChange = onTagTextChanged, onSuggestionClick = { tag ->
                 onTagTextChanged(tag)
                 onSaveTag()
@@ -113,12 +105,12 @@ fun SelectionOverlay(
         }
     }
     if (showDefinitionInput) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, onPlacingOriginMeasured = { placementOriginY = it }, modifier = modifier) {
+        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
             AnchoredDefinitionInput(word = selectedText ?: "", definition = activeDefinitionText, onDefinitionChange = onDefinitionTextChanged, onSave = onSaveDefinition, onDismiss = onDismissDefinitionInput)
         }
     }
     if (showTranslationPanel) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, onPlacingOriginMeasured = { placementOriginY = it }, modifier = modifier) {
+        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
             AnchoredTranslationPanel(
                 sourceWord = selectedText ?: "",
                 state = translationPanelState,
@@ -129,7 +121,7 @@ fun SelectionOverlay(
         }
     }
     if (showDefinitionPanel) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, onPlacingOriginMeasured = { placementOriginY = it }, modifier = modifier) {
+        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
             AnchoredDefinitionPanel(
                 sourceWord = definitionWord ?: selectedText ?: "",
                 state = definitionPanelState,
@@ -144,8 +136,9 @@ fun SelectionOverlay(
         // The popover is NOT an `AnchoredOverlayBox` — it offsets itself — so it
         // runs the SAME conversion explicitly rather than being left behind in
         // Readium's space. It is the one surface that must remember to convert;
-        // the test suite pins it so a future third producer cannot forget.
-        val placement = rememberOverlayPlacement(selectionRect, selectionSource, placementOriginY)
+        // `SelectionOverlayPlacementTest` pins the popover's conversion to the
+        // shared one, so a future third producer that diverges fails there.
+        val placement = rememberOverlayPlacement(selectionRect, selectionSource)
         val density = LocalDensity.current
         val anchorCenterX = placement.left + (placement.right - placement.left) / 2
         val anchorBelowY = placement.bottom + with(density) { 12.dp.toPx() }.toInt()
@@ -190,18 +183,40 @@ private fun rememberSelectionSource(): android.view.View? {
  * `Modifier.offset` instead of the shared anchor. Every other surface converts
  * inside `AnchoredOverlayBox`; this exists so the popover cannot be the one
  * place the conversion is forgotten.
+ *
+ * Pure and non-composable on purpose: [overlayPlacementRect] is the arithmetic,
+ * and this only adds `remember`. `SelectionOverlayPlacementTest` pins the
+ * arithmetic to the same [SelectionOverlaySpace] the shared path uses, so the
+ * two cannot drift apart.
  */
 @Composable
 private fun rememberOverlayPlacement(
     rect: Rect,
     webView: android.view.View?,
-    placingOriginY: Int,
 ): Rect {
-    val contentBox = LocalView.current
-    return remember(rect, webView, contentBox, placingOriginY) {
-        SelectionOverlaySpace.of(rect, webView, contentBox, placingOriginY).rect
+    val fallbackOrigin = LocalView.current
+    return remember(rect, webView, fallbackOrigin) {
+        overlayPlacementRect(rect, webView, fallbackOrigin)
     }
 }
+
+/**
+ * The popover's conversion, named so it can be tested without composition.
+ *
+ * It delegates to [SelectionOverlaySpace.of] — the SAME entry point
+ * [AnchoredOverlayBox] uses — so the popover's placement is the shared
+ * conversion rather than a second, parallel implementation. The returned `rect`
+ * is in the overlay's space; [SelectionOverlay] derives `anchorCenterX` /
+ * `anchorBelowY` from it.
+ *
+ * `null` [webView] means the rect is already in the overlay's space (the PDF
+ * path), and [SelectionOverlaySpace.of] treats it as "no conversion needed".
+ */
+internal fun overlayPlacementRect(
+    rect: Rect,
+    webView: android.view.View?,
+    fallbackOrigin: android.view.View,
+): Rect = SelectionOverlaySpace.of(rect, webView, fallbackOrigin).rect
 
 private enum class SelectionSurface { TEXT_MENU, CONTEXT_MENU, TAG_INPUT, DEFINITION_INPUT, COLOR_PICKER }
 
