@@ -28,9 +28,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.presentation.theme.NexoColors
 import com.nexo.presentation.theme.NexoDimens
 import com.nexo.presentation.theme.NexoTheme
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoAvatar
 import com.nexo.ui.components.atoms.NexoIconButton
 import com.nexo.ui.icons.NexoIcons
@@ -134,11 +134,12 @@ fun NexoTopAppBar(
     unreadNotificationsCount: Int = 0,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
+    val colors = nexoColors
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
-                .background(NexoColors.header)
+                .background(colors.header)
                 .then(
                     when (variant) {
                         TopLevelVariant.Home ->
@@ -170,14 +171,14 @@ fun NexoTopAppBar(
                                 Modifier
                                     .size(BarAvatarSize)
                                     .clip(CircleShape)
-                                    .background(NexoColors.surfaceVariant),
+                                    .background(colors.surfaceVariant),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = NexoIcons.Person,
                                 contentDescription = avatarContentDescription,
                                 modifier = Modifier.size(20.dp),
-                                tint = NexoColors.textSecondary,
+                                tint = colors.textSecondary,
                             )
                         }
                     } else {
@@ -223,6 +224,7 @@ private fun TopBarTitle(
     subtitle: String?,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(NexoDimens.topBarTitleGap),
@@ -231,7 +233,7 @@ private fun TopBarTitle(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -239,7 +241,7 @@ private fun TopBarTitle(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = NexoColors.textSecondary,
+                color = colors.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -256,6 +258,7 @@ private fun TopBarActions(
     unreadNotificationsCount: Int,
     actions: @Composable RowScope.() -> Unit,
 ) {
+    val colors = nexoColors
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(NexoDimens.topBarActionGap),
@@ -267,7 +270,7 @@ private fun TopBarActions(
                 onClick = onSearchClick,
                 size = BarActionSize,
                 iconSize = 20.dp,
-                containerColor = NexoColors.surface,
+                containerColor = colors.surface,
             )
         }
         if (streakDays > 0) {
@@ -285,7 +288,7 @@ private fun TopBarActions(
                         },
                     onClick = onNotificationsClick,
                     size = BarActionSize,
-                    containerColor = NexoColors.surface,
+                    containerColor = colors.surface,
                 )
                 if (unreadNotificationsCount > 0) {
                     Box(
@@ -320,13 +323,14 @@ private fun StreakBadge(
     days: Int,
     onClick: (() -> Unit)?,
 ) {
+    val colors = nexoColors
     val label = stringResource(R.string.home_streak_badge_content_description, days)
     Box(
         modifier =
             Modifier
                 .height(BarStreakTargetHeight)
                 .clip(CircleShape)
-                .background(NexoColors.surface)
+                .background(colors.surface)
                 .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
                 .semantics(mergeDescendants = true) { contentDescription = label }
                 .padding(horizontal = BarStreakHorizontalPadding),
@@ -339,14 +343,14 @@ private fun StreakBadge(
             Icon(
                 imageVector = NexoIcons.Flame,
                 contentDescription = null,
-                tint = NexoColors.streak,
+                tint = colors.streak,
                 modifier = Modifier.size(BarStreakIconSize),
             )
             Text(
                 text = days.toString(),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = NexoColors.textPrimary,
+                color = colors.textPrimary,
                 maxLines = 1,
             )
         }

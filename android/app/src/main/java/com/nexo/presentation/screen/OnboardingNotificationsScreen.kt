@@ -38,9 +38,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexo.R
-import com.nexo.presentation.theme.NexoColors
 import com.nexo.presentation.theme.NexoDimens
 import com.nexo.presentation.theme.NexoTheme
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.atoms.NexoDivider
@@ -155,6 +155,7 @@ fun OnboardingNotificationsScreen(
 
 @Composable
 private fun NotificationsHero() {
+    val colors = nexoColors
     Box(
         modifier =
             Modifier
@@ -168,7 +169,7 @@ private fun NotificationsHero() {
         Icon(
             imageVector = NexoIcons.Notifications,
             contentDescription = null,
-            tint = NexoColors.accentYellow,
+            tint = colors.accentYellow,
             modifier = Modifier.size(48.dp),
         )
     }

@@ -23,7 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoSkeletonBox
 
 /** Number of placeholder cards in the initial LOADING skeleton (2x3 grid). */
@@ -35,6 +35,7 @@ private const val SKELETON_CARD_COUNT = 6
  */
 @Composable
 fun DiscoverSkeletonState(modifier: Modifier = Modifier) {
+    val colors = nexoColors
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         modifier = modifier.fillMaxSize(),
@@ -56,13 +57,13 @@ fun DiscoverSkeletonState(modifier: Modifier = Modifier) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp,
-                    color = NexoColors.primary,
+                    color = colors.primary,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.discover_searching),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                 )
             }
         }

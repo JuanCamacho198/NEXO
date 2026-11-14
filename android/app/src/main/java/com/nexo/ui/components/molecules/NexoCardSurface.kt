@@ -14,9 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.presentation.theme.NexoColors
 import com.nexo.presentation.theme.NexoDimens
 import com.nexo.presentation.theme.NexoTheme
+import com.nexo.presentation.theme.nexoColors
 
 /**
  * The one card surface for NEXO.
@@ -46,13 +46,14 @@ fun NexoCardSurface(
     bordered: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val colors = nexoColors
     val shape = RoundedCornerShape(NexoDimens.cardCornerRadius)
     Column(
         modifier =
             modifier
                 .clip(shape)
-                .background(NexoColors.surface)
-                .then(if (bordered) Modifier.border(1.dp, NexoColors.borderSubtle, shape) else Modifier)
+                .background(colors.surface)
+                .then(if (bordered) Modifier.border(1.dp, colors.borderSubtle, shape) else Modifier)
                 .padding(contentPadding),
         content = content,
     )
@@ -62,12 +63,13 @@ fun NexoCardSurface(
 @Composable
 private fun NexoCardSurfaceDarkPreview() {
     NexoTheme(darkTheme = true) {
+        val colors = nexoColors
         NexoCardSurface(modifier = Modifier.padding(16.dp)) {
             Text(text = "La Odisea", style = MaterialTheme.typography.titleMedium)
             Text(
                 text = "Homero · 320 páginas",
                 style = MaterialTheme.typography.bodyMedium,
-                color = NexoColors.textSecondary,
+                color = colors.textSecondary,
             )
         }
     }
@@ -77,12 +79,13 @@ private fun NexoCardSurfaceDarkPreview() {
 @Composable
 private fun NexoCardSurfaceLightPreview() {
     NexoTheme(darkTheme = false) {
+        val colors = nexoColors
         NexoCardSurface(modifier = Modifier.padding(16.dp)) {
             Text(text = "La Odisea", style = MaterialTheme.typography.titleMedium)
             Text(
                 text = "Homero · 320 páginas",
                 style = MaterialTheme.typography.bodyMedium,
-                color = NexoColors.textSecondary,
+                color = colors.textSecondary,
             )
         }
     }

@@ -19,8 +19,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.presentation.theme.NexoColors
 import com.nexo.presentation.theme.NexoTheme
+import com.nexo.presentation.theme.nexoColors
 
 /** Horizontal inset inside a chip. Matches the `.pen` chip specimen. */
 private val ChipHorizontalPadding = 14.dp
@@ -44,7 +44,7 @@ private val ChipIconGap = 6.dp
  * and the majority of call sites agree on — a pill, 14dp × 8dp — and the
  * `primary` selection fill, so a selected chip means the same thing everywhere.
  *
- * [NexoColors.surface] is the resting fill and `primary` is the selected one;
+ * [nexoColors.surface] is the resting fill and `primary` is the selected one;
  * `secondaryContainer` is deliberately not accepted here because it belongs to
  * editable metadata, not to filters.
  *
@@ -68,9 +68,9 @@ fun NexoChip(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     contentDescription: String? = null,
-    containerColor: Color = if (selected) NexoColors.primary else NexoColors.surface,
-    iconTint: Color = if (selected) NexoColors.surface else NexoColors.primary,
-    labelColor: Color = if (selected) NexoColors.surface else NexoColors.textPrimary,
+    containerColor: Color = if (selected) nexoColors.primary else nexoColors.surface,
+    iconTint: Color = if (selected) nexoColors.surface else nexoColors.primary,
+    labelColor: Color = if (selected) nexoColors.surface else nexoColors.textPrimary,
 ) {
     Row(
         modifier =

@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.usecase.DownloadImportState
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.atoms.NexoDivider
@@ -57,11 +57,12 @@ fun ReadAccessSheet(
     onDenyConsent: () -> Unit = {},
     onDismiss: () -> Unit,
 ) {
+    val colors = nexoColors
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = NexoColors.surface,
+        containerColor = colors.surface,
     ) {
         ReadAccessContent(
             state = state,
@@ -136,6 +137,7 @@ internal fun ReadAccessContent(
     onDenyConsent: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     Column(
         modifier =
             modifier
@@ -147,12 +149,12 @@ internal fun ReadAccessContent(
             text = stringResource(R.string.read_access_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
         )
         Text(
             text = stringResource(R.string.read_access_subtitle),
             style = MaterialTheme.typography.bodySmall,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
         )
         NexoDivider()
         when (state) {
@@ -234,6 +236,7 @@ private fun ReadAccessDownloadCta(
     onDownloadInApp: () -> Unit,
     onCancelDownload: () -> Unit,
 ) {
+    val colors = nexoColors
     when (download) {
         is DownloadImportState.Idle ->
             NexoButton(
@@ -261,13 +264,13 @@ private fun ReadAccessDownloadCta(
             Text(
                 text = stringResource(R.string.discover_duplicate),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NexoColors.textSecondary,
+                color = colors.textSecondary,
             )
         is DownloadImportState.Failure -> {
             Text(
                 text = stringResource(R.string.discover_download_failed),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NexoColors.errorSoft,
+                color = colors.errorSoft,
             )
             NexoButton(
                 text = stringResource(R.string.discover_retry),
@@ -299,6 +302,7 @@ private fun ReadAccessMessage(
     body: String,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -309,12 +313,12 @@ private fun ReadAccessMessage(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
         )
         Text(
             text = body,
             style = MaterialTheme.typography.bodySmall,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
         )
     }
 }

@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 
 /**
  * App-generic loading placeholder: a rounded `bg_surface` block with an
@@ -39,6 +39,7 @@ fun NexoSkeletonBox(
     radius: Dp = 8.dp,
     shimmer: Boolean = true,
 ) {
+    val colors = nexoColors
     val alpha =
         if (shimmer) {
             val transition = rememberInfiniteTransition(label = "nexoSkeleton")
@@ -62,6 +63,6 @@ fun NexoSkeletonBox(
             modifier
                 .then(if (size != null) Modifier.size(size) else Modifier)
                 .clip(RoundedCornerShape(radius))
-                .background(NexoColors.surface.copy(alpha = alpha)),
+                .background(colors.surface.copy(alpha = alpha)),
     )
 }

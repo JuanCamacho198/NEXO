@@ -26,7 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.icons.NexoIcons
@@ -45,6 +45,7 @@ fun DiscoverEmptyState(
     legalEmpty: Boolean = false,
     sourceName: String? = null,
 ) {
+    val colors = nexoColors
     if (legalEmpty && sourceName != null) {
         DiscoverLegalEmptyState(
             query = query,
@@ -68,7 +69,7 @@ fun DiscoverEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        DiscoverIllustration(icon = NexoIcons.Search, tint = NexoColors.textSecondary)
+        DiscoverIllustration(icon = NexoIcons.Search, tint = colors.textSecondary)
         Spacer(modifier = Modifier.height(16.dp))
         DiscoverFeedbackTitle(stringResource(R.string.discover_empty_title))
         Spacer(modifier = Modifier.height(8.dp))
@@ -87,9 +88,10 @@ fun DiscoverErrorState(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     DiscoverFeedbackState(
         icon = NexoIcons.ErrorOutline,
-        iconTint = NexoColors.errorSoft,
+        iconTint = colors.errorSoft,
         title = stringResource(R.string.discover_error_title),
         body = stringResource(R.string.discover_error_body),
         onRetry = onRetry,
@@ -103,9 +105,10 @@ fun DiscoverOfflineState(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     DiscoverFeedbackState(
         icon = Icons.Rounded.Warning,
-        iconTint = NexoColors.accentYellow,
+        iconTint = colors.accentYellow,
         title = stringResource(R.string.discover_offline_title),
         body = stringResource(R.string.discover_offline_body),
         onRetry = onRetry,
@@ -151,12 +154,13 @@ private fun DiscoverIllustration(
     icon: ImageVector,
     tint: androidx.compose.ui.graphics.Color,
 ) {
+    val colors = nexoColors
     Box(
         modifier =
             Modifier
                 .size(120.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(NexoColors.surface),
+                .background(colors.surface),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -170,21 +174,23 @@ private fun DiscoverIllustration(
 
 @Composable
 private fun DiscoverFeedbackTitle(text: String) {
+    val colors = nexoColors
     Text(
         text = text,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
-        color = NexoColors.textPrimary,
+        color = colors.textPrimary,
         textAlign = TextAlign.Center,
     )
 }
 
 @Composable
 private fun DiscoverFeedbackBody(text: String) {
+    val colors = nexoColors
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
-        color = NexoColors.textSecondary,
+        color = colors.textSecondary,
         textAlign = TextAlign.Center,
     )
 }
@@ -201,6 +207,7 @@ private fun DiscoverLegalEmptyState(
     onSuggestionClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     val suggestions =
         listOf(
             stringResource(R.string.discover_suggestion_1),
@@ -215,7 +222,7 @@ private fun DiscoverLegalEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        DiscoverIllustration(icon = NexoIcons.Search, tint = NexoColors.textSecondary)
+        DiscoverIllustration(icon = NexoIcons.Search, tint = colors.textSecondary)
         Spacer(modifier = Modifier.height(16.dp))
         DiscoverFeedbackTitle(stringResource(R.string.discover_empty_legal_title))
         Spacer(modifier = Modifier.height(8.dp))

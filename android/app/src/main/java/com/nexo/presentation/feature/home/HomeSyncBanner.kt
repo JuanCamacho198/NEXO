@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.presentation.screen.HomeTags
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.presentation.theme.NexoDimens
 import com.nexo.ui.components.molecules.NexoCardSurface
 import com.nexo.ui.icons.NexoIcons
@@ -49,6 +49,7 @@ fun HomeSyncBanner(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     val contentDescription = stringResource(R.string.home_sync_banner_content_description)
     NexoCardSurface(
         modifier =
@@ -68,14 +69,14 @@ fun HomeSyncBanner(
                     Modifier
                         .size(SyncIconWrapSize)
                         .clip(CircleShape)
-                        .background(NexoColors.iconBackground),
+                        .background(colors.iconBackground),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = NexoIcons.CloudSync,
                     contentDescription = null,
                     modifier = Modifier.size(SyncIconSize),
-                    tint = NexoColors.accentYellow,
+                    tint = colors.accentYellow,
                 )
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -83,19 +84,19 @@ fun HomeSyncBanner(
                     text = stringResource(R.string.home_sync_banner_title),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = NexoColors.textPrimary,
+                    color = colors.textPrimary,
                 )
                 Text(
                     text = stringResource(R.string.home_sync_banner_subtitle),
                     style = MaterialTheme.typography.labelMedium,
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                 )
             }
             Icon(
                 imageVector = NexoIcons.ChevronRight,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
-                tint = NexoColors.textSecondary,
+                tint = colors.textSecondary,
             )
         }
     }

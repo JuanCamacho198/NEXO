@@ -36,17 +36,14 @@ import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.presentation.theme.NexoColors
 import com.nexo.presentation.theme.NexoDimens
 import com.nexo.presentation.theme.NexoTheme
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.icons.NexoIcons
 import kotlinx.coroutines.currentCoroutineContext
 
 /** Corner radius for the snackbar surface — the brand card radius. */
 private val SnackbarCornerRadius = RoundedCornerShape(NexoDimens.cardCornerRadius)
-
-/** Hairline brand border, matching the outline used on cards and panels. */
-private val SnackbarBorder = BorderStroke(1.dp, NexoColors.borderSubtle)
 
 /** Caps the surface width on tablets so a message keeps a readable line length. */
 private val SnackbarMaxWidth = 560.dp
@@ -115,6 +112,7 @@ internal fun SnackbarSurface(
             currentCoroutineContext()[MotionDurationScale.Key]?.scaleFactor ?: 1f
     }
     val startScale = NexoSnackbarMotion.enterStartScale(motionScale)
+    val colors = nexoColors
 
     Box(modifier = modifier) {
         AnimatedVisibility(
@@ -144,8 +142,8 @@ internal fun SnackbarSurface(
                     Modifier
                         .widthIn(max = SnackbarMaxWidth)
                         .clip(SnackbarCornerRadius)
-                        .background(NexoColors.surface)
-                        .border(SnackbarBorder, SnackbarCornerRadius)
+                        .background(colors.surface)
+                        .border(BorderStroke(1.dp, colors.borderSubtle), SnackbarCornerRadius)
                         .padding(
                             horizontal = NexoDimens.spacingMd,
                             vertical = NexoDimens.spacingSm + 2.dp,
@@ -155,7 +153,7 @@ internal fun SnackbarSurface(
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NexoColors.textPrimary,
+                    color = colors.textPrimary,
                     modifier = Modifier.weight(1f),
                 )
                 if (actionLabel != null) {
@@ -163,7 +161,7 @@ internal fun SnackbarSurface(
                         Text(
                             text = actionLabel,
                             style = MaterialTheme.typography.labelLarge,
-                            color = NexoColors.primary,
+                            color = colors.primary,
                         )
                     }
                 }
@@ -172,7 +170,7 @@ internal fun SnackbarSurface(
                         Icon(
                             imageVector = NexoIcons.Close,
                             contentDescription = null,
-                            tint = NexoColors.textSecondary,
+                            tint = colors.textSecondary,
                         )
                     }
                 }

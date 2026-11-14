@@ -37,8 +37,8 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nexo.R
 import com.nexo.presentation.screen.HomeTags
-import com.nexo.presentation.theme.NexoColors
 import com.nexo.presentation.theme.NexoDimens
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoAvatar
 import com.nexo.ui.icons.NexoIcons
 
@@ -97,12 +97,18 @@ private val HeroActionIconSize = 18.dp
 /**
  * Character of the fade painted over the hero photo.
  *
- * The photo stays clear for the first third, dims through the middle, and is
+ * The photo stays clear past the first half, dims through the middle, and is
  * fully covered by `bg_main` at the bottom edge so the hero dissolves into the
  * page instead of ending on a hard line.
+ *
+ * [HeroFadeStartSolid] is `0.55`: solid starts just past the midpoint so the
+ * copy stays legible without the dim reaching the top of the photo.
+ * [HeroFadeDimAlpha] is `0.70`: at `0.85` the dimmed stop over a white page
+ * mixed to a muddy grey band at the hero boundary; `0.70` at `0.55` reads
+ * cleanly in both theme modes.
  */
-private const val HeroFadeStartSolid = 0.45f
-private const val HeroFadeDimAlpha = 0.85f
+private const val HeroFadeStartSolid = 0.55f
+private const val HeroFadeDimAlpha = 0.70f
 
 /**
  * Full-bleed hero for the first-session Home: photo, brand lockup with the
@@ -262,9 +268,13 @@ private fun BoxScope.AsyncHeroImage() {
  * stops run transparent (top) → dimmed → opaque `bg_main` (bottom), in ascending
  * order. Compose reads the positions from the pairs, so they MUST ascend; a
  * descending list renders as a broken gradient rather than a reversed one.
+ *
+ * Both background stops come from the theme-aware [nexoColors] palette, so the
+ * fade lands on the active page colour instead of the dark-mode `bg_main`.
  */
 @Composable
 private fun BoxScope.HeroFade(visibleHeight: Dp) {
+    val colors = nexoColors
     Box(
         modifier =
             Modifier
@@ -276,8 +286,8 @@ private fun BoxScope.HeroFade(visibleHeight: Dp) {
                         colorStops =
                             arrayOf(
                                 0f to Color.Transparent,
-                                HeroFadeStartSolid to NexoColors.background.copy(alpha = HeroFadeDimAlpha),
-                                1f to NexoColors.background,
+                                HeroFadeStartSolid to colors.background.copy(alpha = HeroFadeDimAlpha),
+                                1f to colors.background,
                             ),
                     ),
                 ),
@@ -295,6 +305,7 @@ private fun HeroHeaderRow(
     modifier: Modifier = Modifier,
     onSearchClick: (() -> Unit)? = null,
 ) {
+    val colors = nexoColors
     Row(
         modifier = modifier.fillMaxWidth().testTag(HomeTags.HERO_BRAND_ROW),
         verticalAlignment = Alignment.CenterVertically,
@@ -313,7 +324,7 @@ private fun HeroHeaderRow(
                     text = stringResource(R.string.home_nexo_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = NexoColors.textPrimary,
+                    color = colors.textPrimary,
                 )
             }
         }
@@ -351,14 +362,15 @@ private fun HeroActionButton(
     onClick: () -> Unit,
     badgeCount: Int = 0,
 ) {
+    val colors = nexoColors
     Box {
         Box(
             modifier =
                 Modifier
                     .size(HeroActionSize)
                     .clip(CircleShape)
-                    .background(NexoColors.surface.copy(alpha = HeroActionSurfaceAlpha))
-                    .border(1.dp, NexoColors.borderSubtle, CircleShape)
+                    .background(colors.surface.copy(alpha = HeroActionSurfaceAlpha))
+                    .border(1.dp, colors.borderSubtle, CircleShape)
                     .clickable(onClickLabel = contentDescription, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
@@ -366,7 +378,7 @@ private fun HeroActionButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 modifier = Modifier.size(HeroActionIconSize),
-                tint = NexoColors.textPrimary,
+                tint = colors.textPrimary,
             )
         }
         if (badgeCount > 0) {
@@ -374,12 +386,12 @@ private fun HeroActionButton(
                 text = badgeCount.toString(),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = NexoColors.background,
+                color = colors.background,
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
                         .clip(CircleShape)
-                        .background(NexoColors.accentYellow)
+                        .background(colors.accentYellow)
                         .padding(horizontal = 5.dp, vertical = 1.dp),
             )
         }
@@ -394,6 +406,7 @@ private fun HeroCopy(
     onExplore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     Column(
         modifier = modifier.fillMaxWidth().testTag(HomeTags.HERO_MESSAGE),
         verticalArrangement = Arrangement.spacedBy(NexoDimens.spacingSm),
@@ -402,13 +415,13 @@ private fun HeroCopy(
             text = stringResource(R.string.home_hero_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.width(HeroTitleWidth),
         )
         Text(
             text = stringResource(R.string.home_hero_subtitle),
             style = MaterialTheme.typography.bodyMedium,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
         )
         Spacer(modifier = Modifier.height(NexoDimens.spacingXs))
         ExplorePill(onClick = onExplore)
@@ -426,13 +439,14 @@ private fun HeroCopy(
  */
 @Composable
 private fun ExplorePill(onClick: () -> Unit) {
+    val colors = nexoColors
     val contentDescription = stringResource(R.string.home_hero_cta_content_description)
     Row(
         modifier =
             Modifier
                 .testTag(HomeTags.HERO_CTA)
                 .clip(CircleShape)
-                .background(NexoColors.accentYellow)
+                .background(colors.accentYellow)
                 .clickable(onClickLabel = contentDescription, onClick = onClick)
                 .padding(horizontal = 22.dp, vertical = 14.dp)
                 .widthIn(min = 48.dp),
@@ -443,13 +457,13 @@ private fun ExplorePill(onClick: () -> Unit) {
             text = stringResource(R.string.home_hero_cta),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            color = NexoColors.background,
+            color = colors.background,
         )
         Icon(
             imageVector = NexoIcons.ArrowRight,
             contentDescription = null,
             modifier = Modifier.size(16.dp),
-            tint = NexoColors.background,
+            tint = colors.background,
         )
     }
 }

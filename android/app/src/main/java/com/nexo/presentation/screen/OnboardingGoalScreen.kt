@@ -51,6 +51,7 @@ import com.nexo.R
 import com.nexo.presentation.theme.NexoColors
 import com.nexo.presentation.theme.NexoDimens
 import com.nexo.presentation.theme.NexoTheme
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoDivider
 import com.nexo.ui.icons.NexoIcons
@@ -165,6 +166,7 @@ private fun GoalHeader(onNavigateBack: (() -> Unit)?) {
 
 @Composable
 private fun GoalHero() {
+    val colors = nexoColors
     val composition by rememberLottieComposition(
         LottieCompositionSpec.RawRes(R.raw.fire_streak),
     )
@@ -197,7 +199,7 @@ private fun GoalHero() {
                             shape = RoundedCornerShape(NexoDimens.spacingSm),
                         ).border(
                             width = 1.dp,
-                            color = NexoColors.header,
+                            color = colors.header,
                             shape = RoundedCornerShape(NexoDimens.spacingSm),
                         ),
                 contentAlignment = Alignment.Center,
@@ -205,7 +207,7 @@ private fun GoalHero() {
                 Icon(
                     imageVector = NexoIcons.Flame,
                     contentDescription = null,
-                    tint = NexoColors.accentYellow,
+                    tint = colors.accentYellow,
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -220,6 +222,7 @@ private fun GoalOptionCard(
     onSelect: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     Surface(
         modifier =
             modifier
@@ -253,7 +256,7 @@ private fun GoalOptionCard(
                     Modifier
                         .size(40.dp)
                         .background(
-                            color = option.accentColor.copy(alpha = 0.12f),
+                            color = option.accentSelector(colors).copy(alpha = 0.12f),
                             shape = CircleShape,
                         ),
                 contentAlignment = Alignment.Center,
@@ -261,7 +264,7 @@ private fun GoalOptionCard(
                 Icon(
                     imageVector = option.icon,
                     contentDescription = null,
-                    tint = option.accentColor,
+                    tint = option.accentSelector(colors),
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -385,13 +388,18 @@ internal data class GoalOption(
     val descriptionRes: Int,
     val valueRes: Int,
     val icon: ImageVector,
-    val accentColor: Color,
+    val accentSelector: NexoColors.() -> Color,
 )
 
 /** Light-blue accent for the "Serious" goal option (design token #B6C4FF). */
 private val AccentLightBlue = Color(0xFFB6C4FF)
 
 // `internal` (not `private`) so unit tests can assert the fixed option set.
+//
+// Accents are held as [NexoColors] selectors, not resolved values: this list is
+// a file-level property read both by Compose and by JVM unit tests, so it must
+// not capture a palette at class-init time. [OnboardingGoalScreen] resolves them
+// against the active `nexoColors`.
 internal val GOAL_OPTIONS =
     listOf(
         GoalOption(
@@ -400,7 +408,7 @@ internal val GOAL_OPTIONS =
             descriptionRes = R.string.onboarding_goal_option_relaxed_desc,
             valueRes = R.string.onboarding_goal_option_relaxed_value,
             icon = NexoIcons.Spa,
-            accentColor = NexoColors.accentGreen,
+            accentSelector = { accentGreen },
         ),
         GoalOption(
             minutes = 20,
@@ -408,7 +416,7 @@ internal val GOAL_OPTIONS =
             descriptionRes = R.string.onboarding_goal_option_regular_desc,
             valueRes = R.string.onboarding_goal_option_regular_value,
             icon = NexoIcons.AutoStories,
-            accentColor = NexoColors.accentYellow,
+            accentSelector = { accentYellow },
         ),
         GoalOption(
             minutes = 30,
@@ -416,7 +424,7 @@ internal val GOAL_OPTIONS =
             descriptionRes = R.string.onboarding_goal_option_serious_desc,
             valueRes = R.string.onboarding_goal_option_serious_value,
             icon = NexoIcons.Book,
-            accentColor = AccentLightBlue,
+            accentSelector = { AccentLightBlue },
         ),
         GoalOption(
             minutes = 45,
@@ -424,7 +432,7 @@ internal val GOAL_OPTIONS =
             descriptionRes = R.string.onboarding_goal_option_intense_desc,
             valueRes = R.string.onboarding_goal_option_intense_value,
             icon = NexoIcons.Flame,
-            accentColor = NexoColors.accentPurple,
+            accentSelector = { accentPurple },
         ),
     )
 

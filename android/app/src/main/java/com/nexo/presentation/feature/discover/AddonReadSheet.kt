@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.access.LegalAccess
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.atoms.NexoDivider
@@ -78,13 +78,14 @@ fun AddonReadSheet(
     onRetry: () -> Unit = {},
     onDismiss: () -> Unit,
 ) {
+    val colors = nexoColors
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val uriHandler = LocalUriHandler.current
     if (state == AddonReadState.Hidden) return
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = NexoColors.surface,
+        containerColor = colors.surface,
     ) {
         Column(
             modifier =
@@ -98,7 +99,7 @@ fun AddonReadSheet(
                 text = stringResource(R.string.discover_rail_from, addonName),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = NexoColors.textPrimary,
+                color = colors.textPrimary,
             )
             NexoDivider()
             when (state) {
@@ -109,7 +110,7 @@ fun AddonReadSheet(
                     Text(
                         text = stringResource(R.string.addon_read_resolving),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NexoColors.textSecondary,
+                        color = colors.textSecondary,
                     )
                 }
                 is AddonReadState.Loaded -> {
@@ -126,12 +127,12 @@ fun AddonReadSheet(
                         text = stringResource(R.string.addon_read_empty_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = NexoColors.textPrimary,
+                        color = colors.textPrimary,
                     )
                     Text(
                         text = stringResource(R.string.addon_read_empty_body, addonName),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NexoColors.textSecondary,
+                        color = colors.textSecondary,
                     )
                     AddonLegalNotice()
                 }
@@ -140,12 +141,12 @@ fun AddonReadSheet(
                         text = stringResource(R.string.discover_error_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = NexoColors.textPrimary,
+                        color = colors.textPrimary,
                     )
                     Text(
                         text = stringResource(R.string.discover_error_body),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NexoColors.textSecondary,
+                        color = colors.textSecondary,
                     )
                     NexoButton(
                         text = stringResource(R.string.discover_retry),
@@ -159,12 +160,12 @@ fun AddonReadSheet(
                         text = stringResource(R.string.addon_consent_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = NexoColors.textPrimary,
+                        color = colors.textPrimary,
                     )
                     Text(
                         text = stringResource(R.string.addon_consent_body, addonName),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NexoColors.textSecondary,
+                        color = colors.textSecondary,
                     )
                     NexoButton(
                         text = stringResource(R.string.addon_consent_allow),
@@ -187,13 +188,14 @@ fun AddonReadSheet(
 /** Legal notice pinned under addon content: external source, user verifies rights. */
 @Composable
 private fun AddonLegalNotice(modifier: Modifier = Modifier) {
+    val colors = nexoColors
     Column(modifier = modifier.fillMaxWidth()) {
         NexoDivider()
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.addon_read_legal_notice),
             style = MaterialTheme.typography.bodySmall,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
         )
     }
 }

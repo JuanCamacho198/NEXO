@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.sp
 import com.nexo.R
 import com.nexo.data.remote.catalog.BUILTIN_GOOGLEBOOKS
 import com.nexo.data.remote.catalog.CatalogSources
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 
 /**
  * fs12 source attribution badge for catalog results.
@@ -32,16 +32,17 @@ fun SourceAttributionBadge(
     attributionNames: Map<String, String>,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     if (provider == BUILTIN_GOOGLEBOOKS) {
         Text(
             text = stringResource(R.string.google_books_attribution),
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
             fontWeight = FontWeight.Medium,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
             modifier =
                 modifier
                     .clip(RoundedCornerShape(4.dp))
-                    .background(NexoColors.surface)
+                    .background(colors.surface)
                     .padding(horizontal = 6.dp, vertical = 2.dp),
         )
         return
@@ -55,11 +56,11 @@ fun SourceAttributionBadge(
         text = label,
         style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
         fontWeight = FontWeight.Medium,
-        color = NexoColors.textSecondary,
+        color = colors.textSecondary,
         modifier =
             modifier
                 .clip(RoundedCornerShape(4.dp))
-                .background(NexoColors.surface)
+                .background(colors.surface)
                 .padding(horizontal = 6.dp, vertical = 2.dp),
     )
 }

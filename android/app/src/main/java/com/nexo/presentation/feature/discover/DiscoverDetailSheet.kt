@@ -44,7 +44,7 @@ import com.nexo.data.remote.catalog.CatalogSources
 import com.nexo.domain.access.resolveAccess
 import com.nexo.domain.usecase.DownloadImportState
 import com.nexo.presentation.feature.library.formatFileSize
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.presentation.viewmodel.DiscoverDetailStatus
 import com.nexo.ui.components.atoms.NexoBookCover
 import com.nexo.ui.components.atoms.NexoButton
@@ -108,6 +108,7 @@ fun DiscoverDetailSheet(
     onRetryAddonRead: () -> Unit = {},
     onRetryAccess: () -> Unit = {},
 ) {
+    val colors = nexoColors
     if (detailStatus == DiscoverDetailStatus.CLOSED) return
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showReadAccess by remember(detailStatus) { mutableStateOf(false) }
@@ -116,7 +117,7 @@ fun DiscoverDetailSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         scrimColor = Color(0x66000000),
-        containerColor = NexoColors.surface,
+        containerColor = colors.surface,
     ) {
         when {
             detailStatus == DiscoverDetailStatus.LOADING ->
@@ -139,7 +140,7 @@ fun DiscoverDetailSheet(
                             },
                         ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                     modifier = Modifier.padding(24.dp),
                 )
             else ->
@@ -302,6 +303,7 @@ private fun DiscoverAccessSection(
     onDenyAccessConsent: () -> Unit,
     onRetryAccess: () -> Unit,
 ) {
+    val colors = nexoColors
     val addonId = remember(detail) { CatalogSources.addonIdOf(detail.provider) }
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -311,12 +313,12 @@ private fun DiscoverAccessSection(
             text = stringResource(R.string.read_access_title),
             style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
             fontWeight = FontWeight.SemiBold,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
         )
         Text(
             text = stringResource(R.string.read_access_subtitle),
             style = MaterialTheme.typography.bodySmall,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
         )
         when (accessState) {
             AccessResolverState.Loading -> {
@@ -382,13 +384,13 @@ private fun DiscoverAccessSection(
                 Text(
                     text = stringResource(R.string.read_access_empty_body),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                 )
             AccessResolverState.Error -> {
                 Text(
                     text = stringResource(R.string.discover_error_body),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                 )
                 NexoButton(
                     text = stringResource(R.string.discover_retry),
@@ -400,7 +402,7 @@ private fun DiscoverAccessSection(
                 Text(
                     text = stringResource(R.string.discover_offline_body),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                 )
                 NexoButton(
                     text = stringResource(R.string.discover_retry),
@@ -416,7 +418,7 @@ private fun DiscoverAccessSection(
                             addonName ?: accessState.addonId,
                         ),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                 )
                 NexoButton(
                     text = stringResource(R.string.addon_consent_allow),
@@ -445,6 +447,7 @@ private fun DiscoverDownloadCta(
     onDownload: () -> Unit,
     onCancelDownload: () -> Unit,
 ) {
+    val colors = nexoColors
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -472,14 +475,14 @@ private fun DiscoverDownloadCta(
                     Text(
                         text = "${formatFileSize(download.bytesSoFar)} / ${formatFileSize(total)}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = NexoColors.textSecondary,
+                        color = colors.textSecondary,
                     )
                 } else {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     Text(
                         text = formatFileSize(download.bytesSoFar),
                         style = MaterialTheme.typography.labelSmall,
-                        color = NexoColors.textSecondary,
+                        color = colors.textSecondary,
                     )
                 }
                 NexoButton(
@@ -523,14 +526,14 @@ private fun DiscoverDownloadCta(
                 Text(
                     text = stringResource(R.string.discover_duplicate),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                 )
             }
             is DownloadImportState.Failure -> {
                 Text(
                     text = stringResource(R.string.discover_download_failed),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NexoColors.errorSoft,
+                    color = colors.errorSoft,
                 )
                 NexoButton(
                     onClick = onDownload,
@@ -550,6 +553,7 @@ private fun DiscoverDownloadCta(
 /** Head row: 72x108 cover, title, author line and the language chips. */
 @Composable
 private fun DiscoverDetailHead(detail: CatalogBook) {
+    val colors = nexoColors
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -560,14 +564,14 @@ private fun DiscoverDetailHead(detail: CatalogBook) {
                     Modifier
                         .size(width = 72.dp, height = 108.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(NexoColors.surface),
+                        .background(colors.surface),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = bookInitial(detail.title),
                     style = MaterialTheme.typography.headlineMedium.copy(fontSize = 28.sp),
                     fontWeight = FontWeight.Bold,
-                    color = NexoColors.primary,
+                    color = colors.primary,
                 )
             }
         } else {
@@ -586,7 +590,7 @@ private fun DiscoverDetailHead(detail: CatalogBook) {
                 text = detail.title,
                 style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
                 fontWeight = FontWeight.SemiBold,
-                color = NexoColors.textPrimary,
+                color = colors.textPrimary,
             )
             if (detail.authors.isNotEmpty()) {
                 Text(
@@ -596,7 +600,7 @@ private fun DiscoverDetailHead(detail: CatalogBook) {
                             detail.authors.joinToString(", "),
                         ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                 )
             }
             if (detail.languages.isNotEmpty()) {
@@ -628,23 +632,25 @@ private fun DiscoverDetailParagraph(
     @StringRes labelRes: Int,
     body: String?,
 ) {
+    val colors = nexoColors
     if (body.isNullOrBlank()) return
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         DiscoverDetailLabel(text = stringResource(labelRes))
         Text(
             text = body,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
         )
     }
 }
 
 @Composable
 private fun DiscoverDetailLabel(text: String) {
+    val colors = nexoColors
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-        color = NexoColors.textSecondary,
+        color = colors.textSecondary,
     )
 }
 

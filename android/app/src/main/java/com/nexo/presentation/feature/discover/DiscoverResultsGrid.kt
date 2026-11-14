@@ -16,7 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.data.remote.catalog.CatalogBook
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 
 /** Rows from the end of the list that trigger the next-page prefetch. */
 private const val PREFETCH_THRESHOLD = 3
@@ -45,6 +45,7 @@ fun DiscoverResultsGrid(
     modifier: Modifier = Modifier,
     attributionNames: Map<String, String> = emptyMap(),
 ) {
+    val colors = nexoColors
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         modifier = modifier.fillMaxSize(),
@@ -64,7 +65,7 @@ fun DiscoverResultsGrid(
                     Text(
                         text = stringResource(R.string.discover_end_of_results),
                         style = MaterialTheme.typography.labelSmall,
-                        color = NexoColors.textSecondary,
+                        color = colors.textSecondary,
                         modifier = Modifier.padding(8.dp),
                     )
             }

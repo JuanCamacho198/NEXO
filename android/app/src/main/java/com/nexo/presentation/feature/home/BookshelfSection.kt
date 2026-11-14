@@ -28,7 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.model.Book
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.presentation.theme.NexoDimens
 import com.nexo.ui.components.atoms.CoverThumbnail
 import com.nexo.ui.components.atoms.NexoEmptyState
@@ -40,13 +40,14 @@ fun MyBookshelfSection(
     onViewAll: () -> Unit,
     onBookSelected: (String, String, String) -> Unit,
 ) {
+    val colors = nexoColors
     Column {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringResource(R.string.home_my_bookshelf_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = NexoColors.textPrimary,
+                color = colors.textPrimary,
             )
             Row(
                 modifier = Modifier.clickable(onClick = onViewAll).padding(NexoDimens.spacingXs),
@@ -57,12 +58,12 @@ fun MyBookshelfSection(
                     text = stringResource(R.string.home_ver_todo),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = NexoColors.accentOrange,
+                    color = colors.accentOrange,
                 )
                 Icon(
                     imageVector = NexoIcons.ChevronRight,
                     contentDescription = null,
-                    tint = NexoColors.accentOrange,
+                    tint = colors.accentOrange,
                     modifier = Modifier.size(14.dp),
                 )
             }
@@ -83,6 +84,7 @@ fun BookshelfCard(
     book: Book,
     onClick: () -> Unit,
 ) {
+    val colors = nexoColors
     Column(
         modifier = Modifier.width(BookshelfCardWidth).clickable(onClick = onClick),
     ) {
@@ -99,7 +101,7 @@ fun BookshelfCard(
             text = book.title,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
             maxLines = 2,
             minLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -109,7 +111,7 @@ fun BookshelfCard(
             Text(
                 text = author,
                 style = MaterialTheme.typography.labelSmall,
-                color = NexoColors.textSecondary,
+                color = colors.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

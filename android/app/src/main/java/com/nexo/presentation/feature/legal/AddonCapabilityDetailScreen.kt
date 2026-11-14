@@ -29,7 +29,7 @@ import com.nexo.R
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.addons.InstalledAddonRow
 import com.nexo.presentation.feature.discover.AddonCapabilityBadges
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.icons.NexoIcons
 
 /** Builds the capability-detail route for [addonId] (registry ids are hex). */
@@ -49,6 +49,7 @@ fun AddonCapabilityDetailRoute(
     onViewPolicy: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val colors = nexoColors
     var row by remember(addonId) { mutableStateOf<InstalledAddonRow?>(null) }
     var consented by remember(addonId) { mutableStateOf(hasConsent(addonId)) }
     LaunchedEffect(addonId) {
@@ -59,7 +60,7 @@ fun AddonCapabilityDetailRoute(
         Text(
             text = stringResource(R.string.discover_loading),
             style = MaterialTheme.typography.bodyMedium,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
             modifier = Modifier.padding(24.dp),
         )
         return
@@ -97,6 +98,7 @@ fun AddonCapabilityDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -125,7 +127,7 @@ fun AddonCapabilityDetailScreen(
             Text(
                 text = stringResource(R.string.addon_capability_detail_body),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NexoColors.textPrimary,
+                color = colors.textPrimary,
             )
             AddonCapabilityBadges(capabilities = capabilities)
             androidx.compose.material3.Switch(
@@ -142,19 +144,19 @@ fun AddonCapabilityDetailScreen(
                         },
                     ),
                 style = MaterialTheme.typography.bodySmall,
-                color = NexoColors.textSecondary,
+                color = colors.textSecondary,
                 fontWeight = FontWeight.Medium,
             )
             Text(
                 text = stringResource(R.string.addon_consent_trust_note),
                 style = MaterialTheme.typography.bodySmall,
-                color = NexoColors.textSecondary,
+                color = colors.textSecondary,
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(
                 text = stringResource(R.string.legal_disclaimer_view_policy),
                 style = MaterialTheme.typography.labelMedium,
-                color = NexoColors.textAccent,
+                color = colors.textAccent,
                 modifier = Modifier.clickable(onClick = onViewPolicy),
             )
         }

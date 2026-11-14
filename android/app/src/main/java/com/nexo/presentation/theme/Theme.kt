@@ -64,8 +64,12 @@ fun NexoTheme(
 ) {
     val colorScheme = if (darkTheme) NexoDarkColorScheme else NexoLightColorScheme
     val extendedColors = if (darkTheme) darkExtendedColors else lightExtendedColors
+    val resolvedNexoColors = if (darkTheme) darkNexoColors else lightNexoColors
 
-    CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
+    CompositionLocalProvider(
+        LocalExtendedColors provides extendedColors,
+        LocalNexoColors provides resolvedNexoColors,
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = NexoTypography,

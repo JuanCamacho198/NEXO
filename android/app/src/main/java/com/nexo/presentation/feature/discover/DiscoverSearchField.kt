@@ -19,7 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.icons.NexoIcons
 
 /**
@@ -41,6 +41,7 @@ fun DiscoverSearchField(
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     val shape = RoundedCornerShape(12.dp)
     OutlinedTextField(
         value = query,
@@ -51,12 +52,12 @@ fun DiscoverSearchField(
                 .height(48.dp),
         singleLine = true,
         shape = shape,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(color = NexoColors.textPrimary),
+        textStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.textPrimary),
         placeholder = {
             Text(
                 text = stringResource(R.string.discover_search_hint),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NexoColors.textSecondary,
+                color = colors.textSecondary,
             )
         },
         leadingIcon = {
@@ -64,7 +65,7 @@ fun DiscoverSearchField(
                 imageVector = NexoIcons.Search,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = if (isSearching) NexoColors.primary else NexoColors.textSecondary,
+                tint = if (isSearching) colors.primary else colors.textSecondary,
             )
         },
         trailingIcon = {
@@ -73,7 +74,7 @@ fun DiscoverSearchField(
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
-                        color = NexoColors.primary,
+                        color = colors.primary,
                     )
                 query.isNotEmpty() ->
                     IconButton(
@@ -84,7 +85,7 @@ fun DiscoverSearchField(
                             imageVector = NexoIcons.Close,
                             contentDescription = stringResource(R.string.discover_clear_content_desc),
                             modifier = Modifier.size(16.dp),
-                            tint = NexoColors.textSecondary,
+                            tint = colors.textSecondary,
                         )
                     }
             }
@@ -93,11 +94,11 @@ fun DiscoverSearchField(
         keyboardActions = KeyboardActions(onSearch = { onSearch() }),
         colors =
             OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = NexoColors.surface,
-                unfocusedContainerColor = NexoColors.surface,
-                focusedBorderColor = NexoColors.primary,
-                unfocusedBorderColor = NexoColors.borderSubtle,
-                cursorColor = NexoColors.primary,
+                focusedContainerColor = colors.surface,
+                unfocusedContainerColor = colors.surface,
+                focusedBorderColor = colors.primary,
+                unfocusedBorderColor = colors.borderSubtle,
+                cursorColor = colors.primary,
             ),
     )
 }

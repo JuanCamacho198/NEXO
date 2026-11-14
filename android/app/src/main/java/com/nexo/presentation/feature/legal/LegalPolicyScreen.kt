@@ -19,7 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.icons.NexoIcons
 
 /**
@@ -35,6 +35,7 @@ fun LegalPolicyScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -63,7 +64,7 @@ fun LegalPolicyScreen(
             Text(
                 text = stringResource(R.string.legal_policy_intro),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NexoColors.textPrimary,
+                color = colors.textPrimary,
             )
             LegalPolicySection(
                 title = stringResource(R.string.legal_policy_sources_title),
@@ -80,7 +81,7 @@ fun LegalPolicyScreen(
             Text(
                 text = stringResource(R.string.legal_policy_updated_note),
                 style = MaterialTheme.typography.bodySmall,
-                color = NexoColors.textSecondary,
+                color = colors.textSecondary,
             )
         }
     }
@@ -93,17 +94,18 @@ private fun LegalPolicySection(
     body: String,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
         )
         Text(
             text = body,
             style = MaterialTheme.typography.bodySmall,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
         )
     }
 }
