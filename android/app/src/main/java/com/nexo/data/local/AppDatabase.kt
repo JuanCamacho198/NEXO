@@ -6,6 +6,7 @@ import androidx.room.TypeConverters
 import com.nexo.data.local.dao.AddonDao
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
+import com.nexo.data.local.dao.DefinitionCacheDao
 import com.nexo.data.local.dao.DictionaryWordDao
 import com.nexo.data.local.dao.DiscoverCacheDao
 import com.nexo.data.local.dao.HighlightDao
@@ -20,6 +21,7 @@ import com.nexo.data.local.dao.TranslationCacheDao
 import com.nexo.data.local.entity.AddonEntity
 import com.nexo.data.local.entity.BookEntity
 import com.nexo.data.local.entity.BookmarkEntity
+import com.nexo.data.local.entity.DefinitionCacheEntity
 import com.nexo.data.local.entity.DictionaryWordEntity
 import com.nexo.data.local.entity.DiscoverCacheEntity
 import com.nexo.data.local.entity.HighlightEntity
@@ -46,8 +48,9 @@ import com.nexo.data.local.entity.TranslationCacheEntity
         AddonEntity::class,
         NotificationEntity::class,
         TranslationCacheEntity::class,
+        DefinitionCacheEntity::class,
     ],
-    version = 36,
+    version = 37,
     exportSchema = true,
 )
 @TypeConverters(NotificationConverters::class)
@@ -77,6 +80,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun notificationDao(): NotificationDao
 
     abstract fun translationCacheDao(): TranslationCacheDao
+
+    abstract fun definitionCacheDao(): DefinitionCacheDao
 
     abstract fun retentionDao(): RetentionDao
 }
