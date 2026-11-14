@@ -33,8 +33,7 @@ class TranslationBookSourcePreferenceTest {
 
     private fun providerFor(userId: String?) = ActiveUserProvider().apply { set(userId) }
 
-    private fun store(userId: String? = TEST_USER_ID) =
-        TranslationPreferences(context, providerFor(userId))
+    private fun store(userId: String? = TEST_USER_ID) = TranslationPreferences(context, providerFor(userId))
 
     @Test
     fun `a book source choice is stored for that book`() {
@@ -104,7 +103,10 @@ class TranslationBookSourcePreferenceTest {
     fun `the account preference and the book choice coexist`() {
         // The two levels live in the same file but are separate keys: writing one
         // must never move the other.
-        store().save(com.nexo.domain.translation.TranslationSettings(sourceLanguage = "pt", targetLanguage = "en"))
+        store().save(
+            com.nexo.domain.translation
+                .TranslationSettings(sourceLanguage = "pt", targetLanguage = "en"),
+        )
         store().saveBookSource(bookId = "book-a", language = "es")
 
         assertEquals("pt", store().load().sourceLanguage)

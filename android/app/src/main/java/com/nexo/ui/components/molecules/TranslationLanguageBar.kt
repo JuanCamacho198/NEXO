@@ -165,7 +165,9 @@ private fun LanguageSide(
         TextButton(
             onClick = { onExpandedChange(true) },
             enabled = enabled,
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+            contentPadding =
+                androidx.compose.foundation.layout
+                    .PaddingValues(horizontal = 8.dp, vertical = 2.dp),
             modifier = Modifier.semantics { this.contentDescription = contentDescription },
         ) {
             Text(

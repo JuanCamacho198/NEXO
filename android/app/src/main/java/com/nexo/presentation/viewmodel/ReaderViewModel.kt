@@ -7,11 +7,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nexo.R
 import com.nexo.data.remote.supabase.SupabaseProgressSync
+import com.nexo.data.session.DefinitionPreferences
 import com.nexo.data.session.ReaderPreferences
 import com.nexo.data.session.TranslationPreferences
 import com.nexo.debug.DebugLog
+import com.nexo.domain.definition.WordLanguage
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.SearchResult
+import com.nexo.domain.repository.DefinitionRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.ReaderRepository
@@ -109,6 +112,8 @@ class ReaderViewModel(
     private val supabaseProgressSync: SupabaseProgressSync? = null,
     private val translationRepository: TranslationRepository? = null,
     private val translationPreferences: TranslationPreferences? = null,
+    private val definitionRepository: DefinitionRepository? = null,
+    private val definitionPreferences: DefinitionPreferences? = null,
 ) : AndroidViewModel(application) {
     /**
      * Sleep timer manager — timer slice owner (SDD reader-facade-split, slice 3).
@@ -234,6 +239,7 @@ class ReaderViewModel(
             appContext = application,
             mainDispatcher = mainDispatcher,
             translationRepository = translationRepository,
+            definitionRepository = definitionRepository,
         )
 
     /**
@@ -490,6 +496,99 @@ class ReaderViewModel(
      * exactly what a language change is.
      */
     private fun retranslateCurrentSelection() = onTranslateSelection()
+
+    // ── Selection definition (T7/T8, android-define-selection) ─────────
+
+    /**
+     * Looks up the definition of the current reader selection and opens the
+     * anchored definition panel.
+     *
+     * **The two languages** (invariant 1) are resolved separately and passed
+     * separately:
+     *
+     * - **Word language** = the current book's `language`, through
+     *   [WordLanguage.fromOptional]. When the book declares none the cascade
+     *   skips step 1 and assumes `en`; the panel STATES the unknown rather than
+     *   hiding the guess.
+     * - **Reader language** = the reader's definition-language preference through
+     *   `DefinitionPreferences.resolve`, laddering stored value → app UI locale
+     *   → `en`. This is NEVER the book's language: a Spanish reader defining an
+     *   English word wants the definition in Spanish.
+     *
+     * The book lookup is best-effort, matching [onTranslateSelection]: a missing
+     * repository or book resolves the word language as UNKNOWN instead of
+     * failing the tap.
+     */
+    fun onDefineSelection() {
+        val selectedText =
+            interactionHolder.state.value.selectedText
+                .orEmpty()
+        if (selectedText.isBlank()) return
+        val readerLanguage =
+            definitionPreferences?.resolve(DefinitionPreferences.appLocaleLanguage())
+                ?: DefinitionPreferences.DEFAULT_LANGUAGE
+        val bookId = sessionUiState.value.selectedBookId
+        val repo = libraryRepository
+
+        if (bookId == null || repo == null) {
+            interactionHolder.onDefineSelection(readerLanguage, WordLanguage.unknown())
+            return
+        }
+        viewModelScope.launch {
+            val bookLanguage =
+                runCatching { repo.getBookById(bookId, activeUser.requireUserId()) }
+                    .getOrNull()
+                    ?.language
+            interactionHolder.onDefineSelection(
+                readerLanguage = readerLanguage,
+                wordLanguage = WordLanguage.fromOptional(bookLanguage),
+            )
+        }
+    }
+
+    /**
+     * The reader picked a DEFINITION language in the panel's selector.
+     *
+     * The choice is account-wide (the analogue of the translation target) and is
+     * written to [DefinitionPreferences]. The lookup then RE-RUNS for the same
+     * selection without closing the panel — a language change is not a new
+     * selection.
+     */
+    fun onDefinitionLanguageChosen(language: String?) {
+        definitionPreferences?.save(language)
+        val readerLanguage =
+            definitionPreferences?.resolve(DefinitionPreferences.appLocaleLanguage())
+                ?: DefinitionPreferences.DEFAULT_LANGUAGE
+        val bookId = sessionUiState.value.selectedBookId
+        val repo = libraryRepository
+        if (bookId == null || repo == null) {
+            interactionHolder.onDefinitionLanguageChanged(readerLanguage, WordLanguage.unknown())
+            return
+        }
+        viewModelScope.launch {
+            val bookLanguage =
+                runCatching { repo.getBookById(bookId, activeUser.requireUserId()) }
+                    .getOrNull()
+                    ?.language
+            interactionHolder.onDefinitionLanguageChanged(
+                readerLanguage = readerLanguage,
+                wordLanguage = WordLanguage.fromOptional(bookLanguage),
+            )
+        }
+    }
+
+    /** Closes the definition panel, keeping the selection so the menu returns. */
+    fun onDismissDefinitionPanel() = interactionHolder.onDismissDefinitionPanel()
+
+    /**
+     * The reader's current definition language, for the panel's selector. Read
+     * live (the store is consulted on every read), so the selector never shows a
+     * value different from the one the next lookup would use.
+     */
+    val definitionLanguage: String
+        get() =
+            definitionPreferences?.resolve(DefinitionPreferences.appLocaleLanguage())
+                ?: DefinitionPreferences.DEFAULT_LANGUAGE
 
     /**
      * Loads a new book into the reader, replacing any current selection.
@@ -779,6 +878,8 @@ class ReaderViewModelFactory(
     private val supabaseProgressSync: SupabaseProgressSync? = null,
     private val translationRepository: TranslationRepository? = null,
     private val translationPreferences: TranslationPreferences? = null,
+    private val definitionRepository: DefinitionRepository? = null,
+    private val definitionPreferences: DefinitionPreferences? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -796,6 +897,8 @@ class ReaderViewModelFactory(
                 supabaseProgressSync = supabaseProgressSync,
                 translationRepository = translationRepository,
                 translationPreferences = translationPreferences,
+                definitionRepository = definitionRepository,
+                definitionPreferences = definitionPreferences,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

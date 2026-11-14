@@ -20,6 +20,10 @@ class PreferencesModule(
         com.nexo.data.session
             .TranslationPreferences(context.applicationContext, activeUserProvider)
 
+    val definitionPreferences: com.nexo.data.session.DefinitionPreferences =
+        com.nexo.data.session
+            .DefinitionPreferences(context.applicationContext, activeUserProvider)
+
     val updatePrefs: UpdatePrefs = UpdatePrefs(context.applicationContext)
 
     val dailyGoalProvider: () -> Int = { readingGoalPreferences.load() ?: 30 }

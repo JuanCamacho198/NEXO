@@ -503,4 +503,52 @@ class NetworkModule(
             activeUser = activeUserProvider,
         )
     }
+
+    // ── android-define-selection T4: Wiktionary client + definition cascade ──
+    // Same posture as the translation client above: direct-from-app, no API
+    // key, its own OkHttp stack so definition traffic is isolated. The UA is the
+    // identified, contact-carrying one Wikimedia requires — a generic agent is
+    // blocked with a 403 (see NEXO_WIKTIONARY_USER_AGENT).
+    val wiktionaryHttpClient: HttpClient by lazy {
+        HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        isLenient = true
+                    },
+                )
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 15_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 15_000
+            }
+            defaultRequest {
+                header(
+                    HttpHeaders.UserAgent,
+                    com.nexo.domain.definition.NEXO_WIKTIONARY_USER_AGENT,
+                )
+            }
+        }
+    }
+
+    val wiktionaryClient: com.nexo.data.remote.wiktionary.WiktionaryClient by lazy {
+        com.nexo.data.remote.wiktionary.WiktionaryClient(
+            com.nexo.data.remote.wiktionary
+                .KtorWiktionaryHttpTransport(wiktionaryHttpClient),
+        )
+    }
+
+    val definitionRepository: com.nexo.domain.repository.DefinitionRepository by lazy {
+        com.nexo.data.repository.CachedDefinitionRepository(
+            delegate =
+                com.nexo.data.repository.RemoteDefinitionRepository(
+                    wiktionaryClient = wiktionaryClient,
+                    translationClient = translationClient,
+                ),
+            cacheDao = databaseModule.definitionCacheDao,
+            activeUser = activeUserProvider,
+        )
+    }
 }

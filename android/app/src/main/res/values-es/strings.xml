@@ -444,6 +444,21 @@
     <!-- Reader / Text Selection -->
     <string name="text_selection_copy">Copiar</string>
     <string name="text_selection_translate">Traducir</string>
+    <string name="text_selection_define">Definir</string>
+    <string name="definition_loading">Buscando…</string>
+    <string name="definition_close">Cerrar</string>
+    <string name="definition_no_definition">No se encontró definición para esta palabra.</string>
+    <string name="definition_no_service">Las definiciones necesitan conexión.</string>
+    <string name="definition_service_failed">El servicio de diccionario falló.</string>
+    <string name="definition_translated_mark">Traducido automáticamente — puede ser impreciso.</string>
+    <string name="definition_add_to_dictionary">Añadir a mi diccionario</string>
+    <string name="definition_word_language">Idioma de la palabra: %1$s</string>
+    <string name="definition_word_language_unknown">Idioma de la palabra: desconocido</string>
+    <string name="definition_language_spanish">Español</string>
+    <string name="definition_language_english">Inglés</string>
+    <string name="definition_language_french">Francés</string>
+    <string name="definition_language_portuguese">Portugués</string>
+    <string name="definition_language_unknown">Desconocido</string>
     <string name="translation_loading">Traduciendo…</string>
     <string name="translation_no_result">No hay traducción disponible para este texto.</string>
     <string name="translation_offline">La traducción necesita conexión.</string>
@@ -476,6 +491,10 @@
     <!-- Translation settings (per-account source/target languages + history) -->
     <string name="settings_translation_title">Traducción</string>
     <string name="settings_translation_target_label">Traducir a</string>
+    <!-- Definition settings (per-account definition language) -->
+    <string name="settings_definition_title">Definiciones</string>
+    <string name="settings_definition_language_label">Definiciones en</string>
+    <string name="settings_definition_language_hint">Solo afecta al idioma en el que se muestran las definiciones. El idioma de la palabra viene del libro.</string>
     <string name="settings_translation_source_label">Traducir desde</string>
     <string name="settings_translation_language_system">Seguir el dispositivo</string>
     <string name="settings_translation_language_auto">Detectar automáticamente</string>

@@ -106,7 +106,10 @@ class TranslationPreferences(
      *
      * A no-op when no account is active, matching [save].
      */
-    fun saveBookSource(bookId: String, language: String?) {
+    fun saveBookSource(
+        bookId: String,
+        language: String?,
+    ) {
         if (bookId.isBlank()) return
         val prefs = prefs() ?: return
         val editor = prefs.edit()

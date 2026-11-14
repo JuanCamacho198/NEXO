@@ -28,4 +28,15 @@ data class ReaderLifecycleState(
     val isLoading: Boolean = true,
     val loadTimeMs: Long? = null,
     val error: String? = null,
+    /**
+     * Whether the reader is allowed to PERSIST a progress emission.
+     *
+     * Set by the loader: false while a book is being opened, true only once the
+     * saved position (the persisted locator, or the cloud copy that replaces it)
+     * has been handed to the navigator. Until then the navigator reports the
+     * position it happens to be resting on — the reading order's first resource,
+     * i.e. the cover — and persisting that would overwrite the reader's real
+     * position with 0%.
+     */
+    val progressPersistenceArmed: Boolean = false,
 )

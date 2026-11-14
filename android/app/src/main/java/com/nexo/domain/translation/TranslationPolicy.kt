@@ -291,8 +291,7 @@ object TranslationPolicy {
      * lets each cascade step fall through to the next instead of pinning a
      * placeholder.
      */
-    private fun usableLanguage(tag: String?): String? =
-        normalizeLanguage(tag = tag, fallback = "").takeIf { it.isNotEmpty() }
+    private fun usableLanguage(tag: String?): String? = normalizeLanguage(tag = tag, fallback = "").takeIf { it.isNotEmpty() }
 
     /**
      * One detection attempt, over ONE text. Never joins two texts: the string it

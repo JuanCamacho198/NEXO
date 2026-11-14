@@ -62,7 +62,12 @@ internal object DeviceLocale {
     fun languageTag(
         systemLocales: List<Locale> = deviceLocales(),
         fallback: String = TranslationPolicy.DEFAULT_LANGUAGE,
-    ): String = systemLocales.firstOrNull()?.toLanguageTag().orEmpty().ifBlank { fallback }
+    ): String =
+        systemLocales
+            .firstOrNull()
+            ?.toLanguageTag()
+            .orEmpty()
+            .ifBlank { fallback }
 
     /**
      * The device's locale list, from the platform locale service — never the app's.

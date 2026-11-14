@@ -5,6 +5,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import androidx.annotation.VisibleForTesting
 import com.nexo.domain.model.Highlight
+import com.nexo.domain.repository.DefinitionRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.TranslationRepository
@@ -14,6 +15,7 @@ import com.nexo.domain.translation.TranslationLanguageSelection
 import com.nexo.presentation.UiEvent
 import com.nexo.presentation.viewmodel.reader.interaction.AnnotationManager
 import com.nexo.presentation.viewmodel.reader.interaction.BookmarkManager
+import com.nexo.presentation.viewmodel.reader.interaction.DefinitionManager
 import com.nexo.presentation.viewmodel.reader.interaction.HighlightManager
 import com.nexo.presentation.viewmodel.reader.interaction.InteractionStateStore
 import com.nexo.presentation.viewmodel.reader.interaction.SelectionManager
@@ -46,6 +48,7 @@ class ReaderInteractionStateHolder(
     private val appContext: Context,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val translationRepository: TranslationRepository? = null,
+    private val definitionRepository: DefinitionRepository? = null,
 ) {
     private val _state = MutableStateFlow(ReaderInteractionState())
     val state: StateFlow<ReaderInteractionState> = _state.asStateFlow()
@@ -62,6 +65,8 @@ class ReaderInteractionStateHolder(
         ShareDictionaryManager(store, selectionManager, dictionaryRepository, activeUser, scope, onEvent, appContext, mainDispatcher)
     private val translationManager =
         TranslationManager(store, translationRepository, appContext, scope, mainDispatcher)
+    private val definitionManager =
+        DefinitionManager(store, definitionRepository, appContext, scope, mainDispatcher)
 
     init {
         store.setCoordinator = { selectionManager.coordinator = it }
@@ -234,6 +239,23 @@ class ReaderInteractionStateHolder(
 
     fun onDismissTranslationPanel() = translationManager.onDismissTranslationPanel()
 
+    // ── Definition lookup (T7/T8) ─────────────────────────────────
+    fun onDefineSelection(
+        readerLanguage: String,
+        wordLanguage: com.nexo.domain.definition.WordLanguage,
+    ) = definitionManager.onDefine(readerLanguage, wordLanguage)
+
+    /**
+     * Re-runs the definition lookup for the SAME selection after the reader
+     * changed the definition-language selector; the panel stays open.
+     */
+    fun onDefinitionLanguageChanged(
+        readerLanguage: String,
+        wordLanguage: com.nexo.domain.definition.WordLanguage,
+    ) = definitionManager.onLanguageChanged(readerLanguage, wordLanguage)
+
+    fun onDismissDefinitionPanel() = definitionManager.onDismissDefinitionPanel()
+
     // ── Share / Copy ──────────────────────────────────────────────
     fun onShareSelectedText(selectedText: String?) = shareDictionaryManager.onShareSelectedText(selectedText)
 
@@ -289,5 +311,6 @@ class ReaderInteractionStateHolder(
         bookmarkManager.onCleared()
         shareDictionaryManager.onCleared()
         translationManager.onCleared()
+        definitionManager.onCleared()
     }
 }

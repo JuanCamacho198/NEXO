@@ -37,10 +37,10 @@ import com.nexo.domain.translation.TranslationSettings
 import com.nexo.presentation.theme.NexoTheme
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.launch
 
 /**
  * Translation languages (source + target) and the translation history.
@@ -291,8 +291,7 @@ private fun HistoryRow(entry: TranslationHistoryEntry) {
  * is rendered in the device time zone (the default) rather than UTC — unlike the
  * weekly-activity weekday labels in `StatisticsScreen`.
  */
-private fun formatHistoryDate(epochMillis: Long): String =
-    SimpleDateFormat("MMM d, yyyy · HH:mm", Locale.getDefault()).format(Date(epochMillis))
+private fun formatHistoryDate(epochMillis: Long): String = SimpleDateFormat("MMM d, yyyy · HH:mm", Locale.getDefault()).format(Date(epochMillis))
 
 // ─── Previews ─────────────────────────────────────────────────────────
 

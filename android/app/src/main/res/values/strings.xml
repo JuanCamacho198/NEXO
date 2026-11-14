@@ -476,6 +476,21 @@
     <!-- Reader / Text Selection -->
     <string name="text_selection_copy">Copy</string>
     <string name="text_selection_translate">Translate</string>
+    <string name="text_selection_define">Define</string>
+    <string name="definition_loading">Looking up…</string>
+    <string name="definition_close">Close</string>
+    <string name="definition_no_definition">No definition found for this word.</string>
+    <string name="definition_no_service">Definitions need a connection.</string>
+    <string name="definition_service_failed">The dictionary service failed.</string>
+    <string name="definition_translated_mark">Translated automatically — may be inaccurate.</string>
+    <string name="definition_add_to_dictionary">Add to my dictionary</string>
+    <string name="definition_word_language">Word language: %1$s</string>
+    <string name="definition_word_language_unknown">Word language: unknown</string>
+    <string name="definition_language_spanish">Spanish</string>
+    <string name="definition_language_english">English</string>
+    <string name="definition_language_french">French</string>
+    <string name="definition_language_portuguese">Portuguese</string>
+    <string name="definition_language_unknown">Unknown</string>
     <string name="translation_loading">Translating…</string>
     <string name="translation_no_result">No translation available for this text.</string>
     <string name="translation_offline">Translation needs a connection.</string>
@@ -508,6 +523,10 @@
     <!-- Translation settings (per-account source/target languages + history) -->
     <string name="settings_translation_title">Translation</string>
     <string name="settings_translation_target_label">Translate into</string>
+    <!-- Definition settings (per-account definition language) -->
+    <string name="settings_definition_title">Definitions</string>
+    <string name="settings_definition_language_label">Definitions in</string>
+    <string name="settings_definition_language_hint">Only affects the language definitions are shown in. The word\'s own language comes from the book.</string>
     <string name="settings_translation_source_label">Translate from</string>
     <string name="settings_translation_language_system">Follow the device</string>
     <string name="settings_translation_language_auto">Detect automatically</string>

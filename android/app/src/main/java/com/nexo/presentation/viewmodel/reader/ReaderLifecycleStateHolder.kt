@@ -98,6 +98,7 @@ class ReaderLifecycleStateHolder(
             onNavigateToLocator = onNavigateToLocator,
             onBookLoaded = onBookLoaded,
             onProgressDisplay = { progressTracker.updateProgressDisplay() },
+            onProgressContextLoaded = { progressTracker.openOnSavedPosition(it) },
         )
 
     private val pdfLoader =
@@ -123,6 +124,7 @@ class ReaderLifecycleStateHolder(
             onNavigateToLocator = onNavigateToLocator,
             onSelectionCleared = onSelectionCleared,
             onProgressDisplay = { progressTracker.updateProgressDisplay() },
+            onReaderMoved = { progressTracker.onReaderMoved() },
         )
 
     private val sessionRecorder =
