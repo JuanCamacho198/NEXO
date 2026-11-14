@@ -32,6 +32,71 @@ internal class SelectionManager(
         private const val TAG = "SelectionManager"
         private const val DEBUG_LOG_TEXT_LIMIT = 50
         private val DEBUG_FORCE_MENU_RECT = Rect(200, 200, 600, 250)
+
+        /**
+         * Converts Readium's selection rect to a WELL-FORMED Android [Rect].
+         *
+         * Readium's reflowable engine reports the selection rect from
+         * `getBoundingClientRect()` and multiplies it by `devicePixelRatio`,
+         * which mathematically cannot produce `bottom < top`. In practice it
+         * does: a selection that crosses a CSS multi-column boundary comes back
+         * with `top = 466.25, bottom = 306.25` — an inverted rect that still
+         * has the correct `right` (`left + width`).
+         *
+         * An inverted [Rect] is never harmless downstream. The anchoring rule
+         * reads `top` when it places a surface ABOVE and `bottom` when it
+         * places one BELOW, so an inverted rect makes "below" land ABOVE the
+         * selection's first line — which is exactly how the definition panel
+         * ended up covering the word the reader asked about.
+         *
+         * Normalizing here, at the single boundary where Readium's coordinates
+         * enter the app, fixes every consumer at once instead of asking each
+         * one to defend against malformed input.
+         */
+        internal fun toNormalizedRect(rect: RectF): Rect =
+            Rect(
+                rect.left.roundToInt(),
+                minOf(rect.top, rect.bottom).roundToInt(),
+                rect.right.roundToInt(),
+                maxOf(rect.top, rect.bottom).roundToInt(),
+            )
+
+        /**
+         * A prose-free fingerprint of a selection: each character as a short
+         * class token (`L` letter/digit, `S` whitespace, `P` other) plus the hex
+         * codepoint of every non-letter edge character.
+         *
+         * The production log pipeline ships to Sentry, so the selection's text
+         * must never be interpolated (see `BookContentLogHygieneTest`). This
+         * keeps the one diagnostic that matters possible without shipping the
+         * passage: whether the selection arrived wrapped in punctuation such as
+         * `"` (0x22), which is what made a lookup refuse before any network call.
+         */
+        private fun String.codepointShape(): String {
+            if (isEmpty()) return "<empty>"
+            val classes =
+                buildString(length) {
+                    for (c in this@codepointShape) {
+                        append(
+                            when {
+                                c.isLetterOrDigit() -> 'L'
+                                c.isWhitespace() -> 'S'
+                                else -> 'P'
+                            },
+                        )
+                    }
+                }
+            val edgeCodes =
+                this
+                    .toList()
+                    .filterNot { it.isLetterOrDigit() || it.isWhitespace() }
+                    .distinct()
+                    .joinToString(",") { "0x%02X".format(it.code) }
+            return if (edgeCodes.isEmpty()) classes else "$classes[$edgeCodes]"
+        }
+
+        /** Test seam for [codepointShape] — the log line's only reachable surface. */
+        internal fun codepointShapeOf(text: String): String = text.codepointShape()
     }
 
     internal var coordinator: SelectionCoordinator = SelectionCoordinator.Idle
@@ -50,9 +115,19 @@ internal class SelectionManager(
         text: String,
         existingHighlights: List<Highlight>,
     ) {
+        // Log the SHAPE of the selection, never its prose: every log line reaches
+        // Sentry through the FeedbackCapture snapshot, so book content must not
+        // be interpolated (BookContentLogHygieneTest enforces this). The shape
+        // still answers the diagnostic question this line exists for — whether
+        // the selection carries surrounding punctuation such as the ASCII double
+        // quote (0x22) that Defect B refused. The shape is a prose-free class
+        // string plus the hex codepoints of its non-letter edge characters, held
+        // in a local so the value logged is a described property, not the text.
+        val selectionShape = text.codepointShape()
         Log.d(
             "SelectionDebug",
-            "VM.onReadiumSelection: text='', rect=[${rect.left},${rect.top},${rect.right},${rect.bottom}], locator.href=${locator.href}",
+            "VM.onReadiumSelection: len=${text.length} shape=$selectionShape, " +
+                "rect=[${rect.left},${rect.top},${rect.right},${rect.bottom}], locator.href=${locator.href}",
         )
         val now = SystemClock.elapsedRealtime()
         when (val current = coordinator) {
@@ -90,7 +165,7 @@ internal class SelectionManager(
 
         val selectionRect =
             try {
-                Rect(rect.left.roundToInt(), rect.top.roundToInt(), rect.right.roundToInt(), rect.bottom.roundToInt())
+                toNormalizedRect(rect)
             } catch (e: Throwable) {
                 Log.e("SelectionDebug", "Rect creation THREW: ${e::class.simpleName}: ${e.message}", e)
                 Rect(0, 0, 100, DEBUG_LOG_TEXT_LIMIT)
@@ -152,6 +227,7 @@ internal class SelectionManager(
                     showDefinitionInput = false,
                     showTranslationPanel = false,
                     translationPanelState = com.nexo.presentation.viewmodel.reader.TranslationPanelState.Idle,
+                    definitionWord = null,
                     activeNoteText = "",
                     activeTagText = "",
                     activeDefinitionText = "",
@@ -193,7 +269,7 @@ internal class SelectionManager(
         rect: RectF,
     ) {
         DebugLog.info(TAG, "onHighlightTapped id=${highlight.id} t=${SystemClock.elapsedRealtime()}")
-        val selectionRect = Rect(rect.left.roundToInt(), rect.top.roundToInt(), rect.right.roundToInt(), rect.bottom.roundToInt())
+        val selectionRect = toNormalizedRect(rect)
         coordinator =
             SelectionCoordinator.ExistingHighlight(
                 highlight = highlight,
@@ -240,6 +316,7 @@ internal class SelectionManager(
                 showDefinitionInput = false,
                 showTranslationPanel = false,
                 translationPanelState = com.nexo.presentation.viewmodel.reader.TranslationPanelState.Idle,
+                definitionWord = null,
                 activeNoteText = "",
                 activeTagText = "",
                 activeDefinitionText = "",
