@@ -19,6 +19,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -208,11 +209,19 @@ fun AnchoredDefinitionPanel(
                         .fillMaxWidth()
                         .padding(16.dp),
             ) {
+                // The header mark and the "Definir" action share ONE glyph
+                // (`NexoIcons.BookSearch`), so the panel is visibly the thing the
+                // action opened. The icon is tinted `onSurfaceVariant` rather than
+                // `primary`: a saturated accent glyph immediately left of the word
+                // took the eye before the word did, and in this build `primary` is
+                // a HIGH-CHROMA blue, so the eye landed on the icon as the panel's
+                // most colourful element instead of on the term being defined.
+                // The mark is orientation, not the message.
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = NexoIcons.BookSearch,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -343,9 +352,16 @@ private fun DefinitionLanguageSelector(
         onClick = { if (!disabled) expanded = true },
         label = { Text(definitionLanguageName(selected)) },
         trailingIcon = {
+            // `onSurfaceVariant`, not the chip's default `localContentColor`.
+            // At 18dp this chevron is a wide open "V" sitting immediately
+            // right of the language name inside the chip border, and at the
+            // content colour it was a third side of that box rather than an
+            // affordance — the second of the two shapes the reader read beside
+            // the word. Recessing it separates the control from the box.
             Icon(
                 imageVector = NexoIcons.ChevronDown,
                 contentDescription = null,
+                tint = LocalContentColor.current.copy(alpha = 0.6f),
                 modifier = Modifier.size(18.dp),
             )
         },

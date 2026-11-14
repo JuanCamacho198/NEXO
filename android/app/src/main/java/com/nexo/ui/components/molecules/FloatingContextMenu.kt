@@ -44,9 +44,16 @@ import com.nexo.ui.icons.NexoIcons
  * @param onCopy Copy the highlight text to the clipboard.
  * @param onDefine Look up the MEANING of the highlighted text
  *   ([AnchoredDefinitionPanel]). Mirrors the selection menu's Define:
- *   same callback path, same icon and content description.
+ *   same callback path, same icon and content description — and that identity is
+ *   a CONTRACT, not a coincidence: one Maestro selector addresses the Define
+ *   action in whichever menu is open. See [NexoIcons.BookSearch] for why that
+ *   glyph is what it is.
  * @param onTranslate Open the [AnchoredTranslationPanel] for the
- *   highlighted text (machine translation, MyMemory).
+ *   highlighted text (machine translation, MyMemory). Mirrors the selection
+ *   menu's Translate: same icon [NexoIcons.Translate] and content description
+ *   `R.string.text_selection_translate`, and that identity is a CONTRACT — one
+ *   Maestro selector (`"Translate|Traducir"`) addresses the action in whichever
+ *   menu is open.
  * @param onAddTag Open the [AnchoredTagInput] for this highlight.
  * @param onAnnotate Open the [HighlightAnnotationModal] for this
  *   highlight.

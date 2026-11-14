@@ -61,6 +61,7 @@ import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.MenuOpen
 import androidx.compose.material.icons.rounded.Monitor
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Notifications
@@ -201,15 +202,33 @@ object NexoIcons {
         }
 
     /**
-     * Book with a magnifier — the "Definir" action (look up the meaning of the
-     * selection). Distinct from [BookOpen], which is the personal dictionary
-     * ("save this word"), so the two actions never read as the same thing.
-     * Filled. Source: `ic_book_search.xml`, 24 viewport.
+     * Open book with a magnifier — the "Definir" action (look up the meaning of
+     * the current text) AND the definition panel's header mark, so the panel and
+     * the action that opened it wear the same glyph.
+     *
+     * **Why `MenuOpen` and not Material's `BookOnline`/`FindInPage`/`Quiz`.**
+     * Chosen by rendered comparison at the size the reader actually sees — 22dp
+     * inside the menu's 40dp circle, 18dp in the panel header (see
+     * `DefineIconCandidatesPreview.kt`). The previous glyph was a flat-closed
+     * book (`ic_book_search.xml`) whose four horizontal text lines and small
+     * magnifier annular ring merged into a solid blob at 22dp. `MenuOpen` reads
+     * as an OPEN book — the universal "meaning of this text" mark — because it
+     * carries exactly ONE internal detail stripe instead of four, and every
+     * stroke survives at 18dp.
+     *
+     * `BookOnline` was the obvious candidate by name and was REJECTED: it draws a
+     * page of unreadable fuzz plus a magnifier that shrinks to a 3px dot — the
+     * same defect being fixed. `FindInPage`/`Plagiarism`/`Pageview` are all a
+     * small magnifier inside a larger outline and collapse identically. `Quiz`
+     * (book + `?`) is too busy and says "question", not "definition". `Search`
+     * alone was rejected because it collides with the library's search action.
+     *
+     * Distinct from [BookOpen] (the personal dictionary, "save this word"), so
+     * the two adjacent actions never read as the same thing.
+     *
+     * Filled. Source: `Icons.Rounded.MenuOpen`.
      */
-    val BookSearch =
-        nexoIcon("BookSearch") {
-            filledPathFromXml("M6,2A3,3 0,0 0,3 5V19a5.006,5.006 0,0 0,5 5H19a1,1 0,0 0,1 -1V17.5a1,1 0,0 0,-0.293 -0.707A2.5,2.5 0,0 1,20 13V5A3,3 0,0 0,17 2ZM5,5A1,1 0,0 1,6 4H17a1,1 0,0 1,1 1V13h-3.5a4.5,4.5 0,0 0,-2.5 0.8V5a1,1 0,0 0,-2 0V16.6A4.5,4.5 0,0 0,7.5 16H7a1,1 0,0 0,0 2h0.5a2.5,2.5 0,0 1,0.5 0V20a3,3 0,0 1,-3 -3ZM13.5,15h3.086l2.707,2.707a1,1 0,0 0,1.414 -1.414L17.914,13.586A4.5,4.5 0,1 0,13.5 22a4.5,4.5 0,0 0,0 -7ZM11,17.5a2.5,2.5 0,1 1,2.5 2.5A2.5,2.5 0,0 1,11 17.5Z")
-        }
+    val BookSearch = Icons.Rounded.MenuOpen
 
     /**
      * Share — three connected dots. Filled. Source: `ic_share.xml`,
