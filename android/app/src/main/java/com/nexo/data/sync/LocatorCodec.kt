@@ -43,33 +43,81 @@ object LocatorCodec {
     private const val FALLBACK_TYPE = "application/xhtml+xml"
     private val SPINE_INDEX_RE = Regex("""^epubcfi\(/6/(\d+)""")
 
-    /** Normalize href to forward slash (Windows backslash fix). */
-    fun normalizeHref(href: String): String = href.replace("\\", "/")
+    /**
+     * Normalize an href to the form an EPUB/Readium href must take (Windows backslash fix), and
+     * collapse a doubled slash left in already-persisted data by the corruption that shipped
+     * before T2. A separator is always a single `/` in an EPUB href (OCF container filenames are
+     * ZIP entries; an empty path segment is not a legal filename), and an href is always a
+     * publication-relative path — never an absolute URL with an authority. So `//` has no legal
+     * occurrence in the value this field may hold, and collapsing it is lossless.
+     */
+    fun normalizeHref(href: String): String = collapseRepeatedSlashes(href.replace("\\", "/"))
 
     /**
-     * Normalize a locator JSON string: replace backslash in href field with forward slash.
-     * Returns original json if no backslash or parse fails (fallback global replace).
+     * Collapse runs of `/` in a resource href. A path segment cannot be empty, so a repeated
+     * slash is always an artefact: either the Windows artefact above or the `\/`-escaping
+     * corruption that turned `OEBPS\/x.xhtml` into `OEBPS//x.xhtml` on write. Idempotent, so it
+     * is safe to apply on every read. Applied per FIELD — never as a blanket replace over the
+     * whole JSON — and `locations.fragment` (an epubcfi) is left alone entirely.
+     */
+    private fun collapseRepeatedSlashes(href: String): String = href.replace(REPEATED_SLASH_RE, "/")
+
+    /** Matches the `"href":"<value>"` pair, so the regex fallback touches only the href value. */
+    private val HREF_PAIR_RE = Regex(""""href"\s*:\s*"([^"]*)"""")
+
+    /** A run of two or more `/` — never legal inside an href (see [collapseRepeatedSlashes]). */
+    private val REPEATED_SLASH_RE = Regex("/{2,}")
+
+    /**
+     * Collapse a doubled slash in a `type` media type. The corruption that shipped before T2 hit
+     * BOTH fields, and `type` is not inert: Readium's `Locator.fromJSON` parses it as a
+     * `MediaType` and returns null for the WHOLE locator when it is malformed. Measured on device:
+     * `{"href":"OEBPS/ch.xhtml","type":"application//xhtml+xml"}` parses to null, while the same
+     * JSON with `application/xhtml+xml` parses. Without this the href repair alone changes nothing
+     * about resume — the reader still lands on the cover. A media type is `type/subtype` with
+     * exactly one structural slash, so a run of two is never legal and collapsing it is lossless.
+     */
+    private fun normalizeMediaType(type: String): String = type.replace(REPEATED_SLASH_RE, "/")
+
+    /**
+     * Normalize a locator JSON string: repair the `href` and `type` fields, and leave the input
+     * untouched when there is nothing to repair.
+     *
+     * Both repairs are idempotent:
+     * - a real backslash (Windows path artefact) becomes a forward slash;
+     * - a doubled slash — the shape the pre-T2 writer persisted, `OEBPS//x.xhtml` — collapses to
+     *   a single slash. That shape is *read-path repaired* rather than migrated: existing rows
+     *   already hold it, and a single-statement bulk UPDATE would rewrite rows whose corruption
+     *   pattern differs, could not be validated row by row, and could not be undone, whereas
+     *   normalising on read is idempotent, testable, and heals only what the reader actually uses.
+     *
+     * Parity with desktop `normalizeLocatorJson` — parse FIRST, inspect the PARSED href, and never
+     * test the RAW text for a backslash: the platform `org.json` serializer escapes `/` as `\/`,
+     * so the serialized text of a clean locator always contains one and a blanket replace would
+     * turn `OEBPS\/x.xhtml` into `OEBPS//x.xhtml`. Every rewrite is applied to a parsed FIELD —
+     * never to the serialized text — so an unrelated field can never be mangled.
+     *
+     * Falls back to a targeted regex over the `"href"` pair when the JSON does not parse.
      */
     fun normalizeLocatorJson(json: String?): String? {
         if (json.isNullOrEmpty()) return json
-        if (!json.contains("\\")) return json
         return try {
             val obj = org.json.JSONObject(json)
-            if (obj.has("href")) {
-                val href = obj.optString("href")
-                if (href.contains("\\")) {
-                    obj.put("href", normalizeHref(href))
-                    return obj.toString()
-                }
-            }
-            // If href not at top level but json still contains backslash, fallback
-            if (json.contains("\\") && json.contains("\"href\"")) {
-                json.replace("\\", "/")
-            } else {
-                json
-            }
+            val href = if (obj.has("href")) obj.optString("href") else ""
+            val type = if (obj.has("type")) obj.optString("type") else ""
+            val normalizedHref = normalizeHref(href)
+            val normalizedType = normalizeMediaType(type)
+            if (normalizedHref == href && normalizedType == type) return json
+            if (normalizedHref != href) obj.put("href", normalizedHref)
+            if (normalizedType != type) obj.put("type", normalizedType)
+            obj.toString()
         } catch (_: Exception) {
-            if (json.contains("\\")) json.replace("\\", "/") else json
+            // Unparseable input: rewrite only the `"href"` value, never the serialized text
+            // wholesale — a blanket replace would also rewrite the `type` media type.
+            val match = HREF_PAIR_RE.find(json) ?: return json
+            val normalized = normalizeHref(match.groupValues[1])
+            if (normalized == match.groupValues[1]) return json
+            json.replace(HREF_PAIR_RE) { m -> "\"href\":\"${normalizeHref(m.groupValues[1])}\"" }
         }
     }
 
