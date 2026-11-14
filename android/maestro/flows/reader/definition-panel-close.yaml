@@ -1,0 +1,151 @@
+appId: com.nexo
+tags: [regression]
+---
+# T1 of `android-selection-overlay-polish` — the definition panel's "Cerrar"
+# must actually CLOSE the panel.
+#
+# The shipped defect: "Cerrar" resolved to `onDismissDefinitionInput()`, which
+# clears `showDefinitionInput` — the save-to-personal-dictionary flag — while the
+# panel obeys `showDefinitionPanel`. The button did something real and irrelevant,
+# so a test that only checked "the tap was accepted" passed. This flow asserts
+# the PANEL IS GONE after the tap.
+#
+# Every assertion is a selector (`text:`/`contentDescription`), never a
+# coordinate + eyeball. The panel's unique markers are its Close label
+# (`R.string.definition_close`) and the Wiktionary attribution; the selection
+# MENU returns after dismissal and legitimately still shows "Definir", so the
+# "gone" assertions target the panel's own content, not the whole screen.
+#
+# Preconditions (android/AGENTS.md → E2E): signed-in session preserved, the book
+# "El extranjero" imported, system locale Spanish. NEVER clearState: true.
+#
+# Run: maestro --device emulator-5554 test maestro/flows/reader/definition-panel-close.yaml
+- launchApp:
+    clearState: false
+- runFlow:
+    file: ../../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ─── 1. Reach the reader ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      text: "Ajustes|Settings"
+    timeout: 30000
+- tapOn:
+    text: "Estantería|Library|Biblioteca|Home|Inicio"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "El extranjero"
+- extendedWaitUntil:
+    visible:
+      text: "Sinopsis"
+    timeout: 15000
+- runFlow:
+    when:
+      visible: "Continuar leyendo|Continue Reading"
+    commands:
+      - tapOn: "Continuar leyendo|Continue Reading"
+- runFlow:
+    when:
+      visible: "Empezar a leer|Start Reading"
+    commands:
+      - tapOn: "Empezar a leer|Start Reading"
+- waitForAnimationToEnd:
+    timeout: 25000
+
+# Past the cover into the flowing text. A real press-and-hold is what starts the
+# WebView selection (`adb shell input` cannot produce it — selection-probe.yaml).
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 80%, 50%
+          end: 20%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+- longPressOn:
+    point: 30%, 36%
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# ─── 2. Open the definition panel via "Definir" ───────────────────────
+- assertVisible:
+    text: "Definir|Define"
+- tapOn:
+    text: "Definir|Define"
+- waitForAnimationToEnd:
+    timeout: 15000
+
+# The panel is present: its Close label and the attribution are BOTH its own.
+- extendedWaitUntil:
+    visible:
+      text: "Cerrar|Close"
+    timeout: 15000
+- assertVisible:
+    text: ".*Wiktionary.*|.*CC BY-SA.*"
+- takeScreenshot: close-01-panel-visible
+
+# ─── 3. Tap "Cerrar" and assert the PANEL IS GONE (the defect) ────────
+- tapOn:
+    text: "Cerrar|Close"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertNotVisible:
+    text: "Cerrar|Close"
+- assertNotVisible:
+    text: ".*Wiktionary.*|.*CC BY-SA.*"
+- assertNotVisible:
+    text: "Idioma de la palabra.*|Word language.*"
+- takeScreenshot: close-02-panel-dismissed-by-close
+
+# ─── 4. A SECOND dismissal path still works: tap away ─────────────────
+# Reopen, then dismiss by tapping the void. The panel must go too — this is the
+# path my change must not break.
+- assertVisible:
+    text: "Definir|Define"
+- tapOn:
+    text: "Definir|Define"
+- waitForAnimationToEnd:
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      text: "Cerrar|Close"
+    timeout: 15000
+- takeScreenshot: close-03-panel-reopened
+# A point ABOVE the panel's box — the panel anchors near the selection, so a tap
+# at 20% would land INSIDE it and prove nothing. 8% is clear of the card.
+- tapOn:
+    point: 50%, 8%
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertNotVisible:
+    text: "Cerrar|Close"
+- takeScreenshot: close-04-panel-dismissed-by-tap-away
+
+# ─── 5. The panel can be REOPENED afterwards (not left broken) ────────
+- longPressOn:
+    point: 30%, 36%
+- waitForAnimationToEnd:
+    timeout: 10000
+- assertVisible:
+    text: "Definir|Define"
+- tapOn:
+    text: "Definir|Define"
+- waitForAnimationToEnd:
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      text: "Cerrar|Close"
+    timeout: 15000
+- takeScreenshot: close-05-panel-reopened-after-dismissals
+
+# Leave the reader clean for the next flow.
+- tapOn:
+    text: "Cerrar|Close"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertNotVisible:
+    text: "Cerrar|Close"
+- takeScreenshot: close-06-final-dismiss

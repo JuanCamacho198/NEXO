@@ -1,0 +1,242 @@
+appId: com.nexo
+tags: [regression]
+---
+# T9/T10/T11 of `android-define-selection` — the definition language setting.
+#
+# What this covers, all by selector (no coordinate taps):
+#   1. Settings → Definitions sub-page is reachable, and its row lives in the
+#      "Lectura" group next to Translation.
+#   2. Picking a definition language shows it selected.
+#   3. The choice PERSISTS across a navigate-away-and-back (the setting is a
+#      real store, not in-memory UI state).
+#   4. In the reader, selecting a word and tapping "Definir" (the Define icon's
+#      contentDescription — the icon has no visible text) opens the definition
+#      panel.
+#   5. The panel shows the word-language LABEL and the definition-language
+#      SELECTOR showing the SAME value chosen in Settings (one store, two views).
+#   6. The Wiktionary CC BY-SA attribution is present.
+#   7. "Diccionario" is still its own action in the same menu — the lookup never
+#      replaces the personal dictionary path.
+#
+# Preconditions (see android/AGENTS.md → E2E): signed-in session preserved, the
+# book "El extranjero" imported, system locale Spanish. NEVER clearState: true.
+#
+# Run: maestro --device emulator-5554 test maestro/flows/reader/definition-language.yaml
+- launchApp:
+    clearState: false
+- runFlow:
+    file: ../../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ─── 1. Settings → Definitions sub-page ───────────────────────────────
+- extendedWaitUntil:
+    visible:
+      text: "Ajustes|Settings"
+    timeout: 30000
+- tapOn:
+    text: "Ajustes|Settings"
+- waitForAnimationToEnd:
+    timeout: 5000
+- scrollUntilVisible:
+    element:
+      text: "Definiciones|Definitions"
+    direction: DOWN
+    timeout: 10000
+# T9: the row shipped in the "Lectura" group, beside Translation.
+- assertVisible:
+    text: "Traducción|Translation"
+- assertVisible:
+    text: "Definiciones|Definitions"
+- takeScreenshot: settings-definition-row
+
+- tapOn:
+    text: "Definiciones|Definitions"
+- extendedWaitUntil:
+    visible:
+      text: "Definiciones en|Definitions in"
+    timeout: 10000
+# The sub-page renders follow-the-locale plus one option per language.
+- assertVisible:
+    text: "Seguir el dispositivo|Follow the device"
+- assertVisible:
+    text: "Español|Spanish"
+- assertVisible:
+    text: "Inglés|English"
+- takeScreenshot: settings-definition-subpage
+
+# ─── 2. Choose a definition language ──────────────────────────────────
+# Choosing Spanish makes the assertion sharp: the emulator locale is en-US, so a
+# panel that ignored the setting would show English and fail step 5.
+- tapOn:
+    text: "Español|Spanish"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: settings-definition-chosen
+
+# ─── 3. It PERSISTS across a navigate-away-and-back ───────────────────
+# The toolbar back arrow carries R.string.nav_back as its contentDescription,
+# so this is a selector, not a coordinate tap.
+- tapOn:
+    text: "Volver|Back"
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element:
+      text: "Definiciones|Definitions"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    text: "Definiciones|Definitions"
+- extendedWaitUntil:
+    visible:
+      text: "Definiciones en|Definitions in"
+    timeout: 10000
+# The re-read value is the persisted one, not a fresh default.
+- assertVisible:
+    text: "Español|Spanish"
+- takeScreenshot: settings-definition-persisted
+
+# ─── 4. Open a book and select a word, then Define ────────────────────
+- tapOn:
+    text: "Volver|Back"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "Estantería|Library|Biblioteca|Home|Inicio"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "El extranjero"
+- extendedWaitUntil:
+    visible:
+      text: "Sinopsis"
+    timeout: 15000
+- runFlow:
+    when:
+      visible: "Continuar leyendo|Continue Reading"
+    commands:
+      - tapOn: "Continuar leyendo|Continue Reading"
+- runFlow:
+    when:
+      visible: "Empezar a leer|Start Reading"
+    commands:
+      - tapOn: "Empezar a leer|Start Reading"
+- waitForAnimationToEnd:
+    timeout: 25000
+# The reader opens on the cover; swipe into the flowing text.
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 80%, 50%
+          end: 20%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+# A real press-and-hold is what starts a WebView selection (see
+# selection-probe.yaml — `adb shell input` cannot produce this gesture).
+- longPressOn:
+    point: 30%, 36%
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: definition-selection-menu
+
+# T10/T7: the Define action carries its label as contentDescription (the icon
+# has no visible text), which is what makes it addressable here.
+- assertVisible:
+    text: "Definir|Define"
+# 7. The personal dictionary stays a separate action in the same menu. Its
+# contentDescription is R.string.context_menu_dictionary ("Agregar al
+# diccionario"), NOT a literal "Diccionario" — the icon is text-less.
+- assertVisible:
+    text: "Agregar al diccionario|Add to Dictionary"
+- tapOn:
+    text: "Definir|Define"
+- waitForAnimationToEnd:
+    timeout: 15000
+- takeScreenshot: definition-panel
+
+# ─── 5. The panel shows both languages, never conflated ───────────────
+# The word-language LABEL (read-only text, "Idioma de la palabra: …") is the
+# BOOK's language and must never follow the definition-language setting.
+- assertVisible:
+    text: "Idioma de la palabra.*|Word language.*"
+- assertVisible:
+    text: "Cerrar|Close"
+# ─── 6. The attribution accompanies the result ────────────────────────
+# WIKTIONARY_ATTRIBUTION is a non-optional default on DefinitionResult and is
+# rendered on every branch — result, empty AND failure — so it must be visible
+# whatever the body says. This is the licence condition, not a nicety.
+- assertVisible:
+    text: ".*Wiktionary.*|.*CC BY-SA.*"
+- takeScreenshot: definition-panel-asserted
+
+# ─── The definition-language SELECTOR reads the SAME store as Settings ─
+# Settings was set to Spanish above, and the emulator locale is English, so a
+# chip reading "Español" proves the panel read the SETTING, not the locale.
+- assertVisible:
+    text: "Español|Spanish"
+- takeScreenshot: definition-panel-selector
+
+# Change the language ON THE PANEL, without leaving the reader (ODD T9/T8: that
+# is the whole point of the selector). Step 1 reopens the chip, step 2 picks
+# English, step 3 proves the WRITE landed on the shared store by asserting the
+# chip now reads English and Spanish is GONE — a weak assertion would pass on an
+# unchanged panel, which is the failure mode this ODD exists to prevent.
+- tapOn:
+    text: "Español|Spanish"
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "Inglés|English"
+- waitForAnimationToEnd:
+    timeout: 15000
+- takeScreenshot: definition-panel-relanguage
+- assertVisible:
+    text: "Inglés|English"
+- assertNotVisible:
+    text: "Español|Spanish"
+# The word-language LABEL is unaffected by the definition-language change: the
+# two are separate facts (invariant 1). The attribution survives the re-lookup.
+- assertVisible:
+    text: "Idioma de la palabra.*|Word language.*"
+- assertVisible:
+    text: ".*Wiktionary.*|.*CC BY-SA.*"
+- takeScreenshot: definition-panel-relanguage-asserted
+
+# ─── Back in Settings the SAME value is shown (one store, two views) ──
+# The panel changed the language to English; Settings must agree, because both
+# read and write the SAME DefinitionPreferences (ODD T9/acceptance 11).
+- tapOn:
+    text: "Cerrar|Close"
+- waitForAnimationToEnd:
+    timeout: 5000
+# The reader is immersive; the chrome (and any visible back arrow) is hidden.
+# The project leaves the reader with the system Back key (see
+# reader-menu-delete.yaml and resurrection-guard.yaml).
+- pressKey: Back
+- waitForAnimationToEnd:
+    timeout: 5000
+- pressKey: Back
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "Ajustes|Settings"
+    timeout: 15000
+- tapOn:
+    text: "Ajustes|Settings"
+- waitForAnimationToEnd:
+    timeout: 5000
+- scrollUntilVisible:
+    element:
+      text: "Definiciones|Definitions"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    text: "Definiciones|Definitions"
+- extendedWaitUntil:
+    visible:
+      text: "Definiciones en|Definitions in"
+    timeout: 10000
+- takeScreenshot: settings-definition-after-panel-change

@@ -1,0 +1,107 @@
+appId: com.nexo
+tags: [regression]
+---
+# Definition-panel ANCHORING at two selection positions.
+#
+# Bug being pinned: tapping "Definir" opened the ~180dp definition panel that
+# COVERED the selected word — it landed above the selection and, because the
+# placement decision used a height that did not match what was drawn, its lower
+# edge crossed the very text the reader asked about.
+#
+# Required behaviour: the panel goes ABOVE by preference, flips BELOW when it
+# does not fit, and NEVER overlaps the selection rect.
+#
+# Two positions are exercised, because the two branches are what the fix is
+# about:
+#   CASE A — selection near the TOP: no room above the header reserve, so the
+#            panel must flip BELOW.
+#   CASE B — selection in the MIDDLE: room above, so the panel must go ABOVE.
+#
+# Maestro cannot compare two element rectangles, so each case takes a
+# screenshot AND the run script reads `android layout --pretty` to compare the
+# panel's bounds against the selection bounds. The assertions here prove the
+# panel actually OPENED; the geometry proof is in the run report.
+#
+# Run: maestro --device emulator-5554 test maestro/flows/reader/definition-panel-anchoring.yaml
+- launchApp:
+    clearState: false
+- runFlow:
+    file: ../../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "Library|Biblioteca|Home|Inicio"
+    timeout: 30000
+- tapOn:
+    text: "Library|Biblioteca|Home|Inicio"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "El extranjero"
+- extendedWaitUntil:
+    visible:
+      text: "Sinopsis|Synopsis"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Continuar leyendo|Continue Reading"
+    commands:
+      - tapOn: "Continuar leyendo|Continue Reading"
+- runFlow:
+    when:
+      visible: "Empezar a leer|Start Reading"
+    commands:
+      - tapOn: "Empezar a leer|Start Reading"
+- waitForAnimationToEnd:
+    timeout: 25000
+# Swipe past the cover into the flowing text.
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 80%, 50%
+          end: 20%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ─── CASE A: selection near the TOP of the readable area ──────────────
+# y=18% leaves far less than a panel's height above the header reserve, so the
+# panel MUST flip below the selection.
+- longPressOn:
+    point: 30%, 18%
+- waitForAnimationToEnd:
+    timeout: 10000
+- assertVisible:
+    text: "Definir|Define"
+- tapOn:
+    text: "Definir|Define"
+- waitForAnimationToEnd:
+    timeout: 15000
+# The panel is open: its two always-present controls.
+- assertVisible:
+    text: "Idioma de la palabra.*|Word language.*"
+- assertVisible:
+    text: "Cerrar|Close"
+- takeScreenshot: definition-panel-top-selection
+
+# ─── CASE B: selection in the MIDDLE of the page ─────────────────────
+- tapOn:
+    text: "Cerrar|Close"
+- waitForAnimationToEnd:
+    timeout: 5000
+- longPressOn:
+    point: 30%, 46%
+- waitForAnimationToEnd:
+    timeout: 10000
+- assertVisible:
+    text: "Definir|Define"
+- tapOn:
+    text: "Definir|Define"
+- waitForAnimationToEnd:
+    timeout: 15000
+- assertVisible:
+    text: "Idioma de la palabra.*|Word language.*"
+- assertVisible:
+    text: "Cerrar|Close"
+- takeScreenshot: definition-panel-middle-selection

@@ -2,9 +2,7 @@ package com.nexo.ui.components.molecules
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,33 +28,41 @@ import com.nexo.ui.icons.NexoIcons
 /**
  * Floating action menu shown when the user makes a NEW text
  * selection. Sibling of [FloatingContextMenu] but with a different
- * action set: 5 color swatches + copy + dictionary + share (the
- * "existing highlight" menu has Tag + Delete instead of the
- * dictionary, and uses a single color popover trigger).
+ * action set: a single palette trigger + copy + dictionary +
+ * define + translate + share (the "existing highlight" menu has
+ * Tag + Annotate + Delete instead of the dictionary).
  *
  * Design: horizontal pill with thin vertical divider between the
- * color group and the action group:
+ * colour group and the action group:
  * ```
- * [●][●][●][●][●] | [Copy] [Dictionary] [Share]
+ * [Palette] | [Copy] [Dictionary] [Define] [Translate] [Share]
  * ```
  * All colors come from [MaterialTheme.colorScheme] so the menu
  * adapts to light/dark themes.
  *
- * @param paletteColors List of 5 hex color strings shown as
- *   swatches. Should come from
- *   `ReaderSettings.customHighlightColors` (or the defaults via
- *   [HighlightColor.defaultHexList]). The first 5 are used; extras
- *   are ignored.
+ * **Why one palette trigger and not five inline swatches.** Five swatches
+ * consumed ~140dp of the pill; on a 360dp phone the menu overflowed and its
+ * ends were cut. Worse, a swatch only means something when you can compare it
+ * against its neighbours, so scrolling the palette turns "pick a colour" into
+ * "hunt for a colour". The trigger opens [HighlightColorPickerPopover] — the
+ * same mechanism [FloatingContextMenu] already uses — which shows every preset
+ * at once. The two menus therefore share a colour-control SHAPE without
+ * becoming one menu.
+ *
  * @param selectedColor Currently active highlight color (hex with
- *   or without `#`). The matching swatch gets a 2dp ring around
- *   it so the user can see which color was last used. Pass `null`
- *   to disable the ring (e.g. for the very first selection).
- * @param onColorSelected Invoked with the chosen hex when a
- *   swatch is tapped. The caller should immediately persist the
- *   highlight with that color (this menu does NOT open a popover).
+ *   or without `#`). Drives the Palette icon tint via
+ *   [parseColorHex] so the user sees the last-used colour. Pass
+ *   `null` to fall back to the neutral content colour.
+ * @param onColorSelected Invoked when the Palette icon is tapped.
+ *   Typically opens the [HighlightColorPickerPopover]; the
+ *   popover's own colour callback does the actual highlight.
  * @param onCopy Copy the selected text to the clipboard.
  * @param onDictionary Open the [AnchoredDefinitionInput] for the
- *   selected word.
+ *   selected word (the PERSONAL dictionary — save a word).
+ * @param onDefine Look up the MEANING of the selected word
+ *   ([AnchoredDefinitionPanel]). A different action from
+ *   [onDictionary]: this one looks up, it never writes the personal
+ *   dictionary.
  * @param onTranslate Open the [AnchoredTranslationPanel] for the
  *   selected word (machine translation, MyMemory).
  * @param onShare Share the selected text via the system share
@@ -64,25 +70,24 @@ import com.nexo.ui.icons.NexoIcons
  * @param modifier Modifier applied to the outer `Row`.
  *
  * **Visual**: pill-shaped `Row` with 8dp shadow, 6dp padding,
- *   50%-radius corners. Each swatch is a 28dp clickable circle;
- *   the active swatch (matching [selectedColor]) is wrapped in a
- *   2dp ring of `onSurface` for visibility against the
- *   surface. Action icons are 40dp clickable circles (same as
- *   [FloatingContextMenu]). Vertical dividers (1dp × 20dp) sit
- *   between the color group and the action group.
- * **Behavior**: each swatch calls [onColorSelected] with its hex.
- *   Each action icon calls its respective callback. No internal
- *   state, no animation.
- * **Recomposition**: recomposes when `paletteColors`,
- *   `selectedColor`, or any callback changes.
+ *   50%-radius corners. Action icons are 40dp clickable circles (same as
+ *   [FloatingContextMenu]). A vertical divider (1dp × 20dp) sits between the
+ *   palette trigger and the action group.
+ * **Overflow**: the palette trigger is pinned; the actions scroll horizontally
+ *   when they exceed the width, with an edge fade on any side that still has
+ *   content (see [MenuScrollRow]). On a screen wide enough to fit the whole
+ *   menu nothing scrolls and no fade is drawn.
+ * **Behavior**: the palette trigger calls [onColorSelected]; each action icon
+ *   calls its respective callback. No internal state beyond the scroll offset.
+ * **Recomposition**: recomposes when `selectedColor` or any callback changes.
  */
 @Composable
 fun TextSelectionMenu(
-    paletteColors: List<String>,
     selectedColor: String? = null,
-    onColorSelected: (String) -> Unit,
+    onColorSelected: () -> Unit,
     onCopy: () -> Unit,
     onDictionary: () -> Unit,
+    onDefine: () -> Unit = {},
     onTranslate: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
@@ -91,58 +96,59 @@ fun TextSelectionMenu(
     val contentColor = contentColorFor(containerColor)
     val dividerColor = MaterialTheme.colorScheme.outlineVariant
 
-    Row(
+    MenuScrollRow(
         modifier =
             modifier
                 .shadow(8.dp, RoundedCornerShape(50))
                 .background(containerColor, RoundedCornerShape(50))
                 .padding(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        // ── 5 color swatches (direct selection) ─────────────────
-        paletteColors.take(5).forEach { hex ->
-            Box(
-                modifier =
-                    Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(parseColorHex(hex))
-                        .clickable { onColorSelected(hex) },
+        leading = {
+            SelectionMenuIcon(
+                icon = NexoIcons.Palette,
+                contentDescription = stringResource(R.string.context_menu_color),
+                tint = selectedColor?.let(::parseColorHex) ?: contentColor,
+                onClick = onColorSelected,
             )
-        }
 
-        MenuVerticalDivider(dividerColor)
+            MenuVerticalDivider(dividerColor)
+        },
+        actions = {
+            SelectionMenuIcon(
+                icon = NexoIcons.Copy,
+                contentDescription = stringResource(R.string.text_selection_copy),
+                tint = contentColor,
+                onClick = onCopy,
+            )
 
-        // ── Actions ─────────────────────────────────────────────
-        SelectionMenuIcon(
-            icon = NexoIcons.Copy,
-            contentDescription = stringResource(R.string.text_selection_copy),
-            tint = contentColor,
-            onClick = onCopy,
-        )
+            SelectionMenuIcon(
+                icon = NexoIcons.BookOpen,
+                contentDescription = stringResource(R.string.context_menu_dictionary),
+                tint = contentColor,
+                onClick = onDictionary,
+            )
 
-        SelectionMenuIcon(
-            icon = NexoIcons.BookOpen,
-            contentDescription = stringResource(R.string.context_menu_dictionary),
-            tint = contentColor,
-            onClick = onDictionary,
-        )
+            SelectionMenuIcon(
+                icon = NexoIcons.BookSearch,
+                contentDescription = stringResource(R.string.text_selection_define),
+                tint = contentColor,
+                onClick = onDefine,
+            )
 
-        SelectionMenuIcon(
-            icon = NexoIcons.Language,
-            contentDescription = stringResource(R.string.text_selection_translate),
-            tint = contentColor,
-            onClick = onTranslate,
-        )
+            SelectionMenuIcon(
+                icon = NexoIcons.Language,
+                contentDescription = stringResource(R.string.text_selection_translate),
+                tint = contentColor,
+                onClick = onTranslate,
+            )
 
-        SelectionMenuIcon(
-            icon = NexoIcons.Share,
-            contentDescription = stringResource(R.string.context_menu_share),
-            tint = contentColor,
-            onClick = onShare,
-        )
-    }
+            SelectionMenuIcon(
+                icon = NexoIcons.Share,
+                contentDescription = stringResource(R.string.context_menu_share),
+                tint = contentColor,
+                onClick = onShare,
+            )
+        },
+    )
 }
 
 @Composable
@@ -202,11 +208,11 @@ private fun parseColorHex(hex: String): Color =
 private fun TextSelectionMenuDarkPreview() {
     NexoTheme(darkTheme = true) {
         TextSelectionMenu(
-            paletteColors = HighlightColor.defaultHexList(),
             selectedColor = HighlightColor.YELLOW.hex,
             onColorSelected = {},
             onCopy = {},
             onDictionary = {},
+            onDefine = {},
             onTranslate = {},
             onShare = {},
         )
@@ -218,11 +224,11 @@ private fun TextSelectionMenuDarkPreview() {
 private fun TextSelectionMenuLightPreview() {
     NexoTheme(darkTheme = false) {
         TextSelectionMenu(
-            paletteColors = HighlightColor.defaultHexList(),
             selectedColor = HighlightColor.YELLOW.hex,
             onColorSelected = {},
             onCopy = {},
             onDictionary = {},
+            onDefine = {},
             onTranslate = {},
             onShare = {},
         )

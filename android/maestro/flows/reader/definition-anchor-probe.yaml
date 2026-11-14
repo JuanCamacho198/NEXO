@@ -1,0 +1,65 @@
+appId: com.nexo
+---
+# Geometry probe for the definition panel's ANCHORING.
+#
+# Leaves the DEFINITION PANEL open so the run script can read its bounds from
+# `android layout --pretty` and compare them against the Readium selection
+# handles (which the native WebView renders as its own popup windows).
+#
+# The selection handles are the ground truth for where the selected word IS:
+# they are drawn by Readium at the selection's edges, so if the panel's rect
+# intersects the band between them, the panel COVERS the selected word.
+- launchApp:
+    clearState: false
+- runFlow:
+    file: ../../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "Library|Biblioteca|Home|Inicio"
+    timeout: 30000
+- tapOn:
+    text: "Library|Biblioteca|Home|Inicio"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "El extranjero"
+- extendedWaitUntil:
+    visible:
+      text: "Sinopsis|Synopsis"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Continuar leyendo|Continue Reading"
+    commands:
+      - tapOn: "Continuar leyendo|Continue Reading"
+- runFlow:
+    when:
+      visible: "Empezar a leer|Start Reading"
+    commands:
+      - tapOn: "Empezar a leer|Start Reading"
+- waitForAnimationToEnd:
+    timeout: 25000
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 80%, 50%
+          end: 20%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+- longPressOn:
+    point: 30%, 48%
+- waitForAnimationToEnd:
+    timeout: 10000
+- assertVisible:
+    text: "Definir|Define"
+- takeScreenshot: anchor-probe-menu
+- tapOn:
+    text: "Definir|Define"
+- waitForAnimationToEnd:
+    timeout: 15000
+- assertVisible:
+    text: "Idioma de la palabra.*|Word language.*"
+- takeScreenshot: anchor-probe-panel

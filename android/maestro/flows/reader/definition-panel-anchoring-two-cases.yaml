@@ -1,0 +1,109 @@
+appId: com.nexo
+tags: [regression]
+---
+# Definition-panel ANCHORING — two selection positions, verified against geometry.
+#
+# Bug being pinned: tapping "Definir" opened the ~180dp definition panel that
+# COVERED the selected word. The placement decision was fed a selection rect
+# whose `bottom` was ABOVE its `top` (Readium returns an inverted rect for a
+# selection crossing a column boundary), so the "place below" branch computed a
+# y ABOVE the selection's first line.
+#
+# Required behaviour: ABOVE by preference, flip BELOW when it does not fit, and
+# NEVER overlap the selection rect.
+#
+# CASE A — selection near the TOP of the readable area: no room above the
+#          header reserve, so the panel must flip BELOW.
+# CASE B — selection in the MIDDLE: room above, so the panel must go ABOVE.
+#
+# Maestro cannot compare two element rectangles, so each case takes a
+# screenshot and the run script reads `android layout --full` and compares the
+# panel bounds against Readium's selection handles (PopupWindows). The
+# assertions here prove the panel OPENED and that the selection stayed put; the
+# geometry proof is in the run report.
+# NOTE: no launchApp — this flow assumes the app is ALREADY on the Home shelf.
+# Relaunching restores the last reader session and lands inside the book, which
+# skips the shelf entirely. Run it after: adb shell am force-stop com.nexo &&
+# adb shell am start -n com.nexo/.MainActivity
+- runFlow:
+    file: ../../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "El extranjero"
+    timeout: 30000
+- tapOn:
+    text: "El extranjero"
+- extendedWaitUntil:
+    visible:
+      text: "Sinopsis|Synopsis"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Continuar leyendo|Continue Reading"
+    commands:
+      - tapOn: "Continuar leyendo|Continue Reading"
+- runFlow:
+    when:
+      visible: "Empezar a leer|Start Reading"
+    commands:
+      - tapOn: "Empezar a leer|Start Reading"
+- waitForAnimationToEnd:
+    timeout: 25000
+# Swipe past the cover into the flowing text.
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 80%, 50%
+          end: 20%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ─── CASE A: selection near the TOP of the readable area ──────────────
+# y=18% leaves far less than a panel's height above the header reserve, so the
+# panel MUST flip below the selection.
+- longPressOn:
+    point: 30%, 18%
+- waitForAnimationToEnd:
+    timeout: 10000
+- assertVisible:
+    text: "Definir|Define"
+- tapOn:
+    text: "Definir|Define"
+- waitForAnimationToEnd:
+    timeout: 15000
+- assertVisible:
+    text: "Idioma de la palabra.*|Word language.*"
+- assertVisible:
+    text: "Cerrar|Close"
+- takeScreenshot: def-anchor-case-a-top
+- tapOn:
+    text: "Cerrar|Close"
+- waitForAnimationToEnd:
+    timeout: 5000
+# Clear the leftover selection before the next case: closing the panel does not
+# drop the text selection, so the next long-press would re-open the SAME menu
+# instead of producing a fresh selection at the new position.
+- tapOn:
+    point: 50%, 80%
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# ─── CASE B: selection in the MIDDLE ─────────────────────────────────
+- longPressOn:
+    point: 30%, 46%
+- waitForAnimationToEnd:
+    timeout: 10000
+- assertVisible:
+    text: "Definir|Define"
+- tapOn:
+    text: "Definir|Define"
+- waitForAnimationToEnd:
+    timeout: 15000
+- assertVisible:
+    text: "Idioma de la palabra.*|Word language.*"
+- assertVisible:
+    text: "Cerrar|Close"
+- takeScreenshot: def-anchor-case-b-middle
