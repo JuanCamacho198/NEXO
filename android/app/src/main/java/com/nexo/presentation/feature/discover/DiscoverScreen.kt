@@ -32,8 +32,8 @@ import com.nexo.R
 import com.nexo.data.remote.catalog.CatalogSources
 import com.nexo.data.session.LegalDisclaimerPrefs
 import com.nexo.presentation.feature.legal.LegalNoticeDialog
-import com.nexo.presentation.theme.NexoColors
 import com.nexo.presentation.theme.NexoDimens
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.presentation.viewmodel.DiscoverRailGroup
 import com.nexo.presentation.viewmodel.DiscoverSourceFilter
 import com.nexo.presentation.viewmodel.DiscoverStatus
@@ -242,6 +242,7 @@ private fun DiscoverIdleRails(
     onDismissGroup: (DiscoverRailGroup) -> Unit = {},
     onRetryRail: (Int) -> Unit = {},
 ) {
+    val colors = nexoColors
     Column(
         modifier =
             Modifier
@@ -262,7 +263,7 @@ private fun DiscoverIdleRails(
             Text(
                 text = stringResource(R.string.discover_idle_source_empty, sourceName),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NexoColors.textSecondary,
+                color = colors.textSecondary,
                 textAlign = TextAlign.Center,
                 modifier =
                     Modifier
@@ -294,6 +295,7 @@ private fun DiscoverRailGroupNotice(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     val source = stringResource(group.labelRes)
     val body = stringResource(R.string.discover_rail_group_failed, source)
     Column(
@@ -306,21 +308,21 @@ private fun DiscoverRailGroupNotice(
         Text(
             text = body,
             style = MaterialTheme.typography.bodyMedium,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
         )
         Row {
             TextButton(onClick = onRetry) {
                 Text(
                     text = stringResource(R.string.discover_retry),
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp),
-                    color = NexoColors.textAccent,
+                    color = colors.textAccent,
                 )
             }
             TextButton(onClick = onDismiss) {
                 Text(
                     text = stringResource(R.string.discover_dismiss),
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp),
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                 )
             }
         }

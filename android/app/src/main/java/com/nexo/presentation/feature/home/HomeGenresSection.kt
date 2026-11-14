@@ -26,15 +26,15 @@ import com.nexo.R
 import com.nexo.presentation.screen.HomeTags
 import com.nexo.presentation.theme.NexoColors
 import com.nexo.presentation.theme.NexoDimens
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.components.molecules.NexoChip
 import com.nexo.ui.icons.NexoIcons
 
-/** One genre chip: its label, glyph, tinted container and accent glyph colour. */
+/** One genre chip: its label, glyph, and the palette selectors that tint it. */
 private data class HomeGenre(
     val labelRes: Int,
     val icon: ImageVector,
-    val container: Color,
-    val accent: Color,
+    val palette: NexoColors.() -> Pair<Color, Color>,
 )
 
 /**
@@ -47,17 +47,21 @@ private data class HomeGenre(
  * `.pen` `genre_chips` row: the colour is what separates a genre at a glance,
  * and the tinted background replaces the plain surface fill that made the row
  * read as disabled controls.
+ *
+ * Colours are held as [NexoColors] selectors, not resolved values: this list is
+ * a file-level property, so it must not capture a palette at class-init time.
+ * [HomeGenresSection] resolves them against the active `nexoColors`.
  */
 private val HomeGenreChips: List<HomeGenre>
     get() =
         listOf(
-            HomeGenre(R.string.home_genre_fiction, NexoIcons.BookOpen, NexoColors.backgroundYellowTransparent, NexoColors.accentOrange),
-            HomeGenre(R.string.home_genre_classics, NexoIcons.AutoStories, NexoColors.backgroundBlueTransparent, NexoColors.accentBlue),
-            HomeGenre(R.string.home_genre_adventure, NexoIcons.Explore, NexoColors.backgroundGreenTransparent, NexoColors.accentGreen),
-            HomeGenre(R.string.home_genre_mystery, NexoIcons.Search, NexoColors.backgroundPurpleTransparent, NexoColors.accentPurple),
-            HomeGenre(R.string.home_genre_romance, NexoIcons.Favorite, NexoColors.backgroundYellowTransparent, NexoColors.accentOrange),
-            HomeGenre(R.string.home_genre_science_fiction, NexoIcons.AutoAwesome, NexoColors.backgroundPurpleTransparent, NexoColors.accentPurple),
-            HomeGenre(R.string.home_genre_history, NexoIcons.Book, NexoColors.backgroundBlueTransparent, NexoColors.accentBlue),
+            HomeGenre(R.string.home_genre_fiction, NexoIcons.BookOpen) { backgroundYellowTransparent to accentOrange },
+            HomeGenre(R.string.home_genre_classics, NexoIcons.AutoStories) { backgroundBlueTransparent to accentBlue },
+            HomeGenre(R.string.home_genre_adventure, NexoIcons.Explore) { backgroundGreenTransparent to accentGreen },
+            HomeGenre(R.string.home_genre_mystery, NexoIcons.Search) { backgroundPurpleTransparent to accentPurple },
+            HomeGenre(R.string.home_genre_romance, NexoIcons.Favorite) { backgroundYellowTransparent to accentOrange },
+            HomeGenre(R.string.home_genre_science_fiction, NexoIcons.AutoAwesome) { backgroundPurpleTransparent to accentPurple },
+            HomeGenre(R.string.home_genre_history, NexoIcons.Book) { backgroundBlueTransparent to accentBlue },
         )
 
 /**
@@ -75,20 +79,22 @@ fun HomeGenresSection(
     onGenreSelected: (String) -> Unit = {},
     onBrowseAll: () -> Unit = {},
 ) {
+    val colors = nexoColors
     Column(modifier = modifier.fillMaxWidth().testTag(HomeTags.GENRES_SECTION)) {
         GenresHeader(onBrowseAll = onBrowseAll)
         Spacer(modifier = Modifier.height(NexoDimens.spacingMd))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(NexoDimens.spacingSm)) {
             items(HomeGenreChips) { genre ->
                 val label = stringResource(genre.labelRes)
+                val (container, accent) = genre.palette(colors)
                 NexoChip(
                     label = label,
                     selected = label == selectedGenreLabel,
                     onClick = { onGenreSelected(label) },
                     icon = genre.icon,
-                    containerColor = genre.container,
-                    iconTint = genre.accent,
-                    labelColor = NexoColors.textPrimary,
+                    containerColor = container,
+                    iconTint = accent,
+                    labelColor = colors.textPrimary,
                 )
             }
         }
@@ -97,6 +103,7 @@ fun HomeGenresSection(
 
 @Composable
 private fun GenresHeader(onBrowseAll: () -> Unit) {
+    val colors = nexoColors
     val contentDescription = stringResource(R.string.home_genres_content_description)
     Row(
         modifier =
@@ -110,13 +117,13 @@ private fun GenresHeader(onBrowseAll: () -> Unit) {
             text = stringResource(R.string.home_genres_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
         )
         Icon(
             imageVector = NexoIcons.ChevronRight,
             contentDescription = null,
             modifier = Modifier.size(18.dp),
-            tint = NexoColors.textSecondary,
+            tint = colors.textSecondary,
         )
     }
 }

@@ -33,7 +33,7 @@ import com.nexo.domain.access.AccessGroup
 import com.nexo.domain.access.AccessOption
 import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.access.resolveAccess
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 
 /** Group header order for the access section: free first, paid last. */
 private val ACCESS_GROUP_ORDER = listOf(AccessGroup.FREE, AccessGroup.BUY, AccessGroup.SUBSCRIBE)
@@ -71,6 +71,7 @@ fun AccessBadge(
     access: LegalAccess,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     val label =
         when {
             access.canDownloadInApp -> stringResource(R.string.access_badge_download)
@@ -81,7 +82,7 @@ fun AccessBadge(
         modifier =
             modifier
                 .clip(RoundedCornerShape(4.dp))
-                .background(NexoColors.backgroundGreenTransparent)
+                .background(colors.backgroundGreenTransparent)
                 .padding(horizontal = 6.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -90,7 +91,7 @@ fun AccessBadge(
             Icon(
                 imageVector = it,
                 contentDescription = null,
-                tint = NexoColors.accentGreen,
+                tint = colors.accentGreen,
                 modifier = Modifier.size(12.dp),
             )
         }
@@ -98,7 +99,7 @@ fun AccessBadge(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
             fontWeight = FontWeight.Medium,
-            color = NexoColors.accentGreen,
+            color = colors.accentGreen,
         )
     }
 }
@@ -116,6 +117,7 @@ fun ProviderLogo(
     label: String,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     val initial =
         remember(label) {
             label.trim().firstOrNull()?.uppercase() ?: PROVIDER_LOGO_FALLBACK
@@ -125,14 +127,14 @@ fun ProviderLogo(
             modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(NexoColors.surfaceVariant),
+                .background(colors.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = initial,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = NexoColors.primary,
+            color = colors.primary,
         )
     }
 }
@@ -148,6 +150,7 @@ fun AccessCtaButton(
     onOpenExternal: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     Row(
         modifier =
             modifier
@@ -163,13 +166,13 @@ fun AccessCtaButton(
             text = option.title,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.weight(1f),
         )
         Icon(
             imageVector = Icons.Rounded.OpenInNew,
             contentDescription = stringResource(R.string.read_access_open),
-            tint = NexoColors.textSecondary,
+            tint = colors.textSecondary,
             modifier = Modifier.size(16.dp),
         )
     }
@@ -186,6 +189,7 @@ fun BookAccessList(
     onOpenExternal: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -196,7 +200,7 @@ fun BookAccessList(
                 Text(
                     text = accessGroupLabel(group),
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                     modifier = Modifier.padding(top = 8.dp),
                 )
                 rows.forEach { option ->

@@ -1,7 +1,7 @@
 package com.nexo.presentation.theme
 
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -34,9 +34,13 @@ data class ExtendedColors(
  * The default value uses [Color.Unspecified] — consumers must be inside a
  * [NexoTheme] to read real values; using [Color.Unspecified] will fall back
  * to whatever Material 3 supplies for that role.
+ *
+ * Declared as `compositionLocalOf`, not `staticCompositionLocalOf`: the active
+ * palette changes at runtime when the user switches theme, and every reader must
+ * be invalidated. A static local would leave readers on the previous palette.
  */
 val LocalExtendedColors =
-    staticCompositionLocalOf {
+    compositionLocalOf {
         ExtendedColors(
             readingBackground = Color.Unspecified,
             chartAccent = Color.Unspecified,

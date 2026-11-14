@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.debug.SentryMetrics
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 
 /**
  * Remote cover with the shared letter-initial fallback used by the results grid,
@@ -51,6 +51,7 @@ internal fun DiscoverBookCover(
     letterSize: TextUnit = 32.sp,
     surface: String = "grid",
 ) {
+    val colors = nexoColors
     var coverFailed by remember(coverUrl) { mutableStateOf(false) }
     val showCover = !coverUrl.isNullOrBlank() && !coverFailed
 
@@ -58,7 +59,7 @@ internal fun DiscoverBookCover(
         modifier =
             modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(NexoColors.surface),
+                .background(colors.surface),
         contentAlignment = Alignment.Center,
     ) {
         if (showCover) {
@@ -69,8 +70,8 @@ internal fun DiscoverBookCover(
                 // Solid painters, not painterResource: the cover_* XML drawables are
                 // <shape>s, which crash Compose's vector/raster-only resource loader
                 // (IllegalArgumentException). Surface matches the card background.
-                placeholder = ColorPainter(NexoColors.surface),
-                error = ColorPainter(NexoColors.surface),
+                placeholder = ColorPainter(colors.surface),
+                error = ColorPainter(colors.surface),
                 onError = {
                     coverFailed = true
                     SentryMetrics.count("discover_cover_fail", mapOf("surface" to surface))
@@ -82,7 +83,7 @@ internal fun DiscoverBookCover(
                 text = bookInitial(title),
                 style = MaterialTheme.typography.headlineLarge.copy(fontSize = letterSize),
                 fontWeight = FontWeight.Bold,
-                color = NexoColors.primary,
+                color = colors.primary,
             )
         }
     }
@@ -99,6 +100,7 @@ fun DiscoverCard(
     modifier: Modifier = Modifier,
     attributionNames: Map<String, String> = emptyMap(),
 ) {
+    val colors = nexoColors
     Column(
         modifier =
             modifier
@@ -123,14 +125,14 @@ fun DiscoverCard(
             fontWeight = FontWeight.Medium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
         )
         Text(
             text = book.authors.joinToString(", "),
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
         )
         SourceAttributionBadge(
             provider = book.provider,

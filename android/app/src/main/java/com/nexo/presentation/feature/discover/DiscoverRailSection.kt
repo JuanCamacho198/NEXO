@@ -33,8 +33,8 @@ import com.nexo.R
 import com.nexo.data.remote.catalog.CatalogBook
 import com.nexo.data.remote.catalog.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogFeaturedSort
-import com.nexo.presentation.theme.NexoColors
 import com.nexo.presentation.theme.NexoDimens
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoSkeletonBox
 import com.nexo.ui.components.molecules.NexoCardSurface
 
@@ -102,6 +102,7 @@ fun DiscoverRailSection(
     attributionNames: Map<String, String> = emptyMap(),
     onRetry: () -> Unit = {},
 ) {
+    val colors = nexoColors
     when (state) {
         DiscoverRailState.Hidden -> Unit
         is DiscoverRailState.Error -> {
@@ -109,13 +110,13 @@ fun DiscoverRailSection(
                 Text(
                     text = stringResource(railErrorCopy(state.code)),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                 )
                 TextButton(onClick = onRetry) {
                     Text(
                         text = stringResource(R.string.discover_retry),
                         style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp),
-                        color = NexoColors.textAccent,
+                        color = colors.textAccent,
                     )
                 }
             }
@@ -158,7 +159,7 @@ fun DiscoverRailSection(
                         text = sectionTitle,
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
                         fontWeight = FontWeight.SemiBold,
-                        color = NexoColors.textPrimary,
+                        color = colors.textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
@@ -167,7 +168,7 @@ fun DiscoverRailSection(
                         Text(
                             text = stringResource(R.string.discover_view_all),
                             style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-                            color = NexoColors.textAccent,
+                            color = colors.textAccent,
                         )
                     }
                 }
@@ -200,6 +201,7 @@ private fun DiscoverRailCard(
     onOpen: (String) -> Unit,
     attributionNames: Map<String, String> = emptyMap(),
 ) {
+    val colors = nexoColors
     Column(
         modifier =
             Modifier
@@ -230,7 +232,7 @@ private fun DiscoverRailCard(
         Text(
             text = book.title,
             style = MaterialTheme.typography.bodySmall,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
@@ -245,7 +247,7 @@ private fun DiscoverRailCard(
 /**
  * Coverless rail slot: title and author on the shared card surface with a short
  * accent rule, so it reads as a typographic card. Every colour comes from
- * [NexoColors]; no literal palette value is used here.
+ * [nexoColors]; no literal palette value is used here.
  */
 @Composable
 private fun RailTextCard(
@@ -253,6 +255,7 @@ private fun RailTextCard(
     author: String,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     NexoCardSurface(
         modifier = modifier.testTag(RAIL_TEXT_CARD_TAG),
         contentPadding = PaddingValues(NexoDimens.spacingSm),
@@ -265,7 +268,7 @@ private fun RailTextCard(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = NexoColors.textPrimary,
+                color = colors.textPrimary,
                 maxLines = 4,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -274,7 +277,7 @@ private fun RailTextCard(
                     Text(
                         text = author,
                         style = MaterialTheme.typography.labelSmall,
-                        color = NexoColors.textSecondary,
+                        color = colors.textSecondary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -285,7 +288,7 @@ private fun RailTextCard(
                             .width(28.dp)
                             .height(2.dp)
                             .clip(RoundedCornerShape(1.dp))
-                            .background(NexoColors.primary.copy(alpha = 0.4f)),
+                            .background(colors.primary.copy(alpha = 0.4f)),
                 )
             }
         }

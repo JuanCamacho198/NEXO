@@ -275,3 +275,63 @@ val OutlineDark = Color(0xFF30363D)
  * Contrast: 4.8:1 against BgMain (AA)
  */
 val ErrorSoft = Color(0xFFF85149)
+
+// ─── Design Tokens - Light Mode ──────────────────────────────────────
+// Light counterparts of the dark tokens above. Values come from the design
+// document's theme-mode variables (light mode), not from the "Design Tokens
+// (Light)" frame — that frame duplicates the dark hex values.
+//
+// Brand accents (PrimaryBlue, PrimaryBlueHover, TextAccent, AccentYellow,
+// AccentOrange, AccentGreen, AccentPurple, AccentBlue) are identical in both
+// modes, so they have no *Light duplicate.
+
+/** BgMainLight — App-wide canvas background in light mode. Alias source: `$bg_main` (light). */
+val BgMainLight = Color(0xFFF8FAFC)
+
+/** BgSurfaceLight — Elevated card/panel background in light mode. Alias source: `$bg_surface` (light). */
+val BgSurfaceLight = Color(0xFFFFFFFF)
+
+/** BgCardHoverLight — Card hover/pressed background in light mode. Alias source: `$bg-card-hover` (light). */
+val BgCardHoverLight = Color(0xFFF1F5F9)
+
+/** BgHeaderLight — Top app bar background in light mode. Inferred from `bg_main`; no light variable. */
+val BgHeaderLight = Color(0xFFF8FAFC)
+
+/** BorderSubtleLight — Hairline dividers and outline strokes in light mode. Alias source: `$border` (light). */
+val BorderSubtleLight = Color(0xFFE2E8F0)
+
+/** IconBgBlueLight — Icon container background tint in light mode. Alias source: `$icon-bg-blue` (light). */
+val IconBgBlueLight = Color(0xFFDBEAFE)
+
+/** TextPrimaryLight — Primary text/icon color in light mode. Alias source: `$text-primary` (light). */
+val TextPrimaryLight = Color(0xFF0F172A)
+
+/** TextSecondaryLight — De-emphasized text in light mode. Alias source: `$text-secondary` (light). */
+val TextSecondaryLight = Color(0xFF475569)
+
+/** BgYellowTransparentLight — Yellow chip/badge tint in light mode. Alias source: `$bg_yellow_transparent`. */
+val BgYellowTransparentLight = Color(0xFFFEF3C7)
+
+/** BgGreenTransparentLight — Green chip/badge tint in light mode. Alias source: `$bg_green_transparent`. */
+val BgGreenTransparentLight = Color(0xFFDCFCE7)
+
+/** BgPurpleTransparentLight — Purple chip/badge tint in light mode. Alias source: `$bg_purple_transparent`. */
+val BgPurpleTransparentLight = Color(0xFFF3E8FF)
+
+/** BgBlueTransparentLight — Blue chip/badge tint in light mode. Alias source: `$bg_blue_transparent`. */
+val BgBlueTransparentLight = Color(0xFFDBEAFE)
+
+/** NavBarActiveLight — Selected bottom-nav foreground in light mode. Inferred from `primary`. */
+val NavBarActiveLight = Color(0xFF3B82F6)
+
+/** NavBarInactiveLight — Unselected bottom-nav foreground in light mode. Inferred from `text_secondary`. */
+val NavBarInactiveLight = Color(0xFF475569)
+
+/** NavBarOverlayLight — Translucent navbar overlay in light mode. Inferred from `primary` at 8% alpha. */
+val NavBarOverlayLight = Color(0x143B82F6)
+
+/** OutlineLight — Outline/stroke color for light-theme surfaces. Inferred from `border`. */
+val OutlineLight = Color(0xFFE2E8F0)
+
+/** ErrorSoftLight — Soft red for non-blocking errors in light mode. Alias source: `$error` (light). */
+val ErrorSoftLight = Color(0xFFEF4444)

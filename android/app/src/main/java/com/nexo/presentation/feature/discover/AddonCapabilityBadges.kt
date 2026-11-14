@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 
 /**
  * Capability chips for an installed addon manifest (U5).
@@ -26,6 +26,7 @@ fun AddonCapabilityBadges(
     capabilities: List<String>,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     if (capabilities.isEmpty()) return
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -34,7 +35,7 @@ fun AddonCapabilityBadges(
         Text(
             text = stringResource(R.string.addon_capabilities_title),
             style = MaterialTheme.typography.labelSmall,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
         )
         DiscoverChipRow(
             chips = capabilities.map { DiscoverChip(label = capabilityLabel(it)) },
@@ -53,6 +54,7 @@ fun AddonTrustNote(
     onViewPolicy: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -60,13 +62,13 @@ fun AddonTrustNote(
         Text(
             text = stringResource(R.string.addon_consent_trust_note),
             style = MaterialTheme.typography.bodySmall,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
             modifier = Modifier.padding(top = 4.dp),
         )
         Text(
             text = stringResource(R.string.legal_disclaimer_view_policy),
             style = MaterialTheme.typography.labelMedium,
-            color = NexoColors.textAccent,
+            color = colors.textAccent,
             modifier =
                 Modifier
                     .padding(top = 2.dp)

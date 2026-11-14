@@ -31,7 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.model.Book
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.presentation.theme.NexoDimens
 import com.nexo.ui.components.atoms.CoverThumbnail
 import com.nexo.ui.components.atoms.NexoProgressBar
@@ -71,6 +71,7 @@ fun ContinueReadingSection(
     onShare: (Book) -> Unit = {},
     onDelete: (Book) -> Unit = {},
 ) {
+    val colors = nexoColors
     Column {
         ContinueSectionHeader(onViewAll = onViewAll)
         Spacer(modifier = Modifier.height(NexoDimens.spacingSm))
@@ -87,10 +88,10 @@ fun ContinueReadingSection(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(NexoDimens.spacingSm))
-                        .background(NexoColors.surfaceVariant)
+                        .background(colors.surfaceVariant)
                         .padding(NexoDimens.spacingMd),
             ) {
-                Text(text = stringResource(R.string.home_no_current_book), style = MaterialTheme.typography.bodyMedium, color = NexoColors.textSecondary)
+                Text(text = stringResource(R.string.home_no_current_book), style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
             }
         }
     }
@@ -104,6 +105,7 @@ fun ContinueReadingSection(
  */
 @Composable
 private fun ContinueSectionHeader(onViewAll: () -> Unit) {
+    val colors = nexoColors
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -113,7 +115,7 @@ private fun ContinueSectionHeader(onViewAll: () -> Unit) {
             text = stringResource(R.string.home_continue_reading),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = NexoColors.textPrimary,
+            color = colors.textPrimary,
         )
         Row(
             modifier = Modifier.clickable(onClick = onViewAll).padding(NexoDimens.spacingXs),
@@ -124,12 +126,12 @@ private fun ContinueSectionHeader(onViewAll: () -> Unit) {
                 text = stringResource(R.string.home_ver_todo),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = NexoColors.accentOrange,
+                color = colors.accentOrange,
             )
             Icon(
                 imageVector = NexoIcons.ChevronRight,
                 contentDescription = null,
-                tint = NexoColors.accentOrange,
+                tint = colors.accentOrange,
                 modifier = Modifier.size(14.dp),
             )
         }
@@ -141,6 +143,7 @@ private fun LastReadText(
     updatedAtEpochMillis: Long?,
     modifier: Modifier = Modifier,
 ) {
+    val colors = nexoColors
     val label = LastReadLabel.from(updatedAtEpochMillis, System.currentTimeMillis()) ?: return
     val arg = label.formatArg()
     val text =
@@ -152,7 +155,7 @@ private fun LastReadText(
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall,
-        color = NexoColors.textSecondary,
+        color = colors.textSecondary,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier,
@@ -162,9 +165,9 @@ private fun LastReadText(
 /**
  * One continue-reading card.
  *
- * The surface is the design's radial tint — [NexoColors.backgroundBlueTransparent]
- * at the centre fading to [NexoColors.surfaceVariant] at the edge — with a
- * [NexoColors.accentBlue]-derived hairline. The cover keeps the book's own
+ * The surface is the design's radial tint — the theme-aware
+ * `backgroundBlueTransparent` at the centre fading to `surfaceVariant` at the
+ * edge — with an `accentBlue`-derived hairline. The cover keeps the book's own
  * artwork; the meta column carries title, author, progress, chapter and the
  * last-read stamp.
  */
@@ -180,6 +183,7 @@ fun ContinueReadingCard(
     onShare: (Book) -> Unit = {},
     onDelete: (Book) -> Unit = {},
 ) {
+    val colors = nexoColors
     Box(
         modifier =
             Modifier
@@ -187,7 +191,7 @@ fun ContinueReadingCard(
                 .clip(RoundedCornerShape(CardRadius))
                 .background(
                     Brush.radialGradient(
-                        colors = listOf(NexoColors.backgroundBlueTransparent, NexoColors.surfaceVariant),
+                        colors = listOf(colors.backgroundBlueTransparent, colors.surfaceVariant),
                     ),
                 ).border(1.dp, ContinueCardStroke, RoundedCornerShape(CardRadius))
                 .clickable { onBookSelected(book.id, book.filePath, book.format) }
@@ -204,7 +208,7 @@ fun ContinueReadingCard(
                         text = book.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = NexoColors.textPrimary,
+                        color = colors.textPrimary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
@@ -226,7 +230,7 @@ fun ContinueReadingCard(
                     Text(
                         text = author,
                         style = MaterialTheme.typography.labelMedium,
-                        color = NexoColors.textSecondary,
+                        color = colors.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -237,15 +241,15 @@ fun ContinueReadingCard(
                         progress = progressFraction,
                         height = 8.dp,
                         showPercentage = false,
-                        trackColor = NexoColors.background,
-                        indicatorColor = NexoColors.accentOrange,
+                        trackColor = colors.background,
+                        indicatorColor = colors.accentOrange,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
                         text = stringResource(R.string.home_progress_percent, (progressFraction * 100).toInt()),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
-                        color = NexoColors.textPrimary,
+                        color = colors.textPrimary,
                     )
                 }
                 Spacer(modifier = Modifier.height(NexoDimens.spacingSm))
@@ -277,19 +281,20 @@ private val ContinueCardStroke =
  */
 @Composable
 private fun ChapterRow(book: Book) {
+    val colors = nexoColors
     val chapterCount = book.chapterCount
     if (chapterCount == null || chapterCount <= 0) return
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Icon(
             imageVector = NexoIcons.BookOpen,
             contentDescription = null,
-            tint = NexoColors.textSecondary,
+            tint = colors.textSecondary,
             modifier = Modifier.size(14.dp),
         )
         Text(
             text = stringResource(R.string.home_chapter_count, chapterCount),
             style = MaterialTheme.typography.labelSmall,
-            color = NexoColors.textSecondary,
+            color = colors.textSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -304,20 +309,21 @@ private fun ChapterRow(book: Book) {
  */
 @Composable
 private fun PlayButton(onClick: () -> Unit) {
+    val colors = nexoColors
     val label = stringResource(R.string.home_continuar)
     Box(
         modifier =
             Modifier
                 .size(PlayButtonSize)
                 .clip(CircleShape)
-                .border(1.5.dp, NexoColors.accentOrange, CircleShape)
+                .border(1.5.dp, colors.accentOrange, CircleShape)
                 .clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = NexoIcons.Play,
             contentDescription = label,
-            tint = NexoColors.accentOrange,
+            tint = colors.accentOrange,
             modifier = Modifier.size(20.dp),
         )
     }

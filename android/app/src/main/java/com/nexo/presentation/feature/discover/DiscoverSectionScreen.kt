@@ -23,7 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
-import com.nexo.presentation.theme.NexoColors
+import com.nexo.presentation.theme.nexoColors
 import com.nexo.presentation.viewmodel.DiscoverStatus
 import com.nexo.ui.icons.NexoIcons
 
@@ -41,6 +41,7 @@ fun DiscoverSectionScreen(
     viewModel: DiscoverSectionViewModel,
     onBack: () -> Unit,
 ) {
+    val colors = nexoColors
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
@@ -60,7 +61,7 @@ fun DiscoverSectionScreen(
                     imageVector = NexoIcons.ArrowBack,
                     contentDescription = stringResource(R.string.discover_back),
                     modifier = Modifier.size(24.dp),
-                    tint = NexoColors.textPrimary,
+                    tint = colors.textPrimary,
                 )
             }
             Column(
@@ -71,14 +72,14 @@ fun DiscoverSectionScreen(
                     text = stringResource(R.string.discover_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = NexoColors.textPrimary,
+                    color = colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = sectionSubtitle(uiState),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NexoColors.textSecondary,
+                    color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -101,7 +102,7 @@ fun DiscoverSectionScreen(
                         Text(
                             text = stringResource(R.string.discover_empty),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = NexoColors.textSecondary,
+                            color = colors.textSecondary,
                         )
                     }
                 DiscoverStatus.ERROR -> DiscoverErrorState(onRetry = viewModel::retry)
