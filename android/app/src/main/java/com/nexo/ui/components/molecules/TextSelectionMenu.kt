@@ -58,13 +58,27 @@ import com.nexo.ui.icons.NexoIcons
  *   popover's own colour callback does the actual highlight.
  * @param onCopy Copy the selected text to the clipboard.
  * @param onDictionary Open the [AnchoredDefinitionInput] for the
- *   selected word (the PERSONAL dictionary — save a word).
+ *   selected word (the PERSONAL dictionary — save a word). The content
+ *   description is `R.string.context_menu_dictionary_action` ("Dictionary" /
+ *   "Diccionario") — a short, stable, locale-independent selector, distinct from
+ *   the longer `R.string.context_menu_dictionary` label.
  * @param onDefine Look up the MEANING of the selected word
  *   ([AnchoredDefinitionPanel]). A different action from
  *   [onDictionary]: this one looks up, it never writes the personal
- *   dictionary.
+ *   dictionary. The icon is [NexoIcons.BookSearch] and the content
+ *   description `R.string.text_selection_define` — BOTH must stay byte-identical
+ *   to [FloatingContextMenu]'s Define, because one Maestro selector addresses the
+ *   action in either menu. See [NexoIcons.BookSearch] for why that glyph is what
+ *   it is.
  * @param onTranslate Open the [AnchoredTranslationPanel] for the
- *   selected word (machine translation, MyMemory).
+ *   selected word (machine translation, MyMemory). The icon is
+ *   [NexoIcons.Translate] and the content description
+ *   `R.string.text_selection_translate` — BOTH must stay byte-identical to
+ *   [FloatingContextMenu]'s Translate, because one Maestro selector
+ *   (`"Translate|Traducir"`) addresses the action in either menu, the same
+ *   contract Define carries. [NexoIcons.Translate] is the translation ACTION
+ *   glyph (see [NexoIcons.Translate] and the Settings translation row);
+ *   [NexoIcons.Language] means "language selection" and is not this action.
  * @param onShare Share the selected text via the system share
  *   sheet.
  * @param modifier Modifier applied to the outer `Row`.
@@ -122,7 +136,7 @@ fun TextSelectionMenu(
 
             SelectionMenuIcon(
                 icon = NexoIcons.BookOpen,
-                contentDescription = stringResource(R.string.context_menu_dictionary),
+                contentDescription = stringResource(R.string.context_menu_dictionary_action),
                 tint = contentColor,
                 onClick = onDictionary,
             )
@@ -135,7 +149,7 @@ fun TextSelectionMenu(
             )
 
             SelectionMenuIcon(
-                icon = NexoIcons.Language,
+                icon = NexoIcons.Translate,
                 contentDescription = stringResource(R.string.text_selection_translate),
                 tint = contentColor,
                 onClick = onTranslate,

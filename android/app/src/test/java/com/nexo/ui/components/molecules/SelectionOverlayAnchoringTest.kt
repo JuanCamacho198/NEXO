@@ -13,7 +13,12 @@ class SelectionOverlayAnchoringTest {
     /** Wraps a rect that is ALREADY in the overlay's space (the rule's input). */
     private fun spaceOf(rect: Rect) = SelectionOverlaySpace.of(rect)
 
-    /** 1080x1920 px viewport at this density: header reserve 160px, footer 144px, gap 16px. */
+    /**
+     * 1080x1920 px viewport at this density: header reserve 160px, footer 144px,
+     * gap 16px (8dp at density 2). The reader inset is NOT part of this rule — it
+     * is removed by the conversion in
+     * [com.nexo.presentation.screen.readium.ReadiumOverlaySpace].
+     */
     private fun rect(
         top: Int,
         bottom: Int,

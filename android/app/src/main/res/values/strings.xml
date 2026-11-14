@@ -877,6 +877,10 @@
     <string name="dictionary_detail_chapter">Chapter %1$s</string>
     <string name="settings_dictionary_label">Dictionary</string>
     <string name="context_menu_dictionary">Add to Dictionary</string>
+    <!-- Short, stable content description for the dictionary action's icon
+         (text-less). Kept separate from `context_menu_dictionary` so the longer,
+         localisation-sensitive label can never silently become the selector. -->
+    <string name="context_menu_dictionary_action">Dictionary</string>
     <string name="reader_add_to_dictionary">Added to dictionary</string>
     <string name="reader_already_in_dictionary">Already in dictionary</string>
 

@@ -881,6 +881,10 @@
     <string name="dictionary_detail_chapter">Capítulo %1$s</string>
     <string name="settings_dictionary_label">Diccionario</string>
     <string name="context_menu_dictionary">Agregar al diccionario</string>
+    <!-- Descripción de contenido corta y estable para el icono de la acción de
+         diccionario (sin texto). Separada de `context_menu_dictionary` para que
+         la etiqueta larga no pueda convertirse en el selector por accidente. -->
+    <string name="context_menu_dictionary_action">Diccionario</string>
     <string name="reader_add_to_dictionary">Agregado al diccionario</string>
     <string name="reader_already_in_dictionary">Ya está en el diccionario</string>
 

@@ -146,10 +146,11 @@ tags: [regression]
 - assertVisible:
     text: "Definir|Define"
 # 7. The personal dictionary stays a separate action in the same menu. Its
-# contentDescription is R.string.context_menu_dictionary ("Agregar al
-# diccionario"), NOT a literal "Diccionario" — the icon is text-less.
+# contentDescription is R.string.context_menu_dictionary_action ("Diccionario"),
+# a short stable selector — NOT the longer label R.string.context_menu_dictionary
+# ("Agregar al diccionario"). The icon is text-less.
 - assertVisible:
-    text: "Agregar al diccionario|Add to Dictionary"
+    text: "Diccionario|Dictionary"
 - tapOn:
     text: "Definir|Define"
 - waitForAnimationToEnd:

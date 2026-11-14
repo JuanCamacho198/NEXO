@@ -44,7 +44,7 @@ class SelectionMenuOverflowTest {
 
     private val paletteDesc: String get() = description(R.string.context_menu_color)
     private val copyDesc: String get() = description(R.string.text_selection_copy)
-    private val dictionaryDesc: String get() = description(R.string.context_menu_dictionary)
+    private val dictionaryDesc: String get() = description(R.string.context_menu_dictionary_action)
     private val defineDesc: String get() = description(R.string.text_selection_define)
     private val translateDesc: String get() = description(R.string.text_selection_translate)
     private val shareDesc: String get() = description(R.string.context_menu_share)
