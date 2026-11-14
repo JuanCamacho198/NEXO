@@ -3,6 +3,7 @@ package com.nexo.presentation.viewmodel.reader.lifecycle
 import android.app.Application
 import com.nexo.debug.DebugDual
 import com.nexo.debug.DebugEvent
+import com.nexo.domain.model.ReadingProgress
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
@@ -19,12 +20,17 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.util.Url
 
 /**
  * Wraps ReadingProgressCalculator and handles locator/viewport/typography progress.
  *
  * Preserves verbatim: reflection chain (getPositions -> field -> members) lives
  * inside ReadingProgressCalculator; display vs persisted split; restoreProgressForBook.
+ *
+ * Persistence is ARMED, not unconditional. See [ReaderLifecycleState.progressPersistenceArmed]:
+ * the navigator's first emission precedes the saved position being applied, so
+ * persisting it would replace the reader's real position with the cover at 0%.
  */
 class ReadingProgressTracker(
     private val application: Application,
@@ -41,8 +47,26 @@ class ReadingProgressTracker(
     private var typographySnapshot: ReadingProgressCalculator.ViewportTypography? = null
     private var densitySnapshot: Float = 3f
 
+    /**
+     * The saved position this session opened at, handed over by the loader from
+     * the SAME synchronous read that produced the reader's initial locator.
+     * `null` until [openOnSavedPosition] runs, and for a book with no saved row.
+     * See [mayPersist].
+     */
+    private var protectedPosition: ReadingProgress? = null
+
     companion object {
         private const val MAX_PROGRESS_PERCENT = 99f
+
+        /**
+         * The writer's own marker (`onReadiumLocatorChanged` writes
+         * `"readium:<href>"`). Recognized by [restoreProgressForBook] so a row
+         * this app wrote is a row this app can restore.
+         */
+        private const val READIUM_PREFIX = "readium:"
+
+        private const val PDF_PAGE_PREFIX = "pdfpage:"
+        private const val EPUB_CFI_PREFIX = "epubcfi("
     }
 
     fun onReadiumLocatorChanged(locator: Locator) {
@@ -65,6 +89,7 @@ class ReadingProgressTracker(
             )
         }
         updateProgressDisplay()
+        if (!mayPersist(locator)) return
         val bookId = state.value.selectedBookId ?: return
         val locatorJson = CfiMigrator.locatorToJson(locator)
         scope.launch(mainDispatcher) {
@@ -77,6 +102,89 @@ class ReadingProgressTracker(
             )
         }
         DebugDual.log(DebugEvent.ProgressEmit(bookId, progressPercent, "locatorChanged"))
+    }
+
+    /**
+     * Whether this emission may be written to the reader's saved position.
+     *
+     * ## Why this gate exists
+     *
+     * The navigator's `currentLocator` is a `StateFlow`, so its FIRST emission is
+     * the position the navigator happens to be resting on the moment it is
+     * committed — the reading order's first resource, i.e. the COVER at 0%. That
+     * emission arrives one frame plus `FRAGMENT_COMMIT_MS` after a book loads,
+     * and before the restored position has been applied. Persisting it replaced
+     * the reader's real position with the cover: tapping "Continue reading"
+     * destroyed the very row it was meant to restore.
+     *
+     * ## Why it is keyed on the LOADED row and not on a load milestone
+     *
+     * Arming when the loader finishes is measurably WRONG: the load completes
+     * before Compose commits the navigator fragment, so the cover emission still
+     * arrives after the gate opened.
+     *
+     * It is also not keyed on `state.readingProgress`: that slice is filled by
+     * [restoreProgressForBook]'s asynchronous Room collector, which may not have
+     * delivered by the time the navigator emits. Relying on it opened the gate
+     * for the cover emission and the row was destroyed on device.
+     *
+     * [openOnSavedPosition] is therefore called by the loader with the row it read
+     * SYNCHRONOUSLY and used to build the reader's initial locator — the exact
+     * position this session is protecting.
+     *
+     * ## The two suppressions
+     *
+     * - An emission equal to the protected position IS the restore landing. It is
+     *   persisted, and it arms the gate for the rest of the session.
+     * - An emission different from it, while it is still unapplied, is the
+     *   navigator's pre-restore resting place. It is not persisted.
+     *
+     * A reader who genuinely sits on page one has no saved position, so
+     * [openOnSavedPosition] is never called with one, the gate is open from the
+     * start, and their page-one position is persisted normally. Nothing here
+     * special-cases a cover href.
+     */
+    private fun mayPersist(locator: Locator): Boolean {
+        if (state.value.progressPersistenceArmed) return true
+        val protected = protectedPosition ?: return true
+        if (!isSamePosition(locator, protected)) return false
+        state.update { it.copy(progressPersistenceArmed = true) }
+        return true
+    }
+
+    /**
+     * Hands the tracker the position this session opened at, read synchronously
+     * by the loader. `null` when the book has no saved position — see [mayPersist].
+     */
+    fun openOnSavedPosition(saved: ReadingProgress?) {
+        protectedPosition = saved
+        state.update { it.copy(progressPersistenceArmed = saved == null) }
+    }
+
+    /**
+     * True when [locator] is the position [saved] records. Compares the resource
+     * href, because that is what the persisted row keys on (`"readium:<href>"`),
+     * normalised the same way chapter matching does.
+     */
+    private fun isSamePosition(
+        locator: Locator,
+        saved: ReadingProgress,
+    ): Boolean {
+        val savedHref = saved.cfiLocation.removePrefix(READIUM_PREFIX)
+        val locatorHref = locator.href.toString()
+        if (savedHref.isBlank() || locatorHref.isBlank()) return saved.cfiLocation.isBlank()
+        return normalizeChapterFile(locatorHref) == normalizeChapterFile(savedHref)
+    }
+
+    /**
+     * Records that the reader has navigated deliberately (a chapter jump, a
+     * scrub, a tap zone), which is a position the reader chose rather than the
+     * navigator's pre-restore resting place. Opens the gate.
+     */
+    fun onReaderMoved() {
+        if (!state.value.progressPersistenceArmed) {
+            state.update { it.copy(progressPersistenceArmed = true) }
+        }
     }
 
     fun onReadiumViewportChanged(
@@ -145,10 +253,10 @@ class ReadingProgressTracker(
                         var newState = s.copy(readingProgress = progress, isLoading = false)
                         if (progress != null) {
                             val cfi = progress.cfiLocation
-                            if (cfi.startsWith("pdfpage:")) {
-                                val page = cfi.removePrefix("pdfpage:").toIntOrNull()
+                            if (cfi.startsWith(PDF_PAGE_PREFIX)) {
+                                val page = cfi.removePrefix(PDF_PAGE_PREFIX).toIntOrNull()
                                 if (page != null) newState = newState.copy(currentPdfPage = page)
-                            } else if (cfi.startsWith("epubcfi(")) {
+                            } else if (cfi.startsWith(EPUB_CFI_PREFIX)) {
                                 val chapterMatch = Regex("/6/(\\d+)").find(cfi)
                                 val spineIdx =
                                     chapterMatch
@@ -167,6 +275,15 @@ class ReadingProgressTracker(
                                     val resolved = listPos ?: spineIdx
                                     newState = newState.copy(currentChapterIndex = resolved)
                                 }
+                            } else if (cfi.startsWith(READIUM_PREFIX)) {
+                                // The prefix `onReadiumLocatorChanged` writes. Without
+                                // this branch a row written by this app is not
+                                // recognised as restorable, and the navigator's first
+                                // (cover) emission then overwrites it — data loss.
+                                val chapterIndex = resolveChapterIndexForReadiumHref(cfi.removePrefix(READIUM_PREFIX), newState)
+                                if (chapterIndex != null) {
+                                    newState = newState.copy(currentChapterIndex = chapterIndex)
+                                }
                             }
                         }
                         newState
@@ -180,6 +297,9 @@ class ReadingProgressTracker(
         val clamped = percent.coerceIn(0f, 100f)
         state.update { it.copy(progressPercent = clamped) }
         if (state.value.selectedBookId == null) return
+        // A scrub is the reader choosing a position, so it is never the
+        // navigator's pre-restore resting place.
+        onReaderMoved()
         val s = state.value
         if (s.totalPdfPages > 0) {
             val pageIndex = ((clamped / 100f) * s.totalPdfPages).toInt().coerceIn(0, s.totalPdfPages - 1)
@@ -284,6 +404,59 @@ class ReadingProgressTracker(
         state.update { it.copy(currentChapterIndex = resolvedChapterIndex, progressPercent = percent, progressLabel = label) }
     }
 
+    /**
+     * Resolves the reader's chapter list position for a `readium:<href>` marker.
+     *
+     * The href is matched with the same normalisation [resolveChapterListIndex]
+     * uses (full href first, then path and filename), so a `readium:` row
+     * restores the same chapter the equivalent locator would. Returns null when
+     * the href matches no chapter — the row is then display-only, never a
+     * licence to move the reader somewhere arbitrary.
+     */
+    private fun resolveChapterIndexForReadiumHref(
+        href: String,
+        snapshot: ReaderLifecycleState,
+    ): Int? {
+        val chapters = snapshot.chapters
+        if (chapters.isEmpty() || href.isBlank()) return null
+        val path = href.substringBefore('#').substringBefore('?')
+        chapters
+            .indexOfFirst { it.href == href }
+            .takeIf { it >= 0 }
+            ?.let { return it }
+        chapters
+            .indexOfFirst { it.href.substringBefore('#').substringBefore('?') == path }
+            .takeIf { it >= 0 }
+            ?.let { return it }
+        chapters
+            .indexOfFirst { normalizeChapterFile(it.href) == normalizeChapterFile(href) }
+            .takeIf { it >= 0 }
+            ?.let { return it }
+        snapshot.readiumPublication?.let { publication ->
+            try {
+                val link = publication.linkWithHref(Url(href) ?: return@let null) ?: return@let null
+                val roIndex = publication.readingOrder.indexOf(link)
+                if (roIndex >= 0) {
+                    val byIndex = chapters.indexOfFirst { it.index == roIndex }.takeIf { it >= 0 }
+                    if (byIndex != null) return byIndex
+                    val firstIdx = chapters.minOfOrNull { it.index } ?: 0
+                    (roIndex - firstIdx).takeIf { it in chapters.indices }?.let { return it }
+                    roIndex.takeIf { it in chapters.indices }?.let { return it }
+                }
+            } catch (_: Throwable) {
+            }
+        }
+        return null
+    }
+
+    private fun normalizeChapterFile(href: String): String =
+        href
+            .substringAfterLast('/')
+            .substringBefore('#')
+            .substringBefore('?')
+            .trim()
+            .lowercase()
+
     private fun resolveChapterListIndex(
         locator: Locator,
         publication: Publication?,
@@ -291,15 +464,7 @@ class ReadingProgressTracker(
     ): Int? {
         if (chapters.isEmpty()) return null
         val locatorHref = locator.href.toString()
-
-        fun normalizeFile(href: String): String =
-            href
-                .substringAfterLast('/')
-                .substringBefore('#')
-                .substringBefore('?')
-                .trim()
-                .lowercase()
-        val normLocatorFile = normalizeFile(locatorHref)
+        val normLocatorFile = normalizeChapterFile(locatorHref)
         chapters.indexOfFirst { it.href == locatorHref }.takeIf { it >= 0 }?.let { return it }
         val locatorBase = locatorHref.substringBefore('#').substringBefore('?')
         chapters
@@ -307,7 +472,7 @@ class ReadingProgressTracker(
             .takeIf { it >= 0 }
             ?.let { return it }
         chapters
-            .indexOfFirst { normalizeFile(it.href) == normLocatorFile }
+            .indexOfFirst { normalizeChapterFile(it.href) == normLocatorFile }
             .takeIf { it >= 0 }
             ?.let { return it }
         publication?.let { pub ->

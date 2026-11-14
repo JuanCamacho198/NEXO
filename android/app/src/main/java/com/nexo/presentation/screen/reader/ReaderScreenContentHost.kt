@@ -61,6 +61,13 @@ fun ReaderScreenContentHost(
             activeDefinitionText = annotationUiState.activeDefinitionText,
             showTranslationPanel = annotationUiState.showTranslationPanel,
             translationPanelState = annotationUiState.translationPanelState,
+            showDefinitionPanel = annotationUiState.showDefinitionPanel,
+            definitionPanelState = annotationUiState.definitionPanelState,
+            // Read from the LIVE interaction state, never from the callbacks
+            // snapshot: the selector writes this value and must see it come
+            // back, or the chip keeps showing the previous language.
+            definitionLanguage = annotationUiState.definitionLanguage,
+            definitionWord = annotationUiState.definitionWord,
             selectionRect = annotationUiState.selectionRect,
             selectedText = annotationUiState.selectedText,
             highlights = annotationUiState.highlights,
@@ -74,8 +81,14 @@ fun ReaderScreenContentHost(
             onAnnotate = selectionCallbacks.onAnnotate,
             onShare = selectionCallbacks.onShare,
             onDictionary = selectionCallbacks.onDictionary,
+            onDefine = selectionCallbacks.onDefine,
             onTranslate = selectionCallbacks.onTranslate,
             onDismissTranslation = selectionCallbacks.onDismissTranslation,
+            onTranslationSourceChosen = selectionCallbacks.onTranslationSourceChosen,
+            onTranslationTargetChosen = selectionCallbacks.onTranslationTargetChosen,
+            onDismissDefinition = selectionCallbacks.onDismissDefinitionPanel,
+            onDefinitionLanguageChosen = selectionCallbacks.onDefinitionLanguageChosen,
+            onAddDefinitionToDictionary = selectionCallbacks.onAddDefinitionToDictionary,
             onShowColorPickerPopover = selectionCallbacks.onShowColorPicker,
             onDismissColorPickerPopover = selectionCallbacks.onDismissColorPicker,
             onTagTextChanged = selectionCallbacks.onTagTextChanged,
@@ -83,7 +96,7 @@ fun ReaderScreenContentHost(
             onDismissTagInput = selectionCallbacks.onDismissTag,
             onDefinitionTextChanged = selectionCallbacks.onDefinitionTextChanged,
             onSaveDefinition = selectionCallbacks.onSaveDefinition,
-            onDismissDefinitionInput = selectionCallbacks.onDismissDefinition,
+            onDismissDefinitionInput = selectionCallbacks.onDismissDefinitionInput,
         )
     }
 

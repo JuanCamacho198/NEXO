@@ -1,0 +1,52 @@
+appId: com.nexo
+---
+# Probe: where does a long-press actually land, and where does the selection rect
+# sit? Leaves the SELECTION MENU open (does NOT tap Definir) so the run script
+# can read the selection geometry from `android layout --pretty`.
+#
+# Param: PROBE_POINT (e.g. "30%, 46%").
+- launchApp:
+    clearState: false
+- runFlow:
+    file: ../../lib/dismiss-dialogs-if-present.yaml
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "Library|Biblioteca|Home|Inicio"
+    timeout: 30000
+- tapOn:
+    text: "Library|Biblioteca|Home|Inicio"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "El extranjero"
+- extendedWaitUntil:
+    visible:
+      text: "Sinopsis|Synopsis"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Continuar leyendo|Continue Reading"
+    commands:
+      - tapOn: "Continuar leyendo|Continue Reading"
+- runFlow:
+    when:
+      visible: "Empezar a leer|Start Reading"
+    commands:
+      - tapOn: "Empezar a leer|Start Reading"
+- waitForAnimationToEnd:
+    timeout: 25000
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 80%, 50%
+          end: 20%, 50%
+- waitForAnimationToEnd:
+    timeout: 5000
+- longPressOn:
+    point: 30%, 48%
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: probe-menu

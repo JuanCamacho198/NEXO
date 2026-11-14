@@ -20,8 +20,19 @@ data class ReaderSelectionCallbacks(
     val onAnnotate: () -> Unit,
     val onShare: () -> Unit,
     val onDictionary: () -> Unit,
+    val onDefine: () -> Unit,
     val onTranslate: () -> Unit,
     val onDismissTranslation: () -> Unit,
+    /** A source picked in the language bar, or `null` for "Automatic (detect)". */
+    val onTranslationSourceChosen: (String?) -> Unit,
+    /** A destination picked in the language bar, or `null` to follow the device. */
+    val onTranslationTargetChosen: (String?) -> Unit,
+    /** Closes the definition panel ("Close" on the lookup card). */
+    val onDismissDefinitionPanel: () -> Unit,
+    /** A definition language picked in the panel's selector. */
+    val onDefinitionLanguageChosen: (String?) -> Unit,
+    /** The explicit bridge from the lookup result to the personal dictionary. */
+    val onAddDefinitionToDictionary: () -> Unit,
     val onShowColorPicker: () -> Unit,
     val onDismissColorPicker: () -> Unit,
     val onTagTextChanged: (String) -> Unit,
@@ -29,7 +40,8 @@ data class ReaderSelectionCallbacks(
     val onDismissTag: () -> Unit,
     val onDefinitionTextChanged: (String) -> Unit,
     val onSaveDefinition: () -> Unit,
-    val onDismissDefinition: () -> Unit,
+    /** Cancels the save-to-personal-dictionary input card. */
+    val onDismissDefinitionInput: () -> Unit,
     val activeOverlayHighlightColor: State<String?>,
 )
 
@@ -141,8 +153,16 @@ fun rememberReaderSelectionCallbacks(
             }
         }
     val onDictionary = remember(viewModel) { { viewModel.interactionHolder.onAddToDictionary() } }
+    val onDefine = remember(viewModel) { { viewModel.onDefineSelection() } }
     val onTranslate = remember(viewModel) { { viewModel.onTranslateSelection() } }
     val onDismissTranslation = remember(viewModel) { { viewModel.interactionHolder.onDismissTranslationPanel() } }
+    val onTranslationSourceChosen = remember(viewModel) { { language: String? -> viewModel.onTranslationSourceChosen(language) } }
+    val onTranslationTargetChosen = remember(viewModel) { { language: String? -> viewModel.onTranslationTargetChosen(language) } }
+    val onDismissDefinitionPanel = remember(viewModel) { ReaderDismissalWiring.dismissDefinitionPanel(viewModel) }
+    val onDefinitionLanguageChosen = remember(viewModel) { { language: String? -> viewModel.onDefinitionLanguageChosen(language) } }
+    // The ONLY path from a lookup result to `dictionary_words`: an explicit tap,
+    // never the lookup itself (ODD invariant 3 — a lookup is read-only).
+    val onAddDefinitionToDictionary = remember(viewModel) { { viewModel.interactionHolder.onAddToDictionary() } }
     val onShowColorPicker = remember(viewModel) { { viewModel.interactionHolder.onShowColorPickerPopover() } }
     val onDismissColorPicker = remember(viewModel) { { viewModel.interactionHolder.onDismissColorPickerPopover() } }
     val onTagTextChanged = remember(viewModel) { { text: String -> viewModel.interactionHolder.onTagTextChanged(text) } }
@@ -150,7 +170,7 @@ fun rememberReaderSelectionCallbacks(
     val onDismissTag = remember(viewModel) { { viewModel.interactionHolder.onDismissTagInput() } }
     val onDefTextChanged = remember(viewModel) { { text: String -> viewModel.interactionHolder.onDefinitionTextChanged(text) } }
     val onSaveDef = remember(viewModel) { { viewModel.interactionHolder.onSaveDefinition(viewModel.annotationUiState.value.activeDefinitionText) } }
-    val onDismissDef = remember(viewModel) { { viewModel.interactionHolder.onDismissDefinitionInput() } }
+    val onDismissDef = remember(viewModel) { ReaderDismissalWiring.dismissDefinitionInput(viewModel) }
 
     return ReaderSelectionCallbacks(
         onColorSelected = onColorSelected,
@@ -161,8 +181,14 @@ fun rememberReaderSelectionCallbacks(
         onAnnotate = onAnnotate,
         onShare = onShare,
         onDictionary = onDictionary,
+        onDefine = onDefine,
         onTranslate = onTranslate,
         onDismissTranslation = onDismissTranslation,
+        onTranslationSourceChosen = onTranslationSourceChosen,
+        onTranslationTargetChosen = onTranslationTargetChosen,
+        onDismissDefinitionPanel = onDismissDefinitionPanel,
+        onDefinitionLanguageChosen = onDefinitionLanguageChosen,
+        onAddDefinitionToDictionary = onAddDefinitionToDictionary,
         onShowColorPicker = onShowColorPicker,
         onDismissColorPicker = onDismissColorPicker,
         onTagTextChanged = onTagTextChanged,
@@ -170,7 +196,7 @@ fun rememberReaderSelectionCallbacks(
         onDismissTag = onDismissTag,
         onDefinitionTextChanged = onDefTextChanged,
         onSaveDefinition = onSaveDef,
-        onDismissDefinition = onDismissDef,
+        onDismissDefinitionInput = onDismissDef,
         activeOverlayHighlightColor = activeOverlayHighlightColor,
     )
 }

@@ -476,14 +476,57 @@
     <!-- Reader / Text Selection -->
     <string name="text_selection_copy">Copy</string>
     <string name="text_selection_translate">Translate</string>
+    <string name="text_selection_define">Define</string>
+    <string name="definition_loading">Looking up…</string>
+    <string name="definition_close">Close</string>
+    <string name="definition_no_definition">No definition found for this word.</string>
+    <string name="definition_no_service">Definitions need a connection.</string>
+    <string name="definition_service_failed">The dictionary service failed.</string>
+    <string name="definition_translated_mark">Translated automatically — may be inaccurate.</string>
+    <string name="definition_add_to_dictionary">Add to my dictionary</string>
+    <string name="definition_word_language">Word language: %1$s</string>
+    <string name="definition_word_language_unknown">Word language: unknown</string>
+    <string name="definition_language_spanish">Spanish</string>
+    <string name="definition_language_english">English</string>
+    <string name="definition_language_french">French</string>
+    <string name="definition_language_portuguese">Portuguese</string>
+    <string name="definition_language_unknown">Unknown</string>
     <string name="translation_loading">Translating…</string>
     <string name="translation_no_result">No translation available for this text.</string>
     <string name="translation_offline">Translation needs a connection.</string>
     <string name="translation_close">Close</string>
+    <!--
+      Refusals, one per reason. Each names the cause and the fix the reader can
+      apply, never the failure alone: "the pair is the problem, change one side"
+      is actionable, a bare "no translation available" is not. The collision copy
+      must never claim the text is untranslatable — the text was fine; the pair
+      was the problem.
+    -->
+    <string name="translation_same_language">The source and target languages are the same, so there is nothing to translate. Change one of them in the bar above.</string>
+    <string name="translation_unknown_source">We could not detect the language of the selected text. Choose a source language in the bar above.</string>
+    <string name="translation_invalid_source">The source language you chose is not valid. Choose another one in the bar above.</string>
+    <string name="translation_invalid_target">The target language you chose is not valid. Choose another one in the bar above.</string>
+
+    <!--
+      The language bar (Group 2). `source_auto` is NOT Settings' "Detect
+      automatically": choosing it here CLEARS this book's source choice, so it
+      promises "discard my choice for this book" — a different action from
+      restoring a default. `auto_with_language` marks a side the app INFERRED
+      rather than one the reader chose.
+    -->
+    <string name="translation_bar_source_auto">Automatic (detect)</string>
+    <string name="translation_bar_target_auto">Follow the device</string>
+    <string name="translation_bar_auto_with_language">Auto (%1$s)</string>
+    <string name="translation_bar_source_description">Source language</string>
+    <string name="translation_bar_target_description">Target language</string>
 
     <!-- Translation settings (per-account source/target languages + history) -->
     <string name="settings_translation_title">Translation</string>
     <string name="settings_translation_target_label">Translate into</string>
+    <!-- Definition settings (per-account definition language) -->
+    <string name="settings_definition_title">Definitions</string>
+    <string name="settings_definition_language_label">Definitions in</string>
+    <string name="settings_definition_language_hint">Only affects the language definitions are shown in. The word\'s own language comes from the book.</string>
     <string name="settings_translation_source_label">Translate from</string>
     <string name="settings_translation_language_system">Follow the device</string>
     <string name="settings_translation_language_auto">Detect automatically</string>
@@ -834,6 +877,10 @@
     <string name="dictionary_detail_chapter">Chapter %1$s</string>
     <string name="settings_dictionary_label">Dictionary</string>
     <string name="context_menu_dictionary">Add to Dictionary</string>
+    <!-- Short, stable content description for the dictionary action's icon
+         (text-less). Kept separate from `context_menu_dictionary` so the longer,
+         localisation-sensitive label can never silently become the selector. -->
+    <string name="context_menu_dictionary_action">Dictionary</string>
     <string name="reader_add_to_dictionary">Added to dictionary</string>
     <string name="reader_already_in_dictionary">Already in dictionary</string>
 

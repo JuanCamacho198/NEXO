@@ -56,6 +56,26 @@ class ReaderInteractionState(
     val debugForceMenu: Boolean = false,
     val showTranslationPanel: Boolean = false,
     val translationPanelState: TranslationPanelState = TranslationPanelState.Idle,
+    val showDefinitionPanel: Boolean = false,
+    val definitionPanelState: DefinitionPanelState = DefinitionPanelState.Idle,
+    /**
+     * The word the definition panel is looking up, after the surrounding
+     * punctuation the drag covered was trimmed (`"de"` → `de`).
+     *
+     * A separate field from [selectedText] on purpose: the selection is the
+     * reader's raw drag and other actions (copy, share) must still see it
+     * verbatim, while the panel's title must name the word being defined —
+     * `de`, not `"de"`. `null` when no lookup has run.
+     */
+    val definitionWord: String? = null,
+    /**
+     * The reader's definition language, mirrored here so the panel's selector has
+     * OBSERVABLE state to recompose from. A change made in the panel must bring
+     * the chip's label with it; a plain snapshot of the preference store, read
+     * once outside composition, leaves the chip showing the previous language.
+     * Never the word's language — that is a fact about the book (invariant 1).
+     */
+    val definitionLanguage: String = "",
 ) {
     fun copy(
         highlights: List<Highlight> = this.highlights,
@@ -75,6 +95,10 @@ class ReaderInteractionState(
         debugForceMenu: Boolean = this.debugForceMenu,
         showTranslationPanel: Boolean = this.showTranslationPanel,
         translationPanelState: TranslationPanelState = this.translationPanelState,
+        showDefinitionPanel: Boolean = this.showDefinitionPanel,
+        definitionPanelState: DefinitionPanelState = this.definitionPanelState,
+        definitionLanguage: String = this.definitionLanguage,
+        definitionWord: String? = this.definitionWord,
     ): ReaderInteractionState =
         ReaderInteractionState(
             highlights = highlights,
@@ -94,6 +118,10 @@ class ReaderInteractionState(
             debugForceMenu = debugForceMenu,
             showTranslationPanel = showTranslationPanel,
             translationPanelState = translationPanelState,
+            showDefinitionPanel = showDefinitionPanel,
+            definitionPanelState = definitionPanelState,
+            definitionLanguage = definitionLanguage,
+            definitionWord = definitionWord,
         )
 
     override fun equals(other: Any?): Boolean {
@@ -114,7 +142,11 @@ class ReaderInteractionState(
             showHighlightsSheet == other.showHighlightsSheet &&
             debugForceMenu == other.debugForceMenu &&
             showTranslationPanel == other.showTranslationPanel &&
-            translationPanelState == other.translationPanelState
+            translationPanelState == other.translationPanelState &&
+            showDefinitionPanel == other.showDefinitionPanel &&
+            definitionPanelState == other.definitionPanelState &&
+            definitionWord == other.definitionWord &&
+            definitionLanguage == other.definitionLanguage
         // selectionRect intentionally omitted — not mockable in JVM unit tests
     }
 
@@ -135,6 +167,10 @@ class ReaderInteractionState(
         result = 31 * result + debugForceMenu.hashCode()
         result = 31 * result + showTranslationPanel.hashCode()
         result = 31 * result + translationPanelState.hashCode()
+        result = 31 * result + showDefinitionPanel.hashCode()
+        result = 31 * result + definitionPanelState.hashCode()
+        result = 31 * result + (definitionWord?.hashCode() ?: 0)
+        result = 31 * result + definitionLanguage.hashCode()
         return result
     }
 
@@ -154,6 +190,8 @@ class ReaderInteractionState(
             "showDefinitionInput=$showDefinitionInput, " +
             "activeDefinitionText='$activeDefinitionText', " +
             "showHighlightsSheet=$showHighlightsSheet, " +
-            "debugForceMenu=$debugForceMenu" +
+            "debugForceMenu=$debugForceMenu, " +
+            "definitionLanguage='$definitionLanguage', " +
+            "definitionWord.length=${definitionWord?.length ?: 0}" +
             ")"
 }

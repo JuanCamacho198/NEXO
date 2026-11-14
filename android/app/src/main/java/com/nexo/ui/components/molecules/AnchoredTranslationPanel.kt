@@ -1,5 +1,6 @@
 package com.nexo.ui.components.molecules
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
+import com.nexo.domain.translation.NoTranslationReason
 import com.nexo.presentation.theme.NexoTheme
 import com.nexo.presentation.viewmodel.reader.TranslationPanelState
 import com.nexo.ui.icons.NexoIcons
@@ -35,18 +37,29 @@ import com.nexo.ui.icons.NexoIcons
  *
  * @param sourceWord The word being translated, rendered as a `titleSmall`
  *   label (the panel is anchored to it).
- * @param state Current [TranslationPanelState] driving the body.
+ * @param state Current [TranslationPanelState] driving the body. It also
+ *   carries the language pair the body was built from, which is what the bar
+ *   renders — one value, so the two cannot disagree (invariant 6).
  * @param onDismiss Invoked when the user taps "Close". The caller is expected
  *   to close the surrounding overlay.
+ * @param onSourceChosen A source picked in the bar, or `null` for
+ *   "Automatic (detect)" which clears the book's choice. Defaulted so the
+ *   previews and any non-interactive call site need not supply it.
+ * @param onTargetChosen A destination picked in the bar, or `null` to follow
+ *   the device.
  * @param modifier Modifier applied to the outer `Surface`.
  *
  * **Visual**: 280dp-wide `Surface`, 16dp radius, 8dp elevation. Header shows
- *   the source word; the body is either a spinner ([TranslationPanelState.Loading]),
- *   the translated `bodyLarge` text ([TranslationPanelState.Result]), or a
- *   muted message for the no-translation / error states. Footer is a single
- *   right-aligned "Close" text button.
+ *   the source word; below it the [TranslationLanguageBar]; the body is either
+ *   a spinner ([TranslationPanelState.Loading]), the translated `bodyLarge`
+ *   text ([TranslationPanelState.Result]), or a muted message for the
+ *   no-translation / error states. Footer is a single right-aligned "Close"
+ *   text button.
  * **Behavior**: purely presentational; all state is hoisted.
  * **Recomposition**: recomposes when any parameter changes.
+ * **Anchoring**: this card's height now includes the bar, and
+ *   `AnchoredOverlayBox` measures it AFTER layout. See the note on
+ *   [TranslationLanguageBar]'s placement below.
  */
 @Composable
 fun AnchoredTranslationPanel(
@@ -54,6 +67,8 @@ fun AnchoredTranslationPanel(
     state: TranslationPanelState,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    onSourceChosen: (String?) -> Unit = {},
+    onTargetChosen: (String?) -> Unit = {},
 ) {
     Surface(
         modifier = modifier.width(280.dp),
@@ -82,18 +97,41 @@ fun AnchoredTranslationPanel(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // The bar sits ABOVE the body, inside the card, so a refusal's copy
+            // ("change one of them in the bar above") points at a control that is
+            // literally above it. It is fed the pair from `state`, never a pair
+            // derived separately, so the fix and the answer describe one value.
+            //
+            // The card is fixed at 280dp and `AnchoredOverlayBox` measures it
+            // with `onGloballyPositioned` — AFTER layout. The bar therefore grows
+            // the card's measured HEIGHT, and the anchor is recomputed from that
+            // measurement. Because `AnchoredOverlayBox` holds its width/height in
+            // `mutableIntStateOf` read during composition, the new measurement
+            // triggers a recomposition and the anchor lands on the real card, not
+            // the pre-bar one. Nothing is added inside the card that changes its
+            // WIDTH, so the horizontal clamp (`computeAnchor` centring on the
+            // selection) is unaffected.
+            TranslationLanguageBar(
+                languages = state.languages,
+                onSourceChosen = onSourceChosen,
+                onTargetChosen = onTargetChosen,
+                disabled = state is TranslationPanelState.Loading,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             when (state) {
-                TranslationPanelState.Loading -> TranslationLoadingBody()
+                is TranslationPanelState.Loading -> TranslationLoadingBody()
                 is TranslationPanelState.Result ->
                     Text(
                         text = state.translated,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                TranslationPanelState.NoTranslation ->
-                    MutedBody(stringResource(R.string.translation_no_result))
+                is TranslationPanelState.NoTranslation ->
+                    MutedBody(stringResource(noTranslationMessage(state.reason)))
                 is TranslationPanelState.Error -> MutedBody(state.message)
                 TranslationPanelState.Idle -> MutedBody(stringResource(R.string.translation_loading))
             }
@@ -138,6 +176,27 @@ private fun MutedBody(message: String) {
     )
 }
 
+/**
+ * The message for a refusal, keyed on WHY it is a refusal.
+ *
+ * Each reason names the cause and, where the reader can act, the FIX — never the
+ * failure alone. [NoTranslationReason.SAME_LANGUAGE] is the case that was
+ * measured wrong: it used the generic "no translation available for this text",
+ * which blames the text for a problem in the language PAIR. It now says the pair
+ * is the problem and how to change it.
+ *
+ * Exhaustive `when` with no `else`, so a new reason cannot be added without a
+ * decision about its copy.
+ */
+@StringRes
+private fun noTranslationMessage(reason: NoTranslationReason): Int =
+    when (reason) {
+        NoTranslationReason.SAME_LANGUAGE -> R.string.translation_same_language
+        NoTranslationReason.UNKNOWN_SOURCE -> R.string.translation_unknown_source
+        NoTranslationReason.INVALID_SOURCE -> R.string.translation_invalid_source
+        NoTranslationReason.INVALID_TARGET -> R.string.translation_invalid_target
+    }
+
 @Preview(showBackground = true)
 @Composable
 private fun AnchoredTranslationPanelResultPreview() {
@@ -156,7 +215,7 @@ private fun AnchoredTranslationPanelNoResultPreview() {
     NexoTheme(darkTheme = false) {
         AnchoredTranslationPanel(
             sourceWord = "francés",
-            state = TranslationPanelState.NoTranslation,
+            state = TranslationPanelState.NoTranslation(NoTranslationReason.SAME_LANGUAGE),
             onDismiss = {},
         )
     }

@@ -444,14 +444,57 @@
     <!-- Reader / Text Selection -->
     <string name="text_selection_copy">Copiar</string>
     <string name="text_selection_translate">Traducir</string>
+    <string name="text_selection_define">Definir</string>
+    <string name="definition_loading">Buscando…</string>
+    <string name="definition_close">Cerrar</string>
+    <string name="definition_no_definition">No se encontró definición para esta palabra.</string>
+    <string name="definition_no_service">Las definiciones necesitan conexión.</string>
+    <string name="definition_service_failed">El servicio de diccionario falló.</string>
+    <string name="definition_translated_mark">Traducido automáticamente — puede ser impreciso.</string>
+    <string name="definition_add_to_dictionary">Añadir a mi diccionario</string>
+    <string name="definition_word_language">Idioma de la palabra: %1$s</string>
+    <string name="definition_word_language_unknown">Idioma de la palabra: desconocido</string>
+    <string name="definition_language_spanish">Español</string>
+    <string name="definition_language_english">Inglés</string>
+    <string name="definition_language_french">Francés</string>
+    <string name="definition_language_portuguese">Portugués</string>
+    <string name="definition_language_unknown">Desconocido</string>
     <string name="translation_loading">Traduciendo…</string>
     <string name="translation_no_result">No hay traducción disponible para este texto.</string>
     <string name="translation_offline">La traducción necesita conexión.</string>
     <string name="translation_close">Cerrar</string>
+    <!--
+      Refusals, one per reason. Each names the cause and the fix the reader can
+      apply, never the failure alone: "the pair is the problem, change one side"
+      is actionable, a bare "no translation available" is not. The collision copy
+      must never claim the text is untranslatable — the text was fine; the pair
+      was the problem.
+    -->
+    <string name="translation_same_language">El idioma de origen y el de destino son el mismo, así que no hay nada que traducir. Cambia uno de los dos en la barra de arriba.</string>
+    <string name="translation_unknown_source">No pudimos detectar el idioma del texto seleccionado. Elige un idioma de origen en la barra de arriba.</string>
+    <string name="translation_invalid_source">El idioma de origen elegido no es válido. Elige otro en la barra de arriba.</string>
+    <string name="translation_invalid_target">El idioma de destino elegido no es válido. Elige otro en la barra de arriba.</string>
+
+    <!--
+      La barra de idiomas (Grupo 2). `source_auto` NO es el "Detectar
+      automáticamente" de Ajustes: elegirlo aquí BORRA la elección de origen de
+      este libro, así que promete "descarta mi elección para este libro" — una
+      acción distinta de restaurar un valor por defecto. `auto_with_language`
+      marca un lado que la app INFIRIÓ, no uno que el lector eligió.
+    -->
+    <string name="translation_bar_source_auto">Automático (detectar)</string>
+    <string name="translation_bar_target_auto">Seguir el dispositivo</string>
+    <string name="translation_bar_auto_with_language">Auto (%1$s)</string>
+    <string name="translation_bar_source_description">Idioma de origen</string>
+    <string name="translation_bar_target_description">Idioma de destino</string>
 
     <!-- Translation settings (per-account source/target languages + history) -->
     <string name="settings_translation_title">Traducción</string>
     <string name="settings_translation_target_label">Traducir a</string>
+    <!-- Definition settings (per-account definition language) -->
+    <string name="settings_definition_title">Definiciones</string>
+    <string name="settings_definition_language_label">Definiciones en</string>
+    <string name="settings_definition_language_hint">Solo afecta al idioma en el que se muestran las definiciones. El idioma de la palabra viene del libro.</string>
     <string name="settings_translation_source_label">Traducir desde</string>
     <string name="settings_translation_language_system">Seguir el dispositivo</string>
     <string name="settings_translation_language_auto">Detectar automáticamente</string>
@@ -838,6 +881,10 @@
     <string name="dictionary_detail_chapter">Capítulo %1$s</string>
     <string name="settings_dictionary_label">Diccionario</string>
     <string name="context_menu_dictionary">Agregar al diccionario</string>
+    <!-- Descripción de contenido corta y estable para el icono de la acción de
+         diccionario (sin texto). Separada de `context_menu_dictionary` para que
+         la etiqueta larga no pueda convertirse en el selector por accidente. -->
+    <string name="context_menu_dictionary_action">Diccionario</string>
     <string name="reader_add_to_dictionary">Agregado al diccionario</string>
     <string name="reader_already_in_dictionary">Ya está en el diccionario</string>
 

@@ -128,11 +128,14 @@ fun rememberSelectionBridge(
                 if (text != rawText) {
                     Log.d("SelectionDebug", "Normalized selection text: len=${rawText.length} -> ${text.length}")
                 }
-                Log.d("SelectionDebug", "Calling interactionHolder.onReadiumSelection(len=${text.length}, rect=$selRect)")
+                val usableRect = resolveSelectionRect(frag, selRect)
+                Log.d("SelectionDebug", "Resolved rect=$usableRect (readium rect=$selRect)")
+                logRectSpaces(frag, usableRect)
+                Log.d("SelectionDebug", "Calling interactionHolder.onReadiumSelection(len=${text.length}, rect=$usableRect)")
                 try {
                     viewModel.interactionHolder.onReadiumSelection(
                         locator = sel.locator,
-                        rect = selRect,
+                        rect = usableRect,
                         text = text,
                         existingHighlights = latestHighlights,
                     )
@@ -297,3 +300,111 @@ fun rememberSelectionBridge(
         DebugStateHolder.recordApplied(decorations.size)
     }
 }
+
+/**
+ * Returns a selection rect NEXO can trust, preferring the value Readium itself
+ * starts from over the one it corrupts on the way out.
+ *
+ * Readium 3.2.0's `EpubNavigatorFragment.adjustedToViewport()` adds the WebView
+ * container's `paddingTop` to the selection rect's `top` ONLY, which inverts the
+ * rect and stretches it by that padding. See [ReadiumSelectionRectRepair] for
+ * the full trace and the measured numbers.
+ *
+ * The raw rect is read from the same page call Readium uses, so it is unpadded
+ * and symmetric. When it is unavailable (interface not ready, no selection, any
+ * parse failure) the delivered value is repaired instead, so the worst case is
+ * never worse than a locally-corrected rect.
+ */
+private suspend fun resolveSelectionRect(
+    frag: EpubNavigatorFragment,
+    readiumRect: RectF,
+): RectF {
+    val raw =
+        try {
+            ReadiumSelectionRectRepair.parseRawRect(
+                frag.evaluateJavascript(ReadiumSelectionRectRepair.selectionRectJs),
+            )
+        } catch (e: Throwable) {
+            Log.d("SelectionDebug", "raw rect JS failed: ${e::class.simpleName}: ${e.message}")
+            null
+        }
+    if (raw != null && raw.isSortedFinite()) return raw
+
+    val repaired = ReadiumSelectionRectRepair.repairTopOnlyPadding(readiumRect, LINE_HEIGHT_FALLBACK_PX)
+    if (repaired != readiumRect) {
+        Log.d("SelectionDebug", "Repaired Readium rect $readiumRect -> $repaired")
+    }
+    return repaired
+}
+
+/**
+ * A text line is a small fraction of a device-pixel viewport at any supported
+ * font size; this is the tolerance the repair uses to recognise a rect that
+ * carries Readium's padding defect rather than genuine multi-line extent.
+ */
+private const val LINE_HEIGHT_FALLBACK_PX = 96f
+
+/**
+ * TEMPORARY diagnostic — prints the candidate content-space origins discussed
+ * while locating the overlay translate. Remove once the anchor is settled.
+ */
+private fun logRectSpaces(
+    frag: EpubNavigatorFragment,
+    rect: android.graphics.RectF,
+) {
+    val container = frag.view ?: return
+    val containerLoc = IntArray(2)
+    container.getLocationOnScreen(containerLoc)
+    val (vw, vh) = containerLayoutSize(frag, container)
+    val rootLoc = IntArray(2)
+    frag
+        .requireActivity()
+        .window.decorView
+        .getLocationOnScreen(rootLoc)
+    val insets =
+        androidx.core.view.ViewCompat
+            .getRootWindowInsets(container)
+    val (sysTop, sysBottom) = systemBarInsets(insets)
+    val cutoutTop = insets?.displayCutout?.safeInsetTop ?: 0
+    Log.d(
+        "SelectionDebug",
+        "SPACES rect=$rect containerScreen=${containerLoc[0]},${containerLoc[1]} " +
+            "containerLocal=${container.paddingLeft},${container.paddingTop},${container.paddingRight},${container.paddingBottom} " +
+            "containerSize=${vw}x$vh decorScreen=${rootLoc[0]},${rootLoc[1]} " +
+            "sysTop=$sysTop sysBottom=$sysBottom cutout=$cutoutTop",
+    )
+}
+
+private fun containerLayoutSize(
+    frag: EpubNavigatorFragment,
+    container: android.view.View,
+): Pair<Int, Int> {
+    val webView = findWebView(container)
+    if (webView == null) return container.width to container.height
+    // The WebView's viewport is what the CSS coordinate space maps onto.
+    return webView.width to webView.height
+}
+
+private fun findWebView(view: android.view.View): android.webkit.WebView? {
+    if (view is android.webkit.WebView) return view
+    if (view is android.view.ViewGroup) {
+        for (i in 0 until view.childCount) {
+            findWebView(view.getChildAt(i))?.let { return it }
+        }
+    }
+    return null
+}
+
+private fun systemBarInsets(
+    insets: androidx.core.view.WindowInsetsCompat?,
+): Pair<Int, Int> {
+    if (insets == null) return 0 to 0
+    val bars =
+        insets.getInsets(
+            androidx.core.view.WindowInsetsCompat.Type
+                .systemBars(),
+        )
+    return bars.top to bars.bottom
+}
+
+private fun RectF.isSortedFinite(): Boolean = left.isFinite() && top.isFinite() && right.isFinite() && bottom.isFinite() && bottom > top

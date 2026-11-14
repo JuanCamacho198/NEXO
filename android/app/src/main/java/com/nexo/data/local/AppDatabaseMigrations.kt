@@ -1179,6 +1179,50 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * Reader selection definitions (T5 of `android-define-selection`).
+     * Isolated `definition_cache` table — device-local definition lookups keyed
+     * by the SHA-256 of `(owner, readerLanguage, wordLanguage, word)` and
+     * scoped by `user_id` so a lookup can never cross the owner boundary.
+     *
+     * Both languages are inside the identity because the cascade resolves
+     * differently per reader language AND reads a different `{{lengua|XX}}`
+     * section per word language; a definition in a different language is a
+     * different answer. Never synced. Additive only.
+     *
+     * The unique `(user_id, key)` index makes a re-cache an in-place REPLACE
+     * instead of a duplicate; `(user_id, created_at)` serves the retention
+     * sweep, mirroring the translation cache.
+     */
+    val MIGRATION_36_37 =
+        object : Migration(36, 37) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS definition_cache (
+                        `key` TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        word TEXT NOT NULL,
+                        word_normalized TEXT NOT NULL,
+                        word_language TEXT NOT NULL,
+                        reader_language TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        PRIMARY KEY(`key`)
+                    )
+                    """.trimIndent(),
+                )
+                connection.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_definition_cache_user_id_key " +
+                        "ON definition_cache(user_id, `key`)",
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_definition_cache_user_id_created_at " +
+                        "ON definition_cache(user_id, created_at)",
+                )
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -1216,5 +1260,6 @@ object AppDatabaseMigrations {
             MIGRATION_33_34,
             MIGRATION_34_35,
             MIGRATION_35_36,
+            MIGRATION_36_37,
         )
 }

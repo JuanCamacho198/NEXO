@@ -58,6 +58,156 @@ class ZipEpubParserServiceTest {
         }
 
     @Test
+    fun extractMetadata_returnsFirstImageAsCoverWhenNoMarkerAndNoGuide() =
+        runBlocking {
+            val imageBytes = byteArrayOf(9, 8, 7, 6, 5)
+            val epubBytes =
+                buildEpub(
+                    entries =
+                        mapOf(
+                            "META-INF/container.xml" to CONTAINER_XML.toByteArray(),
+                            // Marker-less, guide-less shape: EPUB3, ONE image whose
+                            // name carries no cover word, referenced only from a
+                            // chapter. This mirrors `Como Hablar con Cualquiera`.
+                            "OEBPS/content.opf" to
+                                """
+                                <package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+                                    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+                                        <dc:title>Markerless Book</dc:title>
+                                        <dc:creator>Jane Doe</dc:creator>
+                                        <dc:language>und</dc:language>
+                                        <meta property="dcterms:modified">2021-05-04T00:00:00Z</meta>
+                                    </metadata>
+                                    <manifest>
+                                        <item id="img0" href="img/img0.jpg" media-type="image/jpeg"/>
+                                        <item id="page1" href="page1.xhtml" media-type="application/xhtml+xml"/>
+                                    </manifest>
+                                    <spine>
+                                        <itemref idref="page1"/>
+                                    </spine>
+                                </package>
+                                """.trimIndent().toByteArray(),
+                            "OEBPS/img/img0.jpg" to imageBytes,
+                            "OEBPS/page1.xhtml" to
+                                """
+                                <html xmlns="http://www.w3.org/1999/xhtml"><body>
+                                    <img src="img/img0.jpg"/>
+                                </body></html>
+                                """.trimIndent().toByteArray(),
+                        ),
+                )
+
+            val result = parser.extractMetadata(ByteArrayInputStream(epubBytes))
+
+            assertTrue(result.isSuccess)
+            val metadata = result.getOrThrow()
+            assertNotNull(metadata.coverImageBytes)
+            assertArrayEquals(imageBytes, metadata.coverImageBytes)
+        }
+
+    @Test
+    fun extractMetadata_returnsNullCoverWhenBookHasNoImageAtAll() =
+        runBlocking {
+            val epubBytes =
+                buildEpub(
+                    entries =
+                        mapOf(
+                            "META-INF/container.xml" to CONTAINER_XML.toByteArray(),
+                            "OEBPS/content.opf" to
+                                """
+                                <package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+                                    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+                                        <dc:title>Imageless Book</dc:title>
+                                    </metadata>
+                                    <manifest>
+                                        <item id="page1" href="page1.xhtml" media-type="application/xhtml+xml"/>
+                                    </manifest>
+                                    <spine>
+                                        <itemref idref="page1"/>
+                                    </spine>
+                                </package>
+                                """.trimIndent().toByteArray(),
+                            "OEBPS/page1.xhtml" to
+                                """
+                                <html xmlns="http://www.w3.org/1999/xhtml"><body><p>text</p></body></html>
+                                """.trimIndent().toByteArray(),
+                        ),
+                )
+
+            val result = parser.extractMetadata(ByteArrayInputStream(epubBytes))
+
+            assertTrue(result.isSuccess)
+            assertEquals(null, result.getOrThrow().coverImageBytes)
+        }
+
+    @Test
+    fun extractMetadata_prefersNamedCoverOverFirstImage() =
+        runBlocking {
+            val coverBytes = byteArrayOf(1, 1, 1)
+            val otherBytes = byteArrayOf(2, 2, 2)
+            val epubBytes =
+                buildEpub(
+                    entries =
+                        mapOf(
+                            "META-INF/container.xml" to CONTAINER_XML.toByteArray(),
+                            "OEBPS/content.opf" to
+                                """
+                                <package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+                                    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+                                        <dc:title>Heuristic Book</dc:title>
+                                    </metadata>
+                                    <manifest>
+                                        <item id="a" href="img/first.jpg" media-type="image/jpeg"/>
+                                        <item id="b" href="img/cover.jpg" media-type="image/jpeg"/>
+                                    </manifest>
+                                </package>
+                                """.trimIndent().toByteArray(),
+                            "OEBPS/img/first.jpg" to otherBytes,
+                            "OEBPS/img/cover.jpg" to coverBytes,
+                        ),
+                )
+
+            val result = parser.extractMetadata(ByteArrayInputStream(epubBytes))
+
+            assertTrue(result.isSuccess)
+            assertArrayEquals(coverBytes, result.getOrThrow().coverImageBytes)
+        }
+
+    @Test
+    fun extractMetadata_returnsGuideCoverHrefWhenDeclared() =
+        runBlocking {
+            val coverBytes = byteArrayOf(4, 4, 4, 4)
+            val epubBytes =
+                buildEpub(
+                    entries =
+                        mapOf(
+                            "META-INF/container.xml" to CONTAINER_XML.toByteArray(),
+                            "OEBPS/content.opf" to
+                                """
+                                <package xmlns="http://www.idpf.org/2007/opf" version="2.0">
+                                    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+                                        <dc:title>Guide Book</dc:title>
+                                    </metadata>
+                                    <manifest>
+                                        <item id="a" href="img/first.jpg" media-type="image/jpeg"/>
+                                    </manifest>
+                                    <guide>
+                                        <reference type="cover" href="img/cover.jpg" title="Cover"/>
+                                    </guide>
+                                </package>
+                                """.trimIndent().toByteArray(),
+                            "OEBPS/img/first.jpg" to byteArrayOf(3, 3),
+                            "OEBPS/img/cover.jpg" to coverBytes,
+                        ),
+                )
+
+            val result = parser.extractMetadata(ByteArrayInputStream(epubBytes))
+
+            assertTrue(result.isSuccess)
+            assertArrayEquals(coverBytes, result.getOrThrow().coverImageBytes)
+        }
+
+    @Test
     fun extractMetadata_returnsFailureForInvalidEpub() =
         runBlocking {
             val invalidEpubBytes =

@@ -40,6 +40,7 @@ import com.nexo.presentation.screen.settings.AboutScreen
 import com.nexo.presentation.screen.settings.PerformanceScreen
 import com.nexo.presentation.screen.settings.SettingsAccountScreen
 import com.nexo.presentation.screen.settings.SettingsDataStorageScreen
+import com.nexo.presentation.screen.settings.SettingsDefinitionScreen
 import com.nexo.presentation.screen.settings.SettingsDevicesScreen
 import com.nexo.presentation.screen.settings.SettingsLanguageScreen
 import com.nexo.presentation.screen.settings.SettingsListScreen
@@ -84,6 +85,7 @@ fun SettingsScreen(
     activeUser: ActiveUserProvider,
     translationPreferences: com.nexo.data.session.TranslationPreferences? = null,
     translationHistoryRepository: com.nexo.domain.repository.TranslationHistoryRepository? = null,
+    definitionPreferences: com.nexo.data.session.DefinitionPreferences? = null,
 ) {
     SettingsScreenContent(
         contentPadding = contentPadding,
@@ -113,6 +115,7 @@ fun SettingsScreen(
         activeUser = activeUser,
         translationPreferences = translationPreferences,
         translationHistoryRepository = translationHistoryRepository,
+        definitionPreferences = definitionPreferences,
     )
 }
 
@@ -145,6 +148,7 @@ private fun SettingsScreenContent(
     activeUser: ActiveUserProvider,
     translationPreferences: com.nexo.data.session.TranslationPreferences? = null,
     translationHistoryRepository: com.nexo.domain.repository.TranslationHistoryRepository? = null,
+    definitionPreferences: com.nexo.data.session.DefinitionPreferences? = null,
 ) {
     val nestedNavController = rememberNavController()
     val dictionaryViewModel = rememberDictionaryViewModel(dictionaryRepository, activeUser)
@@ -207,6 +211,9 @@ private fun SettingsScreenContent(
                     onNavigateToTranslation = {
                         nestedNavController.navigate(NexoDestination.SettingsTranslation.route)
                     },
+                    onNavigateToDefinition = {
+                        nestedNavController.navigate(NexoDestination.SettingsDefinition.route)
+                    },
                     onNavigateToPerformance = {
                         nestedNavController.navigate(NexoDestination.SettingsPerformance.route)
                     },
@@ -255,6 +262,13 @@ private fun SettingsScreenContent(
                     onBack = { nestedNavController.popBackStack() },
                     preferencesStore = translationPreferences,
                     historyRepository = translationHistoryRepository,
+                )
+            }
+
+            composable(route = NexoDestination.SettingsDefinition.route) {
+                SettingsDefinitionScreen(
+                    onBack = { nestedNavController.popBackStack() },
+                    preferencesStore = definitionPreferences,
                 )
             }
 

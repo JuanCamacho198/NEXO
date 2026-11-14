@@ -30,6 +30,12 @@ class ReadingNavigator(
     private val onNavigateToLocator: (Locator) -> Unit = {},
     private val onSelectionCleared: () -> Unit = {},
     private val onProgressDisplay: () -> Unit = {},
+    /**
+     * Reports deliberate navigation (chapter jump, page turn, scrub) so the
+     * persistence gate opens for a position the READER chose, as opposed to the
+     * navigator's pre-restore resting place. See `ReadingProgressTracker.mayPersist`.
+     */
+    private val onReaderMoved: () -> Unit = {},
 ) : Clearable {
     companion object {
         private const val MAX_PROGRESS_PERCENT = 99f
@@ -40,6 +46,7 @@ class ReadingNavigator(
         val totalChapters = state.value.chapters.size
         if (currentIndex < totalChapters - 1) {
             val newIndex = currentIndex + 1
+            onReaderMoved()
             state.update { it.copy(currentChapterIndex = newIndex) }
             updateProgressForChapter(newIndex)
             onChapterChanged()
@@ -51,6 +58,7 @@ class ReadingNavigator(
         val currentIndex = state.value.currentChapterIndex
         if (currentIndex > 0) {
             val newIndex = currentIndex - 1
+            onReaderMoved()
             state.update { it.copy(currentChapterIndex = newIndex) }
             updateProgressForChapter(newIndex)
             onChapterChanged()
@@ -61,6 +69,7 @@ class ReadingNavigator(
     fun goToChapter(listPosition: Int) {
         if (listPosition in state.value.chapters.indices) {
             if (listPosition == state.value.currentChapterIndex) return
+            onReaderMoved()
             state.update { it.copy(currentChapterIndex = listPosition) }
             updateProgressForChapter(listPosition)
             onChapterChanged()
@@ -108,6 +117,7 @@ class ReadingNavigator(
         val totalPages = state.value.totalPdfPages
         if (currentPage < totalPages - 1) {
             val newPage = currentPage + 1
+            onReaderMoved()
             state.update { it.copy(currentPdfPage = newPage) }
             updatePdfProgress(newPage, totalPages)
             onProgressDisplay()
@@ -118,6 +128,7 @@ class ReadingNavigator(
         val currentPage = state.value.currentPdfPage
         if (currentPage > 0) {
             val newPage = currentPage - 1
+            onReaderMoved()
             state.update { it.copy(currentPdfPage = newPage) }
             updatePdfProgress(newPage, state.value.totalPdfPages)
             onProgressDisplay()
@@ -127,6 +138,7 @@ class ReadingNavigator(
     fun goToPdfPage(pageIndex: Int) {
         val totalPages = state.value.totalPdfPages
         if (pageIndex in 0 until totalPages) {
+            onReaderMoved()
             state.update { it.copy(currentPdfPage = pageIndex) }
             updatePdfProgress(pageIndex, totalPages)
             onProgressDisplay()
@@ -137,6 +149,7 @@ class ReadingNavigator(
         val totalPages = state.value.totalPdfPages
         if (pageNumber in 1..totalPages) {
             val newPage = pageNumber - 1
+            onReaderMoved()
             state.update { it.copy(currentPdfPage = newPage) }
             updatePdfProgress(newPage, totalPages)
             onProgressDisplay()

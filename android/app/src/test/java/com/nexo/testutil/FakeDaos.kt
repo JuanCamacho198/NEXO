@@ -208,6 +208,15 @@ open class FakeBookDao : BookDao {
         books[bookId]?.takeIf { it.userId == userId }?.let { books[bookId] = it.copy(filePath = filePath) }
         state.value++
     }
+
+    override suspend fun updateCoverPath(
+        bookId: String,
+        userId: String,
+        coverPath: String,
+    ) {
+        books[bookId]?.takeIf { it.userId == userId }?.let { books[bookId] = it.copy(coverPath = coverPath) }
+        state.value++
+    }
 }
 
 /** In-memory [ReadingProgressDao] scoped by `userId`. */

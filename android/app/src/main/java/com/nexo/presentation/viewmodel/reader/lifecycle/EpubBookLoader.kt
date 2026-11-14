@@ -5,6 +5,7 @@ import android.util.Log
 import com.nexo.R
 import com.nexo.data.remote.supabase.SupabaseProgressSync
 import com.nexo.debug.DebugLog
+import com.nexo.domain.model.ReadingProgress
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.UiEvent
@@ -50,6 +51,12 @@ class EpubBookLoader(
     private val onNavigateToLocator: (Locator) -> Unit,
     private val onBookLoaded: (String) -> Unit,
     private val onProgressDisplay: () -> Unit,
+    /**
+     * Hands the persisted position this book opened at to the progress tracker,
+     * so it can distinguish the navigator's pre-restore cover emission from the
+     * reader's real position. See `ReadingProgressTracker.mayPersist`.
+     */
+    private val onProgressContextLoaded: (ReadingProgress?) -> Unit = {},
 ) : BookLoader,
     Clearable {
     private val _isLoading = MutableStateFlow(false)
@@ -126,6 +133,9 @@ class EpubBookLoader(
                 readiumLocator = null,
                 progressPercent = 0f,
                 progressLabel = "",
+                // Disarmed: the navigator's first emission arrives before the saved
+                // position is applied, and persisting it would write the cover at 0%.
+                progressPersistenceArmed = false,
             )
         }
         _isLoading.value = true
@@ -206,6 +216,14 @@ class EpubBookLoader(
                         ?.locatorJson
                         ?.let { CfiMigrator.jsonToLocator(it) }
 
+                // Hand the tracker the SAME row the initial locator was built
+                // from, so it can tell the navigator's pre-restore cover emission
+                // apart from the reader's real position. Read synchronously here
+                // rather than from the room-backed `readingProgress` slice, which
+                // arrives on its own schedule and was still empty when the
+                // navigator emitted — the gate then opened and the row was lost.
+                onProgressContextLoaded(savedProgress)
+
                 state.update {
                     it.copy(
                         readiumPublication = publication,
@@ -218,15 +236,15 @@ class EpubBookLoader(
                 _isLoading.value = false
                 _loadTimeMs.value = loadTime
 
-                supabaseProgressSync?.let { sync ->
-                    scope.launch(Dispatchers.IO) {
-                        sync.resumeForBook(bookId) { remote ->
-                            val locator = remote.locatorJson?.let(CfiMigrator::jsonToLocator)
-                            if (locator != null && epoch == loadEpoch && state.value.selectedBookId == bookId) {
-                                state.update { current -> current.copy(readiumLocator = locator) }
-                                scope.launch(mainDispatcher) { onNavigateToLocator(locator) }
-                            }
-                        }
+                // Persistence is NOT armed here. The navigator fragment is committed
+                // by Compose only after this coroutine yields (plus its 200 ms
+                // settle delay), so its first emission — the cover — still arrives
+                // after this point; arming now would let it overwrite the saved
+                // row. The tracker opens its own gate from the restored position
+                // instead; see `ReadingProgressTracker.mayPersist`.
+                if (supabaseProgressSync != null) {
+                    withContext(Dispatchers.IO) {
+                        syncProgressForBook(bookId, epoch)
                     }
                 }
                 withContext(Dispatchers.IO) {
@@ -257,6 +275,32 @@ class EpubBookLoader(
                 _isLoading.value = false
                 onErrorEvent(UiEvent.ShowSnackbar(message))
             }
+        }
+    }
+
+    /**
+     * Applies the remote copy of this book's position (LWW). Awaited from a
+     * background coroutine so the caller's control flow stays sequential.
+     *
+     * No arming happens here any more: the tracker opens its own persistence gate
+     * from whichever position this session actually opened at, so a remote
+     * locator is protected by the same rule as a local one.
+     */
+    private suspend fun syncProgressForBook(
+        bookId: String,
+        epoch: Long,
+    ) {
+        val sync = supabaseProgressSync ?: return
+        try {
+            sync.resumeForBook(bookId) { remote ->
+                val locator = remote.locatorJson?.let(CfiMigrator::jsonToLocator)
+                if (locator != null && epoch == loadEpoch && state.value.selectedBookId == bookId) {
+                    state.update { current -> current.copy(readiumLocator = locator) }
+                    scope.launch(mainDispatcher) { onNavigateToLocator(locator) }
+                }
+            }
+        } catch (e: Exception) {
+            DebugLog.warn(TAG, "resumeForBook failed bookId=$bookId epoch=$epoch cause=${e.message}")
         }
     }
 

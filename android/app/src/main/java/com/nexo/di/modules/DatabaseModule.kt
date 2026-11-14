@@ -10,6 +10,7 @@ import com.nexo.data.local.AppDatabaseMigrations
 import com.nexo.data.local.dao.AddonDao
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
+import com.nexo.data.local.dao.DefinitionCacheDao
 import com.nexo.data.local.dao.DictionaryWordDao
 import com.nexo.data.local.dao.DiscoverCacheDao
 import com.nexo.data.local.dao.HighlightDao
@@ -68,6 +69,7 @@ class DatabaseModule(
     val installedAddonDao: AddonDao get() = appDatabase.addonDao()
     val notificationDao: NotificationDao get() = appDatabase.notificationDao()
     val translationCacheDao: TranslationCacheDao get() = appDatabase.translationCacheDao()
+    val definitionCacheDao: DefinitionCacheDao get() = appDatabase.definitionCacheDao()
 
     fun clearAllTables() {
         appDatabase.clearAllTables()

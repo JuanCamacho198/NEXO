@@ -214,6 +214,7 @@ class AppContainer(
     val updatePrefs: UpdatePrefs get() = preferencesModule.updatePrefs
     val readingGoalPreferences: ReadingGoalPreferences get() = preferencesModule.readingGoalPreferences
     val translationPreferences: com.nexo.data.session.TranslationPreferences get() = preferencesModule.translationPreferences
+    val definitionPreferences: com.nexo.data.session.DefinitionPreferences get() = preferencesModule.definitionPreferences
     val dailyGoalProvider: () -> Int get() = preferencesModule.dailyGoalProvider
 
     /**
@@ -252,6 +253,12 @@ class AppContainer(
 
     /** Reader-selection translation (MyMemory, cache-first). */
     val translationRepository: com.nexo.domain.repository.TranslationRepository by lazy { networkModule.translationRepository }
+
+    /**
+     * Reader-selection definition lookup (Wiktionary cascade). Read-only with
+     * respect to the personal dictionary; no cache yet (T5).
+     */
+    val definitionRepository: com.nexo.domain.repository.DefinitionRepository by lazy { networkModule.definitionRepository }
 
     /** Translation history for settings — cache-backed, account-scoped. */
     val translationHistoryRepository: com.nexo.domain.repository.TranslationHistoryRepository by lazy {

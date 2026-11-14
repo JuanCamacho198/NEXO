@@ -729,4 +729,79 @@ class AppDatabaseMigrationTest {
             }
         db.close()
     }
+
+    @Test
+    fun `migration 36 to 37 creates the definition cache with its scoped indexes`() {
+        val dbPath =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+                .getDatabasePath("migration-36-37")
+                .absolutePath
+        helper.createDatabase(dbPath, 36).use { db ->
+            // Pre-existing data must survive the additive migration untouched.
+            db.execSQL(
+                "INSERT INTO translation_cache (id, user_id, original_text, word_normalized, lang_pair, translated_text, created_at) " +
+                    "VALUES ('tc-keep', 'user-a', 'casa', 'casa', 'es|en', 'house', 1000)",
+            )
+        }
+
+        val db = helper.runMigrationsAndValidate(dbPath, 37, true, AppDatabaseMigrations.MIGRATION_36_37)
+
+        assertEquals(
+            listOf(
+                "key",
+                "user_id",
+                "word",
+                "word_normalized",
+                "word_language",
+                "reader_language",
+                "payload",
+                "created_at",
+            ),
+            columnNames(db, "definition_cache"),
+        )
+        assertEquals(0L, query(db, "SELECT COUNT(*) FROM definition_cache"))
+        assertEquals("translation_cache is untouched", 1L, query(db, "SELECT COUNT(*) FROM translation_cache"))
+
+        val indexes = mutableListOf<String>()
+        db
+            .query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'definition_cache'")
+            .use { cursor ->
+                while (cursor.moveToNext()) indexes.add(cursor.getString(0))
+            }
+        assertTrue(
+            "expected index_definition_cache_user_id_key, got $indexes",
+            indexes.contains("index_definition_cache_user_id_key"),
+        )
+        assertTrue(
+            "expected index_definition_cache_user_id_created_at, got $indexes",
+            indexes.contains("index_definition_cache_user_id_created_at"),
+        )
+
+        // The key embeds the owner (SHA-256 of owner|reader|wordLanguage|word),
+        // so two owners hold distinct keys and never collide.
+        db.execSQL(
+            "INSERT INTO definition_cache (`key`, user_id, word, word_normalized, word_language, reader_language, payload, created_at) " +
+                "VALUES ('k-user-a', 'user-a', 'house', 'house', 'en', 'es', '{}', 1000)",
+        )
+        db.execSQL(
+            "INSERT INTO definition_cache (`key`, user_id, word, word_normalized, word_language, reader_language, payload, created_at) " +
+                "VALUES ('k-user-b', 'user-b', 'house', 'house', 'en', 'en', '{}', 2000)",
+        )
+        assertEquals(2L, query(db, "SELECT COUNT(*) FROM definition_cache"))
+
+        // The unique (user_id, key) index makes a same-owner re-cache an
+        // in-place REPLACE.
+        db.execSQL(
+            "INSERT OR REPLACE INTO definition_cache (`key`, user_id, word, word_normalized, word_language, reader_language, payload, created_at) " +
+                "VALUES ('k-user-a', 'user-a', 'house', 'house', 'en', 'es', '{\"fresh\":true}', 3000)",
+        )
+        assertEquals(2L, query(db, "SELECT COUNT(*) FROM definition_cache"))
+        db.query("SELECT payload FROM definition_cache WHERE user_id = 'user-a'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("{\"fresh\":true}", cursor.getString(0))
+        }
+        db.close()
+    }
 }

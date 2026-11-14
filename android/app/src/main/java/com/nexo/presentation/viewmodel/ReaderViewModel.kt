@@ -7,23 +7,29 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nexo.R
 import com.nexo.data.remote.supabase.SupabaseProgressSync
+import com.nexo.data.session.DefinitionPreferences
 import com.nexo.data.session.ReaderPreferences
 import com.nexo.data.session.TranslationPreferences
 import com.nexo.debug.DebugLog
+import com.nexo.domain.definition.WordLanguage
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.SearchResult
+import com.nexo.domain.repository.DefinitionRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.repository.TranslationRepository
 import com.nexo.domain.session.ActiveUserProvider
+import com.nexo.domain.translation.NoTranslationReason
+import com.nexo.domain.translation.TranslationLanguageSelection
 import com.nexo.domain.translation.TranslationPolicy
 import com.nexo.domain.translation.TranslationSettings
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.presentation.UiEvent
 import com.nexo.presentation.viewmodel.reader.AnnotationUiState
 import com.nexo.presentation.viewmodel.reader.ChromeUiState
+import com.nexo.presentation.viewmodel.reader.DeviceLocale
 import com.nexo.presentation.viewmodel.reader.FullscreenManager
 import com.nexo.presentation.viewmodel.reader.ReaderInteractionStateHolder
 import com.nexo.presentation.viewmodel.reader.ReaderLifecycleStateHolder
@@ -106,6 +112,8 @@ class ReaderViewModel(
     private val supabaseProgressSync: SupabaseProgressSync? = null,
     private val translationRepository: TranslationRepository? = null,
     private val translationPreferences: TranslationPreferences? = null,
+    private val definitionRepository: DefinitionRepository? = null,
+    private val definitionPreferences: DefinitionPreferences? = null,
 ) : AndroidViewModel(application) {
     /**
      * Sleep timer manager — timer slice owner (SDD reader-facade-split, slice 3).
@@ -231,6 +239,7 @@ class ReaderViewModel(
             appContext = application,
             mainDispatcher = mainDispatcher,
             translationRepository = translationRepository,
+            definitionRepository = definitionRepository,
         )
 
     /**
@@ -327,33 +336,47 @@ class ReaderViewModel(
      * Translates the current reader selection into the reader's configured
      * target language and opens the anchored translation panel.
      *
-     * **Language decision** (T1/T2 of `translation-preferences`):
-     * - **Target** = [TranslationSettings.targetLanguage] when the reader chose
-     *   one, else the system locale.
-     * - **Source** = [TranslationSettings.sourceLanguage] when chosen, else the
-     *   book's `language`, else [TranslationPolicy.guessSourceLanguage].
+     * **Language decision** — the full cascade lives in
+     * [TranslationPolicy.resolveLanguageResolution]; this method's only job is
+     * to read its inputs:
      *
-     * The resolution lives in [TranslationPolicy.resolveLanguages] so it is pure
-     * and unit-testable. When the resolved source and target are the SAME the
-     * call does not reach the network at all: a self-pair is always an echo, and
-     * the panel reports "no translation" instead of asking (the verified defect
-     * was an English book on an English phone). The book lookup is best-effort:
-     * a missing repository or book falls back to the heuristic source.
+     * - **Target** = [TranslationSettings.targetLanguage] when the reader chose
+     *   one, else the DEVICE locale (never the app's UI locale; see [DeviceLocale]).
+     *   There is no per-book target and there must never be one.
+     * - **Source** = this book's choice, else the account choice, else the book's
+     *   `language`, else a detection over the SELECTION, else a detection over the
+     *   PAGE, else an honest refusal.
+     *
+     * When the resolution refuses, the panel opens carrying the reason instead of
+     * reaching the network. The book lookup is best-effort: a missing repository
+     * or book simply skips the book metadata step.
      */
     fun onTranslateSelection() {
-        val target =
-            java.util.Locale
-                .getDefault()
-                .language
-        val settings = translationPreferences?.load() ?: TranslationSettings()
+        // The DEVICE locale, never `Locale.getDefault()`: the latter is overridden
+        // by `AppCompatDelegate.setApplicationLocales` when the reader changes the
+        // app's display language, which silently turned "follow the device" into
+        // "follow the app's UI language" and made a Spanish book on an English
+        // phone refuse. See [DeviceLocale].
+        val target = DeviceLocale.languageTag(DeviceLocale.deviceLocales(getApplication()))
         val selectedText =
             interactionHolder.state.value.selectedText
                 .orEmpty()
+        // The page context: the chapter head (EPUB only, ~600 chars), already
+        // extracted and reactive in the session owner. Blank for PDFs.
+        val pageText = sessionUiState.value.previewText
+        val settings = translationPreferences?.load() ?: TranslationSettings()
         val bookId = sessionUiState.value.selectedBookId
         val repo = libraryRepository
 
         if (bookId == null || repo == null) {
-            dispatchTranslation(settings, bookLanguage = null, systemLanguage = target, selectedText = selectedText)
+            dispatchTranslation(
+                settings = settings,
+                bookLanguage = null,
+                systemLanguage = target,
+                selectedText = selectedText,
+                bookSourceLanguage = null,
+                pageText = pageText,
+            )
             return
         }
         viewModelScope.launch {
@@ -361,32 +384,211 @@ class ReaderViewModel(
                 runCatching { repo.getBookById(bookId, activeUser.requireUserId()) }
                     .getOrNull()
                     ?.language
-            dispatchTranslation(settings, bookLanguage, target, selectedText)
+            // The per-book SOURCE choice, read for THIS book only. Never a
+            // per-book target (invariant 1): only the source level exists.
+            val bookSource = translationPreferences?.bookSource(bookId)
+            dispatchTranslation(
+                settings = settings,
+                bookLanguage = bookLanguage,
+                systemLanguage = target,
+                selectedText = selectedText,
+                bookSourceLanguage = bookSource,
+                pageText = pageText,
+            )
         }
     }
 
+    /**
+     * Resolves the pair for the current selection and hands it to the panel.
+     *
+     * The resolution is pure ([TranslationPolicy.resolveLanguageResolution]), so
+     * this is the only place the cascade's inputs are read. [pageText] is passed
+     * as its OWN argument and never joined with [selectedText]: the selection and
+     * the page are detected separately, selection first (invariant 5).
+     */
     private fun dispatchTranslation(
         settings: TranslationSettings,
         bookLanguage: String?,
         systemLanguage: String,
         selectedText: String,
+        bookSourceLanguage: String? = null,
+        pageText: String? = null,
     ) {
-        val resolved =
-            TranslationPolicy.resolveLanguages(
+        val resolution =
+            TranslationPolicy.resolveLanguageResolution(
                 settings = settings,
                 bookLanguage = bookLanguage,
                 systemLanguage = systemLanguage,
                 selectedText = selectedText,
+                bookSourceLanguage = bookSourceLanguage,
+                pageText = pageText,
             )
+        val resolved = resolution.pair
         if (resolved == null) {
-            interactionHolder.onTranslationUnavailable()
+            // Carry the reason the resolver produced so the panel names the cause
+            // instead of blaming the text. There is no pair to show, so the bar's
+            // pair is empty — but the refusal state still renders the bar, which
+            // is where the reader can fix a collision or an unknown source.
+            interactionHolder.onTranslationUnavailable(
+                reason = resolution.reason ?: NoTranslationReason.UNKNOWN_SOURCE,
+                languages = TranslationLanguageSelection.EMPTY,
+            )
             return
         }
         interactionHolder.onTranslate(
             sourceLanguage = resolved.source,
             targetLanguage = resolved.target,
+            languages = TranslationLanguageSelection(pair = resolved, sourceOrigin = resolution.sourceOrigin),
         )
     }
+
+    // ── Language bar actions (Group 2) ────────────────────────────────
+
+    /**
+     * The reader picked a SOURCE in the language bar, or cleared it to
+     * "Automatic (detect)".
+     *
+     * A [language] of `null` CLEARS this book's choice — it does not write
+     * "automatic" (see [TranslationPreferences.bookSource]). A non-null value is
+     * stored for THIS BOOK only: the source has a per-book level, the destination
+     * does not (invariant 1).
+     *
+     * The write is scoped to whatever book is selected at call time, not to a
+     * captured id, so a change that lands after the reader opened another book
+     * cannot leak into the first one.
+     *
+     * Either way the translation then RE-RUNS for the same selection: a language
+     * change is not a new selection and does not close the panel (invariant 7).
+     */
+    fun onTranslationSourceChosen(language: String?) {
+        val bookId = sessionUiState.value.selectedBookId
+        if (bookId.isNullOrBlank()) return
+        if (language.isNullOrBlank()) {
+            translationPreferences?.clearBookSource(bookId)
+        } else {
+            translationPreferences?.saveBookSource(bookId, language)
+        }
+        retranslateCurrentSelection()
+    }
+
+    /**
+     * The reader picked a DESTINATION in the language bar.
+     *
+     * The destination is account-wide and never per-book (invariant 1): writing
+     * it here stores the reader's preference for every book, not for the one on
+     * screen. The panel then re-runs the same selection (invariant 7).
+     */
+    fun onTranslationTargetChosen(language: String?) {
+        val store = translationPreferences ?: return
+        store.save(store.load().copy(targetLanguage = language))
+        retranslateCurrentSelection()
+    }
+
+    /**
+     * Re-resolves and re-runs the translation for the selection already live in
+     * the interaction store, without closing the panel.
+     *
+     * Deliberately re-reads every input — the selection, the page, the stored
+     * choices — rather than reusing the pair from the previous run: after a
+     * language change the whole cascade must be re-evaluated, because a cleared
+     * book choice falls through to the account preference and may resolve
+     * differently. This is [onTranslateSelection] with no new selection, which is
+     * exactly what a language change is.
+     */
+    private fun retranslateCurrentSelection() = onTranslateSelection()
+
+    // ── Selection definition (T7/T8, android-define-selection) ─────────
+
+    /**
+     * Looks up the definition of the current reader selection and opens the
+     * anchored definition panel.
+     *
+     * **The two languages** (invariant 1) are resolved separately and passed
+     * separately:
+     *
+     * - **Word language** = the current book's `language`, through
+     *   [WordLanguage.fromOptional]. When the book declares none the cascade
+     *   skips step 1 and assumes `en`; the panel STATES the unknown rather than
+     *   hiding the guess.
+     * - **Reader language** = the reader's definition-language preference through
+     *   `DefinitionPreferences.resolve`, laddering stored value → app UI locale
+     *   → `en`. This is NEVER the book's language: a Spanish reader defining an
+     *   English word wants the definition in Spanish.
+     *
+     * The book lookup is best-effort, matching [onTranslateSelection]: a missing
+     * repository or book resolves the word language as UNKNOWN instead of
+     * failing the tap.
+     */
+    fun onDefineSelection() {
+        val selectedText =
+            interactionHolder.state.value.selectedText
+                .orEmpty()
+        if (selectedText.isBlank()) return
+        val readerLanguage =
+            definitionPreferences?.resolve(DefinitionPreferences.appLocaleLanguage())
+                ?: DefinitionPreferences.DEFAULT_LANGUAGE
+        val bookId = sessionUiState.value.selectedBookId
+        val repo = libraryRepository
+
+        if (bookId == null || repo == null) {
+            interactionHolder.onDefineSelection(readerLanguage, WordLanguage.unknown())
+            return
+        }
+        viewModelScope.launch {
+            val bookLanguage =
+                runCatching { repo.getBookById(bookId, activeUser.requireUserId()) }
+                    .getOrNull()
+                    ?.language
+            interactionHolder.onDefineSelection(
+                readerLanguage = readerLanguage,
+                wordLanguage = WordLanguage.fromOptional(bookLanguage),
+            )
+        }
+    }
+
+    /**
+     * The reader picked a DEFINITION language in the panel's selector.
+     *
+     * The choice is account-wide (the analogue of the translation target) and is
+     * written to [DefinitionPreferences]. The lookup then RE-RUNS for the same
+     * selection without closing the panel — a language change is not a new
+     * selection.
+     */
+    fun onDefinitionLanguageChosen(language: String?) {
+        definitionPreferences?.save(language)
+        val readerLanguage =
+            definitionPreferences?.resolve(DefinitionPreferences.appLocaleLanguage())
+                ?: DefinitionPreferences.DEFAULT_LANGUAGE
+        val bookId = sessionUiState.value.selectedBookId
+        val repo = libraryRepository
+        if (bookId == null || repo == null) {
+            interactionHolder.onDefinitionLanguageChanged(readerLanguage, WordLanguage.unknown())
+            return
+        }
+        viewModelScope.launch {
+            val bookLanguage =
+                runCatching { repo.getBookById(bookId, activeUser.requireUserId()) }
+                    .getOrNull()
+                    ?.language
+            interactionHolder.onDefinitionLanguageChanged(
+                readerLanguage = readerLanguage,
+                wordLanguage = WordLanguage.fromOptional(bookLanguage),
+            )
+        }
+    }
+
+    /** Closes the definition panel, keeping the selection so the menu returns. */
+    fun onDismissDefinitionPanel() = interactionHolder.onDismissDefinitionPanel()
+
+    /**
+     * The reader's current definition language, for the panel's selector. Read
+     * live (the store is consulted on every read), so the selector never shows a
+     * value different from the one the next lookup would use.
+     */
+    val definitionLanguage: String
+        get() =
+            definitionPreferences?.resolve(DefinitionPreferences.appLocaleLanguage())
+                ?: DefinitionPreferences.DEFAULT_LANGUAGE
 
     /**
      * Loads a new book into the reader, replacing any current selection.
@@ -676,6 +878,8 @@ class ReaderViewModelFactory(
     private val supabaseProgressSync: SupabaseProgressSync? = null,
     private val translationRepository: TranslationRepository? = null,
     private val translationPreferences: TranslationPreferences? = null,
+    private val definitionRepository: DefinitionRepository? = null,
+    private val definitionPreferences: DefinitionPreferences? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -693,6 +897,8 @@ class ReaderViewModelFactory(
                 supabaseProgressSync = supabaseProgressSync,
                 translationRepository = translationRepository,
                 translationPreferences = translationPreferences,
+                definitionRepository = definitionRepository,
+                definitionPreferences = definitionPreferences,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
