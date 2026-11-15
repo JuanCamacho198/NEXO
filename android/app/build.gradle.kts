@@ -37,9 +37,9 @@ plugins {
     alias(libs.plugins.androidx.baselineprofile)
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-}
+// Room codegen moved to :core:data with AppDatabase. :app keeps the Room
+// runtime and the KSP processor for Hilt, but owns no @Entity, so it exports
+// no schema.
 
 // SDD android-tooling-hygiene WS5 slice 7: `spotless{kotlin{ktlint()}}` over
 // **/*.kt + **/*.kts. ktlint runs at the Spotless-bundled default version
@@ -319,31 +319,13 @@ android {
         abortOnError = true
     }
 
-    // Robolectric reads schemas from the merged debug assets dir (AGP does not
-    // merge test-sourceSet assets into it, and the Sentry asset-injection task
-    // owns that directory). Copy Room schema exports there before unit tests.
-    val copySchemasForUnitTest by tasks.registering(Copy::class) {
-        from("$projectDir/schemas")
-        into(layout.buildDirectory.dir("intermediates/assets/debug/injectSentryDebugMetaPropertiesIntoAssetsDebug"))
-        mustRunAfter("injectSentryDebugMetaPropertiesIntoAssetsDebug")
-    }
-
-    tasks.matching { it.name == "packageDebugUnitTestForUnitTest" }.configureEach {
-        dependsOn(copySchemasForUnitTest)
-    }
-
     tasks.withType(Test::class).configureEach {
-        dependsOn(copySchemasForUnitTest)
         // Konsist parses the whole production source tree in-process. Give the
         // shared unit-test JVM headroom so the architecture rules and the
         // ~1100-test suite coexist without OOM (default Test heap is 512m).
         maxHeapSize = "2g"
     }
 
-    sourceSets {
-        getByName("androidTest").assets.srcDirs("$projectDir/schemas")
-        getByName("test").assets.srcDirs("$projectDir/schemas")
-    }
 }
 
 // SDD android-stack-modernization S11: make the Kotlin source directories explicit BEFORE
