@@ -25,7 +25,7 @@ private const val HIGHLIGHT_ALPHA_SHIFT = 24
  *
  * Unified core — sorting, tint, text.highlight enrichment, viaFallback, DebugDual preserved.
  */
-internal fun highlightsToDecorations(
+fun highlightsToDecorations(
     highlights: List<Highlight>,
     readingOrder: List<Link> = emptyList(),
     publication: Publication? = null,
@@ -162,4 +162,4 @@ internal fun highlightsToDecorations(
  * Thin wrapper for PDF reader — delegates to unified core with empty readingOrder and no publication.
  * Keeps call-site stable; additional fallback logic is harmless when highlights already carry locatorJson.
  */
-internal fun highlightsToPdfDecorations(highlights: List<Highlight>): List<Decoration> = highlightsToDecorations(highlights, emptyList(), null)
+fun highlightsToPdfDecorations(highlights: List<Highlight>): List<Decoration> = highlightsToDecorations(highlights, emptyList(), null)

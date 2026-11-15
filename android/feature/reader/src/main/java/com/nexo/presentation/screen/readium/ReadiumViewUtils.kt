@@ -38,7 +38,7 @@ private object SuppressSelectionActionMode : ActionMode.Callback {
 /**
  * Recursively searches [root] for a [WebView].
  */
-internal fun View.findWebView(): WebView? {
+fun View.findWebView(): WebView? {
     if (this is WebView) return this
     if (this is ViewGroup) {
         for (i in 0 until childCount) {
@@ -61,7 +61,7 @@ internal fun View.findWebView(): WebView? {
  * consumed so the WebView can still create a text selection for
  * [org.readium.r2.navigator.SelectableNavigator.currentSelection()].
  */
-internal fun installActionModeCallback(root: View) {
+fun installActionModeCallback(root: View) {
     val webView =
         root.findWebView() ?: run {
             Log.d("ReadiumReaderContent", "No WebView found in navigator fragment")
@@ -112,7 +112,7 @@ internal fun installActionModeCallback(root: View) {
  * PDF divergence: `isLongClickable=false` + `OnLongClickListener{true}` consumer
  * to fully disable long-press handling, unlike EPUB which keeps `isLongClickable=true`.
  */
-internal fun installPdfActionModeCallback(root: View) {
+fun installPdfActionModeCallback(root: View) {
     val webView =
         root.findWebView() ?: run {
             Log.d("ReadiumPdfReaderContent", "No WebView in PDF navigator — ActionMode not applicable")
@@ -193,6 +193,6 @@ private fun installPdfCallbackOnWebView(webView: WebView) {
  * WebView extension variant for direct calls — installs the EPUB-style callback.
  * Preserves original `WebView.installActionModeCallbackOnWebView()` entry point.
  */
-internal fun WebView.installActionModeCallbackOnWebView() {
+fun WebView.installActionModeCallbackOnWebView() {
     installEpubCallbackOnWebView(this)
 }

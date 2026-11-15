@@ -51,7 +51,7 @@ import org.json.JSONObject
  * defect exactly when the rect is provably corrupted, and is a no-op on a
  * well-formed rect.
  */
-internal object ReadiumSelectionRectRepair {
+object ReadiumSelectionRectRepair {
     /**
      * How many line heights a rect may span before the repair treats it as
      * carrying Readium's padding rather than being a genuine selection.
@@ -87,7 +87,7 @@ internal object ReadiumSelectionRectRepair {
      * arrives quoted (`"{\"left\":...}"`). Returns `null` for the `null`
      * sentinel, malformed JSON, or a non-finite edge — never a partial rect.
      */
-    internal fun parseRawRect(jsResult: String?): RectF? {
+    fun parseRawRect(jsResult: String?): RectF? {
         val trimmed = jsResult?.trim().orEmpty()
         if (trimmed.isEmpty() || trimmed == "null") return null
         // evaluateJavascript wraps the string result in quotes; unwrap once.
@@ -126,7 +126,7 @@ internal object ReadiumSelectionRectRepair {
      * This cannot invent a position: it only narrows a rect that is already
      * anchored at the correct `bottom`.
      */
-    internal fun repairTopOnlyPadding(
+    fun repairTopOnlyPadding(
         rect: RectF,
         lineHeightPx: Float,
     ): RectF {

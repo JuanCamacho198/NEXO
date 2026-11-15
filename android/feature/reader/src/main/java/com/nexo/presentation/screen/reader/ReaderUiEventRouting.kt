@@ -14,7 +14,7 @@ import com.nexo.domain.event.UiEvent
  * `ShowToast` stays a system toast on purpose: it is used for transient
  * feedback that must survive independent of the Compose host.
  */
-internal fun readerSnackbarMessage(event: UiEvent): String? =
+fun readerSnackbarMessage(event: UiEvent): String? =
     when (event) {
         is UiEvent.ShowSnackbar -> event.message
         else -> null

@@ -1,18 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="aa_audio_coming_soon">Reproducción de audio próximamente</string>
     <string name="aa_close_settings">Cerrar</string>
-    <string name="aa_collapse">Contraer</string>
-    <string name="aa_direction_ltr">Izquierda a derecha</string>
-    <string name="aa_expand">Expandir</string>
-    <string name="aa_margin_left">Margen izquierdo</string>
-    <string name="aa_margin_right">Margen derecho</string>
     <!-- Reader / aA Settings -->
-    <string name="aa_preview_text">El veloz murciélago hindú comía feliz cardillo y kiwi. Esta es una vista previa de la configuración actual de lectura.</string>
-    <string name="aa_section_audio">Audio</string>
-    <string name="aa_section_direction">Dirección</string>
-    <string name="aa_section_justification">Justificación</string>
-    <string name="aa_section_margins">Márgenes</string>
     <!-- U3: etiquetas de grupos de acceso (voseo) -->
     <string name="action_cancel">Cancelar</string>
     <string name="action_ok">Aceptar</string>
@@ -66,7 +55,6 @@
     <string name="book_downloading">Descargando…</string>
     <!-- Navigation errors -->
     <string name="book_not_found">Libro no encontrado</string>
-    <string name="bookmark_ribbon_announcement">Marcador guardado</string>
     <string name="cloud_books_loading">Cargando libros de la nube…</string>
     <string name="color_picker_confirm">Tocá un preset o escribí un hex</string>
     <string name="comment_modal_title">Nuevo Comentario</string>
@@ -89,7 +77,6 @@
     <string name="debug_action_inspect_html">Inspeccionar HTML</string>
     <string name="debug_action_log_webview">Log de WebView</string>
     <string name="debug_action_simulate_tap">Simular toque</string>
-    <string name="debug_chip_label">DEBUG</string>
     <string name="debug_close">Cerrar</string>
     <string name="debug_crash_channel_description">Notifica cuando la app crasheó en un inicio anterior</string>
     <!-- Debug: notificación de crash + detalle -->
@@ -160,7 +147,6 @@
     <string name="definition_language_unknown">Desconocido</string>
     <string name="definition_loading">Buscando…</string>
     <string name="definition_no_definition">No se encontró definición para esta palabra.</string>
-    <string name="definition_no_service">Las definiciones necesitan conexión.</string>
     <string name="definition_service_failed">El servicio de diccionario falló.</string>
     <string name="definition_translated_mark">Traducido automáticamente — puede ser impreciso.</string>
     <string name="definition_word_language">Idioma de la palabra: %1$s</string>
@@ -233,7 +219,6 @@
     <string name="edit_metadata_tags">Etiquetas</string>
     <!-- Edit Metadata -->
     <string name="edit_metadata_title">Editar metadatos</string>
-    <string name="editor_values">Valores del editor</string>
     <string name="error_auth">Error de autenticación. Iniciá sesión de nuevo.</string>
     <string name="error_config">Error de configuración. Algunas funciones pueden no estar disponibles.</string>
     <!-- Global Error Messages -->
@@ -263,9 +248,6 @@
          These strings are the SOURCE OF TRUTH (spec D1 copy audit gate). Do not edit lightly;
          any drift from the design contract must update both this block and #2460. -->
     <string name="feedback_mobile_title">Ayúdanos a arreglar esto</string>
-    <string name="font_name_arial">Arial</string>
-    <string name="font_name_georgia">Georgia</string>
-    <string name="font_name_merriweather">Merriweather</string>
     <!-- Format strings -->
     <string name="format_percent">%d %%</string>
     <!-- U2: atribución de Google Books + aviso de key ausente (voseo) -->
@@ -300,9 +282,7 @@
     <string name="highlights_refresh_content_description">Actualizar resaltados</string>
     <!-- Highlights filtros -->
     <string name="highlights_search">Buscar resaltados</string>
-    <string name="highlights_snackbar_add_to_dictionary_failed">No se pudo agregar al diccionario</string>
     <!-- Highlight CRUD snackbars -->
-    <string name="highlights_snackbar_added_to_dictionary">Agregado al diccionario</string>
     <string name="highlights_snackbar_color_changed">Color cambiado</string>
     <string name="highlights_snackbar_copied">Copiado al portapapeles</string>
     <string name="highlights_snackbar_tag_saved">Etiqueta guardada</string>
@@ -503,43 +483,25 @@
     <string name="palette_reset">Restablecer valores predeterminados</string>
     <string name="palette_section_subtitle">Personalizá los 5 colores de resaltado</string>
     <!-- U5: read-access ("Dónde leerlo") section -->
-    <string name="reader_add_bookmark">Añadir marcador</string>
     <!-- Reader / Header -->
-    <string name="reader_back">Volver</string>
     <string name="reader_cancel">Cancelar</string>
     <string name="reader_chapter_fallback">Capítulo %1$d</string>
     <string name="reader_chapters_title">Capítulos</string>
-    <string name="reader_go">Ir</string>
-    <string name="reader_go_to_page">Ir a página</string>
-    <string name="reader_go_to_page_input_hint">Ingresá un valor entre 1 y %1$d</string>
-    <string name="reader_go_to_page_input_label">Número de página</string>
-    <string name="reader_highlights_button">Resaltados</string>
-    <string name="reader_loaded_in">Abierto en %1$d ms</string>
-    <string name="reader_pages_remaining">%1$s — %2$d págs. restantes</string>
     <string name="reader_progress_empty">-- / --</string>
-    <string name="reader_retry">Reintentar</string>
     <string name="reader_rotate_screen">Rotar pantalla</string>
     <string name="reader_save">Guardar</string>
     <!-- Reader selection / clipboard feedback -->
-    <string name="reader_selection_no_text">Ningún texto seleccionado</string>
     <!-- Reader / Settings Sheet -->
     <string name="reader_settings_close">Cerrar</string>
-    <string name="reader_settings_theme_section">Tema de fondo</string>
     <string name="reader_sleep_timer_cancel">Cancelar temporizador</string>
     <string name="reader_sleep_timer_change_duration">Cambiar duración</string>
     <string name="reader_sleep_timer_choose_duration">Elegí una duración</string>
     <!-- Reader / Sleep Timer -->
-    <string name="reader_sleep_timer_end_of_chapter">Fin de capítulo</string>
     <string name="reader_sleep_timer_end_of_chapter_desc">Detiene al cambiar de capítulo</string>
     <string name="reader_sleep_timer_finished_title">¡Se acabó el tiempo!</string>
     <string name="reader_sleep_timer_remaining_label">Tiempo restante:</string>
     <string name="reader_sleep_timer_sheet_title">Temporizador de lectura</string>
     <string name="reader_sleep_timer_tap_to_dismiss">Toca cualquier lugar para seguir leyendo</string>
-    <string name="reader_snackbar_save_error">No se pudo guardar. Inténtelo de nuevo.</string>
-    <string name="reader_theme_dark">Oscuro</string>
-    <string name="reader_theme_light">Claro</string>
-    <string name="reader_theme_sepia">Sepia</string>
-    <string name="reader_toc">Índice</string>
     <string name="reader_typography">Tipografía</string>
     <string name="search_clear">Limpiar búsqueda</string>
     <!-- Reader / Search -->
@@ -591,7 +553,6 @@
     <string name="text_selection_copy">Copiar</string>
     <string name="text_selection_define">Definir</string>
     <string name="text_selection_translate">Traducir</string>
-    <string name="theme_oled">OLED</string>
     <string name="translation_bar_auto_with_language">Auto (%1$s)</string>
     <!--
       La barra de idiomas (Grupo 2). `source_auto` NO es el "Detectar
@@ -608,8 +569,6 @@
     <string name="translation_invalid_source">El idioma de origen elegido no es válido. Elige otro en la barra de arriba.</string>
     <string name="translation_invalid_target">El idioma de destino elegido no es válido. Elige otro en la barra de arriba.</string>
     <string name="translation_loading">Traduciendo…</string>
-    <string name="translation_no_result">No hay traducción disponible para este texto.</string>
-    <string name="translation_offline">La traducción necesita conexión.</string>
     <!--
       Refusals, one per reason. Each names the cause and the fix the reader can
       apply, never the failure alone: "the pair is the problem, change one side"
@@ -619,7 +578,6 @@
     -->
     <string name="translation_same_language">El idioma de origen y el de destino son el mismo, así que no hay nada que traducir. Cambia uno de los dos en la barra de arriba.</string>
     <string name="translation_unknown_source">No pudimos detectar el idioma del texto seleccionado. Elige un idioma de origen en la barra de arriba.</string>
-    <string name="vertical_scroll">Desplazamiento vertical</string>
     <string name="addon_capabilities_title">Capacidades</string>
     <string name="addon_consent_trust_note">Los complementos corren fuera de NEXO. Compartí datos solo con fuentes en las que confíes.</string>
     <string name="discover_back">Volver</string>
@@ -631,4 +589,43 @@
     <string name="search_label">Buscar</string>
 
 
+
+
+    <!-- Duplicated from :feature:reader: the reader settings sections and the
+         screen files that stay in :app still resolve these. Identical text in
+         both modules. -->
+    <string name="aa_audio_coming_soon">Reproducción de audio próximamente</string>
+    <string name="aa_collapse">Contraer</string>
+    <string name="aa_direction_ltr">Izquierda a derecha</string>
+    <string name="aa_expand">Expandir</string>
+    <string name="aa_margin_left">Margen izquierdo</string>
+    <string name="aa_margin_right">Margen derecho</string>
+    <string name="aa_preview_text">El veloz murciélago hindú comía feliz cardillo y kiwi. Esta es una vista previa de la configuración actual de lectura.</string>
+    <string name="aa_section_audio">Audio</string>
+    <string name="aa_section_direction">Dirección</string>
+    <string name="aa_section_justification">Justificación</string>
+    <string name="aa_section_margins">Márgenes</string>
+    <string name="bookmark_ribbon_announcement">Marcador guardado</string>
+    <string name="debug_chip_label">DEBUG</string>
+    <string name="editor_values">Valores del editor</string>
+    <string name="font_name_arial">Arial</string>
+    <string name="font_name_georgia">Georgia</string>
+    <string name="font_name_merriweather">Merriweather</string>
+    <string name="reader_add_bookmark">Añadir marcador</string>
+    <string name="reader_back">Volver</string>
+    <string name="reader_go">Ir</string>
+    <string name="reader_go_to_page">Ir a página</string>
+    <string name="reader_go_to_page_input_hint">Ingresá un valor entre 1 y %1$d</string>
+    <string name="reader_go_to_page_input_label">Número de página</string>
+    <string name="reader_highlights_button">Resaltados</string>
+    <string name="reader_loaded_in">Abierto en %1$d ms</string>
+    <string name="reader_retry">Reintentar</string>
+    <string name="reader_settings_theme_section">Tema de fondo</string>
+    <string name="reader_sleep_timer_end_of_chapter">Fin de capítulo</string>
+    <string name="reader_theme_dark">Oscuro</string>
+    <string name="reader_theme_light">Claro</string>
+    <string name="reader_theme_sepia">Sepia</string>
+    <string name="reader_toc">Índice</string>
+    <string name="theme_oled">OLED</string>
+    <string name="vertical_scroll">Desplazamiento vertical</string>
 </resources>

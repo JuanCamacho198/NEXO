@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Strings owned by :feature:reader.
+
+  `Owned here` keys are resolved only by reader sources (the reader state
+  holders/managers), so they live here and nowhere else.
+
+  `Duplicated from :app` keys are ALSO declared in app/src/main/res because
+  non-reader code resolves them. Both modules carry identical text; that is the
+  same precedent as `app_name` in :feature:settings and `app_name`/`nav_back`
+  in :feature:auth.
+
+  Everything else the reader renders (chrome labels, the settings sheet copy,
+  the go-to-page strings) stays in :app, because the files that resolve those
+  keys remain in :app (ReaderChrome, ReaderScreenOverlaysHost, the reader
+  settings sections). This module takes no dependency on :app's R.
+-->
+<resources>
+    <!-- Owned here: no reference outside :feature:reader. -->
+
+    <string name="definition_no_service">Las definiciones necesitan conexión.</string>
+    <string name="highlights_snackbar_add_to_dictionary_failed">No se pudo agregar al diccionario</string>
+    <string name="highlights_snackbar_added_to_dictionary">Agregado al diccionario</string>
+    <string name="reader_pages_remaining">%1$s — %2$d págs. restantes</string>
+    <string name="reader_selection_no_text">Ningún texto seleccionado</string>
+    <string name="reader_snackbar_save_error">No se pudo guardar. Inténtelo de nuevo.</string>
+    <string name="translation_no_result">No hay traducción disponible para este texto.</string>
+    <string name="translation_offline">La traducción necesita conexión.</string>
+
+    <!-- Duplicated from :app: non-reader code still resolves these. -->
+    <string name="book_not_found">Libro no encontrado</string>
+    <string name="dictionary_added">"%1$s" agregado a tu diccionario.</string>
+    <string name="dictionary_duplicate">"%1$s" ya está en tu diccionario.</string>
+    <string name="error_unknown">Error inesperado. Intentá de nuevo.</string>
+    <string name="highlights_snackbar_copied">Copiado al portapapeles</string>
+</resources>

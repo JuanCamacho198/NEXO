@@ -385,7 +385,7 @@ class ReadingProgressTracker(
             label =
                 if (remaining > 0 && chapterTitle != "—") {
                     application.getString(
-                        com.nexo.R.string.reader_pages_remaining,
+                        com.nexo.feature.reader.R.string.reader_pages_remaining,
                         chapterTitle,
                         remaining,
                     )

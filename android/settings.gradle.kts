@@ -55,3 +55,14 @@ include(":benchmark")
 // three ViewModel-bound AuthScreen/RegisterScreen/ForgotScreen entry points stay
 // in :app because AuthViewModel is a :app Hilt type.
 include(":feature:auth")
+
+// SDD M7: reader feature module. Same rules as the other feature modules --
+// :core:* only, never :app -- and the same package policy, so :app imports of
+// com.nexo.presentation.screen.readium, com.nexo.presentation.screen.reader and
+// com.nexo.presentation.viewmodel.reader keep resolving.
+//
+// This is the product core: the Readium bridges, the selection/tap-zone
+// plumbing, the reader state holders and managers, the reader settings
+// sections, and the screen-level hosts. ReaderViewModel stays in :app (it needs
+// com.nexo.R) and so do the screen entry points that bind it.
+include(":feature:reader")

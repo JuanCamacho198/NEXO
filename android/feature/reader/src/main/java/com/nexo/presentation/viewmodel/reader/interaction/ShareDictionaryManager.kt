@@ -1,7 +1,7 @@
 package com.nexo.presentation.viewmodel.reader.interaction
 
 import android.content.Context
-import com.nexo.R
+import com.nexo.feature.reader.R
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.event.UiEvent

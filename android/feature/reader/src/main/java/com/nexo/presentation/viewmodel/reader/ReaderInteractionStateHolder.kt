@@ -74,7 +74,7 @@ class ReaderInteractionStateHolder(
 
     // ── Testing ───────────────────────────────────────────────────
     @VisibleForTesting
-    internal fun testSetInitialHighlights(highlights: List<Highlight>) {
+    fun testSetInitialHighlights(highlights: List<Highlight>) {
         _state.update { it.copy(highlights = highlights) }
     }
 

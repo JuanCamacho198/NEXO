@@ -464,6 +464,12 @@ dependencies {
     // package, so AuthNavGraph and presentation/screen/AuthScreen keep importing
     // it unchanged. The ViewModel-bound entry points stay in this module.
     implementation(project(":feature:auth"))
+    // SDD M7: reader feature module. Keeps the
+    // com.nexo.presentation.screen.{readium,reader} and
+    // com.nexo.presentation.viewmodel.reader packages, so no import here
+    // changes. ReaderViewModel and the ViewModel-bound screen entry points
+    // stay in this module.
+    implementation(project(":feature:reader"))
 
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -869,15 +875,28 @@ tasks.register("verifyNoReaderUiStateResidue") {
     //    reader half takes a `session: SessionUiState?` param (no member
     //    access possible) and its only `.uiState` read belongs to
     //    AuthViewModel.
+    // SDD M7 moved the reader bridges, holders and managers into
+    // :feature:reader, so the `.uiState` member scan has to follow them. The
+    // reader-owned sources now live in two places:
+    //  - the remaining :app reader surface (the ViewModel, the screen entry
+    //    points that bind it, and DebugPanel's reader half);
+    //  - feature/reader's own sources, scanned from the repository root.
     val readerRoots =
         listOf(
             "src/main/java/com/nexo/presentation/viewmodel/ReaderViewModel.kt",
-            "src/main/java/com/nexo/presentation/viewmodel/reader",
             "src/main/java/com/nexo/presentation/screen/reader",
             "src/main/java/com/nexo/presentation/screen/ReaderScreen.kt",
             "src/main/java/com/nexo/presentation/screen/ReadiumPdfReaderContent.kt",
-            "src/main/java/com/nexo/presentation/screen/readium",
+            "src/main/java/com/nexo/presentation/screen/ReadiumReaderContent.kt",
+            "src/main/java/com/nexo/presentation/screen/ReaderChrome.kt",
             "src/main/java/com/nexo/debug/DebugPanel.kt",
+        )
+    // Paths are relative to the repository root, not this module.
+    val readerFeatureRoots =
+        listOf(
+            "feature/reader/src/main/java/com/nexo/presentation/viewmodel/reader",
+            "feature/reader/src/main/java/com/nexo/presentation/screen/reader",
+            "feature/reader/src/main/java/com/nexo/presentation/screen/readium",
         )
     val typeBanPattern = Regex("\\bReaderUiState\\b")
     val memberPattern = Regex("\\.uiState\\b")
@@ -888,6 +907,8 @@ tasks.register("verifyNoReaderUiStateResidue") {
     val projectDir = layout.projectDirectory.asFile
     val mainSrcDir = projectDir.resolve("src/main/java")
     val readerBases = readerRoots.map { projectDir.resolve(it) }
+    val rootDir = projectDir.parentFile
+    val readerFeatureBases = readerFeatureRoots.map { rootDir.resolve(it) }
 
     doLast {
         val violations = mutableListOf<String>()
@@ -905,7 +926,9 @@ tasks.register("verifyNoReaderUiStateResidue") {
             }
 
         // 2. Scoped member ban: no `.uiState` access in reader-owned sources.
-        readerBases.forEach { base ->
+        //    Covers both the :app reader surface and the extracted
+        //    :feature:reader sources.
+        (readerBases + readerFeatureBases).forEach { base ->
             if (!base.exists()) return@forEach
             val files =
                 if (base.isFile) {

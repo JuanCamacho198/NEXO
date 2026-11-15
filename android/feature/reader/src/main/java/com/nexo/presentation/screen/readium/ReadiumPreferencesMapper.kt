@@ -11,7 +11,7 @@ import org.readium.r2.navigator.preferences.Theme as ReadiumTheme
  * Maps [ReaderSettings] to Readium's [EpubPreferences] for
  * [org.readium.r2.navigator.epub.EpubNavigatorFragment.submitPreferences].
  */
-internal fun ReaderSettings.toEpubPreferences(): EpubPreferences =
+fun ReaderSettings.toEpubPreferences(): EpubPreferences =
     EpubPreferences(
         fontSize =
             when (fontSize) {

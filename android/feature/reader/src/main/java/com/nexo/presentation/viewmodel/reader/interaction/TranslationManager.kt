@@ -2,7 +2,7 @@ package com.nexo.presentation.viewmodel.reader.interaction
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
-import com.nexo.R
+import com.nexo.feature.reader.R
 import com.nexo.domain.repository.TranslationRepository
 import com.nexo.domain.translation.NoTranslationReason
 import com.nexo.domain.translation.TranslationLanguageSelection

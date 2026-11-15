@@ -54,7 +54,7 @@ import androidx.core.view.ViewCompat
  * live hierarchy on every conversion, so the same code is correct for a
  * cutout-less phone, a rotated screen, and any reader mode.
  */
-internal object ReadiumOverlaySpace {
+object ReadiumOverlaySpace {
     /**
      * Returns the vector that maps a Readium-space coordinate into the box the
      * overlay is placed in (the navigator fragment's root view).
@@ -64,7 +64,7 @@ internal object ReadiumOverlaySpace {
      *   cannot be found in [webView]'s ancestry (kept for callers whose rect is
      *   already in the overlay's space; the conversion is then skipped anyway)
      */
-    internal fun translation(
+    fun translation(
         webView: View,
         fallback: View,
     ): OffsetPx {
@@ -104,7 +104,7 @@ internal object ReadiumOverlaySpace {
      * Rounds half-up and orders the edges, so the result is a well-formed
      * [Rect] no matter which way Readium delivered the values.
      */
-    internal fun toOverlayRect(
+    fun toOverlayRect(
         rect: RectF,
         translation: OffsetPx,
     ): Rect? {
@@ -130,7 +130,7 @@ internal object ReadiumOverlaySpace {
      * using the root instead of the WebView would silently add the wrapper's
      * padding as a second, invisible offset.
      */
-    internal fun findWebView(root: View): android.webkit.WebView? {
+    fun findWebView(root: View): android.webkit.WebView? {
         if (root is android.webkit.WebView) return root
         if (root is android.view.ViewGroup) {
             for (i in 0 until root.childCount) {
@@ -157,7 +157,7 @@ internal object ReadiumOverlaySpace {
 }
 
 /** A pixel translation in window coordinates. */
-internal data class OffsetPx(
+data class OffsetPx(
     val x: Int,
     val y: Int,
 )

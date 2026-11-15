@@ -2,7 +2,7 @@ package com.nexo.presentation.viewmodel.reader.lifecycle
 
 import android.app.Application
 import android.util.Log
-import com.nexo.R
+import com.nexo.feature.reader.R
 import com.nexo.data.remote.supabase.SupabaseProgressSync
 import com.nexo.debug.DebugLog
 import com.nexo.domain.model.ReadingProgress

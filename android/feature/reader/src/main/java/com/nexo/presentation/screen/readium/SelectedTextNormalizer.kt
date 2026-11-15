@@ -9,4 +9,4 @@ package com.nexo.presentation.screen.readium
  * leading/trailing whitespace. Only the edges are trimmed: internal spacing is
  * part of the selection and a two-word highlight must keep its space.
  */
-internal fun normalizeSelectedText(text: String): String = text.trim()
+fun normalizeSelectedText(text: String): String = text.trim()

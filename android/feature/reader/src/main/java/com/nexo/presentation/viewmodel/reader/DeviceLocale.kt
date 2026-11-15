@@ -49,7 +49,7 @@ import java.util.Locale
  * WorkManager and leak its Room thread. The Android-specific acquisition lives in
  * [deviceLocales] and is deliberately the thinnest possible shell over the platform.
  */
-internal object DeviceLocale {
+object DeviceLocale {
     /**
      * The device's language tag (`"en-US"`), or [fallback] when the platform
      * reports nothing usable.

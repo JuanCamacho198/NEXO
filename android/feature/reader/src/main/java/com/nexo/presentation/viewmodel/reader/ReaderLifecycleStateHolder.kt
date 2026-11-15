@@ -326,7 +326,7 @@ class ReaderLifecycleStateHolder(
         progressTracker.onTypographyConfigChanged(fontSizeSp, lineHeight, pageMarginsDp, density)
     }
 
-    internal fun updateProgressDisplay() {
+    fun updateProgressDisplay() {
         progressTracker.updateProgressDisplay()
     }
 
@@ -480,13 +480,13 @@ class ReaderLifecycleStateHolder(
     // ── Pending CFI after load (SDD reader-facade-split, T5) ─────────
     // Owned by ReadingNavigator; the facade preserves the surface verbatim.
 
-    internal val pendingCfiAfterLoad: String?
+    val pendingCfiAfterLoad: String?
         get() = navigator.pendingCfiAfterLoad
 
     fun navigateToCfiAfterLoad(cfiRange: String) = navigator.navigateToCfiAfterLoad(cfiRange)
 
     @VisibleForTesting
-    internal fun applyPendingCfi() = navigator.applyPendingCfi()
+    fun applyPendingCfi() = navigator.applyPendingCfi()
 
     // ── Typography → reflow wiring (SDD reader-facade-split, T5) ─────
     // Moved from ReaderViewModel init so the reflow subscription lives in
@@ -516,12 +516,12 @@ class ReaderLifecycleStateHolder(
     // ── Test helpers ────────────────────────────────────────────
 
     @VisibleForTesting
-    internal fun setChaptersForTest(chapters: List<BookChapter>) {
+    fun setChaptersForTest(chapters: List<BookChapter>) {
         _state.update { it.copy(chapters = chapters) }
     }
 
     @VisibleForTesting
-    internal fun setPdfStateForTest(
+    fun setPdfStateForTest(
         selectedBookId: String = "",
         totalPages: Int = 0,
         currentPage: Int = 0,
@@ -533,13 +533,13 @@ class ReaderLifecycleStateHolder(
     }
 
     @VisibleForTesting
-    internal fun setBookLoadedForTest(publication: Publication? = null) {
+    fun setBookLoadedForTest(publication: Publication? = null) {
         _state.update { it.copy(isLoading = false, readiumPublication = publication, bookFormat = "epub") }
         progressTracker.updateProgressDisplay()
     }
 
     @VisibleForTesting
-    internal fun setEpubStateForTest(
+    fun setEpubStateForTest(
         chapters: List<BookChapter>,
         currentChapterIndex: Int = 0,
         selectedBookId: String = "",
