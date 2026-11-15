@@ -96,6 +96,8 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
 
-    testImplementation(libs.testing.junit4)
+        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    testImplementation(project(":core:test"))
+testImplementation(libs.testing.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
 }

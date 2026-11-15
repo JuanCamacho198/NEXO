@@ -505,7 +505,9 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
     androidTestImplementation(libs.room.testing)
-    testImplementation(libs.room.testing)
+        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    testImplementation(project(":core:test"))
+testImplementation(libs.room.testing)
 
     // Paging 3
     implementation(libs.paging.runtime)

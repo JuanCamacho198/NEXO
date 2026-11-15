@@ -77,5 +77,7 @@ dependencies {
     // directly by GoogleSignInButton.
     implementation(libs.google.id)
 
-    testImplementation(libs.testing.junit4)
+        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    testImplementation(project(":core:test"))
+testImplementation(libs.testing.junit4)
 }

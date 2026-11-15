@@ -18,7 +18,9 @@ dependencies {
     // Flow / CoroutineDispatcher appear in repository and usecase signatures.
     api(libs.kotlinx.coroutines.core)
 
-    testImplementation(kotlin("test"))
+        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    testImplementation(project(":core:test"))
+testImplementation(kotlin("test"))
     testImplementation(libs.testing.junit4)
     testImplementation(libs.testing.mockk)
     testImplementation(libs.kotlinx.coroutines.test)

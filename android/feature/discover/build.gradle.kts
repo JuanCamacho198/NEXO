@@ -50,7 +50,9 @@ dependencies {
     // because this module compiles AsyncImage itself.
     implementation(libs.coil.compose)
 
-    testImplementation(libs.testing.junit4)
+        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    testImplementation(project(":core:test"))
+testImplementation(libs.testing.junit4)
     testImplementation(libs.testing.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
 }

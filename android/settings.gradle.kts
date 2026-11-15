@@ -34,6 +34,12 @@ include(":core:debug")
 // Direction: core:data -> core:domain -> core:model; core:data -> core:debug.
 include(":core:data")
 include(":core:ui")
+// Shared test fixtures across the module graph (com.nexo.testutil). A plain
+// Kotlin/JVM module so both the pure-JVM cores and the Android modules can add
+// it as `testImplementation`. Nothing Android-bound may live here: :core:model,
+// :core:domain and the features that skip :core:data cannot afford the
+// dependency. See core/test/build.gradle.kts.
+include(":core:test")
 // SDD M4: first feature module. Depends on :core:* only and keeps the
 // com.nexo.presentation.screen.settings package so :app imports stay unchanged.
 include(":feature:settings")

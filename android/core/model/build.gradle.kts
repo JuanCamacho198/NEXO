@@ -25,7 +25,9 @@ dependencies {
 
     api(libs.kotlinx.serialization.json)
 
-    testImplementation(kotlin("test"))
+        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    testImplementation(project(":core:test"))
+testImplementation(kotlin("test"))
     testImplementation(libs.testing.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.testing.json)

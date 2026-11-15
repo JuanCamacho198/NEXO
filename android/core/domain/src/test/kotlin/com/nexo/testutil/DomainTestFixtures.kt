@@ -3,13 +3,16 @@ package com.nexo.testutil
 /**
  * Domain-test fixture constants.
  *
- * Mirrors the values these tests used from `:app`'s test sources
- * (`com.nexo.testutil.TEST_USER_ID`, `com.nexo.data.remote.catalog.BUILTIN_GUTENDEX`).
- * `:core:domain` must not depend on `:app`, so the constants are duplicated here.
- * Both are opaque identifiers: no domain logic branches on their text, and no
- * assertion compares against the `:app` originals.
+ * [TEST_USER_ID] lives in :core:test (`AccountTestFixtures`) and is imported
+ * from there.
+ *
+ * [TEST_BUILTIN_GUTENDEX] stays here rather than moving to :core:test: it is a
+ * mirror of the production constant `com.nexo.data.remote.catalog.BUILTIN_GUTENDEX`,
+ * which lives in :core:data. :core:domain must not depend on :core:data, so the
+ * value is duplicated for exactly two domain test files. It is an opaque
+ * identifier: no domain logic branches on its text, and no assertion compares
+ * against the :core:data original.
  */
-const val TEST_USER_ID: String = "test-user"
 
 /** Built-in Gutendex provider id; mirrors `com.nexo.data.remote.catalog.BUILTIN_GUTENDEX`. */
 const val TEST_BUILTIN_GUTENDEX: String = "builtin:gutendex"
