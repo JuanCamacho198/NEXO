@@ -36,16 +36,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.R
+import com.nexo.feature.discover.R
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
 import com.nexo.domain.model.CatalogBook
 import com.nexo.data.remote.catalog.CatalogSources
 import com.nexo.domain.access.resolveAccess
 import com.nexo.domain.usecase.DownloadImportState
-import com.nexo.presentation.feature.library.formatFileSize
 import com.nexo.ui.theme.nexoColors
-import com.nexo.presentation.viewmodel.DiscoverDetailStatus
+import com.nexo.domain.discover.DiscoverDetailStatus
 import com.nexo.ui.components.atoms.NexoBookCover
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
@@ -107,6 +106,12 @@ fun DiscoverDetailSheet(
     onDismissAddonRead: () -> Unit = {},
     onRetryAddonRead: () -> Unit = {},
     onRetryAccess: () -> Unit = {},
+    /**
+     * Human-readable byte count for the download progress line. The feature owns
+     * no byte formatter :app can share, so the host passes the already-resolved
+     * text instead of the feature importing an `:app`-only helper.
+     */
+    formatBytes: (Long) -> String = { "$it B" },
 ) {
     val colors = nexoColors
     if (detailStatus == DiscoverDetailStatus.CLOSED) return
@@ -156,6 +161,7 @@ fun DiscoverDetailSheet(
                     onAllowAccessConsent = onAllowAccessConsent,
                     onDenyAccessConsent = onDenyAccessConsent,
                     onRetryAccess = onRetryAccess,
+                    formatBytes = formatBytes,
                 )
         }
     }
@@ -215,6 +221,7 @@ private fun DiscoverDetailContent(
     onAllowAccessConsent: () -> Unit,
     onDenyAccessConsent: () -> Unit,
     onRetryAccess: () -> Unit,
+    formatBytes: (Long) -> String,
 ) {
     val uriHandler = LocalUriHandler.current
     val externalLink = discoverExternalLink(detail)
@@ -256,6 +263,7 @@ private fun DiscoverDetailContent(
             onAllowAccessConsent = onAllowAccessConsent,
             onDenyAccessConsent = onDenyAccessConsent,
             onRetryAccess = onRetryAccess,
+            formatBytes = formatBytes,
         )
 
         externalLink?.let { link ->
@@ -302,6 +310,7 @@ private fun DiscoverAccessSection(
     onAllowAccessConsent: () -> Unit,
     onDenyAccessConsent: () -> Unit,
     onRetryAccess: () -> Unit,
+    formatBytes: (Long) -> String,
 ) {
     val colors = nexoColors
     val addonId = remember(detail) { CatalogSources.addonIdOf(detail.provider) }
@@ -332,6 +341,7 @@ private fun DiscoverAccessSection(
                             download = download,
                             onDownload = onDownload,
                             onCancelDownload = onCancelDownload,
+                            formatBytes = formatBytes,
                         )
                     } else {
                         // Host without the download bridge (the "Ver todo"
@@ -446,6 +456,7 @@ private fun DiscoverDownloadCta(
     download: DownloadImportState,
     onDownload: () -> Unit,
     onCancelDownload: () -> Unit,
+    formatBytes: (Long) -> String,
 ) {
     val colors = nexoColors
     Column(
@@ -473,14 +484,14 @@ private fun DiscoverDownloadCta(
                         showPercentage = true,
                     )
                     Text(
-                        text = "${formatFileSize(download.bytesSoFar)} / ${formatFileSize(total)}",
+                        text = "${formatBytes(download.bytesSoFar)} / ${formatBytes(total)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = colors.textSecondary,
                     )
                 } else {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     Text(
-                        text = formatFileSize(download.bytesSoFar),
+                        text = formatBytes(download.bytesSoFar),
                         style = MaterialTheme.typography.labelSmall,
                         color = colors.textSecondary,
                     )

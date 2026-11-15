@@ -11,4 +11,6 @@ package com.nexo.data.remote.catalog
  * - [NEWEST]  -> `sort=descending` (newest-by-id, HTTP 200 verified). Note this
  *   is *not* week-scoped: Gutendex exposes no time-windowed ordering.
  */
-enum class CatalogFeaturedSort { POPULAR, NEWEST }
+// CatalogFeaturedSort lives in :core:domain; re-exported below for data-layer callers.
+
+typealias CatalogFeaturedSort = com.nexo.domain.discover.CatalogFeaturedSort

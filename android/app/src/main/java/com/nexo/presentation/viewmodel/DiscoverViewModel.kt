@@ -1,10 +1,9 @@
 package com.nexo.presentation.viewmodel
 
-import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.nexo.R
+import com.nexo.feature.discover.R
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.BUILTIN_STANDARD_EBOOKS
 import com.nexo.domain.model.CatalogBook
@@ -23,6 +22,10 @@ import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.access.resolveAccess
 import com.nexo.domain.connectivity.AlwaysOnlineConnectivityObserver
 import com.nexo.domain.connectivity.ConnectivityObserver
+import com.nexo.domain.discover.DiscoverDetailStatus
+import com.nexo.domain.discover.DiscoverRailGroup
+import com.nexo.domain.discover.DiscoverSourceFilter
+import com.nexo.domain.discover.DiscoverStatus
 import com.nexo.domain.discover.TOPIC_ROTATION
 import com.nexo.domain.discover.TopicEntry
 import com.nexo.domain.discover.entriesFor
@@ -31,7 +34,7 @@ import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.domain.usecase.DownloadImportState
 import com.nexo.presentation.feature.discover.AccessResolverState
 import com.nexo.presentation.feature.discover.AddonReadState
-import com.nexo.presentation.feature.discover.DiscoverRailState
+import com.nexo.domain.discover.DiscoverRailState
 import com.nexo.presentation.feature.discover.mapAccessState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -47,58 +50,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-
-/** Screen-level status for the Discover search flow. */
-enum class DiscoverStatus {
-    IDLE,
-    LOADING,
-    LOADING_MORE,
-    LOADED,
-    EMPTY,
-    ERROR,
-    OFFLINE,
-}
-
-/**
- * Rails sharing one upstream. When every rail of a group fails together the
- * reader gets ONE notice instead of an identical inline error per rail: the
- * author shelves share the Google Books quota and fail as a unit. Standard
- * Ebooks is a group of one, so its grouped notice and its inline error agree.
- *
- * A group never names its rails: [DiscoverViewModel.retryRailGroup] rebuilds
- * them from the same deterministic plan, so a retry re-resolves exactly its own
- * group and never refetches a shelf that worked.
- */
-enum class DiscoverRailGroup(
-    @param:StringRes val labelRes: Int,
-) {
-    GoogleBooks(R.string.discover_rail_group_google_books),
-    Gutendex(R.string.discover_rail_group_gutendex),
-    StandardEbooks(R.string.discover_rail_group_standard_ebooks),
-}
-
-/** Detail pane status, independent from the search-list status. */
-enum class DiscoverDetailStatus {
-    CLOSED,
-    LOADING,
-    LOADED,
-    NOT_FOUND,
-    ERROR,
-}
-
-/**
- * In-memory source narrowing for the results grid. [AllSources] is the default;
- * [Source] pins exactly one `CatalogSourceInfo.sourceId`. A filter whose source
- * disappears mid-session (addon disabled/uninstalled) degrades back to
- * [AllSources] instead of throwing or rendering an empty phantom filter.
- */
-sealed interface DiscoverSourceFilter {
-    data object AllSources : DiscoverSourceFilter
-
-    data class Source(
-        val sourceId: String,
-    ) : DiscoverSourceFilter
-}
 
 /** Immutable UI state exposed by [DiscoverViewModel]. */
 data class DiscoverUiState(
@@ -961,7 +912,6 @@ class DiscoverViewModel(
      *
      * The title mapping lives in this layer deliberately: `TopicEntry.titleKey`
      * is a stable string key because the domain layer must not carry Android
-     * resource ids, and [R.string] ids are resolved here.
      *
      * Fail closed on the title: a rotation entry whose title key has no resource
      * is DROPPED rather than carried with an unresolved title, and its term is
@@ -1019,7 +969,7 @@ class DiscoverViewModel(
                 CatalogRailLog.loaded(spec.railLogId, spec.railLogSource, spec.railLogTerm, result.results.size)
                 DiscoverRailState.Loaded(
                     sectionTitleRes = spec.sectionTitleRes,
-                    sort = spec.sort,
+                    sort = spec.sort?.name,
                     sourceId = spec.sourceId,
                     books = result.results,
                     totalCount = result.totalCount,

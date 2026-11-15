@@ -25,7 +25,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.nexo.R
+import com.nexo.feature.discover.R
 import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.usecase.DownloadImportState
 import com.nexo.ui.theme.nexoColors
@@ -93,6 +93,7 @@ fun ReadAccessScreen(
     onAllowConsent: () -> Unit = {},
     onDenyConsent: () -> Unit = {},
     onBack: () -> Unit,
+    backContentDescription: String = "",
 ) {
     Scaffold(
         topBar = {
@@ -102,7 +103,7 @@ fun ReadAccessScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = NexoIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.discover_back),
+                            contentDescription = backContentDescription,
                         )
                     }
                 },

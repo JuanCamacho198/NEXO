@@ -29,57 +29,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.R
+import com.nexo.feature.discover.R
+import com.nexo.domain.discover.DiscoverRailState
 import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.data.remote.catalog.CatalogFeaturedSort
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoSkeletonBox
 import com.nexo.ui.components.molecules.NexoCardSurface
 
-/**
- * Fail-closed state of one IDLE featured rail.
- *
- * A rail that cannot be served (no capability, upstream error, empty page) is
- * [Hidden] and its section is not composed at all — never an empty rail, never a
- * placeholder header. There is deliberately no screen-level rail status: each
- * rail resolves on its own.
- */
-sealed interface DiscoverRailState {
-    data object Hidden : DiscoverRailState
-
-    data object Loading : DiscoverRailState
-
-    /**
-     * An upstream failure kept in place instead of hidden: the section renders
-     * its own inline error and retry, and a source whose every rail failed adds
-     * ONE grouped notice below the shelves (never a second copy per rail).
-     *
-     * [sourceId] identifies the owning source, so a source filter can still
-     * attribute the failure to its shelf.
-     */
-    data class Error(
-        val code: CatalogErrorCode,
-        val sourceId: String,
-    ) : DiscoverRailState
-
-    data class Loaded(
-        @param:StringRes val sectionTitleRes: Int,
-        val sort: CatalogFeaturedSort?,
-        val sourceId: String?,
-        val books: List<CatalogBook>,
-        val totalCount: Int,
-        /** Addon display name for a per-addon rail; null for featured rails. */
-        val addonName: String? = null,
-        /**
-         * Gutendex topic term for a topic shelf; null for featured and addon
-         * rails. Carried so "See all" can page the same `topic` query the shelf
-         * used.
-         */
-        val topicTerm: String? = null,
-    ) : DiscoverRailState
-}
 
 private val RAIL_CARD_WIDTH = 110.dp
 private val RAIL_COVER_HEIGHT = 165.dp
@@ -144,9 +102,12 @@ fun DiscoverRailSection(
                 }
             }
         is DiscoverRailState.Loaded -> {
+            // Bound to a local first: a property declared in another module does
+            // not smart-cast, so `state.addonName` cannot be used as a non-null.
+            val addonName = state.addonName
             val sectionTitle =
-                if (state.sourceId != null && state.addonName != null) {
-                    stringResource(R.string.discover_rail_from, state.addonName)
+                if (state.sourceId != null && addonName != null) {
+                    stringResource(R.string.discover_rail_from, addonName)
                 } else {
                     stringResource(state.sectionTitleRes)
                 }

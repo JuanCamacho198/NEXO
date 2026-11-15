@@ -29,6 +29,8 @@ import com.nexo.R
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.addons.InstalledAddonRow
 import com.nexo.presentation.feature.discover.AddonCapabilityBadges
+import com.nexo.presentation.feature.discover.AddonTrustNote
+import com.nexo.presentation.feature.discover.DiscoverStringRes
 import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.icons.NexoIcons
 
@@ -129,7 +131,15 @@ fun AddonCapabilityDetailScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.textPrimary,
             )
-            AddonCapabilityBadges(capabilities = capabilities)
+            AddonCapabilityBadges(
+                capabilities = capabilities,
+                strings =
+                    DiscoverStringRes(
+                        capabilitiesTitle = R.string.addon_capabilities_title,
+                        consentTrustNote = R.string.addon_consent_trust_note,
+                        viewPolicyLabel = R.string.legal_disclaimer_view_policy,
+                    ),
+            )
             androidx.compose.material3.Switch(
                 checked = hasConsent,
                 onCheckedChange = onConsentChange,

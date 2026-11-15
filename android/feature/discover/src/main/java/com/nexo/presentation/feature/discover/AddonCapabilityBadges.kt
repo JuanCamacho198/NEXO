@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.nexo.R
+import com.nexo.feature.discover.R
 import com.nexo.ui.theme.nexoColors
 
 /**
@@ -24,6 +24,7 @@ import com.nexo.ui.theme.nexoColors
 @Composable
 fun AddonCapabilityBadges(
     capabilities: List<String>,
+    strings: DiscoverStringRes,
     modifier: Modifier = Modifier,
 ) {
     val colors = nexoColors
@@ -33,7 +34,7 @@ fun AddonCapabilityBadges(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = stringResource(R.string.addon_capabilities_title),
+            text = stringResource(strings.capabilitiesTitle),
             style = MaterialTheme.typography.labelSmall,
             color = colors.textSecondary,
         )
@@ -52,6 +53,7 @@ fun AddonCapabilityBadges(
 @Composable
 fun AddonTrustNote(
     onViewPolicy: () -> Unit,
+    strings: DiscoverStringRes,
     modifier: Modifier = Modifier,
 ) {
     val colors = nexoColors
@@ -60,13 +62,13 @@ fun AddonTrustNote(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            text = stringResource(R.string.addon_consent_trust_note),
+            text = stringResource(strings.consentTrustNote),
             style = MaterialTheme.typography.bodySmall,
             color = colors.textSecondary,
             modifier = Modifier.padding(top = 4.dp),
         )
         Text(
-            text = stringResource(R.string.legal_disclaimer_view_policy),
+            text = stringResource(strings.viewPolicyLabel),
             style = MaterialTheme.typography.labelMedium,
             color = colors.textAccent,
             modifier =

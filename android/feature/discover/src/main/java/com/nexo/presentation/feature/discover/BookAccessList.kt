@@ -27,7 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.R
+import com.nexo.feature.discover.R
 import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.access.AccessGroup
 import com.nexo.domain.access.AccessOption

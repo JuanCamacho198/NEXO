@@ -19,7 +19,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.nexo.R
+import com.nexo.feature.discover.R
 import com.nexo.domain.access.LegalAccess
 import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoButton

@@ -1,6 +1,7 @@
 package com.nexo.presentation.viewmodel
 
 import com.nexo.R
+import com.nexo.feature.discover.R as FeatureR
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.model.CatalogErrorCode
@@ -10,7 +11,7 @@ import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.PagedResult
 import com.nexo.domain.discover.TOPIC_ROTATION
 import com.nexo.domain.discover.entriesFor
-import com.nexo.presentation.feature.discover.DiscoverRailState
+import com.nexo.domain.discover.DiscoverRailState
 import com.nexo.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -38,16 +39,16 @@ class TopicRailTitlesTest {
     /** Expected resource id per rotation term. */
     private val expectedTitleRes =
         mapOf(
-            "science fiction" to R.string.discover_rail_topic_science_fiction,
-            "adventure" to R.string.discover_rail_topic_adventure,
-            "history" to R.string.discover_rail_topic_history,
-            "travel" to R.string.discover_rail_topic_travel,
-            "poetry" to R.string.discover_rail_topic_poetry,
-            "philosophy" to R.string.discover_rail_topic_philosophy,
-            "drama" to R.string.discover_rail_topic_drama,
-            "romance" to R.string.discover_rail_topic_romance,
-            "mystery" to R.string.discover_rail_topic_mystery,
-            "horror" to R.string.discover_rail_topic_horror,
+            "science fiction" to FeatureR.string.discover_rail_topic_science_fiction,
+            "adventure" to FeatureR.string.discover_rail_topic_adventure,
+            "history" to FeatureR.string.discover_rail_topic_history,
+            "travel" to FeatureR.string.discover_rail_topic_travel,
+            "poetry" to FeatureR.string.discover_rail_topic_poetry,
+            "philosophy" to FeatureR.string.discover_rail_topic_philosophy,
+            "drama" to FeatureR.string.discover_rail_topic_drama,
+            "romance" to FeatureR.string.discover_rail_topic_romance,
+            "mystery" to FeatureR.string.discover_rail_topic_mystery,
+            "horror" to FeatureR.string.discover_rail_topic_horror,
         )
 
     @Test

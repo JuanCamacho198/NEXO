@@ -20,14 +20,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.R
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.theme.nexoColors
@@ -110,6 +109,17 @@ private val BarStreakIconSize = 14.dp
  * @param unreadNotificationsCount When > 0 a dot is drawn on the bell and the
  *   bell's label switches to the badge description.
  * @param actions Extra trailing icon buttons, rendered after the built-ins.
+ * @param backContentDescription Accessibility label for the back arrow in
+ *   [TopLevelVariant.Detail].
+ * @param searchContentDescription Accessibility label for the search action.
+ * @param notificationsContentDescription Accessibility label for the
+ *   notifications action when there is nothing unread.
+ * @param unreadNotificationsContentDescription Accessibility label for the
+ *   notifications action when [unreadNotificationsCount] is greater than zero.
+ * @param streakContentDescription Accessibility label for the streak pill, with
+ *   the day count already formatted in. Every label here is resolved by the
+ *   caller because this module owns no string resources, and `stringResource`
+ *   cannot be called from a lambda argument.
  *
  * **Behavior**: no internal state; every action is hoisted.
  * **Accessibility**: the avatar, back arrow and both built-in buttons carry
@@ -132,6 +142,11 @@ fun NexoTopAppBar(
     onStreakClick: (() -> Unit)? = null,
     onNotificationsClick: (() -> Unit)? = null,
     unreadNotificationsCount: Int = 0,
+    backContentDescription: String = "",
+    searchContentDescription: String = "",
+    notificationsContentDescription: String = "",
+    unreadNotificationsContentDescription: String = "",
+    streakContentDescription: String = "",
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val colors = nexoColors
@@ -195,7 +210,7 @@ fun NexoTopAppBar(
                     if (onBack != null) {
                         NexoIconButton(
                             icon = NexoIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.nav_back),
+                            contentDescription = backContentDescription,
                             onClick = onBack,
                             size = BarActionSize,
                             iconSize = 24.dp,
@@ -212,6 +227,10 @@ fun NexoTopAppBar(
                 onStreakClick = onStreakClick,
                 onNotificationsClick = onNotificationsClick,
                 unreadNotificationsCount = unreadNotificationsCount,
+                searchContentDescription = searchContentDescription,
+                notificationsContentDescription = notificationsContentDescription,
+                unreadNotificationsContentDescription = unreadNotificationsContentDescription,
+                streakContentDescription = streakContentDescription,
                 actions = actions,
             )
         }
@@ -256,6 +275,10 @@ private fun TopBarActions(
     onStreakClick: (() -> Unit)?,
     onNotificationsClick: (() -> Unit)?,
     unreadNotificationsCount: Int,
+    searchContentDescription: String,
+    notificationsContentDescription: String,
+    unreadNotificationsContentDescription: String,
+    streakContentDescription: String,
     actions: @Composable RowScope.() -> Unit,
 ) {
     val colors = nexoColors
@@ -266,7 +289,7 @@ private fun TopBarActions(
         if (onSearchClick != null) {
             NexoIconButton(
                 icon = NexoIcons.Search,
-                contentDescription = stringResource(R.string.search_label),
+                contentDescription = searchContentDescription,
                 onClick = onSearchClick,
                 size = BarActionSize,
                 iconSize = 20.dp,
@@ -274,7 +297,11 @@ private fun TopBarActions(
             )
         }
         if (streakDays > 0) {
-            StreakBadge(days = streakDays, onClick = onStreakClick)
+            StreakBadge(
+                days = streakDays,
+                onClick = onStreakClick,
+                label = streakContentDescription,
+            )
         }
         if (onNotificationsClick != null) {
             Box {
@@ -282,9 +309,9 @@ private fun TopBarActions(
                     icon = NexoIcons.Notifications,
                     contentDescription =
                         if (unreadNotificationsCount > 0) {
-                            stringResource(R.string.notifications_badge_content_description)
+                            unreadNotificationsContentDescription
                         } else {
-                            stringResource(R.string.notifications_title)
+                            notificationsContentDescription
                         },
                     onClick = onNotificationsClick,
                     size = BarActionSize,
@@ -322,9 +349,9 @@ private fun TopBarActions(
 private fun StreakBadge(
     days: Int,
     onClick: (() -> Unit)?,
+    label: String,
 ) {
     val colors = nexoColors
-    val label = stringResource(R.string.home_streak_badge_content_description, days)
     Box(
         modifier =
             Modifier

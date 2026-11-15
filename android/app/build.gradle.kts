@@ -456,6 +456,9 @@ dependencies {
     // SDD M4: settings feature module. It keeps the
     // com.nexo.presentation.screen.settings package, so no import here changes.
     implementation(project(":feature:settings"))
+    // SDD M5: discover feature module. Same package as before the split, so the
+    // nav graph and the DiscoverViewModel keep importing it unchanged.
+    implementation(project(":feature:discover"))
 
     implementation(composeBom)
     androidTestImplementation(composeBom)

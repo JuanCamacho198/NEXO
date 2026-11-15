@@ -13,33 +13,16 @@
     <string name="aa_section_direction">Dirección</string>
     <string name="aa_section_justification">Justificación</string>
     <string name="aa_section_margins">Márgenes</string>
-    <string name="access_badge_download">Descarga gratis</string>
-    <string name="access_group_buy">Comprar</string>
     <!-- U3: etiquetas de grupos de acceso (voseo) -->
-    <string name="access_group_free">Gratis</string>
-    <string name="access_group_subscribe">Suscripción</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_ok">Aceptar</string>
     <!-- U5: addon capabilities -->
-    <string name="addon_capabilities_title">Capacidades</string>
     <string name="addon_capability_detail_body">Lo que este complemento declara que puede hacer con tus consultas del catálogo. Otorgá acceso solo si confiás en esta fuente.</string>
     <string name="addon_capability_detail_title">Capacidades de %1$s</string>
-    <string name="addon_capability_details">Detalles</string>
-    <string name="addon_capability_resolve">Resolver enlaces</string>
-    <string name="addon_capability_search">Buscar</string>
-    <string name="addon_consent_allow">Permitir</string>
-    <string name="addon_consent_body">«%1$s» puede ver el título, el autor y los identificadores de este libro para buscar dónde leerlo. Los enlaces se abren en tu navegador; nada se descarga sin tu acción.</string>
-    <string name="addon_consent_deny">Ahora no</string>
     <string name="addon_consent_state_granted">Acceso otorgado: este complemento puede resolver enlaces de lectura.</string>
     <string name="addon_consent_state_missing">Acceso no otorgado: este complemento no va a resolver enlaces de lectura.</string>
     <!-- U5: addon consent/disclosure (deferred from 4.3) -->
-    <string name="addon_consent_title">¿Compartir los datos del libro con este complemento?</string>
-    <string name="addon_consent_trust_note">Los complementos corren fuera de NEXO. Compartí datos solo con fuentes en las que confíes.</string>
-    <string name="addon_read_empty_body">«%1$s» no ofrece opciones de lectura para este título ahora.</string>
-    <string name="addon_read_empty_title">Sin opciones de este complemento</string>
-    <string name="addon_read_legal_notice">Fuente externa: los enlaces se abren en tu navegador. La disponibilidad y los derechos dependen del proveedor y de tu región.</string>
     <!-- U5: addon read sheet -->
-    <string name="addon_read_resolving">Consultando al complemento…</string>
     <string name="annotation_modal_close">Cerrar</string>
     <string name="annotation_snippet_label">Texto seleccionado</string>
     <string name="annotation_textarea_comment_hint">Escribí tu comentario…</string>
@@ -250,77 +233,10 @@
     <!-- Dictionary -->
     <string name="dictionary_title">Diccionario</string>
     <string name="dictionary_word_count">%1$d palabras</string>
-    <string name="discover_avatar_content_desc">Tu perfil</string>
-    <string name="discover_back">Volver</string>
-    <string name="discover_by_authors">por %1$s</string>
-    <string name="discover_clear_content_desc">Borrar búsqueda</string>
-    <string name="discover_detail_description_label">DESCRIPCIÓN</string>
-    <string name="discover_detail_external_gutenberg">Ver en Project Gutenberg</string>
-    <string name="discover_detail_external_openlibrary">Ver en Open Library</string>
-    <string name="discover_detail_not_found">Este título ya no está disponible en el catálogo.</string>
-    <string name="discover_detail_subjects_label">TEMAS</string>
-    <string name="discover_dismiss">Cerrar</string>
-    <string name="discover_download">Descargar EPUB</string>
-    <string name="discover_download_cancel">Cancelar descarga</string>
-    <string name="discover_download_failed">No pudimos descargar el libro. Intentá de nuevo.</string>
-    <string name="discover_duplicate">Este libro ya está en tu biblioteca.</string>
-    <string name="discover_empty">Sin resultados.</string>
-    <string name="discover_empty_body">No encontramos nada para «%1$s». Probá con otra búsqueda:</string>
-    <string name="discover_empty_legal_body">Nada en %1$s coincide con «%2$s». Probá con otra fuente u otra búsqueda.</string>
     <!-- U5: legal empty state + universal sources -->
-    <string name="discover_empty_legal_title">Sin coincidencias legales</string>
-    <string name="discover_empty_title">Sin resultados</string>
-    <string name="discover_end_of_results">· Fin de los resultados ·</string>
-    <string name="discover_error_body">Revisá tu conexión e intentá de nuevo. Podés reintentar cuando quieras.</string>
-    <string name="discover_error_rate_limited">El catálogo está limitando las solicitudes. Inténtalo de nuevo en un momento.</string>
-    <string name="discover_error_title">No se pudo conectar</string>
-    <string name="discover_error_upstream">El catálogo no está disponible ahora. Inténtalo más tarde.</string>
-    <string name="discover_format_epub">EPUB</string>
-    <string name="discover_format_html">HTML</string>
-    <string name="discover_format_mobi">MOBI</string>
-    <string name="discover_format_txt">TXT</string>
-    <string name="discover_idle_source_empty">No hay destacados de %1$s. Elegí otra fuente para ver las estanterías.</string>
-    <string name="discover_imported">Ya está en tu estantería</string>
     <string name="discover_loading">Cargando…</string>
-    <string name="discover_offline">Parece que estás sin conexión. Revisa tu red e inténtalo de nuevo.</string>
-    <string name="discover_offline_body">No podés explorar el catálogo sin internet, pero tu Estantería sigue disponible offline.</string>
-    <string name="discover_offline_title">Estás sin conexión</string>
-    <string name="discover_rail_from">De %1$s</string>
-    <string name="discover_rail_group_failed">No se pudieron cargar las estanterías de %1$s.</string>
-    <string name="discover_rail_group_google_books">Google Books</string>
-    <string name="discover_rail_group_gutendex">Gutendex</string>
-    <string name="discover_rail_group_standard_ebooks">Standard Ebooks</string>
-    <string name="discover_rail_gutendex_popular">Clásicos más descargados</string>
-    <string name="discover_rail_standard_ebooks">Standard Ebooks: novedades</string>
-    <string name="discover_rail_topic_adventure">Aventura</string>
-    <string name="discover_rail_topic_drama">Teatro</string>
-    <string name="discover_rail_topic_history">Historia</string>
-    <string name="discover_rail_topic_horror">Terror</string>
-    <string name="discover_rail_topic_mystery">Misterio</string>
-    <string name="discover_rail_topic_philosophy">Filosofía</string>
-    <string name="discover_rail_topic_poetry">Poesía</string>
-    <string name="discover_rail_topic_romance">Romance</string>
     <!-- S2: títulos de los estantes por tema de Gutendex (términos medidos en vivo) -->
-    <string name="discover_rail_topic_science_fiction">Ciencia ficción</string>
-    <string name="discover_rail_topic_travel">Viajes</string>
-    <string name="discover_results_count">%1$d resultados</string>
-    <string name="discover_retry">Reintentar</string>
-    <string name="discover_search_hint">Buscar en el catálogo</string>
-    <string name="discover_searching">Buscando…</string>
-    <string name="discover_section_subtitle">«%1$s» · %2$d resultados</string>
-    <string name="discover_source_addon_fallback">Complemento</string>
-    <string name="discover_source_filter_all">Todos</string>
-    <string name="discover_subtitle">Catálogo Open Library + Gutendex</string>
-    <string name="discover_suggestion_1">Cortázar</string>
-    <string name="discover_suggestion_2">Cuentos</string>
-    <string name="discover_suggestion_3">Ciencia ficción</string>
     <!-- discover-screen U1: shell, states, connectivity -->
-    <string name="discover_title">Descubrir</string>
-    <string name="discover_trending_all">Más buscados</string>
-    <string name="discover_trending_classics">Clásicos</string>
-    <string name="discover_trending_popular">Populares</string>
-    <string name="discover_trending_scifi">Ciencia ficción</string>
-    <string name="discover_view_all">Ver todo</string>
     <string name="download_confirm_body">Se descargará "%1$s" de %2$s.</string>
     <string name="download_confirm_body_no_author">Se descargará "%1$s".</string>
     <string name="download_confirm_title">¿Descargar libro?</string>
@@ -392,7 +308,6 @@
     <!-- Format strings -->
     <string name="format_percent">%d %%</string>
     <!-- U2: atribución de Google Books + aviso de key ausente (voseo) -->
-    <string name="google_books_attribution">Con tecnología de Google</string>
     <!-- Reader / Highlights Panel -->
     <string name="highlight_filter_all">Todos</string>
     <string name="highlight_filter_blue">Azul</string>
@@ -473,7 +388,6 @@
     <string name="home_progress_percent">%1$d%%</string>
     <string name="home_search_results">Resultados</string>
     <string name="home_sessions">Sesiones</string>
-    <string name="home_streak_badge_content_description">Racha de lectura: %1$d días</string>
     <string name="home_streak_content_description">Racha de lectura</string>
     <string name="home_streak_days">d\u00edas</string>
     <string name="home_subtitle">¿Qué vas a leer hoy?</string>
@@ -494,7 +408,6 @@
     <string name="legal_disclaimer_body">NEXO apunta a fuentes externas legales. Las descargas en la app solo se ofrecen para libros de dominio público; lo demás se abre en tu navegador, donde la disponibilidad y los derechos dependen del proveedor.</string>
     <!-- U5: legal disclaimer + policy page -->
     <string name="legal_disclaimer_title">Un aviso antes de explorar</string>
-    <string name="legal_disclaimer_view_policy">Leer aviso legal</string>
     <string name="legal_policy_addons_body">Los complementos corren fuera de NEXO. Un complemento solo resuelve enlaces de lectura después de que le otorgues acceso al título, autor e identificadores del libro, y podés revocar ese acceso cuando quieras desde la pantalla de complementos.</string>
     <string name="legal_policy_addons_title">Complementos y consentimiento</string>
     <string name="legal_policy_intro">NEXO es una app de lectura, no una librería: te ayuda a encontrar dónde leer legalmente y mantiene tu biblioteca sincronizada.</string>
@@ -561,7 +474,6 @@
     <string name="library_tab_reading">Leyendo</string>
     <string name="library_view_grid">Vista de cuadrícula</string>
     <string name="library_view_list">Vista de lista</string>
-    <string name="nav_back">Volver</string>
     <string name="nav_book_detail">Detalle del libro</string>
     <string name="nav_discover">Descubrir</string>
     <string name="nav_highlights">Resaltados</string>
@@ -570,7 +482,6 @@
     <string name="nav_settings">Ajustes</string>
     <string name="nav_statistics">Estadísticas</string>
     <string name="note_modal_title">Nueva Nota</string>
-    <string name="notifications_badge_content_description">Notificaciones sin leer</string>
     <string name="notifications_channel_description">Novedades de importación, sincronización y lectura</string>
     <!-- Notification OS channel -->
     <string name="notifications_channel_name">Notificaciones</string>
@@ -598,7 +509,6 @@
     <!-- Tray relative timestamps -->
     <string name="notifications_time_now">Ahora mismo</string>
     <!-- Notifications -->
-    <string name="notifications_title">Notificaciones</string>
     <string name="onboarding_goal_action">Establecer meta</string>
     <string name="onboarding_goal_footer_note">Puedes cambiar esta configuración más tarde en Ajustes.</string>
     <!-- Onboarding goal -->
@@ -631,12 +541,7 @@
     <string name="palette_pick_color">Elegir color</string>
     <string name="palette_reset">Restablecer valores predeterminados</string>
     <string name="palette_section_subtitle">Personalizá los 5 colores de resaltado</string>
-    <string name="read_access_empty_body">Todavía no encontramos una forma legal de leer este título. Probá con otra edición u otra búsqueda.</string>
-    <string name="read_access_empty_title">Sin copias legales</string>
-    <string name="read_access_open">Abrir</string>
-    <string name="read_access_subtitle">Opciones legales para este título, en otro lado</string>
     <!-- U5: read-access ("Dónde leerlo") section -->
-    <string name="read_access_title">Dónde leerlo</string>
     <string name="reader_add_bookmark">Añadir marcador</string>
     <!-- Reader / Header -->
     <string name="reader_back">Volver</string>
@@ -678,7 +583,6 @@
     <string name="search_clear">Limpiar búsqueda</string>
     <!-- Reader / Search -->
     <string name="search_input_hint">Buscar en el libro…</string>
-    <string name="search_label">Buscar</string>
     <string name="search_no_results">Sin resultados</string>
     <string name="search_result_chapter">Capítulo %1$d</string>
     <string name="search_results_count">Resultados (%1$d)</string>
@@ -755,4 +659,15 @@
     <string name="translation_same_language">El idioma de origen y el de destino son el mismo, así que no hay nada que traducir. Cambia uno de los dos en la barra de arriba.</string>
     <string name="translation_unknown_source">No pudimos detectar el idioma del texto seleccionado. Elige un idioma de origen en la barra de arriba.</string>
     <string name="vertical_scroll">Desplazamiento vertical</string>
+    <string name="addon_capabilities_title">Capacidades</string>
+    <string name="addon_consent_trust_note">Los complementos corren fuera de NEXO. Compartí datos solo con fuentes en las que confíes.</string>
+    <string name="discover_back">Volver</string>
+    <string name="legal_disclaimer_view_policy">Leer aviso legal</string>
+    <string name="home_streak_badge_content_description">Racha de lectura: %1$d días</string>
+    <string name="nav_back">Volver</string>
+    <string name="notifications_badge_content_description">Notificaciones sin leer</string>
+    <string name="notifications_title">Notificaciones</string>
+    <string name="search_label">Buscar</string>
+
+
 </resources>

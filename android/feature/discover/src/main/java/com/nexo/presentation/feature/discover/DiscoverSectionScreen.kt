@@ -22,9 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nexo.R
+import com.nexo.feature.discover.R
 import com.nexo.ui.theme.nexoColors
-import com.nexo.presentation.viewmodel.DiscoverStatus
+import com.nexo.domain.discover.DiscoverStatus
 import com.nexo.ui.icons.NexoIcons
 
 /**
@@ -40,6 +40,7 @@ fun DiscoverSectionScreen(
     contentPadding: PaddingValues,
     viewModel: DiscoverSectionViewModel,
     onBack: () -> Unit,
+    backContentDescription: String = "",
 ) {
     val colors = nexoColors
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -59,7 +60,7 @@ fun DiscoverSectionScreen(
             ) {
                 Icon(
                     imageVector = NexoIcons.ArrowBack,
-                    contentDescription = stringResource(R.string.discover_back),
+                    contentDescription = backContentDescription,
                     modifier = Modifier.size(24.dp),
                     tint = colors.textPrimary,
                 )

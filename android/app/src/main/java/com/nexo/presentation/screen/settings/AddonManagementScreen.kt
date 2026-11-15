@@ -39,11 +39,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nexo.R as AppR
 import com.nexo.feature.settings.R
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.addons.InstalledAddonRow
 import com.nexo.presentation.feature.discover.AddonCapabilityBadges
 import com.nexo.presentation.feature.discover.AddonTrustNote
+import com.nexo.presentation.feature.discover.DiscoverStringRes
 import com.nexo.presentation.navigation.rememberAddonSettingsViewModel
 import com.nexo.presentation.viewmodel.AddonSettingsUiState
 import com.nexo.presentation.viewmodel.AddonSettingsViewModel
@@ -230,7 +232,15 @@ fun AddonManagementScreen(
                 }
             }
 
-            AddonTrustNote(onViewPolicy = onNavigateToLegal)
+            AddonTrustNote(
+                onViewPolicy = onNavigateToLegal,
+                strings =
+                    DiscoverStringRes(
+                        capabilitiesTitle = AppR.string.addon_capabilities_title,
+                        consentTrustNote = AppR.string.addon_consent_trust_note,
+                        viewPolicyLabel = AppR.string.legal_disclaimer_view_policy,
+                    ),
+            )
         }
     }
 }
@@ -347,7 +357,15 @@ private fun AddonRow(
 
             Spacer(Modifier.height(8.dp))
 
-            AddonCapabilityBadges(capabilities = row.manifest.capabilities)
+            AddonCapabilityBadges(
+                capabilities = row.manifest.capabilities,
+                strings =
+                    DiscoverStringRes(
+                        capabilitiesTitle = AppR.string.addon_capabilities_title,
+                        consentTrustNote = AppR.string.addon_consent_trust_note,
+                        viewPolicyLabel = AppR.string.legal_disclaimer_view_policy,
+                    ),
+            )
 
             Spacer(Modifier.height(8.dp))
 

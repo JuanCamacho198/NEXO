@@ -21,11 +21,39 @@ import com.nexo.domain.model.CatalogBook
 class CatalogIdentityU3Test {
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** First existing candidate, so a test runs from the module or the repo root. */
     private fun resFile(vararg names: String): java.io.File {
         val candidates = names.map { java.io.File(it) }
         return candidates.firstOrNull { it.exists() }
             ?: error("missing res file, tried: ${names.joinToString()}")
     }
+
+    /**
+     * EN or ES strings content, concatenated across every module that owns part
+     * of the copy: the key under assertion may live in `:app` or in a feature
+     * module, so a first-match read would miss one of them.
+     */
+    private fun stringsXml(locale: String): String {
+        val parts =
+            stringsXmlCandidates(locale).map { java.io.File(it) }.filter { it.exists() }.map { it.readText() }
+        if (parts.isEmpty()) error("missing $locale strings.xml")
+        return parts.joinToString("\n")
+    }
+
+    /**
+     * Every location the copy may live in: this module's own `res`, then the
+     * feature modules that own the discover strings. Relative paths cover the
+     * Gradle working directory being either `android/` or the repository root.
+     */
+    private fun stringsXmlCandidates(locale: String): Array<String> =
+        listOf(
+            "src/main/res/$locale/strings.xml",
+            "app/src/main/res/$locale/strings.xml",
+            "../feature/discover/src/main/res/$locale/strings.xml",
+            "android/feature/discover/src/main/res/$locale/strings.xml",
+            "feature/discover/src/main/res/$locale/strings.xml",
+            "../../feature/discover/src/main/res/$locale/strings.xml",
+        ).toTypedArray()
 
     @Test fun identityFields_defaultToNull() {
         val book =
@@ -199,15 +227,9 @@ class CatalogIdentityU3Test {
 
     @Test fun accessGroupLabels_presentEnAndEs() {
         val en =
-            resFile(
-                "src/main/res/values/strings.xml",
-                "app/src/main/res/values/strings.xml",
-            ).readText()
+            stringsXml("values")
         val es =
-            resFile(
-                "src/main/res/values-es/strings.xml",
-                "app/src/main/res/values-es/strings.xml",
-            ).readText()
+            stringsXml("values-es")
         assertTrue(en.contains("name=\"access_group_free\""))
         assertTrue(en.contains("name=\"access_group_buy\""))
         assertTrue(en.contains("name=\"access_group_subscribe\""))

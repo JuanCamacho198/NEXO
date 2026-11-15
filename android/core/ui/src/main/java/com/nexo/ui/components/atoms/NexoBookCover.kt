@@ -2,7 +2,6 @@ package com.nexo.ui.components.atoms
 
 import com.nexo.ui.R as UiR
 
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +21,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -33,8 +31,6 @@ import coil3.request.crossfade
 import coil3.request.error
 import coil3.request.fallback
 import coil3.request.placeholder
-import com.nexo.R
-import com.nexo.debug.DebugLog
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.icons.NexoIcons
 
@@ -49,12 +45,15 @@ import com.nexo.ui.icons.NexoIcons
  *   icon branch is rendered (unless [isLoading] is `true`).
  * @param title Book title, used as the `contentDescription` for the
  *   remote image and fallback icon. When `null`, falls back to
- *   `R.string.library_cover_content_description`.
+ *   [contentDescription].
  * @param modifier Modifier applied to the outer `Box`. The size must
  *   be set by the caller (e.g. `Modifier.size(width = 96.dp, height = 136.dp)`).
  * @param isLoading When `true`, the loading branch is forced (overrides
  *   [coverUrl]). Renders a 32dp `CircularProgressIndicator` centered
  *   inside the box. Pass `false` once the surrounding data is ready.
+ * @param contentDescription Accessibility label used when [title] is `null`.
+ *   Resolved by the caller: this module owns no string resources, so the
+ *   localized "Book cover" copy is passed in from the host.
  *
  * **Visual**: rounded 8dp `Box` filled with `colorScheme.surfaceVariant`.
  * On loading: 32dp `CircularProgressIndicator` in `colorScheme.primary`.
@@ -75,10 +74,11 @@ fun NexoBookCover(
     title: String? = null,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
+    contentDescription: String = "",
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val contentDescription = title ?: stringResource(R.string.library_cover_content_description)
+    val resolvedContentDescription = title ?: contentDescription
 
     Box(
         modifier =
@@ -113,12 +113,7 @@ fun NexoBookCover(
                     }
                 AsyncImage(
                     model = imageRequest,
-                    onState = { state ->
-                        if (state is AsyncImagePainter.State.Error) {
-                            DebugLog.error(TAG, "NexoBookCover: cover load failed for $coverUrl")
-                        }
-                    },
-                    contentDescription = contentDescription,
+                    contentDescription = resolvedContentDescription,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                 )
@@ -126,7 +121,7 @@ fun NexoBookCover(
             else -> {
                 Icon(
                     imageVector = NexoIcons.Book,
-                    contentDescription = contentDescription,
+                    contentDescription = resolvedContentDescription,
                     modifier = Modifier.size(40.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -134,8 +129,6 @@ fun NexoBookCover(
         }
     }
 }
-
-private const val TAG = "NexoBookCover"
 
 @Preview(showBackground = true)
 @Composable

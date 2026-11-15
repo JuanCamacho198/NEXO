@@ -21,6 +21,11 @@ import com.nexo.ui.components.molecules.TopLevelVariant
  *   person placeholder instead — the header never crashes.
  * @param avatarContentDescription Accessibility label for the avatar.
  * @param onAvatarClick Optional avatar tap handler.
+ *
+ * The bar's built-in action labels are resolved by [NexoTopAppBar]'s host: the
+ * atom lives in `:core:ui`, which owns no string resources, and this screen
+ * renders none of those built-ins (no back arrow, no search, no bell, no
+ * streak), so nothing is passed down.
  */
 @Composable
 fun DiscoverHeader(

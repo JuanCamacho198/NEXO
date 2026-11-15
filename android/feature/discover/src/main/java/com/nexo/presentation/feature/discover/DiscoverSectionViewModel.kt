@@ -14,8 +14,8 @@ import com.nexo.debug.SentryMetrics
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.domain.usecase.DownloadImportState
-import com.nexo.presentation.viewmodel.DiscoverDetailStatus
-import com.nexo.presentation.viewmodel.DiscoverStatus
+import com.nexo.domain.discover.DiscoverDetailStatus
+import com.nexo.domain.discover.DiscoverStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers

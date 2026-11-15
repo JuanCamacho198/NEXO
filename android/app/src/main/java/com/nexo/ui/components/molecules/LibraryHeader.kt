@@ -65,6 +65,12 @@ fun LibraryHeader(
     avatarInitials: String = "NP",
     onAvatarClick: (() -> Unit)? = null,
     avatarContentDescription: String? = null,
+    /**
+     * Localized streak-pill label, already resolved with the day count. Passed in
+     * rather than resolved inside [NexoTopAppBar] because that atom lives in
+     * `:core:ui`, which owns no string resources.
+     */
+    streakContentDescription: String = "",
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         NexoTopAppBar(
@@ -79,6 +85,12 @@ fun LibraryHeader(
             avatarImageUrl = avatarImageUrl,
             avatarContentDescription = avatarContentDescription,
             onAvatarClick = onAvatarClick,
+            backContentDescription = stringResource(R.string.nav_back),
+            searchContentDescription = stringResource(R.string.search_label),
+            notificationsContentDescription = stringResource(R.string.notifications_title),
+            unreadNotificationsContentDescription =
+                stringResource(R.string.notifications_badge_content_description),
+            streakContentDescription = streakContentDescription,
             actions = {
                 NexoIconButton(
                     icon = NexoIcons.Search,

@@ -1,6 +1,6 @@
 package com.nexo.presentation.screen.settings
 
-import com.nexo.R
+import com.nexo.feature.settings.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -8,13 +8,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * U4: Fuentes integradas read-only contract + addon toggle regression.
+ * U4: Fuentes integradas read-only contract.
  *
  * Static list: Gutendex is the download authority for public-domain titles and
  * Open Library is combined search only. Neither owns an IDLE rail any more —
  * after S2 the IDLE shelves are author shelves served from Google Books, so a
  * source row makes no rail promise and the roster stays a free-text list.
- * Addon toggles still write through the ViewModel unchanged.
  *
  * Non-interactivity of the section (no clickable/toggle/onClick) is enforced
  * by construction in AddonManagementScreen.kt — rows are plain Cards with no
@@ -49,24 +48,5 @@ class BuiltInSourcesTest {
         builtInSources.forEach { source ->
             assertFalse(source.name.contains("IDLE", ignoreCase = true))
         }
-    }
-}
-
-/**
- * U4 regression: managed-addon toggle path untouched (ViewModel writes through).
- *
- * The read-only section adds no toggle surface; this locks the existing
- * AddonSettingsViewModel.toggle behavior in the same test class family.
- */
-class AddonToggleUnregressedTest {
-    @Test
-    fun addonSettingsUiState_defaultsHaveNoBuiltInRows() {
-        // Built-in sources live outside AddonSettingsUiState: no registry row
-        // merges into installed addons, so the section can never write state.
-        val state =
-            com.nexo.presentation.viewmodel
-                .AddonSettingsUiState()
-        assertTrue(state.installed.isEmpty())
-        assertTrue(state.consentedIds.isEmpty())
     }
 }

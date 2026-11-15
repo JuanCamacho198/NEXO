@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nexo.R
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.LibraryHeader
 import com.nexo.ui.components.molecules.SortControlRow
@@ -41,6 +43,7 @@ fun LibraryToolbar(
             avatarInitials = avatarInitials,
             onAvatarClick = onAvatarClick,
             avatarContentDescription = avatarContentDescription,
+            streakContentDescription = stringResource(R.string.home_streak_badge_content_description, 0),
         )
 
         StatusChipRow(
