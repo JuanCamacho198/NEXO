@@ -26,31 +26,9 @@
     <string name="book_card_options">Opciones</string>
     <string name="book_card_progress">Progreso de lectura: %1$d por ciento</string>
     <string name="book_card_remove_from_library">Eliminar de estantería</string>
-    <string name="book_detail_chapter_x_of_y">Capítulo %1$d de %2$d</string>
-    <string name="book_detail_continue_reading">Continuar leyendo</string>
-    <string name="book_detail_error_not_found">Libro no encontrado</string>
     <string name="book_detail_estimated_pages">≈%1$d</string>
-    <string name="book_detail_genres">Géneros</string>
-    <string name="book_detail_meta_format">Formato</string>
-    <string name="book_detail_meta_language">Idioma</string>
-    <string name="book_detail_meta_pages">Páginas</string>
-    <string name="book_detail_meta_published">Publicado</string>
-    <string name="book_detail_meta_publisher">Editorial</string>
-    <string name="book_detail_meta_size">Tamaño</string>
-    <string name="book_detail_more_content_description">Más opciones</string>
-    <string name="book_detail_my_rating">Mi calificación</string>
-    <string name="book_detail_na">N/D</string>
-    <string name="book_detail_no_synopsis">Sin sinopsis disponible</string>
-    <string name="book_detail_pages_of">%1$d / %2$d páginas</string>
-    <string name="book_detail_progress_label">Progreso</string>
     <string name="book_detail_rating_star_full">%1$d estrellas</string>
     <string name="book_detail_rating_star_half">%1$.1f estrellas</string>
-    <string name="book_detail_rating_value">%1$.1f/5</string>
-    <string name="book_detail_share_content_description">Compartir libro</string>
-    <string name="book_detail_show_less">Ver menos</string>
-    <string name="book_detail_show_more_chevron">Ver más</string>
-    <string name="book_detail_start_reading">Empezar a leer</string>
-    <string name="book_detail_synopsis">Sinopsis</string>
     <string name="book_download">Descargar</string>
     <string name="book_downloading">Descargando…</string>
     <!-- Navigation errors -->
@@ -216,7 +194,6 @@
     <string name="edit_metadata_save_changes">Guardar cambios</string>
     <string name="edit_metadata_save_failed">No se pudieron guardar los cambios</string>
     <string name="edit_metadata_section_details">Detalles</string>
-    <string name="edit_metadata_tags">Etiquetas</string>
     <!-- Edit Metadata -->
     <string name="edit_metadata_title">Editar metadatos</string>
     <string name="error_auth">Error de autenticación. Iniciá sesión de nuevo.</string>
@@ -358,7 +335,6 @@
     <string name="legal_policy_sources_title">De dónde viene el catálogo</string>
     <string name="legal_policy_title">Aviso legal</string>
     <string name="legal_policy_updated_note">Este aviso puede cambiar a medida que se agreguen fuentes.</string>
-    <string name="library_author_unknown">Autor desconocido</string>
     <string name="library_count">%1$d disponibles</string>
     <string name="library_cover_content_description">Portada del libro</string>
     <string name="library_delete_confirm">Eliminar</string>
@@ -588,9 +564,6 @@
     <string name="notifications_title">Notificaciones</string>
     <string name="search_label">Buscar</string>
 
-
-
-
     <!-- Duplicated from :feature:reader: the reader settings sections and the
          screen files that stay in :app still resolve these. Identical text in
          both modules. -->
@@ -628,4 +601,9 @@
     <string name="reader_toc">Índice</string>
     <string name="theme_oled">OLED</string>
     <string name="vertical_scroll">Desplazamiento vertical</string>
+
+    <!-- Duplicated from :feature:bookdetail: :app still resolves these; text is identical. -->
+    <string name="book_detail_error_not_found">Libro no encontrado</string>
+    <string name="edit_metadata_tags">Etiquetas</string>
+    <string name="library_author_unknown">Autor desconocido</string>
 </resources>

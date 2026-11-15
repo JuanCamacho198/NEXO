@@ -27,10 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.R
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.icons.NexoIcons
 
@@ -51,11 +49,18 @@ fun GenreChips(
     onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
     modifier: Modifier = Modifier,
+    addLabel: String,
+    removeLabel: String,
+    confirmLabel: String,
+    dismissLabel: String,
 ) {
     EditableChipRow(
         items = genres,
         max = max,
-        addLabel = stringResource(R.string.edit_metadata_add_genre),
+        addLabel = addLabel,
+        removeLabel = removeLabel,
+        confirmLabel = confirmLabel,
+        dismissLabel = dismissLabel,
         showColorDot = true,
         onAdd = onAdd,
         onRemove = onRemove,
@@ -75,11 +80,18 @@ fun TagChips(
     onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
     modifier: Modifier = Modifier,
+    addLabel: String,
+    removeLabel: String,
+    confirmLabel: String,
+    dismissLabel: String,
 ) {
     EditableChipRow(
         items = tags,
         max = max,
-        addLabel = stringResource(R.string.edit_metadata_add_tag),
+        addLabel = addLabel,
+        removeLabel = removeLabel,
+        confirmLabel = confirmLabel,
+        dismissLabel = dismissLabel,
         showColorDot = false,
         onAdd = onAdd,
         onRemove = onRemove,
@@ -172,6 +184,9 @@ private fun EditableChipRow(
     items: List<String>,
     max: Int,
     addLabel: String,
+    removeLabel: String,
+    confirmLabel: String,
+    dismissLabel: String,
     showColorDot: Boolean,
     onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
@@ -179,7 +194,6 @@ private fun EditableChipRow(
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf("") }
-    val removeLabel = stringResource(R.string.edit_metadata_remove_chip)
 
     FlowRow(
         modifier = modifier,
@@ -265,12 +279,12 @@ private fun EditableChipRow(
                         showAddDialog = false
                     },
                 ) {
-                    Text(text = stringResource(R.string.edit_metadata_add))
+                    Text(text = confirmLabel)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) {
-                    Text(text = stringResource(R.string.action_cancel))
+                    Text(text = dismissLabel)
                 }
             },
         )
@@ -287,8 +301,8 @@ private fun MetadataChipsDarkPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            GenreChips(genres = listOf("Fiction", "Adventure", "Classics"), max = 5, onAdd = {}, onRemove = {})
-            TagChips(tags = listOf("favorites", "read-later"), max = 10, onAdd = {}, onRemove = {})
+            GenreChips(genres = listOf("Fiction", "Adventure", "Classics"), max = 5, onAdd = {}, onRemove = {}, addLabel = "Add genre", removeLabel = "Remove", confirmLabel = "Add", dismissLabel = "Cancel")
+            TagChips(tags = listOf("favorites", "read-later"), max = 10, onAdd = {}, onRemove = {}, addLabel = "Add tag", removeLabel = "Remove", confirmLabel = "Add", dismissLabel = "Cancel")
             GenreChipsDisplay(genres = listOf("Desarrollo personal", "Productividad"))
             TagChipsDisplay(tags = listOf("favorites"))
         }
@@ -303,8 +317,8 @@ private fun MetadataChipsLightPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            GenreChips(genres = listOf("Fiction", "Adventure"), max = 5, onAdd = {}, onRemove = {})
-            TagChips(tags = listOf("favorites"), max = 10, onAdd = {}, onRemove = {})
+            GenreChips(genres = listOf("Fiction", "Adventure"), max = 5, onAdd = {}, onRemove = {}, addLabel = "Add genre", removeLabel = "Remove", confirmLabel = "Add", dismissLabel = "Cancel")
+            TagChips(tags = listOf("favorites"), max = 10, onAdd = {}, onRemove = {}, addLabel = "Add tag", removeLabel = "Remove", confirmLabel = "Add", dismissLabel = "Cancel")
         }
     }
 }

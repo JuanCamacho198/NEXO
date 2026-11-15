@@ -53,7 +53,7 @@ fun SearchResultsList(
         results.forEach { book ->
             Surface(modifier = Modifier.fillMaxWidth().clickable { onBookSelected(book.id, book.filePath, book.format) }, shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) {
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CoverThumbnail(coverPath = book.coverPath, modifier = Modifier.width(40.dp).height(56.dp).clip(RoundedCornerShape(6.dp)))
+                    CoverThumbnail(coverPath = book.coverPath, contentDescription = stringResource(R.string.library_cover_content_description), modifier = Modifier.width(40.dp).height(56.dp).clip(RoundedCornerShape(6.dp)))
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(text = book.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)

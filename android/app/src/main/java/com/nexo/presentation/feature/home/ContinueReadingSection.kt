@@ -200,6 +200,7 @@ fun ContinueReadingCard(
         Row(horizontalArrangement = Arrangement.spacedBy(NexoDimens.spacingMd)) {
             CoverThumbnail(
                 coverPath = book.coverPath,
+                contentDescription = stringResource(R.string.library_cover_content_description),
                 modifier = Modifier.width(CoverWidth).height(CoverHeight).clip(RoundedCornerShape(CoverRadius)),
             )
             Column(modifier = Modifier.weight(1f)) {

@@ -22,7 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.nexo.R
+import com.nexo.feature.bookdetail.R
 import com.nexo.domain.model.Book
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.icons.NexoIcons

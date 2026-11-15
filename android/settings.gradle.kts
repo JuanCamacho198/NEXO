@@ -66,3 +66,17 @@ include(":feature:auth")
 // sections, and the screen-level hosts. ReaderViewModel stays in :app (it needs
 // com.nexo.R) and so do the screen entry points that bind it.
 include(":feature:reader")
+
+// SDD M8: book-detail feature module. Same rules as the other feature modules --
+// :core:* only, never :app -- and the same package policy, so :app imports of
+// com.nexo.presentation.feature.bookdetail and
+// com.nexo.presentation.viewmodel.BookDetailViewModel keep resolving.
+//
+// This is the last Android feature extraction. Unlike the reader, the ViewModel
+// cluster moves with the screens: BookDetailViewModel depends on :core:* alone
+// (LibraryRepository, ActiveUserProvider) and carries a plain
+// ViewModelProvider.Factory, so no :app Hilt type blocks it.
+//
+// `editmetadata` and `library` were evaluated and deliberately left in :app.
+// See feature/bookdetail/build.gradle.kts for the measurement.
+include(":feature:bookdetail")

@@ -13,11 +13,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import java.util.Locale
 import androidx.compose.ui.unit.dp
-import com.nexo.R
 import com.nexo.ui.theme.AccentYellow
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.icons.NexoIcons
@@ -84,6 +83,8 @@ fun StarRating(
     onRatingChanged: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier,
     size: Dp = 28.dp,
+    fullStarContentDescriptionFormat: String = "%1\$d stars",
+    halfStarContentDescriptionFormat: String = "%1\$.1f stars",
 ) {
     Row(
         modifier = modifier,
@@ -93,8 +94,8 @@ fun StarRating(
             val fill = starFillAt(rating, starIndex)
             val contentDescription =
                 when (fill) {
-                    StarFill.FULL -> stringResource(R.string.book_detail_rating_star_full, starIndex)
-                    StarFill.HALF -> stringResource(R.string.book_detail_rating_star_half, starIndex - 0.5f)
+                    StarFill.FULL -> String.format(Locale.getDefault(), fullStarContentDescriptionFormat, starIndex)
+                    StarFill.HALF -> String.format(Locale.getDefault(), halfStarContentDescriptionFormat, starIndex - 0.5f)
                     StarFill.EMPTY -> null
                 }
             val tapModifier =

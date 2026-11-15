@@ -95,7 +95,7 @@ private fun DownloadableBookCard(
 ) {
     Card(modifier = Modifier.width(140.dp), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
         Column {
-            Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))) { CoverThumbnail(coverPath = book.coverUrl, modifier = Modifier.matchParentSize()) }
+            Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))) { CoverThumbnail(coverPath = book.coverUrl, contentDescription = stringResource(R.string.library_cover_content_description), modifier = Modifier.matchParentSize()) }
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(text = book.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val author = book.author

@@ -90,6 +90,7 @@ fun BookshelfCard(
     ) {
         CoverThumbnail(
             coverPath = book.coverPath,
+            contentDescription = stringResource(R.string.library_cover_content_description),
             modifier =
                 Modifier
                     .width(BookshelfCardWidth)

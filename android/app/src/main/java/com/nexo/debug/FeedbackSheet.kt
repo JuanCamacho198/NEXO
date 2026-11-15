@@ -359,6 +359,7 @@ private fun FeedbackAutoContextCard(context: CrashContextViewModel) {
                 // the old shared brown rectangle claimed every book looked alike.
                 CoverThumbnail(
                     coverPath = context.coverPath,
+                    contentDescription = stringResource(R.string.library_cover_content_description),
                     modifier = Modifier.size(width = 44.dp, height = 60.dp),
                 )
             }

@@ -21,7 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.nexo.R
+import com.nexo.feature.bookdetail.R
 import com.nexo.domain.model.Book
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.components.atoms.CoverThumbnail
@@ -59,6 +59,7 @@ internal fun BookHeroSection(
         ) {
             CoverThumbnail(
                 coverPath = book.coverPath,
+                contentDescription = stringResource(R.string.library_cover_content_description),
                 modifier =
                     Modifier
                         .width(110.dp)
@@ -96,6 +97,8 @@ internal fun BookHeroSection(
                     StarRating(
                         rating = rating,
                         onRatingChanged = onRatingChanged,
+                        fullStarContentDescriptionFormat = stringResource(R.string.book_detail_rating_star_full),
+                        halfStarContentDescriptionFormat = stringResource(R.string.book_detail_rating_star_half),
                     )
                     if (rating != null) {
                         Surface(

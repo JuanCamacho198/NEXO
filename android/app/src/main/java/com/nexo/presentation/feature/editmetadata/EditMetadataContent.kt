@@ -138,6 +138,10 @@ internal fun EditMetadataContent(
             onAdd = onGenreAdd,
             onRemove = onGenreRemove,
             modifier = Modifier.fillMaxWidth(),
+            addLabel = stringResource(R.string.edit_metadata_add_genre),
+            removeLabel = stringResource(R.string.edit_metadata_remove_chip),
+            confirmLabel = stringResource(R.string.edit_metadata_add),
+            dismissLabel = stringResource(R.string.action_cancel),
         )
 
         SectionHeader(stringResource(R.string.edit_metadata_tags))
@@ -147,6 +151,10 @@ internal fun EditMetadataContent(
             onAdd = onTagAdd,
             onRemove = onTagRemove,
             modifier = Modifier.fillMaxWidth(),
+            addLabel = stringResource(R.string.edit_metadata_add_tag),
+            removeLabel = stringResource(R.string.edit_metadata_remove_chip),
+            confirmLabel = stringResource(R.string.edit_metadata_add),
+            dismissLabel = stringResource(R.string.action_cancel),
         )
 
         Spacer(modifier = Modifier.height(8.dp))

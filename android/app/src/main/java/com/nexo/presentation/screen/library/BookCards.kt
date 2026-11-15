@@ -68,6 +68,7 @@ fun BookListCard(
         Row(modifier = Modifier.padding(12.dp)) {
             CoverThumbnail(
                 coverPath = book.coverPath,
+                contentDescription = stringResource(R.string.library_cover_content_description),
                 modifier =
                     Modifier
                         .width(60.dp)
@@ -154,6 +155,7 @@ fun BookGridCard(
         Box {
             CoverThumbnail(
                 coverPath = book.coverPath,
+                contentDescription = stringResource(R.string.library_cover_content_description),
                 modifier =
                     Modifier
                         .fillMaxWidth()

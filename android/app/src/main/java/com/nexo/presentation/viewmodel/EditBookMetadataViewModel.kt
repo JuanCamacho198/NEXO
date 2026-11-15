@@ -11,6 +11,9 @@ import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.event.UiEvent
+import com.nexo.domain.metadata.parseChipList
+import com.nexo.domain.metadata.sanitizeChipList
+import com.nexo.domain.metadata.sanitizeChipValue
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -30,36 +33,10 @@ internal const val MAX_GENRES = 5
 internal const val MAX_TAGS = 10
 
 /**
- * Parses a comma-separated metadata field (genre/tags stored as TEXT, design D2)
- * into its individual values, trimmed and with blanks dropped.
- */
-internal fun parseChipList(value: String?): List<String> =
-    value
-        ?.split(',')
-        ?.map { it.trim() }
-        ?.filter { it.isNotEmpty() }
-        ?: emptyList()
-
-/**
- * Sanitizes a single user-entered chip value: strips embedded commas, trims,
- * and rejects values that become empty (REQ-data-model-8).
- */
-internal fun sanitizeChipValue(value: String): String? = value.replace(",", "").trim().takeIf { it.isNotEmpty() }
-
-/**
  * Sanitizes a whole chip list: strips commas, trims, dedupes case-insensitively,
  * and caps at [max] (REQ-data-model-8 — "input con coma se normaliza; duplicados
  * se colapsan"; UI limits 5 genres / 10 tags).
  */
-internal fun sanitizeChipList(
-    values: List<String>,
-    max: Int,
-): List<String> =
-    values
-        .mapNotNull { sanitizeChipValue(it) }
-        .distinctBy { it.lowercase() }
-        .take(max)
-
 /**
  * Form state for the full-screen edit-metadata editor (design A9ymv).
  *

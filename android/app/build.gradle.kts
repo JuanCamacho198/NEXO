@@ -470,6 +470,11 @@ dependencies {
     // changes. ReaderViewModel and the ViewModel-bound screen entry points
     // stay in this module.
     implementation(project(":feature:reader"))
+    // SDD M8: book-detail feature module. Keeps the
+    // com.nexo.presentation.feature.bookdetail and
+    // com.nexo.presentation.viewmodel packages, so no import here changes.
+    // BookDetailViewModel moves with it: it depends on :core:* alone.
+    implementation(project(":feature:bookdetail"))
 
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -605,11 +610,26 @@ dependencies {
 // The task name is kept because AGENTS.md and docs/ reference it.
 // ---------------------------------------------------------------------------
 
-// Scan scope: the UI layer plus the debug tooling that ships in debug builds.
+// Scan scope: the UI layer plus the debug tooling that ships in debug builds,
+// plus every extracted feature module's own sources. Without the feature roots
+// this gate silently stops looking at any code that moved out of :app — the
+// exact failure mode that made the original single-file scan check nothing.
+// Feature paths are repository-relative (see `featureScanRootDir` below).
 val hardcodedStringsScanRoots =
     listOf(
         "src/main/java/com/nexo/presentation",
         "src/main/java/com/nexo/debug",
+    )
+
+// Relative to the repository root, not this module.
+val hardcodedStringsFeatureScanRoots =
+    listOf(
+        "feature/settings/src/main/java",
+        "feature/discover/src/main/java",
+        "feature/highlights/src/main/java",
+        "feature/auth/src/main/java",
+        "feature/reader/src/main/java",
+        "feature/bookdetail/src/main/java",
     )
 
 // Resolve paths at configuration time (java.io.File is configuration-cache
@@ -624,6 +644,8 @@ tasks.register("verifyNoHardcodedStrings") {
 
     val projectDir = hardcodedStringsProjectDir
     val roots = hardcodedStringsScanRoots
+    val featureRoots = hardcodedStringsFeatureScanRoots
+    val rootDir = layout.projectDirectory.asFile.parentFile
     val baselineFile = hardcodedStringsBaselineFile.asFile
 
     doLast {
@@ -665,14 +687,19 @@ tasks.register("verifyNoHardcodedStrings") {
                 .replace(Regex("""//.*$""", RegexOption.MULTILINE), "")
 
         val findings = mutableListOf<Triple<String, Int, String>>()
-        roots.forEach { root ->
-            val base = projectDir.resolve(root)
+        // Each root is paired with the directory its reported path is relative
+        // to, so a feature finding reads `feature/bookdetail/...` while an :app
+        // finding keeps its historical `src/main/java/...` form the baseline uses.
+        val scannedBases =
+            roots.map { projectDir.resolve(it) to projectDir } +
+                featureRoots.map { rootDir.resolve(it) to rootDir }
+        scannedBases.forEach { (base, relativeBase) ->
             if (!base.exists()) return@forEach
             base
                 .walkTopDown()
                 .filter { it.isFile && it.extension == "kt" }
                 .forEach { file ->
-                    val relative = file.relativeTo(projectDir).path.replace('\\', '/')
+                    val relative = file.relativeTo(relativeBase).path.replace('\\', '/')
                     val source = stripKotlinComments(file.readText())
                     textLiteralPattern.findAll(source).forEach { match ->
                         val literal = match.groupValues[1]
@@ -747,6 +774,8 @@ tasks.register("updateHardcodedStringsBaseline") {
 
     val projectDir = hardcodedStringsProjectDir
     val roots = hardcodedStringsScanRoots
+    val featureRoots = hardcodedStringsFeatureScanRoots
+    val rootDir = layout.projectDirectory.asFile.parentFile
     val baselineFile = hardcodedStringsBaselineFile.asFile
 
     doLast {
@@ -772,14 +801,16 @@ tasks.register("updateHardcodedStringsBaseline") {
                 .replace(Regex("""//.*$""", RegexOption.MULTILINE), "")
 
         val entries = mutableListOf<String>()
-        roots.forEach { root ->
-            val base = projectDir.resolve(root)
+        val scannedBases =
+            roots.map { projectDir.resolve(it) to projectDir } +
+                featureRoots.map { rootDir.resolve(it) to rootDir }
+        scannedBases.forEach { (base, relativeBase) ->
             if (!base.exists()) return@forEach
             base
                 .walkTopDown()
                 .filter { it.isFile && it.extension == "kt" }
                 .forEach { file ->
-                    val relative = file.relativeTo(projectDir).path.replace('\\', '/')
+                    val relative = file.relativeTo(relativeBase).path.replace('\\', '/')
                     val source = stripKotlinComments(file.readText())
                     textLiteralPattern.findAll(source).forEach { match ->
                         val literal = match.groupValues[1]
@@ -818,6 +849,30 @@ tasks.register("verifyStringParity") {
     val defaultStrings = layout.projectDirectory.file("src/main/res/values/strings.xml")
     val spanishStrings = layout.projectDirectory.file("src/main/res/values-es/strings.xml")
 
+    // Extracted feature modules own their own string resources, so a parity
+    // check scoped to :app alone would silently pass while checking nothing for
+    // every key that moved out. Each module is verified independently: a key
+    // must exist in both of THAT module's locale files. Paths are relative to
+    // the repository root, matching `readerFeatureRoots` below.
+    val rootDir = layout.projectDirectory.asFile.parentFile
+    val featureStringModules =
+        listOf(
+            "feature/settings",
+            "feature/discover",
+            "feature/highlights",
+            "feature/auth",
+            "feature/reader",
+            "feature/bookdetail",
+        )
+    val featureStringPairs =
+        featureStringModules.map { module ->
+            module to
+                (
+                    rootDir.resolve("$module/src/main/res/values/strings.xml") to
+                        rootDir.resolve("$module/src/main/res/values-es/strings.xml")
+                )
+        }
+
     doLast {
         // Matches the declared resource name of <string>, <plurals> and
         // <string-array>. <item> children are intentionally excluded: their
@@ -855,6 +910,41 @@ tasks.register("verifyStringParity") {
                     }
                 },
             )
+        }
+
+        // Same parity contract, per extracted feature module. A module with no
+        // res/values directory simply owns no strings and is skipped; a module
+        // that owns one locale file but not the other is a hard error.
+        featureStringPairs.forEach { (module, pair) ->
+            val (enFile, esFile) = pair
+            if (!enFile.exists() && !esFile.exists()) return@forEach
+            if (!enFile.exists() || !esFile.exists()) {
+                throw GradleException(
+                    "$module declares one locale file but not the other.\n" +
+                        "  values:    ${enFile.path} (exists=${enFile.exists()})\n" +
+                        "  values-es: ${esFile.path} (exists=${esFile.exists()})\n",
+                )
+            }
+            val moduleEnglish = namesIn(enFile, "$module values/strings.xml")
+            val moduleSpanish = namesIn(esFile, "$module values-es/strings.xml")
+            val moduleMissingInSpanish = (moduleEnglish - moduleSpanish).sorted()
+            val moduleMissingInEnglish = (moduleSpanish - moduleEnglish).sorted()
+            if (moduleMissingInSpanish.isNotEmpty() || moduleMissingInEnglish.isNotEmpty()) {
+                throw GradleException(
+                    buildString {
+                        append("Locale string parity failed in $module.\n")
+                        if (moduleMissingInSpanish.isNotEmpty()) {
+                            append("Missing from values-es/strings.xml (${moduleMissingInSpanish.size}):\n")
+                            moduleMissingInSpanish.forEach { append("  - $it\n") }
+                        }
+                        if (moduleMissingInEnglish.isNotEmpty()) {
+                            append("Missing from values/strings.xml (${moduleMissingInEnglish.size}):\n")
+                            moduleMissingInEnglish.forEach { append("  - $it\n") }
+                        }
+                    },
+                )
+            }
+            logger.lifecycle("verifyStringParity: $module OK (${moduleEnglish.size} keys).")
         }
     }
 }

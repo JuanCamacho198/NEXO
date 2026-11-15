@@ -27,32 +27,10 @@
     <string name="book_card_options">Options</string>
     <string name="book_card_progress">Reading progress: %1$d percent</string>
     <string name="book_card_remove_from_library">Remove from library</string>
-    <string name="book_detail_chapter_x_of_y">Chapter %1$d of %2$d</string>
-    <string name="book_detail_continue_reading">Continue Reading</string>
     <!-- Book detail -->
-    <string name="book_detail_error_not_found">Book not found</string>
     <string name="book_detail_estimated_pages">\u2248%1$d</string>
-    <string name="book_detail_genres">Genres</string>
-    <string name="book_detail_meta_format">Format</string>
-    <string name="book_detail_meta_language">Language</string>
-    <string name="book_detail_meta_pages">Pages</string>
-    <string name="book_detail_meta_published">Published</string>
-    <string name="book_detail_meta_publisher">Publisher</string>
-    <string name="book_detail_meta_size">Size</string>
-    <string name="book_detail_more_content_description">More options</string>
-    <string name="book_detail_my_rating">My rating</string>
-    <string name="book_detail_na">N/A</string>
-    <string name="book_detail_no_synopsis">No synopsis available</string>
-    <string name="book_detail_pages_of">%1$d / %2$d pages</string>
-    <string name="book_detail_progress_label">Progress</string>
     <string name="book_detail_rating_star_full">%1$d stars</string>
     <string name="book_detail_rating_star_half">%1$.1f stars</string>
-    <string name="book_detail_rating_value">%1$.1f/5</string>
-    <string name="book_detail_share_content_description">Share book</string>
-    <string name="book_detail_show_less">Show less</string>
-    <string name="book_detail_show_more_chevron">Show more</string>
-    <string name="book_detail_start_reading">Start Reading</string>
-    <string name="book_detail_synopsis">Synopsis</string>
     <string name="book_download">Download</string>
     <string name="book_downloading">Downloading…</string>
     <!-- Navigation errors -->
@@ -218,7 +196,6 @@
     <string name="edit_metadata_save_changes">Save changes</string>
     <string name="edit_metadata_save_failed">Could not save changes</string>
     <string name="edit_metadata_section_details">Details</string>
-    <string name="edit_metadata_tags">Tags</string>
     <!-- Edit Metadata -->
     <string name="edit_metadata_title">Edit metadata</string>
     <string name="error_auth">Authentication error. Please sign in again.</string>
@@ -362,7 +339,6 @@
     <string name="legal_policy_sources_title">Where the catalog comes from</string>
     <string name="legal_policy_title">Legal notice</string>
     <string name="legal_policy_updated_note">This notice may change as new sources are added.</string>
-    <string name="library_author_unknown">Unknown author</string>
     <string name="library_count">%1$d available</string>
     <string name="library_cover_content_description">Book cover</string>
     <string name="library_delete_confirm">Delete</string>
@@ -592,9 +568,6 @@
     <string name="notifications_title">Notifications</string>
     <string name="search_label">Search</string>
 
-
-
-
     <!-- Duplicated from :feature:reader: the reader settings sections and the
          screen files that stay in :app still resolve these. Identical text in
          both modules. -->
@@ -632,4 +605,9 @@
     <string name="reader_toc">Table of contents</string>
     <string name="theme_oled">OLED</string>
     <string name="vertical_scroll">Vertical scroll</string>
+
+    <!-- Duplicated from :feature:bookdetail: :app still resolves these; text is identical. -->
+    <string name="book_detail_error_not_found">Book not found</string>
+    <string name="edit_metadata_tags">Tags</string>
+    <string name="library_author_unknown">Unknown author</string>
 </resources>
