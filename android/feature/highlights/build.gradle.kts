@@ -1,7 +1,5 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    id("nexo.android.library.compose")
 }
 
 // SDD M6: highlights feature module extracted from :app. This slice owns the
@@ -20,26 +18,6 @@ plugins {
 // report; those land in a follow-up slice once :core:ui is completed.
 android {
     namespace = "com.nexo.feature.highlights"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-        }
-    }
-
-    buildFeatures {
-        compose = true
-    }
 
     testOptions {
         unitTests {

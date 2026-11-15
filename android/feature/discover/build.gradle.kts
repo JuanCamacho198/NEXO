@@ -1,7 +1,5 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    id("nexo.android.library.compose")
 }
 
 // SDD M5: discover feature module extracted from :app. It owns the search/rails
@@ -19,26 +17,6 @@ plugins {
 // :app (or by another :app screen) stay in app/src/main/res.
 android {
     namespace = "com.nexo.feature.discover"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-        }
-    }
-
-    buildFeatures {
-        compose = true
-    }
 
     testOptions {
         unitTests {

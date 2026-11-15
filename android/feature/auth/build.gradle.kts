@@ -1,9 +1,7 @@
 import java.util.Properties
 
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    id("nexo.android.library.compose")
 }
 
 // SDD M6: auth feature module extracted from :app. It owns the entry-flow
@@ -44,29 +42,14 @@ fun String.escapeForBuildConfig(): String = replace("\\", "\\\\").replace("\"", 
 val googleOAuthClientId =
     (localProperties.getProperty("google.oauth.client.id") ?: "").escapeForBuildConfig()
 
-
 android {
     namespace = "com.nexo.feature.auth"
-    compileSdk = 36
 
     defaultConfig {
-        minSdk = 26
         buildConfigField("String", "GOOGLE_OAUTH_CLIENT_ID", "\"$googleOAuthClientId\"")
     }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-        }
-    }
-
     buildFeatures {
-        compose = true
         buildConfig = true
     }
 
@@ -82,7 +65,6 @@ dependencies {
     // safePainterResource. :core:ui exposes the Compose BOM, material3 and the
     // Compose UI bundle via api().
     api(project(":core:ui"))
-
 
     // AuthUiState / AuthFailureKind moved to com.nexo.domain.auth.
     api(project(":core:domain"))

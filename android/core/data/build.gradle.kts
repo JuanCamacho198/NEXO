@@ -1,8 +1,7 @@
 import java.util.Properties
 
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("nexo.android.library")
     // @Serializable on the DTOs lives in this module's bytecode, so the serialization
     // compiler plugin runs here — :app applying it does NOT cover this module.
     alias(libs.plugins.kotlin.serialization)
@@ -36,26 +35,12 @@ fun String.escapeForBuildConfig(): String = replace("\\", "\\\\").replace("\"", 
 // unchanged (com.nexo.data.*), so no consumer import changed.
 android {
     namespace = "com.nexo.data"
-    compileSdk = 36
 
     defaultConfig {
-        minSdk = 26
-
         val supabaseUrl = (localProperties.getProperty("SUPABASE_URL") ?: "").escapeForBuildConfig()
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         val supabaseAnonKey = (localProperties.getProperty("SUPABASE_ANON_KEY") ?: "").escapeForBuildConfig()
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-        }
     }
 
     // SupabaseClientProvider reads SUPABASE_URL / SUPABASE_ANON_KEY from this

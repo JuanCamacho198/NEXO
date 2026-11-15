@@ -1,7 +1,5 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    id("nexo.android.library.compose")
 }
 
 // SDD M4: shared design system extracted from :app so feature modules can own
@@ -18,26 +16,6 @@ plugins {
 // the caller (`:app` or a feature module) supplies `stringResource(...)`.
 android {
     namespace = "com.nexo.ui"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-        }
-    }
-
-    buildFeatures {
-        compose = true
-    }
 }
 
 dependencies {

@@ -1,6 +1,5 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("nexo.android.library")
 }
 
 // SDD M3: cross-cutting debug/telemetry instrumentation extracted from :app.
@@ -11,22 +10,6 @@ plugins {
 // and every call site stays byte-identical: only the Gradle module boundary moves.
 android {
     namespace = "com.nexo.debug"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-        }
-    }
 
     buildFeatures {
         buildConfig = true

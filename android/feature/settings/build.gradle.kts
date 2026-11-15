@@ -1,11 +1,8 @@
+import java.io.ByteArrayOutputStream
 import java.util.Properties
 
-import java.io.ByteArrayOutputStream
-
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    id("nexo.android.library.compose")
 }
 
 // SDD M4: feature module extracted from :app. It owns the settings screens, the
@@ -22,11 +19,8 @@ plugins {
 // :app stay in app/src/main/res.
 android {
     namespace = "com.nexo.feature.settings"
-    compileSdk = 36
 
     defaultConfig {
-        minSdk = 26
-
         // The About screen prints the app version and the git revision, so this
         // module carries its own BuildConfig instead of reaching into :app's.
         // The version mirrors `appVersionName` in :app; release-please keeps the
@@ -46,21 +40,9 @@ android {
         buildConfigField("String", "GOOGLE_OAUTH_ANDROID_CLIENT_ID", "\"$oauthClientId\"")
     }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-        }
-    }
-
     buildFeatures {
         // BuildConfig.DEBUG gates the debug-panel row in the settings list.
         buildConfig = true
-        compose = true
     }
 
     testOptions {

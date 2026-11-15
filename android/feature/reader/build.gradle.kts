@@ -1,7 +1,5 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    id("nexo.android.library.compose")
 }
 
 // SDD M7: reader feature module extracted from :app. It owns the Readium
@@ -46,26 +44,6 @@ plugins {
 // left off. Turn it on (never `com.nexo.BuildConfig`) if that changes.
 android {
     namespace = "com.nexo.feature.reader"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 26
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlin {
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-        }
-    }
-
-    buildFeatures {
-        compose = true
-    }
 
     testOptions {
         unitTests {
