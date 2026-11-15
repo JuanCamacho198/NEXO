@@ -38,9 +38,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexo.R
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.NexoTheme
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.atoms.NexoDivider

@@ -22,7 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Circular user avatar: either a Coil-loaded remote image, or a

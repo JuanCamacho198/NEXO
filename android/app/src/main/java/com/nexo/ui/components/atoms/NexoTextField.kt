@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Material 3 `OutlinedTextField` preconfigured with the NEXO color

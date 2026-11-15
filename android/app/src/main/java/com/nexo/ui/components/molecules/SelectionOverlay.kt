@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
 import com.nexo.presentation.screen.readium.ReadiumOverlaySpace
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.reader.DefinitionPanelState
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
 import com.nexo.presentation.viewmodel.reader.TranslationPanelState

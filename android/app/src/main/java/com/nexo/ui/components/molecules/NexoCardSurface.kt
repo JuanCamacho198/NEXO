@@ -14,9 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.NexoTheme
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 /**
  * The one card surface for NEXO.

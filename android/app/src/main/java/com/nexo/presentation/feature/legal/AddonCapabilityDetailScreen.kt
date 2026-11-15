@@ -29,7 +29,7 @@ import com.nexo.R
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.addons.InstalledAddonRow
 import com.nexo.presentation.feature.discover.AddonCapabilityBadges
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.icons.NexoIcons
 
 /** Builds the capability-detail route for [addonId] (registry ids are hex). */

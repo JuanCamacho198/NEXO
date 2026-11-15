@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
 import com.nexo.presentation.UiEvent
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.EditBookMetadataUiState
 import com.nexo.presentation.viewmodel.EditBookMetadataViewModel
 import com.nexo.ui.components.atoms.NexoButton

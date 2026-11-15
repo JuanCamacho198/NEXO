@@ -39,12 +39,12 @@ import androidx.compose.ui.unit.sp
 import com.nexo.R
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
-import com.nexo.data.remote.catalog.CatalogBook
+import com.nexo.domain.model.CatalogBook
 import com.nexo.data.remote.catalog.CatalogSources
 import com.nexo.domain.access.resolveAccess
 import com.nexo.domain.usecase.DownloadImportState
 import com.nexo.presentation.feature.library.formatFileSize
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.nexoColors
 import com.nexo.presentation.viewmodel.DiscoverDetailStatus
 import com.nexo.ui.components.atoms.NexoBookCover
 import com.nexo.ui.components.atoms.NexoButton

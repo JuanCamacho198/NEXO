@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.nexoColors
 
 /**
  * App-generic loading placeholder: a rounded `bg_surface` block with an

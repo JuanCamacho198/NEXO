@@ -6,6 +6,7 @@ import androidx.compose.ui.res.stringResource
 import com.nexo.R
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.presentation.viewmodel.DiscoverSourceFilter
+import com.nexo.domain.model.CatalogBook
 
 /**
  * Horizontal source-filter chips built from [sources] (provider order), with a

@@ -3,9 +3,9 @@ package com.nexo.presentation.feature.discover
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.nexo.data.remote.catalog.CatalogBook
-import com.nexo.data.remote.catalog.CatalogErrorCode
-import com.nexo.data.remote.catalog.CatalogException
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import com.nexo.data.remote.catalog.CatalogFeaturedSort
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.PagedResult

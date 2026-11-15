@@ -19,8 +19,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.presentation.theme.NexoTheme
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 /** Horizontal inset inside a chip. Matches the `.pen` chip specimen. */
 private val ChipHorizontalPadding = 14.dp

@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.data.remote.catalog.CatalogBook
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.domain.model.CatalogBook
+import com.nexo.ui.theme.nexoColors
 
 /** Rows from the end of the list that trigger the next-page prefetch. */
 private const val PREFETCH_THRESHOLD = 3

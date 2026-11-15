@@ -27,9 +27,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.nexo.data.remote.catalog.CatalogBook
+import com.nexo.domain.model.CatalogBook
 import com.nexo.debug.SentryMetrics
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.nexoColors
 
 /**
  * Remote cover with the shared letter-initial fallback used by the results grid,

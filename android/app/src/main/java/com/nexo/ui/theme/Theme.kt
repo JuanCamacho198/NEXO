@@ -1,4 +1,4 @@
-package com.nexo.presentation.theme
+package com.nexo.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

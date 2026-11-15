@@ -7,7 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import com.nexo.NexoApplication
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Host activity for the crash-feedback bottom sheet (PR4 / tasks 4.3-4.4).

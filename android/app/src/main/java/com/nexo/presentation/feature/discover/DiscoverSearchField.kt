@@ -19,7 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.icons.NexoIcons
 
 /**

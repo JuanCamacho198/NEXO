@@ -30,11 +30,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexo.R
-import com.nexo.data.remote.catalog.CatalogBook
-import com.nexo.data.remote.catalog.CatalogErrorCode
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogFeaturedSort
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoSkeletonBox
 import com.nexo.ui.components.molecules.NexoCardSurface
 

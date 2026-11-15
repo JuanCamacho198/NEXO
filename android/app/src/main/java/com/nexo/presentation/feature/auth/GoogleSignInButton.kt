@@ -38,7 +38,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingExcept
 import com.nexo.BuildConfig
 import com.nexo.R
 import com.nexo.presentation.screen.AuthTags
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.AuthUiState
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant

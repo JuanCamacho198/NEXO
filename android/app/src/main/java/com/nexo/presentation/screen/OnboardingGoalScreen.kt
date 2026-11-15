@@ -48,10 +48,10 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.nexo.R
-import com.nexo.presentation.theme.NexoColors
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.NexoTheme
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.NexoColors
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoDivider
 import com.nexo.ui.icons.NexoIcons

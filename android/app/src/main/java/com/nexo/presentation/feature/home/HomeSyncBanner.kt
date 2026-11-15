@@ -23,8 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.presentation.screen.HomeTags
-import com.nexo.presentation.theme.nexoColors
-import com.nexo.presentation.theme.NexoDimens
+import com.nexo.ui.theme.nexoColors
+import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.components.molecules.NexoCardSurface
 import com.nexo.ui.icons.NexoIcons
 

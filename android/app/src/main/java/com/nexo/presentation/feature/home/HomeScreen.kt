@@ -26,8 +26,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
 import com.nexo.domain.model.Book
 import com.nexo.presentation.screen.HomeTags
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.HomeUiState
 import com.nexo.presentation.viewmodel.HomeViewModel
 import com.nexo.ui.components.atoms.NexoEmptyState

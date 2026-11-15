@@ -22,7 +22,7 @@ import coil3.request.fallback
 import coil3.request.placeholder
 import com.nexo.R
 import com.nexo.debug.DebugLog
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Small cover thumbnail for the library grid. Loads from a local

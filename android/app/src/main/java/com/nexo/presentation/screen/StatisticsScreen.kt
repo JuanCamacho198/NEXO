@@ -44,8 +44,8 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.nexo.R
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.model.DailyReadingActivity
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.StatisticsUiState
 import com.nexo.presentation.viewmodel.StatisticsViewModel
 import com.nexo.ui.components.atoms.NexoEmptyState

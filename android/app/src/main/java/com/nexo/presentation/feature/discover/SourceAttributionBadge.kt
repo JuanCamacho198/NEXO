@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.sp
 import com.nexo.R
 import com.nexo.data.remote.catalog.BUILTIN_GOOGLEBOOKS
 import com.nexo.data.remote.catalog.CatalogSources
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.nexoColors
 
 /**
  * fs12 source attribution badge for catalog results.

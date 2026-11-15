@@ -39,7 +39,7 @@ import com.nexo.data.remote.drive.InMemoryDriveTokenStore
 import com.nexo.data.remote.drive.driveOAuthRedirectUri
 import com.nexo.data.remote.sync.CatalogSyncStatus
 import com.nexo.data.remote.sync.DriveColdBackupService
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.NexoPreferenceItem
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons

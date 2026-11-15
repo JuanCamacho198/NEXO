@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.nexo.BuildConfig
 import com.nexo.R
 import com.nexo.domain.update.UpdateErrorKind
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.UpdateUiState
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons

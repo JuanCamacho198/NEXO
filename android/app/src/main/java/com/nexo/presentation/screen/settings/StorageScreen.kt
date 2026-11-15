@@ -32,7 +32,7 @@ import com.nexo.R
 import com.nexo.domain.model.BookStorageItem
 import com.nexo.domain.model.CacheUsage
 import com.nexo.presentation.screen.library.RemoveBookDialog
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.util.formatFileSize
 import com.nexo.presentation.viewmodel.StorageUiState
 import com.nexo.ui.components.molecules.NexoSettingsSubPage

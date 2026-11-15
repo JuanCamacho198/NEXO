@@ -2,7 +2,7 @@ package com.nexo.presentation.feature.auth
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.AuthFailureKind
 import com.nexo.presentation.viewmodel.AuthUiState
 

@@ -21,7 +21,7 @@ import com.nexo.debug.SentryInitGuard
 import com.nexo.debug.SentryMetrics
 import com.nexo.debug.SentryPiiScrubber
 import com.nexo.debug.SentryPrivacyPrefs
-import com.nexo.presentation.theme.CoilModule
+import com.nexo.ui.theme.CoilModule
 import dagger.hilt.android.HiltAndroidApp
 import io.sentry.Sentry
 import io.sentry.SentryLevel

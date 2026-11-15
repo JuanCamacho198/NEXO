@@ -1,4 +1,4 @@
-package com.nexo.presentation.theme
+package com.nexo.ui.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -130,13 +130,13 @@ val darkNexoColors =
         backgroundPurpleTransparent = BgPurpleTransparent,
         accentBlue = AccentBlue,
         backgroundBlueTransparent = BgBlueTransparent,
-        navBarActive = com.nexo.presentation.theme.NavBarActive,
-        navBarInactive = com.nexo.presentation.theme.NavBarInactive,
-        navBarOverlay = com.nexo.presentation.theme.NavBarOverlay,
+        navBarActive = com.nexo.ui.theme.NavBarActive,
+        navBarInactive = com.nexo.ui.theme.NavBarInactive,
+        navBarOverlay = com.nexo.ui.theme.NavBarOverlay,
         outline = OutlineDark,
         errorSoft = ErrorSoft,
-        readingBackgroundLight = com.nexo.presentation.theme.ReadingBackgroundLight,
-        readingBackgroundDark = com.nexo.presentation.theme.ReadingBackgroundDark,
+        readingBackgroundLight = com.nexo.ui.theme.ReadingBackgroundLight,
+        readingBackgroundDark = com.nexo.ui.theme.ReadingBackgroundDark,
     )
 
 /**
@@ -178,8 +178,8 @@ val lightNexoColors =
         navBarOverlay = NavBarOverlayLight,
         outline = OutlineLight,
         errorSoft = ErrorSoftLight,
-        readingBackgroundLight = com.nexo.presentation.theme.ReadingBackgroundLight,
-        readingBackgroundDark = com.nexo.presentation.theme.ReadingBackgroundDark,
+        readingBackgroundLight = com.nexo.ui.theme.ReadingBackgroundLight,
+        readingBackgroundDark = com.nexo.ui.theme.ReadingBackgroundDark,
     )
 
 /** The active [NexoColors] for the current theme. Must be called from a composable inside [NexoTheme]. */

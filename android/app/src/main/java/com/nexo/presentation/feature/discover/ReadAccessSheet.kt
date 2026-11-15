@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.usecase.DownloadImportState
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.atoms.NexoDivider

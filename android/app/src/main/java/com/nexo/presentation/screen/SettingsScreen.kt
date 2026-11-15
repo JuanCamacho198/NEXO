@@ -51,7 +51,7 @@ import com.nexo.presentation.screen.settings.SettingsThemeScreen
 import com.nexo.presentation.screen.settings.SettingsTranslationScreen
 import com.nexo.presentation.screen.settings.StorageScreen
 import com.nexo.presentation.screen.settings.SyncScreen
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.StatisticsViewModel
 import com.nexo.presentation.viewmodel.UpdateViewModel
 import kotlinx.coroutines.launch

@@ -1,7 +1,7 @@
 package com.nexo.presentation.feature.discover
 
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
-import com.nexo.data.remote.catalog.CatalogBook
+import com.nexo.domain.model.CatalogBook
 import com.nexo.data.remote.catalog.addonSource
 import com.nexo.domain.access.resolveAccess
 import org.junit.Assert.assertEquals

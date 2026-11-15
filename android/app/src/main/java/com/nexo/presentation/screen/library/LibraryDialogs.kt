@@ -5,7 +5,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.nexo.R
 import com.nexo.domain.model.Book
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.atoms.NexoDialog
 import com.nexo.ui.components.atoms.NexoDialogVariant
 

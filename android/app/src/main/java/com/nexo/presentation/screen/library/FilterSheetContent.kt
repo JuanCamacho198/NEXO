@@ -2,7 +2,7 @@ package com.nexo.presentation.screen.library
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.FilterBottomSheet
 
 @Composable

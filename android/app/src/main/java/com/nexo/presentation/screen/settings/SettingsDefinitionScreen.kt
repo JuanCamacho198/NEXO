@@ -27,7 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.data.session.DefinitionPreferences
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.DEFINITION_LANGUAGE_OPTIONS
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.components.molecules.definitionLanguageName

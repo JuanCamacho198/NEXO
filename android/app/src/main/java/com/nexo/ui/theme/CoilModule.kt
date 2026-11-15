@@ -1,4 +1,4 @@
-package com.nexo.presentation.theme
+package com.nexo.ui.theme
 
 import android.content.Context
 import coil3.ImageLoader

@@ -32,8 +32,8 @@ import com.nexo.R
 import com.nexo.data.remote.catalog.CatalogSources
 import com.nexo.data.session.LegalDisclaimerPrefs
 import com.nexo.presentation.feature.legal.LegalNoticeDialog
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.nexoColors
 import com.nexo.presentation.viewmodel.DiscoverRailGroup
 import com.nexo.presentation.viewmodel.DiscoverSourceFilter
 import com.nexo.presentation.viewmodel.DiscoverStatus

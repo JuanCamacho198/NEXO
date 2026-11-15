@@ -40,7 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.ReadingProgress
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.BookDetailViewModel
 import com.nexo.presentation.viewmodel.parseChipList
 import com.nexo.ui.components.atoms.NexoButton

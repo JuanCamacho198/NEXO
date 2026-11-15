@@ -12,7 +12,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.atoms.NexoBookCover
 import com.nexo.ui.components.atoms.NexoProgressBar
 import com.nexo.ui.components.atoms.NexoTypography

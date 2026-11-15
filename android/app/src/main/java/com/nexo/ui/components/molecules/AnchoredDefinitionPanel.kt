@@ -41,7 +41,7 @@ import com.nexo.domain.definition.DefinitionItem
 import com.nexo.domain.definition.DefinitionResult
 import com.nexo.domain.definition.DefinitionSource
 import com.nexo.domain.definition.WIKTIONARY_ATTRIBUTION
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.reader.DefinitionPanelState
 import com.nexo.ui.icons.NexoIcons
 

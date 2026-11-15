@@ -34,7 +34,7 @@ import com.nexo.data.session.TranslationPreferences
 import com.nexo.domain.model.TranslationHistoryEntry
 import com.nexo.domain.repository.TranslationHistoryRepository
 import com.nexo.domain.translation.TranslationSettings
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
 import kotlinx.coroutines.launch

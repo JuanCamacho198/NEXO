@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.presentation.theme.nexoColors
+import com.nexo.ui.theme.nexoColors
 
 /**
  * Capability chips for an installed addon manifest (U5).

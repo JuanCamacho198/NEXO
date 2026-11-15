@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.ReadingProgress
-import com.nexo.presentation.theme.NexoDimens
+import com.nexo.ui.theme.NexoDimens
 import kotlin.math.roundToInt
 
 @Composable

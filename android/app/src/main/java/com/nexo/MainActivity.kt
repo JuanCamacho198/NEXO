@@ -29,7 +29,7 @@ import com.nexo.presentation.navigation.InstallDeepLinkParser
 import com.nexo.presentation.navigation.NexoNavHost
 import com.nexo.presentation.screen.readium.evictRestoredReadiumNavigatorFragments
 import com.nexo.presentation.screen.readium.installReadiumDummyFragmentFactories
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.AuthViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.jan.supabase.auth.handleDeeplinks

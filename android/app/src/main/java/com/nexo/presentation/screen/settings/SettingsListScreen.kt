@@ -36,8 +36,8 @@ import com.nexo.data.session.AppLanguagePreferences
 import com.nexo.debug.DebugPrefs
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.model.ThemeMode
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.atoms.NexoAvatar
 import com.nexo.ui.components.molecules.NexoHeader
 import com.nexo.ui.components.molecules.NexoPreferenceItem

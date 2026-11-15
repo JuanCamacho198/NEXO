@@ -28,7 +28,7 @@ import com.nexo.R
 import com.nexo.data.session.NotificationPreferencesStore
 import com.nexo.domain.notification.NotificationPreferences
 import com.nexo.domain.notification.QuietHoursSchedule
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 
 /**

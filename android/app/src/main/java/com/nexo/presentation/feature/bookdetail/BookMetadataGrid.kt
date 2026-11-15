@@ -24,7 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.model.Book
-import com.nexo.presentation.theme.NexoDimens
+import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.util.formatSizeMb
 import com.nexo.ui.util.getPagesDisplayText
