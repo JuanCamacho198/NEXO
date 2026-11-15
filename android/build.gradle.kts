@@ -1,5 +1,9 @@
 plugins {
     alias(libs.plugins.android.application) apply false
+    // SDD M3: `com.android.library` for the Android library modules extracted from
+    // :app (:core:debug, :core:data). Declared here (apply false) so its version
+    // resolves ONCE against the shared `agp` ref.
+    alias(libs.plugins.android.library) apply false
     // SDD android-stack-modernization S9: `com.android.test` for the macrobenchmark
     // module. Declared here (apply false) so its version resolves ONCE — the
     // `com.android.application` and `com.android.test` markers share a single AGP

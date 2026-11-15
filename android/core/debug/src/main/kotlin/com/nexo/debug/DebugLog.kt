@@ -1,7 +1,6 @@
 package com.nexo.debug
 
 import android.util.Log
-import com.nexo.BuildConfig
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import kotlinx.coroutines.CoroutineScope
@@ -84,8 +83,13 @@ object DebugLog {
         this.writer = writer
     }
 
-    /** Visible for testing — resets writer and scope to null. */
-    internal fun resetForTest() {
+    /**
+     * Visible for testing - resets writer and scope to null.
+     *
+     * Public (not `internal`) because the seam is exercised by :app's unit tests:
+     * Kotlin `internal` is module-scoped and this module is no longer :app.
+     */
+    fun resetForTest() {
         writer = null
         scope = null
         minLevel = if (BuildConfig.DEBUG) Level.DEBUG else Level.INFO

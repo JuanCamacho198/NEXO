@@ -1,6 +1,6 @@
 package com.nexo.data.remote.supabase
 
-import com.nexo.BuildConfig
+import com.nexo.data.BuildConfig
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient

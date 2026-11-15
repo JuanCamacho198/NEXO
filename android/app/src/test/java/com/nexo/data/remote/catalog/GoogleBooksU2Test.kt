@@ -9,6 +9,22 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
+import com.nexo.data.remote.catalog.AndroidAppIdentity
+import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
+import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
+import com.nexo.data.remote.catalog.CatalogHttpResponse
+import com.nexo.data.remote.catalog.CatalogHttpTransport
+import com.nexo.data.remote.catalog.CompositeCatalogProvider
+import com.nexo.data.remote.catalog.FakeCatalogHttpTransport
+import com.nexo.data.remote.catalog.GoogleBooksDataSource
+import com.nexo.data.remote.catalog.HEADER_ANDROID_CERT
+import com.nexo.data.remote.catalog.HEADER_ANDROID_PACKAGE
+import com.nexo.data.remote.catalog.OpenLibraryDoc
+import com.nexo.data.remote.catalog.androidAppIdentityOrNull
+import com.nexo.data.remote.catalog.googleBooksProviderOrNull
+import com.nexo.data.remote.catalog.gutenbergCoverUrl
+import com.nexo.data.remote.catalog.isOpenLibraryPublic
+import com.nexo.data.remote.catalog.mapOpenLibraryDoc
 import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.model.CatalogErrorCode
 import com.nexo.domain.model.CatalogException
@@ -201,8 +217,6 @@ class GoogleBooksU2Test {
         assertTrue(en.contains("Powered by Google"))
         assertTrue(es.contains("name=\"google_books_attribution\""))
         assertTrue(es.contains("Con tecnolog") || es.contains("tecnolog"))
-        assertTrue(en.contains("name=\"discover_google_books_disabled\""))
-        assertTrue(es.contains("name=\"discover_google_books_disabled\""))
     }
 
     @Test fun `network allowlist and key wiring present`() {
@@ -285,6 +299,8 @@ class GoogleBooksU2Test {
             resFile(
                 "src/main/java/com/nexo/data/remote/catalog/AndroidAppIdentity.kt",
                 "app/src/main/java/com/nexo/data/remote/catalog/AndroidAppIdentity.kt",
+                // SDD M3: the data layer moved to :core:data; same package, new module root.
+                "../core/data/src/main/kotlin/com/nexo/data/remote/catalog/AndroidAppIdentity.kt",
             ).readText()
         assertTrue(src.contains("androidAppIdentityOrNull"))
         assertTrue(src.contains("SHA-1"))

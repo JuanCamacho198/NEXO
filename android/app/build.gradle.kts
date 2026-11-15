@@ -445,6 +445,13 @@ dependencies {
     // own dependency set stays readable and independent of `api` propagation.
     implementation(project(":core:model"))
     implementation(project(":core:domain"))
+    // SDD M3: debug/telemetry instrumentation (com.nexo.debug). Extracted so that
+    // :core:data can log without depending on :app. The package is unchanged, so
+    // no import in this module changed.
+    implementation(project(":core:debug"))
+    // SDD M3: data layer (com.nexo.data.*). Package names are unchanged, so every
+    // existing import in this module resolves exactly as before.
+    implementation(project(":core:data"))
 
     implementation(composeBom)
     androidTestImplementation(composeBom)

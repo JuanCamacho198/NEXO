@@ -24,6 +24,14 @@ include(":app")
 // and file contents are unchanged; only the Gradle module boundary moved.
 include(":core:model")
 include(":core:domain")
+// SDD M3: cross-cutting debug/telemetry instrumentation (com.nexo.debug). It is an
+// Android library because it egresses through the Sentry Android SDK and reads
+// android.util.Log. Both :app and :core:data depend on it; :core:domain does not.
+include(":core:debug")
+// SDD M3: data layer extracted from :app (com.nexo.data.*). An Android library
+// because it uses Context, Room, OkHttp/Ktor, Supabase and Android file APIs.
+// Direction: core:data -> core:domain -> core:model; core:data -> core:debug.
+include(":core:data")
 // SDD android-stack-modernization S9: macrobenchmark test module. It is a
 // self-instrumenting `com.android.test` module targeting `:app` (see
 // benchmark/build.gradle.kts) and is NOT part of the normal build graph — every

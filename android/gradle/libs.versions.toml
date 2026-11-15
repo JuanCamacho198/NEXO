@@ -234,7 +234,10 @@ testing = ["testing-junit4", "testing-mockk", "testing-robolectric"]
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-# `com.android.test` — the self-instrumenting macrobenchmark module (S9).
+# `com.android.library` - Android library modules extracted from :app (M3).
+# Same `agp` version ref as android-application so the two can never drift.
+android-library = { id = "com.android.library", version.ref = "agp" }
+# `com.android.test` - the self-instrumenting macrobenchmark module (S9).
 android-test = { id = "com.android.test", version.ref = "agp" }
 # `androidx.baselineprofile` — applied as a CONSUMER on :app (generation + consumption
 # wiring) and as a PRODUCER on :benchmark (the device-side generator) in S11. One id,

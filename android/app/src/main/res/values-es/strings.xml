@@ -11,8 +11,6 @@
     <string name="auth_wiring_error_incomplete">Error de configuracion: la configuracion OAuth de Google esta incompleta. Verifica la configuracion OAuth. La lectura local sigue disponible.</string>
     <string name="auth_email_label">Correo electrónico</string>
     <string name="auth_password_label">Contraseña</string>
-    <string name="auth_sign_in">Iniciar sesión</string>
-    <string name="auth_sign_up">Registrarse</string>
     <string name="auth_continue_local_dev">Continuar en local (Dev)</string>
     <string name="auth_failure_config_error_with_details">Error de configuracion: %1$s. Continua en modo local hasta corregir la configuracion.</string>
     <string name="auth_failure_wiring_error_with_details">Error de conexion: %1$s. Continua en modo local mientras se corrige la conexion.</string>
@@ -34,11 +32,8 @@
     <string name="auth_forgot_title">Restablecer contraseña</string>
     <string name="auth_forgot_subtitle">Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.</string>
     <string name="auth_send_reset_email">Enviar correo de recuperación</string>
-    <string name="auth_reset_email_sent">Correo de recuperación enviado. Revisa tu bandeja de entrada.</string>
     <string name="auth_password_show">Mostrar contraseña</string>
     <string name="auth_password_hide">Ocultar contraseña</string>
-    <string name="auth_signup_stale_session">Este correo ya está registrado o la verificación está pendiente — revisa tu bandeja o inicia sesión</string>
-    <string name="auth_mock_google_button">Mock Google jcamachomolina503</string>
     <string name="auth_google_unexpected_credential">Tipo de credencial inesperado: %1$s</string>
     <string name="auth_google_no_credential">No hay ninguna cuenta de Google disponible en este dispositivo. Agrega una en los ajustes del dispositivo y vuelve a intentarlo.</string>
     <string name="auth_google_credential_interrupted">El inicio de sesión se interrumpió. Inténtalo de nuevo.</string>
@@ -53,20 +48,10 @@
     <string name="highlights_tab_ideas">Ideas</string>
     <string name="highlights_tab_passages">Pasajes</string>
     <string name="highlights_recent">Recientes</string>
-    <string name="highlights_summary_quotes">Citas</string>
-    <string name="highlights_summary_ideas">Ideas</string>
-    <string name="highlights_summary_passages">Pasajes</string>
-    <string name="highlights_summary_favorites">Favoritos</string>
-    <string name="highlights_quote_content">"El conocimiento es poder."</string>
-    <string name="highlights_quote_author">Francis Bacon</string>
-    <string name="highlights_idea_content">La consistencia diaria construye resultados.</string>
     <string name="settings_title">Ajustes</string>
     <string name="settings_subtitle">Personaliza tu experiencia en NEXO.</string>
     <string name="settings_account_section">Cuenta</string>
-    <string name="settings_preferences_section">Preferencias</string>
     <string name="settings_pref_theme">Tema</string>
-    <string name="settings_pref_font_size">Tamaño de fuente</string>
-    <string name="settings_pref_sync">Sincronización</string>
     <string name="settings_pref_about">Acerca de</string>
     <string name="settings_pref_notifications">Notificaciones</string>
     <string name="settings_user_default">Usuario</string>
@@ -76,23 +61,17 @@
     <string name="settings_logout_message">¿Estás seguro de que deseas cerrar sesión? Los datos no sincronizados podrían perderse.</string>
     <string name="settings_logout_confirm">Cerrar sesión</string>
     <string name="settings_lectura_section">Lectura</string>
-    <string name="settings_pref_reading_theme">Tema de lectura</string>
-    <string name="settings_pref_line_height">Interlineado</string>
     <string name="settings_apariencia_section">Apariencia</string>
     <string name="settings_pref_language">Idioma</string>
     <string name="settings_datos_section">Datos</string>
-    <string name="settings_pref_storage">Almacenamiento</string>
-    <string name="settings_pref_stats">Estadísticas</string>
     <string name="settings_info_section">Información</string>
     <string name="settings_language_title">Idioma</string>
     <string name="settings_language_spanish">Español</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_system">Seguir dispositivo</string>
-    <string name="home_welcome">Bienvenido de nuevo</string>
     <string name="home_greeting">Hola, %1$s</string>
     <string name="home_subtitle">¿Qué vas a leer hoy?</string>
     <string name="home_continue_reading">Continuar leyendo</string>
-    <string name="home_no_book_in_progress">Sin libro en progreso</string>
     <string name="home_continuar">Continuar</string>
     <string name="home_last_read_just_now">Última lectura: recién</string>
     <string name="home_last_read_hours_ago">Última lectura: hace %1$d h</string>
@@ -101,22 +80,12 @@
     <string name="home_progress_percent">%1$d%%</string>
     <string name="home_chapter_count">Capítulo %1$d</string>
     <string name="home_sessions">Sesiones</string>
-    <string name="home_progress">Progreso</string>
     <string name="home_minutes">Minutos</string>
-    <string name="home_minutes_read_today">%1$d minutos leídos hoy</string>
-    <string name="home_my_bookshelf">Mi estantería</string>
     <string name="home_my_bookshelf_title">Mi biblioteca</string>
-    <string name="home_view_all">Ver todo</string>
     <string name="home_ver_todo">Ver todo</string>
-    <string name="home_import_epub">Importar EPUB</string>
-    <string name="home_import_pdf">Importar PDF</string>
-    <string name="home_action_import_epub">Importar EPUB</string>
-    <string name="home_action_import_pdf">Importar PDF</string>
-    <string name="home_action_notes">Notas</string>
     <string name="home_no_current_book">Sin libro en curso</string>
     <string name="home_bookshelf_empty_title">Tu estanter\u00eda est\u00e1 vac\u00eda</string>
     <string name="home_bookshelf_empty_subtitle">Import\u00e1 un libro para empezar tu biblioteca.</string>
-    <string name="home_today_summary">Resumen de hoy</string>
     <string name="home_today_summary_title">Resumen de hoy</string>
     <string name="home_streak_days">d\u00edas</string>
     <!-- Onboarding goal -->
@@ -154,18 +123,13 @@
     <string name="nav_home">Inicio</string>
     <string name="nav_library">Estantería</string>
     <string name="nav_discover">Descubrir</string>
-    <string name="discover_search">Buscar</string>
     <string name="discover_search_hint">Buscar en el catálogo</string>
-    <string name="discover_idle">Busca en el catálogo para encontrar tu próxima lectura.</string>
     <string name="discover_empty">Sin resultados.</string>
     <string name="discover_end_of_results">· Fin de los resultados ·</string>
     <string name="discover_retry">Reintentar</string>
     <string name="discover_loading">Cargando…</string>
-    <string name="discover_loading_more">Cargando más…</string>
     <string name="discover_offline">Parece que estás sin conexión. Revisa tu red e inténtalo de nuevo.</string>
     <string name="discover_error_upstream">El catálogo no está disponible ahora. Inténtalo más tarde.</string>
-    <string name="discover_error_invalid_page">Solicitud de página no válida.</string>
-    <string name="discover_error_not_found">Sin resultados del catálogo para esta búsqueda.</string>
     <string name="discover_detail_not_found">Este título ya no está disponible en el catálogo.</string>
     <string name="discover_dismiss">Cerrar</string>
     <string name="discover_download">Descargar EPUB</string>
@@ -174,8 +138,6 @@
     <string name="discover_duplicate">Este libro ya está en tu biblioteca.</string>
     <string name="discover_download_failed">No pudimos descargar el libro. Intentá de nuevo.</string>
     <string name="discover_by_authors">por %1$s</string>
-    <string name="discover_languages">Idiomas: %1$s</string>
-    <string name="discover_subjects">Temas: %1$s</string>
     <!-- discover-screen U1: shell, states, connectivity -->
     <string name="discover_title">Descubrir</string>
     <string name="discover_subtitle">Catálogo Open Library + Gutendex</string>
@@ -200,19 +162,15 @@
     <string name="discover_source_filter_all">Todos</string>
     <string name="discover_source_addon_fallback">Complemento</string>
     <string name="discover_rail_from">De %1$s</string>
-    <string name="discover_manage_addons">Gestionar addons</string>
     <string name="settings_manage_addons">Gestionar addons (beta)</string>
     <string name="discover_idle_source_empty">No hay destacados de %1$s. Elegí otra fuente para ver las estanterías.</string>
     <!-- U2: atribución de Google Books + aviso de key ausente (voseo) -->
     <string name="google_books_attribution">Con tecnología de Google</string>
-    <string name="discover_google_books_disabled">Google Books está deshabilitado (falta la API key). Mostrando resultados de Open Library + Gutenberg.</string>
     <!-- U3: etiquetas de grupos de acceso (voseo) -->
     <string name="access_group_free">Gratis</string>
     <string name="access_group_buy">Comprar</string>
     <string name="access_group_subscribe">Suscripción</string>
     <string name="discover_back">Volver</string>
-    <string name="discover_rail_newest">Recién agregados al catálogo</string>
-    <string name="discover_rail_popular">Populares del catálogo</string>
     <string name="discover_rail_gutendex_popular">Clásicos más descargados</string>
     <string name="discover_rail_standard_ebooks">Standard Ebooks: novedades</string>
     <string name="discover_error_rate_limited">El catálogo está limitando las solicitudes. Inténtalo de nuevo en un momento.</string>
@@ -237,32 +195,21 @@
     <string name="discover_format_epub">EPUB</string>
     <string name="discover_format_html">HTML</string>
     <string name="discover_format_mobi">MOBI</string>
-    <string name="discover_format_pdf">PDF</string>
     <string name="discover_format_txt">TXT</string>
     <string name="discover_detail_external_gutenberg">Ver en Project Gutenberg</string>
     <string name="discover_detail_external_openlibrary">Ver en Open Library</string>
     <string name="nav_highlights">Resaltados</string>
     <string name="nav_settings">Ajustes</string>
     <string name="nav_book_detail">Detalle del libro</string>
-    <string name="book_detail_loading">Cargando...</string>
     <string name="book_detail_error_not_found">Libro no encontrado</string>
     <string name="book_detail_synopsis">Sinopsis</string>
-    <string name="book_detail_show_more">Ver más</string>
     <string name="book_detail_show_less">Ver menos</string>
     <string name="book_detail_no_synopsis">Sin sinopsis disponible</string>
-    <string name="book_detail_pages_label">Páginas</string>
-    <string name="book_detail_chapters_label">Capítulos</string>
     <string name="book_detail_progress_label">Progreso</string>
-    <string name="book_detail_last_read_label">Última lectura</string>
     <string name="book_detail_na">N/D</string>
     <string name="book_detail_estimated_pages">≈%1$d</string>
     <string name="book_detail_continue_reading">Continuar leyendo</string>
     <string name="book_detail_start_reading">Empezar a leer</string>
-    <string name="book_detail_page_x_of_y">Página %1$d / %2$d</string>
-    <string name="book_detail_page_x">Página %1$d</string>
-    <string name="book_detail_progress_percent">%1$d%% completado</string>
-    <string name="book_detail_no_pages">-- / --</string>
-    <string name="book_detail_rating_content_description">Calificar %1$d estrella(s)</string>
     <string name="book_detail_my_rating">Mi calificación</string>
     <string name="book_detail_rating_value">%1$.1f/5</string>
     <string name="book_detail_meta_format">Formato</string>
@@ -291,18 +238,9 @@
 
     <!-- Library / Bookshelf - New Pencil design -->
     <string name="library_empty">Todavía no hay libros locales.</string>
-    <string name="library_import_epub">Importar EPUB</string>
-    <string name="library_import_pdf">Importar PDF</string>
     <string name="library_import_success">Se importó "%1$s"</string>
     <string name="library_import_failure">Error al importar: %1$s</string>
-    <string name="library_open">Abrir</string>
     <string name="library_author_unknown">Autor desconocido</string>
-    <string name="library_last_updated">Actualizado: %1$s</string>
-    <string name="library_cover_placeholder">Sin portada</string>
-    <string name="library_layout_list">Lista</string>
-    <string name="library_layout_grid">Cuadrícula</string>
-    <string name="library_total_minutes_read">Total leído: %1$d minutos</string>
-    <string name="library_item_minutes_read">Leído: %1$d minutos</string>
     <string name="library_delete_title">Eliminar libro</string>
     <string name="library_delete_message">¿Estás seguro de eliminar &quot;%1$s&quot;?</string>
     <string name="library_delete_confirm">Eliminar</string>
@@ -317,10 +255,8 @@
     <string name="library_sort_title">Título</string>
     <string name="library_sort_author">Autor</string>
     <string name="library_sort_last_read">Última lectura</string>
-    <string name="library_add_book">Añadir libro</string>
     <string name="library_import_book">Importar libro</string>
     <string name="library_import_formats">Formatos soportados: EPUB, PDF</string>
-    <string name="library_import_unsupported">Formato no soportado. Solo se permiten archivos EPUB y PDF.</string>
     <string name="library_status_in_progress">%1$d min</string>
     <string name="library_status_completed">Completado</string>
     <string name="library_filter_format_label">Formato</string>
@@ -328,24 +264,11 @@
     <string name="library_search_no_results">Sin resultados</string>
     <string name="library_search_empty_subtitle">Prob\u00e1 con otro t\u00e9rmino de b\u00fasqueda.</string>
 
-    <!-- Bookmarks -->
-    <string name="bookmarks_tab">Marcadores (%1$d)</string>
-    <string name="bookmarks_empty">Aún no hay marcadores</string>
-    <string name="bookmark_location">Ubicación: %1$s</string>
 
-    <!-- PDF -->
-    <string name="pdf_page_description">Página %1$d de %2$d</string>
-    <string name="pdf_loading">Cargando PDF...</string>
 
     <!-- Notifications -->
     <string name="notifications_title">Notificaciones</string>
     <string name="notifications_empty">No tenés notificaciones aún</string>
-    <string name="notifications_mock_welcome_title">¡Bienvenido a NEXO!</string>
-    <string name="notifications_mock_welcome_body">Empezá a leer tu primer libro.</string>
-    <string name="notifications_mock_streak_title">Meta de lectura</string>
-    <string name="notifications_mock_streak_body">Completaste 3 días de lectura consecutiva. ¡Seguí así!</string>
-    <string name="notifications_mock_library_title">Nuevo libro disponible</string>
-    <string name="notifications_mock_library_body">Explorá los libros en tu estantería.</string>
     <string name="notifications_badge_content_description">Notificaciones sin leer</string>
 
     <!-- Mensajes de eventos de notificación (se renderizan desde la clave i18n almacenada) -->
@@ -377,51 +300,23 @@
     <string name="notifications_group_count">%1$d</string>
 
     <!-- Reader / Sleep Timer -->
-    <string name="reader_sleep_timer">Temporizador</string>
     <string name="reader_sleep_timer_end_of_chapter">Fin de capítulo</string>
     <string name="reader_sleep_timer_end_of_chapter_desc">Detiene al cambiar de capítulo</string>
-    <string name="reader_sleep_timer_finished_chapter_title">Fin del capítulo</string>
-    <string name="reader_sleep_timer_finished_chapter_body">Llegaste al final del capítulo.</string>
-    <string name="reader_sleep_timer_start">Iniciar temporizador</string>
-    <string name="reader_sleep_timer_5min">5 min</string>
-    <string name="reader_sleep_timer_10min">10 min</string>
-    <string name="reader_sleep_timer_15min">15 min</string>
-    <string name="reader_sleep_timer_30min">30 min</string>
     <string name="reader_sleep_timer_cancel">Cancelar temporizador</string>
     <string name="reader_sleep_timer_sheet_title">Temporizador de lectura</string>
     <string name="reader_sleep_timer_remaining_label">Tiempo restante:</string>
     <string name="reader_sleep_timer_change_duration">Cambiar duración</string>
     <string name="reader_sleep_timer_choose_duration">Elegí una duración</string>
     <string name="reader_sleep_timer_finished_title">¡Se acabó el tiempo!</string>
-    <string name="reader_sleep_timer_finished_message">Tu tiempo de lectura terminó.</string>
     <string name="reader_sleep_timer_tap_to_dismiss">Toca cualquier lugar para seguir leyendo</string>
 
-    <!-- Reader -->
-    <string name="reader_placeholder">El motor de renderizado del lector estará disponible próximamente.</string>
-    <string name="reader_selected_book">Libro: %1$s</string>
-    <string name="reader_no_progress">Aún no hay progreso local para este libro.</string>
-    <string name="reader_progress_cfi">CFI: %1$s</string>
-    <string name="reader_progress_percent">Progreso: %1$.1f%%</string>
-    <string name="reader_mark_quarter">Marcar 25%%</string>
-    <string name="reader_mark_three_quarter">Marcar 75%%</string>
 
     <!-- Reader / Settings Sheet -->
-    <string name="reader_settings_sheet_title">Ajustes de lectura</string>
     <string name="reader_settings_close">Cerrar</string>
-    <string name="reader_settings_font_size_section">Tamaño de fuente</string>
     <string name="reader_settings_theme_section">Tema de fondo</string>
-    <string name="reader_settings_line_height_section">Interlineado</string>
-    <string name="reader_font_size_small">Chico</string>
-    <string name="reader_font_size_medium">Mediano</string>
-    <string name="reader_font_size_large">Grande</string>
-    <string name="reader_font_size_xlarge">Muy grande</string>
     <string name="reader_theme_dark">Oscuro</string>
     <string name="reader_theme_sepia">Sepia</string>
     <string name="reader_theme_light">Claro</string>
-    <string name="reader_line_height_tight">Apretado</string>
-    <string name="reader_line_height_normal">Normal</string>
-    <string name="reader_line_height_comfortable">Cómodo</string>
-    <string name="reader_line_height_wide">Amplio</string>
     <string name="reader_progress_empty">-- / --</string>
 
     <!-- Reader / Search -->
@@ -429,7 +324,6 @@
     <string name="search_clear">Limpiar búsqueda</string>
     <string name="search_results_count">Resultados (%1$d)</string>
     <string name="search_no_results">Sin resultados</string>
-    <string name="search_error_retry">Error al buscar. Intentá de nuevo.</string>
     <string name="search_result_chapter">Capítulo %1$d</string>
     <string name="search_label">Buscar</string>
 
@@ -508,11 +402,8 @@
     <string name="settings_translation_history_title">Historial</string>
     <string name="settings_translation_history_empty">Todavía no hay traducciones.</string>
     <string name="settings_translation_history_clear">Borrar historial</string>
-    <string name="settings_translation_history_cleared">Historial borrado.</string>
     <string name="context_menu_color">Color</string>
     <string name="context_menu_tag">Etiqueta</string>
-    <string name="context_menu_note">Nota</string>
-    <string name="context_menu_comment">Comentario</string>
     <string name="context_menu_share">Compartir</string>
     <string name="context_menu_delete">Eliminar</string>
     <string name="context_menu_annotate">Anotar</string>
@@ -525,9 +416,6 @@
     <string name="annotation_textarea_comment_hint">Escribí tu comentario…</string>
     <string name="annotation_snippet_label">Texto seleccionado</string>
     <string name="annotation_modal_close">Cerrar</string>
-    <string name="tag_dialog_title">Etiqueta</string>
-    <string name="tag_dialog_label">Etiqueta</string>
-    <string name="share_no_text">No hay texto seleccionado</string>
     <string name="palette_section_title">Paleta de colores</string>
     <string name="palette_section_subtitle">Personalizá los 5 colores de resaltado</string>
     <string name="palette_reset">Restablecer valores predeterminados</string>
@@ -543,10 +431,6 @@
     <string name="aa_section_direction">Dirección</string>
     <string name="aa_section_audio">Audio</string>
     <string name="aa_close_settings">Cerrar</string>
-    <string name="aa_justification_left">Izquierda</string>
-    <string name="aa_justification_center">Centrar</string>
-    <string name="aa_justification_right">Derecha</string>
-    <string name="aa_justification_justify">Justificar</string>
     <string name="aa_margin_left">Margen izquierdo</string>
     <string name="aa_margin_right">Margen derecho</string>
     <string name="aa_direction_ltr">Izquierda a derecha</string>
@@ -555,17 +439,13 @@
     <string name="font_name_arial">Arial</string>
     <string name="font_name_merriweather">Merriweather</string>
     <string name="theme_oled">OLED</string>
-    <string name="scroll_mode_vertical">Vertical</string>
-    <string name="scroll_mode_paginated">Paginado</string>
     <string name="editor_values">Valores del editor</string>
     <string name="vertical_scroll">Desplazamiento vertical</string>
     <string name="reader_rotate_screen">Rotar pantalla</string>
 
     <!-- Reader / Header -->
     <string name="reader_back">Volver</string>
-    <string name="reader_author_placeholder">Autor</string>
     <string name="reader_toc">Índice</string>
-    <string name="reader_bookmark">Marcador</string>
     <string name="reader_typography">Tipografía</string>
     <string name="reader_chapters_title">Capítulos</string>
     <string name="reader_chapter_fallback">Capítulo %1$d</string>
@@ -608,8 +488,6 @@
     <string name="debug_chip_label">DEBUG</string>
     <string name="debug_kv_selected_text">texto seleccionado</string>
     <string name="debug_kv_selection_rect">rect de selección</string>
-    <string name="debug_kv_show_color_picker">mostrar color picker</string>
-    <string name="debug_kv_show_context_menu">mostrar menú</string>
     <string name="debug_kv_active_highlight_id">id resaltado activo</string>
     <string name="debug_kv_debounce_remaining_ms">debounce (ms)</string>
     <string name="debug_kv_am_installed">instalado</string>
@@ -620,7 +498,6 @@
     <string name="debug_kv_hl_last_id">último id</string>
     <string name="debug_kv_hl_last_rect">último rect</string>
     <string name="debug_kv_hl_activations">activaciones</string>
-    <string name="debug_no_highlights">No hay resaltados para simular</string>
     <string name="debug_log_copied">Registro copiado al portapapeles</string>
 
     <!-- Debug: notificación de crash + detalle -->
@@ -643,8 +520,6 @@
     <string name="debug_log_viewer_share">Compartir</string>
     <string name="debug_log_viewer_no_crashes">No hay crashes registrados</string>
     <string name="debug_log_viewer_no_logs">Todavía no hay registros</string>
-    <string name="debug_log_viewer_crash_timestamp">Fecha y hora</string>
-    <string name="debug_log_viewer_crash_message">Mensaje</string>
     <string name="debug_log_viewer_crash_stack">Stack Trace</string>
     <string name="debug_log_viewer_crash_logs">Registros al crash</string>
     <string name="debug_log_viewer_crash_thread">Thread: %1$s</string>
@@ -668,9 +543,6 @@
 
     <!-- Navegación y nuevas keys -->
     <string name="tab_auth">Acceso</string>
-    <string name="tab_highlights">Resaltados</string>
-    <string name="tab_settings">Ajustes</string>
-    <string name="tab_statistics">Estadísticas</string>
     <string name="nav_statistics">Estadísticas</string>
     <string name="nav_back">Volver</string>
     <string name="home_close_search">Cerrar búsqueda</string>
@@ -679,7 +551,6 @@
     <string name="library_view_list">Vista de lista</string>
 
     <!-- Home empty / first session -->
-    <string name="home_brand_tagline">Tus libros, siempre contigo</string>
     <string name="home_hero_title">Descubre nuevas historias</string>
     <string name="home_hero_subtitle">Empieza tu primera lectura</string>
     <string name="home_hero_cta">Explorar</string>
@@ -711,36 +582,25 @@
     <string name="sync_status_syncing">Sincronizando\u2026</string>
     <string name="sync_status_error">Error de sinc.</string>
     <string name="sync_status_authorization_needed">Autorizaci\u00f3n requerida</string>
-    <string name="sync_pending_badge">%1$d elementos pendientes</string>
-    <string name="debug_supabase_sync_title">Sinc. Supabase</string>
-    <string name="debug_supabase_state">Estado</string>
-    <string name="debug_supabase_gated_reason">Motivo bloqueado</string>
-    <string name="debug_supabase_pending_count">Pendientes</string>
 
     <!-- Highlights filtros -->
     <string name="highlights_search">Buscar resaltados</string>
     <string name="highlights_empty">A\u00fan no hay resaltados</string>
     <string name="highlights_empty_subtitle">Guard\u00e1 pasajes, ideas y citas mientras le\u00e9s.</string>
     <string name="highlights_filter_book">Filtrar por libro</string>
-    <string name="highlights_filter_color">Filtrar por color</string>
     <string name="highlights_filter_tag">Filtrar por etiqueta</string>
     <string name="highlights_filter_all_books">Todos los libros</string>
-    <string name="highlights_filter_all_colors">Todos los colores</string>
     <string name="highlights_filter_all_tags">Todas las etiquetas</string>
-    <string name="highlights_clear_filters">Borrar filtros</string>
-    <string name="highlight_location">Ubicación: %1$s</string>
     <string name="highlight_pdf_page">Página %1$d</string>
     <string name="highlight_reading_progress">%1$d%% del libro</string>
 
     <!-- Daily goal (onboarding + settings) -->
     <string name="settings_daily_goal_title">Meta diaria</string>
-    <string name="settings_daily_goal_subtitle">Tiempo de lectura por día</string>
 
     <!-- Settings -->
     <string name="settings_theme_light">Claro</string>
     <string name="settings_theme_dark">Oscuro</string>
     <string name="settings_theme_system">Predeterminado del sistema</string>
-    <string name="settings_palette">Paleta de colores</string>
     <string name="settings_account_title">Cuenta</string>
     <string name="settings_data_storage_title">Datos y almacenamiento</string>
     <string name="settings_notifications_title">Notificaciones</string>
@@ -764,15 +624,9 @@
     <string name="settings_devices_remove">Cerrar sesión</string>
     <string name="settings_devices_remove_confirm">¿Cerrar sesión en %1$s?</string>
     <string name="settings_devices_count">%1$d dispositivos conectados</string>
-    <string name="settings_devices_loading">Cargando dispositivos...</string>
-    <string name="settings_provider_google">Google</string>
-    <string name="settings_provider_email">Correo electrónico</string>
-    <string name="settings_provider_anonymous">Anónimo</string>
-    <string name="settings_member_since">Miembro desde %1$s</string>
     <string name="settings_drive_section">Google Drive</string>
     <string name="settings_drive_description">Sincroniza libros entre dispositivos usando Google Drive</string>
     <string name="settings_drive_authorize">Autorizar Google Drive</string>
-    <string name="settings_drive_connected">Conectado como %1$s</string>
     <string name="settings_drive_disconnect">Desconectar</string>
     <string name="settings_drive_authorizing">Autorizando…</string>
     <string name="settings_drive_error_oauth">Error al autorizar Google Drive</string>
@@ -812,11 +666,8 @@
     <string name="statistics_favorite_genres">Géneros favoritos</string>
     <string name="statistics_no_genres">Aún no hay datos de géneros</string>
     <string name="statistics_no_genres_subtitle">Agregá resaltados y notas para ver qué leés más.</string>
-    <string name="statistics_empty_title">Aún no hay datos de lectura</string>
-    <string name="statistics_empty_subtitle">Empezá a leer para ver tus estadísticas.</string>
     <string name="reader_cancel">Cancelar</string>
     <string name="reader_save">Guardar</string>
-    <string name="reader_title">Lector</string>
     <string name="reader_add_bookmark">Añadir marcador</string>
     <string name="reader_go_to_page">Ir a página</string>
     <string name="reader_go_to_page_input_label">Número de página</string>
@@ -841,7 +692,6 @@
     <string name="highlights_snackbar_color_changed">Color cambiado</string>
     <string name="highlights_snackbar_tag_saved">Etiqueta guardada</string>
     <string name="highlights_tag_dialog_hint">Ingresá nombre de etiqueta</string>
-    <string name="highlights_color_filter_todos">Todas</string>
     <string name="highlights_syncing">Sincronizando…</string>
     <string name="highlights_synced">Sincronizado</string>
     <string name="highlights_refresh_content_description">Actualizar resaltados</string>
@@ -885,8 +735,6 @@
          diccionario (sin texto). Separada de `context_menu_dictionary` para que
          la etiqueta larga no pueda convertirse en el selector por accidente. -->
     <string name="context_menu_dictionary_action">Diccionario</string>
-    <string name="reader_add_to_dictionary">Agregado al diccionario</string>
-    <string name="reader_already_in_dictionary">Ya está en el diccionario</string>
 
     <!-- Library Context Menu -->
     <string name="library_menu_mark_completed">Marcar como leído</string>
@@ -898,10 +746,8 @@
     <string name="edit_metadata_field_title">Título</string>
     <string name="edit_metadata_field_author">Autor</string>
     <string name="edit_metadata_field_synopsis">Sinopsis</string>
-    <string name="edit_metadata_field_cover">Portada</string>
     <string name="edit_metadata_change_cover">Cambiar portada</string>
     <string name="library_cover_content_description">Portada del libro</string>
-    <string name="edit_metadata_save">Guardar</string>
     <string name="edit_metadata_section_details">Detalles</string>
     <string name="edit_metadata_field_date">Fecha de publicación</string>
     <string name="edit_metadata_field_language">Idioma</string>
@@ -944,15 +790,9 @@
     <string name="cloud_books_loading">Cargando libros de la nube…</string>
     <string name="book_download">Descargar</string>
     <string name="book_downloading">Descargando…</string>
-    <string name="book_download_error">No se pudo descargar el libro. Verificá tu conexión e intentá de nuevo.</string>
-    <string name="book_download_source_android">Desde Android</string>
-    <string name="book_download_source_desktop">Desde Desktop</string>
-    <string name="book_download_source_unknown">Desde otro dispositivo</string>
     <string name="download_confirm_title">¿Descargar libro?</string>
     <string name="download_confirm_body">Se descargará "%1$s" de %2$s.</string>
     <string name="download_confirm_body_no_author">Se descargará "%1$s".</string>
-    <string name="book_empty_downloadable">No hay libros disponibles desde otros dispositivos</string>
-    <string name="action_dismiss">Descartar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="library_count">%1$d disponibles</string>
 
@@ -982,8 +822,6 @@
     <string name="storage_loading">Calculando…</string>
     <string name="storage_action_delete">Borrar</string>
     <string name="storage_action_sweep">Eliminar archivos huérfanos</string>
-    <string name="storage_action_clear_all">Limpiar todo</string>
-    <string name="storage_cleared">Almacenamiento limpiado</string>
 
     <!-- Sincronización (Ajustes → Sincronización) -->
     <string name="settings_sync_title">Sincronización</string>
@@ -1058,7 +896,6 @@
     <string name="feedback_mobile_context_chapter_page">%1$s · página %2$d</string>
     <string name="feedback_mobile_context_page_only">página %1$d</string>
     <string name="feedback_mobile_context_chapter_only">%1$s</string>
-    <string name="feedback_mobile_input_label">¿Qué estabas haciendo cuando se cerró?</string>
     <string name="feedback_mobile_helper">Opcional · nos ayuda muchísimo</string>
     <string name="feedback_mobile_privacy">Solo se envía este reporte, nada de tu biblioteca.</string>
     <string name="feedback_mobile_close">Cerrar</string>
@@ -1074,8 +911,6 @@
     <string name="settings_addons_url_placeholder">https://ejemplo.com/manifest.json</string>
     <string name="settings_addons_install">Instalar</string>
     <string name="settings_addons_installing">Instalando…</string>
-    <string name="settings_addons_installed_toast">Complemento instalado</string>
-    <string name="settings_addons_install_failed">Error al instalar el complemento</string>
     <string name="settings_addons_empty">No hay complementos instalados</string>
     <string name="settings_addons_enable">Activar</string>
     <string name="settings_addons_disable">Desactivar</string>
@@ -1094,7 +929,6 @@
     <string name="performance_no_data">Sin datos aún</string>
     <string name="performance_no_data_hint">Este flujo aún no tiene instrumento: los datos aparecen al usarlo en esta sesión.</string>
     <string name="settings_privacy_title">Privacidad y telemetría</string>
-    <string name="settings_privacy_summary">Qué recopilamos y qué nunca recopilamos</string>
     <string name="settings_privacy_collected">Recopilamos: informes de fallos, tiempos de rendimiento agrupados y versión/plataforma de la app (vía Sentry).</string>
     <string name="settings_privacy_never">Nunca recopilamos: contenido de libros, títulos, resaltados ni tus búsquedas.</string>
     <string name="settings_privacy_toggle_label">Enviar telemetría</string>
@@ -1104,7 +938,6 @@
     <string name="read_access_title">Dónde leerlo</string>
     <string name="read_access_subtitle">Opciones legales para este título, en otro lado</string>
     <string name="read_access_open">Abrir</string>
-    <string name="read_access_loading">Buscando opciones legales…</string>
     <string name="read_access_empty_title">Sin copias legales</string>
     <string name="read_access_empty_body">Todavía no encontramos una forma legal de leer este título. Probá con otra edición u otra búsqueda.</string>
     <string name="access_badge_download">Descarga gratis</string>
