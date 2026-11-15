@@ -19,7 +19,7 @@ import org.readium.r2.shared.publication.Locator
  * Chapter/PDF navigation: goToChapter, goToNext/Previous, goToPdfPage, onTapZone,
  * emitLocatorForCurrentState, spineIndexToListPosition — with clamp guards preserved verbatim.
  */
-class ReadingNavigator(
+internal class ReadingNavigator(
     private val state: MutableStateFlow<ReaderLifecycleState>,
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher,

@@ -100,6 +100,7 @@ class ReaderHighlightsOrderingTest {
             defaultBookId = "book-1",
             activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
+            bookNotFoundMessage = "Book not found",
         )
     }
 }

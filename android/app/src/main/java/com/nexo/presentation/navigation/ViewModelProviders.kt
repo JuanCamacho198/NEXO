@@ -130,6 +130,7 @@ internal fun rememberNavHostViewModels(
                     translationPreferences = translationPreferences,
                     definitionRepository = definitionRepository,
                     definitionPreferences = definitionPreferences,
+                    bookNotFoundMessage = context.getString(R.string.book_not_found),
                 ),
         )
 

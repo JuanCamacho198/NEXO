@@ -10,7 +10,7 @@ import org.readium.r2.shared.publication.Publication
  * Preserves verbatim logic from [ReaderLifecycleStateHolder]: recursive TOC walk,
  * href normalization, and spine index resolution.
  */
-object TocBuilder {
+internal object TocBuilder {
     private const val TAG = "TocBuilder"
 
     fun buildChaptersFromPublication(publication: Publication): List<BookChapter> {

@@ -14,7 +14,7 @@ import kotlin.math.floor
  * 1. Readium pagination (publication.positions) when available and non-empty
  * 2. Fallback typographic charsPerPage model when positions absent
  */
-object ReadingProgressCalculator {
+internal object ReadingProgressCalculator {
     private const val PROGRESSION_EPSILON = 0.02
     private const val NO_VIEWPORT_REMAINING_FACTOR = 10
     private const val AVG_CHAR_WIDTH_FACTOR = 0.6f

@@ -105,6 +105,7 @@ class ReaderViewModelSearchTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
 
             setEpubState(
@@ -141,6 +142,7 @@ class ReaderViewModelSearchTest {
             defaultBookId = null,
             activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
+            bookNotFoundMessage = "Book not found",
         )
     }
 

@@ -32,7 +32,7 @@ import org.readium.r2.shared.util.Url
  * the navigator's first emission precedes the saved position being applied, so
  * persisting it would replace the reader's real position with the cover at 0%.
  */
-class ReadingProgressTracker(
+internal class ReadingProgressTracker(
     private val application: Application,
     private val state: MutableStateFlow<ReaderLifecycleState>,
     private val scope: CoroutineScope,

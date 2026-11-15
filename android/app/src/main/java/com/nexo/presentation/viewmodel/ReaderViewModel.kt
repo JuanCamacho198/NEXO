@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.nexo.R
 import com.nexo.data.remote.supabase.SupabaseProgressSync
 import com.nexo.data.session.DefinitionPreferences
 import com.nexo.data.session.ReaderPreferences
@@ -83,6 +82,9 @@ typealias BookChapter = com.nexo.presentation.viewmodel.reader.BookChapter
 + *   `filePath` by id when the navigation selection carries a null/blank path
 + *   (e.g. a stale Continuar snapshot). `null` in tests without a library.
  * @param mainDispatcher Dispatcher for state-collection coroutines. Defaults to [Dispatchers.Main].
+ * @param bookNotFoundMessage Already-resolved text for the reader's load-failure
+ *   state (the `book_not_found` resource). Resolved at the construction site so
+ *   this ViewModel carries no resource reference.
  */
 
 /**
@@ -114,6 +116,7 @@ class ReaderViewModel(
     private val translationPreferences: TranslationPreferences? = null,
     private val definitionRepository: DefinitionRepository? = null,
     private val definitionPreferences: DefinitionPreferences? = null,
+    private val bookNotFoundMessage: String,
 ) : AndroidViewModel(application) {
     /**
      * Sleep timer manager — timer slice owner (SDD reader-facade-split, slice 3).
@@ -671,7 +674,7 @@ class ReaderViewModel(
     }
 
     private fun reportBookNotFound() {
-        lifecycleHolder.reportLoadError(getApplication<Application>().getString(R.string.book_not_found))
+        lifecycleHolder.reportLoadError(bookNotFoundMessage)
     }
 
     // ── Readium Bridge ──────────────────────────────────────────────
@@ -880,6 +883,7 @@ class ReaderViewModelFactory(
     private val translationPreferences: TranslationPreferences? = null,
     private val definitionRepository: DefinitionRepository? = null,
     private val definitionPreferences: DefinitionPreferences? = null,
+    private val bookNotFoundMessage: String,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -899,6 +903,7 @@ class ReaderViewModelFactory(
                 translationPreferences = translationPreferences,
                 definitionRepository = definitionRepository,
                 definitionPreferences = definitionPreferences,
+                bookNotFoundMessage = bookNotFoundMessage,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

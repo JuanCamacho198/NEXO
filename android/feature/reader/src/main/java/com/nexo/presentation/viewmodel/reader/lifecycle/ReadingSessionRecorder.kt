@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
  * Preserves verbatim: READING_TIME_TICK_MS, activeUserId, flushReadingTime,
  * and onCleared() cancellation via injected CoroutineScope.
  */
-class ReadingSessionRecorder(
+internal class ReadingSessionRecorder(
     private val state: MutableStateFlow<ReaderLifecycleState>,
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher,

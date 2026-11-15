@@ -100,6 +100,7 @@ class ReaderViewModelDefinitionLanguageTest {
             mainDispatcher = UnconfinedTestDispatcher(),
             definitionRepository = repo,
             definitionPreferences = prefs,
+            bookNotFoundMessage = "Book not found",
         )
     }
 

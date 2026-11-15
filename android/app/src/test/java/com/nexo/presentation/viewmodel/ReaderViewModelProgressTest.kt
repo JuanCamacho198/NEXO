@@ -45,6 +45,7 @@ class ReaderViewModelProgressTest {
                     defaultBookId = "book-10",
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
 
             viewModel.lifecycleHolder.updateProgress(
@@ -78,6 +79,7 @@ class ReaderViewModelProgressTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
 
             setPdfState(viewModel, selectedBookId = "book-42", totalPdfPages = 10)
@@ -111,6 +113,7 @@ class ReaderViewModelProgressTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
 
             setPdfState(viewModel, selectedBookId = "book-42", totalPdfPages = 10)
@@ -135,6 +138,7 @@ class ReaderViewModelProgressTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
 
             setPdfState(
@@ -168,6 +172,7 @@ class ReaderViewModelProgressTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
 
             setPdfState(viewModel, selectedBookId = "book-42", totalPdfPages = 10)
@@ -194,6 +199,7 @@ class ReaderViewModelProgressTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
 
             setPdfState(viewModel, selectedBookId = "book-42", totalPdfPages = 10)
@@ -220,6 +226,7 @@ class ReaderViewModelProgressTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
             val chapters =
                 listOf(
@@ -260,6 +267,7 @@ class ReaderViewModelProgressTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
 
             // 10 pages, on page 0 → 10%
@@ -292,6 +300,7 @@ class ReaderViewModelProgressTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
 
             assertEquals(0f, viewModel.sessionUiState.value.progressPercent, 0.01f)

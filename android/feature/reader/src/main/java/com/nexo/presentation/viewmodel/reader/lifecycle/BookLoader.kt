@@ -10,7 +10,7 @@ import org.readium.r2.shared.publication.Publication
  * Exposes loading state and epoch to prevent stale async overwrites
  * (preservation: loadEpoch must increment per open attempt).
  */
-interface BookLoader {
+internal interface BookLoader {
     val isLoading: StateFlow<Boolean>
     val loadTimeMs: StateFlow<Long?>
     val loadEpoch: Long
@@ -22,6 +22,6 @@ interface BookLoader {
     ): Result<Pair<Publication, Locator?>>
 }
 
-interface Clearable {
+internal interface Clearable {
     fun onCleared()
 }

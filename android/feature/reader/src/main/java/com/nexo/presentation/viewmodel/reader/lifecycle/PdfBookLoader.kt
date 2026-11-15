@@ -27,7 +27,7 @@ import java.io.File
  * PDF loader via Readium PublicationOpener with PdfiumDocumentFactory.
  * Preserves verbatim: onPdfDocumentLoaded, loadEpoch handling.
  */
-class PdfBookLoader(
+internal class PdfBookLoader(
     private val application: Application,
     private val state: MutableStateFlow<ReaderLifecycleState>,
     private val scope: CoroutineScope,

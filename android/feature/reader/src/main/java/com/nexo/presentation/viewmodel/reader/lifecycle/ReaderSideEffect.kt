@@ -8,7 +8,7 @@ import org.readium.r2.shared.publication.Locator
  * Breaks ViewModel -> Holder -> ViewModel cycle by routing via interfaces/flows
  * instead of direct ViewModel references.
  */
-sealed interface ReaderSideEffect {
+internal sealed interface ReaderSideEffect {
     data class NavigateToLocator(
         val locator: Locator,
     ) : ReaderSideEffect
@@ -18,7 +18,7 @@ sealed interface ReaderSideEffect {
     ) : ReaderSideEffect
 }
 
-interface NavigatorCallbacks {
+internal interface NavigatorCallbacks {
     fun onChapterChanged()
 
     fun onNavigateToLocator(locator: Locator)
@@ -28,6 +28,6 @@ interface NavigatorCallbacks {
     fun onBookLoaded(bookId: String)
 }
 
-interface ProgressCallbacks {
+internal interface ProgressCallbacks {
     fun onErrorEvent(event: UiEvent)
 }

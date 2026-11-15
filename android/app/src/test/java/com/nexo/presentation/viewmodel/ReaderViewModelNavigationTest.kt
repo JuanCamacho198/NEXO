@@ -35,6 +35,7 @@ class ReaderViewModelNavigationTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
 
             viewModel.lifecycleHolder.navigateToCfiAfterLoad("pdfpage:5")
@@ -55,6 +56,7 @@ class ReaderViewModelNavigationTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
             val chapters =
                 listOf(
@@ -85,6 +87,7 @@ class ReaderViewModelNavigationTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
             viewModel.lifecycleHolder.setPdfStateForTest(
                 selectedBookId = "book-42",
@@ -112,6 +115,7 @@ class ReaderViewModelNavigationTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
             viewModel.lifecycleHolder.setPdfStateForTest(
                 selectedBookId = "book-42",
@@ -138,6 +142,7 @@ class ReaderViewModelNavigationTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
             val chapters =
                 listOf(
