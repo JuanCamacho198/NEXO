@@ -10,7 +10,7 @@ import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.ImportEpubBookUseCase
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.TEST_USER_ID
 import com.nexo.testutil.activeUserProviderFor

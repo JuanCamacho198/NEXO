@@ -7,7 +7,7 @@ import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.CfiMigrator
 import com.nexo.presentation.viewmodel.reader.lifecycle.EpubBookLoader
 import com.nexo.presentation.viewmodel.reader.lifecycle.PdfBookLoader

@@ -1,6 +1,6 @@
 package com.nexo.presentation.viewmodel
 
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch

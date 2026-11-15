@@ -1,6 +1,6 @@
 package com.nexo.presentation.screen.reader
 
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

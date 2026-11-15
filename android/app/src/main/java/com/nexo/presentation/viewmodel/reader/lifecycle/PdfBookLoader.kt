@@ -2,7 +2,7 @@ package com.nexo.presentation.viewmodel.reader.lifecycle
 
 import android.app.Application
 import android.util.Log
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.reader.ReaderLifecycleState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

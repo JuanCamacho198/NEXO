@@ -29,9 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
-import com.nexo.presentation.screen.AuthTags
-import com.nexo.presentation.viewmodel.AuthFailureKind
-import com.nexo.presentation.viewmodel.AuthUiState
+import com.nexo.ui.tags.AuthTags
+import com.nexo.domain.auth.AuthFailureKind
+import com.nexo.domain.auth.AuthUiState
 import com.nexo.presentation.viewmodel.AuthViewModel
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant

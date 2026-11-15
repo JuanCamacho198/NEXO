@@ -14,7 +14,7 @@ import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.GetStatisticsUseCase
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job

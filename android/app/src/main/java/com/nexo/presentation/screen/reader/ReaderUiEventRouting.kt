@@ -1,6 +1,6 @@
 package com.nexo.presentation.screen.reader
 
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 
 /**
  * Maps a [UiEvent] to the message the reader's in-app snackbar host must show,

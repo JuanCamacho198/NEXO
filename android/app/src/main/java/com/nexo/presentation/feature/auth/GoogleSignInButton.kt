@@ -37,9 +37,9 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.nexo.BuildConfig
 import com.nexo.R
-import com.nexo.presentation.screen.AuthTags
+import com.nexo.ui.tags.AuthTags
 import com.nexo.ui.theme.NexoTheme
-import com.nexo.presentation.viewmodel.AuthUiState
+import com.nexo.domain.auth.AuthUiState
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.util.safePainterResource

@@ -1,8 +1,8 @@
 package com.nexo.presentation.feature.auth
 
 import com.nexo.R
-import com.nexo.presentation.viewmodel.AuthFailureKind
-import com.nexo.presentation.viewmodel.AuthUiState
+import com.nexo.domain.auth.AuthFailureKind
+import com.nexo.domain.auth.AuthUiState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

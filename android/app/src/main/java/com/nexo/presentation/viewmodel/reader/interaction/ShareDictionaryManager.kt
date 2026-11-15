@@ -4,7 +4,7 @@ import android.content.Context
 import com.nexo.R
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.reader.lifecycle.Clearable
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

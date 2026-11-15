@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SDD M6: strings referenced ONLY from com.nexo.presentation.feature.highlights.
+     Keys still resolved by :app or :core:ui stay in app/src/main/res. -->
+<resources>
+    <string name="highlight_pdf_page">Page %1$d</string>
+    <string name="highlight_reading_progress">%1$d%% through the book</string>
+    <string name="highlights_menu_add_tag">Add Tag</string>
+    <string name="highlights_menu_change_color">Change Color</string>
+    <string name="highlights_menu_copy_text">Copy Text</string>
+    <string name="highlights_menu_delete">Delete Highlight</string>
+    <string name="highlights_menu_edit_note">Edit Note</string>
+    <string name="highlights_menu_view_in_book">View in Book</string>
+    <string name="context_menu_more">More options</string>
+</resources>

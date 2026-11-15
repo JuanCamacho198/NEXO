@@ -10,7 +10,7 @@ import com.nexo.data.storage.CoverStorage
 import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow

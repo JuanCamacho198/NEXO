@@ -14,10 +14,12 @@ import com.nexo.domain.error.ErrorCategory
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.repository.AuthRepository
 import com.nexo.domain.sync.OutboxDrainScheduler
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
+import com.nexo.domain.auth.AuthFailureKind
+import com.nexo.domain.auth.AuthUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,48 +36,6 @@ import javax.inject.Named
  * (e.g. show a "fix config" CTA for [CONFIG_ERROR] vs. a generic error toast
  * for [UNKNOWN]).
  */
-enum class AuthFailureKind {
-    /** No failure — session is healthy or has not yet been attempted. */
-    NONE,
-
-    /** Failure caused by missing/malformed auth configuration (build flag, keys). */
-    CONFIG_ERROR,
-
-    /** Failure caused by a wiring/dependency problem in the auth chain. */
-    WIRING_ERROR,
-
-    /** Sign-up created the account but email confirmation is pending. */
-    CONFIRMATION_PENDING,
-
-    /** Failure that does not match the known categories. */
-    UNKNOWN,
-}
-
-/**
- * AuthUiState — UI state for the authentication flow (sign-in / sign-up / sign-out).
- *
- * **Used by**: AuthScreen
- * **Mutated by**: [AuthViewModel.handleGoogleIdToken], [AuthViewModel.signUp],
- *                 [AuthViewModel.signIn], [AuthViewModel.signOut],
- *                 [AuthViewModel.continueLocally], [AuthViewModel.clearError],
- *                 and the init-block session restoration.
- *
- * @property currentSession The active auth session, or `null` if signed out / not yet known.
- * @property isConfigured `true` if the auth subsystem is configured at runtime (build keys present).
- * @property hasWiringIssue `true` if a DI/dependency wiring problem was detected at startup.
- * @property isLoading `true` while an auth call is in flight.
- * @property errorMessage Human-readable error string from the last failed call (or `null`).
- * @property failureKind Coarse classification of [errorMessage] (see [AuthFailureKind]).
- */
-data class AuthUiState(
-    val currentSession: AuthSession? = null,
-    val isCheckingSession: Boolean = true,
-    val isConfigured: Boolean = true,
-    val hasWiringIssue: Boolean = false,
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val failureKind: AuthFailureKind = AuthFailureKind.NONE,
-)
 
 /**
  * AuthViewModel — Owns the user's authentication state and exposes it as

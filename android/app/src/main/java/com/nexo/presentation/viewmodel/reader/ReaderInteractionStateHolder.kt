@@ -12,7 +12,7 @@ import com.nexo.domain.repository.TranslationRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.translation.NoTranslationReason
 import com.nexo.domain.translation.TranslationLanguageSelection
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.reader.interaction.AnnotationManager
 import com.nexo.presentation.viewmodel.reader.interaction.BookmarkManager
 import com.nexo.presentation.viewmodel.reader.interaction.DefinitionManager

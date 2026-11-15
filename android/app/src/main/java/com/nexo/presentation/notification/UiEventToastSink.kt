@@ -5,7 +5,7 @@ import com.nexo.R
 import com.nexo.domain.notification.ToastRequest
 import com.nexo.domain.notification.ToastSink
 import com.nexo.domain.notification.ToastType
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 
 /**
  * Android glue for the pure [com.nexo.domain.notification.NotificationSurfaces].

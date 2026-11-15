@@ -40,9 +40,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.presentation.screen.AuthTags
+import com.nexo.ui.tags.AuthTags
 import com.nexo.ui.theme.NexoTheme
-import com.nexo.presentation.viewmodel.AuthUiState
+import com.nexo.domain.auth.AuthUiState
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.util.safePainterResource
 
@@ -259,7 +259,7 @@ fun AuthFooterLink(
 }
 
 @Composable
-fun AuthConfigError(uiState: com.nexo.presentation.viewmodel.AuthUiState) {
+fun AuthConfigError(uiState: com.nexo.domain.auth.AuthUiState) {
     if (!uiState.isConfigured) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(

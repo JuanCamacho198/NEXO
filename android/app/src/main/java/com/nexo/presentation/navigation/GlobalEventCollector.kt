@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavController
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 

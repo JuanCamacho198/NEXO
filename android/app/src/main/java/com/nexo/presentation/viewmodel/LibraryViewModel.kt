@@ -17,7 +17,7 @@ import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.ImportEpubBookUseCase
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.library.BookActionStateHolder
 import com.nexo.presentation.viewmodel.library.BookFilterStateHolder
 import com.nexo.presentation.viewmodel.library.BookImportState

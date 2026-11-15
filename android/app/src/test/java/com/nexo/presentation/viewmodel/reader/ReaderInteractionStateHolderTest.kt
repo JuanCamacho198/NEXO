@@ -8,7 +8,7 @@ import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.ReaderRepository
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.activeUserProviderFor
 import com.nexo.testutil.mockAppContext
@@ -349,7 +349,7 @@ class ReaderInteractionStateHolderTest {
             // And: a snackbar was emitted
             assertTrue(
                 "snackbar should be emitted",
-                events.any { it is com.nexo.presentation.UiEvent.ShowSnackbar },
+                events.any { it is com.nexo.domain.event.UiEvent.ShowSnackbar },
             )
         }
 

@@ -26,7 +26,7 @@ import com.nexo.domain.translation.TranslationLanguageSelection
 import com.nexo.domain.translation.TranslationPolicy
 import com.nexo.domain.translation.TranslationSettings
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.reader.AnnotationUiState
 import com.nexo.presentation.viewmodel.reader.ChromeUiState
 import com.nexo.presentation.viewmodel.reader.DeviceLocale

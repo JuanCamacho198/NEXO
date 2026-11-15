@@ -8,7 +8,7 @@ import com.nexo.debug.DebugLog
 import com.nexo.domain.model.ReadingProgress
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.CfiMigrator
 import com.nexo.presentation.viewmodel.reader.ReaderLifecycleState
 import kotlinx.coroutines.CoroutineDispatcher

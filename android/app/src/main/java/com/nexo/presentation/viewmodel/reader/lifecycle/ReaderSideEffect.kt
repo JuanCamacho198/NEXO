@@ -1,6 +1,6 @@
 package com.nexo.presentation.viewmodel.reader.lifecycle
 
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import org.readium.r2.shared.publication.Locator
 
 /**

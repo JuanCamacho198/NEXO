@@ -8,7 +8,7 @@ import com.nexo.domain.model.Highlight
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.feature.highlights.buildHighlightsUiState
 import com.nexo.presentation.viewmodel.highlights.CrudStateHolder
 import com.nexo.presentation.viewmodel.highlights.FilterStateHolder

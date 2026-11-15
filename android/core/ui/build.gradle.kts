@@ -59,5 +59,8 @@ dependencies {
     // HighlightPaletteSection renders domain HighlightColor values.
     api(project(":core:domain"))
 
+    // SafeResourcePainter logs a missing drawable through DebugDual.
+    implementation(project(":core:debug"))
+
     testImplementation(libs.testing.junit4)
 }

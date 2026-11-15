@@ -10,7 +10,7 @@ import com.nexo.domain.model.HighlightColor
 import com.nexo.domain.model.ReadingStats
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.ReaderRepository
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.activeUserProviderFor
 import kotlinx.coroutines.ExperimentalCoroutinesApi

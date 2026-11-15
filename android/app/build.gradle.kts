@@ -459,6 +459,7 @@ dependencies {
     // SDD M5: discover feature module. Same package as before the split, so the
     // nav graph and the DiscoverViewModel keep importing it unchanged.
     implementation(project(":feature:discover"))
+    implementation(project(":feature:highlights"))
 
     implementation(composeBom)
     androidTestImplementation(composeBom)

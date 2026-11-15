@@ -1,4 +1,4 @@
-package com.nexo.presentation
+package com.nexo.domain.event
 
 sealed interface UiEvent {
     data class ShowSnackbar(

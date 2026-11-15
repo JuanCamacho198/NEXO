@@ -264,7 +264,7 @@ fun NexoNavHost(
     }
     LaunchedEffect(notificationToastBus) {
         notificationToastBus.events.collect { event ->
-            if (event is com.nexo.presentation.UiEvent.ShowToast) {
+            if (event is com.nexo.domain.event.UiEvent.ShowToast) {
                 snackbarHostState.showSnackbar(event.message)
             }
         }

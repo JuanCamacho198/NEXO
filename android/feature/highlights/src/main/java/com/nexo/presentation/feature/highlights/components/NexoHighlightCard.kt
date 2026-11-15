@@ -36,7 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.R
+import com.nexo.feature.highlights.R
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.icons.NexoIcons
 

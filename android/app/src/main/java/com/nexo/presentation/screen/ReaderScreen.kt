@@ -112,17 +112,17 @@ fun ReaderScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
-                is com.nexo.presentation.UiEvent.ShowToast -> {
+                is com.nexo.domain.event.UiEvent.ShowToast -> {
                     android.widget.Toast
                         .makeText(context, event.message, android.widget.Toast.LENGTH_SHORT)
                         .show()
                 }
-                is com.nexo.presentation.UiEvent.ShowSnackbar -> {
+                is com.nexo.domain.event.UiEvent.ShowSnackbar -> {
                     // Immersive fullscreen: a system Toast is drawn behind the
                     // WebView surface. Route through the in-app host instead.
                     readerSnackbarMessage(event)?.let { snackbarHostState.showSnackbar(it) }
                 }
-                is com.nexo.presentation.UiEvent.ShareText -> {
+                is com.nexo.domain.event.UiEvent.ShareText -> {
                     val shareIntent =
                         android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                             type = "text/plain"

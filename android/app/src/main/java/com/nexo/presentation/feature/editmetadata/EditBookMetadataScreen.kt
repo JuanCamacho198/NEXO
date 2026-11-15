@@ -33,7 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.EditBookMetadataUiState
 import com.nexo.presentation.viewmodel.EditBookMetadataViewModel

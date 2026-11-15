@@ -5,7 +5,7 @@ import com.nexo.R
 import com.nexo.data.storage.CoverStorage
 import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.TEST_USER_ID
 import com.nexo.testutil.activeUserProviderFor
