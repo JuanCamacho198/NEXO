@@ -33,6 +33,9 @@ include(":core:debug")
 // Direction: core:data -> core:domain -> core:model; core:data -> core:debug.
 include(":core:data")
 include(":core:ui")
+// SDD M4: first feature module. Depends on :core:* only and keeps the
+// com.nexo.presentation.screen.settings package so :app imports stay unchanged.
+include(":feature:settings")
 // SDD android-stack-modernization S9: macrobenchmark test module. It is a
 // self-instrumenting `com.android.test` module targeting `:app` (see
 // benchmark/build.gradle.kts) and is NOT part of the normal build graph — every

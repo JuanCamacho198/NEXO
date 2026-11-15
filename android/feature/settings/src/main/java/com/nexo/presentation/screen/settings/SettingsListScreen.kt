@@ -30,18 +30,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.BuildConfig
-import com.nexo.R
+import com.nexo.feature.settings.R
 import com.nexo.data.session.AppLanguagePreferences
 import com.nexo.debug.DebugPrefs
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.model.ThemeMode
-import com.nexo.ui.theme.NexoDimens
-import com.nexo.ui.theme.NexoTheme
+import com.nexo.feature.settings.BuildConfig
 import com.nexo.ui.components.atoms.NexoAvatar
 import com.nexo.ui.components.molecules.NexoHeader
 import com.nexo.ui.components.molecules.NexoPreferenceItem
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
+
 
 private data class SettingsRow(
     val labelRes: Int,

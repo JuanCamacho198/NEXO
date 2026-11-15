@@ -1,8 +1,9 @@
 package com.nexo.presentation.screen.settings
 
-import com.nexo.R
+import com.nexo.feature.settings.R
 import com.nexo.data.remote.catalog.PROVIDER_LABEL_GUTENDEX
 import com.nexo.data.remote.catalog.PROVIDER_LABEL_OPENLIBRARY
+
 
 /**
  * U4: static read-only built-in source entries (Fuentes integradas).

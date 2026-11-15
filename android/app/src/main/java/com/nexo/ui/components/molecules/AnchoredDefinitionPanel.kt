@@ -50,7 +50,6 @@ import com.nexo.ui.icons.NexoIcons
  * the same list backs the selector and its test, and so the settings sub-page
  * can reuse it.
  */
-internal val DEFINITION_LANGUAGE_OPTIONS = listOf("es", "en", "fr", "pt")
 
 /**
  * The body's minimum usable height.
@@ -484,16 +483,6 @@ private fun AttributionFooter() {
 }
 
 /** Human-readable name for a language code, falling back to the code itself. */
-@Composable
-internal fun definitionLanguageName(code: String): String =
-    when (code.lowercase()) {
-        "es" -> stringResource(R.string.definition_language_spanish)
-        "en" -> stringResource(R.string.definition_language_english)
-        "fr" -> stringResource(R.string.definition_language_french)
-        "pt" -> stringResource(R.string.definition_language_portuguese)
-        else -> code.ifBlank { stringResource(R.string.definition_language_unknown) }
-    }
-
 @Preview(showBackground = true)
 @Composable
 private fun AnchoredDefinitionPanelResultPreview() {
@@ -534,3 +523,13 @@ private fun AnchoredDefinitionPanelEmptyPreview() {
         )
     }
 }
+
+@Composable
+fun definitionLanguageName(code: String): String =
+    when (code.lowercase()) {
+        "es" -> stringResource(R.string.definition_language_spanish)
+        "en" -> stringResource(R.string.definition_language_english)
+        "fr" -> stringResource(R.string.definition_language_french)
+        "pt" -> stringResource(R.string.definition_language_portuguese)
+        else -> code.ifBlank { stringResource(R.string.definition_language_unknown) }
+    }

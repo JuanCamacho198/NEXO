@@ -28,8 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.BuildConfig
-import com.nexo.R
+import com.nexo.feature.settings.R
 import com.nexo.data.remote.drive.DriveAuthResult
 import com.nexo.data.remote.drive.DriveOAuthSession
 import com.nexo.data.remote.drive.DriveTokenApi
@@ -39,11 +38,13 @@ import com.nexo.data.remote.drive.InMemoryDriveTokenStore
 import com.nexo.data.remote.drive.driveOAuthRedirectUri
 import com.nexo.data.remote.sync.CatalogSyncStatus
 import com.nexo.data.remote.sync.DriveColdBackupService
-import com.nexo.ui.theme.NexoTheme
+import com.nexo.feature.settings.BuildConfig
 import com.nexo.ui.components.molecules.NexoPreferenceItem
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 import kotlinx.coroutines.launch
+
 
 /**
  * Data & Storage settings: Google Drive authorization via the PKCE browser flow.

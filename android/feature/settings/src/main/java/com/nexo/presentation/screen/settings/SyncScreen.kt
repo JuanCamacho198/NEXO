@@ -30,10 +30,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.R
-import com.nexo.ui.theme.NexoTheme
+import com.nexo.feature.settings.R
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
+
 
 @Composable
 fun SyncScreen(

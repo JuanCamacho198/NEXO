@@ -41,6 +41,8 @@ import com.nexo.presentation.screen.settings.PerformanceScreen
 import com.nexo.presentation.screen.settings.SettingsAccountScreen
 import com.nexo.presentation.screen.settings.SettingsDataStorageScreen
 import com.nexo.presentation.screen.settings.SettingsDefinitionScreen
+import com.nexo.ui.components.molecules.DEFINITION_LANGUAGE_OPTIONS
+import com.nexo.ui.components.molecules.definitionLanguageName
 import com.nexo.presentation.screen.settings.SettingsDevicesScreen
 import com.nexo.presentation.screen.settings.SettingsLanguageScreen
 import com.nexo.presentation.screen.settings.SettingsListScreen
@@ -269,6 +271,12 @@ private fun SettingsScreenContent(
                 SettingsDefinitionScreen(
                     onBack = { nestedNavController.popBackStack() },
                     preferencesStore = definitionPreferences,
+                    // Resolved here because the display names are string resources,
+                    // and the feature module owns none.
+                    languageLabels =
+                        DEFINITION_LANGUAGE_OPTIONS.associateWith { code ->
+                            definitionLanguageName(code)
+                        },
                 )
             }
 

@@ -25,13 +25,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.R
+import com.nexo.feature.settings.R
 import com.nexo.data.session.DefinitionPreferences
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.DEFINITION_LANGUAGE_OPTIONS
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
-import com.nexo.ui.components.molecules.definitionLanguageName
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
+
 
 /**
  * The reader's DEFINITION language: the language definitions are shown in.
@@ -65,6 +65,7 @@ import com.nexo.ui.icons.NexoIcons
 fun SettingsDefinitionScreen(
     onBack: () -> Unit,
     preferencesStore: DefinitionPreferences? = null,
+    languageLabels: Map<String, String> = emptyMap(),
 ) {
     var selected by remember { mutableStateOf(preferencesStore?.load()) }
 
@@ -102,7 +103,7 @@ fun SettingsDefinitionScreen(
             DEFINITION_LANGUAGE_OPTIONS.forEach { code ->
                 DefinitionLanguageOption(
                     code = code,
-                    label = definitionLanguageName(code),
+                    label = languageLabels[code] ?: code,
                     isSelected = selected == code,
                     onSelect = ::update,
                 )

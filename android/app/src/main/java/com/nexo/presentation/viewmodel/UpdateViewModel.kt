@@ -7,6 +7,7 @@ import com.nexo.domain.update.CheckForUpdatesUseCase
 import com.nexo.domain.update.UpdateCandidate
 import com.nexo.domain.update.UpdateCheckOutcome
 import com.nexo.domain.update.UpdateErrorKind
+import com.nexo.domain.update.UpdateUiState
 import com.nexo.domain.update.UpdateNetworkGate
 import com.nexo.domain.update.UpdateSuppressionStore
 import kotlinx.coroutines.CoroutineDispatcher
@@ -15,21 +16,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-sealed interface UpdateUiState {
-    data object Idle : UpdateUiState
-
-    data object Checking : UpdateUiState
-
-    data object UpToDate : UpdateUiState
-
-    data class Available(
-        val candidate: UpdateCandidate,
-    ) : UpdateUiState
-
-    data class Error(
-        val kind: UpdateErrorKind,
-    ) : UpdateUiState
-}
 
 class UpdateViewModel(
     private val useCase: CheckForUpdatesUseCase,

@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
 import com.nexo.R
 import com.nexo.domain.model.Book
 import com.nexo.ui.theme.NexoTheme
@@ -47,6 +48,15 @@ fun RemoveBookDialog(
     onDismiss: () -> Unit,
     onConfirmLocalOnly: () -> Unit,
     onConfirmLocalAndDrive: () -> Unit,
+    @StringRes titleRes: Int = R.string.library_remove_title,
+    @StringRes bodyRes: Int = R.string.library_remove_message,
+    @StringRes confirmRes: Int = R.string.library_remove_continue,
+    @StringRes dismissRes: Int = R.string.library_remove_cancel,
+    @StringRes localOnlyTitleRes: Int = R.string.library_remove_local_only,
+    @StringRes localOnlySubtitleRes: Int = R.string.library_remove_local_only_subtitle,
+    @StringRes localAndDriveTitleRes: Int = R.string.library_remove_local_and_drive,
+    @StringRes localAndDriveSubtitleRes: Int = R.string.library_remove_local_and_drive_subtitle,
+    @StringRes cancelRes: Int = R.string.library_remove_cancel,
 ) {
     if (bookToDelete == null) return
 
@@ -58,10 +68,10 @@ fun RemoveBookDialog(
 
     if (step == "confirm") {
         NexoDialog(
-            title = stringResource(R.string.library_remove_title),
-            body = stringResource(R.string.library_remove_message, bookToDelete.title),
-            confirmText = stringResource(R.string.library_remove_continue),
-            dismissText = stringResource(R.string.library_remove_cancel),
+            title = stringResource(titleRes),
+            body = stringResource(bodyRes, bookToDelete.title),
+            confirmText = stringResource(confirmRes),
+            dismissText = stringResource(dismissRes),
             onConfirm = { step = "choose" },
             onDismiss = onDismiss,
             variant = NexoDialogVariant.DESTRUCTIVE,
@@ -70,7 +80,7 @@ fun RemoveBookDialog(
         AlertDialog(
             shape = MaterialTheme.shapes.extraLarge,
             onDismissRequest = onDismiss,
-            title = { Text(text = stringResource(R.string.library_remove_title)) },
+            title = { Text(text = stringResource(titleRes)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Card(
@@ -86,12 +96,12 @@ fun RemoveBookDialog(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = stringResource(R.string.library_remove_local_only),
+                                text = stringResource(localOnlyTitleRes),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
-                                text = stringResource(R.string.library_remove_local_only_subtitle),
+                                text = stringResource(localOnlySubtitleRes),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -108,12 +118,12 @@ fun RemoveBookDialog(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = stringResource(R.string.library_remove_local_and_drive),
+                                text = stringResource(localAndDriveTitleRes),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.error,
                             )
                             Text(
-                                text = stringResource(R.string.library_remove_local_and_drive_subtitle),
+                                text = stringResource(localAndDriveSubtitleRes),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -124,7 +134,7 @@ fun RemoveBookDialog(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = onDismiss) {
-                    Text(text = stringResource(R.string.library_remove_cancel))
+                    Text(text = stringResource(cancelRes))
                 }
             },
         )

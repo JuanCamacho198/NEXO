@@ -1,11 +1,12 @@
 package com.nexo.update
 
+import com.nexo.domain.update.UpdateUiState
+
 import com.nexo.data.update.UpdateDownloader
 import com.nexo.domain.update.CheckForUpdatesUseCase
 import com.nexo.domain.update.UpdateErrorKind
 import com.nexo.domain.update.UpdateFeedFailure
 import com.nexo.domain.update.UpdateFeedFetch
-import com.nexo.presentation.viewmodel.UpdateUiState
 import com.nexo.presentation.viewmodel.UpdateViewModel
 import com.nexo.testutil.MainDispatcherRule
 import io.mockk.every

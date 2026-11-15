@@ -58,4 +58,6 @@ dependencies {
 
     // HighlightPaletteSection renders domain HighlightColor values.
     api(project(":core:domain"))
+
+    testImplementation(libs.testing.junit4)
 }

@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nexo.R
+import com.nexo.feature.settings.R
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.addons.InstalledAddonRow
 import com.nexo.presentation.feature.discover.AddonCapabilityBadges
@@ -53,6 +53,7 @@ import com.nexo.ui.components.atoms.NexoDialogVariant
 import com.nexo.ui.components.atoms.NexoSnackbar
 import com.nexo.ui.components.atoms.NexoTextField
 import com.nexo.ui.icons.NexoIcons
+
 
 /**
  * Stateful host for [AddonManagementScreen].

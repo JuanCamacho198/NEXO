@@ -28,13 +28,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.BuildConfig
-import com.nexo.R
+import com.nexo.feature.settings.R
 import com.nexo.domain.update.UpdateErrorKind
-import com.nexo.ui.theme.NexoTheme
-import com.nexo.presentation.viewmodel.UpdateUiState
+import com.nexo.feature.settings.BuildConfig
+import com.nexo.domain.update.UpdateUiState
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
+
 
 @Composable
 fun AboutScreen(

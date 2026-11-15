@@ -453,6 +453,9 @@ dependencies {
     // existing import in this module resolves exactly as before.
     implementation(project(":core:data"))
     implementation(project(":core:ui"))
+    // SDD M4: settings feature module. It keeps the
+    // com.nexo.presentation.screen.settings package, so no import here changes.
+    implementation(project(":feature:settings"))
 
     implementation(composeBom)
     androidTestImplementation(composeBom)

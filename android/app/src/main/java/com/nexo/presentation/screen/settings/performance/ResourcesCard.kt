@@ -24,9 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.nexo.R
+import com.nexo.feature.settings.R
 import com.nexo.presentation.viewmodel.PerformanceResources
 import java.util.Locale
+
 
 @Composable
 fun ResourcesCard(

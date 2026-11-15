@@ -1,4 +1,4 @@
-package com.nexo.presentation.util
+package com.nexo.ui.util
 
 import android.content.Context
 import android.text.format.Formatter
