@@ -2,8 +2,8 @@ package com.nexo.data.remote.addons
 
 import com.nexo.data.local.dao.AddonDao
 import com.nexo.data.local.entity.AddonEntity
-import com.nexo.data.remote.catalog.CatalogErrorCode
-import com.nexo.data.remote.catalog.CatalogException
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.CatalogSourceKind

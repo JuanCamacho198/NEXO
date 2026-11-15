@@ -2,7 +2,7 @@ package com.nexo.data.remote.addons
 
 import com.nexo.data.local.dao.AddonDao
 import com.nexo.data.local.entity.AddonEntity
-import com.nexo.data.remote.catalog.CatalogBook
+import com.nexo.domain.model.CatalogBook
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
 import org.json.JSONObject

@@ -1,7 +1,7 @@
 package com.nexo.domain.access
 
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
-import com.nexo.data.remote.catalog.CatalogBook
+import com.nexo.domain.model.CatalogBook
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

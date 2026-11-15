@@ -1,6 +1,8 @@
 package com.nexo.data.remote.wiktionary
 
 import com.nexo.domain.definition.NEXO_WIKTIONARY_USER_AGENT
+import com.nexo.domain.model.WiktionaryErrorCode
+import com.nexo.domain.model.WiktionaryFetch
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.header

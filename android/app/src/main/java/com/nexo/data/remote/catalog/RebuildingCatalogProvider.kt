@@ -1,5 +1,8 @@
 package com.nexo.data.remote.catalog
 
+import com.nexo.domain.model.CatalogBook
+
+
 /**
  * Live-catalog seam: rebuilds the ordered composite from fresh registry rows
  * whenever it is invalidated (design A1/A4 wiring — install, enable/disable,

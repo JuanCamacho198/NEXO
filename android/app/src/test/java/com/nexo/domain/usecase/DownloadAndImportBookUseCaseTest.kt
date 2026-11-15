@@ -1,11 +1,11 @@
 package com.nexo.domain.usecase
 
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
-import com.nexo.data.remote.catalog.CatalogBook
-import com.nexo.data.remote.catalog.CatalogErrorCode
-import com.nexo.data.remote.catalog.CatalogException
-import com.nexo.data.remote.catalog.CatalogFileDownloader
 import com.nexo.domain.model.Book
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
+import com.nexo.domain.model.CatalogFileSource
 import com.nexo.domain.model.DuplicateBookException
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.testutil.TEST_USER_ID
@@ -62,7 +62,7 @@ class DownloadAndImportBookUseCaseTest {
         private val payload: ByteArray = ByteArray(16) { it.toByte() },
         private val failAtChunk: Int? = null,
         private val hangAfterFirstChunk: Boolean = false,
-    ) : CatalogFileDownloader {
+    ) : CatalogFileSource {
         var invocations = 0
             private set
         val destinations = mutableListOf<File>()
@@ -93,7 +93,7 @@ class DownloadAndImportBookUseCaseTest {
     }
 
     private fun useCase(
-        downloader: CatalogFileDownloader,
+        downloader: CatalogFileSource,
         importUseCase: ImportEpubBookUseCase,
         repo: LibraryRepository,
         tempDir: File,

@@ -1,4 +1,4 @@
-package com.nexo.data.sync
+package com.nexo.domain.model
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

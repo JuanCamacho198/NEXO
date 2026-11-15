@@ -1,5 +1,8 @@
 package com.nexo.data.sync
 
+import com.nexo.domain.model.CanonicalName
+import com.nexo.domain.model.DriveFilename
+
 /**
  * FR-08 Drive binary write guard.
  *

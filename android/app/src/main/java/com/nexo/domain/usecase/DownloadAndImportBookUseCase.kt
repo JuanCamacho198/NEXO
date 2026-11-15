@@ -1,12 +1,12 @@
 package com.nexo.domain.usecase
 
-import com.nexo.data.remote.catalog.CatalogBook
-import com.nexo.data.remote.catalog.CatalogErrorCode
-import com.nexo.data.remote.catalog.CatalogException
-import com.nexo.data.remote.catalog.CatalogFileDownloader
-import com.nexo.data.sync.DriveFilename
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.BookImportRequest
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
+import com.nexo.domain.model.CatalogFileSource
+import com.nexo.domain.model.DriveFilename
 import com.nexo.domain.model.DuplicateBookException
 import com.nexo.domain.repository.LibraryRepository
 import kotlinx.coroutines.CancellationException
@@ -64,7 +64,7 @@ sealed interface DownloadImportState {
  *   [DownloadImportState.Duplicate], never as a failure.
  */
 class DownloadAndImportBookUseCase(
-    private val downloader: CatalogFileDownloader,
+    private val downloader: CatalogFileSource,
     private val importEpubBookUseCase: ImportEpubBookUseCase,
     private val libraryRepository: LibraryRepository,
     private val tempDir: File,

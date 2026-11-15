@@ -8,6 +8,9 @@ import org.xmlpull.v1.XmlPullParserFactory
 import java.io.IOException
 import java.io.StringReader
 import java.text.Normalizer
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.catalogError
 
 /**
  * Normalizers, PD predicates, download resolution, merge and pagination math.

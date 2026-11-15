@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.nexo.domain.model.CatalogBook
 
 /**
  * U3: additive identity fields default to null, survive a JSON round-trip,

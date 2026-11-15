@@ -8,6 +8,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 
 /**
  * Standard Ebooks parity suite: the Atom feed mapper (measured against

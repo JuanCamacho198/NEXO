@@ -7,6 +7,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.fail
 import org.junit.Test
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
+import com.nexo.domain.model.catalogError
 
 /** Offline mirror of the desktop composite suite (same fixtures, fake sources). */
 @OptIn(ExperimentalCoroutinesApi::class)

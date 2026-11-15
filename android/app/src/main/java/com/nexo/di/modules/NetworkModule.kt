@@ -9,8 +9,8 @@ import com.nexo.data.remote.addons.KtorAddonHttpTransport
 import com.nexo.data.remote.addons.PersistentAddonConsentStore
 import com.nexo.data.remote.addons.catalogProvidersWithAddons
 import com.nexo.data.remote.catalog.ANDROID_USER_AGENT
-import com.nexo.data.remote.catalog.CatalogBook
-import com.nexo.data.remote.catalog.CatalogFileDownloader
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogFileSource
 import com.nexo.data.remote.catalog.CatalogHttpTransport
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CompositeCatalogProvider
@@ -286,7 +286,7 @@ class NetworkModule(
 
     // discover-screen U3a: binary catalog downloads reuse the catalog client
     // identity (UA + timeouts) but live on their own streaming port.
-    val catalogFileDownloader: CatalogFileDownloader by lazy {
+    val catalogFileDownloader: CatalogFileSource by lazy {
         KtorCatalogFileDownloader(catalogHttpClient)
     }
 

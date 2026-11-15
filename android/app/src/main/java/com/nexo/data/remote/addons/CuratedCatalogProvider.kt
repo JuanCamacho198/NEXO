@@ -1,8 +1,8 @@
 package com.nexo.data.remote.addons
 
 import android.content.Context
-import com.nexo.data.remote.catalog.CatalogBook
-import com.nexo.data.remote.catalog.CatalogErrorCode
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.CatalogSourceKind
@@ -10,6 +10,7 @@ import com.nexo.data.remote.catalog.PagedResult
 import com.nexo.data.remote.catalog.parseCatalogSource
 import com.nexo.data.remote.catalog.resolveDownloadUrl
 import org.json.JSONObject
+import com.nexo.domain.model.catalogError
 
 /**
  * Curated first-party bundle: read-only, manifest-shaped `assets/addons/curated.json`
@@ -37,7 +38,7 @@ class CuratedCatalogProvider private constructor(
 
     /** Curated sources are not routable; stable NOT_FOUND, no I/O. */
     override suspend fun getDetails(id: String): CatalogBook =
-        throw com.nexo.data.remote.catalog.catalogError(
+        throw catalogError(
             CatalogErrorCode.NOT_FOUND,
             "curated sources are not routable: $id",
         )

@@ -1,6 +1,6 @@
 package com.nexo.domain.access
 
-import com.nexo.data.remote.catalog.CatalogBook
+import com.nexo.domain.model.CatalogBook
 import java.net.URLEncoder
 
 /**

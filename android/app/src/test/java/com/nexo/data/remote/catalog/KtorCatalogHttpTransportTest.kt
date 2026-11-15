@@ -12,6 +12,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 
 /**
  * Ktor wiring check for [KtorCatalogHttpTransport] against a MockEngine:

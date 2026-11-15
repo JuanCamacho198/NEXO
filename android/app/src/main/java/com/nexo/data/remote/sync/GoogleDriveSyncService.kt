@@ -10,7 +10,7 @@ import com.nexo.data.local.entity.SyncEntityType
 import com.nexo.data.local.entity.SyncFileMappingEntity
 import com.nexo.data.local.entity.SyncOperation
 import com.nexo.data.session.SessionManager
-import com.nexo.data.sync.DriveFilename
+import com.nexo.domain.model.DriveFilename
 import com.nexo.data.sync.DriveWriteGuard
 import com.nexo.debug.DebugLog
 import com.nexo.domain.error.AppError

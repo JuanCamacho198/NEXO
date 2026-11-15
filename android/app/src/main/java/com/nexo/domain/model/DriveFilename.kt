@@ -1,4 +1,4 @@
-package com.nexo.data.sync
+package com.nexo.domain.model
 
 import java.text.Normalizer
 import java.util.Locale

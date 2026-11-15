@@ -6,7 +6,7 @@ import com.nexo.data.epub.ZipEpubParserService
 import com.nexo.data.pdf.DefaultPdfParserService
 import com.nexo.data.storage.AppInternalCoverStorage
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.presentation.theme.CoilModule
+import com.nexo.ui.theme.CoilModule
 
 class StorageModule(
     context: Context,

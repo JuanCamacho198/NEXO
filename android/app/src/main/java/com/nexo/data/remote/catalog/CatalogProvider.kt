@@ -1,5 +1,8 @@
 package com.nexo.data.remote.catalog
 
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.catalogError
 import kotlinx.serialization.Serializable
 
 /**
@@ -70,80 +73,12 @@ fun addonSourceIdOf(source: String): String? = CatalogSources.addonIdOf(source)
 fun parseCatalogSource(raw: String): String = CatalogSources.parse(raw)
 
 @Serializable
-data class CatalogBook(
-    val id: String,
-    val provider: String,
-    val title: String,
-    val authors: List<String>,
-    val coverUrl: String?,
-    val languages: List<String>,
-    val subjects: List<String>,
-    val downloadUrl: String?,
-    /**
-     * Additive fields (defaulted) so payloads cached before they existed keep
-     * decoding with `ignoreUnknownKeys = true` and call sites keep compiling.
-     */
-    val description: String? = null,
-    val isPublicDomain: Boolean? = null,
-    val formats: Map<String, String> = emptyMap(),
-    /**
-     * U3 identity fields (all additive + defaulted): ISBN pair split by length,
-     * Open Library work key (`/works/OL…W`), first Internet Archive id, and the
-     * Google Books volume id. Unknown stays null; old cached payloads keep
-     * decoding via `ignoreUnknownKeys = true`. No Room migration.
-     */
-    val isbn13: String? = null,
-    val isbn10: String? = null,
-    val openLibraryWorkId: String? = null,
-    val internetArchiveId: String? = null,
-    val googleBooksId: String? = null,
-)
-
-@Serializable
 data class PagedResult(
     val results: List<CatalogBook>,
     /** Next 1-based page, or null when the last page was reached. */
     val nexoPage: Int?,
     val totalCount: Int,
 )
-
-/**
- * Stable catalog error codes shared by desktop and Android.
- * Messages are redacted at the boundary; only [code] is contractual.
- */
-enum class CatalogErrorCode {
-    INVALID_PAGE,
-    UNAVAILABLE_DOWNLOAD,
-    NOT_FOUND,
-    RATE_LIMITED,
-    UPSTREAM_ERROR,
-    NETWORK_ERROR,
-}
-
-class CatalogException(
-    val code: CatalogErrorCode,
-    message: String,
-    val retryable: Boolean =
-        code == CatalogErrorCode.RATE_LIMITED ||
-            code == CatalogErrorCode.NETWORK_ERROR,
-) : Exception("$code: $message")
-
-/** Build a typed catalog error without leaking upstream details. */
-fun catalogError(
-    code: CatalogErrorCode,
-    detail: String? = null,
-): CatalogException = CatalogException(code, detail ?: code.name)
-
-fun isCatalogError(err: Throwable): Boolean = err is CatalogException
-
-/** Map an upstream HTTP status to a stable contract code. */
-fun mapHttpStatusToCode(status: Int): CatalogErrorCode =
-    when (status) {
-        HTTP_NOT_FOUND -> CatalogErrorCode.NOT_FOUND
-        HTTP_TOO_MANY_REQUESTS -> CatalogErrorCode.RATE_LIMITED
-        in HTTP_SERVER_ERROR_MIN..HTTP_SERVER_ERROR_MAX -> CatalogErrorCode.UPSTREAM_ERROR
-        else -> CatalogErrorCode.UPSTREAM_ERROR
-    }
 
 interface CatalogProvider {
     /** [page] is 1-based; `page < 1` rejects with INVALID_PAGE before any I/O. */

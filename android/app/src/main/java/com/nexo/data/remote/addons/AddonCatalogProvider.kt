@@ -1,7 +1,7 @@
 package com.nexo.data.remote.addons
 
-import com.nexo.data.remote.catalog.CatalogBook
-import com.nexo.data.remote.catalog.CatalogErrorCode
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.CatalogSourceKind
@@ -9,10 +9,10 @@ import com.nexo.data.remote.catalog.MAX_PAGE_SIZE
 import com.nexo.data.remote.catalog.PagedResult
 import com.nexo.data.remote.catalog.RETRY_BASE_DELAY_MS
 import com.nexo.data.remote.catalog.addonSource
-import com.nexo.data.remote.catalog.catalogError
+import com.nexo.domain.model.catalogError
 import com.nexo.data.remote.catalog.computeNextPage
 import com.nexo.data.remote.catalog.isHttpSuccess
-import com.nexo.data.remote.catalog.mapHttpStatusToCode
+import com.nexo.domain.model.mapHttpStatusToCode
 import com.nexo.data.remote.catalog.resolveDownloadUrl
 import com.nexo.data.remote.catalog.shouldRetryStatus
 import com.nexo.domain.access.AccessGroup
@@ -26,6 +26,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import com.nexo.domain.access.resolveAccess as resolveU3Access
+import com.nexo.domain.model.CatalogException
 
 /**
  * U4 external-open link title (localized copy, if any, belongs to U5).
@@ -167,7 +168,7 @@ class AddonCatalogProvider(
         return try {
             transport.fetch(url)
         } catch (err: Throwable) {
-            if (err is com.nexo.data.remote.catalog.CatalogException) throw err
+            if (err is CatalogException) throw err
             throw catalogError(CatalogErrorCode.NETWORK_ERROR, "addon payload request failed")
         }
     }

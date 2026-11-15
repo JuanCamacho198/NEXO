@@ -1,5 +1,7 @@
 package com.nexo.data.remote.wiktionary
 
+import com.nexo.domain.model.WiktionaryErrorCode
+import com.nexo.domain.model.WiktionaryFetch
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals

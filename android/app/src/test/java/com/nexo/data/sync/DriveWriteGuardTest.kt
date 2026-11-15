@@ -1,5 +1,6 @@
 package com.nexo.data.sync
 
+import com.nexo.domain.model.DriveFilename
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

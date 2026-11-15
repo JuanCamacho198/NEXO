@@ -15,6 +15,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 
 /**
  * Contract evidence for [KtorCatalogFileDownloader]: body is streamed to disk,

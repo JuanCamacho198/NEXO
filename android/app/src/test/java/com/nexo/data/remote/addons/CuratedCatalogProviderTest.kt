@@ -2,8 +2,8 @@ package com.nexo.data.remote.addons
 
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
-import com.nexo.data.remote.catalog.CatalogErrorCode
-import com.nexo.data.remote.catalog.CatalogException
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.CatalogSourceKind
@@ -20,6 +20,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
+import com.nexo.domain.model.CatalogBook
 
 /**
  * Curated first-party bundle parity suite. Mirrors desktop
@@ -105,7 +106,7 @@ class CuratedCatalogProviderTest {
                         error("not expected")
                     }
 
-                    override suspend fun getDetails(id: String): com.nexo.data.remote.catalog.CatalogBook {
+                    override suspend fun getDetails(id: String): CatalogBook {
                         error("not expected")
                     }
 

@@ -1,5 +1,10 @@
 package com.nexo.data.remote.catalog
 
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.catalogError
+
+
 /**
  * Built-in Google Books provider (U2) over [GoogleBooksDataSource].
  *

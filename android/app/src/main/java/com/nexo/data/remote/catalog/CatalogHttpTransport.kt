@@ -6,6 +6,11 @@ import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.delay
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.catalogError
+import com.nexo.domain.model.isCatalogError
+import com.nexo.domain.model.mapHttpStatusToCode
 
 /** Raw upstream result shared by both catalog datasources. */
 data class CatalogHttpResponse(

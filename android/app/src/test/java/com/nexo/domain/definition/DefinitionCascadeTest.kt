@@ -1,7 +1,7 @@
 package com.nexo.domain.definition
 
-import com.nexo.data.remote.wiktionary.WiktionaryErrorCode
-import com.nexo.data.remote.wiktionary.WiktionaryFetch
+import com.nexo.domain.model.WiktionaryErrorCode
+import com.nexo.domain.model.WiktionaryFetch
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject

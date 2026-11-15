@@ -1,7 +1,7 @@
 package com.nexo.data.remote.addons
 
-import com.nexo.data.remote.catalog.CatalogErrorCode
-import com.nexo.data.remote.catalog.CatalogException
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import com.nexo.data.remote.catalog.CatalogSourceKind
 import com.nexo.data.remote.catalog.CompositeCatalogProvider
 import com.nexo.data.remote.catalog.MAX_PAGE_SIZE

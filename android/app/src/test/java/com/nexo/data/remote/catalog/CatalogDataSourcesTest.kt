@@ -8,6 +8,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
+import com.nexo.domain.model.catalogError
 
 /** Offline mirror of the desktop datasource suite (same fixtures, fake transport). */
 @OptIn(ExperimentalCoroutinesApi::class)

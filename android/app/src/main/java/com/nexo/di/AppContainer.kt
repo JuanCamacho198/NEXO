@@ -12,7 +12,7 @@ import com.nexo.data.local.dao.HighlightDao
 import com.nexo.data.local.dao.NotificationDao
 import com.nexo.data.local.dao.ReadingProgressDao
 import com.nexo.data.local.dao.ReadingSessionDao
-import com.nexo.data.remote.catalog.CatalogFileDownloader
+import com.nexo.domain.model.CatalogFileSource
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.drive.DriveCoordinator
 import com.nexo.data.remote.drive.DriveOAuthSession
@@ -64,6 +64,7 @@ import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.GetStatisticsUseCase
 import com.nexo.domain.usecase.ImportEpubBookUseCase
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
+import com.nexo.domain.model.CatalogBook
 
 class AppContainer(
     context: Context,
@@ -283,7 +284,7 @@ class AppContainer(
             networkGate = networkModule.updateNetworkGate,
         )
     }
-    val catalogFileDownloader: CatalogFileDownloader by lazy { networkModule.catalogFileDownloader }
+    val catalogFileDownloader: CatalogFileSource by lazy { networkModule.catalogFileDownloader }
     val downloadAndImportBookUseCase: DownloadAndImportBookUseCase by lazy {
         DownloadAndImportBookUseCase(
             downloader = networkModule.catalogFileDownloader,
@@ -296,7 +297,7 @@ class AppContainer(
     val addonRegistry: com.nexo.data.remote.addons.AddonRegistry by lazy { networkModule.addonRegistry }
 
     /** U5: ephemeral per-addon reading-link resolve for the detail sheet. */
-    val addonResolveForBook: suspend (String, com.nexo.data.remote.catalog.CatalogBook) -> com.nexo.domain.access.LegalAccess
+    val addonResolveForBook: suspend (String, CatalogBook) -> com.nexo.domain.access.LegalAccess
         by lazy { networkModule.addonResolveForBook }
 
     // ── addon-deeplink-v1: pending install deep links (B2/B3) ──────────

@@ -1,6 +1,6 @@
 package com.nexo.domain.definition
 
-import com.nexo.data.remote.wiktionary.WiktionaryFetch
+import com.nexo.domain.model.WiktionaryFetch
 
 /**
  * A source of raw wikitext: the URL boundary the cascade drives, injected so the

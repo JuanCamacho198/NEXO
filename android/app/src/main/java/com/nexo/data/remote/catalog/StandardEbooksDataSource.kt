@@ -1,5 +1,10 @@
 package com.nexo.data.remote.catalog
 
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.catalogError
+
+
 const val STANDARD_EBOOKS_BASE_URL = "https://standardebooks.org"
 
 /**

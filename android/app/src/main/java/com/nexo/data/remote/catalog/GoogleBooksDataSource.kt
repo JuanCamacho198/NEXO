@@ -2,6 +2,10 @@ package com.nexo.data.remote.catalog
 
 import kotlinx.serialization.json.Json
 import java.net.URLEncoder
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.catalogError
+import com.nexo.domain.model.isCatalogError
 
 const val GOOGLE_BOOKS_BASE_URL = "https://www.googleapis.com/books/v1"
 

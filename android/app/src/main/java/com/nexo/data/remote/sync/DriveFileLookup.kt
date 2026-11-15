@@ -2,7 +2,7 @@ package com.nexo.data.remote.sync
 
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
-import com.nexo.data.sync.DriveFilename
+import com.nexo.domain.model.DriveFilename
 
 /**
  * Drive file lookups scoped to a parent folder, shared by the storage data

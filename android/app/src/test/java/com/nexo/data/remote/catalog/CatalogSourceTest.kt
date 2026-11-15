@@ -4,6 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Test
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 
 /** Strict source-id parsing — mirrors desktop catalog-source.test.ts vectors. */
 class CatalogSourceTest {

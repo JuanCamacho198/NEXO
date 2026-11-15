@@ -1,5 +1,7 @@
 package com.nexo.data.remote.catalog
 
+import com.nexo.domain.model.HTTP_SERVER_ERROR_MIN
+import com.nexo.domain.model.HTTP_TOO_MANY_REQUESTS
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -30,10 +32,6 @@ const val RETRY_BASE_DELAY_MS = 800L
 /** HTTP status bands shared by transports, registry and providers. */
 const val HTTP_OK_MIN = 200
 const val HTTP_OK_MAX = 299
-const val HTTP_NOT_FOUND = 404
-const val HTTP_TOO_MANY_REQUESTS = 429
-const val HTTP_SERVER_ERROR_MIN = 500
-const val HTTP_SERVER_ERROR_MAX = 599
 
 const val ANDROID_USER_AGENT = "NEXO/Android (contact: TBD)"
 

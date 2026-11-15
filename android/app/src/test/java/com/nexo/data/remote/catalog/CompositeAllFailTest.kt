@@ -5,6 +5,9 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.catalogError
 
 /** U1: all providers failing still yields an empty result with no crash. */
 @OptIn(ExperimentalCoroutinesApi::class)

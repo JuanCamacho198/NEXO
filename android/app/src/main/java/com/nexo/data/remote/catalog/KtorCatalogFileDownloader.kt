@@ -10,9 +10,14 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogFileSource
+import com.nexo.domain.model.catalogError
+import com.nexo.domain.model.isCatalogError
+import com.nexo.domain.model.mapHttpStatusToCode
 
 /**
- * Production [CatalogFileDownloader] over the shared catalog [HttpClient].
+ * Production [CatalogFileSource] over the shared catalog [HttpClient].
  *
  * Reads the response body in fixed-size chunks straight into the destination
  * file so a large EPUB never has to fit in memory, reporting
@@ -26,7 +31,7 @@ import java.io.File
 class KtorCatalogFileDownloader(
     private val client: HttpClient,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-) : CatalogFileDownloader {
+) : CatalogFileSource {
     override suspend fun download(
         url: String,
         destination: File,
