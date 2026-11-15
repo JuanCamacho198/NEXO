@@ -1,5 +1,7 @@
 package com.nexo.data.remote.supabase
 
+import com.nexo.domain.model.UserBookRow
+
 import android.util.Log
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.SyncOutboxDao

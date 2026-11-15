@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexo.R
-import com.nexo.data.remote.supabase.UserBookRow
+import com.nexo.domain.model.UserBookRow
 import com.nexo.presentation.viewmodel.DownloadState
 import com.nexo.ui.components.atoms.CoverThumbnail
 import com.nexo.ui.components.atoms.NexoDialog

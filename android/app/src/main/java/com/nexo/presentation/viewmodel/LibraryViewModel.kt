@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nexo.data.remote.supabase.SupabaseBookCatalogSync
-import com.nexo.data.remote.supabase.UserBookRow
+import com.nexo.domain.model.UserBookRow
 import com.nexo.data.remote.sync.DriveSyncState
 import com.nexo.data.remote.sync.SyncService
 import com.nexo.debug.DebugLog

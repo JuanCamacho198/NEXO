@@ -16,7 +16,7 @@ import com.nexo.data.remote.supabase.ReadingProgressRow
 import com.nexo.data.remote.supabase.ReadingSessionRow
 import com.nexo.data.remote.supabase.SupabaseBookCatalogDataSource
 import com.nexo.data.remote.supabase.SupabaseProgressDataSource
-import com.nexo.data.remote.supabase.UserBookRow
+import com.nexo.domain.model.UserBookRow
 import com.nexo.data.session.SessionManager
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
