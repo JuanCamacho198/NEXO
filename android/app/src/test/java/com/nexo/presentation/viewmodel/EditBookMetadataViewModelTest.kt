@@ -1,7 +1,5 @@
 package com.nexo.presentation.viewmodel
 
-import android.content.Context
-import com.nexo.R
 import com.nexo.data.storage.CoverStorage
 import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
@@ -11,7 +9,6 @@ import com.nexo.testutil.TEST_USER_ID
 import com.nexo.testutil.activeUserProviderFor
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -26,6 +23,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
+/**
+ * The snackbar copy is passed in as plain strings and the tests assert the exact
+ * text: the emitted message is the ViewModel's observable behavior, and it must
+ * not change as the ViewModel moves off `Context`.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class EditBookMetadataViewModelTest {
     @get:Rule
@@ -153,11 +155,9 @@ class EditBookMetadataViewModelTest {
     fun `save updates metadata with joined values and calls onSaved`() =
         runTest {
             val repository = mockk<LibraryRepository>()
-            val context = mockk<Context>()
             coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
             coEvery { repository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
                 Result.success(Unit)
-            every { context.getString(R.string.library_snackbar_metadata_saved) } returns "Metadata updated"
 
             var saved = false
             val events = mutableListOf<UiEvent>()
@@ -166,7 +166,8 @@ class EditBookMetadataViewModelTest {
                     bookId = "book-1",
                     libraryRepository = repository,
                     coverStorage = mockk(),
-                    appContext = context,
+                    savedMessage = "Metadata updated",
+                    saveFailedMessage = "Could not save changes",
                     onSaved = { saved = true },
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = UnconfinedTestDispatcher(testScheduler),
@@ -181,7 +182,8 @@ class EditBookMetadataViewModelTest {
             advanceUntilIdle()
 
             assertTrue(saved)
-            assertTrue(events.firstOrNull() is UiEvent.ShowSnackbar)
+            val snackbar = events.firstOrNull() as UiEvent.ShowSnackbar
+            assertEquals("Metadata updated", snackbar.message)
             coVerify {
                 repository.updateBookMetadata(
                     bookId = "book-1",
@@ -200,14 +202,12 @@ class EditBookMetadataViewModelTest {
         }
 
     @Test
-    fun `save failure emits error snackbar and does not call onSaved`() =
+    fun `save failure emits the resource text when the error has no message`() =
         runTest {
             val repository = mockk<LibraryRepository>()
-            val context = mockk<Context>()
             coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
             coEvery { repository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
-                Result.failure(IllegalStateException("update failed"))
-            every { context.getString(R.string.edit_metadata_save_failed) } returns "Could not save changes"
+                Result.failure(IllegalStateException())
 
             var saved = false
             val events = mutableListOf<UiEvent>()
@@ -216,7 +216,8 @@ class EditBookMetadataViewModelTest {
                     bookId = "book-1",
                     libraryRepository = repository,
                     coverStorage = mockk(),
-                    appContext = context,
+                    savedMessage = "Metadata updated",
+                    saveFailedMessage = "Could not save changes",
                     onSaved = { saved = true },
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = UnconfinedTestDispatcher(testScheduler),
@@ -230,27 +231,59 @@ class EditBookMetadataViewModelTest {
             advanceUntilIdle()
 
             assertFalse(saved)
-            assertTrue(events.firstOrNull() is UiEvent.ShowSnackbar)
+            val snackbar = events.firstOrNull() as UiEvent.ShowSnackbar
+            assertEquals("Could not save changes", snackbar.message)
+        }
+
+    @Test
+    fun `save failure keeps the error message when it has one`() =
+        runTest {
+            val repository = mockk<LibraryRepository>()
+            coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
+            coEvery { repository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+                Result.failure(IllegalStateException("disk full"))
+
+            val events = mutableListOf<UiEvent>()
+            val viewModel =
+                EditBookMetadataViewModel(
+                    bookId = "book-1",
+                    libraryRepository = repository,
+                    coverStorage = mockk(),
+                    savedMessage = "Metadata updated",
+                    saveFailedMessage = "Could not save changes",
+                    onSaved = {},
+                    activeUser = activeUserProviderFor(),
+                    mainDispatcher = UnconfinedTestDispatcher(testScheduler),
+                )
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiEvent.collect { events.add(it) }
+            }
+            advanceUntilIdle()
+
+            viewModel.save()
+            advanceUntilIdle()
+
+            val snackbar = events.firstOrNull() as UiEvent.ShowSnackbar
+            assertEquals("disk full", snackbar.message)
         }
 
     @Test
     fun `save with new cover bytes saves cover and passes its path`() =
         runTest {
             val repository = mockk<LibraryRepository>()
-            val context = mockk<Context>()
             val coverStorage = mockk<CoverStorage>()
             coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
             coEvery { repository.updateBookMetadata(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
                 Result.success(Unit)
             coEvery { coverStorage.saveCover("book-1", any()) } returns Result.success("/covers/book-1.jpg")
-            every { context.getString(R.string.library_snackbar_metadata_saved) } returns "Metadata updated"
 
             val viewModel =
                 EditBookMetadataViewModel(
                     bookId = "book-1",
                     libraryRepository = repository,
                     coverStorage = coverStorage,
-                    appContext = context,
+                    savedMessage = "Metadata updated",
+                    saveFailedMessage = "Could not save changes",
                     onSaved = {},
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = UnconfinedTestDispatcher(testScheduler),
@@ -289,7 +322,8 @@ class EditBookMetadataViewModelTest {
             bookId = "book-1",
             libraryRepository = repository,
             coverStorage = mockk(),
-            appContext = mockk(),
+            savedMessage = "Metadata updated",
+            saveFailedMessage = "Could not save changes",
             onSaved = onSaved,
             activeUser = activeUserProviderFor(),
             mainDispatcher = UnconfinedTestDispatcher(),

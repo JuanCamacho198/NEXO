@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nexo.R
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.catalog.CatalogFeaturedSort
 import com.nexo.data.remote.catalog.CatalogProvider
@@ -230,8 +231,8 @@ internal fun rememberBookDetailViewModel(
 /**
  * Resolves the route-scoped [EditBookMetadataViewModel] for one `bookId`.
  *
- * The factory needs the route's `onSaved` callback and the application context
- * (cover storage), so the route cannot create it from the host holder. The
+ * The factory needs the route's `onSaved` callback and the two already-resolved
+ * snackbar strings, so the route cannot create it from the host holder. The
  * settings/book-detail graph resolves here and passes the instance in.
  */
 @Composable
@@ -250,7 +251,8 @@ internal fun rememberEditBookMetadataViewModel(
                 libraryRepository = libraryRepository,
                 activeUser = activeUser,
                 coverStorage = coverStorage,
-                appContext = context.applicationContext,
+                savedMessage = context.getString(R.string.library_snackbar_metadata_saved),
+                saveFailedMessage = context.getString(R.string.edit_metadata_save_failed),
                 onSaved = onSaved,
             ),
     )

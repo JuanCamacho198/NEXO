@@ -1,11 +1,9 @@
 package com.nexo.presentation.viewmodel
 
-import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.nexo.R
 import com.nexo.data.storage.CoverStorage
 import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
@@ -74,7 +72,8 @@ class EditBookMetadataViewModel(
     private val libraryRepository: LibraryRepository,
     private val activeUser: ActiveUserProvider,
     private val coverStorage: CoverStorage,
-    private val appContext: Context,
+    private val savedMessage: String,
+    private val saveFailedMessage: String,
     private val onSaved: () -> Unit = {},
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : ViewModel() {
@@ -202,14 +201,14 @@ class EditBookMetadataViewModel(
             result.fold(
                 onSuccess = {
                     _uiEvent.tryEmit(
-                        UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_metadata_saved)),
+                        UiEvent.ShowSnackbar(savedMessage),
                     )
                     onSaved()
                 },
                 onFailure = { error ->
                     _uiEvent.tryEmit(
                         UiEvent.ShowSnackbar(
-                            error.message ?: appContext.getString(R.string.edit_metadata_save_failed),
+                            error.message ?: saveFailedMessage,
                         ),
                     )
                 },
@@ -222,7 +221,8 @@ class EditBookMetadataViewModel(
         private val libraryRepository: LibraryRepository,
         private val activeUser: ActiveUserProvider,
         private val coverStorage: CoverStorage,
-        private val appContext: Context,
+        private val savedMessage: String,
+        private val saveFailedMessage: String,
         private val onSaved: () -> Unit = {},
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -232,7 +232,8 @@ class EditBookMetadataViewModel(
                 libraryRepository = libraryRepository,
                 activeUser = activeUser,
                 coverStorage = coverStorage,
-                appContext = appContext,
+                savedMessage = savedMessage,
+                saveFailedMessage = saveFailedMessage,
                 onSaved = onSaved,
             ) as T
     }
