@@ -73,7 +73,7 @@ android/
 │       │   ├── domain/           # Domain layer (models, repository interfaces, usecases)
 │       │   ├── presentation/    # UI layer (screens, viewmodels, theme, navigation)
 │       │   ├── ui/              # Reusable UI components (atoms, molecules)
-│       │   ├── di/              # Dependency injection (AppContainer)
+│       │   ├── di/              # Dependency injection (Hilt modules)
 │       │   └── MainActivity.kt  # Entry point
 │       ├── test/                # Unit tests (JVM)
 │       │   └── java/com/nexo/

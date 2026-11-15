@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
  *
  * Note on the WorkManager resolution: the design pinned the constructor default
  * `workManager: WorkManager = WorkManager.getInstance(context)`, which would
- * initialize WorkManager eagerly while [com.nexo.di.AppContainer] is being
+ * initialize WorkManager eagerly while the app-scoped graph is being
  * built (before its `Configuration.Provider` is guaranteed ready). The
  * implementation instead resolves the instance lazily on the first enqueue and
  * accepts an injected instance for tests. Construction is therefore side-effect

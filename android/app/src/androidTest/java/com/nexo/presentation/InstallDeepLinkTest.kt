@@ -66,7 +66,7 @@ class InstallDeepLinkTest {
         // The override is the real routing entry point. The call chain under
         // test: `MainActivity.onNewIntent` → `setIntent(intent)` → install
         // branch first → `InstallDeepLinkParser.isInstallUri` →
-        // `appContainer.installDeepLinkController.onInstallUri`, returning
+        // `installDeepLinkController.onInstallUri`, returning
         // before `handleAuthDeepLink`/supabase.
         //
         // That production `setIntent` is what breaks Scenario teardown, and the

@@ -13,7 +13,9 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.nexo.data.session.NotificationPermissionPrefs
-import com.nexo.di.AppContainer
+import com.nexo.data.repository.ReadingGoalRepository
+import com.nexo.data.session.ReadingGoalPreferences
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.navigation.NexoDestination
 import com.nexo.presentation.screen.OnboardingGoalScreen
 import com.nexo.presentation.screen.OnboardingNotificationsScreen
@@ -30,7 +32,9 @@ import kotlinx.coroutines.launch
  */
 fun NavGraphBuilder.onboardingGraph(
     navController: NavController,
-    appContainer: AppContainer,
+    readingGoalPreferences: ReadingGoalPreferences,
+    readingGoalRepository: ReadingGoalRepository,
+    activeUserProvider: ActiveUserProvider,
     onOnboardingCompleted: () -> Unit,
 ) {
     composable(
@@ -47,9 +51,9 @@ fun NavGraphBuilder.onboardingGraph(
                 // for the rest of the flow. The remote push is backgrounded: a
                 // slow or failed network must not block navigation, and the
                 // local cache already answers offline.
-                appContainer.readingGoalPreferences.save(minutes)
+                readingGoalPreferences.save(minutes)
                 saveScope.launch {
-                    appContainer.readingGoalRepository.sync(appContainer.activeUserProvider.currentUserId())
+                    readingGoalRepository.sync(activeUserProvider.currentUserId())
                 }
                 // onGoalSaved bumps the host's gate key so it recomputes from the
                 // new goal — but the host's `startDestination` would then flip to

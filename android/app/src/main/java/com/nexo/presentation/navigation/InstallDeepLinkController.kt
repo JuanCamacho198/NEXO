@@ -31,8 +31,8 @@ sealed class InstallUiState {
 }
 
 /**
- * Holds pending addon-install deep links (design: MutableStateFlow in
- * appContainer). MainActivity routes install URIs here (BEFORE supabase
+ * Holds pending addon-install deep links (design: a singleton MutableStateFlow
+ * provided by Hilt). MainActivity routes install URIs here (BEFORE supabase
  * handleDeeplinks); the NavHost-root dialog host observes [state].
  *
  * Flow: onInstallUri → parse → fetchManifest (preview) → Confirming →

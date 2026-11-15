@@ -33,11 +33,10 @@ import java.io.File
 import javax.inject.Inject
 
 /**
- * SDD android-tooling-hygiene WS2b slice 5: decomposed — takes explicit
- * dependencies instead of the whole manual `AppContainer` (it was
- * the widest container dependency). Lazy manual singletons stay lazy via
- * providers so cold-start partitions are preserved; slice 6 provides this
- * as an `@HiltViewModel` with constructor injection.
+ * Takes explicit dependencies (it was once the widest manual-container
+ * consumer). Lazy app-scoped singletons stay lazy by arriving as providers, so
+ * the cold-start partition is preserved; the ViewModel itself is constructed by
+ * Hilt.
  */
 @HiltViewModel
 class DebugViewModel

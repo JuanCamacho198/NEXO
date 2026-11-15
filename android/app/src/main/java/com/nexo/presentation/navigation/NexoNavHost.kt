@@ -29,10 +29,44 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.nexo.data.remote.addons.AddonRegistry
+import com.nexo.data.remote.catalog.CatalogProvider
+import com.nexo.data.remote.drive.GoogleDriveAuthHelper
+import com.nexo.data.remote.supabase.SupabaseProgressSync
+import com.nexo.data.remote.sync.SyncService
+import com.nexo.data.repository.NotificationRepository
+import com.nexo.data.repository.ReadingGoalRepository
+import com.nexo.data.session.DefinitionPreferences
 import com.nexo.data.session.DriveConnectPromptPrefs
+import com.nexo.data.session.NotificationPreferencesStore
+import com.nexo.data.session.ReaderPreferences
+import com.nexo.data.session.ReadingGoalPreferences
+import com.nexo.data.session.TranslationPreferences
+import com.nexo.data.session.UpdatePrefs
+import com.nexo.data.storage.CoverStorage
+import com.nexo.data.update.UpdateDownloader
 import com.nexo.debug.DebugPrefs
-import com.nexo.di.AppContainer
+import com.nexo.domain.access.AddonAccessResolver
+import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.model.AuthSession
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.notification.NotificationStore
+import com.nexo.domain.repository.CacheRepository
+import com.nexo.domain.repository.DefinitionRepository
+import com.nexo.domain.repository.DictionaryRepository
+import com.nexo.domain.repository.LibraryRepository
+import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.repository.ReadingStatsRepository
+import com.nexo.domain.repository.StorageRepository
+import com.nexo.domain.repository.TranslationHistoryRepository
+import com.nexo.domain.repository.TranslationRepository
+import com.nexo.domain.session.ActiveUserProvider
+import com.nexo.domain.update.CheckForUpdatesUseCase
+import com.nexo.domain.update.UpdateNetworkGate
+import com.nexo.domain.usecase.DownloadAndImportBookUseCase
+import com.nexo.domain.usecase.GetStatisticsUseCase
+import com.nexo.presentation.navigation.InstallDeepLinkController
+import com.nexo.presentation.notification.NotificationToastBus
 import com.nexo.presentation.debug.DebugPanel
 import com.nexo.presentation.feature.highlights.HighlightsScreen
 import com.nexo.presentation.navigation.feature.authGraph
@@ -83,7 +117,40 @@ internal fun resolveStartDestination(
 
 @Composable
 fun NexoNavHost(
-    appContainer: AppContainer,
+    installDeepLinkController: InstallDeepLinkController,
+    googleDriveAuthHelper: GoogleDriveAuthHelper,
+    activeUserProvider: ActiveUserProvider,
+    libraryRepository: LibraryRepository,
+    readerRepository: ReaderRepository,
+    readingStatsRepository: ReadingStatsRepository,
+    readerPreferences: ReaderPreferences,
+    dictionaryRepository: DictionaryRepository,
+    supabaseProgressSync: SupabaseProgressSync,
+    translationRepository: TranslationRepository,
+    translationPreferences: TranslationPreferences,
+    definitionRepository: DefinitionRepository,
+    definitionPreferences: DefinitionPreferences,
+    catalogProvider: CatalogProvider,
+    connectivityObserver: ConnectivityObserver,
+    downloadAndImportBookUseCase: DownloadAndImportBookUseCase,
+    addonRegistry: AddonRegistry,
+    addonAccessResolver: AddonAccessResolver,
+    syncService: SyncService,
+    notificationStore: NotificationStore,
+    notificationToastBus: NotificationToastBus,
+    notificationRepository: NotificationRepository,
+    getStatisticsUseCase: GetStatisticsUseCase,
+    readingGoalRepository: ReadingGoalRepository,
+    readingGoalPreferences: ReadingGoalPreferences,
+    storageRepository: StorageRepository,
+    cacheRepository: CacheRepository,
+    translationHistoryRepository: TranslationHistoryRepository,
+    notificationPreferencesStore: NotificationPreferencesStore,
+    coverStorage: CoverStorage,
+    checkForUpdatesUseCase: CheckForUpdatesUseCase,
+    updatePrefs: UpdatePrefs,
+    updateNetworkGate: UpdateNetworkGate,
+    updateDownloader: UpdateDownloader,
     appThemeMode: com.nexo.domain.model.ThemeMode = com.nexo.domain.model.ThemeMode.SYSTEM,
     onAppThemeModeChanged: (com.nexo.domain.model.ThemeMode) -> Unit = {},
 ) {
@@ -93,7 +160,7 @@ fun NexoNavHost(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val driveConnectPromptPrefs = remember { DriveConnectPromptPrefs(context) }
-    val driveAuthHelper = appContainer.googleDriveAuthHelper
+    val driveAuthHelper = googleDriveAuthHelper
 
     var selectedBookId by rememberSaveable { mutableStateOf("") }
     var selectedBookFilePath by rememberSaveable { mutableStateOf<String?>(null) }
@@ -104,7 +171,26 @@ fun NexoNavHost(
     // re-open the stale route.
     var settingsInitialRoute by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val navHostViewModels = rememberNavHostViewModels(appContainer, selectedBookId)
+    val navHostViewModels =
+        rememberNavHostViewModels(
+            selectedBookId = selectedBookId,
+            readerRepository = readerRepository,
+            readingStatsRepository = readingStatsRepository,
+            readerPreferences = readerPreferences,
+            dictionaryRepository = dictionaryRepository,
+            libraryRepository = libraryRepository,
+            activeUserProvider = activeUserProvider,
+            supabaseProgressSync = supabaseProgressSync,
+            translationRepository = translationRepository,
+            translationPreferences = translationPreferences,
+            definitionRepository = definitionRepository,
+            definitionPreferences = definitionPreferences,
+            catalogProvider = catalogProvider,
+            connectivityObserver = connectivityObserver,
+            downloadAndImportBookUseCase = downloadAndImportBookUseCase,
+            addonRegistry = addonRegistry,
+            addonAccessResolver = addonAccessResolver,
+        )
     val libraryViewModel = navHostViewModels.library
     val readerViewModel = navHostViewModels.reader
     val highlightsViewModel = navHostViewModels.highlights
@@ -121,9 +207,9 @@ fun NexoNavHost(
     SessionSyncEffect(
         session = authState.currentSession,
         homeViewModel = homeViewModel,
-        getStatisticsUseCase = appContainer.getStatisticsUseCase,
+        getStatisticsUseCase = getStatisticsUseCase,
         readerViewModel = readerViewModel,
-        activeUserProvider = appContainer.activeUserProvider,
+        activeUserProvider = activeUserProvider,
     )
 
     // Resolved here (not inside the screen) so the Discover surface no longer
@@ -146,7 +232,7 @@ fun NexoNavHost(
         snackbarHostState = snackbarHostState,
         context = context,
         onOpenBookAtLocation = { event ->
-            val book = appContainer.libraryRepository.getBookById(event.bookId, appContainer.activeUserProvider.requireUserId())
+            val book = libraryRepository.getBookById(event.bookId, activeUserProvider.requireUserId())
             if (book != null) {
                 selectedBookId = book.id
                 selectedBookFilePath = book.filePath
@@ -167,17 +253,17 @@ fun NexoNavHost(
         authSession = authState.currentSession,
         importEvents = libraryViewModel.importEvents,
         snackbarHostState = snackbarHostState,
-        syncService = appContainer.syncService,
-        notificationStore = appContainer.notificationStore,
+        syncService = syncService,
+        notificationStore = notificationStore,
     )
 
     // NOTIF: load persisted history once, then present store-delivered toasts
     // through the shared snackbar host so the tray and toast share one surface.
-    LaunchedEffect(appContainer) {
-        appContainer.notificationStore.ensureLoaded()
+    LaunchedEffect(notificationStore) {
+        notificationStore.ensureLoaded()
     }
-    LaunchedEffect(appContainer) {
-        appContainer.notificationToastBus.events.collect { event ->
+    LaunchedEffect(notificationToastBus) {
+        notificationToastBus.events.collect { event ->
             if (event is com.nexo.presentation.UiEvent.ShowToast) {
                 snackbarHostState.showSnackbar(event.message)
             }
@@ -185,13 +271,13 @@ fun NexoNavHost(
     }
 
     // ── Addon install deep-link dialog (nextpage://install) ─────────────
-    AddonInstallDialogHost(controller = appContainer.installDeepLinkController)
+    AddonInstallDialogHost(controller = installDeepLinkController)
 
     // ── App-update self-check (SDD app-auto-update) ────────────────────
     // Single shared instance: the startup check fires once here, the About
     // manual row (settings graph) drives the same state. The dialog host
     // lives at root so the startup prompt surfaces on any screen.
-    val updateViewModel = rememberUpdateViewModel(appContainer)
+    val updateViewModel = rememberUpdateViewModel(checkForUpdatesUseCase, updatePrefs, updateNetworkGate, updateDownloader)
     LaunchedEffect(Unit) {
         updateViewModel.checkAtStartup()
     }
@@ -225,7 +311,7 @@ fun NexoNavHost(
     // switching accounts re-evaluates the gate instead of reusing the previous
     // account's answer). See [OnboardingGate] for why no extra flag exists.
     var dailyGoalVersion by remember { mutableStateOf(0) }
-    val activeUserId by appContainer.activeUserProvider.userId.collectAsStateWithLifecycle()
+    val activeUserId by activeUserProvider.userId.collectAsStateWithLifecycle()
     // The goal belongs to an account, and the account is only known once
     // SessionSyncEffect has published it. A null id therefore means "not yet
     // resolved" — NOT "this account has no goal": the latter answer would send a
@@ -243,14 +329,14 @@ fun NexoNavHost(
         hasDailyGoal =
             when (activeUserId) {
                 null -> null
-                else -> ReadingGoalGate.resolve(appContainer.readingGoalRepository, activeUserId)
+                else -> ReadingGoalGate.resolve(readingGoalRepository, activeUserId)
             }
     }
     // Keep a synchronous fallback for the local, already-resolved case so a
     // returning user on a warm cache never waits on the effect to run.
     val localHasDailyGoal =
         remember(dailyGoalVersion, activeUserId) {
-            activeUserId?.let { OnboardingGate.hasDailyGoal(appContainer.readingGoalPreferences) }
+            activeUserId?.let { OnboardingGate.hasDailyGoal(readingGoalPreferences) }
         }
     val effectiveHasDailyGoal = hasDailyGoal ?: localHasDailyGoal
 
@@ -315,12 +401,14 @@ fun NexoNavHost(
                         authGraph(
                             navController = navController,
                             authViewModel = authViewModel,
-                            appContainer = appContainer,
+                            readingGoalRepository = readingGoalRepository,
                         )
 
                         onboardingGraph(
                             navController = navController,
-                            appContainer = appContainer,
+                            readingGoalPreferences = readingGoalPreferences,
+                            readingGoalRepository = readingGoalRepository,
+                            activeUserProvider = activeUserProvider,
                             onOnboardingCompleted = { dailyGoalVersion++ },
                         )
 
@@ -328,8 +416,8 @@ fun NexoNavHost(
                             navController = navController,
                             homeViewModel = homeViewModel,
                             libraryViewModel = libraryViewModel,
-                            activeUser = appContainer.activeUserProvider,
-                            notificationHistory = appContainer.notificationRepository,
+                            activeUser = activeUserProvider,
+                            notificationHistory = notificationRepository,
                             contentPadding = innerPadding,
                             onSelectBook = { id, path, format ->
                                 selectedBookId = id
@@ -341,7 +429,7 @@ fun NexoNavHost(
                                     when (destination) {
                                         is ResolvedNotificationTarget.Book -> {
                                             scope.launch {
-                                                val book = appContainer.libraryRepository.getBookById(destination.bookId, appContainer.activeUserProvider.requireUserId())
+                                                val book = libraryRepository.getBookById(destination.bookId, activeUserProvider.requireUserId())
                                                 if (book != null) {
                                                     selectedBookId = book.id
                                                     selectedBookFilePath = book.filePath
@@ -366,7 +454,9 @@ fun NexoNavHost(
 
                         bookDetailGraph(
                             navController = navController,
-                            appContainer = appContainer,
+                            libraryRepository = libraryRepository,
+                            activeUserProvider = activeUserProvider,
+                            coverStorage = coverStorage,
                             readerViewModel = readerViewModel,
                             contentPadding = innerPadding,
                             onSelectBook = { id, path, format ->
@@ -380,9 +470,9 @@ fun NexoNavHost(
                             navController = navController,
                             contentPadding = innerPadding,
                             discoverViewModel = discoverViewModel,
-                            catalogProvider = appContainer.catalogProvider,
+                            catalogProvider = catalogProvider,
                             discoverUserInitial = discoverUserInitial,
-                            downloadAndImportBookUseCase = appContainer.downloadAndImportBookUseCase,
+                            downloadAndImportBookUseCase = downloadAndImportBookUseCase,
                         )
 
                         libraryGraph(
@@ -450,10 +540,21 @@ fun NexoNavHost(
 
                         settingsGraph(
                             navController = navController,
-                            appContainer = appContainer,
+                            readerPreferences = readerPreferences,
+                            readingGoalPreferences = readingGoalPreferences,
+                            readingGoalRepository = readingGoalRepository,
+                            notificationPreferencesStore = notificationPreferencesStore,
+                            storageRepository = storageRepository,
+                            cacheRepository = cacheRepository,
+                            libraryRepository = libraryRepository,
+                            activeUserProvider = activeUserProvider,
+                            translationPreferences = translationPreferences,
+                            translationHistoryRepository = translationHistoryRepository,
+                            definitionPreferences = definitionPreferences,
+                            addonRegistry = addonRegistry,
                             authViewModel = authViewModel,
                             statisticsViewModel = statisticsViewModel,
-                            dictionaryRepository = appContainer.dictionaryRepository,
+                            dictionaryRepository = dictionaryRepository,
                             driveAuthHelper = driveAuthHelper,
                             currentSession = authState.currentSession,
                             settingsInitialRoute = settingsInitialRoute,
@@ -499,7 +600,7 @@ fun NexoNavHost(
                         viewModel = debugViewModel,
                         authViewModel = authViewModel,
                         session = readerSessionUiState,
-                        syncService = appContainer.syncService,
+                        syncService = syncService,
                         onDismiss = { showDebugSheet = false },
                     )
                 }

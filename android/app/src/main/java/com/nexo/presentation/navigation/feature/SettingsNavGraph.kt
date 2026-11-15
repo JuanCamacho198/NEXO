@@ -10,7 +10,18 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.nexo.data.remote.drive.GoogleDriveAuthHelper
 import com.nexo.debug.LogViewerScreen
-import com.nexo.di.AppContainer
+import com.nexo.data.remote.addons.AddonRegistry
+import com.nexo.data.repository.ReadingGoalRepository
+import com.nexo.data.session.DefinitionPreferences
+import com.nexo.data.session.NotificationPreferencesStore
+import com.nexo.data.session.ReaderPreferences
+import com.nexo.data.session.ReadingGoalPreferences
+import com.nexo.data.session.TranslationPreferences
+import com.nexo.domain.repository.CacheRepository
+import com.nexo.domain.repository.LibraryRepository
+import com.nexo.domain.repository.StorageRepository
+import com.nexo.domain.repository.TranslationHistoryRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.model.ThemeMode
 import com.nexo.domain.repository.DictionaryRepository
@@ -33,7 +44,18 @@ import com.nexo.presentation.viewmodel.UpdateViewModel
  */
 fun NavGraphBuilder.settingsGraph(
     navController: NavController,
-    appContainer: AppContainer,
+    readerPreferences: ReaderPreferences,
+    readingGoalPreferences: ReadingGoalPreferences,
+    readingGoalRepository: ReadingGoalRepository,
+    notificationPreferencesStore: NotificationPreferencesStore,
+    storageRepository: StorageRepository,
+    cacheRepository: CacheRepository,
+    libraryRepository: LibraryRepository,
+    activeUserProvider: ActiveUserProvider,
+    translationPreferences: TranslationPreferences,
+    translationHistoryRepository: TranslationHistoryRepository,
+    definitionPreferences: DefinitionPreferences,
+    addonRegistry: AddonRegistry,
     authViewModel: AuthViewModel,
     statisticsViewModel: StatisticsViewModel,
     dictionaryRepository: DictionaryRepository,
@@ -66,9 +88,9 @@ fun NavGraphBuilder.settingsGraph(
                     popUpTo(0) { inclusive = true }
                 }
             },
-            customHighlightColors = appContainer.readerPreferences.load().customHighlightColors,
+            customHighlightColors = readerPreferences.load().customHighlightColors,
             onUpdateCustomHighlightColor = { index, hex ->
-                val prefs = appContainer.readerPreferences
+                val prefs = readerPreferences
                 val current = prefs.load()
                 val colors =
                     current.customHighlightColors?.toMutableList()
@@ -79,7 +101,7 @@ fun NavGraphBuilder.settingsGraph(
                 prefs.save(current.copy(customHighlightColors = colors))
             },
             onAddCustomHighlightColor = {
-                val prefs = appContainer.readerPreferences
+                val prefs = readerPreferences
                 val current = prefs.load()
                 val colors =
                     current.customHighlightColors?.toMutableList()
@@ -92,7 +114,7 @@ fun NavGraphBuilder.settingsGraph(
                 }
             },
             onDeleteCustomHighlightColor = { index ->
-                val prefs = appContainer.readerPreferences
+                val prefs = readerPreferences
                 val current = prefs.load()
                 val colors =
                     current.customHighlightColors?.toMutableList()
@@ -105,7 +127,7 @@ fun NavGraphBuilder.settingsGraph(
                 }
             },
             onResetCustomHighlightColors = {
-                val prefs = appContainer.readerPreferences
+                val prefs = readerPreferences
                 val current = prefs.load()
                 prefs.save(current.copy(customHighlightColors = null))
             },
@@ -115,16 +137,16 @@ fun NavGraphBuilder.settingsGraph(
             statisticsViewModel = statisticsViewModel,
             dictionaryRepository = dictionaryRepository,
             driveAuthHelper = driveAuthHelper,
-            readingGoalPreferences = appContainer.readingGoalPreferences,
-            readingGoalRepository = appContainer.readingGoalRepository,
-            notificationPreferencesStore = appContainer.notificationPreferencesStore,
-            storageRepository = appContainer.storageRepository,
-            cacheRepository = appContainer.cacheRepository,
-            libraryRepository = appContainer.libraryRepository,
-            activeUser = appContainer.activeUserProvider,
-            translationPreferences = appContainer.translationPreferences,
-            translationHistoryRepository = appContainer.translationHistoryRepository,
-            definitionPreferences = appContainer.definitionPreferences,
+            readingGoalPreferences = readingGoalPreferences,
+            readingGoalRepository = readingGoalRepository,
+            notificationPreferencesStore = notificationPreferencesStore,
+            storageRepository = storageRepository,
+            cacheRepository = cacheRepository,
+            libraryRepository = libraryRepository,
+            activeUser = activeUserProvider,
+            translationPreferences = translationPreferences,
+            translationHistoryRepository = translationHistoryRepository,
+            definitionPreferences = definitionPreferences,
             updateViewModel = updateViewModel,
             onNavigateToAddons = {
                 navController.navigate(NexoDestination.SettingsAddons.route)
@@ -140,14 +162,14 @@ fun NavGraphBuilder.settingsGraph(
 
     composable(route = NexoDestination.SettingsAddons.route) {
         AddonManagementRoute(
-            registry = appContainer.addonRegistry,
+            registry = addonRegistry,
             onBack = { navController.popBackStack() },
-            hasConsent = { addonId -> appContainer.addonRegistry.hasAddonConsent(addonId) },
+            hasConsent = { addonId -> addonRegistry.hasAddonConsent(addonId) },
             onConsentChange = { addonId, granted ->
                 if (granted) {
-                    appContainer.addonRegistry.recordAddonConsent(addonId)
+                    addonRegistry.recordAddonConsent(addonId)
                 } else {
-                    appContainer.addonRegistry.revokeAddonConsent(addonId)
+                    addonRegistry.revokeAddonConsent(addonId)
                 }
             },
             onNavigateToLegal = {
@@ -170,14 +192,14 @@ fun NavGraphBuilder.settingsGraph(
         arguments = listOf(navArgument("addonId") { type = NavType.StringType }),
     ) { entry ->
         AddonCapabilityDetailRoute(
-            registry = appContainer.addonRegistry,
+            registry = addonRegistry,
             addonId = entry.arguments?.getString("addonId").orEmpty(),
-            hasConsent = { addonId -> appContainer.addonRegistry.hasAddonConsent(addonId) },
+            hasConsent = { addonId -> addonRegistry.hasAddonConsent(addonId) },
             onConsentChange = { addonId, granted ->
                 if (granted) {
-                    appContainer.addonRegistry.recordAddonConsent(addonId)
+                    addonRegistry.recordAddonConsent(addonId)
                 } else {
-                    appContainer.addonRegistry.revokeAddonConsent(addonId)
+                    addonRegistry.revokeAddonConsent(addonId)
                 }
             },
             onViewPolicy = {

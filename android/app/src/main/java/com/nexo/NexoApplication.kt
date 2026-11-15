@@ -48,12 +48,10 @@ import javax.inject.Inject
  * - Chains to the previous default handler so the OS still gets the
  *   crash report (and the process still dies as expected).
  *
- * SDD android-tooling-hygiene WS2a slice 4: Hilt root. App-scoped bindings
- * live in `com.nexo.di.HiltFoundationModule` (slice 4) and
- * `com.nexo.di.HiltSingletonsModule` (slice 5: sync + deep-link
- * singletons); the manual [com.nexo.di.AppContainer]
- * still constructs entry-point graphs and delegates binding construction to the
- * shared factories until slices 5-6 migrate consumers.
+ * Hilt root: App-scoped bindings live in `com.nexo.di.HiltFoundationModule`,
+ * `com.nexo.di.HiltSingletonsModule` and the `com.nexo.di.modules` modules.
+ * Every singleton is constructed by the Hilt graph; there is no manual
+ * container.
  */
 @HiltAndroidApp
 class NexoApplication :
@@ -210,7 +208,7 @@ class NexoApplication :
 
         // Warm the Supabase client on a background thread so the first Activity
         // frame never pays the ~2s client-construction cost on the main thread
-        // (measured via logcat: AppContainer fully initialized in ~1950ms).
+        // (measured via logcat: the app-scoped graph fully initialized in ~1950ms).
         // The client is created lazily on first use if this warm-up races.
         supabaseWarmupScope.launch {
             runCatching { SupabaseClientProvider.client }

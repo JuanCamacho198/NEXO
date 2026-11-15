@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
  * PR-2 of sync-layer-split adds this interface; consumers are NOT yet wired in
  * this PR — `AuthViewModel.triggerSyncForSession` / `onLogout` migrate in PR-3.
  * Existing per-domain handles (`syncService`, `supabaseProgressSync`,
- * `supabaseBookCatalogSync`) stay reachable from `AppContainer` so domain-shaped
+ * `supabaseBookCatalogSync`) stay injectable so domain-shaped
  * entry points (`pullAllHighlights`, `resumeForBook`, `getDownloadableBooks`,
  * `downloadRemoteBook`) keep working unchanged.
  *

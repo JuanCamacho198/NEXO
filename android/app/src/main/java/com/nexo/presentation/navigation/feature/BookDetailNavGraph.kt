@@ -10,7 +10,9 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.nexo.di.AppContainer
+import com.nexo.data.storage.CoverStorage
+import com.nexo.domain.repository.LibraryRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.feature.bookdetail.BookDetailScreen
 import com.nexo.presentation.feature.editmetadata.EditBookMetadataScreen
 import com.nexo.presentation.navigation.NexoDestination
@@ -30,7 +32,9 @@ import com.nexo.presentation.viewmodel.ReaderViewModel
  */
 fun NavGraphBuilder.bookDetailGraph(
     navController: NavController,
-    appContainer: AppContainer,
+    libraryRepository: LibraryRepository,
+    activeUserProvider: ActiveUserProvider,
+    coverStorage: CoverStorage,
     readerViewModel: ReaderViewModel,
     contentPadding: PaddingValues,
     onSelectBook: (String, String?, String) -> Unit,
@@ -47,8 +51,8 @@ fun NavGraphBuilder.bookDetailGraph(
         val bookDetailViewModel =
             rememberBookDetailViewModel(
                 bookId = bookId,
-                libraryRepository = appContainer.libraryRepository,
-                activeUser = appContainer.activeUserProvider,
+                libraryRepository = libraryRepository,
+                activeUser = activeUserProvider,
             )
         BookDetailScreen(
             contentPadding = contentPadding,
@@ -76,9 +80,9 @@ fun NavGraphBuilder.bookDetailGraph(
         val editBookMetadataViewModel =
             rememberEditBookMetadataViewModel(
                 bookId = bookId,
-                libraryRepository = appContainer.libraryRepository,
-                activeUser = appContainer.activeUserProvider,
-                coverStorage = appContainer.coverStorage,
+                libraryRepository = libraryRepository,
+                activeUser = activeUserProvider,
+                coverStorage = coverStorage,
                 onSaved = { navController.popBackStack() },
             )
         EditBookMetadataScreen(

@@ -29,7 +29,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/CrashNotificationHelper.kt"
-            line="96"
+            line="101"
             column="13"/>
     </issue>
 
@@ -293,7 +293,7 @@
         errorLine2="                        ^">
         <location
             file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="108"
+            line="151"
             column="25"/>
     </issue>
 
@@ -388,12 +388,12 @@
     <issue
         id="NonObservableLocale"
         message="Reading locale in a non-observable way in a composable function"
-        errorLine1="                val dateFormatter = SimpleDateFormat(&quot;EEE&quot;, Locale.getDefault())"
-        errorLine2="                                                            ~~~~~~~~~~~~~~~~~~~">
+        errorLine1="                    SimpleDateFormat(&quot;EEE&quot;, Locale.getDefault()).apply {"
+        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/StatisticsScreen.kt"
-            line="304"
-            column="61"/>
+            line="314"
+            column="45"/>
     </issue>
 
     <issue
@@ -596,7 +596,7 @@
 
     <issue
         id="AndroidGradlePluginVersion"
-        message="A newer version of Gradle than 8.13 is available: 8.14.5"
+        message="A newer version of Gradle than 8.13 is available: 8.14.7"
         errorLine1="distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -607,7 +607,7 @@
 
     <issue
         id="AndroidGradlePluginVersion"
-        message="A newer version of com.android.application than 8.11.1 is available: 9.4.1. (There is also a newer version of 8.11.𝑥 available, if upgrading to 9.4.1 is difficult: 8.11.2)"
+        message="A newer version of com.android.application than 8.11.1 is available: 9.5.1. (There is also a newer version of 8.11.𝑥 available, if upgrading to 9.5.1 is difficult: 8.11.2)"
         errorLine1="agp = &quot;8.11.1&quot;"
         errorLine2="      ~~~~~~~~">
         <location
@@ -618,7 +618,7 @@
 
     <issue
         id="AndroidGradlePluginVersion"
-        message="A newer version of com.android.test than 8.11.1 is available: 9.4.1. (There is also a newer version of 8.11.𝑥 available, if upgrading to 9.4.1 is difficult: 8.11.2)"
+        message="A newer version of com.android.test than 8.11.1 is available: 9.5.1. (There is also a newer version of 8.11.𝑥 available, if upgrading to 9.5.1 is difficult: 8.11.2)"
         errorLine1="agp = &quot;8.11.1&quot;"
         errorLine2="      ~~~~~~~~">
         <location
@@ -668,6 +668,17 @@
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
             line="22"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-process than 2.8.6 is available: 2.11.0"
+        errorLine1="lifecycle = &quot;2.8.6&quot;"
+        errorLine2="            ~~~~~~~">
+        <location
+            file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
+            line="23"
             column="13"/>
     </issue>
 
@@ -805,23 +816,34 @@
 
     <issue
         id="GradleDependency"
-        message="A newer version of androidx.paging:paging-compose than 3.3.6 is available: 3.5.1"
+        message="A newer version of androidx.sqlite:sqlite-bundled than 2.6.2 is available: 2.7.1"
+        errorLine1="androidxSqlite = &quot;2.6.2&quot;"
+        errorLine2="                 ~~~~~~~">
+        <location
+            file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
+            line="35"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.paging:paging-compose than 3.3.6 is available: 3.5.3"
         errorLine1="paging = &quot;3.3.6&quot;"
         errorLine2="         ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="28"
+            line="36"
             column="10"/>
     </issue>
 
     <issue
         id="GradleDependency"
-        message="A newer version of androidx.paging:paging-runtime-ktx than 3.3.6 is available: 3.5.1"
+        message="A newer version of androidx.paging:paging-runtime-ktx than 3.3.6 is available: 3.5.3"
         errorLine1="paging = &quot;3.3.6&quot;"
         errorLine2="         ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="28"
+            line="36"
             column="10"/>
     </issue>
 
@@ -832,7 +854,7 @@
         errorLine2="                   ~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="29"
+            line="37"
             column="20"/>
     </issue>
 
@@ -843,7 +865,7 @@
         errorLine2="              ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="33"
+            line="41"
             column="15"/>
     </issue>
 
@@ -854,7 +876,7 @@
         errorLine2="              ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="33"
+            line="41"
             column="15"/>
     </issue>
 
@@ -865,7 +887,7 @@
         errorLine2="           ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="34"
+            line="42"
             column="12"/>
     </issue>
 
@@ -876,7 +898,7 @@
         errorLine2="                 ~~~~~~~~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="40"
+            line="48"
             column="18"/>
     </issue>
 
@@ -887,7 +909,7 @@
         errorLine2="                   ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="41"
+            line="49"
             column="20"/>
     </issue>
 
@@ -898,7 +920,7 @@
         errorLine2="                   ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="50"
+            line="58"
             column="20"/>
     </issue>
 
@@ -909,7 +931,7 @@
         errorLine2="           ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="52"
+            line="60"
             column="12"/>
     </issue>
 
@@ -920,18 +942,18 @@
         errorLine2="           ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="53"
+            line="61"
             column="12"/>
     </issue>
 
     <issue
         id="GradleDependency"
-        message="A newer version of androidx.webkit:webkit than 1.12.1 is available: 1.17.1"
+        message="A newer version of androidx.webkit:webkit than 1.12.1 is available: 1.18.0"
         errorLine1="webkit = &quot;1.12.1&quot;"
         errorLine2="         ~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="55"
+            line="63"
             column="10"/>
     </issue>
 
@@ -942,7 +964,7 @@
         errorLine2="                        ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="57"
+            line="65"
             column="25"/>
     </issue>
 
@@ -953,7 +975,7 @@
         errorLine2="       ~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="63"
+            line="71"
             column="8"/>
     </issue>
 
@@ -964,7 +986,7 @@
         errorLine2="               ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="71"
+            line="79"
             column="16"/>
     </issue>
 
@@ -975,13 +997,24 @@
         errorLine2="               ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="71"
+            line="79"
             column="16"/>
     </issue>
 
     <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test.uiautomator:uiautomator than 2.4.0 is available: 2.4.1"
+        errorLine1="uiautomator = &quot;2.4.0&quot;"
+        errorLine2="              ~~~~~~~">
+        <location
+            file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
+            line="94"
+            column="15"/>
+    </issue>
+
+    <issue
         id="NewerVersionAvailable"
-        message="A newer version of org.jetbrains.kotlin.android than 2.2.21 is available: 2.4.20"
+        message="A newer version of org.jetbrains.kotlin.android than 2.2.21 is available: 2.4.21"
         errorLine1="kotlin = &quot;2.2.21&quot;"
         errorLine2="         ~~~~~~~~">
         <location
@@ -992,7 +1025,7 @@
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of org.jetbrains.kotlin.plugin.compose than 2.2.21 is available: 2.4.20"
+        message="A newer version of org.jetbrains.kotlin.jvm than 2.2.21 is available: 2.4.21"
         errorLine1="kotlin = &quot;2.2.21&quot;"
         errorLine2="         ~~~~~~~~">
         <location
@@ -1003,7 +1036,18 @@
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of org.jetbrains.kotlin.plugin.serialization than 2.2.21 is available: 2.4.20"
+        message="A newer version of org.jetbrains.kotlin.plugin.compose than 2.2.21 is available: 2.4.21"
+        errorLine1="kotlin = &quot;2.2.21&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
+            line="7"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.plugin.serialization than 2.2.21 is available: 2.4.21"
         errorLine1="kotlin = &quot;2.2.21&quot;"
         errorLine2="         ~~~~~~~~">
         <location
@@ -1025,7 +1069,7 @@
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of io.sentry.android.gradle than 6.21.0 is available: 6.23.0"
+        message="A newer version of io.sentry.android.gradle than 6.21.0 is available: 6.27.0"
         errorLine1="sentryPlugin = &quot;6.21.0&quot;"
         errorLine2="               ~~~~~~~~">
         <location
@@ -1069,12 +1113,12 @@
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.google.api-client:google-api-client-android than 2.7.2 is available: 2.9.1"
+        message="A newer version of com.google.api-client:google-api-client-android than 2.7.2 is available: 2.9.2"
         errorLine1="googleApiClient = &quot;2.7.2&quot;"
         errorLine2="                  ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="30"
+            line="38"
             column="19"/>
     </issue>
 
@@ -1085,7 +1129,7 @@
         errorLine2="                       ~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="32"
+            line="40"
             column="24"/>
     </issue>
 
@@ -1096,7 +1140,18 @@
         errorLine2="             ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="35"
+            line="43"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-core than 1.8.1 is available: 1.11.0"
+        errorLine1="coroutines = &quot;1.8.1&quot;"
+        errorLine2="             ~~~~~~~">
+        <location
+            file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
+            line="43"
             column="14"/>
     </issue>
 
@@ -1107,95 +1162,95 @@
         errorLine2="             ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="35"
+            line="43"
             column="14"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of org.jetbrains.kotlinx:kotlinx-serialization-json than 1.7.3 is available: 1.11.0"
+        message="A newer version of org.jetbrains.kotlinx:kotlinx-serialization-json than 1.7.3 is available: 1.13.0"
         errorLine1="serializationJson = &quot;1.7.3&quot;"
         errorLine2="                    ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="36"
+            line="44"
             column="21"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of io.ktor:ktor-client-cio than 3.1.2 is available: 3.6.0"
+        message="A newer version of io.ktor:ktor-client-cio than 3.1.2 is available: 3.6.1"
         errorLine1="ktor = &quot;3.1.2&quot;"
         errorLine2="       ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="37"
+            line="45"
             column="8"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of io.ktor:ktor-client-content-negotiation than 3.1.2 is available: 3.6.0"
+        message="A newer version of io.ktor:ktor-client-content-negotiation than 3.1.2 is available: 3.6.1"
         errorLine1="ktor = &quot;3.1.2&quot;"
         errorLine2="       ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="37"
+            line="45"
             column="8"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of io.ktor:ktor-client-core than 3.1.2 is available: 3.6.0"
+        message="A newer version of io.ktor:ktor-client-core than 3.1.2 is available: 3.6.1"
         errorLine1="ktor = &quot;3.1.2&quot;"
         errorLine2="       ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="37"
+            line="45"
             column="8"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of io.ktor:ktor-client-mock than 3.1.2 is available: 3.6.0"
+        message="A newer version of io.ktor:ktor-client-mock than 3.1.2 is available: 3.6.1"
         errorLine1="ktor = &quot;3.1.2&quot;"
         errorLine2="       ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="37"
+            line="45"
             column="8"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of io.ktor:ktor-client-okhttp than 3.1.2 is available: 3.6.0"
+        message="A newer version of io.ktor:ktor-client-okhttp than 3.1.2 is available: 3.6.1"
         errorLine1="ktor = &quot;3.1.2&quot;"
         errorLine2="       ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="37"
+            line="45"
             column="8"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of io.ktor:ktor-serialization-kotlinx-json than 3.1.2 is available: 3.6.0"
+        message="A newer version of io.ktor:ktor-serialization-kotlinx-json than 3.1.2 is available: 3.6.1"
         errorLine1="ktor = &quot;3.1.2&quot;"
         errorLine2="       ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="37"
+            line="45"
             column="8"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of io.github.jan-tennert.supabase:bom than 3.5.0 is available: 3.8.0"
+        message="A newer version of io.github.jan-tennert.supabase:bom than 3.5.0 is available: 3.9.0"
         errorLine1="supabaseBom = &quot;3.5.0&quot;"
         errorLine2="              ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="38"
+            line="46"
             column="15"/>
     </issue>
 
@@ -1206,7 +1261,7 @@
         errorLine2="           ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="39"
+            line="47"
             column="12"/>
     </issue>
 
@@ -1217,7 +1272,7 @@
         errorLine2="          ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="42"
+            line="50"
             column="11"/>
     </issue>
 
@@ -1228,7 +1283,7 @@
         errorLine2="          ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="42"
+            line="50"
             column="11"/>
     </issue>
 
@@ -1239,7 +1294,7 @@
         errorLine2="          ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="42"
+            line="50"
             column="11"/>
     </issue>
 
@@ -1250,30 +1305,41 @@
         errorLine2="          ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="42"
+            line="50"
             column="11"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of io.sentry:sentry-android than 8.54.0 is available: 8.58.0"
+        message="A newer version of io.sentry:sentry-android than 8.54.0 is available: 8.64.0"
         errorLine1="sentry = &quot;8.54.0&quot;"
         errorLine2="         ~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="43"
+            line="51"
             column="10"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of io.mockk:mockk than 1.13.12 is available: 1.14.11"
+        message="A newer version of io.mockk:mockk than 1.13.12 is available: 1.14.12"
         errorLine1="mockk = &quot;1.13.12&quot;"
         errorLine2="        ~~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="46"
+            line="54"
             column="9"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.lemonappdev:konsist than 0.17.3 is available: 0.18.1"
+        errorLine1="konsist = &quot;0.17.3&quot;"
+        errorLine2="          ~~~~~~~~">
+        <location
+            file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
+            line="56"
+            column="11"/>
     </issue>
 
     <issue
@@ -1283,18 +1349,18 @@
         errorLine2="       ~~~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="49"
+            line="57"
             column="8"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of org.robolectric:robolectric than 4.13 is available: 4.17"
+        message="A newer version of org.robolectric:robolectric than 4.13 is available: 4.18"
         errorLine1="robolectric = &quot;4.13&quot;"
         errorLine2="              ~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="51"
+            line="59"
             column="15"/>
     </issue>
 
@@ -1305,7 +1371,7 @@
         errorLine2="         ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="54"
+            line="62"
             column="10"/>
     </issue>
 
@@ -1316,7 +1382,7 @@
         errorLine2="       ~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="56"
+            line="64"
             column="8"/>
     </issue>
 
@@ -1327,7 +1393,7 @@
         errorLine2="       ~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="56"
+            line="64"
             column="8"/>
     </issue>
 
@@ -1338,7 +1404,7 @@
         errorLine2="       ~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="56"
+            line="64"
             column="8"/>
     </issue>
 
@@ -1349,7 +1415,7 @@
         errorLine2="       ~~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="56"
+            line="64"
             column="8"/>
     </issue>
 
@@ -1360,18 +1426,18 @@
         errorLine2="        ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="72"
+            line="80"
             column="9"/>
     </issue>
 
     <issue
         id="NewerVersionAvailable"
-        message="A newer version of com.diffplug.spotless than 7.2.1 is available: 8.10.3"
+        message="A newer version of com.diffplug.spotless than 7.2.1 is available: 8.11.0"
         errorLine1="spotless = &quot;7.2.1&quot;"
         errorLine2="           ~~~~~~~">
         <location
             file="$HOME/Documents/PROYECTOS/NEXTPAGE/android/gradle/libs.versions.toml"
-            line="73"
+            line="81"
             column="12"/>
     </issue>
 
@@ -1382,7 +1448,7 @@
         errorLine2="                          ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/ReaderLifecycleStateHolder.kt"
-            line="461"
+            line="484"
             column="27"/>
     </issue>
 
@@ -1393,7 +1459,7 @@
         errorLine2="                            ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/ReaderViewModel.kt"
-            line="322"
+            line="623"
             column="29"/>
     </issue>
 
@@ -1409,13 +1475,24 @@
     </issue>
 
     <issue
+        id="ComposableNaming"
+        message="Composable functions that return Unit should start with an uppercase letter"
+        errorLine1="fun rememberTapZonesBridge("
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumTapZones.kt"
+            line="56"
+            column="5"/>
+    </issue>
+
+    <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
         errorLine1="                        context.getString(R.string.library_import_success, event.title),"
         errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/navigation/DrivePromptHost.kt"
-            line="57"
+            line="58"
             column="25"/>
     </issue>
 
@@ -1426,7 +1503,7 @@
         errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/navigation/DrivePromptHost.kt"
-            line="72"
+            line="88"
             column="25"/>
     </issue>
 
@@ -1437,7 +1514,7 @@
         errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/navigation/DrivePromptHost.kt"
-            line="102"
+            line="138"
             column="37"/>
     </issue>
 
@@ -1448,7 +1525,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/navigation/DrivePromptHost.kt"
-            line="126"
+            line="195"
             column="21"/>
     </issue>
 
@@ -1459,7 +1536,7 @@
         errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/navigation/DrivePromptHost.kt"
-            line="127"
+            line="196"
             column="20"/>
     </issue>
 
@@ -1470,7 +1547,7 @@
         errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/navigation/DrivePromptHost.kt"
-            line="128"
+            line="197"
             column="27"/>
     </issue>
 
@@ -1481,7 +1558,7 @@
         errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/navigation/DrivePromptHost.kt"
-            line="129"
+            line="198"
             column="27"/>
     </issue>
 
@@ -1492,7 +1569,7 @@
         errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/navigation/DrivePromptHost.kt"
-            line="138"
+            line="207"
             column="29"/>
     </issue>
 
@@ -1525,7 +1602,7 @@
         errorLine2="                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/navigation/NexoNavHost.kt"
-            line="135"
+            line="245"
             column="48"/>
     </issue>
 
@@ -1657,7 +1734,7 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/feature/discover/ReadAccessSheet.kt"
-            line="137"
+            line="138"
             column="5"/>
     </issue>
 
@@ -1723,17 +1800,6 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/ReadiumReaderContent.kt"
-            line="54"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/ui/components/molecules/SelectionOverlay.kt"
             line="56"
             column="5"/>
     </issue>
@@ -1744,8 +1810,19 @@
         errorLine1="    modifier: Modifier = Modifier,"
         errorLine2="    ~~~~~~~~">
         <location
+            file="src/main/java/com/nexo/ui/components/molecules/SelectionOverlay.kt"
+            line="73"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
             file="src/main/java/com/nexo/ui/components/molecules/SelectionOverlayAnchoring.kt"
-            line="75"
+            line="194"
             column="5"/>
     </issue>
 
@@ -1778,19 +1855,41 @@
         errorLine2="    ~~~~~~~~">
         <location
             file="src/main/java/com/nexo/ui/components/molecules/TextSelectionMenu.kt"
-            line="85"
+            line="107"
             column="5"/>
     </issue>
 
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.i(TAG, &quot;AppContainer fully initialized in ${totalInitTime}ms&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        errorLine1="            Log.d(TAG, &quot;Database initialized in ${elapsedMs}ms&quot;)"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/nexo/di/AppContainer.kt"
-            line="295"
-            column="9"/>
+            file="src/main/java/com/nexo/di/AppStartTimings.kt"
+            line="32"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="LogNotTimber"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
+        errorLine1="            Log.d(TAG, &quot;LibraryRepository initialized in ${elapsedMs}ms&quot;)"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/di/AppStartTimings.kt"
+            line="37"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="LogNotTimber"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
+        errorLine1="            Log.d(TAG, &quot;ReaderRepository initialized in ${elapsedMs}ms&quot;)"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/di/AppStartTimings.kt"
+            line="42"
+            column="13"/>
     </issue>
 
     <issue
@@ -1800,7 +1899,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/feature/auth/AuthScreen.kt"
-            line="86"
+            line="83"
             column="9"/>
     </issue>
 
@@ -1811,7 +1910,7 @@
         errorLine2="                ^">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/AuthViewModel.kt"
-            line="514"
+            line="499"
             column="17"/>
     </issue>
 
@@ -1822,7 +1921,7 @@
         errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/AuthViewModel.kt"
-            line="523"
+            line="508"
             column="27"/>
     </issue>
 
@@ -1833,19 +1932,8 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/BookmarkManager.kt"
-            line="64"
+            line="66"
             column="13"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d(TAG, &quot;Database initialized in ${dbInitTimeMs}ms&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/di/modules/DatabaseModule.kt"
-            line="48"
-            column="9"/>
     </issue>
 
     <issue
@@ -1932,7 +2020,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/debug/DebugViewModel.kt"
-            line="187"
+            line="199"
             column="21"/>
     </issue>
 
@@ -1943,7 +2031,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/debug/DebugViewModel.kt"
-            line="201"
+            line="213"
             column="21"/>
     </issue>
 
@@ -1954,7 +2042,7 @@
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/EpubBookLoader.kt"
-            line="196"
+            line="208"
             column="17"/>
     </issue>
 
@@ -1965,7 +2053,7 @@
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/EpubBookLoader.kt"
-            line="240"
+            line="260"
             column="17"/>
     </issue>
 
@@ -1976,7 +2064,7 @@
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/EpubBookLoader.kt"
-            line="251"
+            line="271"
             column="17"/>
     </issue>
 
@@ -1987,7 +2075,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/EpubBookLoader.kt"
-            line="347"
+            line="393"
             column="9"/>
     </issue>
 
@@ -1998,7 +2086,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/FeedbackCapture.kt"
-            line="38"
+            line="108"
             column="13"/>
     </issue>
 
@@ -2009,7 +2097,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/FeedbackCapture.kt"
-            line="60"
+            line="153"
             column="13"/>
     </issue>
 
@@ -2042,7 +2130,7 @@
         errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="120"
+            line="163"
             column="33"/>
     </issue>
 
@@ -2053,7 +2141,7 @@
         errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="125"
+            line="168"
             column="25"/>
     </issue>
 
@@ -2064,7 +2152,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="131"
+            line="174"
             column="21"/>
     </issue>
 
@@ -2075,7 +2163,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="133"
+            line="176"
             column="21"/>
     </issue>
 
@@ -2086,7 +2174,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="138"
+            line="183"
             column="21"/>
     </issue>
 
@@ -2097,7 +2185,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/HighlightManager.kt"
-            line="76"
+            line="78"
             column="13"/>
     </issue>
 
@@ -2130,7 +2218,7 @@
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/NexoApplication.kt"
-            line="231"
+            line="289"
             column="17"/>
     </issue>
 
@@ -2163,7 +2251,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/ReadingSessionRecorder.kt"
-            line="91"
+            line="97"
             column="13"/>
     </issue>
 
@@ -2174,7 +2262,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/readium/ReadiumFragmentHost.kt"
-            line="109"
+            line="114"
             column="13"/>
     </issue>
 
@@ -2218,7 +2306,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/ReadiumReaderContent.kt"
-            line="86"
+            line="97"
             column="13"/>
     </issue>
 
@@ -2229,7 +2317,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/ReadiumReaderContent.kt"
-            line="217"
+            line="231"
             column="21"/>
     </issue>
 
@@ -2240,7 +2328,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/ReadiumReaderContent.kt"
-            line="227"
+            line="241"
             column="21"/>
     </issue>
 
@@ -2251,7 +2339,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/ReadiumReaderContent.kt"
-            line="229"
+            line="243"
             column="21"/>
     </issue>
 
@@ -2357,8 +2445,8 @@
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                        Log.d(&quot;SelectionDebug&quot;, &quot;evaluateJavascript result: &apos;$jsResult&apos;&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        errorLine1="                        Log.d(&quot;SelectionDebug&quot;, &quot;evaluateJavascript result: len=${jsResult?.length ?: 0}&quot;)"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
             line="113"
@@ -2368,8 +2456,8 @@
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                            Log.d(&quot;SelectionDebug&quot;, &quot;JS result empty, using locator.text fallback: &apos;$fallback&apos;&quot;)"
-        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        errorLine1="                            Log.d(&quot;SelectionDebug&quot;, &quot;JS result empty, using locator.text fallback: len=${fallback.length}&quot;)"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
             line="116"
@@ -2390,8 +2478,8 @@
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                        Log.d(&quot;SelectionDebug&quot;, &quot;Using locator.text fallback after exception: &apos;$fallback&apos;&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        errorLine1="                        Log.d(&quot;SelectionDebug&quot;, &quot;Using locator.text fallback after exception: len=${fallback.length}&quot;)"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
             line="124"
@@ -2401,11 +2489,33 @@
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                Log.d(&quot;SelectionDebug&quot;, &quot;Calling interactionHolder.onReadiumSelection(text=&apos;${text.take(50)}&apos;, rect=$selRect)&quot;)"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        errorLine1="                    Log.d(&quot;SelectionDebug&quot;, &quot;Normalized selection text: len=${rawText.length} -> ${text.length}&quot;)"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
-            line="127"
+            line="129"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="LogNotTimber"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
+        errorLine1="                Log.d(&quot;SelectionDebug&quot;, &quot;Resolved rect=$usableRect (readium rect=$selRect)&quot;)"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
+            line="132"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="LogNotTimber"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
+        errorLine1="                Log.d(&quot;SelectionDebug&quot;, &quot;Calling interactionHolder.onReadiumSelection(len=${text.length}, rect=$usableRect)&quot;)"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
+            line="134"
             column="17"/>
     </issue>
 
@@ -2416,7 +2526,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
-            line="135"
+            line="142"
             column="21"/>
     </issue>
 
@@ -2427,7 +2537,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
-            line="137"
+            line="144"
             column="21"/>
     </issue>
 
@@ -2438,7 +2548,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
-            line="142"
+            line="149"
             column="21"/>
     </issue>
 
@@ -2449,8 +2559,41 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
-            line="247"
+            line="254"
             column="9"/>
+    </issue>
+
+    <issue
+        id="LogNotTimber"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
+        errorLine1="            Log.d(&quot;SelectionDebug&quot;, &quot;raw rect JS failed: ${e::class.simpleName}: ${e.message}&quot;)"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
+            line="328"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="LogNotTimber"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
+        errorLine1="        Log.d(&quot;SelectionDebug&quot;, &quot;Repaired Readium rect $readiumRect -> $repaired&quot;)"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
+            line="335"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="LogNotTimber"
+        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
+        errorLine1="    Log.d("
+        errorLine2="    ^">
+        <location
+            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumSelectionBridge.kt"
+            line="369"
+            column="5"/>
     </issue>
 
     <issue
@@ -2522,28 +2665,6 @@
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d(TAG, &quot;LibraryRepository initialized in ${epubImportInitTimeMs}ms&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/di/modules/RepositoryModule.kt"
-            line="66"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d(TAG, &quot;ReaderRepository initialized in ${readerRepoInitTimeMs}ms&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/di/modules/RepositoryModule.kt"
-            line="82"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
         errorLine1="                Log.w(TAG, &quot;Failed to parse PDF search results&quot;, e)"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -2559,7 +2680,7 @@
         errorLine2="        ^">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="53"
+            line="127"
             column="9"/>
     </issue>
 
@@ -2570,7 +2691,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="61"
+            line="136"
             column="21"/>
     </issue>
 
@@ -2581,7 +2702,7 @@
         errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="77"
+            line="152"
             column="25"/>
     </issue>
 
@@ -2592,7 +2713,7 @@
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="95"
+            line="170"
             column="17"/>
     </issue>
 
@@ -2603,7 +2724,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="110"
+            line="185"
             column="13"/>
     </issue>
 
@@ -2614,7 +2735,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="112"
+            line="187"
             column="13"/>
     </issue>
 
@@ -2625,7 +2746,7 @@
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="134"
+            line="209"
             column="9"/>
     </issue>
 
@@ -2636,7 +2757,7 @@
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="138"
+            line="213"
             column="17"/>
     </issue>
 
@@ -2647,18 +2768,18 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="161"
+            line="239"
             column="13"/>
     </issue>
 
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d(&quot;ReaderVM&quot;, &quot;onTextSelection: \&quot;${text.take(DEBUG_LOG_TEXT_LIMIT)}\&quot; rect=$rect&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        errorLine1="        Log.d("
+        errorLine2="        ^">
         <location
             file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="179"
+            line="257"
             column="9"/>
     </issue>
 
@@ -2669,7 +2790,7 @@
         errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="199"
+            line="201"
             column="35"/>
     </issue>
 
@@ -2680,7 +2801,7 @@
         errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="240"
+            line="242"
             column="31"/>
     </issue>
 
@@ -2691,7 +2812,7 @@
         errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="307"
+            line="312"
             column="31"/>
     </issue>
 
@@ -2702,7 +2823,7 @@
         errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="326"
+            line="331"
             column="35"/>
     </issue>
 
@@ -2724,7 +2845,29 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="55"
+            line="59"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;days&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;home_last_read_days_ago&quot;>Last read: %1$d days ago&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="73"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;days&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;home_streak_badge_content_description&quot;>Reading streak: %1$d days&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="116"
             column="5"/>
     </issue>
 
@@ -2735,7 +2878,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="137"
+            line="174"
             column="5"/>
     </issue>
 
@@ -2746,7 +2889,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="157"
+            line="212"
             column="5"/>
     </issue>
 
@@ -2757,7 +2900,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="192"
+            line="247"
             column="5"/>
     </issue>
 
@@ -2768,7 +2911,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="204"
+            line="259"
             column="5"/>
     </issue>
 
@@ -2779,7 +2922,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="207"
+            line="262"
             column="5"/>
     </issue>
 
@@ -2790,7 +2933,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="223"
+            line="278"
             column="5"/>
     </issue>
 
@@ -2801,7 +2944,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="224"
+            line="279"
             column="5"/>
     </issue>
 
@@ -2812,7 +2955,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="265"
+            line="320"
             column="5"/>
     </issue>
 
@@ -2823,7 +2966,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="273"
+            line="328"
             column="5"/>
     </issue>
 
@@ -2834,7 +2977,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="455"
+            line="606"
             column="5"/>
     </issue>
 
@@ -2845,7 +2988,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="510"
+            line="669"
             column="5"/>
     </issue>
 
@@ -2856,7 +2999,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="534"
+            line="693"
             column="5"/>
     </issue>
 
@@ -2867,7 +3010,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="535"
+            line="694"
             column="5"/>
     </issue>
 
@@ -2878,7 +3021,18 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="637"
+            line="796"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;entries&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;debug_panel_clear_cache_done&quot;>Cleared %1$d entries (%2$d bytes)&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="812"
             column="5"/>
     </issue>
 
@@ -2889,7 +3043,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="697"
+            line="867"
             column="5"/>
     </issue>
 
@@ -2900,7 +3054,7 @@
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="778"
+            line="952"
             column="5"/>
     </issue>
 
@@ -2942,6 +3096,17 @@
 
     <issue
         id="ObsoleteSdkInt"
+        message="Unnecessary; `SDK_INT` is never &lt; 26"
+        errorLine1="        if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.O) return"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/presentation/notification/AndroidOsNotifier.kt"
+            line="78"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
         message="Unnecessary; `SDK_INT` is always >= 26"
         errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -2958,7 +3123,7 @@
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/MainActivity.kt"
-            line="268"
+            line="392"
             column="21"/>
     </issue>
 
@@ -2969,7 +3134,7 @@
         errorLine2="                                       ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/navigation/NexoNavHost.kt"
-            line="186"
+            line="313"
             column="40"/>
     </issue>
 
@@ -3225,7 +3390,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="19"
+            line="20"
             column="13"/>
     </issue>
 
@@ -3236,7 +3401,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="20"
+            line="21"
             column="13"/>
     </issue>
 
@@ -3280,7 +3445,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="53"
+            line="57"
             column="13"/>
     </issue>
 
@@ -3291,7 +3456,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="54"
+            line="58"
             column="13"/>
     </issue>
 
@@ -3302,7 +3467,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="55"
+            line="59"
             column="13"/>
     </issue>
 
@@ -3313,7 +3478,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="57"
+            line="61"
             column="13"/>
     </issue>
 
@@ -3324,7 +3489,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="58"
+            line="62"
             column="13"/>
     </issue>
 
@@ -3335,7 +3500,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="60"
+            line="63"
             column="13"/>
     </issue>
 
@@ -3346,7 +3511,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="61"
+            line="64"
             column="13"/>
     </issue>
 
@@ -3357,7 +3522,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="63"
+            line="65"
             column="13"/>
     </issue>
 
@@ -3368,7 +3533,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="65"
+            line="66"
             column="13"/>
     </issue>
 
@@ -3379,7 +3544,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="70"
+            line="77"
             column="13"/>
     </issue>
 
@@ -3390,7 +3555,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="74"
+            line="81"
             column="13"/>
     </issue>
 
@@ -3401,7 +3566,18 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="75"
+            line="82"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.home_brand_tagline` appears to be unused"
+        errorLine1="    &lt;string name=&quot;home_brand_tagline&quot;>Your books, always with you&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="124"
             column="13"/>
     </issue>
 
@@ -3412,7 +3588,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="111"
+            line="148"
             column="13"/>
     </issue>
 
@@ -3423,7 +3599,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="113"
+            line="150"
             column="13"/>
     </issue>
 
@@ -3434,18 +3610,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="118"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.discover_offline` appears to be unused"
-        errorLine1="    &lt;string name=&quot;discover_offline&quot;>You appear to be offline. Check your connection and retry.&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="119"
+            line="155"
             column="13"/>
     </issue>
 
@@ -3456,7 +3621,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="121"
+            line="158"
             column="13"/>
     </issue>
 
@@ -3467,18 +3632,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="122"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.discover_dismiss` appears to be unused"
-        errorLine1="    &lt;string name=&quot;discover_dismiss&quot;>Dismiss&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="124"
+            line="159"
             column="13"/>
     </issue>
 
@@ -3489,7 +3643,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="131"
+            line="168"
             column="13"/>
     </issue>
 
@@ -3500,7 +3654,29 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="132"
+            line="169"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.discover_rail_newest` appears to be unused"
+        errorLine1="    &lt;string name=&quot;discover_rail_newest&quot;>Recently added to the catalog&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="192"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.discover_rail_popular` appears to be unused"
+        errorLine1="    &lt;string name=&quot;discover_rail_popular&quot;>Popular in the catalog&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="193"
             column="13"/>
     </issue>
 
@@ -3511,7 +3687,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="163"
+            line="218"
             column="13"/>
     </issue>
 
@@ -3522,7 +3698,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="174"
+            line="229"
             column="13"/>
     </issue>
 
@@ -3533,7 +3709,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="177"
+            line="232"
             column="13"/>
     </issue>
 
@@ -3544,7 +3720,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="180"
+            line="235"
             column="13"/>
     </issue>
 
@@ -3555,7 +3731,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="181"
+            line="236"
             column="13"/>
     </issue>
 
@@ -3566,7 +3742,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="183"
+            line="238"
             column="13"/>
     </issue>
 
@@ -3577,7 +3753,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="185"
+            line="240"
             column="13"/>
     </issue>
 
@@ -3588,7 +3764,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="188"
+            line="243"
             column="13"/>
     </issue>
 
@@ -3599,7 +3775,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="189"
+            line="244"
             column="13"/>
     </issue>
 
@@ -3610,7 +3786,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="190"
+            line="245"
             column="13"/>
     </issue>
 
@@ -3621,7 +3797,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="191"
+            line="246"
             column="13"/>
     </issue>
 
@@ -3632,7 +3808,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="192"
+            line="247"
             column="13"/>
     </issue>
 
@@ -3643,7 +3819,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="212"
+            line="267"
             column="13"/>
     </issue>
 
@@ -3654,7 +3830,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="213"
+            line="268"
             column="13"/>
     </issue>
 
@@ -3665,7 +3841,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="216"
+            line="271"
             column="13"/>
     </issue>
 
@@ -3676,7 +3852,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="218"
+            line="273"
             column="13"/>
     </issue>
 
@@ -3687,7 +3863,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="219"
+            line="274"
             column="13"/>
     </issue>
 
@@ -3698,7 +3874,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="221"
+            line="276"
             column="13"/>
     </issue>
 
@@ -3709,7 +3885,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="222"
+            line="277"
             column="13"/>
     </issue>
 
@@ -3720,7 +3896,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="223"
+            line="278"
             column="13"/>
     </issue>
 
@@ -3731,7 +3907,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="224"
+            line="279"
             column="13"/>
     </issue>
 
@@ -3742,7 +3918,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="248"
+            line="303"
             column="13"/>
     </issue>
 
@@ -3753,7 +3929,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="251"
+            line="306"
             column="13"/>
     </issue>
 
@@ -3764,7 +3940,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="273"
+            line="328"
             column="13"/>
     </issue>
 
@@ -3775,7 +3951,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="274"
+            line="329"
             column="13"/>
     </issue>
 
@@ -3786,7 +3962,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="275"
+            line="330"
             column="13"/>
     </issue>
 
@@ -3797,7 +3973,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="276"
+            line="331"
             column="13"/>
     </issue>
 
@@ -3808,7 +3984,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="277"
+            line="332"
             column="13"/>
     </issue>
 
@@ -3819,7 +3995,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="280"
+            line="335"
             column="13"/>
     </issue>
 
@@ -3830,7 +4006,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="281"
+            line="336"
             column="13"/>
     </issue>
 
@@ -3841,7 +4017,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="282"
+            line="337"
             column="13"/>
     </issue>
 
@@ -3852,7 +4028,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="283"
+            line="338"
             column="13"/>
     </issue>
 
@@ -3863,7 +4039,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="284"
+            line="339"
             column="13"/>
     </issue>
 
@@ -3874,7 +4050,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="285"
+            line="340"
             column="13"/>
     </issue>
 
@@ -3885,7 +4061,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="286"
+            line="341"
             column="13"/>
     </issue>
 
@@ -3896,7 +4072,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="296"
+            line="351"
             column="13"/>
     </issue>
 
@@ -3907,7 +4083,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="297"
+            line="352"
             column="13"/>
     </issue>
 
@@ -3918,7 +4094,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="298"
+            line="353"
             column="13"/>
     </issue>
 
@@ -3929,7 +4105,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="299"
+            line="354"
             column="13"/>
     </issue>
 
@@ -3940,7 +4116,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="300"
+            line="355"
             column="13"/>
     </issue>
 
@@ -3951,7 +4127,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="301"
+            line="356"
             column="13"/>
     </issue>
 
@@ -3962,7 +4138,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="302"
+            line="357"
             column="13"/>
     </issue>
 
@@ -3973,7 +4149,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="307"
+            line="362"
             column="13"/>
     </issue>
 
@@ -3984,7 +4160,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="310"
+            line="365"
             column="13"/>
     </issue>
 
@@ -3995,7 +4171,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="312"
+            line="367"
             column="13"/>
     </issue>
 
@@ -4006,7 +4182,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="313"
+            line="368"
             column="13"/>
     </issue>
 
@@ -4017,7 +4193,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="316"
+            line="373"
             column="13"/>
     </issue>
 
@@ -4028,7 +4204,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="317"
+            line="374"
             column="13"/>
     </issue>
 
@@ -4039,7 +4215,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="318"
+            line="375"
             column="13"/>
     </issue>
 
@@ -4050,7 +4226,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="321"
+            line="378"
             column="13"/>
     </issue>
 
@@ -4061,18 +4237,73 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="322"
+            line="379"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
-        message="The resource `R.string.notifications_badge_content_description` appears to be unused"
-        errorLine1="    &lt;string name=&quot;notifications_badge_content_description&quot;>Unread notifications&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        message="The resource `R.string.notifications_mock_welcome_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;notifications_mock_welcome_title&quot;>Welcome to NEXO!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="333"
+            line="384"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.notifications_mock_welcome_body` appears to be unused"
+        errorLine1="    &lt;string name=&quot;notifications_mock_welcome_body&quot;>Start reading your first book.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="385"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.notifications_mock_streak_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;notifications_mock_streak_title&quot;>Reading goal&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="386"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.notifications_mock_streak_body` appears to be unused"
+        errorLine1="    &lt;string name=&quot;notifications_mock_streak_body&quot;>You completed 3 consecutive reading days. Keep it up!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="387"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.notifications_mock_library_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;notifications_mock_library_title&quot;>New book available&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="388"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.notifications_mock_library_body` appears to be unused"
+        errorLine1="    &lt;string name=&quot;notifications_mock_library_body&quot;>Explore the books on your bookshelf.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="389"
             column="13"/>
     </issue>
 
@@ -4083,7 +4314,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="336"
+            line="421"
             column="13"/>
     </issue>
 
@@ -4094,7 +4325,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="339"
+            line="424"
             column="13"/>
     </issue>
 
@@ -4105,7 +4336,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="340"
+            line="425"
             column="13"/>
     </issue>
 
@@ -4116,7 +4347,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="341"
+            line="426"
             column="13"/>
     </issue>
 
@@ -4127,7 +4358,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="342"
+            line="427"
             column="13"/>
     </issue>
 
@@ -4138,7 +4369,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="343"
+            line="428"
             column="13"/>
     </issue>
 
@@ -4149,7 +4380,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="344"
+            line="429"
             column="13"/>
     </issue>
 
@@ -4160,7 +4391,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="345"
+            line="430"
             column="13"/>
     </issue>
 
@@ -4171,7 +4402,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="352"
+            line="437"
             column="13"/>
     </issue>
 
@@ -4182,7 +4413,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="356"
+            line="441"
             column="13"/>
     </issue>
 
@@ -4193,7 +4424,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="358"
+            line="443"
             column="13"/>
     </issue>
 
@@ -4204,7 +4435,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="360"
+            line="445"
             column="13"/>
     </issue>
 
@@ -4215,7 +4446,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="361"
+            line="446"
             column="13"/>
     </issue>
 
@@ -4226,7 +4457,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="362"
+            line="447"
             column="13"/>
     </issue>
 
@@ -4237,7 +4468,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="363"
+            line="448"
             column="13"/>
     </issue>
 
@@ -4248,7 +4479,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="364"
+            line="449"
             column="13"/>
     </issue>
 
@@ -4259,7 +4490,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="368"
+            line="453"
             column="13"/>
     </issue>
 
@@ -4270,7 +4501,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="369"
+            line="454"
             column="13"/>
     </issue>
 
@@ -4281,7 +4512,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="370"
+            line="455"
             column="13"/>
     </issue>
 
@@ -4292,7 +4523,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="371"
+            line="456"
             column="13"/>
     </issue>
 
@@ -4303,7 +4534,18 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="379"
+            line="464"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_translation_history_cleared` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_translation_history_cleared&quot;>History cleared.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="543"
             column="13"/>
     </issue>
 
@@ -4314,7 +4556,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="395"
+            line="546"
             column="13"/>
     </issue>
 
@@ -4325,7 +4567,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="396"
+            line="547"
             column="13"/>
     </issue>
 
@@ -4336,7 +4578,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="409"
+            line="560"
             column="13"/>
     </issue>
 
@@ -4347,7 +4589,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="410"
+            line="561"
             column="13"/>
     </issue>
 
@@ -4358,7 +4600,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="411"
+            line="562"
             column="13"/>
     </issue>
 
@@ -4369,7 +4611,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="429"
+            line="580"
             column="13"/>
     </issue>
 
@@ -4380,7 +4622,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="430"
+            line="581"
             column="13"/>
     </issue>
 
@@ -4391,7 +4633,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="431"
+            line="582"
             column="13"/>
     </issue>
 
@@ -4402,7 +4644,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="432"
+            line="583"
             column="13"/>
     </issue>
 
@@ -4413,7 +4655,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="441"
+            line="592"
             column="13"/>
     </issue>
 
@@ -4424,7 +4666,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="442"
+            line="593"
             column="13"/>
     </issue>
 
@@ -4435,7 +4677,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="449"
+            line="600"
             column="13"/>
     </issue>
 
@@ -4446,7 +4688,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="451"
+            line="602"
             column="13"/>
     </issue>
 
@@ -4457,7 +4699,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="461"
+            line="612"
             column="13"/>
     </issue>
 
@@ -4468,7 +4710,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="467"
+            line="618"
             column="13"/>
     </issue>
 
@@ -4479,7 +4721,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="469"
+            line="620"
             column="13"/>
     </issue>
 
@@ -4490,7 +4732,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="470"
+            line="621"
             column="13"/>
     </issue>
 
@@ -4501,7 +4743,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="480"
+            line="631"
             column="13"/>
     </issue>
 
@@ -4512,7 +4754,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="481"
+            line="632"
             column="13"/>
     </issue>
 
@@ -4523,7 +4765,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="485"
+            line="636"
             column="13"/>
     </issue>
 
@@ -4534,7 +4776,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="486"
+            line="637"
             column="13"/>
     </issue>
 
@@ -4545,7 +4787,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="495"
+            line="646"
             column="13"/>
     </issue>
 
@@ -4556,7 +4798,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="511"
+            line="670"
             column="13"/>
     </issue>
 
@@ -4567,7 +4809,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="512"
+            line="671"
             column="13"/>
     </issue>
 
@@ -4578,7 +4820,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="513"
+            line="672"
             column="13"/>
     </issue>
 
@@ -4589,7 +4831,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="514"
+            line="673"
             column="13"/>
     </issue>
 
@@ -4600,7 +4842,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="515"
+            line="674"
             column="13"/>
     </issue>
 
@@ -4611,7 +4853,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="519"
+            line="678"
             column="13"/>
     </issue>
 
@@ -4622,7 +4864,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="559"
+            line="718"
             column="13"/>
     </issue>
 
@@ -4633,7 +4875,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="560"
+            line="719"
             column="13"/>
     </issue>
 
@@ -4644,7 +4886,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="597"
+            line="756"
             column="13"/>
     </issue>
 
@@ -4655,7 +4897,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="598"
+            line="757"
             column="13"/>
     </issue>
 
@@ -4666,7 +4908,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="609"
+            line="768"
             column="13"/>
     </issue>
 
@@ -4677,7 +4919,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="632"
+            line="791"
             column="13"/>
     </issue>
 
@@ -4688,7 +4930,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="633"
+            line="792"
             column="13"/>
     </issue>
 
@@ -4699,40 +4941,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="645"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.highlights_deleted_snackbar` appears to be unused"
-        errorLine1="    &lt;string name=&quot;highlights_deleted_snackbar&quot;>Highlight deleted&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="660"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.highlights_snackbar_color_changed` appears to be unused"
-        errorLine1="    &lt;string name=&quot;highlights_snackbar_color_changed&quot;>Color changed&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="667"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.highlights_snackbar_tag_saved` appears to be unused"
-        errorLine1="    &lt;string name=&quot;highlights_snackbar_tag_saved&quot;>Tag saved&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="668"
+            line="815"
             column="13"/>
     </issue>
 
@@ -4743,29 +4952,18 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="670"
+            line="840"
             column="13"/>
     </issue>
 
     <issue
         id="UnusedResources"
-        message="The resource `R.string.dictionary_duplicate` appears to be unused"
-        errorLine1="    &lt;string name=&quot;dictionary_duplicate&quot;>&quot;%1$s&quot; is already in your dictionary.&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        message="The resource `R.string.context_menu_dictionary` appears to be unused"
+        errorLine1="    &lt;string name=&quot;context_menu_dictionary&quot;>Add to Dictionary&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="695"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.dictionary_added` appears to be unused"
-        errorLine1="    &lt;string name=&quot;dictionary_added&quot;>&quot;%1$s&quot; added to your dictionary.&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="696"
+            line="879"
             column="13"/>
     </issue>
 
@@ -4776,7 +4974,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="710"
+            line="884"
             column="13"/>
     </issue>
 
@@ -4787,7 +4985,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="711"
+            line="885"
             column="13"/>
     </issue>
 
@@ -4798,7 +4996,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="723"
+            line="897"
             column="13"/>
     </issue>
 
@@ -4809,7 +5007,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="725"
+            line="899"
             column="13"/>
     </issue>
 
@@ -4820,7 +5018,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="768"
+            line="942"
             column="13"/>
     </issue>
 
@@ -4831,7 +5029,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="769"
+            line="943"
             column="13"/>
     </issue>
 
@@ -4842,7 +5040,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="770"
+            line="944"
             column="13"/>
     </issue>
 
@@ -4853,7 +5051,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="771"
+            line="945"
             column="13"/>
     </issue>
 
@@ -4864,7 +5062,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="775"
+            line="949"
             column="13"/>
     </issue>
 
@@ -4875,7 +5073,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="776"
+            line="950"
             column="13"/>
     </issue>
 
@@ -4886,7 +5084,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="806"
+            line="980"
             column="13"/>
     </issue>
 
@@ -4897,7 +5095,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="807"
+            line="981"
             column="13"/>
     </issue>
 
@@ -4908,7 +5106,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="879"
+            line="1057"
             column="13"/>
     </issue>
 
@@ -4919,7 +5117,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="895"
+            line="1073"
             column="13"/>
     </issue>
 
@@ -4930,7 +5128,18 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="896"
+            line="1074"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.discover_manage_addons` appears to be unused"
+        errorLine1="    &lt;string name=&quot;discover_manage_addons&quot;>Manage addons&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1093"
             column="13"/>
     </issue>
 
@@ -4941,7 +5150,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="918"
+            line="1098"
             column="13"/>
     </issue>
 
@@ -4952,7 +5161,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="926"
+            line="1106"
             column="13"/>
     </issue>
 
@@ -4963,7 +5172,7 @@
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="936"
+            line="1116"
             column="13"/>
     </issue>
 
@@ -4985,7 +5194,7 @@
         errorLine2="                                       ~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="174"
+            line="229"
             column="40"/>
     </issue>
 
@@ -4996,7 +5205,7 @@
         errorLine2="                                       ~~~~~~~~~~~">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="211"
+            line="247"
             column="40"/>
     </issue>
 
@@ -5007,7 +5216,7 @@
         errorLine2="                                              ~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="237"
+            line="292"
             column="47"/>
     </issue>
 
@@ -5018,7 +5227,7 @@
         errorLine2="                                              ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="273"
+            line="309"
             column="47"/>
     </issue>
 
@@ -5029,7 +5238,7 @@
         errorLine2="                               ~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="302"
+            line="338"
             column="32"/>
     </issue>
 
@@ -5040,19 +5249,8 @@
         errorLine2="                               ~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="322"
+            line="379"
             column="32"/>
-    </issue>
-
-    <issue
-        id="TypographyEllipsis"
-        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
-        errorLine1="    &lt;string name=&quot;settings_devices_loading&quot;>Loading devices...&lt;/string>"
-        errorLine2="                                            ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="511"
-            column="45"/>
     </issue>
 
     <issue
@@ -5062,8 +5260,19 @@
         errorLine2="                                                    ~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="521"
+            line="651"
             column="53"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;settings_devices_loading&quot;>Loading devices...&lt;/string>"
+        errorLine2="                                            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="670"
+            column="45"/>
     </issue>
 
     <issue
@@ -5073,7 +5282,7 @@
         errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values-es/strings.xml"
-            line="595"
+            line="767"
             column="45"/>
     </issue>
 
@@ -5084,7 +5293,7 @@
         errorLine2="                                                    ~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/res/values/strings.xml"
-            line="637"
+            line="796"
             column="53"/>
     </issue>
 
@@ -5117,7 +5326,7 @@
         errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/CrashDetailActivity.kt"
-            line="75"
+            line="78"
             column="36"/>
     </issue>
 
@@ -5128,7 +5337,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/CrashDetailActivity.kt"
-            line="83"
+            line="86"
             column="30"/>
     </issue>
 
@@ -5139,7 +5348,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/CrashDetailActivity.kt"
-            line="96"
+            line="99"
             column="30"/>
     </issue>
 
@@ -5150,7 +5359,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/CrashDetailActivity.kt"
-            line="106"
+            line="109"
             column="30"/>
     </issue>
 
@@ -5161,7 +5370,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/CrashDetailActivity.kt"
-            line="116"
+            line="119"
             column="30"/>
     </issue>
 
@@ -5172,7 +5381,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/CrashDetailActivity.kt"
-            line="126"
+            line="129"
             column="30"/>
     </issue>
 
@@ -5183,7 +5392,7 @@
         errorLine2="                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/CrashDetailActivity.kt"
-            line="141"
+            line="144"
             column="36"/>
     </issue>
 
@@ -5194,7 +5403,7 @@
         errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/CrashDetailActivity.kt"
-            line="147"
+            line="150"
             column="30"/>
     </issue>
 
@@ -5234,6 +5443,17 @@
     <issue
         id="UseKtx"
         message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        val editor = prefs.edit()"
+        errorLine2="                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/DefinitionPreferences.kt"
+            line="61"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
         errorLine1="        prefs.edit().putString(KEY_DECLINED_FOR_USER, userId).apply()"
         errorLine2="        ~~~~~~~~~~~~">
         <location
@@ -5260,18 +5480,128 @@
         errorLine2="                     ~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/data/remote/drive/DriveTokenStore.kt"
-            line="195"
+            line="259"
             column="22"/>
     </issue>
 
     <issue
         id="UseKtx"
         message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit().clear().apply()"
-        errorLine2="        ~~~~~~~~~~~~">
+        errorLine1="        prefs()?.edit()?.clear()?.apply()"
+        errorLine2="        ~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/data/remote/drive/DriveTokenStore.kt"
-            line="203"
+            line="267"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="                delegate.edit().putString(sessionKey, legacy).apply()"
+        errorLine2="                ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
+            line="33"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            migrateFrom.edit().remove(sessionKey).apply()"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
+            line="35"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        delegate"
+        errorLine2="        ^">
+        <location
+            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
+            line="45"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        delegate.edit().remove(key).apply()"
+        errorLine2="        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
+            line="56"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        delegate.edit().putInt(key, value).apply()"
+        errorLine2="        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
+            line="66"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        delegate.edit().putLong(key, value).apply()"
+        errorLine2="        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
+            line="81"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        delegate.edit().putString(key, value).apply()"
+        errorLine2="        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
+            line="96"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        delegate.edit().putFloat(key, value).apply()"
+        errorLine2="        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
+            line="111"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        delegate.edit().putLong(key, value.toRawBits()).apply()"
+        errorLine2="        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
+            line="126"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        delegate.edit().putBoolean(key, value).apply()"
+        errorLine2="        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
+            line="141"
             column="9"/>
     </issue>
 
@@ -5370,8 +5700,41 @@
         errorLine2="                ^">
         <location
             file="src/main/java/com/nexo/NexoApplication.kt"
-            line="207"
+            line="265"
             column="17"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        context"
+        errorLine2="        ^">
+        <location
+            file="src/main/java/com/nexo/data/session/NotificationPermissionPrefs.kt"
+            line="43"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        context"
+        errorLine2="        ^">
+        <location
+            file="src/main/java/com/nexo/data/session/NotificationPermissionPrefs.kt"
+            line="57"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        prefs.edit().putString(KEY_PREFERENCES, json.toString()).apply()"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/NotificationPreferencesStore.kt"
+            line="55"
+            column="9"/>
     </issue>
 
     <issue
@@ -5425,29 +5788,7 @@
         errorLine2="            ^">
         <location
             file="src/main/java/com/nexo/data/session/ReaderPreferences.kt"
-            line="77"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="            prefs.edit().putString(KEY_DRIVE_ACCESS_TOKEN, value).apply()"
-        errorLine2="            ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/ReaderPreferences.kt"
-            line="115"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="            prefs.edit().putString(KEY_DRIVE_REFRESH_TOKEN, value).apply()"
-        errorLine2="            ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/ReaderPreferences.kt"
-            line="124"
+            line="110"
             column="13"/>
     </issue>
 
@@ -5456,31 +5797,9 @@
         message="Use the KTX extension function `SharedPreferences.edit` instead?"
         errorLine1="        prefs"
         errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/session/ReaderPreferences.kt"
-            line="134"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/session/ReaderPreferences.kt"
-            line="145"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit().putInt(KEY_DAILY_GOAL_MINUTES, minutes).apply()"
-        errorLine2="        ~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/data/session/ReadingGoalPreferences.kt"
-            line="25"
+            line="92"
             column="9"/>
     </issue>
 
@@ -5504,6 +5823,28 @@
             file="src/main/java/com/nexo/debug/SentryPrivacyPrefs.kt"
             line="24"
             column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        val editor = prefs.edit()"
+        errorLine2="                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/TranslationPreferences.kt"
+            line="81"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        val editor = prefs.edit()"
+        errorLine2="                     ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/nexo/data/session/TranslationPreferences.kt"
+            line="115"
+            column="22"/>
     </issue>
 
     <issue
@@ -5546,7 +5887,7 @@
         errorLine2="                        ~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/CrashDetailActivity.kt"
-            line="105"
+            line="108"
             column="25"/>
     </issue>
 
@@ -5557,7 +5898,7 @@
         errorLine2="                        ~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/debug/CrashDetailActivity.kt"
-            line="125"
+            line="128"
             column="25"/>
     </issue>
 

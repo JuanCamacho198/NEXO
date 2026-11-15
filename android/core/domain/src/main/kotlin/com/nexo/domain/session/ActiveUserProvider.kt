@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Exactly one writer: [com.nexo.presentation.navigation.SessionSyncEffect],
  * which publishes the restored/later auth session once per `userId` change. The
- * provider is a process-wide singleton (built in `AppContainer`, provided by
- * `HiltSingletonsModule`), so every reader sees the same owner.
+ * provider is a process-wide singleton (provided by `HiltSingletonsModule`), so
+ * every reader sees the same owner.
  *
  * ## When it changes
  *
