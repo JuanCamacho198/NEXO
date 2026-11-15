@@ -29,47 +29,8 @@
     <string name="annotation_textarea_note_hint">Write your note\u2026</string>
     <string name="app_name">NEXO</string>
     <!-- Auth -->
-    <string name="auth_config_error_google_unavailable">Configuration error: Google sign-in unavailable because the OAuth client ID is not configured. You can continue using local library features.</string>
-    <string name="auth_continue_local_dev">Continue in local (Dev)</string>
-    <string name="auth_continue_with_email">Continue with email</string>
-    <string name="auth_continue_with_google">Continue with Google</string>
-    <string name="auth_email_label">Email</string>
-    <string name="auth_failure_config_error_with_details">Configuration error: %1$s. Continue in local mode until config is fixed.</string>
-    <string name="auth_failure_wiring_error_with_details">Wiring error: %1$s. Continue in local mode while wiring is fixed.</string>
-    <string name="auth_forgot_password">Forgot your password?</string>
-    <string name="auth_forgot_subtitle">Enter your email and we\'ll send you a link to reset your password.</string>
-    <string name="auth_forgot_title">Reset password</string>
-    <string name="auth_full_name_label">Full name</string>
-    <string name="auth_full_name_placeholder">e.g. Ana García</string>
-    <string name="auth_google_credential_error_generic">We couldn\'t sign you in with Google. Please try again.</string>
-    <string name="auth_google_credential_interrupted">Sign-in was interrupted. Please try again.</string>
-    <string name="auth_google_credential_network_error">No connection. Check your internet and try again.</string>
-    <string name="auth_google_credential_unknown">Something went wrong signing in with Google. Please try again.</string>
-    <string name="auth_google_disabled_config_error">Google sign-in is disabled due to a configuration error (missing OAuth client ID).</string>
-    <string name="auth_google_disabled_loading">Google sign-in is currently in progress.</string>
-    <string name="auth_google_disabled_wiring_error">Google sign-in is disabled due to a setup error.</string>
-    <string name="auth_google_no_credential">No Google account is available on this device. Add one in your device settings and try again.</string>
-    <string name="auth_google_unexpected_credential">Unexpected credential type: %1$s</string>
-    <string name="auth_google_unexpected_error">Unexpected error: %1$s</string>
-    <string name="auth_login_action">Sign In</string>
-    <string name="auth_login_footer_link">Sign in</string>
-    <string name="auth_login_footer_prefix">Already have an account?</string>
-    <string name="auth_login_subtitle">Sign in to keep your library in sync.</string>
-    <string name="auth_or_login_with">OR SIGN IN WITH</string>
-    <string name="auth_or_register_with">OR SIGN UP WITH</string>
-    <string name="auth_password_hide">Hide password</string>
-    <string name="auth_password_hint">Minimum 8 characters, with letters and numbers.</string>
-    <string name="auth_password_label">Password</string>
-    <string name="auth_password_show">Show password</string>
-    <string name="auth_register_action">Sign Up</string>
-    <string name="auth_register_footer_link">Sign up</string>
-    <string name="auth_register_footer_prefix">Don\'t have an account?</string>
-    <string name="auth_register_title">Create your account</string>
-    <string name="auth_send_reset_email">Send reset email</string>
     <!-- Auth snackbars -->
     <string name="auth_snackbar_reset_email_sent">Reset email sent</string>
-    <string name="auth_welcome_title">Welcome!</string>
-    <string name="auth_wiring_error_incomplete">Setup error: Google sign-in setup is incomplete. Verify OAuth configuration. Local reading still works.</string>
     <!-- Download from other devices -->
     <string name="book_available_from_other_device">Available from other devices</string>
     <string name="book_card_edit_metadata">Edit metadata</string>

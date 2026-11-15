@@ -460,6 +460,10 @@ dependencies {
     // nav graph and the DiscoverViewModel keep importing it unchanged.
     implementation(project(":feature:discover"))
     implementation(project(":feature:highlights"))
+    // SDD M6: auth feature module. Keeps the com.nexo.presentation.feature.auth
+    // package, so AuthNavGraph and presentation/screen/AuthScreen keep importing
+    // it unchanged. The ViewModel-bound entry points stay in this module.
+    implementation(project(":feature:auth"))
 
     implementation(composeBom)
     androidTestImplementation(composeBom)

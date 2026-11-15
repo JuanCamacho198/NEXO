@@ -49,3 +49,9 @@ include(":feature:highlights")
 // benchmark/build.gradle.kts) and is NOT part of the normal build graph — every
 // variant except `benchmark` is disabled.
 include(":benchmark")
+// SDD M6: third feature module. Same dependency rule as :feature:settings and
+// :feature:discover -- :core:* only, never :app -- and the same package policy,
+// so :app imports of com.nexo.presentation.feature.auth keep resolving. The
+// three ViewModel-bound AuthScreen/RegisterScreen/ForgotScreen entry points stay
+// in :app because AuthViewModel is a :app Hilt type.
+include(":feature:auth")

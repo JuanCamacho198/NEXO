@@ -1,6 +1,6 @@
 package com.nexo.presentation.feature.auth
 
-import com.nexo.R
+import com.nexo.feature.auth.R
 import com.nexo.domain.auth.AuthFailureKind
 
 /** Minimum password length enforced client-side on the register screen (SCEN-3). */

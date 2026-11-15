@@ -39,7 +39,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.nexo.R
+import com.nexo.feature.auth.BuildConfig
+import com.nexo.feature.auth.R
 import com.nexo.ui.tags.AuthTags
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.domain.auth.AuthUiState
@@ -109,7 +110,7 @@ fun AuthScreenScaffold(
                 ) {
                     Icon(
                         imageVector = NexoIcons.ArrowBack,
-                        contentDescription = stringResource(R.string.nav_back),
+                        contentDescription = stringResource(com.nexo.feature.auth.R.string.nav_back),
                     )
                 }
             }
@@ -179,7 +180,7 @@ fun AuthLogo() {
         ) {
             Icon(
                 imageVector = vector,
-                contentDescription = stringResource(R.string.app_name),
+                contentDescription = stringResource(com.nexo.feature.auth.R.string.app_name),
                 modifier =
                     Modifier
                         .width(190.dp)
@@ -276,7 +277,7 @@ fun AuthConfigError(uiState: com.nexo.domain.auth.AuthUiState) {
 
 @Composable
 fun AuthDevBypass(onContinueLocal: () -> Unit) {
-    if (com.nexo.BuildConfig.DEBUG) {
+    if (BuildConfig.DEBUG) {
         Spacer(modifier = Modifier.height(16.dp))
         com.nexo.ui.components.atoms.NexoButton(
             onClick = onContinueLocal,

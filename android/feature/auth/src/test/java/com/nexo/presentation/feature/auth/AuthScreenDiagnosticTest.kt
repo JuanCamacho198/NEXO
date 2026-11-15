@@ -1,6 +1,6 @@
 package com.nexo.presentation.feature.auth
 
-import com.nexo.R
+import com.nexo.feature.auth.R
 import com.nexo.domain.auth.AuthFailureKind
 import com.nexo.domain.auth.AuthUiState
 import org.junit.Assert.assertEquals

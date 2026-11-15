@@ -1,6 +1,6 @@
 package com.nexo.presentation.feature.auth
 
-import com.nexo.R
+import com.nexo.feature.auth.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

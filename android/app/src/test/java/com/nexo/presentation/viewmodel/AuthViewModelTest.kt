@@ -2,6 +2,7 @@ package com.nexo.presentation.viewmodel
 
 import com.nexo.data.remote.sync.SyncOrchestrator
 import com.nexo.data.remote.sync.SyncState
+import com.nexo.domain.auth.AuthFailureKind
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
 import com.nexo.domain.model.AuthSession

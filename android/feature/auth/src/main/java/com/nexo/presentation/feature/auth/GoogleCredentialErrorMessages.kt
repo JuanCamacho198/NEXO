@@ -1,6 +1,6 @@
 package com.nexo.presentation.feature.auth
 
-import com.nexo.R
+import com.nexo.feature.auth.R
 
 /**
  * Raw `GetCredentialException.type` values emitted by androidx.credentials.
