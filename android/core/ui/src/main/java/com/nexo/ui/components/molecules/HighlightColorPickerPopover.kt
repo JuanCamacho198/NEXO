@@ -37,7 +37,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
@@ -46,7 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.R
+import com.nexo.ui.R
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.highlight.ColorPickerState
 import com.nexo.ui.components.molecules.highlight.hslToColor
@@ -74,6 +73,7 @@ fun ColorPickerContent(
     onColorSelected: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    confirmLabel: String = "",
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -187,7 +187,7 @@ fun ColorPickerContent(
         Spacer(Modifier.height(4.dp))
 
         Text(
-            text = stringResource(R.string.color_picker_confirm),
+            text = confirmLabel,
             fontSize = 10.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

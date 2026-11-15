@@ -32,6 +32,7 @@ include(":core:debug")
 // because it uses Context, Room, OkHttp/Ktor, Supabase and Android file APIs.
 // Direction: core:data -> core:domain -> core:model; core:data -> core:debug.
 include(":core:data")
+include(":core:ui")
 // SDD android-stack-modernization S9: macrobenchmark test module. It is a
 // self-instrumenting `com.android.test` module targeting `:app` (see
 // benchmark/build.gradle.kts) and is NOT part of the normal build graph — every

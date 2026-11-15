@@ -17,11 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.R
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.atoms.NexoAvatar
 import com.nexo.ui.components.atoms.NexoIconButton
@@ -50,8 +48,14 @@ import com.nexo.ui.icons.NexoIcons
  *   When `null`, the bell icon is not rendered.
  * @param unreadNotificationsCount When > 0, a small primary-coloured badge
  *   with the count is drawn on the notifications bell and the bell's a11y
- *   label switches to `notifications_badge_content_description`. Default `0`
+ *   label switches to `notificationsBadgeContentDescription`. Default `0`
  *   (no badge).
+ * @param searchContentDescription Accessibility label for the search icon.
+ *   Supplied by the caller: :core:ui declares no string resources.
+ * @param notificationsContentDescription Accessibility label for the bell
+ *   when there are no unread notifications.
+ * @param notificationsBadgeContentDescription Accessibility label for the
+ *   bell when unread notifications exist.
  * @param trailingActions Additional icon buttons rendered after the
  *   built-in search/notifications buttons. Each pair is
  *   `(icon, onClick)`. The `contentDescription` for these is
@@ -77,6 +81,9 @@ fun NexoHeader(
     avatarContentDescription: String? = null,
     onSearchClick: (() -> Unit)? = null,
     onNotificationsClick: (() -> Unit)? = null,
+    searchContentDescription: String? = null,
+    notificationsContentDescription: String? = null,
+    notificationsBadgeContentDescription: String? = null,
     unreadNotificationsCount: Int = 0,
     trailingActions: List<Pair<ImageVector, () -> Unit>> = emptyList(),
 ) {
@@ -108,7 +115,7 @@ fun NexoHeader(
             onSearchClick?.let {
                 NexoIconButton(
                     icon = NexoIcons.Search,
-                    contentDescription = stringResource(R.string.search_label),
+                    contentDescription = searchContentDescription.orEmpty(),
                     onClick = it,
                     size = 40.dp,
                     iconSize = 20.dp,
@@ -120,9 +127,9 @@ fun NexoHeader(
                         icon = NexoIcons.Notifications,
                         contentDescription =
                             if (unreadNotificationsCount > 0) {
-                                stringResource(R.string.notifications_badge_content_description)
+                                notificationsBadgeContentDescription.orEmpty()
                             } else {
-                                stringResource(R.string.notifications_title)
+                                notificationsContentDescription.orEmpty()
                             },
                         onClick = it,
                         size = 40.dp,

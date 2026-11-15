@@ -30,11 +30,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.R
 import com.nexo.domain.model.HighlightColor
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.highlight.rememberColorPickerState
@@ -81,6 +79,12 @@ fun HighlightPaletteSection(
     onDeleteColor: (Int) -> Unit,
     onReset: () -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    addColorLabel: String? = null,
+    resetLabel: String? = null,
+    pickColorLabel: String? = null,
+    cancelLabel: String? = null,
+    deleteContentDescription: String? = null,
 ) {
     val colors = customColors ?: HighlightColor.defaultHexList()
     var editingIndex by remember { mutableStateOf<Int?>(null) }
@@ -95,7 +99,7 @@ fun HighlightPaletteSection(
     ) {
         // ── Subtitle ──────────────────────────────────────────────
         Text(
-            text = stringResource(R.string.palette_section_subtitle),
+            text = subtitle.orEmpty(),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -107,6 +111,7 @@ fun HighlightPaletteSection(
                 hex = hex,
                 canDelete = colors.size > 3,
                 onDelete = onDeleteColor,
+                deleteContentDescription = deleteContentDescription.orEmpty(),
                 onClick = {
                     editingIndex = index
                     editorHex = hex
@@ -134,12 +139,12 @@ fun HighlightPaletteSection(
                 ) {
                     Icon(
                         NexoIcons.Add,
-                        contentDescription = stringResource(R.string.palette_add_color),
+                        contentDescription = addColorLabel.orEmpty(),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = stringResource(R.string.palette_add_color),
+                        text = addColorLabel.orEmpty(),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -158,7 +163,7 @@ fun HighlightPaletteSection(
             color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
             Text(
-                text = stringResource(R.string.palette_reset),
+                text = resetLabel.orEmpty(),
                 modifier = Modifier.padding(16.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
@@ -173,7 +178,7 @@ fun HighlightPaletteSection(
         AlertDialog(
             onDismissRequest = { editingIndex = null },
             title = {
-                Text(text = stringResource(R.string.palette_pick_color))
+                Text(text = pickColorLabel.orEmpty())
             },
             text = {
                 ColorPickerContent(
@@ -189,7 +194,7 @@ fun HighlightPaletteSection(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { editingIndex = null }) {
-                    Text(text = stringResource(R.string.reader_cancel))
+                    Text(text = cancelLabel.orEmpty())
                 }
             },
         )
@@ -204,6 +209,7 @@ private fun PaletteSwatchRow(
     canDelete: Boolean,
     onDelete: (Int) -> Unit,
     onClick: () -> Unit,
+    deleteContentDescription: String = "",
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -240,7 +246,7 @@ private fun PaletteSwatchRow(
                 IconButton(onClick = { onDelete(index) }) {
                     Icon(
                         NexoIcons.Close,
-                        contentDescription = stringResource(R.string.annotation_modal_close),
+                        contentDescription = deleteContentDescription.orEmpty(),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

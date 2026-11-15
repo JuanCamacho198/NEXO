@@ -6,7 +6,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.nexo.R
+import com.nexo.ui.R
 
 /**
  * Material 3 [Typography] scale for NEXO.

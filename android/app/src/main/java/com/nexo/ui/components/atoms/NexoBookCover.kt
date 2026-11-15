@@ -1,5 +1,8 @@
 package com.nexo.ui.components.atoms
 
+import com.nexo.ui.R as UiR
+
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -102,9 +105,9 @@ fun NexoBookCover(
                                 height = with(density) { 180.dp.toPx().toInt() },
                             ).memoryCachePolicy(CachePolicy.ENABLED)
                             .diskCachePolicy(CachePolicy.ENABLED)
-                            .placeholder(R.drawable.cover_placeholder)
-                            .error(R.drawable.cover_error)
-                            .fallback(R.drawable.cover_placeholder)
+                            .placeholder(UiR.drawable.cover_placeholder)
+                            .error(UiR.drawable.cover_error)
+                            .fallback(UiR.drawable.cover_placeholder)
                             .crossfade(true)
                             .build()
                     }

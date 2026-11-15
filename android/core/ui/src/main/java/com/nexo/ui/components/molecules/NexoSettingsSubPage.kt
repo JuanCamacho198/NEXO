@@ -15,11 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.R
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.icons.NexoIcons
@@ -34,6 +32,9 @@ import com.nexo.ui.icons.NexoIcons
  *   `titleLarge` bold.
  * @param onBack Invoked when the user taps the back arrow in the
  *   top-left. Typically pops the navigation back stack.
+ * @param backContentDescription Accessibility label for the back
+ *   arrow. Passed in by the caller because :core:ui declares no
+ *   string resources — the consuming module resolves it.
  * @param modifier Modifier applied to the outer `Scaffold`.
  * @param content Composable body of the sub-page, rendered in a
  *   `Column` with 24dp horizontal padding below the `TopAppBar`.
@@ -55,6 +56,7 @@ fun NexoSettingsSubPage(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    backContentDescription: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Scaffold(
@@ -72,7 +74,7 @@ fun NexoSettingsSubPage(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = NexoIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.nav_back),
+                            contentDescription = backContentDescription,
                         )
                     }
                 },

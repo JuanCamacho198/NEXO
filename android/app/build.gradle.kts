@@ -452,6 +452,7 @@ dependencies {
     // SDD M3: data layer (com.nexo.data.*). Package names are unchanged, so every
     // existing import in this module resolves exactly as before.
     implementation(project(":core:data"))
+    implementation(project(":core:ui"))
 
     implementation(composeBom)
     androidTestImplementation(composeBom)

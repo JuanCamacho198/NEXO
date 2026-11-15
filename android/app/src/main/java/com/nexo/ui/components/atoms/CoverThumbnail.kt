@@ -1,5 +1,8 @@
 package com.nexo.ui.components.atoms
 
+import com.nexo.ui.R as UiR
+
+
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -33,7 +36,7 @@ import com.nexo.ui.theme.NexoTheme
  *
  * @param coverPath Absolute path to the cover image file on local
  *   storage or a remote URL string. When `null` or blank, the
- *   request resolves to `fallback(R.drawable.cover_placeholder)`.
+ *   request resolves to `fallback(UiR.drawable.cover_placeholder)`.
  * @param modifier Modifier applied to the `AsyncImage`. Use it to set
  *   the rendered size — the decode size is fixed at 80×120 px and is
  *   decoupled from the render size.
@@ -67,9 +70,9 @@ fun CoverThumbnail(
                 .size(
                     width = with(density) { 80.dp.toPx().toInt() },
                     height = with(density) { 120.dp.toPx().toInt() },
-                ).placeholder(R.drawable.cover_placeholder)
-                .error(R.drawable.cover_error)
-                .fallback(R.drawable.cover_placeholder)
+                ).placeholder(UiR.drawable.cover_placeholder)
+                .error(UiR.drawable.cover_error)
+                .fallback(UiR.drawable.cover_placeholder)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .crossfade(true)

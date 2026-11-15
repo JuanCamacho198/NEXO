@@ -1,9 +1,7 @@
 package com.nexo.ui.components.atoms
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import com.nexo.R
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.icons.NexoIcons
 
@@ -12,21 +10,32 @@ import com.nexo.ui.icons.NexoIcons
  * [NexoDialogVariant.DESTRUCTIVE] and a [NexoIcons.SignOut] icon,
  * pre-configured for logout confirmation.
  *
+ * Copy is passed in rather than resolved here: :core:ui declares no string
+ * resources, so the caller supplies its own `stringResource(...)` values.
+ *
+ * @param title Dialog heading.
+ * @param body Explanatory body copy.
+ * @param confirmText Label of the destructive confirm action.
+ * @param dismissText Label of the dismiss action.
  * @param onConfirm Invoked when the user confirms logout.
  * @param onDismiss Invoked when the user dismisses the dialog.
  */
 @Composable
 fun NexoLogoutDialog(
+    title: String,
+    body: String,
+    confirmText: String,
+    dismissText: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     NexoDialog(
         icon = NexoIcons.SignOut,
         variant = NexoDialogVariant.DESTRUCTIVE,
-        title = stringResource(R.string.settings_logout_title),
-        body = stringResource(R.string.settings_logout_message),
-        confirmText = stringResource(R.string.settings_logout_confirm),
-        dismissText = stringResource(R.string.reader_cancel),
+        title = title,
+        body = body,
+        confirmText = confirmText,
+        dismissText = dismissText,
         onConfirm = onConfirm,
         onDismiss = onDismiss,
     )
@@ -37,6 +46,10 @@ fun NexoLogoutDialog(
 private fun NexoLogoutDialogDarkPreview() {
     NexoTheme(darkTheme = true) {
         NexoLogoutDialog(
+            title = "Log out?",
+            body = "Your local library stays on this device.",
+            confirmText = "Log out",
+            dismissText = "Cancel",
             onConfirm = {},
             onDismiss = {},
         )
@@ -48,6 +61,10 @@ private fun NexoLogoutDialogDarkPreview() {
 private fun NexoLogoutDialogLightPreview() {
     NexoTheme(darkTheme = false) {
         NexoLogoutDialog(
+            title = "Log out?",
+            body = "Your local library stays on this device.",
+            confirmText = "Log out",
+            dismissText = "Cancel",
             onConfirm = {},
             onDismiss = {},
         )

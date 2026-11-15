@@ -50,6 +50,10 @@ fun SettingsAccountScreen(
 
     if (showLogoutDialog) {
         NexoLogoutDialog(
+            title = stringResource(R.string.settings_logout_title),
+            body = stringResource(R.string.settings_logout_message),
+            confirmText = stringResource(R.string.settings_logout_confirm),
+            dismissText = stringResource(R.string.reader_cancel),
             onConfirm = {
                 showLogoutDialog = false
                 onLogout()
