@@ -440,6 +440,12 @@ baselineProfile {
 dependencies {
     val composeBom = platform(libs.compose.bom)
 
+    // SDD modularization M1/M2: extracted pure-JVM core modules. `:core:domain`
+    // re-exports `:core:model` (`api`), but the app declares both explicitly so its
+    // own dependency set stays readable and independent of `api` propagation.
+    implementation(project(":core:model"))
+    implementation(project(":core:domain"))
+
     implementation(composeBom)
     androidTestImplementation(composeBom)
 

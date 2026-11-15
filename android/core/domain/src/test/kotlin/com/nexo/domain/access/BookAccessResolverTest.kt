@@ -1,6 +1,6 @@
 package com.nexo.domain.access
 
-import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
+import com.nexo.testutil.TEST_BUILTIN_GUTENDEX
 import com.nexo.domain.model.CatalogBook
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,7 +38,7 @@ class BookAccessResolverTest {
     ): CatalogBook =
         CatalogBook(
             id = id,
-            provider = BUILTIN_GUTENDEX,
+            provider = TEST_BUILTIN_GUTENDEX,
             title = title,
             authors = authors,
             coverUrl = null,

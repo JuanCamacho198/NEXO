@@ -20,6 +20,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "NexoAndroid"
 include(":app")
+// SDD modularization M1/M2: pure-JVM core modules extracted from :app. Packages
+// and file contents are unchanged; only the Gradle module boundary moved.
+include(":core:model")
+include(":core:domain")
 // SDD android-stack-modernization S9: macrobenchmark test module. It is a
 // self-instrumenting `com.android.test` module targeting `:app` (see
 // benchmark/build.gradle.kts) and is NOT part of the normal build graph — every

@@ -187,11 +187,14 @@ internal class DefinitionManager(
  * truths apart: a [DefinitionResult.failure] is a service failure, an empty
  * `definitions` with no failure is the honest "no definition" (ODD invariant 2).
  */
-private fun DefinitionResult.toPanelState(): DefinitionPanelState =
-    when {
-        failure != null ->
+private fun DefinitionResult.toPanelState(): DefinitionPanelState {
+    // Local val: `failure` is a property declared in :core:domain, so the
+    // cross-module boundary blocks the implicit smart cast after the null check.
+    val currentFailure = failure
+    return when {
+        currentFailure != null ->
             DefinitionPanelState.Failure(
-                message = failure.message,
+                message = currentFailure.message,
                 wordLanguage = wordLanguage,
                 wordLanguageKnown = wordLanguageKnown,
             )
@@ -208,3 +211,4 @@ private fun DefinitionResult.toPanelState(): DefinitionPanelState =
                 wordLanguageKnown = wordLanguageKnown,
             )
     }
+}

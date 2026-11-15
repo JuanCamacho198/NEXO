@@ -3,10 +3,14 @@ package com.nexo.domain.usecase
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.BookImportRequest
 import com.nexo.domain.repository.LibraryRepository
+import com.nexo.domain.telemetry.TelemetrySink
 import java.io.InputStream
 
 class ImportEpubBookUseCase(
     private val libraryRepository: LibraryRepository,
+    // Domain seam: the real Sentry-backed sink is wired in di/. Defaulting keeps
+    // every existing construction site (and ViewModel test) unchanged.
+    private val telemetry: TelemetrySink = TelemetrySink.NoOp,
 ) {
     suspend operator fun invoke(
         userId: String,
@@ -39,10 +43,9 @@ class ImportEpubBookUseCase(
                 // message, which can embed user content.
                 tags["error_code"] = exception.javaClass.simpleName.take(8)
             }
-            com.nexo.debug.SentryMetrics.distribution(
+            telemetry.distribution(
                 "book_import",
-                com.nexo.debug.SentryMetrics
-                    .bucketDurationMs(elapsed),
+                telemetry.bucketDurationMs(elapsed),
                 tags,
             )
         }

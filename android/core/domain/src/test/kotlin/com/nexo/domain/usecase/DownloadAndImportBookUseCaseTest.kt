@@ -1,6 +1,6 @@
 package com.nexo.domain.usecase
 
-import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
+import com.nexo.testutil.TEST_BUILTIN_GUTENDEX
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.model.CatalogErrorCode
@@ -38,7 +38,7 @@ class DownloadAndImportBookUseCaseTest {
     private fun catalogBook(id: String = "gutendex:1342") =
         CatalogBook(
             id = id,
-            provider = BUILTIN_GUTENDEX,
+            provider = TEST_BUILTIN_GUTENDEX,
             title = "Pride and Prejudice",
             authors = listOf("Jane Austen"),
             coverUrl = null,

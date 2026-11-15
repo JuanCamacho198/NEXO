@@ -288,7 +288,7 @@ class AppContainer(
     val downloadAndImportBookUseCase: DownloadAndImportBookUseCase by lazy {
         DownloadAndImportBookUseCase(
             downloader = networkModule.catalogFileDownloader,
-            importEpubBookUseCase = ImportEpubBookUseCase(repositoryModule.libraryRepository),
+            importEpubBookUseCase = ImportEpubBookUseCase(repositoryModule.libraryRepository, SentryTelemetrySink),
             libraryRepository = repositoryModule.libraryRepository,
             tempDir = networkModule.catalogTempDir,
             booksDir = networkModule.libraryBooksDir,

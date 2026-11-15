@@ -65,7 +65,8 @@ object HiltSingletonsModule {
     fun provideLibraryRepository(a: AppContainer): LibraryRepository = a.libraryRepository
 
     @Provides @Singleton
-    fun provideImportEpub(r: LibraryRepository): ImportEpubBookUseCase = ImportEpubBookUseCase(r)
+    fun provideImportEpub(r: LibraryRepository): ImportEpubBookUseCase =
+        ImportEpubBookUseCase(r, SentryTelemetrySink)
 
     @Provides @Singleton
     fun provideSyncService(a: AppContainer): SyncService = a.syncService

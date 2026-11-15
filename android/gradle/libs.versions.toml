@@ -134,6 +134,12 @@ androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx"
 
 # compose group
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+# Standalone Compose runtime for PURE-JVM consumers. `@Immutable` lives here.
+# Deliberately declared WITHOUT a version: every BOM-managed consumer in this repo
+# is on `composeBom`, and adding an entry to a platform() cannot override a pinned
+# version, so pinning here would force a second Compose version on the classpath.
+# The BOM is applied to :core:model with `implementation(platform(libs.compose.bom))`.
+compose-runtime = { group = "androidx.compose.runtime", name = "runtime" }
 compose-ui = { group = "androidx.compose.ui", name = "ui" }
 compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
@@ -165,6 +171,9 @@ ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-conte
 ktor-serialization-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+# Pure-JVM coroutines for :core:domain (no Android dispatcher). Same version ref as
+# the -android artifact so the two can never resolve to different coroutines versions.
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serializationJson" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "datetime" }
@@ -232,6 +241,10 @@ android-test = { id = "com.android.test", version.ref = "agp" }
 # two roles: the plugin decides from the module's own AGP plugin which one applies.
 androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineProfile" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+# Pure-JVM Kotlin modules (:core:model, :core:domain). Same `kotlin` version ref as
+# kotlin-android so the compiler versions can never drift between the app and the
+# extracted core modules.
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

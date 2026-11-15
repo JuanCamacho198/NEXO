@@ -11,6 +11,8 @@ plugins {
     // declared here (apply false) so its version resolves ONCE.
     alias(libs.plugins.androidx.baselineprofile) apply false
     alias(libs.plugins.kotlin.android) apply false
+    // Pure-JVM Kotlin for the extracted :core:model / :core:domain modules.
+    alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.ksp) apply false

@@ -402,9 +402,12 @@ private fun DefinitionResultBody(result: DefinitionResult) {
 @Composable
 private fun DefinitionItemRow(item: DefinitionItem) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        if (!item.partOfSpeech.isNullOrBlank()) {
+        // Local val: `item.partOfSpeech` is a property declared in :core:domain, so
+        // the cross-module boundary blocks the implicit smart cast after the check.
+        val partOfSpeech = item.partOfSpeech
+        if (!partOfSpeech.isNullOrBlank()) {
             Text(
-                text = item.partOfSpeech,
+                text = partOfSpeech,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
             )

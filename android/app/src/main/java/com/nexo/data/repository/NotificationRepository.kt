@@ -127,8 +127,11 @@ private const val TARGET_KIND_BOOK = "book"
 private const val TARGET_KIND_ROUTE = "route"
 
 /** Flattens the sealed target into `target_kind` + `target_id`. */
-internal fun Notification.toEntity(): NotificationEntity =
-    NotificationEntity(
+internal fun Notification.toEntity(): NotificationEntity {
+    // Local val: `Notification.target` is declared in another module, so the
+    // sealed-subtype smart cast below is not available on the property itself.
+    val target = target
+    return NotificationEntity(
         id = id,
         createdAt = createdAt,
         source = source.name,
@@ -152,6 +155,7 @@ internal fun Notification.toEntity(): NotificationEntity =
         readAt = readAt,
         dedupKey = dedupKey,
     )
+}
 
 /**
  * Re-assembles the sealed target and degrades unknown persisted values to null
