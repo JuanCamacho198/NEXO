@@ -2,12 +2,12 @@ package com.nexo.presentation.viewmodel.reader.interaction
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
-import com.nexo.feature.reader.R
 import com.nexo.domain.definition.DefinableSelection
 import com.nexo.domain.definition.DefinitionRequest
 import com.nexo.domain.definition.DefinitionResult
 import com.nexo.domain.definition.WordLanguage
 import com.nexo.domain.repository.DefinitionRepository
+import com.nexo.feature.reader.R
 import com.nexo.presentation.viewmodel.reader.DefinitionPanelState
 import com.nexo.presentation.viewmodel.reader.lifecycle.Clearable
 import kotlinx.coroutines.CoroutineDispatcher

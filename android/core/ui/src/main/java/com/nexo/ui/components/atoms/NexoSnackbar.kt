@@ -36,10 +36,10 @@ import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.theme.nexoColors
-import com.nexo.ui.icons.NexoIcons
 import kotlinx.coroutines.currentCoroutineContext
 
 /** Corner radius for the snackbar surface — the brand card radius. */

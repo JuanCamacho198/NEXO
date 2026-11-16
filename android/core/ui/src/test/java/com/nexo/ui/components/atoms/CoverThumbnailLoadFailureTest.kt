@@ -38,7 +38,9 @@ class CoverThumbnailLoadFailureTest {
         assertEquals(
             "A book without a cover must not be reported at ERROR level (it floods Sentry)",
             DebugLog.Level.WARN,
-            DebugLog.events.value.single().level,
+            DebugLog.events.value
+                .single()
+                .level,
         )
         assertTrue(
             "No ERROR event may be produced for a book with no cover",
@@ -53,7 +55,9 @@ class CoverThumbnailLoadFailureTest {
         assertEquals(
             "A blank cover path is the same normal state as null",
             DebugLog.Level.WARN,
-            DebugLog.events.value.single().level,
+            DebugLog.events.value
+                .single()
+                .level,
         )
         assertTrue(
             "No ERROR event may be produced for a blank cover path",
@@ -68,23 +72,33 @@ class CoverThumbnailLoadFailureTest {
         assertEquals(
             "A genuine load failure must keep its ERROR severity so Sentry still sees it",
             DebugLog.Level.ERROR,
-            DebugLog.events.value.single().level,
+            DebugLog.events.value
+                .single()
+                .level,
         )
         assertEquals(
             "The ERROR event must reach the error ring that Sentry egress reads",
             DebugLog.Level.ERROR,
-            DebugLog.errorEvents.value.single().level,
+            DebugLog.errorEvents.value
+                .single()
+                .level,
         )
     }
 
     @Test
     fun `warn and error messages are distinguishable in Sentry`() {
         reportCoverLoadFailure(null)
-        val absent = DebugLog.events.value.single().message
+        val absent =
+            DebugLog.events.value
+                .single()
+                .message
         DebugLog.clear()
 
         reportCoverLoadFailure("/tmp/nexo-missing-cover.png")
-        val failed = DebugLog.events.value.single().message
+        val failed =
+            DebugLog.events.value
+                .single()
+                .message
 
         assertTrue("The absent-cover message must be distinct from the failure message", absent != failed)
         assertFalse(

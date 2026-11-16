@@ -3,6 +3,7 @@ package com.nexo.domain.auth
 import com.nexo.domain.model.AuthSession
 
 /** Coarse classification of an auth failure, for UI copy selection. */
+
 /** UI state of the authentication flow (sign-in / sign-up / sign-out). */
 enum class AuthFailureKind {
     /** No failure — session is healthy or has not yet been attempted. */

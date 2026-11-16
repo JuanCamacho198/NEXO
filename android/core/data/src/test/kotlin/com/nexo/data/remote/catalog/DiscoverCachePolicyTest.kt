@@ -2,6 +2,9 @@ package com.nexo.data.remote.catalog
 
 import com.nexo.data.local.dao.DiscoverCacheDao
 import com.nexo.data.local.entity.DiscoverCacheEntity
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.catalogError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -11,9 +14,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import com.nexo.domain.model.CatalogBook
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.catalogError
 
 /**
  * Slice 6a — `discover_cache` policy (spec capability `cache-lifecycle`).

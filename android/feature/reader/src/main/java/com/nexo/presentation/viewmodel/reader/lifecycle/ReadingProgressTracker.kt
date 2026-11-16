@@ -3,11 +3,11 @@ package com.nexo.presentation.viewmodel.reader.lifecycle
 import android.app.Application
 import com.nexo.debug.DebugDual
 import com.nexo.debug.DebugEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.ReadingProgress
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
-import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.CfiMigrator
 import com.nexo.presentation.viewmodel.reader.BookChapter
 import com.nexo.presentation.viewmodel.reader.ReaderLifecycleState

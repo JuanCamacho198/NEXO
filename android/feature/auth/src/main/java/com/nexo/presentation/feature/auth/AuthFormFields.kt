@@ -15,9 +15,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import com.nexo.feature.auth.R
-import com.nexo.ui.tags.AuthTags
 import com.nexo.ui.components.atoms.NexoTextField
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.tags.AuthTags
 
 @Composable
 fun PasswordTextField(

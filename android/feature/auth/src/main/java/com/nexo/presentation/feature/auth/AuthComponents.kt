@@ -39,12 +39,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.nexo.domain.auth.AuthUiState
 import com.nexo.feature.auth.BuildConfig
 import com.nexo.feature.auth.R
+import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.tags.AuthTags
 import com.nexo.ui.theme.NexoTheme
-import com.nexo.domain.auth.AuthUiState
-import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.util.safePainterResource
 
 @Composable

@@ -1,7 +1,7 @@
 package com.nexo.presentation.feature.auth
 
-import com.nexo.feature.auth.R
 import com.nexo.domain.auth.AuthFailureKind
+import com.nexo.feature.auth.R
 
 /** Minimum password length enforced client-side on the register screen (SCEN-3). */
 const val MIN_PASSWORD_LENGTH = 8

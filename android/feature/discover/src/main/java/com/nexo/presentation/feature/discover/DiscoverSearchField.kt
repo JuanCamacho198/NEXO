@@ -19,8 +19,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.nexo.feature.discover.R
-import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.nexoColors
 
 /**
  * Discover search field: 48dp surface field with a search icon that tints

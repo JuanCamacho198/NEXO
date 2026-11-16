@@ -2,8 +2,6 @@ package com.nexo.data.remote.addons
 
 import com.nexo.data.local.dao.AddonDao
 import com.nexo.data.local.entity.AddonEntity
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.CatalogException
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.CatalogSourceKind
@@ -11,6 +9,8 @@ import com.nexo.data.remote.catalog.CompositeCatalogProvider
 import com.nexo.data.remote.catalog.PagedResult
 import com.nexo.data.remote.catalog.RebuildingCatalogProvider
 import com.nexo.data.remote.catalog.addonSource
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
 import org.junit.Assert.assertEquals

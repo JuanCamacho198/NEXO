@@ -67,7 +67,11 @@ fun gitSha(): String =
         if (result.exitValue != 0) {
             "unknown"
         } else {
-            out.toString(Charsets.UTF_8).trim().take(12).ifEmpty { "unknown" }
+            out
+                .toString(Charsets.UTF_8)
+                .trim()
+                .take(12)
+                .ifEmpty { "unknown" }
         }
     } catch (_: Exception) {
         "unknown"
@@ -96,8 +100,8 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.compose)
 
-        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
     testImplementation(project(":core:test"))
-testImplementation(libs.testing.junit4)
+    testImplementation(libs.testing.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
 }

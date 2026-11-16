@@ -1,5 +1,7 @@
 package com.nexo.data.remote.catalog
 
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -12,8 +14,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.CatalogException
 
 /**
  * Ktor wiring check for [KtorCatalogHttpTransport] against a MockEngine:

@@ -29,19 +29,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nexo.feature.settings.R
 import com.nexo.data.session.TranslationPreferences
 import com.nexo.domain.model.TranslationHistoryEntry
 import com.nexo.domain.repository.TranslationHistoryRepository
 import com.nexo.domain.translation.TranslationSettings
+import com.nexo.feature.settings.R
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.launch
-
 
 /**
  * Translation languages (source + target) and the translation history.

@@ -1,5 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    // ktlint gate from build-logic (one contract for every Kotlin module).
+    id("nexo.kotlin.formatting")
 }
 
 kotlin {
@@ -18,9 +20,9 @@ dependencies {
     // Flow / CoroutineDispatcher appear in repository and usecase signatures.
     api(libs.kotlinx.coroutines.core)
 
-        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
     testImplementation(project(":core:test"))
-testImplementation(kotlin("test"))
+    testImplementation(kotlin("test"))
     testImplementation(libs.testing.junit4)
     testImplementation(libs.testing.mockk)
     testImplementation(libs.kotlinx.coroutines.test)

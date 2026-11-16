@@ -35,7 +35,6 @@ import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
 
-
 @Composable
 fun SyncScreen(
     onBack: () -> Unit,

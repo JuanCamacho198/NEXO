@@ -34,9 +34,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.domain.model.HighlightColor
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.highlight.rememberColorPickerState
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Settings section that displays the five customizable highlight

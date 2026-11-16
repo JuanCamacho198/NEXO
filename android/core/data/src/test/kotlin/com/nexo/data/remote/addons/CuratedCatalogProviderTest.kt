@@ -2,8 +2,6 @@ package com.nexo.data.remote.addons
 
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.CatalogException
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.CatalogSourceKind
@@ -16,11 +14,13 @@ import com.nexo.data.remote.catalog.MAX_PAGE_SIZE
 import com.nexo.data.remote.catalog.MIN_PAGE_SIZE
 import com.nexo.data.remote.catalog.OL_MIN_GAP_MS
 import com.nexo.data.remote.catalog.PAGE_TTL_S
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import com.nexo.domain.model.CatalogBook
 
 /**
  * Curated first-party bundle parity suite. Mirrors desktop

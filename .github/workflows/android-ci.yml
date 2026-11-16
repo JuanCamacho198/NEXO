@@ -69,9 +69,10 @@ jobs:
   android-checks:
     name: Android checks
     runs-on: ubuntu-latest
-    # Full unit suite (~1117 tests) + detekt + verification gates. Locally the
-    # full debug suite ran in ~5m12s on Windows; ubuntu runners are comparable
-    # but a cold-cache first run is slower, so leave generous headroom.
+    # Full unit suite (2127 tests across :app and the extracted modules) + detekt
+    # + verification gates. Locally the combined run took ~7m on Windows on a
+    # warm build; ubuntu runners are comparable but a cold-cache first run is
+    # slower, so leave generous headroom.
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -162,17 +163,46 @@ jobs:
         # pays a cold JVM start for nothing). Configuration cache + build
         # cache remove the remaining per-run reconfiguration/rebuild tax.
         #
-        # Full unit suite (all ~1117 tests, no --tests filter). Instrumentation
-        # tests are intentionally out of scope — no emulator job (deferred).
+        # Full unit suite (2127 tests: 702 in :app, the rest in the extracted
+        # modules listed below; no --tests filter). Instrumentation tests are
+        # intentionally out of scope — no emulator job (deferred).
         # The verify* tasks below are the cheap, deterministic string/source
         # gates. verifyReleaseMapping and verifySentryMappingUpload are
         # release-only (R8 mapping / SENTRY_AUTH_TOKEN) and stay out of CI.
+        #
+        # The extracted modules are SEPARATE Gradle projects, so
+        # `:app:testDebugUnitTest` runs only :app's own tests. Leaving them out
+        # meant a :core:data unit-test compile could fail on a clean tree while
+        # this job stayed green (UserBookRow moved to :core:model in ac644fda and
+        # four :core:data test files kept the old package — broken for three
+        # commits). Every module with tests is listed explicitly.
+        #
+        # Task-name split: the two `kotlin("jvm")` modules expose `test`; the
+        # Android libraries expose `testDebugUnitTest`. Release variants are
+        # deliberately not run — debug is the variant this job builds anyway and
+        # the extra wall-clock buys nothing.
+        #
+        # `detekt` is a root task that already aggregates every module and
+        # `spotlessCheck` likewise covers all modules via the build-logic
+        # `nexo.kotlin.formatting` convention plugin; neither needs a per-module
+        # entry here. :core:debug and :core:test have no tests. :app:lintDebug
+        # stays :app-only — lint is not configured per library.
         run: |
           ./gradlew \
             --configuration-cache \
             --build-cache \
             -Dorg.gradle.vfs.watch=false \
             :app:testDebugUnitTest \
+            :core:model:test \
+            :core:domain:test \
+            :core:data:testDebugUnitTest \
+            :core:ui:testDebugUnitTest \
+            :feature:settings:testDebugUnitTest \
+            :feature:discover:testDebugUnitTest \
+            :feature:highlights:testDebugUnitTest \
+            :feature:auth:testDebugUnitTest \
+            :feature:reader:testDebugUnitTest \
+            :feature:bookdetail:testDebugUnitTest \
             detekt \
             spotlessCheck \
             :app:lintDebug \
@@ -210,11 +240,18 @@ jobs:
         working-directory: android
         # The Gradle console only shows the failing test name; the XML report
         # carries the expected/actual message needed to diagnose without SSH.
+        #
+        # Every module's results dir is scanned, not just :app's — the gate step
+        # now runs the extracted modules' tests too, so a :core:data or feature
+        # failure would otherwise print nothing here. `find` (not a glob) because
+        # the module list grows and a missing dir must not fail the step.
         run: |
-          grep -rl "<failure\|<error" app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | while read -r f; do
-            echo "===== $f ====="
-            grep -A5 '<failure\|<error' "$f" | head -40
-          done
+          find . -path '*/build/test-results/*' -name 'TEST-*.xml' 2>/dev/null \
+            | xargs -r grep -l "<failure\|<error" 2>/dev/null \
+            | while read -r f; do
+                echo "===== $f ====="
+                grep -A5 '<failure\|<error' "$f" | head -40
+              done
 
   # ── S10 (android-stack-modernization): instrumented tests on an emulator ────
   # Closes the device workstream deferred since S5: the instrumented suites
@@ -453,6 +490,25 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
           script: echo "Generated AVD snapshot for caching."
+
+      - name: Precompile before the emulator is resident
+        # Run 43923446693 died with java.lang.OutOfMemoryError on
+        # :core:data:compileDebugKotlin during :app:connectedDebugAndroidTest -
+        # before any test ran. The arithmetic is the same one documented above,
+        # now with a wider graph: the module split means connectedDebugAndroidTest
+        # compiles :app plus every :core:* and :feature:* dependency, and the
+        # 7 GB runner already carries the emulator's 2048 MB for the whole Gradle
+        # phase.
+        #
+        # Rather than raise a heap the runner cannot hold - or lower the AVD,
+        # which the ram-size comment explicitly forbids - the compilation moves
+        # ahead of the emulator. Nothing competes for the 2 GB the AVD will take,
+        # and the test step below then finds the artifacts already built.
+        #
+        # Same task the test step runs, so the second invocation is incremental.
+        # `--max-workers=2` for the same peak-OOM reason documented on that step.
+        working-directory: android
+        run: ./gradlew --build-cache --max-workers=2 -Dorg.gradle.vfs.watch=false :app:assembleDebug :app:assembleDebugAndroidTest
 
       - name: Run instrumented tests on the emulator
         # `-no-snapshot-save` loads the cached snapshot read-only: a test run

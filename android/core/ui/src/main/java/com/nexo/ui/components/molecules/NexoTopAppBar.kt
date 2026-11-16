@@ -20,19 +20,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.ui.theme.NexoDimens
-import com.nexo.ui.theme.NexoTheme
-import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoAvatar
 import com.nexo.ui.components.atoms.NexoIconButton
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 /** Height of the top-level (avatar) bar — the `.pen` `Component/TopAppBar/Home` spec. */
 private val TopLevelBarHeight = 64.dp

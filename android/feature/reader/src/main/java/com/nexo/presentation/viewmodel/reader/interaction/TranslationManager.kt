@@ -2,12 +2,12 @@ package com.nexo.presentation.viewmodel.reader.interaction
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
-import com.nexo.feature.reader.R
 import com.nexo.domain.repository.TranslationRepository
 import com.nexo.domain.translation.NoTranslationReason
 import com.nexo.domain.translation.TranslationLanguageSelection
 import com.nexo.domain.translation.TranslationOutcome
 import com.nexo.domain.translation.TranslationPolicy
+import com.nexo.feature.reader.R
 import com.nexo.presentation.viewmodel.reader.TranslationPanelState
 import com.nexo.presentation.viewmodel.reader.lifecycle.Clearable
 import kotlinx.coroutines.CoroutineDispatcher

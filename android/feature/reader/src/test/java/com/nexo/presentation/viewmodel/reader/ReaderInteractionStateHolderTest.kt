@@ -4,11 +4,11 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.os.SystemClock
 import android.util.Log
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.ReaderRepository
-import com.nexo.domain.event.UiEvent
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.activeUserProviderFor
 import com.nexo.testutil.mockAppContext

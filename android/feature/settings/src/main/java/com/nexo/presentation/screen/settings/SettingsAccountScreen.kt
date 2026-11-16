@@ -31,14 +31,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.feature.settings.R
 import com.nexo.domain.model.AuthSession
+import com.nexo.feature.settings.R
 import com.nexo.ui.components.atoms.NexoAvatar
 import com.nexo.ui.components.atoms.NexoLogoutDialog
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
-
 
 @Composable
 fun SettingsAccountScreen(

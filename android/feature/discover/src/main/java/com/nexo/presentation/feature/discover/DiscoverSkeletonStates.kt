@@ -23,8 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nexo.feature.discover.R
-import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.components.atoms.NexoSkeletonBox
+import com.nexo.ui.theme.nexoColors
 
 /** Number of placeholder cards in the initial LOADING skeleton (2x3 grid). */
 private const val SKELETON_CARD_COUNT = 6

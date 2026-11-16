@@ -2,13 +2,13 @@ package com.nexo.presentation.viewmodel.reader.lifecycle
 
 import android.app.Application
 import android.util.Log
-import com.nexo.feature.reader.R
 import com.nexo.data.remote.supabase.SupabaseProgressSync
 import com.nexo.debug.DebugLog
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.ReadingProgress
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.domain.event.UiEvent
+import com.nexo.feature.reader.R
 import com.nexo.presentation.viewmodel.CfiMigrator
 import com.nexo.presentation.viewmodel.reader.ReaderLifecycleState
 import kotlinx.coroutines.CoroutineDispatcher

@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.nexo.domain.model.CatalogBook
 import com.nexo.debug.SentryMetrics
+import com.nexo.domain.model.CatalogBook
 import com.nexo.ui.theme.nexoColors
 
 /**

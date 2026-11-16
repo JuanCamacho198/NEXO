@@ -1,6 +1,5 @@
 package com.nexo.domain.usecase
 
-import com.nexo.testutil.TEST_BUILTIN_GUTENDEX
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.model.CatalogErrorCode
@@ -8,6 +7,7 @@ import com.nexo.domain.model.CatalogException
 import com.nexo.domain.model.CatalogFileSource
 import com.nexo.domain.model.DuplicateBookException
 import com.nexo.domain.repository.LibraryRepository
+import com.nexo.testutil.TEST_BUILTIN_GUTENDEX
 import com.nexo.testutil.TEST_USER_ID
 import io.mockk.coEvery
 import io.mockk.coVerify

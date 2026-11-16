@@ -24,13 +24,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.feature.settings.R
 import com.nexo.data.session.NotificationPreferencesStore
 import com.nexo.domain.notification.NotificationPreferences
 import com.nexo.domain.notification.QuietHoursSchedule
+import com.nexo.feature.settings.R
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.theme.NexoTheme
-
 
 /**
  * Real notification settings (U9).

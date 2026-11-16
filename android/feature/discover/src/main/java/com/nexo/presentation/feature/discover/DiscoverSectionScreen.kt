@@ -22,10 +22,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nexo.feature.discover.R
-import com.nexo.ui.theme.nexoColors
 import com.nexo.domain.discover.DiscoverStatus
+import com.nexo.feature.discover.R
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.nexoColors
 
 /**
  * "Ver todo" section list: the RESULTADOS layout minus the search section.

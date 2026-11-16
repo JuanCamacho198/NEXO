@@ -10,4 +10,9 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.21")
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.2.21")
     implementation("org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.2.21")
+    // `nexo.kotlin.formatting` applies Spotless to every Kotlin module from one
+    // place, so the plugin must be on this build's classpath. Version mirrors
+    // `gradle/libs.versions.toml` (`spotless = "7.2.1"`), same as the entries
+    // above mirror the catalog.
+    implementation("com.diffplug.spotless:spotless-plugin-gradle:7.2.1")
 }
