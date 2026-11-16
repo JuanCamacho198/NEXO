@@ -1,5 +1,6 @@
 package com.nexo.presentation.feature.discover
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,11 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -28,33 +25,38 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nexo.R
 import com.nexo.data.remote.catalog.CatalogSources
-import com.nexo.data.session.LegalDisclaimerPrefs
-import com.nexo.presentation.feature.legal.LegalNoticeDialog
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.nexoColors
-import com.nexo.presentation.viewmodel.DiscoverRailGroup
-import com.nexo.presentation.viewmodel.DiscoverSourceFilter
-import com.nexo.presentation.viewmodel.DiscoverStatus
+import com.nexo.domain.discover.DiscoverRailGroup
+import com.nexo.domain.discover.DiscoverRailState
+import com.nexo.domain.discover.DiscoverSourceFilter
+import com.nexo.domain.discover.DiscoverStatus
 import com.nexo.presentation.viewmodel.DiscoverUiState
 import com.nexo.presentation.viewmodel.DiscoverViewModel
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.nexoColors
+import com.nexo.feature.discover.R as FeatureR
 
 /**
  * Discover shell: header, search field, trending chips, then exactly one body
  * state. The body is owned per state — rails own their Loading/Loaded/Hidden
  * lifecycle, so the shell never shows a screen-level spinner for them.
  *
- * U5 hosts the one-time legal disclaimer dialog here: it shows on entry
- * until [LegalDisclaimerPrefs] records acceptance (durable across
- * restarts), with a direct route to the legal policy page.
+ * The one-time legal disclaimer is NOT composed here: its copy and its
+ * `LegalDisclaimerPrefs` gate are `:app`-only (the preferences class lives in
+ * `:core:data`, the dialog in `presentation/feature/legal`), so the nav call
+ * site owns and overlays it. This screen only needs to know whether it may
+ * render results yet.
  *
  * @param userInitial Initial of the signed-in user, resolved by the nav call site
  *   (the screen no longer reaches into a service locator). Null renders a
  *   neutral avatar placeholder.
  * @param onOpenSection Opens the "Ver todo" list for a rail, forwarding the
  *   already-localized section title.
+ * @param formatBytes Human-readable byte count for the detail sheet's download
+ *   progress; supplied by the host because the byte formatter is `:app`-only.
+ * @param contentHidden Suppresses the screen body, e.g. while the host is
+ *   gating the session behind the legal disclaimer.
  */
 @Composable
 fun DiscoverScreen(
@@ -62,23 +64,12 @@ fun DiscoverScreen(
     viewModel: DiscoverViewModel,
     userInitial: String? = null,
     onOpenSection: (DiscoverRailState.Loaded, String) -> Unit = { _, _ -> },
-    onNavigateToLegalPolicy: () -> Unit = {},
+    formatBytes: (Long) -> String = { "$it B" },
+    contentHidden: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val trendingChips = trendingChips()
-    val context = LocalContext.current
-    val disclaimerPrefs = remember { LegalDisclaimerPrefs(context) }
-    var showDisclaimer by remember { mutableStateOf(!disclaimerPrefs.hasAccepted()) }
-    if (showDisclaimer) {
-        LegalNoticeDialog(
-            onAccept = {
-                disclaimerPrefs.accept()
-                showDisclaimer = false
-            },
-            onViewPolicy = onNavigateToLegalPolicy,
-            onDismiss = { showDisclaimer = false },
-        )
-    }
+    if (contentHidden) return
 
     Column(
         modifier =
@@ -87,10 +78,10 @@ fun DiscoverScreen(
                 .padding(contentPadding),
     ) {
         DiscoverHeader(
-            title = stringResource(R.string.discover_title),
+            title = stringResource(FeatureR.string.discover_title),
             subtitle = headerSubtitle(uiState),
             userInitial = userInitial,
-            avatarContentDescription = stringResource(R.string.discover_avatar_content_desc),
+            avatarContentDescription = stringResource(FeatureR.string.discover_avatar_content_desc),
         )
 
         Column(
@@ -215,6 +206,7 @@ fun DiscoverScreen(
         onRetryAccess = {
             uiState.detail?.id?.let(viewModel::openDetail)
         },
+        formatBytes = formatBytes,
     )
 }
 
@@ -261,7 +253,7 @@ private fun DiscoverIdleRails(
         }
         if (sourceName != null && rails.all { it is DiscoverRailState.Hidden }) {
             Text(
-                text = stringResource(R.string.discover_idle_source_empty, sourceName),
+                text = stringResource(FeatureR.string.discover_idle_source_empty, sourceName),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.textSecondary,
                 textAlign = TextAlign.Center,
@@ -296,8 +288,8 @@ private fun DiscoverRailGroupNotice(
     modifier: Modifier = Modifier,
 ) {
     val colors = nexoColors
-    val source = stringResource(group.labelRes)
-    val body = stringResource(R.string.discover_rail_group_failed, source)
+    val source = stringResource(railGroupLabelRes(group))
+    val body = stringResource(FeatureR.string.discover_rail_group_failed, source)
     Column(
         modifier =
             modifier
@@ -313,14 +305,14 @@ private fun DiscoverRailGroupNotice(
         Row {
             TextButton(onClick = onRetry) {
                 Text(
-                    text = stringResource(R.string.discover_retry),
+                    text = stringResource(FeatureR.string.discover_retry),
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp),
                     color = colors.textAccent,
                 )
             }
             TextButton(onClick = onDismiss) {
                 Text(
-                    text = stringResource(R.string.discover_dismiss),
+                    text = stringResource(FeatureR.string.discover_dismiss),
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp),
                     color = colors.textSecondary,
                 )
@@ -329,25 +321,34 @@ private fun DiscoverRailGroupNotice(
     }
 }
 
+/** Resource id naming [group]; the ids live in this feature, not in `:core:domain`. */
+@StringRes
+private fun railGroupLabelRes(group: DiscoverRailGroup): Int =
+    when (group) {
+        DiscoverRailGroup.GoogleBooks -> FeatureR.string.discover_rail_group_google_books
+        DiscoverRailGroup.Gutendex -> FeatureR.string.discover_rail_group_gutendex
+        DiscoverRailGroup.StandardEbooks -> FeatureR.string.discover_rail_group_standard_ebooks
+    }
+
 @Composable
 private fun headerSubtitle(uiState: DiscoverUiState): String =
     when {
         uiState.status == DiscoverStatus.LOADED || uiState.status == DiscoverStatus.LOADING_MORE ->
             if (uiState.totalCount > 0) {
-                stringResource(R.string.discover_results_count, uiState.totalCount)
+                stringResource(FeatureR.string.discover_results_count, uiState.totalCount)
             } else {
-                stringResource(R.string.discover_subtitle)
+                stringResource(FeatureR.string.discover_subtitle)
             }
-        else -> stringResource(R.string.discover_subtitle)
+        else -> stringResource(FeatureR.string.discover_subtitle)
     }
 
 @Composable
 private fun trendingChips(): List<DiscoverChip> =
     listOf(
-        DiscoverChip(label = stringResource(R.string.discover_trending_all), icon = NexoIcons.Sparkle),
-        DiscoverChip(label = stringResource(R.string.discover_trending_popular), icon = NexoIcons.Flame),
-        DiscoverChip(label = stringResource(R.string.discover_trending_scifi), icon = NexoIcons.Sparkle),
-        DiscoverChip(label = stringResource(R.string.discover_trending_classics), icon = NexoIcons.Book),
+        DiscoverChip(label = stringResource(FeatureR.string.discover_trending_all), icon = NexoIcons.Sparkle),
+        DiscoverChip(label = stringResource(FeatureR.string.discover_trending_popular), icon = NexoIcons.Flame),
+        DiscoverChip(label = stringResource(FeatureR.string.discover_trending_scifi), icon = NexoIcons.Sparkle),
+        DiscoverChip(label = stringResource(FeatureR.string.discover_trending_classics), icon = NexoIcons.Book),
     )
 
 /**

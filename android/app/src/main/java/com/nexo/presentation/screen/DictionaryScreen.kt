@@ -155,9 +155,13 @@ fun DictionaryScreen(
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = FontWeight.Medium,
                                     )
-                                    if (!word.definition.isNullOrBlank()) {
+                                    // Local val: `word.definition` is a property declared in
+                                    // :core:model, so the cross-module boundary blocks the
+                                    // implicit smart cast after the null check.
+                                    val definitionText = word.definition
+                                    if (!definitionText.isNullOrBlank()) {
                                         Text(
-                                            text = word.definition,
+                                            text = definitionText,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 2,

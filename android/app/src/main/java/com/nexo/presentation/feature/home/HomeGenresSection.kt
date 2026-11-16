@@ -24,11 +24,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.presentation.screen.HomeTags
-import com.nexo.presentation.theme.NexoColors
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.nexoColors
 import com.nexo.ui.components.molecules.NexoChip
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoColors
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.nexoColors
 
 /** One genre chip: its label, glyph, and the palette selectors that tint it. */
 private data class HomeGenre(

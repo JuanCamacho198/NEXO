@@ -33,13 +33,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
-import com.nexo.presentation.UiEvent
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.EditBookMetadataUiState
 import com.nexo.presentation.viewmodel.EditBookMetadataViewModel
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

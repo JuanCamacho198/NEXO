@@ -42,9 +42,9 @@ import androidx.compose.ui.unit.sp
 import com.nexo.R
 import com.nexo.presentation.navigation.NexoDestination
 import com.nexo.presentation.screen.NavTags
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.NexoTheme
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
 
 data class BottomNavItem(
     val route: String,

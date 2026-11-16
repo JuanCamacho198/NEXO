@@ -1,15 +1,30 @@
 package com.nexo.di.modules
 
 import android.content.Context
-import android.util.Log
+import com.nexo.data.local.dao.BookDao
+import com.nexo.data.local.dao.BookmarkDao
+import com.nexo.data.local.dao.DictionaryWordDao
+import com.nexo.data.local.dao.DiscoverCacheDao
+import com.nexo.data.local.dao.HighlightDao
+import com.nexo.data.local.dao.ReadingProgressDao
+import com.nexo.data.local.dao.ReadingSessionDao
+import com.nexo.data.local.dao.ReadingStatsDao
+import com.nexo.data.local.dao.SyncOutboxDao
+import com.nexo.data.local.dao.TranslationCacheDao
+import com.nexo.data.remote.sync.SyncOrchestrator
+import com.nexo.data.remote.sync.SyncOrchestratorSettleGate
 import com.nexo.data.repository.CacheRepositoryImpl
 import com.nexo.data.repository.DictionaryRepositoryImpl
 import com.nexo.data.repository.HomeRepositoryImpl
 import com.nexo.data.repository.LibraryRepositoryImpl
 import com.nexo.data.repository.ReaderRepositoryImpl
 import com.nexo.data.repository.ReadingStatsRepositoryImpl
+import com.nexo.data.repository.RoomTranslationHistoryRepository
 import com.nexo.data.repository.StorageRepositoryImpl
+import com.nexo.data.storage.AppInternalCoverStorage
 import com.nexo.data.sync.DictionarySyncService
+import com.nexo.data.sync.SessionGateImpl
+import com.nexo.di.AppStartTimings
 import com.nexo.domain.repository.CacheRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.HomeRepository
@@ -17,112 +32,171 @@ import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.repository.StorageRepository
+import com.nexo.domain.repository.TranslationHistoryRepository
+import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.sync.OutboxDrainScheduler
+import com.nexo.domain.sync.SessionGate
 import com.nexo.domain.sync.SyncSettleGate
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
 import java.time.ZoneId
+import javax.inject.Singleton
 
-class RepositoryModule(
-    context: Context,
-    databaseModule: DatabaseModule,
-    storageModule: StorageModule,
-    @Suppress("UNUSED_PARAMETER") preferencesModule: PreferencesModule,
-    syncSettleGateProvider: () -> SyncSettleGate,
-    /**
-     * Resolves the outbox drain scheduler lazily so this module can be built
-     * while the app container is still wiring the network module (the scheduler
-     * needs the session manager). Defaults to a no-op so non-wired callers
-     * (tests) keep working.
-     */
-    drainSchedulerProvider: () -> OutboxDrainScheduler = { OutboxDrainScheduler.NoOp },
-    /**
-     * Resolves the dictionary sync mirror lazily-equivalent at construction.
-     * Defaults to absent so unit tests and non-wired callers stay local-only.
-     */
-    dictionarySyncProvider: () -> DictionarySyncService? = { null },
-) {
-    companion object {
-        private const val TAG = "RepositoryModule"
-    }
-
-    /** Resolved once; the scheduler resolves its WorkManager lazily per enqueue. */
-    private val drainScheduler: OutboxDrainScheduler = drainSchedulerProvider()
+@Module
+@InstallIn(SingletonComponent::class)
+object RepositoryModule {
+    @Provides
+    @Singleton
+    fun provideSessionGate(
+        sessionManager: com.nexo.data.session.SessionManager,
+    ): SessionGate = SessionGateImpl(sessionManager)
 
     /**
-     * Resolves the orchestrator-backed gate lazily, on each cleanup attempt, so
-     * this module can be built before the (lazy) SyncOrchestrator exists.
+     * Settle signal consumed by local file cleanup: a delete waits (bounded)
+     * for the aggregate sync state to leave `SyncState.Active`.
+     *
+     * Depends on the orchestrator directly. The previous `() -> SyncSettleGate`
+     * lambda existed only because the manual container built its repository
+     * module before the orchestrator; Hilt resolves the chain without it.
      */
-    val syncSettleGate: SyncSettleGate = SyncSettleGate { syncSettleGateProvider().awaitSettled() }
+    @Provides
+    @Singleton
+    fun provideSyncSettleGate(
+        orchestrator: SyncOrchestrator,
+    ): SyncSettleGate = SyncOrchestratorSettleGate(orchestrator)
 
-    private val epubImportStartTime = System.currentTimeMillis()
-    val libraryRepository: LibraryRepository =
-        LibraryRepositoryImpl(
-            appContext = context.applicationContext,
-            bookDao = databaseModule.bookDao,
-            readingStatsDao = databaseModule.readingStatsDao,
-            epubParserService = storageModule.epubParserService,
-            pdfParserService = storageModule.pdfParserService,
-            coverStorage = storageModule.coverStorage,
-            readingProgressDao = databaseModule.readingProgressDao,
-            outboxDao = databaseModule.syncOutboxDao,
-            settleGate = syncSettleGate,
-            drainScheduler = drainScheduler,
-        )
-    val epubImportInitTimeMs: Long = System.currentTimeMillis() - epubImportStartTime
-
-    init {
-        Log.d(TAG, "LibraryRepository initialized in ${epubImportInitTimeMs}ms")
+    @Provides
+    @Singleton
+    fun provideLibraryRepository(
+        @ApplicationContext context: Context,
+        bookDao: BookDao,
+        readingStatsDao: ReadingStatsDao,
+        epubParserService: com.nexo.data.epub.EpubParserService,
+        pdfParserService: com.nexo.data.pdf.PdfParserService,
+        coverStorage: AppInternalCoverStorage,
+        readingProgressDao: ReadingProgressDao,
+        outboxDao: SyncOutboxDao,
+        settleGate: SyncSettleGate,
+        drainScheduler: OutboxDrainScheduler,
+        timings: AppStartTimings,
+    ): LibraryRepository {
+        val start = System.currentTimeMillis()
+        val repository =
+            LibraryRepositoryImpl(
+                appContext = context,
+                bookDao = bookDao,
+                readingStatsDao = readingStatsDao,
+                epubParserService = epubParserService,
+                pdfParserService = pdfParserService,
+                coverStorage = coverStorage,
+                readingProgressDao = readingProgressDao,
+                outboxDao = outboxDao,
+                settleGate = settleGate,
+                drainScheduler = drainScheduler,
+            )
+        timings.recordEpubImportInit(System.currentTimeMillis() - start)
+        return repository
     }
 
-    private val readerRepoStartTime = System.currentTimeMillis()
-    val readerRepository: ReaderRepository =
-        ReaderRepositoryImpl(
-            readingProgressDao = databaseModule.readingProgressDao,
-            highlightDao = databaseModule.highlightDao,
-            bookmarkDao = databaseModule.bookmarkDao,
-            bookDao = databaseModule.bookDao,
-            outboxDao = databaseModule.syncOutboxDao,
-            drainScheduler = drainScheduler,
-        )
-    val readerRepoInitTimeMs: Long = System.currentTimeMillis() - readerRepoStartTime
-
-    init {
-        Log.d(TAG, "ReaderRepository initialized in ${readerRepoInitTimeMs}ms")
+    @Provides
+    @Singleton
+    fun provideReaderRepository(
+        readingProgressDao: ReadingProgressDao,
+        highlightDao: HighlightDao,
+        bookmarkDao: BookmarkDao,
+        bookDao: BookDao,
+        outboxDao: SyncOutboxDao,
+        drainScheduler: OutboxDrainScheduler,
+        timings: AppStartTimings,
+    ): ReaderRepository {
+        val start = System.currentTimeMillis()
+        val repository =
+            ReaderRepositoryImpl(
+                readingProgressDao = readingProgressDao,
+                highlightDao = highlightDao,
+                bookmarkDao = bookmarkDao,
+                bookDao = bookDao,
+                outboxDao = outboxDao,
+                drainScheduler = drainScheduler,
+            )
+        timings.recordReaderRepoInit(System.currentTimeMillis() - start)
+        return repository
     }
 
-    val readingStatsRepository: ReadingStatsRepository =
+    @Provides
+    @Singleton
+    fun provideReadingStatsRepository(
+        readingStatsDao: ReadingStatsDao,
+        readingSessionDao: ReadingSessionDao,
+        outboxDao: SyncOutboxDao,
+        drainScheduler: OutboxDrainScheduler,
+    ): ReadingStatsRepository =
         ReadingStatsRepositoryImpl(
-            readingStatsDao = databaseModule.readingStatsDao,
-            readingSessionDao = databaseModule.readingSessionDao,
-            outboxDao = databaseModule.syncOutboxDao,
+            readingStatsDao = readingStatsDao,
+            readingSessionDao = readingSessionDao,
+            outboxDao = outboxDao,
             drainScheduler = drainScheduler,
             zoneId = ZoneId.systemDefault(),
         )
 
-    val homeRepository: HomeRepository =
+    @Provides
+    @Singleton
+    fun provideHomeRepository(
+        bookDao: BookDao,
+        readingProgressDao: ReadingProgressDao,
+        readingSessionDao: ReadingSessionDao,
+    ): HomeRepository =
         HomeRepositoryImpl(
-            bookDao = databaseModule.bookDao,
-            readingProgressDao = databaseModule.readingProgressDao,
-            readingSessionDao = databaseModule.readingSessionDao,
+            bookDao = bookDao,
+            readingProgressDao = readingProgressDao,
+            readingSessionDao = readingSessionDao,
             zoneId = ZoneId.systemDefault(),
         )
 
-    val dictionaryRepository: DictionaryRepository =
-        DictionaryRepositoryImpl(
-            dao = databaseModule.dictionaryWordDao,
-            sync = dictionarySyncProvider(),
-        )
+    @Provides
+    @Singleton
+    fun provideDictionaryRepository(
+        dao: DictionaryWordDao,
+        sync: DictionarySyncService,
+    ): DictionaryRepository = DictionaryRepositoryImpl(dao = dao, sync = sync)
 
-    val cacheRepository: CacheRepository =
+    @Provides
+    @Singleton
+    fun provideCacheRepository(
+        @ApplicationContext context: Context,
+        discoverCacheDao: DiscoverCacheDao,
+        imageLoader: coil3.ImageLoader,
+    ): CacheRepository =
         CacheRepositoryImpl(
-            discoverCacheDao = databaseModule.discoverCacheDao,
-            appContext = context.applicationContext,
-            imageLoader = storageModule.coilImageLoader,
+            discoverCacheDao = discoverCacheDao,
+            appContext = context,
+            imageLoader = imageLoader,
         )
 
-    val storageRepository: StorageRepository =
+    @Provides
+    @Singleton
+    fun provideStorageRepository(
+        @ApplicationContext context: Context,
+        bookDao: BookDao,
+        settleGate: SyncSettleGate,
+    ): StorageRepository =
         StorageRepositoryImpl(
-            appContext = context.applicationContext,
-            bookDao = databaseModule.bookDao,
-            settleGate = syncSettleGate,
+            appContext = context,
+            bookDao = bookDao,
+            settleGate = settleGate,
+        )
+
+    @Provides
+    @Singleton
+    fun provideTranslationHistoryRepository(
+        cacheDao: TranslationCacheDao,
+        activeUserProvider: ActiveUserProvider,
+    ): TranslationHistoryRepository =
+        RoomTranslationHistoryRepository(
+            cacheDao = cacheDao,
+            activeUser = activeUserProvider,
         )
 }

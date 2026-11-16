@@ -23,10 +23,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.presentation.screen.HomeTags
-import com.nexo.presentation.theme.nexoColors
-import com.nexo.presentation.theme.NexoDimens
 import com.nexo.ui.components.molecules.NexoCardSurface
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.nexoColors
 
 /** Diameter of the cloud glyph's circular container. */
 private val SyncIconWrapSize = 44.dp

@@ -26,9 +26,9 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.nexo.R
-import com.nexo.presentation.theme.NexoDimens
-import com.nexo.presentation.theme.NexoSectionLabel
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoSectionLabel
 
 /**
  * Today's reading scoreboard: minutes, sessions and streak as three equal

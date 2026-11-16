@@ -2,6 +2,8 @@ package com.nexo.data.remote.addons
 
 import com.nexo.data.remote.catalog.CatalogSourceKind
 import com.nexo.data.remote.catalog.addonSource
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -62,8 +64,8 @@ class AddonRegistryHardeningTest {
             .PagedResult(emptyList(), null, 0)
 
         override suspend fun getDetails(id: String): Nothing =
-            throw com.nexo.data.remote.catalog.CatalogException(
-                com.nexo.data.remote.catalog.CatalogErrorCode.NOT_FOUND,
+            throw CatalogException(
+                CatalogErrorCode.NOT_FOUND,
                 id,
             )
 

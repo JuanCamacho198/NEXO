@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexo.R
-import com.nexo.data.remote.supabase.UserBookRow
+import com.nexo.domain.model.UserBookRow
 import com.nexo.presentation.viewmodel.DownloadState
 import com.nexo.ui.components.atoms.CoverThumbnail
 import com.nexo.ui.components.atoms.NexoDialog
@@ -77,7 +77,10 @@ fun DownloadableBooksSection(
         Spacer(modifier = Modifier.height(12.dp))
     }
     pendingDownloadBook?.let { book ->
-        NexoDialog(title = stringResource(R.string.download_confirm_title), body = if (book.author.isNullOrBlank()) stringResource(R.string.download_confirm_body_no_author, book.title) else stringResource(R.string.download_confirm_body, book.title, book.author), confirmText = stringResource(R.string.book_download), dismissText = stringResource(R.string.action_cancel), onConfirm = {
+        // `author` is declared in another module, so it cannot be smart-cast; bind it
+        // to a local val once and branch on that.
+        val author = book.author
+        NexoDialog(title = stringResource(R.string.download_confirm_title), body = if (author.isNullOrBlank()) stringResource(R.string.download_confirm_body_no_author, book.title) else stringResource(R.string.download_confirm_body, book.title, author), confirmText = stringResource(R.string.book_download), dismissText = stringResource(R.string.action_cancel), onConfirm = {
             onConfirmDownload(book.id)
             pendingDownloadBook = null
         }, onDismiss = { pendingDownloadBook = null }, icon = NexoIcons.CloudDownload)
@@ -92,10 +95,11 @@ private fun DownloadableBookCard(
 ) {
     Card(modifier = Modifier.width(140.dp), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
         Column {
-            Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))) { CoverThumbnail(coverPath = book.coverUrl, modifier = Modifier.matchParentSize()) }
+            Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))) { CoverThumbnail(coverPath = book.coverUrl, contentDescription = stringResource(R.string.library_cover_content_description), modifier = Modifier.matchParentSize()) }
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(text = book.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (book.author != null) Text(text = book.author, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val author = book.author
+                if (author != null) Text(text = author, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 book.fileSize?.takeIf { it > 0 }?.let { bytes -> Text(text = formatFileSize(bytes), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 if (isDownloading) {
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {

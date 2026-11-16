@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auth_config_error_google_unavailable">Error de configuracion: el inicio de sesion con Google no esta disponible porque el ID de cliente OAuth no esta configurado. Podes continuar usando funciones de biblioteca local.</string>
+    <string name="auth_continue_local_dev">Continuar en local (Dev)</string>
+    <string name="auth_continue_with_email">Continuar con correo</string>
+    <string name="auth_continue_with_google">Continuar con Google</string>
+    <string name="auth_email_label">Correo electrónico</string>
+    <string name="auth_failure_config_error_with_details">Error de configuracion: %1$s. Continua en modo local hasta corregir la configuracion.</string>
+    <string name="auth_failure_wiring_error_with_details">Error de conexion: %1$s. Continua en modo local mientras se corrige la conexion.</string>
+    <string name="auth_forgot_password">Olvidé mi contraseña</string>
+    <string name="auth_forgot_subtitle">Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.</string>
+    <string name="auth_forgot_title">Restablecer contraseña</string>
+    <string name="auth_full_name_label">Nombre completo</string>
+    <string name="auth_full_name_placeholder">ej. Ana García</string>
+    <string name="auth_google_credential_error_generic">No pudimos iniciar sesión con Google. Inténtalo de nuevo.</string>
+    <string name="auth_google_credential_interrupted">El inicio de sesión se interrumpió. Inténtalo de nuevo.</string>
+    <string name="auth_google_credential_network_error">Sin conexión. Revisa tu internet y vuelve a intentarlo.</string>
+    <string name="auth_google_credential_unknown">Algo salió mal al iniciar sesión con Google. Inténtalo de nuevo.</string>
+    <string name="auth_google_disabled_config_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion (falta el ID de cliente OAuth).</string>
+    <string name="auth_google_disabled_loading">El inicio de sesion con Google esta en progreso.</string>
+    <string name="auth_google_disabled_wiring_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion.</string>
+    <string name="auth_google_no_credential">No hay ninguna cuenta de Google disponible en este dispositivo. Agrega una en los ajustes del dispositivo y vuelve a intentarlo.</string>
+    <string name="auth_google_unexpected_credential">Tipo de credencial inesperado: %1$s</string>
+    <string name="auth_google_unexpected_error">Error inesperado: %1$s</string>
+    <string name="auth_login_action">Iniciar sesión</string>
+    <string name="auth_login_footer_link">Inicia sesión</string>
+    <string name="auth_login_footer_prefix">¿Ya tienes cuenta?</string>
+    <string name="auth_login_subtitle">Inicia sesión para mantener tu biblioteca sincronizada.</string>
+    <string name="auth_or_login_with">O INICIA SESIÓN CON</string>
+    <string name="auth_or_register_with">O REGÍSTRATE CON</string>
+    <string name="auth_password_hide">Ocultar contraseña</string>
+    <string name="auth_password_hint">Mínimo 8 caracteres, con letras y números.</string>
+    <string name="auth_password_label">Contraseña</string>
+    <string name="auth_password_show">Mostrar contraseña</string>
+    <string name="auth_register_action">Registrarse</string>
+    <string name="auth_register_footer_link">Regístrate</string>
+    <string name="auth_register_footer_prefix">¿No tienes una cuenta?</string>
+    <string name="auth_register_title">Crea tu cuenta</string>
+    <string name="auth_send_reset_email">Enviar correo de recuperación</string>
+    <string name="auth_welcome_title">¡Bienvenido!</string>
+    <string name="auth_wiring_error_incomplete">Error de configuracion: la configuracion OAuth de Google esta incompleta. Verifica la configuracion OAuth. La lectura local sigue disponible.</string>
+    <string name="app_name">NEXO</string>
+    <string name="nav_back">Volver</string>
+</resources>

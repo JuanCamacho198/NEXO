@@ -1,15 +1,14 @@
 package com.nexo.presentation.viewmodel.library
 
-import android.content.Context
 import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
-import com.nexo.presentation.UiEvent
+import com.nexo.presentation.util.StringResolver
+import com.nexo.testutil.FakeStringResolver
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.activeUserProviderFor
-import com.nexo.testutil.mockAppContext
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -121,6 +120,40 @@ class BookActionStateHolderTest {
         }
 
     @Test
+    fun `confirmDeleteBook emits snackbar formatted with the book title`() =
+        runTest {
+            val scheduler = TestCoroutineScheduler()
+            val dispatcher = UnconfinedTestDispatcher(scheduler)
+            val scope = CoroutineScope(dispatcher + SupervisorJob())
+            val mockRepository = mockk<LibraryRepository>()
+
+            coEvery { mockRepository.deleteBook(any(), any()) } returns Result.success(Unit)
+
+            var emittedEvent: UiEvent? = null
+            val holder =
+                createActionHolder(
+                    scope = scope,
+                    dispatcher = dispatcher,
+                    libraryRepository = mockRepository,
+                    stringResolver =
+                        FakeStringResolver(
+                            mapOf(R.string.library_snackbar_book_deleted to "Deleted \"%1\$s\""),
+                        ),
+                    onUiEvent = { emittedEvent = it },
+                )
+
+            holder.requestDeleteBook(sampleBook)
+            holder.confirmDeleteBook()
+            advanceUntilIdle()
+
+            assertTrue("Should emit snackbar", emittedEvent is UiEvent.ShowSnackbar)
+            assertEquals(
+                "Deleted \"${sampleBook.title}\"",
+                (emittedEvent as UiEvent.ShowSnackbar).message,
+            )
+        }
+
+    @Test
     fun `confirmDeleteBook emits error snackbar on failure`() =
         runTest {
             val scheduler = TestCoroutineScheduler()
@@ -180,10 +213,9 @@ class BookActionStateHolderTest {
             val dispatcher = UnconfinedTestDispatcher(scheduler)
             val scope = CoroutineScope(dispatcher + SupervisorJob())
             val mockRepository = mockk<LibraryRepository>()
-            val mockContext = mockk<Context>()
+            val mockResolver = FakeStringResolver(mapOf(R.string.library_snackbar_marked_completed to "Marked as completed", R.string.library_snackbar_marked_plan_to_read to "Marked as plan to read"))
 
             coEvery { mockRepository.updateBookStatus(any(), any(), any()) } returns Result.success(Unit)
-            every { mockContext.getString(R.string.library_snackbar_marked_completed) } returns "Marked as completed"
 
             var emittedEvent: UiEvent? = null
             val holder =
@@ -191,7 +223,7 @@ class BookActionStateHolderTest {
                     scope = scope,
                     dispatcher = dispatcher,
                     libraryRepository = mockRepository,
-                    context = mockContext,
+                    stringResolver = mockResolver,
                     onUiEvent = { emittedEvent = it },
                 )
 
@@ -209,10 +241,9 @@ class BookActionStateHolderTest {
             val dispatcher = UnconfinedTestDispatcher(scheduler)
             val scope = CoroutineScope(dispatcher + SupervisorJob())
             val mockRepository = mockk<LibraryRepository>()
-            val mockContext = mockk<Context>()
+            val mockResolver = FakeStringResolver(mapOf(R.string.library_snackbar_marked_completed to "Marked as completed", R.string.library_snackbar_marked_plan_to_read to "Marked as plan to read"))
 
             coEvery { mockRepository.updateBookStatus(any(), any(), any()) } returns Result.success(Unit)
-            every { mockContext.getString(R.string.library_snackbar_marked_plan_to_read) } returns "Marked as plan to read"
 
             var emittedEvent: UiEvent? = null
             val holder =
@@ -220,7 +251,7 @@ class BookActionStateHolderTest {
                     scope = scope,
                     dispatcher = dispatcher,
                     libraryRepository = mockRepository,
-                    context = mockContext,
+                    stringResolver = mockResolver,
                     onUiEvent = { emittedEvent = it },
                 )
 
@@ -297,20 +328,20 @@ class BookActionStateHolderTest {
         val dispatcher = UnconfinedTestDispatcher(scheduler)
         val scope = CoroutineScope(dispatcher + SupervisorJob())
         val mockRepository = mockk<LibraryRepository>()
-        val mockContext = mockk<Context>()
+        val mockResolver = FakeStringResolver()
 
         return TestComponents(
             holder =
                 BookActionStateHolder(
                     libraryRepository = mockRepository,
-                    appContext = mockContext,
+                    stringResolver = mockResolver,
                     scope = scope,
                     onUiEvent = {},
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                 ),
             mockRepository = mockRepository,
-            mockContext = mockContext,
+            mockResolver = mockResolver,
         )
     }
 
@@ -318,12 +349,12 @@ class BookActionStateHolderTest {
         scope: CoroutineScope,
         dispatcher: TestDispatcher,
         libraryRepository: LibraryRepository = mockk(),
-        context: Context = mockAppContext(),
+        stringResolver: StringResolver = FakeStringResolver(),
         onUiEvent: (UiEvent) -> Unit,
     ): BookActionStateHolder =
         BookActionStateHolder(
             libraryRepository = libraryRepository,
-            appContext = context,
+            stringResolver = stringResolver,
             scope = scope,
             onUiEvent = onUiEvent,
             activeUser = activeUserProviderFor(),
@@ -333,6 +364,6 @@ class BookActionStateHolderTest {
     private data class TestComponents(
         val holder: BookActionStateHolder,
         val mockRepository: LibraryRepository,
-        val mockContext: Context,
+        val mockResolver: StringResolver,
     )
 }

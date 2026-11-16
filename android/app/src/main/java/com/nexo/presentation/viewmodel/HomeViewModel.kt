@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nexo.debug.DebugDual
 import com.nexo.debug.DebugEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.ReadingStats
@@ -14,7 +15,6 @@ import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.GetStatisticsUseCase
-import com.nexo.presentation.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job

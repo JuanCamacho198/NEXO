@@ -30,6 +30,7 @@ import com.nexo.R
 import com.nexo.domain.model.Book
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
+import com.nexo.ui.R as UiR
 
 @Composable
 internal fun CoverSection(
@@ -47,9 +48,9 @@ internal fun CoverSection(
                 .size(
                     width = with(density) { 128.dp.toPx().toInt() },
                     height = with(density) { 192.dp.toPx().toInt() },
-                ).placeholder(R.drawable.cover_placeholder)
-                .error(R.drawable.cover_error)
-                .fallback(R.drawable.cover_placeholder)
+                ).placeholder(UiR.drawable.cover_placeholder)
+                .error(UiR.drawable.cover_error)
+                .fallback(UiR.drawable.cover_placeholder)
                 .crossfade(true)
                 .build()
         }

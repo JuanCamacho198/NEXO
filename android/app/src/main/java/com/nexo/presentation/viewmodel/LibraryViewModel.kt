@@ -1,23 +1,23 @@
 package com.nexo.presentation.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nexo.data.remote.supabase.SupabaseBookCatalogSync
-import com.nexo.data.remote.supabase.UserBookRow
 import com.nexo.data.remote.sync.DriveSyncState
 import com.nexo.data.remote.sync.SyncService
 import com.nexo.debug.DebugLog
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.BookStatus
+import com.nexo.domain.model.UserBookRow
 import com.nexo.domain.model.effectiveStatus
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.ImportEpubBookUseCase
-import com.nexo.presentation.UiEvent
+import com.nexo.presentation.util.StringResolver
 import com.nexo.presentation.viewmodel.library.BookActionStateHolder
 import com.nexo.presentation.viewmodel.library.BookFilterStateHolder
 import com.nexo.presentation.viewmodel.library.BookImportState
@@ -25,7 +25,6 @@ import com.nexo.presentation.viewmodel.library.BookImportStateHolder
 import com.nexo.presentation.viewmodel.library.CatalogPollingHolder
 import com.nexo.presentation.viewmodel.library.isImporting
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -194,7 +193,7 @@ sealed interface DownloadState {
  * @param libraryRepository Source of books + reading-time flows.
  * @param importEpubBookUseCase Use case that copies and registers an EPUB file.
  * @param syncService Sync scheduler and state stream.
- * @param appContext Application context (used by the action holder to read file metadata).
+ * @param stringResolver Resolves snackbar copy for the action holder.
  * @param mainDispatcher Dispatcher for state updates; defaults to [Dispatchers.Main].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -205,7 +204,7 @@ class LibraryViewModel
         private val libraryRepository: LibraryRepository,
         private val importEpubBookUseCase: ImportEpubBookUseCase,
         private val syncService: SyncService,
-        @ApplicationContext private val appContext: Context,
+        private val stringResolver: StringResolver,
         private val catalogSync: SupabaseBookCatalogSync,
         private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
         private val readerRepository: ReaderRepository,
@@ -335,7 +334,7 @@ class LibraryViewModel
             BookActionStateHolder(
                 libraryRepository = libraryRepository,
                 activeUser = activeUser,
-                appContext = appContext,
+                stringResolver = stringResolver,
                 scope = viewModelScope,
                 onUiEvent = { _uiEvent.tryEmit(it) },
                 mainDispatcher = mainDispatcher,
@@ -697,7 +696,7 @@ class LibraryViewModel
 class LibraryViewModelFactory(
     private val libraryRepository: LibraryRepository,
     private val syncService: SyncService,
-    private val appContext: Context,
+    private val stringResolver: StringResolver,
     private val catalogSync: SupabaseBookCatalogSync,
     private val readerRepository: ReaderRepository,
     private val getBookProgressUseCase: GetBookProgressUseCase,
@@ -710,7 +709,7 @@ class LibraryViewModelFactory(
                 libraryRepository = libraryRepository,
                 importEpubBookUseCase = ImportEpubBookUseCase(libraryRepository),
                 syncService = syncService,
-                appContext = appContext,
+                stringResolver = stringResolver,
                 catalogSync = catalogSync,
                 readerRepository = readerRepository,
                 getBookProgressUseCase = getBookProgressUseCase,

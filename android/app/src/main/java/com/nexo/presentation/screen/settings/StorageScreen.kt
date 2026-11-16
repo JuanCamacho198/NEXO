@@ -28,14 +28,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.R
 import com.nexo.domain.model.BookStorageItem
 import com.nexo.domain.model.CacheUsage
+import com.nexo.feature.settings.R
 import com.nexo.presentation.screen.library.RemoveBookDialog
-import com.nexo.presentation.theme.NexoTheme
-import com.nexo.presentation.util.formatFileSize
 import com.nexo.presentation.viewmodel.StorageUiState
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
+import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.util.formatFileSize
 
 /**
  * Real storage screen (WS6) driven by [StorageUiState].
@@ -63,11 +63,22 @@ fun StorageScreen(
         onRequestDeleteBook = onRequestDeleteBook,
         onSweepOrphans = onSweepOrphans,
     )
+    // RemoveBookDialog still lives in :app (it is shared with the library
+    // screens), so the copy it renders is supplied from :app's resources.
     RemoveBookDialog(
         bookToDelete = uiState.bookToDelete,
         onDismiss = onDismissDelete,
         onConfirmLocalOnly = onConfirmLocalOnly,
         onConfirmLocalAndDrive = onConfirmLocalAndDrive,
+        titleRes = com.nexo.R.string.library_remove_title,
+        bodyRes = com.nexo.R.string.library_remove_message,
+        confirmRes = com.nexo.R.string.library_remove_continue,
+        dismissRes = com.nexo.R.string.library_remove_cancel,
+        localOnlyTitleRes = com.nexo.R.string.library_remove_local_only,
+        localOnlySubtitleRes = com.nexo.R.string.library_remove_local_only_subtitle,
+        localAndDriveTitleRes = com.nexo.R.string.library_remove_local_and_drive,
+        localAndDriveSubtitleRes = com.nexo.R.string.library_remove_local_and_drive_subtitle,
+        cancelRes = com.nexo.R.string.library_remove_cancel,
     )
 }
 

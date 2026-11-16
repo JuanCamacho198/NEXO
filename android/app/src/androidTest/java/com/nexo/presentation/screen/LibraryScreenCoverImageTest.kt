@@ -26,6 +26,7 @@ class LibraryScreenCoverImageTest {
         composeRule.setContent {
             CoverThumbnail(
                 coverPath = null,
+                contentDescription = contentDescription,
                 onImageState = { state -> states += state::class.simpleName.orEmpty() },
             )
         }
@@ -52,6 +53,7 @@ class LibraryScreenCoverImageTest {
         composeRule.setContent {
             CoverThumbnail(
                 coverPath = coverFile.absolutePath,
+                contentDescription = contentDescription,
                 onImageState = { state -> states += state::class.simpleName.orEmpty() },
             )
         }
@@ -70,6 +72,7 @@ class LibraryScreenCoverImageTest {
         composeRule.setContent {
             CoverThumbnail(
                 coverPath = "/tmp/nexo-does-not-exist-cover.png",
+                contentDescription = contentDescription,
                 onImageState = { state -> states += state::class.simpleName.orEmpty() },
             )
         }

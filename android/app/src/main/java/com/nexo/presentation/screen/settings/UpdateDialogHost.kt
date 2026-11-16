@@ -7,8 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nexo.R
-import com.nexo.presentation.viewmodel.UpdateUiState
+import com.nexo.domain.update.UpdateUiState
+import com.nexo.feature.settings.R
 import com.nexo.presentation.viewmodel.UpdateViewModel
 
 @Composable

@@ -1,7 +1,7 @@
 package com.nexo.presentation.viewmodel.library
 
 import com.nexo.data.remote.supabase.SupabaseBookCatalogSync
-import com.nexo.data.remote.supabase.UserBookRow
+import com.nexo.domain.model.UserBookRow
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

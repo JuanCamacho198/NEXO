@@ -1,0 +1,12 @@
+{
+  "expect": "reject",
+  "expectedCode": "ADDON_FETCH_BAD_CONTENT_TYPE",
+  "contentType": "text/html; charset=utf-8",
+  "manifest": {
+    "id": "example-books",
+    "name": "Example Books",
+    "version": "1.0.0",
+    "catalogs": [{ "type": "book-catalog", "id": "main", "name": "Example Catalog" }],
+    "resources": ["search"]
+  }
+}

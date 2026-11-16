@@ -41,16 +41,15 @@ import com.nexo.domain.definition.DefinitionItem
 import com.nexo.domain.definition.DefinitionResult
 import com.nexo.domain.definition.DefinitionSource
 import com.nexo.domain.definition.WIKTIONARY_ATTRIBUTION
-import com.nexo.presentation.theme.NexoTheme
 import com.nexo.presentation.viewmodel.reader.DefinitionPanelState
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * The definition-language options the panel's selector offers. Kept as data so
  * the same list backs the selector and its test, and so the settings sub-page
  * can reuse it.
  */
-internal val DEFINITION_LANGUAGE_OPTIONS = listOf("es", "en", "fr", "pt")
 
 /**
  * The body's minimum usable height.
@@ -402,9 +401,12 @@ private fun DefinitionResultBody(result: DefinitionResult) {
 @Composable
 private fun DefinitionItemRow(item: DefinitionItem) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        if (!item.partOfSpeech.isNullOrBlank()) {
+        // Local val: `item.partOfSpeech` is a property declared in :core:domain, so
+        // the cross-module boundary blocks the implicit smart cast after the check.
+        val partOfSpeech = item.partOfSpeech
+        if (!partOfSpeech.isNullOrBlank()) {
             Text(
-                text = item.partOfSpeech,
+                text = partOfSpeech,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -481,16 +483,6 @@ private fun AttributionFooter() {
 }
 
 /** Human-readable name for a language code, falling back to the code itself. */
-@Composable
-internal fun definitionLanguageName(code: String): String =
-    when (code.lowercase()) {
-        "es" -> stringResource(R.string.definition_language_spanish)
-        "en" -> stringResource(R.string.definition_language_english)
-        "fr" -> stringResource(R.string.definition_language_french)
-        "pt" -> stringResource(R.string.definition_language_portuguese)
-        else -> code.ifBlank { stringResource(R.string.definition_language_unknown) }
-    }
-
 @Preview(showBackground = true)
 @Composable
 private fun AnchoredDefinitionPanelResultPreview() {
@@ -531,3 +523,13 @@ private fun AnchoredDefinitionPanelEmptyPreview() {
         )
     }
 }
+
+@Composable
+fun definitionLanguageName(code: String): String =
+    when (code.lowercase()) {
+        "es" -> stringResource(R.string.definition_language_spanish)
+        "en" -> stringResource(R.string.definition_language_english)
+        "fr" -> stringResource(R.string.definition_language_french)
+        "pt" -> stringResource(R.string.definition_language_portuguese)
+        else -> code.ifBlank { stringResource(R.string.definition_language_unknown) }
+    }

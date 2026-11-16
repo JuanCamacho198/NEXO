@@ -37,9 +37,9 @@ plugins {
     alias(libs.plugins.androidx.baselineprofile)
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-}
+// Room codegen moved to :core:data with AppDatabase. :app keeps the Room
+// runtime and the KSP processor for Hilt, but owns no @Entity, so it exports
+// no schema.
 
 // SDD android-tooling-hygiene WS5 slice 7: `spotless{kotlin{ktlint()}}` over
 // **/*.kt + **/*.kts. ktlint runs at the Spotless-bundled default version
@@ -319,30 +319,19 @@ android {
         abortOnError = true
     }
 
-    // Robolectric reads schemas from the merged debug assets dir (AGP does not
-    // merge test-sourceSet assets into it, and the Sentry asset-injection task
-    // owns that directory). Copy Room schema exports there before unit tests.
-    val copySchemasForUnitTest by tasks.registering(Copy::class) {
-        from("$projectDir/schemas")
-        into(layout.buildDirectory.dir("intermediates/assets/debug/injectSentryDebugMetaPropertiesIntoAssetsDebug"))
-        mustRunAfter("injectSentryDebugMetaPropertiesIntoAssetsDebug")
-    }
-
-    tasks.matching { it.name == "packageDebugUnitTestForUnitTest" }.configureEach {
-        dependsOn(copySchemasForUnitTest)
+    // The migration tests live in :app but AppDatabase and its exported schemas
+    // moved to :core:data with the module split. MigrationTestHelper resolves
+    // schemas through InstrumentationRegistry assets, so :app has to expose that
+    // module's schema directory as its own asset source.
+    sourceSets {
+        getByName("androidTest").assets.srcDirs(rootProject.file("core/data/schemas"))
     }
 
     tasks.withType(Test::class).configureEach {
-        dependsOn(copySchemasForUnitTest)
         // Konsist parses the whole production source tree in-process. Give the
         // shared unit-test JVM headroom so the architecture rules and the
         // ~1100-test suite coexist without OOM (default Test heap is 512m).
         maxHeapSize = "2g"
-    }
-
-    sourceSets {
-        getByName("androidTest").assets.srcDirs("$projectDir/schemas")
-        getByName("test").assets.srcDirs("$projectDir/schemas")
     }
 }
 
@@ -440,6 +429,42 @@ baselineProfile {
 dependencies {
     val composeBom = platform(libs.compose.bom)
 
+    // SDD modularization M1/M2: extracted pure-JVM core modules. `:core:domain`
+    // re-exports `:core:model` (`api`), but the app declares both explicitly so its
+    // own dependency set stays readable and independent of `api` propagation.
+    implementation(project(":core:model"))
+    implementation(project(":core:domain"))
+    // SDD M3: debug/telemetry instrumentation (com.nexo.debug). Extracted so that
+    // :core:data can log without depending on :app. The package is unchanged, so
+    // no import in this module changed.
+    implementation(project(":core:debug"))
+    // SDD M3: data layer (com.nexo.data.*). Package names are unchanged, so every
+    // existing import in this module resolves exactly as before.
+    implementation(project(":core:data"))
+    implementation(project(":core:ui"))
+    // SDD M4: settings feature module. It keeps the
+    // com.nexo.presentation.screen.settings package, so no import here changes.
+    implementation(project(":feature:settings"))
+    // SDD M5: discover feature module. Same package as before the split, so the
+    // nav graph and the DiscoverViewModel keep importing it unchanged.
+    implementation(project(":feature:discover"))
+    implementation(project(":feature:highlights"))
+    // SDD M6: auth feature module. Keeps the com.nexo.presentation.feature.auth
+    // package, so AuthNavGraph and presentation/screen/AuthScreen keep importing
+    // it unchanged. The ViewModel-bound entry points stay in this module.
+    implementation(project(":feature:auth"))
+    // SDD M7: reader feature module. Keeps the
+    // com.nexo.presentation.screen.{readium,reader} and
+    // com.nexo.presentation.viewmodel.reader packages, so no import here
+    // changes. ReaderViewModel and the ViewModel-bound screen entry points
+    // stay in this module.
+    implementation(project(":feature:reader"))
+    // SDD M8: book-detail feature module. Keeps the
+    // com.nexo.presentation.feature.bookdetail and
+    // com.nexo.presentation.viewmodel packages, so no import here changes.
+    // BookDetailViewModel moves with it: it depends on :core:* alone.
+    implementation(project(":feature:bookdetail"))
+
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -487,6 +512,8 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
     androidTestImplementation(libs.room.testing)
+    // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    testImplementation(project(":core:test"))
     testImplementation(libs.room.testing)
 
     // Paging 3
@@ -574,11 +601,26 @@ dependencies {
 // The task name is kept because AGENTS.md and docs/ reference it.
 // ---------------------------------------------------------------------------
 
-// Scan scope: the UI layer plus the debug tooling that ships in debug builds.
+// Scan scope: the UI layer plus the debug tooling that ships in debug builds,
+// plus every extracted feature module's own sources. Without the feature roots
+// this gate silently stops looking at any code that moved out of :app — the
+// exact failure mode that made the original single-file scan check nothing.
+// Feature paths are repository-relative (see `featureScanRootDir` below).
 val hardcodedStringsScanRoots =
     listOf(
         "src/main/java/com/nexo/presentation",
         "src/main/java/com/nexo/debug",
+    )
+
+// Relative to the repository root, not this module.
+val hardcodedStringsFeatureScanRoots =
+    listOf(
+        "feature/settings/src/main/java",
+        "feature/discover/src/main/java",
+        "feature/highlights/src/main/java",
+        "feature/auth/src/main/java",
+        "feature/reader/src/main/java",
+        "feature/bookdetail/src/main/java",
     )
 
 // Resolve paths at configuration time (java.io.File is configuration-cache
@@ -593,6 +635,8 @@ tasks.register("verifyNoHardcodedStrings") {
 
     val projectDir = hardcodedStringsProjectDir
     val roots = hardcodedStringsScanRoots
+    val featureRoots = hardcodedStringsFeatureScanRoots
+    val rootDir = layout.projectDirectory.asFile.parentFile
     val baselineFile = hardcodedStringsBaselineFile.asFile
 
     doLast {
@@ -634,14 +678,19 @@ tasks.register("verifyNoHardcodedStrings") {
                 .replace(Regex("""//.*$""", RegexOption.MULTILINE), "")
 
         val findings = mutableListOf<Triple<String, Int, String>>()
-        roots.forEach { root ->
-            val base = projectDir.resolve(root)
+        // Each root is paired with the directory its reported path is relative
+        // to, so a feature finding reads `feature/bookdetail/...` while an :app
+        // finding keeps its historical `src/main/java/...` form the baseline uses.
+        val scannedBases =
+            roots.map { projectDir.resolve(it) to projectDir } +
+                featureRoots.map { rootDir.resolve(it) to rootDir }
+        scannedBases.forEach { (base, relativeBase) ->
             if (!base.exists()) return@forEach
             base
                 .walkTopDown()
                 .filter { it.isFile && it.extension == "kt" }
                 .forEach { file ->
-                    val relative = file.relativeTo(projectDir).path.replace('\\', '/')
+                    val relative = file.relativeTo(relativeBase).path.replace('\\', '/')
                     val source = stripKotlinComments(file.readText())
                     textLiteralPattern.findAll(source).forEach { match ->
                         val literal = match.groupValues[1]
@@ -716,6 +765,8 @@ tasks.register("updateHardcodedStringsBaseline") {
 
     val projectDir = hardcodedStringsProjectDir
     val roots = hardcodedStringsScanRoots
+    val featureRoots = hardcodedStringsFeatureScanRoots
+    val rootDir = layout.projectDirectory.asFile.parentFile
     val baselineFile = hardcodedStringsBaselineFile.asFile
 
     doLast {
@@ -741,14 +792,16 @@ tasks.register("updateHardcodedStringsBaseline") {
                 .replace(Regex("""//.*$""", RegexOption.MULTILINE), "")
 
         val entries = mutableListOf<String>()
-        roots.forEach { root ->
-            val base = projectDir.resolve(root)
+        val scannedBases =
+            roots.map { projectDir.resolve(it) to projectDir } +
+                featureRoots.map { rootDir.resolve(it) to rootDir }
+        scannedBases.forEach { (base, relativeBase) ->
             if (!base.exists()) return@forEach
             base
                 .walkTopDown()
                 .filter { it.isFile && it.extension == "kt" }
                 .forEach { file ->
-                    val relative = file.relativeTo(projectDir).path.replace('\\', '/')
+                    val relative = file.relativeTo(relativeBase).path.replace('\\', '/')
                     val source = stripKotlinComments(file.readText())
                     textLiteralPattern.findAll(source).forEach { match ->
                         val literal = match.groupValues[1]
@@ -786,6 +839,30 @@ tasks.register("verifyStringParity") {
     // Resolve at configuration time; RegularFile is configuration-cache safe.
     val defaultStrings = layout.projectDirectory.file("src/main/res/values/strings.xml")
     val spanishStrings = layout.projectDirectory.file("src/main/res/values-es/strings.xml")
+
+    // Extracted feature modules own their own string resources, so a parity
+    // check scoped to :app alone would silently pass while checking nothing for
+    // every key that moved out. Each module is verified independently: a key
+    // must exist in both of THAT module's locale files. Paths are relative to
+    // the repository root, matching `readerFeatureRoots` below.
+    val rootDir = layout.projectDirectory.asFile.parentFile
+    val featureStringModules =
+        listOf(
+            "feature/settings",
+            "feature/discover",
+            "feature/highlights",
+            "feature/auth",
+            "feature/reader",
+            "feature/bookdetail",
+        )
+    val featureStringPairs =
+        featureStringModules.map { module ->
+            module to
+                (
+                    rootDir.resolve("$module/src/main/res/values/strings.xml") to
+                        rootDir.resolve("$module/src/main/res/values-es/strings.xml")
+                )
+        }
 
     doLast {
         // Matches the declared resource name of <string>, <plurals> and
@@ -825,6 +902,41 @@ tasks.register("verifyStringParity") {
                 },
             )
         }
+
+        // Same parity contract, per extracted feature module. A module with no
+        // res/values directory simply owns no strings and is skipped; a module
+        // that owns one locale file but not the other is a hard error.
+        featureStringPairs.forEach { (module, pair) ->
+            val (enFile, esFile) = pair
+            if (!enFile.exists() && !esFile.exists()) return@forEach
+            if (!enFile.exists() || !esFile.exists()) {
+                throw GradleException(
+                    "$module declares one locale file but not the other.\n" +
+                        "  values:    ${enFile.path} (exists=${enFile.exists()})\n" +
+                        "  values-es: ${esFile.path} (exists=${esFile.exists()})\n",
+                )
+            }
+            val moduleEnglish = namesIn(enFile, "$module values/strings.xml")
+            val moduleSpanish = namesIn(esFile, "$module values-es/strings.xml")
+            val moduleMissingInSpanish = (moduleEnglish - moduleSpanish).sorted()
+            val moduleMissingInEnglish = (moduleSpanish - moduleEnglish).sorted()
+            if (moduleMissingInSpanish.isNotEmpty() || moduleMissingInEnglish.isNotEmpty()) {
+                throw GradleException(
+                    buildString {
+                        append("Locale string parity failed in $module.\n")
+                        if (moduleMissingInSpanish.isNotEmpty()) {
+                            append("Missing from values-es/strings.xml (${moduleMissingInSpanish.size}):\n")
+                            moduleMissingInSpanish.forEach { append("  - $it\n") }
+                        }
+                        if (moduleMissingInEnglish.isNotEmpty()) {
+                            append("Missing from values/strings.xml (${moduleMissingInEnglish.size}):\n")
+                            moduleMissingInEnglish.forEach { append("  - $it\n") }
+                        }
+                    },
+                )
+            }
+            logger.lifecycle("verifyStringParity: $module OK (${moduleEnglish.size} keys).")
+        }
     }
 }
 
@@ -844,15 +956,28 @@ tasks.register("verifyNoReaderUiStateResidue") {
     //    reader half takes a `session: SessionUiState?` param (no member
     //    access possible) and its only `.uiState` read belongs to
     //    AuthViewModel.
+    // SDD M7 moved the reader bridges, holders and managers into
+    // :feature:reader, so the `.uiState` member scan has to follow them. The
+    // reader-owned sources now live in two places:
+    //  - the remaining :app reader surface (the ViewModel, the screen entry
+    //    points that bind it, and DebugPanel's reader half);
+    //  - feature/reader's own sources, scanned from the repository root.
     val readerRoots =
         listOf(
             "src/main/java/com/nexo/presentation/viewmodel/ReaderViewModel.kt",
-            "src/main/java/com/nexo/presentation/viewmodel/reader",
             "src/main/java/com/nexo/presentation/screen/reader",
             "src/main/java/com/nexo/presentation/screen/ReaderScreen.kt",
             "src/main/java/com/nexo/presentation/screen/ReadiumPdfReaderContent.kt",
-            "src/main/java/com/nexo/presentation/screen/readium",
+            "src/main/java/com/nexo/presentation/screen/ReadiumReaderContent.kt",
+            "src/main/java/com/nexo/presentation/screen/ReaderChrome.kt",
             "src/main/java/com/nexo/debug/DebugPanel.kt",
+        )
+    // Paths are relative to the repository root, not this module.
+    val readerFeatureRoots =
+        listOf(
+            "feature/reader/src/main/java/com/nexo/presentation/viewmodel/reader",
+            "feature/reader/src/main/java/com/nexo/presentation/screen/reader",
+            "feature/reader/src/main/java/com/nexo/presentation/screen/readium",
         )
     val typeBanPattern = Regex("\\bReaderUiState\\b")
     val memberPattern = Regex("\\.uiState\\b")
@@ -863,6 +988,8 @@ tasks.register("verifyNoReaderUiStateResidue") {
     val projectDir = layout.projectDirectory.asFile
     val mainSrcDir = projectDir.resolve("src/main/java")
     val readerBases = readerRoots.map { projectDir.resolve(it) }
+    val rootDir = projectDir.parentFile
+    val readerFeatureBases = readerFeatureRoots.map { rootDir.resolve(it) }
 
     doLast {
         val violations = mutableListOf<String>()
@@ -880,7 +1007,9 @@ tasks.register("verifyNoReaderUiStateResidue") {
             }
 
         // 2. Scoped member ban: no `.uiState` access in reader-owned sources.
-        readerBases.forEach { base ->
+        //    Covers both the :app reader surface and the extracted
+        //    :feature:reader sources.
+        (readerBases + readerFeatureBases).forEach { base ->
             if (!base.exists()) return@forEach
             val files =
                 if (base.isFile) {

@@ -4,23 +4,40 @@ import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nexo.R
+import com.nexo.data.remote.addons.AddonRegistry
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.catalog.CatalogFeaturedSort
 import com.nexo.data.remote.catalog.CatalogProvider
+import com.nexo.data.remote.supabase.SupabaseProgressSync
+import com.nexo.data.session.DefinitionPreferences
+import com.nexo.data.session.ReaderPreferences
+import com.nexo.data.session.TranslationPreferences
+import com.nexo.data.session.UpdatePrefs
 import com.nexo.data.storage.CoverStorage
-import com.nexo.di.AppContainer
+import com.nexo.data.update.UpdateDownloader
+import com.nexo.domain.access.AddonAccessResolver
+import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.repository.CacheRepository
+import com.nexo.domain.repository.DefinitionRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.LibraryRepository
+import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.repository.StorageRepository
+import com.nexo.domain.repository.TranslationRepository
 import com.nexo.domain.session.ActiveUserProvider
+import com.nexo.domain.update.CheckForUpdatesUseCase
+import com.nexo.domain.update.UpdateNetworkGate
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.presentation.debug.DebugViewModel
 import com.nexo.presentation.feature.discover.DiscoverSectionViewModel
 import com.nexo.presentation.feature.discover.DiscoverSectionViewModelFactory
 import com.nexo.presentation.screen.settings.AddonSettingsViewModelFactory
+import com.nexo.presentation.util.AndroidStringResolver
 import com.nexo.presentation.viewmodel.AddonSettingsViewModel
 import com.nexo.presentation.viewmodel.AuthViewModel
 import com.nexo.presentation.viewmodel.BookDetailViewModel
@@ -43,8 +60,6 @@ import kotlinx.coroutines.Dispatchers
 /**
  * Holder grouping the host-scoped ViewModels.
  *
- * Mirrors AppContainer.ReaderDependencies facade pattern (PR #1/2):
- * keeps factory wiring host-local without leaking AppContainer module split (PR #4).
  * ViewModels are created once in the host via [rememberNavHostViewModels] and
  * injected into feature NavGraphBuilders — builders never call viewModel() inside composable.
  *
@@ -76,11 +91,31 @@ internal data class ViewModelProviders(
  */
 @Composable
 internal fun rememberNavHostViewModels(
-    appContainer: AppContainer,
     selectedBookId: String,
+    readerRepository: ReaderRepository,
+    readingStatsRepository: ReadingStatsRepository,
+    readerPreferences: ReaderPreferences,
+    dictionaryRepository: DictionaryRepository,
+    libraryRepository: LibraryRepository,
+    activeUserProvider: ActiveUserProvider,
+    supabaseProgressSync: SupabaseProgressSync,
+    translationRepository: TranslationRepository,
+    translationPreferences: TranslationPreferences,
+    definitionRepository: DefinitionRepository,
+    definitionPreferences: DefinitionPreferences,
+    catalogProvider: CatalogProvider,
+    connectivityObserver: ConnectivityObserver,
+    downloadAndImportBookUseCase: DownloadAndImportBookUseCase,
+    addonRegistry: AddonRegistry,
+    addonAccessResolver: AddonAccessResolver,
 ): ViewModelProviders {
     val context = LocalContext.current
     val application = context.applicationContext as android.app.Application
+
+    // Resolved with stringResource, not context.getString: reading a resource
+    // through LocalContext.current inside a composable trips the Compose lint
+    // rule LocalContextGetResourceValueCall. Same pattern as ImportLauncher.
+    val bookNotFoundMessage = stringResource(R.string.book_not_found)
 
     val libraryViewModel: LibraryViewModel = hiltViewModel()
 
@@ -89,18 +124,19 @@ internal fun rememberNavHostViewModels(
             factory =
                 ReaderViewModelFactory(
                     application = application,
-                    readerRepository = appContainer.readerRepository,
-                    readingStatsRepository = appContainer.readingStatsRepository,
-                    readerPreferences = appContainer.readerPreferences,
+                    readerRepository = readerRepository,
+                    readingStatsRepository = readingStatsRepository,
+                    readerPreferences = readerPreferences,
                     defaultBookId = selectedBookId,
-                    dictionaryRepository = appContainer.dictionaryRepository,
-                    libraryRepository = appContainer.libraryRepository,
-                    activeUser = appContainer.activeUserProvider,
-                    supabaseProgressSync = appContainer.supabaseProgressSync,
-                    translationRepository = appContainer.translationRepository,
-                    translationPreferences = appContainer.translationPreferences,
-                    definitionRepository = appContainer.definitionRepository,
-                    definitionPreferences = appContainer.definitionPreferences,
+                    dictionaryRepository = dictionaryRepository,
+                    libraryRepository = libraryRepository,
+                    activeUser = activeUserProvider,
+                    supabaseProgressSync = supabaseProgressSync,
+                    translationRepository = translationRepository,
+                    translationPreferences = translationPreferences,
+                    definitionRepository = definitionRepository,
+                    definitionPreferences = definitionPreferences,
+                    bookNotFoundMessage = bookNotFoundMessage,
                 ),
         )
 
@@ -118,21 +154,21 @@ internal fun rememberNavHostViewModels(
         viewModel(
             factory =
                 DiscoverViewModelFactory(
-                    catalogProvider = appContainer.catalogProvider,
-                    connectivityObserver = appContainer.connectivityObserver,
-                    downloadAndImportBookUseCase = appContainer.downloadAndImportBookUseCase,
+                    catalogProvider = catalogProvider,
+                    connectivityObserver = connectivityObserver,
+                    downloadAndImportBookUseCase = downloadAndImportBookUseCase,
                     registerAddonChangeListener = { listener ->
-                        appContainer.addonRegistry.addOnChangedListener(listener)
+                        addonRegistry.addOnChangedListener(listener)
                     },
-                    addonConsent = { addonId -> appContainer.addonRegistry.hasAddonConsent(addonId) },
+                    addonConsent = { addonId -> addonRegistry.hasAddonConsent(addonId) },
                     onAddonConsentChange = { addonId, granted ->
                         if (granted) {
-                            appContainer.addonRegistry.recordAddonConsent(addonId)
+                            addonRegistry.recordAddonConsent(addonId)
                         } else {
-                            appContainer.addonRegistry.revokeAddonConsent(addonId)
+                            addonRegistry.revokeAddonConsent(addonId)
                         }
                     },
-                    addonResolve = { addonId, book -> appContainer.addonResolveForBook(addonId, book) },
+                    addonResolve = { addonId, book -> addonAccessResolver.resolve(addonId, book) },
                 ),
         )
 
@@ -202,8 +238,8 @@ internal fun rememberBookDetailViewModel(
 /**
  * Resolves the route-scoped [EditBookMetadataViewModel] for one `bookId`.
  *
- * The factory needs the route's `onSaved` callback and the application context
- * (cover storage), so the route cannot create it from the host holder. The
+ * The factory needs the route's `onSaved` callback and the two already-resolved
+ * snackbar strings, so the route cannot create it from the host holder. The
  * settings/book-detail graph resolves here and passes the instance in.
  */
 @Composable
@@ -214,7 +250,11 @@ internal fun rememberEditBookMetadataViewModel(
     coverStorage: CoverStorage,
     onSaved: () -> Unit,
 ): EditBookMetadataViewModel {
-    val context = LocalContext.current
+    // Resolved with stringResource, not context.getString: reading a resource
+    // through LocalContext.current inside a composable trips the Compose lint
+    // rule LocalContextGetResourceValueCall.
+    val savedMessage = stringResource(R.string.library_snackbar_metadata_saved)
+    val saveFailedMessage = stringResource(R.string.edit_metadata_save_failed)
     return viewModel(
         factory =
             EditBookMetadataViewModel.Factory(
@@ -222,7 +262,8 @@ internal fun rememberEditBookMetadataViewModel(
                 libraryRepository = libraryRepository,
                 activeUser = activeUser,
                 coverStorage = coverStorage,
-                appContext = context.applicationContext,
+                savedMessage = savedMessage,
+                saveFailedMessage = saveFailedMessage,
                 onSaved = onSaved,
             ),
     )
@@ -285,8 +326,9 @@ internal fun rememberDictionaryViewModel(
     activeUser: ActiveUserProvider,
 ): DictionaryViewModel? {
     val appContext = LocalContext.current.applicationContext
-    return remember(dictionaryRepository, appContext) {
-        dictionaryRepository?.let { DictionaryViewModel(it, activeUser, appContext) }
+    val stringResolver = remember(appContext) { AndroidStringResolver(appContext) }
+    return remember(dictionaryRepository, stringResolver) {
+        dictionaryRepository?.let { DictionaryViewModel(it, activeUser, stringResolver) }
     }
 }
 
@@ -321,13 +363,18 @@ internal fun rememberStorageViewModel(
  * the ViewModel reports version-display-only and never checks.
  */
 @Composable
-internal fun rememberUpdateViewModel(appContainer: AppContainer): UpdateViewModel =
-    remember(appContainer) {
+internal fun rememberUpdateViewModel(
+    checkForUpdatesUseCase: CheckForUpdatesUseCase,
+    updatePrefs: UpdatePrefs,
+    updateNetworkGate: UpdateNetworkGate,
+    updateDownloader: UpdateDownloader,
+): UpdateViewModel =
+    remember(checkForUpdatesUseCase, updatePrefs, updateNetworkGate, updateDownloader) {
         UpdateViewModel(
-            appContainer.checkForUpdatesUseCase,
-            appContainer.updatePrefs,
-            appContainer.updateNetworkGate,
-            appContainer.updateDownloader,
+            checkForUpdatesUseCase,
+            updatePrefs,
+            updateNetworkGate,
+            updateDownloader,
             com.nexo.BuildConfig.VERSION_CODE,
             Dispatchers.Main,
             { System.currentTimeMillis() },

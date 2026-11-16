@@ -1,0 +1,38 @@
+{
+  "count": 3,
+  "results": [
+    {
+      "id": 1342,
+      "title": "Pride and Prejudice",
+      "authors": [{ "name": "Austen, Jane" }],
+      "copyright": false,
+      "languages": ["en"],
+      "subjects": ["Love stories", "Domestic fiction"],
+      "formats": {
+        "application/epub+zip": "https://www.gutenberg.org/ebooks/1342.epub3.images",
+        "text/plain": "https://www.gutenberg.org/ebooks/1342.txt.utf8",
+        "text/html": "https://www.gutenberg.org/ebooks/1342.html.images"
+      }
+    },
+    {
+      "id": 99991,
+      "title": "Still In Copyright Novel",
+      "authors": [{ "name": "Living, Author" }],
+      "copyright": true,
+      "languages": ["en"],
+      "subjects": ["Fiction"],
+      "formats": {
+        "application/epub+zip": "https://www.gutenberg.org/ebooks/99991.epub3.images"
+      }
+    },
+    {
+      "id": 11,
+      "title": "Alice's Adventures in Wonderland",
+      "authors": [{ "name": "Carroll, Lewis" }],
+      "copyright": false,
+      "languages": ["en"],
+      "subjects": ["Fantasy fiction"],
+      "formats": {}
+    }
+  ]
+}

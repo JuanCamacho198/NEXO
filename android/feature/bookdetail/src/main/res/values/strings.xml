@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Strings owned by :feature:bookdetail.
+
+  Every key here is `Owned here`: its only references live inside this module's
+  sources (BookDetailScreen, BookDetailHero, BookMetadataGrid,
+  ReadingProgressSection, SynopsisSection, DetailChipsSection).
+
+  `Duplicated from :app` keys are ALSO declared in app/src/main/res because
+  non-bookdetail code resolves them. Both modules carry identical text; that is
+  the same precedent as reader/settings/auth.
+-->
+<resources>
+    <!-- Owned here: no reference outside :feature:bookdetail. -->
+
+    <string name="book_detail_chapter_x_of_y">Chapter %1$d of %2$d</string>
+    <string name="book_detail_continue_reading">Continue Reading</string>
+    <string name="book_detail_error_not_found">Book not found</string>
+    <string name="book_detail_genres">Genres</string>
+    <string name="book_detail_meta_format">Format</string>
+    <string name="book_detail_meta_language">Language</string>
+    <string name="book_detail_meta_pages">Pages</string>
+    <string name="book_detail_meta_published">Published</string>
+    <string name="book_detail_meta_publisher">Publisher</string>
+    <string name="book_detail_meta_size">Size</string>
+    <string name="book_detail_more_content_description">More options</string>
+    <string name="book_detail_my_rating">My rating</string>
+    <string name="book_detail_na">N/A</string>
+    <string name="book_detail_no_synopsis">No synopsis available</string>
+    <string name="book_detail_pages_of">%1$d / %2$d pages</string>
+    <string name="book_detail_progress_label">Progress</string>
+    <string name="book_detail_rating_value">%1$.1f/5</string>
+    <string name="book_detail_share_content_description">Share book</string>
+    <string name="book_detail_show_less">Show less</string>
+    <string name="book_detail_show_more_chevron">Show more</string>
+    <string name="book_detail_start_reading">Start Reading</string>
+    <string name="book_detail_synopsis">Synopsis</string>
+    <string name="edit_metadata_tags">Tags</string>
+    <string name="library_author_unknown">Unknown author</string>
+
+    <!-- Duplicated from :app: :app still resolves these; text is identical. -->
+    <string name="reader_cancel">Cancel</string>
+    <string name="library_menu_edit_metadata">Edit Metadata</string>
+    <string name="library_share_chooser_title">Share book</string>
+    <string name="format_percent">%d%%</string>
+    <string name="library_cover_content_description">Book cover</string>
+    <string name="book_detail_rating_star_full">%1$d stars</string>
+    <string name="book_detail_rating_star_half">%1$.1f stars</string>
+</resources>

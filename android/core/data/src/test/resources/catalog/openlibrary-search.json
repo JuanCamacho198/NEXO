@@ -1,0 +1,31 @@
+{
+  "numFound": 3,
+  "docs": [
+    {
+      "key": "/works/OL66554W",
+      "title": "Pride and Prejudice",
+      "author_name": ["Jane Austen"],
+      "cover_i": 6794977,
+      "ebook_access": "public",
+      "language": ["eng"],
+      "subject": ["Love stories", "Classic fiction"]
+    },
+    {
+      "key": "/works/OL99991W",
+      "title": "Borrow Restricted Title",
+      "author_name": ["Some Author"],
+      "cover_i": 1234567,
+      "ebook_access": "borrowable",
+      "language": ["eng"],
+      "subject": ["Fiction"]
+    },
+    {
+      "key": "/works/OL11W",
+      "title": "Alice's Adventures in Wonderland",
+      "author_name": ["Lewis Carroll"],
+      "ebook_access": "public",
+      "language": ["eng"],
+      "subject": ["Fantasy"]
+    }
+  ]
+}

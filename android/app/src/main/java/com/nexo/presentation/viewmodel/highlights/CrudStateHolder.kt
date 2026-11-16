@@ -1,11 +1,11 @@
 package com.nexo.presentation.viewmodel.highlights
 
-import android.content.Context
 import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.presentation.UiEvent
+import com.nexo.presentation.util.StringResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 class CrudStateHolder(
     private val readerRepository: ReaderRepository,
     private val activeUser: ActiveUserProvider,
-    private val appContext: Context,
+    private val stringResolver: StringResolver,
     private val scope: CoroutineScope,
     private val uiEvent: MutableSharedFlow<UiEvent>,
 ) {
@@ -65,7 +65,7 @@ class CrudStateHolder(
             )
         scope.launch {
             readerRepository.upsertHighlight(updated, activeUser.requireUserId())
-            uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.highlights_deleted_snackbar)))
+            uiEvent.emit(UiEvent.ShowSnackbar(stringResolver.get(R.string.highlights_deleted_snackbar)))
         }
         highlightToDelete.update { null }
     }
@@ -91,7 +91,7 @@ class CrudStateHolder(
             )
         scope.launch {
             readerRepository.upsertHighlight(updated, activeUser.requireUserId())
-            uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.highlights_snackbar_color_changed)))
+            uiEvent.emit(UiEvent.ShowSnackbar(stringResolver.get(R.string.highlights_snackbar_color_changed)))
         }
         highlightToChangeColor.update { null }
     }
@@ -119,7 +119,7 @@ class CrudStateHolder(
             )
         scope.launch {
             readerRepository.upsertHighlight(updated, activeUser.requireUserId())
-            uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.highlights_snackbar_tag_saved)))
+            uiEvent.emit(UiEvent.ShowSnackbar(stringResolver.get(R.string.highlights_snackbar_tag_saved)))
         }
         highlightToEditTag.update { null }
         editTagText.update { "" }

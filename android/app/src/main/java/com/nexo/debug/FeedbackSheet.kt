@@ -51,8 +51,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexo.R
-import com.nexo.presentation.theme.NexoTheme
 import com.nexo.ui.components.atoms.CoverThumbnail
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Mobile crash-feedback bottom sheet (PR4 / tasks 4.3-4.4).
@@ -359,6 +359,7 @@ private fun FeedbackAutoContextCard(context: CrashContextViewModel) {
                 // the old shared brown rectangle claimed every book looked alike.
                 CoverThumbnail(
                     coverPath = context.coverPath,
+                    contentDescription = stringResource(R.string.library_cover_content_description),
                     modifier = Modifier.size(width = 44.dp, height = 60.dp),
                 )
             }

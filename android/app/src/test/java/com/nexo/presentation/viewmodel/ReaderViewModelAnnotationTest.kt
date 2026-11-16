@@ -239,6 +239,7 @@ class ReaderViewModelAnnotationTest {
             defaultBookId = defaultBookId,
             activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
+            bookNotFoundMessage = "Book not found",
         )
     }
 }

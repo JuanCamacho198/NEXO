@@ -7,7 +7,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.nexo.di.AppContainer
+import com.nexo.data.repository.ReadingGoalRepository
 import com.nexo.presentation.feature.auth.AuthScreen
 import com.nexo.presentation.feature.auth.ForgotScreen
 import com.nexo.presentation.feature.auth.RegisterScreen
@@ -22,7 +22,8 @@ import kotlinx.coroutines.launch
 /**
  * Feature NavGraph for auth: 3 routes (auth, auth/register, auth/forgot).
  *
- * Receives host-scoped [authViewModel] and [appContainer] (for readingGoalPreferences).
+ * Receives the host-scoped [authViewModel] and the [readingGoalRepository] the
+ * landing-route decision reads.
  * Never calls viewModel() inside composable — VM scoping stays host-owned.
  * Preserves NexoDestination strings, fade transitions, and popUpTo(Auth){inclusive=true}
  * verbatim from the monolith.
@@ -30,12 +31,12 @@ import kotlinx.coroutines.launch
 fun NavGraphBuilder.authGraph(
     navController: NavController,
     authViewModel: AuthViewModel,
-    appContainer: AppContainer,
+    readingGoalRepository: ReadingGoalRepository,
 ) {
     @Composable
     fun onAuthenticated(): () -> Unit {
         val scope = rememberCoroutineScope()
-        return { scope.launch { navigateAfterAuthentication(navController, appContainer, authViewModel) } }
+        return { scope.launch { navigateAfterAuthentication(navController, readingGoalRepository, authViewModel) } }
     }
 
     composable(
@@ -120,7 +121,7 @@ fun NavGraphBuilder.authGraph(
  */
 private suspend fun navigateAfterAuthentication(
     navController: NavController,
-    appContainer: AppContainer,
+    readingGoalRepository: ReadingGoalRepository,
     authViewModel: AuthViewModel,
 ) {
     val userId =
@@ -135,7 +136,7 @@ private suspend fun navigateAfterAuthentication(
     // offline-with-empty-cache, and there the local read is the best we have —
     // a genuinely new account still has no cache, so it correctly lands on the
     // goal step.
-    val hasGoal = ReadingGoalGate.resolve(appContainer.readingGoalRepository, userId) ?: false
+    val hasGoal = ReadingGoalGate.resolve(readingGoalRepository, userId) ?: false
     val destination = if (hasGoal) NexoDestination.Home.route else NexoDestination.OnboardingGoal.route
     navController.navigate(destination) {
         popUpTo(NexoDestination.Auth.route) { inclusive = true }

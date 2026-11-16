@@ -1,13 +1,17 @@
 package com.nexo.presentation.viewmodel
 
+import app.cash.turbine.test
+import com.nexo.R
 import com.nexo.data.remote.sync.SyncOrchestrator
 import com.nexo.data.remote.sync.SyncState
+import com.nexo.domain.auth.AuthFailureKind
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.repository.AuthRepository
+import com.nexo.testutil.FakeStringResolver
 import com.nexo.testutil.MainDispatcherRule
-import com.nexo.testutil.mockAppContext
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -32,6 +36,17 @@ class AuthViewModelTest {
     @After
     fun tearDown() = unmockkAll()
 
+    private companion object {
+        /**
+         * Real English copy for the one key AuthViewModel resolves, so the
+         * snackbar assertions pin display text rather than a placeholder.
+         */
+        val FAKE_STRINGS =
+            FakeStringResolver(
+                mapOf(R.string.auth_snackbar_reset_email_sent to "Reset email sent"),
+            )
+    }
+
     @Test
     fun init_mapsConfigErrorKind_whenCurrentSessionFailsWithConfigError() =
         runTest {
@@ -54,7 +69,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = false,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
 
             advanceUntilIdle()
@@ -77,7 +92,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -108,7 +123,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -133,7 +148,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = true,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -153,7 +168,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -188,7 +203,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -222,7 +237,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -257,7 +272,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -280,7 +295,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -313,7 +328,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -322,6 +337,74 @@ class AuthViewModelTest {
 
             assertEquals("no account", viewModel.uiState.value.errorMessage)
             assertEquals(AuthFailureKind.UNKNOWN, viewModel.uiState.value.failureKind)
+        }
+
+    // ── resetPassword snackbar copy ──────────────────────────────────────
+    // Pins the exact text emitted through getString. The success path resolves
+    // auth_snackbar_reset_email_sent, which declares no format arguments; the
+    // failure path uses the exception message verbatim. Both are asserted so a
+    // change in the string seam cannot silently alter display copy.
+
+    @Test
+    fun resetPassword_emitsResetEmailSentSnackbar_whenSucceeds() =
+        runTest {
+            val repository =
+                FakeAuthRepository(
+                    resetPasswordResult = Result.success(Unit),
+                )
+            val viewModel =
+                AuthViewModel(
+                    authRepository = repository,
+                    syncOrchestrator = FakeSyncOrchestrator(),
+                    isAuthConfigured = true,
+                    hasAuthWiringIssue = false,
+                    stringResolver = FAKE_STRINGS,
+                )
+            advanceUntilIdle()
+
+            viewModel.uiEvent.test {
+                viewModel.resetPassword("user@test.com")
+
+                val event = awaitItem()
+                assertTrue("Expected snackbar, got ${event::class.simpleName}", event is UiEvent.ShowSnackbar)
+                assertEquals("Reset email sent", (event as UiEvent.ShowSnackbar).message)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun resetPassword_emitsRepositoryMessageSnackbar_whenFails() =
+        runTest {
+            val repository =
+                FakeAuthRepository(
+                    resetPasswordResult =
+                        Result.failure(
+                            AppError(
+                                category = ErrorCategory.AUTH,
+                                code = "RESET_PASSWORD_FAILED",
+                                message = "no account",
+                                component = "SupabaseAuthRepository",
+                            ),
+                        ),
+                )
+            val viewModel =
+                AuthViewModel(
+                    authRepository = repository,
+                    syncOrchestrator = FakeSyncOrchestrator(),
+                    isAuthConfigured = true,
+                    hasAuthWiringIssue = false,
+                    stringResolver = FAKE_STRINGS,
+                )
+            advanceUntilIdle()
+
+            viewModel.uiEvent.test {
+                viewModel.resetPassword("missing@test.com")
+
+                val event = awaitItem()
+                assertTrue("Expected snackbar, got ${event::class.simpleName}", event is UiEvent.ShowSnackbar)
+                assertEquals("no account", (event as UiEvent.ShowSnackbar).message)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     // ── sync-layer-split PR-3 — AuthViewModel orchestrator wiring ────────
@@ -344,7 +427,7 @@ class AuthViewModelTest {
                     syncOrchestrator = orchestrator,
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -374,7 +457,7 @@ class AuthViewModelTest {
                     syncOrchestrator = orchestrator,
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -403,7 +486,7 @@ class AuthViewModelTest {
                     syncOrchestrator = orchestrator,
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -435,7 +518,7 @@ class AuthViewModelTest {
                     syncOrchestrator = orchestrator,
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -473,7 +556,7 @@ class AuthViewModelTest {
                     syncOrchestrator = orchestrator,
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 
@@ -503,7 +586,7 @@ class AuthViewModelTest {
                     syncOrchestrator = FakeSyncOrchestrator(),
                     isAuthConfigured = true,
                     hasAuthWiringIssue = false,
-                    appContext = mockAppContext(),
+                    stringResolver = FAKE_STRINGS,
                 )
             advanceUntilIdle()
 

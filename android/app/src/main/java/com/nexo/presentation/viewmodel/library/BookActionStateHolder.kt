@@ -1,12 +1,12 @@
 package com.nexo.presentation.viewmodel.library
 
-import android.content.Context
 import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.BookStatus
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.presentation.UiEvent
+import com.nexo.presentation.util.StringResolver
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
  * dialog (REQ-edit-screen-1, design D3).
  *
  * @param libraryRepository  Repository for book CRUD operations
- * @param appContext         Application context for string resources
+ * @param stringResolver     Resolves string resources for snackbar copy
  * @param scope              CoroutineScope for async operations (e.g. viewModelScope)
  * @param onUiEvent          Callback to emit [UiEvent] (snackbar, share intent)
  * @param mainDispatcher     Dispatcher for UI-side state updates (default: [Dispatchers.Main])
@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 class BookActionStateHolder(
     private val libraryRepository: LibraryRepository,
     private val activeUser: ActiveUserProvider,
-    private val appContext: Context,
+    private val stringResolver: StringResolver,
     private val scope: CoroutineScope,
     private val onUiEvent: (UiEvent) -> Unit,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
@@ -81,10 +81,10 @@ class BookActionStateHolder(
 
             result.fold(
                 onSuccess = {
-                    onUiEvent(UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_book_deleted, book.title)))
+                    onUiEvent(UiEvent.ShowSnackbar(stringResolver.get(R.string.library_snackbar_book_deleted, book.title)))
                 },
                 onFailure = { error ->
-                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: appContext.getString(R.string.library_snackbar_book_delete_failed)))
+                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: stringResolver.get(R.string.library_snackbar_book_delete_failed)))
                 },
             )
         }
@@ -101,10 +101,10 @@ class BookActionStateHolder(
 
             result.fold(
                 onSuccess = {
-                    onUiEvent(UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_book_deleted, book.title)))
+                    onUiEvent(UiEvent.ShowSnackbar(stringResolver.get(R.string.library_snackbar_book_deleted, book.title)))
                 },
                 onFailure = { error ->
-                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: appContext.getString(R.string.library_snackbar_book_delete_failed)))
+                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: stringResolver.get(R.string.library_snackbar_book_delete_failed)))
                 },
             )
         }
@@ -131,10 +131,10 @@ class BookActionStateHolder(
             val result = libraryRepository.updateBookStatus(book.id, activeUser.requireUserId(), status)
             result.fold(
                 onSuccess = {
-                    onUiEvent(UiEvent.ShowSnackbar(appContext.getString(successMessageRes)))
+                    onUiEvent(UiEvent.ShowSnackbar(stringResolver.get(successMessageRes)))
                 },
                 onFailure = { error ->
-                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: appContext.getString(R.string.library_snackbar_status_failed)))
+                    onUiEvent(UiEvent.ShowSnackbar(error.message ?: stringResolver.get(R.string.library_snackbar_status_failed)))
                 },
             )
         }

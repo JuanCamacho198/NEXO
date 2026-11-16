@@ -13,8 +13,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.nexo.data.remote.addons.AddonRegistry
+import com.nexo.data.remote.catalog.CatalogProvider
+import com.nexo.data.remote.drive.GoogleDriveAuthHelper
 import com.nexo.data.remote.supabase.SupabaseClientProvider
+import com.nexo.data.remote.supabase.SupabaseProgressSync
+import com.nexo.data.remote.sync.SyncService
+import com.nexo.data.repository.NotificationRepository
+import com.nexo.data.repository.ReadingGoalRepository
 import com.nexo.data.session.AppThemePreferences
+import com.nexo.data.session.DefinitionPreferences
+import com.nexo.data.session.NotificationPreferencesStore
+import com.nexo.data.session.ReaderPreferences
+import com.nexo.data.session.ReadingGoalPreferences
+import com.nexo.data.session.TranslationPreferences
+import com.nexo.data.session.UpdatePrefs
+import com.nexo.data.storage.CoverStorage
+import com.nexo.data.update.UpdateDownloader
 import com.nexo.debug.CrashContext
 import com.nexo.debug.CrashNotificationHelper
 import com.nexo.debug.DebugLog
@@ -22,22 +37,106 @@ import com.nexo.debug.DebugPrefs
 import com.nexo.debug.DebugStateHolder
 import com.nexo.debug.FeedbackActivity
 import com.nexo.debug.FeedbackPersistence
-import com.nexo.di.AppContainer
+import com.nexo.domain.access.AddonAccessResolver
+import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.model.ThemeMode
+import com.nexo.domain.notification.NotificationStore
+import com.nexo.domain.repository.CacheRepository
+import com.nexo.domain.repository.DefinitionRepository
+import com.nexo.domain.repository.DictionaryRepository
+import com.nexo.domain.repository.LibraryRepository
+import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.repository.ReadingStatsRepository
+import com.nexo.domain.repository.StorageRepository
+import com.nexo.domain.repository.TranslationHistoryRepository
+import com.nexo.domain.repository.TranslationRepository
+import com.nexo.domain.session.ActiveUserProvider
+import com.nexo.domain.update.CheckForUpdatesUseCase
+import com.nexo.domain.update.UpdateNetworkGate
+import com.nexo.domain.usecase.DownloadAndImportBookUseCase
+import com.nexo.domain.usecase.GetStatisticsUseCase
 import com.nexo.presentation.navigation.DeepLinkSchemes
+import com.nexo.presentation.navigation.InstallDeepLinkController
 import com.nexo.presentation.navigation.InstallDeepLinkParser
 import com.nexo.presentation.navigation.NexoNavHost
+import com.nexo.presentation.notification.NotificationToastBus
 import com.nexo.presentation.screen.readium.evictRestoredReadiumNavigatorFragments
 import com.nexo.presentation.screen.readium.installReadiumDummyFragmentFactories
-import com.nexo.presentation.theme.NexoTheme
 import com.nexo.presentation.viewmodel.AuthViewModel
+import com.nexo.ui.theme.NexoTheme
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.jan.supabase.auth.handleDeeplinks
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
-    @Inject lateinit var appContainer: AppContainer
+    @Inject lateinit var installDeepLinkController: InstallDeepLinkController
+
+    @Inject lateinit var googleDriveAuthHelper: GoogleDriveAuthHelper
+
+    @Inject lateinit var activeUserProvider: ActiveUserProvider
+
+    @Inject lateinit var libraryRepository: LibraryRepository
+
+    @Inject lateinit var readerRepository: ReaderRepository
+
+    @Inject lateinit var readingStatsRepository: ReadingStatsRepository
+
+    @Inject lateinit var readerPreferences: ReaderPreferences
+
+    @Inject lateinit var dictionaryRepository: DictionaryRepository
+
+    @Inject lateinit var supabaseProgressSync: SupabaseProgressSync
+
+    @Inject lateinit var translationRepository: TranslationRepository
+
+    @Inject lateinit var translationPreferences: TranslationPreferences
+
+    @Inject lateinit var definitionRepository: DefinitionRepository
+
+    @Inject lateinit var definitionPreferences: DefinitionPreferences
+
+    @Inject lateinit var catalogProvider: CatalogProvider
+
+    @Inject lateinit var connectivityObserver: ConnectivityObserver
+
+    @Inject lateinit var downloadAndImportBookUseCase: DownloadAndImportBookUseCase
+
+    @Inject lateinit var addonRegistry: AddonRegistry
+
+    @Inject lateinit var addonAccessResolver: AddonAccessResolver
+
+    @Inject lateinit var syncService: SyncService
+
+    @Inject lateinit var notificationStore: NotificationStore
+
+    @Inject lateinit var notificationToastBus: NotificationToastBus
+
+    @Inject lateinit var notificationRepository: NotificationRepository
+
+    @Inject lateinit var getStatisticsUseCase: GetStatisticsUseCase
+
+    @Inject lateinit var readingGoalRepository: ReadingGoalRepository
+
+    @Inject lateinit var readingGoalPreferences: ReadingGoalPreferences
+
+    @Inject lateinit var storageRepository: StorageRepository
+
+    @Inject lateinit var cacheRepository: CacheRepository
+
+    @Inject lateinit var translationHistoryRepository: TranslationHistoryRepository
+
+    @Inject lateinit var notificationPreferencesStore: NotificationPreferencesStore
+
+    @Inject lateinit var coverStorage: CoverStorage
+
+    @Inject lateinit var checkForUpdatesUseCase: CheckForUpdatesUseCase
+
+    @Inject lateinit var updatePrefs: UpdatePrefs
+
+    @Inject lateinit var updateNetworkGate: UpdateNetworkGate
+
+    @Inject lateinit var updateDownloader: UpdateDownloader
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Must run BEFORE super.onCreate: the FragmentManager restores saved
@@ -59,7 +158,7 @@ class MainActivity : AppCompatActivity() {
         // url) also route here so the controller can surface the https-required
         // error dialog (verify D1).
         if (InstallDeepLinkParser.isInstallUri(intent?.data)) {
-            appContainer.installDeepLinkController.onInstallUri(intent?.data)
+            installDeepLinkController.onInstallUri(intent?.data)
         } else {
             // Email-confirmation / OAuth deep links (nexo://auth/..., legacy
             // nextpage://auth/...). supabase-kt parses the fragment and imports
@@ -115,7 +214,40 @@ class MainActivity : AppCompatActivity() {
 
             NexoTheme(darkTheme = darkTheme) {
                 NexoNavHost(
-                    appContainer = appContainer,
+                    installDeepLinkController = installDeepLinkController,
+                    googleDriveAuthHelper = googleDriveAuthHelper,
+                    activeUserProvider = activeUserProvider,
+                    libraryRepository = libraryRepository,
+                    readerRepository = readerRepository,
+                    readingStatsRepository = readingStatsRepository,
+                    readerPreferences = readerPreferences,
+                    dictionaryRepository = dictionaryRepository,
+                    supabaseProgressSync = supabaseProgressSync,
+                    translationRepository = translationRepository,
+                    translationPreferences = translationPreferences,
+                    definitionRepository = definitionRepository,
+                    definitionPreferences = definitionPreferences,
+                    catalogProvider = catalogProvider,
+                    connectivityObserver = connectivityObserver,
+                    downloadAndImportBookUseCase = downloadAndImportBookUseCase,
+                    addonRegistry = addonRegistry,
+                    addonAccessResolver = addonAccessResolver,
+                    syncService = syncService,
+                    notificationStore = notificationStore,
+                    notificationToastBus = notificationToastBus,
+                    notificationRepository = notificationRepository,
+                    getStatisticsUseCase = getStatisticsUseCase,
+                    readingGoalRepository = readingGoalRepository,
+                    readingGoalPreferences = readingGoalPreferences,
+                    storageRepository = storageRepository,
+                    cacheRepository = cacheRepository,
+                    translationHistoryRepository = translationHistoryRepository,
+                    notificationPreferencesStore = notificationPreferencesStore,
+                    coverStorage = coverStorage,
+                    checkForUpdatesUseCase = checkForUpdatesUseCase,
+                    updatePrefs = updatePrefs,
+                    updateNetworkGate = updateNetworkGate,
+                    updateDownloader = updateDownloader,
                     appThemeMode = appThemeMode,
                     onAppThemeModeChanged = { mode ->
                         appThemeMode = mode
@@ -174,7 +306,7 @@ class MainActivity : AppCompatActivity() {
         // install URIs go to the controller and never reach handleDeeplinks.
         val uri = intent.data
         if (InstallDeepLinkParser.isInstallUri(uri)) {
-            appContainer.installDeepLinkController.onInstallUri(uri)
+            installDeepLinkController.onInstallUri(uri)
             return
         }
         // Warm-start email confirmation: import the session so the next launch
@@ -184,7 +316,7 @@ class MainActivity : AppCompatActivity() {
             BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID.removeSuffix(".apps.googleusercontent.com")
         }"
         if (uri != null && uri.scheme == driveRedirectScheme) {
-            appContainer.googleDriveAuthHelper.onRedirect(uri)
+            googleDriveAuthHelper.onRedirect(uri)
         }
     }
 

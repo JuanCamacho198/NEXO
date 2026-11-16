@@ -2,6 +2,16 @@ package com.nexo.di.modules
 
 import android.content.Context
 import com.nexo.BuildConfig
+import com.nexo.data.local.dao.AddonDao
+import com.nexo.data.local.dao.BookDao
+import com.nexo.data.local.dao.BookmarkDao
+import com.nexo.data.local.dao.DictionaryWordDao
+import com.nexo.data.local.dao.DiscoverCacheDao
+import com.nexo.data.local.dao.HighlightDao
+import com.nexo.data.local.dao.ReadingProgressDao
+import com.nexo.data.local.dao.ReadingSessionDao
+import com.nexo.data.local.dao.SyncFileMappingDao
+import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.remote.addons.AddonCatalogProvider
 import com.nexo.data.remote.addons.AddonRegistry
 import com.nexo.data.remote.addons.CuratedCatalogProvider
@@ -9,13 +19,10 @@ import com.nexo.data.remote.addons.KtorAddonHttpTransport
 import com.nexo.data.remote.addons.PersistentAddonConsentStore
 import com.nexo.data.remote.addons.catalogProvidersWithAddons
 import com.nexo.data.remote.catalog.ANDROID_USER_AGENT
-import com.nexo.data.remote.catalog.CatalogBook
-import com.nexo.data.remote.catalog.CatalogFileDownloader
 import com.nexo.data.remote.catalog.CatalogHttpTransport
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CompositeCatalogProvider
 import com.nexo.data.remote.catalog.GoogleBooksCatalogProvider
-import com.nexo.data.remote.catalog.GoogleBooksDataSource
 import com.nexo.data.remote.catalog.GutendexCatalogProvider
 import com.nexo.data.remote.catalog.GutendexDataSource
 import com.nexo.data.remote.catalog.KtorCatalogFileDownloader
@@ -57,15 +64,22 @@ import com.nexo.data.session.SessionStore
 import com.nexo.data.session.SupabaseSessionManager
 import com.nexo.data.sync.DictionarySyncService
 import com.nexo.data.update.AndroidUpdateNetworkGate
-import com.nexo.data.update.UpdateDownloader
 import com.nexo.data.update.UpdateFeedService
-import com.nexo.di.createConnectivityObserver
+import com.nexo.di.createInstallDeepLinkController
 import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogFileSource
 import com.nexo.domain.repository.AuthRepository
 import com.nexo.domain.session.ActiveUserProvider
+import com.nexo.presentation.navigation.InstallDeepLinkController
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
 import io.github.jan.supabase.auth.MemorySessionManager
 import io.github.jan.supabase.auth.SettingsSessionManager
 import io.ktor.client.HttpClient
@@ -77,101 +91,162 @@ import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import javax.inject.Named
+import javax.inject.Singleton
 import io.github.jan.supabase.auth.SessionManager as SupabaseAuthSessionManager
 
-class NetworkModule(
-    private val context: Context,
-    private val databaseModule: DatabaseModule,
-    @Suppress("UNUSED_PARAMETER") private val preferencesModule: PreferencesModule,
-    private val activeUserProvider: ActiveUserProvider,
-) {
-    val driveTokenStore: DriveTokenStore by lazy {
-        runCatching { EncryptedDriveTokenStore(context.applicationContext, activeUserProvider) }
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkModule {
+    /**
+     * HTTP timeouts shared by every OkHttp client the module builds.
+     *
+     * They were repeated as literals in four separate client builders; naming
+     * them keeps the four in lockstep and satisfies the magic-number rule.
+     */
+    private const val REQUEST_TIMEOUT_MILLIS = 15_000L
+    private const val CONNECT_TIMEOUT_MILLIS = 10_000L
+    private const val SOCKET_TIMEOUT_MILLIS = 15_000L
+
+    /**
+     * Qualifier for the ephemeral addon reading-link resolver. A function type
+     * needs a qualifier to be bindable at all; this is not a container.
+     */
+    const val ADDON_RESOLVE_FOR_BOOK = "addonResolveForBook"
+    const val CATALOG_HTTP_CLIENT = "catalogHttpClient"
+    const val UPDATE_HTTP_CLIENT = "updateHttpClient"
+    const val TRANSLATION_HTTP_CLIENT = "translationHttpClient"
+    const val WIKTIONARY_HTTP_CLIENT = "wiktionaryHttpClient"
+
+    // ── Session / Drive ─────────────────────────────────────────────────
+
+    @Provides
+    @Singleton
+    fun provideDriveTokenStore(
+        @ApplicationContext context: Context,
+        activeUserProvider: ActiveUserProvider,
+    ): DriveTokenStore =
+        runCatching { EncryptedDriveTokenStore(context, activeUserProvider) }
             .getOrElse { InMemoryDriveTokenStore() }
-    }
 
-    val driveTokenApi: DriveTokenApi by lazy {
-        KtorAuthApi(HttpClient())
-    }
+    @Provides
+    @Singleton
+    fun provideDriveTokenApi(): DriveTokenApi = KtorAuthApi(HttpClient())
 
-    val driveOAuthSession: DriveOAuthSession by lazy {
+    @Provides
+    @Singleton
+    fun provideDriveOAuthSession(
+        tokenStore: DriveTokenStore,
+        tokenApi: DriveTokenApi,
+    ): DriveOAuthSession =
         DriveOAuthSession(
             clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID,
             redirectUri = driveOAuthRedirectUri(BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID),
-            tokenStore = driveTokenStore,
-            tokenApi = driveTokenApi,
+            tokenStore = tokenStore,
+            tokenApi = tokenApi,
         )
-    }
 
-    val googleDriveAuthHelper: GoogleDriveAuthHelper by lazy {
-        GoogleDriveAuthHelper(
-            context = context.applicationContext,
-            session = driveOAuthSession,
-        )
-    }
+    /**
+     * Singleton on purpose: it carries the in-flight PKCE verifier and the
+     * redirect outcome across process-wide deep links. `MainActivity.onNewIntent`
+     * completes the attempt that some screen started, so an Activity-scoped
+     * instance would lose the pending auth on every config change.
+     */
+    @Provides
+    @Singleton
+    fun provideGoogleDriveAuthHelper(
+        @ApplicationContext context: Context,
+        session: DriveOAuthSession,
+    ): GoogleDriveAuthHelper = GoogleDriveAuthHelper(context = context, session = session)
 
-    val driveCoordinator: DriveCoordinator by lazy {
+    @Provides
+    @Singleton
+    fun provideDriveCoordinator(
+        @ApplicationContext context: Context,
+        tokenStore: DriveTokenStore,
+        tokenApi: DriveTokenApi,
+    ): DriveCoordinator =
         DriveCoordinator(
-            context = context.applicationContext,
-            tokenStore = driveTokenStore,
-            tokenApi = driveTokenApi,
+            context = context,
+            tokenStore = tokenStore,
+            tokenApi = tokenApi,
             clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID,
         )
-    }
 
-    val driveRemoteDataSource: StorageSyncRemoteDataSource by lazy {
-        driveCoordinator.buildDataSource()
-    }
+    @Provides
+    @Singleton
+    fun provideDriveRemoteDataSource(
+        driveCoordinator: DriveCoordinator,
+    ): StorageSyncRemoteDataSource = driveCoordinator.buildDataSource()
 
-    val sessionManager: SessionManager by lazy {
-        SupabaseSessionManager(sessionStore)
-    }
-
-    /**
-     * Encrypted AuthSession metadata mirror (0.3.5 secrets encryption).
-     * PreferencesSessionStore is EncryptedSharedPreferences-backed; the in-memory fallback preserves the
-     * historical behavior on Keystore failure instead of crashing startup (same policy as [driveTokenStore]).
-     */
-    val sessionStore: SessionStore by lazy {
-        runCatching { PreferencesSessionStore(context.applicationContext) }
+    @Provides
+    @Singleton
+    fun provideSessionStore(
+        @ApplicationContext context: Context,
+    ): SessionStore =
+        runCatching { PreferencesSessionStore(context) }
             .getOrElse { InMemorySessionStore() }
-    }
+
+    @Provides
+    @Singleton
+    fun provideSessionManager(
+        sessionStore: SessionStore,
+    ): SessionManager = SupabaseSessionManager(sessionStore)
 
     /**
-     * Encrypted supabase-kt token store (0.3.5 secrets encryption). The access/refresh pair supabase-kt
-     * auto-persists now lands in EncryptedSharedPreferences instead of its plaintext SharedPreferences default.
-     * Keystore failure degrades to process-memory storage (session lost on restart, app keeps working).
+     * Encrypted supabase-kt token store.
+     *
+     * Calls [SupabaseClientProvider.configureSessionManager] before returning:
+     * the configuration must land before the first `SupabaseClientProvider.client`
+     * access, otherwise token persistence silently stays plaintext. Hilt builds
+     * this before any provider that consumes the client, so the ordering the
+     * manual container guaranteed in its constructor is preserved here.
      */
-    val supabaseTokenSessionManager: SupabaseAuthSessionManager by lazy {
-        runCatching {
-            SettingsSessionManager(
-                EncryptedSessionSettings.create(context.applicationContext, BuildConfig.SUPABASE_URL),
-            )
-        }.getOrElse { MemorySessionManager() }
+    @Provides
+    @Singleton
+    fun provideSupabaseTokenSessionManager(
+        @ApplicationContext context: Context,
+    ): SupabaseAuthSessionManager {
+        val manager =
+            runCatching {
+                SettingsSessionManager(
+                    EncryptedSessionSettings.create(context, BuildConfig.SUPABASE_URL),
+                )
+            }.getOrElse { MemorySessionManager() }
+        SupabaseClientProvider.configureSessionManager(manager)
+        return manager
     }
 
-    init {
-        // Must run before the first SupabaseClientProvider.client access (AppContainer builds NetworkModule
-        // first), otherwise token persistence silently stays plaintext.
-        SupabaseClientProvider.configureSessionManager(supabaseTokenSessionManager)
-    }
+    @Provides
+    @Singleton
+    fun provideAuthRepository(
+        sessionManager: SessionManager,
+    ): AuthRepository = SupabaseAuthRepository(sessionManager = sessionManager)
 
-    val authRepository: AuthRepository by lazy {
-        SupabaseAuthRepository(
-            sessionManager = sessionManager,
-        )
-    }
+    // ── Sync ────────────────────────────────────────────────────────────
 
-    val syncService: SyncService by lazy {
+    @Provides
+    @Singleton
+    fun provideSyncService(
+        @ApplicationContext context: Context,
+        outboxDao: SyncOutboxDao,
+        bookDao: BookDao,
+        mappingDao: SyncFileMappingDao,
+        highlightDao: HighlightDao,
+        bookmarkDao: BookmarkDao,
+        sessionManager: SessionManager,
+        remoteDataSource: StorageSyncRemoteDataSource,
+        driveCoordinator: DriveCoordinator,
+    ): SyncService =
         GoogleDriveSyncService(
-            outboxDao = databaseModule.syncOutboxDao,
-            bookDao = databaseModule.bookDao,
-            mappingDao = databaseModule.syncFileMappingDao,
-            highlightDao = databaseModule.highlightDao,
-            bookmarkDao = databaseModule.bookmarkDao,
+            outboxDao = outboxDao,
+            bookDao = bookDao,
+            mappingDao = mappingDao,
+            highlightDao = highlightDao,
+            bookmarkDao = bookmarkDao,
             sessionManager = sessionManager,
-            remoteDataSource = driveRemoteDataSource,
-            localBooksDir = context.applicationContext.filesDir.resolve("books"),
+            remoteDataSource = remoteDataSource,
+            localBooksDir = context.filesDir.resolve("books"),
             isEnabled = driveCoordinator::isEnabled,
             tokenRefresher = { driveCoordinator.refreshAccessToken() },
             diagnosticError =
@@ -179,87 +254,123 @@ class NetworkModule(
                     category = ErrorCategory.CONFIG_ERROR,
                     code = "SYNC_DRIVE_NOT_AUTHORIZED",
                     message = "Google Drive not authorized. Authorize in Settings → Data & Storage.",
-                    component = "AppContainer",
+                    component = "SyncService",
                 ),
         )
-    }
 
-    val supabaseProgressDataSource: SupabaseProgressDataSource by lazy {
-        SupabaseProgressDataSource()
-    }
+    @Provides
+    @Singleton
+    fun provideSupabaseProgressDataSource(): SupabaseProgressDataSource = SupabaseProgressDataSource()
 
-    val supabaseProgressSync: SupabaseProgressSync by lazy {
+    @Provides
+    @Singleton
+    fun provideOutboxCommit(
+        outboxDao: SyncOutboxDao,
+    ): OutboxCommit = OutboxCommit(outboxDao)
+
+    @Provides
+    @Singleton
+    fun provideSupabaseProgressSync(
+        outboxDao: SyncOutboxDao,
+        bookDao: BookDao,
+        readingProgressDao: ReadingProgressDao,
+        bookmarkDao: BookmarkDao,
+        highlightDao: HighlightDao,
+        readingSessionDao: ReadingSessionDao,
+        sessionManager: SessionManager,
+        dataSource: SupabaseProgressDataSource,
+        outboxCommit: OutboxCommit,
+    ): SupabaseProgressSync =
         SupabaseProgressSync(
-            outboxDao = databaseModule.syncOutboxDao,
-            bookDao = databaseModule.bookDao,
-            readingProgressDao = databaseModule.readingProgressDao,
-            bookmarkDao = databaseModule.bookmarkDao,
-            highlightDao = databaseModule.highlightDao,
-            readingSessionDao = databaseModule.readingSessionDao,
+            outboxDao = outboxDao,
+            bookDao = bookDao,
+            readingProgressDao = readingProgressDao,
+            bookmarkDao = bookmarkDao,
+            highlightDao = highlightDao,
+            readingSessionDao = readingSessionDao,
             sessionManager = sessionManager,
-            dataSource = supabaseProgressDataSource,
+            dataSource = dataSource,
             outboxCommit = outboxCommit,
         )
-    }
+
+    @Provides
+    @Singleton
+    fun provideDictionarySyncService(
+        dictionaryWordDao: DictionaryWordDao,
+        sessionManager: SessionManager,
+    ): DictionarySyncService =
+        DictionarySyncService(
+            dao = dictionaryWordDao,
+            sessionManager = sessionManager,
+        )
+
+    @Provides
+    @Singleton
+    fun provideSupabaseBookCatalogDataSource(): SupabaseBookCatalogDataSource = SupabaseBookCatalogDataSource()
+
+    @Provides
+    @Singleton
+    fun provideSupabaseBookCatalogSync(
+        @ApplicationContext context: Context,
+        outboxDao: SyncOutboxDao,
+        bookDao: BookDao,
+        sessionManager: SessionManager,
+        dataSource: SupabaseBookCatalogDataSource,
+        remoteDataSource: StorageSyncRemoteDataSource,
+        driveCoordinator: DriveCoordinator,
+        progressDataSource: SupabaseProgressDataSource,
+        outboxCommit: OutboxCommit,
+    ): SupabaseBookCatalogSync =
+        SupabaseBookCatalogSync(
+            outboxDao = outboxDao,
+            bookDao = bookDao,
+            sessionManager = sessionManager,
+            dataSource = dataSource,
+            remoteDataSource = remoteDataSource,
+            driveTokenRefresher = { driveCoordinator.refreshAccessToken() },
+            localBooksDir = context.filesDir.resolve("books"),
+            progressDataSource = progressDataSource,
+            outboxCommit = outboxCommit,
+        )
+
+    @Provides
+    @Singleton
+    fun provideDriveColdBackupService(
+        remoteDataSource: StorageSyncRemoteDataSource,
+        bookDao: BookDao,
+        readingProgressDao: ReadingProgressDao,
+        highlightDao: HighlightDao,
+        bookmarkDao: BookmarkDao,
+        readingSessionDao: ReadingSessionDao,
+        bookCatalogDataSource: SupabaseBookCatalogDataSource,
+        progressDataSource: SupabaseProgressDataSource,
+        sessionManager: SessionManager,
+    ): DriveColdBackupService =
+        DriveColdBackupService(
+            remoteDataSource = remoteDataSource,
+            bookDao = bookDao,
+            readingProgressDao = readingProgressDao,
+            highlightDao = highlightDao,
+            bookmarkDao = bookmarkDao,
+            readingSessionDao = readingSessionDao,
+            bookCatalogDataSource = bookCatalogDataSource,
+            progressDataSource = progressDataSource,
+            sessionManager = sessionManager,
+        )
+
+    // ── Catalog ─────────────────────────────────────────────────────────
 
     /**
-     * Dictionary push/pull (FR-09). Reuses the same session manager as the
-     * other Supabase syncers; the remote default is the shared
-     * `user_dictionary_words` contract.
+     * Dedicated catalog client: separate OkHttp stack (timeouts, JSON,
+     * identified UA, HTTPS-only by constant base URLs + network_security_config)
+     * so public catalog traffic never shares the Drive/Supabase client.
+     * Engine is OkHttp (not CIO): CIO failed to reach the catalog on real
+     * devices while the OkHttp-backed clients worked.
      */
-    val dictionarySyncService: DictionarySyncService by lazy {
-        DictionarySyncService(
-            dao = databaseModule.dictionaryWordDao,
-            sessionManager = sessionManager,
-        )
-    }
-
-    val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy {
-        SupabaseBookCatalogDataSource()
-    }
-
-    val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy {
-        SupabaseBookCatalogSync(
-            outboxDao = databaseModule.syncOutboxDao,
-            bookDao = databaseModule.bookDao,
-            sessionManager = sessionManager,
-            dataSource = supabaseBookCatalogDataSource,
-            remoteDataSource = driveRemoteDataSource,
-            driveTokenRefresher = { driveCoordinator.refreshAccessToken() },
-            localBooksDir = context.applicationContext.filesDir.resolve("books"),
-            progressDataSource = supabaseProgressDataSource,
-            outboxCommit = outboxCommit,
-        )
-    }
-
-    val driveColdBackupService: DriveColdBackupService by lazy {
-        DriveColdBackupService(
-            remoteDataSource = driveRemoteDataSource,
-            bookDao = databaseModule.bookDao,
-            readingProgressDao = databaseModule.readingProgressDao,
-            highlightDao = databaseModule.highlightDao,
-            bookmarkDao = databaseModule.bookmarkDao,
-            readingSessionDao = databaseModule.readingSessionDao,
-            bookCatalogDataSource = supabaseBookCatalogDataSource,
-            progressDataSource = supabaseProgressDataSource,
-            sessionManager = sessionManager,
-        )
-    }
-
-    // ── sync-layer-split PR-1: OutboxCommit helper ────────────────────────
-    // Centralised ack/increment/prune policy used by both Supabase syncers.
-    // Lives in NetworkModule alongside the per-domain syncers that consume it.
-    val outboxCommit: OutboxCommit by lazy { OutboxCommit(databaseModule.syncOutboxDao) }
-
-    // ── discover-catalog PR-2: dedicated catalog client ───────────────
-    // Separate OkHttp stack (timeouts, JSON, identified UA, HTTPS-only by
-    // constant base URLs + network_security_config) so public catalog
-    // traffic never shares the Drive/Supabase client. No user_books or
-    // outbox writes pass through here — search/detail only.
-    // Engine is OkHttp (not CIO): CIO failed to reach the catalog on real
-    // devices while the OkHttp-backed Supabase/Drive clients worked, so the
-    // catalog now uses the proven engine.
-    val catalogHttpClient: HttpClient by lazy {
+    @Provides
+    @Singleton
+    @Named(CATALOG_HTTP_CLIENT)
+    fun provideCatalogHttpClient(): HttpClient =
         HttpClient(OkHttp) {
             install(ContentNegotiation) {
                 json(
@@ -270,138 +381,119 @@ class NetworkModule(
                 )
             }
             install(HttpTimeout) {
-                requestTimeoutMillis = 15_000
-                connectTimeoutMillis = 10_000
-                socketTimeoutMillis = 15_000
+                requestTimeoutMillis = REQUEST_TIMEOUT_MILLIS
+                connectTimeoutMillis = CONNECT_TIMEOUT_MILLIS
+                socketTimeoutMillis = SOCKET_TIMEOUT_MILLIS
             }
             defaultRequest {
                 header(HttpHeaders.UserAgent, ANDROID_USER_AGENT)
             }
         }
-    }
 
-    val catalogTransport: CatalogHttpTransport by lazy {
-        KtorCatalogHttpTransport(catalogHttpClient)
-    }
+    @Provides
+    @Singleton
+    fun provideCatalogTransport(
+        @Named(CATALOG_HTTP_CLIENT) client: HttpClient,
+    ): CatalogHttpTransport = KtorCatalogHttpTransport(client)
 
-    // discover-screen U3a: binary catalog downloads reuse the catalog client
-    // identity (UA + timeouts) but live on their own streaming port.
-    val catalogFileDownloader: CatalogFileDownloader by lazy {
-        KtorCatalogFileDownloader(catalogHttpClient)
-    }
+    @Provides
+    @Singleton
+    fun provideCatalogFileDownloader(
+        @Named(CATALOG_HTTP_CLIENT) client: HttpClient,
+    ): CatalogFileSource = KtorCatalogFileDownloader(client)
 
-    /** Internal cache where catalog downloads stage before import (WU6). */
-    val catalogTempDir: java.io.File by lazy {
-        java.io.File(context.cacheDir, "catalog")
-    }
+    @Provides
+    @Singleton
+    fun provideAddonTransport(
+        @Named(CATALOG_HTTP_CLIENT) catalogHttpClient: HttpClient,
+    ): KtorAddonHttpTransport = KtorAddonHttpTransport(catalogHttpClient)
 
-    /** Internal target tree where imported book binaries are stored (WU6, FR-03).
-     *  Root of the per-account tree: files land in `books/{userId}/` (T8). */
-    val libraryBooksDir: java.io.File by lazy {
-        java.io.File(context.filesDir, "books")
-    }
+    @Provides
+    @Singleton
+    fun provideAddonRegistry(
+        @ApplicationContext context: Context,
+        installedAddonDao: AddonDao,
+        transport: KtorAddonHttpTransport,
+    ): AddonRegistry =
+        AddonRegistry(
+            installedAddonDao,
+            transport,
+            // U5: durable consent (survives process restart); delivers the
+            // persistence deferred from U4's in-memory default.
+            PersistentAddonConsentStore(context),
+        )
 
-    val gutendexDataSource: GutendexDataSource by lazy {
-        GutendexDataSource(catalogTransport)
-    }
+    @Provides
+    @Singleton
+    fun provideGutendexDataSource(
+        transport: CatalogHttpTransport,
+    ): GutendexDataSource = GutendexDataSource(transport)
 
-    val openLibraryDataSource: OpenLibraryDataSource by lazy {
-        OpenLibraryDataSource(catalogTransport)
-    }
+    @Provides
+    @Singleton
+    fun provideOpenLibraryDataSource(
+        transport: CatalogHttpTransport,
+    ): OpenLibraryDataSource = OpenLibraryDataSource(transport)
 
-    /** Standard Ebooks: the public Atom feed, fetched directly (no CORS on Android). */
-    val standardEbooksDataSource: StandardEbooksDataSource by lazy {
-        StandardEbooksDataSource(catalogTransport)
-    }
+    @Provides
+    @Singleton
+    fun provideStandardEbooksDataSource(
+        transport: CatalogHttpTransport,
+    ): StandardEbooksDataSource = StandardEbooksDataSource(transport)
 
     /**
      * Google Books (U2, fail-closed): null when `GOOGLE_BOOKS_KEY` is
-     * absent/blank (key not provided yet) so the composite fan-out — already
-     * failure-isolated per provider (U1) — simply never sees the source and
-     * the app keeps working on Open Library + Gutenberg.
-     *
-     * The key in `local.properties` is restricted to Android apps
-     * (package + signing SHA-1), so the app identity headers travel with every
-     * Google Books request; without them the API answers 403
-     * `API_KEY_ANDROID_APP_BLOCKED` for an empty package.
+     * absent/blank so the composite fan-out simply never sees the source.
+     * The key is restricted to Android apps (package + signing SHA-1), so the
+     * app identity headers travel with every request.
      */
-    val googleBooksDataSource: GoogleBooksDataSource? by lazy {
-        BuildConfig.GOOGLE_BOOKS_KEY.trim().takeIf { it.isNotEmpty() }?.let {
-            val identity = androidAppIdentityOrNull(context)
-            GoogleBooksDataSource(
-                catalogTransport,
-                it,
-                androidPackage = identity?.packageName,
-                androidCert = identity?.certSha1,
-            )
-        }
-    }
-
-    val googleBooksCatalogProvider: GoogleBooksCatalogProvider? by lazy {
+    @Provides
+    @Singleton
+    fun provideGoogleBooksCatalogProvider(
+        @ApplicationContext context: Context,
+        transport: CatalogHttpTransport,
+    ): GoogleBooksCatalogProvider? {
         val identity = androidAppIdentityOrNull(context)
-        googleBooksProviderOrNull(
-            catalogTransport,
+        return googleBooksProviderOrNull(
+            transport,
             BuildConfig.GOOGLE_BOOKS_KEY,
             androidPackage = identity?.packageName,
             androidCert = identity?.certSha1,
         )
     }
 
-    val addonRegistry: AddonRegistry by lazy {
-        AddonRegistry(
-            databaseModule.installedAddonDao,
-            KtorAddonHttpTransport(catalogHttpClient),
-            // U5: durable consent (survives process restart); delivers the
-            // persistence deferred from U4's in-memory default.
-            PersistentAddonConsentStore(context),
-        )
-    }
-
     /**
-     * U5: resolves one installed addon's reading links for [book] through an
-     * ephemeral provider over its manifest. Fail-closed: unknown addon or
-     * missing disclosure consent resolves to an empty [LegalAccess] with
-     * zero I/O (mirrors the provider gate).
+     * Live composite: rebuilds from installed addon rows whenever the registry
+     * mutates, so addon sources start or stop contributing immediately.
      */
-    val addonResolveForBook: suspend (addonId: String, book: CatalogBook) -> LegalAccess =
-        { addonId, book ->
-            val row = addonRegistry.listInstalled().find { it.id == addonId }
-            if (row == null || !addonRegistry.hasAddonConsent(addonId)) {
-                LegalAccess(book.id, false, null, emptyList())
-            } else {
-                AddonCatalogProvider(
-                    row.manifest,
-                    addonId,
-                    addonTransport,
-                    consent = addonRegistry.consent,
-                ).resolveAccess(book)
-            }
-        }
-
-    // ── addon-registry PR4: live composite ─────────────────────────────
-    // The composite rebuilds from installed addon rows whenever the registry
-    // mutates (install/enable/disable/uninstall), so addon sources stop or
-    // start contributing immediately; rows are re-read after restart (A1/A4).
-    val addonTransport: KtorAddonHttpTransport by lazy {
-        KtorAddonHttpTransport(catalogHttpClient)
-    }
-
-    val rebuildingCatalogProvider: RebuildingCatalogProvider by lazy {
+    @Provides
+    @Singleton
+    fun provideRebuildingCatalogProvider(
+        @ApplicationContext context: Context,
+        transport: CatalogHttpTransport,
+        gutendex: GutendexDataSource,
+        openLibrary: OpenLibraryDataSource,
+        googleBooks: GoogleBooksCatalogProvider?,
+        standardEbooks: StandardEbooksDataSource,
+        discoverCacheDao: DiscoverCacheDao,
+        addonTransport: KtorAddonHttpTransport,
+        addonRegistry: AddonRegistry,
+    ): RebuildingCatalogProvider {
         val provider =
             RebuildingCatalogProvider {
                 CompositeCatalogProvider(
                     catalogProvidersWithAddons(
                         builtIns =
                             listOfNotNull(
-                                GutendexCatalogProvider(gutendexDataSource),
-                                OpenLibraryCatalogProvider(openLibraryDataSource),
+                                GutendexCatalogProvider(gutendex),
+                                OpenLibraryCatalogProvider(openLibrary),
                                 // Fail-closed: absent/blank GOOGLE_BOOKS_KEY ⇒ null ⇒ omitted.
-                                googleBooksCatalogProvider,
+                                googleBooks,
                                 // Before the curated bundle so the real source wins the
                                 // source-id dedupe: the bundle lists the same
                                 // `builtin:standard-ebooks` id as CURATED, and first
                                 // occurrence wins in `listSources()`.
-                                StandardEbooksCatalogProvider(standardEbooksDataSource),
+                                StandardEbooksCatalogProvider(standardEbooks),
                             ),
                         curated = CuratedCatalogProvider(context),
                         installedAddons = addonRegistry.listInstalled(),
@@ -410,28 +502,59 @@ class NetworkModule(
                         // recorded disclosure consent unblocks resolveAccess.
                         addonConsent = addonRegistry.consent,
                     ),
-                    cache = RoomDiscoverCache(databaseModule.discoverCacheDao),
+                    cache = RoomDiscoverCache(discoverCacheDao),
                 )
             }
         addonRegistry.addOnChangedListener { provider.invalidate() }
-        provider
+        return provider
     }
 
-    val catalogProvider: CatalogProvider by lazy { LiveCatalogProvider(rebuildingCatalogProvider) }
+    @Provides
+    @Singleton
+    fun provideCatalogProvider(
+        rebuilding: RebuildingCatalogProvider,
+    ): CatalogProvider = LiveCatalogProvider(rebuilding)
 
-    // discover-screen U1: app-lifetime connectivity observer. Network callbacks
-    // are process-global, so this singleton has no cleanup hook.
-    // SDD android-tooling-hygiene WS2a slice 4: delegated to the shared factory
-    // also used by HiltFoundationModule (Hilt graph + manual container agree).
-    val connectivityObserver: ConnectivityObserver by lazy {
-        createConnectivityObserver(context)
-    }
+    /**
+     * U5: resolves one installed addon's reading links for a book through an
+     * ephemeral provider over its manifest. Fail-closed: unknown addon or
+     * missing disclosure consent resolves to an empty [LegalAccess] with zero I/O.
+     */
+    @Provides
+    @Singleton
+    fun provideAddonAccessResolver(
+        addonRegistry: AddonRegistry,
+        addonTransport: KtorAddonHttpTransport,
+    ): com.nexo.domain.access.AddonAccessResolver =
+        object : com.nexo.domain.access.AddonAccessResolver {
+            override suspend fun resolve(
+                addonId: String,
+                book: CatalogBook,
+            ): LegalAccess {
+                val row = addonRegistry.listInstalled().find { it.id == addonId }
+                return if (row == null || !addonRegistry.hasAddonConsent(addonId)) {
+                    LegalAccess(book.id, false, null, emptyList())
+                } else {
+                    AddonCatalogProvider(
+                        row.manifest,
+                        addonId,
+                        addonTransport,
+                        consent = addonRegistry.consent,
+                    ).resolveAccess(book)
+                }
+            }
+        }
 
-    // ── app-auto-update PR2: Android self-check slice ───────────────────
-    // Dedicated feed client (same OkHttp + timeouts + JSON shape as the
-    // catalog client, separate instance so update traffic stays isolated).
-    // Feed URL comes from BuildConfig.UPDATE_FEED_URL; empty = disabled.
-    val updateHttpClient: HttpClient by lazy {
+    // ── Connectivity ────────────────────────────────────────────────────
+
+    // App-lifetime connectivity observer is provided by HiltFoundationModule.
+
+    // ── App self-update ─────────────────────────────────────────────────
+
+    @Provides
+    @Singleton
+    @Named(UPDATE_HTTP_CLIENT)
+    fun provideUpdateHttpClient(): HttpClient =
         HttpClient(OkHttp) {
             install(ContentNegotiation) {
                 json(
@@ -442,33 +565,50 @@ class NetworkModule(
                 )
             }
             install(HttpTimeout) {
-                requestTimeoutMillis = 15_000
-                connectTimeoutMillis = 10_000
-                socketTimeoutMillis = 15_000
+                requestTimeoutMillis = REQUEST_TIMEOUT_MILLIS
+                connectTimeoutMillis = CONNECT_TIMEOUT_MILLIS
+                socketTimeoutMillis = SOCKET_TIMEOUT_MILLIS
             }
             defaultRequest {
                 header(HttpHeaders.UserAgent, ANDROID_USER_AGENT)
             }
         }
-    }
 
-    val updateFeedService: UpdateFeedService by lazy {
-        UpdateFeedService(updateHttpClient, BuildConfig.UPDATE_FEED_URL)
-    }
+    @Provides
+    @Singleton
+    fun provideUpdateFeedService(
+        @Named(UPDATE_HTTP_CLIENT) client: HttpClient,
+    ): UpdateFeedService = UpdateFeedService(client, BuildConfig.UPDATE_FEED_URL)
 
-    val updateNetworkGate: AndroidUpdateNetworkGate by lazy {
-        AndroidUpdateNetworkGate(context.applicationContext, connectivityObserver)
-    }
+    @Provides
+    @Singleton
+    fun provideUpdateNetworkGate(
+        @ApplicationContext context: Context,
+        connectivityObserver: ConnectivityObserver,
+    ): com.nexo.domain.update.UpdateNetworkGate = AndroidUpdateNetworkGate(context, connectivityObserver)
 
-    val updateDownloader: UpdateDownloader by lazy {
-        UpdateDownloader(context.applicationContext)
-    }
+    @Provides
+    @Singleton
+    fun provideDownloadAndImportBookUseCase(
+        @ApplicationContext context: Context,
+        @Named(CATALOG_HTTP_CLIENT) client: HttpClient,
+        importEpubBookUseCase: com.nexo.domain.usecase.ImportEpubBookUseCase,
+        libraryRepository: com.nexo.domain.repository.LibraryRepository,
+    ): com.nexo.domain.usecase.DownloadAndImportBookUseCase =
+        com.nexo.domain.usecase.DownloadAndImportBookUseCase(
+            downloader = KtorCatalogFileDownloader(client),
+            importEpubBookUseCase = importEpubBookUseCase,
+            libraryRepository = libraryRepository,
+            tempDir = java.io.File(context.cacheDir, "catalog"),
+            booksDir = java.io.File(context.filesDir, "books"),
+        )
 
-    // ── reader-selection-translation: MyMemory client ──────────────────
-    // Direct-from-app, no API key (anonymous 5.000 chars/day quota). Its own
-    // OkHttp stack so translation traffic is isolated from catalog/updates,
-    // mirroring the catalog client's UA + timeouts + JSON shape.
-    val translationHttpClient: HttpClient by lazy {
+    // ── Reader-selection translation + definition ───────────────────────
+
+    @Provides
+    @Singleton
+    @Named(TRANSLATION_HTTP_CLIENT)
+    fun provideTranslationHttpClient(): HttpClient =
         HttpClient(OkHttp) {
             install(ContentNegotiation) {
                 json(
@@ -479,37 +619,42 @@ class NetworkModule(
                 )
             }
             install(HttpTimeout) {
-                requestTimeoutMillis = 15_000
-                connectTimeoutMillis = 10_000
-                socketTimeoutMillis = 15_000
+                requestTimeoutMillis = REQUEST_TIMEOUT_MILLIS
+                connectTimeoutMillis = CONNECT_TIMEOUT_MILLIS
+                socketTimeoutMillis = SOCKET_TIMEOUT_MILLIS
             }
             defaultRequest {
                 header(HttpHeaders.UserAgent, com.nexo.data.remote.translation.NEXO_TRANSLATION_USER_AGENT)
             }
         }
-    }
 
-    val translationClient: com.nexo.data.remote.translation.MyMemoryTranslationClient by lazy {
+    @Provides
+    @Singleton
+    fun provideTranslationClient(
+        @Named(TRANSLATION_HTTP_CLIENT) client: HttpClient,
+    ): com.nexo.data.remote.translation.MyMemoryTranslationClient =
         com.nexo.data.remote.translation.MyMemoryTranslationClient(
             com.nexo.data.remote.translation
-                .KtorTranslationHttpTransport(translationHttpClient),
+                .KtorTranslationHttpTransport(client),
         )
-    }
 
-    val translationRepository: com.nexo.domain.repository.TranslationRepository by lazy {
+    @Provides
+    @Singleton
+    fun provideTranslationRepository(
+        client: com.nexo.data.remote.translation.MyMemoryTranslationClient,
+        cacheDao: com.nexo.data.local.dao.TranslationCacheDao,
+        activeUserProvider: ActiveUserProvider,
+    ): com.nexo.domain.repository.TranslationRepository =
         com.nexo.data.repository.RoomTranslationRepository(
-            client = translationClient,
-            cacheDao = databaseModule.translationCacheDao,
+            client = client,
+            cacheDao = cacheDao,
             activeUser = activeUserProvider,
         )
-    }
 
-    // ── android-define-selection T4: Wiktionary client + definition cascade ──
-    // Same posture as the translation client above: direct-from-app, no API
-    // key, its own OkHttp stack so definition traffic is isolated. The UA is the
-    // identified, contact-carrying one Wikimedia requires — a generic agent is
-    // blocked with a 403 (see NEXO_WIKTIONARY_USER_AGENT).
-    val wiktionaryHttpClient: HttpClient by lazy {
+    @Provides
+    @Singleton
+    @Named(WIKTIONARY_HTTP_CLIENT)
+    fun provideWiktionaryHttpClient(): HttpClient =
         HttpClient(OkHttp) {
             install(ContentNegotiation) {
                 json(
@@ -520,9 +665,9 @@ class NetworkModule(
                 )
             }
             install(HttpTimeout) {
-                requestTimeoutMillis = 15_000
-                connectTimeoutMillis = 10_000
-                socketTimeoutMillis = 15_000
+                requestTimeoutMillis = REQUEST_TIMEOUT_MILLIS
+                connectTimeoutMillis = CONNECT_TIMEOUT_MILLIS
+                socketTimeoutMillis = SOCKET_TIMEOUT_MILLIS
             }
             defaultRequest {
                 header(
@@ -531,24 +676,63 @@ class NetworkModule(
                 )
             }
         }
-    }
 
-    val wiktionaryClient: com.nexo.data.remote.wiktionary.WiktionaryClient by lazy {
+    @Provides
+    @Singleton
+    fun provideWiktionaryClient(
+        @Named(WIKTIONARY_HTTP_CLIENT) client: HttpClient,
+    ): com.nexo.data.remote.wiktionary.WiktionaryClient =
         com.nexo.data.remote.wiktionary.WiktionaryClient(
             com.nexo.data.remote.wiktionary
-                .KtorWiktionaryHttpTransport(wiktionaryHttpClient),
+                .KtorWiktionaryHttpTransport(client),
         )
-    }
 
-    val definitionRepository: com.nexo.domain.repository.DefinitionRepository by lazy {
+    @Provides
+    @Singleton
+    fun provideDefinitionRepository(
+        wiktionaryClient: com.nexo.data.remote.wiktionary.WiktionaryClient,
+        translationClient: com.nexo.data.remote.translation.MyMemoryTranslationClient,
+        definitionCacheDao: com.nexo.data.local.dao.DefinitionCacheDao,
+        activeUserProvider: ActiveUserProvider,
+    ): com.nexo.domain.repository.DefinitionRepository =
         com.nexo.data.repository.CachedDefinitionRepository(
             delegate =
                 com.nexo.data.repository.RemoteDefinitionRepository(
                     wiktionaryClient = wiktionaryClient,
                     translationClient = translationClient,
                 ),
-            cacheDao = databaseModule.definitionCacheDao,
+            cacheDao = definitionCacheDao,
             activeUser = activeUserProvider,
         )
-    }
+
+    @Provides
+    @Singleton
+    fun provideReadingGoalRemoteDataSource(): com.nexo.data.sync.ReadingGoalRemoteDataSource =
+        com.nexo.data.remote.supabase
+            .SupabaseReadingGoalDataSource()
+
+    @Provides
+    @Singleton
+    fun provideReadingGoalRepository(
+        local: com.nexo.data.session.ReadingGoalPreferences,
+        remote: com.nexo.data.sync.ReadingGoalRemoteDataSource,
+        activeUserProvider: ActiveUserProvider,
+    ): com.nexo.data.repository.ReadingGoalRepository =
+        com.nexo.data.repository.ReadingGoalRepository(
+            local = local,
+            remote = remote,
+            activeUserIdProvider = { activeUserProvider.currentUserId() },
+        )
+
+    // ── Deep links ──────────────────────────────────────────────────────
+
+    /**
+     * Singleton so the install-flow `StateFlow` survives configuration changes
+     * and the Compose dialog host keeps observing one instance.
+     */
+    @Provides
+    @Singleton
+    fun provideInstallDeepLinkController(
+        addonRegistry: AddonRegistry,
+    ): InstallDeepLinkController = createInstallDeepLinkController(registry = addonRegistry)
 }

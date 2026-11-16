@@ -120,6 +120,7 @@ class ReaderDefinitionPanelDismissTest {
             mainDispatcher = mainDispatcherRule.dispatcher,
             definitionRepository = SilentRepo(),
             definitionPreferences = DefinitionPreferences(context, activeUserProviderFor(TEST_USER_ID)),
+            bookNotFoundMessage = "Book not found",
         )
     }
 

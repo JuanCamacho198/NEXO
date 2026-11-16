@@ -46,7 +46,7 @@ import com.nexo.presentation.feature.highlights.components.HighlightCard
 import com.nexo.presentation.feature.highlights.components.HighlightsSheetFilterChips
 import com.nexo.presentation.feature.highlights.utils.ChapterLocation
 import com.nexo.presentation.feature.highlights.utils.matchesHighlightFilter
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.ui.theme.NexoTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

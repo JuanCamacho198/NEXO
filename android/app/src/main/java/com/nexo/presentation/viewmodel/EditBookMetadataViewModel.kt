@@ -1,16 +1,17 @@
 package com.nexo.presentation.viewmodel
 
-import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.nexo.R
 import com.nexo.data.storage.CoverStorage
+import com.nexo.domain.event.UiEvent
+import com.nexo.domain.metadata.parseChipList
+import com.nexo.domain.metadata.sanitizeChipList
+import com.nexo.domain.metadata.sanitizeChipValue
 import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.presentation.UiEvent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -30,35 +31,10 @@ internal const val MAX_GENRES = 5
 internal const val MAX_TAGS = 10
 
 /**
- * Parses a comma-separated metadata field (genre/tags stored as TEXT, design D2)
- * into its individual values, trimmed and with blanks dropped.
- */
-internal fun parseChipList(value: String?): List<String> =
-    value
-        ?.split(',')
-        ?.map { it.trim() }
-        ?.filter { it.isNotEmpty() }
-        ?: emptyList()
-
-/**
- * Sanitizes a single user-entered chip value: strips embedded commas, trims,
- * and rejects values that become empty (REQ-data-model-8).
- */
-internal fun sanitizeChipValue(value: String): String? = value.replace(",", "").trim().takeIf { it.isNotEmpty() }
-
-/**
  * Sanitizes a whole chip list: strips commas, trims, dedupes case-insensitively,
  * and caps at [max] (REQ-data-model-8 — "input con coma se normaliza; duplicados
  * se colapsan"; UI limits 5 genres / 10 tags).
  */
-internal fun sanitizeChipList(
-    values: List<String>,
-    max: Int,
-): List<String> =
-    values
-        .mapNotNull { sanitizeChipValue(it) }
-        .distinctBy { it.lowercase() }
-        .take(max)
 
 /**
  * Form state for the full-screen edit-metadata editor (design A9ymv).
@@ -97,7 +73,8 @@ class EditBookMetadataViewModel(
     private val libraryRepository: LibraryRepository,
     private val activeUser: ActiveUserProvider,
     private val coverStorage: CoverStorage,
-    private val appContext: Context,
+    private val savedMessage: String,
+    private val saveFailedMessage: String,
     private val onSaved: () -> Unit = {},
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : ViewModel() {
@@ -225,14 +202,14 @@ class EditBookMetadataViewModel(
             result.fold(
                 onSuccess = {
                     _uiEvent.tryEmit(
-                        UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_metadata_saved)),
+                        UiEvent.ShowSnackbar(savedMessage),
                     )
                     onSaved()
                 },
                 onFailure = { error ->
                     _uiEvent.tryEmit(
                         UiEvent.ShowSnackbar(
-                            error.message ?: appContext.getString(R.string.edit_metadata_save_failed),
+                            error.message ?: saveFailedMessage,
                         ),
                     )
                 },
@@ -245,7 +222,8 @@ class EditBookMetadataViewModel(
         private val libraryRepository: LibraryRepository,
         private val activeUser: ActiveUserProvider,
         private val coverStorage: CoverStorage,
-        private val appContext: Context,
+        private val savedMessage: String,
+        private val saveFailedMessage: String,
         private val onSaved: () -> Unit = {},
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -255,7 +233,8 @@ class EditBookMetadataViewModel(
                 libraryRepository = libraryRepository,
                 activeUser = activeUser,
                 coverStorage = coverStorage,
-                appContext = appContext,
+                savedMessage = savedMessage,
+                saveFailedMessage = saveFailedMessage,
                 onSaved = onSaved,
             ) as T
     }

@@ -1,8 +1,8 @@
 package com.nexo.presentation.viewmodel
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
+import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.Bookmark
 import com.nexo.domain.model.Highlight
@@ -10,7 +10,8 @@ import com.nexo.domain.model.HighlightColor
 import com.nexo.domain.model.ReadingStats
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.ReaderRepository
-import com.nexo.presentation.UiEvent
+import com.nexo.presentation.util.StringResolver
+import com.nexo.testutil.FakeStringResolver
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.activeUserProviderFor
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,9 +24,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /**
  * Tests for [HighlightsViewModel].
@@ -34,17 +32,22 @@ import org.robolectric.annotation.Config
  * which only emits AFTER the first subscriber starts collecting.  Every test
  * must launch a background collection before reading `.value`.
  *
- * Robolectric is required because the CRUD snackbars resolve their copy from
- * string resources: the assertions read the real English text.
+ * The CRUD snackbars resolve copy through [StringResolver]; those assertions
+ * read the text pinned in the fake below, so no Android runtime is needed.
  */
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 @OptIn(ExperimentalCoroutinesApi::class)
 class HighlightsViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private val appContext: Context = ApplicationProvider.getApplicationContext()
+    private val stringResolver =
+        FakeStringResolver(
+            mapOf(
+                R.string.highlights_snackbar_color_changed to "Color changed",
+                R.string.highlights_snackbar_tag_saved to "Tag saved",
+                R.string.highlights_deleted_snackbar to "Highlight deleted",
+            ),
+        )
 
     /** Start collecting uiState in the background so `stateIn` emits. */
     private fun <T> collectUiState(viewModel: HighlightsViewModel) {
@@ -266,7 +269,7 @@ class HighlightsViewModelTest {
         runTest {
             val highlight = createHighlight(color = HighlightColor.YELLOW.hex)
             val readerRepo = FakeReaderRepository(listOf(highlight))
-            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository(), activeUserProviderFor(), appContext)
+            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository(), activeUserProviderFor(), stringResolver)
             viewModel.uiState.first()
 
             viewModel.onChangeHighlightColor(highlight)
@@ -290,7 +293,7 @@ class HighlightsViewModelTest {
         runTest {
             val highlight = createHighlight(tag = null)
             val readerRepo = FakeReaderRepository(listOf(highlight))
-            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository(), activeUserProviderFor(), appContext)
+            val viewModel = HighlightsViewModel(readerRepo, FakeHomeRepository(), activeUserProviderFor(), stringResolver)
             viewModel.uiState.first()
 
             viewModel.onAddHighlightTag(highlight)
@@ -362,7 +365,7 @@ class HighlightsViewModelTest {
     ): HighlightsViewModel {
         val readerRepo = FakeReaderRepository(highlights)
         val homeRepo = FakeHomeRepository(books)
-        return HighlightsViewModel(readerRepo, homeRepo, activeUserProviderFor(), appContext)
+        return HighlightsViewModel(readerRepo, homeRepo, activeUserProviderFor(), stringResolver)
     }
 
     private class FakeReaderRepository(

@@ -35,13 +35,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.R
 import com.nexo.domain.model.Device
-import com.nexo.presentation.theme.NexoTheme
+import com.nexo.feature.settings.R
 import com.nexo.presentation.viewmodel.SettingsDevicesUiState
 import com.nexo.ui.components.atoms.NexoDialog
 import com.nexo.ui.components.atoms.NexoDialogVariant
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 import java.time.Duration
 import java.time.Instant
 
@@ -177,7 +177,7 @@ private fun DeviceItem(
             title = stringResource(R.string.settings_devices_remove_confirm, device.name),
             body = "",
             confirmText = stringResource(R.string.settings_devices_remove),
-            dismissText = stringResource(android.R.string.cancel),
+            dismissText = stringResource(R.string.cancel),
             onConfirm = {
                 onRemove()
                 showRemoveDialog = false

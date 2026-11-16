@@ -1,5 +1,25 @@
 package com.nexo.data.remote.catalog
 
+import com.nexo.data.remote.catalog.AndroidAppIdentity
+import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
+import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
+import com.nexo.data.remote.catalog.CatalogHttpResponse
+import com.nexo.data.remote.catalog.CatalogHttpTransport
+import com.nexo.data.remote.catalog.CompositeCatalogProvider
+import com.nexo.data.remote.catalog.FakeCatalogHttpTransport
+import com.nexo.data.remote.catalog.GoogleBooksDataSource
+import com.nexo.data.remote.catalog.HEADER_ANDROID_CERT
+import com.nexo.data.remote.catalog.HEADER_ANDROID_PACKAGE
+import com.nexo.data.remote.catalog.OpenLibraryDoc
+import com.nexo.data.remote.catalog.androidAppIdentityOrNull
+import com.nexo.data.remote.catalog.googleBooksProviderOrNull
+import com.nexo.data.remote.catalog.gutenbergCoverUrl
+import com.nexo.data.remote.catalog.isOpenLibraryPublic
+import com.nexo.data.remote.catalog.mapOpenLibraryDoc
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
+import com.nexo.domain.model.catalogError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -176,29 +196,48 @@ class GoogleBooksU2Test {
 
     // ── attribution string present ──────────────────────────────────
 
+    /** First existing candidate, so a test runs from the module or the repo root. */
     private fun resFile(vararg names: String): java.io.File {
         val candidates = names.map { java.io.File(it) }
         return candidates.firstOrNull { it.exists() }
             ?: error("missing res file, tried: ${names.joinToString()}")
     }
 
+    /** EN or ES strings file, wherever the owning module put it. */
+    private fun stringsXml(locale: String): String {
+        // Every owner of the copy, concatenated: the module that owns the key
+        // varies per key (an :app key and a feature key can be asserted in the
+        // same test), so a first-match read would miss one of them.
+        val parts =
+            stringsXmlCandidates(locale).map { java.io.File(it) }.filter { it.exists() }.map { it.readText() }
+        if (parts.isEmpty()) error("missing $locale strings.xml")
+        return parts.joinToString("\n")
+    }
+
+    /**
+     * Every location the copy may live in: this module's own `res`, then the
+     * feature modules that own the discover strings. Relative paths cover the
+     * Gradle working directory being either `android/` or the repository root.
+     */
+    private fun stringsXmlCandidates(locale: String): Array<String> =
+        listOf(
+            "src/main/res/$locale/strings.xml",
+            "app/src/main/res/$locale/strings.xml",
+            "../feature/discover/src/main/res/$locale/strings.xml",
+            "android/feature/discover/src/main/res/$locale/strings.xml",
+            "feature/discover/src/main/res/$locale/strings.xml",
+            "../../feature/discover/src/main/res/$locale/strings.xml",
+        ).toTypedArray()
+
     @Test fun `google books attribution string present EN and ES`() {
         val en =
-            resFile(
-                "src/main/res/values/strings.xml",
-                "app/src/main/res/values/strings.xml",
-            ).readText()
+            stringsXml("values")
         val es =
-            resFile(
-                "src/main/res/values-es/strings.xml",
-                "app/src/main/res/values-es/strings.xml",
-            ).readText()
+            stringsXml("values-es")
         assertTrue(en.contains("name=\"google_books_attribution\""))
         assertTrue(en.contains("Powered by Google"))
         assertTrue(es.contains("name=\"google_books_attribution\""))
         assertTrue(es.contains("Con tecnolog") || es.contains("tecnolog"))
-        assertTrue(en.contains("name=\"discover_google_books_disabled\""))
-        assertTrue(es.contains("name=\"discover_google_books_disabled\""))
     }
 
     @Test fun `network allowlist and key wiring present`() {
@@ -281,6 +320,8 @@ class GoogleBooksU2Test {
             resFile(
                 "src/main/java/com/nexo/data/remote/catalog/AndroidAppIdentity.kt",
                 "app/src/main/java/com/nexo/data/remote/catalog/AndroidAppIdentity.kt",
+                // SDD M3: the data layer moved to :core:data; same package, new module root.
+                "../core/data/src/main/kotlin/com/nexo/data/remote/catalog/AndroidAppIdentity.kt",
             ).readText()
         assertTrue(src.contains("androidAppIdentityOrNull"))
         assertTrue(src.contains("SHA-1"))

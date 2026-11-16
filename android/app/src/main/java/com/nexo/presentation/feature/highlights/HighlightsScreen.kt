@@ -23,10 +23,10 @@ import com.nexo.R
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.Highlight
-import com.nexo.presentation.theme.NexoDimens
 import com.nexo.presentation.viewmodel.HighlightsViewModel
 import com.nexo.ui.components.molecules.NexoSelector
 import com.nexo.ui.components.molecules.SelectorOption
+import com.nexo.ui.theme.NexoDimens
 
 @Composable
 fun HighlightsScreen(

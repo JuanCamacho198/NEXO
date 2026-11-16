@@ -1,6 +1,5 @@
 package com.nexo.presentation.viewmodel
 
-import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -9,14 +8,16 @@ import com.nexo.BuildConfig
 import com.nexo.R
 import com.nexo.data.remote.sync.SyncOrchestrator
 import com.nexo.data.repository.SupabaseAuthRepository
+import com.nexo.domain.auth.AuthFailureKind
+import com.nexo.domain.auth.AuthUiState
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.repository.AuthRepository
 import com.nexo.domain.sync.OutboxDrainScheduler
-import com.nexo.presentation.UiEvent
+import com.nexo.presentation.util.StringResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -34,48 +35,6 @@ import javax.inject.Named
  * (e.g. show a "fix config" CTA for [CONFIG_ERROR] vs. a generic error toast
  * for [UNKNOWN]).
  */
-enum class AuthFailureKind {
-    /** No failure — session is healthy or has not yet been attempted. */
-    NONE,
-
-    /** Failure caused by missing/malformed auth configuration (build flag, keys). */
-    CONFIG_ERROR,
-
-    /** Failure caused by a wiring/dependency problem in the auth chain. */
-    WIRING_ERROR,
-
-    /** Sign-up created the account but email confirmation is pending. */
-    CONFIRMATION_PENDING,
-
-    /** Failure that does not match the known categories. */
-    UNKNOWN,
-}
-
-/**
- * AuthUiState — UI state for the authentication flow (sign-in / sign-up / sign-out).
- *
- * **Used by**: AuthScreen
- * **Mutated by**: [AuthViewModel.handleGoogleIdToken], [AuthViewModel.signUp],
- *                 [AuthViewModel.signIn], [AuthViewModel.signOut],
- *                 [AuthViewModel.continueLocally], [AuthViewModel.clearError],
- *                 and the init-block session restoration.
- *
- * @property currentSession The active auth session, or `null` if signed out / not yet known.
- * @property isConfigured `true` if the auth subsystem is configured at runtime (build keys present).
- * @property hasWiringIssue `true` if a DI/dependency wiring problem was detected at startup.
- * @property isLoading `true` while an auth call is in flight.
- * @property errorMessage Human-readable error string from the last failed call (or `null`).
- * @property failureKind Coarse classification of [errorMessage] (see [AuthFailureKind]).
- */
-data class AuthUiState(
-    val currentSession: AuthSession? = null,
-    val isCheckingSession: Boolean = true,
-    val isConfigured: Boolean = true,
-    val hasWiringIssue: Boolean = false,
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val failureKind: AuthFailureKind = AuthFailureKind.NONE,
-)
 
 /**
  * AuthViewModel — Owns the user's authentication state and exposes it as
@@ -91,6 +50,7 @@ data class AuthUiState(
  *                        [signOut]. See sync-layer-split PR-3.
  * @param isAuthConfigured Build-time flag indicating auth keys are wired in.
  * @param hasAuthWiringIssue Build-time flag indicating a DI wiring problem.
+ * @param stringResolver Resolves user-facing copy without an Android Context.
  */
 @HiltViewModel
 class AuthViewModel
@@ -100,7 +60,7 @@ class AuthViewModel
         private val syncOrchestrator: SyncOrchestrator,
         @Named("isAuthConfigured") private val isAuthConfigured: Boolean,
         @Named("hasAuthWiringIssue") private val hasAuthWiringIssue: Boolean,
-        @ApplicationContext private val appContext: Context,
+        private val stringResolver: StringResolver,
         /**
          * S6: schedules an outbox drain at app start for a restored session.
          * Defaults to a no-op so direct VM tests stay free of WorkManager.
@@ -392,7 +352,7 @@ class AuthViewModel
                 result.fold(
                     onSuccess = {
                         _uiState.update { it.copy(errorMessage = null, failureKind = AuthFailureKind.NONE) }
-                        _uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.auth_snackbar_reset_email_sent)))
+                        _uiEvent.emit(UiEvent.ShowSnackbar(stringResolver.get(R.string.auth_snackbar_reset_email_sent)))
                     },
                     onFailure = { error ->
                         _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to send reset email"))
@@ -547,7 +507,7 @@ class AuthViewModel
             private val syncOrchestrator: SyncOrchestrator,
             private val isAuthConfigured: Boolean,
             private val hasAuthWiringIssue: Boolean,
-            private val appContext: Context,
+            private val stringResolver: StringResolver,
             private val outboxDrainScheduler: OutboxDrainScheduler = OutboxDrainScheduler.NoOp,
         ) : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
@@ -557,7 +517,7 @@ class AuthViewModel
                     syncOrchestrator = syncOrchestrator,
                     isAuthConfigured = isAuthConfigured,
                     hasAuthWiringIssue = hasAuthWiringIssue,
-                    appContext = appContext,
+                    stringResolver = stringResolver,
                     outboxDrainScheduler = outboxDrainScheduler,
                 ) as T
         }

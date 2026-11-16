@@ -37,6 +37,7 @@ class ReaderViewModelSettingsTest {
                     defaultBookId = null,
                     readerPreferences = null,
                     activeUser = activeUserProviderFor(),
+                    bookNotFoundMessage = "Book not found",
                 )
 
             val settings = viewModel.settingsUiState.value.readerSettings
@@ -58,6 +59,7 @@ class ReaderViewModelSettingsTest {
                     defaultBookId = null,
                     readerPreferences = mockPrefs,
                     activeUser = activeUserProviderFor(),
+                    bookNotFoundMessage = "Book not found",
                 )
 
             val newSettings =
@@ -87,6 +89,7 @@ class ReaderViewModelSettingsTest {
                     defaultBookId = null,
                     readerPreferences = null,
                     activeUser = activeUserProviderFor(),
+                    bookNotFoundMessage = "Book not found",
                 )
 
             viewModel.settingsManager.onToggleSplitSettings()
@@ -116,6 +119,7 @@ class ReaderViewModelSettingsTest {
                     defaultBookId = null,
                     readerPreferences = mockPrefs,
                     activeUser = activeUserProviderFor(),
+                    bookNotFoundMessage = "Book not found",
                 )
 
             val newSettings =
@@ -152,6 +156,7 @@ class ReaderViewModelSettingsTest {
                     defaultBookId = null,
                     readerPreferences = mockPrefs,
                     activeUser = activeUserProviderFor(),
+                    bookNotFoundMessage = "Book not found",
                 )
 
             val settings = viewModel.settingsUiState.value.readerSettings
@@ -173,6 +178,7 @@ class ReaderViewModelSettingsTest {
                     defaultBookId = null,
                     readerPreferences = mockPrefs,
                     activeUser = activeUserProviderFor(),
+                    bookNotFoundMessage = "Book not found",
                 )
 
             // Change only font size — copy with defaults for the rest

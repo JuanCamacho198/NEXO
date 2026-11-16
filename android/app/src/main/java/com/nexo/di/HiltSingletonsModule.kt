@@ -1,15 +1,10 @@
 package com.nexo.di
 
 import android.content.Context
+import com.nexo.BuildConfig
 import com.nexo.data.local.AppDatabase
 import com.nexo.data.local.RetentionPruner
-import com.nexo.data.local.dao.BookDao
-import com.nexo.data.local.dao.BookmarkDao
-import com.nexo.data.local.dao.HighlightDao
 import com.nexo.data.local.dao.NotificationDao
-import com.nexo.data.local.dao.ReadingProgressDao
-import com.nexo.data.local.dao.ReadingSessionDao
-import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.supabase.SupabaseBookCatalogSync
 import com.nexo.data.remote.supabase.SupabaseProgressSync
@@ -17,22 +12,30 @@ import com.nexo.data.remote.sync.SyncOrchestrator
 import com.nexo.data.remote.sync.SyncOrchestratorImpl
 import com.nexo.data.remote.sync.SyncOrchestratorSettleGate
 import com.nexo.data.remote.sync.SyncService
+import com.nexo.data.remote.work.WorkManagerOutboxDrainScheduler
 import com.nexo.data.remote.work.WorkManagerRetentionPruneScheduler
 import com.nexo.data.repository.NotificationRepository
+import com.nexo.data.session.NotificationPreferencesStore
+import com.nexo.data.session.ReadingGoalPreferences
+import com.nexo.data.session.SessionManager
 import com.nexo.data.sync.DictionarySyncService
-import com.nexo.domain.repository.AuthRepository
-import com.nexo.domain.repository.HomeRepository
+import com.nexo.domain.notification.AppForegroundSignal
+import com.nexo.domain.notification.NotificationStore
+import com.nexo.domain.notification.NotificationSurfaces
+import com.nexo.domain.notification.ToastSink
 import com.nexo.domain.repository.LibraryRepository
-import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.sync.OutboxDrainScheduler
 import com.nexo.domain.sync.SessionGate
 import com.nexo.domain.sync.SyncSettleGate
-import com.nexo.domain.usecase.GetBookProgressUseCase
-import com.nexo.domain.usecase.GetStatisticsUseCase
 import com.nexo.domain.usecase.ImportEpubBookUseCase
-import com.nexo.presentation.debug.InitTimingsSection
 import com.nexo.presentation.navigation.InstallDeepLinkController
+import com.nexo.presentation.notification.AndroidOsNotifier
+import com.nexo.presentation.notification.NotificationToastBus
+import com.nexo.presentation.notification.ProcessLifecycleAppForegroundSignal
+import com.nexo.presentation.notification.UiEventToastSink
+import com.nexo.presentation.util.AndroidStringResolver
+import com.nexo.presentation.util.StringResolver
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -45,166 +48,181 @@ import kotlinx.coroutines.SupervisorJob
 import javax.inject.Named
 import javax.inject.Singleton
 
-/** WS2c slice 6: one Hilt-owned [AppContainer] serves VMs and entry points. */
 @Module
 @InstallIn(SingletonComponent::class)
 object HiltSingletonsModule {
-    @Provides @Singleton
-    fun provideAppContainer(
-        @ApplicationContext c: Context,
-    ): AppContainer = AppContainer(c)
+    @Provides
+    @Singleton
+    fun provideStringResolver(
+        @ApplicationContext context: Context,
+    ): StringResolver = AndroidStringResolver(context)
 
-    /**
-     * The active account id, shared by the app-scoped [AppContainer] holder and
-     * every Hilt-constructed ViewModel that reads account-owned data.
-     */
-    @Provides @Singleton
-    fun provideActiveUserProvider(a: AppContainer): ActiveUserProvider = a.activeUserProvider
-
-    @Provides @Singleton
-    fun provideLibraryRepository(a: AppContainer): LibraryRepository = a.libraryRepository
-
-    @Provides @Singleton
-    fun provideImportEpub(r: LibraryRepository): ImportEpubBookUseCase = ImportEpubBookUseCase(r)
-
-    @Provides @Singleton
-    fun provideSyncService(a: AppContainer): SyncService = a.syncService
-
-    @Provides @Singleton
-    fun provideCatalogSync(a: AppContainer): SupabaseBookCatalogSync = a.supabaseBookCatalogSync
-
-    @Provides @Singleton
-    fun provideReaderRepository(a: AppContainer): ReaderRepository = a.readerRepository
-
-    @Provides @Singleton
-    fun provideBookProgress(a: AppContainer): GetBookProgressUseCase = a.getBookProgressUseCase
+    @Provides
+    @Singleton
+    fun provideActiveUserProvider(): ActiveUserProvider = ActiveUserProvider()
 
     @Provides @Singleton
     fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
 
     @Provides @Singleton
-    fun provideHomeRepository(a: AppContainer): HomeRepository = a.homeRepository
+    fun provideImportEpub(r: LibraryRepository): ImportEpubBookUseCase = ImportEpubBookUseCase(r, SentryTelemetrySink)
 
-    @Provides @Singleton
-    fun provideProgressSync(a: AppContainer): SupabaseProgressSync = a.supabaseProgressSync
-
-    @Provides @Singleton
-    fun provideStatistics(a: AppContainer): GetStatisticsUseCase = a.getStatisticsUseCase
-
-    @Provides @Singleton
-    fun provideAuthRepository(a: AppContainer): AuthRepository = a.authRepository
-
-    @Provides @Singleton
-    fun provideSyncOrchestrator(a: AppContainer): SyncOrchestrator = a.syncOrchestrator
+    /** WS2c slice 6: the app-lifetime sync orchestrator. */
+    @Provides
+    @Singleton
+    fun provideSyncOrchestrator(
+        drive: SyncService,
+        catalog: SupabaseBookCatalogSync,
+        progress: SupabaseProgressSync,
+        dictionary: DictionarySyncService,
+        gate: SessionGate,
+        outboxDao: com.nexo.data.local.dao.SyncOutboxDao,
+    ): SyncOrchestrator =
+        createSyncOrchestrator(
+            drive = drive,
+            catalog = catalog,
+            progress = progress,
+            dictionary = dictionary,
+            gate = gate,
+            outboxDao = outboxDao,
+        )
 
     /** S6: WorkManager-backed outbox drain scheduler (scheduler-only). */
-    @Provides @Singleton
-    fun provideOutboxDrainScheduler(a: AppContainer): OutboxDrainScheduler = a.outboxDrainScheduler
-
-    /** FR-14: Room database for the retention pruner + its worker. */
-    @Provides @Singleton
-    fun provideAppDatabase(a: AppContainer): AppDatabase = a.appDatabase
+    @Provides
+    @Singleton
+    fun provideOutboxDrainScheduler(
+        @ApplicationContext context: Context,
+        sessionManager: SessionManager,
+    ): OutboxDrainScheduler =
+        WorkManagerOutboxDrainScheduler(
+            context = context,
+            sessionManager = sessionManager,
+        )
 
     /** FR-14: prune + VACUUM implementation consumed by RetentionPruneWorker. */
-    @Provides @Singleton
-    fun provideRetentionPruner(a: AppContainer): RetentionPruner = a.retentionPruner
+    @Provides
+    @Singleton
+    fun provideRetentionPruner(db: AppDatabase): RetentionPruner = RetentionPruner(db)
 
     /** FR-14: WorkManager-backed periodic retention scheduler (scheduler-only). */
-    @Provides @Singleton
-    fun provideRetentionPruneScheduler(a: AppContainer): WorkManagerRetentionPruneScheduler = a.retentionPruneScheduler
+    @Provides
+    @Singleton
+    fun provideRetentionPruneScheduler(
+        @ApplicationContext context: Context,
+    ): WorkManagerRetentionPruneScheduler = WorkManagerRetentionPruneScheduler(context = context)
 
     @Provides
+    @Singleton
     @Named("isAuthConfigured")
-    fun provideAuthConfigured(a: AppContainer): Boolean = !a.isAuthConfigError
+    fun provideAuthConfigured(): Boolean = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_ANON_KEY.isNotBlank()
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     @Named("hasAuthWiringIssue")
     fun provideHasAuthWiringIssue(): Boolean = false
 
-    @Provides fun provideDailyGoalProvider(a: AppContainer): @JvmSuppressWildcards () -> Int = a.dailyGoalProvider
+    @Provides
+    @Singleton
+    fun provideDailyGoalProvider(
+        readingGoalPreferences: ReadingGoalPreferences,
+    ): @JvmSuppressWildcards () -> Int = { readingGoalPreferences.load() ?: 30 }
 
-    @Provides @Singleton
-    fun provideInitTimings(a: AppContainer): InitTimingsSection =
-        InitTimingsSection(
-            a.dbInitTimeMs,
-            a.epubImportInitTimeMs,
-            a.readerRepoInitTimeMs,
-            a.totalInitTimeMs,
+    @Provides
+    @Singleton
+    fun provideInitTimings(timings: AppStartTimings): com.nexo.presentation.debug.InitTimingsSection = timings.snapshot()
+
+    // ── Notifications (NOTIF-02 / U7 / U9) ──────────────────────────────
+
+    @Provides
+    @Singleton
+    fun provideNotificationRepository(
+        dao: NotificationDao,
+    ): NotificationRepository = NotificationRepository(dao)
+
+    @Provides
+    @Singleton
+    fun provideNotificationPreferencesStore(
+        @ApplicationContext context: Context,
+        activeUserProvider: ActiveUserProvider,
+    ): NotificationPreferencesStore = NotificationPreferencesStore(context, activeUserProvider)
+
+    @Provides
+    @Singleton
+    fun provideNotificationToastBus(): NotificationToastBus = NotificationToastBus()
+
+    @Provides
+    @Singleton
+    fun provideNotificationToastSink(
+        @ApplicationContext context: Context,
+        bus: NotificationToastBus,
+    ): ToastSink =
+        UiEventToastSink(
+            emit = { event -> bus.publish(event) },
+            resolveMessage = { request ->
+                UiEventToastSink.format(
+                    context = context,
+                    i18nKey = request.i18nKey,
+                    params = request.i18nParams,
+                )
+            },
         )
 
-    @Provides @Singleton
-    fun provideBookDao(a: AppContainer): BookDao = a.bookDao
+    /**
+     * Process-wide foreground signal. The observer attaches on first access, so
+     * constructing the graph never touches ProcessLifecycleOwner.
+     */
+    @Provides
+    @Singleton
+    fun provideAppForegroundSignal(): AppForegroundSignal = ProcessLifecycleAppForegroundSignal.install()
 
-    @Provides @Singleton
-    fun provideHighlightDao(a: AppContainer): HighlightDao = a.highlightDao
+    @Provides
+    @Singleton
+    fun provideNotificationStore(
+        @ApplicationContext context: Context,
+        history: NotificationRepository,
+        toastSink: ToastSink,
+        foreground: AppForegroundSignal,
+        preferences: NotificationPreferencesStore,
+    ): NotificationStore =
+        NotificationStore(
+            history = history,
+            surfaces = NotificationSurfaces(toastSink = toastSink, osNotifier = AndroidOsNotifier(context)),
+            foreground = foreground,
+            preferencesProvider = { preferences.load() },
+        )
 
-    @Provides @Singleton
-    fun provideBookmarkDao(a: AppContainer): BookmarkDao = a.bookmarkDao
+    // ── Lambda seams ────────────────────────────────────────────────────
 
-    @Provides @Singleton
-    fun provideReadingSessionDao(a: AppContainer): ReadingSessionDao = a.readingSessionDao
+    @Provides
+    fun provideProgressSyncProvider(
+        sync: SupabaseProgressSync,
+    ): @JvmSuppressWildcards () -> SupabaseProgressSync = { sync }
 
-    @Provides @Singleton
-    fun provideReadingProgressDao(a: AppContainer): ReadingProgressDao = a.readingProgressDao
+    @Provides
+    fun provideClearAllData(
+        db: AppDatabase,
+    ): @JvmSuppressWildcards () -> Unit = { db.clearAllTables() }
 
-    /** NOTIF-02: Room-backed notification history. */
-    @Provides @Singleton
-    fun provideNotificationDao(a: AppContainer): NotificationDao = a.notificationDao
-
-    /** Reader-selection translation cache DAO (device-local, never synced). */
-    @Provides @Singleton
-    fun provideTranslationCacheDao(a: AppContainer): com.nexo.data.local.dao.TranslationCacheDao = a.appDatabase.translationCacheDao()
-
-    /** Reader-selection definition cache DAO (device-local, never synced). */
-    @Provides @Singleton
-    fun provideDefinitionCacheDao(a: AppContainer): com.nexo.data.local.dao.DefinitionCacheDao = a.appDatabase.definitionCacheDao()
-
-    /** Reader-selection translation (MyMemory, cache-first). */
-    @Provides @Singleton
-    fun provideTranslationRepository(a: AppContainer): com.nexo.domain.repository.TranslationRepository = a.translationRepository
-
-    @Provides @Singleton
-    fun provideNotificationRepository(a: AppContainer): NotificationRepository = a.notificationRepository
-
-    /** U9: persisted notification preferences (system/nudge switches + quiet hours). */
-    @Provides @Singleton
-    fun provideNotificationPreferencesStore(a: AppContainer): com.nexo.data.session.NotificationPreferencesStore = a.notificationPreferencesStore
-
-    /** U7: the single entry point emit sites call. */
-    @Provides @Singleton
-    fun provideNotificationStore(a: AppContainer): com.nexo.domain.notification.NotificationStore = a.notificationStore
-
-    /** U7: process-wide toast channel consumed by the nav host. */
-    @Provides @Singleton
-    fun provideNotificationToastBus(a: AppContainer): com.nexo.presentation.notification.NotificationToastBus = a.notificationToastBus
-
-    @Provides fun provideProgressSyncProvider(a: AppContainer): @JvmSuppressWildcards () -> SupabaseProgressSync =
-        {
-            a.supabaseProgressSync
-        }
-
-    @Provides fun provideClearAllData(a: AppContainer): @JvmSuppressWildcards () -> Unit = { a.clearAllData() }
-
-    @Provides fun provideSyncServiceProvider(a: AppContainer): @JvmSuppressWildcards () -> SyncService = { a.syncService }
+    @Provides
+    fun provideSyncServiceProvider(
+        sync: SyncService,
+    ): @JvmSuppressWildcards () -> SyncService = { sync }
 }
 
 /**
  * Shared factory for the app-lifetime [SyncOrchestrator] singleton.
  *
- * Used by [HiltSingletonsModule.provideSyncOrchestrator] (Hilt graph) and by
- * the manual [AppContainer] graph, so both graphs construct the identical
- * instance type from identical inputs. The default [externalScope] matches
- * the historical manual wiring (SupervisorJob + Default dispatcher).
+ * The default [externalScope] matches the historical manual wiring
+ * (SupervisorJob + Default dispatcher).
  */
 fun createSyncOrchestrator(
     drive: SyncService,
     catalog: SupabaseBookCatalogSync,
     progress: SupabaseProgressSync,
     gate: SessionGate,
-    outboxDao: SyncOutboxDao,
+    outboxDao: com.nexo.data.local.dao.SyncOutboxDao,
     dictionary: DictionarySyncService? = null,
-    externalScope: CoroutineScope =
-        CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    externalScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ): SyncOrchestrator =
     SyncOrchestratorImpl(
         drive = drive,
@@ -218,9 +236,6 @@ fun createSyncOrchestrator(
 
 /**
  * Shared factory for the app-lifetime [SyncSettleGate] singleton.
- *
- * Used by [HiltSingletonsModule.provideSyncSettleGate] (Hilt graph) and by
- * the manual [AppContainer] graph.
  */
 fun createSyncSettleGate(
     orchestrator: SyncOrchestrator,
@@ -234,11 +249,7 @@ fun createSyncSettleGate(
 /**
  * Shared factory for the app-lifetime [InstallDeepLinkController] singleton.
  *
- * Used by [HiltSingletonsModule.provideInstallDeepLinkController] (Hilt
- * graph) and by the manual [AppContainer] graph. The default
- * [mainDispatcher] matches the historical manual wiring (Main dispatcher;
- * the controller owns a Main-scoped StateFlow read by the Compose dialog
- * host).
+ * The default [mainDispatcher] matches the historical manual wiring.
  */
 fun createInstallDeepLinkController(
     registry: AddonRegistryLike,

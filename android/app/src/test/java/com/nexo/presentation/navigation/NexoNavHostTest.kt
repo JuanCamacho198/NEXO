@@ -1,6 +1,6 @@
 package com.nexo.presentation.navigation
 
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.navigation.feature.resolveReaderBookIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

@@ -1,12 +1,8 @@
 package com.nexo.presentation.viewmodel
 
-import com.nexo.R
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
 import com.nexo.data.remote.catalog.BUILTIN_STANDARD_EBOOKS
-import com.nexo.data.remote.catalog.CatalogBook
-import com.nexo.data.remote.catalog.CatalogErrorCode
-import com.nexo.data.remote.catalog.CatalogException
 import com.nexo.data.remote.catalog.CatalogFeaturedSort
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
@@ -17,14 +13,21 @@ import com.nexo.debug.SentryMetrics
 import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.connectivity.FakeConnectivityObserver
+import com.nexo.domain.discover.DiscoverDetailStatus
+import com.nexo.domain.discover.DiscoverRailGroup
+import com.nexo.domain.discover.DiscoverRailState
+import com.nexo.domain.discover.DiscoverSourceFilter
+import com.nexo.domain.discover.DiscoverStatus
 import com.nexo.domain.discover.entriesFor
 import com.nexo.domain.model.Book
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.domain.usecase.DownloadImportState
 import com.nexo.presentation.feature.discover.AccessResolverState
 import com.nexo.presentation.feature.discover.AddonReadState
-import com.nexo.presentation.feature.discover.DiscoverRailState
 import com.nexo.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -45,6 +48,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
+import com.nexo.feature.discover.R as FeatureR
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DiscoverViewModelTest {
@@ -671,16 +675,16 @@ class DiscoverViewModelTest {
     /** Real resource id per rotation term — the same table the rail titles use. */
     private fun topicTitleResFor(term: String): Int =
         when (term) {
-            "science fiction" -> R.string.discover_rail_topic_science_fiction
-            "adventure" -> R.string.discover_rail_topic_adventure
-            "history" -> R.string.discover_rail_topic_history
-            "travel" -> R.string.discover_rail_topic_travel
-            "poetry" -> R.string.discover_rail_topic_poetry
-            "philosophy" -> R.string.discover_rail_topic_philosophy
-            "drama" -> R.string.discover_rail_topic_drama
-            "romance" -> R.string.discover_rail_topic_romance
-            "mystery" -> R.string.discover_rail_topic_mystery
-            "horror" -> R.string.discover_rail_topic_horror
+            "science fiction" -> FeatureR.string.discover_rail_topic_science_fiction
+            "adventure" -> FeatureR.string.discover_rail_topic_adventure
+            "history" -> FeatureR.string.discover_rail_topic_history
+            "travel" -> FeatureR.string.discover_rail_topic_travel
+            "poetry" -> FeatureR.string.discover_rail_topic_poetry
+            "philosophy" -> FeatureR.string.discover_rail_topic_philosophy
+            "drama" -> FeatureR.string.discover_rail_topic_drama
+            "romance" -> FeatureR.string.discover_rail_topic_romance
+            "mystery" -> FeatureR.string.discover_rail_topic_mystery
+            "horror" -> FeatureR.string.discover_rail_topic_horror
             else -> throw AssertionError("no title resource for term: $term")
         }
 
@@ -714,12 +718,14 @@ class DiscoverViewModelTest {
             // Every shelf is titled by its own topic string resource.
             assertEquals(topicTitleResFor(terms.first()), shelves.first().sectionTitleRes)
             // The popular shelf goes through the closed featured ordering.
-            assertEquals(R.string.discover_rail_gutendex_popular, shelves[2].sectionTitleRes)
-            assertEquals(CatalogFeaturedSort.POPULAR, shelves[2].sort)
+            assertEquals(FeatureR.string.discover_rail_gutendex_popular, shelves[2].sectionTitleRes)
+            // `sort` carries the enum's name, not the enum: the rail state lives in
+            // :core:domain, which cannot see :core:data's CatalogFeaturedSort.
+            assertEquals(CatalogFeaturedSort.POPULAR.name, shelves[2].sort)
             assertEquals(BUILTIN_GUTENDEX, shelves[2].sourceId)
             assertEquals(listOf(CatalogFeaturedSort.POPULAR), provider.featuredCalls)
             // The Standard Ebooks shelf goes through its own source, blank term.
-            assertEquals(R.string.discover_rail_standard_ebooks, shelves[3].sectionTitleRes)
+            assertEquals(FeatureR.string.discover_rail_standard_ebooks, shelves[3].sectionTitleRes)
             assertEquals(BUILTIN_STANDARD_EBOOKS, shelves[3].sourceId)
             assertEquals(listOf("Suspense"), shelves[3].books.map { it.title })
             // One Gutendex TOPIC query per topic shelf, one Standard Ebooks query.

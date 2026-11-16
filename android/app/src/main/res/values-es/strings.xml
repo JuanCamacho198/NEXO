@@ -1,468 +1,550 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">NEXO</string>
-    <string name="app_logo_initials">N</string>
-    <string name="auth_config_error_google_unavailable">Error de configuracion: el inicio de sesion con Google no esta disponible porque el ID de cliente OAuth no esta configurado. Podes continuar usando funciones de biblioteca local.</string>
-    <string name="auth_continue_with_google">Continuar con Google</string>
-    <string name="auth_continue_with_email">Continuar con correo</string>
-    <string name="auth_google_disabled_loading">El inicio de sesion con Google esta en progreso.</string>
-    <string name="auth_google_disabled_config_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion (falta el ID de cliente OAuth).</string>
-    <string name="auth_google_disabled_wiring_error">El inicio de sesion con Google esta deshabilitado por un error de configuracion.</string>
-    <string name="auth_wiring_error_incomplete">Error de configuracion: la configuracion OAuth de Google esta incompleta. Verifica la configuracion OAuth. La lectura local sigue disponible.</string>
-    <string name="auth_email_label">Correo electrónico</string>
-    <string name="auth_password_label">Contraseña</string>
-    <string name="auth_sign_in">Iniciar sesión</string>
-    <string name="auth_sign_up">Registrarse</string>
-    <string name="auth_continue_local_dev">Continuar en local (Dev)</string>
-    <string name="auth_failure_config_error_with_details">Error de configuracion: %1$s. Continua en modo local hasta corregir la configuracion.</string>
-    <string name="auth_failure_wiring_error_with_details">Error de conexion: %1$s. Continua en modo local mientras se corrige la conexion.</string>
-    <string name="auth_welcome_title">¡Bienvenido!</string>
-    <string name="auth_login_subtitle">Inicia sesión para mantener tu biblioteca sincronizada.</string>
-    <string name="auth_forgot_password">Olvidé mi contraseña</string>
-    <string name="auth_login_action">Iniciar sesión</string>
-    <string name="auth_or_login_with">O INICIA SESIÓN CON</string>
-    <string name="auth_register_footer_prefix">¿No tienes una cuenta?</string>
-    <string name="auth_register_footer_link">Regístrate</string>
-    <string name="auth_register_title">Crea tu cuenta</string>
-    <string name="auth_full_name_label">Nombre completo</string>
-    <string name="auth_full_name_placeholder">ej. Ana García</string>
-    <string name="auth_password_hint">Mínimo 8 caracteres, con letras y números.</string>
-    <string name="auth_register_action">Registrarse</string>
-    <string name="auth_or_register_with">O REGÍSTRATE CON</string>
-    <string name="auth_login_footer_prefix">¿Ya tienes cuenta?</string>
-    <string name="auth_login_footer_link">Inicia sesión</string>
-    <string name="auth_forgot_title">Restablecer contraseña</string>
-    <string name="auth_forgot_subtitle">Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.</string>
-    <string name="auth_send_reset_email">Enviar correo de recuperación</string>
-    <string name="auth_reset_email_sent">Correo de recuperación enviado. Revisa tu bandeja de entrada.</string>
-    <string name="auth_password_show">Mostrar contraseña</string>
-    <string name="auth_password_hide">Ocultar contraseña</string>
-    <string name="auth_signup_stale_session">Este correo ya está registrado o la verificación está pendiente — revisa tu bandeja o inicia sesión</string>
-    <string name="auth_mock_google_button">Mock Google jcamachomolina503</string>
-    <string name="auth_google_unexpected_credential">Tipo de credencial inesperado: %1$s</string>
-    <string name="auth_google_no_credential">No hay ninguna cuenta de Google disponible en este dispositivo. Agrega una en los ajustes del dispositivo y vuelve a intentarlo.</string>
-    <string name="auth_google_credential_interrupted">El inicio de sesión se interrumpió. Inténtalo de nuevo.</string>
-    <string name="auth_google_credential_network_error">Sin conexión. Revisa tu internet y vuelve a intentarlo.</string>
-    <string name="auth_google_credential_error_generic">No pudimos iniciar sesión con Google. Inténtalo de nuevo.</string>
-    <string name="auth_google_credential_unknown">Algo salió mal al iniciar sesión con Google. Inténtalo de nuevo.</string>
-    <string name="auth_google_unexpected_error">Error inesperado: %1$s</string>
-    <string name="highlights_title">Resaltados</string>
-    <string name="highlights_subtitle">Tus notas y pasajes destacados</string>
-    <string name="highlights_tab_all">Todos</string>
-    <string name="highlights_tab_quotes">Citas</string>
-    <string name="highlights_tab_ideas">Ideas</string>
-    <string name="highlights_tab_passages">Pasajes</string>
-    <string name="highlights_recent">Recientes</string>
-    <string name="highlights_summary_quotes">Citas</string>
-    <string name="highlights_summary_ideas">Ideas</string>
-    <string name="highlights_summary_passages">Pasajes</string>
-    <string name="highlights_summary_favorites">Favoritos</string>
-    <string name="highlights_quote_content">"El conocimiento es poder."</string>
-    <string name="highlights_quote_author">Francis Bacon</string>
-    <string name="highlights_idea_content">La consistencia diaria construye resultados.</string>
-    <string name="settings_title">Ajustes</string>
-    <string name="settings_subtitle">Personaliza tu experiencia en NEXO.</string>
-    <string name="settings_account_section">Cuenta</string>
-    <string name="settings_preferences_section">Preferencias</string>
-    <string name="settings_pref_theme">Tema</string>
-    <string name="settings_pref_font_size">Tamaño de fuente</string>
-    <string name="settings_pref_sync">Sincronización</string>
-    <string name="settings_pref_about">Acerca de</string>
-    <string name="settings_pref_notifications">Notificaciones</string>
-    <string name="settings_user_default">Usuario</string>
-    <string name="settings_email_placeholder">email@ejemplo.com</string>
-    <string name="settings_logout">Cerrar sesión</string>
-    <string name="settings_logout_title">Cerrar sesión</string>
-    <string name="settings_logout_message">¿Estás seguro de que deseas cerrar sesión? Los datos no sincronizados podrían perderse.</string>
-    <string name="settings_logout_confirm">Cerrar sesión</string>
-    <string name="settings_lectura_section">Lectura</string>
-    <string name="settings_pref_reading_theme">Tema de lectura</string>
-    <string name="settings_pref_line_height">Interlineado</string>
-    <string name="settings_apariencia_section">Apariencia</string>
-    <string name="settings_pref_language">Idioma</string>
-    <string name="settings_datos_section">Datos</string>
-    <string name="settings_pref_storage">Almacenamiento</string>
-    <string name="settings_pref_stats">Estadísticas</string>
-    <string name="settings_info_section">Información</string>
-    <string name="settings_language_title">Idioma</string>
-    <string name="settings_language_spanish">Español</string>
-    <string name="settings_language_english">English</string>
-    <string name="settings_language_system">Seguir dispositivo</string>
-    <string name="home_welcome">Bienvenido de nuevo</string>
-    <string name="home_greeting">Hola, %1$s</string>
-    <string name="home_subtitle">¿Qué vas a leer hoy?</string>
-    <string name="home_continue_reading">Continuar leyendo</string>
-    <string name="home_no_book_in_progress">Sin libro en progreso</string>
-    <string name="home_continuar">Continuar</string>
-    <string name="home_last_read_just_now">Última lectura: recién</string>
-    <string name="home_last_read_hours_ago">Última lectura: hace %1$d h</string>
-    <string name="home_last_read_yesterday">Última lectura: ayer</string>
-    <string name="home_last_read_days_ago">Última lectura: hace %1$d días</string>
-    <string name="home_progress_percent">%1$d%%</string>
-    <string name="home_chapter_count">Capítulo %1$d</string>
-    <string name="home_sessions">Sesiones</string>
-    <string name="home_progress">Progreso</string>
-    <string name="home_minutes">Minutos</string>
-    <string name="home_minutes_read_today">%1$d minutos leídos hoy</string>
-    <string name="home_my_bookshelf">Mi estantería</string>
-    <string name="home_my_bookshelf_title">Mi biblioteca</string>
-    <string name="home_view_all">Ver todo</string>
-    <string name="home_ver_todo">Ver todo</string>
-    <string name="home_import_epub">Importar EPUB</string>
-    <string name="home_import_pdf">Importar PDF</string>
-    <string name="home_action_import_epub">Importar EPUB</string>
-    <string name="home_action_import_pdf">Importar PDF</string>
-    <string name="home_action_notes">Notas</string>
-    <string name="home_no_current_book">Sin libro en curso</string>
-    <string name="home_bookshelf_empty_title">Tu estanter\u00eda est\u00e1 vac\u00eda</string>
-    <string name="home_bookshelf_empty_subtitle">Import\u00e1 un libro para empezar tu biblioteca.</string>
-    <string name="home_today_summary">Resumen de hoy</string>
-    <string name="home_today_summary_title">Resumen de hoy</string>
-    <string name="home_streak_days">d\u00edas</string>
-    <!-- Onboarding goal -->
-    <string name="onboarding_goal_header">Tu meta diaria</string>
-    <string name="onboarding_goal_hero_title">Establece tu ritmo</string>
-    <string name="onboarding_goal_hero_subtitle">Elegir una meta diaria te ayuda a mantener el hábito de la lectura.</string>
-    <string name="onboarding_goal_option_relaxed">Relajado</string>
-    <string name="onboarding_goal_option_relaxed_desc">Para lectores casuales</string>
-    <string name="onboarding_goal_option_relaxed_value">10 min/día</string>
-    <string name="onboarding_goal_option_regular">Regular</string>
-    <string name="onboarding_goal_option_regular_desc">Un buen hábito diario</string>
-    <string name="onboarding_goal_option_regular_value">20 min/día</string>
-    <string name="onboarding_goal_option_serious">Serio</string>
-    <string name="onboarding_goal_option_serious_desc">Para devoradores de libros</string>
-    <string name="onboarding_goal_option_serious_value">30 min/día</string>
-    <string name="onboarding_goal_option_intense">Intenso</string>
-    <string name="onboarding_goal_option_intense_desc">Inmersión profunda</string>
-    <string name="onboarding_goal_option_intense_value">Más de 40 min/día</string>
-    <string name="onboarding_goal_action">Establecer meta</string>
-    <string name="onboarding_goal_footer_note">Puedes cambiar esta configuración más tarde en Ajustes.</string>
-    <!-- Onboarding notifications (post-goal, Duolingo-style) -->
-    <string name="onboarding_notifications_title">No pierdas tu racha</string>
-    <string name="onboarding_notifications_body">Activa los recordatorios y te avisaremos antes de que termine el día, para que tu racha de lectura siga viva.</string>
-    <string name="onboarding_notifications_benefit_reminders">Un recordatorio diario a la hora adecuada</string>
-    <string name="onboarding_notifications_benefit_streak">Alertas de racha antes de perderla</string>
-    <string name="onboarding_notifications_benefit_quiet">Puedes cambiar esto cuando quieras en Ajustes</string>
-    <string name="onboarding_notifications_enable">Activar notificaciones</string>
-    <string name="onboarding_notifications_skip">Ahora no</string>
-    <string name="onboarding_notifications_open_settings">Abrir ajustes del sistema</string>
-    <string name="onboarding_notifications_blocked_hint">Las notificaciones están desactivadas para NEXO. Actívalas en los ajustes del sistema.</string>
-    <string name="home_nexo_title">NEXO</string>
-    <string name="home_avatar_content_description">Abrir cuenta</string>
-    <string name="home_streak_badge_content_description">Racha de lectura: %1$d días</string>
-    <string name="home_search_results">Resultados</string>
-    <string name="nav_home">Inicio</string>
-    <string name="nav_library">Estantería</string>
-    <string name="nav_discover">Descubrir</string>
-    <string name="discover_search">Buscar</string>
-    <string name="discover_search_hint">Buscar en el catálogo</string>
-    <string name="discover_idle">Busca en el catálogo para encontrar tu próxima lectura.</string>
-    <string name="discover_empty">Sin resultados.</string>
-    <string name="discover_end_of_results">· Fin de los resultados ·</string>
-    <string name="discover_retry">Reintentar</string>
-    <string name="discover_loading">Cargando…</string>
-    <string name="discover_loading_more">Cargando más…</string>
-    <string name="discover_offline">Parece que estás sin conexión. Revisa tu red e inténtalo de nuevo.</string>
-    <string name="discover_error_upstream">El catálogo no está disponible ahora. Inténtalo más tarde.</string>
-    <string name="discover_error_invalid_page">Solicitud de página no válida.</string>
-    <string name="discover_error_not_found">Sin resultados del catálogo para esta búsqueda.</string>
-    <string name="discover_detail_not_found">Este título ya no está disponible en el catálogo.</string>
-    <string name="discover_dismiss">Cerrar</string>
-    <string name="discover_download">Descargar EPUB</string>
-    <string name="discover_download_cancel">Cancelar descarga</string>
-    <string name="discover_imported">Ya está en tu estantería</string>
-    <string name="discover_duplicate">Este libro ya está en tu biblioteca.</string>
-    <string name="discover_download_failed">No pudimos descargar el libro. Intentá de nuevo.</string>
-    <string name="discover_by_authors">por %1$s</string>
-    <string name="discover_languages">Idiomas: %1$s</string>
-    <string name="discover_subjects">Temas: %1$s</string>
-    <!-- discover-screen U1: shell, states, connectivity -->
-    <string name="discover_title">Descubrir</string>
-    <string name="discover_subtitle">Catálogo Open Library + Gutendex</string>
-    <string name="discover_avatar_content_desc">Tu perfil</string>
-    <string name="discover_results_count">%1$d resultados</string>
-    <string name="discover_searching">Buscando…</string>
-    <string name="discover_clear_content_desc">Borrar búsqueda</string>
-    <string name="discover_trending_all">Más buscados</string>
-    <string name="discover_trending_popular">Populares</string>
-    <string name="discover_trending_scifi">Ciencia ficción</string>
-    <string name="discover_trending_classics">Clásicos</string>
-    <string name="discover_empty_title">Sin resultados</string>
-    <string name="discover_empty_body">No encontramos nada para «%1$s». Probá con otra búsqueda:</string>
-    <string name="discover_suggestion_1">Cortázar</string>
-    <string name="discover_suggestion_2">Cuentos</string>
-    <string name="discover_suggestion_3">Ciencia ficción</string>
-    <string name="discover_error_title">No se pudo conectar</string>
-    <string name="discover_error_body">Revisá tu conexión e intentá de nuevo. Podés reintentar cuando quieras.</string>
-    <string name="discover_offline_title">Estás sin conexión</string>
-    <string name="discover_offline_body">No podés explorar el catálogo sin internet, pero tu Estantería sigue disponible offline.</string>
-    <string name="discover_view_all">Ver todo</string>
-    <string name="discover_source_filter_all">Todos</string>
-    <string name="discover_source_addon_fallback">Complemento</string>
-    <string name="discover_rail_from">De %1$s</string>
-    <string name="discover_manage_addons">Gestionar addons</string>
-    <string name="settings_manage_addons">Gestionar addons (beta)</string>
-    <string name="discover_idle_source_empty">No hay destacados de %1$s. Elegí otra fuente para ver las estanterías.</string>
-    <!-- U2: atribución de Google Books + aviso de key ausente (voseo) -->
-    <string name="google_books_attribution">Con tecnología de Google</string>
-    <string name="discover_google_books_disabled">Google Books está deshabilitado (falta la API key). Mostrando resultados de Open Library + Gutenberg.</string>
+    <string name="aa_close_settings">Cerrar</string>
+    <!-- Reader / aA Settings -->
     <!-- U3: etiquetas de grupos de acceso (voseo) -->
-    <string name="access_group_free">Gratis</string>
-    <string name="access_group_buy">Comprar</string>
-    <string name="access_group_subscribe">Suscripción</string>
-    <string name="discover_back">Volver</string>
-    <string name="discover_rail_newest">Recién agregados al catálogo</string>
-    <string name="discover_rail_popular">Populares del catálogo</string>
-    <string name="discover_rail_gutendex_popular">Clásicos más descargados</string>
-    <string name="discover_rail_standard_ebooks">Standard Ebooks: novedades</string>
-    <string name="discover_error_rate_limited">El catálogo está limitando las solicitudes. Inténtalo de nuevo en un momento.</string>
-    <string name="discover_rail_group_google_books">Google Books</string>
-    <string name="discover_rail_group_gutendex">Gutendex</string>
-    <string name="discover_rail_group_standard_ebooks">Standard Ebooks</string>
-    <string name="discover_rail_group_failed">No se pudieron cargar las estanterías de %1$s.</string>
-    <!-- S2: títulos de los estantes por tema de Gutendex (términos medidos en vivo) -->
-    <string name="discover_rail_topic_science_fiction">Ciencia ficción</string>
-    <string name="discover_rail_topic_adventure">Aventura</string>
-    <string name="discover_rail_topic_history">Historia</string>
-    <string name="discover_rail_topic_travel">Viajes</string>
-    <string name="discover_rail_topic_poetry">Poesía</string>
-    <string name="discover_rail_topic_philosophy">Filosofía</string>
-    <string name="discover_rail_topic_drama">Teatro</string>
-    <string name="discover_rail_topic_romance">Romance</string>
-    <string name="discover_rail_topic_mystery">Misterio</string>
-    <string name="discover_rail_topic_horror">Terror</string>
-    <string name="discover_section_subtitle">«%1$s» · %2$d resultados</string>
-    <string name="discover_detail_subjects_label">TEMAS</string>
-    <string name="discover_detail_description_label">DESCRIPCIÓN</string>
-    <string name="discover_format_epub">EPUB</string>
-    <string name="discover_format_html">HTML</string>
-    <string name="discover_format_mobi">MOBI</string>
-    <string name="discover_format_pdf">PDF</string>
-    <string name="discover_format_txt">TXT</string>
-    <string name="discover_detail_external_gutenberg">Ver en Project Gutenberg</string>
-    <string name="discover_detail_external_openlibrary">Ver en Open Library</string>
-    <string name="nav_highlights">Resaltados</string>
-    <string name="nav_settings">Ajustes</string>
-    <string name="nav_book_detail">Detalle del libro</string>
-    <string name="book_detail_loading">Cargando...</string>
-    <string name="book_detail_error_not_found">Libro no encontrado</string>
-    <string name="book_detail_synopsis">Sinopsis</string>
-    <string name="book_detail_show_more">Ver más</string>
-    <string name="book_detail_show_less">Ver menos</string>
-    <string name="book_detail_no_synopsis">Sin sinopsis disponible</string>
-    <string name="book_detail_pages_label">Páginas</string>
-    <string name="book_detail_chapters_label">Capítulos</string>
-    <string name="book_detail_progress_label">Progreso</string>
-    <string name="book_detail_last_read_label">Última lectura</string>
-    <string name="book_detail_na">N/D</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_ok">Aceptar</string>
+    <!-- U5: addon capabilities -->
+    <string name="addon_capability_detail_body">Lo que este complemento declara que puede hacer con tus consultas del catálogo. Otorgá acceso solo si confiás en esta fuente.</string>
+    <string name="addon_capability_detail_title">Capacidades de %1$s</string>
+    <string name="addon_consent_state_granted">Acceso otorgado: este complemento puede resolver enlaces de lectura.</string>
+    <string name="addon_consent_state_missing">Acceso no otorgado: este complemento no va a resolver enlaces de lectura.</string>
+    <!-- U5: addon consent/disclosure (deferred from 4.3) -->
+    <!-- U5: addon read sheet -->
+    <string name="annotation_modal_close">Cerrar</string>
+    <string name="annotation_snippet_label">Texto seleccionado</string>
+    <string name="annotation_textarea_comment_hint">Escribí tu comentario…</string>
+    <string name="annotation_textarea_note_hint">Escribí tu nota…</string>
+    <string name="app_name">NEXO</string>
+    <!-- Auth snackbars -->
+    <string name="auth_snackbar_reset_email_sent">Correo de restablecimiento enviado</string>
+    <!-- Download from other devices -->
+    <string name="book_available_from_other_device">Disponibles desde otros dispositivos</string>
+    <string name="book_card_edit_metadata">Editar metadatos</string>
+    <!-- Book card -->
+    <string name="book_card_options">Opciones</string>
+    <string name="book_card_progress">Progreso de lectura: %1$d por ciento</string>
+    <string name="book_card_remove_from_library">Eliminar de estantería</string>
     <string name="book_detail_estimated_pages">≈%1$d</string>
-    <string name="book_detail_continue_reading">Continuar leyendo</string>
-    <string name="book_detail_start_reading">Empezar a leer</string>
-    <string name="book_detail_page_x_of_y">Página %1$d / %2$d</string>
-    <string name="book_detail_page_x">Página %1$d</string>
-    <string name="book_detail_progress_percent">%1$d%% completado</string>
-    <string name="book_detail_no_pages">-- / --</string>
-    <string name="book_detail_rating_content_description">Calificar %1$d estrella(s)</string>
-    <string name="book_detail_my_rating">Mi calificación</string>
-    <string name="book_detail_rating_value">%1$.1f/5</string>
-    <string name="book_detail_meta_format">Formato</string>
-    <string name="book_detail_meta_language">Idioma</string>
-    <string name="book_detail_meta_publisher">Editorial</string>
-    <string name="book_detail_meta_published">Publicado</string>
-    <string name="book_detail_meta_pages">Páginas</string>
-    <string name="book_detail_meta_size">Tamaño</string>
-    <string name="book_detail_show_more_chevron">Ver más</string>
-    <string name="book_detail_genres">Géneros</string>
-    <string name="book_detail_chapter_x_of_y">Capítulo %1$d de %2$d</string>
-    <string name="book_detail_pages_of">%1$d / %2$d páginas</string>
-    <string name="book_detail_share_content_description">Compartir libro</string>
-    <string name="book_detail_more_content_description">Más opciones</string>
     <string name="book_detail_rating_star_full">%1$d estrellas</string>
     <string name="book_detail_rating_star_half">%1$.1f estrellas</string>
-    <!-- Remove book (2-step) — mirrors desktop RemoveBookModal -->
-    <string name="library_remove_title">¿Quitar de la estantería?</string>
-    <string name="library_remove_message">Se quitará &quot;%1$s&quot; de tu estantería.</string>
-    <string name="library_remove_continue">Continuar</string>
-    <string name="library_remove_cancel">Cancelar</string>
-    <string name="library_remove_local_only">Solo local</string>
-    <string name="library_remove_local_only_subtitle">Quita de esta biblioteca. El archivo en Drive se conserva.</string>
-    <string name="library_remove_local_and_drive">Local y Drive</string>
-    <string name="library_remove_local_and_drive_subtitle">Mueve a la papelera de Drive y registra el borrado.</string>
-
-    <!-- Library / Bookshelf - New Pencil design -->
-    <string name="library_empty">Todavía no hay libros locales.</string>
-    <string name="library_import_epub">Importar EPUB</string>
-    <string name="library_import_pdf">Importar PDF</string>
-    <string name="library_import_success">Se importó "%1$s"</string>
-    <string name="library_import_failure">Error al importar: %1$s</string>
-    <string name="library_open">Abrir</string>
-    <string name="library_author_unknown">Autor desconocido</string>
-    <string name="library_last_updated">Actualizado: %1$s</string>
-    <string name="library_cover_placeholder">Sin portada</string>
-    <string name="library_layout_list">Lista</string>
-    <string name="library_layout_grid">Cuadrícula</string>
-    <string name="library_total_minutes_read">Total leído: %1$d minutos</string>
-    <string name="library_item_minutes_read">Leído: %1$d minutos</string>
-    <string name="library_delete_title">Eliminar libro</string>
-    <string name="library_delete_message">¿Estás seguro de eliminar &quot;%1$s&quot;?</string>
-    <string name="library_delete_confirm">Eliminar</string>
-    <string name="library_search_placeholder">Buscar libros...</string>
-    <string name="library_filter_label">Filtrar</string>
-    <string name="library_tab_all">Todos</string>
-    <string name="library_tab_reading">Leyendo</string>
-    <string name="library_tab_pending">Pendientes</string>
-    <string name="library_tab_completed">Completados</string>
-    <string name="library_sort_label">Ordenar por:</string>
-    <string name="library_sort_date_added">Fecha agregada</string>
-    <string name="library_sort_title">Título</string>
-    <string name="library_sort_author">Autor</string>
-    <string name="library_sort_last_read">Última lectura</string>
-    <string name="library_add_book">Añadir libro</string>
-    <string name="library_import_book">Importar libro</string>
-    <string name="library_import_formats">Formatos soportados: EPUB, PDF</string>
-    <string name="library_import_unsupported">Formato no soportado. Solo se permiten archivos EPUB y PDF.</string>
-    <string name="library_status_in_progress">%1$d min</string>
-    <string name="library_status_completed">Completado</string>
-    <string name="library_filter_format_label">Formato</string>
-    <string name="library_filter_format_all">Todos</string>
-    <string name="library_search_no_results">Sin resultados</string>
-    <string name="library_search_empty_subtitle">Prob\u00e1 con otro t\u00e9rmino de b\u00fasqueda.</string>
-
-    <!-- Bookmarks -->
-    <string name="bookmarks_tab">Marcadores (%1$d)</string>
-    <string name="bookmarks_empty">Aún no hay marcadores</string>
-    <string name="bookmark_location">Ubicación: %1$s</string>
-
-    <!-- PDF -->
-    <string name="pdf_page_description">Página %1$d de %2$d</string>
-    <string name="pdf_loading">Cargando PDF...</string>
-
-    <!-- Notifications -->
-    <string name="notifications_title">Notificaciones</string>
-    <string name="notifications_empty">No tenés notificaciones aún</string>
-    <string name="notifications_mock_welcome_title">¡Bienvenido a NEXO!</string>
-    <string name="notifications_mock_welcome_body">Empezá a leer tu primer libro.</string>
-    <string name="notifications_mock_streak_title">Meta de lectura</string>
-    <string name="notifications_mock_streak_body">Completaste 3 días de lectura consecutiva. ¡Seguí así!</string>
-    <string name="notifications_mock_library_title">Nuevo libro disponible</string>
-    <string name="notifications_mock_library_body">Explorá los libros en tu estantería.</string>
-    <string name="notifications_badge_content_description">Notificaciones sin leer</string>
-
-    <!-- Mensajes de eventos de notificación (se renderizan desde la clave i18n almacenada) -->
-    <string name="notifications_event_import_success">Importación finalizada: %1$s</string>
-    <string name="notifications_event_import_error">La importación falló: %1$s</string>
-    <string name="notifications_event_sync_success">Sincronización completa</string>
-    <string name="notifications_event_sync_error">La sincronización falló: %1$s</string>
-    <string name="notifications_event_addons_success">Complemento instalado</string>
-    <string name="notifications_event_addons_error">El complemento falló</string>
-    <string name="notifications_event_update_info">Actualización disponible</string>
-    <string name="notifications_event_library_success">Biblioteca actualizada</string>
-    <string name="notifications_event_streak_success">Racha mantenida</string>
-    <string name="notifications_event_streak_warning">Tu racha está en riesgo</string>
-    <string name="notifications_event_streak_error">Racha perdida</string>
-    <string name="notifications_event_goal_success">Meta diaria alcanzada</string>
-    <string name="notifications_event_goal_info">Meta de lectura</string>
-    <string name="notifications_event_goal_warning">Leé para alcanzar tu meta</string>
-    <string name="notifications_event_goal_error">No alcanzaste tu meta</string>
-
-    <!-- Notification OS channel -->
-    <string name="notifications_channel_name">Notificaciones</string>
-    <string name="notifications_channel_description">Novedades de importación, sincronización y lectura</string>
-
-    <!-- Tray relative timestamps -->
-    <string name="notifications_time_now">Ahora mismo</string>
-    <string name="notifications_time_minutes">Hace %1$d min</string>
-    <string name="notifications_time_hours">Hace %1$d h</string>
-    <string name="notifications_time_days">Hace %1$d d</string>
-    <string name="notifications_group_count">%1$d</string>
-
-    <!-- Reader / Sleep Timer -->
-    <string name="reader_sleep_timer">Temporizador</string>
-    <string name="reader_sleep_timer_end_of_chapter">Fin de capítulo</string>
-    <string name="reader_sleep_timer_end_of_chapter_desc">Detiene al cambiar de capítulo</string>
-    <string name="reader_sleep_timer_finished_chapter_title">Fin del capítulo</string>
-    <string name="reader_sleep_timer_finished_chapter_body">Llegaste al final del capítulo.</string>
-    <string name="reader_sleep_timer_start">Iniciar temporizador</string>
-    <string name="reader_sleep_timer_5min">5 min</string>
-    <string name="reader_sleep_timer_10min">10 min</string>
-    <string name="reader_sleep_timer_15min">15 min</string>
-    <string name="reader_sleep_timer_30min">30 min</string>
-    <string name="reader_sleep_timer_cancel">Cancelar temporizador</string>
-    <string name="reader_sleep_timer_sheet_title">Temporizador de lectura</string>
-    <string name="reader_sleep_timer_remaining_label">Tiempo restante:</string>
-    <string name="reader_sleep_timer_change_duration">Cambiar duración</string>
-    <string name="reader_sleep_timer_choose_duration">Elegí una duración</string>
-    <string name="reader_sleep_timer_finished_title">¡Se acabó el tiempo!</string>
-    <string name="reader_sleep_timer_finished_message">Tu tiempo de lectura terminó.</string>
-    <string name="reader_sleep_timer_tap_to_dismiss">Toca cualquier lugar para seguir leyendo</string>
-
-    <!-- Reader -->
-    <string name="reader_placeholder">El motor de renderizado del lector estará disponible próximamente.</string>
-    <string name="reader_selected_book">Libro: %1$s</string>
-    <string name="reader_no_progress">Aún no hay progreso local para este libro.</string>
-    <string name="reader_progress_cfi">CFI: %1$s</string>
-    <string name="reader_progress_percent">Progreso: %1$.1f%%</string>
-    <string name="reader_mark_quarter">Marcar 25%%</string>
-    <string name="reader_mark_three_quarter">Marcar 75%%</string>
-
-    <!-- Reader / Settings Sheet -->
-    <string name="reader_settings_sheet_title">Ajustes de lectura</string>
-    <string name="reader_settings_close">Cerrar</string>
-    <string name="reader_settings_font_size_section">Tamaño de fuente</string>
-    <string name="reader_settings_theme_section">Tema de fondo</string>
-    <string name="reader_settings_line_height_section">Interlineado</string>
-    <string name="reader_font_size_small">Chico</string>
-    <string name="reader_font_size_medium">Mediano</string>
-    <string name="reader_font_size_large">Grande</string>
-    <string name="reader_font_size_xlarge">Muy grande</string>
-    <string name="reader_theme_dark">Oscuro</string>
-    <string name="reader_theme_sepia">Sepia</string>
-    <string name="reader_theme_light">Claro</string>
-    <string name="reader_line_height_tight">Apretado</string>
-    <string name="reader_line_height_normal">Normal</string>
-    <string name="reader_line_height_comfortable">Cómodo</string>
-    <string name="reader_line_height_wide">Amplio</string>
-    <string name="reader_progress_empty">-- / --</string>
-
-    <!-- Reader / Search -->
-    <string name="search_input_hint">Buscar en el libro…</string>
-    <string name="search_clear">Limpiar búsqueda</string>
-    <string name="search_results_count">Resultados (%1$d)</string>
-    <string name="search_no_results">Sin resultados</string>
-    <string name="search_error_retry">Error al buscar. Intentá de nuevo.</string>
-    <string name="search_result_chapter">Capítulo %1$d</string>
-    <string name="search_label">Buscar</string>
-
-    <!-- Reader / Highlights Panel -->
-    <string name="highlight_filter_all">Todos</string>
-    <string name="highlight_filter_yellow">Amarillo</string>
-    <string name="highlight_filter_orange">Naranja</string>
-    <string name="highlight_filter_red">Rojo</string>
-    <string name="highlight_filter_green">Verde</string>
-    <string name="highlight_filter_blue">Azul</string>
-
-    <!-- Reader / Text Selection -->
-    <string name="text_selection_copy">Copiar</string>
-    <string name="text_selection_translate">Traducir</string>
-    <string name="text_selection_define">Definir</string>
-    <string name="definition_loading">Buscando…</string>
-    <string name="definition_close">Cerrar</string>
-    <string name="definition_no_definition">No se encontró definición para esta palabra.</string>
-    <string name="definition_no_service">Las definiciones necesitan conexión.</string>
-    <string name="definition_service_failed">El servicio de diccionario falló.</string>
-    <string name="definition_translated_mark">Traducido automáticamente — puede ser impreciso.</string>
+    <string name="book_download">Descargar</string>
+    <string name="book_downloading">Descargando…</string>
+    <!-- Navigation errors -->
+    <string name="book_not_found">Libro no encontrado</string>
+    <string name="cloud_books_loading">Cargando libros de la nube…</string>
+    <string name="color_picker_confirm">Tocá un preset o escribí un hex</string>
+    <string name="comment_modal_title">Nuevo Comentario</string>
+    <string name="context_menu_annotate">Anotar</string>
+    <string name="context_menu_color">Color</string>
+    <string name="context_menu_delete">Eliminar</string>
+    <string name="context_menu_dictionary">Agregar al diccionario</string>
+    <!-- Descripción de contenido corta y estable para el icono de la acción de
+         diccionario (sin texto). Separada de `context_menu_dictionary` para que
+         la etiqueta larga no pueda convertirse en el selector por accidente. -->
+    <string name="context_menu_dictionary_action">Diccionario</string>
+    <!-- Context Menu -->
+    <string name="context_menu_more">Más opciones</string>
+    <string name="context_menu_share">Compartir</string>
+    <string name="context_menu_tag">Etiqueta</string>
+    <string name="debug_action_clear_log">Limpiar registro</string>
+    <string name="debug_action_copy_log">Copiar registro</string>
+    <string name="debug_action_force_color">Forzar cnVL6</string>
+    <string name="debug_action_force_context">Forzar FaPN3</string>
+    <string name="debug_action_inspect_html">Inspeccionar HTML</string>
+    <string name="debug_action_log_webview">Log de WebView</string>
+    <string name="debug_action_simulate_tap">Simular toque</string>
+    <string name="debug_close">Cerrar</string>
+    <string name="debug_crash_channel_description">Notifica cuando la app crasheó en un inicio anterior</string>
+    <!-- Debug: notificación de crash + detalle -->
+    <string name="debug_crash_channel_name">Reportes de crash (debug)</string>
+    <string name="debug_crash_copy">Copiar al portapapeles</string>
+    <string name="debug_crash_detail_title">Último crash</string>
+    <string name="debug_crash_notification_body">Toca para ver el stacktrace</string>
+    <string name="debug_crash_notification_title">NEXO crasheó (debug)</string>
+    <string name="debug_crash_share">Compartir</string>
+    <string name="debug_decorations_activation_count">Activaciones</string>
+    <string name="debug_decorations_active">Activas</string>
+    <string name="debug_decorations_last_applied">Último aplicadas</string>
+    <string name="debug_decorations_last_group">Último grupo</string>
+    <string name="debug_decorations_last_id">Último id</string>
+    <string name="debug_decorations_last_rect">Último rect</string>
+    <string name="debug_decorations_listener_registered">Listener registrado</string>
+    <string name="debug_kv_active_highlight_id">id resaltado activo</string>
+    <string name="debug_kv_am_installed">instalado</string>
+    <string name="debug_kv_am_last_event">último evento</string>
+    <string name="debug_kv_am_last_type">tipo</string>
+    <string name="debug_kv_am_suppressed">suprimidos</string>
+    <string name="debug_kv_debounce_remaining_ms">debounce (ms)</string>
+    <string name="debug_kv_hl_activations">activaciones</string>
+    <string name="debug_kv_hl_last_id">último id</string>
+    <string name="debug_kv_hl_last_rect">último rect</string>
+    <string name="debug_kv_hl_registered">listener registrado</string>
+    <string name="debug_kv_selected_text">texto seleccionado</string>
+    <string name="debug_kv_selection_rect">rect de selección</string>
+    <string name="debug_log_copied">Registro copiado al portapapeles</string>
+    <string name="debug_log_viewer_copy_all">Copiar todo</string>
+    <string name="debug_log_viewer_crash_logs">Registros al crash</string>
+    <string name="debug_log_viewer_crash_logs_more">... y %1$d más</string>
+    <string name="debug_log_viewer_crash_stack">Stack Trace</string>
+    <string name="debug_log_viewer_crash_thread">Thread: %1$s</string>
+    <string name="debug_log_viewer_no_crashes">No hay crashes registrados</string>
+    <string name="debug_log_viewer_no_logs">Todavía no hay registros</string>
+    <string name="debug_log_viewer_share">Compartir</string>
+    <string name="debug_log_viewer_tab_crashes">Crashes</string>
+    <string name="debug_log_viewer_tab_live">Registros en vivo</string>
+    <!-- Debug: Visor de registros -->
+    <string name="debug_log_viewer_title">Visor de registros</string>
+    <string name="debug_panel_cancel">Cancelar</string>
+    <string name="debug_panel_clear_cache">Borrar caché</string>
+    <string name="debug_panel_clear_cache_confirm_action">Borrar</string>
+    <string name="debug_panel_clear_cache_confirm_message">Elimina archivos en caché (imágenes, caché de libros extraídos, catálogo). Los libros y el progreso se conservan.</string>
+    <string name="debug_panel_clear_cache_confirm_title">Borrar caché</string>
+    <string name="debug_panel_clear_cache_done">Se borraron %1$d entradas (%2$d bytes)</string>
+    <string name="debug_panel_recent_errors_empty">No hay errores registrados</string>
+    <!-- Debug toolkit extras -->
+    <string name="debug_panel_recent_errors_title">Errores recientes</string>
+    <string name="debug_panel_sync_never">nunca</string>
+    <!-- Debug Panel (solo en debug) -->
+    <string name="debug_panel_title">DEBUG</string>
+    <string name="debug_section_action_mode">ActionMode</string>
+    <string name="debug_section_decorations">Decoraciones</string>
+    <string name="debug_section_highlight">Toque en resaltado</string>
+    <string name="debug_section_log">Registro de eventos</string>
+    <string name="debug_section_selection">Estado de selección</string>
+    <!-- Debug version label -->
+    <string name="debug_version_label">(build de desarrollo)</string>
     <string name="definition_add_to_dictionary">Añadir a mi diccionario</string>
-    <string name="definition_word_language">Idioma de la palabra: %1$s</string>
-    <string name="definition_word_language_unknown">Idioma de la palabra: desconocido</string>
-    <string name="definition_language_spanish">Español</string>
+    <string name="definition_close">Cerrar</string>
+    <string name="definition_input_hint">Definición (opcional)</string>
     <string name="definition_language_english">Inglés</string>
     <string name="definition_language_french">Francés</string>
     <string name="definition_language_portuguese">Portugués</string>
+    <string name="definition_language_spanish">Español</string>
     <string name="definition_language_unknown">Desconocido</string>
-    <string name="translation_loading">Traduciendo…</string>
-    <string name="translation_no_result">No hay traducción disponible para este texto.</string>
-    <string name="translation_offline">La traducción necesita conexión.</string>
+    <string name="definition_loading">Buscando…</string>
+    <string name="definition_no_definition">No se encontró definición para esta palabra.</string>
+    <string name="definition_service_failed">El servicio de diccionario falló.</string>
+    <string name="definition_translated_mark">Traducido automáticamente — puede ser impreciso.</string>
+    <string name="definition_word_language">Idioma de la palabra: %1$s</string>
+    <string name="definition_word_language_unknown">Idioma de la palabra: desconocido</string>
+    <string name="dictionary_add_confirm">Agregar</string>
+    <string name="dictionary_add_definition_hint">Definición (opcional)</string>
+    <string name="dictionary_add_word">Agregar palabra</string>
+    <string name="dictionary_add_word_hint">Escribí una palabra</string>
+    <string name="dictionary_added">"%1$s" agregado a tu diccionario.</string>
+    <string name="dictionary_delete_confirm">Eliminar</string>
+    <string name="dictionary_delete_message">¿Estás seguro de eliminar &quot;%1$s&quot;?</string>
+    <string name="dictionary_delete_title">Eliminar palabra</string>
+    <string name="dictionary_detail_book_reference">Referencia del libro</string>
+    <string name="dictionary_detail_chapter">Capítulo %1$s</string>
+    <string name="dictionary_detail_description">Descripción</string>
+    <string name="dictionary_detail_example">Ejemplo personal</string>
+    <string name="dictionary_detail_example_hint">Escribe tu propia oración de ejemplo</string>
+    <string name="dictionary_detail_part_of_speech">Categoría gramatical</string>
+    <string name="dictionary_detail_phonetic">Fonética</string>
+    <string name="dictionary_detail_phonetic_hint">/eˈfimeɾo/</string>
+    <string name="dictionary_duplicate">"%1$s" ya está en tu diccionario.</string>
+    <string name="dictionary_edit_confirm">Guardar</string>
+    <string name="dictionary_empty">Sin palabras</string>
+    <string name="dictionary_empty_subtitle">Tocá + para guardar tu primera palabra.</string>
+    <string name="dictionary_search_placeholder">Buscar palabras…</string>
+    <!-- Dictionary snackbars -->
+    <string name="dictionary_snackbar_definition_saved">Definición guardada</string>
+    <string name="dictionary_snackbar_save_failed">No se pudo guardar la palabra</string>
+    <string name="dictionary_subtitle">Palabras y definiciones guardadas</string>
+    <string name="dictionary_tap_to_add_definition">Tocar para agregar definición</string>
+    <!-- Dictionary -->
+    <string name="dictionary_title">Diccionario</string>
+    <string name="dictionary_word_count">%1$d palabras</string>
+    <!-- U5: legal empty state + universal sources -->
+    <string name="discover_loading">Cargando…</string>
+    <!-- S2: títulos de los estantes por tema de Gutendex (términos medidos en vivo) -->
+    <!-- discover-screen U1: shell, states, connectivity -->
+    <string name="download_confirm_body">Se descargará "%1$s" de %2$s.</string>
+    <string name="download_confirm_body_no_author">Se descargará "%1$s".</string>
+    <string name="download_confirm_title">¿Descargar libro?</string>
+    <string name="download_overlay_done">Listo</string>
+    <string name="download_overlay_percent">%1$d%%</string>
+    <!-- Download Overlay -->
+    <string name="download_overlay_stage_downloading">Descargando archivo…</string>
+    <string name="download_overlay_stage_processing">Procesando…</string>
+    <string name="download_overlay_stage_saving">Guardando en tu biblioteca…</string>
+    <string name="drive_connect_prompt_accept">Conectar</string>
+    <string name="drive_connect_prompt_body">Conecta Google Drive para sincronizar y descargar tus libros entre dispositivos.</string>
+    <string name="drive_connect_prompt_decline">Ahora no</string>
+    <!-- Drive connect prompt (one-time, after successful import) -->
+    <string name="drive_connect_prompt_title">¿Conectar Google Drive?</string>
+    <string name="edit_metadata_add">Agregar</string>
+    <string name="edit_metadata_add_genre">Agregar género</string>
+    <string name="edit_metadata_add_tag">Agregar etiqueta</string>
+    <string name="edit_metadata_change_cover">Cambiar portada</string>
+    <string name="edit_metadata_counter">%1$d/%2$d</string>
+    <string name="edit_metadata_field_author">Autor</string>
+    <string name="edit_metadata_field_date">Fecha de publicación</string>
+    <string name="edit_metadata_field_format">Formato</string>
+    <string name="edit_metadata_field_language">Idioma</string>
+    <string name="edit_metadata_field_publisher">Editorial</string>
+    <string name="edit_metadata_field_size">Tamaño</string>
+    <string name="edit_metadata_field_synopsis">Sinopsis</string>
+    <string name="edit_metadata_field_title">Título</string>
+    <string name="edit_metadata_genres">Géneros</string>
+    <string name="edit_metadata_remove_chip">Eliminar</string>
+    <string name="edit_metadata_save_changes">Guardar cambios</string>
+    <string name="edit_metadata_save_failed">No se pudieron guardar los cambios</string>
+    <string name="edit_metadata_section_details">Detalles</string>
+    <!-- Edit Metadata -->
+    <string name="edit_metadata_title">Editar metadatos</string>
+    <string name="error_auth">Error de autenticación. Iniciá sesión de nuevo.</string>
+    <string name="error_config">Error de configuración. Algunas funciones pueden no estar disponibles.</string>
+    <!-- Global Error Messages -->
+    <string name="error_network">Error de red. Verificá tu conexión e intentá de nuevo.</string>
+    <string name="error_not_found">No encontrado. El elemento solicitado no se pudo ubicar.</string>
+    <string name="error_storage">Error de almacenamiento. No se pudo acceder al almacenamiento del dispositivo.</string>
+    <string name="error_unknown">Error inesperado. Intentá de nuevo.</string>
+    <string name="error_validation">Datos inválidos. Revisá los datos ingresados.</string>
+    <string name="error_wiring">Error interno de configuración. Reiniciá la aplicación.</string>
+    <string name="feedback_mobile_auto_context_label">Detectamos automáticamente</string>
+    <string name="feedback_mobile_close">Cerrar</string>
+    <string name="feedback_mobile_context_chapter_only">%1$s</string>
+    <string name="feedback_mobile_context_chapter_page">%1$s · página %2$d</string>
+    <string name="feedback_mobile_context_no_book">La app se cerró mientras usabas NEXO.</string>
+    <string name="feedback_mobile_context_no_title">Libro sin título</string>
+    <string name="feedback_mobile_context_page_only">página %1$d</string>
+    <string name="feedback_mobile_context_unknown_screen">NEXO</string>
+    <string name="feedback_mobile_counter">%1$d / %2$d</string>
+    <string name="feedback_mobile_helper">Opcional · nos ayuda muchísimo</string>
+    <string name="feedback_mobile_offline_notice">Guardado sin conexión — enviaremos cuando vuelvas a estar online.</string>
+    <string name="feedback_mobile_privacy">Solo se envía este reporte, nada de tu biblioteca.</string>
+    <string name="feedback_mobile_send">Enviar reporte</string>
+    <string name="feedback_mobile_sending">Enviando…</string>
+    <string name="feedback_mobile_sent">Enviado</string>
+    <string name="feedback_mobile_subtitle">La app se cerró mientras leías. Tu reporte nos ayuda a que no vuelva a pasar.</string>
+    <!-- Crash feedback sheet (PR4 / tasks 4.3-4.4) — ES verbatim from feedback-design #2460 (njdtk).
+         These strings are the SOURCE OF TRUTH (spec D1 copy audit gate). Do not edit lightly;
+         any drift from the design contract must update both this block and #2460. -->
+    <string name="feedback_mobile_title">Ayúdanos a arreglar esto</string>
+    <!-- Format strings -->
+    <string name="format_percent">%d %%</string>
+    <!-- U2: atribución de Google Books + aviso de key ausente (voseo) -->
+    <!-- Reader / Highlights Panel -->
+    <string name="highlight_filter_all">Todos</string>
+    <string name="highlight_filter_blue">Azul</string>
+    <string name="highlight_filter_green">Verde</string>
+    <string name="highlight_filter_orange">Naranja</string>
+    <string name="highlight_filter_red">Rojo</string>
+    <string name="highlight_filter_yellow">Amarillo</string>
+    <string name="highlight_pdf_page">Página %1$d</string>
+    <string name="highlight_reading_progress">%1$d%% del libro</string>
+    <string name="highlights_delete_confirm">Eliminar</string>
+    <string name="highlights_delete_message">¿Estás seguro de eliminar este resaltado? "%1$s"</string>
+    <string name="highlights_delete_title">Eliminar resaltado</string>
+    <string name="highlights_deleted_snackbar">Resaltado eliminado</string>
+    <string name="highlights_empty">A\u00fan no hay resaltados</string>
+    <string name="highlights_empty_subtitle">Guard\u00e1 pasajes, ideas y citas mientras le\u00e9s.</string>
+    <string name="highlights_filter_all_books">Todos los libros</string>
+    <string name="highlights_filter_all_tags">Todas las etiquetas</string>
+    <string name="highlights_filter_book">Filtrar por libro</string>
+    <string name="highlights_filter_tag">Filtrar por etiqueta</string>
+    <string name="highlights_menu_add_tag">Agregar etiqueta</string>
+    <string name="highlights_menu_change_color">Cambiar color</string>
+    <string name="highlights_menu_copy_text">Copiar texto</string>
+    <string name="highlights_menu_delete">Eliminar resaltado</string>
+    <!-- Highlights -->
+    <string name="highlights_menu_edit_note">Editar nota</string>
+    <string name="highlights_menu_edit_tag">Editar etiqueta</string>
+    <string name="highlights_menu_view_in_book">Ver en el libro</string>
+    <string name="highlights_recent">Recientes</string>
+    <string name="highlights_refresh_content_description">Actualizar resaltados</string>
+    <!-- Highlights filtros -->
+    <string name="highlights_search">Buscar resaltados</string>
+    <!-- Highlight CRUD snackbars -->
+    <string name="highlights_snackbar_color_changed">Color cambiado</string>
+    <string name="highlights_snackbar_copied">Copiado al portapapeles</string>
+    <string name="highlights_snackbar_tag_saved">Etiqueta guardada</string>
+    <string name="highlights_subtitle">Tus notas y pasajes destacados</string>
+    <string name="highlights_synced">Sincronizado</string>
+    <string name="highlights_syncing">Sincronizando…</string>
+    <string name="highlights_tab_all">Todos</string>
+    <string name="highlights_tab_ideas">Ideas</string>
+    <string name="highlights_tab_passages">Pasajes</string>
+    <string name="highlights_tab_quotes">Citas</string>
+    <string name="highlights_tag_dialog_hint">Ingresá nombre de etiqueta</string>
+    <string name="highlights_title">Resaltados</string>
+    <string name="home_avatar_content_description">Abrir cuenta</string>
+    <string name="home_bookshelf_empty_subtitle">Import\u00e1 un libro para empezar tu biblioteca.</string>
+    <string name="home_bookshelf_empty_title">Tu estanter\u00eda est\u00e1 vac\u00eda</string>
+    <string name="home_chapter_count">Capítulo %1$d</string>
+    <string name="home_close_search">Cerrar búsqueda</string>
+    <string name="home_continuar">Continuar</string>
+    <string name="home_continue_reading">Continuar leyendo</string>
+    <string name="home_genre_adventure">Aventura</string>
+    <string name="home_genre_classics">Clásicos</string>
+    <string name="home_genre_fiction">Ficción</string>
+    <string name="home_genre_history">Historia</string>
+    <string name="home_genre_mystery">Misterio</string>
+    <string name="home_genre_romance">Romance</string>
+    <string name="home_genre_science_fiction">Ciencia ficción</string>
+    <string name="home_genres_content_description">Ver géneros</string>
+    <string name="home_genres_title">Géneros que te pueden interesar</string>
+    <string name="home_greeting">Hola, %1$s</string>
+    <string name="home_hero_cta">Explorar</string>
+    <string name="home_hero_cta_content_description">Explorar el catálogo</string>
+    <string name="home_hero_image_content_description">Interior de una cabaña al atardecer con montañas nevadas</string>
+    <string name="home_hero_subtitle">Empieza tu primera lectura</string>
+    <!-- Home empty / first session -->
+    <string name="home_hero_title">Descubre nuevas historias</string>
+    <string name="home_last_read_days_ago">Última lectura: hace %1$d días</string>
+    <string name="home_last_read_hours_ago">Última lectura: hace %1$d h</string>
+    <string name="home_last_read_just_now">Última lectura: recién</string>
+    <string name="home_last_read_yesterday">Última lectura: ayer</string>
+    <string name="home_minutes">Minutos</string>
+    <string name="home_my_bookshelf_title">Mi biblioteca</string>
+    <string name="home_nexo_title">NEXO</string>
+    <string name="home_no_current_book">Sin libro en curso</string>
+    <string name="home_progress_percent">%1$d%%</string>
+    <string name="home_search_results">Resultados</string>
+    <string name="home_sessions">Sesiones</string>
+    <string name="home_streak_content_description">Racha de lectura</string>
+    <string name="home_streak_days">d\u00edas</string>
+    <string name="home_subtitle">¿Qué vas a leer hoy?</string>
+    <string name="home_sync_banner_content_description">Configurar sincronización en la nube</string>
+    <string name="home_sync_banner_subtitle">Inicia sesión con Google Drive para sincronizar tu progreso y tus resaltados.</string>
+    <string name="home_sync_banner_title">Guarda tus libros y sigue leyendo en cualquier lugar</string>
+    <string name="home_today_summary_title">Resumen de hoy</string>
+    <string name="home_ver_todo">Ver todo</string>
+    <string name="home_version_format">v%1$s \u2022 %2$s \u2022 %3$s</string>
+    <string name="import_failed">La importación falló: %1$s</string>
+    <!-- Import Overlay -->
+    <string name="import_overlay_icon_desc">Importando libro</string>
+    <string name="import_requires_account">Inicie sesión para importar libros a su biblioteca</string>
+    <string name="import_state_analyzing">Analizando contenido…</string>
+    <string name="import_state_extracting">Extrayendo libro…</string>
+    <string name="import_state_saving">Guardando…</string>
+    <string name="legal_disclaimer_accept">Entendido</string>
+    <string name="legal_disclaimer_body">NEXO apunta a fuentes externas legales. Las descargas en la app solo se ofrecen para libros de dominio público; lo demás se abre en tu navegador, donde la disponibilidad y los derechos dependen del proveedor.</string>
+    <!-- U5: legal disclaimer + policy page -->
+    <string name="legal_disclaimer_title">Un aviso antes de explorar</string>
+    <string name="legal_policy_addons_body">Los complementos corren fuera de NEXO. Un complemento solo resuelve enlaces de lectura después de que le otorgues acceso al título, autor e identificadores del libro, y podés revocar ese acceso cuando quieras desde la pantalla de complementos.</string>
+    <string name="legal_policy_addons_title">Complementos y consentimiento</string>
+    <string name="legal_policy_intro">NEXO es una app de lectura, no una librería: te ayuda a encontrar dónde leer legalmente y mantiene tu biblioteca sincronizada.</string>
+    <string name="legal_policy_public_domain_body">La descarga en la app solo se ofrece para libros de dominio público. Cualquier otro título se abre en tu navegador, donde los términos del proveedor y tu región deciden la disponibilidad.</string>
+    <string name="legal_policy_public_domain_title">Descargas</string>
+    <string name="legal_policy_sources_body">Los resultados vienen de catálogos públicos (Open Library, Project Gutenberg vía Gutendex, Google Books) y de complementos comunitarios que vos instalás. Cada resultado nombra su fuente.</string>
+    <string name="legal_policy_sources_title">De dónde viene el catálogo</string>
+    <string name="legal_policy_title">Aviso legal</string>
+    <string name="legal_policy_updated_note">Este aviso puede cambiar a medida que se agreguen fuentes.</string>
+    <string name="library_count">%1$d disponibles</string>
+    <string name="library_cover_content_description">Portada del libro</string>
+    <string name="library_delete_confirm">Eliminar</string>
+    <string name="library_delete_message">¿Estás seguro de eliminar &quot;%1$s&quot;?</string>
+    <string name="library_delete_title">Eliminar libro</string>
+    <!-- Library / Bookshelf - New Pencil design -->
+    <string name="library_empty">Todavía no hay libros locales.</string>
+    <string name="library_filter_format_all">Todos</string>
+    <string name="library_filter_format_label">Formato</string>
+    <string name="library_filter_label">Filtrar</string>
+    <string name="library_import_book">Importar libro</string>
+    <string name="library_import_failure">Error al importar: %1$s</string>
+    <string name="library_import_formats">Formatos soportados: EPUB, PDF</string>
+    <string name="library_import_success">Se importó "%1$s"</string>
+    <!-- Library -->
+    <string name="library_menu_edit_metadata">Editar metadatos</string>
+    <!-- Library Context Menu -->
+    <string name="library_menu_mark_completed">Marcar como leído</string>
+    <string name="library_menu_mark_plan_to_read">Planeo leer</string>
+    <string name="library_menu_remove">Quitar de la biblioteca</string>
+    <string name="library_menu_share">Compartir archivo</string>
+    <string name="library_remove_cancel">Cancelar</string>
+    <string name="library_remove_continue">Continuar</string>
+    <string name="library_remove_local_and_drive">Local y Drive</string>
+    <string name="library_remove_local_and_drive_subtitle">Mueve a la papelera de Drive y registra el borrado.</string>
+    <string name="library_remove_local_only">Solo local</string>
+    <string name="library_remove_local_only_subtitle">Quita de esta biblioteca. El archivo en Drive se conserva.</string>
+    <string name="library_remove_message">Se quitará &quot;%1$s&quot; de tu estantería.</string>
+    <!-- Remove book (2-step) — mirrors desktop RemoveBookModal -->
+    <string name="library_remove_title">¿Quitar de la estantería?</string>
+    <string name="library_search_empty_subtitle">Prob\u00e1 con otro t\u00e9rmino de b\u00fasqueda.</string>
+    <string name="library_search_no_results">Sin resultados</string>
+    <string name="library_search_placeholder">Buscar libros...</string>
+    <!-- Share -->
+    <string name="library_share_chooser_title">Compartir libro</string>
+    <string name="library_snackbar_book_delete_failed">No se pudo eliminar el libro</string>
+    <!-- Library snackbars -->
+    <string name="library_snackbar_book_deleted">Se eliminó "%1$s"</string>
+    <!-- Library Snackbars -->
+    <string name="library_snackbar_marked_completed">Marcado como leído</string>
+    <string name="library_snackbar_marked_plan_to_read">Marcado como Planeo leer</string>
+    <string name="library_snackbar_metadata_saved">Metadatos actualizados</string>
+    <string name="library_snackbar_status_failed">No se pudo actualizar el estado</string>
+    <string name="library_sort_author">Autor</string>
+    <string name="library_sort_date_added">Fecha agregada</string>
+    <string name="library_sort_label">Ordenar por:</string>
+    <string name="library_sort_last_read">Última lectura</string>
+    <string name="library_sort_title">Título</string>
+    <string name="library_status_completed">Completado</string>
+    <string name="library_status_in_progress">%1$d min</string>
+    <string name="library_tab_all">Todos</string>
+    <string name="library_tab_completed">Completados</string>
+    <string name="library_tab_pending">Pendientes</string>
+    <string name="library_tab_reading">Leyendo</string>
+    <string name="library_view_grid">Vista de cuadrícula</string>
+    <string name="library_view_list">Vista de lista</string>
+    <string name="nav_book_detail">Detalle del libro</string>
+    <string name="nav_discover">Descubrir</string>
+    <string name="nav_highlights">Resaltados</string>
+    <string name="nav_home">Inicio</string>
+    <string name="nav_library">Estantería</string>
+    <string name="nav_settings">Ajustes</string>
+    <string name="nav_statistics">Estadísticas</string>
+    <string name="note_modal_title">Nueva Nota</string>
+    <string name="notifications_channel_description">Novedades de importación, sincronización y lectura</string>
+    <!-- Notification OS channel -->
+    <string name="notifications_channel_name">Notificaciones</string>
+    <string name="notifications_empty">No tenés notificaciones aún</string>
+    <string name="notifications_event_addons_error">El complemento falló</string>
+    <string name="notifications_event_addons_success">Complemento instalado</string>
+    <string name="notifications_event_goal_error">No alcanzaste tu meta</string>
+    <string name="notifications_event_goal_info">Meta de lectura</string>
+    <string name="notifications_event_goal_success">Meta diaria alcanzada</string>
+    <string name="notifications_event_goal_warning">Leé para alcanzar tu meta</string>
+    <string name="notifications_event_import_error">La importación falló: %1$s</string>
+    <!-- Mensajes de eventos de notificación (se renderizan desde la clave i18n almacenada) -->
+    <string name="notifications_event_import_success">Importación finalizada: %1$s</string>
+    <string name="notifications_event_library_success">Biblioteca actualizada</string>
+    <string name="notifications_event_streak_error">Racha perdida</string>
+    <string name="notifications_event_streak_success">Racha mantenida</string>
+    <string name="notifications_event_streak_warning">Tu racha está en riesgo</string>
+    <string name="notifications_event_sync_error">La sincronización falló: %1$s</string>
+    <string name="notifications_event_sync_success">Sincronización completa</string>
+    <string name="notifications_event_update_info">Actualización disponible</string>
+    <string name="notifications_group_count">%1$d</string>
+    <string name="notifications_time_days">Hace %1$d d</string>
+    <string name="notifications_time_hours">Hace %1$d h</string>
+    <string name="notifications_time_minutes">Hace %1$d min</string>
+    <!-- Tray relative timestamps -->
+    <string name="notifications_time_now">Ahora mismo</string>
+    <!-- Notifications -->
+    <string name="onboarding_goal_action">Establecer meta</string>
+    <string name="onboarding_goal_footer_note">Puedes cambiar esta configuración más tarde en Ajustes.</string>
+    <!-- Onboarding goal -->
+    <string name="onboarding_goal_header">Tu meta diaria</string>
+    <string name="onboarding_goal_hero_subtitle">Elegir una meta diaria te ayuda a mantener el hábito de la lectura.</string>
+    <string name="onboarding_goal_hero_title">Establece tu ritmo</string>
+    <string name="onboarding_goal_option_intense">Intenso</string>
+    <string name="onboarding_goal_option_intense_desc">Inmersión profunda</string>
+    <string name="onboarding_goal_option_intense_value">Más de 40 min/día</string>
+    <string name="onboarding_goal_option_regular">Regular</string>
+    <string name="onboarding_goal_option_regular_desc">Un buen hábito diario</string>
+    <string name="onboarding_goal_option_regular_value">20 min/día</string>
+    <string name="onboarding_goal_option_relaxed">Relajado</string>
+    <string name="onboarding_goal_option_relaxed_desc">Para lectores casuales</string>
+    <string name="onboarding_goal_option_relaxed_value">10 min/día</string>
+    <string name="onboarding_goal_option_serious">Serio</string>
+    <string name="onboarding_goal_option_serious_desc">Para devoradores de libros</string>
+    <string name="onboarding_goal_option_serious_value">30 min/día</string>
+    <string name="onboarding_notifications_benefit_quiet">Puedes cambiar esto cuando quieras en Ajustes</string>
+    <string name="onboarding_notifications_benefit_reminders">Un recordatorio diario a la hora adecuada</string>
+    <string name="onboarding_notifications_benefit_streak">Alertas de racha antes de perderla</string>
+    <string name="onboarding_notifications_blocked_hint">Las notificaciones están desactivadas para NEXO. Actívalas en los ajustes del sistema.</string>
+    <string name="onboarding_notifications_body">Activa los recordatorios y te avisaremos antes de que termine el día, para que tu racha de lectura siga viva.</string>
+    <string name="onboarding_notifications_enable">Activar notificaciones</string>
+    <string name="onboarding_notifications_open_settings">Abrir ajustes del sistema</string>
+    <string name="onboarding_notifications_skip">Ahora no</string>
+    <!-- Onboarding notifications (post-goal, Duolingo-style) -->
+    <string name="onboarding_notifications_title">No pierdas tu racha</string>
+    <string name="palette_add_color">Agregar color</string>
+    <string name="palette_pick_color">Elegir color</string>
+    <string name="palette_reset">Restablecer valores predeterminados</string>
+    <string name="palette_section_subtitle">Personalizá los 5 colores de resaltado</string>
+    <!-- U5: read-access ("Dónde leerlo") section -->
+    <!-- Reader / Header -->
+    <string name="reader_cancel">Cancelar</string>
+    <string name="reader_chapter_fallback">Capítulo %1$d</string>
+    <string name="reader_chapters_title">Capítulos</string>
+    <string name="reader_progress_empty">-- / --</string>
+    <string name="reader_rotate_screen">Rotar pantalla</string>
+    <string name="reader_save">Guardar</string>
+    <!-- Reader selection / clipboard feedback -->
+    <!-- Reader / Settings Sheet -->
+    <string name="reader_settings_close">Cerrar</string>
+    <string name="reader_sleep_timer_cancel">Cancelar temporizador</string>
+    <string name="reader_sleep_timer_change_duration">Cambiar duración</string>
+    <string name="reader_sleep_timer_choose_duration">Elegí una duración</string>
+    <!-- Reader / Sleep Timer -->
+    <string name="reader_sleep_timer_end_of_chapter_desc">Detiene al cambiar de capítulo</string>
+    <string name="reader_sleep_timer_finished_title">¡Se acabó el tiempo!</string>
+    <string name="reader_sleep_timer_remaining_label">Tiempo restante:</string>
+    <string name="reader_sleep_timer_sheet_title">Temporizador de lectura</string>
+    <string name="reader_sleep_timer_tap_to_dismiss">Toca cualquier lugar para seguir leyendo</string>
+    <string name="reader_typography">Tipografía</string>
+    <string name="search_clear">Limpiar búsqueda</string>
+    <!-- Reader / Search -->
+    <string name="search_input_hint">Buscar en el libro…</string>
+    <string name="search_no_results">Sin resultados</string>
+    <string name="search_result_chapter">Capítulo %1$d</string>
+    <string name="search_results_count">Resultados (%1$d)</string>
+    <string name="settings_addons_back">Volver</string>
+    <string name="settings_addons_title">Complementos de catálogo</string>
+    <string name="settings_dictionary_label">Diccionario</string>
+    <string name="settings_drive_error_config">Google Drive no está configurado</string>
+    <string name="settings_drive_error_oauth">Error al autorizar Google Drive</string>
+    <!-- Almacenamiento (Ajustes → Almacenamiento) -->
+    <string name="settings_storage_title">Almacenamiento</string>
+    <!-- Sincronización (Ajustes → Sincronización) -->
+    <string name="settings_sync_title">Sincronización</string>
+    <string name="settings_translation_english">Inglés</string>
+    <string name="settings_translation_french">Francés</string>
+    <string name="settings_translation_german">Alemán</string>
+    <string name="settings_translation_italian">Italiano</string>
+    <string name="settings_translation_portuguese">Portugués</string>
+    <string name="settings_translation_spanish">Español</string>
+    <string name="statistics_books_read">Libros leídos</string>
+    <string name="statistics_current_streak">Racha actual</string>
+    <string name="statistics_daily_goal">Meta diaria</string>
+    <string name="statistics_days">días</string>
+    <string name="statistics_favorite_genres">Géneros favoritos</string>
+    <string name="statistics_goals">Metas</string>
+    <string name="statistics_last_7_days">Últimos 7 días</string>
+    <string name="statistics_minutes">min</string>
+    <string name="statistics_no_genres">Aún no hay datos de géneros</string>
+    <string name="statistics_no_genres_subtitle">Agregá resaltados y notas para ver qué leés más.</string>
+    <string name="statistics_reading_activity">Actividad de lectura</string>
+    <string name="statistics_subtitle">Tu actividad de lectura</string>
+    <string name="statistics_summary">Resumen</string>
+    <!-- Statistics -->
+    <string name="statistics_title">Estadísticas</string>
+    <string name="statistics_total_reading_time">Tiempo total de lectura</string>
+    <string name="sync_status_authorization_needed">Autorizaci\u00f3n requerida</string>
+    <string name="sync_status_error">Error de sinc.</string>
+    <string name="sync_status_off">Sinc. desactivada</string>
+    <!-- Sync -->
+    <string name="sync_status_synced">Sincronizado</string>
+    <string name="sync_status_syncing">Sincronizando\u2026</string>
+    <!-- Navegación y nuevas keys -->
+    <string name="tab_auth">Acceso</string>
+    <string name="tag_input_hint">Etiqueta</string>
+    <!-- Reader / Text Selection -->
+    <string name="text_selection_copy">Copiar</string>
+    <string name="text_selection_define">Definir</string>
+    <string name="text_selection_translate">Traducir</string>
+    <string name="translation_bar_auto_with_language">Auto (%1$s)</string>
+    <!--
+      La barra de idiomas (Grupo 2). `source_auto` NO es el "Detectar
+      automáticamente" de Ajustes: elegirlo aquí BORRA la elección de origen de
+      este libro, así que promete "descarta mi elección para este libro" — una
+      acción distinta de restaurar un valor por defecto. `auto_with_language`
+      marca un lado que la app INFIRIÓ, no uno que el lector eligió.
+    -->
+    <string name="translation_bar_source_auto">Automático (detectar)</string>
+    <string name="translation_bar_source_description">Idioma de origen</string>
+    <string name="translation_bar_target_auto">Seguir el dispositivo</string>
+    <string name="translation_bar_target_description">Idioma de destino</string>
     <string name="translation_close">Cerrar</string>
+    <string name="translation_invalid_source">El idioma de origen elegido no es válido. Elige otro en la barra de arriba.</string>
+    <string name="translation_invalid_target">El idioma de destino elegido no es válido. Elige otro en la barra de arriba.</string>
+    <string name="translation_loading">Traduciendo…</string>
     <!--
       Refusals, one per reason. Each names the cause and the fix the reader can
       apply, never the failure alone: "the pair is the problem, change one side"
@@ -472,713 +554,56 @@
     -->
     <string name="translation_same_language">El idioma de origen y el de destino son el mismo, así que no hay nada que traducir. Cambia uno de los dos en la barra de arriba.</string>
     <string name="translation_unknown_source">No pudimos detectar el idioma del texto seleccionado. Elige un idioma de origen en la barra de arriba.</string>
-    <string name="translation_invalid_source">El idioma de origen elegido no es válido. Elige otro en la barra de arriba.</string>
-    <string name="translation_invalid_target">El idioma de destino elegido no es válido. Elige otro en la barra de arriba.</string>
+    <string name="addon_capabilities_title">Capacidades</string>
+    <string name="addon_consent_trust_note">Los complementos corren fuera de NEXO. Compartí datos solo con fuentes en las que confíes.</string>
+    <string name="discover_back">Volver</string>
+    <string name="legal_disclaimer_view_policy">Leer aviso legal</string>
+    <string name="home_streak_badge_content_description">Racha de lectura: %1$d días</string>
+    <string name="nav_back">Volver</string>
+    <string name="notifications_badge_content_description">Notificaciones sin leer</string>
+    <string name="notifications_title">Notificaciones</string>
+    <string name="search_label">Buscar</string>
 
-    <!--
-      La barra de idiomas (Grupo 2). `source_auto` NO es el "Detectar
-      automáticamente" de Ajustes: elegirlo aquí BORRA la elección de origen de
-      este libro, así que promete "descarta mi elección para este libro" — una
-      acción distinta de restaurar un valor por defecto. `auto_with_language`
-      marca un lado que la app INFIRIÓ, no uno que el lector eligió.
-    -->
-    <string name="translation_bar_source_auto">Automático (detectar)</string>
-    <string name="translation_bar_target_auto">Seguir el dispositivo</string>
-    <string name="translation_bar_auto_with_language">Auto (%1$s)</string>
-    <string name="translation_bar_source_description">Idioma de origen</string>
-    <string name="translation_bar_target_description">Idioma de destino</string>
-
-    <!-- Translation settings (per-account source/target languages + history) -->
-    <string name="settings_translation_title">Traducción</string>
-    <string name="settings_translation_target_label">Traducir a</string>
-    <!-- Definition settings (per-account definition language) -->
-    <string name="settings_definition_title">Definiciones</string>
-    <string name="settings_definition_language_label">Definiciones en</string>
-    <string name="settings_definition_language_hint">Solo afecta al idioma en el que se muestran las definiciones. El idioma de la palabra viene del libro.</string>
-    <string name="settings_translation_source_label">Traducir desde</string>
-    <string name="settings_translation_language_system">Seguir el dispositivo</string>
-    <string name="settings_translation_language_auto">Detectar automáticamente</string>
-    <string name="settings_translation_spanish">Español</string>
-    <string name="settings_translation_english">Inglés</string>
-    <string name="settings_translation_french">Francés</string>
-    <string name="settings_translation_german">Alemán</string>
-    <string name="settings_translation_italian">Italiano</string>
-    <string name="settings_translation_portuguese">Portugués</string>
-    <string name="settings_translation_same_language_warning">El idioma de entrada y el de salida son el mismo, así que nada cambiaría.</string>
-    <string name="settings_translation_history_title">Historial</string>
-    <string name="settings_translation_history_empty">Todavía no hay traducciones.</string>
-    <string name="settings_translation_history_clear">Borrar historial</string>
-    <string name="settings_translation_history_cleared">Historial borrado.</string>
-    <string name="context_menu_color">Color</string>
-    <string name="context_menu_tag">Etiqueta</string>
-    <string name="context_menu_note">Nota</string>
-    <string name="context_menu_comment">Comentario</string>
-    <string name="context_menu_share">Compartir</string>
-    <string name="context_menu_delete">Eliminar</string>
-    <string name="context_menu_annotate">Anotar</string>
-    <string name="color_picker_confirm">Tocá un preset o escribí un hex</string>
-    <string name="tag_input_hint">Etiqueta</string>
-    <string name="definition_input_hint">Definición (opcional)</string>
-    <string name="note_modal_title">Nueva Nota</string>
-    <string name="comment_modal_title">Nuevo Comentario</string>
-    <string name="annotation_textarea_note_hint">Escribí tu nota…</string>
-    <string name="annotation_textarea_comment_hint">Escribí tu comentario…</string>
-    <string name="annotation_snippet_label">Texto seleccionado</string>
-    <string name="annotation_modal_close">Cerrar</string>
-    <string name="tag_dialog_title">Etiqueta</string>
-    <string name="tag_dialog_label">Etiqueta</string>
-    <string name="share_no_text">No hay texto seleccionado</string>
-    <string name="palette_section_title">Paleta de colores</string>
-    <string name="palette_section_subtitle">Personalizá los 5 colores de resaltado</string>
-    <string name="palette_reset">Restablecer valores predeterminados</string>
-    <string name="palette_pick_color">Elegir color</string>
-    <string name="palette_add_color">Agregar color</string>
- 
-    <!-- Reader / aA Settings -->
-    <string name="aa_preview_text">El veloz murciélago hindú comía feliz cardillo y kiwi. Esta es una vista previa de la configuración actual de lectura.</string>
-    <string name="aa_expand">Expandir</string>
+    <!-- Duplicated from :feature:reader: the reader settings sections and the
+         screen files that stay in :app still resolve these. Identical text in
+         both modules. -->
+    <string name="aa_audio_coming_soon">Reproducción de audio próximamente</string>
     <string name="aa_collapse">Contraer</string>
-    <string name="aa_section_justification">Justificación</string>
-    <string name="aa_section_margins">Márgenes</string>
-    <string name="aa_section_direction">Dirección</string>
-    <string name="aa_section_audio">Audio</string>
-    <string name="aa_close_settings">Cerrar</string>
-    <string name="aa_justification_left">Izquierda</string>
-    <string name="aa_justification_center">Centrar</string>
-    <string name="aa_justification_right">Derecha</string>
-    <string name="aa_justification_justify">Justificar</string>
+    <string name="aa_direction_ltr">Izquierda a derecha</string>
+    <string name="aa_expand">Expandir</string>
     <string name="aa_margin_left">Margen izquierdo</string>
     <string name="aa_margin_right">Margen derecho</string>
-    <string name="aa_direction_ltr">Izquierda a derecha</string>
-    <string name="aa_audio_coming_soon">Reproducción de audio próximamente</string>
-    <string name="font_name_georgia">Georgia</string>
-    <string name="font_name_arial">Arial</string>
-    <string name="font_name_merriweather">Merriweather</string>
-    <string name="theme_oled">OLED</string>
-    <string name="scroll_mode_vertical">Vertical</string>
-    <string name="scroll_mode_paginated">Paginado</string>
-    <string name="editor_values">Valores del editor</string>
-    <string name="vertical_scroll">Desplazamiento vertical</string>
-    <string name="reader_rotate_screen">Rotar pantalla</string>
-
-    <!-- Reader / Header -->
-    <string name="reader_back">Volver</string>
-    <string name="reader_author_placeholder">Autor</string>
-    <string name="reader_toc">Índice</string>
-    <string name="reader_bookmark">Marcador</string>
-    <string name="reader_typography">Tipografía</string>
-    <string name="reader_chapters_title">Capítulos</string>
-    <string name="reader_chapter_fallback">Capítulo %1$d</string>
-    <string name="reader_pages_remaining">%1$s — %2$d págs. restantes</string>
-    <string name="reader_highlights_button">Resaltados</string>
+    <string name="aa_preview_text">El veloz murciélago hindú comía feliz cardillo y kiwi. Esta es una vista previa de la configuración actual de lectura.</string>
+    <string name="aa_section_audio">Audio</string>
+    <string name="aa_section_direction">Dirección</string>
+    <string name="aa_section_justification">Justificación</string>
+    <string name="aa_section_margins">Márgenes</string>
     <string name="bookmark_ribbon_announcement">Marcador guardado</string>
-
-    <!-- Global Error Messages -->
-    <string name="error_network">Error de red. Verificá tu conexión e intentá de nuevo.</string>
-    <string name="error_auth">Error de autenticación. Iniciá sesión de nuevo.</string>
-    <string name="error_validation">Datos inválidos. Revisá los datos ingresados.</string>
-    <string name="error_not_found">No encontrado. El elemento solicitado no se pudo ubicar.</string>
-    <string name="error_storage">Error de almacenamiento. No se pudo acceder al almacenamiento del dispositivo.</string>
-    <string name="error_config">Error de configuración. Algunas funciones pueden no estar disponibles.</string>
-    <string name="error_wiring">Error interno de configuración. Reiniciá la aplicación.</string>
-    <string name="error_unknown">Error inesperado. Intentá de nuevo.</string>
-
-    <!-- Debug Panel (solo en debug) -->
-    <string name="debug_panel_title">DEBUG</string>
-    <string name="debug_close">Cerrar</string>
-    <string name="debug_section_selection">Estado de selección</string>
-    <string name="debug_section_action_mode">ActionMode</string>
-    <string name="debug_section_highlight">Toque en resaltado</string>
-    <string name="debug_section_log">Registro de eventos</string>
-    <string name="debug_action_force_color">Forzar cnVL6</string>
-    <string name="debug_action_force_context">Forzar FaPN3</string>
-    <string name="debug_action_simulate_tap">Simular toque</string>
-    <string name="debug_action_clear_log">Limpiar registro</string>
-    <string name="debug_action_copy_log">Copiar registro</string>
-    <string name="debug_action_inspect_html">Inspeccionar HTML</string>
-    <string name="debug_action_log_webview">Log de WebView</string>
-    <string name="debug_section_decorations">Decoraciones</string>
-    <string name="debug_decorations_listener_registered">Listener registrado</string>
-    <string name="debug_decorations_activation_count">Activaciones</string>
-    <string name="debug_decorations_last_id">Último id</string>
-    <string name="debug_decorations_last_rect">Último rect</string>
-    <string name="debug_decorations_last_group">Último grupo</string>
-    <string name="debug_decorations_last_applied">Último aplicadas</string>
-    <string name="debug_decorations_active">Activas</string>
     <string name="debug_chip_label">DEBUG</string>
-    <string name="debug_kv_selected_text">texto seleccionado</string>
-    <string name="debug_kv_selection_rect">rect de selección</string>
-    <string name="debug_kv_show_color_picker">mostrar color picker</string>
-    <string name="debug_kv_show_context_menu">mostrar menú</string>
-    <string name="debug_kv_active_highlight_id">id resaltado activo</string>
-    <string name="debug_kv_debounce_remaining_ms">debounce (ms)</string>
-    <string name="debug_kv_am_installed">instalado</string>
-    <string name="debug_kv_am_last_event">último evento</string>
-    <string name="debug_kv_am_last_type">tipo</string>
-    <string name="debug_kv_am_suppressed">suprimidos</string>
-    <string name="debug_kv_hl_registered">listener registrado</string>
-    <string name="debug_kv_hl_last_id">último id</string>
-    <string name="debug_kv_hl_last_rect">último rect</string>
-    <string name="debug_kv_hl_activations">activaciones</string>
-    <string name="debug_no_highlights">No hay resaltados para simular</string>
-    <string name="debug_log_copied">Registro copiado al portapapeles</string>
-
-    <!-- Debug: notificación de crash + detalle -->
-    <string name="debug_crash_channel_name">Reportes de crash (debug)</string>
-    <string name="debug_crash_channel_description">Notifica cuando la app crasheó en un inicio anterior</string>
-    <string name="debug_crash_notification_title">NEXO crasheó (debug)</string>
-    <string name="debug_crash_notification_body">Toca para ver el stacktrace</string>
-    <string name="debug_crash_detail_title">Último crash</string>
-    <string name="debug_crash_copy">Copiar al portapapeles</string>
-    <string name="debug_crash_share">Compartir</string>
-
-    <!-- Debug version label -->
-    <string name="debug_version_label">(build de desarrollo)</string>
-
-    <!-- Debug: Visor de registros -->
-    <string name="debug_log_viewer_title">Visor de registros</string>
-    <string name="debug_log_viewer_tab_crashes">Crashes</string>
-    <string name="debug_log_viewer_tab_live">Registros en vivo</string>
-    <string name="debug_log_viewer_copy_all">Copiar todo</string>
-    <string name="debug_log_viewer_share">Compartir</string>
-    <string name="debug_log_viewer_no_crashes">No hay crashes registrados</string>
-    <string name="debug_log_viewer_no_logs">Todavía no hay registros</string>
-    <string name="debug_log_viewer_crash_timestamp">Fecha y hora</string>
-    <string name="debug_log_viewer_crash_message">Mensaje</string>
-    <string name="debug_log_viewer_crash_stack">Stack Trace</string>
-    <string name="debug_log_viewer_crash_logs">Registros al crash</string>
-    <string name="debug_log_viewer_crash_thread">Thread: %1$s</string>
-    <string name="debug_log_viewer_crash_logs_more">... y %1$d más</string>
-    <string name="debug_settings_log_viewer">Visor de registros</string>
-
-    <!-- Debug mode toggle -->
-    <string name="debug_mode_title">Modo debug</string>
-    <string name="debug_mode_subtitle">Mostrar herramientas de desarrollo</string>
-
-    <!-- Debug toolkit extras -->
-    <string name="debug_panel_recent_errors_title">Errores recientes</string>
-    <string name="debug_panel_recent_errors_empty">No hay errores registrados</string>
-    <string name="debug_panel_sync_never">nunca</string>
-    <string name="debug_panel_clear_cache">Borrar caché</string>
-    <string name="debug_panel_clear_cache_confirm_title">Borrar caché</string>
-    <string name="debug_panel_clear_cache_confirm_message">Elimina archivos en caché (imágenes, caché de libros extraídos, catálogo). Los libros y el progreso se conservan.</string>
-    <string name="debug_panel_clear_cache_confirm_action">Borrar</string>
-    <string name="debug_panel_cancel">Cancelar</string>
-    <string name="debug_panel_clear_cache_done">Se borraron %1$d entradas (%2$d bytes)</string>
-
-    <!-- Navegación y nuevas keys -->
-    <string name="tab_auth">Acceso</string>
-    <string name="tab_highlights">Resaltados</string>
-    <string name="tab_settings">Ajustes</string>
-    <string name="tab_statistics">Estadísticas</string>
-    <string name="nav_statistics">Estadísticas</string>
-    <string name="nav_back">Volver</string>
-    <string name="home_close_search">Cerrar búsqueda</string>
-    <string name="home_version_format">v%1$s \u2022 %2$s \u2022 %3$s</string>
-    <string name="library_view_grid">Vista de cuadrícula</string>
-    <string name="library_view_list">Vista de lista</string>
-
-    <!-- Home empty / first session -->
-    <string name="home_brand_tagline">Tus libros, siempre contigo</string>
-    <string name="home_hero_title">Descubre nuevas historias</string>
-    <string name="home_hero_subtitle">Empieza tu primera lectura</string>
-    <string name="home_hero_cta">Explorar</string>
-    <string name="home_hero_cta_content_description">Explorar el catálogo</string>
-    <string name="home_genres_title">Géneros que te pueden interesar</string>
-    <string name="home_genres_content_description">Ver géneros</string>
-    <string name="home_streak_content_description">Racha de lectura</string>
-    <string name="home_sync_banner_title">Guarda tus libros y sigue leyendo en cualquier lugar</string>
-    <string name="home_sync_banner_subtitle">Inicia sesión con Google Drive para sincronizar tu progreso y tus resaltados.</string>
-    <string name="home_sync_banner_content_description">Configurar sincronización en la nube</string>
-    <string name="home_hero_image_content_description">Interior de una cabaña al atardecer con montañas nevadas</string>
-    <string name="home_genre_fiction">Ficción</string>
-    <string name="home_genre_classics">Clásicos</string>
-    <string name="home_genre_adventure">Aventura</string>
-    <string name="home_genre_mystery">Misterio</string>
-    <string name="home_genre_romance">Romance</string>
-    <string name="home_genre_science_fiction">Ciencia ficción</string>
-    <string name="home_genre_history">Historia</string>
-
-    <!-- Book card -->
-    <string name="book_card_options">Opciones</string>
-    <string name="book_card_edit_metadata">Editar metadatos</string>
-    <string name="book_card_remove_from_library">Eliminar de estantería</string>
-    <string name="book_card_progress">Progreso de lectura: %1$d por ciento</string>
-
-    <!-- Sync -->
-    <string name="sync_status_synced">Sincronizado</string>
-    <string name="sync_status_off">Sinc. desactivada</string>
-    <string name="sync_status_syncing">Sincronizando\u2026</string>
-    <string name="sync_status_error">Error de sinc.</string>
-    <string name="sync_status_authorization_needed">Autorizaci\u00f3n requerida</string>
-    <string name="sync_pending_badge">%1$d elementos pendientes</string>
-    <string name="debug_supabase_sync_title">Sinc. Supabase</string>
-    <string name="debug_supabase_state">Estado</string>
-    <string name="debug_supabase_gated_reason">Motivo bloqueado</string>
-    <string name="debug_supabase_pending_count">Pendientes</string>
-
-    <!-- Highlights filtros -->
-    <string name="highlights_search">Buscar resaltados</string>
-    <string name="highlights_empty">A\u00fan no hay resaltados</string>
-    <string name="highlights_empty_subtitle">Guard\u00e1 pasajes, ideas y citas mientras le\u00e9s.</string>
-    <string name="highlights_filter_book">Filtrar por libro</string>
-    <string name="highlights_filter_color">Filtrar por color</string>
-    <string name="highlights_filter_tag">Filtrar por etiqueta</string>
-    <string name="highlights_filter_all_books">Todos los libros</string>
-    <string name="highlights_filter_all_colors">Todos los colores</string>
-    <string name="highlights_filter_all_tags">Todas las etiquetas</string>
-    <string name="highlights_clear_filters">Borrar filtros</string>
-    <string name="highlight_location">Ubicación: %1$s</string>
-    <string name="highlight_pdf_page">Página %1$d</string>
-    <string name="highlight_reading_progress">%1$d%% del libro</string>
-
-    <!-- Daily goal (onboarding + settings) -->
-    <string name="settings_daily_goal_title">Meta diaria</string>
-    <string name="settings_daily_goal_subtitle">Tiempo de lectura por día</string>
-
-    <!-- Settings -->
-    <string name="settings_theme_light">Claro</string>
-    <string name="settings_theme_dark">Oscuro</string>
-    <string name="settings_theme_system">Predeterminado del sistema</string>
-    <string name="settings_palette">Paleta de colores</string>
-    <string name="settings_account_title">Cuenta</string>
-    <string name="settings_data_storage_title">Datos y almacenamiento</string>
-    <string name="settings_notifications_title">Notificaciones</string>
-    <string name="settings_notifications_system_label">Notificaciones del sistema</string>
-    <string name="settings_notifications_system_description">Actividad de importación, sincronización y biblioteca</string>
-    <string name="settings_notifications_nudge_label">Recordatorios de lectura</string>
-    <string name="settings_notifications_nudge_description">Rachas y avisos de meta diaria</string>
-    <string name="settings_notifications_quiet_hours_label">Horas de silencio</string>
-    <string name="settings_notifications_quiet_hours_description">Silenciar avisos durante un horario</string>
-    <string name="settings_notifications_quiet_hours_start">Inicio</string>
-    <string name="settings_notifications_quiet_hours_end">Fin</string>
-    <string name="settings_theme_title">Tema</string>
-    <string name="settings_about_title">Acerca de</string>
-    <string name="settings_statistics_title">Estadísticas</string>
-    <string name="settings_storage">Almacenamiento</string>
-    <string name="settings_sync">Sincronización</string>
-    <string name="settings_about_version">Versión %1$s</string>
-    <string name="settings_about_build">Compilación %1$s</string>
-    <string name="settings_devices_title">Dispositivos conectados</string>
-    <string name="settings_devices_this_device">Este dispositivo</string>
-    <string name="settings_devices_remove">Cerrar sesión</string>
-    <string name="settings_devices_remove_confirm">¿Cerrar sesión en %1$s?</string>
-    <string name="settings_devices_count">%1$d dispositivos conectados</string>
-    <string name="settings_devices_loading">Cargando dispositivos...</string>
-    <string name="settings_provider_google">Google</string>
-    <string name="settings_provider_email">Correo electrónico</string>
-    <string name="settings_provider_anonymous">Anónimo</string>
-    <string name="settings_member_since">Miembro desde %1$s</string>
-    <string name="settings_drive_section">Google Drive</string>
-    <string name="settings_drive_description">Sincroniza libros entre dispositivos usando Google Drive</string>
-    <string name="settings_drive_authorize">Autorizar Google Drive</string>
-    <string name="settings_drive_connected">Conectado como %1$s</string>
-    <string name="settings_drive_disconnect">Desconectar</string>
-    <string name="settings_drive_authorizing">Autorizando…</string>
-    <string name="settings_drive_error_oauth">Error al autorizar Google Drive</string>
-    <string name="settings_drive_error_config">Google Drive no está configurado</string>
-    <string name="settings_drive_cold_backup_section">Respaldo frío (Drive)</string>
-    <string name="settings_drive_cold_backup_description">Exportá o importá tu biblioteca como respaldo frío a Drive. Solo desde Ajustes — guardar nunca toca Drive.</string>
-    <string name="settings_drive_cold_export">Exportar a Drive</string>
-    <string name="settings_drive_cold_exporting">Exportando…</string>
-    <string name="settings_drive_cold_export_success">Respaldo frío exportado a Drive</string>
-    <string name="settings_drive_cold_export_error">Falló la exportación del respaldo frío</string>
-    <string name="settings_drive_cold_import">Importar desde Drive</string>
-    <string name="settings_drive_cold_importing">Importando…</string>
-    <string name="settings_drive_cold_import_success">Respaldo frío importado</string>
-    <string name="settings_drive_cold_import_error">Falló la importación del respaldo frío</string>
-    <string name="settings_drive_cold_import_partial">%1$d registro(s) no se pudieron importar (%2$s) — el resto sí se importó</string>
-    <string name="settings_catalog_sync_partial">%1$d libro(s) no se pudieron sincronizar con el catálogo (%2$s). Se reintentará automáticamente.</string>
-
-    <!-- Drive connect prompt (one-time, after successful import) -->
-    <string name="drive_connect_prompt_title">¿Conectar Google Drive?</string>
-    <string name="drive_connect_prompt_body">Conecta Google Drive para sincronizar y descargar tus libros entre dispositivos.</string>
-    <string name="drive_connect_prompt_accept">Conectar</string>
-    <string name="drive_connect_prompt_decline">Ahora no</string>
-
-    <!-- Statistics -->
-    <string name="statistics_title">Estadísticas</string>
-    <string name="statistics_subtitle">Tu actividad de lectura</string>
-    <string name="statistics_summary">Resumen</string>
-    <string name="statistics_total_reading_time">Tiempo total de lectura</string>
-    <string name="statistics_current_streak">Racha actual</string>
-    <string name="statistics_books_read">Libros leídos</string>
-    <string name="statistics_days">días</string>
-    <string name="statistics_minutes">min</string>
-    <string name="statistics_reading_activity">Actividad de lectura</string>
-    <string name="statistics_last_7_days">Últimos 7 días</string>
-    <string name="statistics_goals">Metas</string>
-    <string name="statistics_daily_goal">Meta diaria</string>
-    <string name="statistics_favorite_genres">Géneros favoritos</string>
-    <string name="statistics_no_genres">Aún no hay datos de géneros</string>
-    <string name="statistics_no_genres_subtitle">Agregá resaltados y notas para ver qué leés más.</string>
-    <string name="statistics_empty_title">Aún no hay datos de lectura</string>
-    <string name="statistics_empty_subtitle">Empezá a leer para ver tus estadísticas.</string>
-    <string name="reader_cancel">Cancelar</string>
-    <string name="reader_save">Guardar</string>
-    <string name="reader_title">Lector</string>
+    <string name="editor_values">Valores del editor</string>
+    <string name="font_name_arial">Arial</string>
+    <string name="font_name_georgia">Georgia</string>
+    <string name="font_name_merriweather">Merriweather</string>
     <string name="reader_add_bookmark">Añadir marcador</string>
-    <string name="reader_go_to_page">Ir a página</string>
-    <string name="reader_go_to_page_input_label">Número de página</string>
-    <string name="reader_go_to_page_input_hint">Ingresá un valor entre 1 y %1$d</string>
+    <string name="reader_back">Volver</string>
     <string name="reader_go">Ir</string>
+    <string name="reader_go_to_page">Ir a página</string>
+    <string name="reader_go_to_page_input_hint">Ingresá un valor entre 1 y %1$d</string>
+    <string name="reader_go_to_page_input_label">Número de página</string>
+    <string name="reader_highlights_button">Resaltados</string>
     <string name="reader_loaded_in">Abierto en %1$d ms</string>
     <string name="reader_retry">Reintentar</string>
+    <string name="reader_settings_theme_section">Tema de fondo</string>
+    <string name="reader_sleep_timer_end_of_chapter">Fin de capítulo</string>
+    <string name="reader_theme_dark">Oscuro</string>
+    <string name="reader_theme_light">Claro</string>
+    <string name="reader_theme_sepia">Sepia</string>
+    <string name="reader_toc">Índice</string>
+    <string name="theme_oled">OLED</string>
+    <string name="vertical_scroll">Desplazamiento vertical</string>
 
-    <!-- Highlights -->
-    <string name="highlights_menu_edit_note">Editar nota</string>
-    <string name="highlights_menu_delete">Eliminar resaltado</string>
-    <string name="highlights_delete_title">Eliminar resaltado</string>
-    <string name="highlights_delete_message">¿Estás seguro de eliminar este resaltado? "%1$s"</string>
-    <string name="highlights_delete_confirm">Eliminar</string>
-    <string name="highlights_deleted_snackbar">Resaltado eliminado</string>
-    <string name="highlights_menu_copy_text">Copiar texto</string>
-    <string name="highlights_menu_change_color">Cambiar color</string>
-    <string name="highlights_menu_view_in_book">Ver en el libro</string>
-    <string name="highlights_menu_add_tag">Agregar etiqueta</string>
-    <string name="highlights_menu_edit_tag">Editar etiqueta</string>
-    <string name="highlights_snackbar_copied">Copiado al portapapeles</string>
-    <string name="highlights_snackbar_color_changed">Color cambiado</string>
-    <string name="highlights_snackbar_tag_saved">Etiqueta guardada</string>
-    <string name="highlights_tag_dialog_hint">Ingresá nombre de etiqueta</string>
-    <string name="highlights_color_filter_todos">Todas</string>
-    <string name="highlights_syncing">Sincronizando…</string>
-    <string name="highlights_synced">Sincronizado</string>
-    <string name="highlights_refresh_content_description">Actualizar resaltados</string>
-
-    <!-- Library -->
-    <string name="library_menu_edit_metadata">Editar metadatos</string>
-    <string name="library_menu_remove">Quitar de la biblioteca</string>
-
-    <!-- Context Menu -->
-    <string name="context_menu_more">Más opciones</string>
-
-    <!-- Dictionary -->
-    <string name="dictionary_title">Diccionario</string>
-    <string name="dictionary_subtitle">Palabras y definiciones guardadas</string>
-    <string name="dictionary_add_word">Agregar palabra</string>
-    <string name="dictionary_add_word_hint">Escribí una palabra</string>
-    <string name="dictionary_add_definition_hint">Definición (opcional)</string>
-    <string name="dictionary_add_confirm">Agregar</string>
-    <string name="dictionary_search_placeholder">Buscar palabras…</string>
-    <string name="dictionary_empty">Sin palabras</string>
-    <string name="dictionary_empty_subtitle">Tocá + para guardar tu primera palabra.</string>
-    <string name="dictionary_delete_title">Eliminar palabra</string>
-    <string name="dictionary_delete_message">¿Estás seguro de eliminar &quot;%1$s&quot;?</string>
-    <string name="dictionary_delete_confirm">Eliminar</string>
-    <string name="dictionary_duplicate">"%1$s" ya está en tu diccionario.</string>
-    <string name="dictionary_added">"%1$s" agregado a tu diccionario.</string>
-    <string name="dictionary_word_count">%1$d palabras</string>
-    <string name="dictionary_tap_to_add_definition">Tocar para agregar definición</string>
-    <string name="dictionary_edit_confirm">Guardar</string>
-    <string name="dictionary_detail_part_of_speech">Categoría gramatical</string>
-    <string name="dictionary_detail_phonetic">Fonética</string>
-    <string name="dictionary_detail_phonetic_hint">/eˈfimeɾo/</string>
-    <string name="dictionary_detail_description">Descripción</string>
-    <string name="dictionary_detail_example">Ejemplo personal</string>
-    <string name="dictionary_detail_example_hint">Escribe tu propia oración de ejemplo</string>
-    <string name="dictionary_detail_book_reference">Referencia del libro</string>
-    <string name="dictionary_detail_chapter">Capítulo %1$s</string>
-    <string name="settings_dictionary_label">Diccionario</string>
-    <string name="context_menu_dictionary">Agregar al diccionario</string>
-    <!-- Descripción de contenido corta y estable para el icono de la acción de
-         diccionario (sin texto). Separada de `context_menu_dictionary` para que
-         la etiqueta larga no pueda convertirse en el selector por accidente. -->
-    <string name="context_menu_dictionary_action">Diccionario</string>
-    <string name="reader_add_to_dictionary">Agregado al diccionario</string>
-    <string name="reader_already_in_dictionary">Ya está en el diccionario</string>
-
-    <!-- Library Context Menu -->
-    <string name="library_menu_mark_completed">Marcar como leído</string>
-    <string name="library_menu_mark_plan_to_read">Planeo leer</string>
-    <string name="library_menu_share">Compartir archivo</string>
-
-    <!-- Edit Metadata -->
-    <string name="edit_metadata_title">Editar metadatos</string>
-    <string name="edit_metadata_field_title">Título</string>
-    <string name="edit_metadata_field_author">Autor</string>
-    <string name="edit_metadata_field_synopsis">Sinopsis</string>
-    <string name="edit_metadata_field_cover">Portada</string>
-    <string name="edit_metadata_change_cover">Cambiar portada</string>
-    <string name="library_cover_content_description">Portada del libro</string>
-    <string name="edit_metadata_save">Guardar</string>
-    <string name="edit_metadata_section_details">Detalles</string>
-    <string name="edit_metadata_field_date">Fecha de publicación</string>
-    <string name="edit_metadata_field_language">Idioma</string>
-    <string name="edit_metadata_field_publisher">Editorial</string>
-    <string name="edit_metadata_field_size">Tamaño</string>
-    <string name="edit_metadata_field_format">Formato</string>
-    <string name="edit_metadata_genres">Géneros</string>
+    <!-- Duplicated from :feature:bookdetail: :app still resolves these; text is identical. -->
+    <string name="book_detail_error_not_found">Libro no encontrado</string>
     <string name="edit_metadata_tags">Etiquetas</string>
-    <string name="edit_metadata_add_genre">Agregar género</string>
-    <string name="edit_metadata_add_tag">Agregar etiqueta</string>
-    <string name="edit_metadata_save_changes">Guardar cambios</string>
-    <string name="edit_metadata_counter">%1$d/%2$d</string>
-    <string name="edit_metadata_add">Agregar</string>
-    <string name="edit_metadata_remove_chip">Eliminar</string>
-    <string name="edit_metadata_save_failed">No se pudieron guardar los cambios</string>
-    <string name="action_ok">Aceptar</string>
-
-    <!-- Library Snackbars -->
-    <string name="library_snackbar_marked_completed">Marcado como leído</string>
-    <string name="library_snackbar_marked_plan_to_read">Marcado como Planeo leer</string>
-    <string name="library_snackbar_metadata_saved">Metadatos actualizados</string>
-
-    <!-- Share -->
-    <string name="library_share_chooser_title">Compartir libro</string>
-
-    <!-- Navigation errors -->
-    <string name="book_not_found">Libro no encontrado</string>
-
-    <!-- Format strings -->
-    <string name="format_percent">%d %%</string>
-
-    <!-- Import Overlay -->
-    <string name="import_overlay_icon_desc">Importando libro</string>
-    <string name="import_state_extracting">Extrayendo libro…</string>
-    <string name="import_state_analyzing">Analizando contenido…</string>
-    <string name="import_state_saving">Guardando…</string>
-
-    <!-- Download from other devices -->
-    <string name="book_available_from_other_device">Disponibles desde otros dispositivos</string>
-    <string name="cloud_books_loading">Cargando libros de la nube…</string>
-    <string name="book_download">Descargar</string>
-    <string name="book_downloading">Descargando…</string>
-    <string name="book_download_error">No se pudo descargar el libro. Verificá tu conexión e intentá de nuevo.</string>
-    <string name="book_download_source_android">Desde Android</string>
-    <string name="book_download_source_desktop">Desde Desktop</string>
-    <string name="book_download_source_unknown">Desde otro dispositivo</string>
-    <string name="download_confirm_title">¿Descargar libro?</string>
-    <string name="download_confirm_body">Se descargará "%1$s" de %2$s.</string>
-    <string name="download_confirm_body_no_author">Se descargará "%1$s".</string>
-    <string name="book_empty_downloadable">No hay libros disponibles desde otros dispositivos</string>
-    <string name="action_dismiss">Descartar</string>
-    <string name="action_cancel">Cancelar</string>
-    <string name="library_count">%1$d disponibles</string>
-
-    <!-- Download Overlay -->
-    <string name="download_overlay_stage_downloading">Descargando archivo…</string>
-    <string name="download_overlay_stage_processing">Procesando…</string>
-    <string name="download_overlay_stage_saving">Guardando en tu biblioteca…</string>
-    <string name="download_overlay_done">Listo</string>
-    <string name="download_overlay_percent">%1$d%%</string>
-
-    <!-- Cuenta (Ajustes → Cuenta) -->
-    <string name="settings_account_export_data">Exportar mis datos</string>
-    <string name="settings_account_connected_drive">Conectado Drive</string>
-    <string name="settings_account_export_success">Datos exportados</string>
-
-    <!-- Almacenamiento (Ajustes → Almacenamiento) -->
-    <string name="settings_storage_title">Almacenamiento</string>
-    <string name="storage_header_total_used">%1$s en uso</string>
-    <string name="storage_header_subtitle">Libros y caches locales</string>
-    <string name="storage_cache_section">Cache</string>
-    <string name="storage_cache_discover">Cache de Descubrir</string>
-    <string name="storage_cache_images">Cache de imágenes</string>
-    <string name="storage_cache_reader">Cache de lectura</string>
-    <string name="storage_action_clear_cache">Limpiar cache</string>
-    <string name="storage_books_section">Libros</string>
-    <string name="storage_books_empty">No hay libros guardados</string>
-    <string name="storage_loading">Calculando…</string>
-    <string name="storage_action_delete">Borrar</string>
-    <string name="storage_action_sweep">Eliminar archivos huérfanos</string>
-    <string name="storage_action_clear_all">Limpiar todo</string>
-    <string name="storage_cleared">Almacenamiento limpiado</string>
-
-    <!-- Sincronización (Ajustes → Sincronización) -->
-    <string name="settings_sync_title">Sincronización</string>
-    <string name="sync_card_realtime_title">Realtime</string>
-    <string name="sync_realtime_connected">Conectado</string>
-    <string name="sync_last_sync_label">Última sync</string>
-    <string name="sync_last_sync_value">Hoy 14:32</string>
-    <string name="sync_outbox_label">Outbox</string>
-    <string name="sync_outbox_value">0 pendientes</string>
-    <string name="sync_recent_title">Recientes (últimos 5)</string>
-    <string name="sync_entry_highlights">Resaltados sincronizados</string>
-    <string name="sync_entry_progress">Progreso sincronizado</string>
-    <string name="sync_entry_book">Libro importado</string>
-    <string name="sync_action_sync_now">Sincronizar ahora</string>
-    <string name="sync_action_view_logs">Ver logs</string>
-    <string name="sync_now_success">Sincronización iniciada</string>
-
-    <!-- Acerca de (Ajustes → Acerca de) -->
-    <string name="about_lincoln_quote">“Una persona será tan feliz como decida serlo.”</string>
-    <string name="about_lincoln_author">— Abraham Lincoln</string>
-    <string name="about_terms">Términos</string>
-    <string name="about_licenses">Licencias</string>
-    <string name="about_contact">Contactar</string>
-    <string name="about_rate">Calificar</string>
-    <string name="about_footer">© 2026 NEXO</string>
-
-    <!-- Rendimiento (Ajustes → Rendimiento) -->
-    <string name="settings_performance_title">Rendimiento</string>
-    <string name="performance_card_timings_title">Tiempos clave</string>
-    <string name="performance_card_timings_subtitle">Cold start, abrir lector, sync pull, guardar resaltado — avg / p95 / max</string>
-    <string name="performance_card_resources_title">Recursos</string>
-    <string name="performance_card_resources_subtitle">DB, resaltados, cache y memoria</string>
-    <string name="performance_card_sync_title">Estado sync</string>
-    <string name="performance_card_sync_subtitle">Realtime, última sync y outbox</string>
-    <string name="performance_card_diagnostics_title">Diagnóstico</string>
-    <string name="performance_card_diagnostics_subtitle">FPS, ANRs y últimos crashes</string>
-    <string name="performance_loading">Cargando métricas…</string>
-    <string name="performance_last_measured">Última medición a las %1$s</string>
-    <string name="performance_measure_now">Medir ahora</string>
-    <string name="performance_db_size">Tamaño DB</string>
-    <string name="performance_highlights_count">Resaltados</string>
-    <string name="performance_cache_size">Cache (epub_cache)</string>
-    <string name="performance_clear_cache">Limpiar cache</string>
-    <string name="performance_cache_cleared">Cache limpiada</string>
-    <string name="performance_cache_clear_error">No se pudo limpiar la cache</string>
-    <string name="performance_memory">Memoria</string>
-    <string name="performance_realtime_connected">Realtime Conectado</string>
-    <string name="performance_realtime_disconnected">Realtime Desconectado</string>
-    <string name="performance_status_connected">Conectado</string>
-    <string name="performance_status_disconnected">Desconectado</string>
-    <string name="performance_last_sync">Última sync</string>
-    <string name="performance_outbox_pending">Outbox pendientes</string>
-    <string name="performance_fps_scroll">FPS scroll</string>
-    <string name="performance_anrs">ANRs</string>
-    <string name="performance_crashes_title">Crashes (últimos 3)</string>
-    <string name="performance_no_crashes">Sin crashes recientes</string>
-    <string name="performance_generate_report">Generar reporte (.zip)</string>
-    <string name="performance_report_generated">Reporte generado: %1$s</string>
-    <string name="performance_report_error">No se pudo generar el reporte</string>
-    <string name="performance_report_path">Archivo: %1$s — toca para compartir</string>
-    <string name="performance_share_report">Compartir reporte de rendimiento</string>
-
-    <!-- Crash feedback sheet (PR4 / tasks 4.3-4.4) — ES verbatim from feedback-design #2460 (njdtk).
-         These strings are the SOURCE OF TRUTH (spec D1 copy audit gate). Do not edit lightly;
-         any drift from the design contract must update both this block and #2460. -->
-    <string name="feedback_mobile_title">Ayúdanos a arreglar esto</string>
-    <string name="feedback_mobile_subtitle">La app se cerró mientras leías. Tu reporte nos ayuda a que no vuelva a pasar.</string>
-    <string name="feedback_mobile_auto_context_label">Detectamos automáticamente</string>
-    <string name="feedback_mobile_context_no_book">La app se cerró mientras usabas NEXO.</string>
-    <string name="feedback_mobile_context_unknown_screen">NEXO</string>
-    <string name="feedback_mobile_context_no_title">Libro sin título</string>
-    <string name="feedback_mobile_context_chapter_page">%1$s · página %2$d</string>
-    <string name="feedback_mobile_context_page_only">página %1$d</string>
-    <string name="feedback_mobile_context_chapter_only">%1$s</string>
-    <string name="feedback_mobile_input_label">¿Qué estabas haciendo cuando se cerró?</string>
-    <string name="feedback_mobile_helper">Opcional · nos ayuda muchísimo</string>
-    <string name="feedback_mobile_privacy">Solo se envía este reporte, nada de tu biblioteca.</string>
-    <string name="feedback_mobile_close">Cerrar</string>
-    <string name="feedback_mobile_send">Enviar reporte</string>
-    <string name="feedback_mobile_sending">Enviando…</string>
-    <string name="feedback_mobile_sent">Enviado</string>
-    <string name="feedback_mobile_offline_notice">Guardado sin conexión — enviaremos cuando vuelvas a estar online.</string>
-    <string name="feedback_mobile_counter">%1$d / %2$d</string>
-
-    <string name="settings_addons_title">Complementos de catálogo</string>
-    <string name="settings_addons_description">Instala catálogos desde una URL de manifiesto (solo HTTPS)</string>
-    <string name="settings_addons_url_label">URL del manifiesto</string>
-    <string name="settings_addons_url_placeholder">https://ejemplo.com/manifest.json</string>
-    <string name="settings_addons_install">Instalar</string>
-    <string name="settings_addons_installing">Instalando…</string>
-    <string name="settings_addons_installed_toast">Complemento instalado</string>
-    <string name="settings_addons_install_failed">Error al instalar el complemento</string>
-    <string name="settings_addons_empty">No hay complementos instalados</string>
-    <string name="settings_addons_enable">Activar</string>
-    <string name="settings_addons_disable">Desactivar</string>
-    <string name="settings_addons_uninstall">Desinstalar</string>
-    <string name="settings_addons_back">Volver</string>
-    <string name="settings_addons_state_enabled">Activado</string>
-    <string name="settings_addons_state_disabled">Desactivado</string>
-    <string name="settings_addons_uninstall_confirm">¿Desinstalar addon?</string>
-    <string name="settings_addons_uninstall_confirm_body">Se quitará de tu biblioteca</string>
-    <string name="settings_addons_uninstall_confirm_action">Desinstalar</string>
-    <string name="settings_addons_uninstall_confirm_cancel">Cancelar</string>
-    <!-- U4: Fuentes integradas (read-only built-in sources) -->
-    <string name="settings_addons_builtin_title">Fuentes integradas</string>
-    <string name="settings_addons_builtin_gutendex_role">Habilita las descargas de títulos de dominio público</string>
-    <string name="settings_addons_builtin_openlibrary_role">Solo búsqueda combinada — sin riel dedicado</string>
-    <string name="performance_no_data">Sin datos aún</string>
-    <string name="performance_no_data_hint">Este flujo aún no tiene instrumento: los datos aparecen al usarlo en esta sesión.</string>
-    <string name="settings_privacy_title">Privacidad y telemetría</string>
-    <string name="settings_privacy_summary">Qué recopilamos y qué nunca recopilamos</string>
-    <string name="settings_privacy_collected">Recopilamos: informes de fallos, tiempos de rendimiento agrupados y versión/plataforma de la app (vía Sentry).</string>
-    <string name="settings_privacy_never">Nunca recopilamos: contenido de libros, títulos, resaltados ni tus búsquedas.</string>
-    <string name="settings_privacy_toggle_label">Enviar telemetría</string>
-    <string name="settings_privacy_toggle_hint_off">Esto detiene el ENVÍO de telemetría de inmediato (los datos nunca se recopilan sin conexión).</string>
-    <string name="settings_privacy_toggle_hint_on">Se está enviando telemetría. Desactívalo para dejar de enviar de inmediato.</string>
-    <!-- U5: read-access ("Dónde leerlo") section -->
-    <string name="read_access_title">Dónde leerlo</string>
-    <string name="read_access_subtitle">Opciones legales para este título, en otro lado</string>
-    <string name="read_access_open">Abrir</string>
-    <string name="read_access_loading">Buscando opciones legales…</string>
-    <string name="read_access_empty_title">Sin copias legales</string>
-    <string name="read_access_empty_body">Todavía no encontramos una forma legal de leer este título. Probá con otra edición u otra búsqueda.</string>
-    <string name="access_badge_download">Descarga gratis</string>
-    <!-- U5: addon consent/disclosure (deferred from 4.3) -->
-    <string name="addon_consent_title">¿Compartir los datos del libro con este complemento?</string>
-    <string name="addon_consent_body">«%1$s» puede ver el título, el autor y los identificadores de este libro para buscar dónde leerlo. Los enlaces se abren en tu navegador; nada se descarga sin tu acción.</string>
-    <string name="addon_consent_allow">Permitir</string>
-    <string name="addon_consent_deny">Ahora no</string>
-    <string name="addon_consent_trust_note">Los complementos corren fuera de NEXO. Compartí datos solo con fuentes en las que confíes.</string>
-    <string name="addon_consent_state_granted">Acceso otorgado: este complemento puede resolver enlaces de lectura.</string>
-    <string name="addon_consent_state_missing">Acceso no otorgado: este complemento no va a resolver enlaces de lectura.</string>
-    <!-- U5: addon capabilities -->
-    <string name="addon_capabilities_title">Capacidades</string>
-    <string name="addon_capability_search">Buscar</string>
-    <string name="addon_capability_details">Detalles</string>
-    <string name="addon_capability_resolve">Resolver enlaces</string>
-    <string name="addon_capability_detail_title">Capacidades de %1$s</string>
-    <string name="addon_capability_detail_body">Lo que este complemento declara que puede hacer con tus consultas del catálogo. Otorgá acceso solo si confiás en esta fuente.</string>
-    <!-- U5: addon read sheet -->
-    <string name="addon_read_resolving">Consultando al complemento…</string>
-    <string name="addon_read_empty_title">Sin opciones de este complemento</string>
-    <string name="addon_read_empty_body">«%1$s» no ofrece opciones de lectura para este título ahora.</string>
-    <string name="addon_read_legal_notice">Fuente externa: los enlaces se abren en tu navegador. La disponibilidad y los derechos dependen del proveedor y de tu región.</string>
-    <!-- U5: legal disclaimer + policy page -->
-    <string name="legal_disclaimer_title">Un aviso antes de explorar</string>
-    <string name="legal_disclaimer_body">NEXO apunta a fuentes externas legales. Las descargas en la app solo se ofrecen para libros de dominio público; lo demás se abre en tu navegador, donde la disponibilidad y los derechos dependen del proveedor.</string>
-    <string name="legal_disclaimer_accept">Entendido</string>
-    <string name="legal_disclaimer_view_policy">Leer aviso legal</string>
-    <string name="legal_policy_title">Aviso legal</string>
-    <string name="legal_policy_intro">NEXO es una app de lectura, no una librería: te ayuda a encontrar dónde leer legalmente y mantiene tu biblioteca sincronizada.</string>
-    <string name="legal_policy_sources_title">De dónde viene el catálogo</string>
-    <string name="legal_policy_sources_body">Los resultados vienen de catálogos públicos (Open Library, Project Gutenberg vía Gutendex, Google Books) y de complementos comunitarios que vos instalás. Cada resultado nombra su fuente.</string>
-    <string name="legal_policy_public_domain_title">Descargas</string>
-    <string name="legal_policy_public_domain_body">La descarga en la app solo se ofrece para libros de dominio público. Cualquier otro título se abre en tu navegador, donde los términos del proveedor y tu región deciden la disponibilidad.</string>
-    <string name="legal_policy_addons_title">Complementos y consentimiento</string>
-    <string name="legal_policy_addons_body">Los complementos corren fuera de NEXO. Un complemento solo resuelve enlaces de lectura después de que le otorgues acceso al título, autor e identificadores del libro, y podés revocar ese acceso cuando quieras desde la pantalla de complementos.</string>
-    <string name="legal_policy_updated_note">Este aviso puede cambiar a medida que se agreguen fuentes.</string>
-    <!-- U5: legal empty state + universal sources -->
-    <string name="discover_empty_legal_title">Sin coincidencias legales</string>
-    <string name="discover_empty_legal_body">Nada en %1$s coincide con «%2$s». Probá con otra fuente u otra búsqueda.</string>
-
-    <!-- App update self-check (SDD app-auto-update, Android slice) -->
-    <string name="update_check">Buscar actualizaciones</string>
-    <string name="update_checking">Buscando…</string>
-    <string name="update_up_to_date">Está al día</string>
-    <string name="update_available_title">Actualización disponible</string>
-    <string name="update_available_body">La versión %1$s está disponible.</string>
-    <string name="update_now">Actualizar ahora</string>
-    <string name="update_later">Recordarme más tarde</string>
-    <string name="update_metered_consent">Está en una conexión medida. ¿Descargar la actualización ahora? Puede usar datos móviles.</string>
-    <string name="update_install_guidance">El sistema bloqueó la instalación. Active “Instalar apps desconocidas” para NEXO e inténtelo de nuevo.</string>
-    <string name="update_error_unreachable">No se pudo contactar el servidor de actualizaciones. Inténtelo más tarde.</string>
-    <string name="update_error_malformed">El feed de actualización no es válido. Inténtelo más tarde.</string>
-    <string name="update_error_offline">Está sin conexión. Conéctese e inténtelo de nuevo.</string>
-    <string name="import_requires_account">Inicie sesión para importar libros a su biblioteca</string>
-    <string name="import_failed">La importación falló: %1$s</string>
-
-    <!-- Reader selection / clipboard feedback -->
-    <string name="reader_selection_no_text">Ningún texto seleccionado</string>
-    <string name="reader_snackbar_save_error">No se pudo guardar. Inténtelo de nuevo.</string>
-
-    <!-- Highlight CRUD snackbars -->
-    <string name="highlights_snackbar_added_to_dictionary">Agregado al diccionario</string>
-    <string name="highlights_snackbar_add_to_dictionary_failed">No se pudo agregar al diccionario</string>
-
-    <!-- Dictionary snackbars -->
-    <string name="dictionary_snackbar_definition_saved">Definición guardada</string>
-    <string name="dictionary_snackbar_save_failed">No se pudo guardar la palabra</string>
-
-    <!-- Library snackbars -->
-    <string name="library_snackbar_book_deleted">Se eliminó "%1$s"</string>
-    <string name="library_snackbar_book_delete_failed">No se pudo eliminar el libro</string>
-    <string name="library_snackbar_status_failed">No se pudo actualizar el estado</string>
-
-    <!-- Auth snackbars -->
-    <string name="auth_snackbar_reset_email_sent">Correo de restablecimiento enviado</string>
+    <string name="library_author_unknown">Autor desconocido</string>
 </resources>

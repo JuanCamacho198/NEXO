@@ -1,0 +1,5 @@
+{
+  "expect": "reject",
+  "expectedCode": "ADDON_FETCH_TOO_LARGE",
+  "rawBytesLength": 65537
+}

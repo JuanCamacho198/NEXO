@@ -241,6 +241,7 @@ class ReaderViewModelFinalSweepTest {
             defaultBookId = null,
             activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
+            bookNotFoundMessage = "Book not found",
         )
     }
 }

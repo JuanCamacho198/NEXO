@@ -99,6 +99,7 @@ class ReaderViewModelFullscreenTest {
                     defaultBookId = null,
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
+                    bookNotFoundMessage = "Book not found",
                 )
 
             // Load a new book (simulate)
@@ -127,6 +128,7 @@ class ReaderViewModelFullscreenTest {
             defaultBookId = null,
             activeUser = activeUserProviderFor(),
             mainDispatcher = dispatcher,
+            bookNotFoundMessage = "Book not found",
         )
     }
 }

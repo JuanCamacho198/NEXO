@@ -1,5 +1,5 @@
 {
-  "version": "2.21",
+  "version": "2.22",
   "children": [
     {
       "type": "frame",
@@ -70700,6 +70700,17 @@
           ]
         }
       ]
+    },
+    {
+      "type": "text",
+      "id": "BGppF",
+      "x": 3953.5,
+      "y": 767.5,
+      "fill": "#000000",
+      "content": "Hay que corregir esa skill del emulador de Android porque a veces inicia de una y tú te quedes esperando. Mira, ya está iniciada y tú sigues esperando.",
+      "fontFamily": "Inter",
+      "fontSize": 12,
+      "fontWeight": "normal"
     }
   ],
   "themes": {

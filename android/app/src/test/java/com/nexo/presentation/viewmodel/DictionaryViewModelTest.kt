@@ -1,10 +1,10 @@
 package com.nexo.presentation.viewmodel
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
+import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.DictionaryWord
 import com.nexo.domain.repository.DictionaryRepository
-import com.nexo.presentation.UiEvent
+import com.nexo.testutil.FakeStringResolver
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.TEST_USER_ID
 import com.nexo.testutil.activeUserProviderFor
@@ -21,27 +21,27 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /**
- * Robolectric is required from the moment [DictionaryViewModel] resolves its
- * snackbar copy from string resources: the assertions below read real English
- * text, not a mock's placeholder.
+ * The snackbar copy is pinned in the [FakeStringResolver] below, so the
+ * assertions read the same English text without an Android runtime.
  */
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 @OptIn(ExperimentalCoroutinesApi::class)
 class DictionaryViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    private val appContext: Context = ApplicationProvider.getApplicationContext()
+    private val stringResolver =
+        FakeStringResolver(
+            mapOf(
+                R.string.dictionary_duplicate to "\"%1\$s\" is already in your dictionary.",
+                R.string.dictionary_added to "\"%1\$s\" added to your dictionary.",
+            ),
+        )
 
     private fun viewModel(
         repo: DictionaryRepository,
-    ) = DictionaryViewModel(repo, activeUserProviderFor(), appContext)
+    ) = DictionaryViewModel(repo, activeUserProviderFor(), stringResolver)
 
     @Test
     fun `onAddWordConfirm empty term rejected no insert`() =

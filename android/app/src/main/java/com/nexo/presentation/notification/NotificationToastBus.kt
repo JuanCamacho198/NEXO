@@ -1,6 +1,6 @@
 package com.nexo.presentation.notification
 
-import com.nexo.presentation.UiEvent
+import com.nexo.domain.event.UiEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow

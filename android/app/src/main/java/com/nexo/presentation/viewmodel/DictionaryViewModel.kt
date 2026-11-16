@@ -1,13 +1,13 @@
 package com.nexo.presentation.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.DictionaryWord
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.presentation.UiEvent
+import com.nexo.presentation.util.StringResolver
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +40,7 @@ data class DictionaryUiState(
 class DictionaryViewModel(
     private val dictionaryRepository: DictionaryRepository,
     private val activeUser: ActiveUserProvider,
-    private val appContext: Context,
+    private val stringResolver: StringResolver,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(DictionaryUiState())
     val uiState: StateFlow<DictionaryUiState> = _uiState.asStateFlow()
@@ -109,7 +109,7 @@ class DictionaryViewModel(
             if (dictionaryRepository.exists(trimmed, userId)) {
                 _uiEvent.emit(
                     UiEvent.ShowSnackbar(
-                        appContext.getString(R.string.dictionary_duplicate, trimmed),
+                        stringResolver.get(R.string.dictionary_duplicate, trimmed),
                     ),
                 )
             } else {
@@ -117,14 +117,14 @@ class DictionaryViewModel(
                     onSuccess = {
                         _uiEvent.emit(
                             UiEvent.ShowSnackbar(
-                                appContext.getString(R.string.dictionary_added, trimmed),
+                                stringResolver.get(R.string.dictionary_added, trimmed),
                             ),
                         )
                     },
                     onFailure = { e ->
                         _uiEvent.emit(
                             UiEvent.ShowSnackbar(
-                                e.message ?: appContext.getString(R.string.dictionary_snackbar_save_failed),
+                                e.message ?: stringResolver.get(R.string.dictionary_snackbar_save_failed),
                             ),
                         )
                     },
@@ -215,7 +215,7 @@ class DictionaryViewModel(
                     example = state.editExampleText.trimmedOrNull(),
                 ).fold(
                     onSuccess = {
-                        _uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.dictionary_snackbar_definition_saved)))
+                        _uiEvent.emit(UiEvent.ShowSnackbar(stringResolver.get(R.string.dictionary_snackbar_definition_saved)))
                         _uiState.update {
                             it.copy(
                                 selectedWord = null,
@@ -229,7 +229,7 @@ class DictionaryViewModel(
                     onFailure = { e ->
                         _uiEvent.emit(
                             UiEvent.ShowSnackbar(
-                                e.message ?: appContext.getString(R.string.dictionary_snackbar_save_failed),
+                                e.message ?: stringResolver.get(R.string.dictionary_snackbar_save_failed),
                             ),
                         )
                     },

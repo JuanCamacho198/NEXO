@@ -4,17 +4,17 @@ import app.cash.turbine.test
 import com.nexo.data.remote.supabase.SupabaseBookCatalogSync
 import com.nexo.data.remote.sync.DriveSyncState
 import com.nexo.data.remote.sync.SyncService
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.BookImportRequest
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.usecase.GetBookProgressUseCase
 import com.nexo.domain.usecase.ImportEpubBookUseCase
-import com.nexo.presentation.UiEvent
+import com.nexo.testutil.FakeStringResolver
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.TEST_USER_ID
 import com.nexo.testutil.activeUserProviderFor
-import com.nexo.testutil.mockAppContext
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -52,7 +52,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockAppContext(),
+                    stringResolver = FakeStringResolver(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -86,7 +86,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockAppContext(),
+                    stringResolver = FakeStringResolver(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -119,7 +119,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockAppContext(),
+                    stringResolver = FakeStringResolver(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -158,7 +158,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockAppContext(),
+                    stringResolver = FakeStringResolver(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -198,7 +198,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockAppContext(),
+                    stringResolver = FakeStringResolver(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -238,7 +238,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockAppContext(),
+                    stringResolver = FakeStringResolver(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -263,7 +263,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockAppContext(),
+                    stringResolver = FakeStringResolver(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
@@ -349,7 +349,7 @@ class LibraryViewModelTest {
                     libraryRepository = repository,
                     importEpubBookUseCase = ImportEpubBookUseCase(repository),
                     syncService = FakeSyncService(),
-                    appContext = mockAppContext(),
+                    stringResolver = FakeStringResolver(),
                     activeUser = activeUserProviderFor(),
                     mainDispatcher = dispatcher,
                     catalogSync = catalogSync(),
