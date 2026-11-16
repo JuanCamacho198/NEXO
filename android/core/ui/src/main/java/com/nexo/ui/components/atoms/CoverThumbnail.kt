@@ -82,7 +82,7 @@ fun CoverThumbnail(
         model = imageRequest,
         onState = { state ->
             if (state is AsyncImagePainter.State.Error) {
-                DebugLog.error(TAG, "CoverThumbnail: cover load failed for $coverPath")
+                reportCoverLoadFailure(coverPath)
             }
             onImageState?.invoke(state)
         },
@@ -93,6 +93,29 @@ fun CoverThumbnail(
 }
 
 private const val TAG = "CoverThumbnail"
+
+/**
+ * Reports a Coil load failure at the severity it actually deserves.
+ *
+ * A book with no cover is a normal state, not a failure: `coverPath` being null
+ * or blank collapses the request data to `null`, which Coil resolves through
+ * `.error(UiR.drawable.cover_error)` and reports as
+ * [AsyncImagePainter.State.Error]. Logging that at ERROR flooded Sentry with
+ * fake crashes (NEXO-ANDROID-H, 543 events), so the absent-cover case stays at
+ * WARN — visible in Logcat and the in-app log, but never a Sentry error event.
+ * Only a real path that fails to decode is an ERROR.
+ */
+internal fun reportCoverLoadFailure(coverPath: String?) {
+    if (coverPath.isNullOrBlank()) {
+        DebugLog.warn(
+            TAG,
+            "CoverThumbnail: no cover to load for null/blank path. " +
+                "This is a book without a cover, not an error.",
+        )
+    } else {
+        DebugLog.error(TAG, "CoverThumbnail: cover load failed for $coverPath")
+    }
+}
 
 @Preview(showBackground = true)
 @Composable
