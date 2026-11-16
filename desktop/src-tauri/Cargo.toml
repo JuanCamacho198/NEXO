@@ -46,6 +46,34 @@ unicode-normalization = "0.1"
 [features]
 custom-protocol = ["tauri/custom-protocol"]
 
+# Release tuning: smaller binary and faster startup at the cost of build time.
+# The shipped artifact is the only thing these settings affect — `cargo test`
+# and `cargo build` keep the default dev profile.
+[profile.release]
+# One codegen unit lets LLVM optimise across the whole crate instead of per
+# partition. Largest single win for both size and runtime.
+codegen-units = 1
+# Cross-crate optimisation. With codegen-units = 1 this is "fat" LTO.
+lto = true
+# Runtime speed, not size. This is a reader: opening a book runs lopdf (PDF),
+# the `zip` inflater and the `epub` XML parser over whole files, so time goes
+# into real compute rather than into binary loading. `"s"` would shave a little
+# off the artifact by making exactly those paths slower.
+opt-level = 3
+# Drop debuginfo and symbol tables from the shipped binary.
+strip = true
+# Panics abort instead of unwinding: smaller binary, no landing pads, and a
+# crash still reaches Sentry. Verified against std's own contract for
+# `set_hook` ("the panic hook is invoked when a thread panics, but before the
+# panic runtime is invoked. As such, the hook will run with both the aborting
+# and unwinding runtimes.") and against sentry-panic 0.49.2, which captures the
+# event AND calls `client.flush(None)` synchronously inside the hook — so the
+# upload finishes before `panic_abort::__rust_start_panic` aborts.
+# The `catch_unwind` in `sentry_init.rs` does not argue for unwind either: the
+# only documented panic in `sentry::init` is DSN parsing, and that already
+# happens in `build_options()` outside the `catch_unwind` block.
+panic = "abort"
+
 [dev-dependencies]
 tempfile = "3.10"
 # The `define` cascade tests drive the production shape — a task awaiting a
