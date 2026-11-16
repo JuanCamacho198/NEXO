@@ -15,6 +15,7 @@
     FILTER_OPTIONS,
     SORT_OPTIONS,
     getSafeProgressPercentage,
+    isRealBook,
     type ShelfBook,
   } from '$lib/features/library/utils';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -78,16 +79,23 @@
   // Empty registry rows can only be trusted once the load settles; the store
   // flag keeps a first paint from flashing the empty state.
   const isLoading = $derived(isLoadingProp ?? libraryState.isLoadingLibrary);
-  const isEmptyLibrary = $derived(!isLoading && books.length === 0);
-  const hasNoResults = $derived(!isLoading && books.length > 0 && shelf.filteredBooks.length === 0);
 
-  const totalBooks = $derived(books.length);
+  // Sync stubs are library rows with no local file. They never reach the grid,
+  // so every count and the empty-state decision read from the same visible set
+  // the shelf renders; otherwise a stub inflates the badge or hides the empty
+  // state behind an empty grid.
+  const realBooks = $derived(books.filter((book) => isRealBook(book)));
+
+  const isEmptyLibrary = $derived(!isLoading && realBooks.length === 0);
+  const hasNoResults = $derived(!isLoading && realBooks.length > 0 && shelf.filteredBooks.length === 0);
+
+  const totalBooks = $derived(realBooks.length);
   const readingBooks = $derived(
-    books.filter((b) => getSafeProgressPercentage(b) > 0 && getSafeProgressPercentage(b) < 100)
+    realBooks.filter((b) => getSafeProgressPercentage(b) > 0 && getSafeProgressPercentage(b) < 100)
       .length,
   );
   const completedBooks = $derived(
-    books.filter((b) => b.readingStatus === 'completed' || getSafeProgressPercentage(b) >= 100)
+    realBooks.filter((b) => b.readingStatus === 'completed' || getSafeProgressPercentage(b) >= 100)
       .length,
   );
 </script>
