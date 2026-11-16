@@ -319,6 +319,14 @@ android {
         abortOnError = true
     }
 
+    // The migration tests live in :app but AppDatabase and its exported schemas
+    // moved to :core:data with the module split. MigrationTestHelper resolves
+    // schemas through InstrumentationRegistry assets, so :app has to expose that
+    // module's schema directory as its own asset source.
+    sourceSets {
+        getByName("androidTest").assets.srcDirs(rootProject.file("core/data/schemas"))
+    }
+
     tasks.withType(Test::class).configureEach {
         // Konsist parses the whole production source tree in-process. Give the
         // shared unit-test JVM headroom so the architecture rules and the
