@@ -23,6 +23,7 @@ type TestBook = {
   lastReadAt?: string;
   fileSizeBytes?: number;
   collectionIds?: number[];
+  filePath?: string;
   readingStatus?: 'to_read' | 'reading' | 'completed' | null;
 };
 
@@ -67,12 +68,52 @@ describe('homeState progress guards', () => {
 });
 
 describe('homeState section membership', () => {
+  it('keeps sync stubs out of both home sections and preserves the shelf count', () => {
+    const books: TestBook[] = [
+      { id: 'real', title: 'Real', filePath: '/books/real.epub', progressPercentage: 0 },
+      { id: 'stub-empty', title: 'Stub (empty path)', filePath: '', progressPercentage: 0 },
+      { id: 'stub-missing', title: 'Stub (no path)', progressPercentage: 0 },
+      { id: 'stub-blank', title: 'Stub (blank path)', filePath: '   ', progressPercentage: 0 },
+    ];
+
+    const { continueReadingBooks, myShelfBooks } = partitionHomeBooks(books);
+
+    expect(myShelfBooks.map((book) => book.id)).toEqual(['real']);
+    expect(myShelfBooks.length).toBe(1);
+    expect(continueReadingBooks.map((book) => book.id)).toEqual([]);
+  });
+
+  it('keeps a sync stub that somehow carries progress out of continue reading', () => {
+    const books: TestBook[] = [
+      { id: 'real', title: 'Real', filePath: '/books/real.epub', progressPercentage: 40 },
+      { id: 'stub', title: 'Stub', filePath: '', progressPercentage: 40, readingStatus: 'reading' },
+    ];
+
+    const { continueReadingBooks, myShelfBooks } = partitionHomeBooks(books);
+
+    expect(continueReadingBooks.map((book) => book.id)).toEqual(['real']);
+    expect(myShelfBooks.map((book) => book.id)).toEqual(['real']);
+  });
+
+  it('leaves an array of books with files unchanged', () => {
+    const books: TestBook[] = [
+      { id: 'a', title: 'A', filePath: '/books/a.epub', progressPercentage: 0 },
+      { id: 'b', title: 'B', filePath: '/books/b.epub', progressPercentage: 10 },
+      { id: 'c', title: 'C', filePath: '/books/c.epub', progressPercentage: 100 },
+    ];
+
+    const { continueReadingBooks, myShelfBooks } = partitionHomeBooks(books);
+
+    expect(myShelfBooks.map((book) => book.id)).toEqual(['a', 'b', 'c']);
+    expect(continueReadingBooks.map((book) => book.id)).toEqual(['b']);
+  });
+
   it('keeps every unique book shelved while deriving only started books', () => {
     const books: TestBook[] = [
-      { id: 'a', title: 'A', progressPercentage: 0 },
-      { id: 'b', title: 'B', progressPercentage: 10 },
-      { id: 'c', title: 'C', progressPercentage: 100 },
-      { id: 'b', title: 'B duplicate', progressPercentage: 30 },
+      { id: 'a', title: 'A', filePath: '/books/a.epub', progressPercentage: 0 },
+      { id: 'b', title: 'B', filePath: '/books/b.epub', progressPercentage: 10 },
+      { id: 'c', title: 'C', filePath: '/books/c.epub', progressPercentage: 100 },
+      { id: 'b', title: 'B duplicate', filePath: '/books/b.epub', progressPercentage: 30 },
     ];
 
     const { continueReadingBooks, myShelfBooks } = partitionHomeBooks(books);
@@ -105,7 +146,9 @@ describe('homeState read promotion', () => {
 
 describe('homeState reconciliation', () => {
   it('clears stale ids after reload and falls back to first preview book', () => {
-    const books: TestBook[] = [{ id: 'book-1', title: 'Book 1', progressPercentage: 0 }];
+    const books: TestBook[] = [
+      { id: 'book-1', title: 'Book 1', filePath: '/books/book-1.epub', progressPercentage: 0 },
+    ];
     const result = reconcileHomeState(
       books,
       makeState({
@@ -123,7 +166,9 @@ describe('homeState reconciliation', () => {
   });
 
   it('keeps shelf selection when a book also enters continue reading', () => {
-    const books: TestBook[] = [{ id: 'book-1', title: 'Book 1', progressPercentage: 10 }];
+    const books: TestBook[] = [
+      { id: 'book-1', title: 'Book 1', filePath: '/books/book-1.epub', progressPercentage: 10 },
+    ];
     const result = reconcileHomeState(
       books,
       makeState({
@@ -139,7 +184,9 @@ describe('homeState reconciliation', () => {
   });
 
   it('keeps valid shelf modal selection in home mode', () => {
-    const books: TestBook[] = [{ id: 'book-1', title: 'Book 1', progressPercentage: 0 }];
+    const books: TestBook[] = [
+      { id: 'book-1', title: 'Book 1', filePath: '/books/book-1.epub', progressPercentage: 0 },
+    ];
     const result = reconcileHomeState(
       books,
       makeState({

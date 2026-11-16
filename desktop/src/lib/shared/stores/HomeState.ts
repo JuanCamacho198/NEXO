@@ -2,9 +2,33 @@ export type ProgressLike = {
   id: string;
   progressPercentage?: number | null;
   readingStatus?: ReadingState | null;
+  /**
+   * Absent on callers that only carry progress (and on old payloads). When a
+   * caller supplies it, a missing or empty value marks a sync stub: a
+   * placeholder row for a book that was never downloaded here. Stubs have no
+   * file to open, so the home partitions drop them.
+   */
+  filePath?: string;
 };
 
 export type ReadingState = 'to_read' | 'reading' | 'completed';
+
+/**
+ * True when the book is present on this device rather than a sync stub. The
+ * highlights FK guard used to create placeholder `books` rows with an empty
+ * `file_path` for books never downloaded here; those have no file to open. A
+ * missing or blank `filePath` counts as absent so callers fail closed.
+ *
+ * Lives here because `HomeState` is a leaf module: importing the library
+ * feature's `isRealBook` created a cycle (library/utils -> HomeState ->
+ * library/utils) that silently left the predicate `undefined`. `isRealBook`
+ * delegates to this, so the rule is defined exactly once.
+ */
+export function hasBookFile(
+  book: Pick<{ filePath?: string }, 'filePath'> | undefined | null,
+): boolean {
+  return typeof book?.filePath === 'string' && book.filePath.trim().length > 0;
+}
 
 export const resolveReadingState = (
   explicitState: ReadingState | null | undefined,
@@ -590,11 +614,14 @@ export const partitionHomeBooks = <TBook extends ProgressLike>(
     }
 
     seenIds.add(book.id);
-    if (isBookInProgress(book)) {
-      continueReadingBooks.push(book);
+    // Sync stubs (no file on this device) belong to neither home section:
+    // they cannot be opened, and counting them inflated the shelf badge.
+    if (hasBookFile(book)) {
+      if (isBookInProgress(book)) {
+        continueReadingBooks.push(book);
+      }
+      myShelfBooks.push(book);
     }
-
-    myShelfBooks.push(book);
   }
 
   return {

@@ -1,5 +1,8 @@
 import type { LibraryBookDto } from '$lib/shared/types';
-import { getSafeProgressPercentage as getCanonicalProgress } from '$lib/shared/stores/HomeState';
+import {
+  getSafeProgressPercentage as getCanonicalProgress,
+  hasBookFile,
+} from '$lib/shared/stores/HomeState';
 
 // ─── View mode ───
 
@@ -117,7 +120,10 @@ export function formatPercent(book: ShelfBook): string {
  * empty `file_path` for books that had never been downloaded here; those rows
  * have no file to open and render as "Página 0". A missing `filePath` (older
  * payloads) counts as absent so the caller fails closed.
+ *
+ * Delegates to `hasBookFile` in the shared HomeState leaf module so the home
+ * partition and the library shelf apply the same rule from one definition.
  */
 export function isRealBook(book: Pick<LibraryBookDto, 'filePath'> | undefined | null): boolean {
-  return typeof book?.filePath === 'string' && book.filePath.trim().length > 0;
+  return hasBookFile(book);
 }
