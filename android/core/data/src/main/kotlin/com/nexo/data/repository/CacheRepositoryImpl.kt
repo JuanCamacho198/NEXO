@@ -19,16 +19,16 @@ import java.io.File
 class CacheRepositoryImpl(
     private val discoverCacheDao: DiscoverCacheDao,
     private val appContext: Context,
-    private val imageLoader: ImageLoader,
+    private val imageLoader: dagger.Lazy<ImageLoader>,
 ) : CacheRepository {
     override suspend fun discoverCacheSizeBytes(): Long = discoverCacheDao.payloadBytes()
 
     override suspend fun clearDiscoverCache(): Int = discoverCacheDao.deleteAll()
 
-    override suspend fun imageCacheSizeBytes(): Long = imageLoader.diskCache?.size ?: 0L
+    override suspend fun imageCacheSizeBytes(): Long = imageLoader.get().diskCache?.size ?: 0L
 
     override suspend fun clearImageCache() {
-        imageLoader.diskCache?.clear()
+        imageLoader.get().diskCache?.clear()
     }
 
     override suspend fun readerCacheSizeBytes(): Long = folderSize(readerCacheDir())
