@@ -87,7 +87,9 @@
   const realBooks = $derived(books.filter((book) => isRealBook(book)));
 
   const isEmptyLibrary = $derived(!isLoading && realBooks.length === 0);
-  const hasNoResults = $derived(!isLoading && realBooks.length > 0 && shelf.filteredBooks.length === 0);
+  const hasNoResults = $derived(
+    !isLoading && realBooks.length > 0 && shelf.filteredBooks.length === 0,
+  );
 
   const totalBooks = $derived(realBooks.length);
   const readingBooks = $derived(

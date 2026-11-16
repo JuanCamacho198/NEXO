@@ -238,4 +238,3 @@ describe('LibraryShelfScreen sync-stub suppression', () => {
     expect(screen.queryByText('No results')).toBeNull();
   });
 });
-
