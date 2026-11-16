@@ -1,10 +1,12 @@
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { type as osType } from '@tauri-apps/plugin-os';
-import { isCustomTitlebarPlatform } from '$lib/shared/utils/platform';
+import { isCustomTitlebarPlatform, usesMacTitlebarLayout } from '$lib/shared/utils/platform';
 
 export interface TitlebarState {
   get isMaximized(): boolean;
   get isCustomTitlebar(): boolean;
+  /** macOS: window controls on the left, and the green control is "Zoom". */
+  get isMacLayout(): boolean;
   init(): Promise<void>;
   destroy(): void;
   handleMinimize(): Promise<void>;
@@ -29,7 +31,14 @@ function resolveCustomTitlebar(): boolean {
   try {
     const os = osType();
     const enabled = isCustomTitlebarPlatform(os);
-    console.log('[custom-titlebar] os =', os, '| enabled =', enabled);
+    console.log(
+      '[custom-titlebar] os =',
+      os,
+      '| enabled =',
+      enabled,
+      '| macLayout =',
+      usesMacTitlebarLayout(os),
+    );
     return enabled;
   } catch (err) {
     console.warn('[custom-titlebar] osType() threw:', err);
@@ -37,12 +46,25 @@ function resolveCustomTitlebar(): boolean {
   }
 }
 
+/**
+ * macOS layout gate, resolved the same way and at the same moment as the render
+ * gate so the first paint cannot flash the Windows button order.
+ */
+function resolveMacLayout(): boolean {
+  try {
+    return usesMacTitlebarLayout(osType());
+  } catch (err) {
+    console.warn('[custom-titlebar] osType() threw while resolving mac layout:', err);
+    return false;
+  }
+}
+
 export function createTitlebarState(): TitlebarState {
   let isMaximized = $state(false);
   /**
-   * Whether the custom titlebar should render (Windows only). Seeded at
-   * creation by `resolveCustomTitlebar()` and read by App.svelte to gate the
-   * render.
+   * Whether the custom titlebar should render (every desktop platform: the
+   * window config is borderless everywhere). Seeded at creation by
+   * `resolveCustomTitlebar()` and read by App.svelte to gate the render.
    *
    * Exposed through a closure getter rather than a bare exported `$state`:
    * Svelte 5 cannot re-export a `$state` binding across modules (the compiler
@@ -50,6 +72,7 @@ export function createTitlebarState(): TitlebarState {
    * in this module and be read here for reactivity to hold on the consumer.
    */
   let isCustomTitlebar = $state(resolveCustomTitlebar());
+  let isMacLayout = resolveMacLayout();
   let unlistenResize: (() => void) | null = null;
 
   async function init(): Promise<void> {
@@ -83,6 +106,9 @@ export function createTitlebarState(): TitlebarState {
     },
     get isCustomTitlebar() {
       return isCustomTitlebar;
+    },
+    get isMacLayout() {
+      return isMacLayout;
     },
     init,
     destroy,
