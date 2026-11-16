@@ -33,8 +33,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.reader.BookChapter
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Modal bottom sheet that lists the book's chapters as a

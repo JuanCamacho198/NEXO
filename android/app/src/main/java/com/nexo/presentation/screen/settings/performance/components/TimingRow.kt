@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import com.nexo.feature.settings.R
 import com.nexo.presentation.viewmodel.PerformanceTiming
 
-
 @Composable
 fun TimingRow(timing: PerformanceTiming) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

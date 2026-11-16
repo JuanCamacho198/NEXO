@@ -12,11 +12,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.atoms.NexoBookCover
 import com.nexo.ui.components.atoms.NexoProgressBar
 import com.nexo.ui.components.atoms.NexoTypography
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Card representing a single book in the library list/grid. Shows a

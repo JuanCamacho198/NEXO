@@ -28,8 +28,8 @@ import com.nexo.R
 import com.nexo.domain.translation.ResolvedLanguages
 import com.nexo.domain.translation.SourceOrigin
 import com.nexo.domain.translation.TranslationLanguageSelection
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * The language pair a translation ran with, as two controls the reader can fix

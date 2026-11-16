@@ -1,9 +1,9 @@
 package com.nexo.presentation.viewmodel
 
 import com.nexo.data.storage.CoverStorage
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
-import com.nexo.domain.event.UiEvent
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.TEST_USER_ID
 import com.nexo.testutil.activeUserProviderFor
@@ -18,7 +18,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test

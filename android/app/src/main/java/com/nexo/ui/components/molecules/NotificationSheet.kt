@@ -46,9 +46,9 @@ import com.nexo.domain.notification.NotificationTimestamp
 import com.nexo.domain.notification.Severity
 import com.nexo.domain.notification.groupNotifications
 import com.nexo.presentation.notification.UiEventToastSink
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.atoms.NexoDivider
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Modal bottom sheet showing the real notification tray.

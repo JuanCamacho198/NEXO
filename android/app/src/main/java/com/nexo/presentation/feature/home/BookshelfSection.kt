@@ -28,11 +28,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.model.Book
-import com.nexo.ui.theme.nexoColors
-import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.components.atoms.CoverThumbnail
 import com.nexo.ui.components.atoms.NexoEmptyState
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.nexoColors
 
 @Composable
 fun MyBookshelfSection(

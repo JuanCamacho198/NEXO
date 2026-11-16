@@ -28,7 +28,6 @@ import com.nexo.feature.settings.R
 import com.nexo.presentation.viewmodel.PerformanceResources
 import java.util.Locale
 
-
 @Composable
 fun ResourcesCard(
     resources: PerformanceResources?,

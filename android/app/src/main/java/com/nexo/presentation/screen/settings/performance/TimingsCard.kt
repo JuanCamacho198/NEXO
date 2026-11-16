@@ -1,7 +1,5 @@
 package com.nexo.presentation.screen.settings.performance
 
-import com.nexo.presentation.screen.settings.performance.components.TimingRow
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,9 +24,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexo.feature.settings.R
+import com.nexo.presentation.screen.settings.performance.components.TimingRow
 import com.nexo.presentation.viewmodel.PerformanceTiming
 import com.nexo.ui.icons.NexoIcons
-
 
 @Composable
 fun TimingsCard(

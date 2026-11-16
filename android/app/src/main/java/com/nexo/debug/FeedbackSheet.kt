@@ -51,8 +51,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexo.R
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.atoms.CoverThumbnail
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Mobile crash-feedback bottom sheet (PR4 / tasks 4.3-4.4).

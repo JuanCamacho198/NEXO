@@ -44,8 +44,6 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.nexo.R
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.model.DailyReadingActivity
-import com.nexo.ui.theme.NexoDimens
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.StatisticsUiState
 import com.nexo.presentation.viewmodel.StatisticsViewModel
 import com.nexo.ui.components.atoms.NexoEmptyState
@@ -54,6 +52,8 @@ import com.nexo.ui.components.atoms.NexoLoadingIndicator
 import com.nexo.ui.components.molecules.NexoHeader
 import com.nexo.ui.components.molecules.NexoSectionHeader
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone

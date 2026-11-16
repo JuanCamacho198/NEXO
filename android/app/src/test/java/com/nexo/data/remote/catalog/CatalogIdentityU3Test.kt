@@ -1,17 +1,17 @@
 package com.nexo.data.remote.catalog
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
 import com.nexo.data.remote.catalog.OpenLibraryDoc
 import com.nexo.data.remote.catalog.isOpenLibraryPublic
 import com.nexo.data.remote.catalog.mapOpenLibraryDoc
 import com.nexo.domain.model.CatalogBook
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 /**
  * U3: additive identity fields default to null, survive a JSON round-trip,

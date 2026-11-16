@@ -12,11 +12,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.ui.theme.NexoDimens
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.atoms.NexoIconButton
 import com.nexo.ui.components.atoms.NexoTextField
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Top header for the library screen: the shared top-level bar with the library

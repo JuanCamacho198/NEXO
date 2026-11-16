@@ -30,7 +30,6 @@ import com.nexo.feature.settings.R
 import com.nexo.presentation.viewmodel.PerformanceDiagnostics
 import java.io.File
 
-
 @Composable
 fun DiagnosticsCard(
     diagnostics: PerformanceDiagnostics?,

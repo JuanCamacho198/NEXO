@@ -12,8 +12,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.nexo.data.session.NotificationPermissionPrefs
 import com.nexo.data.repository.ReadingGoalRepository
+import com.nexo.data.session.NotificationPermissionPrefs
 import com.nexo.data.session.ReadingGoalPreferences
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.navigation.NexoDestination

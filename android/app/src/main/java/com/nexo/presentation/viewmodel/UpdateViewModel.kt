@@ -6,16 +6,14 @@ import com.nexo.data.update.UpdateDownloader
 import com.nexo.domain.update.CheckForUpdatesUseCase
 import com.nexo.domain.update.UpdateCandidate
 import com.nexo.domain.update.UpdateCheckOutcome
-import com.nexo.domain.update.UpdateErrorKind
-import com.nexo.domain.update.UpdateUiState
 import com.nexo.domain.update.UpdateNetworkGate
 import com.nexo.domain.update.UpdateSuppressionStore
+import com.nexo.domain.update.UpdateUiState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
 
 class UpdateViewModel(
     private val useCase: CheckForUpdatesUseCase,

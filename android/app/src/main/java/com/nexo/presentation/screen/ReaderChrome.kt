@@ -48,9 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.nexo.R
 import com.nexo.debug.DebugPrefs
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.reader.BookChapter
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

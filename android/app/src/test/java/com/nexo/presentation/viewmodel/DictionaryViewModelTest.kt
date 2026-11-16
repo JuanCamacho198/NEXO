@@ -1,9 +1,9 @@
 package com.nexo.presentation.viewmodel
 
 import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.DictionaryWord
 import com.nexo.domain.repository.DictionaryRepository
-import com.nexo.domain.event.UiEvent
 import com.nexo.testutil.FakeStringResolver
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.TEST_USER_ID

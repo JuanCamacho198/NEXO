@@ -29,13 +29,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.model.ReaderSettings
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.reader.settings.sections.ExpandablesSection
 import com.nexo.ui.components.molecules.reader.settings.sections.FontSelectorSection
 import com.nexo.ui.components.molecules.reader.settings.sections.FontSizeSection
 import com.nexo.ui.components.molecules.reader.settings.sections.PreviewSection
 import com.nexo.ui.components.molecules.reader.settings.sections.ThemeCirclesSection
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Orchestrator for split reader settings. Owns single shadow 12dp / 24dp

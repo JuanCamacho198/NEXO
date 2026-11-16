@@ -3,11 +3,11 @@ package com.nexo.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.feature.highlights.buildHighlightsUiState
 import com.nexo.presentation.util.StringResolver
 import com.nexo.presentation.viewmodel.highlights.CrudStateHolder

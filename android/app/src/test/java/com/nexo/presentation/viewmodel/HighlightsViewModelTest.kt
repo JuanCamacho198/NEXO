@@ -2,6 +2,7 @@ package com.nexo.presentation.viewmodel
 
 import app.cash.turbine.test
 import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.Bookmark
 import com.nexo.domain.model.Highlight
@@ -9,7 +10,6 @@ import com.nexo.domain.model.HighlightColor
 import com.nexo.domain.model.ReadingStats
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.ReaderRepository
-import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.util.StringResolver
 import com.nexo.testutil.FakeStringResolver
 import com.nexo.testutil.MainDispatcherRule

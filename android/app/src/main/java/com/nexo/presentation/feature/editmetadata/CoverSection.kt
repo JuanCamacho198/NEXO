@@ -1,8 +1,5 @@
 package com.nexo.presentation.feature.editmetadata
 
-import com.nexo.ui.R as UiR
-
-
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +30,7 @@ import com.nexo.R
 import com.nexo.domain.model.Book
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
+import com.nexo.ui.R as UiR
 
 @Composable
 internal fun CoverSection(

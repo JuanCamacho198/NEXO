@@ -27,10 +27,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexo.R
 import com.nexo.domain.model.Book
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.atoms.CoverThumbnail
 import com.nexo.ui.components.atoms.NexoProgressBar
 import com.nexo.ui.components.molecules.BookContextMenuTrigger
+import com.nexo.ui.theme.NexoTheme
 
 private const val READING_TARGET_MINUTES = 300L
 private const val SURFACE_ALPHA = 0.3f

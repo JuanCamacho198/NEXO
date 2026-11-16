@@ -2,6 +2,16 @@ package com.nexo.di.modules
 
 import android.content.Context
 import com.nexo.BuildConfig
+import com.nexo.data.local.dao.AddonDao
+import com.nexo.data.local.dao.BookDao
+import com.nexo.data.local.dao.BookmarkDao
+import com.nexo.data.local.dao.DictionaryWordDao
+import com.nexo.data.local.dao.DiscoverCacheDao
+import com.nexo.data.local.dao.HighlightDao
+import com.nexo.data.local.dao.ReadingProgressDao
+import com.nexo.data.local.dao.ReadingSessionDao
+import com.nexo.data.local.dao.SyncFileMappingDao
+import com.nexo.data.local.dao.SyncOutboxDao
 import com.nexo.data.remote.addons.AddonCatalogProvider
 import com.nexo.data.remote.addons.AddonRegistry
 import com.nexo.data.remote.addons.CuratedCatalogProvider
@@ -13,7 +23,6 @@ import com.nexo.data.remote.catalog.CatalogHttpTransport
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CompositeCatalogProvider
 import com.nexo.data.remote.catalog.GoogleBooksCatalogProvider
-import com.nexo.data.remote.catalog.GoogleBooksDataSource
 import com.nexo.data.remote.catalog.GutendexCatalogProvider
 import com.nexo.data.remote.catalog.GutendexDataSource
 import com.nexo.data.remote.catalog.KtorCatalogFileDownloader
@@ -66,16 +75,6 @@ import com.nexo.domain.model.CatalogFileSource
 import com.nexo.domain.repository.AuthRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.presentation.navigation.InstallDeepLinkController
-import com.nexo.data.local.dao.BookDao
-import com.nexo.data.local.dao.BookmarkDao
-import com.nexo.data.local.dao.DiscoverCacheDao
-import com.nexo.data.local.dao.DictionaryWordDao
-import com.nexo.data.local.dao.HighlightDao
-import com.nexo.data.local.dao.AddonDao
-import com.nexo.data.local.dao.ReadingProgressDao
-import com.nexo.data.local.dao.ReadingSessionDao
-import com.nexo.data.local.dao.SyncFileMappingDao
-import com.nexo.data.local.dao.SyncOutboxDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -92,8 +91,8 @@ import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
-import javax.inject.Singleton
 import javax.inject.Named
+import javax.inject.Singleton
 import io.github.jan.supabase.auth.SessionManager as SupabaseAuthSessionManager
 
 @Module
@@ -586,8 +585,7 @@ object NetworkModule {
     fun provideUpdateNetworkGate(
         @ApplicationContext context: Context,
         connectivityObserver: ConnectivityObserver,
-    ): com.nexo.domain.update.UpdateNetworkGate =
-        AndroidUpdateNetworkGate(context, connectivityObserver)
+    ): com.nexo.domain.update.UpdateNetworkGate = AndroidUpdateNetworkGate(context, connectivityObserver)
 
     @Provides
     @Singleton
@@ -636,7 +634,8 @@ object NetworkModule {
         @Named(TRANSLATION_HTTP_CLIENT) client: HttpClient,
     ): com.nexo.data.remote.translation.MyMemoryTranslationClient =
         com.nexo.data.remote.translation.MyMemoryTranslationClient(
-            com.nexo.data.remote.translation.KtorTranslationHttpTransport(client),
+            com.nexo.data.remote.translation
+                .KtorTranslationHttpTransport(client),
         )
 
     @Provides
@@ -684,7 +683,8 @@ object NetworkModule {
         @Named(WIKTIONARY_HTTP_CLIENT) client: HttpClient,
     ): com.nexo.data.remote.wiktionary.WiktionaryClient =
         com.nexo.data.remote.wiktionary.WiktionaryClient(
-            com.nexo.data.remote.wiktionary.KtorWiktionaryHttpTransport(client),
+            com.nexo.data.remote.wiktionary
+                .KtorWiktionaryHttpTransport(client),
         )
 
     @Provides
@@ -708,7 +708,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideReadingGoalRemoteDataSource(): com.nexo.data.sync.ReadingGoalRemoteDataSource =
-        com.nexo.data.remote.supabase.SupabaseReadingGoalDataSource()
+        com.nexo.data.remote.supabase
+            .SupabaseReadingGoalDataSource()
 
     @Provides
     @Singleton
@@ -724,6 +725,7 @@ object NetworkModule {
         )
 
     // ── Deep links ──────────────────────────────────────────────────────
+
     /**
      * Singleton so the install-flow `StateFlow` survives configuration changes
      * and the Compose dialog host keeps observing one instance.
@@ -733,5 +735,4 @@ object NetworkModule {
     fun provideInstallDeepLinkController(
         addonRegistry: AddonRegistry,
     ): InstallDeepLinkController = createInstallDeepLinkController(registry = addonRegistry)
-
 }

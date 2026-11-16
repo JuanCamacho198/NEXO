@@ -49,7 +49,6 @@ import com.nexo.debug.DebugPrefs
 import com.nexo.domain.access.AddonAccessResolver
 import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.model.AuthSession
-import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.notification.NotificationStore
 import com.nexo.domain.repository.CacheRepository
 import com.nexo.domain.repository.DefinitionRepository
@@ -65,10 +64,9 @@ import com.nexo.domain.update.CheckForUpdatesUseCase
 import com.nexo.domain.update.UpdateNetworkGate
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.domain.usecase.GetStatisticsUseCase
-import com.nexo.presentation.navigation.InstallDeepLinkController
-import com.nexo.presentation.notification.NotificationToastBus
 import com.nexo.presentation.debug.DebugPanel
 import com.nexo.presentation.feature.highlights.HighlightsScreen
+import com.nexo.presentation.navigation.InstallDeepLinkController
 import com.nexo.presentation.navigation.feature.authGraph
 import com.nexo.presentation.navigation.feature.bookDetailGraph
 import com.nexo.presentation.navigation.feature.discoverGraph
@@ -77,6 +75,7 @@ import com.nexo.presentation.navigation.feature.libraryGraph
 import com.nexo.presentation.navigation.feature.onboardingGraph
 import com.nexo.presentation.navigation.feature.readerGraph
 import com.nexo.presentation.navigation.feature.settingsGraph
+import com.nexo.presentation.notification.NotificationToastBus
 import com.nexo.presentation.screen.StatisticsScreen
 import com.nexo.presentation.screen.settings.UpdateDialogHost
 import com.nexo.ui.components.atoms.NexoSnackbar

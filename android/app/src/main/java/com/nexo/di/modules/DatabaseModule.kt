@@ -67,31 +67,45 @@ object DatabaseModule {
         return db
     }
 
-    @Provides @Singleton fun provideBookDao(db: AppDatabase): BookDao = db.bookDao()
+    @Provides @Singleton
+    fun provideBookDao(db: AppDatabase): BookDao = db.bookDao()
 
-    @Provides @Singleton fun provideBookmarkDao(db: AppDatabase): BookmarkDao = db.bookmarkDao()
+    @Provides @Singleton
+    fun provideBookmarkDao(db: AppDatabase): BookmarkDao = db.bookmarkDao()
 
-    @Provides @Singleton fun provideHighlightDao(db: AppDatabase): HighlightDao = db.highlightDao()
+    @Provides @Singleton
+    fun provideHighlightDao(db: AppDatabase): HighlightDao = db.highlightDao()
 
-    @Provides @Singleton fun provideReadingProgressDao(db: AppDatabase): ReadingProgressDao = db.readingProgressDao()
+    @Provides @Singleton
+    fun provideReadingProgressDao(db: AppDatabase): ReadingProgressDao = db.readingProgressDao()
 
-    @Provides @Singleton fun provideReadingSessionDao(db: AppDatabase): ReadingSessionDao = db.readingSessionDao()
+    @Provides @Singleton
+    fun provideReadingSessionDao(db: AppDatabase): ReadingSessionDao = db.readingSessionDao()
 
-    @Provides @Singleton fun provideReadingStatsDao(db: AppDatabase): ReadingStatsDao = db.readingStatsDao()
+    @Provides @Singleton
+    fun provideReadingStatsDao(db: AppDatabase): ReadingStatsDao = db.readingStatsDao()
 
-    @Provides @Singleton fun provideSyncOutboxDao(db: AppDatabase): SyncOutboxDao = db.syncOutboxDao()
+    @Provides @Singleton
+    fun provideSyncOutboxDao(db: AppDatabase): SyncOutboxDao = db.syncOutboxDao()
 
-    @Provides @Singleton fun provideSyncFileMappingDao(db: AppDatabase): SyncFileMappingDao = db.syncFileMappingDao()
+    @Provides @Singleton
+    fun provideSyncFileMappingDao(db: AppDatabase): SyncFileMappingDao = db.syncFileMappingDao()
 
-    @Provides @Singleton fun provideDictionaryWordDao(db: AppDatabase): DictionaryWordDao = db.dictionaryWordDao()
+    @Provides @Singleton
+    fun provideDictionaryWordDao(db: AppDatabase): DictionaryWordDao = db.dictionaryWordDao()
 
-    @Provides @Singleton fun provideDiscoverCacheDao(db: AppDatabase): DiscoverCacheDao = db.discoverCacheDao()
+    @Provides @Singleton
+    fun provideDiscoverCacheDao(db: AppDatabase): DiscoverCacheDao = db.discoverCacheDao()
 
-    @Provides @Singleton fun provideInstalledAddonDao(db: AppDatabase): AddonDao = db.addonDao()
+    @Provides @Singleton
+    fun provideInstalledAddonDao(db: AppDatabase): AddonDao = db.addonDao()
 
-    @Provides @Singleton fun provideNotificationDao(db: AppDatabase): NotificationDao = db.notificationDao()
+    @Provides @Singleton
+    fun provideNotificationDao(db: AppDatabase): NotificationDao = db.notificationDao()
 
-    @Provides @Singleton fun provideTranslationCacheDao(db: AppDatabase): TranslationCacheDao = db.translationCacheDao()
+    @Provides @Singleton
+    fun provideTranslationCacheDao(db: AppDatabase): TranslationCacheDao = db.translationCacheDao()
 
-    @Provides @Singleton fun provideDefinitionCacheDao(db: AppDatabase): DefinitionCacheDao = db.definitionCacheDao()
+    @Provides @Singleton
+    fun provideDefinitionCacheDao(db: AppDatabase): DefinitionCacheDao = db.definitionCacheDao()
 }

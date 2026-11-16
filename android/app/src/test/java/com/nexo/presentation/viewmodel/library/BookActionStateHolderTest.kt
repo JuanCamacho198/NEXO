@@ -1,15 +1,14 @@
 package com.nexo.presentation.viewmodel.library
 
 import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Book
 import com.nexo.domain.repository.LibraryRepository
-import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.util.StringResolver
+import com.nexo.testutil.FakeStringResolver
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.activeUserProviderFor
-import com.nexo.testutil.FakeStringResolver
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi

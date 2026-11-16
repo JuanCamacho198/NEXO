@@ -41,8 +41,6 @@ import com.nexo.presentation.screen.settings.PerformanceScreen
 import com.nexo.presentation.screen.settings.SettingsAccountScreen
 import com.nexo.presentation.screen.settings.SettingsDataStorageScreen
 import com.nexo.presentation.screen.settings.SettingsDefinitionScreen
-import com.nexo.ui.components.molecules.DEFINITION_LANGUAGE_OPTIONS
-import com.nexo.ui.components.molecules.definitionLanguageName
 import com.nexo.presentation.screen.settings.SettingsDevicesScreen
 import com.nexo.presentation.screen.settings.SettingsLanguageScreen
 import com.nexo.presentation.screen.settings.SettingsListScreen
@@ -53,9 +51,11 @@ import com.nexo.presentation.screen.settings.SettingsThemeScreen
 import com.nexo.presentation.screen.settings.SettingsTranslationScreen
 import com.nexo.presentation.screen.settings.StorageScreen
 import com.nexo.presentation.screen.settings.SyncScreen
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.StatisticsViewModel
 import com.nexo.presentation.viewmodel.UpdateViewModel
+import com.nexo.ui.components.molecules.DEFINITION_LANGUAGE_OPTIONS
+import com.nexo.ui.components.molecules.definitionLanguageName
+import com.nexo.ui.theme.NexoTheme
 import kotlinx.coroutines.launch
 
 @Composable

@@ -44,9 +44,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.library.BookImportState
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Animated full-screen import overlay that covers the content area

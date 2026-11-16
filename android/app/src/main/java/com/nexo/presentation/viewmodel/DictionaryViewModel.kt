@@ -3,10 +3,10 @@ package com.nexo.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.DictionaryWord
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.util.StringResolver
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow

@@ -19,8 +19,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.nexoColors
 
 /**
  * Legal policy page (U5): what NEXO links to, the public-domain

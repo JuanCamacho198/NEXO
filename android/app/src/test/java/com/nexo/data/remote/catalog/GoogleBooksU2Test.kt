@@ -1,14 +1,5 @@
 package com.nexo.data.remote.catalog
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
-import org.junit.Test
 import com.nexo.data.remote.catalog.AndroidAppIdentity
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
@@ -29,6 +20,15 @@ import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.model.CatalogErrorCode
 import com.nexo.domain.model.CatalogException
 import com.nexo.domain.model.catalogError
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Test
 
 /**
  * U2: keyed Google Books + Gutenberg covers.

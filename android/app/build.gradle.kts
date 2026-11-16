@@ -325,7 +325,6 @@ android {
         // ~1100-test suite coexist without OOM (default Test heap is 512m).
         maxHeapSize = "2g"
     }
-
 }
 
 // SDD android-stack-modernization S11: make the Kotlin source directories explicit BEFORE
@@ -505,9 +504,9 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
     androidTestImplementation(libs.room.testing)
-        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
     testImplementation(project(":core:test"))
-testImplementation(libs.room.testing)
+    testImplementation(libs.room.testing)
 
     // Paging 3
     implementation(libs.paging.runtime)

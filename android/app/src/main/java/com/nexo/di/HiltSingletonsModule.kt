@@ -23,14 +23,12 @@ import com.nexo.domain.notification.AppForegroundSignal
 import com.nexo.domain.notification.NotificationStore
 import com.nexo.domain.notification.NotificationSurfaces
 import com.nexo.domain.notification.ToastSink
+import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.sync.OutboxDrainScheduler
 import com.nexo.domain.sync.SessionGate
 import com.nexo.domain.sync.SyncSettleGate
 import com.nexo.domain.usecase.ImportEpubBookUseCase
-import com.nexo.domain.usecase.GetBookProgressUseCase
-import com.nexo.domain.usecase.GetStatisticsUseCase
-import com.nexo.domain.repository.LibraryRepository
 import com.nexo.presentation.navigation.InstallDeepLinkController
 import com.nexo.presentation.notification.AndroidOsNotifier
 import com.nexo.presentation.notification.NotificationToastBus
@@ -63,11 +61,11 @@ object HiltSingletonsModule {
     @Singleton
     fun provideActiveUserProvider(): ActiveUserProvider = ActiveUserProvider()
 
-    @Provides @Singleton fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
+    @Provides @Singleton
+    fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
 
     @Provides @Singleton
-    fun provideImportEpub(r: LibraryRepository): ImportEpubBookUseCase =
-        ImportEpubBookUseCase(r, SentryTelemetrySink)
+    fun provideImportEpub(r: LibraryRepository): ImportEpubBookUseCase = ImportEpubBookUseCase(r, SentryTelemetrySink)
 
     /** WS2c slice 6: the app-lifetime sync orchestrator. */
     @Provides
@@ -116,8 +114,7 @@ object HiltSingletonsModule {
     @Provides
     @Singleton
     @Named("isAuthConfigured")
-    fun provideAuthConfigured(): Boolean =
-        BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_ANON_KEY.isNotBlank()
+    fun provideAuthConfigured(): Boolean = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_ANON_KEY.isNotBlank()
 
     @Provides
     @Singleton
@@ -132,8 +129,7 @@ object HiltSingletonsModule {
 
     @Provides
     @Singleton
-    fun provideInitTimings(timings: AppStartTimings): com.nexo.presentation.debug.InitTimingsSection =
-        timings.snapshot()
+    fun provideInitTimings(timings: AppStartTimings): com.nexo.presentation.debug.InitTimingsSection = timings.snapshot()
 
     // ── Notifications (NOTIF-02 / U7 / U9) ──────────────────────────────
 

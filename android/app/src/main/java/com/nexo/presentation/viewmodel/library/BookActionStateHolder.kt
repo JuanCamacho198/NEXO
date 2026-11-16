@@ -1,11 +1,11 @@
 package com.nexo.presentation.viewmodel.library
 
 import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.BookStatus
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.util.StringResolver
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

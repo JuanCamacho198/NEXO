@@ -8,11 +8,11 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import com.nexo.R
 import com.nexo.data.remote.catalog.CatalogFeaturedSort
 import com.nexo.data.remote.catalog.CatalogProvider
-import com.nexo.R
-import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.domain.discover.DiscoverRailState
+import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.presentation.feature.discover.DiscoverScreen
 import com.nexo.presentation.feature.discover.DiscoverSectionScreen
 import com.nexo.presentation.feature.legal.LegalDisclaimerGate
@@ -54,11 +54,12 @@ fun NavGraphBuilder.discoverGraph(
         // reach. The gate reports its state up so the screen can stay hidden
         // until acceptance, keeping the pre-acceptance frame byte-identical to
         // the old behaviour.
-        val disclaimerAccepted = LegalDisclaimerGate(
-            onNavigateToLegalPolicy = {
-                navController.navigate(NexoDestination.SettingsLegal.route)
-            },
-        )
+        val disclaimerAccepted =
+            LegalDisclaimerGate(
+                onNavigateToLegalPolicy = {
+                    navController.navigate(NexoDestination.SettingsLegal.route)
+                },
+            )
         DiscoverScreen(
             contentPadding = contentPadding,
             viewModel = discoverViewModel,

@@ -2,12 +2,12 @@ package com.nexo.data.remote.addons
 
 import com.nexo.data.remote.catalog.CatalogSourceKind
 import com.nexo.data.remote.catalog.addonSource
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.CatalogException
 
 /**
  * Edge/hardening tests for the Android addon registry seam:

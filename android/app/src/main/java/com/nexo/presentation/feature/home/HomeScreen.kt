@@ -26,14 +26,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
 import com.nexo.domain.model.Book
 import com.nexo.presentation.screen.HomeTags
-import com.nexo.ui.theme.NexoDimens
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.HomeUiState
 import com.nexo.presentation.viewmodel.HomeViewModel
 import com.nexo.ui.components.atoms.NexoEmptyState
 import com.nexo.ui.components.molecules.ContinueReadingSkeleton
 import com.nexo.ui.components.molecules.NotificationSheet
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Render mode for a Home section that owns an empty state.

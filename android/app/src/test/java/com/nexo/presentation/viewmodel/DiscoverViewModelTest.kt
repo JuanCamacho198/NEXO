@@ -1,13 +1,8 @@
 package com.nexo.presentation.viewmodel
 
-import com.nexo.R
-import com.nexo.feature.discover.R as FeatureR
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
 import com.nexo.data.remote.catalog.BUILTIN_STANDARD_EBOOKS
-import com.nexo.domain.model.CatalogBook
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.CatalogException
 import com.nexo.data.remote.catalog.CatalogFeaturedSort
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
@@ -18,18 +13,21 @@ import com.nexo.debug.SentryMetrics
 import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.connectivity.FakeConnectivityObserver
-import com.nexo.domain.discover.entriesFor
-import com.nexo.domain.discover.DiscoverStatus
 import com.nexo.domain.discover.DiscoverDetailStatus
-import com.nexo.domain.discover.DiscoverSourceFilter
 import com.nexo.domain.discover.DiscoverRailGroup
+import com.nexo.domain.discover.DiscoverRailState
+import com.nexo.domain.discover.DiscoverSourceFilter
+import com.nexo.domain.discover.DiscoverStatus
+import com.nexo.domain.discover.entriesFor
 import com.nexo.domain.model.Book
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.domain.usecase.DownloadImportState
 import com.nexo.presentation.feature.discover.AccessResolverState
 import com.nexo.presentation.feature.discover.AddonReadState
-import com.nexo.domain.discover.DiscoverRailState
 import com.nexo.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -50,6 +48,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
+import com.nexo.feature.discover.R as FeatureR
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DiscoverViewModelTest {

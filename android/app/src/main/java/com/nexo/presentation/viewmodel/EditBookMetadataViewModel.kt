@@ -5,13 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nexo.data.storage.CoverStorage
-import com.nexo.domain.model.Book
-import com.nexo.domain.repository.LibraryRepository
-import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.event.UiEvent
 import com.nexo.domain.metadata.parseChipList
 import com.nexo.domain.metadata.sanitizeChipList
 import com.nexo.domain.metadata.sanitizeChipValue
+import com.nexo.domain.model.Book
+import com.nexo.domain.repository.LibraryRepository
+import com.nexo.domain.session.ActiveUserProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -35,6 +35,7 @@ internal const val MAX_TAGS = 10
  * and caps at [max] (REQ-data-model-8 — "input con coma se normaliza; duplicados
  * se colapsan"; UI limits 5 genres / 10 tags).
  */
+
 /**
  * Form state for the full-screen edit-metadata editor (design A9ymv).
  *

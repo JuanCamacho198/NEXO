@@ -2,10 +2,10 @@ package com.nexo.presentation.notification
 
 import androidx.annotation.StringRes
 import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.notification.ToastRequest
 import com.nexo.domain.notification.ToastSink
 import com.nexo.domain.notification.ToastType
-import com.nexo.domain.event.UiEvent
 
 /**
  * Android glue for the pure [com.nexo.domain.notification.NotificationSurfaces].

@@ -1,10 +1,10 @@
 package com.nexo.presentation.viewmodel.highlights
 
 import com.nexo.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.util.StringResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow

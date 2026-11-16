@@ -2,8 +2,8 @@ package com.nexo.presentation.screen.library
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.FilterBottomSheet
+import com.nexo.ui.theme.NexoTheme
 
 @Composable
 fun FilterSheetContent(

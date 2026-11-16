@@ -7,15 +7,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexo.R
+import com.nexo.data.remote.addons.AddonRegistry
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.catalog.CatalogFeaturedSort
 import com.nexo.data.remote.catalog.CatalogProvider
+import com.nexo.data.remote.supabase.SupabaseProgressSync
+import com.nexo.data.session.DefinitionPreferences
+import com.nexo.data.session.ReaderPreferences
+import com.nexo.data.session.TranslationPreferences
+import com.nexo.data.session.UpdatePrefs
 import com.nexo.data.storage.CoverStorage
+import com.nexo.data.update.UpdateDownloader
+import com.nexo.domain.access.AddonAccessResolver
+import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.repository.CacheRepository
+import com.nexo.domain.repository.DefinitionRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.LibraryRepository
+import com.nexo.domain.repository.ReaderRepository
+import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.repository.StorageRepository
+import com.nexo.domain.repository.TranslationRepository
 import com.nexo.domain.session.ActiveUserProvider
+import com.nexo.domain.update.CheckForUpdatesUseCase
+import com.nexo.domain.update.UpdateNetworkGate
 import com.nexo.domain.usecase.DownloadAndImportBookUseCase
 import com.nexo.presentation.debug.DebugViewModel
 import com.nexo.presentation.feature.discover.DiscoverSectionViewModel
@@ -40,22 +55,6 @@ import com.nexo.presentation.viewmodel.StatisticsViewModel
 import com.nexo.presentation.viewmodel.StorageViewModel
 import com.nexo.presentation.viewmodel.UpdateViewModel
 import kotlinx.coroutines.Dispatchers
-import com.nexo.data.remote.addons.AddonRegistry
-import com.nexo.data.remote.supabase.SupabaseProgressSync
-import com.nexo.data.session.DefinitionPreferences
-import com.nexo.data.session.ReaderPreferences
-import com.nexo.data.session.TranslationPreferences
-import com.nexo.data.session.UpdatePrefs
-import com.nexo.data.update.UpdateDownloader
-import com.nexo.domain.access.AddonAccessResolver
-import com.nexo.domain.connectivity.ConnectivityObserver
-import com.nexo.domain.model.CatalogBook
-import com.nexo.domain.repository.DefinitionRepository
-import com.nexo.domain.repository.ReaderRepository
-import com.nexo.domain.repository.ReadingStatsRepository
-import com.nexo.domain.repository.TranslationRepository
-import com.nexo.domain.update.CheckForUpdatesUseCase
-import com.nexo.domain.update.UpdateNetworkGate
 
 /**
  * Holder grouping the host-scoped ViewModels.

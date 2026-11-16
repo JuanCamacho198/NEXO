@@ -25,10 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nexo.feature.discover.R as FeatureR
 import com.nexo.data.remote.catalog.CatalogSources
-import com.nexo.ui.theme.NexoDimens
-import com.nexo.ui.theme.nexoColors
 import com.nexo.domain.discover.DiscoverRailGroup
 import com.nexo.domain.discover.DiscoverRailState
 import com.nexo.domain.discover.DiscoverSourceFilter
@@ -36,6 +33,9 @@ import com.nexo.domain.discover.DiscoverStatus
 import com.nexo.presentation.viewmodel.DiscoverUiState
 import com.nexo.presentation.viewmodel.DiscoverViewModel
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.nexoColors
+import com.nexo.feature.discover.R as FeatureR
 
 /**
  * Discover shell: header, search field, trending chips, then exactly one body

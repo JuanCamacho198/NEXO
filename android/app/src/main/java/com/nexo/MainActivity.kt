@@ -39,7 +39,6 @@ import com.nexo.debug.FeedbackActivity
 import com.nexo.debug.FeedbackPersistence
 import com.nexo.domain.access.AddonAccessResolver
 import com.nexo.domain.connectivity.ConnectivityObserver
-import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.model.ThemeMode
 import com.nexo.domain.notification.NotificationStore
 import com.nexo.domain.repository.CacheRepository
@@ -63,8 +62,8 @@ import com.nexo.presentation.navigation.NexoNavHost
 import com.nexo.presentation.notification.NotificationToastBus
 import com.nexo.presentation.screen.readium.evictRestoredReadiumNavigatorFragments
 import com.nexo.presentation.screen.readium.installReadiumDummyFragmentFactories
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.presentation.viewmodel.AuthViewModel
+import com.nexo.ui.theme.NexoTheme
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.jan.supabase.auth.handleDeeplinks
 import javax.inject.Inject

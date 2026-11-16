@@ -1,5 +1,6 @@
 package com.nexo.presentation.screen.library
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,12 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.annotation.StringRes
 import com.nexo.R
 import com.nexo.domain.model.Book
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.atoms.NexoDialog
 import com.nexo.ui.components.atoms.NexoDialogVariant
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * 2-step remove dialog mirroring desktop RemoveBookModal.

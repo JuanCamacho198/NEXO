@@ -28,15 +28,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.feature.settings.R
 import com.nexo.domain.model.BookStorageItem
 import com.nexo.domain.model.CacheUsage
+import com.nexo.feature.settings.R
 import com.nexo.presentation.screen.library.RemoveBookDialog
 import com.nexo.presentation.viewmodel.StorageUiState
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.util.formatFileSize
-
 
 /**
  * Real storage screen (WS6) driven by [StorageUiState].

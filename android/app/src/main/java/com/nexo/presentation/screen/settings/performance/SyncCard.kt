@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import com.nexo.feature.settings.R
 import com.nexo.presentation.viewmodel.PerformanceSyncStatus
 
-
 @Composable
 fun SyncCard(
     syncStatus: PerformanceSyncStatus?,

@@ -1,17 +1,15 @@
 package com.nexo.presentation.viewmodel
 
-import com.nexo.R
-import com.nexo.feature.discover.R as FeatureR
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
-import com.nexo.domain.model.CatalogBook
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.CatalogException
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.PagedResult
+import com.nexo.domain.discover.DiscoverRailState
 import com.nexo.domain.discover.TOPIC_ROTATION
 import com.nexo.domain.discover.entriesFor
-import com.nexo.domain.discover.DiscoverRailState
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import com.nexo.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -21,6 +19,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
+import com.nexo.feature.discover.R as FeatureR
 
 /**
  * S2: every curated `TopicEntry.titleKey` must resolve to a real string
