@@ -123,6 +123,7 @@ const makeLibraryRow = (overrides: Partial<BookLike> = {}) => {
     updatedAt: b.updatedAt,
     collectionIds: b.collectionIds,
     readingStatus: b.readingStatus ?? null,
+    filePath: b.filePath,
   };
 };
 
@@ -337,6 +338,51 @@ describe('LibraryDomainState', () => {
 
     expect(libraryState.consumeBooksJustChanged()).toBe(true);
     expect(libraryState.consumeBooksJustChanged()).toBe(false);
+  });
+
+  // --- loadLibrary filePath provenance (no fabricated empty paths) ---
+
+  it('loadLibrary never fabricates an empty filePath when the library row carries one', async () => {
+    const rows = [makeLibraryRow({ id: 'b1', filePath: '/from-library.epub' })];
+    mockListLibraryBooks.mockResolvedValue(rows);
+    mockListBooks.mockResolvedValue([]);
+
+    await libraryState.loadLibrary();
+
+    expect(libraryState.books).toHaveLength(1);
+    expect(libraryState.books[0].filePath).toBe('/from-library.epub');
+  });
+
+  it('loadLibrary prefers the catalog path over the library row when both exist', async () => {
+    const rows = [makeLibraryRow({ id: 'b1', filePath: '/stale.epub' })];
+    mockListLibraryBooks.mockResolvedValue(rows);
+    mockListBooks.mockResolvedValue([makeSourceRow({ id: 'b1', filePath: '/fresh.epub' })]);
+
+    await libraryState.loadLibrary();
+
+    expect(libraryState.books[0].filePath).toBe('/fresh.epub');
+  });
+
+  it('loadLibrary keeps an empty filePath for a genuine sync stub (no file anywhere)', async () => {
+    const rows = [makeLibraryRow({ id: 'stub-1', filePath: '' })];
+    mockListLibraryBooks.mockResolvedValue(rows);
+    mockListBooks.mockResolvedValue([]);
+
+    await libraryState.loadLibrary();
+
+    expect(libraryState.books).toHaveLength(1);
+    expect(libraryState.books[0].filePath).toBe('');
+  });
+
+  it('loadLibrary keeps an empty filePath when the library row omits filePath entirely', async () => {
+    const row = makeLibraryRow({ id: 'stub-2' }) as Record<string, unknown>;
+    delete row.filePath;
+    mockListLibraryBooks.mockResolvedValue([row]);
+    mockListBooks.mockResolvedValue([{ id: 'stub-2', filePath: '' }]);
+
+    await libraryState.loadLibrary();
+
+    expect(libraryState.books[0].filePath).toBe('');
   });
 
   it('loadLibrary handles non-Error non-commandError unknown throws', async () => {

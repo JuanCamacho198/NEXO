@@ -28,6 +28,9 @@ const dictionary: Record<string, string> = {
   'library.noResultsDescription': 'Try a different search or clear the filters.',
   'library.clearFilters': 'Clear filters',
   'library.searchPlaceholder': 'Search by title or author...',
+  'shelf.booksCount': '{{count}} books',
+  'shelf.readingCount': '{{count}} reading',
+  'shelf.completedCount': '{{count}} completed',
 };
 
 const t = (key: string, params?: Record<string, string | number>): string => {
@@ -51,6 +54,17 @@ const book: ShelfBook = {
   updatedAt: '2026-01-01T00:00:00.000Z',
   createdAt: '2026-01-01T00:00:00.000Z',
   filePath: '/library/alpha.epub',
+};
+
+// A sync stub: a row with no local file, unreadable on this device.
+const stub: ShelfBook = {
+  ...book,
+  id: 'stub-1',
+  title: 'Ghost',
+  author: 'Author B',
+  filePath: '',
+  progressPercentage: 0,
+  currentPage: 0,
 };
 
 describe('LibraryShelfScreen states (LIB-02)', () => {
@@ -160,5 +174,67 @@ describe('LibraryShelfScreen states (LIB-02)', () => {
     expect(controlsRow.lastElementChild!.contains(sort)).toBe(true);
     expect(controlsRow.lastElementChild!.contains(toggle)).toBe(true);
     expect(controlsRow.lastElementChild!.className).toContain('ml-auto');
+  });
+});
+
+describe('LibraryShelfScreen sync-stub suppression', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders only the real book when the shelf holds one stub', () => {
+    render(LibraryShelfScreen, { props: { books: [book, stub], isLoading: false, t } });
+
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.queryByText('Ghost')).toBeNull();
+    expect(screen.queryByText('Your library is empty')).toBeNull();
+    expect(screen.queryByText('No results')).toBeNull();
+  });
+
+  it('counts only the real book in the header badge', () => {
+    const { container } = render(LibraryShelfScreen, {
+      props: { books: [book, stub], isLoading: false, t },
+    });
+
+    const badge = container.querySelector('header span')!.textContent!.replace(/\s+/g, ' ');
+    expect(badge).toContain('1 books');
+    expect(badge).not.toContain('2 books');
+    // The stub contributes no reading progress either.
+    expect(badge).toContain('1 reading');
+    expect(badge).toContain('0 completed');
+  });
+
+  it('shows the empty state, not an empty grid, when every book is a stub', () => {
+    const { container } = render(LibraryShelfScreen, {
+      props: { books: [stub, { ...stub, id: 'stub-2', title: 'Ghost Two' }], isLoading: false, t },
+    });
+
+    expect(screen.getByText('Your library is empty')).toBeInTheDocument();
+    expect(screen.queryByText('No results')).toBeNull();
+    expect(screen.queryByText('Ghost')).toBeNull();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+  });
+
+  it('leaves a healthy shelf untouched', () => {
+    const second: ShelfBook = {
+      ...book,
+      id: 'b2',
+      title: 'Beta',
+      author: 'Author C',
+      progressPercentage: 100,
+      currentPage: 10,
+      filePath: '/library/beta.epub',
+    };
+
+    const { container } = render(LibraryShelfScreen, {
+      props: { books: [book, second], isLoading: false, t },
+    });
+
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.getByText('Beta')).toBeInTheDocument();
+    const badge = container.querySelector('header span')!.textContent!.replace(/\s+/g, ' ');
+    expect(badge).toContain('2 books');
+    expect(screen.queryByText('Your library is empty')).toBeNull();
+    expect(screen.queryByText('No results')).toBeNull();
   });
 });

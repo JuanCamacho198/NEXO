@@ -2,6 +2,7 @@ import {
   FAVORITES_COLLECTION_ID,
   getSafeProgressPercentage,
   getTimestamp,
+  isRealBook,
   type ShelfBook,
   type ShelfFilter,
   type ShelfSort,
@@ -106,6 +107,10 @@ export function filterAndSortShelfBooks(
     .filter((term) => term.length > 0);
 
   const visible = books.filter((book) => {
+    // A sync stub has no local file and nothing to open; hide it before any
+    // other dimension so search, filters and sorts never disagree about it.
+    if (!isRealBook(book)) return false;
+
     if (!statusFilters.some((filter) => matchesFilter(book, filter))) return false;
 
     if (

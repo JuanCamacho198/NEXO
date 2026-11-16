@@ -109,7 +109,12 @@ class LibraryDomainState {
       );
       this.books = libraryRows.map((entry: LibraryBookDto) => ({
         ...entry,
-        filePath: filePathById.get(entry.id) ?? '',
+        // Both queries read the same `books` row with the same visibility
+        // predicate, so the catalog map is normally authoritative. Fall back
+        // to the library row's own path before concluding "no file": an empty
+        // value means a sync stub, and callers hide stubs. Fabricating '' here
+        // would hide a book that is actually readable.
+        filePath: filePathById.get(entry.id) ?? entry.filePath ?? '',
         collectionIds: entry.collectionIds ?? [],
       }));
       this._booksJustChanged = true;
