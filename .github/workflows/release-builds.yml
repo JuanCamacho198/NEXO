@@ -52,14 +52,18 @@
 #   produces an APK with EMPTY runtime config — a broken release. That is why
 #   this job fails loud instead of shipping it.
 # - VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_GOOGLE_OAUTH_CLIENT_ID,
-#   VITE_GOOGLE_OAUTH_CLIENT_SECRET, VITE_GOOGLE_BOOKS_KEY (REQUIRED for the
-#   desktop job): read by Vite at build time and inlined into the bundle. The
+#   VITE_GOOGLE_BOOKS_KEY (REQUIRED for the desktop job): read by Vite at
+#   build time and inlined into the bundle. The
 #   0.3.1 desktop tag shipped with NONE of them: the installed Windows app
 #   logged `UNHANDLED_REJECTION: VITE_SUPABASE_URL is not set` at Supabase init
 #   and the home screen spun forever. The job now fails loud when any is
 #   missing, mirroring ANDROID_LOCAL_PROPERTIES above — a desktop release must
 #   never ship config-less. (VITE_UPDATE_FEED_URL is not a secret; it stays
 #   inline in the build step below.)
+#   VITE_GOOGLE_OAUTH_CLIENT_SECRET is DELIBERATELY ABSENT: Vite would inline
+#   it into the shipped JS bundle, where it is extractable with `strings`, and
+#   a Desktop-type OAuth client authenticates with PKCE and needs no secret at
+#   all. Do not add it back.
 # - SENTRY_AUTH_TOKEN + SENTRY_ORG: read at Gradle config time by the Sentry
 #   Gradle plugin, which uploads the R8 mapping during assembleRelease. SAGP has
 #   NO skip-on-missing-token path — an empty token makes the release build fail,
@@ -154,10 +158,9 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.VITE_GOOGLE_OAUTH_CLIENT_ID }}
-          VITE_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.VITE_GOOGLE_OAUTH_CLIENT_SECRET }}
           VITE_GOOGLE_BOOKS_KEY: ${{ secrets.VITE_GOOGLE_BOOKS_KEY }}
         run: |
-          for v in VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY VITE_GOOGLE_OAUTH_CLIENT_ID VITE_GOOGLE_OAUTH_CLIENT_SECRET VITE_GOOGLE_BOOKS_KEY; do
+          for v in VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY VITE_GOOGLE_OAUTH_CLIENT_ID VITE_GOOGLE_BOOKS_KEY; do
             if [ -z "${!v:-}" ]; then
               echo "::error::Secret ${v} is missing or empty. The desktop frontend reads it at Vite build time; without it the bundled app ships with unusable runtime config (Supabase init throws, home screen never loads). Set the repository secret from desktop/.env."
               exit 1
@@ -245,14 +248,15 @@ jobs:
           VITE_UPDATE_FEED_URL: https://github.com/JuanCamacho198/NEXO/releases/download/desktop-latest/latest.json
           # Production backend + Google client config. tauri-action runs the
           # beforeBuildCommand (`bun run build`) with this env, so Vite inlines
-          # all five into the bundle — without them the app cannot reach
+          # all four into the bundle — without them the app cannot reach
           # Supabase (home screen hangs) or complete Google Drive OAuth. The
           # `Verify desktop release env` step above fails the job first if any
-          # secret is missing.
+          # secret is missing. No OAuth client secret is passed: a Desktop-type
+          # client uses PKCE, and a secret here would be inlined into the
+          # shipped bundle.
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.VITE_GOOGLE_OAUTH_CLIENT_ID }}
-          VITE_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.VITE_GOOGLE_OAUTH_CLIENT_SECRET }}
           VITE_GOOGLE_BOOKS_KEY: ${{ secrets.VITE_GOOGLE_BOOKS_KEY }}
         with:
           # Monorepo: the Tauri project lives at desktop/, and the runner

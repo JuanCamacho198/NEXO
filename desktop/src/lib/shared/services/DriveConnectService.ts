@@ -70,19 +70,19 @@ export class DriveConfigError extends Error {
 }
 
 export interface DriveOAuthConfig {
-  clientId: string;
   /**
-   * Optional on purpose. Desktop-app OAuth clients are public clients that use
-   * PKCE with no secret; Web-app clients still need one. Omit it (undefined or
-   * empty) to send a secret-less, PKCE-only token request.
+   * Desktop-app OAuth clients are public clients: they authenticate with PKCE
+   * and carry no secret. There is deliberately no `clientSecret` here — the
+   * value would be read from `import.meta.env` and inlined into the shipped
+   * bundle, where anyone can extract it, so it must never be part of the
+   * desktop config.
    */
-  clientSecret?: string;
+  clientId: string;
 }
 
 export function getDriveOAuthConfig(): DriveOAuthConfig {
   return {
     clientId: (import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID ?? '') as string,
-    clientSecret: (import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET ?? '') as string,
   };
 }
 
@@ -90,7 +90,7 @@ function requireDriveOAuthConfig(): DriveOAuthConfig {
   const config = getDriveOAuthConfig();
   if (!config.clientId) {
     throw new DriveConfigError(
-      'Google OAuth client ID is not configured. Set VITE_GOOGLE_OAUTH_CLIENT_ID to a Desktop app OAuth client ID. VITE_GOOGLE_OAUTH_CLIENT_SECRET is optional and only needed for Web-type clients.',
+      'Google OAuth client ID is not configured. Set VITE_GOOGLE_OAUTH_CLIENT_ID to a Desktop app OAuth client ID. Do not set a client secret: Desktop-type clients authenticate with PKCE.',
     );
   }
   return config;
@@ -264,9 +264,6 @@ async function exchangeCodeForGrant(
     code_verifier: verifier,
     grant_type: 'authorization_code',
   });
-  if (config.clientSecret) {
-    body.set('client_secret', config.clientSecret);
-  }
   const response = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -330,9 +327,6 @@ async function doRefreshDriveAccessToken(): Promise<string> {
     client_id: config.clientId,
     refresh_token: grant.refreshToken,
   });
-  if (config.clientSecret) {
-    refreshBody.set('client_secret', config.clientSecret);
-  }
   let response: Response;
   try {
     response = await fetch(TOKEN_ENDPOINT, {
@@ -351,8 +345,8 @@ async function doRefreshDriveAccessToken(): Promise<string> {
     const errorText = await response.text();
     // U5 (desktop-prod-csp-fixes): a rejected refresh is a dead session, not a
     // transient failure. Google answers a revoked/expired grant with 400
-    // `invalid_grant`, but a dead client auth (revoked project, rotated
-    // secret) comes back as 401 with any body — keeping that grant retries a
+    // `invalid_grant`, but a dead client auth (revoked project, wrong client
+    // ID) comes back as 401 with any body — keeping that grant retries a
     // dead token on every Drive op (the prod 401 storm). 429/5xx stay
     // transient: the grant is kept and the caller sees a generic error.
     if (response.status === 400 || response.status === 401 || /invalid_grant/i.test(errorText)) {
