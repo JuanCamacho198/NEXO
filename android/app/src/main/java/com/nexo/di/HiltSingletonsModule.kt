@@ -36,6 +36,8 @@ import com.nexo.presentation.notification.AndroidOsNotifier
 import com.nexo.presentation.notification.NotificationToastBus
 import com.nexo.presentation.notification.ProcessLifecycleAppForegroundSignal
 import com.nexo.presentation.notification.UiEventToastSink
+import com.nexo.presentation.util.AndroidStringResolver
+import com.nexo.presentation.util.StringResolver
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -51,6 +53,12 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object HiltSingletonsModule {
+    @Provides
+    @Singleton
+    fun provideStringResolver(
+        @ApplicationContext context: Context,
+    ): StringResolver = AndroidStringResolver(context)
+
     @Provides
     @Singleton
     fun provideActiveUserProvider(): ActiveUserProvider = ActiveUserProvider()

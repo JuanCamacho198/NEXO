@@ -21,6 +21,7 @@ import com.nexo.presentation.debug.DebugViewModel
 import com.nexo.presentation.feature.discover.DiscoverSectionViewModel
 import com.nexo.presentation.feature.discover.DiscoverSectionViewModelFactory
 import com.nexo.presentation.screen.settings.AddonSettingsViewModelFactory
+import com.nexo.presentation.util.AndroidStringResolver
 import com.nexo.presentation.viewmodel.AddonSettingsViewModel
 import com.nexo.presentation.viewmodel.AuthViewModel
 import com.nexo.presentation.viewmodel.BookDetailViewModel
@@ -316,8 +317,9 @@ internal fun rememberDictionaryViewModel(
     activeUser: ActiveUserProvider,
 ): DictionaryViewModel? {
     val appContext = LocalContext.current.applicationContext
-    return remember(dictionaryRepository, appContext) {
-        dictionaryRepository?.let { DictionaryViewModel(it, activeUser, appContext) }
+    val stringResolver = remember(appContext) { AndroidStringResolver(appContext) }
+    return remember(dictionaryRepository, stringResolver) {
+        dictionaryRepository?.let { DictionaryViewModel(it, activeUser, stringResolver) }
     }
 }
 
