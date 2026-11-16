@@ -14,6 +14,8 @@
 //! `CATALOG_FETCH_HTTP_{status}` and never echoes the body.
 
 pub const CATALOG_FETCH_USER_AGENT: &str = "Nexo/Desktop (contact: TBD)";
+
+use super::CommandError;
 pub const CATALOG_FETCH_MAX_REDIRECTS: usize = 5;
 pub const CATALOG_FETCH_CONNECT_TIMEOUT_S: u64 = 15;
 pub const CATALOG_FETCH_READ_TIMEOUT_S: u64 = 30;
@@ -94,8 +96,10 @@ async fn fetch_feed_body(client: &reqwest::Client, url: &str) -> Result<String, 
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub async fn fetchCatalogFeed(url: String) -> Result<String, String> {
-    fetch_feed_body(&catalog_fetch_client(), &url).await.map_err(|e| e.to_string())
+pub async fn fetchCatalogFeed(url: String) -> Result<String, CommandError> {
+    fetch_feed_body(&catalog_fetch_client(), &url)
+        .await
+        .map_err(|e| CommandError::coded(&e.code, e.to_string()))
 }
 
 #[cfg(test)]

@@ -6,6 +6,8 @@
 
 use serde::Serialize;
 
+use super::CommandError;
+
 pub const ADDON_MAX_BYTES: u64 = 64 * 1024;
 pub const ADDON_USER_AGENT: &str = "Nexo/Desktop (contact: TBD)";
 
@@ -108,9 +110,11 @@ fn addon_client() -> reqwest::Client {
 pub async fn fetchAddonResource(
     url: String,
     maxBytes: Option<u64>,
-) -> Result<AddonResource, String> {
+) -> Result<AddonResource, CommandError> {
     let max_bytes = maxBytes.unwrap_or(ADDON_MAX_BYTES).min(ADDON_MAX_BYTES);
-    fetch_resource(&addon_client(), &url, max_bytes).await.map_err(|e| e.to_string())
+    fetch_resource(&addon_client(), &url, max_bytes)
+        .await
+        .map_err(|e| CommandError::coded(&e.code, e.to_string()))
 }
 
 #[cfg(test)]

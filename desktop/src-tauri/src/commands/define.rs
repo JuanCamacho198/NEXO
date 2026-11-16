@@ -42,6 +42,7 @@
 
 use super::translate::request_translation;
 use super::wiktionary::{self, Definition};
+use super::{lock_repository, CommandError};
 use serde::Serialize;
 
 /// Wikimedia requires an identifiable User-Agent with a real contact; a generic
@@ -486,7 +487,7 @@ pub async fn defineSelection(
     text: String,
     readerLang: String,
     wordLang: Option<String>,
-) -> Result<DefinitionResult, String> {
+) -> Result<DefinitionResult, CommandError> {
     let word = text.trim();
     if word.is_empty() {
         return Ok(DefinitionResult::empty(word));
@@ -509,7 +510,7 @@ pub async fn defineSelection(
     // command future non-`Send`, which Tauri requires. The guard is scoped to
     // this block; `translateSelection` does the same.
     let cached = {
-        let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+        let repository = lock_repository(&state)?;
         read_cached_definition_best_effort(&repository, &user_id, word, &reader_lang, word_lang)
     };
     if let Some(stored) = cached {

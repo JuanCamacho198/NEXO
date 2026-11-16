@@ -143,6 +143,35 @@ fn deleting_a_missing_collection_reports_not_found() {
     assert!(dto.recoverable);
 }
 
+/// A module that classifies its own failures (`TRANSLATE_*`, `BOOK_DOWNLOAD_*`,
+/// `ADDON_FETCH_*`) must keep that code on the wire.
+///
+/// `translateSelection` used to reject with `format!("{}", e)`, so the frontend
+/// received `TRANSLATE_NO_TRANSLATION: no usable translation was returned` as
+/// plain text and had to re-parse the code out of the message
+/// (`translationOutcome.ts`, `BARE_ERROR_CODE`). `CommandError::coded` carries
+/// the category as data instead, so the same code arrives in `code` — which is
+/// what `translationFailureOutcome` branches on to tell "select something else"
+/// apart from "service unavailable".
+#[test]
+fn a_domain_code_travels_as_data_not_as_message_text() {
+    let error = CommandError::coded(
+        "TRANSLATE_NO_TRANSLATION",
+        "TRANSLATE_NO_TRANSLATION: no usable translation was returned",
+    );
+    let on_the_wire = serde_json::to_value(&error)
+        .expect("serialises")
+        .as_str()
+        .expect("must stay a JSON string")
+        .to_string();
+    let dto = parse_as_frontend(&on_the_wire).expect("frontend must parse");
+    assert_eq!(dto.code, "TRANSLATE_NO_TRANSLATION");
+    assert!(!dto.recoverable);
+    // The message keeps saying what happened for logs and support, but the code
+    // is now redundant there — the frontend must never need to search for it.
+    assert!(dto.message.contains("no usable translation"), "{}", dto.message);
+}
+
 /// A system collection is not user data; deleting it is refused, and the
 /// refusal must survive as a stated reason rather than an unwrap on `None`.
 #[test]

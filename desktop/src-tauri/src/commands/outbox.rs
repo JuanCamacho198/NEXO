@@ -1,4 +1,4 @@
-use super::map_command_error;
+use super::{lock_repository, CommandError};
 use crate::error::AppError;
 use crate::models::SyncOutboxRowDto;
 use crate::state::AppState;
@@ -12,9 +12,9 @@ pub fn addSyncOutboxItem(
     entity_id: Option<String>,
     operation: String,
     payload_json: String,
-) -> Result<String, String> {
+) -> Result<String, CommandError> {
     use uuid::Uuid;
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let repository = lock_repository(&state)?;
     let conn = repository.connection();
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -23,7 +23,7 @@ pub fn addSyncOutboxItem(
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)",
         rusqlite::params![id, entity_type, entity_id, operation, payload_json, now],
     )
-    .map_err(|e| format!("Failed to insert outbox item: {}", e))?;
+    .map_err(|e| CommandError::from(AppError::Database(e)))?;
     Ok(id)
 }
 
@@ -132,11 +132,11 @@ pub fn addCoalescedSyncOutboxItem(
     entity_id: Option<String>,
     operation: String,
     payload_json: String,
-) -> Result<String, String> {
+) -> Result<String, CommandError> {
     let entity_id = entity_id.ok_or_else(|| {
-        map_command_error(AppError::InvalidInput("entityId is required".to_string()))
+        CommandError::from(AppError::InvalidInput("entityId is required".to_string()))
     })?;
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let repository = lock_repository(&state)?;
     let conn = repository.connection();
     add_coalesced_sync_outbox_item_internal(
         conn,
@@ -145,7 +145,7 @@ pub fn addCoalescedSyncOutboxItem(
         &operation,
         &payload_json,
     )
-    .map_err(map_command_error)
+    .map_err(CommandError::from)
 }
 
 #[allow(non_snake_case)]
@@ -153,11 +153,13 @@ pub fn addCoalescedSyncOutboxItem(
 pub fn listSyncOutboxReady(
     state: State<'_, AppState>,
     user_id: String,
-) -> Result<Vec<SyncOutboxRowDto>, String> {
+) -> Result<Vec<SyncOutboxRowDto>, CommandError> {
     if user_id.trim().is_empty() {
-        return Err("userId must be a non-empty string".to_string());
+        return Err(CommandError::from(AppError::InvalidInput(
+            "userId must be a non-empty string".to_string(),
+        )));
     }
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    let repository = lock_repository(&state)?;
     let conn = repository.connection();
     list_sync_outbox_ready_for_user(conn, &user_id)
 }
@@ -167,14 +169,16 @@ pub fn listSyncOutboxReady(
 fn list_sync_outbox_ready_for_user(
     conn: &rusqlite::Connection,
     user_id: &str,
-) -> Result<Vec<SyncOutboxRowDto>, String> {
+) -> Result<Vec<SyncOutboxRowDto>, CommandError> {
     let now = chrono::Utc::now().to_rfc3339();
 
     // Rows with no owner are never drained: their payload's `userId` decides who
     // they belong to, and a row that lacks one may belong to somebody else. The
     // drain must not block on them either, so they are counted, reported and
-    // left in place.
-    report_ownerless_outbox_rows(conn, &now)?;
+    // left in place. A failure here aborts the drain, so it is surfaced as an
+    // internal error rather than silently yielding an empty list.
+    report_ownerless_outbox_rows(conn, &now)
+        .map_err(|message| CommandError::from(AppError::Internal(message)))?;
 
     let mut statement = conn
         .prepare(
@@ -183,7 +187,7 @@ fn list_sync_outbox_ready_for_user(
              WHERE user_id = ?1 AND next_retry_at <= ?2 AND retry_count < 50
              ORDER BY created_at ASC",
         )
-        .map_err(|e| format!("Failed to prepare: {}", e))?;
+        .map_err(|e| CommandError::from(AppError::Database(e)))?;
     let rows = statement
         .query_map(rusqlite::params![user_id, now], |row| {
             Ok(SyncOutboxRowDto {
@@ -198,8 +202,10 @@ fn list_sync_outbox_ready_for_user(
                 next_retry_at: row.get(8)?,
             })
         })
-        .map_err(|e| format!("Failed to query: {}", e))?;
-    let items = rows.collect::<Result<Vec<_>, _>>().map_err(|e| format!("{}", e))?;
+        .map_err(|e| CommandError::from(AppError::Database(e)))?;
+    let items = rows
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| CommandError::from(AppError::Database(e)))?;
     Ok(items)
 }
 
@@ -207,6 +213,11 @@ fn list_sync_outbox_ready_for_user(
 /// failure channel as a failed push (`last_error` + backoff), so an ownerless
 /// row is findable instead of silently invisible. The row is kept: a silent
 /// failure is worse than a visible one, and dropping it would destroy data.
+///
+/// Deliberately still `Result<_, String>`: this text only ever reaches the
+/// caller's `CommandError` message, never a code (an ownerless-row recount is
+/// not a condition the frontend can act on differently), so a DTO here would
+/// fabricate a category that does not exist.
 fn report_ownerless_outbox_rows(conn: &rusqlite::Connection, now: &str) -> Result<(), String> {
     let ownerless: i64 = conn
         .query_row(
@@ -217,7 +228,7 @@ fn report_ownerless_outbox_rows(conn: &rusqlite::Connection, now: &str) -> Resul
             rusqlite::params![now],
             |row| row.get(0),
         )
-        .map_err(|e| format!("Failed to count ownerless outbox rows: {}", e))?;
+        .map_err(|e| format!("Failed to count ownerless outbox rows: {e}"))?;
     if ownerless == 0 {
         return Ok(());
     }
@@ -232,7 +243,7 @@ fn report_ownerless_outbox_rows(conn: &rusqlite::Connection, now: &str) -> Resul
            AND retry_count < 50",
         rusqlite::params![next_retry_at, now],
     )
-    .map_err(|e| format!("Failed to mark ownerless outbox rows: {}", e))?;
+    .map_err(|e| format!("Failed to mark ownerless outbox rows: {e}"))?;
     eprintln!("sync_outbox: skipped {} ownerless row(s) with no payload userId", ownerless);
     Ok(())
 }
@@ -243,8 +254,8 @@ pub fn markSyncOutboxFailed(
     state: State<'_, AppState>,
     id: String,
     error: String,
-) -> Result<(), String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<(), CommandError> {
+    let repository = lock_repository(&state)?;
     let conn = repository.connection();
     // Read current retry_count
     let current_retry: i32 = conn
@@ -253,7 +264,7 @@ pub fn markSyncOutboxFailed(
             rusqlite::params![id],
             |row| row.get(0),
         )
-        .map_err(|e| format!("Failed to read retry_count: {}", e))?;
+        .map_err(|e| CommandError::from(AppError::Database(e)))?;
     let next_delay = std::cmp::min(60, 2_i32.saturating_pow((current_retry + 1) as u32));
     let next_retry_at =
         (chrono::Utc::now() + chrono::Duration::seconds(next_delay as i64)).to_rfc3339();
@@ -261,24 +272,24 @@ pub fn markSyncOutboxFailed(
         "UPDATE sync_outbox SET retry_count = retry_count + 1, last_error = ?1, next_retry_at = ?2 WHERE id = ?3",
         rusqlite::params![error, next_retry_at, id],
     )
-    .map_err(|e| format!("Failed to update outbox item: {}", e))?;
+    .map_err(|e| CommandError::from(AppError::Database(e)))?;
     Ok(())
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn deleteSyncOutboxItem(state: State<'_, AppState>, id: String) -> Result<(), String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+pub fn deleteSyncOutboxItem(state: State<'_, AppState>, id: String) -> Result<(), CommandError> {
+    let repository = lock_repository(&state)?;
     let conn = repository.connection();
     conn.execute("DELETE FROM sync_outbox WHERE id = ?1", rusqlite::params![id])
-        .map_err(|e| format!("Failed to delete outbox item: {}", e))?;
+        .map_err(|e| CommandError::from(AppError::Database(e)))?;
     Ok(())
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn pruneSyncOutbox(state: State<'_, AppState>) -> Result<i32, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+pub fn pruneSyncOutbox(state: State<'_, AppState>) -> Result<i32, CommandError> {
+    let repository = lock_repository(&state)?;
     let conn = repository.connection();
     let cutoff = (chrono::Utc::now() - chrono::Duration::days(7)).to_rfc3339();
     let deleted = conn
@@ -286,7 +297,7 @@ pub fn pruneSyncOutbox(state: State<'_, AppState>) -> Result<i32, String> {
             "DELETE FROM sync_outbox WHERE created_at < ?1 AND retry_count >= 10 AND entity_type <> 'READING_SESSION'",
             rusqlite::params![cutoff],
         )
-        .map_err(|e| format!("Failed to prune outbox: {}", e))?;
+        .map_err(|e| CommandError::from(AppError::Database(e)))?;
     Ok(deleted as i32)
 }
 

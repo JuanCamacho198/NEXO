@@ -1,4 +1,4 @@
-use super::map_command_error;
+use super::{lock_repository, CommandError};
 use crate::models::{
     ReadingProgressDto, ReadingSessionInput, ReadingSessionSavedDto, ReadingStatsSummaryDto,
     SaveProgressInput,
@@ -11,16 +11,19 @@ use tauri::State;
 pub fn getProgress(
     state: State<'_, AppState>,
     book_id: String,
-) -> Result<Option<ReadingProgressDto>, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.get_progress(&book_id).map_err(|e| format!("{}", e))
+) -> Result<Option<ReadingProgressDto>, CommandError> {
+    let repository = lock_repository(&state)?;
+    repository.get_progress(&book_id).map_err(CommandError::from)
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn saveProgress(state: State<'_, AppState>, payload: SaveProgressInput) -> Result<(), String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.save_progress(payload).map_err(|e| format!("{}", e))
+pub fn saveProgress(
+    state: State<'_, AppState>,
+    payload: SaveProgressInput,
+) -> Result<(), CommandError> {
+    let repository = lock_repository(&state)?;
+    repository.save_progress(payload).map_err(CommandError::from)
 }
 
 #[allow(non_snake_case)]
@@ -28,9 +31,9 @@ pub fn saveProgress(state: State<'_, AppState>, payload: SaveProgressInput) -> R
 pub fn upsertProgress(
     state: State<'_, AppState>,
     progress: ReadingProgressDto,
-) -> Result<(), String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.upsert_progress(progress).map_err(|e| format!("{}", e))
+) -> Result<(), CommandError> {
+    let repository = lock_repository(&state)?;
+    repository.upsert_progress(progress).map_err(CommandError::from)
 }
 
 #[allow(non_snake_case)]
@@ -38,9 +41,9 @@ pub fn upsertProgress(
 pub fn saveReadingSession(
     state: State<'_, AppState>,
     payload: ReadingSessionInput,
-) -> Result<ReadingSessionSavedDto, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.save_reading_session(payload).map_err(map_command_error)
+) -> Result<ReadingSessionSavedDto, CommandError> {
+    let repository = lock_repository(&state)?;
+    repository.save_reading_session(payload).map_err(CommandError::from)
 }
 
 #[allow(non_snake_case)]
@@ -49,8 +52,8 @@ pub fn getReadingStats(
     state: State<'_, AppState>,
     book_id: Option<String>,
     user_id: String,
-) -> Result<ReadingStatsSummaryDto, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<ReadingStatsSummaryDto, CommandError> {
+    let repository = lock_repository(&state)?;
     // Return default stats if schema not ready
     if !repository.has_desktop_parity_schema().unwrap_or(true) {
         return Ok(ReadingStatsSummaryDto {
@@ -61,5 +64,5 @@ pub fn getReadingStats(
             avg_progress_percentage: 0.0,
         });
     }
-    repository.get_reading_stats(book_id.as_deref(), &user_id).map_err(map_command_error)
+    repository.get_reading_stats(book_id.as_deref(), &user_id).map_err(CommandError::from)
 }

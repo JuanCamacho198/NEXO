@@ -1,4 +1,4 @@
-use super::map_command_error;
+use super::{lock_repository, CommandError};
 use crate::models::{IndexBookTextInput, SearchBookTextInput, SearchBookTextResponse};
 use crate::state::AppState;
 use tauri::State;
@@ -8,9 +8,9 @@ use tauri::State;
 pub fn indexBookText(
     state: State<'_, AppState>,
     payload: IndexBookTextInput,
-) -> Result<(), String> {
-    let mut repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.index_book_text(payload).map_err(map_command_error)
+) -> Result<(), CommandError> {
+    let mut repository = lock_repository(&state)?;
+    repository.index_book_text(payload).map_err(CommandError::from)
 }
 
 #[allow(non_snake_case)]
@@ -18,7 +18,7 @@ pub fn indexBookText(
 pub fn searchBookText(
     state: State<'_, AppState>,
     payload: SearchBookTextInput,
-) -> Result<SearchBookTextResponse, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.search_book_text(payload).map_err(map_command_error)
+) -> Result<SearchBookTextResponse, CommandError> {
+    let repository = lock_repository(&state)?;
+    repository.search_book_text(payload).map_err(CommandError::from)
 }

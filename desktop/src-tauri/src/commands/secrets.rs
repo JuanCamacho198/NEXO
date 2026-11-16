@@ -21,7 +21,7 @@
 //! "session not persisted", and [`startup_diagnostic`] gives the app a
 //! user-visible reason at boot instead of a per-call runtime failure.
 
-use super::map_command_error;
+use super::CommandError;
 use crate::error::AppError;
 
 /// Service/account names a keyring backend would use, if one is ever wired in.
@@ -44,14 +44,14 @@ pub fn secretProtectionAvailable() -> bool {
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn protectSecret(plaintext: String) -> Result<String, String> {
-    protect_secret_inner(&plaintext).map_err(map_command_error)
+pub fn protectSecret(plaintext: String) -> Result<String, CommandError> {
+    protect_secret_inner(&plaintext).map_err(CommandError::from)
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn unprotectSecret(ciphertext: String) -> Result<String, String> {
-    unprotect_secret_inner(&ciphertext).map_err(map_command_error)
+pub fn unprotectSecret(ciphertext: String) -> Result<String, CommandError> {
+    unprotect_secret_inner(&ciphertext).map_err(CommandError::from)
 }
 
 fn protect_secret_inner(plaintext: &str) -> Result<String, AppError> {

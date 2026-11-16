@@ -4,6 +4,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use super::{lock_repository, CommandError};
 use crate::state::AppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,10 +94,12 @@ pub fn delete_installed_addon(conn: &rusqlite::Connection, id: &str) -> rusqlite
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn listInstalledAddons(state: State<'_, AppState>) -> Result<Vec<InstalledAddonDto>, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+pub fn listInstalledAddons(
+    state: State<'_, AppState>,
+) -> Result<Vec<InstalledAddonDto>, CommandError> {
+    let repository = lock_repository(&state)?;
     list_installed_addons(repository.connection())
-        .map_err(|e| format!("Failed to list addons: {}", e))
+        .map_err(|e| CommandError::from(crate::error::AppError::Database(e)))
 }
 
 #[allow(non_snake_case)]
@@ -104,10 +107,10 @@ pub fn listInstalledAddons(state: State<'_, AppState>) -> Result<Vec<InstalledAd
 pub fn upsertInstalledAddon(
     state: State<'_, AppState>,
     addon: InstalledAddonDto,
-) -> Result<(), String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<(), CommandError> {
+    let repository = lock_repository(&state)?;
     upsert_installed_addon(repository.connection(), &addon)
-        .map_err(|e| format!("Failed to upsert addon: {}", e))
+        .map_err(|e| CommandError::from(crate::error::AppError::Database(e)))
 }
 
 #[allow(non_snake_case)]
@@ -116,19 +119,19 @@ pub fn setAddonEnabled(
     state: State<'_, AppState>,
     id: String,
     enabled: bool,
-) -> Result<(), String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<(), CommandError> {
+    let repository = lock_repository(&state)?;
     set_addon_enabled(repository.connection(), &id, enabled)
-        .map_err(|e| format!("Failed to toggle addon: {}", e))?;
+        .map_err(|e| CommandError::from(crate::error::AppError::Database(e)))?;
     Ok(())
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn deleteInstalledAddon(state: State<'_, AppState>, id: String) -> Result<(), String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+pub fn deleteInstalledAddon(state: State<'_, AppState>, id: String) -> Result<(), CommandError> {
+    let repository = lock_repository(&state)?;
     delete_installed_addon(repository.connection(), &id)
-        .map_err(|e| format!("Failed to uninstall addon: {}", e))?;
+        .map_err(|e| CommandError::from(crate::error::AppError::Database(e)))?;
     Ok(())
 }
 

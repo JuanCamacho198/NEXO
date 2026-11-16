@@ -11,6 +11,8 @@
 //! status surfaces `UPDATE_FEED_HTTP_{status}` and never echoes the body.
 
 pub const UPDATE_FEED_USER_AGENT: &str = "Nexo/Desktop (contact: TBD)";
+
+use super::CommandError;
 pub const UPDATE_FEED_MAX_REDIRECTS: usize = 5;
 pub const UPDATE_FEED_CONNECT_TIMEOUT_S: u64 = 15;
 pub const UPDATE_FEED_READ_TIMEOUT_S: u64 = 30;
@@ -88,8 +90,10 @@ async fn fetch_feed_body(client: &reqwest::Client, url: &str) -> Result<String, 
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub async fn fetchUpdateFeed(url: String) -> Result<String, String> {
-    fetch_feed_body(&update_feed_client(), &url).await.map_err(|e| e.to_string())
+pub async fn fetchUpdateFeed(url: String) -> Result<String, CommandError> {
+    fetch_feed_body(&update_feed_client(), &url)
+        .await
+        .map_err(|e| CommandError::coded(&e.code, e.to_string()))
 }
 
 #[cfg(test)]

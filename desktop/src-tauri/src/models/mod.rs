@@ -585,6 +585,31 @@ impl CommandErrorDto {
     pub fn not_found(message: impl Into<String>) -> Self {
         Self { code: "NOT_FOUND".to_string(), message: message.into(), recoverable: true }
     }
+
+    /// A failure that belongs to a module's own error taxonomy rather than to
+    /// this app-wide one (`TRANSLATE_*`, `BOOK_DOWNLOAD_*`, `ADDON_FETCH_*`).
+    ///
+    /// Those codes existed before this DTO and a frontend consumer branches on
+    /// them — `translationFailureOutcome` decides "nothing to translate" versus
+    /// "service unavailable" from the code alone. Only the carrier changes here:
+    /// the code the module already produced is kept verbatim, and `recoverable`
+    /// is false for the same reason `internal` is — the reader cannot fix an
+    /// upstream service condition by retrying the same call.
+    pub fn coded(code: &str, message: impl Into<String>) -> Self {
+        Self { code: code.to_string(), message: message.into(), recoverable: false }
+    }
+
+    /// The exact text the frontend receives.
+    ///
+    /// `parseCommandError` (`src/lib/shared/api/tauriClient.ts`) JSON-parses the
+    /// rejected promise value, so this is the one place that decides the wire
+    /// shape for every caller: `CommandError`, `map_command_error`.
+    pub fn into_wire_format(self) -> String {
+        serde_json::to_string(&self).unwrap_or_else(|_| {
+            "{\"code\":\"INTERNAL_ERROR\",\"message\":\"Command failed\",\"recoverable\":false}"
+                .to_string()
+        })
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

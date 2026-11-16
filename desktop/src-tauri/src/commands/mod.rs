@@ -6,35 +6,36 @@
 // re-exports them so `commands::<name>` keeps resolving for main.rs, and keeps
 // the two helpers that are not commands.
 //
-// ERROR TYPE MIGRATION (T8, audit item #06) — INCREMENTAL, NOT FINISHED.
+// ERROR TYPE MIGRATION (T8, audit item #06) — COMPLETE for every command
+// module, with three deliberate exceptions named below.
 //
-// `CommandError` (below) is the target shape: it wraps the `{code, message,
+// `CommandError` (below) is the shape: it wraps the `{code, message,
 // recoverable}` JSON text the frontend's `parseCommandError` already parses, and
 // it cannot be built from an arbitrary string, so `format!("{}", e)` can no
-// longer flatten a typed `AppError` on the way out.
+// longer flatten a typed `AppError` on the way out. Every command signature in
+// this tree returns `Result<T, CommandError>`; `map_command_error` is private to
+// this file and is only reached through `CommandError::from`.
 //
-// Migrated so far (their signatures return `CommandError`):
-//   notifications.rs, settings.rs, collections.rs
+// Deliberately still `Result<T, String>` — NOT migrated, on purpose:
+//   files.rs, confine.rs, epub_reader.rs
+//     Path-guard surface added by 62e54d17. Their errors are a message for a
+//     user who just lost a file operation, not a category the frontend can act
+//     on differently. Converting them is a separate decision, not an oversight.
+// Private helpers that still take/return `String` (each says so at its
+// definition, and none is a command): `report_ownerless_outbox_rows`
+// (outbox.rs), `redact_section` / `assemble_bundle` (diagnostics.rs),
+// `fetch_wikitext` (define.rs).
 //
-// Still `Result<T, String>` and still building the message by hand:
-//   addon_*, bookmarks, catalog_fetch, define, diagnostics, dictionary,
-//   discover_cache, download, highlights, library, outbox, progress,
-//   reading_stats, reading_status, search, secrets, session, storage,
-//   translate, translation, update_feed, wiktionary
-//
-// For those modules `map_command_error` keeps working unchanged and the wire
-// format is identical, so nothing is broken — the category is just not enforced
-// by the type. Convert one module per commit, with its test, rather than in one
-// sweep: 120 command signatures is a 3000-line diff that no reviewer can check.
-// The mechanical recipe:
+// The mechanical recipe, kept for any new module:
 //   1. `Result<T, String>` -> `Result<T, CommandError>`.
 //   2. `.map_err(map_command_error)` -> `.map_err(CommandError::from)`.
 //   3. `state.repository.lock().map_err(|e| format!("{}", e))?` ->
 //      `lock_repository(&state)?`.
-//   4. If a helper still needs the string, it takes `.payload()`.
-//
-// When the last module is converted, `map_command_error` becomes private to
-// this file and `CommandError` becomes the only command error type.
+//   4. A module that classifies its own failures (`TRANSLATE_*`,
+//      `BOOK_DOWNLOAD_*`, `ADDON_FETCH_*`, `CATALOG_FETCH_*`,
+//      `UPDATE_FEED_*`) passes its code to `CommandError::coded` instead of
+//      letting `Display` flatten it into prose.
+//   5. If a helper still needs the string, it takes `.payload()`.
 
 pub mod addon_consent;
 pub mod addon_fetch;
@@ -167,6 +168,16 @@ impl CommandError {
         &self.0
     }
 
+    /// A failure that carries a domain code of its own, for a module whose
+    /// transport layer already classifies its errors (`TRANSLATE_*`,
+    /// `BOOK_DOWNLOAD_*`, `ADDON_FETCH_*`) and whose frontend consumer branches
+    /// on that code. The code travels instead of being flattened into the
+    /// message; `recoverable` stays false because these are service conditions,
+    /// not retryable input problems.
+    pub fn coded(code: &str, message: impl Into<String>) -> Self {
+        Self(CommandErrorDto::coded(code, message).into_wire_format())
+    }
+
     /// A failure in command plumbing, reported as `INTERNAL_ERROR` /
     /// not recoverable. Replaces `map_err(|e| format!("{}", e))` on a lock.
     pub fn internal(message: impl std::fmt::Display) -> Self {
@@ -210,10 +221,7 @@ fn map_command_error(error: AppError) -> String {
         other => CommandErrorDto::internal(other.to_string()),
     };
 
-    serde_json::to_string(&dto).unwrap_or_else(|_| {
-        "{\"code\":\"INTERNAL_ERROR\",\"message\":\"Command failed\",\"recoverable\":false}"
-            .to_string()
-    })
+    dto.into_wire_format()
 }
 
 pub fn list_library_books_internal(
