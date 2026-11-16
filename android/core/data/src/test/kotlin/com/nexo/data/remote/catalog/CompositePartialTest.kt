@@ -1,13 +1,13 @@
 package com.nexo.data.remote.catalog
 
 import com.nexo.debug.SentryMetrics
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.catalogError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import com.nexo.domain.model.CatalogBook
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.catalogError
 
 /** U1: one throwing provider inside `executeSearch` still yields survivors' merged results. */
 @OptIn(ExperimentalCoroutinesApi::class)

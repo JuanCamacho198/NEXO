@@ -45,8 +45,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.ui.R
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.components.molecules.highlight.ColorPickerState
 import com.nexo.ui.components.molecules.highlight.hslToColor
 import com.nexo.ui.components.molecules.highlight.hslToHex
@@ -54,6 +52,7 @@ import com.nexo.ui.components.molecules.highlight.hueFromHex
 import com.nexo.ui.components.molecules.highlight.parseColorHex
 import com.nexo.ui.components.molecules.highlight.rememberColorPickerState
 import com.nexo.ui.components.molecules.highlight.spectrumColorAt
+import com.nexo.ui.theme.NexoTheme
 
 /** Default Pencil kixeV design color presets (5 hex values). */
 val DEFAULT_HIGHLIGHT_PRESETS =

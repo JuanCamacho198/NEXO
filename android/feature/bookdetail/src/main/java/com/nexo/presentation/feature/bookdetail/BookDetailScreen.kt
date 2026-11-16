@@ -37,17 +37,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nexo.feature.bookdetail.R
+import com.nexo.domain.metadata.parseChipList
 import com.nexo.domain.model.Book
 import com.nexo.domain.model.ReadingProgress
-import com.nexo.ui.theme.NexoTheme
+import com.nexo.feature.bookdetail.R
 import com.nexo.presentation.viewmodel.BookDetailViewModel
-import com.nexo.domain.metadata.parseChipList
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.molecules.GenreChipsDisplay
 import com.nexo.ui.components.molecules.TagChipsDisplay
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)

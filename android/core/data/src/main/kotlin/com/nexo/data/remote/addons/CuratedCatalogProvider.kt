@@ -1,16 +1,16 @@
 package com.nexo.data.remote.addons
 
 import android.content.Context
-import com.nexo.domain.model.CatalogBook
-import com.nexo.domain.model.CatalogErrorCode
 import com.nexo.data.remote.catalog.CatalogProvider
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.data.remote.catalog.CatalogSourceKind
 import com.nexo.data.remote.catalog.PagedResult
 import com.nexo.data.remote.catalog.parseCatalogSource
 import com.nexo.data.remote.catalog.resolveDownloadUrl
-import org.json.JSONObject
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
 import com.nexo.domain.model.catalogError
+import org.json.JSONObject
 
 /**
  * Curated first-party bundle: read-only, manifest-shaped `assets/addons/curated.json`

@@ -14,8 +14,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.nexo.feature.discover.R
 import com.nexo.domain.model.CatalogBook
+import com.nexo.feature.discover.R
 import com.nexo.ui.theme.nexoColors
 
 /** Rows from the end of the list that trigger the next-page prefetch. */

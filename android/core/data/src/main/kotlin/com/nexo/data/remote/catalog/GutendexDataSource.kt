@@ -1,10 +1,10 @@
 package com.nexo.data.remote.catalog
 
-import kotlinx.serialization.json.Json
-import java.net.URLEncoder
 import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.model.CatalogErrorCode
 import com.nexo.domain.model.catalogError
+import kotlinx.serialization.json.Json
+import java.net.URLEncoder
 
 const val GUTENDEX_BASE_URL = "https://gutendex.com"
 

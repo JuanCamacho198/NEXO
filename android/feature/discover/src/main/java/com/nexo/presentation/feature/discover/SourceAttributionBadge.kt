@@ -12,9 +12,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.feature.discover.R
 import com.nexo.data.remote.catalog.BUILTIN_GOOGLEBOOKS
 import com.nexo.data.remote.catalog.CatalogSources
+import com.nexo.feature.discover.R
 import com.nexo.ui.theme.nexoColors
 
 /**

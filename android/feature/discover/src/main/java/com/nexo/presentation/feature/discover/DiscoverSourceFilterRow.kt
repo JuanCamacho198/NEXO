@@ -3,10 +3,9 @@ package com.nexo.presentation.feature.discover
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import com.nexo.feature.discover.R
 import com.nexo.data.remote.catalog.CatalogSourceInfo
 import com.nexo.domain.discover.DiscoverSourceFilter
-import com.nexo.domain.model.CatalogBook
+import com.nexo.feature.discover.R
 
 /**
  * Horizontal source-filter chips built from [sources] (provider order), with a

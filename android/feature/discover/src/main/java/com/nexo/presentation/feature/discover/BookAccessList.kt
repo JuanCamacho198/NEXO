@@ -27,12 +27,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.feature.discover.R
-import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.access.AccessGroup
 import com.nexo.domain.access.AccessOption
 import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.access.resolveAccess
+import com.nexo.domain.model.CatalogBook
+import com.nexo.feature.discover.R
 import com.nexo.ui.theme.nexoColors
 
 /** Group header order for the access section: free first, paid last. */

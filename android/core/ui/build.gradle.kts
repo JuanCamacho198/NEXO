@@ -40,7 +40,7 @@ dependencies {
     // SafeResourcePainter logs a missing drawable through DebugDual.
     implementation(project(":core:debug"))
 
-        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
     testImplementation(project(":core:test"))
-testImplementation(libs.testing.junit4)
+    testImplementation(libs.testing.junit4)
 }

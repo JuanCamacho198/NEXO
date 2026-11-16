@@ -3,6 +3,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    // Every Android library inherits the ktlint formatting gate from here, so a
+    // new module gets it without a per-module `spotless { }` block.
+    id("nexo.kotlin.formatting")
 }
 
 // Shared baseline for the Android library modules extracted from :app.

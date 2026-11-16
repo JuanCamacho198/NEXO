@@ -21,13 +21,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.nexo.feature.bookdetail.R
 import com.nexo.domain.model.Book
-import com.nexo.ui.theme.NexoDimens
+import com.nexo.feature.bookdetail.R
 import com.nexo.ui.components.atoms.CoverThumbnail
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.atoms.StarRating
+import com.nexo.ui.theme.NexoDimens
 
 @Composable
 internal fun BookHeroSection(

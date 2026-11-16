@@ -25,15 +25,15 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.nexo.feature.discover.R
 import com.nexo.domain.access.LegalAccess
 import com.nexo.domain.usecase.DownloadImportState
-import com.nexo.ui.theme.nexoColors
+import com.nexo.feature.discover.R
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.atoms.NexoDivider
 import com.nexo.ui.components.atoms.NexoSkeletonBox
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.nexoColors
 
 /**
  * "Dónde leerlo" bottom sheet (U5): grouped FREE / BUY / SUBSCRIBE rows

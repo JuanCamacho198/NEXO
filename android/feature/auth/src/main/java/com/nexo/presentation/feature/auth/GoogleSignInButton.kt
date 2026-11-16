@@ -35,13 +35,13 @@ import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import com.nexo.domain.auth.AuthUiState
 import com.nexo.feature.auth.BuildConfig
 import com.nexo.feature.auth.R
-import com.nexo.ui.tags.AuthTags
-import com.nexo.ui.theme.NexoTheme
-import com.nexo.domain.auth.AuthUiState
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
+import com.nexo.ui.tags.AuthTags
+import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.util.safePainterResource
 import kotlinx.coroutines.launch
 import java.util.Locale

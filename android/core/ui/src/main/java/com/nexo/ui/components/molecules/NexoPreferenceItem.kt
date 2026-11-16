@@ -18,8 +18,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Settings-list row: leading icon + label on the left, optional

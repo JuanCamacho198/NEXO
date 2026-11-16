@@ -1,5 +1,7 @@
 package com.nexo.data.remote.catalog
 
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -15,8 +17,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.CatalogException
 
 /**
  * Contract evidence for [KtorCatalogFileDownloader]: body is streamed to disk,

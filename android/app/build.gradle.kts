@@ -23,7 +23,10 @@ plugins {
 
     // SDD android-tooling-hygiene WS5 slice 7: Spotless formatting gate
     // (catalog alias; declared in the root build file, applied here).
-    alias(libs.plugins.spotless)
+    // SDD android-tooling-hygiene WS5 slice 7: ktlint over **/*.kt + **/*.kts.
+    // The contract itself lives in build-logic (`nexo.kotlin.formatting`) so
+    // :app and the extracted modules cannot drift; this module just opts in.
+    id("nexo.kotlin.formatting")
 
     // SDD android-tooling-hygiene WS4 slice 9: Kover report-only coverage
     // (catalog alias; declared in the root build file, applied here).
@@ -41,20 +44,12 @@ plugins {
 // runtime and the KSP processor for Hilt, but owns no @Entity, so it exports
 // no schema.
 
-// SDD android-tooling-hygiene WS5 slice 7: `spotless{kotlin{ktlint()}}` over
-// **/*.kt + **/*.kts. ktlint runs at the Spotless-bundled default version
-// (recorded in apply-progress #2750); detekt stays analysis-authoritative —
-// see android/.editorconfig (ktlint no-wildcard-imports defers to detekt's
-// WildcardImport excludeImports) and never enable detekt's formatting set.
-spotless {
-    kotlin {
-        target("**/*.kt", "**/*.kts")
-        // Konsist fixtures under test resources are parsed data, not compiled source
-        // (see DirectViewModelConstructionFixture.kt) — keep them out of ktlint.
-        targetExclude("src/test/resources/**")
-        ktlint()
-    }
-}
+// SDD android-tooling-hygiene WS5 slice 7: the ktlint contract (`spotless { kotlin
+// { ktlint() } }` over **/*.kt + **/*.kts) is defined ONCE in build-logic as
+// `nexo.kotlin.formatting` and applied in the plugins block above. detekt stays
+// analysis-authoritative — see android/.editorconfig (ktlint no-wildcard-imports
+// defers to detekt's WildcardImport excludeImports) and never enable detekt's
+// formatting set.
 
 // SDD android-tooling-hygiene WS4 slice 9: Kover report-only coverage bound
 // to the debug variant (`testDebugUnitTest`) ONLY — androidTest is separate

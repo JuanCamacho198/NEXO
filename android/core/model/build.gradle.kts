@@ -4,6 +4,8 @@ plugins {
     // real annotations compiled into this module's bytecode, so the serialization
     // compiler plugin runs here — the app applying it does NOT cover this module.
     alias(libs.plugins.kotlin.serialization)
+    // ktlint gate from build-logic (one contract for every Kotlin module).
+    id("nexo.kotlin.formatting")
 }
 
 kotlin {
@@ -25,9 +27,9 @@ dependencies {
 
     api(libs.kotlinx.serialization.json)
 
-        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
     testImplementation(project(":core:test"))
-testImplementation(kotlin("test"))
+    testImplementation(kotlin("test"))
     testImplementation(libs.testing.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.testing.json)

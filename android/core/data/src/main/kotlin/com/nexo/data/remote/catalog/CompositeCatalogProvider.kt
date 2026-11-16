@@ -1,6 +1,10 @@
 package com.nexo.data.remote.catalog
 
 import com.nexo.debug.SentryMetrics
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
+import com.nexo.domain.model.catalogError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -11,10 +15,6 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import com.nexo.domain.model.CatalogBook
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.CatalogException
-import com.nexo.domain.model.catalogError
 
 /**
  * Ordered dynamic composite behind the port.

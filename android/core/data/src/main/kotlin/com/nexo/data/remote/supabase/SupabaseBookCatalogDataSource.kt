@@ -1,7 +1,6 @@
 package com.nexo.data.remote.supabase
 
 import com.nexo.domain.model.UserBookRow
-
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.postgrest
@@ -13,8 +12,6 @@ import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
 import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 
 /**
  * Book catalog CRUD via Supabase PostgREST (using supabase-kt postgrest-kt).

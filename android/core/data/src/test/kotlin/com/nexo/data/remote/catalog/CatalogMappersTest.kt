@@ -1,5 +1,9 @@
 package com.nexo.data.remote.catalog
 
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogException
+import com.nexo.domain.model.catalogError
+import com.nexo.domain.model.mapHttpStatusToCode
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -7,10 +11,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.CatalogException
-import com.nexo.domain.model.catalogError
-import com.nexo.domain.model.mapHttpStatusToCode
 
 /** Offline mirror of the desktop `catalog.test.ts` mapper suite (same fixtures). */
 class CatalogMappersTest {

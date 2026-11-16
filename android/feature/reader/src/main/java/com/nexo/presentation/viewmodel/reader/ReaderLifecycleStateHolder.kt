@@ -3,11 +3,11 @@ package com.nexo.presentation.viewmodel.reader
 import android.app.Application
 import androidx.annotation.VisibleForTesting
 import com.nexo.data.remote.supabase.SupabaseProgressSync
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
-import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.CfiMigrator
 import com.nexo.presentation.viewmodel.reader.lifecycle.EpubBookLoader
 import com.nexo.presentation.viewmodel.reader.lifecycle.PdfBookLoader

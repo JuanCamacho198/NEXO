@@ -87,10 +87,11 @@ class CacheRepositoryImplTest {
             // Coil ImageLoader (OkHttpClient + DiskCache cost ~40-130ms). The
             // getters are the first thing allowed to resolve it.
             var resolved = 0
-            val lazyLoader = dagger.Lazy<ImageLoader> {
-                resolved++
-                imageLoader
-            }
+            val lazyLoader =
+                dagger.Lazy<ImageLoader> {
+                    resolved++
+                    imageLoader
+                }
 
             val repo = CacheRepositoryImpl(dao, context, lazyLoader)
             assertEquals("construction must not resolve the loader", 0, resolved)

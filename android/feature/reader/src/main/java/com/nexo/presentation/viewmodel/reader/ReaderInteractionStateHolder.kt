@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.graphics.RectF
 import androidx.annotation.VisibleForTesting
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.repository.DefinitionRepository
 import com.nexo.domain.repository.DictionaryRepository
@@ -12,7 +13,6 @@ import com.nexo.domain.repository.TranslationRepository
 import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.translation.NoTranslationReason
 import com.nexo.domain.translation.TranslationLanguageSelection
-import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.reader.interaction.AnnotationManager
 import com.nexo.presentation.viewmodel.reader.interaction.BookmarkManager
 import com.nexo.presentation.viewmodel.reader.interaction.DefinitionManager

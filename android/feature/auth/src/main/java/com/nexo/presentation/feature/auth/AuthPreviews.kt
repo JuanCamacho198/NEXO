@@ -2,9 +2,9 @@ package com.nexo.presentation.feature.auth
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.domain.auth.AuthFailureKind
 import com.nexo.domain.auth.AuthUiState
+import com.nexo.ui.theme.NexoTheme
 
 @Preview(showBackground = true)
 @Composable

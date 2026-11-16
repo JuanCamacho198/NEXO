@@ -29,15 +29,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.feature.discover.R
 import com.nexo.domain.discover.DiscoverRailState
 import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.ui.theme.NexoDimens
-import com.nexo.ui.theme.nexoColors
+import com.nexo.feature.discover.R
 import com.nexo.ui.components.atoms.NexoSkeletonBox
 import com.nexo.ui.components.molecules.NexoCardSurface
-
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.nexoColors
 
 private val RAIL_CARD_WIDTH = 110.dp
 private val RAIL_COVER_HEIGHT = 165.dp

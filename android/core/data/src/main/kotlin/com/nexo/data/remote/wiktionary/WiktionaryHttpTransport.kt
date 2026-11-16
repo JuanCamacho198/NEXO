@@ -1,8 +1,5 @@
 package com.nexo.data.remote.wiktionary
 
-import com.nexo.domain.model.WiktionaryErrorCode
-import com.nexo.domain.model.WiktionaryFetch
-
 /**
  * Raw HTTP boundary for the Wiktionary MediaWiki API, so the client stays fully
  * testable offline with fakes (mirrors the translation/catalog transport seam).

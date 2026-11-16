@@ -18,9 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.NexoTheme
-import com.nexo.ui.icons.NexoIcons
 
 /**
  * Scaffold + `TopAppBar` shell for any settings sub-page. Provides a

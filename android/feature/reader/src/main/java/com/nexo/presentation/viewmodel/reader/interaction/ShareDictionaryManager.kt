@@ -1,10 +1,10 @@
 package com.nexo.presentation.viewmodel.reader.interaction
 
 import android.content.Context
-import com.nexo.feature.reader.R
+import com.nexo.domain.event.UiEvent
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.session.ActiveUserProvider
-import com.nexo.domain.event.UiEvent
+import com.nexo.feature.reader.R
 import com.nexo.presentation.viewmodel.reader.lifecycle.Clearable
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

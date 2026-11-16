@@ -21,8 +21,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoTheme
 
 /**
  * Visual variant for [NexoDialog] that drives the confirm button

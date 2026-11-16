@@ -3,23 +3,19 @@ import groovy.json.JsonSlurper
 plugins {
     alias(libs.plugins.android.test)
     alias(libs.plugins.kotlin.android)
-    // Same formatting gate as `:app` (Spotless targets **/*.kt + **/*.kts), so the
-    // root `spotlessApply` / `spotlessCheck` covers this module's Kotlin too.
-    alias(libs.plugins.spotless)
+    // Same formatting gate as every other module (build-logic's
+    // `nexo.kotlin.formatting` targets **/*.kt + **/*.kts), so the root
+    // `spotlessApply` / `spotlessCheck` covers this module's Kotlin too.
+    id("nexo.kotlin.formatting")
     // SDD android-stack-modernization S11: Baseline Profile PRODUCER plugin. Turns this
     // module into the device-side generator that `:app:generateReleaseBaselineProfile`
     // drives (BaselineProfileGenerator.kt lives beside the S9 journeys here).
     alias(libs.plugins.androidx.baselineprofile)
 }
 
-// Spotless is configured per module (mirrors :app) — the plugin alone defines no
-// targets, and the benchmark sources must not escape the format gate.
-spotless {
-    kotlin {
-        target("**/*.kt", "**/*.kts")
-        ktlint()
-    }
-}
+// Spotless is configured by `nexo.kotlin.formatting` (build-logic) — targets are
+// module-relative, so applying the convention plugin here scopes the gate to this
+// module's sources and the benchmark sources cannot escape it.
 
 android {
     namespace = "com.nexo.benchmark"

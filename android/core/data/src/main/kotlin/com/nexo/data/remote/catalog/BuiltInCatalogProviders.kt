@@ -4,7 +4,6 @@ import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.model.CatalogErrorCode
 import com.nexo.domain.model.catalogError
 
-
 /**
  * Built-in CatalogProvider adapters over the raw datasources.
  * Gutendex is metadata/download authority; Open Library enriches + cover

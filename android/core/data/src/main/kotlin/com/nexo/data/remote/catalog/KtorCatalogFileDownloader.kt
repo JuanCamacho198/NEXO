@@ -1,5 +1,10 @@
 package com.nexo.data.remote.catalog
 
+import com.nexo.domain.model.CatalogErrorCode
+import com.nexo.domain.model.CatalogFileSource
+import com.nexo.domain.model.catalogError
+import com.nexo.domain.model.isCatalogError
+import com.nexo.domain.model.mapHttpStatusToCode
 import io.ktor.client.HttpClient
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
@@ -10,11 +15,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import com.nexo.domain.model.CatalogErrorCode
-import com.nexo.domain.model.CatalogFileSource
-import com.nexo.domain.model.catalogError
-import com.nexo.domain.model.isCatalogError
-import com.nexo.domain.model.mapHttpStatusToCode
 
 /**
  * Production [CatalogFileSource] over the shared catalog [HttpClient].

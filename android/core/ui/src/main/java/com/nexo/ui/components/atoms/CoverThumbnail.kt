@@ -1,8 +1,5 @@
 package com.nexo.ui.components.atoms
 
-import com.nexo.ui.R as UiR
-
-
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -24,6 +21,7 @@ import coil3.request.fallback
 import coil3.request.placeholder
 import com.nexo.debug.DebugLog
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.R as UiR
 
 /**
  * Small cover thumbnail for the library grid. Loads from a local

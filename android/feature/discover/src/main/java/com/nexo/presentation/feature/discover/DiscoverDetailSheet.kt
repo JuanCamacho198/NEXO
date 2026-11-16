@@ -36,21 +36,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nexo.feature.discover.R
 import com.nexo.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nexo.data.remote.catalog.BUILTIN_OPENLIBRARY
-import com.nexo.domain.model.CatalogBook
 import com.nexo.data.remote.catalog.CatalogSources
 import com.nexo.domain.access.resolveAccess
-import com.nexo.domain.usecase.DownloadImportState
-import com.nexo.ui.theme.nexoColors
 import com.nexo.domain.discover.DiscoverDetailStatus
+import com.nexo.domain.model.CatalogBook
+import com.nexo.domain.usecase.DownloadImportState
+import com.nexo.feature.discover.R
 import com.nexo.ui.components.atoms.NexoBookCover
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.atoms.NexoDivider
 import com.nexo.ui.components.atoms.NexoProgressBar
 import com.nexo.ui.components.atoms.NexoSkeletonBox
+import com.nexo.ui.theme.nexoColors
 
 /**
  * A derivable off-app link for a catalog book, with the label that names the

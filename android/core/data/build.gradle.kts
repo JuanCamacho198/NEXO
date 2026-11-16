@@ -78,9 +78,9 @@ dependencies {
     // Bundled SQLite driver (FTS5): the platform SQLite has no fts5 module, so
     // MIGRATION_15_16 fails at open time on real devices without it.
     implementation(libs.androidx.sqlite.bundled)
-        // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
+    // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
     testImplementation(project(":core:test"))
-testImplementation(libs.room.testing)
+    testImplementation(libs.room.testing)
 
     // @HiltWorker on OutboxDrainWorker / RetentionPruneWorker. androidx-hilt-compiler
     // is the WorkManager bridge processor; it is separate from Dagger's hilt-compiler.

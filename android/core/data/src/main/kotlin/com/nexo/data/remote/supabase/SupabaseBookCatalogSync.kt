@@ -1,7 +1,5 @@
 package com.nexo.data.remote.supabase
 
-import com.nexo.domain.model.UserBookRow
-
 import android.util.Log
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.SyncOutboxDao
@@ -20,6 +18,7 @@ import com.nexo.data.session.SessionManager
 import com.nexo.debug.DebugLog
 import com.nexo.domain.error.AppError
 import com.nexo.domain.error.ErrorCategory
+import com.nexo.domain.model.UserBookRow
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.decodeRecord
 import io.github.jan.supabase.storage.storage

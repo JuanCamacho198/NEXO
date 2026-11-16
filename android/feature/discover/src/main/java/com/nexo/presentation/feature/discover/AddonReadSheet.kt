@@ -19,13 +19,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.nexo.feature.discover.R
 import com.nexo.domain.access.LegalAccess
-import com.nexo.ui.theme.nexoColors
+import com.nexo.feature.discover.R
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.atoms.NexoDivider
 import com.nexo.ui.components.atoms.NexoSkeletonBox
+import com.nexo.ui.theme.nexoColors
 
 /**
  * Resolve states for one addon's "where to read" items (U5).

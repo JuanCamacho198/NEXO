@@ -9,6 +9,8 @@
 // Android modules that use them.
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    // ktlint gate from build-logic (one contract for every Kotlin module).
+    id("nexo.kotlin.formatting")
 }
 
 kotlin {
