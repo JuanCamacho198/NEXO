@@ -25,7 +25,7 @@ android {
         // module carries its own BuildConfig instead of reaching into :app's.
         // The version mirrors `appVersionName` in :app; release-please keeps the
         // marker comment on both lines.
-        val featureVersionName = "0.6.0" // x-release-please-version
+        val featureVersionName = "0.6.1" // x-release-please-version
         buildConfigField("String", "VERSION_NAME", "\"$featureVersionName\"")
         buildConfigField("String", "GIT_SHA", "\"${gitSha()}\"")
         // SettingsDataStorageScreen shows the OAuth client id. A library module cannot
