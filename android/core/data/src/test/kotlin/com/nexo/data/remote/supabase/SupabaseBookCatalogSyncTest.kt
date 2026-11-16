@@ -7,6 +7,7 @@ import com.nexo.data.local.entity.SyncOutboxEntity
 import com.nexo.data.remote.sync.CatalogSyncStatus
 import com.nexo.data.session.SessionManager
 import com.nexo.domain.model.AuthSession
+import com.nexo.domain.model.UserBookRow
 import com.nexo.testutil.FakeBookDao
 import com.nexo.testutil.FakeSyncOutboxDao
 import com.nexo.testutil.TEST_USER_ID
