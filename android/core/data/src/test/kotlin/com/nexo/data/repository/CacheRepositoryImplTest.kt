@@ -34,7 +34,7 @@ class CacheRepositoryImplTest {
     private val diskCache = mockk<DiskCache>(relaxed = true)
     private val context = mockk<Context>(relaxed = true)
 
-    private fun repository() = CacheRepositoryImpl(dao, context, imageLoader)
+    private fun repository() = CacheRepositoryImpl(dao, context, dagger.Lazy { imageLoader })
 
     @After
     fun tearDown() {
@@ -78,6 +78,25 @@ class CacheRepositoryImplTest {
             every { imageLoader.diskCache } returns null
 
             assertEquals(0L, repository().imageCacheSizeBytes())
+        }
+
+    @Test
+    fun imageLoader_isNotTouchedOnConstruction() =
+        runTest {
+            // Cold-start guard: building the repository must not construct the
+            // Coil ImageLoader (OkHttpClient + DiskCache cost ~40-130ms). The
+            // getters are the first thing allowed to resolve it.
+            var resolved = 0
+            val lazyLoader = dagger.Lazy<ImageLoader> {
+                resolved++
+                imageLoader
+            }
+
+            val repo = CacheRepositoryImpl(dao, context, lazyLoader)
+            assertEquals("construction must not resolve the loader", 0, resolved)
+
+            repo.discoverCacheSizeBytes()
+            assertEquals("unrelated cache calls must not resolve the loader", 0, resolved)
         }
 
     @Test

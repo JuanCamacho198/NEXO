@@ -274,7 +274,17 @@ class GoogleDriveSyncService(
         // the canonical name already has a remote object (a legacy upload from
         // another device), the write targets that canonical name instead of
         // creating a second readable file.
-        val canonicalAlreadyRemote = runCatching { remoteDataSource.readMarker(objectName) }.getOrNull() != null
+        // The probe decides the physical name, so it must not swallow an auth
+        // failure: `getOrNull()` used to turn a Drive 401 into "no remote
+        // object", which downgraded the push to a blind upload against a dead
+        // token (NEXO-ANDROID-16/17/7 — 6 uploads, 0 refreshes). An auth error
+        // is recovered here, at the point it is observed: refresh once, retry
+        // once. Any other failure still degrades to `null` as before.
+        val canonicalMarker =
+            retryAuthOnce(caller = "pushBook ${book.id} marker probe") {
+                remoteDataSource.readMarker(objectName)
+            }.getOrElse { return Result.failure(it) }
+        val canonicalAlreadyRemote = canonicalMarker != null
         val readableName =
             if (canonicalAlreadyRemote) null else DriveFilename.readableObjectName(book.title, book.id, extension)
         if (canonicalAlreadyRemote) {
@@ -289,13 +299,19 @@ class GoogleDriveSyncService(
         } else {
             DebugLog.info(COMPONENT, "pushBook ${book.id}: uploading readable object $readableName")
         }
+        // Read once: the retry re-invokes this lambda, and re-reading a large
+        // book per attempt is pure waste (it used to happen up to 9 times).
+        val bytes = localFile.readBytes()
+        // `retryable` keeps its existing non-auth policy (transient I/O, 3
+        // attempts). Auth is intercepted inside it and costs exactly one refresh
+        // plus one retry, so the only change here is the error classification.
         val uploadResult =
-            retryable {
+            retryable(caller = "pushBook ${book.id} upload") {
                 DriveWriteGuard.uploadWithRetry(
                     port = remoteDataSource,
                     book = canonical,
                     extension = extension,
-                    bytes = localFile.readBytes(),
+                    bytes = bytes,
                     // `rememberBase` stores under the RESOLVED (readable) name, so
                     // the recall must use the same resolved key or the in-session
                     // base cache never hits on a re-push. The real version is still
@@ -470,9 +486,13 @@ class GoogleDriveSyncService(
         userId: String,
     ): Boolean = bookDao.getBookById(bookId, userId)?.deletedAtEpochMillis != null
 
-    private suspend fun <T> retryable(block: suspend () -> T): Result<T> {
+    private suspend fun <T> retryable(
+        caller: String = "retryable",
+        block: suspend () -> T,
+    ): Result<T> {
         var attempt = 0
         var lastError: Throwable? = null
+        var authRefreshed = false
         while (attempt < MAX_ATTEMPTS) {
             val result = runCatching { block() }
             if (result.isSuccess) {
@@ -480,7 +500,24 @@ class GoogleDriveSyncService(
             }
             val error = result.exceptionOrNull()
             if (isUnauthorized(error)) {
-                return driveCall(block = block, lastError = error)
+                // Auth is terminal for this drain. It may refresh at most ONCE
+                // per [retryable] call: a token rejected again after a
+                // successful refresh is a revoked grant, not a transient blip.
+                // Returning here (never falling into the ladder below) is what
+                // keeps a dead token at 2 Drive calls instead of 6.
+                if (authRefreshed) {
+                    return Result.failure(error ?: IllegalStateException("Drive authorization needed"))
+                }
+                authRefreshed = true
+                val refreshed = runCatching { tokenRefresher() }.getOrElse { Result.failure(it) }
+                if (refreshed.isFailure) {
+                    state.value = DriveSyncState.AuthorizationNeeded
+                    DebugLog.warn(COMPONENT, "$caller: 401 and refresh failed — item stays parked")
+                    return Result.failure(refreshed.exceptionOrNull() ?: error ?: IllegalStateException("Drive authorization needed"))
+                }
+                DebugLog.info(COMPONENT, "$caller: 401, refreshed token — retrying once")
+                // The retry is the loop's next iteration, not an extra call site.
+                continue
             }
             if (!isTransient(error)) {
                 return Result.failure(error ?: IllegalStateException("Unknown sync failure"))
@@ -492,44 +529,56 @@ class GoogleDriveSyncService(
     }
 
     /**
-     * Handles Drive 401/403 (D4): refreshes the access token once, waits for the
-     * caller to rebuild the source (the refreshed token is read lazily on next
-     * call), and retries the operation once. On refresh failure it surfaces an
-     * "authorization needed" state instead of failing silently.
+     * Handles a Drive 401/403 (D4) that arrives from a call already in flight,
+     * i.e. after [ensureDriveAuthorized] let it through: refreshes the access
+     * token exactly once and retries [block] exactly once.
+     *
+     * One attempt, no loop and no backoff ladder — a token that is still
+     * rejected after a successful refresh is a revoked grant, and retrying it
+     * only burns the battery and floods Sentry. Non-auth failures are NOT
+     * retried here; they pass straight through to the caller's own policy.
+     *
+     * The refreshed token is picked up lazily: [DriveCoordinator] reads
+     * `tokenStore.accessToken()` per request, so the retry needs no rebuilding.
      */
-    private suspend fun <T> driveCall(
+    private suspend fun <T> retryAuthOnce(
+        caller: String,
         block: suspend () -> T,
-        lastError: Throwable?,
     ): Result<T> {
-        return runCatching { tokenRefresher() }
-            .fold(
-                onSuccess = { refreshResult ->
-                    if (refreshResult.isFailure) {
-                        state.value = DriveSyncState.AuthorizationNeeded
-                        return Result.failure(
-                            refreshResult.exceptionOrNull()
-                                ?: lastError ?: IllegalStateException("Drive authorization needed"),
-                        )
-                    }
-                    runCatching { block() }.let { retry ->
-                        if (retry.isSuccess) {
-                            retry
-                        } else {
-                            Result.failure(retry.exceptionOrNull() ?: lastError ?: IllegalStateException("Drive retry failed"))
-                        }
-                    }
-                },
-                onFailure = { refreshThrown ->
-                    state.value = DriveSyncState.AuthorizationNeeded
-                    Result.failure(refreshThrown)
-                },
-            )
+        val first = runCatching { block() }
+        val error = first.exceptionOrNull() ?: return first
+        if (!isUnauthorized(error)) {
+            return first
+        }
+        val refresh = runCatching { tokenRefresher() }.getOrElse { Result.failure(it) }
+        if (refresh.isFailure) {
+            state.value = DriveSyncState.AuthorizationNeeded
+            DebugLog.warn(COMPONENT, "$caller: 401 and refresh failed — item stays parked")
+            return Result.failure(refresh.exceptionOrNull() ?: error)
+        }
+        DebugLog.info(COMPONENT, "$caller: 401, refreshed token — retrying once")
+        val retry = runCatching { block() }
+        if (retry.isFailure) {
+            val retryError = retry.exceptionOrNull()
+            if (isUnauthorized(retryError)) {
+                // Refresh succeeded yet Drive still rejects: the grant is gone.
+                state.value = DriveSyncState.AuthorizationNeeded
+                DebugLog.warn(COMPONENT, "$caller: still 401 after refresh — authorization needed")
+            }
+            return Result.failure(retryError ?: error)
+        }
+        return retry
     }
 
+    /**
+     * A Drive 401/403 as classified by `GoogleDriveStorageRemoteDataSource`.
+     * [mapDriveError] tags 401 as `AUTH_EXPIRED` and 403 as `PERMISSION_DENIED`,
+     * both under [ErrorCategory.AUTH]; the former `GOOGLE_DRIVE_UNAUTHORIZED`
+     * literal is never produced anywhere and was dead weight.
+     */
     private fun isUnauthorized(error: Throwable?): Boolean {
-        val authError = error as? AppError
-        return authError?.category == ErrorCategory.AUTH ||
-            authError?.code == "GOOGLE_DRIVE_UNAUTHORIZED"
+        val authError = error as? AppError ?: return false
+        return authError.category == ErrorCategory.AUTH
     }
 
     private fun isTransient(error: Throwable?): Boolean =

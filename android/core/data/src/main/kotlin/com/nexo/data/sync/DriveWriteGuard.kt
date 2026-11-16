@@ -1,5 +1,7 @@
 package com.nexo.data.sync
 
+import com.nexo.domain.error.AppError
+import com.nexo.domain.error.ErrorCategory
 import com.nexo.domain.model.CanonicalName
 import com.nexo.domain.model.DriveFilename
 
@@ -166,6 +168,11 @@ object DriveWriteGuard {
      * marker and rebases before the next attempt; a transient I/O failure is
      * retried unchanged. Either way a transient failure is never promoted to a
      * permanent one — after the final attempt the last error is rethrown.
+     *
+     * An auth failure is never retried here: a dead token cannot be fixed by
+     * re-uploading, and retrying it inside this loop is what produced six blind
+     * uploads in NEXO-ANDROID-16/17/7. It is rethrown immediately so the caller's
+     * single refresh-then-retry policy owns it.
      */
     suspend fun uploadWithRetry(
         port: DriveGuardPort,
@@ -186,8 +193,16 @@ object DriveWriteGuard {
                 lastError = error
             } catch (error: Throwable) {
                 lastError = error
+                if (isAuthFailure(error)) throw error
             }
         }
         throw lastError ?: IllegalStateException("guarded upload failed")
     }
+
+    /**
+     * Mirrors `GoogleDriveSyncService.isUnauthorized`: :core:data maps HTTP
+     * 401/403 to [AppError] with [ErrorCategory.AUTH]. Importing that here would
+     * invert the dependency (guard -> sync service), so the check is local.
+     */
+    private fun isAuthFailure(error: Throwable): Boolean = (error as? AppError)?.category == ErrorCategory.AUTH
 }

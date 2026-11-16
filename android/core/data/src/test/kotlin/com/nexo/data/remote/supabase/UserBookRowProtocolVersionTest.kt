@@ -1,5 +1,6 @@
 package com.nexo.data.remote.supabase
 
+import com.nexo.domain.model.UserBookRow
 import io.github.jan.supabase.SupabaseSerializer
 import io.github.jan.supabase.encode
 import io.github.jan.supabase.postgrest.Postgrest

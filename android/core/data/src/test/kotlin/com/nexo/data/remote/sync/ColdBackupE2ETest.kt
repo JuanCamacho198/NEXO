@@ -14,6 +14,7 @@ import com.nexo.data.remote.supabase.SupabaseBookCatalogDataSource
 import com.nexo.data.remote.supabase.SupabaseProgressDataSource
 import com.nexo.data.session.SessionManager
 import com.nexo.domain.model.AuthSession
+import com.nexo.domain.model.UserBookRow
 import com.nexo.testutil.FakeBookDao
 import com.nexo.testutil.FakeBookmarkDao
 import com.nexo.testutil.FakeHighlightDao
@@ -114,7 +115,7 @@ class ColdBackupE2ETest {
                     exportedAt = System.currentTimeMillis(),
                     books =
                         listOf(
-                            com.nexo.data.remote.supabase.UserBookRow(
+                            UserBookRow(
                                 id = "b1",
                                 userId = "u1",
                                 title = "T",
@@ -362,7 +363,7 @@ class ColdBackupE2ETest {
             val gson = com.google.gson.Gson()
             val books =
                 (1..3).map { i ->
-                    com.nexo.data.remote.supabase.UserBookRow(
+                    UserBookRow(
                         id = "b$i",
                         userId = "u1",
                         title = "T$i",
@@ -378,7 +379,7 @@ class ColdBackupE2ETest {
                 )
             coEvery { remote.download(any()) } returns gson.toJson(backup).toByteArray(Charsets.UTF_8)
             coEvery { catalogDataSource.upsertBook(any()) } answers {
-                val row = firstArg<com.nexo.data.remote.supabase.UserBookRow>()
+                val row = firstArg<UserBookRow>()
                 if (row.id == "b2") throw RuntimeException("401 unauthorized token=abc")
                 row
             }
@@ -415,7 +416,7 @@ class ColdBackupE2ETest {
                     exportedAt = System.currentTimeMillis(),
                     books =
                         listOf(
-                            com.nexo.data.remote.supabase.UserBookRow(
+                            UserBookRow(
                                 id = "b1",
                                 userId = "u1",
                                 title = "T",

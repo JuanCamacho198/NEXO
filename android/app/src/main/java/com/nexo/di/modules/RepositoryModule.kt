@@ -168,7 +168,7 @@ object RepositoryModule {
     fun provideCacheRepository(
         @ApplicationContext context: Context,
         discoverCacheDao: DiscoverCacheDao,
-        imageLoader: coil3.ImageLoader,
+        imageLoader: dagger.Lazy<coil3.ImageLoader>,
     ): CacheRepository =
         CacheRepositoryImpl(
             discoverCacheDao = discoverCacheDao,
