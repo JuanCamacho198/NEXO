@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nexo.R
@@ -111,6 +112,11 @@ internal fun rememberNavHostViewModels(
     val context = LocalContext.current
     val application = context.applicationContext as android.app.Application
 
+    // Resolved with stringResource, not context.getString: reading a resource
+    // through LocalContext.current inside a composable trips the Compose lint
+    // rule LocalContextGetResourceValueCall. Same pattern as ImportLauncher.
+    val bookNotFoundMessage = stringResource(R.string.book_not_found)
+
     val libraryViewModel: LibraryViewModel = hiltViewModel()
 
     val readerViewModel: ReaderViewModel =
@@ -130,7 +136,7 @@ internal fun rememberNavHostViewModels(
                     translationPreferences = translationPreferences,
                     definitionRepository = definitionRepository,
                     definitionPreferences = definitionPreferences,
-                    bookNotFoundMessage = context.getString(R.string.book_not_found),
+                    bookNotFoundMessage = bookNotFoundMessage,
                 ),
         )
 
@@ -244,7 +250,11 @@ internal fun rememberEditBookMetadataViewModel(
     coverStorage: CoverStorage,
     onSaved: () -> Unit,
 ): EditBookMetadataViewModel {
-    val context = LocalContext.current
+    // Resolved with stringResource, not context.getString: reading a resource
+    // through LocalContext.current inside a composable trips the Compose lint
+    // rule LocalContextGetResourceValueCall.
+    val savedMessage = stringResource(R.string.library_snackbar_metadata_saved)
+    val saveFailedMessage = stringResource(R.string.edit_metadata_save_failed)
     return viewModel(
         factory =
             EditBookMetadataViewModel.Factory(
@@ -252,8 +262,8 @@ internal fun rememberEditBookMetadataViewModel(
                 libraryRepository = libraryRepository,
                 activeUser = activeUser,
                 coverStorage = coverStorage,
-                savedMessage = context.getString(R.string.library_snackbar_metadata_saved),
-                saveFailedMessage = context.getString(R.string.edit_metadata_save_failed),
+                savedMessage = savedMessage,
+                saveFailedMessage = saveFailedMessage,
                 onSaved = onSaved,
             ),
     )
