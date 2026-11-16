@@ -5,6 +5,11 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.presentation.viewmodel.AuthViewModel
 
+// Filename is AuthScreenHost, not AuthScreen: the module declares its own
+// AuthScreen.kt in this same package, and two files of the same name in one
+// package both generate an AuthScreenKt class - legal for the Kotlin compiler,
+// fatal for D8 when the two modules are merged.
+//
 // AuthViewModel is a :app Hilt type shared by MainActivity, DebugPanel,
 // AuthNavGraph, SettingsNavGraph and ViewModelProviders, so it cannot move into
 // :feature:auth. Only the state-bound `*Content` composables live in the
