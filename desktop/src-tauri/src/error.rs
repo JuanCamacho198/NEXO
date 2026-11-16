@@ -38,6 +38,13 @@ pub enum AppError {
 
     #[error("not found: {0}")]
     NotFound(String),
+
+    /// A failure inside command plumbing that is not the caller's fault: a
+    /// poisoned repository mutex, a background channel that closed. It exists so
+    /// the category survives to `CommandErrorDto::internal` instead of being
+    /// flattened into `Mutex`'s `Display`, which carries no code.
+    #[error("internal error: {0}")]
+    Internal(String),
 }
 
 /// Turn a `rusqlite` failure into a message a reader of the notification can act on.
@@ -82,6 +89,7 @@ impl AppError {
             AppError::Database(_) => false,
             AppError::Io(_) => false,
             AppError::Tauri(_) => false,
+            AppError::Internal(_) => false,
         }
     }
 }
@@ -101,6 +109,7 @@ pub enum ErrorCode {
     ImportError,
     ThumbnailFail,
     NotFound,
+    Internal,
 }
 
 pub type AppResult<T> = Result<T, AppError>;

@@ -39,10 +39,14 @@ pub fn delete_collection(repo: &LibraryRepository, id: i64) -> AppResult<()> {
         .connection
         .query_row("SELECT is_system FROM collections WHERE id = ?1", params![id], |row| row.get(0))
         .optional()?;
-    if is_system.is_none() {
-        return Err(AppError::InvalidInput("Collection not found".to_string()));
-    }
-    if is_system.unwrap() == 1 {
+    // One lookup, one classification: a missing row is `NotFound` (it was
+    // reported as `InvalidInput` / `VALIDATION_ERROR`, which told the caller
+    // their input was wrong when the row simply was not there).
+    let is_system = match is_system {
+        None => return Err(AppError::NotFound("Collection not found".to_string())),
+        Some(flag) => flag,
+    };
+    if is_system == 1 {
         return Err(AppError::InvalidInput("Cannot delete system collection".to_string()));
     }
 

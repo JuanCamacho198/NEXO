@@ -19,15 +19,31 @@ pub const READING_DAY_FIXTURE_JSON: &str =
 /// The user's local calendar day for `instant` at an explicit
 /// `zone_offset_minutes` (positive = east of UTC, matching the value returned
 /// by `-Date.prototype.getTimezoneOffset()`).
+///
+/// Real zones span UTC-12:00 to UTC+14:00. An offset outside the range
+/// `FixedOffset` can represent is clamped to that boundary rather than falling
+/// back to UTC: the old `unwrap_or_else(|| east_opt(0))` silently answered the
+/// UTC day for an out-of-range zone, so a caller that passed a nonsense offset
+/// got a plausible-looking wrong day instead of an obviously clamped one.
 pub fn reading_day(instant: DateTime<Utc>, zone_offset_minutes: i32) -> NaiveDate {
-    let offset = FixedOffset::east_opt(zone_offset_minutes.saturating_mul(60))
-        .unwrap_or_else(|| FixedOffset::east_opt(0).expect("UTC offset is always valid"));
+    let minutes = zone_offset_minutes.clamp(MIN_ZONE_OFFSET_MINUTES, MAX_ZONE_OFFSET_MINUTES);
+    let offset = FixedOffset::east_opt(minutes.saturating_mul(60))
+        .expect("the clamped offset is always representable");
     instant.with_timezone(&offset).date_naive()
 }
 
+/// Widest real-world offsets, in minutes east of UTC (`FixedOffset` allows
+/// ±86_399 s; these are the boundaries of actual civil time).
+const MIN_ZONE_OFFSET_MINUTES: i32 = -12 * 60;
+const MAX_ZONE_OFFSET_MINUTES: i32 = 14 * 60;
+
 /// Canonical persisted value: the local calendar day encoded as 00:00 UTC.
 pub fn reading_day_start_utc(day: NaiveDate) -> DateTime<Utc> {
-    day.and_hms_opt(0, 0, 0).expect("midnight is always valid").and_utc()
+    // `and_hms_opt` returns `Option` only because the hour/minute/second can be
+    // out of range; midnight on a `NaiveDate` has no failing case, so this is a
+    // constructor invariant rather than an error path.
+    let midnight = day.and_hms_opt(0, 0, 0).expect("midnight is always a valid time of day");
+    DateTime::from_naive_utc_and_offset(midnight, Utc)
 }
 
 /// Canonical persisted RFC3339 string for `(instant, zone)`.
