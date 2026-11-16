@@ -38,6 +38,15 @@ pub enum AppError {
 
     #[error("not found: {0}")]
     NotFound(String),
+    /// The path guard refused a path that resolves outside the app data
+    /// directory. It is a security event, not a validation slip, so it carries
+    /// its own code (`PATH_OUTSIDE_APP_DATA`) instead of `VALIDATION_ERROR`:
+    /// the frontend can then log and observe a sandbox refusal as its own thing
+    /// rather than as anonymous prose. The message names the offending path for
+    /// the log line, with the home directory prefix redacted because the same
+    /// text reaches a retry UI.
+    #[error("{0}")]
+    PathOutsideAppData(String),
 
     /// A failure inside command plumbing that is not the caller's fault: a
     /// poisoned repository mutex, a background channel that closed. It exists so
@@ -90,6 +99,8 @@ impl AppError {
             AppError::Io(_) => false,
             AppError::Tauri(_) => false,
             AppError::Internal(_) => false,
+            // The caller cannot fix a refused path by retrying the same call.
+            AppError::PathOutsideAppData(_) => false,
         }
     }
 }

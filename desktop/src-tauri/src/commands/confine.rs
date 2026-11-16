@@ -105,8 +105,26 @@ fn ensure_inside(root_real: &Path, resolved: &Path, candidate: &str) -> AppResul
     }
 }
 
+/// A path guard refusal. The path is kept so a log line still names what was
+/// refused, but the home directory prefix is replaced with `~`: the same text
+/// reaches a retry UI (`discoverDownloadImport` returns `error.message`), and a
+/// user-facing surface should not disclose the account name.
 fn outside(candidate: &str) -> AppError {
-    AppError::InvalidInput(format!("path is outside the application data directory: {candidate}"))
+    AppError::PathOutsideAppData(format!(
+        "path is outside the application data directory: {}",
+        redact_home(candidate)
+    ))
+}
+
+fn redact_home(candidate: &str) -> String {
+    let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"));
+    let Some(home) = home.and_then(|h| h.into_string().ok()) else {
+        return candidate.to_string();
+    };
+    if home.is_empty() {
+        return candidate.to_string();
+    }
+    candidate.replace(&home, "~")
 }
 
 fn canonical_dir(path: &Path) -> Option<PathBuf> {
@@ -206,7 +224,7 @@ mod tests {
         std::fs::write(&secret, b"no").expect("fixture");
         let err = resolve_within(&root, &secret.to_string_lossy())
             .expect_err("outside path must be refused");
-        assert!(matches!(err, AppError::InvalidInput(_)), "{err:?}");
+        assert!(matches!(err, AppError::PathOutsideAppData(_)), "{err:?}");
     }
 
     #[test]
@@ -215,7 +233,7 @@ mod tests {
         let root = root_of(&dir);
         let escaping = format!("{}/../../../etc/passwd", root.display());
         let err = resolve_within(&root, &escaping).expect_err("traversal must be refused");
-        assert!(matches!(err, AppError::InvalidInput(_)), "{err:?}");
+        assert!(matches!(err, AppError::PathOutsideAppData(_)), "{err:?}");
     }
 
     #[test]
@@ -224,7 +242,7 @@ mod tests {
         let root = root_of(&dir);
         let err = resolve_within(&root, "../../etc/passwd")
             .expect_err("relative traversal must be refused");
-        assert!(matches!(err, AppError::InvalidInput(_)), "{err:?}");
+        assert!(matches!(err, AppError::PathOutsideAppData(_)), "{err:?}");
     }
 
     #[test]
@@ -234,7 +252,7 @@ mod tests {
         let escaping = root.join("books").join("..").join("..").join("escape.epub");
         let err = resolve_within(&root, &escaping.to_string_lossy())
             .expect_err("traversal out of root must be refused even if the target is absent");
-        assert!(matches!(err, AppError::InvalidInput(_)), "{err:?}");
+        assert!(matches!(err, AppError::PathOutsideAppData(_)), "{err:?}");
     }
 
     #[test]

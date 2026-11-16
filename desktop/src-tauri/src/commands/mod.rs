@@ -7,7 +7,7 @@
 // the two helpers that are not commands.
 //
 // ERROR TYPE MIGRATION (T8, audit item #06) — COMPLETE for every command
-// module, with three deliberate exceptions named below.
+// module.
 //
 // `CommandError` (below) is the shape: it wraps the `{code, message,
 // recoverable}` JSON text the frontend's `parseCommandError` already parses, and
@@ -16,11 +16,14 @@
 // this tree returns `Result<T, CommandError>`; `map_command_error` is private to
 // this file and is only reached through `CommandError::from`.
 //
-// Deliberately still `Result<T, String>` — NOT migrated, on purpose:
-//   files.rs, confine.rs, epub_reader.rs
-//     Path-guard surface added by 62e54d17. Their errors are a message for a
-//     user who just lost a file operation, not a category the frontend can act
-//     on differently. Converting them is a separate decision, not an oversight.
+// `files.rs`, `confine.rs`, `epub_reader.rs` were converted last, because they
+// are the path-guard surface and their refusals deserve a code of their own:
+// `AppError::PathOutsideAppData` -> `PATH_OUTSIDE_APP_DATA`, so a sandbox
+// refusal reaches the frontend as a distinct, loggable security event instead of
+// anonymous prose behind `VALIDATION_ERROR`. The message still names the refused
+// path, with the home directory prefix redacted because the same text reaches a
+// retry UI (`discoverDownloadImport` returns `error.message`).
+//
 // Private helpers that still take/return `String` (each says so at its
 // definition, and none is a command): `report_ownerless_outbox_rows`
 // (outbox.rs), `redact_section` / `assemble_bundle` (diagnostics.rs),
@@ -217,6 +220,11 @@ fn map_command_error(error: AppError) -> String {
         AppError::ThumbnailFail(message) => CommandErrorDto::thumbnail_error(message),
         AppError::MigrationFail(message) => CommandErrorDto::migration_fail(message),
         AppError::NotFound(message) => CommandErrorDto::not_found(message),
+        // Its own code, not `validation`: a sandbox refusal must stay
+        // distinguishable from "the input was malformed".
+        AppError::PathOutsideAppData(message) => {
+            CommandErrorDto::coded("PATH_OUTSIDE_APP_DATA", message)
+        }
         AppError::Internal(message) => CommandErrorDto::internal(message),
         other => CommandErrorDto::internal(other.to_string()),
     };
