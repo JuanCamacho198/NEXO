@@ -1,6 +1,5 @@
 package com.nexo.presentation.viewmodel
 
-import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -15,8 +14,8 @@ import com.nexo.domain.model.AuthSession
 import com.nexo.domain.repository.AuthRepository
 import com.nexo.domain.sync.OutboxDrainScheduler
 import com.nexo.domain.event.UiEvent
+import com.nexo.presentation.util.StringResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import com.nexo.domain.auth.AuthFailureKind
 import com.nexo.domain.auth.AuthUiState
@@ -51,6 +50,7 @@ import javax.inject.Named
  *                        [signOut]. See sync-layer-split PR-3.
  * @param isAuthConfigured Build-time flag indicating auth keys are wired in.
  * @param hasAuthWiringIssue Build-time flag indicating a DI wiring problem.
+ * @param stringResolver Resolves user-facing copy without an Android Context.
  */
 @HiltViewModel
 class AuthViewModel
@@ -60,7 +60,7 @@ class AuthViewModel
         private val syncOrchestrator: SyncOrchestrator,
         @Named("isAuthConfigured") private val isAuthConfigured: Boolean,
         @Named("hasAuthWiringIssue") private val hasAuthWiringIssue: Boolean,
-        @ApplicationContext private val appContext: Context,
+        private val stringResolver: StringResolver,
         /**
          * S6: schedules an outbox drain at app start for a restored session.
          * Defaults to a no-op so direct VM tests stay free of WorkManager.
@@ -352,7 +352,7 @@ class AuthViewModel
                 result.fold(
                     onSuccess = {
                         _uiState.update { it.copy(errorMessage = null, failureKind = AuthFailureKind.NONE) }
-                        _uiEvent.emit(UiEvent.ShowSnackbar(appContext.getString(R.string.auth_snackbar_reset_email_sent)))
+                        _uiEvent.emit(UiEvent.ShowSnackbar(stringResolver.get(R.string.auth_snackbar_reset_email_sent)))
                     },
                     onFailure = { error ->
                         _uiEvent.emit(UiEvent.ShowSnackbar(error.message ?: "Failed to send reset email"))
@@ -507,7 +507,7 @@ class AuthViewModel
             private val syncOrchestrator: SyncOrchestrator,
             private val isAuthConfigured: Boolean,
             private val hasAuthWiringIssue: Boolean,
-            private val appContext: Context,
+            private val stringResolver: StringResolver,
             private val outboxDrainScheduler: OutboxDrainScheduler = OutboxDrainScheduler.NoOp,
         ) : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
@@ -517,7 +517,7 @@ class AuthViewModel
                     syncOrchestrator = syncOrchestrator,
                     isAuthConfigured = isAuthConfigured,
                     hasAuthWiringIssue = hasAuthWiringIssue,
-                    appContext = appContext,
+                    stringResolver = stringResolver,
                     outboxDrainScheduler = outboxDrainScheduler,
                 ) as T
         }
