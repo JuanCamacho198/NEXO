@@ -491,6 +491,25 @@ jobs:
           disable-animations: false
           script: echo "Generated AVD snapshot for caching."
 
+      - name: Precompile before the emulator is resident
+        # Run 43923446693 died with java.lang.OutOfMemoryError on
+        # :core:data:compileDebugKotlin during :app:connectedDebugAndroidTest -
+        # before any test ran. The arithmetic is the same one documented above,
+        # now with a wider graph: the module split means connectedDebugAndroidTest
+        # compiles :app plus every :core:* and :feature:* dependency, and the
+        # 7 GB runner already carries the emulator's 2048 MB for the whole Gradle
+        # phase.
+        #
+        # Rather than raise a heap the runner cannot hold - or lower the AVD,
+        # which the ram-size comment explicitly forbids - the compilation moves
+        # ahead of the emulator. Nothing competes for the 2 GB the AVD will take,
+        # and the test step below then finds the artifacts already built.
+        #
+        # Same task the test step runs, so the second invocation is incremental.
+        # `--max-workers=2` for the same peak-OOM reason documented on that step.
+        working-directory: android
+        run: ./gradlew --build-cache --max-workers=2 -Dorg.gradle.vfs.watch=false :app:assembleDebug :app:assembleDebugAndroidTest
+
       - name: Run instrumented tests on the emulator
         # `-no-snapshot-save` loads the cached snapshot read-only: a test run
         # must never mutate the artifact the next run boots from.
