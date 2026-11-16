@@ -1,18 +1,21 @@
 use std::path::PathBuf;
 
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 
+use crate::commands::confine::{resolve_within, resolve_within_app_data, AppDataRoot};
 use crate::models::IndexBookTextInput;
 use crate::services::epub_extractor::{
     extract_plain_texts, EpubChapterContent, EpubExtractor, EpubMetadataExtract,
 };
 use crate::state::AppState;
 
+use super::map_command_error;
+
 const CACHE_VERSION: u32 = 4;
 
-fn get_cache_dir(app: &AppHandle, book_id: &str) -> PathBuf {
-    let app_data = app.path().app_data_dir().expect("app data dir");
-    crate::layout::cache_dir(&app_data).join("epub").join(book_id)
+fn get_cache_dir(app: &AppHandle, book_id: &str) -> Result<PathBuf, String> {
+    let app_data = app.app_data_root().map_err(map_command_error)?;
+    Ok(crate::layout::cache_dir(&app_data).join("epub").join(book_id))
 }
 
 fn cache_version_path(cache_dir: &std::path::Path) -> PathBuf {
@@ -62,7 +65,11 @@ pub async fn parse_epub(
     file_path: String,
     book_id: String,
 ) -> Result<EpubMetadataExtract, String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
+    let cache_dir = get_cache_dir(&app, &book_id)?;
+    // The reader only ever parses books that were imported, which copies them
+    // under app data (`repository::library::import_book`). A user-selected file
+    // is read by `importBook` from the dialog, not from here.
+    let source_path = resolve_within_app_data(&app, &file_path).map_err(map_command_error)?;
 
     // Check if already cached
     let metadata_path = cache_dir.join("metadata.json");
@@ -98,7 +105,7 @@ pub async fn parse_epub(
     }
 
     // Extract and cache
-    let meta = EpubExtractor::extract(std::path::Path::new(&file_path), &cache_dir)?;
+    let meta = EpubExtractor::extract(&source_path, &cache_dir)?;
 
     // Cache metadata for future calls
     std::fs::create_dir_all(&cache_dir)
@@ -130,7 +137,7 @@ pub async fn get_epub_chapter(
     book_id: String,
     chapter_index: usize,
 ) -> Result<EpubChapterContent, String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
+    let cache_dir = get_cache_dir(&app, &book_id)?;
     EpubExtractor::get_chapter(&cache_dir, chapter_index)
 }
 
@@ -141,14 +148,21 @@ pub async fn get_epub_resource(
     book_id: String,
     resource_path: String,
 ) -> Result<Vec<u8>, String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
+    let cache_dir = get_cache_dir(&app, &book_id)?;
+    // `resource_path` is a relative href taken from the book's own spine
+    // (`EpubExtractor::get_resource` joins it under `resources/`), so it is
+    // confined by resolving it inside that directory before the join.
+    let resources_dir = cache_dir.join("resources");
+    std::fs::create_dir_all(&resources_dir)
+        .map_err(|e| format!("Failed to create resources dir: {}", e))?;
+    resolve_within(&resources_dir, &resource_path).map_err(map_command_error)?;
     EpubExtractor::get_resource(&cache_dir, &resource_path)
 }
 
 /// Check if an EPUB has been parsed and cached.
 #[tauri::command(rename_all = "camelCase")]
 pub async fn is_epub_cached(app: AppHandle, book_id: String) -> Result<bool, String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
+    let cache_dir = get_cache_dir(&app, &book_id)?;
     let metadata_path = cache_dir.join("metadata.json");
     Ok(metadata_path.exists())
 }
@@ -156,7 +170,7 @@ pub async fn is_epub_cached(app: AppHandle, book_id: String) -> Result<bool, Str
 /// Delete the EPUB cache for a book.
 #[tauri::command(rename_all = "camelCase")]
 pub async fn clear_epub_cache(app: AppHandle, book_id: String) -> Result<(), String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
+    let cache_dir = get_cache_dir(&app, &book_id)?;
     if cache_dir.exists() {
         std::fs::remove_dir_all(&cache_dir)
             .map_err(|e| format!("Failed to clear EPUB cache: {}", e))?;
@@ -172,7 +186,7 @@ pub async fn index_epub_text(
     state: State<'_, AppState>,
     book_id: String,
 ) -> Result<(), String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
+    let cache_dir = get_cache_dir(&app, &book_id)?;
     if !cache_dir.exists() {
         return Err("EPUB not cached — run parse_epub first".to_string());
     }
@@ -200,8 +214,29 @@ pub async fn index_epub_text(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::AppError;
     use crate::services::epub_extractor::{EpubChapterMeta, EpubMetadataExtract};
     use std::fs;
+    use std::path::PathBuf;
+
+    struct Unavailable;
+
+    impl AppDataRoot for Unavailable {
+        fn app_data_root(&self) -> crate::error::AppResult<PathBuf> {
+            Err(AppError::InvalidInput("app data directory is unavailable".to_string()))
+        }
+    }
+
+    #[test]
+    fn a_missing_app_data_dir_is_an_error_instead_of_a_panic() {
+        let err = get_cache_dir_for(&Unavailable, "book-1").expect_err("must not panic");
+        assert!(err.contains("app data directory is unavailable"), "{err}");
+    }
+
+    fn get_cache_dir_for<A: AppDataRoot>(app: &A, book_id: &str) -> Result<PathBuf, String> {
+        let app_data = app.app_data_root().map_err(map_command_error)?;
+        Ok(crate::layout::cache_dir(&app_data).join("epub").join(book_id))
+    }
 
     fn make_meta(total: usize, spine_len: usize) -> EpubMetadataExtract {
         EpubMetadataExtract {

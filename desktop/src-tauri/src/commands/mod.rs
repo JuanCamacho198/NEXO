@@ -12,6 +12,7 @@ pub mod addon_registry;
 pub mod bookmarks;
 pub mod catalog_fetch;
 pub mod collections;
+pub mod confine;
 pub mod define;
 pub mod devtools;
 pub mod diagnostics;
