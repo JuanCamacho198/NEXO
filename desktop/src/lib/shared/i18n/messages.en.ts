@@ -319,6 +319,8 @@ export const messagesEn = {
   'notifications.state.failure': 'Failure',
   'notifications.auth.required': 'Sign-in required to sync',
   'notifications.auth.expired': 'Sync sign-in expired',
+  'notifications.secrets.unavailable':
+    'Secret protection is unavailable on this platform (macOS/Linux). Your session will not be saved between launches.',
   'notifications.catalog.failed': 'A book could not be synced',
   'notifications.action.view': 'View',
 

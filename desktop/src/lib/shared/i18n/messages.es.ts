@@ -323,6 +323,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'notifications.state.failure': 'Fallo',
   'notifications.auth.required': 'Se requiere iniciar sesion para sincronizar',
   'notifications.auth.expired': 'La sesion de sincronizacion expiro',
+  'notifications.secrets.unavailable':
+    'La proteccion de secretos no esta disponible en esta plataforma (macOS/Linux). Tu sesion no se guardara entre inicios.',
   'notifications.catalog.failed': 'Un libro no se pudo sincronizar',
   'notifications.action.view': 'Ver',
 

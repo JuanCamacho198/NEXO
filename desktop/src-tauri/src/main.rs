@@ -144,6 +144,14 @@ fn main() {
         eprintln!("[nexo] Sentry disabled (no SENTRY_DSN or init failed)");
     }
 
+    // T3: never let the app boot "clean" on a platform that cannot seal
+    // secrets. The same decision drives the `protectSecret` rejection, so this
+    // line and the per-call error can never disagree.
+    match commands::secrets::startup_diagnostic() {
+        Some(diagnostic) => eprintln!("[nexo] SECRETS UNAVAILABLE: {diagnostic}"),
+        None => eprintln!("[nexo] secret protection: available"),
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             // sdd/addon-deeplink-v1: warm-start forwarding. Must be the FIRST
@@ -294,6 +302,7 @@ fn main() {
             commands::discardRemoteDownload,
             commands::protectSecret,
             commands::unprotectSecret,
+            commands::secretProtectionAvailable,
             commands::fetchUpdateFeed,
             commands::fetchCatalogFeed,
             commands::translateSelection,
