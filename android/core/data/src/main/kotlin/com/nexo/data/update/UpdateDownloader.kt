@@ -9,10 +9,13 @@ import android.net.Uri
 import android.os.Environment
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import com.nexo.domain.update.UpdateInstallSource
+import com.nexo.domain.update.UpdateInstallSourceReader
 import java.io.File
 
 class UpdateDownloader(
     private val appContext: Context,
+    private val installSource: UpdateInstallSourceReader = AndroidUpdateInstallSourceReader(appContext),
 ) {
     fun fileNameFor(
         version: String,
@@ -22,10 +25,17 @@ class UpdateDownloader(
         return lastSegment.ifBlank { "nexo-update-v$version.apk" }
     }
 
+    /**
+     * Refuses to enqueue for a build a store installed. The check lives here as
+     * well as in [com.nexo.domain.update.CheckForUpdatesUseCase] because the
+     * download is the destructive step: a store-managed build must not even
+     * fetch a replacement feed APK.
+     */
     fun enqueue(
         version: String,
         assetUrl: String,
     ): Long {
+        if (installSource.current() != UpdateInstallSource.SIDELOAD) return FAILED_ID
         val manager = appContext.getSystemService(DownloadManager::class.java) ?: return FAILED_ID
         return try {
             val request =
@@ -73,6 +83,7 @@ class UpdateDownloader(
     }
 
     fun installDownloadedApk(fileName: String): Boolean {
+        if (installSource.current() != UpdateInstallSource.SIDELOAD) return false
         val downloadsDir = appContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: return false
         val apk = File(downloadsDir, fileName)
         if (!apk.exists()) return false

@@ -55,126 +55,16 @@
             column="49"/>
     </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 30 (current min is 26): `android.view.View#getWindowInsetsController`"
-        errorLine1="            view.windowInsetsController?.let { controller ->"
-        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="60"
-            column="18"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 30 (current min is 26): `android.view.WindowInsetsController#hide`"
-        errorLine1="                controller.hide("
-        errorLine2="                           ~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="61"
-            column="28"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
-        errorLine1="                        .systemBars(),"
-        errorLine2="                         ~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="63"
-            column="26"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 30 (current min is 26): `android.view.WindowInsetsController#setSystemBarsBehavior`"
-        errorLine1="                controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE"
-        errorLine2="                           ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="65"
-            column="28"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 30 (current min is 26): `android.view.WindowInsetsController#setSystemBarsBehavior`"
-        errorLine1="                controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE"
-        errorLine2="                                              ~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="65"
-            column="47"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 30 (current min is 26): `android.view.View#getWindowInsetsController`"
-        errorLine1="            view.windowInsetsController?.let { controller ->"
-        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="68"
-            column="18"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 30 (current min is 26): `android.view.WindowInsetsController#show`"
-        errorLine1="                controller.show("
-        errorLine2="                           ~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="69"
-            column="28"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
-        errorLine1="                        .systemBars(),"
-        errorLine2="                         ~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="71"
-            column="26"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 30 (current min is 26): `android.view.View#getWindowInsetsController`"
-        errorLine1="            view.windowInsetsController?.let { controller ->"
-        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="76"
-            column="18"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 30 (current min is 26): `android.view.WindowInsetsController#show`"
-        errorLine1="                controller.show("
-        errorLine2="                           ~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="77"
-            column="28"/>
-    </issue>
 
-    <issue
-        id="NewApi"
-        message="Call requires API level 30 (current min is 26): `android.view.WindowInsets.Type#systemBars`"
-        errorLine1="                        .systemBars(),"
-        errorLine2="                         ~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="79"
-            column="26"/>
-    </issue>
 
     <issue
         id="AppLinkUrlError"

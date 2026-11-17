@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nexo.domain.model.CatalogBook
 import com.nexo.feature.discover.R
+import com.nexo.ui.layout.rememberGridColumnCount
 import com.nexo.ui.theme.nexoColors
 
 /** Rows from the end of the list that trigger the next-page prefetch. */
@@ -47,7 +48,9 @@ fun DiscoverResultsGrid(
 ) {
     val colors = nexoColors
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        // 2 on every phone width (unchanged); wider windows spend the surplus on
+        // columns rather than on stretching each DiscoverCard.
+        columns = GridCells.Fixed(rememberGridColumnCount()),
         modifier = modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),

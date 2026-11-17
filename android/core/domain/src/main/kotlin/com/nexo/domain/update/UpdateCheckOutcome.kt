@@ -4,6 +4,9 @@ enum class UpdateErrorKind {
     UNREACHABLE,
     MALFORMED,
     OFFLINE,
+
+    /** The running build was not sideloaded, so in-app self-install is refused. */
+    MANAGED_INSTALL,
 }
 
 data class UpdateCandidate(

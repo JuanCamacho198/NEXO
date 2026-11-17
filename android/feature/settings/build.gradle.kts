@@ -104,4 +104,15 @@ dependencies {
     testImplementation(project(":core:test"))
     testImplementation(libs.testing.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // Compose UI assertions for the About rows. Robolectric runs the Compose
+    // host on the JVM, so the row's click/role wiring is provable in
+    // `testDebugUnitTest` instead of needing a device. The manifest artifact is
+    // what createComposeRule launches; without it the rule cannot resolve
+    // its host activity and every UI test dies before asserting anything.
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.testing.robolectric)
 }

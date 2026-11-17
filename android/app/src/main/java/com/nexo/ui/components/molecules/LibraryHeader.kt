@@ -109,10 +109,14 @@ fun LibraryHeader(
             },
         )
         if (showSearch) {
+            // `library_search_placeholder` is the only accessible name this field
+            // would otherwise have, and it disappears once text is typed, so it is
+            // not passed as a placeholder: TalkBack gets a stable label instead.
             NexoTextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
-                placeholder = stringResource(R.string.library_search_placeholder),
+                leadingIcon = NexoIcons.Search,
+                leadingIconContentDescription = stringResource(R.string.library_search_placeholder),
                 singleLine = true,
                 shape = RoundedCornerShape(24.dp),
                 modifier =

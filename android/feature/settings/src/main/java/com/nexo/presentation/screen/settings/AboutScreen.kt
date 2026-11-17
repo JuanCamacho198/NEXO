@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -40,6 +41,7 @@ import com.nexo.ui.theme.NexoTheme
 fun AboutScreen(
     onBack: () -> Unit,
     onTerms: (() -> Unit)? = null,
+    onPrivacy: (() -> Unit)? = null,
     onLicenses: (() -> Unit)? = null,
     onContact: (() -> Unit)? = null,
     onRate: (() -> Unit)? = null,
@@ -138,10 +140,11 @@ fun AboutScreen(
 
             // Lista 4 filas height 56dp
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                AboutRow(labelRes = R.string.about_terms, icon = NexoIcons.Info, onClick = onTerms)
-                AboutRow(labelRes = R.string.about_licenses, icon = NexoIcons.LibraryBooks, onClick = onLicenses)
-                AboutRow(labelRes = R.string.about_contact, icon = NexoIcons.Email, onClick = onContact)
-                AboutRow(labelRes = R.string.about_rate, icon = NexoIcons.Star, onClick = onRate)
+                AboutRow(label = stringResource(R.string.about_terms), icon = NexoIcons.Info, onClick = onTerms)
+                AboutRow(label = stringResource(R.string.about_privacy), icon = NexoIcons.Lock, onClick = onPrivacy)
+                AboutRow(label = stringResource(R.string.about_licenses), icon = NexoIcons.LibraryBooks, onClick = onLicenses)
+                AboutRow(label = stringResource(R.string.about_contact), icon = NexoIcons.Email, onClick = onContact)
+                AboutRow(label = stringResource(R.string.about_rate), icon = NexoIcons.Star, onClick = onRate)
             }
 
             // Footer
@@ -174,6 +177,7 @@ private fun UpdateCheckRow(
                     UpdateErrorKind.OFFLINE -> stringResource(R.string.update_error_offline)
                     UpdateErrorKind.MALFORMED -> stringResource(R.string.update_error_malformed)
                     UpdateErrorKind.UNREACHABLE -> stringResource(R.string.update_error_unreachable)
+                    UpdateErrorKind.MANAGED_INSTALL -> stringResource(R.string.update_error_managed_install)
                 }
             is UpdateUiState.Idle -> null
         }
@@ -225,9 +229,23 @@ private fun UpdateCheckRow(
     }
 }
 
+/**
+ * Pressable only when a handler exists.
+ *
+ * A null handler leaves the row inert: no `clickable`, so Compose emits no
+ * click action and no `Role.Button`, and TalkBack stops announcing a target
+ * that cannot be activated.
+ */
+private fun Modifier.aboutRowClickable(onClick: (() -> Unit)?): Modifier =
+    if (onClick == null) {
+        this
+    } else {
+        clickable(role = Role.Button, onClick = onClick)
+    }
+
 @Composable
-private fun AboutRow(
-    labelRes: Int,
+internal fun AboutRow(
+    label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: (() -> Unit)?,
 ) {
@@ -240,6 +258,7 @@ private fun AboutRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .aboutRowClickable(onClick)
                     .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -251,17 +270,20 @@ private fun AboutRow(
                 modifier = Modifier.width(24.dp).height(24.dp),
             )
             Text(
-                text = stringResource(labelRes),
+                text = label,
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f),
             )
-            Icon(
-                imageVector = NexoIcons.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.width(20.dp).height(20.dp),
-            )
+            // Only a row that actually opens something earns the chevron.
+            if (onClick != null) {
+                Icon(
+                    imageVector = NexoIcons.ChevronRight,
+                    contentDescription = stringResource(R.string.about_row_opens_screen),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(20.dp).height(20.dp),
+                )
+            }
         }
     }
 }

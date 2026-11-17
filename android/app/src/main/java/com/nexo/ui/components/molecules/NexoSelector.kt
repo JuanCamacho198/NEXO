@@ -103,7 +103,7 @@ fun NexoSelector(
                     if (isSelected) {
                         Icon(
                             imageVector = NexoIcons.Check,
-                            contentDescription = null,
+                            contentDescription = stringResource(com.nexo.R.string.a11y_selected),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }

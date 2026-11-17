@@ -164,7 +164,10 @@ fun AddonManagementScreen(
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
-                NexoSnackbar(snackbarData = data)
+                NexoSnackbar(
+                    snackbarData = data,
+                    dismissContentDescription = stringResource(com.nexo.R.string.action_dismiss_snackbar),
+                )
             }
         },
     ) { padding ->

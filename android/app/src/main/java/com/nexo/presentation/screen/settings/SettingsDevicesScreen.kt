@@ -127,7 +127,17 @@ private fun DeviceItem(
                         device.os.contains("macOS") || device.os.contains("Darwin") -> NexoIcons.Laptop
                         else -> NexoIcons.Devices
                     },
-                contentDescription = null,
+                // The glyph is the only thing that says _which_ platform this row
+                // is; the row text carries the name and the date, not the OS.
+                contentDescription =
+                    stringResource(
+                        when {
+                            device.os.contains("Android") -> com.nexo.R.string.a11y_device_android
+                            device.os.contains("Windows") -> com.nexo.R.string.a11y_device_windows
+                            device.os.contains("macOS") || device.os.contains("Darwin") -> com.nexo.R.string.a11y_device_apple
+                            else -> com.nexo.R.string.a11y_device_other
+                        },
+                    ),
                 modifier = Modifier.size(28.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )

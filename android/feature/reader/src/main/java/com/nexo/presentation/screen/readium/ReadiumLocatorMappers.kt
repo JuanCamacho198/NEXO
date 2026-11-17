@@ -7,8 +7,6 @@ import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 
-internal const val ESTIMATED_CHAPTER_CHARS_FALLBACK = 10000
-
 /**
  * Fallback Locator builder for highlights without a valid locatorJson.
  *
@@ -120,26 +118,11 @@ internal fun epubCfiFallbackLocator(
     if (readingOrder.isEmpty()) return null
     // Delegate to provider seam with publication-backed provider
     return epubCfiFallbackLocator(cfiRange, readingOrder) { link ->
-        runCatching {
-            if (publication != null) {
-                val resource = publication.get(link)
-                val bytes =
-                    kotlinx.coroutines.runBlocking {
-                        resource?.read()?.getOrNull()
-                    }
-                val decodedLength =
-                    bytes?.let {
-                        try {
-                            it.decodeToString().length
-                        } catch (_: Throwable) {
-                            it.size
-                        }
-                    } ?: ESTIMATED_CHAPTER_CHARS_FALLBACK
-                decodedLength.takeIf { it > 0 } ?: ESTIMATED_CHAPTER_CHARS_FALLBACK
-            } else {
-                ESTIMATED_CHAPTER_CHARS_FALLBACK
-            }
-        }.getOrDefault(ESTIMATED_CHAPTER_CHARS_FALLBACK).coerceAtLeast(1)
+        if (publication != null) {
+            chapterCharCount(link, publication)
+        } else {
+            ESTIMATED_CHAPTER_CHARS_FALLBACK
+        }
     }
 }
 

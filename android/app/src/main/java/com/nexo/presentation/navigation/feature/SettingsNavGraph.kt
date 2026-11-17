@@ -31,6 +31,8 @@ import com.nexo.presentation.feature.legal.addonCapabilitiesRoute
 import com.nexo.presentation.navigation.NexoDestination
 import com.nexo.presentation.screen.SettingsScreen
 import com.nexo.presentation.screen.settings.AddonManagementRoute
+import com.nexo.presentation.screen.settings.PrivacyPolicyScreen
+import com.nexo.presentation.screen.settings.TermsScreen
 import com.nexo.presentation.viewmodel.AuthViewModel
 import com.nexo.presentation.viewmodel.StatisticsViewModel
 import com.nexo.presentation.viewmodel.UpdateViewModel
@@ -183,6 +185,18 @@ fun NavGraphBuilder.settingsGraph(
 
     composable(route = NexoDestination.SettingsLegal.route) {
         LegalPolicyScreen(
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(route = NexoDestination.SettingsPrivacy.route) {
+        PrivacyPolicyScreen(
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(route = NexoDestination.SettingsTerms.route) {
+        TermsScreen(
             onBack = { navController.popBackStack() },
         )
     }

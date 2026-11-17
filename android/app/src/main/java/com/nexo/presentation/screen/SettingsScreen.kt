@@ -8,8 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -36,8 +38,10 @@ import com.nexo.presentation.navigation.rememberDictionaryViewModel
 import com.nexo.presentation.navigation.rememberPerformanceViewModel
 import com.nexo.presentation.navigation.rememberSettingsDevicesViewModel
 import com.nexo.presentation.navigation.rememberStorageViewModel
+import com.nexo.presentation.screen.settings.AboutContact
 import com.nexo.presentation.screen.settings.AboutScreen
 import com.nexo.presentation.screen.settings.PerformanceScreen
+import com.nexo.presentation.screen.settings.PrivacyPolicyScreen
 import com.nexo.presentation.screen.settings.SettingsAccountScreen
 import com.nexo.presentation.screen.settings.SettingsDataStorageScreen
 import com.nexo.presentation.screen.settings.SettingsDefinitionScreen
@@ -51,6 +55,7 @@ import com.nexo.presentation.screen.settings.SettingsThemeScreen
 import com.nexo.presentation.screen.settings.SettingsTranslationScreen
 import com.nexo.presentation.screen.settings.StorageScreen
 import com.nexo.presentation.screen.settings.SyncScreen
+import com.nexo.presentation.screen.settings.TermsScreen
 import com.nexo.presentation.viewmodel.StatisticsViewModel
 import com.nexo.presentation.viewmodel.UpdateViewModel
 import com.nexo.ui.components.molecules.DEFINITION_LANGUAGE_OPTIONS
@@ -153,6 +158,9 @@ private fun SettingsScreenContent(
     definitionPreferences: com.nexo.data.session.DefinitionPreferences? = null,
 ) {
     val nestedNavController = rememberNavController()
+    // Contact opens outside the app, so the nested NavHost needs a context to
+    // start the intent from.
+    val context = LocalContext.current
     val dictionaryViewModel = rememberDictionaryViewModel(dictionaryRepository, activeUser)
     val storageViewModel = rememberStorageViewModel(storageRepository, cacheRepository, libraryRepository, activeUser)
 
@@ -337,12 +345,45 @@ private fun SettingsScreenContent(
                 )
             }
 
+            // The nested NavHost owns privacy/terms so the About screen can push
+            // them onto the stack it was itself pushed onto.
+            composable(route = NexoDestination.SettingsPrivacy.route) {
+                PrivacyPolicyScreen(
+                    onBack = { nestedNavController.popBackStack() },
+                )
+            }
+
+            composable(route = NexoDestination.SettingsTerms.route) {
+                TermsScreen(
+                    onBack = { nestedNavController.popBackStack() },
+                )
+            }
+
             composable(route = NexoDestination.SettingsAbout.route) {
                 val vm = updateViewModel
+                // Only rows with a destination get a handler. A null handler
+                // renders an inert row with no chevron, so About never promises
+                // a screen that does not exist: licences open the legal notice
+                // from inside this nested stack, contact opens the project's
+                // issue tracker, and a rating row has nowhere to go until there
+                // is a store listing to rate.
+                val onLicenses: () -> Unit = {
+                    nestedNavController.navigate(NexoDestination.SettingsLegal.route)
+                }
+                val onContact: (() -> Unit)? =
+                    remember {
+                        AboutContact.openSupportMailIntent(context)?.let { intent ->
+                            { context.startActivity(intent) }
+                        }
+                    }
                 if (vm != null) {
                     val updateState by vm.uiState.collectAsStateWithLifecycle()
                     AboutScreen(
                         onBack = { nestedNavController.popBackStack() },
+                        onTerms = { nestedNavController.navigate(NexoDestination.SettingsTerms.route) },
+                        onPrivacy = { nestedNavController.navigate(NexoDestination.SettingsPrivacy.route) },
+                        onLicenses = onLicenses,
+                        onContact = onContact,
                         isUpdateCheckEnabled = vm.isFeedEnabled(),
                         updateState = updateState,
                         onCheckUpdates = vm::checkManually,
@@ -350,6 +391,10 @@ private fun SettingsScreenContent(
                 } else {
                     AboutScreen(
                         onBack = { nestedNavController.popBackStack() },
+                        onTerms = { nestedNavController.navigate(NexoDestination.SettingsTerms.route) },
+                        onPrivacy = { nestedNavController.navigate(NexoDestination.SettingsPrivacy.route) },
+                        onLicenses = onLicenses,
+                        onContact = onContact,
                     )
                 }
             }

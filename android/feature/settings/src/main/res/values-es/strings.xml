@@ -6,8 +6,10 @@
     <string name="about_lincoln_author">— Abraham Lincoln</string>
     <string name="about_lincoln_quote">“Una persona será tan feliz como decida serlo.”</string>
     <string name="about_rate">Calificar</string>
+    <string name="about_privacy">Privacidad</string>
     <string name="about_terms">Términos</string>
     <string name="action_cancel">Cancelar</string>
+    <string name="a11y_selected">Seleccionado</string>
     <string name="action_ok">Aceptar</string>
     <string name="addon_capabilities_title">Capacidades</string>
     <string name="addon_consent_state_granted">Acceso otorgado: este complemento puede resolver enlaces de lectura.</string>
@@ -211,6 +213,7 @@
     <string name="update_check">Buscar actualizaciones</string>
     <string name="update_checking">Buscando…</string>
     <string name="update_error_malformed">El feed de actualización no es válido. Inténtelo más tarde.</string>
+    <string name="update_error_managed_install">Esta copia de NEXO se instaló desde una tienda, así que se actualiza a través de ella. Las actualizaciones dentro de la app están desactivadas.</string>
     <string name="update_error_offline">Está sin conexión. Conéctese e inténtelo de nuevo.</string>
     <string name="update_error_unreachable">No se pudo contactar el servidor de actualizaciones. Inténtelo más tarde.</string>
     <string name="update_install_guidance">El sistema bloqueó la instalación. Active “Instalar apps desconocidas” para NEXO e inténtelo de nuevo.</string>
@@ -218,4 +221,58 @@
     <string name="update_metered_consent">Está en una conexión medida. ¿Descargar la actualización ahora? Puede usar datos móviles.</string>
     <string name="update_now">Actualizar ahora</string>
     <string name="update_up_to_date">Está al día</string>
+	<string name="about_row_opens_screen">Abre una pantalla nueva</string>
+
+	<!-- Terminos de uso. -->
+	<string name="terms_title">Terminos de uso</string>
+	<string name="terms_updated">Ultima actualizacion: 17 de noviembre de 2026</string>
+	<string name="terms_distribution_title">Como obtienes esta aplicacion</string>
+	<string name="terms_distribution_body">NEXO no se distribuye a traves de Google Play. Descargas el APK desde la pagina de Releases de GitHub de este proyecto y lo instalas tu mismo, lo cual significa que: tu eliges cuando actualizar; tu dispositivo te avisara sobre instalar aplicaciones de fuera de la tienda; y ninguna revision, escaneo ni proceso de reembolso de una tienda se interpone entre una version defectuosa y tu dispositivo. La comprobacion de actualizaciones de la aplicacion descarga un APK del mismo canal de distribucion y lo entrega al instalador de Android. Manten desactivado el permiso para instalar aplicaciones desconocidas de NEXO salvo que estes actualizando activamente.</string>
+	<string name="terms_license_title">Tu licencia de uso</string>
+	<string name="terms_license_body">Se te concede una licencia personal, no exclusiva e intransferible para ejecutar NEXO en dispositivos que controles. No puedes revenderlo, redistribuir versiones modificadas como NEXO ni eliminar los avisos que incluye. La licencia del codigo fuente, cuando se publique junto con el repositorio, rige el codigo propiamente dicho y prevalece sobre este parrafo.</string>
+	<string name="terms_service_title">Que es NEXO</string>
+	<string name="terms_service_body">NEXO es un lector con un servicio de biblioteca asociado. No es una libreria ni vende libros. Encuentra titulos en catalogos de terceros, te indica de donde proviene cada uno y descarga archivos de dominio publico o te deriva al proveedor para leerlos. Tu eres responsable de lo que descargas y de donde lo lees.</string>
+	<string name="terms_content_title">Tu contenido y el de otras personas</string>
+	<string name="terms_content_body">Los archivos que importas siguen siendo tuyos. Confirmas que tienes derecho a almacenar y leer cada archivo que anades y que tu uso cumple la ley de tu jurisdiccion. La descarga dentro de la aplicacion se ofrece unicamente para titulos de dominio publico; cualquier otro se abre en tu navegador bajo las condiciones del proveedor, que NEXO no puede otorgarte.</string>
+	<string name="terms_addons_title">Complementos</string>
+	<string name="terms_addons_body">Los complementos son componentes independientes que decides instalar. Cada uno solicita consentimiento antes de resolver enlaces de lectura, y puedes revocarlo en cualquier momento desde la pantalla de complementos. Un complemento se ejecuta fuera del control de NEXO: su comportamiento, su tratamiento de datos y su disponibilidad dependen de ti y de quien lo publica.</string>
+	<string name="terms_account_title">Tu cuenta</string>
+	<string name="terms_account_body">Tener una cuenta implica mantener tus credenciales en privado. Eres responsable de la actividad realizada con tu cuenta y de cerrar sesion en los dispositivos que ya no uses. La lista de dispositivos de NEXO muestra las sesiones activas para que puedas finalizarlas.</string>
+	<string name="terms_data_title">Datos y privacidad</string>
+	<string name="terms_data_body">La politica de privacidad describe que sale de tu dispositivo, que se elimina antes de que salga y como desactivar la telemetria. Forma parte de estas condiciones, y leerla forma parte de aceptarlas.</string>
+	<string name="terms_availability_title">Disponibilidad y cambios del servicio</string>
+	<string name="terms_availability_body">La sincronizacion, la busqueda en catalogos y la comprobacion de actualizaciones necesitan acceso a la red y servicios de terceros que NEXO no opera. Pueden ser lentos, tener limite de peticiones, cambiar o retirarse sin previo aviso. Tu biblioteca esta disenada para seguir funcionando sin conexion con lo que ya hayas descargado, pero ninguna funcion en linea tiene garantia de permanencia.</string>
+	<string name="terms_liability_title">Limites</string>
+	<string name="terms_liability_body">NEXO se ofrece tal cual. En la medida en que la ley lo permita, no se otorga garantia de que este libre de errores ni de que sirva para un proposito determinado, y NEXO no responde por perdidas indirectas o consecuentes, por perdida de datos ni por lo que hagan los catalogos, complementos o proveedores de terceros. Nada de lo aqui dispuesto excluye derechos que la ley no permite excluir.</string>
+	<string name="terms_changes_title">Cambios en estas condiciones</string>
+	<string name="terms_changes_body">Estas condiciones cambian cuando cambia el comportamiento de la aplicacion. La fecha indicada arriba corresponde a la version que estas leyendo, incluida en esta compilacion; el texto vigente es siempre el de la copia que instalaste. Seguir usando una nueva version significa aceptar las condiciones que la acompanan.</string>
+	<!-- Politica de privacidad. Antes de editar el texto, vuelve a leer
+	     NexoApplication.kt, SentryPiiScrubber.kt, EncryptedSessionSettings.kt,
+	     DriveTokenStore.kt y SupabaseBookCatalogSync.kt. -->
+	<string name="privacy_policy_title">Politica de privacidad</string>
+	<string name="privacy_policy_updated">Ultima actualizacion: 17 de noviembre de 2026</string>
+	<string name="privacy_policy_distribution_title">Como se distribuye esta aplicacion</string>
+	<string name="privacy_policy_distribution_body">NEXO es una aplicacion instalada fuera de las tiendas: se distribuye como descarga de APK desde la pagina de Releases de GitHub de este proyecto, no a traves de Google Play. No hay cuenta de tienda detras de la instalacion ni analitica de tienda. GitHub si registra que se descargo un archivo, conforme a su propia politica de privacidad. Una vez instalada, la aplicacion solo contacta los servicios que se indican a continuacion.</string>
+	<string name="privacy_policy_account_title">Si creas una cuenta</string>
+	<string name="privacy_policy_account_body">Una cuenta existe para conservar tu biblioteca entre dispositivos. Al registrarte se envian tu direccion de correo, una contrasena y los tokens de sesion resultantes al backend de Supabase de la aplicacion. El correo se usa para confirmar la direccion, iniciar sesion y enviar un restablecimiento de contrasena cuando lo solicitas. Tu biblioteca se guarda como filas en una tabla por usuario (user_books), de modo que un libro se identifica en tu cuenta por sus metadatos y el hash de su contenido; los archivos de los libros y las imagenes de portada se guardan en el almacenamiento de archivos del mismo backend cuando la sincronizacion esta activada. Cerrar sesion y eliminar la cuenta son las dos formas de detenerlo. Las sesiones duran hasta que expiran o hasta que cierras sesion.</string>
+	<string name="privacy_policy_local_title">Que permanece en tu dispositivo</string>
+	<string name="privacy_policy_local_body">Tus libros, portadas y progreso de lectura viven en el almacenamiento privado de la aplicacion, al que otras aplicaciones no pueden acceder. El indice de la biblioteca es una base de datos local. Las sesiones de inicio y los tokens de Google Drive se cifran en reposo con una clave custodiada por el Android Keystore, de modo que los valores almacenados son inservibles en otro dispositivo. La copia de seguridad propia de Android esta desactivada para esta aplicacion, asi que el sistema operativo no copia nada de esto a los servidores de Google. La aplicacion tambien conserva informes de fallos y archivos de registro localmente, con un numero limitado, para que un error pueda reportarse desde dentro de la aplicacion.</string>
+	<string name="privacy_policy_telemetry_title">Informes de fallos y rendimiento</string>
+	<string name="privacy_policy_telemetry_body">Cuando algo falla, la aplicacion envia un informe de fallo a traves de Sentry: la excepcion y su traza, la version de la aplicacion y la revision de git, la version de Android y el modelo del dispositivo, y una breve secuencia de eventos que describe que estaba haciendo la aplicacion. Las trazas de rendimiento se muestrean, y un error puede incluir una repeticion de sesion. Nunca se adjuntan capturas de pantalla ni la jerarquia de vistas, porque esto es un lector y el contenido de las paginas no es algo que deba subirse.</string>
+	<string name="privacy_policy_telemetry_never_title">Que se elimina antes de enviar nada</string>
+	<string name="privacy_policy_telemetry_never_body">Todo evento saliente pasa por un depurador. Las credenciales y los identificadores se sustituyen antes de la transmision: contrasenas, tokens, secretos, claves de API, cookies, direcciones de correo, identificadores de usuario, direcciones IP y el dominio propio del lector: titulo del libro, autor, ISBN, posicion de lectura, texto de resaltados, notas, etiquetas, rutas de archivo y terminos de busqueda. Las rutas de archivo se descartan por completo en lugar de reducirse a un nombre de archivo, porque una ruta puede identificar a una cuenta. Los eventos que no estan en una lista permitida explicita se descartan, y solo los comentarios de fallo que decidas enviar pueden incluir el titulo de un libro y la etiqueta de un capitulo.</string>
+	<string name="privacy_policy_optout_title">Como desactivar la telemetria</string>
+	<string name="privacy_policy_optout_body">Ajustes, Privacidad tiene un interruptor que detiene el envio de informes. Se consulta en el momento del envio, no al arrancar, asi que desactivarlo surte efecto de inmediato, en mitad de la sesion, y la eleccion se mantiene tras reiniciar. Con el interruptor desactivado, los fallos permanecen en los archivos locales descritos arriba y solo se envian si los adjuntas a un informe que redactes tu. El mismo interruptor silencia tambien las metricas de rendimiento medidas, que viajan por fuera del canal normal de informes.</string>
+	<string name="privacy_policy_drive_title">Google Drive</string>
+	<string name="privacy_policy_drive_body">La compatibilidad con Drive es opcional y esta desactivada hasta que la conectes. Conectarla solicita a Google el permiso drive.file, el mas limitado que permite a una aplicacion tocar solo los archivos que ella misma creo: NEXO no puede leer, listar ni modificar nada mas de tu Drive. Los tokens de acceso y de actualizacion se cifran con el Android Keystore en tu dispositivo. Desconectar en la aplicacion los elimina, y puedes revocar la autorizacion desde la pagina de tu cuenta de Google en cualquier momento.</string>
+	<string name="privacy_policy_catalogs_title">Busquedas en los catalogos</string>
+	<string name="privacy_policy_catalogs_body">Descubrir busca en catalogos publicos (Open Library, Project Gutenberg a traves de Gutendex y Google Books) usando las palabras que escribes. Esas peticiones llevan tu termino de busqueda y estan sujetas a la politica de privacidad de cada proveedor. Las descargas provienen de los mismos archivos publicos y se sirven por HTTPS. Un complemento que instales puede enviar tu consulta a su propia fuente, bajo sus propias condiciones, y por eso solicita consentimiento primero.</string>
+	<string name="privacy_policy_permissions_title">Permisos y hardware</string>
+	<string name="privacy_policy_permissions_body">La aplicacion solicita acceso a internet, permiso para publicar notificaciones si activas los recordatorios, y permiso para instalar paquetes a fin de ofrecerte una actualizacion como descarga. No usa camara, ni microfono, ni ubicacion, ni contactos, y no lee datos de salud o actividad fisica. Ninguna de las caracteristicas de hardware que declara es obligatoria: la aplicacion se instala y funciona en un dispositivo que no las tenga.</string>
+	<string name="privacy_policy_retention_title">Cuanto tiempo se conservan los datos</string>
+	<string name="privacy_policy_retention_body">Los archivos de fallos y de registro en el dispositivo se purgan segun un calendario y tienen un limite por cantidad. Sentry conserva los informes durante el periodo configurado en el proyecto. Los datos de la cuenta, las filas de la biblioteca y los archivos sincronizados permanecen hasta que elimines el libro, cierres sesion o elimines la cuenta. Eliminar un libro borra su archivo local y su copia sincronizada; eliminar la cuenta borra las filas de biblioteca que le pertenecen.</string>
+	<string name="privacy_policy_rights_title">Tus opciones</string>
+	<string name="privacy_policy_rights_body">Puedes usar esta aplicacion sin cuenta, cerrar sesion de la sincronizacion en cualquier momento, mantenerlo todo sin conexion, desactivar la telemetria y eliminar la aplicacion para borrar su almacenamiento local. Segun donde vivas, tambien puedes tener derecho a solicitar una copia de tus datos, su rectificacion o su supresion, y a oponerte al tratamiento basado en interes legitimo. Las solicitudes sobre datos de la cuenta pueden enviarse a nexosupport@gmail.com. Tambien puedes reclamar ante tu autoridad de proteccion de datos.</string>
+	<string name="privacy_policy_changes_title">Cambios</string>
+	<string name="privacy_policy_changes_body">Esta politica cambia cuando cambian las practicas de datos de la aplicacion, y la fecha indicada arriba corresponde a la copia incluida en la compilacion que instalaste. Como el texto reside en la aplicacion, la politica que puedes leer es siempre la que se aplica a la version que se ejecuta en tu dispositivo.</string>
 </resources>

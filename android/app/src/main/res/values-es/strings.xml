@@ -2,8 +2,14 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="aa_close_settings">Cerrar</string>
     <!-- Reader / aA Settings -->
-    <!-- U3: etiquetas de grupos de acceso (voseo) -->
+    <!-- U3: etiquetas de grupos de acceso -->
     <string name="action_cancel">Cancelar</string>
+    <string name="action_dismiss_snackbar">Descartar mensaje</string>
+    <string name="a11y_selected">Seleccionado</string>
+    <string name="a11y_device_android">Dispositivo Android</string>
+    <string name="a11y_device_windows">Dispositivo Windows</string>
+    <string name="a11y_device_apple">Dispositivo Apple</string>
+    <string name="a11y_device_other">Dispositivo</string>
     <string name="action_ok">Aceptar</string>
     <!-- U5: addon capabilities -->
     <string name="addon_capability_detail_body">Lo que este complemento declara que puede hacer con tus consultas del catálogo. Otorgá acceso solo si confiás en esta fuente.</string>

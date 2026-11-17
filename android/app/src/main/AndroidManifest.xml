@@ -2,6 +2,29 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- A3: hardware/feature requirements, made explicit.
+
+         The app drives a Compose touch UI (pointer input, scrolling, gesture
+         detection) and needs no other hardware: no camera, no microphone, no
+         telephony, no location, no Bluetooth. It is a touch-only interface, so
+         `android.hardware.touchscreen` is the one feature the app genuinely
+         requires.
+
+         The other two are declared `required="false"` on purpose. The install
+         targets a high-SDK baseline and uses landscape in the reader, but
+         neither is worth being uninstallable over a device that reports no
+         touchscreen or no gyroscope, so declaring them documents the intent
+         without narrowing the device list. Nothing here grants a permission. -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.screen.landscape"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.touchscreen.multitouch"
+        android:required="false" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- SDD app-auto-update: sideloaded APK install via DownloadManager + install intent. -->

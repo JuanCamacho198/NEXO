@@ -20,7 +20,10 @@ fun HighlightsSearchSection(
         NexoTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
-            placeholder = stringResource(R.string.highlights_search),
+            // A placeholder is not an accessible name and vanishes on first
+            // keystroke, so the field is labelled through its leading icon.
+            leadingIcon = NexoIcons.Search,
+            leadingIconContentDescription = stringResource(R.string.highlights_search),
             singleLine = true,
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier.fillMaxWidth(),

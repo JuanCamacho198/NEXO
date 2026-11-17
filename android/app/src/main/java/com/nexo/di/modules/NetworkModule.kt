@@ -83,6 +83,8 @@ import dagger.hilt.components.SingletonComponent
 import io.github.jan.supabase.auth.MemorySessionManager
 import io.github.jan.supabase.auth.SettingsSessionManager
 import io.ktor.client.HttpClient
+import io.ktor.client.HttpClientConfig
+import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -131,7 +133,42 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideDriveTokenApi(): DriveTokenApi = KtorAuthApi(HttpClient())
+    fun provideDriveTokenApi(): DriveTokenApi = KtorAuthApi(authHttpClient())
+
+    /**
+     * The OAuth token client, built with the same [HttpTimeout] as the four
+     * catalog/update/translation/wiktionary clients.
+     *
+     * The token endpoint is reached from a 401 retry under a WorkManager drain,
+     * so a client without a timeout does not merely fail: it parks login and
+     * sync behind a request that never completes.
+     */
+    private fun HttpClientConfig<*>.authTimeouts() {
+        install(HttpTimeout) {
+            requestTimeoutMillis = REQUEST_TIMEOUT_MILLIS
+            connectTimeoutMillis = CONNECT_TIMEOUT_MILLIS
+            socketTimeoutMillis = SOCKET_TIMEOUT_MILLIS
+        }
+    }
+
+    internal fun authHttpClient(): HttpClient =
+        HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+            authTimeouts()
+        }
+
+    /** Test seam: the production client, with the transport swapped for [engine]. */
+    internal fun provideDriveTokenApiWith(engine: HttpClientEngine): DriveTokenApi =
+        KtorAuthApi(
+            HttpClient(engine) {
+                install(ContentNegotiation) {
+                    json(Json { ignoreUnknownKeys = true })
+                }
+                authTimeouts()
+            },
+        )
 
     @Provides
     @Singleton
