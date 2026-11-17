@@ -86,6 +86,12 @@ sealed class NexoDestination(
 
     data object SettingsAddons : NexoDestination("settings/addons", R.string.settings_addons_title, NexoIcons.LibraryBooks)
 
+    /** A2: privacy policy, reachable from About. */
+    data object SettingsPrivacy : NexoDestination("settings/privacy")
+
+    /** A2: terms of use, reachable from About. */
+    data object SettingsTerms : NexoDestination("settings/terms")
+
     /** U5: legal policy page, reachable from the disclaimer and addon screens. */
     data object SettingsLegal : NexoDestination("settings/legal", R.string.legal_policy_title, NexoIcons.LibraryBooks)
 

@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- A3: default for every destination that is not named below.
+
+         HTTPS only. All three backends the app talks to (Supabase, Google
+         Drive/Books, the public catalogs) are HTTPS endpoints, so a cleartext
+         fallback here would only ever serve a downgrade, a redirect or a
+         misconfigured proxy. Setting the default instead of relying on the
+         platform's per-version `usesCleartextTraffic` default keeps the rule
+         identical on every Android version from the minSdk up.
+
+         Debug builds are NOT exempted: `app/src/debug` ships no
+         `network_security_config.xml`, so a local cleartext endpoint needs its
+         own `domain-config` added deliberately rather than granted here. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
     <!-- Google Drive API requires HTTPS -->
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">googleapis.com</domain>

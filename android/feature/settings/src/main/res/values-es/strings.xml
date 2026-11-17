@@ -6,6 +6,7 @@
     <string name="about_lincoln_author">— Abraham Lincoln</string>
     <string name="about_lincoln_quote">“Una persona será tan feliz como decida serlo.”</string>
     <string name="about_rate">Calificar</string>
+    <string name="about_privacy">Privacidad</string>
     <string name="about_terms">Términos</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_ok">Aceptar</string>
@@ -218,4 +219,63 @@
     <string name="update_metered_consent">Está en una conexión medida. ¿Descargar la actualización ahora? Puede usar datos móviles.</string>
     <string name="update_now">Actualizar ahora</string>
     <string name="update_up_to_date">Está al día</string>
+	<string name="about_row_opens_screen">Opens a new screen</string>
+	<!-- TODO(es): translate the privacy policy and terms below. English copy ships
+	     	until a human translator writes neutral Spanish that a lawyer has reviewed;
+	     	machine-translated legalese is worse than no translation. -->
+	<!-- TODO(i18n): the privacy policy and terms sections below are still
+	     English. Translate only with a human reviewer; legal copy is not
+	     machine-translatable. -->
+	<!-- Terms of use (feature/settings owns these keys). -->
+	<string name="terms_title">Terms of use</string>
+	<string name="terms_updated">Last updated 17 November 2026</string>
+	<string name="terms_distribution_title">How you get this app</string>
+	<string name="terms_distribution_body">NEXO is not distributed through Google Play. You download the APK from this project\'s GitHub Releases page and install it yourself, which means: you choose when to update; your device will warn you about installing apps from outside the store; and no store reviews, scans or refund process stands between a bad build and your device. The in-app update check downloads an APK from the same release feed and hands it to the Android installer. Keep \"install unknown apps\" permission for NEXO switched off unless you are actively updating.</string>
+	<string name="terms_license_title">Your licence to use it</string>
+	<string name="terms_license_body">You get a personal, non-exclusive, non-transferable licence to run NEXO on devices you control. You may not resell it, redistribute modified builds as NEXO, or remove the notices it carries. The source code\'s own licence, where one is published with the repository, governs the code itself and wins over this paragraph.</string>
+	<string name="terms_service_title">What NEXO is</string>
+	<string name="terms_service_body">NEXO is a reader with a companion library service. It is not a bookstore and it sells no books. It finds titles in third-party catalogs, tells you where each one came from, and either downloads public-domain files or sends you to the provider to read. You are responsible for what you download and where you read it.</string>
+	<string name="terms_content_title">Your content and other people\'s</string>
+	<string name="terms_content_body">Files you import stay yours. You confirm you have the right to store and read every file you add, and that your use complies with the law where you live. The in-app download is offered only for public-domain titles; anything else opens in your browser under the provider\'s own terms, which NEXO cannot grant you.</string>
+	<string name="terms_addons_title">Addons</string>
+	<string name="terms_addons_body">Addons are separate components you choose to install. Each one asks for consent before it can resolve reading links, and you can revoke that consent at any time from the addons screen. An addon runs outside NEXO\'s control: its behaviour, its data handling and its availability are between you and whoever publishes it.</string>
+	<string name="terms_account_title">Your account</string>
+	<string name="terms_account_body">Keeping an account means keeping your credentials to yourself. You are responsible for activity under your account, and for signing out on devices you no longer use. NEXO\'s device list shows active sessions so you can end them.</string>
+	<string name="terms_data_title">Data and privacy</string>
+	<string name="terms_data_body">The privacy policy describes what leaves your device, what is scrubbed before it does, and how to switch telemetry off. It forms part of these terms, and reading it is part of accepting them.</string>
+	<string name="terms_availability_title">Availability and changes to the service</string>
+	<string name="terms_availability_body">Sync, catalog search and update checks need network access and third-party services that NEXO does not operate. They can be slow, rate-limited, changed or withdrawn without notice. Your library is designed to keep working offline for what you have already downloaded, but no online feature is promised to be permanent.</string>
+	<string name="terms_liability_title">Limits</string>
+	<string name="terms_liability_body">NEXO is provided as it is. To the extent the law allows, no warranty is given that it will be free of errors or fit for a particular purpose, and NEXO is not liable for indirect or consequential loss, for lost data, or for what third-party catalogs, addons or providers do. Nothing here excludes rights you have that cannot be excluded by law.</string>
+	<string name="terms_changes_title">Changes to these terms</string>
+	<string name="terms_changes_body">These terms change when the app\'s behaviour changes. The date above is the version you are reading, shipped inside this build; the current text is always the one in the copy you installed. Continuing to use a new build means accepting the terms that came with it.</string>
+	<!-- Privacy policy, derived from NexoApplication.kt, SentryPiiScrubber.kt,
+	     SentryPrivacyPrefs.kt, EncryptedSessionSettings.kt, DriveTokenStore.kt and
+	     SupabaseBookCatalogSync.kt. Re-read those before editing the copy. -->
+	<string name="privacy_policy_title">Privacy policy</string>
+	<string name="privacy_policy_updated">Last updated 17 November 2026</string>
+	<string name="privacy_policy_distribution_title">How this app is distributed</string>
+	<string name="privacy_policy_distribution_body">NEXO is a sideloaded app: it ships as an APK download from this project\'s GitHub Releases page, not through Google Play. There is no store account behind the install and no store analytics. GitHub itself sees that a file was downloaded, under GitHub\'s own privacy policy. Once installed, the app contacts only the services listed below.</string>
+	<string name="privacy_policy_account_title">If you create an account</string>
+	<string name="privacy_policy_account_body">An account exists to hold your library across devices. Signing up sends your email address, a password and the resulting session tokens to the app\'s Supabase backend. The email is used to confirm the address, to sign in and to send a password reset when you ask for one. Your reading library is stored as rows in a per-user table (user_books), so a book is identified to your account by its metadata and content hash; book files themselves and cover images are stored in the same backend\'s file storage when sync is enabled. Signing out and deleting the account are the two ways to stop that. Sessions last until they expire or you sign out.</string>
+	<string name="privacy_policy_local_title">What stays on your device</string>
+	<string name="privacy_policy_local_body">Your books, covers and reading progress live in the app\'s private storage, which other apps cannot read. The library index is a local database. Sign-in sessions and Google Drive tokens are encrypted at rest with a key held by the Android Keystore, so the stored values are useless on another device. Android\'s own backup is switched off for this app, so none of this is copied to Google\'s servers by the operating system. The app also keeps crash reports and log files locally, capped in number, so a bug can be reported from inside the app.</string>
+	<string name="privacy_policy_telemetry_title">Crash and performance reports</string>
+	<string name="privacy_policy_telemetry_body">When something breaks, the app sends a crash report through Sentry: the exception and its stack trace, the app version and git revision, the Android version and device model, and a short trail of breadcrumbs describing what the app was doing. Performance traces are sampled, and an error may carry a session replay. No screenshots and no view hierarchy are ever attached, because this is a reader and page content is not something to upload.</string>
+	<string name="privacy_policy_telemetry_never_title">What is removed before anything is sent</string>
+	<string name="privacy_policy_telemetry_never_body">Every outgoing event passes a scrubber. Credentials and identifiers are replaced before transmission: passwords, tokens, secrets, API keys, cookies, email addresses, user ids, IP addresses, and the reader\'s own domain - book title, author, ISBN, reading position, highlight text, notes, tags, file paths and search terms. File paths are dropped whole rather than reduced to a file name, because a path can name an account. Breadcrumbs not on an explicit allowlist are discarded, and only crash feedback you choose to send may carry a book title and chapter label.</string>
+	<string name="privacy_policy_optout_title">Turning telemetry off</string>
+	<string name="privacy_policy_optout_body">Settings -> Privacy has a switch that stops reports being sent. It is checked at the moment of sending, not at startup, so turning it off takes effect immediately, mid-session, and the choice survives restarts. With it off, crashes stay in the local files described above and are only ever sent if you attach them to a report you write yourself. The same switch also silences measured performance metrics, which travel outside the normal report path.</string>
+	<string name="privacy_policy_drive_title">Google Drive</string>
+	<string name="privacy_policy_drive_body">Drive support is optional and off until you connect it. Connecting asks Google for the drive.file permission, the narrowest one that allows an app to touch only files it created itself: NEXO cannot read, list or change anything else in your Drive. Access and refresh tokens are encrypted with the Android Keystore on your device. Disconnecting in the app deletes them, and you can revoke the grant from your Google account page at any time.</string>
+	<string name="privacy_policy_catalogs_title">Searching the catalogs</string>
+	<string name="privacy_policy_catalogs_body">Discover searches public catalogs - Open Library, Project Gutenberg through Gutendex, and Google Books - using the words you type. Those requests carry your search term and are subject to each provider\'s privacy policy. Downloads come from the same public archives and are served over HTTPS. An addon you install may send your query to its own source, under its own terms, which is why it asks for consent first.</string>
+	<string name="privacy_policy_permissions_title">Permissions and hardware</string>
+	<string name="privacy_policy_permissions_body">The app asks for internet access, permission to post notifications if you enable reminders, and permission to install packages so it can hand you an update as a download. It uses no camera, no microphone, no location and no contacts, and it reads no health or fitness data. None of the hardware features it declares is required: the app installs and runs on a device without them.</string>
+	<string name="privacy_policy_retention_title">How long data is kept</string>
+	<string name="privacy_policy_retention_body">Crash and log files on the device are pruned on a schedule and capped by count. Sentry keeps reports for the retention period configured on the project. Account data, library rows and synced files stay until you delete the book, sign out or delete the account. Deleting a book removes its local file and its synced copy; deleting the account removes the library rows that belong to it.</string>
+	<string name="privacy_policy_rights_title">Your choices</string>
+	<string name="privacy_policy_rights_body">You can read this app without an account, sign out of sync at any time, keep everything offline, turn telemetry off, and delete the app to remove its local storage. Depending on where you live you may also have the right to ask for a copy of your data, its correction or its erasure, and to object to processing based on legitimate interest. Requests about account data can be sent through the project\'s repository. You can also complain to your local data protection authority.</string>
+	<string name="privacy_policy_changes_title">Changes</string>
+	<string name="privacy_policy_changes_body">This policy changes when the app\'s data practices change, and the date above is the copy shipped inside the build you installed. Because the text lives in the app, the policy you can read is always the one that applies to the version running on your device.</string>
 </resources>
