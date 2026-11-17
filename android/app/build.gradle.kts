@@ -1066,6 +1066,12 @@ tasks.register("verifyLintBaselinePaths") {
     //
     // Generated paths are counted and reported so the tolerance is visible rather than
     // silent.
+    // Line-drift half: a path that exists can still have drifted to a line the file
+    // no longer has (a resource block that shrank, a file that was rewritten). Lint
+    // matches baselined issues on `id + file + line`, so those entries stop matching
+    // and the issue resurfaces as new. Checking the line against the file's length is a
+    // cheap, honest signal: it cannot detect drift INSIDE the file, but it catches
+    // every entry pointing past the end, which is where a moved resource block lands.
     val baselineFile = layout.projectDirectory.file("lint-baseline.xml")
     val moduleDir = layout.projectDirectory.asFile
     val gradleUserHome = gradle.gradleUserHomeDir
@@ -1087,6 +1093,7 @@ tasks.register("verifyLintBaselinePaths") {
         val issueCount = Regex("<issue\\b").findAll(text).count()
 
         val missing = mutableListOf<String>()
+        val drifted = mutableListOf<String>()
         var moduleChecked = 0
         var homeChecked = 0
         var cacheChecked = 0
@@ -1119,6 +1126,44 @@ tasks.register("verifyLintBaselinePaths") {
                 }
             if (resolved != null && !resolved.exists()) missing += raw
         }
+        // Second pass: only for entries that resolved to a real, line-addressable file.
+        // `location` attributes are read structurally so a multi-line <issue> block is
+        // not mistaken for a missing path.
+        Regex("""<location\s+([^>]+?)\s*/?>""").findAll(text).forEach { loc ->
+            val attrs = loc.groupValues[1]
+            val fileAttr = Regex("file=\"([^\"]+)\"").find(attrs)?.groupValues?.get(1) ?: return@forEach
+            val lineAttr =
+                Regex("line=\"([^\"]+)\"")
+                    .find(attrs)
+                    ?.groupValues
+                    ?.get(1)
+                    ?.toIntOrNull()
+                    ?: return@forEach
+            if (fileAttr.startsWith("build/")) return@forEach
+            val path =
+                when {
+                    fileAttr.startsWith("\$GRADLE_USER_HOME/") ->
+                        gradleUserHome.resolve(fileAttr.removePrefix("\$GRADLE_USER_HOME/"))
+                    fileAttr.startsWith("\$HOME/") -> File(userHome, fileAttr.removePrefix("\$HOME/"))
+                    File(fileAttr).isAbsolute -> File(fileAttr)
+                    else -> moduleDir.resolve(fileAttr)
+                }
+            if (!path.isFile) return@forEach
+            val lineCount = path.readLines().size
+            if (lineAttr < 1 || lineAttr > lineCount) {
+                drifted += "$fileAttr:$lineAttr (file has $lineCount lines)"
+            }
+        }
+        if (drifted.isNotEmpty()) {
+            throw GradleException(
+                buildString {
+                    append("lint-baseline.xml references ${drifted.size} location(s) past the end of their file.\n")
+                    append("Lint matches baselined issues on id + file + line, so these entries no longer match\n")
+                    append("anything and the issue resurfaces as new. Delete them; never regenerate the baseline.\n")
+                    drifted.distinct().sorted().forEach { append("  - $it\n") }
+                },
+            )
+        }
 
         if (missing.isNotEmpty()) {
             throw GradleException(
@@ -1135,7 +1180,7 @@ tasks.register("verifyLintBaselinePaths") {
         logger.lifecycle(
             "verifyLintBaselinePaths: $moduleChecked module + $homeChecked repo/cache-path + " +
                 "$cacheChecked gradle-cache path(s) OK, $generatedSkipped generated skipped, " +
-                "across $issueCount baseline entries.",
+                "across $issueCount baseline entries, all locations within their file.",
         )
     }
 }
