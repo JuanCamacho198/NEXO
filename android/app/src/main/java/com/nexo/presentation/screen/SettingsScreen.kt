@@ -372,7 +372,7 @@ private fun SettingsScreenContent(
                 }
                 val onContact: (() -> Unit)? =
                     remember {
-                        AboutContact.openIssueTrackerIntent(context)?.let { intent ->
+                        AboutContact.openSupportMailIntent(context)?.let { intent ->
                             { context.startActivity(intent) }
                         }
                     }

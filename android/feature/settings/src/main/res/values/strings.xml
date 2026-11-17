@@ -9,6 +9,7 @@
     <string name="about_privacy">Privacy</string>
     <string name="about_terms">Terms</string>
     <string name="action_cancel">Cancel</string>
+    <string name="a11y_selected">Selected</string>
     <string name="action_ok">OK</string>
     <string name="addon_capabilities_title">Capabilities</string>
     <string name="addon_consent_state_granted">Access granted: this addon may resolve reading links.</string>
@@ -212,6 +213,7 @@
     <string name="update_check">Check for updates</string>
     <string name="update_checking">Checking…</string>
     <string name="update_error_malformed">The update feed is invalid. Try again later.</string>
+    <string name="update_error_managed_install">This copy of NEXO was installed by a store, so it updates through that store. In-app updates are turned off for it.</string>
     <string name="update_error_offline">You\'re offline. Connect and try again.</string>
     <string name="update_error_unreachable">Couldn\'t reach the update server. Try again later.</string>
     <string name="update_install_guidance">The system blocked the install. Enable “Install unknown apps” for NEXO, then try again.</string>
@@ -269,7 +271,7 @@
 	<string name="privacy_policy_retention_title">How long data is kept</string>
 	<string name="privacy_policy_retention_body">Crash and log files on the device are pruned on a schedule and capped by count. Sentry keeps reports for the retention period configured on the project. Account data, library rows and synced files stay until you delete the book, sign out or delete the account. Deleting a book removes its local file and its synced copy; deleting the account removes the library rows that belong to it.</string>
 	<string name="privacy_policy_rights_title">Your choices</string>
-	<string name="privacy_policy_rights_body">You can read this app without an account, sign out of sync at any time, keep everything offline, turn telemetry off, and delete the app to remove its local storage. Depending on where you live you may also have the right to ask for a copy of your data, its correction or its erasure, and to object to processing based on legitimate interest. Requests about account data can be sent through the project\'s repository. You can also complain to your local data protection authority.</string>
+	<string name="privacy_policy_rights_body">You can read this app without an account, sign out of sync at any time, keep everything offline, turn telemetry off, and delete the app to remove its local storage. Depending on where you live you may also have the right to ask for a copy of your data, its correction or its erasure, and to object to processing based on legitimate interest. Requests about account data can be sent to nexosupport@gmail.com. You can also complain to your local data protection authority.</string>
 	<string name="privacy_policy_changes_title">Changes</string>
 	<string name="privacy_policy_changes_body">This policy changes when the app\'s data practices change, and the date above is the copy shipped inside the build you installed. Because the text lives in the app, the policy you can read is always the one that applies to the version running on your device.</string>
 </resources>
