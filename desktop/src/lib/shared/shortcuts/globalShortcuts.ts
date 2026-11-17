@@ -1,3 +1,4 @@
+import { listen } from '@tauri-apps/api/event';
 import { hasEditableContext } from '$lib/features/reader/viewer-epub/keyboardNav';
 import { helpState } from './helpState.svelte';
 import { commandPaletteState } from './commandPaletteState.svelte';
@@ -131,12 +132,11 @@ export function installGlobalShortcuts(options: HandleGlobalOptions = {}): () =>
   return () => window.removeEventListener('keydown', listener);
 }
 
-/** Default `listen`: the Tauri event bridge, imported lazily so non-Tauri hosts never load it. */
+/** Default `listen`: the Tauri event bridge. Only reached when a caller has no explicit `listen`. */
 async function defaultListen(
   event: string,
   handler: (payload: string) => void,
 ): Promise<() => void> {
-  const { listen } = await import('@tauri-apps/api/event');
   const unlisten = await listen<string>(event, (e) => handler(e.payload));
   return unlisten;
 }
@@ -223,10 +223,7 @@ export type MenuCommandOptions = {
   palette?: CommandPaletteActions;
   shortcuts?: GlobalShortcutActions;
   /** Install listener. Defaults to Tauri's `listen`. */
-  listen?: (
-    event: string,
-    handler: (payload: string) => void,
-  ) => Promise<() => void>;
+  listen?: (event: string, handler: (payload: string) => void) => Promise<() => void>;
 };
 
 /**
@@ -236,9 +233,7 @@ export type MenuCommandOptions = {
  * keybinding. Resolves to the cleanup function. Never rejects: a non-Tauri host
  * has no menu, and the keyboard path is unaffected.
  */
-export async function installMenuCommands(
-  options: MenuCommandOptions = {},
-): Promise<() => void> {
+export async function installMenuCommands(options: MenuCommandOptions = {}): Promise<() => void> {
   const palette = options.palette ?? defaultCommandPaletteActions;
   const shortcuts = options.shortcuts ?? defaultGlobalShortcutActions;
   const listenImpl = options.listen ?? defaultListen;

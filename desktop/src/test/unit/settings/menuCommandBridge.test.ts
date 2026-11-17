@@ -101,20 +101,18 @@ describe('native menu command bridge', () => {
       const palette = spyPalette();
       const shortcuts = spyShortcuts();
       expect(runMenuCommand(id, palette, shortcuts), id).toBe(true);
-      const called = [
-        ...Object.values(palette),
-        ...Object.values(shortcuts),
-      ].filter((fn) => (fn as ReturnType<typeof vi.fn>).mock.calls.length > 0);
+      const called = [...Object.values(palette), ...Object.values(shortcuts)].filter(
+        (fn) => (fn as ReturnType<typeof vi.fn>).mock.calls.length > 0,
+      );
       expect(called, id).toHaveLength(1);
     }
     for (const id of MENU_SHORTCUT_IDS) {
       const palette = spyPalette();
       const shortcuts = spyShortcuts();
       expect(runMenuCommand(id, palette, shortcuts), id).toBe(true);
-      const called = [
-        ...Object.values(palette),
-        ...Object.values(shortcuts),
-      ].filter((fn) => (fn as ReturnType<typeof vi.fn>).mock.calls.length > 0);
+      const called = [...Object.values(palette), ...Object.values(shortcuts)].filter(
+        (fn) => (fn as ReturnType<typeof vi.fn>).mock.calls.length > 0,
+      );
       expect(called, id).toHaveLength(1);
     }
   });
