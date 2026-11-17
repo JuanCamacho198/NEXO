@@ -8,7 +8,7 @@
  */
 import { render } from '@testing-library/svelte';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import Harness from '../../fixtures/DebugIpcStatsHarness.svelte';
+import Harness from './DebugIpcStatsHarness.svelte';
 import type { DebugIpcStatsState } from '$lib/shared/debug/useDebugIpcStats.svelte';
 
 const mountStats = (shouldRun: boolean): DebugIpcStatsState => {
