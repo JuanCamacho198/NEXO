@@ -9,20 +9,49 @@
 //! Malware running as the same user is explicitly OUT of scope: DPAPI by
 //! design decrypts for any process running as the user, so no attempt is made
 //! here to defend against it.
+//!
+//! Non-Windows builds ship as `.dmg`/`.AppImage`/`.deb`/`.rpm` and have no
+//! DPAPI. They do NOT get a different sealing scheme here: the frontend
+//! contract is "protectSecret returns the on-disk sealed bytes", and an OS
+//! keyring would return a handle instead of ciphertext — which breaks the
+//! legacy-migration path in `supabase.ts` that re-seals a plaintext session
+//! file by feeding the bytes it just read back into `protectSecret`. So on
+//! those platforms protection is declared UNAVAILABLE: `protectSecret` fails
+//! with an explicit error, the frontend's seal-before-disk rule turns that into
+//! "session not persisted", and [`startup_diagnostic`] gives the app a
+//! user-visible reason at boot instead of a per-call runtime failure.
 
-use super::map_command_error;
+use super::CommandError;
 use crate::error::AppError;
 
+/// Service/account names a keyring backend would use, if one is ever wired in.
+/// They are part of the stored-secret identity: changing them orphans every
+/// secret already written.
+pub const KEYRING_SERVICE: &str = "nexo-desktop";
+pub const KEYRING_ACCOUNT: &str = "secret-vault";
+
+/// Whether this build can seal secrets at rest, as seen by the frontend.
+///
+/// Read-only and argument-free: it reads the same [`secret_protection_available`]
+/// flag that [`protectSecret`] consults, so the boot banner and the per-call
+/// rejection can never disagree. `false` is not an error — the app runs fully,
+/// only session persistence across launches is lost.
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn protectSecret(plaintext: String) -> Result<String, String> {
-    protect_secret_inner(&plaintext).map_err(map_command_error)
+pub fn secretProtectionAvailable() -> bool {
+    secret_protection_available()
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn unprotectSecret(ciphertext: String) -> Result<String, String> {
-    unprotect_secret_inner(&ciphertext).map_err(map_command_error)
+pub fn protectSecret(plaintext: String) -> Result<String, CommandError> {
+    protect_secret_inner(&plaintext).map_err(CommandError::from)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
+pub fn unprotectSecret(ciphertext: String) -> Result<String, CommandError> {
+    unprotect_secret_inner(&ciphertext).map_err(CommandError::from)
 }
 
 fn protect_secret_inner(plaintext: &str) -> Result<String, AppError> {
@@ -35,6 +64,30 @@ fn unprotect_secret_inner(ciphertext: &str) -> Result<String, AppError> {
     let plain = platform::unprotect(&cipher)?;
     String::from_utf8(plain)
         .map_err(|_| AppError::InvalidInput("secret payload is not valid UTF-8".to_string()))
+}
+
+/// True when this build can actually seal secrets at rest.
+pub fn secret_protection_available() -> bool {
+    platform::AVAILABLE
+}
+
+/// Startup diagnostic text for a build that cannot seal secrets, or `None`
+/// when protection works. It reads the same flag the IPC rejection reads, so
+/// the boot path and the per-call error can never disagree.
+pub fn startup_diagnostic() -> Option<String> {
+    startup_diagnostic_for(secret_protection_available())
+}
+
+fn startup_diagnostic_for(protection_available: bool) -> Option<String> {
+    if protection_available {
+        return None;
+    }
+    Some(format!(
+        "Secret protection is unavailable on this platform ({}), so NEXO cannot seal stored \
+         secrets. Your Supabase session is not persisted: it lives in memory for this run and \
+         you will need to sign in again after quitting.",
+        std::env::consts::OS
+    ))
 }
 
 fn hex_encode(bytes: &[u8]) -> String {
@@ -73,6 +126,10 @@ mod platform {
     use super::AppError;
     use std::ffi::c_void;
     use std::ptr;
+
+    /// DPAPI (`CurrentUser`) ships with every supported Windows build, so
+    /// protection never reports itself as unavailable there.
+    pub(super) const AVAILABLE: bool = true;
 
     #[repr(C)]
     struct DataBlob {
@@ -178,12 +235,27 @@ mod platform {
 mod platform {
     use super::AppError;
 
+    /// No DPAPI outside Windows. The keyring alternative was evaluated and
+    /// rejected: it stores the secret itself, so `protect` would have to return
+    /// a handle rather than ciphertext, and `secretVault.ts` cannot unseal a
+    /// handle. Reporting the capability as missing is the honest option that
+    /// keeps the IPC contract unchanged.
+    pub(super) const AVAILABLE: bool = false;
+
+    fn unavailable() -> AppError {
+        AppError::InvalidInput(format!(
+            "secret protection is unavailable on this platform ({}): the Windows DPAPI key \
+             store is not present",
+            std::env::consts::OS
+        ))
+    }
+
     pub(super) fn protect(_plaintext: &[u8]) -> Result<Vec<u8>, AppError> {
-        Err(AppError::InvalidInput("secret protection requires Windows DPAPI".to_string()))
+        Err(unavailable())
     }
 
     pub(super) fn unprotect(_ciphertext: &[u8]) -> Result<Vec<u8>, AppError> {
-        Err(AppError::InvalidInput("secret protection requires Windows DPAPI".to_string()))
+        Err(unavailable())
     }
 }
 
@@ -234,5 +306,54 @@ mod tests {
         let last = ciphertext.pop().unwrap();
         ciphertext.push(if last == '0' { '1' } else { '0' });
         assert!(unprotect_secret_inner(&ciphertext).is_err());
+    }
+
+    #[test]
+    fn keyring_names_are_stable() {
+        assert_eq!(KEYRING_SERVICE, "nexo-desktop");
+        assert_eq!(KEYRING_ACCOUNT, "secret-vault");
+    }
+
+    // T3: a build without a sealing backend must never report success that the
+    // frontend then writes to disk as a sealed file. Either the round-trip
+    // works or the call fails and says why.
+    #[test]
+    fn protection_availability_matches_platform_capability() {
+        if secret_protection_available() {
+            let ciphertext = protect_secret_inner("nexo-platform-secret").unwrap();
+            assert_ne!(ciphertext, "nexo-platform-secret");
+            assert_eq!(unprotect_secret_inner(&ciphertext).unwrap(), "nexo-platform-secret");
+        } else {
+            let err = protect_secret_inner("nexo-platform-secret").unwrap_err();
+            assert!(
+                err.to_string().contains("secret protection is unavailable"),
+                "unexpected error: {err}"
+            );
+            assert!(unprotect_secret_inner("00").is_err());
+        }
+    }
+
+    // Pure decision logic, host-independent: the part of the non-Windows
+    // behaviour that can be proven on any host.
+    #[test]
+    fn startup_diagnostic_for_unprotected_host_is_explicit() {
+        let diagnostic = startup_diagnostic_for(false).expect("must produce a diagnostic");
+        assert!(diagnostic.contains("not persisted"));
+        assert!(diagnostic.contains(std::env::consts::OS));
+        assert!(startup_diagnostic_for(true).is_none());
+    }
+
+    #[test]
+    fn startup_diagnostic_tracks_protection_availability() {
+        assert_eq!(startup_diagnostic().is_some(), !secret_protection_available());
+    }
+
+    // The IPC surface the frontend banner reads must answer with the same flag
+    // the per-call rejection uses, or the banner and the real behaviour drift.
+    #[test]
+    fn ipc_availability_matches_per_call_path() {
+        assert_eq!(secretProtectionAvailable(), secret_protection_available());
+        let sealing_works = protect_secret_inner("nexo-ipc-probe").is_ok();
+        assert_eq!(secretProtectionAvailable(), sealing_works);
     }
 }

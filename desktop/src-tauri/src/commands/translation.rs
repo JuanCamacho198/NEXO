@@ -11,7 +11,7 @@
 //! `translateSelection` (`commands/translate.rs`), which owns the request path;
 //! this module only exposes the history view over the table that call fills.
 
-use super::map_command_error;
+use super::{lock_repository, CommandError};
 use crate::models::{
     BookTranslationSourceDto, TranslationCacheEntryDto, TranslationPreferencesDto,
 };
@@ -22,10 +22,10 @@ use tauri::State;
 #[tauri::command(rename_all = "camelCase")]
 pub fn getTranslationPreferences(
     state: State<'_, AppState>,
-) -> Result<Option<TranslationPreferencesDto>, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<Option<TranslationPreferencesDto>, CommandError> {
+    let repository = lock_repository(&state)?;
     let user_id = state.active_user.require_user_id();
-    repository.get_translation_preferences(&user_id).map_err(map_command_error)
+    repository.get_translation_preferences(&user_id).map_err(CommandError::from)
 }
 
 #[allow(non_snake_case)]
@@ -34,8 +34,8 @@ pub fn saveTranslationPreferences(
     state: State<'_, AppState>,
     source_language: Option<String>,
     target_language: Option<String>,
-) -> Result<TranslationPreferencesDto, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<TranslationPreferencesDto, CommandError> {
+    let repository = lock_repository(&state)?;
     let user_id = state.active_user.require_user_id();
     repository
         .save_translation_preferences(
@@ -43,7 +43,7 @@ pub fn saveTranslationPreferences(
             source_language.as_deref(),
             target_language.as_deref(),
         )
-        .map_err(map_command_error)
+        .map_err(CommandError::from)
 }
 
 /// Persists the definition language for the active account (D6).
@@ -56,12 +56,12 @@ pub fn saveTranslationPreferences(
 pub fn saveDefinitionLanguage(
     state: State<'_, AppState>,
     definition_language: Option<String>,
-) -> Result<TranslationPreferencesDto, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<TranslationPreferencesDto, CommandError> {
+    let repository = lock_repository(&state)?;
     let user_id = state.active_user.require_user_id();
     repository
         .save_definition_language(&user_id, definition_language.as_deref())
-        .map_err(map_command_error)
+        .map_err(CommandError::from)
 }
 
 /// The effective source language for one book (T13).
@@ -80,10 +80,10 @@ pub fn saveDefinitionLanguage(
 pub fn getBookTranslationSource(
     state: State<'_, AppState>,
     book_id: String,
-) -> Result<Option<String>, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<Option<String>, CommandError> {
+    let repository = lock_repository(&state)?;
     let user_id = state.active_user.require_user_id();
-    repository.resolve_book_translation_source(&user_id, &book_id).map_err(map_command_error)
+    repository.resolve_book_translation_source(&user_id, &book_id).map_err(CommandError::from)
 }
 
 /// Reads this book's OWN source choice, without the account fallback (T13).
@@ -98,10 +98,10 @@ pub fn getBookTranslationSource(
 pub fn getBookTranslationSourceChoice(
     state: State<'_, AppState>,
     book_id: String,
-) -> Result<Option<BookTranslationSourceDto>, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<Option<BookTranslationSourceDto>, CommandError> {
+    let repository = lock_repository(&state)?;
     let user_id = state.active_user.require_user_id();
-    repository.get_book_translation_source(&user_id, &book_id).map_err(map_command_error)
+    repository.get_book_translation_source(&user_id, &book_id).map_err(CommandError::from)
 }
 
 /// Persists this book's source language (T13).
@@ -119,12 +119,12 @@ pub fn saveBookTranslationSource(
     state: State<'_, AppState>,
     book_id: String,
     source_language: Option<String>,
-) -> Result<BookTranslationSourceDto, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<BookTranslationSourceDto, CommandError> {
+    let repository = lock_repository(&state)?;
     let user_id = state.active_user.require_user_id();
     repository
         .save_book_translation_source(&user_id, &book_id, source_language.as_deref())
-        .map_err(map_command_error)
+        .map_err(CommandError::from)
 }
 
 /// The account's translation history, newest first.
@@ -136,10 +136,10 @@ pub fn saveBookTranslationSource(
 #[tauri::command(rename_all = "camelCase")]
 pub fn listTranslationHistory(
     state: State<'_, AppState>,
-) -> Result<Vec<TranslationCacheEntryDto>, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<Vec<TranslationCacheEntryDto>, CommandError> {
+    let repository = lock_repository(&state)?;
     let user_id = state.active_user.require_user_id();
-    repository.list_translation_history(&user_id).map_err(map_command_error)
+    repository.list_translation_history(&user_id).map_err(CommandError::from)
 }
 
 /// Forgets every cached translation of the active account and returns how many
@@ -151,10 +151,10 @@ pub fn listTranslationHistory(
 /// answers an empty list in the same situation.
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn clearTranslationHistory(state: State<'_, AppState>) -> Result<i64, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+pub fn clearTranslationHistory(state: State<'_, AppState>) -> Result<i64, CommandError> {
+    let repository = lock_repository(&state)?;
     let user_id = state.active_user.require_user_id();
-    repository.clear_translation_history(&user_id).map_err(map_command_error)
+    repository.clear_translation_history(&user_id).map_err(CommandError::from)
 }
 
 #[cfg(test)]

@@ -38,6 +38,22 @@ pub enum AppError {
 
     #[error("not found: {0}")]
     NotFound(String),
+    /// The path guard refused a path that resolves outside the app data
+    /// directory. It is a security event, not a validation slip, so it carries
+    /// its own code (`PATH_OUTSIDE_APP_DATA`) instead of `VALIDATION_ERROR`:
+    /// the frontend can then log and observe a sandbox refusal as its own thing
+    /// rather than as anonymous prose. The message names the offending path for
+    /// the log line, with the home directory prefix redacted because the same
+    /// text reaches a retry UI.
+    #[error("{0}")]
+    PathOutsideAppData(String),
+
+    /// A failure inside command plumbing that is not the caller's fault: a
+    /// poisoned repository mutex, a background channel that closed. It exists so
+    /// the category survives to `CommandErrorDto::internal` instead of being
+    /// flattened into `Mutex`'s `Display`, which carries no code.
+    #[error("internal error: {0}")]
+    Internal(String),
 }
 
 /// Turn a `rusqlite` failure into a message a reader of the notification can act on.
@@ -82,6 +98,9 @@ impl AppError {
             AppError::Database(_) => false,
             AppError::Io(_) => false,
             AppError::Tauri(_) => false,
+            AppError::Internal(_) => false,
+            // The caller cannot fix a refused path by retrying the same call.
+            AppError::PathOutsideAppData(_) => false,
         }
     }
 }
@@ -101,6 +120,7 @@ pub enum ErrorCode {
     ImportError,
     ThumbnailFail,
     NotFound,
+    Internal,
 }
 
 pub type AppResult<T> = Result<T, AppError>;

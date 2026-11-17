@@ -176,6 +176,13 @@ export const messagesEn = {
   'settings.about.links': 'Links',
   'settings.about.github': 'GitHub',
   'settings.about.reportIssue': 'Report Issue',
+  'settings.about.diagnostics': 'Diagnostics',
+  'settings.about.diagnosticsBody':
+    'Copies a technical report support can read: app version, platform, recent logs and a health check. Tokens, keys, file paths and reader content are redacted before anything leaves the app.',
+  'settings.about.diagnosticsExport': 'Copy diagnostics',
+  'settings.about.diagnosticsExporting': 'Collecting diagnostics…',
+  'settings.about.diagnosticsCopied': 'Diagnostics copied to the clipboard',
+  'settings.about.diagnosticsFailed': 'Diagnostics could not be generated',
   'settings.about.starBody':
     'If NEXO is useful to you, a star on GitHub helps more people find it.',
   'settings.about.starCta': 'Star NEXO on GitHub',
@@ -319,6 +326,8 @@ export const messagesEn = {
   'notifications.state.failure': 'Failure',
   'notifications.auth.required': 'Sign-in required to sync',
   'notifications.auth.expired': 'Sync sign-in expired',
+  'notifications.secrets.unavailable':
+    'Secret protection is unavailable on this platform (macOS/Linux). Your session will not be saved between launches.',
   'notifications.catalog.failed': 'A book could not be synced',
   'notifications.action.view': 'View',
 
@@ -373,6 +382,7 @@ export const messagesEn = {
   'settings.sync.drive.connect': 'Connect Drive',
   'settings.sync.drive.disconnect': 'Disconnect',
   'settings.sync.drive.connecting': 'Connecting...',
+  'settings.sync.drive.offline': 'You are offline. Reconnect to link Drive and try again.',
   'settings.sync.drive.connectFailed': 'Drive connect failed',
   'settings.sync.drive.disconnected': 'Drive disconnected',
 

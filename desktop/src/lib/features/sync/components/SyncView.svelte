@@ -136,24 +136,44 @@
       </p>
       <div class="flex shrink-0 items-center gap-2">
         {#if statusKind === 'error'}
-          <Button variant="ghost" size="sm" onclick={() => void handleSyncNow()}>
+          <!-- T16 (#20): on failure the two buttons ran the same handler, so the
+               screen presented two primaries for one decision. Retry keeps the
+               primary weight; the standing manual action drops to secondary so
+               the recovery step is the obvious one. -->
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={isSyncing || !authState.isAuthenticated}
+            onclick={() => void handleSyncNow()}
+            data-action-emphasis="secondary"
+          >
+            {t('settings.sync.syncNow')}
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onclick={() => void handleSyncNow()}
+            data-action-emphasis="primary"
+          >
             {t('error.retry')}
           </Button>
+        {:else}
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={isSyncing || !authState.isAuthenticated}
+            onclick={() => void handleSyncNow()}
+            data-action-emphasis="primary"
+          >
+            {#if isSyncing}
+              <span
+                class="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                aria-hidden="true"
+              ></span>
+            {/if}
+            {isSyncing ? t('settings.notifications.syncingNow') : t('settings.sync.syncNow')}
+          </Button>
         {/if}
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={isSyncing || !authState.isAuthenticated}
-          onclick={() => void handleSyncNow()}
-        >
-          {#if isSyncing}
-            <span
-              class="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
-              aria-hidden="true"
-            ></span>
-          {/if}
-          {isSyncing ? t('settings.notifications.syncingNow') : t('settings.sync.syncNow')}
-        </Button>
       </div>
     </div>
     {#if !authState.isAuthenticated}

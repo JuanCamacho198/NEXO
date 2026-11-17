@@ -826,6 +826,12 @@ pub(crate) mod tests {
         LibraryRepository::new(connection)
     }
 
+    /// A repository for tests that live outside this module (for example the
+    /// command-layer error tests), so the migration set stays defined once.
+    pub(crate) fn new_repository_for_tests() -> LibraryRepository {
+        new_repository()
+    }
+
     pub(crate) fn insert_book(repository: &LibraryRepository, id: &str, file_path: &str) {
         let now = Utc::now().to_rfc3339();
         repository

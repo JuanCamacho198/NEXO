@@ -14,7 +14,12 @@
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import { titlebarState } from '$lib/stores/titlebarState.svelte';
-  import { installGlobalShortcuts, ShortcutHelpModal, CommandPalette } from '$lib/shared/shortcuts';
+  import {
+    installGlobalShortcuts,
+    installMenuCommands,
+    ShortcutHelpModal,
+    CommandPalette,
+  } from '$lib/shared/shortcuts';
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
   import { logger } from '$lib/shared/logger/Logger';
   import {
@@ -22,6 +27,8 @@
     resolveUpdateFeedUrl,
     runStartupUpdateCheck,
   } from '$lib/features/settings/update/updateChecker';
+  import { scheduleAfterFirstPaint } from '$lib/features/settings/update/startupScheduling';
+  import { checkSecretProtectionAtStartup } from '$lib/shared/services/secretProtectionNotice';
 
   // The platform gate that decides whether the custom titlebar renders is
   // resolved inside `titlebarState` at module load, so the first paint is
@@ -36,6 +43,13 @@
     // Default off: no debug chrome renders until Settings turns it on.
     void loadDebugEnabled().then((enabled) => {
       debugState.enabled = enabled;
+    });
+
+    // Secrets audit #08: on macOS/Linux the backend cannot seal secrets, so the
+    // Supabase session is never persisted. Ask once, after first paint, and let
+    // the notice reach the tray — never a modal, never a blocked boot.
+    scheduleAfterFirstPaint(() => {
+      void checkSecretProtectionAtStartup((message) => logger.warn(message));
     });
 
     // Global error handler (replaces Svelte 5's missing ErrorBoundary).
@@ -77,11 +91,22 @@
     window.addEventListener('error', handleError);
     window.addEventListener('unhandledrejection', handleError);
     const uninstallShortcuts = installGlobalShortcuts();
+    // Native menu clicks arrive as event ids; this runs them through the same
+    // command registry the palette and the keyboard use. Subscription is async
+    // (it crosses IPC), so the cleanup is latched and awaited on teardown.
+    let uninstallMenu: (() => void) | null = null;
+    let disposed = false;
+    void installMenuCommands().then((unlisten) => {
+      if (disposed) unlisten();
+      else uninstallMenu = unlisten;
+    });
 
     return () => {
+      disposed = true;
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleError);
       uninstallShortcuts();
+      uninstallMenu?.();
     };
   });
 
@@ -90,20 +115,21 @@
   });
 
   // Startup update check: runs once per launch, whether or not the user ever
-  // opens Settings → About. A verified newer version surfaces a toast so the
-  // notice is actually delivered; the actionable update flow stays in About.
-  // The module guard inside runStartupUpdateCheck keeps it to one check.
-  onMount(() => {
-    const settleTimer = setTimeout(() => {
+  // opens Settings → About. It is deliberately last: the scheduler does not
+  // even start its delay until the window has loaded and the main thread is
+  // idle, so the feed round-trip never competes with first paint or the first
+  // interaction. It is not removed because the updater path (#17) depends on it
+  // firing; the module guard inside runStartupUpdateCheck keeps it to one check.
+  onMount(() =>
+    scheduleAfterFirstPaint(() => {
       void (async () => {
         const state = await runStartupUpdateCheck(defaultUpdateCheckDeps(resolveUpdateFeedUrl()));
         if (state?.status === 'available') {
           pushToast('info', appState.t('update.availableToast', { version: state.feedVersion }));
         }
       })();
-    }, 1500);
-    return () => clearTimeout(settleTimer);
-  });
+    }),
+  );
 
   // Track viewport for debug panel
   $effect(() => {
@@ -138,8 +164,8 @@
     <SyncAuthBanner />
     {#if debugState.enabled}
       <DebugToggle />
+      <DebugPanel />
     {/if}
-    <DebugPanel />
     <ShortcutHelpModal t={appState.t} />
     <CommandPalette t={appState.t} />
   </main>

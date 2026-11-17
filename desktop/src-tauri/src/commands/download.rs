@@ -40,6 +40,8 @@ use tauri::Manager;
 
 use crate::filename::{canonical_extension, normalize_segment};
 
+use super::CommandError;
+
 pub const DOWNLOAD_USER_AGENT: &str = "Nexo/Desktop (contact: TBD)";
 pub const MAX_DOWNLOAD_BYTES: u64 = 67_108_864;
 pub const MAX_REDIRECTS: usize = 5;
@@ -583,25 +585,38 @@ pub(crate) fn download_client() -> reqwest::Client {
 pub async fn downloadRemoteBook(
     app: tauri::AppHandle,
     payload: DownloadRemoteBookInput,
-) -> Result<DownloadRemoteBookResult, String> {
-    let app_data_dir = app.path().app_data_dir().map_err(|err| format!("{}", err))?;
+) -> Result<DownloadRemoteBookResult, CommandError> {
+    // `app_data_dir` failing is a local installation problem, not a transfer
+    // condition, so it is reported as `BAD_PATH` — the same code the transfer
+    // uses for every other local path failure.
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|err| CommandError::coded(ERR_BAD_PATH, format!("no app data dir: {err}")))?;
     let mut progress = TauriProgressSink::new(app, payload.transfer_id.clone());
     perform_download(&download_client(), &app_data_dir, &payload, &mut progress)
         .await
-        .map_err(|err| err.to_string())
+        .map_err(|err| CommandError::coded(&err.code, err.to_string()))
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn cancelRemoteDownload(transfer_id: String) -> Result<bool, String> {
+pub fn cancelRemoteDownload(transfer_id: String) -> Result<bool, CommandError> {
     Ok(cancel_transfer(&transfer_id))
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn discardRemoteDownload(app: tauri::AppHandle, file_path: String) -> Result<bool, String> {
-    let app_data_dir = app.path().app_data_dir().map_err(|err| format!("{}", err))?;
-    discard_remote_download(&app_data_dir, &file_path).map_err(|err| err.to_string())
+pub fn discardRemoteDownload(
+    app: tauri::AppHandle,
+    file_path: String,
+) -> Result<bool, CommandError> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|err| CommandError::coded(ERR_BAD_PATH, format!("no app data dir: {err}")))?;
+    discard_remote_download(&app_data_dir, &file_path)
+        .map_err(|err| CommandError::coded(&err.code, err.to_string()))
 }
 
 #[cfg(test)]

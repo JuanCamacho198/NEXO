@@ -179,6 +179,13 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.about.links': 'Enlaces',
   'settings.about.github': 'GitHub',
   'settings.about.reportIssue': 'Reportar un problema',
+  'settings.about.diagnostics': 'Diagnóstico',
+  'settings.about.diagnosticsBody':
+    'Copia un informe técnico que soporte puede leer: versión, plataforma, registros recientes y un chequeo de estado. Los tokens, claves, rutas de archivo y el contenido de lectura se redactan antes de salir de la aplicación.',
+  'settings.about.diagnosticsExport': 'Copiar diagnóstico',
+  'settings.about.diagnosticsExporting': 'Recopilando diagnóstico…',
+  'settings.about.diagnosticsCopied': 'Diagnóstico copiado al portapapeles',
+  'settings.about.diagnosticsFailed': 'No se pudo generar el diagnóstico',
   'settings.about.starBody':
     'Si NEXO te sirve, una estrella en GitHub ayuda a que más gente lo encuentre.',
   'settings.about.starCta': 'Danos una estrella en GitHub',
@@ -323,6 +330,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'notifications.state.failure': 'Fallo',
   'notifications.auth.required': 'Se requiere iniciar sesion para sincronizar',
   'notifications.auth.expired': 'La sesion de sincronizacion expiro',
+  'notifications.secrets.unavailable':
+    'La proteccion de secretos no esta disponible en esta plataforma (macOS/Linux). Tu sesion no se guardara entre inicios.',
   'notifications.catalog.failed': 'Un libro no se pudo sincronizar',
   'notifications.action.view': 'Ver',
 
@@ -378,6 +387,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.sync.drive.connect': 'Conectar Drive',
   'settings.sync.drive.disconnect': 'Desconectar',
   'settings.sync.drive.connecting': 'Conectando...',
+  'settings.sync.drive.offline':
+    'Sin conexion. Reconectate para vincular Drive e intentalo de nuevo.',
   'settings.sync.drive.connectFailed': 'No se pudo conectar Drive',
   'settings.sync.drive.disconnected': 'Drive desconectado',
 

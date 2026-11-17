@@ -174,6 +174,27 @@ describe('SyncView simplification', () => {
     expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
   });
 
+  it('one primary action on failure: retry is primary, manual sync steps back', () => {
+    renderView({
+      health: {
+        lastSyncAt: null,
+        pendingCount: 0,
+        lastError: 'BOOM_RAW_ERROR',
+        realtimeStatus: 'error',
+      },
+    });
+
+    // T16 (#20): in the error state "Reintentar" and "Sincronizar ahora" ran the
+    // same handler side by side, so the screen offered two primary buttons for
+    // one task. The retry keeps the primary affordance; the standing manual
+    // action stays reachable but stops competing for the same decision.
+    const retry = screen.getByRole('button', { name: 'Reintentar' });
+    const manual = screen.getByRole('button', { name: 'Sincronizar ahora' });
+
+    expect(retry.getAttribute('data-action-emphasis')).toBe('primary');
+    expect(manual.getAttribute('data-action-emphasis')).toBe('secondary');
+  });
+
   it('shows the syncing status line while a manual run is in flight', async () => {
     let resolveSync: () => void = () => {};
     syncMetadataMock.mockImplementationOnce(

@@ -11,6 +11,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use super::{lock_repository, CommandError};
 use crate::state::AppState;
 
 /// Durable per-addon consent row, exactly as stored (mirrors the TS store shape).
@@ -65,10 +66,10 @@ pub fn delete_addon_consent(conn: &rusqlite::Connection, addon_id: &str) -> rusq
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn listAddonConsents(state: State<'_, AppState>) -> Result<Vec<AddonConsentDto>, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+pub fn listAddonConsents(state: State<'_, AppState>) -> Result<Vec<AddonConsentDto>, CommandError> {
+    let repository = lock_repository(&state)?;
     list_addon_consents(repository.connection())
-        .map_err(|e| format!("Failed to list addon consents: {}", e))
+        .map_err(|e| CommandError::from(crate::error::AppError::Database(e)))
 }
 
 #[allow(non_snake_case)]
@@ -77,11 +78,11 @@ pub fn setAddonConsent(
     state: State<'_, AppState>,
     id: String,
     granted: bool,
-) -> Result<(), String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<(), CommandError> {
+    let repository = lock_repository(&state)?;
     let updated_at = chrono::Utc::now().timestamp();
     set_addon_consent(repository.connection(), &id, granted, updated_at)
-        .map_err(|e| format!("Failed to set addon consent: {}", e))
+        .map_err(|e| CommandError::from(crate::error::AppError::Database(e)))
 }
 
 #[cfg(test)]

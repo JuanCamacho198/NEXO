@@ -17,11 +17,16 @@
         "width": 1200,
         "height": 800,
         "resizable": true,
-        "decorations": false
+        "decorations": false,
+        "titleBarStyle": "Overlay",
+        "trafficLightPosition": {
+          "x": 16,
+          "y": 20
+        }
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://asset.localhost data: blob: https://covers.openlibrary.org https://www.gutenberg.org https://books.google.com https://lh3.googleusercontent.com https://standardebooks.org https://xshgfrwqiddaaecqmicy.supabase.co; style-src 'self' 'unsafe-inline' asset: http://asset.localhost https://asset.localhost; font-src 'self' asset: http://asset.localhost https://asset.localhost; connect-src 'self' asset: http://asset.localhost https://asset.localhost https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://*.supabase.co https://gutendex.com https://openlibrary.org https://covers.openlibrary.org https://*.archive.org https://standardebooks.org https://github.com http://ipc.localhost",
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://asset.localhost data: blob: https://covers.openlibrary.org https://www.gutenberg.org https://books.google.com https://standardebooks.org; style-src 'self' 'unsafe-inline' asset: http://asset.localhost https://asset.localhost; font-src 'self' asset: http://asset.localhost https://asset.localhost; connect-src 'self' asset: http://asset.localhost https://asset.localhost https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://*.supabase.co https://gutendex.com https://openlibrary.org https://covers.openlibrary.org http://ipc.localhost",
       "assetProtocol": {
         "enable": true,
         "scope": [
@@ -61,6 +66,48 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": []
+    "externalBin": [],
+    "shortDescription": "EPUB reader with local-first storage and sync",
+    "longDescription": "NEXO Desktop is a local-first EPUB reader: books, highlights, dictionary and reading progress live in a local SQLite database and sync to Supabase only when you sign in.",
+    "category": "Productivity",
+    "fileAssociations": [
+      {
+        "ext": ["epub"],
+        "name": "EPUB document",
+        "description": "EPUB document",
+        "mimeType": "application/epub+zip",
+        "role": "Viewer",
+        "rank": "Owner"
+      }
+    ],
+    "windows": {
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "tsp": true
+    },
+    "macOS": {
+      "signingIdentity": "-",
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.plist"
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0",
+          "libayatana-appindicator3-1",
+          "librsvg2-2"
+        ],
+        "section": "utils"
+      },
+      "rpm": {
+        "depends": [
+          "webkit2gtk4.1",
+          "gtk3",
+          "libayatana-appindicator-gtk3",
+          "librsvg2"
+        ]
+      }
+    }
   }
 }

@@ -1,3 +1,4 @@
+use super::{lock_repository, CommandError};
 use crate::logger::{ErrorEventDto, LogEventDto, Logger, BUNDLE_LOG_TAIL_CAP};
 use crate::models::AppSettingDto;
 use crate::services::diagnostics::DiagnoseResult;
@@ -87,6 +88,11 @@ fn allowlisted_settings(settings: &[AppSettingDto]) -> serde_json::Value {
 /// Re-apply the shared redaction boundary over one bundle section by
 /// round-tripping it through `serde_json::Value`. Defense-in-depth against any
 /// source path that assembled unredacted data.
+///
+/// Still `Result<_, String>` on purpose: this is a private helper whose only
+/// caller is [`assemble_bundle`], and a serde round-trip failure means the
+/// section's own types disagree with themselves — nothing a reader or the
+/// frontend can act on differently, so it carries no code of its own.
 fn redact_section<T>(section: &T) -> Result<T, String>
 where
     T: serde::Serialize + serde::de::DeserializeOwned,
@@ -101,6 +107,9 @@ where
 /// to [`BUNDLE_LOG_TAIL_CAP`] most-recent lines, and keeps book data as counts.
 /// Split out from the command so privacy probes can exercise it directly
 /// without an `AppState`.
+///
+/// Same shape as [`redact_section`]: a private helper, `String` rather than a
+/// DTO, because the only failure is the serde round-trip above.
 #[allow(clippy::too_many_arguments)]
 fn assemble_bundle(
     app_version: String,
@@ -133,9 +142,13 @@ fn assemble_bundle(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn reportErrorEvent(state: State<'_, AppState>, event: ErrorEventDto) -> Result<(), String> {
-    let mut logger = state.logger.lock().map_err(|e| format!("{}", e))?;
-    logger.log_to_file(&event)?;
+pub fn reportErrorEvent(
+    state: State<'_, AppState>,
+    event: ErrorEventDto,
+) -> Result<(), CommandError> {
+    let mut logger =
+        state.logger.lock().map_err(|_| CommandError::internal("logger lock is poisoned"))?;
+    logger.log_to_file(&event).map_err(CommandError::internal)?;
 
     // Forward to Sentry when initialized. The PII scrubber is already wired
     // via `before_send` in `sentry_init` (reuses `Logger::redact_json_value`),
@@ -168,9 +181,10 @@ pub fn reportErrorEvent(state: State<'_, AppState>, event: ErrorEventDto) -> Res
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn logEvent(state: State<'_, AppState>, event: LogEventDto) -> Result<(), String> {
-    let mut logger = state.logger.lock().map_err(|e| format!("{}", e))?;
-    logger.log_generic(&event)
+pub fn logEvent(state: State<'_, AppState>, event: LogEventDto) -> Result<(), CommandError> {
+    let mut logger =
+        state.logger.lock().map_err(|_| CommandError::internal("logger lock is poisoned"))?;
+    logger.log_generic(&event).map_err(CommandError::internal)
 }
 
 /// Batched counterpart of [`logEvent`]: one IPC call, one lock, one disk pass
@@ -183,9 +197,15 @@ pub fn logEvent(state: State<'_, AppState>, event: LogEventDto) -> Result<(), St
 /// than losing it, which is the failure contract the sink documents.
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn logEvents(state: State<'_, AppState>, events: Vec<LogEventDto>) -> Result<usize, String> {
-    let mut logger = state.logger.lock().map_err(|e| format!("{}", e))?;
-    logger.log_generic_batch(&events, &crate::logger::LogLevel::current_threshold())
+pub fn logEvents(
+    state: State<'_, AppState>,
+    events: Vec<LogEventDto>,
+) -> Result<usize, CommandError> {
+    let mut logger =
+        state.logger.lock().map_err(|_| CommandError::internal("logger lock is poisoned"))?;
+    logger
+        .log_generic_batch(&events, &crate::logger::LogLevel::current_threshold())
+        .map_err(CommandError::internal)
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -195,20 +215,23 @@ pub fn diagnose(state: State<'_, AppState>) -> crate::services::diagnostics::Dia
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn getLogs(state: State<'_, AppState>) -> Result<Vec<String>, String> {
-    let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
-    logger.read_all_logs()
+pub fn getLogs(state: State<'_, AppState>) -> Result<Vec<String>, CommandError> {
+    let logger =
+        state.logger.lock().map_err(|_| CommandError::internal("logger lock is poisoned"))?;
+    logger.read_all_logs().map_err(CommandError::internal)
 }
 
 /// Assemble the L2 diagnostics bundle. Explicit user action only (opt-in
 /// feedback attachment); no timer, thread, or scheduled path exists here.
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn collectDiagnosticsBundle(state: State<'_, AppState>) -> Result<DiagnosticsBundle, String> {
+pub fn collectDiagnosticsBundle(
+    state: State<'_, AppState>,
+) -> Result<DiagnosticsBundle, CommandError> {
     let raw_settings = {
-        let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+        let repository = lock_repository(&state)?;
         if repository.has_desktop_parity_schema().unwrap_or(true) {
-            repository.get_settings().map_err(|e| e.to_string())?
+            repository.get_settings().map_err(CommandError::from)?
         } else {
             Vec::new()
         }
@@ -218,8 +241,9 @@ pub fn collectDiagnosticsBundle(state: State<'_, AppState>) -> Result<Diagnostic
     let diagnose = crate::services::diagnostics::run_diagnose(&state);
 
     let log_tail = {
-        let logger = state.logger.lock().map_err(|e| format!("{}", e))?;
-        logger.read_tail(BUNDLE_LOG_TAIL_CAP)?
+        let logger =
+            state.logger.lock().map_err(|_| CommandError::internal("logger lock is poisoned"))?;
+        logger.read_tail(BUNDLE_LOG_TAIL_CAP).map_err(CommandError::internal)?
     };
 
     // Phase 6 aggregates stay local to the frontend (`summarizeTimings`); the
@@ -235,6 +259,7 @@ pub fn collectDiagnosticsBundle(state: State<'_, AppState>) -> Result<Diagnostic
         log_tail,
         metrics_summary,
     )
+    .map_err(CommandError::internal)
 }
 
 #[cfg(test)]

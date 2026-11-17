@@ -1,4 +1,4 @@
-use super::map_command_error;
+use super::{lock_repository, CommandError};
 use crate::state::AppState;
 use tauri::State;
 
@@ -8,7 +8,7 @@ pub fn setReadingStatus(
     state: State<'_, AppState>,
     book_id: String,
     status: Option<String>,
-) -> Result<(), String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.set_reading_status(&book_id, status.as_deref()).map_err(map_command_error)
+) -> Result<(), CommandError> {
+    let repository = lock_repository(&state)?;
+    repository.set_reading_status(&book_id, status.as_deref()).map_err(CommandError::from)
 }

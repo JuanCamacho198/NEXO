@@ -3,6 +3,7 @@
   import Info from 'lucide-svelte/icons/info';
   import Star from 'lucide-svelte/icons/star';
   import { openUrl } from '@tauri-apps/plugin-opener';
+  import { invoke } from '@tauri-apps/api/core';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -58,6 +59,12 @@
   let downloadProgress = $state<string | null>(null);
   let versionCopied = $state(false);
   let copyResetTimer: ReturnType<typeof setTimeout> | null = null;
+  // T14 — diagnostics export. `'idle' | 'copying' | 'copied' | 'failed'`
+  // states the outcome in a live region instead of a toast: the support
+  // surface is where a user already is, and a toast would race the Settings
+  // overlay's own announcements.
+  let diagnosticsPhase = $state<'idle' | 'copying' | 'copied' | 'failed'>('idle');
+  let diagnosticsResetTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Rotation is deterministic: same day of year, same quote. Never localized
   // away — a quote is a factual attribution.
@@ -114,6 +121,43 @@
       versionCopied = false;
       copyResetTimer = null;
     }, 2000);
+  };
+
+  /**
+   * Assemble the diagnostics bundle and copy it. The bundle is redacted by the
+   * Rust boundary (`commands/diagnostics.rs` scrubs secrets, absolute paths and
+   * reader content before the JSON crosses IPC), so this path never handles a
+   * raw log line — it copies what the command returned or nothing at all.
+   */
+  const exportDiagnostics = async (): Promise<void> => {
+    if (diagnosticsPhase === 'copying') return;
+    diagnosticsPhase = 'copying';
+    if (diagnosticsResetTimer) clearTimeout(diagnosticsResetTimer);
+    let text: string;
+    try {
+      const bundle = await invoke<unknown>('collectDiagnosticsBundle');
+      // `null`/`undefined` from the command serialises to `'null'`/`undefined`;
+      // both are treated as a failure below rather than pasted as a payload.
+      text = JSON.stringify(bundle, null, 2) ?? '';
+    } catch {
+      diagnosticsPhase = 'failed';
+      return;
+    }
+    if (text.trim().length === 0 || text.trim() === 'null' || text.trim() === 'undefined') {
+      diagnosticsPhase = 'failed';
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      diagnosticsPhase = 'failed';
+      return;
+    }
+    diagnosticsPhase = 'copied';
+    diagnosticsResetTimer = setTimeout(() => {
+      diagnosticsPhase = 'idle';
+      diagnosticsResetTimer = null;
+    }, 3000);
   };
 
   const handleRemindLater = (): void => {
@@ -174,6 +218,7 @@
     return () => {
       cancelled = true;
       if (copyResetTimer) clearTimeout(copyResetTimer);
+      if (diagnosticsResetTimer) clearTimeout(diagnosticsResetTimer);
     };
   });
 </script>
@@ -394,6 +439,38 @@
       <Button onclick={() => void openUrl(ISSUES_URL)} variant="ghost" size="sm">
         {t('settings.about.reportIssue')}
       </Button>
+    </div>
+
+    <!-- T14: diagnostics reachable without the debug panel. This is the path a
+         user in trouble (or the person helping them) actually finds, so the
+         bundle is one click and copies to the clipboard rather than opening a
+         viewer. Redaction happens in Rust before IPC; this button cannot make
+         the payload less redacted, only fail closed. -->
+    <div class="mt-4 border-t border-(--color-border) pt-3">
+      <h4 class="mt-0 mb-1 text-xs font-semibold text-(--color-primary)">
+        {t('settings.about.diagnostics')}
+      </h4>
+      <p class="text-xs text-(--color-text-muted)">{t('settings.about.diagnosticsBody')}</p>
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <Button
+          onclick={() => void exportDiagnostics()}
+          variant="secondary"
+          size="sm"
+          disabled={diagnosticsPhase === 'copying'}
+          data-testid="about-export-diagnostics"
+        >
+          {diagnosticsPhase === 'copying'
+            ? t('settings.about.diagnosticsExporting')
+            : t('settings.about.diagnosticsExport')}
+        </Button>
+        <span class="text-xs text-(--color-text-muted)" role="status" aria-live="polite">
+          {#if diagnosticsPhase === 'copied'}
+            {t('settings.about.diagnosticsCopied')}
+          {:else if diagnosticsPhase === 'failed'}
+            {t('settings.about.diagnosticsFailed')}
+          {/if}
+        </span>
+      </div>
     </div>
   </Panel>
 </section>

@@ -1,18 +1,46 @@
 use std::path::PathBuf;
 
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 
+use crate::commands::confine::{resolve_within, resolve_within_app_data, AppDataRoot};
 use crate::models::IndexBookTextInput;
 use crate::services::epub_extractor::{
     extract_plain_texts, EpubChapterContent, EpubExtractor, EpubMetadataExtract,
 };
 use crate::state::AppState;
 
+use super::{lock_repository, CommandError};
+
 const CACHE_VERSION: u32 = 4;
 
-fn get_cache_dir(app: &AppHandle, book_id: &str) -> PathBuf {
-    let app_data = app.path().app_data_dir().expect("app data dir");
-    crate::layout::cache_dir(&app_data).join("epub").join(book_id)
+fn get_cache_dir(app: &AppHandle, book_id: &str) -> Result<PathBuf, CommandError> {
+    let app_data = app.app_data_root().map_err(CommandError::from)?;
+    Ok(crate::layout::cache_dir(&app_data).join("epub").join(book_id))
+}
+
+/// Names what could not be read or written. The underlying `AppError::Io` keeps
+/// the `IO` code on the wire; the context survives in the message, which is what
+/// makes the failure traceable without changing the error category.
+fn io_failure(context: &str, err: impl std::fmt::Display) -> CommandError {
+    CommandError::from(crate::error::AppError::InvalidInput(format!("{context}: {err}")))
+}
+
+/// `services::epub_extractor` still reports failures as prose (it is a service,
+/// not a command), so the category is assigned here: a message that names a
+/// missing artefact is `NOT_FOUND`, anything else stays an internal failure.
+fn extractor_failure(message: String) -> CommandError {
+    let not_found = message.starts_with("Resource not found")
+        || message.starts_with("EPUB not cached")
+        || message.contains("no spine data")
+        || message.starts_with("Chapter not found")
+        || message.starts_with("Failed to open EPUB")
+        || message.contains("No such file")
+        || message.contains("os error 2");
+    if not_found {
+        CommandError::from(crate::error::AppError::NotFound(message))
+    } else {
+        CommandError::internal(message)
+    }
 }
 
 fn cache_version_path(cache_dir: &std::path::Path) -> PathBuf {
@@ -61,14 +89,18 @@ pub async fn parse_epub(
     _state: State<'_, AppState>,
     file_path: String,
     book_id: String,
-) -> Result<EpubMetadataExtract, String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
+) -> Result<EpubMetadataExtract, CommandError> {
+    let cache_dir = get_cache_dir(&app, &book_id)?;
+    // The reader only ever parses books that were imported, which copies them
+    // under app data (`repository::library::import_book`). A user-selected file
+    // is read by `importBook` from the dialog, not from here.
+    let source_path = resolve_within_app_data(&app, &file_path).map_err(CommandError::from)?;
 
     // Check if already cached
     let metadata_path = cache_dir.join("metadata.json");
     if metadata_path.exists() {
         let data = std::fs::read_to_string(&metadata_path)
-            .map_err(|e| format!("Failed to read cached metadata: {}", e))?;
+            .map_err(|e| io_failure("Failed to read cached metadata", e))?;
         match serde_json::from_str::<EpubMetadataExtract>(&data) {
             Ok(meta) => {
                 if is_cache_stale(&cache_dir, &meta) {
@@ -98,15 +130,14 @@ pub async fn parse_epub(
     }
 
     // Extract and cache
-    let meta = EpubExtractor::extract(std::path::Path::new(&file_path), &cache_dir)?;
+    let meta = EpubExtractor::extract(&source_path, &cache_dir).map_err(extractor_failure)?;
 
     // Cache metadata for future calls
-    std::fs::create_dir_all(&cache_dir)
-        .map_err(|e| format!("Failed to create cache dir: {}", e))?;
+    std::fs::create_dir_all(&cache_dir).map_err(|e| io_failure("Failed to create cache dir", e))?;
     let data =
-        serde_json::to_string(&meta).map_err(|e| format!("Failed to serialize metadata: {}", e))?;
+        serde_json::to_string(&meta).map_err(|e| io_failure("Failed to serialize metadata", e))?;
     std::fs::write(&metadata_path, &data)
-        .map_err(|e| format!("Failed to write metadata cache: {}", e))?;
+        .map_err(|e| io_failure("Failed to write metadata cache", e))?;
 
     // Write cache version (bumped 2→3)
     let version_path = cache_version_path(&cache_dir);
@@ -116,7 +147,7 @@ pub async fn parse_epub(
     let spine_path = cache_dir.join("spine.json");
     if !spine_path.exists() {
         let spine_data = serde_json::to_string(&meta.spine_hrefs)
-            .map_err(|e| format!("Failed to serialize spine: {}", e))?;
+            .map_err(|e| io_failure("Failed to serialize spine", e))?;
         let _ = std::fs::write(&spine_path, &spine_data);
     }
 
@@ -129,9 +160,9 @@ pub async fn get_epub_chapter(
     app: AppHandle,
     book_id: String,
     chapter_index: usize,
-) -> Result<EpubChapterContent, String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
-    EpubExtractor::get_chapter(&cache_dir, chapter_index)
+) -> Result<EpubChapterContent, CommandError> {
+    let cache_dir = get_cache_dir(&app, &book_id)?;
+    EpubExtractor::get_chapter(&cache_dir, chapter_index).map_err(extractor_failure)
 }
 
 /// Get a resource file from the EPUB cache.
@@ -140,26 +171,33 @@ pub async fn get_epub_resource(
     app: AppHandle,
     book_id: String,
     resource_path: String,
-) -> Result<Vec<u8>, String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
-    EpubExtractor::get_resource(&cache_dir, &resource_path)
+) -> Result<Vec<u8>, CommandError> {
+    let cache_dir = get_cache_dir(&app, &book_id)?;
+    // `resource_path` is a relative href taken from the book's own spine
+    // (`EpubExtractor::get_resource` joins it under `resources/`), so it is
+    // confined by resolving it inside that directory before the join.
+    let resources_dir = cache_dir.join("resources");
+    std::fs::create_dir_all(&resources_dir)
+        .map_err(|e| io_failure("Failed to create resources dir", e))?;
+    resolve_within(&resources_dir, &resource_path).map_err(CommandError::from)?;
+    EpubExtractor::get_resource(&cache_dir, &resource_path).map_err(extractor_failure)
 }
 
 /// Check if an EPUB has been parsed and cached.
 #[tauri::command(rename_all = "camelCase")]
-pub async fn is_epub_cached(app: AppHandle, book_id: String) -> Result<bool, String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
+pub async fn is_epub_cached(app: AppHandle, book_id: String) -> Result<bool, CommandError> {
+    let cache_dir = get_cache_dir(&app, &book_id)?;
     let metadata_path = cache_dir.join("metadata.json");
     Ok(metadata_path.exists())
 }
 
 /// Delete the EPUB cache for a book.
 #[tauri::command(rename_all = "camelCase")]
-pub async fn clear_epub_cache(app: AppHandle, book_id: String) -> Result<(), String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
+pub async fn clear_epub_cache(app: AppHandle, book_id: String) -> Result<(), CommandError> {
+    let cache_dir = get_cache_dir(&app, &book_id)?;
     if cache_dir.exists() {
         std::fs::remove_dir_all(&cache_dir)
-            .map_err(|e| format!("Failed to clear EPUB cache: {}", e))?;
+            .map_err(|e| io_failure("Failed to clear EPUB cache", e))?;
     }
     Ok(())
 }
@@ -171,13 +209,15 @@ pub async fn index_epub_text(
     app: AppHandle,
     state: State<'_, AppState>,
     book_id: String,
-) -> Result<(), String> {
-    let cache_dir = get_cache_dir(&app, &book_id);
+) -> Result<(), CommandError> {
+    let cache_dir = get_cache_dir(&app, &book_id)?;
     if !cache_dir.exists() {
-        return Err("EPUB not cached — run parse_epub first".to_string());
+        return Err(CommandError::from(crate::error::AppError::NotFound(
+            "EPUB not cached — run parse_epub first".to_string(),
+        )));
     }
 
-    let chunks = extract_plain_texts(&cache_dir)?;
+    let chunks = extract_plain_texts(&cache_dir).map_err(extractor_failure)?;
     if chunks.is_empty() {
         return Ok(()); // Nothing to index
     }
@@ -193,15 +233,44 @@ pub async fn index_epub_text(
                 .collect(),
         };
 
-    let mut repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    repository.index_book_text(input).map_err(|e| format!("{}", e))
+    let mut repository = lock_repository(&state)?;
+    repository.index_book_text(input).map_err(CommandError::from)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::AppError;
     use crate::services::epub_extractor::{EpubChapterMeta, EpubMetadataExtract};
     use std::fs;
+    use std::path::PathBuf;
+
+    struct Unavailable;
+
+    impl AppDataRoot for Unavailable {
+        fn app_data_root(&self) -> crate::error::AppResult<PathBuf> {
+            Err(AppError::InvalidInput("app data directory is unavailable".to_string()))
+        }
+    }
+
+    #[test]
+    fn a_missing_app_data_dir_is_an_error_instead_of_a_panic() {
+        let err = get_cache_dir_for(&Unavailable, "book-1").expect_err("must not panic");
+        let wire: serde_json::Value =
+            serde_json::from_str(err.payload()).expect("the wire format is JSON");
+        assert_eq!(wire["code"], "VALIDATION_ERROR", "{wire}");
+        assert!(
+            wire["message"]
+                .as_str()
+                .is_some_and(|m| m.contains("app data directory is unavailable")),
+            "{wire}"
+        );
+    }
+
+    fn get_cache_dir_for<A: AppDataRoot>(app: &A, book_id: &str) -> Result<PathBuf, CommandError> {
+        let app_data = app.app_data_root().map_err(CommandError::from)?;
+        Ok(crate::layout::cache_dir(&app_data).join("epub").join(book_id))
+    }
 
     fn make_meta(total: usize, spine_len: usize) -> EpubMetadataExtract {
         EpubMetadataExtract {

@@ -14,7 +14,7 @@
   let logsLoading = $state(false);
   let diagnoseResult = $state<DiagnoseResult | null>(null);
   let diagnoseLoading = $state(false);
-  const ipc = createDebugIpcStats();
+  const ipc = createDebugIpcStats({ enabled: () => debugState.enabled });
   const operationTimings = $derived.by(() => {
     void ipc.refreshTick;
     return summarizeTimings();

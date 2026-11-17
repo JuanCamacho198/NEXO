@@ -57,6 +57,7 @@ import {
   disconnectDrive,
   DriveConfigError,
   DriveOAuthError,
+  generateDriveCodeChallenge,
   getDriveAccessToken,
   isDriveAuthorized,
   parseDriveCallbackUrl,
@@ -66,11 +67,14 @@ import {
 import { driveState } from '$lib/shared/stores/driveState.svelte';
 
 const CLIENT_ID = 'test-client-id';
-const CLIENT_SECRET = 'test-client-secret';
+// A Desktop-type OAuth client has no secret. This value is stubbed into the
+// env on purpose to prove the service never reads it: if the service consumed
+// VITE_GOOGLE_OAUTH_CLIENT_SECRET it would be inlined into the shipped bundle.
+const INLINED_SECRET_SENTINEL = 'test-client-secret';
 
 function stubOAuthEnv(): void {
   vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', CLIENT_ID);
-  vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', CLIENT_SECRET);
+  vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', INLINED_SECRET_SENTINEL);
 }
 
 function fireCallback(params: string): void {
@@ -270,7 +274,6 @@ describe('beginDriveConnect', () => {
   });
 
   it('client ID alone is enough and the token exchange omits client_secret', async () => {
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', '');
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ access_token: 'access-1', refresh_token: 'refresh-1' }));
@@ -284,10 +287,14 @@ describe('beginDriveConnect', () => {
     expect(result).toEqual({ kind: 'success', accessToken: 'access-1' });
     const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
     expect(body).toContain('client_id=test-client-id');
+    expect(body).toContain('grant_type=authorization_code');
+    expect(body).toContain('code_verifier=');
     expect(body).not.toContain('client_secret');
   });
 
-  it('includes client_secret in the token exchange when one is configured', async () => {
+  it('never sends client_secret in the token exchange, even with the env var set', async () => {
+    // The env var is still stubbed by beforeEach; the exchange must ignore it.
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', INLINED_SECRET_SENTINEL);
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ access_token: 'access-1', refresh_token: 'refresh-1' }));
@@ -300,7 +307,30 @@ describe('beginDriveConnect', () => {
 
     expect(result.kind).toBe('success');
     const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
-    expect(body).toContain('client_secret=test-client-secret');
+    expect(body).not.toContain('client_secret');
+    expect(body).not.toContain(INLINED_SECRET_SENTINEL);
+  });
+
+  it('sends an S256 code challenge that matches the code verifier', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ access_token: 'access-1', refresh_token: 'refresh-1' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pending = beginDriveConnect();
+    await waitForConnectStarted();
+    const authUrl = new URL(mockOpenUrl.mock.calls[0][0] as string);
+    const challenge = authUrl.searchParams.get('code_challenge');
+    expect(authUrl.searchParams.get('code_challenge_method')).toBe('S256');
+    expect(challenge).toBeTruthy();
+
+    fireCallback(`code=auth-code&state=${authorizeStateFromOpenUrl()}`);
+    await pending;
+
+    const body = new URLSearchParams((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    const verifier = body.get('code_verifier');
+    expect(verifier).toBeTruthy();
+    await expect(generateDriveCodeChallenge(verifier as string)).resolves.toBe(challenge);
   });
 });
 
@@ -441,17 +471,21 @@ describe('getDriveAccessToken', () => {
     await expect(getDriveAccessToken()).resolves.toBe('fresh-access');
     const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
     expect(body).toContain('client_id=test-client-id');
+    expect(body).toContain('grant_type=refresh_token');
     expect(body).not.toContain('client_secret');
   });
 
-  it('includes client_secret in the refresh when one is configured', async () => {
+  it('never sends client_secret in the refresh, even with the env var set', async () => {
+    // The env var is still stubbed by beforeEach; the refresh must ignore it.
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', INLINED_SECRET_SENTINEL);
     memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ access_token: 'fresh-access' }));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(getDriveAccessToken()).resolves.toBe('fresh-access');
     const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
-    expect(body).toContain('client_secret=test-client-secret');
+    expect(body).not.toContain('client_secret');
+    expect(body).not.toContain(INLINED_SECRET_SENTINEL);
   });
 });
 

@@ -1,7 +1,12 @@
 import { metricsStore } from '$lib/shared/logger/MetricsStore';
 import type { MetricEvent } from '$lib/shared/logger/metricTypes';
 
-export function createDebugIpcStats(): {
+/**
+ * Debug IPC sampler. The refresh timer only exists while `enabled()` returns
+ * true, so a release build with debug mode off never pays for it. Disabled by
+ * default: forgetting the argument must not start a background interval.
+ */
+export function createDebugIpcStats(options?: { enabled?: () => boolean }): {
   readonly ipcCalls: MetricEvent[];
   readonly ipcSummary: {
     totalCalls: number;
@@ -23,7 +28,10 @@ export function createDebugIpcStats(): {
 } {
   let refreshTick = $state(0);
 
+  const isEnabled = options?.enabled ?? ((): boolean => false);
+
   $effect(() => {
+    if (!isEnabled()) return;
     const interval = setInterval(() => {
       refreshTick++;
     }, 2000);

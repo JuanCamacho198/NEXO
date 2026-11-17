@@ -49,4 +49,13 @@ describe('catalog cover hosts CSP guard', () => {
       expect(entry).not.toContain('*');
     }
   });
+
+  it('img-src carries no origin no mapper can produce', () => {
+    // `lh3.googleusercontent.com` had zero code references and the literal
+    // project Supabase origin was never an image source; both were dead.
+    // See docs/desktop-csp-origins.md.
+    const entries = imgSrcDirective().split(/\s+/).slice(1);
+    expect(entries).not.toContain('https://lh3.googleusercontent.com');
+    expect(entries.some((entry) => entry.includes('.supabase.co'))).toBe(false);
+  });
 });

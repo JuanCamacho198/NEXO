@@ -15,6 +15,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use super::{lock_repository, CommandError};
 use crate::db::{discover_cache_put, discover_cache_read};
 use crate::state::AppState;
 
@@ -32,8 +33,8 @@ pub struct DiscoverCacheRowDto {
 pub fn discoverCacheRead(
     state: State<'_, AppState>,
     key: String,
-) -> Result<Option<DiscoverCacheRowDto>, String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<Option<DiscoverCacheRowDto>, CommandError> {
+    let repository = lock_repository(&state)?;
     discover_cache_read(repository.connection(), &key)
         .map(|row| {
             row.map(|row| DiscoverCacheRowDto {
@@ -42,7 +43,7 @@ pub fn discoverCacheRead(
                 ttl_s: row.ttl_s,
             })
         })
-        .map_err(|e| format!("Failed to read discover cache: {}", e))
+        .map_err(CommandError::from)
 }
 
 #[allow(non_snake_case)]
@@ -53,10 +54,10 @@ pub fn discoverCachePut(
     payload: String,
     fetched_at: i64,
     ttl_s: i64,
-) -> Result<(), String> {
-    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+) -> Result<(), CommandError> {
+    let repository = lock_repository(&state)?;
     discover_cache_put(repository.connection(), &key, &payload, fetched_at, ttl_s)
-        .map_err(|e| format!("Failed to write discover cache: {}", e))
+        .map_err(CommandError::from)
 }
 
 #[cfg(test)]

@@ -131,9 +131,12 @@ fn is_html_entity(text: &str) -> bool {
 // ── Transport ─────────────────────────────────────────────────────────────
 //
 // Same posture as `catalog_fetch.rs`: HTTPS pre-check, bounded redirects,
-// explicit timeouts, no cookie store, typed error codes returned as `String`.
-// Nothing is persisted here — the per-account cache is written by the command
-// layer (`translateSelection`), which is the only place that knows the account.
+// explicit timeouts, no cookie store, typed error codes. The command layer
+// (`translateSelection`) is the only place that knows the account and the
+// only caller that turns these into a `CommandError`; the code travels with
+// the error instead of being re-parsed out of its message.
+
+use super::{lock_repository, CommandError};
 
 // Module-private on purpose: `commands/mod.rs` globs every command module and
 // `catalog_fetch` already exports `ERR_HTTPS_REQUIRED` / `ERR_NETWORK` with
@@ -160,6 +163,20 @@ impl std::fmt::Display for TranslateError {
 }
 
 impl std::error::Error for TranslateError {}
+
+impl TranslateError {
+    /// The `TRANSLATE_*` category this failure belongs to.
+    ///
+    /// The command hands this to `CommandError::coded`, because
+    /// `translationFailureOutcome` (`src/lib/shared/services/translation/
+    /// translationOutcome.ts`) branches on it: `TRANSLATE_NO_TRANSLATION` and
+    /// `TRANSLATE_UNTRANSLATABLE_INPUT` render as "select something else" while
+    /// everything else renders as "service unavailable". Flattening the code
+    /// into the message was the bug that made `no-result` unreachable.
+    fn code(&self) -> &str {
+        &self.code
+    }
+}
 
 fn error(code: &str, detail: impl Into<String>) -> TranslateError {
     TranslateError { code: code.to_string(), detail: detail.into() }
@@ -318,13 +335,13 @@ pub async fn translateSelection(
     text: String,
     sourceLang: String,
     targetLang: String,
-) -> Result<String, String> {
+) -> Result<String, CommandError> {
     let user_id = state.active_user.require_user_id();
 
     // Empty owner ⇒ no cache at all (option A): the lookup returns `None` and
     // the write is a no-op. Nothing here branches on anonymity.
     if let Ok(Some(cached)) = {
-        let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+        let repository = lock_repository(&state)?;
         repository.read_cached_translation(&user_id, &sourceLang, &targetLang, &text)
     } {
         return Ok(cached);
@@ -332,7 +349,7 @@ pub async fn translateSelection(
 
     let translated = request_translation(&translate_client(), &text, &sourceLang, &targetLang)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| CommandError::coded(e.code(), e.to_string()))?;
 
     // Only a real translation reaches this point: the guards already rejected
     // echoes, entities and empty output, so a "no translation" is never cached.

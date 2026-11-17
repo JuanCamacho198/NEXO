@@ -1,16 +1,25 @@
+use super::CommandError;
 use crate::state::AppState;
 use tauri::State;
 
+// Both commands are infallible: they set or clear an in-memory value and never
+// fail. The `Result` shape is kept because the IPC contract declares it and the
+// frontend already awaits it — only the error type changed, so the day a failure
+// appears it has a category to report.
+
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn setActiveUser(state: State<'_, AppState>, user_id: Option<String>) -> Result<(), String> {
+pub fn setActiveUser(
+    state: State<'_, AppState>,
+    user_id: Option<String>,
+) -> Result<(), CommandError> {
     state.active_user.set(user_id);
     Ok(())
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn clearActiveUser(state: State<'_, AppState>) -> Result<(), String> {
+pub fn clearActiveUser(state: State<'_, AppState>) -> Result<(), CommandError> {
     state.active_user.clear();
     Ok(())
 }
@@ -24,12 +33,11 @@ mod tests {
     // `Logger`, all of which bind to on-disk resources. The commands above are
     // pure delegations to `ActiveUser`, so the behavior under test lives there
     // and is exercised directly here instead of through a fabricated `State`.
+
     #[test]
     fn set_then_require_user_id_returns_the_id() {
         let active_user = ActiveUser::new();
-
         active_user.set(Some("user-42".to_string()));
-
         assert_eq!(active_user.require_user_id(), "user-42");
         assert_eq!(active_user.current_user_id(), Some("user-42".to_string()));
         assert!(!active_user.is_anonymous());
@@ -39,9 +47,7 @@ mod tests {
     fn set_with_none_clears_the_active_user() {
         let active_user = ActiveUser::new();
         active_user.set(Some("user-42".to_string()));
-
         active_user.set(None);
-
         assert_eq!(active_user.require_user_id(), "");
         assert!(active_user.is_anonymous());
     }
@@ -50,9 +56,7 @@ mod tests {
     fn clear_drops_the_active_user_id() {
         let active_user = ActiveUser::new();
         active_user.set(Some("user-42".to_string()));
-
         active_user.clear();
-
         assert_eq!(active_user.current_user_id(), None);
         assert!(active_user.is_anonymous());
     }
@@ -60,9 +64,7 @@ mod tests {
     #[test]
     fn local_user_ids_are_not_accepted_as_active_user() {
         let active_user = ActiveUser::new();
-
         active_user.set(Some("local-abc".to_string()));
-
         assert!(active_user.is_anonymous());
         assert_eq!(active_user.require_user_id(), "");
     }

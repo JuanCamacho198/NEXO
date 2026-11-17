@@ -4,6 +4,7 @@ pub mod error;
 pub mod filename;
 pub mod layout;
 pub mod logger;
+pub mod menu;
 pub mod models;
 pub mod queue;
 pub mod reading_day;
