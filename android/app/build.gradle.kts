@@ -1113,7 +1113,17 @@ tasks.register("verifyLintBaselinePaths") {
                     }
                     raw.startsWith("\$HOME/") -> {
                         homeChecked++
-                        File(userHome, raw.removePrefix("\$HOME/"))
+                        // Lint renders an absolute path under whatever home the
+                        // baseline was generated in. On a CI runner that is neither
+                        // this home nor the same OS, so the literal prefix fails on
+                        // every entry. Resolve by the repo-root segment instead:
+                        // everything after /NEXTPAGE/ is relative to the repository.
+                        val afterRepo = raw.substringAfter("/NEXTPAGE/", "")
+                        if (afterRepo.isEmpty()) {
+                            File(userHome, raw.removePrefix("\$HOME/"))
+                        } else {
+                            moduleDir.parentFile.parentFile.resolve(afterRepo)
+                        }
                     }
                     File(raw).isAbsolute -> {
                         homeChecked++
@@ -1144,7 +1154,14 @@ tasks.register("verifyLintBaselinePaths") {
                 when {
                     fileAttr.startsWith("\$GRADLE_USER_HOME/") ->
                         gradleUserHome.resolve(fileAttr.removePrefix("\$GRADLE_USER_HOME/"))
-                    fileAttr.startsWith("\$HOME/") -> File(userHome, fileAttr.removePrefix("\$HOME/"))
+                    fileAttr.startsWith("\$HOME/") -> {
+                        val afterRepo = fileAttr.substringAfter("/NEXTPAGE/", "")
+                        if (afterRepo.isEmpty()) {
+                            File(userHome, fileAttr.removePrefix("\$HOME/"))
+                        } else {
+                            moduleDir.parentFile.parentFile.resolve(afterRepo)
+                        }
+                    }
                     File(fileAttr).isAbsolute -> File(fileAttr)
                     else -> moduleDir.resolve(fileAttr)
                 }
