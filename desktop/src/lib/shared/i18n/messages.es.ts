@@ -179,6 +179,13 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.about.links': 'Enlaces',
   'settings.about.github': 'GitHub',
   'settings.about.reportIssue': 'Reportar un problema',
+  'settings.about.diagnostics': 'Diagnóstico',
+  'settings.about.diagnosticsBody':
+    'Copia un informe técnico que soporte puede leer: versión, plataforma, registros recientes y un chequeo de estado. Los tokens, claves, rutas de archivo y el contenido de lectura se redactan antes de salir de la aplicación.',
+  'settings.about.diagnosticsExport': 'Copiar diagnóstico',
+  'settings.about.diagnosticsExporting': 'Recopilando diagnóstico…',
+  'settings.about.diagnosticsCopied': 'Diagnóstico copiado al portapapeles',
+  'settings.about.diagnosticsFailed': 'No se pudo generar el diagnóstico',
   'settings.about.starBody':
     'Si NEXO te sirve, una estrella en GitHub ayuda a que más gente lo encuentre.',
   'settings.about.starCta': 'Danos una estrella en GitHub',

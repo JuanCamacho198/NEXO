@@ -31,6 +31,22 @@ const SECRET_ASSIGNMENT_RE = new RegExp(
   'gi',
 );
 const BEARER_RE = /(Bearer\s+)[A-Za-z0-9._-]+/gi;
+
+/**
+ * Shape-based catch for secrets that appear without a key in front of them.
+ *
+ * The key/anchor rules above only fire when the secret is introduced by
+ * `token=`, `api_key:` or `Bearer `. A JWT logged in prose
+ * (`token exchanged for eyJhbGci...`) carries no such anchor, so it survived
+ * every rule — measured on the real `logger.error` path in
+ * `loggerRedactionEndToEnd.test.ts`. The base64url alphabet and the
+ * header.payload.signature shape are specific enough that matching them does
+ * not swallow ordinary words, and the length floor keeps short dotted
+ * identifiers out.
+ */
+const JWT_RE = /\beyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}/g;
+/** Stripe-style vendor keys (`sk-live-…`, `pk-test-…`) pasted into prose. */
+const VENDOR_KEY_RE = /\b(?:sk|pk|rk)-[A-Za-z0-9]{8,}\b/g;
 const DSN_RE = /(https?:\/\/)[A-Za-z0-9]+@/gi;
 const WINDOWS_PATH_RE = /(^|[^\w:])([a-zA-Z]:[\\/][^\s,"'\]}]*)/g;
 const UNIX_PATH_RE =
@@ -50,9 +66,15 @@ export function redactText(input: string): string {
   result = result.replace(SECRET_ASSIGNMENT_RE, (match) => {
     const separatorIndex = match.search(/[:=]/);
     const key = separatorIndex >= 0 ? match.slice(0, separatorIndex) : match;
-    return `${key}:${REDACTED}`;
+    // Trailing whitespace after the separator is preserved so an already
+    // redacted `token: [REDACTED]` stays byte-identical on a second pass
+    // instead of collapsing to `token:[REDACTED]`.
+    const separator = match.slice(separatorIndex, match.length).match(/^[:=]\s*/)?.[0] ?? ':';
+    return `${key}${separator}${REDACTED}`;
   });
   result = result.replace(BEARER_RE, `$1${REDACTED}`);
+  result = result.replace(JWT_RE, REDACTED);
+  result = result.replace(VENDOR_KEY_RE, REDACTED);
   result = result.replace(DSN_RE, `$1${REDACTED}@`);
   result = result.replace(WINDOWS_PATH_RE, `$1${REDACTED_PATH}`);
   result = result.replace(UNIX_PATH_RE, `$1${REDACTED_PATH}`);

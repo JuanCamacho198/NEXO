@@ -30,24 +30,36 @@
   lights at y=20, i.e. their centres sit on the bar's vertical centre. The bar
   reserves a wide empty block on the left for them, and the drag region starts
   only after that block, so a drag can never begin on top of a traffic light.
+
+  Accessibility: `role="banner"` + `aria-label` gives a screen reader one named
+  landmark for the window frame instead of loose text above the document. The
+  drag regions are `aria-hidden` and `role="presentation"` — they are pointer
+  affordances, not content, and announcing an empty div is noise. Branding is
+  `aria-hidden` for the same reason: the landmark already carries the name.
 -->
 <div
   class="flex h-9 shrink-0 items-center select-none"
   class:pl-4={!isMac}
   class:hidden
   data-platform={isMac ? 'macos' : 'other'}
+  role="banner"
+  aria-label="Window"
 >
   {#if isMac}
     <!-- Reserved for the native traffic lights; never draggable, never occluded. -->
     <div class="h-full w-[78px] shrink-0" aria-hidden="true"></div>
-    <span class="font-bold text-sm text-(--color-accent-blue) leading-none">NEXO</span>
-    <div class="flex-1 h-full" data-tauri-drag-region></div>
+    <span class="font-bold text-sm text-(--color-accent-blue) leading-none" aria-hidden="true"
+      >NEXO</span
+    >
+    <div class="flex-1 h-full" data-tauri-drag-region role="presentation" aria-hidden="true"></div>
   {:else}
     <!-- Left: branding -->
-    <span class="font-bold text-sm text-(--color-accent-blue) leading-none">NEXO</span>
+    <span class="font-bold text-sm text-(--color-accent-blue) leading-none" aria-hidden="true"
+      >NEXO</span
+    >
 
     <!-- Center: drag region -->
-    <div class="flex-1 h-full" data-tauri-drag-region></div>
+    <div class="flex-1 h-full" data-tauri-drag-region role="presentation" aria-hidden="true"></div>
 
     <!-- Right: window controls -->
     <button
@@ -61,8 +73,8 @@
     <button
       onclick={titlebarState.handleMaximize}
       class="w-11 h-9 flex items-center justify-center border-none text-(--color-text-secondary) hover:bg-(--color-surface-hover) cursor-pointer transition-colors"
-      aria-label="Maximize"
-      title="Maximize"
+      aria-label={titlebarState.isMaximized ? 'Restore' : 'Maximize'}
+      title={titlebarState.isMaximized ? 'Restore' : 'Maximize'}
     >
       {#if titlebarState.isMaximized}
         <Copy size={16} class="h-4 w-4" aria-hidden="true" />
