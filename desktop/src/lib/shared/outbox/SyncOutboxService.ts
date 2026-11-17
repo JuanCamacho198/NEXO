@@ -2,10 +2,16 @@
  * SyncOutboxService — timer-based processor for the SQLite sync outbox.
  *
  * Lifecycle:
- *   start() → flush immediately, then every 30s
- *   stop()  → clear interval
+ *   start() → flush immediately, then every 30s; also flushes on `online`
+ *   stop()  → clear interval AND remove the `online` listener
  *
  * On each flush:
+ *   offline  → navigator.onLine === false? skip the ENTIRE flush: rows keep
+ *              their retry state, no request fires, no markFailed, no prune.
+ *              This is a FAST PATH, NOT the correctness mechanism: the Tauri
+ *              webview is not known to flip navigator.onLine on network loss,
+ *              so offline safety still comes from the retry/backoff state
+ *              persisted per row — never from this guard alone.
  *   gate()   → no live session? skip the ENTIRE flush (SR-1.1): rows keep
  *              their retry state, no request fires, no markFailed, no prune
  *   breaker  → auth-class failure armed the pause window? skip the ENTIRE
@@ -79,6 +85,8 @@ export class SyncOutboxService {
     private readonly currentUserId: UserIdProvider = () => null,
   ) {}
   private intervalId: ReturnType<typeof setInterval> | null = null;
+  /** Flushes the queue as soon as connectivity returns (removed in stop()). */
+  private onlineHandler: (() => void) | null = null;
   private handler: OutboxHandler | null = null;
   private flushing = false;
   /** D7: last emitted outbox-depth bucket (emit only on bucket change). */
@@ -136,22 +144,35 @@ export class SyncOutboxService {
 
   /**
    * Start the timer-based processor.
-   * Flushes immediately, then every 30 seconds.
+   * Flushes immediately, then every 30 seconds; an `online` event also flushes
+   * immediately instead of waiting for the next tick.
    */
   start(): void {
     if (this.intervalId !== null) return;
     void this.flush();
     this.intervalId = setInterval(() => void this.flush(), 30_000);
+
+    if (typeof window !== 'undefined') {
+      this.onlineHandler = () => {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+        void this.flush();
+      };
+      window.addEventListener('online', this.onlineHandler);
+    }
   }
 
   /**
-   * Stop the processor.
+   * Stop the processor: clears the interval and removes the `online` listener.
    */
   stop(): void {
     if (this.intervalId !== null) {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+    if (this.onlineHandler !== null && typeof window !== 'undefined') {
+      window.removeEventListener('online', this.onlineHandler);
+    }
+    this.onlineHandler = null;
   }
 
   /**
@@ -168,6 +189,13 @@ export class SyncOutboxService {
     let gatePassed = false;
 
     try {
+      // Offline fast path: navigator.onLine === false → skip the ENTIRE flush.
+      // Rows keep their retry state; no request fires; no markFailed; no prune.
+      // Same skip contract as SR-1.1. Fast path only — the Tauri webview is not
+      // known to flip navigator.onLine on network loss, so correctness still
+      // rests on the persisted retry/backoff state, never on this guard.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
       // SR-1.1: no live session → skip the entire flush. Rows keep their retry
       // state; no request fires; no markFailed; no prune.
       if (!(await this.gate())) return;

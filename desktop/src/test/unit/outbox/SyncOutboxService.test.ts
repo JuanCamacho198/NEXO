@@ -326,6 +326,107 @@ describe('SyncOutboxService — auth circuit breaker (D4, SR-2.1/4.2)', () => {
   });
 });
 
+describe('SyncOutboxService — offline gate (navigator.onLine fast path)', () => {
+  /** Stub navigator.onLine; returns a restore function. */
+  function stubOnLine(value: boolean): () => void {
+    const original = Object.getOwnPropertyDescriptor(window.navigator, 'onLine');
+    Object.defineProperty(window.navigator, 'onLine', {
+      configurable: true,
+      get: () => value,
+    });
+    return () => {
+      if (original) Object.defineProperty(window.navigator, 'onLine', original);
+      else delete (window.navigator as unknown as Record<string, unknown>).onLine;
+    };
+  }
+
+  let restoreOnLine: (() => void) | null = null;
+
+  afterEach(() => {
+    restoreOnLine?.();
+    restoreOnLine = null;
+  });
+
+  it('skips the ENTIRE flush while offline: no request, no markFailed, no prune, retry state kept', async () => {
+    restoreOnLine = stubOnLine(false);
+    const dao = makeDao([row('READING_PROGRESS')]);
+    const handler: OutboxHandler = vi.fn();
+    const service = makeService(dao);
+    service.setHandler(handler);
+
+    await service.flush();
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(dao.listReady).not.toHaveBeenCalled();
+    expect(dao.delete).not.toHaveBeenCalled();
+    expect(dao.markFailed).not.toHaveBeenCalled();
+    expect(dao.prune).not.toHaveBeenCalled();
+  });
+
+  it('does not touch the breaker or drop rows while offline — a later online flush drains them', async () => {
+    const dao = makeDao([row('BOOK')]);
+    const handler: OutboxHandler = vi.fn().mockResolvedValue(undefined);
+    const service = makeService(dao);
+    service.setHandler(handler);
+
+    restoreOnLine = stubOnLine(false);
+    await service.flush();
+    expect(handler).not.toHaveBeenCalled();
+    expect(service.isBreakerPaused()).toBe(false);
+    expect(dao.delete).not.toHaveBeenCalled();
+
+    restoreOnLine();
+    restoreOnLine = null;
+    await service.flush();
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(dao.delete).toHaveBeenCalledWith('row-1');
+  });
+
+  it('flushes IMMEDIATELY on the online event instead of waiting for the 30s tick', async () => {
+    vi.useFakeTimers();
+    try {
+      restoreOnLine = stubOnLine(false);
+      const dao = makeDao([row('BOOK')]);
+      const handler: OutboxHandler = vi.fn().mockResolvedValue(undefined);
+      const service = makeService(dao);
+      service.setHandler(handler);
+      service.start();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(handler).not.toHaveBeenCalled();
+
+      restoreOnLine();
+      restoreOnLine = null;
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Well before the 30s tick.
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(dao.delete).toHaveBeenCalledWith('row-1');
+      service.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stop() removes the online listener — no flush after teardown (no leaked listener)', async () => {
+    const dao = makeDao([row('BOOK')]);
+    const handler: OutboxHandler = vi.fn().mockResolvedValue(undefined);
+    const service = makeService(dao);
+    service.setHandler(handler);
+    service.start();
+    await vi.waitFor(() => expect(handler).toHaveBeenCalledTimes(1));
+
+    service.stop();
+    window.dispatchEvent(new Event('online'));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(dao.listReady).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('SyncOutboxService — BOOK catalog failure status (aggregate, retry unchanged)', () => {
   beforeEach(() => {
     clearCatalogSyncStatus();
