@@ -53,11 +53,13 @@ object UseCaseModule {
         fetcher: UpdateFeedService,
         suppression: UpdatePrefs,
         networkGate: UpdateNetworkGate,
+        installSource: com.nexo.domain.update.UpdateInstallSourceReader,
     ): CheckForUpdatesUseCase =
         CheckForUpdatesUseCase(
             fetcher = fetcher,
             suppression = suppression,
             networkGate = networkGate,
+            installSource = installSource,
         )
 
     /**
@@ -69,4 +71,15 @@ object UseCaseModule {
     fun provideUpdateDownloader(
         @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
     ): UpdateDownloader = UpdateDownloader(context)
+
+    /**
+     * Reads the installer package of the running build. Bound unconditionally:
+     * the startup update check asks it on every cold start.
+     */
+    @Provides
+    @Singleton
+    fun provideUpdateInstallSourceReader(
+        @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
+    ): com.nexo.domain.update.UpdateInstallSourceReader =
+        com.nexo.data.update.AndroidUpdateInstallSourceReader(context)
 }
