@@ -1,32 +1,47 @@
 {
   "$schema": "https://schema.tauri.app/config/2/capability",
   "identifier": "default",
-  "description": "Default capabilities for Nexo Desktop",
+  "description": "Default capabilities for Nexo Desktop. Every entry is derived from a call site in desktop/src (see the comment above each group); nothing is granted for a plugin the frontend never invokes.",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "core:event:default",
     "core:window:default",
-    "dialog:default",
-    "dialog:allow-open",
-    "dialog:allow-save",
-    "fs:default",
-    "fs:allow-appdata-read-recursive",
-    "fs:allow-appdata-write-recursive",
-    "notification:default",
     "core:path:default",
-    "deep-link:default",
-    "oauth:allow-start",
-    "oauth:allow-cancel",
-    "opener:default",
-    "process:default",
-    "updater:default",
+
     "core:window:allow-set-fullscreen",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
     "core:window:allow-is-maximized",
     "core:window:allow-start-dragging",
-    "os:default"
+
+    "dialog:allow-open",
+    "dialog:allow-save",
+
+    "fs:read-app-specific-dirs-recursive",
+    "fs:allow-appdata-write-recursive",
+
+    "notification:default",
+    "deep-link:default",
+    "oauth:allow-start",
+    "oauth:allow-cancel",
+
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://github.com/JuanCamacho198/NEXO*" },
+        { "url": "https://www.gutenberg.org/*" },
+        { "url": "https://la.wikisource.org/*" },
+        { "url": "https://accounts.google.com/*" },
+        { "url": "https://*.supabase.co/*" }
+      ]
+    },
+
+    "process:allow-restart",
+    "updater:default",
+    "os:allow-os-type",
+    "os:allow-version",
+    "os:allow-hostname"
   ]
 }

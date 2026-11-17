@@ -14,7 +14,12 @@
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import { titlebarState } from '$lib/stores/titlebarState.svelte';
-  import { installGlobalShortcuts, ShortcutHelpModal, CommandPalette } from '$lib/shared/shortcuts';
+  import {
+    installGlobalShortcuts,
+    installMenuCommands,
+    ShortcutHelpModal,
+    CommandPalette,
+  } from '$lib/shared/shortcuts';
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
   import { logger } from '$lib/shared/logger/Logger';
   import {
@@ -86,11 +91,22 @@
     window.addEventListener('error', handleError);
     window.addEventListener('unhandledrejection', handleError);
     const uninstallShortcuts = installGlobalShortcuts();
+    // Native menu clicks arrive as event ids; this runs them through the same
+    // command registry the palette and the keyboard use. Subscription is async
+    // (it crosses IPC), so the cleanup is latched and awaited on teardown.
+    let uninstallMenu: (() => void) | null = null;
+    let disposed = false;
+    void installMenuCommands().then((unlisten) => {
+      if (disposed) unlisten();
+      else uninstallMenu = unlisten;
+    });
 
     return () => {
+      disposed = true;
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleError);
       uninstallShortcuts();
+      uninstallMenu?.();
     };
   });
 

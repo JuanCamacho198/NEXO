@@ -12,6 +12,16 @@ import {
   type ShortcutPlatform,
 } from './registry';
 import { getShortcutPlatform } from './platform';
+import {
+  COMMAND_ACTION_BY_HANDLER,
+  COMMAND_REGISTRY,
+  defaultCommandPaletteActions,
+  type CommandEntry,
+  type CommandPaletteActions,
+} from './commands';
+
+/** Event the Rust menu emits, with a frontend command id as its payload. */
+export const MENU_EVENT = 'nexo://menu-command';
 
 export type GlobalShortcutActions = {
   toggleTheme: () => void;
@@ -119,4 +129,124 @@ export function installGlobalShortcuts(options: HandleGlobalOptions = {}): () =>
   };
   window.addEventListener('keydown', listener);
   return () => window.removeEventListener('keydown', listener);
+}
+
+/** Default `listen`: the Tauri event bridge, imported lazily so non-Tauri hosts never load it. */
+async function defaultListen(
+  event: string,
+  handler: (payload: string) => void,
+): Promise<() => void> {
+  const { listen } = await import('@tauri-apps/api/event');
+  const unlisten = await listen<string>(event, (e) => handler(e.payload));
+  return unlisten;
+}
+
+/** The id a keyboard press for a handler would run, or `undefined` if it has none. */
+export function shortcutIdFor(handlerKey: string): string | undefined {
+  return SHORTCUT_REGISTRY.find((entry) => entry.handlerKey === handlerKey)?.id;
+}
+
+/**
+ * Ids the native menu (`desktop/src-tauri/src/menu.rs`) emits.
+ *
+ * There are two id registries in the frontend and the menu spans both:
+ * command-palette ids (`COMMAND_REGISTRY`) and global shortcut ids
+ * (`SHORTCUT_REGISTRY`). `runAppCommand` resolves a palette id; `runShortcutId`
+ * resolves a shortcut id. The menu emits whichever one owns the action, so a
+ * menu row and its keybinding end in the same handler. The test
+ * `menuCommandBridge.test.ts` pins which is which.
+ */
+export const MENU_COMMAND_IDS: readonly string[] = [
+  'action-import-books',
+  'nav-library',
+  'nav-discover',
+  'nav-settings',
+];
+
+/** Menu ids that live in `SHORTCUT_REGISTRY` rather than the palette. */
+export const MENU_SHORTCUT_IDS: readonly string[] = [
+  'app-toggle-dark',
+  'app-help',
+  'app-command-palette',
+];
+
+const COMMANDS_BY_ID = new Map<string, CommandEntry>(
+  COMMAND_REGISTRY.map((entry) => [entry.id, entry]),
+);
+
+/**
+ * Run one app command by id.
+ *
+ * This is the single dispatch point the native menu uses, and the keyboard
+ * path routes to it as well (`installGlobalShortcuts` below), so a menu click
+ * and its shortcut cannot diverge. Returns `false` for an id nothing owns,
+ * which is how an unknown native-menu row is detected instead of silently
+ * doing nothing.
+ */
+export function runAppCommand(
+  id: string,
+  actions: CommandPaletteActions = defaultCommandPaletteActions,
+): boolean {
+  const entry = COMMANDS_BY_ID.get(id);
+  if (entry === undefined) return false;
+  actions[COMMAND_ACTION_BY_HANDLER[entry.handlerKey]]();
+  return true;
+}
+
+/**
+ * Run a global shortcut's action by its registry id — the second half of the
+ * menu bridge, for rows whose action exists only as a shortcut (opening the
+ * command palette). Returns `false` when the row is not a wired global one.
+ */
+export function runShortcutId(
+  id: string,
+  actions: GlobalShortcutActions = defaultGlobalShortcutActions,
+): boolean {
+  const entry = getShortcutEntry(id);
+  if (entry === undefined || entry.context !== 'global') return false;
+  const action = GLOBAL_ACTION_BY_HANDLER[entry.handlerKey];
+  if (action === undefined) return false;
+  actions[action]();
+  return true;
+}
+
+/** Run any menu id through whichever registry owns it. */
+export function runMenuCommand(
+  id: string,
+  palette: CommandPaletteActions = defaultCommandPaletteActions,
+  shortcuts: GlobalShortcutActions = defaultGlobalShortcutActions,
+): boolean {
+  return runAppCommand(id, palette) || runShortcutId(id, shortcuts);
+}
+
+export type MenuCommandOptions = {
+  palette?: CommandPaletteActions;
+  shortcuts?: GlobalShortcutActions;
+  /** Install listener. Defaults to Tauri's `listen`. */
+  listen?: (
+    event: string,
+    handler: (payload: string) => void,
+  ) => Promise<() => void>;
+};
+
+/**
+ * Subscribe to the native menu's command events. The Rust side forwards the
+ * menu id unchanged; `runMenuCommand` resolves it against the palette registry
+ * and the shortcut registry, so a menu row runs the same handler as its
+ * keybinding. Resolves to the cleanup function. Never rejects: a non-Tauri host
+ * has no menu, and the keyboard path is unaffected.
+ */
+export async function installMenuCommands(
+  options: MenuCommandOptions = {},
+): Promise<() => void> {
+  const palette = options.palette ?? defaultCommandPaletteActions;
+  const shortcuts = options.shortcuts ?? defaultGlobalShortcutActions;
+  const listenImpl = options.listen ?? defaultListen;
+  try {
+    return await listenImpl(MENU_EVENT, (id) => {
+      runMenuCommand(id, palette, shortcuts);
+    });
+  } catch {
+    return () => {};
+  }
 }

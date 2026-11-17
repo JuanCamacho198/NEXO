@@ -180,9 +180,29 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_notification::init())
+        .on_menu_event(|app, event| {
+            // Menu rows carry frontend command ids as their menu id (see
+            // `menu.rs`). Forwarding the id verbatim keeps a single id registry:
+            // the frontend dispatches it through the same path a keyboard
+            // shortcut and a command-palette row use.
+            use tauri::Emitter;
+            let command = event.id().0.clone();
+            if let Err(err) = app.emit(nexo_desktop::menu::MENU_EVENT, command) {
+                eprintln!("[nexo] menu command dispatch failed: {err}");
+            }
+        })
         .setup(|app| {
             let state = build_state(app.handle()).map_err(std::io::Error::other)?;
             app.manage(state);
+
+            // Native menu bar. Installing it here (not lazily) is what gives
+            // macOS its application menu before the first paint.
+            if let Err(err) = nexo_desktop::menu::install(app.handle()) {
+                // A missing menu must not stop the app from starting: on Linux
+                // without a global menu host the call can fail, and the webview
+                // shortcuts still work.
+                eprintln!("[nexo] native menu unavailable: {err}");
+            }
 
             // Register the scheme(s) declared in `tauri.conf.json`. `nexo` is the
             // canonical NEXO scheme; the `nextpage*` schemes are legacy and are
