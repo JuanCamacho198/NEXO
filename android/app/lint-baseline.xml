@@ -7,175 +7,18 @@
         <location
             file="build/intermediates/lint-cache/updateLintBaselineDebug/migrated-jars/androidx.navigation.common.lint.NavigationCommonIssueRegistry-3d526261eadfd16f..jar"/>
     </issue>
-
     <issue
         id="ObsoleteLintCustomCheck"
         message="Library lint checks out of date;&#xA;these checks **will be skipped**!&#xA;&#xA;Lint found an issue registry (`androidx.navigation.compose.lint.NavigationComposeIssueRegistry`)&#xA;which was compiled against an older version of lint&#xA;than this one. This is usually fine, but not in this&#xA;case; some basic verification shows that the lint&#xA;check jar references (for example) the following API&#xA;which is no longer valid in this version of lint:&#xA;com.android.tools.lint.checks.infrastructure.LintDetectorTest#kotlin(java.lang.String): com.android.tools.lint.checks.infrastructure.TestFile&#xA;(Referenced from androidx/navigation/lint/common/LintUtilKt.class)&#xA;&#xA;Therefore, this lint check library is **not** included&#xA;in analysis. This affects the following lint checks:&#xA;`ComposableDestinationInComposeScope`,`ComposableNavGraphInComposeScope`,`UnrememberedGetBackStackEntry`,`WrongStartDestinationType`&#xA;&#xA;Recompile the checks against the latest version, or if&#xA;this is a check bundled with a third-party library, see&#xA;if there is a more recent version available.&#xA;&#xA;Version of Lint API this lint check is using is 14.&#xA;The Lint API version currently running is 16 (8.7+).">
         <location
             file="build/intermediates/lint-cache/updateLintBaselineDebug/migrated-jars/androidx.navigation.compose.lint.NavigationComposeIssueRegistry-0eba33012d8b022c..jar"/>
     </issue>
-
     <issue
         id="ObsoleteLintCustomCheck"
         message="Library lint checks out of date;&#xA;these checks **will be skipped**!&#xA;&#xA;Lint found an issue registry (`androidx.navigation.runtime.lint.NavigationRuntimeIssueRegistry`)&#xA;which was compiled against an older version of lint&#xA;than this one. This is usually fine, but not in this&#xA;case; some basic verification shows that the lint&#xA;check jar references (for example) the following API&#xA;which is no longer valid in this version of lint:&#xA;com.android.tools.lint.checks.infrastructure.LintDetectorTest#kotlin(java.lang.String): com.android.tools.lint.checks.infrastructure.TestFile&#xA;(Referenced from androidx/navigation/lint/common/LintUtilKt.class)&#xA;&#xA;Therefore, this lint check library is **not** included&#xA;in analysis. This affects the following lint checks:&#xA;`DeepLinkInActivityDestination`,`WrongStartDestinationType`,`WrongNavigateRouteType`&#xA;&#xA;Recompile the checks against the latest version, or if&#xA;this is a check bundled with a third-party library, see&#xA;if there is a more recent version available.&#xA;&#xA;Version of Lint API this lint check is using is 14.&#xA;The Lint API version currently running is 16 (8.7+).">
         <location
             file="build/intermediates/lint-cache/updateLintBaselineDebug/migrated-jars/androidx.navigation.runtime.lint.NavigationRuntimeIssueRegistry-b42dcf0e5b11d978..jar"/>
     </issue>
-
-    <issue
-        id="InlinedApi"
-        message="Field requires API level 30 (current min is 26): `android.view.WindowInsetsController#BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE`"
-        errorLine1="                controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE"
-        errorLine2="                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="65"
-            column="49"/>
-    </issue>
-
-    <issue
-        id="InlinedApi"
-        message="Field requires API level 30 (current min is 26): `android.view.WindowInsetsController#BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE`"
-        errorLine1="                controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE"
-        errorLine2="                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="65"
-            column="49"/>
-    </issue>
-
-
-
-
-
-
-
-
-
-
-
-
-    <issue
-        id="AppLinkUrlError"
-        message="`http(s)` scheme is missing, but is required for Android App Links"
-        errorLine1="            &lt;intent-filter android:autoVerify=&quot;true&quot;>"
-        errorLine2="             ~~~~~~~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="41"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="AppLinkUrlError"
-        message="Android App Links&apos; `host` attributes must be valid web domains"
-        errorLine1="                    android:host=&quot;auth&quot;"
-        errorLine2="                                  ~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="50"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="AppLinkUrlError"
-        message="Android App Links&apos; `host` attributes must be valid web domains"
-        errorLine1="                    android:host=&quot;auth&quot;"
-        errorLine2="                                  ~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="54"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="AppLinkUrlError"
-        message="Android App Links&apos; `host` attributes must be valid web domains"
-        errorLine1="                    android:host=&quot;auth&quot;"
-        errorLine2="                                  ~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="65"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="AppLinkUrlError"
-        message="Android App Links&apos; `host` attributes must be valid web domains"
-        errorLine1="                    android:host=&quot;auth&quot;"
-        errorLine2="                                  ~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="69"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="AppLinkUrlError"
-        message="Android App Links&apos; `host` attributes must be valid web domains"
-        errorLine1="                    android:host=&quot;auth&quot;"
-        errorLine2="                                  ~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="78"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="AppLinkUrlError"
-        message="Android App Links&apos; `host` attributes must be valid web domains"
-        errorLine1="                    android:host=&quot;auth&quot;"
-        errorLine2="                                  ~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="82"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="AppLinkUrlError"
-        message="Android App Links&apos; `host` attributes must be valid web domains"
-        errorLine1="                    android:host=&quot;install&quot; />"
-        errorLine2="                                  ~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="90"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="AppLinkUrlError"
-        message="Android App Links&apos; `host` attributes must be valid web domains"
-        errorLine1="                    android:host=&quot;install&quot; />"
-        errorLine2="                                  ~~~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="93"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="AppLinkUrlError"
-        message="At least one `host` must be specified"
-        errorLine1="                &lt;data"
-        errorLine2="                ^">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="107"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="CredentialManagerMisuse"
-        message="Call to `CredentialManager.getCredential` without use of `NoCredentialException`"
-        errorLine1="                        credentialManager.getCredential("
-        errorLine2="                        ^">
-        <location
-            file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="151"
-            column="25"/>
-    </issue>
-
     <issue
         id="IntentFilterUniqueDataAttributes"
         message="Consider splitting data tag into multiple tags with individual attributes to avoid confusion"
@@ -186,7 +29,6 @@
             line="48"
             column="17"/>
     </issue>
-
     <issue
         id="IntentFilterUniqueDataAttributes"
         message="Consider splitting data tag into multiple tags with individual attributes to avoid confusion"
@@ -197,7 +39,6 @@
             line="52"
             column="17"/>
     </issue>
-
     <issue
         id="IntentFilterUniqueDataAttributes"
         message="Consider splitting data tag into multiple tags with individual attributes to avoid confusion"
@@ -208,7 +49,6 @@
             line="63"
             column="17"/>
     </issue>
-
     <issue
         id="IntentFilterUniqueDataAttributes"
         message="Consider splitting data tag into multiple tags with individual attributes to avoid confusion"
@@ -219,7 +59,6 @@
             line="67"
             column="17"/>
     </issue>
-
     <issue
         id="IntentFilterUniqueDataAttributes"
         message="Consider splitting data tag into multiple tags with individual attributes to avoid confusion"
@@ -230,7 +69,6 @@
             line="76"
             column="17"/>
     </issue>
-
     <issue
         id="IntentFilterUniqueDataAttributes"
         message="Consider splitting data tag into multiple tags with individual attributes to avoid confusion"
@@ -241,7 +79,6 @@
             line="80"
             column="17"/>
     </issue>
-
     <issue
         id="IntentFilterUniqueDataAttributes"
         message="Consider splitting data tag into multiple tags with individual attributes to avoid confusion"
@@ -252,7 +89,6 @@
             line="88"
             column="17"/>
     </issue>
-
     <issue
         id="IntentFilterUniqueDataAttributes"
         message="Consider splitting data tag into multiple tags with individual attributes to avoid confusion"
@@ -263,7 +99,6 @@
             line="91"
             column="17"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -274,7 +109,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -285,7 +119,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -296,7 +129,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -307,7 +139,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -318,7 +149,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -329,7 +159,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -340,7 +169,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -351,7 +179,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -362,7 +189,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -373,7 +199,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -384,7 +209,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -395,7 +219,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -406,7 +229,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -417,7 +239,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -428,7 +249,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -439,7 +259,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -450,7 +269,6 @@
             line="2"
             column="20"/>
     </issue>
-
     <issue
         id="VectorRaster"
         message="Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more"
@@ -461,7 +279,6 @@
             line="20"
             column="20"/>
     </issue>
-
     <issue
         id="AndroidGradlePluginVersion"
         message="A newer version of Gradle than 8.13 is available: 8.14.7"
@@ -472,7 +289,6 @@
             line="3"
             column="17"/>
     </issue>
-
     <issue
         id="AndroidGradlePluginVersion"
         message="A newer version of com.android.application than 8.11.1 is available: 9.5.1. (There is also a newer version of 8.11.𝑥 available, if upgrading to 9.5.1 is difficult: 8.11.2)"
@@ -483,7 +299,6 @@
             line="6"
             column="7"/>
     </issue>
-
     <issue
         id="AndroidGradlePluginVersion"
         message="A newer version of com.android.test than 8.11.1 is available: 9.5.1. (There is also a newer version of 8.11.𝑥 available, if upgrading to 9.5.1 is difficult: 8.11.2)"
@@ -494,7 +309,6 @@
             line="6"
             column="7"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.compose:compose-bom than 2026.05.01 is available: 2026.09.00"
@@ -505,7 +319,6 @@
             line="11"
             column="14"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.core:core-ktx than 1.13.1 is available: 1.19.1"
@@ -516,7 +329,6 @@
             line="20"
             column="11"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.core:core-splashscreen than 1.0.1 is available: 1.2.0"
@@ -527,7 +339,6 @@
             line="21"
             column="10"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.appcompat:appcompat than 1.7.0 is available: 1.8.0"
@@ -538,7 +349,6 @@
             line="22"
             column="13"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.lifecycle:lifecycle-process than 2.8.6 is available: 2.11.0"
@@ -549,7 +359,6 @@
             line="23"
             column="13"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.lifecycle:lifecycle-runtime-compose than 2.8.6 is available: 2.11.0"
@@ -560,7 +369,6 @@
             line="23"
             column="13"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.8.6 is available: 2.11.0"
@@ -571,7 +379,6 @@
             line="23"
             column="13"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.8.6 is available: 2.11.0"
@@ -582,7 +389,6 @@
             line="23"
             column="13"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.activity:activity-compose than 1.9.2 is available: 1.13.0"
@@ -593,7 +399,6 @@
             line="24"
             column="19"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.fragment:fragment-ktx than 1.8.5 is available: 1.9.1"
@@ -604,7 +409,6 @@
             line="25"
             column="15"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.navigation:navigation-compose than 2.8.2 is available: 2.10.2"
@@ -615,7 +419,6 @@
             line="26"
             column="14"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.navigation:navigation-testing than 2.8.2 is available: 2.10.2"
@@ -626,7 +429,6 @@
             line="26"
             column="14"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.room:room-compiler than 2.8.4 is available: 2.8.5"
@@ -637,7 +439,6 @@
             line="27"
             column="8"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.room:room-ktx than 2.8.4 is available: 2.8.5"
@@ -648,7 +449,6 @@
             line="27"
             column="8"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.room:room-paging than 2.8.4 is available: 2.8.5"
@@ -659,7 +459,6 @@
             line="27"
             column="8"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.room:room-runtime than 2.8.4 is available: 2.8.5"
@@ -670,7 +469,6 @@
             line="27"
             column="8"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.room:room-testing than 2.8.4 is available: 2.8.5"
@@ -681,7 +479,6 @@
             line="27"
             column="8"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.sqlite:sqlite-bundled than 2.6.2 is available: 2.7.1"
@@ -692,7 +489,6 @@
             line="35"
             column="18"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.paging:paging-compose than 3.3.6 is available: 3.5.3"
@@ -703,7 +499,6 @@
             line="36"
             column="10"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.paging:paging-runtime-ktx than 3.3.6 is available: 3.5.3"
@@ -714,7 +509,6 @@
             line="36"
             column="10"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of com.google.android.gms:play-services-auth than 21.3.0 is available: 22.0.0"
@@ -725,7 +519,6 @@
             line="37"
             column="20"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.credentials:credentials than 1.5.0 is available: 1.6.0"
@@ -736,7 +529,6 @@
             line="41"
             column="15"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.credentials:credentials-play-services-auth than 1.5.0 is available: 1.6.0"
@@ -747,7 +539,6 @@
             line="41"
             column="15"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of com.google.android.libraries.identity.googleid:googleid than 1.1.1 is available: 1.2.1"
@@ -758,7 +549,6 @@
             line="42"
             column="12"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.security:security-crypto than 1.1.0-alpha06 is available: 1.1.0"
@@ -769,7 +559,6 @@
             line="48"
             column="18"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.profileinstaller:profileinstaller than 1.3.1 is available: 1.4.1"
@@ -780,7 +569,6 @@
             line="49"
             column="20"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.test:core than 1.6.1 is available: 1.7.0"
@@ -791,7 +579,6 @@
             line="58"
             column="20"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.test.ext:junit than 1.2.1 is available: 1.3.0"
@@ -802,7 +589,6 @@
             line="60"
             column="12"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.test.espresso:espresso-core than 3.6.1 is available: 3.7.0"
@@ -813,7 +599,6 @@
             line="61"
             column="12"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.webkit:webkit than 1.12.1 is available: 1.18.0"
@@ -824,7 +609,6 @@
             line="63"
             column="10"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.hilt:hilt-navigation-compose than 1.2.0 is available: 1.4.0"
@@ -835,7 +619,6 @@
             line="65"
             column="25"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.work:work-runtime-ktx than 2.10.5 is available: 2.12.0"
@@ -846,7 +629,6 @@
             line="71"
             column="8"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.hilt:hilt-compiler than 1.3.0 is available: 1.4.0"
@@ -857,7 +639,6 @@
             line="79"
             column="16"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.hilt:hilt-work than 1.3.0 is available: 1.4.0"
@@ -868,7 +649,6 @@
             line="79"
             column="16"/>
     </issue>
-
     <issue
         id="GradleDependency"
         message="A newer version of androidx.test.uiautomator:uiautomator than 2.4.0 is available: 2.4.1"
@@ -879,7 +659,6 @@
             line="94"
             column="15"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.jetbrains.kotlin.android than 2.2.21 is available: 2.4.21"
@@ -890,7 +669,6 @@
             line="7"
             column="10"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.jetbrains.kotlin.jvm than 2.2.21 is available: 2.4.21"
@@ -901,7 +679,6 @@
             line="7"
             column="10"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.jetbrains.kotlin.plugin.compose than 2.2.21 is available: 2.4.21"
@@ -912,7 +689,6 @@
             line="7"
             column="10"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.jetbrains.kotlin.plugin.serialization than 2.2.21 is available: 2.4.21"
@@ -923,7 +699,6 @@
             line="7"
             column="10"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.gitlab.arturbosch.detekt than 1.23.7 is available: 1.23.8"
@@ -934,7 +709,6 @@
             line="9"
             column="10"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.sentry.android.gradle than 6.21.0 is available: 6.27.0"
@@ -945,7 +719,6 @@
             line="10"
             column="16"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.coil-kt.coil3:coil than 3.3.0 is available: 3.6.3"
@@ -956,7 +729,6 @@
             line="19"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.coil-kt.coil3:coil-compose than 3.3.0 is available: 3.6.3"
@@ -967,7 +739,6 @@
             line="19"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.coil-kt.coil3:coil-network-okhttp than 3.3.0 is available: 3.6.3"
@@ -978,7 +749,6 @@
             line="19"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of com.google.api-client:google-api-client-android than 2.7.2 is available: 2.9.2"
@@ -989,7 +759,6 @@
             line="38"
             column="19"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of com.google.http-client:google-http-client-gson than 1.45.3 is available: 2.2.0"
@@ -1000,7 +769,6 @@
             line="40"
             column="24"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-android than 1.8.1 is available: 1.11.0"
@@ -1011,7 +779,6 @@
             line="43"
             column="14"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-core than 1.8.1 is available: 1.11.0"
@@ -1022,7 +789,6 @@
             line="43"
             column="14"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-test than 1.8.1 is available: 1.11.0"
@@ -1033,7 +799,6 @@
             line="43"
             column="14"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.jetbrains.kotlinx:kotlinx-serialization-json than 1.7.3 is available: 1.13.0"
@@ -1044,7 +809,6 @@
             line="44"
             column="21"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.ktor:ktor-client-cio than 3.1.2 is available: 3.6.1"
@@ -1055,7 +819,6 @@
             line="45"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.ktor:ktor-client-content-negotiation than 3.1.2 is available: 3.6.1"
@@ -1066,7 +829,6 @@
             line="45"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.ktor:ktor-client-core than 3.1.2 is available: 3.6.1"
@@ -1077,7 +839,6 @@
             line="45"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.ktor:ktor-client-mock than 3.1.2 is available: 3.6.1"
@@ -1088,7 +849,6 @@
             line="45"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.ktor:ktor-client-okhttp than 3.1.2 is available: 3.6.1"
@@ -1099,7 +859,6 @@
             line="45"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.ktor:ktor-serialization-kotlinx-json than 3.1.2 is available: 3.6.1"
@@ -1110,7 +869,6 @@
             line="45"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.github.jan-tennert.supabase:bom than 3.5.0 is available: 3.9.0"
@@ -1121,7 +879,6 @@
             line="46"
             column="15"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.jetbrains.kotlinx:kotlinx-datetime than 0.7.1 is available: 0.8.0"
@@ -1132,7 +889,6 @@
             line="47"
             column="12"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.readium.kotlin-toolkit:readium-adapter-pdfium than 3.2.0 is available: 3.4.0"
@@ -1143,7 +899,6 @@
             line="50"
             column="11"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.readium.kotlin-toolkit:readium-navigator than 3.2.0 is available: 3.4.0"
@@ -1154,7 +909,6 @@
             line="50"
             column="11"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.readium.kotlin-toolkit:readium-shared than 3.2.0 is available: 3.4.0"
@@ -1165,7 +919,6 @@
             line="50"
             column="11"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.readium.kotlin-toolkit:readium-streamer than 3.2.0 is available: 3.4.0"
@@ -1176,7 +929,6 @@
             line="50"
             column="11"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.sentry:sentry-android than 8.54.0 is available: 8.64.0"
@@ -1187,7 +939,6 @@
             line="51"
             column="10"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of io.mockk:mockk than 1.13.12 is available: 1.14.12"
@@ -1198,7 +949,6 @@
             line="54"
             column="9"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of com.lemonappdev:konsist than 0.17.3 is available: 0.18.1"
@@ -1209,7 +959,6 @@
             line="56"
             column="11"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.json:json than 20231013 is available: 20260814"
@@ -1220,7 +969,6 @@
             line="57"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.robolectric:robolectric than 4.13 is available: 4.18"
@@ -1231,7 +979,6 @@
             line="59"
             column="15"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of com.airbnb.android:lottie-compose than 6.6.6 is available: 6.7.1"
@@ -1242,7 +989,6 @@
             line="62"
             column="10"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of com.google.dagger.hilt.android than 2.57.1 is available: 2.60.1"
@@ -1253,7 +999,6 @@
             line="64"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of com.google.dagger:hilt-android than 2.57.1 is available: 2.60.1"
@@ -1264,7 +1009,6 @@
             line="64"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of com.google.dagger:hilt-android-testing than 2.57.1 is available: 2.60.1"
@@ -1275,7 +1019,6 @@
             line="64"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of com.google.dagger:hilt-compiler than 2.57.1 is available: 2.60.1"
@@ -1286,7 +1029,6 @@
             line="64"
             column="8"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of org.jetbrains.kotlinx.kover than 0.9.3 is available: 0.9.11"
@@ -1297,7 +1039,6 @@
             line="80"
             column="9"/>
     </issue>
-
     <issue
         id="NewerVersionAvailable"
         message="A newer version of com.diffplug.spotless than 7.2.1 is available: 8.11.0"
@@ -1308,18 +1049,6 @@
             line="81"
             column="12"/>
     </issue>
-
-    <issue
-        id="VisibleForTests"
-        message="This method should only be accessed from tests or within private scope"
-        errorLine1="        get() = navigator.pendingCfiAfterLoad"
-        errorLine2="                          ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/ReaderLifecycleStateHolder.kt"
-            line="484"
-            column="27"/>
-    </issue>
-
     <issue
         id="VisibleForTests"
         message="This method should only be accessed from tests or within private scope"
@@ -1330,7 +1059,6 @@
             line="623"
             column="29"/>
     </issue>
-
     <issue
         id="ComposableNaming"
         message="Composable functions that return Unit should start with an uppercase letter"
@@ -1341,18 +1069,6 @@
             line="46"
             column="5"/>
     </issue>
-
-    <issue
-        id="ComposableNaming"
-        message="Composable functions that return Unit should start with an uppercase letter"
-        errorLine1="fun rememberTapZonesBridge("
-        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumTapZones.kt"
-            line="56"
-            column="5"/>
-    </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1363,7 +1079,6 @@
             line="58"
             column="25"/>
     </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1374,7 +1089,6 @@
             line="88"
             column="25"/>
     </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1385,7 +1099,6 @@
             line="138"
             column="37"/>
     </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1396,7 +1109,6 @@
             line="195"
             column="21"/>
     </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1407,7 +1119,6 @@
             line="196"
             column="20"/>
     </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1418,7 +1129,6 @@
             line="197"
             column="27"/>
     </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1429,7 +1139,6 @@
             line="198"
             column="27"/>
     </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1440,7 +1149,6 @@
             line="207"
             column="29"/>
     </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1451,7 +1159,6 @@
             line="301"
             column="37"/>
     </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1462,7 +1169,6 @@
             line="322"
             column="37"/>
     </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1473,7 +1179,6 @@
             line="245"
             column="48"/>
     </issue>
-
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current"
@@ -1481,76 +1186,9 @@
         errorLine2="                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt"
-            line="95"
+            line="80"
             column="55"/>
     </issue>
-
-    <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                                    context.getString(R.string.settings_account_export_success),"
-        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/settings/SettingsAccountScreen.kt"
-            line="146"
-            column="37"/>
-    </issue>
-
-    <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                                    context.getString(R.string.settings_drive_cold_export_success)"
-        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/settings/SettingsDataStorageScreen.kt"
-            line="240"
-            column="37"/>
-    </issue>
-
-    <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                                    context.getString(R.string.settings_drive_cold_export_error)"
-        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/settings/SettingsDataStorageScreen.kt"
-            line="242"
-            column="37"/>
-    </issue>
-
-    <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                            Toast.makeText(context, e.message ?: context.getString(R.string.settings_drive_cold_export_error), Toast.LENGTH_SHORT).show()"
-        errorLine2="                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/settings/SettingsDataStorageScreen.kt"
-            line="246"
-            column="66"/>
-    </issue>
-
-    <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                    Toast.makeText(context, context.getString(R.string.sync_now_success), Toast.LENGTH_SHORT).show()"
-        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/settings/SyncScreen.kt"
-            line="183"
-            column="45"/>
-    </issue>
-
-    <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current"
-        errorLine1="                        Toast.makeText(context, context.getString(R.string.debug_settings_log_viewer), Toast.LENGTH_SHORT).show()"
-        errorLine2="                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/settings/SyncScreen.kt"
-            line="202"
-            column="49"/>
-    </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
@@ -1561,7 +1199,6 @@
             line="78"
             column="5"/>
     </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
@@ -1572,40 +1209,6 @@
             line="109"
             column="5"/>
     </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/ui/components/molecules/HighlightColorPickerPopover.kt"
-            line="206"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/ui/components/atoms/NexoBookCover.kt"
-            line="73"
-            column="5"/>
-    </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/feature/discover/ReadAccessSheet.kt"
-            line="138"
-            column="5"/>
-    </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be named modifier"
@@ -1616,7 +1219,6 @@
             line="93"
             column="5"/>
     </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
@@ -1627,7 +1229,6 @@
             line="93"
             column="5"/>
     </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
@@ -1638,7 +1239,6 @@
             line="186"
             column="5"/>
     </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
@@ -1649,7 +1249,6 @@
             line="99"
             column="5"/>
     </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
@@ -1660,7 +1259,6 @@
             line="74"
             column="5"/>
     </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
@@ -1671,7 +1269,6 @@
             line="56"
             column="5"/>
     </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
@@ -1682,7 +1279,6 @@
             line="73"
             column="5"/>
     </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
@@ -1693,7 +1289,6 @@
             line="194"
             column="5"/>
     </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
@@ -1704,18 +1299,6 @@
             line="234"
             column="5"/>
     </issue>
-
-    <issue
-        id="ModifierParameter"
-        message="Modifier parameter should be the first optional parameter"
-        errorLine1="    modifier: Modifier = Modifier,"
-        errorLine2="    ~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/ui/components/atoms/StarRating.kt"
-            line="85"
-            column="5"/>
-    </issue>
-
     <issue
         id="ModifierParameter"
         message="Modifier parameter should be the first optional parameter"
@@ -1726,7 +1309,6 @@
             line="107"
             column="5"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -1737,7 +1319,6 @@
             line="32"
             column="13"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -1748,7 +1329,6 @@
             line="37"
             column="13"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -1759,18 +1339,6 @@
             line="42"
             column="13"/>
     </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d(AUTH_SCREEN_TAG, &quot;Google diagnostics: $buttonDisabledReason, configured=${uiState.isConfigured}, wiring=${uiState.hasWiringIssue}, loading=${uiState.isLoading}, failure=${uiState.failureKind}&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/feature/auth/AuthScreen.kt"
-            line="83"
-            column="9"/>
-    </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -1781,7 +1349,6 @@
             line="499"
             column="17"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -1792,95 +1359,6 @@
             line="508"
             column="27"/>
     </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="            Log.d(TAG, &quot;Bookmark created: ${bookmark.id}&quot;)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/BookmarkManager.kt"
-            line="66"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        runCatching { Log.d(tag, message) }"
-        errorLine2="                      ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/debug/DebugDual.kt"
-            line="39"
-            column="23"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        if (tag != TAG_FILTER) runCatching { Log.d(TAG_FILTER, &quot;[$tag] $message&quot;) }"
-        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/debug/DebugDual.kt"
-            line="41"
-            column="46"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        runCatching { Log.w(tag, message) }"
-        errorLine2="                      ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/debug/DebugDual.kt"
-            line="49"
-            column="23"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        if (tag != TAG_FILTER) runCatching { Log.w(TAG_FILTER, &quot;[$tag] $message&quot;) }"
-        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/debug/DebugDual.kt"
-            line="50"
-            column="46"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        runCatching { Log.e(tag, message, throwable) }"
-        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/debug/DebugDual.kt"
-            line="59"
-            column="23"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        if (tag != TAG_FILTER) runCatching { Log.e(TAG_FILTER, &quot;[$tag] $message&quot;, throwable) }"
-        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/debug/DebugDual.kt"
-            line="60"
-            column="46"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        runCatching { Log.d(TAG_SYNC, msg) }"
-        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/debug/DebugDual.kt"
-            line="97"
-            column="23"/>
-    </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -1891,7 +1369,6 @@
             line="199"
             column="21"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -1902,51 +1379,6 @@
             line="213"
             column="21"/>
     </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                Log.d(TAG, &quot;Readium loaded EPUB in ${loadTime}ms&quot;)"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/EpubBookLoader.kt"
-            line="208"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                Log.e(TAG, &quot;Readium EPUB open timed out&quot;, e)"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/EpubBookLoader.kt"
-            line="260"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                Log.e(TAG, &quot;Readium failed to open EPUB&quot;, e)"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/EpubBookLoader.kt"
-            line="271"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d(TAG, &quot;CFI migration complete for book $bookId&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/EpubBookLoader.kt"
-            line="393"
-            column="9"/>
-    </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -1957,7 +1389,6 @@
             line="108"
             column="13"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -1968,95 +1399,6 @@
             line="153"
             column="13"/>
     </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d(TAG, &quot;Launching Drive OAuth browser flow&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/drive/GoogleDriveAuthHelper.kt"
-            line="77"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                Log.w(TAG, &quot;Drive OAuth redirect received with no pending authorization — ignoring&quot;)"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/drive/GoogleDriveAuthHelper.kt"
-            line="91"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                                Log.e(AUTH_SCREEN_TAG, &quot;Failed to parse Google ID token&quot;, e)"
-        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="163"
-            column="33"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                        Log.w(AUTH_SCREEN_TAG, &quot;Unexpected credential type: ${credential.type}&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="168"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                    Log.d(AUTH_SCREEN_TAG, &quot;Google sign-in cancelled by user&quot;)"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="174"
-            column="21"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                    Log.e(AUTH_SCREEN_TAG, &quot;Google credential error: type=${e.type} msg=${e.message}&quot;, e)"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="176"
-            column="21"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                    Log.e(AUTH_SCREEN_TAG, &quot;Unexpected error in Google sign-in&quot;, e)"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/feature/auth/GoogleSignInButton.kt"
-            line="183"
-            column="21"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="            Log.d(TAG, &quot;Highlight created: ${highlight.id}&quot;)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/HighlightManager.kt"
-            line="78"
-            column="13"/>
-    </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2067,7 +1409,6 @@
             line="72"
             column="17"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2078,7 +1419,6 @@
             line="76"
             column="13"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2089,40 +1429,6 @@
             line="289"
             column="17"/>
     </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                Log.d(TAG, &quot;Readium loaded PDF in ${loadTime}ms&quot;)"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/PdfBookLoader.kt"
-            line="149"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                Log.e(TAG, &quot;Readium failed to open PDF&quot;, e)"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/PdfBookLoader.kt"
-            line="165"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="            Log.d(TAG, &quot;Recorded $additionalMinutes minutes for book $bookId&quot;)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/ReadingSessionRecorder.kt"
-            line="97"
-            column="13"/>
-    </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2133,7 +1439,6 @@
             line="114"
             column="13"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2144,7 +1449,6 @@
             line="138"
             column="9"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2155,7 +1459,6 @@
             line="152"
             column="13"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2166,7 +1469,6 @@
             line="239"
             column="17"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2177,7 +1479,6 @@
             line="97"
             column="13"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2188,7 +1489,6 @@
             line="231"
             column="21"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2199,7 +1499,6 @@
             line="241"
             column="21"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2210,7 +1509,6 @@
             line="243"
             column="21"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2221,7 +1519,6 @@
             line="59"
             column="9"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2232,7 +1529,6 @@
             line="62"
             column="13"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2243,7 +1539,6 @@
             line="66"
             column="9"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2254,7 +1549,6 @@
             line="73"
             column="13"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2265,7 +1559,6 @@
             line="78"
             column="21"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2276,7 +1569,6 @@
             line="88"
             column="13"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2287,7 +1579,6 @@
             line="93"
             column="17"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2298,7 +1589,6 @@
             line="99"
             column="21"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2309,7 +1599,6 @@
             line="101"
             column="25"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2320,7 +1609,6 @@
             line="113"
             column="25"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2331,7 +1619,6 @@
             line="116"
             column="29"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2342,7 +1629,6 @@
             line="122"
             column="25"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2353,7 +1639,6 @@
             line="124"
             column="25"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2364,7 +1649,6 @@
             line="129"
             column="21"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2375,7 +1659,6 @@
             line="132"
             column="17"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2386,7 +1669,6 @@
             line="134"
             column="17"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2397,7 +1679,6 @@
             line="142"
             column="21"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2408,7 +1689,6 @@
             line="144"
             column="21"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2419,7 +1699,6 @@
             line="149"
             column="21"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2430,7 +1709,6 @@
             line="254"
             column="9"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2441,7 +1719,6 @@
             line="328"
             column="13"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2452,7 +1729,6 @@
             line="335"
             column="9"/>
     </issue>
-
     <issue
         id="LogNotTimber"
         message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
@@ -2463,249 +1739,6 @@
             line="369"
             column="5"/>
     </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="            Log.d(&quot;ReadiumReaderContent&quot;, &quot;No WebView found in navigator fragment&quot;)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumViewUtils.kt"
-            line="67"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="            Log.d(&quot;ReadiumPdfReaderContent&quot;, &quot;No WebView in PDF navigator — ActionMode not applicable&quot;)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumViewUtils.kt"
-            line="118"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d(&quot;ReadiumReaderContent&quot;, &quot;Installed custom selection ActionMode callback on ${webView.javaClass.simpleName}&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumViewUtils.kt"
-            line="153"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.w(&quot;ReadiumReaderContent&quot;, &quot;Failed to install ActionMode callback (non-critical)&quot;, e)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumViewUtils.kt"
-            line="159"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d(&quot;ReadiumReaderContent&quot;, &quot;Installed custom selection ActionMode callback on ${webView.javaClass.simpleName}&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumViewUtils.kt"
-            line="184"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.e(&quot;ReadiumReaderContent&quot;, &quot;Failed to install ActionMode callback&quot;, e)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumViewUtils.kt"
-            line="187"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                Log.w(TAG, &quot;Failed to parse PDF search results&quot;, e)"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/SearchStateHolder.kt"
-            line="148"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d("
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="127"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                    Log.d(&quot;SelectionDebug&quot;, &quot;Ignoring selection after menu close (${now - current.closedAt}ms ago)&quot;)"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="136"
-            column="21"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                        Log.d(&quot;SelectionDebug&quot;, &quot;Ignoring selection during highlight-tap debounce (matches active highlight)&quot;)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="152"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                Log.e(&quot;SelectionDebug&quot;, &quot;Rect creation THREW: ${e::class.simpleName}: ${e.message}&quot;, e)"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="170"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="            Log.d(&quot;SelectionDebug&quot;, &quot;VM.onReadiumSelection state update OK&quot;)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="185"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="            Log.e(&quot;SelectionDebug&quot;, &quot;VM.onReadiumSelection state update THREW: ${e::class.simpleName}: ${e.message}&quot;, e)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="187"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d(&quot;SelectionDebug&quot;, &quot;VM.onSelectionCleared — resetting selection state&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="209"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                Log.d(&quot;SelectionDebug&quot;, &quot;Ignoring selection-clear during highlight-tap debounce&quot;)"
-        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="213"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="            Log.e(&quot;SelectionDebug&quot;, &quot;VM.onSelectionCleared THREW: ${e::class.simpleName}: ${e.message}&quot;, e)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="239"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.d("
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/interaction/SelectionManager.kt"
-            line="257"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                    runCatching { Log.w(TAG, &quot;processBookItem: failed for book $bookId&quot;, e) }"
-        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="201"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                runCatching { Log.w(TAG, &quot;processBookItem: failed for book $bookId&quot;, e) }"
-        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="242"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                runCatching { Log.w(TAG, &quot;reconcileLocalBooks: failed to list remote catalog, aborting reconcile&quot;, e) }"
-        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="312"
-            column="31"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="                    runCatching { Log.w(TAG, &quot;reconcileLocalBooks: failed to push book ${book.id} (${book.title})&quot;, e) }"
-        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/supabase/SupabaseBookCatalogSync.kt"
-            line="331"
-            column="35"/>
-    </issue>
-
-    <issue
-        id="LogNotTimber"
-        message="Using &apos;Log&apos; instead of &apos;Timber&apos;"
-        errorLine1="        Log.w(TAG, &quot;collectTocChapters: no spine match for TOC href=&apos;$href&apos; (file=&apos;$fileLower&apos;), fallback to list position $fallbackIndex&quot;)"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/viewmodel/reader/lifecycle/TocBuilder.kt"
-            line="106"
-            column="9"/>
-    </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;minutes&quot;): This should probably be a plural rather than a string"
@@ -2716,7 +1749,6 @@
             line="59"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;days&quot;): This should probably be a plural rather than a string"
@@ -2727,7 +1759,6 @@
             line="73"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;days&quot;): This should probably be a plural rather than a string"
@@ -2738,7 +1769,6 @@
             line="116"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;results&quot;): This should probably be a plural rather than a string"
@@ -2749,7 +1779,6 @@
             line="174"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;results&quot;): This should probably be a plural rather than a string"
@@ -2760,7 +1789,6 @@
             line="212"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;star&quot;): This should probably be a plural rather than a string"
@@ -2771,7 +1799,6 @@
             line="247"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;pages&quot;): This should probably be a plural rather than a string"
@@ -2782,7 +1809,6 @@
             line="259"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;stars&quot;): This should probably be a plural rather than a string"
@@ -2793,7 +1819,6 @@
             line="262"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;minutes&quot;): This should probably be a plural rather than a string"
@@ -2804,7 +1829,6 @@
             line="278"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;minutes&quot;): This should probably be a plural rather than a string"
@@ -2815,7 +1839,6 @@
             line="279"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;percent&quot;): This should probably be a plural rather than a string"
@@ -2826,7 +1849,6 @@
             line="320"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;pending&quot;): This should probably be a plural rather than a string"
@@ -2837,7 +1859,6 @@
             line="328"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;pages&quot;): This should probably be a plural rather than a string"
@@ -2848,7 +1869,6 @@
             line="606"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;connected&quot;): This should probably be a plural rather than a string"
@@ -2859,7 +1879,6 @@
             line="669"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;record&quot;): This should probably be a plural rather than a string"
@@ -2870,7 +1889,6 @@
             line="693"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;book&quot;): This should probably be a plural rather than a string"
@@ -2881,7 +1899,6 @@
             line="694"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;more&quot;): This should probably be a plural rather than a string"
@@ -2892,7 +1909,6 @@
             line="796"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;entries&quot;): This should probably be a plural rather than a string"
@@ -2903,7 +1919,6 @@
             line="812"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;words&quot;): This should probably be a plural rather than a string"
@@ -2914,7 +1929,6 @@
             line="867"
             column="5"/>
     </issue>
-
     <issue
         id="PluralsCandidate"
         message="Formatting %d followed by words (&quot;available&quot;): This should probably be a plural rather than a string"
@@ -2925,32 +1939,6 @@
             line="952"
             column="5"/>
     </issue>
-
-    <issue
-        id="HardwareIds"
-        message="Using `getString` to get device identifiers is not recommended"
-        errorLine1="        Settings.Secure.getString("
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/device/DeviceInfoDetector.kt"
-            line="20"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="TrustAllX509TrustManager"
-        message="`checkClientTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
-        <location
-            file="$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.google.http-client/google-http-client/1.45.3/dde98b597081b98514867c9cefa551fcdea3a28c/google-http-client-1.45.3.jar"/>
-    </issue>
-
-    <issue
-        id="TrustAllX509TrustManager"
-        message="`checkServerTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
-        <location
-            file="$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.google.http-client/google-http-client/1.45.3/dde98b597081b98514867c9cefa551fcdea3a28c/google-http-client-1.45.3.jar"/>
-    </issue>
-
     <issue
         id="ObsoleteSdkInt"
         message="Unnecessary; `SDK_INT` is never &lt; 26"
@@ -2961,7 +1949,6 @@
             line="78"
             column="13"/>
     </issue>
-
     <issue
         id="ObsoleteSdkInt"
         message="Unnecessary; `SDK_INT` is always >= 26"
@@ -2972,7 +1959,6 @@
             line="34"
             column="13"/>
     </issue>
-
     <issue
         id="ObsoleteSdkInt"
         message="Unnecessary; `SDK_INT` is always >= 26"
@@ -2983,7 +1969,6 @@
             line="392"
             column="21"/>
     </issue>
-
     <issue
         id="AutoboxingStateCreation"
         message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
@@ -2994,7 +1979,6 @@
             line="313"
             column="40"/>
     </issue>
-
     <issue
         id="AutoboxingStateCreation"
         message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
@@ -3005,7 +1989,6 @@
             line="110"
             column="34"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_account` appears to be unused"
@@ -3016,7 +1999,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_cross_circle` appears to be unused"
@@ -3027,7 +2009,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_drive_logo` appears to be unused"
@@ -3038,7 +2019,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_email` appears to be unused"
@@ -3049,7 +2029,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_highlights` appears to be unused"
@@ -3060,7 +2039,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_home` appears to be unused"
@@ -3071,7 +2049,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_interrogation` appears to be unused"
@@ -3082,7 +2059,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_library` appears to be unused"
@@ -3093,7 +2069,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_marcador` appears to be unused"
@@ -3104,7 +2079,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_marcador_relleno` appears to be unused"
@@ -3115,7 +2089,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_menu_burger` appears to be unused"
@@ -3126,7 +2099,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_search` appears to be unused"
@@ -3137,7 +2109,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_settings` appears to be unused"
@@ -3148,7 +2119,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_share` appears to be unused"
@@ -3159,7 +2129,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_statistics` appears to be unused"
@@ -3170,7 +2139,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_subir_archivo` appears to be unused"
@@ -3181,7 +2149,6 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.drawable.ic_trash` appears to be unused"
@@ -3192,21 +2159,18 @@
             line="1"
             column="1"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.raw.inter_ofl` appears to be unused">
         <location
             file="src/main/res/raw/inter_ofl.txt"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.raw.lato_ofl` appears to be unused">
         <location
             file="src/main/res/raw/lato_ofl.txt"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.tab_highlights` appears to be unused"
@@ -3217,7 +2181,6 @@
             line="6"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.tab_settings` appears to be unused"
@@ -3228,7 +2191,6 @@
             line="7"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.tab_statistics` appears to be unused"
@@ -3239,7 +2201,6 @@
             line="8"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.auth_sign_in` appears to be unused"
@@ -3250,7 +2211,6 @@
             line="20"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.auth_sign_up` appears to be unused"
@@ -3261,7 +2221,6 @@
             line="21"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.auth_reset_email_sent` appears to be unused"
@@ -3272,7 +2231,6 @@
             line="43"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.auth_signup_stale_session` appears to be unused"
@@ -3283,7 +2241,6 @@
             line="46"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.auth_mock_google_button` appears to be unused"
@@ -3294,7 +2251,6 @@
             line="47"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_welcome` appears to be unused"
@@ -3305,7 +2261,6 @@
             line="57"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_today_summary` appears to be unused"
@@ -3316,7 +2271,6 @@
             line="58"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_minutes_read_today` appears to be unused"
@@ -3327,7 +2281,6 @@
             line="59"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_no_book_in_progress` appears to be unused"
@@ -3338,7 +2291,6 @@
             line="61"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_my_bookshelf` appears to be unused"
@@ -3349,7 +2301,6 @@
             line="62"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_action_import_epub` appears to be unused"
@@ -3360,7 +2311,6 @@
             line="63"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_action_import_pdf` appears to be unused"
@@ -3371,7 +2321,6 @@
             line="64"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_action_notes` appears to be unused"
@@ -3382,7 +2331,6 @@
             line="65"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_view_all` appears to be unused"
@@ -3393,7 +2341,6 @@
             line="66"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_progress` appears to be unused"
@@ -3404,7 +2351,6 @@
             line="77"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_import_epub` appears to be unused"
@@ -3415,7 +2361,6 @@
             line="81"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_import_pdf` appears to be unused"
@@ -3426,7 +2371,6 @@
             line="82"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.home_brand_tagline` appears to be unused"
@@ -3437,7 +2381,6 @@
             line="124"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_search` appears to be unused"
@@ -3448,7 +2391,6 @@
             line="148"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_idle` appears to be unused"
@@ -3459,7 +2401,6 @@
             line="150"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_loading_more` appears to be unused"
@@ -3470,7 +2411,6 @@
             line="155"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_error_invalid_page` appears to be unused"
@@ -3481,7 +2421,6 @@
             line="158"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_error_not_found` appears to be unused"
@@ -3492,7 +2431,6 @@
             line="159"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_languages` appears to be unused"
@@ -3503,7 +2441,6 @@
             line="168"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_subjects` appears to be unused"
@@ -3514,7 +2451,6 @@
             line="169"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_rail_newest` appears to be unused"
@@ -3525,7 +2461,6 @@
             line="192"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_rail_popular` appears to be unused"
@@ -3536,7 +2471,6 @@
             line="193"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_format_pdf` appears to be unused"
@@ -3547,7 +2481,6 @@
             line="218"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_detail_loading` appears to be unused"
@@ -3558,7 +2491,6 @@
             line="229"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_detail_show_more` appears to be unused"
@@ -3569,7 +2501,6 @@
             line="232"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_detail_pages_label` appears to be unused"
@@ -3580,7 +2511,6 @@
             line="235"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_detail_chapters_label` appears to be unused"
@@ -3591,7 +2521,6 @@
             line="236"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_detail_last_read_label` appears to be unused"
@@ -3602,7 +2531,6 @@
             line="238"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_detail_estimated_pages` appears to be unused"
@@ -3613,7 +2541,6 @@
             line="240"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_detail_page_x_of_y` appears to be unused"
@@ -3624,7 +2551,6 @@
             line="243"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_detail_page_x` appears to be unused"
@@ -3635,7 +2561,6 @@
             line="244"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_detail_progress_percent` appears to be unused"
@@ -3646,7 +2571,6 @@
             line="245"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_detail_no_pages` appears to be unused"
@@ -3657,7 +2581,6 @@
             line="246"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_detail_rating_content_description` appears to be unused"
@@ -3668,7 +2591,6 @@
             line="247"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.library_import_epub` appears to be unused"
@@ -3679,7 +2601,6 @@
             line="267"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.library_import_pdf` appears to be unused"
@@ -3690,7 +2611,6 @@
             line="268"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.library_open` appears to be unused"
@@ -3701,7 +2621,6 @@
             line="271"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.library_last_updated` appears to be unused"
@@ -3712,7 +2631,6 @@
             line="273"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.library_cover_placeholder` appears to be unused"
@@ -3723,7 +2641,6 @@
             line="274"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.library_layout_list` appears to be unused"
@@ -3734,7 +2651,6 @@
             line="276"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.library_layout_grid` appears to be unused"
@@ -3745,7 +2661,6 @@
             line="277"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.library_total_minutes_read` appears to be unused"
@@ -3756,7 +2671,6 @@
             line="278"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.library_item_minutes_read` appears to be unused"
@@ -3767,7 +2681,6 @@
             line="279"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.library_add_book` appears to be unused"
@@ -3778,7 +2691,6 @@
             line="303"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.library_import_unsupported` appears to be unused"
@@ -3789,7 +2701,6 @@
             line="306"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.sync_pending_badge` appears to be unused"
@@ -3800,7 +2711,6 @@
             line="328"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.debug_supabase_sync_title` appears to be unused"
@@ -3811,7 +2721,6 @@
             line="329"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.debug_supabase_state` appears to be unused"
@@ -3822,7 +2731,6 @@
             line="330"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.debug_supabase_gated_reason` appears to be unused"
@@ -3833,7 +2741,6 @@
             line="331"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.debug_supabase_pending_count` appears to be unused"
@@ -3844,7 +2751,6 @@
             line="332"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_placeholder` appears to be unused"
@@ -3855,7 +2761,6 @@
             line="335"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_selected_book` appears to be unused"
@@ -3866,7 +2771,6 @@
             line="336"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_no_progress` appears to be unused"
@@ -3877,7 +2781,6 @@
             line="337"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_progress_cfi` appears to be unused"
@@ -3888,7 +2791,6 @@
             line="338"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_progress_percent` appears to be unused"
@@ -3899,7 +2801,6 @@
             line="339"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_mark_quarter` appears to be unused"
@@ -3910,7 +2811,6 @@
             line="340"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_mark_three_quarter` appears to be unused"
@@ -3921,7 +2821,6 @@
             line="341"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlights_summary_quotes` appears to be unused"
@@ -3932,7 +2831,6 @@
             line="351"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlights_summary_ideas` appears to be unused"
@@ -3943,7 +2841,6 @@
             line="352"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlights_summary_passages` appears to be unused"
@@ -3954,7 +2851,6 @@
             line="353"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlights_summary_favorites` appears to be unused"
@@ -3965,7 +2861,6 @@
             line="354"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlights_quote_content` appears to be unused"
@@ -3976,7 +2871,6 @@
             line="355"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlights_quote_author` appears to be unused"
@@ -3987,7 +2881,6 @@
             line="356"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlights_idea_content` appears to be unused"
@@ -3998,7 +2891,6 @@
             line="357"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlights_filter_color` appears to be unused"
@@ -4009,7 +2901,6 @@
             line="362"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlights_filter_all_colors` appears to be unused"
@@ -4020,7 +2911,6 @@
             line="365"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlights_clear_filters` appears to be unused"
@@ -4031,7 +2921,6 @@
             line="367"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlight_location` appears to be unused"
@@ -4042,7 +2931,6 @@
             line="368"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.bookmarks_tab` appears to be unused"
@@ -4053,7 +2941,6 @@
             line="373"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.bookmarks_empty` appears to be unused"
@@ -4064,7 +2951,6 @@
             line="374"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.bookmark_location` appears to be unused"
@@ -4075,7 +2961,6 @@
             line="375"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.pdf_page_description` appears to be unused"
@@ -4086,7 +2971,6 @@
             line="378"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.pdf_loading` appears to be unused"
@@ -4097,7 +2981,6 @@
             line="379"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.notifications_mock_welcome_title` appears to be unused"
@@ -4108,7 +2991,6 @@
             line="384"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.notifications_mock_welcome_body` appears to be unused"
@@ -4119,7 +3001,6 @@
             line="385"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.notifications_mock_streak_title` appears to be unused"
@@ -4130,7 +3011,6 @@
             line="386"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.notifications_mock_streak_body` appears to be unused"
@@ -4141,7 +3021,6 @@
             line="387"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.notifications_mock_library_title` appears to be unused"
@@ -4152,7 +3031,6 @@
             line="388"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.notifications_mock_library_body` appears to be unused"
@@ -4163,7 +3041,6 @@
             line="389"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_sleep_timer` appears to be unused"
@@ -4174,7 +3051,6 @@
             line="421"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_sleep_timer_finished_chapter_title` appears to be unused"
@@ -4185,7 +3061,6 @@
             line="424"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_sleep_timer_finished_chapter_body` appears to be unused"
@@ -4196,7 +3071,6 @@
             line="425"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_sleep_timer_start` appears to be unused"
@@ -4207,7 +3081,6 @@
             line="426"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_sleep_timer_5min` appears to be unused"
@@ -4218,7 +3091,6 @@
             line="427"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_sleep_timer_10min` appears to be unused"
@@ -4229,7 +3101,6 @@
             line="428"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_sleep_timer_15min` appears to be unused"
@@ -4240,7 +3111,6 @@
             line="429"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_sleep_timer_30min` appears to be unused"
@@ -4251,7 +3121,6 @@
             line="430"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_sleep_timer_finished_message` appears to be unused"
@@ -4262,7 +3131,6 @@
             line="437"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_settings_sheet_title` appears to be unused"
@@ -4273,7 +3141,6 @@
             line="441"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_settings_font_size_section` appears to be unused"
@@ -4284,7 +3151,6 @@
             line="443"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_settings_line_height_section` appears to be unused"
@@ -4295,7 +3161,6 @@
             line="445"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_font_size_small` appears to be unused"
@@ -4306,7 +3171,6 @@
             line="446"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_font_size_medium` appears to be unused"
@@ -4317,7 +3181,6 @@
             line="447"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_font_size_large` appears to be unused"
@@ -4328,7 +3191,6 @@
             line="448"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_font_size_xlarge` appears to be unused"
@@ -4339,7 +3201,6 @@
             line="449"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_line_height_tight` appears to be unused"
@@ -4350,7 +3211,6 @@
             line="453"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_line_height_normal` appears to be unused"
@@ -4361,7 +3221,6 @@
             line="454"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_line_height_comfortable` appears to be unused"
@@ -4372,7 +3231,6 @@
             line="455"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_line_height_wide` appears to be unused"
@@ -4383,7 +3241,6 @@
             line="456"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.search_error_retry` appears to be unused"
@@ -4394,7 +3251,6 @@
             line="464"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_translation_history_cleared` appears to be unused"
@@ -4405,7 +3261,6 @@
             line="543"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.context_menu_note` appears to be unused"
@@ -4416,7 +3271,6 @@
             line="546"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.context_menu_comment` appears to be unused"
@@ -4427,7 +3281,6 @@
             line="547"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.tag_dialog_title` appears to be unused"
@@ -4438,7 +3291,6 @@
             line="560"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.tag_dialog_label` appears to be unused"
@@ -4449,7 +3301,6 @@
             line="561"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.share_no_text` appears to be unused"
@@ -4460,7 +3311,6 @@
             line="562"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.aa_justification_left` appears to be unused"
@@ -4471,7 +3321,6 @@
             line="580"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.aa_justification_center` appears to be unused"
@@ -4482,7 +3331,6 @@
             line="581"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.aa_justification_right` appears to be unused"
@@ -4493,7 +3341,6 @@
             line="582"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.aa_justification_justify` appears to be unused"
@@ -4504,7 +3351,6 @@
             line="583"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.scroll_mode_vertical` appears to be unused"
@@ -4515,7 +3361,6 @@
             line="592"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.scroll_mode_paginated` appears to be unused"
@@ -4526,7 +3371,6 @@
             line="593"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_author_placeholder` appears to be unused"
@@ -4537,7 +3381,6 @@
             line="600"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_bookmark` appears to be unused"
@@ -4548,7 +3391,6 @@
             line="602"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_daily_goal_subtitle` appears to be unused"
@@ -4559,7 +3401,6 @@
             line="612"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_preferences_section` appears to be unused"
@@ -4570,7 +3411,6 @@
             line="618"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_pref_font_size` appears to be unused"
@@ -4581,7 +3421,6 @@
             line="620"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_pref_sync` appears to be unused"
@@ -4592,7 +3431,6 @@
             line="621"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_pref_reading_theme` appears to be unused"
@@ -4603,7 +3441,6 @@
             line="631"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_pref_line_height` appears to be unused"
@@ -4614,7 +3451,6 @@
             line="632"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_pref_storage` appears to be unused"
@@ -4625,7 +3461,6 @@
             line="636"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_pref_stats` appears to be unused"
@@ -4636,7 +3471,6 @@
             line="637"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_palette` appears to be unused"
@@ -4647,7 +3481,6 @@
             line="646"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_devices_loading` appears to be unused"
@@ -4658,7 +3491,6 @@
             line="670"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_provider_google` appears to be unused"
@@ -4669,7 +3501,6 @@
             line="671"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_provider_email` appears to be unused"
@@ -4680,7 +3511,6 @@
             line="672"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_provider_anonymous` appears to be unused"
@@ -4691,7 +3521,6 @@
             line="673"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_member_since` appears to be unused"
@@ -4702,7 +3531,6 @@
             line="674"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_drive_connected` appears to be unused"
@@ -4713,7 +3541,6 @@
             line="678"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.statistics_empty_title` appears to be unused"
@@ -4724,7 +3551,6 @@
             line="718"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.statistics_empty_subtitle` appears to be unused"
@@ -4735,7 +3561,6 @@
             line="719"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.debug_kv_show_color_picker` appears to be unused"
@@ -4746,7 +3571,6 @@
             line="756"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.debug_kv_show_context_menu` appears to be unused"
@@ -4757,7 +3581,6 @@
             line="757"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.debug_no_highlights` appears to be unused"
@@ -4768,7 +3591,6 @@
             line="768"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.debug_log_viewer_crash_timestamp` appears to be unused"
@@ -4779,7 +3601,6 @@
             line="791"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.debug_log_viewer_crash_message` appears to be unused"
@@ -4790,7 +3611,6 @@
             line="792"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_title` appears to be unused"
@@ -4801,7 +3621,6 @@
             line="815"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.highlights_color_filter_todos` appears to be unused"
@@ -4812,7 +3631,6 @@
             line="840"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.context_menu_dictionary` appears to be unused"
@@ -4823,7 +3641,6 @@
             line="879"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_add_to_dictionary` appears to be unused"
@@ -4834,7 +3651,6 @@
             line="884"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.reader_already_in_dictionary` appears to be unused"
@@ -4845,7 +3661,6 @@
             line="885"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.edit_metadata_field_cover` appears to be unused"
@@ -4856,7 +3671,6 @@
             line="897"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.edit_metadata_save` appears to be unused"
@@ -4867,7 +3681,6 @@
             line="899"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_download_error` appears to be unused"
@@ -4878,7 +3691,6 @@
             line="942"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_download_source_android` appears to be unused"
@@ -4889,7 +3701,6 @@
             line="943"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_download_source_desktop` appears to be unused"
@@ -4900,7 +3711,6 @@
             line="944"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_download_source_unknown` appears to be unused"
@@ -4911,7 +3721,6 @@
             line="945"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.book_empty_downloadable` appears to be unused"
@@ -4922,7 +3731,6 @@
             line="949"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.action_dismiss` appears to be unused"
@@ -4933,7 +3741,6 @@
             line="950"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.storage_action_clear_all` appears to be unused"
@@ -4944,7 +3751,6 @@
             line="980"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.storage_cleared` appears to be unused"
@@ -4955,7 +3761,6 @@
             line="981"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.feedback_mobile_input_label` appears to be unused"
@@ -4966,7 +3771,6 @@
             line="1057"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_addons_installed_toast` appears to be unused"
@@ -4977,7 +3781,6 @@
             line="1073"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_addons_install_failed` appears to be unused"
@@ -4988,7 +3791,6 @@
             line="1074"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_manage_addons` appears to be unused"
@@ -4999,7 +3801,6 @@
             line="1093"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.discover_google_books_disabled` appears to be unused"
@@ -5010,7 +3811,6 @@
             line="1098"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.settings_privacy_summary` appears to be unused"
@@ -5021,7 +3821,6 @@
             line="1106"
             column="13"/>
     </issue>
-
     <issue
         id="UnusedResources"
         message="The resource `R.string.read_access_loading` appears to be unused"
@@ -5032,7 +3831,6 @@
             line="1116"
             column="13"/>
     </issue>
-
     <issue
         id="UseOfNonLambdaOffsetOverload"
         message="State backed values should use the lambda overload of Modifier.offset"
@@ -5043,7 +3841,6 @@
             line="197"
             column="26"/>
     </issue>
-
     <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
@@ -5054,7 +3851,6 @@
             line="229"
             column="40"/>
     </issue>
-
     <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
@@ -5065,7 +3861,6 @@
             line="247"
             column="40"/>
     </issue>
-
     <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
@@ -5076,7 +3871,6 @@
             line="292"
             column="47"/>
     </issue>
-
     <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
@@ -5087,7 +3881,6 @@
             line="309"
             column="47"/>
     </issue>
-
     <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
@@ -5098,7 +3891,6 @@
             line="338"
             column="32"/>
     </issue>
-
     <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
@@ -5109,7 +3901,6 @@
             line="379"
             column="32"/>
     </issue>
-
     <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
@@ -5120,7 +3911,6 @@
             line="651"
             column="53"/>
     </issue>
-
     <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
@@ -5131,7 +3921,6 @@
             line="670"
             column="45"/>
     </issue>
-
     <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
@@ -5142,7 +3931,6 @@
             line="767"
             column="45"/>
     </issue>
-
     <issue
         id="TypographyEllipsis"
         message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
@@ -5153,29 +3941,6 @@
             line="796"
             column="53"/>
     </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit().putString(KEY_LANG, langCode).apply()"
-        errorLine2="        ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/AppLanguagePreferences.kt"
-            line="16"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit().putString(KEY_THEME, themeMode.name).apply()"
-        errorLine2="        ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/AppThemePreferences.kt"
-            line="21"
-            column="9"/>
-    </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `String.toColorInt` instead?"
@@ -5186,7 +3951,6 @@
             line="78"
             column="36"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `String.toColorInt` instead?"
@@ -5197,7 +3961,6 @@
             line="86"
             column="30"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `String.toColorInt` instead?"
@@ -5208,7 +3971,6 @@
             line="99"
             column="30"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `String.toColorInt` instead?"
@@ -5219,7 +3981,6 @@
             line="109"
             column="30"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `String.toColorInt` instead?"
@@ -5230,7 +3991,6 @@
             line="119"
             column="30"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `String.toColorInt` instead?"
@@ -5241,7 +4001,6 @@
             line="129"
             column="30"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `String.toColorInt` instead?"
@@ -5252,7 +4011,6 @@
             line="144"
             column="36"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `String.toColorInt` instead?"
@@ -5263,7 +4021,6 @@
             line="150"
             column="30"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `SharedPreferences.edit` instead?"
@@ -5274,194 +4031,6 @@
             line="63"
             column="9"/>
     </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        context"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/debug/DebugPrefs.kt"
-            line="18"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX function `createBitmap` instead?"
-        errorLine1="                                    val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)"
-        errorLine2="                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/pdf/DefaultPdfParserService.kt"
-            line="34"
-            column="50"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        val editor = prefs.edit()"
-        errorLine2="                     ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/DefinitionPreferences.kt"
-            line="61"
-            column="22"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit().putString(KEY_DECLINED_FOR_USER, userId).apply()"
-        errorLine2="        ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/DriveConnectPromptPrefs.kt"
-            line="29"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit().remove(KEY_DECLINED_FOR_USER).apply()"
-        errorLine2="        ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/DriveConnectPromptPrefs.kt"
-            line="34"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        val editor = prefs.edit().putString(KEY_ACCESS, pair.accessToken)"
-        errorLine2="                     ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/drive/DriveTokenStore.kt"
-            line="259"
-            column="22"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs()?.edit()?.clear()?.apply()"
-        errorLine2="        ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/drive/DriveTokenStore.kt"
-            line="267"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="                delegate.edit().putString(sessionKey, legacy).apply()"
-        errorLine2="                ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
-            line="33"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="            migrateFrom.edit().remove(sessionKey).apply()"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
-            line="35"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        delegate"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
-            line="45"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        delegate.edit().remove(key).apply()"
-        errorLine2="        ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
-            line="56"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        delegate.edit().putInt(key, value).apply()"
-        errorLine2="        ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
-            line="66"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        delegate.edit().putLong(key, value).apply()"
-        errorLine2="        ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
-            line="81"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        delegate.edit().putString(key, value).apply()"
-        errorLine2="        ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
-            line="96"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        delegate.edit().putFloat(key, value).apply()"
-        errorLine2="        ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
-            line="111"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        delegate.edit().putLong(key, value.toRawBits()).apply()"
-        errorLine2="        ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
-            line="126"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        delegate.edit().putBoolean(key, value).apply()"
-        errorLine2="        ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/EncryptedSessionSettings.kt"
-            line="141"
-            column="9"/>
-    </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `SharedPreferences.edit` instead?"
@@ -5472,7 +4041,6 @@
             line="35"
             column="9"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `SharedPreferences.edit` instead?"
@@ -5483,7 +4051,6 @@
             line="43"
             column="9"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `SharedPreferences.edit` instead?"
@@ -5494,7 +4061,6 @@
             line="65"
             column="9"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `SharedPreferences.edit` instead?"
@@ -5505,7 +4071,6 @@
             line="72"
             column="9"/>
     </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `SharedPreferences.edit` instead?"
@@ -5516,40 +4081,6 @@
             line="92"
             column="9"/>
     </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="        return Intent(Intent.ACTION_VIEW, Uri.parse(authUrl))"
-        errorLine2="                                          ~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/drive/GoogleDriveAuthHelper.kt"
-            line="78"
-            column="43"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="        Uri"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/remote/drive/GoogleDriveAuthHelper.kt"
-            line="118"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit().putBoolean(KEY_DISCLAIMER_ACCEPTED, true).apply()"
-        errorLine2="        ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/LegalDisclaimerPrefs.kt"
-            line="24"
-            column="9"/>
-    </issue>
-
     <issue
         id="UseKtx"
         message="Use the KTX extension function `SharedPreferences.edit` instead?"
@@ -5560,183 +4091,6 @@
             line="265"
             column="17"/>
     </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        context"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/session/NotificationPermissionPrefs.kt"
-            line="43"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        context"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/session/NotificationPermissionPrefs.kt"
-            line="57"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit().putString(KEY_PREFERENCES, json.toString()).apply()"
-        errorLine2="        ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/NotificationPreferencesStore.kt"
-            line="55"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit().putBoolean(consentKey(addonId), true).apply()"
-        errorLine2="        ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/addons/PersistentAddonConsentStore.kt"
-            line="30"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs.edit().remove(consentKey(addonId)).apply()"
-        errorLine2="        ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/remote/addons/PersistentAddonConsentStore.kt"
-            line="35"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        preferences"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/session/PreferencesSessionStore.kt"
-            line="50"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        preferences"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/session/PreferencesSessionStore.kt"
-            line="62"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="            prefs"
-        errorLine2="            ^">
-        <location
-            file="src/main/java/com/nexo/data/session/ReaderPreferences.kt"
-            line="110"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/session/ReadingGoalPreferences.kt"
-            line="92"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toColorInt` instead?"
-        errorLine1="                    android.graphics.Color.parseColor(h.color)"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/readium/ReadiumDecorationMappers.kt"
-            line="148"
-            column="21"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        context"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/debug/SentryPrivacyPrefs.kt"
-            line="24"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        val editor = prefs.edit()"
-        errorLine2="                     ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/TranslationPreferences.kt"
-            line="81"
-            column="22"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        val editor = prefs.edit()"
-        errorLine2="                     ~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/session/TranslationPreferences.kt"
-            line="115"
-            column="22"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toUri` instead?"
-        errorLine1="                    .Request(Uri.parse(assetUrl))"
-        errorLine2="                             ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/data/update/UpdateDownloader.kt"
-            line="33"
-            column="30"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/session/UpdatePrefs.kt"
-            line="24"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `SharedPreferences.edit` instead?"
-        errorLine1="        prefs"
-        errorLine2="        ^">
-        <location
-            file="src/main/java/com/nexo/data/session/UpdatePrefs.kt"
-            line="32"
-            column="9"/>
-    </issue>
-
     <issue
         id="SetTextI18n"
         message="String literal in `setText` can not be translated. Use Android resources instead."
@@ -5747,7 +4101,6 @@
             line="108"
             column="25"/>
     </issue>
-
     <issue
         id="SetTextI18n"
         message="String literal in `setText` can not be translated. Use Android resources instead."

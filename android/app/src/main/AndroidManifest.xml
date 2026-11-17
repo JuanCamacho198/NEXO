@@ -62,7 +62,11 @@
                    email-confirmation mails, previously shared addon links) keep
                    resolving. Do NOT remove it in this release: retire it together
                    with the matching Supabase redirect-allowlist change. -->
-            <intent-filter android:autoVerify="true">
+            <!-- No `android:autoVerify`: it only applies to `http(s)` App Links and
+                 the merged manifest declares no https scheme, so here it did nothing
+                 except make lint demand web hosts these custom-scheme filters cannot
+                 have. Custom schemes need no assetlinks.json verification. -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
@@ -121,16 +125,31 @@
                  Scheme injected from build.gradle.kts (driveRedirectScheme) —
                  Google's reserved native-app pattern
                  com.googleusercontent.apps.<android-client-id>:/oauth2redirect.
-                 Arbitrary custom URI schemes are no longer supported on Android. -->
+                 Arbitrary custom URI schemes are no longer supported on Android.
+
+                 Deliberately NO `android:host`: the redirect URI is
+                 `com.googleusercontent.apps.<id>:/oauth2redirect` — the client ID is
+                 the SCHEME and a single colon introduces the path, so the URI has no
+                 authority at all (see driveOAuthRedirectUri in DriveOAuthSession.kt).
+                 MainActivity matches on `uri.scheme` only. Adding a host would make
+                 the filter stop matching the URI Google actually redirects to. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
+                <!-- tools:ignore is line-scoped to THIS <data> element on purpose.
+                     AppLinkUrlError's "At least one `host` must be specified" is a
+                     false positive here: the check assumes a filter with a path but no
+                     host is a malformed App Link, while this filter is a custom-scheme
+                     deep link whose URI genuinely has no authority. Suppressing it in
+                     manifest scope (android:tools:ignore on <manifest>) would also
+                     silence every future App Link mistake in this file. -->
                 <data
                     android:scheme="${driveRedirectScheme}"
-                    android:pathPrefix="/oauth2redirect" />
+                    android:pathPrefix="/oauth2redirect"
+                    tools:ignore="AppLinkUrlError" />
             </intent-filter>
         </activity>
 
