@@ -81,5 +81,6 @@ object UseCaseModule {
     fun provideUpdateInstallSourceReader(
         @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
     ): com.nexo.domain.update.UpdateInstallSourceReader =
-        com.nexo.data.update.AndroidUpdateInstallSourceReader(context)
+        com.nexo.data.update
+            .AndroidUpdateInstallSourceReader(context)
 }

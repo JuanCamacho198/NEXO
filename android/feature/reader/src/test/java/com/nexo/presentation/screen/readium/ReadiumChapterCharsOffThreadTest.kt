@@ -1,22 +1,20 @@
 package com.nexo.presentation.screen.readium
 
 import com.nexo.domain.model.Highlight
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Publication
-import io.mockk.coEvery
 import org.readium.r2.shared.util.Try
-import org.readium.r2.shared.util.data.ReadError
 import org.readium.r2.shared.util.Url
 import org.readium.r2.shared.util.resource.Resource
+import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
@@ -71,8 +69,10 @@ class ReadiumChapterCharsOffThreadTest {
 
     private fun link(href: String): Link = Link(href = Url(href)!!, mediaType = null)
 
-
-    private fun cfiHighlight(id: String, cfi: String): Highlight =
+    private fun cfiHighlight(
+        id: String,
+        cfi: String,
+    ): Highlight =
         Highlight(
             id = id,
             bookId = "book",
@@ -197,7 +197,10 @@ class ReadiumChapterCharsOffThreadTest {
         throw AssertionError("the chapter read never started")
     }
 
-    private fun awaitRead(publication: SlowPublication, expectedReads: Int = 1) {
+    private fun awaitRead(
+        publication: SlowPublication,
+        expectedReads: Int = 1,
+    ) {
         val deadline = System.currentTimeMillis() + MAX_WAIT_MS
         while (System.currentTimeMillis() < deadline) {
             if (publication.readCountNow() >= expectedReads) return

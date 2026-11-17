@@ -83,10 +83,10 @@ import dagger.hilt.components.SingletonComponent
 import io.github.jan.supabase.auth.MemorySessionManager
 import io.github.jan.supabase.auth.SettingsSessionManager
 import io.ktor.client.HttpClient
+import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.header

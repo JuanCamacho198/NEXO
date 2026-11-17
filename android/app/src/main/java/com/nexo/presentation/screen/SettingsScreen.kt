@@ -40,9 +40,8 @@ import com.nexo.presentation.navigation.rememberSettingsDevicesViewModel
 import com.nexo.presentation.navigation.rememberStorageViewModel
 import com.nexo.presentation.screen.settings.AboutContact
 import com.nexo.presentation.screen.settings.AboutScreen
-import com.nexo.presentation.screen.settings.PrivacyPolicyScreen
-import com.nexo.presentation.screen.settings.TermsScreen
 import com.nexo.presentation.screen.settings.PerformanceScreen
+import com.nexo.presentation.screen.settings.PrivacyPolicyScreen
 import com.nexo.presentation.screen.settings.SettingsAccountScreen
 import com.nexo.presentation.screen.settings.SettingsDataStorageScreen
 import com.nexo.presentation.screen.settings.SettingsDefinitionScreen
@@ -56,6 +55,7 @@ import com.nexo.presentation.screen.settings.SettingsThemeScreen
 import com.nexo.presentation.screen.settings.SettingsTranslationScreen
 import com.nexo.presentation.screen.settings.StorageScreen
 import com.nexo.presentation.screen.settings.SyncScreen
+import com.nexo.presentation.screen.settings.TermsScreen
 import com.nexo.presentation.viewmodel.StatisticsViewModel
 import com.nexo.presentation.viewmodel.UpdateViewModel
 import com.nexo.ui.components.molecules.DEFINITION_LANGUAGE_OPTIONS

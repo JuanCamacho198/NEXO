@@ -1,7 +1,6 @@
 package com.nexo.di.modules
 
 import com.nexo.data.remote.drive.DriveTokenApi
-import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.HttpRequestTimeoutException

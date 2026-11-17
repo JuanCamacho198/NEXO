@@ -42,8 +42,7 @@ object AdaptiveLayout {
      * At compact width this returns the available width unchanged, so the phone
      * layout is byte-identical: the cap only bites from [MEDIUM_MIN_WIDTH_DP] up.
      */
-    fun readerMaxWidthDp(availableWidthDp: Int): Int =
-        if (availableWidthDp < MEDIUM_MIN_WIDTH_DP) availableWidthDp else READER_MAX_COLUMN_WIDTH_DP
+    fun readerMaxWidthDp(availableWidthDp: Int): Int = if (availableWidthDp < MEDIUM_MIN_WIDTH_DP) availableWidthDp else READER_MAX_COLUMN_WIDTH_DP
 
     /** Fixed column count for the book grids (library shelf, discover results). */
     fun gridColumnCount(widthDp: Int): Int =
