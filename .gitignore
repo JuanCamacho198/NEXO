@@ -51,6 +51,8 @@ docs/*
 !android/docs/
 !docs/release-update-feed.md
 !docs/storage-layout-and-sync.md
+!docs/desktop-csp-origins.md
+!docs/desktop-offline-capabilities.md
 openspec/
 CLAUDE.md
 
