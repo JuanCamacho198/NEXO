@@ -66,6 +66,48 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": []
+    "externalBin": [],
+    "shortDescription": "EPUB reader with local-first storage and sync",
+    "longDescription": "NEXO Desktop is a local-first EPUB reader: books, highlights, dictionary and reading progress live in a local SQLite database and sync to Supabase only when you sign in.",
+    "category": "Productivity",
+    "fileAssociations": [
+      {
+        "ext": ["epub"],
+        "name": "EPUB document",
+        "description": "EPUB document",
+        "mimeType": "application/epub+zip",
+        "role": "Viewer",
+        "rank": "Owner"
+      }
+    ],
+    "windows": {
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "tsp": true
+    },
+    "macOS": {
+      "signingIdentity": "-",
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.plist"
+    },
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0",
+          "libayatana-appindicator3-1",
+          "librsvg2-2"
+        ],
+        "section": "utils"
+      },
+      "rpm": {
+        "depends": [
+          "webkit2gtk4.1",
+          "gtk3",
+          "libayatana-appindicator-gtk3",
+          "librsvg2"
+        ]
+      }
+    }
   }
 }
