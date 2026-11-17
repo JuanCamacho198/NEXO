@@ -209,6 +209,7 @@ jobs:
             :app:verifyStringParity \
             :app:verifyAuthScreenNoHardcodedStrings \
             :app:verifyNoReaderUiStateResidue \
+            :app:verifyLintBaselinePaths \
             :app:koverXmlReportDebug \
             :app:koverHtmlReportDebug
 

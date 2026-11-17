@@ -1,13 +1,16 @@
 package com.nexo.debug
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.nexo.NexoApplication
 import com.nexo.R
 import org.json.JSONObject
@@ -59,6 +62,20 @@ object CrashNotificationHelper {
                 Context.MODE_PRIVATE,
             )
         val raw = prefs.getString(NexoApplication.KEY_LAST_CRASH, null) ?: return
+        // Explicit permission gate, mirroring
+        // [com.nexo.presentation.notification.AndroidOsNotifier]: from API 33 the
+        // OS surface needs POST_NOTIFICATIONS, and a denied permission must be a
+        // silent no-op rather than a `SecurityException` swallowed by the
+        // `runCatching` below. Keep the persisted crash (return before the
+        // clear) so a later launch on a grant can still surface it.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
         // Clear immediately so the notification only shows once.
         prefs.edit().remove(NexoApplication.KEY_LAST_CRASH).apply()
 
