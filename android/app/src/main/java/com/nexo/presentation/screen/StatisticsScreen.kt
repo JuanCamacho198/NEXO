@@ -27,10 +27,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -310,12 +312,13 @@ private fun ReadingActivitySection(weeklyActivity: List<DailyReadingActivity>) {
                 verticalAlignment = Alignment.Bottom,
             ) {
                 val maxMinutes = weeklyActivity.maxOfOrNull { it.minutesRead }?.coerceAtLeast(1) ?: 1
-                val dateFormatter =
-                    SimpleDateFormat("EEE", Locale.getDefault()).apply {
-                        // Canonical reading-day keys are 00:00 UTC of the local
-                        // day; format in UTC so the weekday never shifts.
-                        timeZone = TimeZone.getTimeZone("UTC")
-                    }
+                // Canonical reading-day keys are 00:00 UTC of the local day;
+                // format in UTC so the weekday never shifts. The formatter is
+                // rebuilt whenever the configuration's locale changes, so the
+                // day labels follow a late locale switch instead of freezing on
+                // whatever Locale.getDefault() was at first composition.
+                val locales = LocalConfiguration.current.locales
+                val dateFormatter = remember(locales) { statisticsDayLabelFormat(locales[0]) }
                 weeklyActivity.forEach { day ->
                     val heightFraction = day.minutesRead.toFloat() / maxMinutes
                     Column(
@@ -342,6 +345,18 @@ private fun ReadingActivitySection(weeklyActivity: List<DailyReadingActivity>) {
         }
     }
 }
+
+/**
+ * Builds the day-label formatter for [locale].
+ *
+ * Keyed on the observable configuration locale by the caller so a locale
+ * change rebuilds it; UTC keeps the weekday pinned to the canonical
+ * reading-day key (00:00 UTC of the local day).
+ */
+internal fun statisticsDayLabelFormat(locale: Locale): SimpleDateFormat =
+    SimpleDateFormat("EEE", locale).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
 
 @Composable
 private fun GoalsSection(goalProgress: Float) {

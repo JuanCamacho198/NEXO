@@ -23,17 +23,6 @@
     </issue>
 
     <issue
-        id="MissingPermission"
-        message="Call requires permission which may be rejected by user: code should explicitly check to see if permission is available (with `checkPermission`) or explicitly handle a potential `SecurityException`"
-        errorLine1="            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/debug/CrashNotificationHelper.kt"
-            line="101"
-            column="13"/>
-    </issue>
-
-    <issue
         id="InlinedApi"
         message="Field requires API level 30 (current min is 26): `android.view.WindowInsetsController#BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE`"
         errorLine1="                controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE"
@@ -273,17 +262,6 @@
             file="src/main/AndroidManifest.xml"
             line="91"
             column="17"/>
-    </issue>
-
-    <issue
-        id="NonObservableLocale"
-        message="Reading locale in a non-observable way in a composable function"
-        errorLine1="                    SimpleDateFormat(&quot;EEE&quot;, Locale.getDefault()).apply {"
-        errorLine2="                                            ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/nexo/presentation/screen/StatisticsScreen.kt"
-            line="314"
-            column="45"/>
     </issue>
 
     <issue
@@ -2971,17 +2949,6 @@
         message="`checkServerTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
         <location
             file="$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.google.http-client/google-http-client/1.45.3/dde98b597081b98514867c9cefa551fcdea3a28c/google-http-client-1.45.3.jar"/>
-    </issue>
-
-    <issue
-        id="DataExtractionRules"
-        message="The attribute `android:allowBackup` is deprecated from Android 12 and higher and may be removed in future versions. Consider adding the attribute `android:dataExtractionRules` specifying an `@xml` resource which configures cloud backups and device transfers on Android 12 and higher."
-        errorLine1="        android:allowBackup=&quot;false&quot;"
-        errorLine2="                             ~~~~~">
-        <location
-            file="src/main/AndroidManifest.xml"
-            line="12"
-            column="30"/>
     </issue>
 
     <issue
