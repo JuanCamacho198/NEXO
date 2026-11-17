@@ -28,6 +28,10 @@ export function createDeviceHeartbeat(options?: {
   function start(id: string): void {
     stop();
     timer = setInterval(async () => {
+      // Presence is not worth a request while offline: skipping the tick pays
+      // nothing, whereas attempting it pays the full network timeout every
+      // interval and hides the reason behind the silent catch below.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
       try {
         await updateHeartbeat(getClient(), id);
       } catch {

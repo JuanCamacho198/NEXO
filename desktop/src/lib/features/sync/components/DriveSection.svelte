@@ -20,6 +20,9 @@
   const isConnecting = $derived(driveState.isConnecting);
   const lastError = $derived(driveState.lastError);
   const showError = $derived(!isAuthorized && !isConnecting && lastError !== null);
+  const errorText = $derived(
+    lastError === 'DRIVE_OFFLINE' ? t('settings.sync.drive.offline') : lastError,
+  );
 
   $effect(() => {
     void isDriveAuthorized();
@@ -56,7 +59,7 @@
   {:else if showError}
     <div class="flex items-center gap-3">
       <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-(--color-error)" aria-hidden="true"></span>
-      <span class="flex-1 text-xs text-(--color-error)">{lastError}</span>
+      <span class="flex-1 text-xs text-(--color-error)">{errorText}</span>
       <Button variant="primary" data-testid="drive-retry" onclick={() => void handleConnect()}>
         <span>{t('error.retry')}</span>
       </Button>

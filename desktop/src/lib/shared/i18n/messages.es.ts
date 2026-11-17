@@ -380,6 +380,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.sync.drive.connect': 'Conectar Drive',
   'settings.sync.drive.disconnect': 'Desconectar',
   'settings.sync.drive.connecting': 'Conectando...',
+  'settings.sync.drive.offline':
+    'Sin conexion. Reconectate para vincular Drive e intentalo de nuevo.',
   'settings.sync.drive.connectFailed': 'No se pudo conectar Drive',
   'settings.sync.drive.disconnected': 'Drive desconectado',
 

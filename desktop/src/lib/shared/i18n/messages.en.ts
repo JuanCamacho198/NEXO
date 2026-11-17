@@ -375,6 +375,7 @@ export const messagesEn = {
   'settings.sync.drive.connect': 'Connect Drive',
   'settings.sync.drive.disconnect': 'Disconnect',
   'settings.sync.drive.connecting': 'Connecting...',
+  'settings.sync.drive.offline': 'You are offline. Reconnect to link Drive and try again.',
   'settings.sync.drive.connectFailed': 'Drive connect failed',
   'settings.sync.drive.disconnected': 'Drive disconnected',
 

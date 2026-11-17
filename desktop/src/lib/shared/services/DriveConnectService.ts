@@ -61,6 +61,13 @@ export class DriveOAuthError extends Error {
 
 export type DriveConfigErrorCode = 'DRIVE_CONFIG_MISSING';
 
+/**
+ * Connect-route failure code for "there is no network". Kept at the connect
+ * boundary (not inferred from a fetch failure) because the callback never
+ * arrives offline, so there is no failure to inspect.
+ */
+const OFFLINE_CODE = 'DRIVE_OFFLINE';
+
 export class DriveConfigError extends Error {
   public readonly code: DriveConfigErrorCode = 'DRIVE_CONFIG_MISSING';
   constructor(message: string) {
@@ -397,6 +404,13 @@ export async function isDriveAuthorized(): Promise<boolean> {
 }
 
 async function runDriveConnect(): Promise<DriveAuthResult> {
+  // Offline, the loopback callback can never arrive: the flow would show
+  // "Connecting…" forever and leave the buttons disabled. Fail up front with an
+  // explicit code instead, before any loopback or browser work.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return reportFailure(OFFLINE_CODE, 'Connect to the internet to link Google Drive.');
+  }
+
   let config: DriveOAuthConfig;
   try {
     config = requireDriveOAuthConfig();
