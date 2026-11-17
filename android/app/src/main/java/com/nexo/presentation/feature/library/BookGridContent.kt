@@ -14,6 +14,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.domain.model.Book
 import com.nexo.ui.components.molecules.AddBookCard
+import com.nexo.ui.layout.rememberGridColumnCount
 import com.nexo.ui.theme.NexoTheme
 
 @Composable
@@ -88,7 +89,9 @@ fun BookGrid(
     footerContent: (@Composable () -> Unit)? = null,
 ) {
     LazyVerticalStaggeredGrid(
-        columns = StaggeredGridCells.Fixed(2),
+        // 2 on every phone width (unchanged); 3 on a 600dp+ window and 4 from
+        // 840dp, so a tablet spends its width on books instead of widening cards.
+        columns = StaggeredGridCells.Fixed(rememberGridColumnCount()),
         modifier =
             Modifier
                 .fillMaxSize()

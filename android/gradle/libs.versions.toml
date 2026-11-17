@@ -21,6 +21,10 @@ coreKtx = "1.13.1"
 splash = "1.0.1"
 appcompat = "1.7.0"
 lifecycle = "2.8.6"
+# WindowSizeClass breakpoints and the WindowMetrics calculator. Already on the
+# classpath transitively at 1.5.0 (activity-compose); declared so core:ui can
+# reference it directly instead of relying on a transitive edge.
+window = "1.5.0"
 activityCompose = "1.9.2"
 fragmentKtx = "1.8.5"
 navigation = "2.8.2"
@@ -103,6 +107,7 @@ baselineProfile = "1.5.0"
 [libraries]
 # androidx group
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-window = { group = "androidx.window", name = "window", version.ref = "window" }
 androidx-splash = { group = "androidx.core", name = "core-splashscreen", version.ref = "splash" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-lifecycle-runtime = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }

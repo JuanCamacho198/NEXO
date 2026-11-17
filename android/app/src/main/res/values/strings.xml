@@ -4,6 +4,12 @@
     <!-- Reader / aA Settings -->
     <!-- U3: legal access group labels -->
     <string name="action_cancel">Cancel</string>
+    <string name="action_dismiss_snackbar">Dismiss message</string>
+    <string name="a11y_selected">Selected</string>
+    <string name="a11y_device_android">Android device</string>
+    <string name="a11y_device_windows">Windows device</string>
+    <string name="a11y_device_apple">Apple device</string>
+    <string name="a11y_device_other">Device</string>
     <string name="action_ok">OK</string>
     <!-- U5: addon capabilities -->
     <string name="addon_capability_detail_body">What this addon declares it can do with your catalog queries. Grant access only if you trust this source.</string>

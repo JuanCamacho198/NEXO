@@ -177,6 +177,7 @@ private fun UpdateCheckRow(
                     UpdateErrorKind.OFFLINE -> stringResource(R.string.update_error_offline)
                     UpdateErrorKind.MALFORMED -> stringResource(R.string.update_error_malformed)
                     UpdateErrorKind.UNREACHABLE -> stringResource(R.string.update_error_unreachable)
+                    UpdateErrorKind.MANAGED_INSTALL -> stringResource(R.string.update_error_managed_install)
                 }
             is UpdateUiState.Idle -> null
         }

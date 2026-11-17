@@ -142,7 +142,7 @@ fun SearchBottomSheet(
                 leadingIcon = {
                     Icon(
                         imageVector = NexoIcons.Search,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.search_input_hint),
                         tint = Color(0xFF718096),
                     )
                 },

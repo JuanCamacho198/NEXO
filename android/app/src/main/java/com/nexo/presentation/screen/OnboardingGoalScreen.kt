@@ -319,7 +319,7 @@ private fun GoalOptionCard(
             ) {
                 Icon(
                     imageVector = NexoIcons.Check,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.a11y_selected),
                     tint =
                         if (selected) {
                             MaterialTheme.colorScheme.primary

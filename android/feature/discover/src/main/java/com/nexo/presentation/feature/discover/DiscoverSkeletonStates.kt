@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nexo.feature.discover.R
 import com.nexo.ui.components.atoms.NexoSkeletonBox
+import com.nexo.ui.layout.rememberGridColumnCount
 import com.nexo.ui.theme.nexoColors
 
 /** Number of placeholder cards in the initial LOADING skeleton (2x3 grid). */
@@ -37,7 +38,9 @@ private const val SKELETON_CARD_COUNT = 6
 fun DiscoverSkeletonState(modifier: Modifier = Modifier) {
     val colors = nexoColors
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        // Matches DiscoverResultsGrid so the skeletons do not reflow when the
+        // real results land on a wide window.
+        columns = GridCells.Fixed(rememberGridColumnCount()),
         modifier = modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),

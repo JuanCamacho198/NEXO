@@ -195,7 +195,7 @@ private fun LanguagePicker(
                     if (isSelected) {
                         Icon(
                             imageVector = NexoIcons.Check,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.a11y_selected),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }

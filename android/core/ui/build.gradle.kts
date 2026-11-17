@@ -40,6 +40,17 @@ dependencies {
     // SafeResourcePainter logs a missing drawable through DebugDual.
     implementation(project(":core:debug"))
 
+    // WindowSizeClass breakpoints: `api` so the reader, library and discover
+    // surfaces can branch on the same object without each declaring it.
+    //
+    // Does NOT use `androidx.compose.material3.windowsizeclass.calculateWindowSizeClass`:
+    // material3 1.4.0 (the version this repo's BOM resolves) removed it. The
+    // replacement here is `androidx.window.core.layout.WindowSizeClass`, which is
+    // what material3 1.5 moved to anyway, so the next bump does not churn this.
+    // This artifact is already on the classpath transitively at this exact version
+    // via activity-compose; the declaration only makes the direct use explicit.
+    api(libs.androidx.window)
+
     // Shared Android-free test fixtures (MainDispatcherRule, account fixtures).
     testImplementation(project(":core:test"))
     testImplementation(libs.testing.junit4)

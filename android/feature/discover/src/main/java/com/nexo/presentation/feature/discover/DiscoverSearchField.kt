@@ -63,7 +63,7 @@ fun DiscoverSearchField(
         leadingIcon = {
             Icon(
                 imageVector = NexoIcons.Search,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.discover_search_hint),
                 modifier = Modifier.size(20.dp),
                 tint = if (isSearching) colors.primary else colors.textSecondary,
             )

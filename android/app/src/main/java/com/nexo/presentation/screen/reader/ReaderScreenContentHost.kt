@@ -4,8 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +30,7 @@ import com.nexo.presentation.viewmodel.reader.AnnotationUiState
 import com.nexo.presentation.viewmodel.reader.SessionUiState
 import com.nexo.presentation.viewmodel.reader.SettingsUiState
 import com.nexo.ui.components.molecules.SelectionOverlay
+import com.nexo.ui.layout.rememberReaderMaxWidth
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 @Composable
@@ -121,21 +125,33 @@ fun ReaderScreenContentHost(
             }
         }
         sessionUiState.chapters.isNotEmpty() && readiumPublication != null -> {
-            Box(modifier = modifier.fillMaxSize()) {
-                ReadiumReaderContent(
-                    publication = readiumPublication,
-                    navigatorConfig = buildNavigatorConfig(settingsUiState.readerSettings),
-                    highlights = annotationUiState.highlights,
-                    readerSettings = settingsUiState.readerSettings,
-                    viewModel = viewModel,
-                    initialLocator = sessionUiState.readiumLocator,
-                    inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,
-                    logWebViewTreeTrigger = logWebViewTreeTrigger,
-                    onShowChrome = { currentOnShowChrome() },
-                    onToggleChrome = { currentOnToggleChrome() },
-                    modifier = Modifier.fillMaxSize(),
-                )
-                SharedSelectionOverlay()
+            // Past 600dp the text column is capped so a tablet does not turn a
+            // book into one 1200dp-wide line. Null at phone widths: the column
+            // keeps filling the screen exactly as before.
+            val readerMaxWidth = rememberReaderMaxWidth()
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .then(if (readerMaxWidth != null) Modifier.widthIn(max = readerMaxWidth) else Modifier)
+                            .fillMaxHeight(),
+                ) {
+                    ReadiumReaderContent(
+                        publication = readiumPublication,
+                        navigatorConfig = buildNavigatorConfig(settingsUiState.readerSettings),
+                        highlights = annotationUiState.highlights,
+                        readerSettings = settingsUiState.readerSettings,
+                        viewModel = viewModel,
+                        initialLocator = sessionUiState.readiumLocator,
+                        inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,
+                        logWebViewTreeTrigger = logWebViewTreeTrigger,
+                        onShowChrome = { currentOnShowChrome() },
+                        onToggleChrome = { currentOnToggleChrome() },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    SharedSelectionOverlay()
+                }
             }
         }
         else -> {

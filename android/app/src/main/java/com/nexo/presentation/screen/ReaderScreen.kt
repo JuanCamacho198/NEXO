@@ -303,7 +303,10 @@ fun ReaderScreen(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
         ) { data ->
-            NexoSnackbar(snackbarData = data)
+            NexoSnackbar(
+                snackbarData = data,
+                dismissContentDescription = stringResource(R.string.action_dismiss_snackbar),
+            )
         }
     }
 }

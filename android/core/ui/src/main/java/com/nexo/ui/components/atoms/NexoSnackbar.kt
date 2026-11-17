@@ -74,6 +74,7 @@ private val SnackbarMaxWidth = 560.dp
 fun NexoSnackbar(
     snackbarData: SnackbarData,
     modifier: Modifier = Modifier,
+    dismissContentDescription: String? = null,
 ) {
     SnackbarSurface(
         message = snackbarData.visuals.message,
@@ -81,6 +82,7 @@ fun NexoSnackbar(
         withDismissAction = snackbarData.visuals.withDismissAction,
         onAction = snackbarData::performAction,
         onDismiss = snackbarData::dismiss,
+        dismissContentDescription = dismissContentDescription,
         modifier = modifier,
     )
 }
@@ -100,6 +102,7 @@ internal fun SnackbarSurface(
     withDismissAction: Boolean = false,
     onAction: () -> Unit = {},
     onDismiss: () -> Unit = {},
+    dismissContentDescription: String? = null,
 ) {
     // Scale-only motion probe: `MotionDurationScale` lives in the Recomposer's
     // coroutine context rather than in a CompositionLocal, so it is read once
@@ -169,7 +172,10 @@ internal fun SnackbarSurface(
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = NexoIcons.Close,
-                            contentDescription = null,
+                            // The close glyph is the whole control: without a
+                            // description TalkBack announces an unlabelled
+                            // button. Null only for previews.
+                            contentDescription = dismissContentDescription,
                             tint = colors.textSecondary,
                         )
                     }
