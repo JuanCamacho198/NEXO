@@ -34,24 +34,7 @@ fun highlightsToDecorations(
     // If publication is provided, wrap it into effective provider; otherwise use supplied provider.
     val effectiveProvider: (Link) -> Int =
         if (publication != null) {
-            { link ->
-                runCatching {
-                    val resource = publication.get(link)
-                    val bytes =
-                        kotlinx.coroutines.runBlocking {
-                            resource?.read()?.getOrNull()
-                        }
-                    val decodedLength =
-                        bytes?.let {
-                            try {
-                                it.decodeToString().length
-                            } catch (_: Throwable) {
-                                it.size
-                            }
-                        } ?: ESTIMATED_CHAPTER_CHARS_FALLBACK
-                    decodedLength.takeIf { it > 0 } ?: ESTIMATED_CHAPTER_CHARS_FALLBACK
-                }.getOrDefault(ESTIMATED_CHAPTER_CHARS_FALLBACK).coerceAtLeast(1)
-            }
+            { link -> chapterCharCount(link, publication) }
         } else {
             chapterCharsProvider
         }
