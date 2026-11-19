@@ -41,6 +41,9 @@ const highlights = [
 
   <div class="hero-card relative flex flex-col">
     <div class="hero-stage relative min-h-0 flex-1" id="dispositivos">
+      <p class="hero-chrome hero-tagline absolute inset-x-0 top-0 px-6 text-center text-[15px] font-medium tracking-[0.01em] text-ink/85 text-balance">
+        {t('hero.heading')}
+      </p>
       <h1 class="hero-word">{t('hero.wordmark')}</h1>
 
       <!-- 3D renders (transparent PNG) of the Sketchfab models with the dark app
@@ -79,10 +82,6 @@ const highlights = [
         />
       </div>
     </div>
-
-    <p class="hero-chrome hero-tagline px-6 text-center text-[15px] font-medium text-ink/85 text-balance">
-      {t('hero.heading')}
-    </p>
 
     <div class="hero-chrome hero-bar grid grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.15fr)] items-center gap-0 max-[1023px]:grid-cols-1 max-[1023px]:gap-5">
       {highlights.map((item) => (
@@ -188,8 +187,8 @@ const highlights = [
   }
 
   .hero-word {
-    --word-size: min(22cqw, 46cqh);
-    --word-top: 2cqh;
+    --word-size: min(20cqw, 36cqh);
+    --word-top: 6cqh;
     /* Intro only: how far the centred word sits below its resting spot, and how
        much larger it is there (see hero-word-in in global.css). */
     --word-rise: calc(50cqh - var(--word-top) - 0.4 * var(--word-size));
@@ -268,21 +267,35 @@ const highlights = [
     bottom: -2.5%;
     height: 5%;
   }
+  /* Float rhythm per device (see hero-float in global.css): different
+     periods and phases so the three never bob in lockstep. */
   .hero-device-laptop {
+    --float-y: -7px;
+    --float-r: 0deg;
+    --float-dur: 6.4s;
+    --float-phase: 0s;
     left: 50%;
-    bottom: -2cqh;
-    width: min(45cqw, 98cqh);
+    bottom: -1cqh;
+    width: min(46cqw, 96cqh);
     translate: -50% 0;
   }
   .hero-device-phone {
-    left: 13cqw;
+    --float-y: -11px;
+    --float-r: -1.2deg;
+    --float-dur: 5.2s;
+    --float-phase: 0.6s;
+    left: 10cqw;
     bottom: -3cqh;
-    width: min(15cqw, 33cqh);
+    width: min(17cqw, 40cqh);
   }
   .hero-device-tablet {
-    right: 9cqw;
-    bottom: 2cqh;
-    width: min(26cqw, 58cqh);
+    --float-y: -9px;
+    --float-r: 1deg;
+    --float-dur: 5.8s;
+    --float-phase: 1.2s;
+    right: 6cqw;
+    bottom: 0;
+    width: min(31cqw, 68cqh);
   }
 
   .placeholder-surface {
@@ -293,8 +306,10 @@ const highlights = [
     backdrop-filter: blur(6px);
   }
 
+  /* Sits above the wordmark like an eyebrow, which frees the band under the
+     devices so they can stand lower and leave more of NEXO visible. */
   .hero-tagline {
-    padding-block: 28px 8px;
+    z-index: 2;
     text-shadow: 0 1px 12px oklch(0% 0 0 / 0.7);
   }
   .hero-bar {
@@ -315,19 +330,19 @@ const highlights = [
     }
     .hero-stage {
       flex: none;
-      height: min(98vw, 640px);
+      height: min(108vw, 680px);
     }
     /* Stacked, the bar would push the rock far below the devices; ending the
        sky just under the stage keeps the ridge beneath them, and the bar sits
        on the section's night colour instead. */
     .hero-bg {
       bottom: auto;
-      height: calc(96px + min(98vw, 640px) + 70px);
+      height: calc(96px + min(108vw, 680px) + 70px);
       mask-image: linear-gradient(to bottom, black 78%, transparent);
     }
     .hero-word {
       --word-size: 25cqw;
-      --word-top: 4cqh;
+      --word-top: 15cqh;
     }
     .hero-device-laptop {
       width: 70cqw;

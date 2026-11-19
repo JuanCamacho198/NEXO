@@ -599,6 +599,19 @@
   .hero-intro .site-header[data-hero] {
     animation: hero-chrome-down 0.55s var(--intro-ease) 1.05s both;
   }
+  /* After the intro the devices keep a slow idle float, like items hovering in
+     a game. It moves the image inside .hero-device (whose own transform belongs
+     to the entrance), and the contact shadow tightens and fades as the device
+     rises, so it reads as lifting off the rock rather than sliding. Starting right
+     after the intro, staggered by --float-phase, keeps the first frame at rest. */
+  .hero-intro .hero-device > img {
+    animation: hero-float var(--float-dur) ease-in-out calc(1.6s + var(--float-phase)) infinite
+      alternate both;
+  }
+  .hero-intro .hero-device::after {
+    animation: hero-float-shadow var(--float-dur) ease-in-out calc(1.6s + var(--float-phase))
+      infinite alternate both;
+  }
 
   /* Reduced motion lives in the components layer so it out-cascades the
      animation declarations above (a base-layer override would lose to them). */
@@ -613,7 +626,9 @@
     .hero-intro .hero-word,
     .hero-intro .hero-device,
     .hero-intro .hero-chrome,
-    .hero-intro .site-header[data-hero] {
+    .hero-intro .site-header[data-hero],
+    .hero-intro .hero-device > img,
+    .hero-intro .hero-device::after {
       animation: none;
     }
   }
@@ -905,6 +920,24 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+@keyframes hero-float {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(var(--float-y)) rotate(var(--float-r));
+  }
+}
+@keyframes hero-float-shadow {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0.6;
+    transform: scaleX(0.88);
   }
 }
 @keyframes hero-chrome-up {

@@ -45,10 +45,10 @@ await renderDevice({
   key: 1.4,
   front: 1.1,
   fill: 1.1,
-  rotation: [0, -16, 0],
+  rotation: [0, 20, 0],
   size: [1800, 1300],
   name: 'laptop',
-  cam: { dist: 5.9, elev: 13, azim: 0 },
+  cam: { dist: 5.9, elev: 11, azim: 0 },
 });
 await renderDevice({
   file: 'ipad_pro_12.9_2020.glb',
@@ -56,7 +56,7 @@ await renderDevice({
   texture: 'screen-tablet.png',
   flipY: true,
   planar: {},
-  rotation: [-6, 28, -90],
+  rotation: [-6, -28, -91],
   size: [1500, 1200],
   name: 'tablet',
   cam: { dist: 5.2, elev: 8, azim: 0 },
