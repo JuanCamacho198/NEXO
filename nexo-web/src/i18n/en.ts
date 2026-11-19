@@ -33,6 +33,22 @@ export const en = {
   'hero.platformMacOS': 'macOS',
   'hero.platformLinux': 'Linux',
 
+  // Steps (how it works)
+  'steps.heading': 'Read on one. Pick up on another.',
+  'steps.lead': 'Three steps, and your library follows you everywhere.',
+  'steps.listAria': 'Steps to get started with NEXO',
+  'steps.s1Title': 'Import your book',
+  'steps.s1Copy': 'Drop in an EPUB or PDF and NEXO files it in your library.',
+  'steps.s2Title': 'Read and highlight',
+  'steps.s2Copy': 'Mark the passages that matter and add notes as you read.',
+  'steps.s3Title': 'Continue on another device',
+  'steps.s3Copy': 'Open your phone and carry on from the very line you stopped at.',
+  'steps.fileName': 'La Odisea.epub',
+  'steps.importToastTitle': 'Book imported',
+  'steps.importToastCopy': 'La Odisea is now in your library',
+  'steps.cloudChip': 'Saved on all your devices',
+  'steps.syncChip': 'Synced from your tablet',
+
   // Experience
   'experience.eyebrow': 'The NEXO experience',
   'experience.heading': 'Start reading wherever you want. Continue where you left off.',

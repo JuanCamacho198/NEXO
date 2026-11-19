@@ -82,3 +82,60 @@ Then trim the transparent margins into the site assets (from `nexo-web/`):
 ```sh
 bun -e 'const sharp = require("sharp"); for (const n of ["laptop","tablet","phone"]) await sharp(`tools/device-renders/out/${n}.png`).trim({ threshold: 1 }).png({ compressionLevel: 9 }).toFile(`src/assets/hero/device-${n}.png`);'
 ```
+
+## Steps section ("Cómo funciona")
+
+`src/assets/steps/step{1,2,3}-{a,b}.png` are two states per device that the
+steps cards cross-fade between. Their screens are not Figma exports: they are
+redrawn in `screens.html` (the app's dark UI with type ~1.6x larger, so it
+reads at card size) and screenshotted to `assets/screen-step*.png` by element
+(`#screen-step1-a` … `#screen-step3-b`). Render each pair with the same camera:
+
+```js
+const laptop = (tex, name) =>
+  renderDevice({
+    file: 'laptop.glb',
+    screen: { by: 'mat', value: 'ComputerScreen' },
+    texture: tex,
+    flipY: true,
+    planar: { flipU: true },
+    pad: [0.02, 0.07, 0.02, 0.06],
+    grey: ['ComputerFrame'],
+    greyFilter: 'grayscale(1) brightness(0.7) contrast(1.1)',
+    key: 1.4,
+    front: 1.1,
+    fill: 1.1,
+    rotation: [0, -14, 0],
+    size: [1600, 1200],
+    name,
+    cam: { dist: 5.6, elev: 12, azim: 0 },
+  });
+const tablet = (tex, name) =>
+  renderDevice({
+    file: 'ipad_pro_12.9_2020.glb',
+    screen: { by: 'mat', value: 'screen' },
+    texture: tex,
+    flipY: true,
+    planar: {},
+    rotation: [-4, -16, -90],
+    size: [1500, 1200],
+    name,
+    cam: { dist: 5.0, elev: 8, azim: 0 },
+  });
+const phone = (tex, name) =>
+  renderDevice({
+    file: 'iphone_16_-_free.glb',
+    screen: { by: 'index', value: [3] },
+    texture: tex,
+    flipY: true,
+    planar: { axes: [0, 1] },
+    desat: 0.55,
+    rotation: [-3, 18, 4],
+    size: [900, 1400],
+    name,
+    cam: { dist: 6.2, elev: 6, azim: 0 },
+  });
+```
+
+Trim each pair with one shared box (the union of both trims), never
+separately, or state B will not land exactly on state A.

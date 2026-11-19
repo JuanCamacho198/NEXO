@@ -1,0 +1,448 @@
+---
+import { Image } from 'astro:assets';
+import step1a from '@/assets/steps/step1-a.png';
+import step1b from '@/assets/steps/step1-b.png';
+import step2a from '@/assets/steps/step2-a.png';
+import step2b from '@/assets/steps/step2-b.png';
+import step3a from '@/assets/steps/step3-a.png';
+import step3b from '@/assets/steps/step3-b.png';
+import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+
+const steps = [
+  {
+    n: '01',
+    kind: 'import',
+    title: t('steps.s1Title'),
+    copy: t('steps.s1Copy'),
+    a: step1a,
+    b: step1b,
+  },
+  {
+    n: '02',
+    kind: 'highlight',
+    title: t('steps.s2Title'),
+    copy: t('steps.s2Copy'),
+    a: step2a,
+    b: step2b,
+  },
+  {
+    n: '03',
+    kind: 'sync',
+    title: t('steps.s3Title'),
+    copy: t('steps.s3Copy'),
+    a: step3a,
+    b: step3b,
+  },
+] as const;
+
+// Two copies back to back make the loop seamless: when the track has moved by
+// exactly one copy, it is indistinguishable from the start and the animation
+// wraps. The second copy is hidden from assistive tech.
+const loop = [...steps, ...steps];
+---
+
+<!-- ══════════════ STEPS ══════════════ -->
+<!-- Dark like the hero it follows; the hero fades its sky into this colour. -->
+<section id="como-funciona" class="steps relative overflow-hidden text-ink" data-theme="dark">
+  <div class="shell steps-head text-center">
+    <p class="steps-eyebrow">{t('header.navHow')}</p>
+    <h2 class="steps-title">{t('steps.heading')}</h2>
+    <p class="steps-lead">{t('steps.lead')}</p>
+  </div>
+
+  <div class="steps-marquee">
+    <ul class="steps-track" aria-label={t('steps.listAria')}>
+      {loop.map((step, i) => (
+        <li
+          class={`step-card step-${step.kind}`}
+          aria-hidden={i >= steps.length ? 'true' : undefined}
+          style={`--card-offset: ${(i % steps.length) * -2.7}s`}
+        >
+          <div class="step-scene" aria-hidden="true">
+            <Image
+              src={step.a}
+              alt=""
+              widths={[480, 960]}
+              sizes="(max-width: 640px) 80vw, 520px"
+              class="scene-img scene-a"
+            />
+            <Image
+              src={step.b}
+              alt=""
+              widths={[480, 960]}
+              sizes="(max-width: 640px) 80vw, 520px"
+              class="scene-img scene-b"
+            />
+            {step.kind === 'import' && (
+              <>
+                <span class="file-chip">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M6 3h8l4 4v14H6Z" />
+                    <path d="M14 3v4h4" />
+                  </svg>
+                  {t('steps.fileName')}
+                </span>
+                <span class="scene-toast">
+                  <span class="toast-icon">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m5 12.5 4.5 4.5L19 7.5" />
+                    </svg>
+                  </span>
+                  <span>
+                    <strong>{t('steps.importToastTitle')}</strong>
+                    <small>{t('steps.importToastCopy')}</small>
+                  </span>
+                </span>
+              </>
+            )}
+            {step.kind !== 'import' && (
+              <span class="scene-chip">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m5 12.5 4.5 4.5L19 7.5" />
+                </svg>
+                {step.kind === 'highlight' ? t('steps.cloudChip') : t('steps.syncChip')}
+              </span>
+            )}
+          </div>
+          <div class="step-text">
+            <span class="step-number">{step.n}</span>
+            <h3 class="step-title">{step.title}</h3>
+            <p class="step-copy">{step.copy}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .steps {
+    --steps-bg: #0d0b18;
+    --card-w: 600px;
+    --gap: 28px;
+    --scene-cycle: 8s;
+    /* Starts on the exact colour the hero ends on (its sky fade, dimmed by
+       the card's outer shadow, measures #070610) and eases to the section's
+       own night blue, so there is no seam. */
+    background: linear-gradient(to bottom, #070610, var(--steps-bg) 240px);
+    padding: 64px 0 120px;
+  }
+  .steps-head {
+    max-width: 760px;
+  }
+  .steps-eyebrow {
+    color: oklch(76% 0.16 55);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .steps-title {
+    margin-top: 14px;
+    font-size: clamp(2.2rem, 4.4vw, 3.6rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    background: linear-gradient(
+      100deg,
+      oklch(97% 0.01 80),
+      oklch(84% 0.08 60) 60%,
+      oklch(74% 0.17 48)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .steps-lead {
+    margin-top: 16px;
+    font-size: 1.1rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* The marquee fades out at both edges so cards enter and leave softly. */
+  .steps-marquee {
+    margin-top: 56px;
+    mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  }
+  .steps-track {
+    display: flex;
+    gap: var(--gap);
+    width: max-content;
+    /* The trailing gap makes one copy exactly 50% of the track. */
+    padding-right: var(--gap);
+    animation: steps-marquee 54s linear infinite;
+  }
+  .steps-marquee:hover .steps-track,
+  .steps-marquee:focus-within .steps-track {
+    animation-play-state: paused;
+  }
+
+  .step-card {
+    width: var(--card-w);
+    flex: none;
+    border: 1px solid oklch(100% 0 0 / 0.08);
+    border-radius: 28px;
+    background:
+      radial-gradient(120% 80% at 50% 0%, oklch(70% 0.17 50 / 0.16), transparent 60%),
+      oklch(17% 0.03 275 / 0.9);
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.06);
+    overflow: hidden;
+  }
+  .step-scene {
+    position: relative;
+    height: 380px;
+    margin: 24px 24px 0;
+  }
+  /* Both states share one trimmed box, so B lands exactly on A. */
+  .step-scene :global(.scene-img) {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    translate: -50% 0;
+    filter: drop-shadow(0 22px 28px oklch(0% 0 0 / 0.55));
+  }
+  .step-scene :global(.scene-b) {
+    opacity: 0;
+    animation: scene-swap var(--scene-cycle) ease-in-out var(--card-offset) infinite;
+  }
+
+  .file-chip,
+  .scene-toast,
+  .scene-chip {
+    position: absolute;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid oklch(100% 0 0 / 0.14);
+    background: oklch(20% 0.035 270 / 0.85);
+    backdrop-filter: blur(12px);
+    color: var(--color-ink);
+    white-space: nowrap;
+    box-shadow: 0 16px 32px -12px oklch(0% 0 0 / 0.7);
+    opacity: 0;
+  }
+  .file-chip {
+    left: 8%;
+    top: 4%;
+    padding: 10px 16px 10px 12px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    animation: file-drop var(--scene-cycle) cubic-bezier(0.5, 0, 0.3, 1) var(--card-offset) infinite;
+  }
+  .file-chip svg {
+    width: 22px;
+    height: 22px;
+    color: oklch(80% 0.15 220);
+  }
+  .scene-toast {
+    right: 2%;
+    top: 0;
+    padding: 12px 18px 12px 12px;
+    border-radius: 16px;
+    animation: toast-pop var(--scene-cycle) cubic-bezier(0.22, 1, 0.36, 1) var(--card-offset)
+      infinite;
+  }
+  .scene-toast strong {
+    display: block;
+    font-size: 14px;
+  }
+  .scene-toast small {
+    display: block;
+    font-size: 12.5px;
+    color: var(--color-ink-soft);
+  }
+  .toast-icon {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: oklch(72% 0.17 155 / 0.2);
+    color: oklch(80% 0.17 155);
+  }
+  .toast-icon svg,
+  .scene-chip svg {
+    width: 16px;
+    height: 16px;
+  }
+  .scene-chip {
+    left: 50%;
+    top: 2%;
+    translate: -50% 0;
+    padding: 8px 14px 8px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    animation: toast-pop var(--scene-cycle) cubic-bezier(0.22, 1, 0.36, 1) var(--card-offset)
+      infinite;
+  }
+  .scene-chip svg {
+    color: oklch(80% 0.16 60);
+  }
+
+  .step-text {
+    padding: 26px 32px 32px;
+  }
+  .step-number {
+    display: block;
+    font-size: 54px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    background: linear-gradient(100deg, oklch(97% 0.01 80), oklch(74% 0.17 48));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    opacity: 0.8;
+  }
+  .step-title {
+    margin-top: 10px;
+    font-size: 1.6rem;
+    letter-spacing: -0.02em;
+  }
+  .step-copy {
+    margin-top: 8px;
+    max-width: 40ch;
+    color: var(--color-ink-soft);
+    font-size: 1.02rem;
+    line-height: 1.6;
+  }
+
+  @keyframes steps-marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  /* One cycle per card: show state A, play the overlay, cross-fade to B,
+     hold, and fade back so the loop restarts on A. */
+  @keyframes scene-swap {
+    0%,
+    36% {
+      opacity: 0;
+    }
+    44%,
+    86% {
+      opacity: 1;
+    }
+    94%,
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes file-drop {
+    0% {
+      opacity: 0;
+      transform: translate(-30px, -40px) rotate(-8deg);
+    }
+    8% {
+      opacity: 1;
+      transform: translate(-10px, -10px) rotate(-4deg);
+    }
+    26% {
+      opacity: 1;
+      transform: translate(140px, 150px) rotate(0deg) scale(0.7);
+    }
+    32%,
+    100% {
+      opacity: 0;
+      transform: translate(150px, 170px) scale(0.5);
+    }
+  }
+  @keyframes toast-pop {
+    0%,
+    30% {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.96);
+    }
+    35%,
+    72% {
+      opacity: 1;
+      transform: none;
+    }
+    80%,
+    100% {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .steps {
+      --card-w: 84vw;
+      --gap: 16px;
+      padding: 40px 0 88px;
+    }
+    .step-scene {
+      height: 260px;
+      margin: 16px 16px 0;
+    }
+    .step-text {
+      padding: 20px 22px 24px;
+    }
+    .step-number {
+      font-size: 42px;
+    }
+    .scene-toast small {
+      display: none;
+    }
+  }
+
+  /* Reduced motion: no marquee and no scene loop. The track becomes a plain
+     swipeable row of the three cards (the duplicate copy is dropped), each
+     showing its finished state. */
+  @media (prefers-reduced-motion: reduce) {
+    .steps-marquee {
+      mask-image: none;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding-inline: 24px;
+    }
+    .steps-track {
+      animation: none;
+    }
+    .step-card {
+      scroll-snap-align: center;
+    }
+    .step-card[aria-hidden='true'] {
+      display: none;
+    }
+    .step-scene :global(.scene-b) {
+      animation: none;
+      opacity: 1;
+    }
+    .file-chip,
+    .scene-toast,
+    .scene-chip {
+      animation: none;
+    }
+  }
+</style>

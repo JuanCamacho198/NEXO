@@ -243,6 +243,17 @@ const highlights = [
   .hero {
     padding: 12px;
   }
+  /* The bottom of the sky fades into the steps section's night colour, so
+     the hero flows into it instead of ending on an edge. */
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    z-index: -1;
+    height: 160px;
+    background: linear-gradient(to bottom, transparent, #0d0b18);
+    pointer-events: none;
+  }
   .hero-card {
     height: clamp(680px, calc(100svh - 24px), 980px);
     padding-top: 108px; /* the fixed header overlays this band */

@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>NEXO landing screens</title>
+    <!-- Landing-only app screens: the app's dark UI from the NEXO-DESIGN Figma
+         file, redrawn with type ~1.6x larger so it stays legible at the size the
+         device renders are shown. Each .screen is screenshotted to
+         assets/<id>.png and mapped onto a device by render.html. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:opsz,wght@7..72,400;7..72,500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b1322;
+        --panel: #0f1a2b;
+        --card: #13223a;
+        --line: #1e3150;
+        --ink: #f2f6fb;
+        --soft: #93a7bf;
+        --cyan: #4fd1f5;
+        --cyan-ink: #04202b;
+        --hl: #f6d365;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        background: #333;
+        font-family: Inter, system-ui, sans-serif;
+        color: var(--ink);
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+        padding: 40px;
+      }
+      .screen {
+        position: relative;
+        overflow: hidden;
+        background: var(--bg);
+        flex: none;
+      }
+      .laptop {
+        width: 1440px;
+        height: 900px;
+      }
+      .tablet {
+        width: 1366px;
+        height: 1024px;
+      }
+      .phone {
+        width: 780px;
+        height: 1684px;
+      }
+
+      /* ── laptop: library ── */
+      .app {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        height: 100%;
+      }
+      .side {
+        background: var(--panel);
+        border-right: 2px solid var(--line);
+        padding: 44px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-weight: 800;
+        font-size: 30px;
+        letter-spacing: 0.12em;
+        margin-bottom: 34px;
+      }
+      .brand i {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #ffb15c, #f06a2c);
+      }
+      .nav {
+        font-size: 24px;
+        font-weight: 500;
+        color: var(--soft);
+        padding: 16px 20px;
+        border-radius: 14px;
+      }
+      .nav.on {
+        background: var(--card);
+        color: var(--cyan);
+        font-weight: 600;
+      }
+      .main {
+        padding: 48px 56px;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 40px;
+      }
+      h1 {
+        font-size: 52px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .sub {
+        font-size: 24px;
+        color: var(--soft);
+        margin-top: 6px;
+      }
+      .btn {
+        background: var(--cyan);
+        color: var(--cyan-ink);
+        font-weight: 700;
+        font-size: 24px;
+        padding: 18px 30px;
+        border-radius: 16px;
+      }
+      .shelf {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 30px;
+      }
+      .cover {
+        aspect-ratio: 3 / 4.3;
+        border-radius: 14px;
+        padding: 22px 18px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        font-weight: 800;
+        font-size: 26px;
+        line-height: 1.05;
+        box-shadow: 0 14px 30px #0008;
+      }
+      .cover small {
+        display: block;
+        font-size: 15px;
+        font-weight: 600;
+        opacity: 0.75;
+        margin-bottom: 8px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .meta {
+        margin-top: 16px;
+        font-size: 22px;
+        font-weight: 600;
+      }
+      .meta span {
+        display: block;
+        font-size: 18px;
+        font-weight: 400;
+        color: var(--soft);
+        margin-top: 4px;
+      }
+      .bar {
+        height: 8px;
+        border-radius: 8px;
+        background: var(--line);
+        margin-top: 12px;
+        overflow: hidden;
+      }
+      .bar b {
+        display: block;
+        height: 100%;
+        background: var(--cyan);
+      }
+      .new {
+        outline: 4px solid var(--cyan);
+        outline-offset: 6px;
+      }
+      .c1 {
+        background: linear-gradient(160deg, #7a1f1f, #3b0d12);
+      }
+      .c2 {
+        background: linear-gradient(160deg, #1f4e79, #0e2442);
+      }
+      .c3 {
+        background: linear-gradient(160deg, #5b4a1f, #2b210c);
+      }
+      .c4 {
+        background: linear-gradient(160deg, #23523f, #0d2a1f);
+      }
+      .c5 {
+        background: linear-gradient(160deg, #4b2a63, #1f0f2e);
+      }
+
+      /* ── laptop: book detail modal ── */
+      .dim {
+        position: absolute;
+        inset: 0;
+        background: #050a14c4;
+      }
+      .modal {
+        position: absolute;
+        inset: 60px 80px;
+        background: var(--panel);
+        border: 2px solid var(--line);
+        border-radius: 28px;
+        padding: 40px 48px;
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        grid-template-rows: auto 1fr auto;
+        column-gap: 40px;
+        box-shadow: 0 40px 80px #000a;
+      }
+      .modal-head {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+      }
+      .modal-head h2 {
+        font-size: 40px;
+      }
+      .x {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: var(--card);
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+        color: var(--soft);
+      }
+      .bigcover {
+        aspect-ratio: 3 / 4;
+        border-radius: 18px;
+        background: #0c1626;
+        border: 2px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+      }
+      .bigcover .sun {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: #9b2226;
+        margin-bottom: 18px;
+      }
+      .bigcover small {
+        font-size: 20px;
+        letter-spacing: 0.14em;
+        color: var(--soft);
+      }
+      .bigcover strong {
+        font-size: 40px;
+        font-weight: 800;
+      }
+      .read {
+        margin-top: 20px;
+        text-align: center;
+      }
+      .cards {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 26px 30px;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px 30px;
+        font-size: 24px;
+      }
+      .kv span {
+        color: var(--soft);
+        margin-right: 14px;
+      }
+      .tag {
+        display: inline-block;
+        background: #12324a;
+        color: var(--cyan);
+        font-weight: 700;
+        font-size: 18px;
+        padding: 4px 12px;
+        border-radius: 8px;
+      }
+      .card h3 {
+        font-size: 18px;
+        letter-spacing: 0.14em;
+        color: var(--cyan);
+        margin-bottom: 18px;
+      }
+      .prog {
+        display: flex;
+        justify-content: space-between;
+        font-size: 24px;
+      }
+      .prog span {
+        color: var(--soft);
+      }
+      .modal-foot {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 28px;
+        font-size: 22px;
+        color: var(--soft);
+      }
+
+      /* ── tablet + phone: reader ── */
+      .reader-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 36px 56px;
+        background: var(--panel);
+        border-bottom: 2px solid var(--line);
+        font-size: 26px;
+        color: var(--soft);
+      }
+      .reader-top b {
+        color: var(--ink);
+        font-size: 30px;
+      }
+      .page {
+        margin: 56px auto 0;
+        width: 1040px;
+        background: #f7f9fc;
+        color: #1b2433;
+        border-radius: 22px;
+        padding: 64px 80px;
+        font-family: Literata, Georgia, serif;
+        font-size: 34px;
+        line-height: 1.55;
+        box-shadow: 0 30px 60px #0008;
+      }
+      .page .canto {
+        font-family: Inter, sans-serif;
+        font-size: 20px;
+        letter-spacing: 0.24em;
+        text-align: center;
+        color: #64748b;
+        margin-bottom: 14px;
+      }
+      .page h2 {
+        font-family: Inter, sans-serif;
+        font-size: 42px;
+        text-align: center;
+        margin-bottom: 34px;
+      }
+      mark {
+        background: var(--hl);
+        color: inherit;
+        border-radius: 6px;
+        padding: 0 4px;
+      }
+      .pop {
+        position: absolute;
+        right: 120px;
+        bottom: 110px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: var(--panel);
+        border: 2px solid var(--line);
+        border-radius: 18px;
+        padding: 18px 26px;
+        font-size: 24px;
+        box-shadow: 0 20px 40px #0009;
+      }
+      .dots {
+        display: flex;
+        gap: 10px;
+      }
+      .dots i {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: block;
+      }
+      .phone .head {
+        padding: 120px 56px 0;
+      }
+      .phone .head h1 {
+        font-size: 64px;
+      }
+      .phone .head .sub {
+        font-size: 30px;
+      }
+      .resume {
+        margin: 48px 40px 0;
+        background: var(--card);
+        border-radius: 32px;
+        padding: 40px;
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 34px;
+        align-items: center;
+      }
+      .resume .mini {
+        aspect-ratio: 3 / 4.3;
+        border-radius: 16px;
+        background: linear-gradient(160deg, #7a1f1f, #3b0d12);
+        display: flex;
+        align-items: flex-end;
+        padding: 16px;
+        font-weight: 800;
+        font-size: 26px;
+      }
+      .resume h2 {
+        font-size: 46px;
+      }
+      .resume p {
+        font-size: 28px;
+        color: var(--soft);
+        margin: 8px 0 22px;
+      }
+      .resume .btn {
+        display: inline-block;
+        font-size: 28px;
+        margin-top: 26px;
+      }
+      .phone .stats {
+        margin: 40px 40px 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .stat {
+        background: var(--card);
+        border-radius: 28px;
+        padding: 34px;
+        font-size: 26px;
+        color: var(--soft);
+      }
+      .stat b {
+        display: block;
+        font-size: 58px;
+        color: var(--ink);
+        margin-top: 8px;
+      }
+      .phone .reader-top {
+        padding: 110px 44px 30px;
+        font-size: 28px;
+      }
+      .phone .page {
+        width: auto;
+        margin: 40px 34px 0;
+        padding: 52px 46px;
+        font-size: 40px;
+        border-radius: 28px;
+      }
+      .phone .page h2 {
+        font-size: 46px;
+      }
+      .synced {
+        position: absolute;
+        left: 50%;
+        top: 210px;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        background: #12324a;
+        color: var(--cyan);
+        font-weight: 700;
+        font-size: 28px;
+        padding: 16px 30px;
+        border-radius: 999px;
+        border: 2px solid #1f5677;
+      }
+      .foot {
+        position: absolute;
+        left: 44px;
+        right: 44px;
+        bottom: 70px;
+        font-size: 26px;
+        color: var(--soft);
+      }
+      .foot .bar {
+        height: 10px;
+        margin-bottom: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- L1: library before the import finishes -->
+    <div class="screen laptop" id="screen-step1-a">
+      <div class="app">
+        <aside class="side">
+          <div class="brand"><i></i>NEXO</div>
+          <div class="nav">Inicio</div>
+          <div class="nav on">Biblioteca</div>
+          <div class="nav">Resaltados</div>
+          <div class="nav">Estadísticas</div>
+          <div class="nav">Ajustes</div>
+        </aside>
+        <main class="main">
+          <div class="top">
+            <div>
+              <h1>Biblioteca</h1>
+              <div class="sub">5 libros · 2 en progreso</div>
+            </div>
+            <div class="btn">+ Importar libro</div>
+          </div>
+          <div class="shelf">
+            <div>
+              <div class="cover c1 new"><small>Homero</small>La Odisea</div>
+              <div class="meta">La Odisea<span>Nuevo · EPUB</span></div>
+            </div>
+            <div>
+              <div class="cover c2"><small>Cervantes</small>Don Quijote</div>
+              <div class="meta">Don Quijote<span>42 %</span></div>
+              <div class="bar"><b style="width: 42%"></b></div>
+            </div>
+            <div>
+              <div class="cover c3"><small>Austen</small>Orgullo y prejuicio</div>
+              <div class="meta">Orgullo y prejuicio<span>18 %</span></div>
+              <div class="bar"><b style="width: 18%"></b></div>
+            </div>
+            <div>
+              <div class="cover c4"><small>Melville</small>Moby Dick</div>
+              <div class="meta">Moby Dick<span>Sin empezar</span></div>
+            </div>
+            <div>
+              <div class="cover c5"><small>Shelley</small>Frankenstein</div>
+              <div class="meta">Frankenstein<span>Sin empezar</span></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- L2: the imported book's detail sheet (after the Figma "Modal Libro") -->
+    <div class="screen laptop" id="screen-step1-b">
+      <div class="app">
+        <aside class="side">
+          <div class="brand"><i></i>NEXO</div>
+          <div class="nav">Inicio</div>
+          <div class="nav on">Biblioteca</div>
+          <div class="nav">Resaltados</div>
+        </aside>
+        <main class="main"><h1>Biblioteca</h1></main>
+      </div>
+      <div class="dim"></div>
+      <div class="modal">
+        <div class="modal-head">
+          <h2>La Odisea</h2>
+          <div class="x">✕</div>
+        </div>
+        <div>
+          <div class="bigcover">
+            <div class="sun"></div>
+            <small>HOMERO</small>
+            <strong>LA ODISEA</strong>
+          </div>
+          <div class="btn read">Leer ahora</div>
+        </div>
+        <div class="cards">
+          <div class="card kv">
+            <div><span>Autor</span>Homero</div>
+            <div><span>Formato</span><em class="tag">EPUB</em></div>
+            <div><span>Género</span>Clásico</div>
+            <div><span>Idioma</span>Español</div>
+          </div>
+          <div class="card">
+            <h3>LECTURA</h3>
+            <div class="prog"><b>Progreso 0 %</b><span>Canto 1 de 24</span></div>
+            <div class="bar"><b style="width: 2%"></b></div>
+          </div>
+          <div class="card kv">
+            <div><span>Agregado</span>Ahora</div>
+            <div><span>Tamaño</span>1,2 MB</div>
+            <div><span>Cantos</span>24</div>
+            <div><span>Publicado</span>s. VIII a. C.</div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <span>✎ Editar metadatos</span>
+          <span class="btn">Leer →</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- T1 / T2: reading, then the same page with a highlight saved -->
+    <div class="screen tablet" id="screen-step2-a">
+      <div class="reader-top"><span>‹ Biblioteca</span><b>La Odisea</b><span>Aa</span></div>
+      <div class="page">
+        <div class="canto">CANTO I</div>
+        <h2>Asamblea de los dioses</h2>
+        <p>
+          Háblame, Musa, de aquel varón de multiforme ingenio que, después de destruir la sacra
+          ciudad de Troya, anduvo peregrinando larguísimo tiempo, vio las poblaciones y conoció las
+          costumbres de muchos hombres y padeció en su ánimo gran número de trabajos.
+        </p>
+      </div>
+    </div>
+    <div class="screen tablet" id="screen-step2-b">
+      <div class="reader-top"><span>‹ Biblioteca</span><b>La Odisea</b><span>Aa</span></div>
+      <div class="page">
+        <div class="canto">CANTO I</div>
+        <h2>Asamblea de los dioses</h2>
+        <p>
+          Háblame, Musa, de aquel varón de multiforme ingenio que, después de destruir la sacra
+          ciudad de Troya, anduvo peregrinando larguísimo tiempo,
+          <mark>vio las poblaciones y conoció las costumbres de muchos hombres</mark> y padeció en
+          su ánimo gran número de trabajos.
+        </p>
+      </div>
+      <div class="pop">
+        <div class="dots">
+          <i style="background: #f6d365"></i><i style="background: #5eead4"></i
+          ><i style="background: #60a5fa"></i><i style="background: #fb923c"></i>
+        </div>
+        Resaltado guardado
+      </div>
+    </div>
+
+    <!-- P1 / P2: the phone's home, then the book opened at the same line -->
+    <div class="screen phone" id="screen-step3-a">
+      <div class="head">
+        <h1>Hola</h1>
+        <div class="sub">¿Seguimos leyendo?</div>
+      </div>
+      <div class="resume">
+        <div class="mini">La Odisea</div>
+        <div>
+          <h2>La Odisea</h2>
+          <p>Canto I · 12 %</p>
+          <div class="bar"><b style="width: 12%"></b></div>
+        </div>
+      </div>
+      <div style="margin: 0 40px">
+        <div
+          class="btn"
+          style="text-align: center; margin-top: 30px; font-size: 30px; padding: 26px"
+        >
+          Seguir leyendo
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat">Hoy<b>24 min</b></div>
+        <div class="stat">Racha<b>5 días</b></div>
+      </div>
+    </div>
+    <div class="screen phone" id="screen-step3-b">
+      <div class="reader-top"><span>‹</span><b>La Odisea</b><span>Aa</span></div>
+      <div class="synced">✓ Continúas donde lo dejaste</div>
+      <div class="page" style="margin-top: 110px">
+        <div class="canto">CANTO I</div>
+        <h2>Asamblea de los dioses</h2>
+        <p>
+          … anduvo peregrinando larguísimo tiempo,
+          <mark>vio las poblaciones y conoció las costumbres de muchos hombres</mark> y padeció en
+          su ánimo gran número de trabajos.
+        </p>
+      </div>
+      <div class="foot">
+        <div class="bar"><b style="width: 12%"></b></div>
+        Canto I · 12 %
+      </div>
+    </div>
+  </body>
+</html>

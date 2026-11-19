@@ -21,6 +21,7 @@ const t = useTranslations(lang);
 const home = localizePath('/', lang);
 const sections = [
   { id: 'top', label: t('header.navHome') },
+  { id: 'como-funciona', label: t('header.navHow') },
   { id: 'caracteristicas', label: t('header.navFeatures') },
   { id: 'faq', label: t('faq.title') },
 ];
@@ -111,9 +112,9 @@ const mobileLink =
     if (!header) return;
     var ticking = false;
     var overHero = header.hasAttribute('data-hero');
-    // Looked up lazily: this script runs right after the header, before the
-    // hero below it has been parsed.
-    var hero = null;
+    // The always-dark sections (hero, steps). Looked up lazily: this script
+    // runs right after the header, before the sections below are parsed.
+    var darkSections = null;
     var spyLinks = header.querySelectorAll('[data-spy]');
     function update() {
       ticking = false;
@@ -124,11 +125,18 @@ const mobileLink =
         header.removeAttribute('data-scrolled');
       }
       if (overHero) {
-        // Dark while any of the hero is still under the bar, not just at the
-        // very top: the scrolled pill floating over the night sky must not
-        // flip to the light theme.
-        hero = hero || document.getElementById('top');
-        var underBar = !hero || hero.getBoundingClientRect().bottom > header.offsetHeight;
+        // Dark while a dark section is under the bar, not just at the very
+        // top: the floating pill over the night sky (or the dark steps
+        // section) must not flip to the light theme.
+        if (!darkSections || !darkSections.length) {
+          darkSections = document.querySelectorAll('main section[data-theme="dark"]');
+        }
+        var line = header.offsetHeight;
+        var underBar = !darkSections.length;
+        for (var k = 0; k < darkSections.length; k++) {
+          var box = darkSections[k].getBoundingClientRect();
+          if (box.top < line && box.bottom > line) underBar = true;
+        }
         if (underBar) header.setAttribute('data-theme', 'dark');
         else header.removeAttribute('data-theme');
         spy();
