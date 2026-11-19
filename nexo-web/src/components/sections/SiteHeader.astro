@@ -1,9 +1,10 @@
 ---
 import Logo from '@/components/ui/Logo.astro';
 import Button from '@/components/ui/Button.astro';
+import DownloadButton from '@/components/ui/DownloadButton.astro';
 import ThemeToggle from '@/components/ui/ThemeToggle.astro';
 import LanguagePicker from '@/components/ui/LanguagePicker.astro';
-import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
+import { defaultLang, localizePath, useTranslations, type Lang } from '@/i18n/utils';
 
 interface Props {
   /** The home page: the header floats over the dark hero instead of pushing it down. */
@@ -14,7 +15,15 @@ const { overHero = false } = Astro.props;
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
-const navLink = 'transition-[color] duration-[180ms] ease-[ease] hover:text-ink';
+// Section links always carry the home path, so they also work from the
+// privacy and terms pages (a bare "#faq" there points at nothing). On the home
+// page "/#faq" is a same-document jump, not a reload.
+const home = localizePath('/', lang);
+const sections = [
+  { id: 'top', label: t('header.navHome') },
+  { id: 'caracteristicas', label: t('header.navFeatures') },
+  { id: 'faq', label: t('faq.title') },
+];
 const langSwitch = 'flex items-center gap-2.5 text-[13px] font-semibold tracking-[0.04em]';
 const mobileLink =
   'transition-[color] duration-[180ms] ease-[ease] max-[1023px]:py-2.5 max-[1023px]:text-[15px] max-[1023px]:font-medium max-[1023px]:text-ink-soft max-[1023px]:hover:text-ink';
@@ -24,8 +33,9 @@ const mobileLink =
 <!-- The glass surface and its scrolled pill state live in `.site-header` in
      global.css, where the tokens and the specificity are controllable. -->
 <!-- Over the hero the bar is fixed (out of flow, so the hero starts at the top
-     of the page) and forced dark at rest, because it sits on the night sky. The
-     script hands it back to the page theme once it turns into the pill. -->
+     of the page) and forced dark for as long as the hero is behind it, because
+     it sits on the night sky. The script hands it back to the page theme once
+     the hero has scrolled out from under it. -->
 <header
   class:list={['site-header z-[60]', overHero ? 'fixed inset-x-0' : 'sticky']}
   data-hero={overHero ? '' : undefined}
@@ -34,22 +44,18 @@ const mobileLink =
   <div class="shell flex items-center gap-8 py-7 min-[1200px]:grid min-[1200px]:grid-cols-[1fr_auto_1fr] max-[1100px]:gap-5 max-[640px]:gap-4 max-[640px]:py-[18px]">
     <Logo />
 
-    <nav
-      class="flex gap-7 text-[14.5px] font-medium text-ink-soft max-[1023px]:hidden"
-      aria-label={t('header.navAria')}
-    >
-      <a class={navLink} href="#caracteristicas">
-        {t('header.navFeatures')}
-      </a>
-      <a class={navLink} href="#dispositivos">
-        {t('header.navDevices')}
-      </a>
-      <a class={navLink} href="#como-funciona">
-        {t('header.navHow')}
-      </a>
-      <a class={navLink} href="#faq">
-        {t('faq.title')}
-      </a>
+    <!-- Glass pill; the link of the section in view gets aria-current and an
+         orange dot (scroll-spy in the script below, home page only). -->
+    <nav class="nav-pill max-[1023px]:hidden" aria-label={t('header.navAria')}>
+      {sections.map((section) => (
+        <a
+          class="nav-pill-link"
+          href={`${home}#${section.id}`}
+          data-spy={overHero ? section.id : undefined}
+        >
+          {section.label}
+        </a>
+      ))}
     </nav>
 
     <div class="ml-auto flex items-center gap-4 min-[1200px]:justify-self-end">
@@ -63,18 +69,11 @@ const mobileLink =
         class="hidden max-[1023px]:peer-checked:absolute max-[1023px]:peer-checked:inset-x-0 max-[1023px]:peer-checked:top-full max-[1023px]:peer-checked:flex max-[1023px]:peer-checked:flex-col max-[1023px]:peer-checked:gap-1 max-[1023px]:peer-checked:border-b max-[1023px]:peer-checked:border-border max-[1023px]:peer-checked:bg-surface max-[1023px]:peer-checked:pt-3.5 max-[1023px]:peer-checked:pr-5 max-[1023px]:peer-checked:pb-[22px] max-[1023px]:peer-checked:pl-5 max-[1023px]:peer-checked:shadow-soft"
         aria-label={t('header.mobileNavAria')}
       >
-        <a class={mobileLink} href="#caracteristicas">
-          {t('header.navFeatures')}
-        </a>
-        <a class={mobileLink} href="#dispositivos">
-          {t('header.navDevices')}
-        </a>
-        <a class={mobileLink} href="#como-funciona">
-          {t('header.navHow')}
-        </a>
-        <a class={mobileLink} href="#faq">
-          {t('faq.title')}
-        </a>
+        {sections.map((section) => (
+          <a class={mobileLink} href={`${home}#${section.id}`}>
+            {section.label}
+          </a>
+        ))}
         <div class="flex items-center gap-4">
           <div class={langSwitch}>
             <LanguagePicker />
@@ -87,12 +86,17 @@ const mobileLink =
            page the control would only ever change sections the visitor has not
            scrolled to. The OS preference still applies there. -->
       {!overHero && <ThemeToggle class="max-[640px]:hidden" />}
-      <!-- Deliberately NOT the adaptive DownloadButton: at 390px the bar already
-           holds the logo, the burger and the CTA, and a 20-character
-           "Descargar para Windows" label there risks overflow. -->
-      <Button variant="primary" href="#descargar">
-        {t('cta.download')}
-      </Button>
+      <!-- From 1024px the adaptive "Descargar para Windows" with its icon fits;
+           below that the bar already holds the logo, the burger and the CTA, so
+           the short label stays (a 20-character label at 390px overflows). -->
+      <span class="max-[1023px]:hidden">
+        <DownloadButton compact href={`${home}#descargar`} />
+      </span>
+      <span class="min-[1024px]:hidden">
+        <Button variant="primary" href={`${home}#descargar`}>
+          {t('cta.download')}
+        </Button>
+      </span>
     </div>
   </div>
 </header>
@@ -107,6 +111,10 @@ const mobileLink =
     if (!header) return;
     var ticking = false;
     var overHero = header.hasAttribute('data-hero');
+    // Looked up lazily: this script runs right after the header, before the
+    // hero below it has been parsed.
+    var hero = null;
+    var spyLinks = header.querySelectorAll('[data-spy]');
     function update() {
       ticking = false;
       var scrolled = window.scrollY > 24;
@@ -116,8 +124,28 @@ const mobileLink =
         header.removeAttribute('data-scrolled');
       }
       if (overHero) {
-        if (scrolled) header.removeAttribute('data-theme');
-        else header.setAttribute('data-theme', 'dark');
+        // Dark while any of the hero is still under the bar, not just at the
+        // very top: the scrolled pill floating over the night sky must not
+        // flip to the light theme.
+        hero = hero || document.getElementById('top');
+        var underBar = !hero || hero.getBoundingClientRect().bottom > header.offsetHeight;
+        if (underBar) header.setAttribute('data-theme', 'dark');
+        else header.removeAttribute('data-theme');
+        spy();
+      }
+    }
+    // Scroll-spy: the active link is the last section whose top has passed
+    // 40% of the viewport. Three getBoundingClientRect reads per frame.
+    function spy() {
+      var line = window.innerHeight * 0.4;
+      var active = null;
+      for (var i = 0; i < spyLinks.length; i++) {
+        var target = document.getElementById(spyLinks[i].getAttribute('data-spy'));
+        if (target && target.getBoundingClientRect().top <= line) active = spyLinks[i];
+      }
+      for (var j = 0; j < spyLinks.length; j++) {
+        if (spyLinks[j] === active) spyLinks[j].setAttribute('aria-current', 'location');
+        else spyLinks[j].removeAttribute('aria-current');
       }
     }
     function onScroll() {
@@ -129,5 +157,8 @@ const mobileLink =
     // Run once immediately: a reload at a restored scroll position must render
     // the pill straight away instead of the flush bar.
     update();
+    // And again once the sections below exist, so the hero check and the
+    // scroll-spy see real elements on first paint.
+    document.addEventListener('DOMContentLoaded', update);
   })();
 </script>

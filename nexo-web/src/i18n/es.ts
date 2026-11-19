@@ -11,8 +11,8 @@ export const es = {
   'header.languageAria': 'Cambiar idioma',
   'header.themeToDark': 'Activar modo oscuro',
   'header.themeToLight': 'Activar modo claro',
+  'header.navHome': 'Inicio',
   'header.navFeatures': 'Características',
-  'header.navDevices': 'Dispositivos',
   'header.navHow': 'Cómo funciona',
 
   // Hero
@@ -32,16 +32,6 @@ export const es = {
   'hero.platformWindows': 'Windows',
   'hero.platformMacOS': 'macOS',
   'hero.platformLinux': 'Linux',
-
-  // Feature strip
-  'strip.cloudTitle': 'Sincronización en la nube',
-  'strip.cloudCopy': 'Tus libros, notas y resaltados siempre actualizados.',
-  'strip.devicesTitle': 'Todos tus dispositivos',
-  'strip.devicesCopy': 'Android, Windows, macOS, Linux y tablet.',
-  'strip.searchTitle': 'Organiza y encuentra',
-  'strip.searchCopy': 'Filtra tus libros, notas y resaltados fácilmente.',
-  'strip.privacyTitle': 'Privacidad primero',
-  'strip.privacyCopy': 'Tus datos están seguros y solo tú tienes acceso.',
 
   // Experience
   'experience.eyebrow': 'La experiencia NEXO',
