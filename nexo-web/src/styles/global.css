@@ -241,80 +241,57 @@
 
 @layer components {
   /* ═══════════════ header ═══════════════ */
-  /* The header is a glass surface at rest and a suspended pill once scrolled.
-     `.site-header` is `position: sticky`, so it stays in normal flow and its
-     height is part of the layout below it. The border is therefore always 1px:
-     transparent on the sides and top, coloured only on the bottom edge. If the
-     pill state added a border the rest state did not have, the page would shift
-     by 1px the moment the user starts scrolling. */
+  /* One state, no scroll behaviour: the bar is the glass surface over the page
+     content and the bare hero card at the top of the home page. It never
+     changes shape, never detaches and never shrinks to a floating pill — the
+     scroll position does not alter it at all. `.site-header` is `position:
+     sticky` everywhere except the home page, where it is `fixed` over the hero,
+     so its border is always 1px: transparent on the sides and top, coloured
+     only on the bottom edge. */
   .site-header {
     /* `top` is owned HERE, not by a `top-0` utility. Tailwind emits
        @layer components BEFORE @layer utilities, and a later layer wins over an
-       earlier one REGARDLESS OF SPECIFICITY — so `.site-header[data-scrolled]`
-       at 0,2,0 still loses to `.top-0` at 0,1,0. Verified in a real browser: the
-       scrolled state applied its radius, border, background and shadow but
-       `top` stayed 0px, so the bar never detached from the viewport edge. Do not
-       reintroduce a `top-*` utility on this element. */
+       earlier one REGARDLESS OF SPECIFICITY. Do not reintroduce a `top-*`
+       utility on this element. */
     top: 0;
     background-color: var(--glass-bg);
     border: 1px solid transparent;
     border-bottom-color: var(--color-border);
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     box-shadow: inset 0 1px 0 var(--glass-highlight);
+    /* The bar leaves by sliding its own height out of the viewport, written by
+       the script. Only `translate` and `visibility` animate — moving `top`
+       would re-run layout on every scroll frame. */
     transition:
-      background-color 0.28s ease,
-      backdrop-filter 0.28s ease,
-      border-radius 0.28s ease,
-      border-color 0.28s ease,
-      box-shadow 0.28s ease,
-      top 0.28s ease;
+      translate 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0.32s;
   }
-  /* The suspension reads from the offset, the radius, the gap above the bar and
-     the shadow — never from shrinking. Only top, max-width, border-radius,
-     border-color, background-color, box-shadow and backdrop-filter may change
-     here; margin-inline merely recentres the narrower box. Padding, height and
-     font-size must NOT change, or the pill would resize the header's box and
-     reflow the page under it. (The earlier claim that 0,2,0 outranks the `top-0`
-     utility was wrong: see the note on `.site-header` above.) */
-  .site-header[data-scrolled] {
-    top: 12px;
-    max-width: min(1240px, calc(100% - 24px));
-    margin-inline: auto;
-    border-radius: 18px;
-    border-color: var(--glass-border);
-    background-color: var(--glass-bg-scrolled);
-    box-shadow:
-      inset 0 1px 0 var(--glass-highlight),
-      var(--glass-shadow);
+  .site-header[data-hidden] {
+    translate: 0 -100%;
+    visibility: hidden;
   }
-  /* At 390px the looser inset keeps the burger, the CTA and the logo from
-     squeezing each other once the bar is no longer full-bleed. */
-  @media (max-width: 640px) {
-    .site-header[data-scrolled] {
-      max-width: calc(100% - 16px);
+  @media (prefers-reduced-motion: reduce) {
+    .site-header {
+      transition: none;
     }
   }
   /* No backdrop-filter (older Firefox, forced-colours): swap the translucent
-     glass for the opaque surface tokens so the bar stays readable. */
+     glass for the opaque surface token so the bar stays readable. */
   @supports not (backdrop-filter: blur(1px)) {
     .site-header {
       background-color: var(--color-background);
     }
-    .site-header[data-scrolled] {
-      background-color: var(--color-surface);
-    }
   }
 
-  /* Over the hero at rest the bar is part of the card: no glass, no rule. */
-  .site-header[data-hero]:not([data-scrolled]) {
+  /* Over the hero the bar is part of the card: no glass, no rule. */
+  .site-header[data-hero] {
     background-color: transparent;
     border-bottom-color: transparent;
     backdrop-filter: none;
     box-shadow: none;
   }
 
-  /* Nav links sit in a glass pill of their own at rest. Once the whole bar
-     becomes the floating pill, the inner one dissolves so they do not nest. */
+  /* Nav links sit in their own glass pill. */
   .nav-pill {
     display: flex;
     gap: 2px;
@@ -328,12 +305,6 @@
       background-color 0.28s ease,
       border-color 0.28s ease,
       box-shadow 0.28s ease;
-  }
-  .site-header[data-scrolled] .nav-pill {
-    border-color: transparent;
-    background: transparent;
-    backdrop-filter: none;
-    box-shadow: none;
   }
   .nav-pill-link {
     display: inline-flex;

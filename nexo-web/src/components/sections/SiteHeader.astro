@@ -30,8 +30,10 @@ const mobileLink =
 ---
 
 <!-- ══════════════ HEADER ══════════════ -->
-<!-- The glass surface and its scrolled pill state live in `.site-header` in
-     global.css, where the tokens and the specificity are controllable. -->
+<!-- The glass surface lives in `.site-header` in global.css, where the tokens
+     and the specificity are controllable. The bar has no scroll styling: only
+     its visibility changes, by sliding out of the top of the viewport when the
+     visitor scrolls down and back in when they scroll up. -->
 <!-- Over the hero the bar is fixed (out of flow, so the hero starts at the top
      of the page) and forced dark for as long as the hero is behind it, because
      it sits on the night sky. The script hands it back to the page theme once
@@ -102,14 +104,16 @@ const mobileLink =
 </header>
 
 <script is:inline>
-  // The header is flush at rest and a suspended pill once scrolled. The pill is a
-  // boolean attribute on the element, so CSS owns the whole visual change and this
-  // script only reports scroll position. rAF with a ticking flag keeps it to one
-  // update per frame instead of one per scroll event.
+  // No scroll state: the bar looks the same at every scroll position. The only
+  // things this script still reports are the theme flip while a dark section is
+  // under the bar, and the scroll-spy dot on the section in view. rAF with a
+  // ticking flag keeps it to one update per frame instead of one per scroll
+  // event.
   (function () {
     var header = document.querySelector('.site-header');
     if (!header) return;
     var ticking = false;
+    var lastY = window.scrollY;
     var overHero = header.hasAttribute('data-hero');
     // The always-dark sections (hero, steps). Looked up lazily: this script
     // runs right after the header, before the sections below are parsed.
@@ -117,29 +121,34 @@ const mobileLink =
     var spyLinks = header.querySelectorAll('[data-spy]');
     function update() {
       ticking = false;
-      var scrolled = window.scrollY > 24;
-      if (scrolled) {
-        header.setAttribute('data-scrolled', '');
-      } else {
-        header.removeAttribute('data-scrolled');
+      // Hide on the way down, show on the way up. The 6px dead zone keeps a
+      // trackpad's sub-pixel jitter from flapping the bar; near the top it is
+      // always shown, so the page never starts without its nav.
+      var y = window.scrollY;
+      if (y <= 40) {
+        header.removeAttribute('data-hidden');
+      } else if (y > lastY + 6) {
+        header.setAttribute('data-hidden', '');
+      } else if (y < lastY - 6) {
+        header.removeAttribute('data-hidden');
       }
-      if (overHero) {
-        // Dark while a dark section is under the bar, not just at the very
-        // top: the floating pill over the night sky (or the dark steps
-        // section) must not flip to the light theme.
-        if (!darkSections || !darkSections.length) {
-          darkSections = document.querySelectorAll('main section[data-theme="dark"]');
-        }
-        var line = header.offsetHeight;
-        var underBar = !darkSections.length;
-        for (var k = 0; k < darkSections.length; k++) {
-          var box = darkSections[k].getBoundingClientRect();
-          if (box.top < line && box.bottom > line) underBar = true;
-        }
-        if (underBar) header.setAttribute('data-theme', 'dark');
-        else header.removeAttribute('data-theme');
-        spy();
+      lastY = y;
+      if (!overHero) return;
+      // Dark while a dark section is under the bar, not just at the very top:
+      // the floating bar over the night sky (or the dark steps section) must
+      // not flip to the light theme.
+      if (!darkSections || !darkSections.length) {
+        darkSections = document.querySelectorAll('main section[data-theme="dark"]');
       }
+      var line = header.offsetHeight;
+      var underBar = !darkSections.length;
+      for (var k = 0; k < darkSections.length; k++) {
+        var box = darkSections[k].getBoundingClientRect();
+        if (box.top < line && box.bottom > line) underBar = true;
+      }
+      if (underBar) header.setAttribute('data-theme', 'dark');
+      else header.removeAttribute('data-theme');
+      spy();
     }
     // Scroll-spy: the active link is the last section whose top has passed
     // 40% of the viewport. Three getBoundingClientRect reads per frame.
@@ -161,11 +170,9 @@ const mobileLink =
       window.requestAnimationFrame(update);
     }
     window.addEventListener('scroll', onScroll, { passive: true });
-    // Run once immediately: a reload at a restored scroll position must render
-    // the pill straight away instead of the flush bar.
+    // Run once immediately, and again once the sections below exist, so the
+    // theme check and the scroll-spy see real elements on first paint.
     update();
-    // And again once the sections below exist, so the hero check and the
-    // scroll-spy see real elements on first paint.
     document.addEventListener('DOMContentLoaded', update);
   })();
 </script>
