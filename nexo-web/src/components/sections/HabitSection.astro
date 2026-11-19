@@ -1,0 +1,628 @@
+---
+import { storeCovers } from '@/data/landingDemo';
+import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+
+const covers = storeCovers(lang);
+// Two shelves drifting in opposite directions; each row is doubled so its
+// loop is seamless (the copy is hidden from assistive tech).
+const rows = [covers.slice(0, 6), covers.slice(6)];
+
+const days = t('habit.weekDays').split(',');
+// Mon–Fri read, today (Saturday) still open. Illustrative, like every number here.
+const read = [true, true, true, true, true, false, false];
+const minutes = [18, 32, 24, 41, 15, 36, 20];
+const peak = Math.max(...minutes);
+const goals = [10, 15, 20, 30];
+---
+
+<!-- ══════════════ HABIT ══════════════ -->
+<!-- The app's store, streak, daily goal and statistics as one bento grid, so
+     four features cost the page a single screen. The figures are illustrative.
+     The goal ring and the bars fill as the grid scrolls into view where
+     scroll-driven animations exist; elsewhere they simply show filled. -->
+<section id="habito" class="habit relative text-ink" data-theme="dark">
+  <div class="night-sky" aria-hidden="true"></div>
+  <div class="shell relative">
+    <div class="habit-head">
+      <p class="habit-eyebrow">{t('habit.eyebrow')}</p>
+      <h2 class="habit-title">{t('habit.heading')}</h2>
+      <p class="habit-lead">{t('habit.lead')}</p>
+    </div>
+
+    <div class="bento">
+      <!-- Store -->
+      <article class="tile tile-store">
+        <div class="tile-text">
+          <p class="tile-kicker">
+            {t('habit.storeKicker')}
+            <span class="store-free">{t('habit.storeFree')}</span>
+          </p>
+          <h3 class="tile-title">{t('habit.storeTitle')}</h3>
+          <p class="tile-copy">{t('habit.storeCopy')}</p>
+          <div class="store-sources">
+            <span>{t('habit.sourceGutenberg')}</span>
+            <span>{t('habit.sourceStandard')}</span>
+          </div>
+        </div>
+        <div class="shelves" aria-hidden="true">
+          {rows.map((row, r) => (
+            <div class={`shelf shelf-${r + 1}`}>
+              <div class="shelf-track">
+                {[...row, ...row].map((book) => (
+                  <div class="cover" style={`--from: ${book.from}; --to: ${book.to}`}>
+                    <small>{book.author}</small>
+                    <span>{book.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <!-- Streak -->
+      <article class="tile tile-streak">
+        <p class="tile-kicker">{t('habit.streakKicker')}</p>
+        <div class="streak-count">
+          <svg class="streak-flame" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 2.5c.6 3.2 3.7 4.9 4.9 8 1.6 4.2-1.2 9-4.9 9s-6.4-3.2-5.5-6.9c.4-1.7 1.4-2.9 2.4-3.7-.1 1.5.4 2.8 1.5 3.4C10.6 9.4 10.5 5.6 12 2.5Z"
+              fill="url(#flame)"
+            />
+            <defs>
+              <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffd27a" />
+                <stop offset="1" stop-color="#f06a2c" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <strong>{t('habit.streakDays')}</strong>
+        </div>
+        <p class="tile-copy">{t('habit.streakCopy')}</p>
+        <ol class="week" aria-label={t('habit.weekAria')}>
+          {days.map((day, i) => (
+            <li class:list={['day', read[i] && 'is-read', i === 5 && 'is-today']}>
+              <span class="day-dot" aria-hidden="true">
+                {read[i] ? (
+                  <svg viewBox="0 0 24 24">
+                    <path
+                      d="M12 2.5c.6 3.2 3.7 4.9 4.9 8 1.6 4.2-1.2 9-4.9 9s-6.4-3.2-5.5-6.9c.4-1.7 1.4-2.9 2.4-3.7-.1 1.5.4 2.8 1.5 3.4C10.6 9.4 10.5 5.6 12 2.5Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                ) : null}
+              </span>
+              <span class="day-name">{day}</span>
+            </li>
+          ))}
+        </ol>
+      </article>
+
+      <!-- Daily goal -->
+      <article class="tile tile-goal">
+        <p class="tile-kicker">{t('habit.goalKicker')}</p>
+        <div class="goal-body">
+          <div class="goal-ring" aria-hidden="true">
+            <svg viewBox="0 0 120 120">
+              <circle class="ring-track" cx="60" cy="60" r="50" />
+              <circle class="ring-value" cx="60" cy="60" r="50" pathLength="100" />
+            </svg>
+            <span class="goal-number">
+              <strong>12</strong>
+              <small>{t('habit.goalOf')}</small>
+            </span>
+          </div>
+          <div>
+            <h3 class="tile-title">{t('habit.goalTitle')}</h3>
+            <p class="tile-copy">{t('habit.goalCopy')}</p>
+          </div>
+        </div>
+        <ul class="goal-presets" aria-label={t('habit.goalPresetsAria')}>
+          {goals.map((goal) => (
+            <li class:list={[goal === 15 && 'is-on']}>
+              {goal === 30 ? '30+' : goal}
+              <small>{t('habit.minutesShort')}</small>
+            </li>
+          ))}
+        </ul>
+      </article>
+
+      <!-- Statistics -->
+      <article class="tile tile-stats">
+        <div class="stats-head">
+          <div>
+            <p class="tile-kicker">{t('habit.statsKicker')}</p>
+            <h3 class="tile-title">{t('habit.statsTitle')}</h3>
+          </div>
+          <dl class="stats-figures">
+            <div>
+              <dt>{t('habit.statsMinutes')}</dt>
+              <dd>186</dd>
+            </div>
+            <div>
+              <dt>{t('habit.statsSessions')}</dt>
+              <dd>9</dd>
+            </div>
+            <div>
+              <dt>{t('habit.statsBooks')}</dt>
+              <dd>2</dd>
+            </div>
+          </dl>
+        </div>
+        <ol class="bars" aria-label={t('habit.statsAria')}>
+          {minutes.map((value, i) => (
+            <li class:list={['bar', i === 3 && 'is-peak']} style={`--h: ${(value / peak) * 100}%`}>
+              <span class="bar-value">{value}</span>
+              <span class="bar-fill" />
+              <span class="bar-day">{days[i]}</span>
+            </li>
+          ))}
+        </ol>
+      </article>
+    </div>
+  </div>
+</section>
+
+<style>
+  .habit {
+    background: #0d0b18;
+    padding: 110px 0 120px;
+    overflow: clip;
+  }
+  .habit-head {
+    max-width: 720px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .habit-eyebrow {
+    color: oklch(76% 0.16 55);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .habit-title {
+    margin-top: 14px;
+    font-size: clamp(2.2rem, 4.2vw, 3.4rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    background: linear-gradient(
+      100deg,
+      oklch(97% 0.01 80),
+      oklch(84% 0.08 60) 60%,
+      oklch(74% 0.17 48)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .habit-lead {
+    margin-top: 16px;
+    color: var(--color-ink-soft);
+    font-size: 1.08rem;
+    line-height: 1.6;
+  }
+
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    margin-top: 56px;
+  }
+  .tile {
+    position: relative;
+    min-width: 0;
+    padding: 28px;
+    border: 1px solid oklch(100% 0 0 / 0.09);
+    border-radius: 26px;
+    background: linear-gradient(180deg, oklch(100% 0 0 / 0.05), oklch(100% 0 0 / 0.015));
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.06);
+    overflow: hidden;
+  }
+  .tile-store {
+    grid-column: span 2;
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 24px;
+    align-items: center;
+    background:
+      radial-gradient(70% 90% at 100% 50%, oklch(72% 0.18 50 / 0.12), transparent 70%),
+      linear-gradient(180deg, oklch(100% 0 0 / 0.05), oklch(100% 0 0 / 0.015));
+  }
+  .tile-stats {
+    grid-column: span 2;
+  }
+  .tile-kicker {
+    color: oklch(80% 0.14 58);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .tile-title {
+    margin-top: 8px;
+    font-size: 1.45rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+  .tile-copy {
+    margin-top: 8px;
+    color: var(--color-ink-soft);
+    font-size: 0.97rem;
+    line-height: 1.55;
+  }
+
+  /* ── store ── */
+  .store-sources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .store-sources span {
+    padding: 6px 12px;
+    border: 1px solid oklch(100% 0 0 / 0.12);
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-ink-soft);
+  }
+  .shelves {
+    display: grid;
+    gap: 14px;
+    margin-right: -28px;
+    mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  }
+  .shelf {
+    overflow: hidden;
+  }
+  .shelf-track {
+    display: flex;
+    gap: 12px;
+    width: max-content;
+    animation: shelf-drift 48s linear infinite;
+  }
+  .shelf-2 .shelf-track {
+    animation-direction: reverse;
+    animation-duration: 56s;
+  }
+  .cover {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    justify-content: flex-end;
+    width: 96px;
+    aspect-ratio: 3 / 4.4;
+    padding: 10px 9px;
+    border-radius: 10px;
+    background: linear-gradient(160deg, var(--from), var(--to));
+    box-shadow:
+      inset 3px 0 0 oklch(100% 0 0 / 0.08),
+      0 10px 22px -10px oklch(0% 0 0 / 0.8);
+  }
+  .cover small {
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.72;
+  }
+  .cover span {
+    margin-top: 3px;
+    font-size: 11.5px;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  .tile-store:hover .shelf-track {
+    animation-play-state: paused;
+  }
+  .store-free {
+    margin-left: 8px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: oklch(72% 0.17 155 / 0.18);
+    color: oklch(84% 0.15 155);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── streak ── */
+  .streak-count {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .streak-flame {
+    width: 44px;
+    height: 44px;
+    filter: drop-shadow(0 0 14px oklch(72% 0.18 50 / 0.6));
+    animation: flame-flicker 2.4s ease-in-out infinite;
+  }
+  .streak-count strong {
+    font-size: 2.6rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+  .week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-top: 20px;
+  }
+  .day {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+  }
+  .day-dot {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    max-width: 38px;
+    aspect-ratio: 1;
+    border: 1px solid oklch(100% 0 0 / 0.1);
+    border-radius: 12px;
+    background: oklch(100% 0 0 / 0.03);
+  }
+  .day-dot svg {
+    width: 55%;
+    height: 55%;
+  }
+  .is-read .day-dot {
+    border-color: oklch(72% 0.18 50 / 0.45);
+    background: oklch(72% 0.18 50 / 0.16);
+    color: oklch(80% 0.17 58);
+  }
+  .is-today .day-dot {
+    border: 1.5px dashed oklch(80% 0.14 58 / 0.7);
+  }
+  .day-name {
+    color: var(--color-muted-foreground);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* ── goal ── */
+  .goal-body {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: 12px;
+  }
+  .goal-ring {
+    position: relative;
+    flex: none;
+    width: 112px;
+    height: 112px;
+  }
+  .goal-ring svg {
+    width: 100%;
+    height: 100%;
+    rotate: -90deg;
+  }
+  .ring-track,
+  .ring-value {
+    fill: none;
+    stroke-width: 10;
+  }
+  .ring-track {
+    stroke: oklch(100% 0 0 / 0.08);
+  }
+  .ring-value {
+    stroke: oklch(74% 0.18 52);
+    stroke-linecap: round;
+    stroke-dasharray: 80 100;
+    filter: drop-shadow(0 0 6px oklch(72% 0.18 50 / 0.6));
+  }
+  .goal-number {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    text-align: center;
+  }
+  .goal-number strong {
+    font-size: 1.9rem;
+    line-height: 1;
+  }
+  .goal-number small {
+    margin-top: 2px;
+    color: var(--color-ink-soft);
+    font-size: 11.5px;
+  }
+  .goal-presets {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .goal-presets li {
+    padding: 9px 4px;
+    border: 1px solid oklch(100% 0 0 / 0.1);
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 700;
+  }
+  .goal-presets small {
+    margin-left: 2px;
+    color: var(--color-ink-soft);
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .goal-presets .is-on {
+    border-color: oklch(72% 0.18 50 / 0.7);
+    background: oklch(72% 0.18 50 / 0.14);
+    color: oklch(86% 0.13 62);
+  }
+
+  /* ── stats ── */
+  .stats-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px 28px;
+  }
+  .stats-figures {
+    display: flex;
+    gap: 28px;
+  }
+  .stats-figures dt {
+    color: var(--color-ink-soft);
+    font-size: 12.5px;
+  }
+  .stats-figures dd {
+    margin: 2px 0 0;
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .bars {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 14px;
+    height: 170px;
+    margin-top: 22px;
+  }
+  .bar {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    justify-items: center;
+    gap: 6px;
+    min-height: 0;
+  }
+  .bar-value {
+    color: var(--color-ink-soft);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .bar-fill {
+    align-self: end;
+    width: 100%;
+    max-width: 46px;
+    height: var(--h);
+    border-radius: 10px 10px 4px 4px;
+    background: linear-gradient(180deg, oklch(80% 0.1 220 / 0.85), oklch(55% 0.12 240 / 0.5));
+    transform-origin: bottom;
+  }
+  .is-peak .bar-fill {
+    background: linear-gradient(180deg, oklch(80% 0.16 60), oklch(65% 0.18 45 / 0.7));
+    box-shadow: 0 0 20px oklch(72% 0.18 50 / 0.45);
+  }
+  .is-peak .bar-value {
+    color: oklch(84% 0.14 60);
+  }
+  .bar-day {
+    color: var(--color-muted-foreground);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* Fill on scroll where supported: the ring draws to 80% and the bars rise
+     as the grid comes into view, and stay. */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .ring-value {
+        animation: ring-fill linear both;
+        animation-timeline: view();
+        animation-range: entry 40% cover 45%;
+      }
+      .bar-fill {
+        animation: bar-rise linear both;
+        animation-timeline: view();
+        animation-range: entry 20% cover 40%;
+      }
+      .bar:nth-child(2) .bar-fill {
+        animation-range: entry 25% cover 42%;
+      }
+      .bar:nth-child(3) .bar-fill {
+        animation-range: entry 30% cover 44%;
+      }
+      .bar:nth-child(4) .bar-fill {
+        animation-range: entry 35% cover 46%;
+      }
+      .bar:nth-child(5) .bar-fill {
+        animation-range: entry 40% cover 48%;
+      }
+      .bar:nth-child(6) .bar-fill {
+        animation-range: entry 45% cover 50%;
+      }
+      .bar:nth-child(7) .bar-fill {
+        animation-range: entry 50% cover 52%;
+      }
+    }
+  }
+  @keyframes ring-fill {
+    from {
+      stroke-dasharray: 0 100;
+    }
+  }
+  @keyframes bar-rise {
+    from {
+      transform: scaleY(0.04);
+    }
+  }
+  @keyframes shelf-drift {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes flame-flicker {
+    0%,
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
+    50% {
+      transform: scale(1.06, 0.96) rotate(-2deg);
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .bento {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .tile-store,
+    .tile-stats {
+      grid-column: span 2;
+    }
+  }
+  @media (max-width: 720px) {
+    .habit {
+      padding: 80px 0 90px;
+    }
+    .bento {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .tile-store,
+    .tile-stats {
+      grid-column: auto;
+    }
+    .tile {
+      padding: 22px;
+    }
+    .tile-store {
+      grid-template-columns: 1fr;
+    }
+    .shelves {
+      margin: 0 -22px;
+    }
+    .bars {
+      gap: 8px;
+      height: 150px;
+    }
+    .stats-figures {
+      gap: 20px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .shelf-track,
+    .streak-flame {
+      animation: none;
+    }
+  }
+</style>
