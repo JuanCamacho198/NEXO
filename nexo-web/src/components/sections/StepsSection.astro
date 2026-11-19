@@ -146,8 +146,8 @@ const steps = [
       <span class="progress-line">
         <span class="progress-fill"></span>
       </span>
-      {steps.map((step, i) => (
-        <span class={`progress-dot dot-${i + 1}`}>{step.n}</span>
+      {steps.map((_, i) => (
+        <span class={`progress-dot dot-${i + 1}`} />
       ))}
     </div>
   </div>
@@ -406,7 +406,11 @@ const steps = [
         gap: var(--gap);
         max-width: none;
         width: max-content;
-        margin: 0;
+        /* Clears the heading: the cards are vertically centred in the pinned
+           screen, and without this gap the tallest ones grow up into the
+           title. The margin is taken out of the track's own flex space, so it
+           never pushes the progress rail off the bottom. */
+        margin: clamp(20px, 4svh, 44px) 0 0;
         /* First card starts centred. */
         padding: 2svh calc((100cqw - var(--card-w)) / 2);
         animation: steps-slide linear both;
@@ -446,32 +450,22 @@ const steps = [
         transform-origin: left;
         animation: progress-fill linear both;
       }
+      /* Three plain dots on the rail: one colour, no numbers, no per-step
+         state. The only thing that moves is the fill of the line behind them. */
       .progress-dot {
         position: relative;
-        display: grid;
-        place-items: center;
-        width: 40px;
-        height: 40px;
-        border: 1px solid oklch(100% 0 0 / 0.16);
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
-        background: var(--steps-bg);
-        color: var(--color-ink-soft);
-        font-size: 12px;
-        font-weight: 700;
-        animation: dot-on linear both;
-      }
-      .progress-dot.dot-2 {
-        animation-name: dot-on-2;
-      }
-      .progress-dot.dot-3 {
-        animation-name: dot-on-3;
+        background: oklch(100% 0 0 / 0.22);
       }
 
-      /* Every animation below runs on the section's pinned scroll range. */
+      /* Every animation below runs on the section's pinned scroll range. The
+         progress dots are deliberately absent: they are static, the line's
+         fill is what reports progress. */
       .steps-track,
       .steps-sky,
       .progress-fill,
-      .progress-dot,
       .step-scene,
       .step-text,
       .step-scene :global(.scene-b),
@@ -641,43 +635,6 @@ const steps = [
       transform: scaleX(1);
     }
   }
-  @keyframes dot-on {
-    0%,
-    100% {
-      border-color: oklch(72% 0.18 50);
-      color: var(--color-ink);
-      box-shadow: 0 0 14px oklch(72% 0.18 50 / 0.6);
-    }
-  }
-  @keyframes dot-on-2 {
-    0%,
-    38% {
-      border-color: oklch(100% 0 0 / 0.16);
-      color: var(--color-ink-soft);
-      box-shadow: none;
-    }
-    40%,
-    100% {
-      border-color: oklch(72% 0.18 50);
-      color: var(--color-ink);
-      box-shadow: 0 0 14px oklch(72% 0.18 50 / 0.6);
-    }
-  }
-  @keyframes dot-on-3 {
-    0%,
-    78% {
-      border-color: oklch(100% 0 0 / 0.16);
-      color: var(--color-ink-soft);
-      box-shadow: none;
-    }
-    80%,
-    100% {
-      border-color: oklch(72% 0.18 50);
-      color: var(--color-ink);
-      box-shadow: 0 0 14px oklch(72% 0.18 50 / 0.6);
-    }
-  }
-
   /* Card 1 (0–20%): the file drops in, the screen turns into the book's
      detail sheet, the "imported" toast lands and clears as the card leaves. */
   @keyframes file-drop {
