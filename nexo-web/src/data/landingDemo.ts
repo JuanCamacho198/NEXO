@@ -1,3 +1,14 @@
+import type { ImageMetadata } from 'astro';
+import cumbres from '@/assets/covers/cumbres-borrascosas.jpg';
+import dracula from '@/assets/covers/dracula.jpg';
+import montecristo from '@/assets/covers/el-conde-de-montecristo.jpg';
+import frankenstein from '@/assets/covers/frankenstein.jpg';
+import islaTesoro from '@/assets/covers/la-isla-del-tesoro.jpg';
+import miserables from '@/assets/covers/los-miserables.jpg';
+import mobyDick from '@/assets/covers/moby-dick.jpg';
+import mujercitas from '@/assets/covers/mujercitas.jpg';
+import odisea from '@/assets/covers/odisea.jpg';
+import orgullo from '@/assets/covers/orgullo-y-prejuicio.jpg';
 import type { Lang } from '@/i18n/utils';
 
 /**
@@ -137,44 +148,23 @@ export function dictionaryDemo(lang: Lang): DictionaryDemo {
   return dictionary[lang];
 }
 
-/** Public-domain classics, as the store would list them. Colours are the
- *  covers' gradient pair. */
-const covers: Record<Lang, { title: string; author: string; from: string; to: string }[]> = {
-  es: [
-    { title: 'La Odisea', author: 'Homero', from: '#7a1f1f', to: '#3b0d12' },
-    { title: 'Don Quijote', author: 'Cervantes', from: '#1f4e79', to: '#0e2442' },
-    { title: 'Orgullo y prejuicio', author: 'Austen', from: '#6b5520', to: '#2b210c' },
-    { title: 'Moby Dick', author: 'Melville', from: '#23523f', to: '#0d2a1f' },
-    { title: 'Frankenstein', author: 'Shelley', from: '#4b2a63', to: '#1f0f2e' },
-    { title: 'Drácula', author: 'Stoker', from: '#5c1830', to: '#22070f' },
-    { title: 'La isla del tesoro', author: 'Stevenson', from: '#7a4a1a', to: '#2e1a07' },
-    { title: 'Mujercitas', author: 'Alcott', from: '#6a2d4f', to: '#2a0f1f' },
-    { title: 'Los miserables', author: 'Hugo', from: '#2c3e63', to: '#101828' },
-    { title: 'Cumbres borrascosas', author: 'Brontë', from: '#3d4a2a', to: '#161c0e' },
-    {
-      title: 'Alicia en el país de las maravillas',
-      author: 'Carroll',
-      from: '#1e5d66',
-      to: '#0b2428',
-    },
-    { title: 'El conde de Montecristo', author: 'Dumas', from: '#5a3a1a', to: '#211408' },
-  ],
-  en: [
-    { title: 'The Odyssey', author: 'Homer', from: '#7a1f1f', to: '#3b0d12' },
-    { title: 'Don Quixote', author: 'Cervantes', from: '#1f4e79', to: '#0e2442' },
-    { title: 'Pride and Prejudice', author: 'Austen', from: '#6b5520', to: '#2b210c' },
-    { title: 'Moby-Dick', author: 'Melville', from: '#23523f', to: '#0d2a1f' },
-    { title: 'Frankenstein', author: 'Shelley', from: '#4b2a63', to: '#1f0f2e' },
-    { title: 'Dracula', author: 'Stoker', from: '#5c1830', to: '#22070f' },
-    { title: 'Treasure Island', author: 'Stevenson', from: '#7a4a1a', to: '#2e1a07' },
-    { title: 'Little Women', author: 'Alcott', from: '#6a2d4f', to: '#2a0f1f' },
-    { title: 'Les Misérables', author: 'Hugo', from: '#2c3e63', to: '#101828' },
-    { title: 'Wuthering Heights', author: 'Brontë', from: '#3d4a2a', to: '#161c0e' },
-    { title: 'Alice in Wonderland', author: 'Carroll', from: '#1e5d66', to: '#0b2428' },
-    { title: 'The Count of Monte Cristo', author: 'Dumas', from: '#5a3a1a', to: '#211408' },
-  ],
-};
+/** Covers for the store tile's shelves: real edition covers, normalised to
+ *  360x540 JPEG by hand (the originals were 30 KB–1.7 MB, 0.63–0.83 ratio);
+ *  astro:assets serves them as small WebP/AVIF. They are decorative (the
+ *  shelves are aria-hidden), so the title is only the image's identity here. */
+const covers: { id: string; image: ImageMetadata }[] = [
+  { id: 'odisea', image: odisea },
+  { id: 'orgullo-y-prejuicio', image: orgullo },
+  { id: 'moby-dick', image: mobyDick },
+  { id: 'frankenstein', image: frankenstein },
+  { id: 'dracula', image: dracula },
+  { id: 'la-isla-del-tesoro', image: islaTesoro },
+  { id: 'mujercitas', image: mujercitas },
+  { id: 'los-miserables', image: miserables },
+  { id: 'cumbres-borrascosas', image: cumbres },
+  { id: 'el-conde-de-montecristo', image: montecristo },
+];
 
-export function storeCovers(lang: Lang) {
-  return covers[lang];
+export function storeCovers() {
+  return covers;
 }

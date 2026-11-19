@@ -55,8 +55,6 @@ export const en = {
   // FAQ
   'faq.eyebrow': 'FAQ',
   'faq.lead': 'The essentials about NEXO, in short.',
-  'faq.moreTitle': 'Still have a question?',
-  'faq.moreLink': 'Ask us on GitHub',
   // Dictionary and habit sections
   'dict.eyebrow': 'Dictionary and translation',
   'dict.heading': 'Understand every word.',

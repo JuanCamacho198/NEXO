@@ -1,14 +1,15 @@
 ---
+import { Image } from 'astro:assets';
 import { storeCovers } from '@/data/landingDemo';
 import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
-const covers = storeCovers(lang);
+const covers = storeCovers();
 // Two shelves drifting in opposite directions; each row is doubled so its
 // loop is seamless (the copy is hidden from assistive tech).
-const rows = [covers.slice(0, 6), covers.slice(6)];
+const rows = [covers.slice(0, 5), covers.slice(5)];
 
 const days = t('habit.weekDays').split(',');
 // Mon–Fri read, today (Saturday) still open. Illustrative, like every number here.
@@ -52,10 +53,17 @@ const goals = [10, 15, 20, 30];
             <div class={`shelf shelf-${r + 1}`}>
               <div class="shelf-track">
                 {[...row, ...row].map((book) => (
-                  <div class="cover" style={`--from: ${book.from}; --to: ${book.to}`}>
-                    <small>{book.author}</small>
-                    <span>{book.title}</span>
-                  </div>
+                  <Image
+                    src={book.image}
+                    alt=""
+                    widths={[112, 224]}
+                    sizes="112px"
+                    quality={78}
+                    loading="eager"
+                    fetchpriority="low"
+                    decoding="async"
+                    class="cover"
+                  />
                 ))}
               </div>
             </div>
@@ -290,31 +298,18 @@ const goals = [10, 15, 20, 30];
     animation-duration: 56s;
   }
   .cover {
-    display: flex;
+    display: block;
     flex: none;
-    flex-direction: column;
-    justify-content: flex-end;
-    width: 96px;
-    aspect-ratio: 3 / 4.4;
-    padding: 10px 9px;
-    border-radius: 10px;
-    background: linear-gradient(160deg, var(--from), var(--to));
+    width: 112px;
+    height: auto;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border-radius: 6px 10px 10px 6px;
+    /* A spine shadow on the left edge and a soft drop, so a flat image reads
+       as a book on a shelf. */
     box-shadow:
-      inset 3px 0 0 oklch(100% 0 0 / 0.08),
-      0 10px 22px -10px oklch(0% 0 0 / 0.8);
-  }
-  .cover small {
-    font-size: 8.5px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    opacity: 0.72;
-  }
-  .cover span {
-    margin-top: 3px;
-    font-size: 11.5px;
-    font-weight: 800;
-    line-height: 1.1;
+      inset 4px 0 6px -2px oklch(0% 0 0 / 0.35),
+      0 14px 26px -12px oklch(0% 0 0 / 0.85);
   }
   .tile-store:hover .shelf-track {
     animation-play-state: paused;

@@ -24,23 +24,6 @@ const faqs = [
       <p class="faq-eyebrow">{t('faq.eyebrow')}</p>
       <h2 class="faq-title">{t('faq.title')}</h2>
       <p class="faq-lead">{t('faq.lead')}</p>
-      <a class="faq-more" href="https://github.com/JuanCamacho198/NEXO/issues" rel="noopener">
-        <span>
-          <strong>{t('faq.moreTitle')}</strong>
-          <small>{t('faq.moreLink')}</small>
-        </span>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M5 12h14M13 6l6 6-6 6" />
-        </svg>
-      </a>
     </div>
 
     <div class="faq-list">
@@ -106,46 +89,6 @@ const faqs = [
     font-size: 1.05rem;
     line-height: 1.65;
   }
-  .faq-more {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    margin-top: 32px;
-    max-width: 360px;
-    padding: 18px 20px;
-    border: 1px solid oklch(100% 0 0 / 0.1);
-    border-radius: 18px;
-    background: oklch(100% 0 0 / 0.03);
-    transition:
-      border-color 0.2s ease,
-      background-color 0.2s ease;
-  }
-  .faq-more:hover {
-    border-color: oklch(72% 0.18 50 / 0.6);
-    background: oklch(72% 0.18 50 / 0.06);
-  }
-  .faq-more strong {
-    display: block;
-    font-size: 15px;
-  }
-  .faq-more small {
-    display: block;
-    margin-top: 2px;
-    font-size: 13px;
-    color: var(--color-ink-soft);
-  }
-  .faq-more svg {
-    flex: none;
-    width: 20px;
-    height: 20px;
-    color: oklch(76% 0.16 55);
-    transition: translate 0.2s ease;
-  }
-  .faq-more:hover svg {
-    translate: 3px 0;
-  }
-
   .faq-list {
     display: grid;
     gap: 14px;
