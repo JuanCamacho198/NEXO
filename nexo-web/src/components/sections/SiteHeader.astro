@@ -5,6 +5,12 @@ import ThemeToggle from '@/components/ui/ThemeToggle.astro';
 import LanguagePicker from '@/components/ui/LanguagePicker.astro';
 import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
+interface Props {
+  /** The home page: the header floats over the dark hero instead of pushing it down. */
+  overHero?: boolean;
+}
+
+const { overHero = false } = Astro.props;
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
@@ -17,7 +23,14 @@ const mobileLink =
 <!-- ══════════════ HEADER ══════════════ -->
 <!-- The glass surface and its scrolled pill state live in `.site-header` in
      global.css, where the tokens and the specificity are controllable. -->
-<header class="site-header sticky z-[60]">
+<!-- Over the hero the bar is fixed (out of flow, so the hero starts at the top
+     of the page) and forced dark at rest, because it sits on the night sky. The
+     script hands it back to the page theme once it turns into the pill. -->
+<header
+  class:list={['site-header z-[60]', overHero ? 'fixed inset-x-0' : 'sticky']}
+  data-hero={overHero ? '' : undefined}
+  data-theme={overHero ? 'dark' : undefined}
+>
   <div class="shell flex items-center gap-8 py-7 max-[1100px]:gap-5 max-[640px]:gap-4 max-[640px]:py-[18px]">
     <Logo />
 
@@ -90,12 +103,18 @@ const mobileLink =
     var header = document.querySelector('.site-header');
     if (!header) return;
     var ticking = false;
+    var overHero = header.hasAttribute('data-hero');
     function update() {
       ticking = false;
-      if (window.scrollY > 24) {
+      var scrolled = window.scrollY > 24;
+      if (scrolled) {
         header.setAttribute('data-scrolled', '');
       } else {
         header.removeAttribute('data-scrolled');
+      }
+      if (overHero) {
+        if (scrolled) header.removeAttribute('data-theme');
+        else header.setAttribute('data-theme', 'dark');
       }
     }
     function onScroll() {

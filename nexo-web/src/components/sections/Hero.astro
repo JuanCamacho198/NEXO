@@ -1,67 +1,266 @@
 ---
-import { Image } from 'astro:assets';
-import DownloadButton from '@/components/ui/DownloadButton.astro';
-import Eyebrow from '@/components/ui/Eyebrow.astro';
-import PlatformIcon from '@/components/ui/PlatformIcon.astro';
-import heroMockup from '@/assets/hero-mockup.png';
+import { Picture } from 'astro:assets';
+import heroSky from '@/assets/hero-sky.png';
 import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
-const platforms = [
-  { name: 'android' as const, label: t('hero.platformAndroid') },
-  { name: 'windows' as const, label: t('hero.platformWindows') },
-  { name: 'macos' as const, label: t('hero.platformMacOS') },
-  { name: 'linux' as const, label: t('hero.platformLinux') },
-];
+const highlights = [
+  { title: t('heroBar.syncTitle'), copy: t('heroBar.syncCopy'), icon: 'devices' },
+  { title: t('heroBar.organizeTitle'), copy: t('heroBar.organizeCopy'), icon: 'bookmark' },
+  { title: t('heroBar.readTitle'), copy: t('heroBar.readCopy'), icon: 'bolt' },
+] as const;
 ---
 
 <!-- ══════════════ HERO ══════════════ -->
-<section class="pt-10 pb-24" id="top">
-  <div class="shell grid grid-cols-[0.86fr_1.19fr] items-center gap-10 max-[900px]:grid-cols-1">
-    <div class="min-w-0 rise rise-1">
-      <Eyebrow>{t('hero.eyebrow')}</Eyebrow>
+<!-- Always dark, whatever theme the visitor picked: the sky only reads at night.
+     The intro timeline (the `.hero-intro` delays and keyframes) lives in
+     global.css next to the header's, because the header is part of it. -->
+<section
+  id="top"
+  class="hero relative isolate overflow-hidden bg-[#0d0b18] text-ink"
+  data-theme="dark"
+>
+  <div class="hero-bg absolute inset-0 -z-10" aria-hidden="true">
+    <Picture
+      src={heroSky}
+      alt=""
+      formats={['avif', 'webp']}
+      widths={[768, 1280, heroSky.width]}
+      sizes="100vw"
+      quality={78}
+      loading="eager"
+      fetchpriority="high"
+      class="absolute inset-0 h-full w-full object-cover object-[50%_100%]"
+    />
+  </div>
 
-      <h1>{t('hero.heading')}</h1>
+  <div class="hero-card relative flex flex-col">
+    <div class="hero-stage relative min-h-0 flex-1" id="dispositivos">
+      <h1 class="hero-word">{t('hero.wordmark')}</h1>
 
-      <p class="mt-5 max-w-[46ch] text-[1.05rem] leading-[1.75] text-ink-soft text-pretty">
-        {t('hero.lead')}
-      </p>
-
-      <div class="mt-8 flex flex-wrap items-center gap-3.5 max-[640px]:gap-3">
-        <DownloadButton />
+      <!-- Device mockup slots. Each is a placeholder sized to the composition;
+           swap the inner <div> for an <Image> with the same box once the
+           renders exist. Suggested exports: laptop 1600×1040, phone 600×1240,
+           tablet 1200×900, all transparent PNG. -->
+      <div class="hero-device hero-device-laptop" aria-hidden="true">
+        <div class="device-placeholder rounded-[2.2cqw]"></div>
       </div>
-
-      <ul
-        class="mt-[30px] flex flex-wrap items-center gap-7 max-[640px]:gap-[18px]"
-        id="dispositivos"
-      >
-        {platforms.map((platform) => (
-          <li class="inline-flex">
-            <a href="#descargar" class="group inline-flex items-center gap-[9px]">
-              <PlatformIcon name={platform.name} />
-              <span class="text-[13px] font-medium text-ink-soft transition-[color] duration-[180ms] ease-[ease] group-hover:text-ink">
-                {platform.label}
-              </span>
-            </a>
-          </li>
-        ))}
-      </ul>
+      <div class="hero-device hero-device-phone" aria-hidden="true">
+        <div class="device-placeholder rounded-[2.6cqw]"></div>
+      </div>
+      <div class="hero-device hero-device-tablet" aria-hidden="true">
+        <div class="device-placeholder rounded-[1.8cqw]"></div>
+      </div>
     </div>
 
-    <div class="rise rise-2 min-w-0 max-[900px]:mt-12 min-[901px]:-translate-y-4 min-[901px]:translate-x-[2%]">
-      <Image
-        src={heroMockup}
-        alt={t('hero.mockupAlt')}
-        widths={[480, 720, 1080, 1600]}
-        sizes="(max-width: 900px) 92vw, 680px"
-        format="webp"
-        quality={82}
-        loading="eager"
-        fetchpriority="high"
-        class="h-auto w-full"
-      />
+    <p class="hero-chrome hero-tagline px-6 text-center text-[15px] font-medium text-ink/85 text-balance">
+      {t('hero.heading')}
+    </p>
+
+    <div class="hero-chrome hero-bar grid grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.15fr)] items-center gap-0 max-[1023px]:grid-cols-1 max-[1023px]:gap-5">
+      {highlights.map((item) => (
+        <div class="flex min-w-0 items-center gap-4 border-r border-white/15 px-8 first:pl-0 max-[1023px]:border-r-0 max-[1023px]:px-0">
+          <svg
+            class="h-9 w-9 flex-none text-ink"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            {item.icon === 'devices' ? (
+              <>
+                <rect x="7" y="4.5" width="15" height="11" rx="1.5" />
+                <path d="M12 19.5h5M14.5 15.5v4" />
+                <rect x="2" y="8.5" width="6" height="11" rx="1.3" fill="#0d0b18" />
+              </>
+            ) : item.icon === 'bookmark' ? (
+              <path d="M6.5 3.5h11v17L12 16l-5.5 4.5Z" />
+            ) : (
+              <path d="M13.5 2.5 5 13.5h6l-1 8 8.5-11h-6Z" />
+            )}
+          </svg>
+          <div class="min-w-0">
+            <p class="text-[1.2rem] leading-tight font-semibold text-ink">{item.title}</p>
+            <p class="mt-1 text-[0.95rem] leading-snug text-ink-soft">{item.copy}</p>
+          </div>
+        </div>
+      ))}
+
+      <!-- Placeholder: there is no video yet, so this card is not interactive. -->
+      <div class="ml-8 flex items-center gap-4 rounded-[18px] border border-white/12 bg-white/[0.06] p-2.5 pr-4 backdrop-blur-md max-[1023px]:ml-0">
+        <div
+          class="placeholder-surface aspect-[3/2] w-24 flex-none rounded-xl"
+          aria-hidden="true"
+        ></div>
+        <div class="min-w-0 flex-1">
+          <p class="font-semibold text-ink">{t('heroBar.videoTitle')}</p>
+          <p class="text-[13px] text-ink-soft">{t('heroBar.videoMeta')}</p>
+        </div>
+        <span
+          class="grid h-11 w-11 flex-none place-items-center rounded-full bg-white/85 text-[#0d0b18]"
+          aria-hidden="true"
+        >
+          <svg class="ml-0.5 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 4.5v15l12-7.5Z" />
+          </svg>
+        </span>
+      </div>
     </div>
   </div>
 </section>
+
+<style>
+  /* Desktop: a framed card floating in the sky. The 100vmax spread shadow dims
+     the sky outside the card without a second copy of the image. */
+  .hero {
+    padding: 12px;
+  }
+  .hero-card {
+    height: clamp(680px, calc(100svh - 24px), 980px);
+    padding-top: 108px; /* the fixed header overlays this band */
+    border: 1px solid oklch(100% 0 0 / 0.1);
+    border-radius: 28px;
+    background: linear-gradient(
+      to bottom,
+      oklch(12% 0.03 275 / 0.35),
+      transparent 30%,
+      transparent 62%,
+      oklch(10% 0.02 275 / 0.7)
+    );
+    box-shadow:
+      0 0 0 100vmax oklch(12% 0.03 275 / 0.42),
+      0 40px 90px -40px oklch(0% 0 0 / 0.8);
+  }
+
+  /* The stage is a size container so the wordmark and the devices scale with
+     the space they actually get, and the wordmark's intro can be expressed as
+     "from the stage's centre" in cqh. */
+  .hero-stage {
+    container-type: size;
+  }
+
+  .hero-word {
+    --word-size: min(22cqw, 46cqh);
+    --word-top: 2cqh;
+    /* Intro only: how far the centred word sits below its resting spot, and how
+       much larger it is there (see hero-word-in in global.css). */
+    --word-rise: calc(50cqh - var(--word-top) - 0.4 * var(--word-size));
+    --word-big: 1.22;
+    position: absolute;
+    top: var(--word-top);
+    left: 50%;
+    z-index: 0;
+    margin: 0;
+    translate: -50% 0;
+    font-size: var(--word-size);
+    font-weight: 800;
+    line-height: 0.8;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+    color: transparent;
+    background: linear-gradient(
+      100deg,
+      oklch(97% 0.01 80) 0%,
+      oklch(86% 0.02 60) 42%,
+      oklch(80% 0.12 55) 70%,
+      oklch(72% 0.19 45) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    opacity: 0.55;
+    user-select: none;
+  }
+
+  .hero-device {
+    position: absolute;
+    z-index: 1;
+    filter: drop-shadow(0 30px 40px oklch(0% 0 0 / 0.55));
+  }
+  .hero-device-laptop {
+    left: 50%;
+    bottom: 0;
+    width: min(50cqw, 112cqh);
+    aspect-ratio: 16 / 10.4;
+    translate: -50% 0;
+    rotate: -3deg;
+  }
+  .hero-device-phone {
+    left: 13cqw;
+    bottom: -3cqh;
+    width: min(15cqw, 33cqh);
+    aspect-ratio: 9 / 18.6;
+    rotate: -9deg;
+  }
+  .hero-device-tablet {
+    right: 9cqw;
+    bottom: 6cqh;
+    width: min(26cqw, 58cqh);
+    aspect-ratio: 4 / 3;
+    rotate: 7deg;
+  }
+
+  .device-placeholder {
+    width: 100%;
+    height: 100%;
+  }
+  .device-placeholder,
+  .placeholder-surface {
+    border: 1px dashed oklch(100% 0 0 / 0.28);
+    background:
+      linear-gradient(135deg, oklch(100% 0 0 / 0.1), oklch(100% 0 0 / 0.02)),
+      oklch(18% 0.03 275 / 0.72);
+    backdrop-filter: blur(6px);
+  }
+
+  .hero-tagline {
+    padding-block: 18px 8px;
+    text-shadow: 0 1px 12px oklch(0% 0 0 / 0.7);
+  }
+  .hero-bar {
+    padding: 22px 36px 28px;
+  }
+
+  /* Phones and small tablets: full-bleed, no card, stacked bar. */
+  @media (max-width: 1023px) {
+    .hero {
+      padding: 0;
+    }
+    .hero-card {
+      height: auto;
+      padding-top: 96px;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .hero-stage {
+      flex: none;
+      height: min(98vw, 640px);
+    }
+    .hero-word {
+      --word-size: 25cqw;
+      --word-top: 4cqh;
+    }
+    .hero-device-laptop {
+      width: 70cqw;
+      bottom: 12cqh;
+    }
+    .hero-device-phone {
+      left: 4cqw;
+      width: 24cqw;
+      bottom: 3cqh;
+    }
+    .hero-device-tablet {
+      right: 3cqw;
+      width: 38cqw;
+      bottom: 4cqh;
+    }
+    .hero-bar {
+      padding: 8px 20px 32px;
+    }
+  }
+</style>

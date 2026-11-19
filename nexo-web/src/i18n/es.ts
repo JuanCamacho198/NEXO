@@ -16,16 +16,22 @@ export const es = {
   'header.navHow': 'Cómo funciona',
 
   // Hero
-  'hero.eyebrow': 'Tu biblioteca, siempre contigo',
+  'hero.wordmark': 'NEXO',
+  'heroBar.syncTitle': 'Sincroniza',
+  'heroBar.syncCopy': 'en todos tus dispositivos',
+  'heroBar.organizeTitle': 'Organiza',
+  'heroBar.organizeCopy': 'tu biblioteca fácilmente',
+  'heroBar.readTitle': 'Lee',
+  'heroBar.readCopy': 'sin interrupciones',
+  'heroBar.videoTitle': 'Descubre Nexo',
+  'heroBar.videoMeta': 'Video próximamente',
   'hero.heading': 'Lee, destaca y sincroniza en todos tus dispositivos.',
   'hero.lead':
     'Nexo es la app que te permite llevar tus libros, notas y resaltados a donde quieras. Empieza en un dispositivo y continúa en otro, sin interrupciones.',
-  'hero.cta': 'Descargar ahora',
   'hero.platformAndroid': 'Android',
   'hero.platformWindows': 'Windows',
   'hero.platformMacOS': 'macOS',
   'hero.platformLinux': 'Linux',
-  'hero.mockupAlt': 'NEXO abierto en escritorio, portátil, tablet y móvil',
 
   // Feature strip
   'strip.cloudTitle': 'Sincronización en la nube',

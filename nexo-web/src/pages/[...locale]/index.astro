@@ -14,9 +14,13 @@ const t = useTranslations(lang);
 ---
 
 <Layout lang={lang} title={t('meta.title')} description={t('hero.lead')}>
-  <SiteHeader />
+  <!-- .hero-intro scopes the load timeline in global.css; it wraps the header
+       too because the nav is the timeline's last beat. -->
+  <div class="hero-intro">
+    <SiteHeader overHero />
 
-  <HomeSections />
+    <HomeSections />
 
-  <SiteFooter />
+    <SiteFooter />
+  </div>
 </Layout>

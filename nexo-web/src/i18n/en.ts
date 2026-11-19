@@ -16,16 +16,22 @@ export const en = {
   'header.navHow': 'How it works',
 
   // Hero
-  'hero.eyebrow': 'Your library, always with you',
+  'hero.wordmark': 'NEXO',
+  'heroBar.syncTitle': 'Sync',
+  'heroBar.syncCopy': 'across all your devices',
+  'heroBar.organizeTitle': 'Organize',
+  'heroBar.organizeCopy': 'your library with ease',
+  'heroBar.readTitle': 'Read',
+  'heroBar.readCopy': 'without interruptions',
+  'heroBar.videoTitle': 'Discover Nexo',
+  'heroBar.videoMeta': 'Video coming soon',
   'hero.heading': 'Read, highlight, and sync across all your devices.',
   'hero.lead':
     'Nexo is the app that lets you carry your books, notes, and highlights wherever you go. Start on one device and continue on another, without interruptions.',
-  'hero.cta': 'Download now',
   'hero.platformAndroid': 'Android',
   'hero.platformWindows': 'Windows',
   'hero.platformMacOS': 'macOS',
   'hero.platformLinux': 'Linux',
-  'hero.mockupAlt': 'NEXO running on desktop, laptop, tablet and phone',
 
   // Feature strip
   'strip.cloudTitle': 'Cloud sync',

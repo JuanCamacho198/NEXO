@@ -305,6 +305,14 @@
     }
   }
 
+  /* Over the hero at rest the bar is part of the card: no glass, no rule. */
+  .site-header[data-hero]:not([data-scrolled]) {
+    background-color: transparent;
+    border-bottom-color: transparent;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
   .logo {
     display: inline-flex;
     align-items: center;
@@ -354,24 +362,27 @@
     opacity: 0;
     transform: rotate(-90deg) scale(0.4);
   }
-  [data-theme='dark'] .theme-toggle-sun {
+  html[data-theme='dark'] .theme-toggle-sun {
     opacity: 0;
     transform: rotate(90deg) scale(0.4);
   }
-  [data-theme='dark'] .theme-toggle-moon {
+  html[data-theme='dark'] .theme-toggle-moon {
     opacity: 1;
     transform: rotate(0deg) scale(1);
   }
+  /* The toggle states key off <html>, not the nearest [data-theme]: the home
+     header forces data-theme="dark" on itself over the hero, and the toggle
+     must keep reporting the page's real theme. */
   /* Exactly one label stays in the accessibility tree: the inactive one is
      display:none, the active one keeps the visually-hidden clip. The button's
      accessible name therefore always describes what the toggle will do next. */
   .theme-label-dark {
     display: none;
   }
-  [data-theme='dark'] .theme-label-light {
+  html[data-theme='dark'] .theme-label-light {
     display: none;
   }
-  [data-theme='dark'] .theme-label-dark {
+  html[data-theme='dark'] .theme-label-dark {
     display: block;
   }
   .vh {
@@ -552,6 +563,43 @@
     animation-delay: 0.16s;
   }
 
+  /* ═══════════════ hero intro ═══════════════ */
+  /* One timeline, ~1.6s, read top to bottom:
+       0.00s  sky zooms out 1.12 → 1 and fades in       (ends 1.60s)
+       0.10s  NEXO fades in centred, 0.92 → 1, unblurs  (ends 1.20s)
+              …then shrinks and rises to rest at 0.55
+       0.70s  laptop, 0.80s phone, 0.90s tablet fade up (ends 1.55s)
+       1.05s  nav, tagline and feature bar              (ends 1.60s)
+     Every keyframe ends on the element's resting style, so `fill: both` and
+     the reduced-motion `animation: none` land on the same final frame. */
+  .hero-intro {
+    --intro-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .hero-intro .hero-bg {
+    animation: hero-bg-in 1.6s var(--intro-ease) 0s both;
+  }
+  .hero-intro .hero-word {
+    animation: hero-word-in 1.1s cubic-bezier(0.65, 0, 0.35, 1) 0.1s both;
+  }
+  .hero-intro .hero-device {
+    animation: hero-device-in 0.65s var(--intro-ease) both;
+  }
+  .hero-intro .hero-device-laptop {
+    animation-delay: 0.7s;
+  }
+  .hero-intro .hero-device-phone {
+    animation-delay: 0.8s;
+  }
+  .hero-intro .hero-device-tablet {
+    animation-delay: 0.9s;
+  }
+  .hero-intro .hero-chrome {
+    animation: hero-chrome-up 0.55s var(--intro-ease) 1.05s both;
+  }
+  .hero-intro .site-header[data-hero] {
+    animation: hero-chrome-down 0.55s var(--intro-ease) 1.05s both;
+  }
+
   /* Reduced motion lives in the components layer so it out-cascades the
      animation declarations above (a base-layer override would lose to them). */
   @media (prefers-reduced-motion: reduce) {
@@ -560,7 +608,12 @@
     }
     .rise,
     .rise-1,
-    .rise-2 {
+    .rise-2,
+    .hero-intro .hero-bg,
+    .hero-intro .hero-word,
+    .hero-intro .hero-device,
+    .hero-intro .hero-chrome,
+    .hero-intro .site-header[data-hero] {
       animation: none;
     }
   }
@@ -802,6 +855,72 @@
   from {
     opacity: 0;
     transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Hero intro. Transforms only touch `transform`, never `translate`/`rotate`,
+   which the elements use for their resting placement, so the two compose. */
+@keyframes hero-bg-in {
+  from {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+  40% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* --word-rise is the distance from the resting spot up top to the stage's
+   centre; --word-big is how much larger the word is while centred. */
+@keyframes hero-word-in {
+  0% {
+    opacity: 0;
+    filter: blur(14px);
+    transform: translateY(var(--word-rise)) scale(calc(var(--word-big) * 0.92));
+  }
+  36%,
+  50% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(var(--word-rise)) scale(var(--word-big));
+  }
+  100% {
+    opacity: 0.55;
+    filter: none;
+    transform: none;
+  }
+}
+@keyframes hero-device-in {
+  from {
+    opacity: 0;
+    transform: translateY(36px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hero-chrome-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hero-chrome-down {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
   }
   to {
     opacity: 1;
