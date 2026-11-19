@@ -1,6 +1,6 @@
 # Hero device renders
 
-Re-renders `src/assets/hero/device-{laptop,tablet,phone}.png`: three Sketchfab
+Re-renders `src/assets/hero/screen-{laptop,tablet,phone}-v2.png`: three Sketchfab
 models with the app screens in `assets/` mapped onto their displays, lit warm
 from behind to match the hero sky. The site ships only the resulting PNGs.
 
@@ -83,7 +83,7 @@ await renderDevice({
 Then trim the transparent margins into the site assets (from `nexo-web/`):
 
 ```sh
-bun -e 'const sharp = require("sharp"); for (const n of ["laptop","tablet","phone"]) await sharp(`tools/device-renders/out/${n}.png`).trim({ threshold: 1 }).png({ compressionLevel: 9 }).toFile(`src/assets/hero/device-${n}.png`);'
+bun -e 'const sharp = require("sharp"); for (const n of ["laptop","tablet","phone"]) await sharp(`tools/device-renders/out/${n}.png`).trim({ threshold: 1 }).png({ compressionLevel: 9 }).toFile(`src/assets/hero/screen-${n}-v2.png`);'
 ```
 
 ## Steps section ("Cómo funciona")
