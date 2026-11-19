@@ -6,9 +6,9 @@ from behind to match the hero sky. The site ships only the resulting PNGs.
 
 ## Inputs
 
-- `assets/screen-*.png` — dark app screens exported from the NEXO-DESIGN Figma
-  file (`Lector / La Odisea 1440x900 DARK (resaltados)` → laptop, `… (Texto)` →
-  tablet, Android `Lectura del Libro` → phone). Never use screens that show an
+- `assets/screen-*.png` — the app's dark UI redrawn in `screens.html` with type
+  ~1.6x larger than the app's, so it reads at the size the renders are shown
+  (the Figma exports it replaced were legible only zoomed in). Never show an
   account name or email.
 - `assets/laptop.glb`, `assets/ipad_pro_12.9_2020.glb`,
   `assets/iphone_16_-_free.glb` — not committed (git-ignored):
@@ -30,13 +30,19 @@ bun add --no-save three@0.170.0
 bun server.mjs           # http://127.0.0.1:4390, writes to out/
 ```
 
-Open the page in a browser (Playwright works) and run in its console:
+Open the page in a browser (Playwright works) and run in its console. The hero
+screens are `#screen-hero-laptop`, `#screen-hero-tablet` and `#screen-hero-phone`
+in `screens.html` (they show real covers: copy `src/assets/covers/*.jpg` into a
+git-ignored `covers/` next to it first), screenshotted by element into
+`assets/screen-hero-*.png`. The tablet texture is stored rotated 270° because
+the iPad model's own UVs run sideways; it uses those UVs (no `planar`), since a
+planar projection shears this screen at the hero's angle.
 
 ```js
 await renderDevice({
   file: 'laptop.glb',
   screen: { by: 'mat', value: 'ComputerScreen' },
-  texture: 'screen-laptop.png',
+  texture: 'screen-hero-laptop.png',
   flipY: true,
   planar: { flipU: true },
   pad: [0.02, 0.07, 0.02, 0.06],
@@ -53,9 +59,8 @@ await renderDevice({
 await renderDevice({
   file: 'ipad_pro_12.9_2020.glb',
   screen: { by: 'mat', value: 'screen' },
-  texture: 'screen-tablet.png',
+  texture: 'screen-hero-tablet.png',
   flipY: true,
-  planar: {},
   rotation: [-6, -28, -91],
   size: [1500, 1200],
   name: 'tablet',
@@ -64,11 +69,9 @@ await renderDevice({
 await renderDevice({
   file: 'iphone_16_-_free.glb',
   screen: { by: 'index', value: [3] },
-  texture: 'screen-phone.png',
+  texture: 'screen-hero-phone.png',
   flipY: true,
   planar: { axes: [0, 1] },
-  pad: [0, 0.06, 0, 0],
-  padColor: '#0d1324',
   desat: 0.55,
   rotation: [-4, 22, 7],
   size: [800, 1300],
