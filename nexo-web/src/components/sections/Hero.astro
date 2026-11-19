@@ -41,10 +41,26 @@ const highlights = [
 
   <div class="hero-card relative flex flex-col">
     <div class="hero-stage relative min-h-0 flex-1" id="dispositivos">
-      <p class="hero-chrome hero-tagline absolute inset-x-0 top-0 px-6 text-center text-[15px] font-medium tracking-[0.01em] text-ink/85 text-balance">
-        {t('hero.heading')}
-      </p>
       <h1 class="hero-word">{t('hero.wordmark')}</h1>
+
+      <!-- Sync ring. One ellipse split at its left and right ends: the upper
+           half passes behind the devices, the lower half in front, so the ring
+           wraps around them. A light travels phone, behind the laptop, to the
+           tablet, then in front back to the phone: reading carried from one
+           device to the next. preserveAspectRatio="none" lets it stretch with
+           the stage (the stroke stretches a little with it). Each half is
+           1040 user units long; the dash values in CSS are built on that. -->
+      <svg
+        class="hero-ring hero-ring-back"
+        viewBox="0 0 1000 600"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <g transform="rotate(-5 500 400)">
+          <path class="ring-line" d="M30 400 A470 150 0 0 1 970 400" />
+          <path class="ring-comet" d="M30 400 A470 150 0 0 1 970 400" />
+        </g>
+      </svg>
 
       <!-- 3D renders (transparent PNG) of the Sketchfab models with the dark app
            screens from the NEXO-DESIGN Figma file mapped on: "Lector / La Odisea
@@ -70,6 +86,20 @@ const highlights = [
           loading="eager"
           class="block h-auto w-full"
         />
+        <span class="sync-chip">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m5 12.5 4.5 4.5L19 7.5" />
+          </svg>
+          {t('heroSync.synced')}
+        </span>
       </div>
       <div class="hero-device hero-device-tablet" aria-hidden="true">
         <Image
@@ -80,7 +110,33 @@ const highlights = [
           loading="eager"
           class="block h-auto w-full"
         />
+        <span class="sync-chip">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m5 12.5 4.5 4.5L19 7.5" />
+          </svg>
+          {t('heroSync.synced')}
+        </span>
       </div>
+
+      <svg
+        class="hero-ring hero-ring-front"
+        viewBox="0 0 1000 600"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <g transform="rotate(-5 500 400)">
+          <path class="ring-line" d="M970 400 A470 150 0 0 1 30 400" />
+          <path class="ring-comet" d="M970 400 A470 150 0 0 1 30 400" />
+        </g>
+      </svg>
     </div>
 
     <div class="hero-chrome hero-bar grid grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.15fr)] items-center gap-0 max-[1023px]:grid-cols-1 max-[1023px]:gap-5">
@@ -138,6 +194,49 @@ const highlights = [
   </div>
 </section>
 
+<script is:inline>
+  // Pointer parallax: a progressive enhancement, like the header's scroll
+  // script. It only writes --px/--py (-1…1, eased toward the cursor) on the
+  // hero; CSS turns them into a depth-scaled `translate` per layer. Mouse and
+  // trackpad only (touch has no hover to follow), and never under reduced
+  // motion. The rAF loop stops itself once the layers have caught up.
+  (function () {
+    var hero = document.querySelector('.hero');
+    if (!hero) return;
+    var allowed = window.matchMedia(
+      '(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)',
+    );
+    var tx = 0;
+    var ty = 0;
+    var x = 0;
+    var y = 0;
+    var raf = 0;
+    function frame() {
+      x += (tx - x) * 0.08;
+      y += (ty - y) * 0.08;
+      hero.style.setProperty('--px', x.toFixed(4));
+      hero.style.setProperty('--py', y.toFixed(4));
+      raf = Math.abs(tx - x) > 0.001 || Math.abs(ty - y) > 0.001 ? requestAnimationFrame(frame) : 0;
+    }
+    function follow(nx, ny) {
+      tx = nx;
+      ty = ny;
+      if (!raf) raf = requestAnimationFrame(frame);
+    }
+    hero.addEventListener('pointermove', function (event) {
+      if (!allowed.matches || event.pointerType === 'touch') return;
+      var box = hero.getBoundingClientRect();
+      follow(
+        ((event.clientX - box.left) / box.width) * 2 - 1,
+        ((event.clientY - box.top) / box.height) * 2 - 1,
+      );
+    });
+    hero.addEventListener('pointerleave', function () {
+      follow(0, 0);
+    });
+  })();
+</script>
+
 <style>
   /* Desktop: a framed card floating in the sky. The 100vmax spread shadow dims
      the sky outside the card without a second copy of the image. */
@@ -188,7 +287,7 @@ const highlights = [
 
   .hero-word {
     --word-size: min(20cqw, 36cqh);
-    --word-top: 6cqh;
+    --word-top: 3cqh;
     /* Intro only: how far the centred word sits below its resting spot, and how
        much larger it is there (see hero-word-in in global.css). */
     --word-rise: calc(50cqh - var(--word-top) - 0.4 * var(--word-size));
@@ -198,7 +297,7 @@ const highlights = [
     left: 50%;
     z-index: 0;
     margin: 0;
-    translate: -50% 0;
+    translate: calc(-50% + var(--px) * -10px) calc(var(--py) * -6px);
     font-size: var(--word-size);
     font-weight: 800;
     line-height: 0.8;
@@ -277,7 +376,7 @@ const highlights = [
     left: 50%;
     bottom: -1cqh;
     width: min(46cqw, 96cqh);
-    translate: -50% 0;
+    translate: calc(-50% + var(--px) * -18px) calc(var(--py) * -10px);
   }
   .hero-device-phone {
     --float-y: -11px;
@@ -287,6 +386,7 @@ const highlights = [
     left: 10cqw;
     bottom: -3cqh;
     width: min(17cqw, 40cqh);
+    translate: calc(var(--px) * -30px) calc(var(--py) * -16px);
   }
   .hero-device-tablet {
     --float-y: -9px;
@@ -296,6 +396,7 @@ const highlights = [
     right: 6cqw;
     bottom: 0;
     width: min(31cqw, 68cqh);
+    translate: calc(var(--px) * -26px) calc(var(--py) * -14px);
   }
 
   .placeholder-surface {
@@ -306,11 +407,86 @@ const highlights = [
     backdrop-filter: blur(6px);
   }
 
-  /* Sits above the wordmark like an eyebrow, which frees the band under the
-     devices so they can stand lower and leave more of NEXO visible. */
-  .hero-tagline {
+  /* The sky drifts against the pointer, the farthest layer; the slight
+     overscan keeps its edges out of view while it does. */
+  .hero-bg :global(img) {
+    scale: 1.04;
+    translate: calc(var(--px) * 8px) calc(var(--py) * 5px);
+  }
+
+  /* Sync ring: back half between the wordmark and the devices, front half
+     over them. The comet is a single short dash travelling the path. */
+  .hero-ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    translate: calc(var(--px) * -16px) calc(var(--py) * -9px);
+    filter: drop-shadow(0 0 6px oklch(72% 0.18 50 / 0.9));
+  }
+  .hero-ring-back {
+    z-index: 0;
+  }
+  .hero-ring-front {
     z-index: 2;
-    text-shadow: 0 1px 12px oklch(0% 0 0 / 0.7);
+  }
+  .ring-line,
+  .ring-comet {
+    fill: none;
+    stroke-linecap: round;
+  }
+  .ring-line {
+    stroke: oklch(76% 0.16 55 / 0.85);
+    stroke-width: 1.6;
+  }
+  .ring-comet {
+    stroke: oklch(96% 0.06 80);
+    stroke-width: 3.4;
+    stroke-dasharray: 52 3000;
+    stroke-dashoffset: 52;
+  }
+
+  /* The device the light reaches flashes warm and says it is in sync. */
+  .hero-device-phone::before,
+  .hero-device-tablet::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -14%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, oklch(75% 0.18 55 / 0.55), transparent);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .sync-chip {
+    position: absolute;
+    left: 50%;
+    top: -9%;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px 6px 9px;
+    border: 1px solid oklch(100% 0 0 / 0.16);
+    border-radius: 999px;
+    background: oklch(18% 0.03 275 / 0.72);
+    backdrop-filter: blur(10px);
+    color: var(--color-ink);
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    translate: -50% 0;
+    opacity: 0;
+  }
+  .sync-chip svg {
+    width: 14px;
+    height: 14px;
+    color: oklch(80% 0.16 60);
+  }
+  .hero-device-tablet .sync-chip {
+    top: -4%;
   }
   .hero-bar {
     padding: 22px 36px 28px;
@@ -342,11 +518,15 @@ const highlights = [
     }
     .hero-word {
       --word-size: 25cqw;
-      --word-top: 15cqh;
+      --word-top: 6cqh;
     }
     .hero-device-laptop {
       width: 70cqw;
       bottom: 12cqh;
+    }
+    .sync-chip {
+      font-size: 11px;
+      padding: 4px 9px 4px 7px;
     }
     .hero-device-phone {
       left: 4cqw;

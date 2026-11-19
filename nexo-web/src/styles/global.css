@@ -574,6 +574,15 @@
      the reduced-motion `animation: none` land on the same final frame. */
   .hero-intro {
     --intro-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    /* One lap of the sync light; the device pings are placed on this clock. */
+    --sync-lap: 7s;
+    --sync-start: 2.2s;
+  }
+  /* Pointer parallax offsets, -1 to 1, written by the script in Hero.astro.
+     Zero means every layer sits at its resting place. */
+  .hero {
+    --px: 0;
+    --py: 0;
   }
   .hero-intro .hero-bg {
     animation: hero-bg-in 1.6s var(--intro-ease) 0s both;
@@ -604,6 +613,35 @@
      to the entrance), and the contact shadow tightens and fades as the device
      rises, so it reads as lifting off the rock rather than sliding. Starting right
      after the intro, staggered by --float-phase, keeps the first frame at rest. */
+  /* Sync ring: the line draws itself in (back half, then front, one loop)
+     as the nav arrives, then the light starts lapping. */
+  .hero-intro .hero-ring .ring-line {
+    stroke-dasharray: 1040 1040;
+    animation: ring-draw 0.55s var(--intro-ease) 1.15s both;
+  }
+  .hero-intro .hero-ring-front .ring-line {
+    animation-delay: 1.6s;
+  }
+  .hero-intro .hero-ring-back .ring-comet {
+    animation: ring-comet-first var(--sync-lap) linear var(--sync-start) infinite both;
+  }
+  .hero-intro .hero-ring-front .ring-comet {
+    animation: ring-comet-second var(--sync-lap) linear var(--sync-start) infinite both;
+  }
+  /* The light leaves the phone at 0% of the lap and reaches the tablet at
+     50%, so the tablet's ping runs half a lap later on the same keyframes. */
+  .hero-intro .hero-device-phone::before,
+  .hero-intro .hero-device-tablet::before {
+    animation: sync-glow var(--sync-lap) ease-out var(--sync-start) infinite both;
+  }
+  .hero-intro .sync-chip {
+    animation: sync-chip var(--sync-lap) var(--intro-ease) var(--sync-start) infinite both;
+  }
+  .hero-intro .hero-device-tablet::before,
+  .hero-intro .hero-device-tablet .sync-chip {
+    animation-delay: calc(var(--sync-start) + var(--sync-lap) / 2);
+  }
+
   .hero-intro .hero-device > img {
     animation: hero-float var(--float-dur) ease-in-out calc(1.6s + var(--float-phase)) infinite
       alternate both;
@@ -628,8 +666,18 @@
     .hero-intro .hero-chrome,
     .hero-intro .site-header[data-hero],
     .hero-intro .hero-device > img,
-    .hero-intro .hero-device::after {
+    .hero-intro .hero-device::after,
+    .hero-intro .hero-ring .ring-line,
+    .hero-intro .hero-ring .ring-comet,
+    .hero-intro .hero-device-phone::before,
+    .hero-intro .hero-device-tablet::before,
+    .hero-intro .sync-chip {
       animation: none;
+    }
+    /* No travelling light, so the ring is simply drawn and the chips stay
+       hidden: a static "Synced" badge would claim an event that never shows. */
+    .hero-intro .hero-ring .ring-line {
+      stroke-dasharray: none;
     }
   }
 
@@ -919,6 +967,65 @@
   }
   to {
     opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: 1040;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+/* Each ring half is 1040 user units (fixed viewBox geometry, so constant).
+   With dasharray "52 3000", offset 52 parks the dash just before the start
+   and -1040 just past the end: it is visible only while crossing. Real units,
+   not pathLength: Chrome scales the dash array by pathLength but not the
+   offset, which left a stray dash parked mid-arc. */
+@keyframes ring-comet-first {
+  0% {
+    stroke-dashoffset: 52;
+  }
+  50%,
+  100% {
+    stroke-dashoffset: -1040;
+  }
+}
+@keyframes ring-comet-second {
+  0%,
+  50% {
+    stroke-dashoffset: 52;
+  }
+  100% {
+    stroke-dashoffset: -1040;
+  }
+}
+@keyframes sync-glow {
+  0% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  24%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes sync-chip {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  6%,
+  26% {
+    opacity: 1;
+    transform: none;
+  }
+  34%,
+  100% {
+    opacity: 0;
     transform: none;
   }
 }

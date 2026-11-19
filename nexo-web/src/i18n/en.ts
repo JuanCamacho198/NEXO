@@ -17,6 +17,7 @@ export const en = {
 
   // Hero
   'hero.wordmark': 'NEXO',
+  'heroSync.synced': 'Synced',
   'heroBar.syncTitle': 'Sync',
   'heroBar.syncCopy': 'across all your devices',
   'heroBar.organizeTitle': 'Organize',
@@ -25,7 +26,6 @@ export const en = {
   'heroBar.readCopy': 'without interruptions',
   'heroBar.videoTitle': 'Discover Nexo',
   'heroBar.videoMeta': 'Video coming soon',
-  'hero.heading': 'Read, highlight, and sync across all your devices.',
   'hero.lead':
     'Nexo is the app that lets you carry your books, notes, and highlights wherever you go. Start on one device and continue on another, without interruptions.',
   'hero.platformAndroid': 'Android',
