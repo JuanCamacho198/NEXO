@@ -37,43 +37,46 @@ const steps = [
     b: step3b,
   },
 ] as const;
-
-// Two copies back to back make the loop seamless: when the track has moved by
-// exactly one copy, it is indistinguishable from the start and the animation
-// wraps. The second copy is hidden from assistive tech.
-const loop = [...steps, ...steps];
 ---
 
 <!-- ══════════════ STEPS ══════════════ -->
-<!-- Dark like the hero it follows; the hero fades its sky into this colour. -->
-<section id="como-funciona" class="steps relative overflow-hidden text-ink" data-theme="dark">
-  <div class="shell steps-head text-center">
-    <p class="steps-eyebrow">{t('header.navHow')}</p>
-    <h2 class="steps-title">{t('steps.heading')}</h2>
-    <p class="steps-lead">{t('steps.lead')}</p>
-  </div>
+<!-- Scrolling down moves this section sideways. The section is tall; its
+     .steps-pin child is sticky, so it holds the screen while the visitor scrolls
+     through it, and every animation inside runs on the section's view timeline
+     (--steps) instead of the clock: scrolling plays it, scrolling back rewinds
+     it. The timeline runs 0% → 100% exactly while the pin is held, and is cut
+     into five beats:
+        0–20%  card 1 plays its story      20–40%  slide to card 2
+       40–60%  card 2 plays its story      60–80%  slide to card 3
+       80–100% card 3 plays its story
+     Without scroll-driven animation support (Firefox today) or under reduced
+     motion, none of that applies and the three cards simply stack. -->
+<section id="como-funciona" class="steps relative text-ink" data-theme="dark">
+  <div class="steps-pin">
+    <div class="steps-sky" aria-hidden="true"></div>
 
-  <div class="steps-marquee">
-    <ul class="steps-track" aria-label={t('steps.listAria')}>
-      {loop.map((step, i) => (
-        <li
-          class={`step-card step-${step.kind}`}
-          aria-hidden={i >= steps.length ? 'true' : undefined}
-          style={`--card-offset: ${(i % steps.length) * -2.7}s`}
-        >
+    <div class="shell steps-head text-center">
+      <p class="steps-eyebrow">{t('header.navHow')}</p>
+      <h2 class="steps-title">{t('steps.heading')}</h2>
+      <p class="steps-lead">{t('steps.lead')}</p>
+    </div>
+
+    <ol class="steps-track" aria-label={t('steps.listAria')}>
+      {steps.map((step) => (
+        <li class={`step-card step-${step.kind}`}>
           <div class="step-scene" aria-hidden="true">
             <Image
               src={step.a}
               alt=""
-              widths={[480, 960]}
-              sizes="(max-width: 640px) 80vw, 520px"
+              widths={[560, 1040]}
+              sizes="(max-width: 640px) 80vw, 40vw"
               class="scene-img scene-a"
             />
             <Image
               src={step.b}
               alt=""
-              widths={[480, 960]}
-              sizes="(max-width: 640px) 80vw, 520px"
+              widths={[560, 1040]}
+              sizes="(max-width: 640px) 80vw, 40vw"
               class="scene-img scene-b"
             />
             {step.kind === 'import' && (
@@ -129,29 +132,65 @@ const loop = [...steps, ...steps];
             )}
           </div>
           <div class="step-text">
-            <span class="step-number">{step.n}</span>
+            <span class="step-number" aria-hidden="true">
+              {step.n}
+            </span>
             <h3 class="step-title">{step.title}</h3>
             <p class="step-copy">{step.copy}</p>
           </div>
         </li>
       ))}
-    </ul>
+    </ol>
+
+    <div class="steps-progress" aria-hidden="true">
+      <span class="progress-line">
+        <span class="progress-fill"></span>
+      </span>
+      {steps.map((step, i) => (
+        <span class={`progress-dot dot-${i + 1}`}>{step.n}</span>
+      ))}
+    </div>
   </div>
 </section>
 
 <style>
+  /* ── base: the stacked layout every browser gets ── */
   .steps {
     --steps-bg: #0d0b18;
-    --card-w: 600px;
-    --gap: 28px;
-    --scene-cycle: 8s;
     /* Starts on the exact colour the hero ends on (its sky fade, dimmed by
        the card's outer shadow, measures #070610) and eases to the section's
        own night blue, so there is no seam. */
     background: linear-gradient(to bottom, #070610, var(--steps-bg) 240px);
-    padding: 64px 0 120px;
+  }
+  .steps-pin {
+    position: relative;
+    padding: 72px 0 112px;
+    overflow: clip;
+  }
+  .steps-sky {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* Far layer: two soft glows and a scatter of stars. */
+    background:
+      radial-gradient(40% 50% at 18% 70%, oklch(62% 0.16 45 / 0.16), transparent 70%),
+      radial-gradient(36% 44% at 82% 30%, oklch(55% 0.14 285 / 0.18), transparent 70%),
+      radial-gradient(1.2px 1.2px at 12% 18%, oklch(100% 0 0 / 0.7), transparent),
+      radial-gradient(1px 1px at 37% 62%, oklch(100% 0 0 / 0.5), transparent),
+      radial-gradient(1.4px 1.4px at 58% 12%, oklch(100% 0 0 / 0.65), transparent),
+      radial-gradient(1px 1px at 74% 78%, oklch(100% 0 0 / 0.45), transparent),
+      radial-gradient(1.2px 1.2px at 91% 44%, oklch(100% 0 0 / 0.6), transparent);
+    background-size:
+      100% 100%,
+      100% 100%,
+      340px 260px,
+      300px 280px,
+      420px 300px,
+      260px 240px,
+      380px 320px;
   }
   .steps-head {
+    position: relative;
     max-width: 760px;
   }
   .steps-eyebrow {
@@ -182,39 +221,32 @@ const loop = [...steps, ...steps];
     color: var(--color-ink-soft);
   }
 
-  /* The marquee fades out at both edges so cards enter and leave softly. */
-  .steps-marquee {
-    margin-top: 56px;
-    mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
-  }
   .steps-track {
+    position: relative;
     display: flex;
-    gap: var(--gap);
-    width: max-content;
-    /* The trailing gap makes one copy exactly 50% of the track. */
-    padding-right: var(--gap);
-    animation: steps-marquee 54s linear infinite;
+    flex-direction: column;
+    gap: 28px;
+    max-width: 1080px;
+    margin: 56px auto 0;
+    padding: 0 24px;
   }
-  .steps-marquee:hover .steps-track,
-  .steps-marquee:focus-within .steps-track {
-    animation-play-state: paused;
-  }
-
   .step-card {
-    width: var(--card-w);
-    flex: none;
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    align-items: center;
+    gap: 24px;
     border: 1px solid oklch(100% 0 0 / 0.08);
-    border-radius: 28px;
+    border-radius: 32px;
     background:
-      radial-gradient(120% 80% at 50% 0%, oklch(70% 0.17 50 / 0.16), transparent 60%),
-      oklch(17% 0.03 275 / 0.9);
+      radial-gradient(90% 90% at 30% 10%, oklch(70% 0.17 50 / 0.14), transparent 60%),
+      oklch(17% 0.03 275 / 0.88);
     box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.06);
     overflow: hidden;
   }
   .step-scene {
     position: relative;
-    height: 380px;
-    margin: 24px 24px 0;
+    height: 400px;
+    margin: 28px 0 28px 28px;
   }
   /* Both states share one trimmed box, so B lands exactly on A. */
   .step-scene :global(.scene-img) {
@@ -226,11 +258,11 @@ const loop = [...steps, ...steps];
     width: auto;
     height: auto;
     translate: -50% 0;
-    filter: drop-shadow(0 22px 28px oklch(0% 0 0 / 0.55));
+    filter: drop-shadow(0 24px 30px oklch(0% 0 0 / 0.55));
   }
-  .step-scene :global(.scene-b) {
+  /* Stacked, each card shows its finished state. */
+  .step-scene :global(.scene-a) {
     opacity: 0;
-    animation: scene-swap var(--scene-cycle) ease-in-out var(--card-offset) infinite;
   }
 
   .file-chip,
@@ -250,13 +282,12 @@ const loop = [...steps, ...steps];
     opacity: 0;
   }
   .file-chip {
-    left: 8%;
+    left: 6%;
     top: 4%;
     padding: 10px 16px 10px 12px;
     border-radius: 14px;
     font-size: 14px;
     font-weight: 600;
-    animation: file-drop var(--scene-cycle) cubic-bezier(0.5, 0, 0.3, 1) var(--card-offset) infinite;
   }
   .file-chip svg {
     width: 22px;
@@ -264,12 +295,10 @@ const loop = [...steps, ...steps];
     color: oklch(80% 0.15 220);
   }
   .scene-toast {
-    right: 2%;
+    right: 0;
     top: 0;
     padding: 12px 18px 12px 12px;
     border-radius: 16px;
-    animation: toast-pop var(--scene-cycle) cubic-bezier(0.22, 1, 0.36, 1) var(--card-offset)
-      infinite;
   }
   .scene-toast strong {
     display: block;
@@ -302,19 +331,17 @@ const loop = [...steps, ...steps];
     border-radius: 999px;
     font-size: 13px;
     font-weight: 600;
-    animation: toast-pop var(--scene-cycle) cubic-bezier(0.22, 1, 0.36, 1) var(--card-offset)
-      infinite;
   }
   .scene-chip svg {
     color: oklch(80% 0.16 60);
   }
 
   .step-text {
-    padding: 26px 32px 32px;
+    padding: 32px 40px 32px 8px;
   }
   .step-number {
     display: block;
-    font-size: 54px;
+    font-size: 72px;
     font-weight: 800;
     line-height: 1;
     letter-spacing: -0.04em;
@@ -322,127 +349,455 @@ const loop = [...steps, ...steps];
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    opacity: 0.8;
+    opacity: 0.85;
   }
   .step-title {
-    margin-top: 10px;
-    font-size: 1.6rem;
+    margin-top: 12px;
+    font-size: clamp(1.5rem, 2.2vw, 2rem);
     letter-spacing: -0.02em;
   }
   .step-copy {
-    margin-top: 8px;
-    max-width: 40ch;
+    margin-top: 10px;
+    max-width: 34ch;
     color: var(--color-ink-soft);
-    font-size: 1.02rem;
+    font-size: 1.05rem;
     line-height: 1.6;
   }
-
-  @keyframes steps-marquee {
-    to {
-      transform: translateX(-50%);
-    }
-  }
-  /* One cycle per card: show state A, play the overlay, cross-fade to B,
-     hold, and fade back so the loop restarts on A. */
-  @keyframes scene-swap {
-    0%,
-    36% {
-      opacity: 0;
-    }
-    44%,
-    86% {
-      opacity: 1;
-    }
-    94%,
-    100% {
-      opacity: 0;
-    }
-  }
-  @keyframes file-drop {
-    0% {
-      opacity: 0;
-      transform: translate(-30px, -40px) rotate(-8deg);
-    }
-    8% {
-      opacity: 1;
-      transform: translate(-10px, -10px) rotate(-4deg);
-    }
-    26% {
-      opacity: 1;
-      transform: translate(140px, 150px) rotate(0deg) scale(0.7);
-    }
-    32%,
-    100% {
-      opacity: 0;
-      transform: translate(150px, 170px) scale(0.5);
-    }
-  }
-  @keyframes toast-pop {
-    0%,
-    30% {
-      opacity: 0;
-      transform: translateY(-10px) scale(0.96);
-    }
-    35%,
-    72% {
-      opacity: 1;
-      transform: none;
-    }
-    80%,
-    100% {
-      opacity: 0;
-      transform: translateY(-6px);
-    }
+  .steps-progress {
+    display: none;
   }
 
-  @media (max-width: 640px) {
-    .steps {
-      --card-w: 84vw;
-      --gap: 16px;
-      padding: 40px 0 88px;
+  @media (max-width: 900px) {
+    .step-card {
+      grid-template-columns: 1fr;
+      gap: 0;
     }
     .step-scene {
-      height: 260px;
-      margin: 16px 16px 0;
+      height: 280px;
+      margin: 20px 20px 0;
     }
     .step-text {
-      padding: 20px 22px 24px;
+      padding: 20px 24px 28px;
     }
     .step-number {
-      font-size: 42px;
+      font-size: 48px;
     }
     .scene-toast small {
       display: none;
     }
   }
 
-  /* Reduced motion: no marquee and no scene loop. The track becomes a plain
-     swipeable row of the three cards (the duplicate copy is dropped), each
-     showing its finished state. */
-  @media (prefers-reduced-motion: reduce) {
-    .steps-marquee {
-      mask-image: none;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      padding-inline: 24px;
+  /* ── enhanced: pinned, sideways, scroll-driven ── */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .steps {
+        /* Five beats of ~60vh of scrolling each, plus the pinned screen. */
+        height: 400svh;
+        view-timeline-name: --steps;
+        view-timeline-axis: block;
+      }
+      .steps-pin {
+        position: sticky;
+        top: 0;
+        height: 100svh;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        container-type: inline-size;
+        /* Card geometry, in units of the pinned screen's width. --d is the
+           distance from one card's centre to the next. */
+        --card-w: 66cqw;
+        --gap: 6cqw;
+        --d: calc(var(--card-w) + var(--gap));
+      }
+      .steps-head {
+        padding-top: clamp(92px, 13svh, 124px);
+      }
+      .steps-head .steps-lead {
+        display: none;
+      }
+      .steps-title {
+        font-size: clamp(2rem, 3.6vw, 3.2rem);
+      }
+
+      .steps-track {
+        flex: 1;
+        min-height: 0;
+        flex-direction: row;
+        align-items: center;
+        gap: var(--gap);
+        max-width: none;
+        width: max-content;
+        margin: 0;
+        /* First card starts centred. */
+        padding: 2svh calc((100cqw - var(--card-w)) / 2);
+        animation: steps-slide linear both;
+      }
+      .step-card {
+        width: var(--card-w);
+        height: min(62svh, 560px);
+        flex: none;
+      }
+      .step-scene {
+        height: calc(100% - 56px);
+      }
+
+      .steps-progress {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: min(560px, 70cqw);
+        margin: 0 auto clamp(20px, 4svh, 40px);
+      }
+      .progress-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: 2px;
+        border-radius: 2px;
+        background: oklch(100% 0 0 / 0.12);
+      }
+      .progress-fill {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: oklch(72% 0.18 50);
+        box-shadow: 0 0 10px oklch(72% 0.18 50 / 0.8);
+        transform-origin: left;
+        animation: progress-fill linear both;
+      }
+      .progress-dot {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border: 1px solid oklch(100% 0 0 / 0.16);
+        border-radius: 50%;
+        background: var(--steps-bg);
+        color: var(--color-ink-soft);
+        font-size: 12px;
+        font-weight: 700;
+        animation: dot-on linear both;
+      }
+      .progress-dot.dot-2 {
+        animation-name: dot-on-2;
+      }
+      .progress-dot.dot-3 {
+        animation-name: dot-on-3;
+      }
+
+      /* Every animation below runs on the section's pinned scroll range. */
+      .steps-track,
+      .steps-sky,
+      .progress-fill,
+      .progress-dot,
+      .step-scene,
+      .step-text,
+      .step-scene :global(.scene-b),
+      .file-chip,
+      .scene-toast,
+      .scene-chip {
+        animation-timeline: --steps;
+        animation-range: contain 0% contain 100%;
+        animation-fill-mode: both;
+      }
+
+      /* Parallax: the far sky drifts slowly; inside each card the device
+         travels further than the card itself and the text a little less,
+         so the three planes separate as a card slides in or out. */
+      .steps-sky {
+        inset: 0 auto 0 0;
+        width: 160cqw;
+        animation-name: sky-drift;
+        animation-timing-function: linear;
+      }
+      .step-scene {
+        --shift: 13cqw;
+      }
+      .step-text {
+        --shift: 4cqw;
+      }
+      .step-import .step-scene,
+      .step-import .step-text {
+        animation-name: depth-1;
+        animation-timing-function: linear;
+      }
+      .step-highlight .step-scene,
+      .step-highlight .step-text {
+        animation-name: depth-2;
+        animation-timing-function: linear;
+      }
+      .step-sync .step-scene,
+      .step-sync .step-text {
+        animation-name: depth-3;
+        animation-timing-function: linear;
+      }
+
+      /* The stories, each placed on its card's beat. */
+      .step-scene :global(.scene-a) {
+        opacity: 1;
+      }
+      .step-scene :global(.scene-b) {
+        opacity: 0;
+        animation-timing-function: linear;
+      }
+      .step-import :global(.scene-b) {
+        animation-name: swap-1;
+      }
+      .step-highlight :global(.scene-b) {
+        animation-name: swap-2;
+      }
+      .step-sync :global(.scene-b) {
+        animation-name: swap-3;
+      }
+      .file-chip {
+        animation-name: file-drop;
+        animation-timing-function: linear;
+      }
+      .scene-toast {
+        animation-name: toast-1;
+        animation-timing-function: linear;
+      }
+      .step-highlight .scene-chip {
+        animation-name: chip-2;
+        animation-timing-function: linear;
+      }
+      .step-sync .scene-chip {
+        animation-name: chip-3;
+        animation-timing-function: linear;
+      }
+
+      @media (max-width: 900px) {
+        .steps {
+          height: 360svh;
+        }
+        .steps-pin {
+          --card-w: 84cqw;
+          --gap: 4cqw;
+        }
+        .step-card {
+          height: min(66svh, 600px);
+          grid-template-rows: 1fr auto;
+        }
+        /* Stretch into the 1fr row: the images are absolutely positioned, so
+           the scene has no height of its own to centre with. */
+        .step-scene {
+          align-self: stretch;
+          height: auto;
+          min-height: 0;
+          margin: 16px 16px 0;
+        }
+      }
     }
-    .steps-track {
-      animation: none;
+  }
+
+  /* Track: hold, slide, hold, slide, hold (the five beats). */
+  @keyframes steps-slide {
+    0%,
+    20% {
+      transform: none;
     }
-    .step-card {
-      scroll-snap-align: center;
+    40%,
+    60% {
+      transform: translateX(calc(var(--d) * -1));
     }
-    .step-card[aria-hidden='true'] {
-      display: none;
+    80%,
+    100% {
+      transform: translateX(calc(var(--d) * -2));
     }
-    .step-scene :global(.scene-b) {
-      animation: none;
+  }
+  @keyframes sky-drift {
+    to {
+      transform: translateX(-60cqw);
+    }
+  }
+  @keyframes depth-1 {
+    0%,
+    20% {
+      translate: 0 0;
+    }
+    40%,
+    100% {
+      translate: calc(var(--shift) * -1) 0;
+    }
+  }
+  @keyframes depth-2 {
+    0%,
+    20% {
+      translate: var(--shift) 0;
+    }
+    40%,
+    60% {
+      translate: 0 0;
+    }
+    80%,
+    100% {
+      translate: calc(var(--shift) * -1) 0;
+    }
+  }
+  @keyframes depth-3 {
+    0%,
+    60% {
+      translate: var(--shift) 0;
+    }
+    80%,
+    100% {
+      translate: 0 0;
+    }
+  }
+  /* The fill reaches each dot as its card arrives, and holds there. */
+  @keyframes progress-fill {
+    0%,
+    20% {
+      transform: scaleX(0);
+    }
+    40%,
+    60% {
+      transform: scaleX(0.5);
+    }
+    80%,
+    100% {
+      transform: scaleX(1);
+    }
+  }
+  @keyframes dot-on {
+    0%,
+    100% {
+      border-color: oklch(72% 0.18 50);
+      color: var(--color-ink);
+      box-shadow: 0 0 14px oklch(72% 0.18 50 / 0.6);
+    }
+  }
+  @keyframes dot-on-2 {
+    0%,
+    38% {
+      border-color: oklch(100% 0 0 / 0.16);
+      color: var(--color-ink-soft);
+      box-shadow: none;
+    }
+    40%,
+    100% {
+      border-color: oklch(72% 0.18 50);
+      color: var(--color-ink);
+      box-shadow: 0 0 14px oklch(72% 0.18 50 / 0.6);
+    }
+  }
+  @keyframes dot-on-3 {
+    0%,
+    78% {
+      border-color: oklch(100% 0 0 / 0.16);
+      color: var(--color-ink-soft);
+      box-shadow: none;
+    }
+    80%,
+    100% {
+      border-color: oklch(72% 0.18 50);
+      color: var(--color-ink);
+      box-shadow: 0 0 14px oklch(72% 0.18 50 / 0.6);
+    }
+  }
+
+  /* Card 1 (0–20%): the file drops in, the screen turns into the book's
+     detail sheet, the "imported" toast lands and clears as the card leaves. */
+  @keyframes file-drop {
+    0%,
+    1% {
+      opacity: 0;
+      transform: translate(-30px, -40px) rotate(-8deg);
+    }
+    3% {
+      opacity: 1;
+      transform: translate(-10px, -10px) rotate(-4deg);
+    }
+    9% {
+      opacity: 1;
+      transform: translate(150px, 150px) scale(0.7);
+    }
+    11%,
+    100% {
+      opacity: 0;
+      transform: translate(160px, 170px) scale(0.5);
+    }
+  }
+  @keyframes swap-1 {
+    0%,
+    9% {
+      opacity: 0;
+    }
+    13%,
+    100% {
       opacity: 1;
     }
-    .file-chip,
-    .scene-toast,
-    .scene-chip {
-      animation: none;
+  }
+  @keyframes toast-1 {
+    0%,
+    11% {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.96);
+    }
+    14%,
+    26% {
+      opacity: 1;
+      transform: none;
+    }
+    32%,
+    100% {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+  /* Card 2 (40–60%): the passage gets highlighted, then "saved everywhere". */
+  @keyframes swap-2 {
+    0%,
+    43% {
+      opacity: 0;
+    }
+    49%,
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes chip-2 {
+    0%,
+    49% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    53%,
+    66% {
+      opacity: 1;
+      transform: none;
+    }
+    72%,
+    100% {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+  /* Card 3 (80–100%): the phone opens the book at the same line. */
+  @keyframes swap-3 {
+    0%,
+    83% {
+      opacity: 0;
+    }
+    89%,
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes chip-3 {
+    0%,
+    89% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    93%,
+    100% {
+      opacity: 1;
+      transform: none;
     }
   }
 </style>
