@@ -53,7 +53,7 @@ const steps = [
      motion, none of that applies and the three cards simply stack. -->
 <section id="como-funciona" class="steps relative text-ink" data-theme="dark">
   <div class="steps-pin">
-    <div class="steps-sky" aria-hidden="true"></div>
+    <div class="steps-sky night-sky" aria-hidden="true"></div>
 
     <div class="shell steps-head text-center">
       <p class="steps-eyebrow">{t('header.navHow')}</p>
@@ -166,28 +166,6 @@ const steps = [
     position: relative;
     padding: 72px 0 112px;
     overflow: clip;
-  }
-  .steps-sky {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    /* Far layer: two soft glows and a scatter of stars. */
-    background:
-      radial-gradient(40% 50% at 18% 70%, oklch(62% 0.16 45 / 0.16), transparent 70%),
-      radial-gradient(36% 44% at 82% 30%, oklch(55% 0.14 285 / 0.18), transparent 70%),
-      radial-gradient(1.2px 1.2px at 12% 18%, oklch(100% 0 0 / 0.7), transparent),
-      radial-gradient(1px 1px at 37% 62%, oklch(100% 0 0 / 0.5), transparent),
-      radial-gradient(1.4px 1.4px at 58% 12%, oklch(100% 0 0 / 0.65), transparent),
-      radial-gradient(1px 1px at 74% 78%, oklch(100% 0 0 / 0.45), transparent),
-      radial-gradient(1.2px 1.2px at 91% 44%, oklch(100% 0 0 / 0.6), transparent);
-    background-size:
-      100% 100%,
-      100% 100%,
-      340px 260px,
-      300px 280px,
-      420px 300px,
-      260px 240px,
-      380px 320px;
   }
   .steps-head {
     position: relative;

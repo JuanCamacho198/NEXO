@@ -2,6 +2,12 @@
 import Logo from '@/components/ui/Logo.astro';
 import { defaultLang, localizePath, useTranslations, type Lang } from '@/i18n/utils';
 
+interface Props {
+  /** Home page: continue the night background instead of the page theme. */
+  dark?: boolean;
+}
+
+const { dark = false } = Astro.props;
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
@@ -11,7 +17,15 @@ const home = localizePath('/', lang);
 ---
 
 <!-- ══════════════ FOOTER ══════════════ -->
-<footer class="border-t border-t-border bg-background">
+<footer
+  class:list={[
+    'border-t',
+    dark
+      ? 'border-t-[oklch(100%_0_0/0.08)] bg-[#0d0b18] text-ink'
+      : 'border-t-border bg-background',
+  ]}
+  data-theme={dark ? 'dark' : undefined}
+>
   <div class="shell flex items-center gap-[30px] py-8 max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-4 max-[640px]:py-[26px]">
     <Logo />
 
@@ -21,9 +35,6 @@ const home = localizePath('/', lang);
     >
       <a class={footerLink} href={`${home}#descargar`}>
         {t('footer.download')}
-      </a>
-      <a class={footerLink} href={`${home}#caracteristicas`}>
-        {t('header.navFeatures')}
       </a>
       <a class={footerLink} href={`${home}#faq`}>
         {t('faq.title')}
@@ -42,21 +53,21 @@ const home = localizePath('/', lang);
   <!-- Required by the CC BY 4.0 licence of the two hero device models (the
        iPhone model is Sketchfab Standard, which needs no credit). -->
   <p class="shell pb-6 text-[12px] text-muted-foreground">
-    {t('footer.creditsLead')}
+    {t('footer.creditsLead')}{' '}
     <a
       class={footerLink}
       href="https://sketchfab.com/3d-models/laptop-7d870e900889481395b4a575b9fa8c3e"
     >
       {t('footer.creditLaptop')}
     </a>
-    ·
+    {' · '}
     <a
       class={footerLink}
       href="https://sketchfab.com/3d-models/ipad-pro-129-2020-f0f7674522124f3bbc2d0f898963457e"
     >
       {t('footer.creditIpad')}
     </a>
-    ·
+    {' · '}
     <a class={footerLink} href="https://creativecommons.org/licenses/by/4.0/">
       {t('footer.creditsLicense')}
     </a>

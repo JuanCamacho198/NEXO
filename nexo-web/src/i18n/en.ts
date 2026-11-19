@@ -12,7 +12,6 @@ export const en = {
   'header.themeToDark': 'Switch to dark mode',
   'header.themeToLight': 'Switch to light mode',
   'header.navHome': 'Home',
-  'header.navFeatures': 'Features',
   'header.navHow': 'How it works',
 
   // Hero
@@ -49,29 +48,11 @@ export const en = {
   'steps.cloudChip': 'Saved on all your devices',
   'steps.syncChip': 'Synced from your tablet',
 
-  // Experience
-  'experience.eyebrow': 'The NEXO experience',
-  'experience.heading': 'Start reading wherever you want. Continue where you left off.',
-  'experience.readerBookChapter': 'Hábitos atómicos · Chapter 4',
-  'experience.readerProgress': '68 %',
-  'experience.progressAria': 'Reading progress',
-  'experience.readerHeading': 'The power of atomic habits',
-  'experience.readerParagraph':
-    'Habits are the compound interest of self-improvement. Getting one percent better each day seems insignificant in the moment, but decisive over time.',
-  'experience.quote': 'Small changes, repeated over time, produce extraordinary results.',
-  'experience.trailing':
-    'You do not rise to the level of your goals: you fall to the level of your systems.',
-  'experience.saved': 'Saved on all your devices',
-  'experience.syncTitle': 'Synced progress',
-  'experience.syncCopy': 'Resume reading exactly on the line where you left off.',
-  'experience.highlightsTitle': 'Highlights',
-  'experience.highlightsCopy': 'Mark what matters with colors and find it in seconds.',
-  'experience.notesTitle': 'Notes',
-  'experience.notesCopy': 'Write ideas next to the paragraph that inspired them.',
-  'experience.libraryTitle': 'Organized library',
-  'experience.libraryCopy': 'Collections, tags, and filters for a clear bookshelf.',
-
   // FAQ
+  'faq.eyebrow': 'FAQ',
+  'faq.lead': 'The essentials about NEXO, in short.',
+  'faq.moreTitle': 'Still have a question?',
+  'faq.moreLink': 'Ask us on GitHub',
   'faq.title': 'Frequently asked questions',
   'faq.q1': 'Which devices does NEXO work on?',
   'faq.a1':

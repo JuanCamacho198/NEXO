@@ -12,7 +12,6 @@ export const es = {
   'header.themeToDark': 'Activar modo oscuro',
   'header.themeToLight': 'Activar modo claro',
   'header.navHome': 'Inicio',
-  'header.navFeatures': 'Características',
   'header.navHow': 'Cómo funciona',
 
   // Hero
@@ -49,29 +48,11 @@ export const es = {
   'steps.cloudChip': 'Guardado en todos tus dispositivos',
   'steps.syncChip': 'Sincronizado desde la tablet',
 
-  // Experience
-  'experience.eyebrow': 'La experiencia NEXO',
-  'experience.heading': 'Empieza a leer donde quieras. Continúa donde lo dejaste.',
-  'experience.readerBookChapter': 'Hábitos atómicos · Capítulo 4',
-  'experience.readerProgress': '68 %',
-  'experience.progressAria': 'Progreso de lectura',
-  'experience.readerHeading': 'El poder de los hábitos atómicos',
-  'experience.readerParagraph':
-    'Los hábitos son el interés compuesto de la automejora. Un uno por ciento mejor cada día parece insignificante en el momento, pero decisivo con el tiempo.',
-  'experience.quote':
-    'Pequeños cambios, repetidos en el tiempo, generan resultados extraordinarios.',
-  'experience.trailing': 'No subes al nivel de tus objetivos: caes al nivel de tus sistemas.',
-  'experience.saved': 'Guardado en todos tus dispositivos',
-  'experience.syncTitle': 'Progreso sincronizado',
-  'experience.syncCopy': 'Retoma la lectura exactamente en la línea donde la dejaste.',
-  'experience.highlightsTitle': 'Resaltados',
-  'experience.highlightsCopy': 'Marca lo esencial por colores y encuéntralo en segundos.',
-  'experience.notesTitle': 'Notas',
-  'experience.notesCopy': 'Escribe ideas junto al párrafo que las inspiró.',
-  'experience.libraryTitle': 'Biblioteca organizada',
-  'experience.libraryCopy': 'Colecciones, etiquetas y filtros para una estantería clara.',
-
   // FAQ
+  'faq.eyebrow': 'FAQ',
+  'faq.lead': 'Lo esencial sobre NEXO, en corto.',
+  'faq.moreTitle': '¿Te quedó otra duda?',
+  'faq.moreLink': 'Pregúntanos en GitHub',
   'faq.title': 'Preguntas frecuentes',
   'faq.q1': '¿En qué dispositivos funciona NEXO?',
   'faq.a1': 'En Android, Windows, macOS y Linux. Tu progreso viaja contigo entre todos ellos.',

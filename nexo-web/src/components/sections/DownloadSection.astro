@@ -1,5 +1,4 @@
 ---
-import Eyebrow from '@/components/ui/Eyebrow.astro';
 import PlatformIcon from '@/components/ui/PlatformIcon.astro';
 import { formatSize, getDownloadCatalog, type Platform } from '@/lib/releases';
 import { defaultLang, useTranslations, type Lang, type UIKey } from '@/i18n/utils';
@@ -31,17 +30,22 @@ const offers = (catalog?.offers ?? []).filter((offer) =>
 ---
 
 <!-- ══════════════ DOWNLOAD ══════════════ -->
-<section id="descargar" class="border-t border-border py-24 max-[640px]:py-16">
-  <div class="shell">
-    <Eyebrow>{t('download.eyebrow')}</Eyebrow>
-    <h2 class="max-w-[20ch]">{t('cta.heading')}</h2>
-    <p class="mt-4 max-w-[52ch] text-[1.05rem] leading-[1.75] text-ink-soft text-pretty">
-      {t('cta.lead')}
-    </p>
+<!-- The closing beat: dark like the rest of the home page, an orange glow
+     rising behind the heading, and the visitor's own platform card first and
+     lit (html[data-os] rules in global.css). -->
+<section id="descargar" class="download relative text-ink" data-theme="dark">
+  <div class="night-sky" aria-hidden="true"></div>
+  <div class="download-glow" aria-hidden="true"></div>
+  <div class="shell relative">
+    <div class="download-head">
+      <p class="download-eyebrow">{t('download.eyebrow')}</p>
+      <h2 class="download-title">{t('cta.heading')}</h2>
+      <p class="download-lead">{t('cta.lead')}</p>
+    </div>
 
     {catalog && offers.length > 0 ? (
       <>
-        <ul class="mt-10 grid grid-cols-4 gap-5 max-[900px]:grid-cols-2 max-[640px]:grid-cols-1">
+        <ul class="mt-14 grid grid-cols-4 gap-5 max-[1100px]:grid-cols-2 max-[640px]:grid-cols-1">
           {offers.map((offer) => (
             <li class="dl-card" data-platform={offer.platform}>
               <div class="dl-card-head">
@@ -101,7 +105,7 @@ const offers = (catalog?.offers ?? []).filter((offer) =>
           ))}
         </ul>
 
-        <div class="mt-[34px] flex flex-wrap items-baseline gap-x-[22px] gap-y-[10px] text-[14px]">
+        <div class="mt-10 flex flex-wrap items-baseline justify-center gap-x-[22px] gap-y-[10px] text-[14px]">
           <a
             class="font-semibold text-ink underline underline-offset-[3px]"
             href="https://github.com/JuanCamacho198/NEXO/releases"
@@ -111,7 +115,7 @@ const offers = (catalog?.offers ?? []).filter((offer) =>
           {catalog.checksumsUrl && (
             <p class="flex flex-wrap items-baseline gap-2 text-[13px] text-muted-foreground">
               <a
-                class="font-semibold text-sync underline underline-offset-[3px]"
+                class="font-semibold text-[oklch(80%_0.15_55)] underline underline-offset-[3px]"
                 href={catalog.checksumsUrl}
               >
                 {t('download.checksums')}
@@ -123,11 +127,11 @@ const offers = (catalog?.offers ?? []).filter((offer) =>
       </>
     ) : (
       <>
-        <div class="dl-note mt-[34px] grid max-w-[60ch] gap-1.5">
+        <div class="dl-note mx-auto mt-[34px] grid max-w-[60ch] gap-1.5">
           <strong>{t('download.unavailable')}</strong>
           <span>{t('download.unavailableNote')}</span>
         </div>
-        <div class="mt-[34px] flex flex-wrap items-baseline gap-x-[22px] gap-y-[10px] text-[14px]">
+        <div class="mt-10 flex flex-wrap items-baseline justify-center gap-x-[22px] gap-y-[10px] text-[14px]">
           <a
             class="font-semibold text-ink underline underline-offset-[3px]"
             href="https://github.com/JuanCamacho198/NEXO/releases"
@@ -139,3 +143,69 @@ const offers = (catalog?.offers ?? []).filter((offer) =>
     )}
   </div>
 </section>
+
+<style>
+  .download {
+    background: #0d0b18;
+    padding: 120px 0 140px;
+    overflow: clip;
+  }
+  /* A sunrise behind the heading: the same orange as the hero's ring. */
+  .download-glow {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: min(1100px, 120vw);
+    height: 620px;
+    /* Starts inside the section and fades out upward, so it never meets the
+       FAQ above with a hard edge. */
+    mask-image: linear-gradient(to bottom, transparent, black 35%);
+    translate: -50% 0;
+    background: radial-gradient(
+      closest-side,
+      oklch(72% 0.18 50 / 0.28),
+      oklch(55% 0.14 285 / 0.12) 55%,
+      transparent
+    );
+    filter: blur(20px);
+    pointer-events: none;
+  }
+  .download-head {
+    max-width: 760px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .download-eyebrow {
+    color: oklch(76% 0.16 55);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .download-title {
+    margin-top: 14px;
+    font-size: clamp(2.4rem, 5.2vw, 4.4rem);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    background: linear-gradient(
+      100deg,
+      oklch(97% 0.01 80),
+      oklch(84% 0.08 60) 55%,
+      oklch(72% 0.19 45)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .download-lead {
+    margin-top: 18px;
+    color: var(--color-ink-soft);
+    font-size: 1.15rem;
+    line-height: 1.6;
+  }
+  @media (max-width: 640px) {
+    .download {
+      padding: 80px 0 96px;
+    }
+  }
+</style>
