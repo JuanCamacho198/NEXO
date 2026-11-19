@@ -111,6 +111,10 @@ export const es = {
   'footer.privacy': 'Privacidad',
   'footer.terms': 'Términos',
   'footer.github': 'GitHub',
+  'footer.creditsLead': 'Modelos 3D:',
+  'footer.creditLaptop': '«Laptop» de Aullwen',
+  'footer.creditIpad': '«iPad Pro 12.9 (2020)» de Konstantin Koretskyi',
+  'footer.creditsLicense': 'CC BY 4.0, modificados',
 
   // Privacy page
   'privacy.metaTitle': 'Política de privacidad — NEXO',

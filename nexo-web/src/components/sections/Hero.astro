@@ -1,9 +1,9 @@
 ---
 import { Image, Picture } from 'astro:assets';
 import heroSky from '@/assets/hero/sky.png';
-import screenLaptop from '@/assets/hero/screen-laptop.png';
-import screenPhone from '@/assets/hero/screen-phone.png';
-import screenTablet from '@/assets/hero/screen-tablet.png';
+import deviceLaptop from '@/assets/hero/device-laptop.png';
+import devicePhone from '@/assets/hero/device-phone.png';
+import deviceTablet from '@/assets/hero/device-tablet.png';
 import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
@@ -43,46 +43,40 @@ const highlights = [
     <div class="hero-stage relative min-h-0 flex-1" id="dispositivos">
       <h1 class="hero-word">{t('hero.wordmark')}</h1>
 
-      <!-- Real dark-theme app screens (Figma file NEXO-DESIGN: "Lector / La Odisea
-           1440x900 DARK (resaltados)", "… (Texto)" and the Android "Lectura del
-           Libro") inside CSS-drawn device frames. Decorative: the copy around
-           them already says what they show. -->
+      <!-- 3D renders (transparent PNG) of the Sketchfab models with the dark app
+           screens from the NEXO-DESIGN Figma file mapped on: "Lector / La Odisea
+           1440x900 DARK (resaltados)", "… (Texto)" and Android "Lectura del
+           Libro". Lit warm from behind to match the sunset. Decorative: the copy
+           around them already says what they show. -->
       <div class="hero-device hero-device-laptop" aria-hidden="true">
-        <div class="device-bezel rounded-[1.4cqw] p-[0.7cqw]">
-          <Image
-            src={screenLaptop}
-            alt=""
-            widths={[720, 1080, screenLaptop.width]}
-            sizes="(max-width: 1023px) 70vw, 50vw"
-            loading="eager"
-            class="block h-auto w-full rounded-[0.7cqw]"
-          />
-        </div>
-        <div class="laptop-base"></div>
+        <Image
+          src={deviceLaptop}
+          alt=""
+          widths={[640, 960, deviceLaptop.width]}
+          sizes="(max-width: 1023px) 70vw, 46vw"
+          loading="eager"
+          class="block h-auto w-full"
+        />
       </div>
       <div class="hero-device hero-device-phone" aria-hidden="true">
-        <div class="device-bezel rounded-[2.4cqw] p-[0.55cqw]">
-          <Image
-            src={screenPhone}
-            alt=""
-            widths={[screenPhone.width]}
-            sizes="(max-width: 1023px) 24vw, 15vw"
-            loading="eager"
-            class="block h-auto w-full rounded-[1.9cqw]"
-          />
-        </div>
+        <Image
+          src={devicePhone}
+          alt=""
+          widths={[320, devicePhone.width]}
+          sizes="(max-width: 1023px) 26vw, 16vw"
+          loading="eager"
+          class="block h-auto w-full"
+        />
       </div>
       <div class="hero-device hero-device-tablet" aria-hidden="true">
-        <div class="device-bezel rounded-[1.6cqw] p-[0.8cqw]">
-          <Image
-            src={screenTablet}
-            alt=""
-            widths={[480, 720, 1080]}
-            sizes="(max-width: 1023px) 38vw, 26vw"
-            loading="eager"
-            class="block h-auto w-full rounded-[0.8cqw]"
-          />
-        </div>
+        <Image
+          src={deviceTablet}
+          alt=""
+          widths={[480, 800, deviceTablet.width]}
+          sizes="(max-width: 1023px) 40vw, 27vw"
+          loading="eager"
+          class="block h-auto w-full"
+        />
       </div>
     </div>
 
@@ -279,57 +273,18 @@ const highlights = [
     bottom: -2cqh;
     width: min(45cqw, 98cqh);
     translate: -50% 0;
-    rotate: -3deg;
   }
   .hero-device-phone {
     left: 13cqw;
     bottom: -3cqh;
     width: min(15cqw, 33cqh);
-    rotate: -9deg;
   }
   .hero-device-tablet {
     right: 9cqw;
-    bottom: 6cqh;
+    bottom: 2cqh;
     width: min(26cqw, 58cqh);
-    rotate: 7deg;
   }
 
-  /* Rim light on the top and sun-facing edges, a faint warm halo, and the
-     lower edge falling into shadow where it nears the rock. */
-  .device-bezel {
-    position: relative;
-    background: linear-gradient(160deg, oklch(36% 0.012 60), oklch(15% 0.01 270) 70%);
-    box-shadow:
-      inset 0 1px 0 oklch(88% 0.1 65 / 0.75),
-      inset 1px 0 0 oklch(80% 0.1 60 / 0.25),
-      inset -1px 0 0 oklch(85% 0.12 60 / 0.45),
-      0 0 0 1px oklch(0% 0 0 / 0.65),
-      0 0 36px -8px oklch(72% 0.17 50 / 0.45);
-  }
-  /* Glass: a diagonal glare on top, ambient occlusion along the bottom. */
-  .device-bezel::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background:
-      linear-gradient(115deg, oklch(100% 0 0 / 0.14), transparent 32%),
-      linear-gradient(to top, oklch(0% 0 0 / 0.38), transparent 30%);
-    pointer-events: none;
-  }
-  /* A thin hinge-and-deck bar, wider than the screen like a real laptop. */
-  .laptop-base {
-    height: 1.5cqw;
-    margin-inline: -7%;
-    border-radius: 0 0 1.2cqw 1.2cqw;
-    background: linear-gradient(
-      to bottom,
-      oklch(70% 0.04 60),
-      oklch(36% 0.01 270) 35%,
-      oklch(16% 0.01 270)
-    );
-    clip-path: polygon(0 0, 100% 0, 97% 100%, 3% 100%);
-  }
   .placeholder-surface {
     border: 1px dashed oklch(100% 0 0 / 0.28);
     background:
