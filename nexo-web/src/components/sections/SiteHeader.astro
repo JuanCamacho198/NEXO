@@ -31,7 +31,7 @@ const mobileLink =
   data-hero={overHero ? '' : undefined}
   data-theme={overHero ? 'dark' : undefined}
 >
-  <div class="shell flex items-center gap-8 py-7 max-[1100px]:gap-5 max-[640px]:gap-4 max-[640px]:py-[18px]">
+  <div class="shell flex items-center gap-8 py-7 min-[1200px]:grid min-[1200px]:grid-cols-[1fr_auto_1fr] max-[1100px]:gap-5 max-[640px]:gap-4 max-[640px]:py-[18px]">
     <Logo />
 
     <nav
@@ -52,7 +52,7 @@ const mobileLink =
       </a>
     </nav>
 
-    <div class="ml-auto flex items-center gap-4">
+    <div class="ml-auto flex items-center gap-4 min-[1200px]:justify-self-end">
       <input
         type="checkbox"
         class="nav-toggle peer hidden max-[1023px]:grid max-[1023px]:h-11 max-[1023px]:w-11 max-[1023px]:cursor-pointer max-[1023px]:appearance-none max-[1023px]:place-items-center max-[1023px]:rounded-xl max-[1023px]:border max-[1023px]:border-border max-[1023px]:bg-card max-[1023px]:text-ink"
@@ -79,11 +79,14 @@ const mobileLink =
           <div class={langSwitch}>
             <LanguagePicker />
           </div>
-          <ThemeToggle class="hidden max-[640px]:grid" />
+          {!overHero && <ThemeToggle class="hidden max-[640px]:grid" />}
         </div>
       </nav>
       <LanguagePicker class="max-[1023px]:hidden" align="right" />
-      <ThemeToggle class="max-[640px]:hidden" />
+      <!-- No theme toggle over the hero: the hero is always dark, so on the home
+           page the control would only ever change sections the visitor has not
+           scrolled to. The OS preference still applies there. -->
+      {!overHero && <ThemeToggle class="max-[640px]:hidden" />}
       <!-- Deliberately NOT the adaptive DownloadButton: at 390px the bar already
            holds the logo, the burger and the CTA, and a 20-character
            "Descargar para Windows" label there risks overflow. -->

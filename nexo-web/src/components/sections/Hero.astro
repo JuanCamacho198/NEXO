@@ -174,6 +174,24 @@ const highlights = [
   .hero-stage {
     container-type: size;
   }
+  /* Warm backlight from the sunset behind the devices: it lifts them off the
+     sky and ties the screens' edge light to a visible source. */
+  .hero-stage::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 4cqh;
+    width: 90cqw;
+    height: 70cqh;
+    translate: -50% 0;
+    background: radial-gradient(
+      closest-side,
+      oklch(72% 0.17 50 / 0.38),
+      oklch(65% 0.16 40 / 0.14) 55%,
+      transparent
+    );
+    pointer-events: none;
+  }
 
   .hero-word {
     --word-size: min(22cqw, 46cqh);
@@ -210,7 +228,51 @@ const highlights = [
   .hero-device {
     position: absolute;
     z-index: 1;
-    filter: drop-shadow(0 30px 40px oklch(0% 0 0 / 0.55));
+    filter: drop-shadow(0 14px 18px oklch(0% 0 0 / 0.55));
+  }
+  /* Ground shadow under the whole group: the rock darkens where the devices
+     stand, which is what reads as weight. */
+  .hero-stage::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -7cqh;
+    width: 86cqw;
+    height: 18cqh;
+    translate: -50% 0;
+    background: radial-gradient(
+      closest-side,
+      oklch(4% 0.01 270 / 0.8),
+      oklch(4% 0.01 270 / 0.45) 50%,
+      transparent
+    );
+    filter: blur(8px);
+    pointer-events: none;
+  }
+  /* Contact shadow: a tight dark pool where the device meets the rock, plus a
+     wider soft one, so it rests on the ground instead of floating. */
+  .hero-device::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: 4%;
+    right: 4%;
+    bottom: -5%;
+    height: 12%;
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      oklch(0% 0 0 / 0.85),
+      oklch(0% 0 0 / 0.45) 55%,
+      transparent
+    );
+    filter: blur(5px);
+  }
+  .hero-device-phone::after {
+    left: -8%;
+    right: -8%;
+    bottom: -2.5%;
+    height: 5%;
   }
   .hero-device-laptop {
     left: 50%;
@@ -232,18 +294,40 @@ const highlights = [
     rotate: 7deg;
   }
 
+  /* Rim light on the top and sun-facing edges, a faint warm halo, and the
+     lower edge falling into shadow where it nears the rock. */
   .device-bezel {
-    background: linear-gradient(160deg, oklch(34% 0.01 270), oklch(16% 0.01 270));
+    position: relative;
+    background: linear-gradient(160deg, oklch(36% 0.012 60), oklch(15% 0.01 270) 70%);
     box-shadow:
-      inset 0 0 0 1px oklch(100% 0 0 / 0.14),
-      0 0 0 1px oklch(0% 0 0 / 0.6);
+      inset 0 1px 0 oklch(88% 0.1 65 / 0.75),
+      inset 1px 0 0 oklch(80% 0.1 60 / 0.25),
+      inset -1px 0 0 oklch(85% 0.12 60 / 0.45),
+      0 0 0 1px oklch(0% 0 0 / 0.65),
+      0 0 36px -8px oklch(72% 0.17 50 / 0.45);
+  }
+  /* Glass: a diagonal glare on top, ambient occlusion along the bottom. */
+  .device-bezel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      linear-gradient(115deg, oklch(100% 0 0 / 0.14), transparent 32%),
+      linear-gradient(to top, oklch(0% 0 0 / 0.38), transparent 30%);
+    pointer-events: none;
   }
   /* A thin hinge-and-deck bar, wider than the screen like a real laptop. */
   .laptop-base {
     height: 1.5cqw;
     margin-inline: -7%;
     border-radius: 0 0 1.2cqw 1.2cqw;
-    background: linear-gradient(to bottom, oklch(52% 0.01 270), oklch(24% 0.01 270));
+    background: linear-gradient(
+      to bottom,
+      oklch(70% 0.04 60),
+      oklch(36% 0.01 270) 35%,
+      oklch(16% 0.01 270)
+    );
     clip-path: polygon(0 0, 100% 0, 97% 100%, 3% 100%);
   }
   .placeholder-surface {
@@ -277,6 +361,14 @@ const highlights = [
     .hero-stage {
       flex: none;
       height: min(98vw, 640px);
+    }
+    /* Stacked, the bar would push the rock far below the devices; ending the
+       sky just under the stage keeps the ridge beneath them, and the bar sits
+       on the section's night colour instead. */
+    .hero-bg {
+      bottom: auto;
+      height: calc(96px + min(98vw, 640px) + 70px);
+      mask-image: linear-gradient(to bottom, black 78%, transparent);
     }
     .hero-word {
       --word-size: 25cqw;
