@@ -17,7 +17,8 @@ const { class: className = '', align = 'left' } = Astro.props;
      on screen and needs CSS Anchor Positioning to anchor it back to the button,
      and that is not available in Firefox stable. -->
 <details class={`lang-picker ${className}`}>
-  <summary class="text-ink" aria-label={t('header.languageAria')}>
+  <summary class="text-ink">
+    <span class="sr-only">{t('header.languageAria')}:</span>
     {lang === 'en' ? 'EN' : 'ES'}
     <svg class="lang-chevron" viewBox="0 0 24 24" aria-hidden="true">
       <path
