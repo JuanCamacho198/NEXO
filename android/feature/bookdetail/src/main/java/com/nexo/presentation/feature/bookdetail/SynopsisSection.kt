@@ -1,5 +1,7 @@
 package com.nexo.presentation.feature.bookdetail
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,24 +26,28 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nexo.feature.bookdetail.R
 import com.nexo.ui.icons.NexoIcons
+
+private const val ExpandMs = 280
 
 @Composable
 internal fun SynopsisSection(synopsis: String?) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column {
+    // animateContentSize turns "show more" into a smooth unfold instead of a jump.
+    Column(modifier = Modifier.animateContentSize(animationSpec = tween(ExpandMs))) {
         Text(
             text = stringResource(R.string.book_detail_synopsis),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = synopsis ?: stringResource(R.string.book_detail_no_synopsis),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 24.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = if (expanded) Int.MAX_VALUE else 4,
             overflow = TextOverflow.Ellipsis,

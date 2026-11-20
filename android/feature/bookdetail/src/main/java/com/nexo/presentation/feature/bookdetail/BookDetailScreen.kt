@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,9 +29,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,8 +46,12 @@ import com.nexo.presentation.viewmodel.BookDetailViewModel
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.components.molecules.GenreChipsDisplay
+import com.nexo.ui.components.molecules.NexoDropdownMenu
+import com.nexo.ui.components.molecules.NexoDropdownMenuItem
 import com.nexo.ui.components.molecules.TagChipsDisplay
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.motion.rememberEntranceProgress
+import com.nexo.ui.motion.staggeredEnter
 import com.nexo.ui.theme.NexoTheme
 import java.io.File
 
@@ -63,10 +68,15 @@ fun BookDetailScreen(
     val context = LocalContext.current
 
     var showActionsMenu by remember { mutableStateOf(false) }
+    // Transparent over the hero backdrop; fills with the page colour once the
+    // content scrolls under it, so the actions never sit on top of text.
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
+                scrollBehavior = scrollBehavior,
                 title = {},
                 navigationIcon = {
                     NexoButton(
@@ -93,19 +103,13 @@ fun BookDetailScreen(
                                 contentDescription = stringResource(R.string.book_detail_more_content_description),
                             )
                         }
-                        DropdownMenu(
+                        NexoDropdownMenu(
                             expanded = showActionsMenu,
                             onDismissRequest = { showActionsMenu = false },
                         ) {
-                            DropdownMenuItem(
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = NexoIcons.Pencil,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                text = { Text(stringResource(R.string.library_menu_edit_metadata)) },
+                            NexoDropdownMenuItem(
+                                text = stringResource(R.string.library_menu_edit_metadata),
+                                icon = NexoIcons.Pencil,
                                 onClick = {
                                     showActionsMenu = false
                                     onEditBook()
@@ -116,18 +120,23 @@ fun BookDetailScreen(
                 },
                 colors =
                     TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
+                        containerColor = Color.Transparent,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background,
                         navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                     ),
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
+        // The top inset is NOT applied here: the hero runs under the transparent
+        // bar and reserves that space itself, so its backdrop reaches the top.
+        val topInset = innerPadding.calculateTopPadding()
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(bottom = innerPadding.calculateBottomPadding())
                     .padding(contentPadding),
         ) {
             val book = state.book
@@ -151,6 +160,7 @@ fun BookDetailScreen(
                         progress = state.readingProgress,
                         onRatingChanged = { viewModel.updateRating(it) },
                         onContinueReading = onContinueReading,
+                        topInset = topInset,
                     )
                 }
             }
@@ -204,7 +214,9 @@ internal fun BookDetailContent(
     progress: ReadingProgress?,
     onRatingChanged: (Int?) -> Unit,
     onContinueReading: (String, String?, String) -> Unit,
+    topInset: Dp = 0.dp,
 ) {
+    val entrance = rememberEntranceProgress()
     Column(
         modifier =
             Modifier
@@ -216,16 +228,21 @@ internal fun BookDetailContent(
             rating = book.userRating,
             onRatingChanged = onRatingChanged,
             onContinueReading = onContinueReading,
+            topInset = topInset,
         )
 
         Column(
-            modifier = Modifier.padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
-            Spacer(modifier = Modifier.height(4.dp))
-            BookMetadataGrid(book = book)
-            SynopsisSection(synopsis = book.description)
-            ReadingProgressSection(progress = progress, book = book)
+            // Only an existing section may take a slot: an empty Box would still
+            // claim a 28dp gap in the arrangement and double the spacing.
+            val percentage = progress?.percentage ?: book.progressPercentage
+            if (percentage > 0f) {
+                Box(modifier = Modifier.staggeredEnter(entrance, 1)) { ReadingProgressSection(progress = progress, book = book) }
+            }
+            Box(modifier = Modifier.staggeredEnter(entrance, 2)) { BookMetadataGrid(book = book) }
+            Box(modifier = Modifier.staggeredEnter(entrance, 3)) { SynopsisSection(synopsis = book.description) }
             val genres = parseChipList(book.genre)
             if (genres.isNotEmpty()) {
                 DetailChipsSection(title = stringResource(R.string.book_detail_genres)) {
