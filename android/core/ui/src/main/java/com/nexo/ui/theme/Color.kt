@@ -282,23 +282,28 @@ val ErrorSoft = Color(0xFFF85149)
 // (Light)" frame — that frame duplicates the dark hex values.
 //
 // Brand accents (PrimaryBlue, PrimaryBlueHover, TextAccent, AccentYellow,
-// AccentOrange, AccentGreen, AccentPurple, AccentBlue) are identical in both
-// modes, so they have no *Light duplicate.
+// AccentGreen, AccentPurple, AccentBlue) are identical in both modes, so they
+// have no *Light duplicate. AccentOrange is the exception: see AccentOrangeLight.
+//
+// The canvas is a warm paper tone rather than near-white slate: with white
+// cards on an almost-white page, nothing separated a card from the page and
+// the whole theme read as a blank sheet. The warm cast also sits with the
+// orange reading accent instead of fighting it.
 
 /** BgMainLight — App-wide canvas background in light mode. Alias source: `$bg_main` (light). */
-val BgMainLight = Color(0xFFF8FAFC)
+val BgMainLight = Color(0xFFF6F3EE)
 
 /** BgSurfaceLight — Elevated card/panel background in light mode. Alias source: `$bg_surface` (light). */
 val BgSurfaceLight = Color(0xFFFFFFFF)
 
 /** BgCardHoverLight — Card hover/pressed background in light mode. Alias source: `$bg-card-hover` (light). */
-val BgCardHoverLight = Color(0xFFF1F5F9)
+val BgCardHoverLight = Color(0xFFEFEAE3)
 
 /** BgHeaderLight — Top app bar background in light mode. Inferred from `bg_main`; no light variable. */
-val BgHeaderLight = Color(0xFFF8FAFC)
+val BgHeaderLight = Color(0xFFF6F3EE)
 
 /** BorderSubtleLight — Hairline dividers and outline strokes in light mode. Alias source: `$border` (light). */
-val BorderSubtleLight = Color(0xFFE2E8F0)
+val BorderSubtleLight = Color(0xFFE8E1D7)
 
 /** IconBgBlueLight — Icon container background tint in light mode. Alias source: `$icon-bg-blue` (light). */
 val IconBgBlueLight = Color(0xFFDBEAFE)
@@ -331,7 +336,14 @@ val NavBarInactiveLight = Color(0xFF475569)
 val NavBarOverlayLight = Color(0x143B82F6)
 
 /** OutlineLight — Outline/stroke color for light-theme surfaces. Inferred from `border`. */
-val OutlineLight = Color(0xFFE2E8F0)
+val OutlineLight = Color(0xFFE8E1D7)
 
 /** ErrorSoftLight — Soft red for non-blocking errors in light mode. Alias source: `$error` (light). */
 val ErrorSoftLight = Color(0xFFEF4444)
+
+/**
+ * AccentOrangeLight — the reading accent in light mode. [AccentOrange] (#F59E0B)
+ * reaches only ~2.1:1 on white, too faint for the labels and icons it colours;
+ * this deeper step clears 3:1 and still reads as the same orange in fills.
+ */
+val AccentOrangeLight = Color(0xFFE07800)

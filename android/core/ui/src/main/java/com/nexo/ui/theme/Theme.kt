@@ -26,19 +26,38 @@ private val NexoDarkColorScheme =
         onError = ColorNeutral,
     )
 
+// Every slot a Material component reads is mapped to a NEXO light token. Left
+// unset, M3 fills them with its lavender defaults (surfaceVariant, containers,
+// outlineVariant), which is why sheets, menus and chips looked off-palette and
+// the page itself was pure white instead of `BgMainLight`.
 private val NexoLightColorScheme =
     lightColorScheme(
         primary = PrimaryBlue,
         onPrimary = TextPrimary,
-        secondary = TextSecondary,
+        primaryContainer = IconBgBlueLight,
+        onPrimaryContainer = PrimaryBlueHover,
+        secondary = AccentOrangeLight,
+        onSecondary = TextPrimary,
+        secondaryContainer = BgYellowTransparentLight,
+        onSecondaryContainer = TextPrimaryLight,
         tertiary = ColorTertiary,
-        background = TextPrimary,
-        surface = Color(0xFFF6F8FA),
-        surfaceContainer = Color(0xFFF6F8FA),
-        outline = Color(0xFFD0D7DE),
+        background = BgMainLight,
+        onBackground = TextPrimaryLight,
+        surface = BgSurfaceLight,
+        onSurface = TextPrimaryLight,
+        surfaceVariant = BgCardHoverLight,
+        onSurfaceVariant = TextSecondaryLight,
+        surfaceTint = Color.Transparent,
+        surfaceBright = BgSurfaceLight,
+        surfaceDim = BgCardHoverLight,
+        surfaceContainerLowest = BgSurfaceLight,
+        surfaceContainerLow = BgSurfaceLight,
+        surfaceContainer = BgSurfaceLight,
+        surfaceContainerHigh = BgSurfaceLight,
+        surfaceContainerHighest = BgCardHoverLight,
+        outline = Color(0xFFCFC6B8),
+        outlineVariant = BorderSubtleLight,
         error = Color(0xFFCF222E),
-        onBackground = ColorNeutral,
-        onSurface = ColorNeutral,
         onError = TextPrimary,
     )
 
