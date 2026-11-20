@@ -9,6 +9,8 @@ sealed class NexoDestination(
     val route: String,
     @param:StringRes val labelRes: Int = -1,
     val icon: ImageVector? = null,
+    /** Bottom-nav glyph while the tab is active; [icon] is the idle (outline) one. */
+    val selectedIcon: ImageVector? = null,
 ) {
     data object Auth : NexoDestination("auth", R.string.tab_auth, NexoIcons.Person)
 
@@ -24,18 +26,18 @@ sealed class NexoDestination(
      */
     data object OnboardingNotifications : NexoDestination("onboarding/notifications")
 
-    data object Home : NexoDestination("home", R.string.nav_home, NexoIcons.Home)
+    data object Home : NexoDestination("home", R.string.nav_home, NexoIcons.HomeOutline, NexoIcons.Home)
 
-    data object Library : NexoDestination("library", R.string.nav_library, NexoIcons.Library)
+    data object Library : NexoDestination("library", R.string.nav_library, NexoIcons.LibraryOutline, NexoIcons.Library)
 
     data object Discover : NexoDestination("discover", R.string.nav_discover, NexoIcons.Search)
 
     // Reader and "Ver todo" DiscoverSection are typed `@Serializable` routes:
     // see `ReaderRoute` / `DiscoverSectionRoute` in TypedRoutes.kt.
 
-    data object Highlights : NexoDestination("highlights", R.string.nav_highlights, NexoIcons.Highlights)
+    data object Highlights : NexoDestination("highlights", R.string.nav_highlights, NexoIcons.Highlights, NexoIcons.HighlightsFilled)
 
-    data object Settings : NexoDestination("settings", R.string.nav_settings, NexoIcons.Settings)
+    data object Settings : NexoDestination("settings", R.string.nav_settings, NexoIcons.SettingsOutline, NexoIcons.Settings)
 
     data object Statistics : NexoDestination("statistics", R.string.nav_statistics, NexoIcons.Statistics)
 
