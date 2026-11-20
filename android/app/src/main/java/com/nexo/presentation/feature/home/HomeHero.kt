@@ -1,8 +1,11 @@
 package com.nexo.presentation.feature.home
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -22,23 +25,35 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nexo.R
 import com.nexo.presentation.screen.HomeTags
 import com.nexo.ui.components.atoms.NexoAvatar
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.motion.pressScaleClickable
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.nexoColors
 
@@ -51,7 +66,7 @@ import com.nexo.ui.theme.nexoColors
  * differently-scaled one — the brand row and the top of the valley keep their
  * proportions on every screen.
  */
-internal val CollapsedHeroHeight = 289.dp
+internal val CollapsedHeroHeight = 248.dp
 
 /**
  * Visible height of the hero when the library is empty.
@@ -76,23 +91,24 @@ private val HeroHeaderTopInset = 40.dp
 /** Vertical offset of the hero copy (`.pen` `hero_message` y=250). */
 private val HeroCopyTopInset = 210.dp
 
-/**
- * Vertical offset of the hero copy in the populated state (`.pen` `W8bma` y=97).
- *
- * The copy sits near the top because the hero is shorter: the brand row claims
- * the first ~76dp, so the title starts just below it instead of at the empty
- * state's y=250, which would fall outside a 289dp frame.
- */
-private val CollapsedHeroCopyTopInset = 97.dp
+/** Gap between the brand row and the greeting in the populated hero. */
+private val CollapsedGreetingTopGap = 36.dp
 
 /** Title measure from the `.pen` `hero_title` node; keeps the line break predictable. */
 private val HeroTitleWidth = 280.dp
 
 /** Diameter of the circular streak and notification actions. */
-private val HeroActionSize = 36.dp
+private val HeroActionSize = 40.dp
 
 /** Side length of the glyph inside a hero action. */
-private val HeroActionIconSize = 18.dp
+private val HeroActionIconSize = 20.dp
+
+/** Diameter of the unread dot on the notifications action. */
+private val UnreadDotSize = 9.dp
+
+/** The hero photo starts slightly zoomed and settles, once, on first open. */
+private const val HeroPhotoStartScale = 1.08f
+private const val HeroPhotoSettleMs = 1400
 
 /**
  * Character of the fade painted over the hero photo.
@@ -141,6 +157,7 @@ fun HomeHeroSection(
     onAvatarClick: (() -> Unit)? = null,
     onStreakClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
+    hasUnreadNotifications: Boolean = false,
 ) {
     HeroFrame(height = HeroHeight, modifier = modifier) {
         HeroHeaderRow(
@@ -150,6 +167,7 @@ fun HomeHeroSection(
             onAvatarClick = onAvatarClick,
             onStreakClick = onStreakClick,
             onNotificationsClick = onNotificationsClick,
+            hasUnreadNotifications = hasUnreadNotifications,
             modifier = Modifier.padding(top = HeroHeaderTopInset, start = NexoDimens.spacingLg, end = NexoDimens.spacingLg),
         )
         Spacer(modifier = Modifier.height(HeroCopyTopInset))
@@ -164,15 +182,14 @@ fun HomeHeroSection(
  * Full-bleed hero for a Home that already has books: the same photo, fade and
  * brand row as [HomeHeroSection], shortened to [CollapsedHeroHeight].
  *
- * The copy and the amber CTA are deliberately absent — with a library to show,
- * the screen's own content is the message, and the hero only carries the user's
- * identity and the two shell actions.
+ * Instead of the first-session pitch ("discover new stories" + CTA), which reads
+ * wrong once the reader has books, it greets the reader by name and asks what
+ * they will read today; the sections below are the call to action.
  *
- * @see HomeHeroSection for the parameter contract; they are identical.
+ * @see HomeHeroSection for the parameter contract; same, minus `onExplore`.
  */
 @Composable
 fun CollapsedHomeHeroSection(
-    onExplore: () -> Unit,
     modifier: Modifier = Modifier,
     avatarUrl: String? = null,
     userName: String = "",
@@ -181,6 +198,7 @@ fun CollapsedHomeHeroSection(
     onStreakClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onSearchClick: (() -> Unit)? = null,
+    hasUnreadNotifications: Boolean = false,
 ) {
     HeroFrame(height = CollapsedHeroHeight, modifier = modifier) {
         HeroHeaderRow(
@@ -191,15 +209,47 @@ fun CollapsedHomeHeroSection(
             onStreakClick = onStreakClick,
             onNotificationsClick = onNotificationsClick,
             onSearchClick = onSearchClick,
+            hasUnreadNotifications = hasUnreadNotifications,
             modifier = Modifier.padding(top = HeroHeaderTopInset, start = NexoDimens.spacingLg, end = NexoDimens.spacingLg),
         )
-        Spacer(modifier = Modifier.height(CollapsedHeroCopyTopInset - HeroHeaderTopInset - HeroActionSize))
-        HeroCopy(
-            onExplore = onExplore,
+        Spacer(modifier = Modifier.height(CollapsedGreetingTopGap))
+        HeroGreeting(
+            userName = userName,
             modifier = Modifier.padding(horizontal = NexoDimens.spacingLg),
         )
     }
 }
+
+/** Personal greeting of the populated hero: "Hola, Juan" over "¿Qué vas a leer hoy?". */
+@Composable
+private fun HeroGreeting(
+    userName: String,
+    modifier: Modifier = Modifier,
+) {
+    val colors = nexoColors
+    Column(
+        modifier = modifier.fillMaxWidth().testTag(HomeTags.HERO_MESSAGE),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (userName.isNotBlank()) {
+            Text(
+                text = stringResource(R.string.home_greeting, userName.substringBefore(' ')),
+                style = MaterialTheme.typography.titleMedium,
+                color = colors.textPrimary.copy(alpha = HeroGreetingAlpha),
+            )
+        }
+        Text(
+            text = stringResource(R.string.home_subtitle),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = colors.textPrimary,
+            modifier = Modifier.width(HeroTitleWidth),
+        )
+    }
+}
+
+/** The greeting line sits one step back from the question below it. */
+private const val HeroGreetingAlpha = 0.78f
 
 /**
  * Shared shell of every hero variant: the cropped photo, the fade that
@@ -245,11 +295,28 @@ private fun HeroFrame(
  */
 @Composable
 private fun BoxScope.AsyncHeroImage() {
+    var settled by rememberSaveable { mutableStateOf(false) }
+    val scale = remember { Animatable(if (settled) 1f else HeroPhotoStartScale) }
+    LaunchedEffect(Unit) {
+        if (!settled) {
+            scale.animateTo(1f, tween(HeroPhotoSettleMs, easing = LinearOutSlowInEasing))
+            settled = true
+        }
+    }
     AsyncImage(
         model = R.drawable.home_hero,
         contentDescription = stringResource(R.string.home_hero_image_content_description),
         contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxWidth().height(HeroPhotoHeight).align(Alignment.TopStart),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(HeroPhotoHeight)
+                .align(Alignment.TopStart)
+                .graphicsLayer {
+                    scaleX = scale.value
+                    scaleY = scale.value
+                    transformOrigin = TransformOrigin(0.5f, 0f)
+                },
     )
 }
 
@@ -304,6 +371,7 @@ private fun HeroHeaderRow(
     onNotificationsClick: () -> Unit,
     modifier: Modifier = Modifier,
     onSearchClick: (() -> Unit)? = null,
+    hasUnreadNotifications: Boolean = false,
 ) {
     val colors = nexoColors
     Row(
@@ -319,14 +387,13 @@ private fun HeroHeaderRow(
                 onClick = onAvatarClick,
                 contentDescription = stringResource(R.string.home_avatar_content_description),
             )
-            Column {
-                Text(
-                    text = stringResource(R.string.home_nexo_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.textPrimary,
-                )
-            }
+            Text(
+                text = stringResource(R.string.home_nexo_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.5.sp,
+                color = colors.textPrimary,
+            )
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(NexoDimens.spacingSm)) {
             if (onSearchClick != null) {
@@ -336,16 +403,12 @@ private fun HeroHeaderRow(
                     onClick = onSearchClick,
                 )
             }
-            HeroActionButton(
-                icon = NexoIcons.Flame,
-                contentDescription = stringResource(R.string.home_streak_content_description),
-                badgeCount = streakDays,
-                onClick = onStreakClick,
-            )
+            StreakAction(streakDays = streakDays, onClick = onStreakClick)
             HeroActionButton(
                 icon = NexoIcons.Notifications,
                 contentDescription = stringResource(R.string.notifications_title),
                 onClick = onNotificationsClick,
+                showDot = hasUnreadNotifications,
             )
         }
     }
@@ -353,48 +416,103 @@ private fun HeroHeaderRow(
 
 /**
  * Circular ghost action on the hero: a translucent surface disc with a hairline
- * border, optionally carrying a numeric badge.
+ * border, optionally carrying an amber unread dot.
  */
 @Composable
 private fun HeroActionButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
-    badgeCount: Int = 0,
+    showDot: Boolean = false,
 ) {
     val colors = nexoColors
-    Box {
-        Box(
-            modifier =
-                Modifier
-                    .size(HeroActionSize)
-                    .clip(CircleShape)
-                    .background(colors.surface.copy(alpha = HeroActionSurfaceAlpha))
-                    .border(1.dp, colors.borderSubtle, CircleShape)
-                    .clickable(onClickLabel = contentDescription, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                modifier = Modifier.size(HeroActionIconSize),
-                tint = colors.textPrimary,
-            )
-        }
-        if (badgeCount > 0) {
-            Text(
-                text = badgeCount.toString(),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = colors.background,
+    Box(
+        modifier =
+            Modifier
+                .size(HeroActionSize)
+                .pressScaleClickable(shape = CircleShape, onClickLabel = contentDescription, onClick = onClick)
+                .background(colors.surface.copy(alpha = HeroActionSurfaceAlpha))
+                .border(1.dp, colors.borderSubtle, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(HeroActionIconSize),
+            tint = colors.textPrimary,
+        )
+        if (showDot) {
+            Box(
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
+                        .padding(top = 9.dp, end = 10.dp)
+                        .size(UnreadDotSize)
                         .clip(CircleShape)
-                        .background(colors.accentYellow)
-                        .padding(horizontal = 5.dp, vertical = 1.dp),
+                        .background(colors.accentOrange),
             )
         }
+    }
+}
+
+/**
+ * Streak action: a pill with the flame and the day count, so the streak reads
+ * at a glance instead of hiding in a tiny corner badge. With no streak it falls
+ * back to the plain circular action.
+ *
+ * On first appearance the flame gives one small spring "flare", once.
+ */
+@Composable
+private fun StreakAction(
+    streakDays: Int,
+    onClick: () -> Unit,
+) {
+    val colors = nexoColors
+    if (streakDays <= 0) {
+        HeroActionButton(
+            icon = NexoIcons.Flame,
+            contentDescription = stringResource(R.string.home_streak_content_description),
+            onClick = onClick,
+        )
+        return
+    }
+    val label = stringResource(R.string.home_streak_badge_content_description, streakDays)
+    var flared by rememberSaveable { mutableStateOf(false) }
+    val flameScale = remember { Animatable(if (flared) 1f else 0.6f) }
+    LaunchedEffect(Unit) {
+        if (!flared) {
+            flameScale.animateTo(1f, spring(dampingRatio = 0.35f, stiffness = 260f))
+            flared = true
+        }
+    }
+    Row(
+        modifier =
+            Modifier
+                .height(HeroActionSize)
+                .pressScaleClickable(shape = CircleShape, onClickLabel = label, onClick = onClick)
+                .background(colors.surface.copy(alpha = HeroActionSurfaceAlpha))
+                .border(1.dp, colors.borderSubtle, CircleShape)
+                .semantics(mergeDescendants = true) { contentDescription = label }
+                .padding(start = 10.dp, end = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            imageVector = NexoIcons.Flame,
+            contentDescription = null,
+            tint = colors.streak,
+            modifier =
+                Modifier.size(HeroActionIconSize).graphicsLayer {
+                    scaleX = flameScale.value
+                    scaleY = flameScale.value
+                },
+        )
+        Text(
+            text = streakDays.toString(),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = colors.textPrimary,
+        )
     }
 }
 
@@ -445,9 +563,8 @@ private fun ExplorePill(onClick: () -> Unit) {
         modifier =
             Modifier
                 .testTag(HomeTags.HERO_CTA)
-                .clip(CircleShape)
+                .pressScaleClickable(shape = CircleShape, onClickLabel = contentDescription, onClick = onClick)
                 .background(colors.accentYellow)
-                .clickable(onClickLabel = contentDescription, onClick = onClick)
                 .padding(horizontal = 22.dp, vertical = 14.dp)
                 .widthIn(min = 48.dp),
         verticalAlignment = Alignment.CenterVertically,
