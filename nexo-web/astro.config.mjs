@@ -15,5 +15,15 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    build: {
+      // Defaults to 'esnext', which emits the bundled scripts INLINE in the
+      // HTML. An external chunk is the whole point of moving the client code
+      // out of <script is:inline>: it gets a content hash, so the Worker serves
+      // it with a long-lived immutable cache and a repeat visitor downloads
+      // nothing. Lowering the target is what makes Vite treat the entry as a
+      // separate asset.
+      target: 'es2020',
+      assetsInlineLimit: 0,
+    },
   },
 });
