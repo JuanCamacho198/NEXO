@@ -1,24 +1,23 @@
 package com.nexo.presentation.screen.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -28,8 +27,13 @@ import com.nexo.data.session.NotificationPreferencesStore
 import com.nexo.domain.notification.NotificationPreferences
 import com.nexo.domain.notification.QuietHoursSchedule
 import com.nexo.feature.settings.R
+import com.nexo.ui.components.molecules.NexoSettingsDivider
+import com.nexo.ui.components.molecules.NexoSettingsSection
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
+import com.nexo.ui.components.molecules.NexoSettingsSwitchRow
+import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 /**
  * Real notification settings (U9).
@@ -59,83 +63,56 @@ fun SettingsNotificationsScreen(
         title = stringResource(R.string.settings_notifications_title),
         onBack = onBack,
     ) {
-        NotificationToggleRow(
-            label = stringResource(R.string.settings_notifications_system_label),
-            description = stringResource(R.string.settings_notifications_system_description),
-            checked = preferences.system,
-            onCheckedChange = { update(preferences.copy(system = it)) },
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        NotificationToggleRow(
-            label = stringResource(R.string.settings_notifications_nudge_label),
-            description = stringResource(R.string.settings_notifications_nudge_description),
-            checked = preferences.nudge,
-            onCheckedChange = { update(preferences.copy(nudge = it)) },
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        NotificationToggleRow(
-            label = stringResource(R.string.settings_notifications_quiet_hours_label),
-            description = stringResource(R.string.settings_notifications_quiet_hours_description),
-            checked = preferences.quietHours.enabled,
-            onCheckedChange = { enabled ->
-                update(preferences.copy(quietHours = preferences.quietHours.copy(enabled = enabled)))
-            },
-        )
-
-        if (preferences.quietHours.enabled) {
-            Spacer(modifier = Modifier.height(8.dp))
-            QuietHoursRow(
-                schedule = preferences.quietHours,
-                onStartChange = { start ->
-                    update(preferences.copy(quietHours = preferences.quietHours.copy(start = start)))
-                },
-                onEndChange = { end ->
-                    update(preferences.copy(quietHours = preferences.quietHours.copy(end = end)))
+        val colors = nexoColors
+        NexoSettingsSection {
+            NexoSettingsSwitchRow(
+                label = stringResource(R.string.settings_notifications_system_label),
+                supporting = stringResource(R.string.settings_notifications_system_description),
+                icon = NexoIcons.Notifications,
+                checked = preferences.system,
+                onCheckedChange = { update(preferences.copy(system = it)) },
+            )
+            NexoSettingsDivider()
+            NexoSettingsSwitchRow(
+                label = stringResource(R.string.settings_notifications_nudge_label),
+                supporting = stringResource(R.string.settings_notifications_nudge_description),
+                icon = NexoIcons.Sparkle,
+                accent = colors.accentOrange,
+                checked = preferences.nudge,
+                onCheckedChange = { update(preferences.copy(nudge = it)) },
+            )
+            NexoSettingsDivider()
+            NexoSettingsSwitchRow(
+                label = stringResource(R.string.settings_notifications_quiet_hours_label),
+                supporting = stringResource(R.string.settings_notifications_quiet_hours_description),
+                icon = NexoIcons.DarkMode,
+                accent = colors.accentPurple,
+                checked = preferences.quietHours.enabled,
+                onCheckedChange = { enabled ->
+                    update(preferences.copy(quietHours = preferences.quietHours.copy(enabled = enabled)))
                 },
             )
-        }
-    }
-}
-
-@Composable
-private fun NotificationToggleRow(
-    label: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            // The schedule unfolds inside the same card, under the switch that owns it.
+            AnimatedVisibility(
+                visible = preferences.quietHours.enabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                Column {
+                    NexoSettingsDivider()
+                    Box(modifier = Modifier.padding(start = 62.dp, end = 14.dp, top = 8.dp, bottom = 14.dp)) {
+                        QuietHoursRow(
+                            schedule = preferences.quietHours,
+                            onStartChange = { start ->
+                                update(preferences.copy(quietHours = preferences.quietHours.copy(start = start)))
+                            },
+                            onEndChange = { end ->
+                                update(preferences.copy(quietHours = preferences.quietHours.copy(end = end)))
+                            },
+                        )
+                    }
+                }
             }
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-            )
         }
     }
 }

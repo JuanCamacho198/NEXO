@@ -1,26 +1,16 @@
 package com.nexo.presentation.screen.settings
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,9 +18,13 @@ import androidx.compose.ui.unit.dp
 import com.nexo.data.session.DefinitionPreferences
 import com.nexo.feature.settings.R
 import com.nexo.ui.components.molecules.DEFINITION_LANGUAGE_OPTIONS
+import com.nexo.ui.components.molecules.NexoSettingsDivider
+import com.nexo.ui.components.molecules.NexoSettingsOptionRow
+import com.nexo.ui.components.molecules.NexoSettingsSection
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 /**
  * The reader's DEFINITION language: the language definitions are shown in.
@@ -83,79 +77,29 @@ fun SettingsDefinitionScreen(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
         ) {
-            Text(
-                text = stringResource(R.string.settings_definition_language_label),
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            DefinitionLanguageOption(
-                code = null,
-                label = stringResource(R.string.settings_translation_language_system),
-                isSelected = selected == null,
-                onSelect = ::update,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            DEFINITION_LANGUAGE_OPTIONS.forEach { code ->
-                DefinitionLanguageOption(
-                    code = code,
-                    label = languageLabels[code] ?: code,
-                    isSelected = selected == code,
-                    onSelect = ::update,
+            NexoSettingsSection(
+                title = stringResource(R.string.settings_definition_language_label),
+                footer = stringResource(R.string.settings_definition_language_hint),
+            ) {
+                NexoSettingsOptionRow(
+                    label = stringResource(R.string.settings_translation_language_system),
+                    icon = NexoIcons.Smartphone,
+                    selected = selected == null,
+                    onClick = { update(null) },
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                DEFINITION_LANGUAGE_OPTIONS.forEach { code ->
+                    NexoSettingsDivider()
+                    NexoSettingsOptionRow(
+                        label = languageLabels[code] ?: code,
+                        icon = NexoIcons.BookSearch,
+                        accent = nexoColors.accentOrange,
+                        selected = selected == code,
+                        onClick = { update(code) },
+                    )
+                }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.settings_definition_language_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
 
             Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-private fun DefinitionLanguageOption(
-    code: String?,
-    label: String,
-    isSelected: Boolean,
-    onSelect: (String?) -> Unit,
-) {
-    Surface(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable { onSelect(code) },
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            if (isSelected) {
-                Icon(
-                    imageVector = NexoIcons.Check,
-                    contentDescription = stringResource(R.string.a11y_selected),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
         }
     }
 }

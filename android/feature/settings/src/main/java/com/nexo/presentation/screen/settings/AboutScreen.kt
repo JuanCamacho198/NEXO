@@ -1,5 +1,7 @@
 package com.nexo.presentation.screen.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,20 +12,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,9 +37,14 @@ import com.nexo.domain.update.UpdateErrorKind
 import com.nexo.domain.update.UpdateUiState
 import com.nexo.feature.settings.BuildConfig
 import com.nexo.feature.settings.R
+import com.nexo.ui.components.molecules.NexoSettingsDivider
+import com.nexo.ui.components.molecules.NexoSettingsIcon
+import com.nexo.ui.components.molecules.NexoSettingsNavRow
+import com.nexo.ui.components.molecules.NexoSettingsSection
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 @Composable
 fun AboutScreen(
@@ -53,82 +62,70 @@ fun AboutScreen(
         title = stringResource(R.string.settings_about_title),
         onBack = onBack,
     ) {
+        val colors = nexoColors
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Cita Lincoln card centrada 280dp, padding 24dp, corner 20dp, bg surfaceVariant 30%
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center,
+            // App identity: mark, name, version and build, centred.
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Surface(
-                    modifier = Modifier.width(280.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                ) {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.about_lincoln_quote),
-                            style =
-                                MaterialTheme.typography.bodyLarge.copy(
-                                    fontSize = 16.sp,
-                                    lineHeight = 25.6.sp,
-                                ),
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = stringResource(R.string.about_lincoln_author),
-                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-
-            // Version info still visible below quote
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Column(
+                Box(
                     modifier =
                         Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(Brush.linearGradient(listOf(colors.primary, colors.accentPurple))),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_about_build, BuildConfig.GIT_SHA),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Icon(imageVector = NexoIcons.BookOpen, contentDescription = null, tint = Color.White, modifier = Modifier.size(34.dp))
                 }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colors.textPrimary,
+                )
+                Text(
+                    text = stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME) + "  ·  " + stringResource(R.string.settings_about_build, BuildConfig.GIT_SHA),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textSecondary,
+                    textAlign = TextAlign.Center,
+                )
+            }
+
+            // The quote, set as a pull-quote: accent mark, larger serif-less type.
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(colors.surface)
+                        .border(1.dp, colors.borderSubtle, RoundedCornerShape(18.dp))
+                        .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(imageVector = NexoIcons.Quote, contentDescription = null, tint = colors.primary, modifier = Modifier.size(24.dp))
+                Text(
+                    text = stringResource(R.string.about_lincoln_quote),
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, lineHeight = 26.sp),
+                    fontStyle = FontStyle.Italic,
+                    color = colors.textPrimary,
+                )
+                Text(
+                    text = stringResource(R.string.about_lincoln_author),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textSecondary,
+                )
             }
 
             // SDD app-auto-update: manual check row below the version block.
@@ -138,21 +135,22 @@ fun AboutScreen(
                 UpdateCheckRow(state = updateState, onCheckUpdates = onCheckUpdates)
             }
 
-            // Lista 4 filas height 56dp
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            NexoSettingsSection {
                 AboutRow(label = stringResource(R.string.about_terms), icon = NexoIcons.Info, onClick = onTerms)
+                NexoSettingsDivider()
                 AboutRow(label = stringResource(R.string.about_privacy), icon = NexoIcons.Lock, onClick = onPrivacy)
+                NexoSettingsDivider()
                 AboutRow(label = stringResource(R.string.about_licenses), icon = NexoIcons.LibraryBooks, onClick = onLicenses)
+                NexoSettingsDivider()
                 AboutRow(label = stringResource(R.string.about_contact), icon = NexoIcons.Email, onClick = onContact)
+                NexoSettingsDivider()
                 AboutRow(label = stringResource(R.string.about_rate), icon = NexoIcons.Star, onClick = onRate)
             }
 
-            // Footer
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.about_footer),
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.textSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -181,51 +179,20 @@ private fun UpdateCheckRow(
                 }
             is UpdateUiState.Idle -> null
         }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onCheckUpdates)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Icon(
-                imageVector = NexoIcons.CloudDownload,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(24.dp),
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.update_check),
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                    fontWeight = FontWeight.Medium,
-                )
-                if (statusText != null) {
-                    Text(
-                        text = statusText,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            if (state is UpdateUiState.Checking) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp))
-            } else {
-                Icon(
-                    imageVector = NexoIcons.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.width(20.dp).height(20.dp),
-                )
-            }
-        }
+    NexoSettingsSection {
+        NexoSettingsNavRow(
+            label = stringResource(R.string.update_check),
+            supporting = statusText,
+            icon = NexoIcons.CloudDownload,
+            accent = if (state is UpdateUiState.Available) nexoColors.accentGreen else nexoColors.primary,
+            onClick = onCheckUpdates,
+            trailing =
+                if (state is UpdateUiState.Checking) {
+                    { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) }
+                } else {
+                    null
+                },
+        )
     }
 }
 
@@ -243,47 +210,39 @@ private fun Modifier.aboutRowClickable(onClick: (() -> Unit)?): Modifier =
         clickable(role = Role.Button, onClick = onClick)
     }
 
+/** One link row inside the About card: icon tile, label, chevron when it opens something. */
 @Composable
 internal fun AboutRow(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: (() -> Unit)?,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().height(56.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+    val colors = nexoColors
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .aboutRowClickable(onClick)
+                .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .aboutRowClickable(onClick)
-                    .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        NexoSettingsIcon(icon = icon, accent = if (onClick != null) colors.primary else colors.textSecondary)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (onClick != null) colors.textPrimary else colors.textSecondary,
+            modifier = Modifier.weight(1f),
+        )
+        // Only a row that actually opens something earns the chevron.
+        if (onClick != null) {
             Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.width(24.dp).height(24.dp),
+                imageVector = NexoIcons.ChevronRight,
+                contentDescription = stringResource(R.string.about_row_opens_screen),
+                tint = colors.textSecondary,
+                modifier = Modifier.size(18.dp),
             )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f),
-            )
-            // Only a row that actually opens something earns the chevron.
-            if (onClick != null) {
-                Icon(
-                    imageVector = NexoIcons.ChevronRight,
-                    contentDescription = stringResource(R.string.about_row_opens_screen),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.width(20.dp).height(20.dp),
-                )
-            }
         }
     }
 }

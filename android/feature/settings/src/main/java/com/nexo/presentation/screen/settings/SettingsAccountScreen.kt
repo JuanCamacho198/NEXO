@@ -1,7 +1,8 @@
 package com.nexo.presentation.screen.settings
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,7 +38,9 @@ import com.nexo.ui.components.atoms.NexoAvatar
 import com.nexo.ui.components.atoms.NexoLogoutDialog
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.motion.pressScaleClickable
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 @Composable
 fun SettingsAccountScreen(
@@ -68,15 +71,15 @@ fun SettingsAccountScreen(
     ) {
         // Card with 24dp padding, avatar 56dp, email, chip Conectado Drive
         Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.fillMaxWidth().border(1.dp, nexoColors.borderSubtle, RoundedCornerShape(18.dp)),
+            shape = RoundedCornerShape(18.dp),
+            color = nexoColors.surface,
         ) {
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(24.dp),
+                        .padding(20.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 NexoAvatar(
@@ -134,8 +137,7 @@ fun SettingsAccountScreen(
         Column(
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Exportar mis datos
@@ -143,7 +145,7 @@ fun SettingsAccountScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .clickable {
+                        .pressScaleClickable(shape = RoundedCornerShape(16.dp)) {
                             Toast
                                 .makeText(
                                     context,
@@ -151,8 +153,9 @@ fun SettingsAccountScreen(
                                     Toast.LENGTH_SHORT,
                                 ).show()
                         },
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(16.dp),
+                color = nexoColors.surface,
+                border = BorderStroke(1.dp, nexoColors.borderSubtle),
             ) {
                 Row(
                     modifier =
@@ -176,7 +179,7 @@ fun SettingsAccountScreen(
                         modifier = Modifier.weight(1f),
                     )
                     Icon(
-                        imageVector = NexoIcons.ArrowRight,
+                        imageVector = NexoIcons.ChevronRight,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
@@ -190,9 +193,12 @@ fun SettingsAccountScreen(
                     Modifier
                         .fillMaxWidth()
                         .padding(top = 12.dp)
-                        .clickable(onClick = { showLogoutDialog = true }),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.errorContainer,
+                        .pressScaleClickable(shape = RoundedCornerShape(16.dp)) { showLogoutDialog = true },
+                // Outlined, not filled: red text on a dark-red container failed
+                // contrast. The red stays in the text, icon and hairline.
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.08f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.45f)),
             ) {
                 Row(
                     modifier =
