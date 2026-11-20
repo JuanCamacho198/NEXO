@@ -5,39 +5,212 @@ const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
 const faqs = [
-  {
-    q: t('faq.q1'),
-    a: t('faq.a1'),
-  },
-  {
-    q: t('faq.q2'),
-    a: t('faq.a2'),
-  },
-  {
-    q: t('faq.q3'),
-    a: t('faq.a3'),
-  },
-  {
-    q: t('faq.q4'),
-    a: t('faq.a4'),
-  },
+  { q: t('faq.q1'), a: t('faq.a1') },
+  { q: t('faq.q2'), a: t('faq.a2') },
+  { q: t('faq.q3'), a: t('faq.a3') },
+  { q: t('faq.q4'), a: t('faq.a4') },
+  { q: t('faq.q5'), a: t('faq.a5') },
 ] as const;
 ---
 
 <!-- ══════════════ FAQ ══════════════ -->
-<section id="faq" class="bg-surface-alt border-t border-t-border py-24 max-[640px]:py-16">
-  <div class="shell grid grid-cols-[0.8fr_1.2fr] [align-items:start] gap-12 max-[900px]:grid-cols-1 max-[900px]:gap-7">
-    <h2 class="min-[640px]:text-[2.25rem]">{t('faq.title')}</h2>
+<!-- Dark, like every home section from the hero down. Native <details>, so it
+     works without JavaScript; where the browser can animate to `height: auto`
+     (::details-content + interpolate-size) the answers glide open. -->
+<section id="faq" class="faq relative text-ink" data-theme="dark">
+  <div class="night-sky" aria-hidden="true"></div>
+  <div class="shell faq-grid">
+    <div class="faq-intro">
+      <p class="faq-eyebrow">{t('faq.eyebrow')}</p>
+      <h2 class="faq-title">{t('faq.title')}</h2>
+      <p class="faq-lead">{t('faq.lead')}</p>
+    </div>
 
-    <div class="border-t border-t-border">
-      {faqs.map((faq) => (
-        <details class="border-b border-b-border py-5">
-          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-medium text-ink [&::-webkit-details-marker]:hidden">
-            {faq.q}
+    <div class="faq-list">
+      {faqs.map((faq, i) => (
+        <details class="faq-item" open={i === 0}>
+          <summary>
+            <span class="faq-num" aria-hidden="true">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <span class="faq-q">{faq.q}</span>
+            <span class="faq-icon" aria-hidden="true" />
           </summary>
-          <p class="mt-3 max-w-[60ch] text-[0.95rem] leading-[1.7] text-ink-soft">{faq.a}</p>
+          <p class="faq-a">{faq.a}</p>
         </details>
       ))}
     </div>
   </div>
 </section>
+
+<style>
+  .faq {
+    background: #0d0b18;
+    padding: 120px 0;
+    overflow: clip;
+    interpolate-size: allow-keywords;
+  }
+  .faq-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 0.85fr 1.3fr;
+    gap: 64px;
+    align-items: start;
+  }
+  .faq-intro {
+    position: sticky;
+    top: 140px;
+  }
+  .faq-eyebrow {
+    color: oklch(76% 0.16 55);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+  }
+  .faq-title {
+    margin-top: 14px;
+    font-size: clamp(2.2rem, 4vw, 3.2rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    background: linear-gradient(
+      100deg,
+      oklch(97% 0.01 80),
+      oklch(84% 0.08 60) 60%,
+      oklch(74% 0.17 48)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .faq-lead {
+    margin-top: 16px;
+    max-width: 34ch;
+    color: var(--color-ink-soft);
+    font-size: 1.05rem;
+    line-height: 1.65;
+  }
+  .faq-list {
+    display: grid;
+    gap: 14px;
+  }
+  .faq-item {
+    border: 1px solid oklch(100% 0 0 / 0.08);
+    border-radius: 22px;
+    background: oklch(100% 0 0 / 0.025);
+    transition:
+      border-color 0.25s ease,
+      background-color 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  .faq-item:hover {
+    border-color: oklch(100% 0 0 / 0.16);
+  }
+  .faq-item[open] {
+    border-color: oklch(72% 0.18 50 / 0.45);
+    background:
+      radial-gradient(80% 120% at 0% 0%, oklch(72% 0.18 50 / 0.1), transparent 60%),
+      oklch(100% 0 0 / 0.04);
+    box-shadow: 0 24px 48px -28px oklch(72% 0.18 50 / 0.45);
+  }
+  .faq-item summary {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 24px 26px;
+    cursor: pointer;
+    list-style: none;
+  }
+  .faq-item summary::-webkit-details-marker {
+    display: none;
+  }
+  .faq-num {
+    flex: none;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: oklch(76% 0.16 55);
+  }
+  .faq-q {
+    flex: 1;
+    font-size: 1.12rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  /* A "+" drawn with two bars that turns into a "×" when open. */
+  .faq-icon {
+    position: relative;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border: 1px solid oklch(100% 0 0 / 0.14);
+    border-radius: 50%;
+    transition:
+      rotate 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.25s ease,
+      border-color 0.25s ease;
+  }
+  .faq-icon::before,
+  .faq-icon::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 12px;
+    height: 1.6px;
+    border-radius: 2px;
+    background: currentColor;
+    translate: -50% -50%;
+  }
+  .faq-icon::after {
+    rotate: 90deg;
+  }
+  .faq-item[open] .faq-icon {
+    rotate: 45deg;
+    border-color: transparent;
+    background: oklch(72% 0.18 50);
+    color: #1b0d03;
+  }
+  .faq-a {
+    padding: 0 26px 26px 57px;
+    max-width: 62ch;
+    color: var(--color-ink-soft);
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  .faq-item::details-content {
+    height: 0;
+    overflow: clip;
+    transition:
+      height 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      content-visibility 0.35s allow-discrete;
+  }
+  .faq-item[open]::details-content {
+    height: auto;
+  }
+
+  @media (max-width: 900px) {
+    .faq {
+      padding: 80px 0;
+    }
+    .faq-grid {
+      grid-template-columns: 1fr;
+      gap: 36px;
+    }
+    .faq-intro {
+      position: static;
+    }
+    .faq-item summary {
+      padding: 20px;
+      gap: 14px;
+    }
+    .faq-a {
+      padding: 0 20px 22px 47px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .faq-item::details-content,
+    .faq-icon {
+      transition: none;
+    }
+  }
+</style>

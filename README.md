@@ -118,6 +118,15 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
 
+### Third-party assets
+
+The 3D device renders in the website hero are derived from models published on Sketchfab:
+
+- **"Laptop"** by [Aullwen](https://sketchfab.com/3d-models/laptop-7d870e900889481395b4a575b9fa8c3e) — [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), modified
+- **"iPad Pro 12.9 (2020)"** by [Konstantin Koretskyi](https://sketchfab.com/3d-models/ipad-pro-129-2020-f0f7674522124f3bbc2d0f898963457e) — [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), modified
+
+Both models were re-rendered and colour-graded for the hero. The licence requires attribution, so this credit must stay in place for as long as those renders ship.
+
 ---
 
 ## Links

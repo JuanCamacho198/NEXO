@@ -1,0 +1,242 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #2a2333;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/node_modules/three/build/three.module.js",
+          "three/addons/": "/node_modules/three/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+      import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+      const loader = new GLTFLoader();
+      const texLoader = new THREE.TextureLoader();
+
+      async function load(file) {
+        const gltf = await loader.loadAsync('/assets/' + file);
+        gltf.scene.updateMatrixWorld(true);
+        return gltf.scene;
+      }
+
+      // List every mesh with what identifies a screen: size, flatness, material.
+      window.inspect = async (file) => {
+        const scene = await load(file);
+        const out = [];
+        let i = 0;
+        scene.traverse((o) => {
+          if (!o.isMesh) return;
+          const box = new THREE.Box3().setFromObject(o);
+          const s = box.getSize(new THREE.Vector3());
+          const m = o.material;
+          out.push({
+            i: i++,
+            name: o.name,
+            mat: m.name,
+            color: m.color ? '#' + m.color.getHexString() : null,
+            emissive: m.emissive ? '#' + m.emissive.getHexString() : null,
+            map: !!m.map,
+            size: [s.x, s.y, s.z].map((v) => +v.toFixed(3)),
+            verts: o.geometry.attributes.position.count,
+            uv: !!o.geometry.attributes.uv,
+          });
+        });
+        return out;
+      };
+
+      // cfg: { file, screen: {by:'mat'|'index', value}, texture, rotation:[x,y,z] (deg),
+      //        cam: {fov, dist, elev, azim}, size:[w,h], name, flipY, uvRotate, debug }
+      window.renderDevice = async (cfg) => {
+        const [w, h] = cfg.size;
+        const renderer = new THREE.WebGLRenderer({
+          antialias: true,
+          alpha: true,
+          preserveDrawingBuffer: true,
+        });
+        renderer.setPixelRatio(1);
+        renderer.setSize(w, h);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = cfg.exposure ?? 1.0;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.innerHTML = '';
+        document.body.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+        scene.environment = env;
+        scene.environmentIntensity = cfg.envIntensity ?? 0.35;
+
+        const model = await load(cfg.file);
+        const pivot = new THREE.Group();
+        pivot.add(model);
+        // Centre and normalise to a unit-ish size so cameras are comparable.
+        const box = new THREE.Box3().setFromObject(model);
+        const c = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        model.position.sub(c);
+        const k = 2 / Math.max(size.x, size.y, size.z);
+        pivot.scale.setScalar(k);
+        const r = (cfg.rotation ?? [0, 0, 0]).map(THREE.MathUtils.degToRad);
+        pivot.rotation.set(r[0], r[1], r[2], 'YXZ');
+        scene.add(pivot);
+
+        // Screen texture swap.
+        let meshes = [];
+        model.traverse((o) => o.isMesh && meshes.push(o));
+        model.traverse((o) => {
+          if (o.isMesh) {
+            o.castShadow = true;
+            o.receiveShadow = true;
+          }
+        });
+        // Desaturate textured body materials (e.g. a rose-gold shell to space grey).
+        if (cfg.grey) {
+          for (const m of meshes) {
+            const map = m.material.map;
+            if (!map || !cfg.grey.includes(m.material.name)) continue;
+            const img = map.image;
+            const cv = document.createElement('canvas');
+            cv.width = img.width;
+            cv.height = img.height;
+            const ctx = cv.getContext('2d');
+            ctx.filter = cfg.greyFilter ?? 'grayscale(1) brightness(0.62) contrast(1.1)';
+            ctx.drawImage(img, 0, 0);
+            const t = new THREE.CanvasTexture(cv);
+            t.colorSpace = map.colorSpace;
+            t.flipY = map.flipY;
+            t.wrapS = map.wrapS;
+            t.wrapT = map.wrapT;
+            m.material.map = t;
+            if (m.material.emissiveMap) m.material.emissiveIntensity = 0;
+            m.material.metalness = cfg.metal ?? 0.6;
+            m.material.roughness = cfg.rough ?? 0.38;
+            m.material.needsUpdate = true;
+          }
+        }
+        // Neutralise untextured body colours (a teal phone to dark titanium).
+        if (cfg.desat) {
+          for (const m of meshes) {
+            const mat = m.material;
+            if (mat.map || !mat.color) continue;
+            const l = mat.color.r * 0.3 + mat.color.g * 0.59 + mat.color.b * 0.11;
+            mat.color.setRGB(l * cfg.desat, l * cfg.desat, l * cfg.desat * 1.04);
+          }
+        }
+        if (cfg.screen) {
+          let tex = await texLoader.loadAsync('/assets/' + cfg.texture);
+          // Inset the screenshot inside a black border (the bezel the mesh's own
+          // texture used to draw), as fractions [left, top, right, bottom].
+          if (cfg.pad) {
+            const img = tex.image;
+            const [l, t, r, b] = cfg.pad;
+            const W = Math.round(img.width / (1 - l - r));
+            const H = Math.round(img.height / (1 - t - b));
+            const cv = document.createElement('canvas');
+            cv.width = W;
+            cv.height = H;
+            const ctx = cv.getContext('2d');
+            ctx.fillStyle = cfg.padColor ?? '#050506';
+            ctx.fillRect(0, 0, W, H);
+            ctx.drawImage(img, Math.round(W * l), Math.round(H * t), img.width, img.height);
+            tex = new THREE.CanvasTexture(cv);
+          }
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.flipY = cfg.flipY ?? false;
+          tex.anisotropy = 8;
+          if (cfg.uvRotate) {
+            tex.center.set(0.5, 0.5);
+            tex.rotation = THREE.MathUtils.degToRad(cfg.uvRotate);
+          }
+          if (cfg.uvRepeat) tex.repeat.set(...cfg.uvRepeat);
+          if (cfg.uvOffset) tex.offset.set(...cfg.uvOffset);
+          const targets =
+            cfg.screen.by === 'mat'
+              ? meshes.filter((m) => m.material.name === cfg.screen.value)
+              : meshes.filter((_, i) => cfg.screen.value.includes(i));
+          for (const m of targets) {
+            // Planar UVs over the mesh's two largest local axes, so the image
+            // covers the panel regardless of how the author unwrapped it.
+            if (cfg.planar) {
+              const g = m.geometry.clone();
+              g.computeBoundingBox();
+              const bb = g.boundingBox;
+              const ext = [bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z];
+              const axes = [0, 1, 2].sort((a, b) => ext[b] - ext[a]);
+              let [au, av] = cfg.planar.axes ?? [axes[0], axes[1]];
+              const pos = g.attributes.position;
+              const mins = [bb.min.x, bb.min.y, bb.min.z];
+              const uv = new Float32Array(pos.count * 2);
+              for (let i = 0; i < pos.count; i++) {
+                const p = [pos.getX(i), pos.getY(i), pos.getZ(i)];
+                let u = (p[au] - mins[au]) / ext[au];
+                let v = (p[av] - mins[av]) / ext[av];
+                if (cfg.planar.flipU) u = 1 - u;
+                if (cfg.planar.flipV) v = 1 - v;
+                uv[i * 2] = u;
+                uv[i * 2 + 1] = v;
+              }
+              g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+              m.geometry = g;
+            }
+            m.material = new THREE.MeshBasicMaterial({
+              map: cfg.debug ? null : tex,
+              color: cfg.debug ? 0xff00ff : 0xffffff,
+              toneMapped: false,
+            });
+            if (cfg.screenBrightness) m.material.color.setScalar(cfg.screenBrightness);
+          }
+        }
+
+        // Sunset rig: warm key from behind-right (the sun), cool fill front-left,
+        // warm rim from behind for the edge highlight.
+        const key = new THREE.DirectionalLight(0xffa25a, cfg.key ?? 3.2);
+        key.position.set(3, 2.5, -4);
+        const rim = new THREE.DirectionalLight(0xff8a3d, cfg.rim ?? 2.4);
+        rim.position.set(-3, 1.5, -3);
+        const fill = new THREE.DirectionalLight(0x8a90c8, cfg.fill ?? 0.9);
+        fill.position.set(-3, 2, 5);
+        const front = new THREE.DirectionalLight(0xdfe4ff, cfg.front ?? 0.6);
+        front.position.set(1, 3, 4);
+        scene.add(key, rim, fill, front);
+
+        const cam = cfg.cam ?? {};
+        const camera = new THREE.PerspectiveCamera(cam.fov ?? 22, w / h, 0.01, 100);
+        const dist = cam.dist ?? 6;
+        const elev = THREE.MathUtils.degToRad(cam.elev ?? 12);
+        const azim = THREE.MathUtils.degToRad(cam.azim ?? 0);
+        camera.position.set(
+          dist * Math.cos(elev) * Math.sin(azim),
+          dist * Math.sin(elev),
+          dist * Math.cos(elev) * Math.cos(azim),
+        );
+        camera.lookAt(0, cam.lookY ?? 0, 0);
+
+        renderer.render(scene, camera);
+        const data = renderer.domElement.toDataURL('image/png');
+        const res = await fetch('/save?name=' + cfg.name, { method: 'POST', body: data });
+        return await res.text();
+      };
+      window.ready = true;
+    </script>
+  </body>
+</html>

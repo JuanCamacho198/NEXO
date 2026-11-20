@@ -1,0 +1,650 @@
+---
+import { dictionaryDemo } from '@/data/landingDemo';
+import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
+
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+const demo = dictionaryDemo(lang);
+const first = demo.words[0];
+const byId = new Map(demo.words.map((word) => [word.id, word]));
+
+const features = [
+  { title: t('dict.f1Title'), copy: t('dict.f1Copy'), icon: 'book' },
+  { title: t('dict.f2Title'), copy: t('dict.f2Copy'), icon: 'translate' },
+  { title: t('dict.f3Title'), copy: t('dict.f3Copy'), icon: 'bookmark' },
+] as const;
+---
+
+<!-- ══════════════ DICTIONARY ══════════════ -->
+<!-- A small working reader. Tapping a highlighted word opens the app's lookup
+     card (definition or translation) next to it; "Save" drops the word into
+     the dictionary list; "Translate paragraph" reveals the whole passage in the
+     visitor's language. Without JavaScript the first word's card is simply
+     shown under the page, so the section still says everything it needs to. -->
+<section id="funciones" class="dict relative text-ink" data-theme="dark">
+  <div class="night-sky" aria-hidden="true"></div>
+  <div class="shell dict-grid relative">
+    <div class="dict-copy">
+      <p class="dict-eyebrow">{t('dict.eyebrow')}</p>
+      <h2 class="dict-title">{t('dict.heading')}</h2>
+      <p class="dict-lead">{t('dict.lead')}</p>
+      <ul class="dict-features">
+        {features.map((feature) => (
+          <li>
+            <span class="dict-feature-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                {feature.icon === 'book' ? (
+                  <>
+                    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5Z" />
+                    <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5" />
+                  </>
+                ) : feature.icon === 'translate' ? (
+                  <>
+                    <path d="M4 5h9M8.5 3v2M6 5c.5 3 2.5 5.5 5 7M11 5c-.6 3.4-3 6.4-6 8" />
+                    <path d="m13 21 4-9 4 9M14.5 18h5" />
+                  </>
+                ) : (
+                  <path d="M6.5 3.5h11v17L12 16l-5.5 4.5Z" />
+                )}
+              </svg>
+            </span>
+            <span>
+              <strong>{feature.title}</strong>
+              <small>{feature.copy}</small>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p class="dict-note">{t('dict.note')}</p>
+    </div>
+
+    <div class="dict-demo" data-dict-demo>
+      <div class="dict-reader">
+        <div class="dict-reader-top">
+          <span>{demo.bookTitle}</span>
+          <span class="dict-hint">{t('dict.hint')}</span>
+        </div>
+        <article class="dict-page" lang={demo.bookLang}>
+          <p class="dict-chapter">{demo.chapter}</p>
+          <p class="dict-text">
+            {demo.segments.map((segment) =>
+              typeof segment === 'string' ? (
+                segment
+              ) : (
+                <button
+                  type="button"
+                  class="dict-word"
+                  data-word={segment.word}
+                  aria-pressed={segment.word === first.id ? 'true' : 'false'}
+                >
+                  {byId.get(segment.word)?.text}
+                </button>
+              ),
+            )}
+          </p>
+          <button type="button" class="dict-translate" data-translate-toggle aria-expanded="false">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 5h9M8.5 3v2M6 5c.5 3 2.5 5.5 5 7M11 5c-.6 3.4-3 6.4-6 8" />
+              <path d="m13 21 4-9 4 9M14.5 18h5" />
+            </svg>
+            <span class="label-show">{t('dict.translateParagraph')}</span>
+            <span class="label-hide">{t('dict.hideTranslation')}</span>
+          </button>
+          <p class="dict-paragraph" lang={lang} hidden data-translation>
+            {demo.paragraphTranslation}
+          </p>
+        </article>
+      </div>
+
+      <div class="dict-side">
+        <!-- One lookup card per word; the script shows the active one. It
+             sits beside the page, never over it, so no word is ever covered. -->
+        <div class="dict-cards" aria-live="polite">
+          {demo.words.map((word) => (
+            <div
+              class="dict-card"
+              data-card={word.id}
+              data-tab="definition"
+              hidden={word.id !== first.id}
+            >
+              <div class="dict-card-head">
+                <strong lang={demo.bookLang}>{word.text}</strong>
+                <span>{word.partOfSpeech}</span>
+              </div>
+              <div class="dict-tabs" role="group">
+                <button type="button" data-tab-button="definition" aria-pressed="true">
+                  {t('dict.tabDefinition')}
+                </button>
+                <button type="button" data-tab-button="translation" aria-pressed="false">
+                  {t('dict.tabTranslation')}
+                </button>
+              </div>
+              <p class="dict-def">{word.definition}</p>
+              <p class="dict-tr">{word.translation}</p>
+              <button type="button" class="dict-save" data-save={word.id}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M6.5 3.5h11v17L12 16l-5.5 4.5Z" />
+                </svg>
+                <span class="label-show">{t('dict.save')}</span>
+                <span class="label-hide">{t('dict.saved')}</span>
+              </button>
+            </div>
+          ))}
+        </div>
+        <aside class="dict-saved">
+          <div class="dict-saved-head">
+            <strong>{t('dict.myDictionary')}</strong>
+            <span class="dict-count" data-count>
+              0
+            </span>
+          </div>
+          <p class="dict-empty" data-empty>
+            {t('dict.empty')}
+          </p>
+          <ul class="dict-saved-list">
+            {demo.words.map((word) => (
+              <li data-saved={word.id} hidden>
+                <span class="dict-saved-initial" aria-hidden="true">
+                  {word.text.charAt(0).toUpperCase()}
+                </span>
+                <span>
+                  <strong lang={demo.bookLang}>{word.text}</strong>
+                  <small>{word.translation}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script is:inline>
+  (function () {
+    var demo = document.querySelector('[data-dict-demo]');
+    if (!demo) return;
+    var words = demo.querySelectorAll('.dict-word');
+    var cards = demo.querySelectorAll('.dict-card');
+    var count = demo.querySelector('[data-count]');
+    var empty = demo.querySelector('[data-empty]');
+    var saved = 0;
+
+    function open(id) {
+      words.forEach(function (word) {
+        word.setAttribute('aria-pressed', word.getAttribute('data-word') === id ? 'true' : 'false');
+      });
+      cards.forEach(function (card) {
+        card.hidden = card.getAttribute('data-card') !== id;
+      });
+    }
+    words.forEach(function (word) {
+      word.addEventListener('click', function () {
+        open(word.getAttribute('data-word'));
+      });
+    });
+    cards.forEach(function (card) {
+      card.querySelectorAll('[data-tab-button]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          var tab = button.getAttribute('data-tab-button');
+          card.setAttribute('data-tab', tab);
+          card.querySelectorAll('[data-tab-button]').forEach(function (other) {
+            other.setAttribute('aria-pressed', other === button ? 'true' : 'false');
+          });
+        });
+      });
+      var save = card.querySelector('[data-save]');
+      save.addEventListener('click', function () {
+        if (save.hasAttribute('data-done')) return;
+        save.setAttribute('data-done', '');
+        var item = demo.querySelector('[data-saved="' + save.getAttribute('data-save') + '"]');
+        if (item) item.hidden = false;
+        saved += 1;
+        count.textContent = String(saved);
+        count.setAttribute('data-bump', '');
+        setTimeout(function () {
+          count.removeAttribute('data-bump');
+        }, 400);
+        empty.hidden = true;
+      });
+    });
+    var toggle = demo.querySelector('[data-translate-toggle]');
+    var translation = demo.querySelector('[data-translation]');
+    toggle.addEventListener('click', function () {
+      var show = translation.hidden;
+      translation.hidden = !show;
+      toggle.setAttribute('aria-expanded', show ? 'true' : 'false');
+    });
+  })();
+</script>
+
+<style>
+  .dict {
+    --orange: oklch(72% 0.18 50);
+    --cyan: #4fd1f5;
+    background: #0d0b18;
+    padding: 120px 0;
+    overflow: clip;
+  }
+  .dict-grid {
+    display: grid;
+    grid-template-columns: 0.8fr 1.5fr;
+    gap: 56px;
+    align-items: center;
+  }
+  .dict-eyebrow {
+    color: oklch(76% 0.16 55);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .dict-title {
+    margin-top: 14px;
+    font-size: clamp(2.2rem, 4vw, 3.3rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    background: linear-gradient(
+      100deg,
+      oklch(97% 0.01 80),
+      oklch(84% 0.08 60) 60%,
+      oklch(74% 0.17 48)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .dict-lead {
+    margin-top: 16px;
+    max-width: 40ch;
+    color: var(--color-ink-soft);
+    font-size: 1.08rem;
+    line-height: 1.65;
+  }
+  .dict-features {
+    display: grid;
+    gap: 18px;
+    margin-top: 32px;
+  }
+  .dict-features li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .dict-feature-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid oklch(100% 0 0 / 0.1);
+    border-radius: 12px;
+    background: oklch(72% 0.18 50 / 0.1);
+    color: oklch(80% 0.15 55);
+  }
+  .dict-feature-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .dict-features strong {
+    display: block;
+    font-size: 1rem;
+  }
+  .dict-features small {
+    display: block;
+    margin-top: 2px;
+    color: var(--color-ink-soft);
+    font-size: 0.93rem;
+    line-height: 1.5;
+  }
+  .dict-note {
+    margin-top: 26px;
+    color: var(--color-muted-foreground);
+    font-size: 13px;
+  }
+
+  /* ── demo ── */
+  .dict-demo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 290px;
+    gap: 18px;
+    align-items: start;
+  }
+  .dict-reader {
+    position: relative;
+    border: 1px solid oklch(100% 0 0 / 0.09);
+    border-radius: 26px;
+    background: oklch(18% 0.03 270 / 0.75);
+    box-shadow:
+      inset 0 1px 0 oklch(100% 0 0 / 0.06),
+      0 40px 80px -40px oklch(0% 0 0 / 0.8);
+    padding: 18px;
+  }
+  .dict-reader-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 2px 6px 14px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .dict-hint {
+    color: oklch(80% 0.15 55);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .dict-page {
+    border-radius: 18px;
+    background: #f7f9fc;
+    color: #1b2433;
+    padding: 34px 36px 26px;
+  }
+  .dict-chapter {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-align: center;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+  .dict-text {
+    margin-top: 16px;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.24rem;
+    line-height: 1.75;
+  }
+  .dict-word {
+    padding: 0 2px;
+    border: 0;
+    border-radius: 5px;
+    background: oklch(85% 0.12 85 / 0.35);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    box-shadow: inset 0 -2px 0 oklch(72% 0.16 70);
+    transition:
+      background-color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+  .dict-word:hover {
+    background: oklch(85% 0.12 85 / 0.6);
+  }
+  .dict-word[aria-pressed='true'] {
+    background: #f6d365;
+    box-shadow: 0 0 0 2px #f6d365;
+  }
+  .dict-translate {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    padding: 9px 14px;
+    border: 1px solid #d6dde8;
+    border-radius: 999px;
+    background: #fff;
+    color: #1b2433;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .dict-translate:hover {
+    border-color: #94a3b8;
+  }
+  .dict-translate svg {
+    width: 16px;
+    height: 16px;
+    color: #0e7490;
+  }
+  .label-hide,
+  [aria-expanded='true'] .label-show,
+  [data-done] .label-show {
+    display: none;
+  }
+  [aria-expanded='true'] .label-hide,
+  [data-done] .label-hide {
+    display: inline;
+  }
+  .dict-paragraph {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-left: 3px solid var(--cyan);
+    border-radius: 0 10px 10px 0;
+    background: #eaf7fb;
+    color: #334155;
+    font-size: 0.98rem;
+    line-height: 1.65;
+  }
+
+  .dict-side {
+    display: grid;
+    gap: 14px;
+  }
+  .dict-card {
+    padding: 20px 20px 18px;
+    border: 1px solid oklch(72% 0.18 50 / 0.4);
+    border-radius: 22px;
+    background:
+      radial-gradient(90% 80% at 0% 0%, oklch(72% 0.18 50 / 0.12), transparent 60%),
+      oklch(20% 0.035 265 / 0.9);
+    box-shadow: 0 30px 60px -30px oklch(72% 0.18 50 / 0.4);
+    color: var(--color-ink);
+    animation: card-in 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .dict-card[hidden] {
+    display: none;
+  }
+  .dict-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .dict-card-head strong {
+    font-size: 1.25rem;
+  }
+  .dict-card-head span {
+    color: var(--color-ink-soft);
+    font-size: 12px;
+    text-align: right;
+  }
+  .dict-tabs {
+    display: flex;
+    gap: 4px;
+    margin-top: 12px;
+    padding: 4px;
+    border-radius: 12px;
+    background: oklch(100% 0 0 / 0.05);
+  }
+  .dict-tabs button {
+    flex: 1;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--color-ink-soft);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .dict-tabs button[aria-pressed='true'] {
+    background: oklch(100% 0 0 / 0.1);
+    color: var(--color-ink);
+  }
+  .dict-def,
+  .dict-tr {
+    margin-top: 12px;
+    font-size: 14.5px;
+    line-height: 1.55;
+  }
+  .dict-tr {
+    color: var(--cyan);
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+  [data-tab='definition'] .dict-tr,
+  [data-tab='translation'] .dict-def {
+    display: none;
+  }
+  .dict-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 9px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--orange);
+    color: #1b0d03;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .dict-save[data-done] {
+    background: oklch(72% 0.17 155 / 0.2);
+    color: oklch(82% 0.16 155);
+    cursor: default;
+  }
+  .dict-save svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* Saved words: the app's dictionary list, filling as the visitor saves. */
+  .dict-saved {
+    padding: 18px 16px;
+    border: 1px solid oklch(100% 0 0 / 0.09);
+    border-radius: 22px;
+    background: oklch(100% 0 0 / 0.03);
+  }
+  .dict-saved-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+  }
+  .dict-count {
+    display: grid;
+    place-items: center;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: oklch(72% 0.18 50 / 0.18);
+    color: oklch(82% 0.14 58);
+    font-size: 12.5px;
+    font-weight: 700;
+    transition: scale 0.2s ease;
+  }
+  .dict-count[data-bump] {
+    scale: 1.25;
+  }
+  .dict-empty {
+    margin-top: 12px;
+    color: var(--color-muted-foreground);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .dict-saved-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .dict-saved-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 12px;
+    background: oklch(100% 0 0 / 0.05);
+    animation: saved-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .dict-saved-list li[hidden] {
+    display: none;
+  }
+  .dict-saved-initial {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #4fd1f5, #2b7bd6);
+    color: #04202b;
+    font-weight: 800;
+  }
+  .dict-saved-list strong {
+    display: block;
+    font-size: 14px;
+  }
+  .dict-saved-list small {
+    display: block;
+    color: var(--color-ink-soft);
+    font-size: 12px;
+  }
+
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+  }
+  @keyframes saved-in {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+  }
+
+  @media (max-width: 1100px) {
+    .dict-grid {
+      grid-template-columns: 1fr;
+      gap: 44px;
+    }
+  }
+  @media (max-width: 720px) {
+    .dict {
+      padding: 80px 0;
+    }
+    .dict-demo {
+      grid-template-columns: 1fr;
+    }
+    .dict-page {
+      padding: 24px 20px 20px;
+    }
+    .dict-text {
+      font-size: 1.08rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dict-card,
+    .dict-saved-list li {
+      animation: none;
+    }
+  }
+</style>

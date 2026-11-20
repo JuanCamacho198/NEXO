@@ -241,68 +241,100 @@
 
 @layer components {
   /* ═══════════════ header ═══════════════ */
-  /* The header is a glass surface at rest and a suspended pill once scrolled.
-     `.site-header` is `position: sticky`, so it stays in normal flow and its
-     height is part of the layout below it. The border is therefore always 1px:
-     transparent on the sides and top, coloured only on the bottom edge. If the
-     pill state added a border the rest state did not have, the page would shift
-     by 1px the moment the user starts scrolling. */
+  /* One state, no scroll behaviour: the bar is the glass surface over the page
+     content and the bare hero card at the top of the home page. It never
+     changes shape, never detaches and never shrinks to a floating pill — the
+     scroll position does not alter it at all. `.site-header` is `position:
+     sticky` everywhere except the home page, where it is `fixed` over the hero,
+     so its border is always 1px: transparent on the sides and top, coloured
+     only on the bottom edge. */
   .site-header {
     /* `top` is owned HERE, not by a `top-0` utility. Tailwind emits
        @layer components BEFORE @layer utilities, and a later layer wins over an
-       earlier one REGARDLESS OF SPECIFICITY — so `.site-header[data-scrolled]`
-       at 0,2,0 still loses to `.top-0` at 0,1,0. Verified in a real browser: the
-       scrolled state applied its radius, border, background and shadow but
-       `top` stayed 0px, so the bar never detached from the viewport edge. Do not
-       reintroduce a `top-*` utility on this element. */
+       earlier one REGARDLESS OF SPECIFICITY. Do not reintroduce a `top-*`
+       utility on this element. */
     top: 0;
     background-color: var(--glass-bg);
     border: 1px solid transparent;
     border-bottom-color: var(--color-border);
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     box-shadow: inset 0 1px 0 var(--glass-highlight);
+    /* The bar leaves by sliding its own height out of the viewport, written by
+       the script. Only `translate` and `visibility` animate — moving `top`
+       would re-run layout on every scroll frame. */
     transition:
-      background-color 0.28s ease,
-      backdrop-filter 0.28s ease,
-      border-radius 0.28s ease,
-      border-color 0.28s ease,
-      box-shadow 0.28s ease,
-      top 0.28s ease;
+      translate 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0.32s;
   }
-  /* The suspension reads from the offset, the radius, the gap above the bar and
-     the shadow — never from shrinking. Only top, max-width, border-radius,
-     border-color, background-color, box-shadow and backdrop-filter may change
-     here; margin-inline merely recentres the narrower box. Padding, height and
-     font-size must NOT change, or the pill would resize the header's box and
-     reflow the page under it. (The earlier claim that 0,2,0 outranks the `top-0`
-     utility was wrong: see the note on `.site-header` above.) */
-  .site-header[data-scrolled] {
-    top: 12px;
-    max-width: min(1240px, calc(100% - 24px));
-    margin-inline: auto;
-    border-radius: 18px;
-    border-color: var(--glass-border);
-    background-color: var(--glass-bg-scrolled);
-    box-shadow:
-      inset 0 1px 0 var(--glass-highlight),
-      var(--glass-shadow);
+  .site-header[data-hidden] {
+    translate: 0 -100%;
+    visibility: hidden;
   }
-  /* At 390px the looser inset keeps the burger, the CTA and the logo from
-     squeezing each other once the bar is no longer full-bleed. */
-  @media (max-width: 640px) {
-    .site-header[data-scrolled] {
-      max-width: calc(100% - 16px);
+  @media (prefers-reduced-motion: reduce) {
+    .site-header {
+      transition: none;
     }
   }
   /* No backdrop-filter (older Firefox, forced-colours): swap the translucent
-     glass for the opaque surface tokens so the bar stays readable. */
+     glass for the opaque surface token so the bar stays readable. */
   @supports not (backdrop-filter: blur(1px)) {
     .site-header {
       background-color: var(--color-background);
     }
-    .site-header[data-scrolled] {
-      background-color: var(--color-surface);
-    }
+  }
+
+  /* Over the hero the bar is part of the card: no glass, no rule. */
+  .site-header[data-hero] {
+    background-color: transparent;
+    border-bottom-color: transparent;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  /* Nav links sit in their own glass pill. */
+  .nav-pill {
+    display: flex;
+    gap: 2px;
+    padding: 5px;
+    border: 1px solid var(--glass-border);
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--color-card) 45%, transparent);
+    backdrop-filter: blur(12px) saturate(1.4);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+    transition:
+      background-color 0.28s ease,
+      border-color 0.28s ease,
+      box-shadow 0.28s ease;
+  }
+  .nav-pill-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    color: var(--color-ink-soft);
+    font-size: 14.5px;
+    font-weight: 500;
+    line-height: 1;
+    transition:
+      color 0.18s ease,
+      background-color 0.18s ease;
+  }
+  .nav-pill-link:hover {
+    color: var(--color-ink);
+  }
+  .nav-pill-link[aria-current] {
+    color: var(--color-ink);
+    background: color-mix(in oklch, var(--color-ink) 9%, transparent);
+  }
+  /* The active dot is the hero ring's orange, tying the nav to the scene. */
+  .nav-pill-link[aria-current]::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: oklch(70% 0.19 48);
+    box-shadow: 0 0 10px oklch(70% 0.19 48 / 0.8);
   }
 
   .logo {
@@ -354,24 +386,27 @@
     opacity: 0;
     transform: rotate(-90deg) scale(0.4);
   }
-  [data-theme='dark'] .theme-toggle-sun {
+  html[data-theme='dark'] .theme-toggle-sun {
     opacity: 0;
     transform: rotate(90deg) scale(0.4);
   }
-  [data-theme='dark'] .theme-toggle-moon {
+  html[data-theme='dark'] .theme-toggle-moon {
     opacity: 1;
     transform: rotate(0deg) scale(1);
   }
+  /* The toggle states key off <html>, not the nearest [data-theme]: the home
+     header forces data-theme="dark" on itself over the hero, and the toggle
+     must keep reporting the page's real theme. */
   /* Exactly one label stays in the accessibility tree: the inactive one is
      display:none, the active one keeps the visually-hidden clip. The button's
      accessible name therefore always describes what the toggle will do next. */
   .theme-label-dark {
     display: none;
   }
-  [data-theme='dark'] .theme-label-light {
+  html[data-theme='dark'] .theme-label-light {
     display: none;
   }
-  [data-theme='dark'] .theme-label-dark {
+  html[data-theme='dark'] .theme-label-dark {
     display: block;
   }
   .vh {
@@ -462,83 +497,29 @@
     right: 0;
   }
 
-  /* ═══════════════ experience ═══════════════ */
-  .reader-card {
-    padding: 48px;
-    border: 1px solid var(--color-border);
-    border-radius: 20px;
-    background: var(--color-card);
-    box-shadow: var(--shadow-soft);
-  }
-  .reader-card-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    font-size: 12px;
-    color: var(--color-muted-foreground);
-  }
-  .reader-progress {
-    overflow: hidden;
-    height: 3px;
-    margin: 14px 0 22px;
-    border-radius: 999px;
-    background: var(--color-muted);
-  }
-  .reader-progress > * {
-    display: block;
-    width: 68%;
-    height: 100%;
-    border-radius: 999px;
-    background: var(--color-sync);
-  }
-  .reader-card h3 {
-    margin-bottom: 12px;
-    font-size: 1.5rem;
-    font-weight: 600;
-  }
-  .reader-card p {
-    font-size: 0.95rem;
-    line-height: 1.75;
-    color: var(--color-ink-soft);
-  }
-  .reader-card p + p {
-    margin-top: 12px;
-  }
-  .reader-card-footer {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 28px;
-    padding-top: 20px;
-    border-top: 1px solid var(--color-border);
-  }
-  .dot-row {
-    display: flex;
-    gap: 6px;
-  }
-  .dot-row > * {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--color-dot-5);
-  }
-  .dot-row > :nth-child(1) {
-    background: var(--color-dot-2);
-  }
-  .dot-row > :nth-child(2) {
-    background: #8b6df0;
-  }
-  .dot-row > :nth-child(3) {
-    background: var(--color-dot-4);
-  }
-  .dot-row > :nth-child(4) {
-    background: var(--color-dot-1);
-  }
-  .reader-saved {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--color-ink-soft);
+  /* ═══════════════ night sky ═══════════════ */
+  /* The far layer of the dark home sections: two soft glows and a scatter of
+     stars. Absolutely positioned; the section supplies the base colour. */
+  .night-sky {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(40% 50% at 18% 70%, oklch(62% 0.16 45 / 0.14), transparent 70%),
+      radial-gradient(36% 44% at 82% 30%, oklch(55% 0.14 285 / 0.16), transparent 70%),
+      radial-gradient(1.2px 1.2px at 12% 18%, oklch(100% 0 0 / 0.7), transparent),
+      radial-gradient(1px 1px at 37% 62%, oklch(100% 0 0 / 0.5), transparent),
+      radial-gradient(1.4px 1.4px at 58% 12%, oklch(100% 0 0 / 0.65), transparent),
+      radial-gradient(1px 1px at 74% 78%, oklch(100% 0 0 / 0.45), transparent),
+      radial-gradient(1.2px 1.2px at 91% 44%, oklch(100% 0 0 / 0.6), transparent);
+    background-size:
+      100% 100%,
+      100% 100%,
+      340px 260px,
+      300px 280px,
+      420px 300px,
+      260px 240px,
+      380px 320px;
   }
 
   /* ═══════════════ motion ═══════════════ */
@@ -552,6 +533,94 @@
     animation-delay: 0.16s;
   }
 
+  /* ═══════════════ hero intro ═══════════════ */
+  /* One timeline, ~1.6s, read top to bottom:
+       0.00s  sky zooms out 1.12 → 1 and fades in       (ends 1.60s)
+       0.10s  NEXO fades in centred, 0.92 → 1, unblurs  (ends 1.20s)
+              …then shrinks and rises to rest at 0.55
+       0.70s  laptop, 0.80s phone, 0.90s tablet fade up (ends 1.55s)
+       1.05s  nav, tagline and feature bar              (ends 1.60s)
+     Every keyframe ends on the element's resting style, so `fill: both` and
+     the reduced-motion `animation: none` land on the same final frame. */
+  .hero-intro {
+    --intro-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    /* One lap of the sync light; the device pings are placed on this clock. */
+    --sync-lap: 7s;
+    --sync-start: 2.2s;
+  }
+  /* Pointer parallax offsets, -1 to 1, written by the script in Hero.astro.
+     Zero means every layer sits at its resting place. */
+  .hero {
+    --px: 0;
+    --py: 0;
+  }
+  .hero-intro .hero-bg {
+    animation: hero-bg-in 1.6s var(--intro-ease) 0s both;
+  }
+  .hero-intro .hero-word {
+    animation: hero-word-in 1.1s cubic-bezier(0.65, 0, 0.35, 1) 0.1s both;
+  }
+  .hero-intro .hero-device {
+    animation: hero-device-in 0.65s var(--intro-ease) both;
+  }
+  .hero-intro .hero-device-laptop {
+    animation-delay: 0.7s;
+  }
+  .hero-intro .hero-device-phone {
+    animation-delay: 0.8s;
+  }
+  .hero-intro .hero-device-tablet {
+    animation-delay: 0.9s;
+  }
+  .hero-intro .hero-chrome {
+    animation: hero-chrome-up 0.55s var(--intro-ease) 1.05s both;
+  }
+  .hero-intro .site-header[data-hero] {
+    animation: hero-chrome-down 0.55s var(--intro-ease) 1.05s both;
+  }
+  /* After the intro the devices keep a slow idle float, like items hovering in
+     a game. It moves the image inside .hero-device (whose own transform belongs
+     to the entrance), and the contact shadow tightens and fades as the device
+     rises, so it reads as lifting off the rock rather than sliding. Starting right
+     after the intro, staggered by --float-phase, keeps the first frame at rest. */
+  /* Sync ring: the line draws itself in (back half, then front, one loop)
+     as the nav arrives, then the light starts lapping. */
+  .hero-intro .hero-ring .ring-line {
+    stroke-dasharray: 1040 1040;
+    animation: ring-draw 0.55s var(--intro-ease) 1.15s both;
+  }
+  .hero-intro .hero-ring-front .ring-line {
+    animation-delay: 1.6s;
+  }
+  .hero-intro .hero-ring-back .ring-comet {
+    animation: ring-comet-first var(--sync-lap) linear var(--sync-start) infinite both;
+  }
+  .hero-intro .hero-ring-front .ring-comet {
+    animation: ring-comet-second var(--sync-lap) linear var(--sync-start) infinite both;
+  }
+  /* The light leaves the phone at 0% of the lap and reaches the tablet at
+     50%, so the tablet's ping runs half a lap later on the same keyframes. */
+  .hero-intro .hero-device-phone::before,
+  .hero-intro .hero-device-tablet::before {
+    animation: sync-glow var(--sync-lap) ease-out var(--sync-start) infinite both;
+  }
+  .hero-intro .sync-chip {
+    animation: sync-chip var(--sync-lap) var(--intro-ease) var(--sync-start) infinite both;
+  }
+  .hero-intro .hero-device-tablet::before,
+  .hero-intro .hero-device-tablet .sync-chip {
+    animation-delay: calc(var(--sync-start) + var(--sync-lap) / 2);
+  }
+
+  .hero-intro .hero-device > img {
+    animation: hero-float var(--float-dur) ease-in-out calc(1.6s + var(--float-phase)) infinite
+      alternate both;
+  }
+  .hero-intro .hero-device::after {
+    animation: hero-float-shadow var(--float-dur) ease-in-out calc(1.6s + var(--float-phase))
+      infinite alternate both;
+  }
+
   /* Reduced motion lives in the components layer so it out-cascades the
      animation declarations above (a base-layer override would lose to them). */
   @media (prefers-reduced-motion: reduce) {
@@ -560,21 +629,29 @@
     }
     .rise,
     .rise-1,
-    .rise-2 {
+    .rise-2,
+    .hero-intro .hero-bg,
+    .hero-intro .hero-word,
+    .hero-intro .hero-device,
+    .hero-intro .hero-chrome,
+    .hero-intro .site-header[data-hero],
+    .hero-intro .hero-device > img,
+    .hero-intro .hero-device::after,
+    .hero-intro .hero-ring .ring-line,
+    .hero-intro .hero-ring .ring-comet,
+    .hero-intro .hero-device-phone::before,
+    .hero-intro .hero-device-tablet::before,
+    .hero-intro .sync-chip {
       animation: none;
+    }
+    /* No travelling light, so the ring is simply drawn and the chips stay
+       hidden: a static "Synced" badge would claim an event that never shows. */
+    .hero-intro .hero-ring .ring-line {
+      stroke-dasharray: none;
     }
   }
 
   /* ═══════════════ responsive ═══════════════ */
-  @media (min-width: 640px) {
-    .reader-card h3 {
-      font-size: 1.875rem;
-    }
-  }
-
-  @media (max-width: 900px) {
-  }
-
   /* The hamburger shows below lg, matching the reference's lg:hidden toggle.
      The glyph is a data-URI background, which no utility can carry. */
   @media (max-width: 1023px) {
@@ -585,33 +662,29 @@
     }
   }
 
-  @media (max-width: 640px) {
-    .reader-card {
-      padding: 28px;
-    }
-    .reader-card h3 {
-      font-size: 1.25rem;
-    }
-  }
-
   /* ═══════════════ download ═══════════════ */
-  /* The section's rhythm, its card grid and its foot are utilities in
-     DownloadSection.astro, matching every sibling section. What stays here is
-     what utilities cannot express: the repeated card surface (the same idiom as
-     .reader-card), the marker reset on <summary>, and the html[data-os=…] state
-     selectors that reveal and hoist the visitor's own card. */
-
-  /* Same surface idiom as .reader-card so the cards read as native to the page. */
+  /* The section sits on the home page's night background (DownloadSection.astro
+     owns its layout). What stays here is what utilities cannot express: the
+     glass card surface, the marker reset on <summary>, and the html[data-os=…]
+     state selectors that reveal, hoist and light up the visitor's own card. */
   .dl-card {
     display: flex;
     flex-direction: column;
     gap: 18px;
     min-width: 0;
     padding: 26px;
-    border: 1px solid var(--color-border);
-    border-radius: 20px;
-    background: var(--color-card);
-    box-shadow: var(--shadow-soft);
+    border: 1px solid oklch(100% 0 0 / 0.09);
+    border-radius: 22px;
+    background: linear-gradient(180deg, oklch(100% 0 0 / 0.055), oklch(100% 0 0 / 0.02));
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.07);
+    backdrop-filter: blur(10px);
+    transition:
+      translate 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.25s ease;
+  }
+  .dl-card:hover {
+    translate: 0 -3px;
+    border-color: oklch(100% 0 0 / 0.18);
   }
   .dl-card-head {
     display: flex;
@@ -644,8 +717,8 @@
      flip it to inline-flex through html[data-os=…]. */
   .dl-detected {
     display: none;
-    border: 1px solid var(--color-sync);
-    color: var(--color-sync);
+    border: 1px solid oklch(72% 0.18 50 / 0.7);
+    color: oklch(80% 0.15 55);
   }
 
   .dl-meta {
@@ -697,6 +770,7 @@
     translate: 0 -1px;
   }
   .dl-cta svg {
+    flex: none;
     width: 17px;
     height: 17px;
   }
@@ -765,10 +839,21 @@
   html[data-os='linux'] .dl-card[data-platform='linux'],
   html[data-os='android'] .dl-card[data-platform='android'] {
     order: -1;
-    border-color: var(--color-ring);
+    border-color: oklch(72% 0.18 50 / 0.7);
+    background:
+      radial-gradient(90% 70% at 50% 0%, oklch(72% 0.18 50 / 0.16), transparent 70%),
+      linear-gradient(180deg, oklch(100% 0 0 / 0.06), oklch(100% 0 0 / 0.02));
     box-shadow:
-      0 0 0 1px var(--color-ring),
-      var(--shadow-soft);
+      0 0 0 1px oklch(72% 0.18 50 / 0.35),
+      0 30px 60px -30px oklch(72% 0.18 50 / 0.55);
+  }
+  /* The visitor's own card gets the orange CTA; the others stay neutral. */
+  html[data-os='windows'] .dl-card[data-platform='windows'] .dl-cta,
+  html[data-os='macos'] .dl-card[data-platform='macos'] .dl-cta,
+  html[data-os='linux'] .dl-card[data-platform='linux'] .dl-cta,
+  html[data-os='android'] .dl-card[data-platform='android'] .dl-cta {
+    background: oklch(72% 0.18 50);
+    color: #1b0d03;
   }
 
   /* ═══════════════ adaptive hero CTA ═══════════════ */
@@ -802,6 +887,149 @@
   from {
     opacity: 0;
     transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Hero intro. Transforms only touch `transform`, never `translate`/`rotate`,
+   which the elements use for their resting placement, so the two compose. */
+@keyframes hero-bg-in {
+  from {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+  40% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* --word-rise is the distance from the resting spot up top to the stage's
+   centre; --word-big is how much larger the word is while centred. */
+@keyframes hero-word-in {
+  0% {
+    opacity: 0;
+    filter: blur(14px);
+    transform: translateY(var(--word-rise)) scale(calc(var(--word-big) * 0.92));
+  }
+  36%,
+  50% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(var(--word-rise)) scale(var(--word-big));
+  }
+  100% {
+    opacity: 0.55;
+    filter: none;
+    transform: none;
+  }
+}
+@keyframes hero-device-in {
+  from {
+    opacity: 0;
+    transform: translateY(36px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: 1040;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+/* Each ring half is 1040 user units (fixed viewBox geometry, so constant).
+   With dasharray "52 3000", offset 52 parks the dash just before the start
+   and -1040 just past the end: it is visible only while crossing. Real units,
+   not pathLength: Chrome scales the dash array by pathLength but not the
+   offset, which left a stray dash parked mid-arc. */
+@keyframes ring-comet-first {
+  0% {
+    stroke-dashoffset: 52;
+  }
+  50%,
+  100% {
+    stroke-dashoffset: -1040;
+  }
+}
+@keyframes ring-comet-second {
+  0%,
+  50% {
+    stroke-dashoffset: 52;
+  }
+  100% {
+    stroke-dashoffset: -1040;
+  }
+}
+@keyframes sync-glow {
+  0% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  24%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes sync-chip {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  6%,
+  26% {
+    opacity: 1;
+    transform: none;
+  }
+  34%,
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+@keyframes hero-float {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(var(--float-y)) rotate(var(--float-r));
+  }
+}
+@keyframes hero-float-shadow {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0.6;
+    transform: scaleX(0.88);
+  }
+}
+@keyframes hero-chrome-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hero-chrome-down {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
   }
   to {
     opacity: 1;

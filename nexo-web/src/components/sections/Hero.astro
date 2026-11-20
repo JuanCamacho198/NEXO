@@ -1,67 +1,557 @@
 ---
-import { Image } from 'astro:assets';
-import DownloadButton from '@/components/ui/DownloadButton.astro';
-import Eyebrow from '@/components/ui/Eyebrow.astro';
-import PlatformIcon from '@/components/ui/PlatformIcon.astro';
-import heroMockup from '@/assets/hero-mockup.png';
+import { Image, Picture } from 'astro:assets';
+import heroSky from '@/assets/hero/sky.png';
+import deviceLaptop from '@/assets/hero/screen-laptop-v2.png';
+import devicePhone from '@/assets/hero/screen-phone-v2.png';
+import deviceTablet from '@/assets/hero/screen-tablet-v2.png';
 import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
-const platforms = [
-  { name: 'android' as const, label: t('hero.platformAndroid') },
-  { name: 'windows' as const, label: t('hero.platformWindows') },
-  { name: 'macos' as const, label: t('hero.platformMacOS') },
-  { name: 'linux' as const, label: t('hero.platformLinux') },
-];
+const highlights = [
+  { title: t('heroBar.syncTitle'), copy: t('heroBar.syncCopy'), icon: 'devices' },
+  { title: t('heroBar.organizeTitle'), copy: t('heroBar.organizeCopy'), icon: 'bookmark' },
+  { title: t('heroBar.readTitle'), copy: t('heroBar.readCopy'), icon: 'bolt' },
+] as const;
 ---
 
 <!-- ══════════════ HERO ══════════════ -->
-<section class="pt-10 pb-24" id="top">
-  <div class="shell grid grid-cols-[0.86fr_1.19fr] items-center gap-10 max-[900px]:grid-cols-1">
-    <div class="min-w-0 rise rise-1">
-      <Eyebrow>{t('hero.eyebrow')}</Eyebrow>
+<!-- Always dark, whatever theme the visitor picked: the sky only reads at night.
+     The intro timeline (the `.hero-intro` delays and keyframes) lives in
+     global.css next to the header's, because the header is part of it. -->
+<section
+  id="top"
+  class="hero relative isolate overflow-hidden bg-[#0d0b18] text-ink"
+  data-theme="dark"
+>
+  <div class="hero-bg absolute inset-0 -z-10" aria-hidden="true">
+    <Picture
+      src={heroSky}
+      alt=""
+      formats={['avif', 'webp']}
+      widths={[768, 1280, heroSky.width]}
+      sizes="100vw"
+      quality={78}
+      loading="eager"
+      fetchpriority="high"
+      class="absolute inset-0 h-full w-full object-cover object-[50%_100%]"
+    />
+  </div>
 
-      <h1>{t('hero.heading')}</h1>
+  <div class="hero-card relative flex flex-col">
+    <div class="hero-stage relative min-h-0 flex-1" id="dispositivos">
+      <h1 class="hero-word">{t('hero.wordmark')}</h1>
 
-      <p class="mt-5 max-w-[46ch] text-[1.05rem] leading-[1.75] text-ink-soft text-pretty">
-        {t('hero.lead')}
-      </p>
+      <!-- Sync ring. One ellipse split at its left and right ends: the upper
+           half passes behind the devices, the lower half in front, so the ring
+           wraps around them. A light travels phone, behind the laptop, to the
+           tablet, then in front back to the phone: reading carried from one
+           device to the next. preserveAspectRatio="none" lets it stretch with
+           the stage (the stroke stretches a little with it). Each half is
+           1040 user units long; the dash values in CSS are built on that. -->
+      <svg
+        class="hero-ring hero-ring-back"
+        viewBox="0 0 1000 600"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <g transform="rotate(-5 500 400)">
+          <path class="ring-line" d="M30 400 A470 150 0 0 1 970 400" />
+          <path class="ring-comet" d="M30 400 A470 150 0 0 1 970 400" />
+        </g>
+      </svg>
 
-      <div class="mt-8 flex flex-wrap items-center gap-3.5 max-[640px]:gap-3">
-        <DownloadButton />
+      <!-- 3D renders (transparent PNG) of the Sketchfab models, each showing a
+           different part of the app, redrawn in tools/device-renders/screens.html
+           with large type: the phone's "Today" (streak, goal, week), the
+           laptop's library continuing La Odisea, the tablet's reader with a
+           word looked up. Decorative: the copy around them says what they show. -->
+      <div class="hero-device hero-device-laptop" aria-hidden="true">
+        <Image
+          src={deviceLaptop}
+          alt=""
+          widths={[640, 960, deviceLaptop.width]}
+          sizes="(max-width: 1023px) 70vw, 46vw"
+          loading="eager"
+          class="block h-auto w-full"
+        />
+      </div>
+      <div class="hero-device hero-device-phone" aria-hidden="true">
+        <Image
+          src={devicePhone}
+          alt=""
+          widths={[320, devicePhone.width]}
+          sizes="(max-width: 1023px) 26vw, 16vw"
+          loading="eager"
+          class="block h-auto w-full"
+        />
+        <span class="sync-chip">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m5 12.5 4.5 4.5L19 7.5" />
+          </svg>
+          {t('heroSync.synced')}
+        </span>
+      </div>
+      <div class="hero-device hero-device-tablet" aria-hidden="true">
+        <Image
+          src={deviceTablet}
+          alt=""
+          widths={[480, 800, deviceTablet.width]}
+          sizes="(max-width: 1023px) 40vw, 27vw"
+          loading="eager"
+          class="block h-auto w-full"
+        />
+        <span class="sync-chip">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m5 12.5 4.5 4.5L19 7.5" />
+          </svg>
+          {t('heroSync.synced')}
+        </span>
       </div>
 
-      <ul
-        class="mt-[30px] flex flex-wrap items-center gap-7 max-[640px]:gap-[18px]"
-        id="dispositivos"
+      <svg
+        class="hero-ring hero-ring-front"
+        viewBox="0 0 1000 600"
+        preserveAspectRatio="none"
+        aria-hidden="true"
       >
-        {platforms.map((platform) => (
-          <li class="inline-flex">
-            <a href="#descargar" class="group inline-flex items-center gap-[9px]">
-              <PlatformIcon name={platform.name} />
-              <span class="text-[13px] font-medium text-ink-soft transition-[color] duration-[180ms] ease-[ease] group-hover:text-ink">
-                {platform.label}
-              </span>
-            </a>
-          </li>
-        ))}
-      </ul>
+        <g transform="rotate(-5 500 400)">
+          <path class="ring-line" d="M970 400 A470 150 0 0 1 30 400" />
+          <path class="ring-comet" d="M970 400 A470 150 0 0 1 30 400" />
+        </g>
+      </svg>
     </div>
 
-    <div class="rise rise-2 min-w-0 max-[900px]:mt-12 min-[901px]:-translate-y-4 min-[901px]:translate-x-[2%]">
-      <Image
-        src={heroMockup}
-        alt={t('hero.mockupAlt')}
-        widths={[480, 720, 1080, 1600]}
-        sizes="(max-width: 900px) 92vw, 680px"
-        format="webp"
-        quality={82}
-        loading="eager"
-        fetchpriority="high"
-        class="h-auto w-full"
-      />
+    <div class="hero-chrome hero-bar grid grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.15fr)] items-center gap-0 max-[1023px]:grid-cols-1 max-[1023px]:gap-5">
+      {highlights.map((item) => (
+        <div class="flex min-w-0 items-center gap-4 border-r border-white/15 px-8 first:pl-0 max-[1023px]:border-r-0 max-[1023px]:px-0">
+          <svg
+            class="h-9 w-9 flex-none text-ink"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            {item.icon === 'devices' ? (
+              <>
+                <rect x="7" y="4.5" width="15" height="11" rx="1.5" />
+                <path d="M12 19.5h5M14.5 15.5v4" />
+                <rect x="2" y="8.5" width="6" height="11" rx="1.3" fill="#0d0b18" />
+              </>
+            ) : item.icon === 'bookmark' ? (
+              <path d="M6.5 3.5h11v17L12 16l-5.5 4.5Z" />
+            ) : (
+              <path d="M13.5 2.5 5 13.5h6l-1 8 8.5-11h-6Z" />
+            )}
+          </svg>
+          <div class="min-w-0">
+            <p class="text-[1.2rem] leading-tight font-semibold text-ink">{item.title}</p>
+            <p class="mt-1 text-[0.95rem] leading-snug text-ink-soft">{item.copy}</p>
+          </div>
+        </div>
+      ))}
+
+      <!-- Placeholder: there is no video yet, so this card is not interactive. -->
+      <div class="ml-8 flex items-center gap-4 rounded-[18px] border border-white/12 bg-white/[0.06] p-2.5 pr-4 backdrop-blur-md max-[1023px]:ml-0">
+        <div
+          class="placeholder-surface aspect-[3/2] w-24 flex-none rounded-xl"
+          aria-hidden="true"
+        ></div>
+        <div class="min-w-0 flex-1">
+          <p class="font-semibold text-ink">{t('heroBar.videoTitle')}</p>
+          <p class="text-[13px] text-ink-soft">{t('heroBar.videoMeta')}</p>
+        </div>
+        <span
+          class="grid h-11 w-11 flex-none place-items-center rounded-full bg-white/85 text-[#0d0b18]"
+          aria-hidden="true"
+        >
+          <svg class="ml-0.5 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 4.5v15l12-7.5Z" />
+          </svg>
+        </span>
+      </div>
     </div>
   </div>
 </section>
+
+<script is:inline>
+  // Pointer parallax: a progressive enhancement, like the header's scroll
+  // script. It only writes --px/--py (-1…1, eased toward the cursor) on the
+  // hero; CSS turns them into a depth-scaled `translate` per layer. Mouse and
+  // trackpad only (touch has no hover to follow), and never under reduced
+  // motion. The rAF loop stops itself once the layers have caught up.
+  (function () {
+    var hero = document.querySelector('.hero');
+    if (!hero) return;
+    var allowed = window.matchMedia(
+      '(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)',
+    );
+    var tx = 0;
+    var ty = 0;
+    var x = 0;
+    var y = 0;
+    var raf = 0;
+    function frame() {
+      x += (tx - x) * 0.08;
+      y += (ty - y) * 0.08;
+      hero.style.setProperty('--px', x.toFixed(4));
+      hero.style.setProperty('--py', y.toFixed(4));
+      raf = Math.abs(tx - x) > 0.001 || Math.abs(ty - y) > 0.001 ? requestAnimationFrame(frame) : 0;
+    }
+    function follow(nx, ny) {
+      tx = nx;
+      ty = ny;
+      if (!raf) raf = requestAnimationFrame(frame);
+    }
+    hero.addEventListener('pointermove', function (event) {
+      if (!allowed.matches || event.pointerType === 'touch') return;
+      var box = hero.getBoundingClientRect();
+      follow(
+        ((event.clientX - box.left) / box.width) * 2 - 1,
+        ((event.clientY - box.top) / box.height) * 2 - 1,
+      );
+    });
+    hero.addEventListener('pointerleave', function () {
+      follow(0, 0);
+    });
+  })();
+</script>
+
+<style>
+  /* Desktop: a framed card floating in the sky. The 100vmax spread shadow dims
+     the sky outside the card without a second copy of the image. */
+  .hero {
+    padding: 12px;
+  }
+  /* The bottom of the sky fades into the steps section's night colour, so
+     the hero flows into it instead of ending on an edge. */
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    z-index: -1;
+    height: 160px;
+    background: linear-gradient(to bottom, transparent, #0d0b18);
+    pointer-events: none;
+  }
+  .hero-card {
+    height: clamp(680px, calc(100svh - 24px), 980px);
+    padding-top: 108px; /* the fixed header overlays this band */
+    border: 1px solid oklch(100% 0 0 / 0.1);
+    border-radius: 28px;
+    background: linear-gradient(
+      to bottom,
+      oklch(12% 0.03 275 / 0.35),
+      transparent 30%,
+      transparent 62%,
+      oklch(10% 0.02 275 / 0.7)
+    );
+    box-shadow:
+      0 0 0 100vmax oklch(12% 0.03 275 / 0.42),
+      0 40px 90px -40px oklch(0% 0 0 / 0.8);
+  }
+
+  /* The stage is a size container so the wordmark and the devices scale with
+     the space they actually get, and the wordmark's intro can be expressed as
+     "from the stage's centre" in cqh. */
+  .hero-stage {
+    container-type: size;
+  }
+  /* Warm backlight from the sunset behind the devices: it lifts them off the
+     sky and ties the screens' edge light to a visible source. */
+  .hero-stage::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 4cqh;
+    width: 90cqw;
+    height: 70cqh;
+    translate: -50% 0;
+    background: radial-gradient(
+      closest-side,
+      oklch(72% 0.17 50 / 0.38),
+      oklch(65% 0.16 40 / 0.14) 55%,
+      transparent
+    );
+    pointer-events: none;
+  }
+
+  .hero-word {
+    --word-size: min(20cqw, 36cqh);
+    --word-top: 3cqh;
+    /* Intro only: how far the centred word sits below its resting spot, and how
+       much larger it is there (see hero-word-in in global.css). */
+    --word-rise: calc(50cqh - var(--word-top) - 0.4 * var(--word-size));
+    --word-big: 1.22;
+    position: absolute;
+    top: var(--word-top);
+    left: 50%;
+    z-index: 0;
+    margin: 0;
+    translate: calc(-50% + var(--px) * -10px) calc(var(--py) * -6px);
+    font-size: var(--word-size);
+    font-weight: 800;
+    line-height: 0.8;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+    color: transparent;
+    background: linear-gradient(
+      100deg,
+      oklch(97% 0.01 80) 0%,
+      oklch(86% 0.02 60) 42%,
+      oklch(80% 0.12 55) 70%,
+      oklch(72% 0.19 45) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    opacity: 0.55;
+    user-select: none;
+  }
+
+  .hero-device {
+    position: absolute;
+    z-index: 1;
+    filter: drop-shadow(0 14px 18px oklch(0% 0 0 / 0.55));
+  }
+  /* Ground shadow under the whole group: the rock darkens where the devices
+     stand, which is what reads as weight. */
+  .hero-stage::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -7cqh;
+    width: 86cqw;
+    height: 18cqh;
+    translate: -50% 0;
+    background: radial-gradient(
+      closest-side,
+      oklch(4% 0.01 270 / 0.8),
+      oklch(4% 0.01 270 / 0.45) 50%,
+      transparent
+    );
+    filter: blur(8px);
+    pointer-events: none;
+  }
+  /* Contact shadow: a tight dark pool where the device meets the rock, plus a
+     wider soft one, so it rests on the ground instead of floating. */
+  .hero-device::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: 4%;
+    right: 4%;
+    bottom: -5%;
+    height: 12%;
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      oklch(0% 0 0 / 0.85),
+      oklch(0% 0 0 / 0.45) 55%,
+      transparent
+    );
+    filter: blur(5px);
+  }
+  .hero-device-phone::after {
+    left: -8%;
+    right: -8%;
+    bottom: -2.5%;
+    height: 5%;
+  }
+  /* Float rhythm per device (see hero-float in global.css): different
+     periods and phases so the three never bob in lockstep. */
+  .hero-device-laptop {
+    --float-y: -7px;
+    --float-r: 0deg;
+    --float-dur: 6.4s;
+    --float-phase: 0s;
+    left: 53%;
+    bottom: -1cqh;
+    width: min(46cqw, 96cqh);
+    translate: calc(-50% + var(--px) * -18px) calc(var(--py) * -10px);
+  }
+  .hero-device-phone {
+    --float-y: -11px;
+    --float-r: -1.2deg;
+    --float-dur: 5.2s;
+    --float-phase: 0.6s;
+    left: 17cqw;
+    bottom: -3cqh;
+    width: min(17cqw, 40cqh);
+    translate: calc(var(--px) * -30px) calc(var(--py) * -16px);
+  }
+  .hero-device-tablet {
+    --float-y: -9px;
+    --float-r: 1deg;
+    --float-dur: 5.8s;
+    --float-phase: 1.2s;
+    right: 10cqw;
+    bottom: 0;
+    width: min(31cqw, 68cqh);
+    translate: calc(var(--px) * -26px) calc(var(--py) * -14px);
+  }
+
+  .placeholder-surface {
+    border: 1px dashed oklch(100% 0 0 / 0.28);
+    background:
+      linear-gradient(135deg, oklch(100% 0 0 / 0.1), oklch(100% 0 0 / 0.02)),
+      oklch(18% 0.03 275 / 0.72);
+    backdrop-filter: blur(6px);
+  }
+
+  /* The sky drifts against the pointer, the farthest layer; the slight
+     overscan keeps its edges out of view while it does. */
+  .hero-bg :global(img) {
+    scale: 1.04;
+    translate: calc(var(--px) * 8px) calc(var(--py) * 5px);
+  }
+
+  /* Sync ring: back half between the wordmark and the devices, front half
+     over them. The comet is a single short dash travelling the path. */
+  .hero-ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    translate: calc(var(--px) * -16px) calc(var(--py) * -9px);
+    filter: drop-shadow(0 0 6px oklch(72% 0.18 50 / 0.9));
+  }
+  .hero-ring-back {
+    z-index: 0;
+  }
+  .hero-ring-front {
+    z-index: 2;
+  }
+  .ring-line,
+  .ring-comet {
+    fill: none;
+    stroke-linecap: round;
+  }
+  .ring-line {
+    stroke: oklch(76% 0.16 55 / 0.85);
+    stroke-width: 1.6;
+  }
+  .ring-comet {
+    stroke: oklch(96% 0.06 80);
+    stroke-width: 3.4;
+    stroke-dasharray: 52 3000;
+    stroke-dashoffset: 52;
+  }
+
+  /* The device the light reaches flashes warm and says it is in sync. */
+  .hero-device-phone::before,
+  .hero-device-tablet::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -14%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, oklch(75% 0.18 55 / 0.55), transparent);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .sync-chip {
+    position: absolute;
+    left: 50%;
+    top: -9%;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px 6px 9px;
+    border: 1px solid oklch(100% 0 0 / 0.16);
+    border-radius: 999px;
+    background: oklch(18% 0.03 275 / 0.72);
+    backdrop-filter: blur(10px);
+    color: var(--color-ink);
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    translate: -50% 0;
+    opacity: 0;
+  }
+  .sync-chip svg {
+    width: 14px;
+    height: 14px;
+    color: oklch(80% 0.16 60);
+  }
+  .hero-device-tablet .sync-chip {
+    top: -4%;
+  }
+  .hero-bar {
+    padding: 22px 36px 28px;
+  }
+
+  /* Phones and small tablets: full-bleed, no card, stacked bar. */
+  @media (max-width: 1023px) {
+    .hero {
+      padding: 0;
+    }
+    .hero-card {
+      height: auto;
+      padding-top: 96px;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .hero-stage {
+      flex: none;
+      height: min(108vw, 680px);
+    }
+    /* Stacked, the bar would push the rock far below the devices; ending the
+       sky just under the stage keeps the ridge beneath them, and the bar sits
+       on the section's night colour instead. */
+    .hero-bg {
+      bottom: auto;
+      height: calc(96px + min(108vw, 680px) + 70px);
+      mask-image: linear-gradient(to bottom, black 78%, transparent);
+    }
+    .hero-word {
+      --word-size: 25cqw;
+      --word-top: 6cqh;
+    }
+    .hero-device-laptop {
+      left: 50%;
+      width: 70cqw;
+      bottom: 12cqh;
+    }
+    .sync-chip {
+      font-size: 11px;
+      padding: 4px 9px 4px 7px;
+    }
+    .hero-device-phone {
+      left: 4cqw;
+      width: 24cqw;
+      bottom: 3cqh;
+    }
+    .hero-device-tablet {
+      right: 3cqw;
+      width: 38cqw;
+      bottom: 4cqh;
+    }
+    .hero-bar {
+      padding: 8px 20px 32px;
+    }
+  }
+</style>

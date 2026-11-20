@@ -1,0 +1,4 @@
+assets/*.glb
+node_modules/
+out/
+covers/

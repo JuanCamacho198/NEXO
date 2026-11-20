@@ -2,14 +2,30 @@
 import Logo from '@/components/ui/Logo.astro';
 import { defaultLang, localizePath, useTranslations, type Lang } from '@/i18n/utils';
 
+interface Props {
+  /** Home page: continue the night background instead of the page theme. */
+  dark?: boolean;
+}
+
+const { dark = false } = Astro.props;
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 
 const footerLink = 'transition-[color] duration-[180ms] ease-[ease] hover:text-ink';
+// Home-anchored, like the header, so the links also work from the legal pages.
+const home = localizePath('/', lang);
 ---
 
 <!-- ══════════════ FOOTER ══════════════ -->
-<footer class="border-t border-t-border bg-background">
+<footer
+  class:list={[
+    'border-t',
+    dark
+      ? 'border-t-[oklch(100%_0_0/0.08)] bg-[#0d0b18] text-ink'
+      : 'border-t-border bg-background',
+  ]}
+  data-theme={dark ? 'dark' : undefined}
+>
   <div class="shell flex items-center gap-[30px] py-8 max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-4 max-[640px]:py-[26px]">
     <Logo />
 
@@ -17,16 +33,10 @@ const footerLink = 'transition-[color] duration-[180ms] ease-[ease] hover:text-i
       class="ml-auto flex gap-6 text-[14px] font-medium text-ink-soft max-[640px]:ml-0 max-[640px]:flex-wrap max-[640px]:gap-4"
       aria-label={t('footer.navAria')}
     >
-      <a class={footerLink} href="#descargar">
+      <a class={footerLink} href={`${home}#descargar`}>
         {t('footer.download')}
       </a>
-      <a class={footerLink} href="#caracteristicas">
-        {t('header.navFeatures')}
-      </a>
-      <a class={footerLink} href="#dispositivos">
-        {t('header.navDevices')}
-      </a>
-      <a class={footerLink} href="#faq">
+      <a class={footerLink} href={`${home}#faq`}>
         {t('faq.title')}
       </a>
       <a class={footerLink} href={localizePath('/privacidad', lang)}>

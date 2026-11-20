@@ -1,0 +1,1149 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>NEXO landing screens</title>
+    <!-- Landing-only app screens: the app's dark UI from the NEXO-DESIGN Figma
+         file, redrawn with type ~1.6x larger so it stays legible at the size the
+         device renders are shown. Each .screen is screenshotted to
+         assets/<id>.png and mapped onto a device by render.html. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:opsz,wght@7..72,400;7..72,500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b1322;
+        --panel: #0f1a2b;
+        --card: #13223a;
+        --line: #1e3150;
+        --ink: #f2f6fb;
+        --soft: #93a7bf;
+        --cyan: #4fd1f5;
+        --cyan-ink: #04202b;
+        --hl: #f6d365;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        background: #333;
+        font-family: Inter, system-ui, sans-serif;
+        color: var(--ink);
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+        padding: 40px;
+      }
+      .screen {
+        position: relative;
+        overflow: hidden;
+        background: var(--bg);
+        flex: none;
+      }
+      .laptop {
+        width: 1440px;
+        height: 900px;
+      }
+      .tablet {
+        width: 1366px;
+        height: 1024px;
+      }
+      .phone {
+        width: 780px;
+        height: 1684px;
+      }
+
+      /* ── laptop: library ── */
+      .app {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        height: 100%;
+      }
+      .side {
+        background: var(--panel);
+        border-right: 2px solid var(--line);
+        padding: 44px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-weight: 800;
+        font-size: 30px;
+        letter-spacing: 0.12em;
+        margin-bottom: 34px;
+      }
+      .brand i {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #ffb15c, #f06a2c);
+      }
+      .nav {
+        font-size: 24px;
+        font-weight: 500;
+        color: var(--soft);
+        padding: 16px 20px;
+        border-radius: 14px;
+      }
+      .nav.on {
+        background: var(--card);
+        color: var(--cyan);
+        font-weight: 600;
+      }
+      .main {
+        padding: 48px 56px;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 40px;
+      }
+      h1 {
+        font-size: 52px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .sub {
+        font-size: 24px;
+        color: var(--soft);
+        margin-top: 6px;
+      }
+      .btn {
+        background: var(--cyan);
+        color: var(--cyan-ink);
+        font-weight: 700;
+        font-size: 24px;
+        padding: 18px 30px;
+        border-radius: 16px;
+      }
+      .shelf {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 30px;
+      }
+      .cover {
+        aspect-ratio: 3 / 4.3;
+        border-radius: 14px;
+        padding: 22px 18px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        font-weight: 800;
+        font-size: 26px;
+        line-height: 1.05;
+        box-shadow: 0 14px 30px #0008;
+      }
+      .cover small {
+        display: block;
+        font-size: 15px;
+        font-weight: 600;
+        opacity: 0.75;
+        margin-bottom: 8px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .meta {
+        margin-top: 16px;
+        font-size: 22px;
+        font-weight: 600;
+      }
+      .meta span {
+        display: block;
+        font-size: 18px;
+        font-weight: 400;
+        color: var(--soft);
+        margin-top: 4px;
+      }
+      .bar {
+        height: 8px;
+        border-radius: 8px;
+        background: var(--line);
+        margin-top: 12px;
+        overflow: hidden;
+      }
+      .bar b {
+        display: block;
+        height: 100%;
+        background: var(--cyan);
+      }
+      .new {
+        outline: 4px solid var(--cyan);
+        outline-offset: 6px;
+      }
+      .c1 {
+        background: linear-gradient(160deg, #7a1f1f, #3b0d12);
+      }
+      .c2 {
+        background: linear-gradient(160deg, #1f4e79, #0e2442);
+      }
+      .c3 {
+        background: linear-gradient(160deg, #5b4a1f, #2b210c);
+      }
+      .c4 {
+        background: linear-gradient(160deg, #23523f, #0d2a1f);
+      }
+      .c5 {
+        background: linear-gradient(160deg, #4b2a63, #1f0f2e);
+      }
+
+      /* ── laptop: book detail modal ── */
+      .dim {
+        position: absolute;
+        inset: 0;
+        background: #050a14c4;
+      }
+      .modal {
+        position: absolute;
+        inset: 60px 80px;
+        background: var(--panel);
+        border: 2px solid var(--line);
+        border-radius: 28px;
+        padding: 40px 48px;
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        grid-template-rows: auto 1fr auto;
+        column-gap: 40px;
+        box-shadow: 0 40px 80px #000a;
+      }
+      .modal-head {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+      }
+      .modal-head h2 {
+        font-size: 40px;
+      }
+      .x {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: var(--card);
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+        color: var(--soft);
+      }
+      .bigcover {
+        aspect-ratio: 3 / 4;
+        border-radius: 18px;
+        background: #0c1626;
+        border: 2px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+      }
+      .bigcover .sun {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: #9b2226;
+        margin-bottom: 18px;
+      }
+      .bigcover small {
+        font-size: 20px;
+        letter-spacing: 0.14em;
+        color: var(--soft);
+      }
+      .bigcover strong {
+        font-size: 40px;
+        font-weight: 800;
+      }
+      .read {
+        margin-top: 20px;
+        text-align: center;
+      }
+      .cards {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 26px 30px;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px 30px;
+        font-size: 24px;
+      }
+      .kv span {
+        color: var(--soft);
+        margin-right: 14px;
+      }
+      .tag {
+        display: inline-block;
+        background: #12324a;
+        color: var(--cyan);
+        font-weight: 700;
+        font-size: 18px;
+        padding: 4px 12px;
+        border-radius: 8px;
+      }
+      .card h3 {
+        font-size: 18px;
+        letter-spacing: 0.14em;
+        color: var(--cyan);
+        margin-bottom: 18px;
+      }
+      .prog {
+        display: flex;
+        justify-content: space-between;
+        font-size: 24px;
+      }
+      .prog span {
+        color: var(--soft);
+      }
+      .modal-foot {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 28px;
+        font-size: 22px;
+        color: var(--soft);
+      }
+
+      /* ── tablet + phone: reader ── */
+      .reader-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 36px 56px;
+        background: var(--panel);
+        border-bottom: 2px solid var(--line);
+        font-size: 26px;
+        color: var(--soft);
+      }
+      .reader-top b {
+        color: var(--ink);
+        font-size: 30px;
+      }
+      .page {
+        margin: 56px auto 0;
+        width: 1040px;
+        background: #f7f9fc;
+        color: #1b2433;
+        border-radius: 22px;
+        padding: 64px 80px;
+        font-family: Literata, Georgia, serif;
+        font-size: 34px;
+        line-height: 1.55;
+        box-shadow: 0 30px 60px #0008;
+      }
+      .page .canto {
+        font-family: Inter, sans-serif;
+        font-size: 20px;
+        letter-spacing: 0.24em;
+        text-align: center;
+        color: #64748b;
+        margin-bottom: 14px;
+      }
+      .page h2 {
+        font-family: Inter, sans-serif;
+        font-size: 42px;
+        text-align: center;
+        margin-bottom: 34px;
+      }
+      mark {
+        background: var(--hl);
+        color: inherit;
+        border-radius: 6px;
+        padding: 0 4px;
+      }
+      .pop {
+        position: absolute;
+        right: 120px;
+        bottom: 110px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: var(--panel);
+        border: 2px solid var(--line);
+        border-radius: 18px;
+        padding: 18px 26px;
+        font-size: 24px;
+        box-shadow: 0 20px 40px #0009;
+      }
+      .dots {
+        display: flex;
+        gap: 10px;
+      }
+      .dots i {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: block;
+      }
+      .phone .head {
+        padding: 120px 56px 0;
+      }
+      .phone .head h1 {
+        font-size: 64px;
+      }
+      .phone .head .sub {
+        font-size: 30px;
+      }
+      .resume {
+        margin: 48px 40px 0;
+        background: var(--card);
+        border-radius: 32px;
+        padding: 40px;
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 34px;
+        align-items: center;
+      }
+      .resume .mini {
+        aspect-ratio: 3 / 4.3;
+        border-radius: 16px;
+        background: linear-gradient(160deg, #7a1f1f, #3b0d12);
+        display: flex;
+        align-items: flex-end;
+        padding: 16px;
+        font-weight: 800;
+        font-size: 26px;
+      }
+      .resume h2 {
+        font-size: 46px;
+      }
+      .resume p {
+        font-size: 28px;
+        color: var(--soft);
+        margin: 8px 0 22px;
+      }
+      .resume .btn {
+        display: inline-block;
+        font-size: 28px;
+        margin-top: 26px;
+      }
+      .phone .stats {
+        margin: 40px 40px 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .stat {
+        background: var(--card);
+        border-radius: 28px;
+        padding: 34px;
+        font-size: 26px;
+        color: var(--soft);
+      }
+      .stat b {
+        display: block;
+        font-size: 58px;
+        color: var(--ink);
+        margin-top: 8px;
+      }
+      .phone .reader-top {
+        padding: 110px 44px 30px;
+        font-size: 28px;
+      }
+      .phone .page {
+        width: auto;
+        margin: 40px 34px 0;
+        padding: 52px 46px;
+        font-size: 40px;
+        border-radius: 28px;
+      }
+      .phone .page h2 {
+        font-size: 46px;
+      }
+      .synced {
+        position: absolute;
+        left: 50%;
+        top: 210px;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        background: #12324a;
+        color: var(--cyan);
+        font-weight: 700;
+        font-size: 28px;
+        padding: 16px 30px;
+        border-radius: 999px;
+        border: 2px solid #1f5677;
+      }
+      .foot {
+        position: absolute;
+        left: 44px;
+        right: 44px;
+        bottom: 70px;
+        font-size: 26px;
+        color: var(--soft);
+      }
+      .foot .bar {
+        height: 10px;
+        margin-bottom: 16px;
+      }
+
+      /* ══ hero screens (h-*) ══ */
+      .h-app {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        height: 100%;
+      }
+      .h-side {
+        background: var(--panel);
+        border-right: 2px solid var(--line);
+        padding: 40px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .h-main {
+        padding: 44px 52px;
+        display: flex;
+        flex-direction: column;
+        gap: 34px;
+      }
+      .h-continue {
+        display: grid;
+        grid-template-columns: 230px 1fr;
+        gap: 40px;
+        align-items: center;
+        padding: 34px;
+        border-radius: 28px;
+        background: radial-gradient(120% 120% at 0% 0%, #1c3a5a, transparent 60%), var(--card);
+        border: 2px solid var(--line);
+      }
+      .h-continue img {
+        width: 230px;
+        aspect-ratio: 2 / 3;
+        object-fit: cover;
+        border-radius: 10px 16px 16px 10px;
+        box-shadow: 0 24px 50px #000a;
+      }
+      .h-kicker {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        color: var(--cyan);
+      }
+      .h-continue h2 {
+        margin-top: 10px;
+        font-size: 62px;
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+      .h-author {
+        margin-top: 10px;
+        font-size: 28px;
+        color: var(--soft);
+      }
+      .h-prog {
+        margin-top: 30px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 24px;
+        color: var(--soft);
+      }
+      .h-prog b {
+        color: var(--ink);
+      }
+      .h-bar {
+        margin-top: 12px;
+        height: 12px;
+        border-radius: 12px;
+        background: var(--line);
+        overflow: hidden;
+      }
+      .h-bar i {
+        display: block;
+        height: 100%;
+        border-radius: 12px;
+        background: linear-gradient(90deg, #2bb3e0, var(--cyan));
+      }
+      .h-actions {
+        margin-top: 30px;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+      }
+      .h-btn {
+        background: var(--cyan);
+        color: var(--cyan-ink);
+        font-weight: 800;
+        font-size: 26px;
+        padding: 20px 34px;
+        border-radius: 18px;
+      }
+      .h-chip {
+        font-size: 22px;
+        color: var(--soft);
+        padding: 16px 22px;
+        border-radius: 16px;
+        border: 2px solid var(--line);
+      }
+      .h-shelf-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 30px;
+        font-weight: 700;
+      }
+      .h-shelf-title span {
+        font-size: 22px;
+        font-weight: 500;
+        color: var(--cyan);
+      }
+      .h-shelf {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 22px;
+        margin-top: -14px;
+      }
+      .h-shelf img {
+        width: 100%;
+        aspect-ratio: 2 / 3;
+        object-fit: cover;
+        border-radius: 6px 12px 12px 6px;
+        box-shadow: 0 14px 30px #0009;
+      }
+
+      /* tablet: reader + lookup card */
+      .h-reader {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      .h-reader .reader-top {
+        padding: 30px 48px;
+      }
+      .h-page {
+        margin: 40px 56px 0;
+        padding: 52px 64px;
+        border-radius: 26px;
+        background: #f7f9fc;
+        color: #1b2433;
+        font-family: Literata, Georgia, serif;
+        font-size: 40px;
+        line-height: 1.6;
+        box-shadow: 0 30px 60px #0008;
+      }
+      .h-page .canto {
+        font-family: Inter, sans-serif;
+        font-size: 22px;
+        letter-spacing: 0.24em;
+        text-align: center;
+        color: #64748b;
+        margin-bottom: 18px;
+      }
+      .h-sel {
+        background: #f6d365;
+        border-radius: 8px;
+        padding: 0 6px;
+        box-shadow: 0 0 0 3px #f6d365;
+      }
+      .h-lookup {
+        position: absolute;
+        left: 50%;
+        bottom: 54px;
+        transform: translateX(-50%);
+        width: 980px;
+        padding: 34px 38px;
+        border-radius: 28px;
+        background: var(--panel);
+        border: 2px solid #2a4566;
+        box-shadow: 0 -10px 60px #0009;
+      }
+      .h-lookup-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .h-lookup-head b {
+        font-size: 50px;
+      }
+      .h-lookup-head span {
+        font-size: 24px;
+        color: var(--soft);
+      }
+      .h-tabs {
+        display: flex;
+        gap: 8px;
+        margin-top: 22px;
+        padding: 8px;
+        border-radius: 18px;
+        background: #0b1322;
+      }
+      .h-tabs div {
+        flex: 1;
+        text-align: center;
+        padding: 14px;
+        border-radius: 12px;
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--soft);
+      }
+      .h-tabs .on {
+        background: var(--card);
+        color: var(--ink);
+      }
+      .h-def {
+        margin-top: 22px;
+        font-size: 32px;
+        line-height: 1.45;
+      }
+      .h-save {
+        display: inline-block;
+        margin-top: 24px;
+        padding: 16px 28px;
+        border-radius: 999px;
+        background: #ff8a3d;
+        color: #1b0d03;
+        font-weight: 800;
+        font-size: 25px;
+      }
+
+      /* phone: today */
+      .h-today {
+        padding: 120px 44px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+      }
+      .h-today h1 {
+        font-size: 70px;
+      }
+      .h-today .sub {
+        margin-top: -18px;
+        font-size: 30px;
+      }
+      .h-card {
+        border-radius: 34px;
+        padding: 36px;
+        background: var(--card);
+        border: 2px solid var(--line);
+      }
+      .h-streak {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+      .h-streak svg {
+        width: 104px;
+        height: 104px;
+        margin: -10px -8px -10px -14px;
+      }
+      .h-mins b {
+        font-size: 46px;
+      }
+      .h-mins span {
+        font-size: 26px;
+        color: var(--soft);
+        margin-left: 10px;
+      }
+      .h-bars {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 16px;
+        align-items: end;
+        height: 170px;
+        margin-top: 24px;
+      }
+      .h-bars i {
+        display: block;
+        border-radius: 12px 12px 4px 4px;
+        background: linear-gradient(180deg, #7cc8e8, #2b6c9a);
+      }
+      .h-bars i.peak {
+        background: linear-gradient(180deg, #ffb15c, #e0632a);
+      }
+      .h-streak b {
+        font-size: 76px;
+        letter-spacing: -0.02em;
+      }
+      .h-streak span {
+        display: block;
+        font-size: 26px;
+        color: var(--soft);
+      }
+      .h-week {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 12px;
+        margin-top: 26px;
+      }
+      .h-week div {
+        aspect-ratio: 1;
+        border-radius: 16px;
+        border: 2px solid var(--line);
+        display: grid;
+        place-items: center;
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--soft);
+      }
+      .h-week .on {
+        background: #3a2414;
+        border-color: #8a4a1e;
+        color: #ffb15c;
+      }
+      .h-goal {
+        display: flex;
+        align-items: center;
+        gap: 34px;
+      }
+      .h-goal svg {
+        width: 190px;
+        height: 190px;
+        transform: rotate(-90deg);
+        flex: none;
+      }
+      .h-goal b {
+        font-size: 54px;
+        display: block;
+      }
+      .h-goal span {
+        font-size: 28px;
+        color: var(--soft);
+      }
+      .h-next {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 28px;
+        align-items: center;
+      }
+      .h-next img {
+        width: 150px;
+        aspect-ratio: 2 / 3;
+        object-fit: cover;
+        border-radius: 6px 12px 12px 6px;
+      }
+      .h-next b {
+        font-size: 42px;
+        display: block;
+      }
+      .h-next span {
+        font-size: 26px;
+        color: var(--soft);
+      }
+      .h-next .h-btn {
+        display: inline-block;
+        margin-top: 20px;
+        font-size: 26px;
+        padding: 16px 26px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- L1: library before the import finishes -->
+    <div class="screen laptop" id="screen-step1-a">
+      <div class="app">
+        <aside class="side">
+          <div class="brand"><i></i>NEXO</div>
+          <div class="nav">Inicio</div>
+          <div class="nav on">Biblioteca</div>
+          <div class="nav">Resaltados</div>
+          <div class="nav">Estadísticas</div>
+          <div class="nav">Ajustes</div>
+        </aside>
+        <main class="main">
+          <div class="top">
+            <div>
+              <h1>Biblioteca</h1>
+              <div class="sub">5 libros · 2 en progreso</div>
+            </div>
+            <div class="btn">+ Importar libro</div>
+          </div>
+          <div class="shelf">
+            <div>
+              <div class="cover c1 new"><small>Homero</small>La Odisea</div>
+              <div class="meta">La Odisea<span>Nuevo · EPUB</span></div>
+            </div>
+            <div>
+              <div class="cover c2"><small>Cervantes</small>Don Quijote</div>
+              <div class="meta">Don Quijote<span>42 %</span></div>
+              <div class="bar"><b style="width: 42%"></b></div>
+            </div>
+            <div>
+              <div class="cover c3"><small>Austen</small>Orgullo y prejuicio</div>
+              <div class="meta">Orgullo y prejuicio<span>18 %</span></div>
+              <div class="bar"><b style="width: 18%"></b></div>
+            </div>
+            <div>
+              <div class="cover c4"><small>Melville</small>Moby Dick</div>
+              <div class="meta">Moby Dick<span>Sin empezar</span></div>
+            </div>
+            <div>
+              <div class="cover c5"><small>Shelley</small>Frankenstein</div>
+              <div class="meta">Frankenstein<span>Sin empezar</span></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- L2: the imported book's detail sheet (after the Figma "Modal Libro") -->
+    <div class="screen laptop" id="screen-step1-b">
+      <div class="app">
+        <aside class="side">
+          <div class="brand"><i></i>NEXO</div>
+          <div class="nav">Inicio</div>
+          <div class="nav on">Biblioteca</div>
+          <div class="nav">Resaltados</div>
+        </aside>
+        <main class="main"><h1>Biblioteca</h1></main>
+      </div>
+      <div class="dim"></div>
+      <div class="modal">
+        <div class="modal-head">
+          <h2>La Odisea</h2>
+          <div class="x">✕</div>
+        </div>
+        <div>
+          <div class="bigcover">
+            <div class="sun"></div>
+            <small>HOMERO</small>
+            <strong>LA ODISEA</strong>
+          </div>
+          <div class="btn read">Leer ahora</div>
+        </div>
+        <div class="cards">
+          <div class="card kv">
+            <div><span>Autor</span>Homero</div>
+            <div><span>Formato</span><em class="tag">EPUB</em></div>
+            <div><span>Género</span>Clásico</div>
+            <div><span>Idioma</span>Español</div>
+          </div>
+          <div class="card">
+            <h3>LECTURA</h3>
+            <div class="prog"><b>Progreso 0 %</b><span>Canto 1 de 24</span></div>
+            <div class="bar"><b style="width: 2%"></b></div>
+          </div>
+          <div class="card kv">
+            <div><span>Agregado</span>Ahora</div>
+            <div><span>Tamaño</span>1,2 MB</div>
+            <div><span>Cantos</span>24</div>
+            <div><span>Publicado</span>s. VIII a. C.</div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <span>✎ Editar metadatos</span>
+          <span class="btn">Leer →</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- T1 / T2: reading, then the same page with a highlight saved -->
+    <div class="screen tablet" id="screen-step2-a">
+      <div class="reader-top"><span>‹ Biblioteca</span><b>La Odisea</b><span>Aa</span></div>
+      <div class="page">
+        <div class="canto">CANTO I</div>
+        <h2>Asamblea de los dioses</h2>
+        <p>
+          Háblame, Musa, de aquel varón de multiforme ingenio que, después de destruir la sacra
+          ciudad de Troya, anduvo peregrinando larguísimo tiempo, vio las poblaciones y conoció las
+          costumbres de muchos hombres y padeció en su ánimo gran número de trabajos.
+        </p>
+      </div>
+    </div>
+    <div class="screen tablet" id="screen-step2-b">
+      <div class="reader-top"><span>‹ Biblioteca</span><b>La Odisea</b><span>Aa</span></div>
+      <div class="page">
+        <div class="canto">CANTO I</div>
+        <h2>Asamblea de los dioses</h2>
+        <p>
+          Háblame, Musa, de aquel varón de multiforme ingenio que, después de destruir la sacra
+          ciudad de Troya, anduvo peregrinando larguísimo tiempo,
+          <mark>vio las poblaciones y conoció las costumbres de muchos hombres</mark> y padeció en
+          su ánimo gran número de trabajos.
+        </p>
+      </div>
+      <div class="pop">
+        <div class="dots">
+          <i style="background: #f6d365"></i><i style="background: #5eead4"></i
+          ><i style="background: #60a5fa"></i><i style="background: #fb923c"></i>
+        </div>
+        Resaltado guardado
+      </div>
+    </div>
+
+    <!-- P1 / P2: the phone's home, then the book opened at the same line -->
+    <div class="screen phone" id="screen-step3-a">
+      <div class="head">
+        <h1>Hola</h1>
+        <div class="sub">¿Seguimos leyendo?</div>
+      </div>
+      <div class="resume">
+        <div class="mini">La Odisea</div>
+        <div>
+          <h2>La Odisea</h2>
+          <p>Canto I · 12 %</p>
+          <div class="bar"><b style="width: 12%"></b></div>
+        </div>
+      </div>
+      <div style="margin: 0 40px">
+        <div
+          class="btn"
+          style="text-align: center; margin-top: 30px; font-size: 30px; padding: 26px"
+        >
+          Seguir leyendo
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat">Hoy<b>24 min</b></div>
+        <div class="stat">Racha<b>5 días</b></div>
+      </div>
+    </div>
+    <div class="screen phone" id="screen-step3-b">
+      <div class="reader-top"><span>‹</span><b>La Odisea</b><span>Aa</span></div>
+      <div class="synced">✓ Continúas donde lo dejaste</div>
+      <div class="page" style="margin-top: 110px">
+        <div class="canto">CANTO I</div>
+        <h2>Asamblea de los dioses</h2>
+        <p>
+          … anduvo peregrinando larguísimo tiempo,
+          <mark>vio las poblaciones y conoció las costumbres de muchos hombres</mark> y padeció en
+          su ánimo gran número de trabajos.
+        </p>
+      </div>
+      <div class="foot">
+        <div class="bar"><b style="width: 12%"></b></div>
+        Canto I · 12 %
+      </div>
+    </div>
+
+    <!-- ══ HERO: laptop — library with La Odisea in progress ══ -->
+    <div class="screen laptop" id="screen-hero-laptop">
+      <div class="h-app">
+        <aside class="h-side">
+          <div class="brand"><i></i>NEXO</div>
+          <div class="nav on">Inicio</div>
+          <div class="nav">Biblioteca</div>
+          <div class="nav">Tienda</div>
+          <div class="nav">Diccionario</div>
+          <div class="nav">Estadísticas</div>
+        </aside>
+        <main class="h-main">
+          <section class="h-continue">
+            <img src="covers/odisea.jpg" alt="" />
+            <div>
+              <div class="h-kicker">CONTINÚA LEYENDO</div>
+              <h2>La Odisea</h2>
+              <div class="h-author">Homero · Canto VIII</div>
+              <div class="h-prog"><b>26 %</b><span>2 h 21 min leídos</span></div>
+              <div class="h-bar"><i style="width: 26%"></i></div>
+              <div class="h-actions">
+                <div class="h-btn">Seguir leyendo</div>
+                <div class="h-chip">✓ Sincronizado</div>
+              </div>
+            </div>
+          </section>
+          <div class="h-shelf-title">Tu biblioteca <span>Ver todo</span></div>
+          <div class="h-shelf">
+            <img src="covers/orgullo-y-prejuicio.jpg" alt="" />
+            <img src="covers/moby-dick.jpg" alt="" />
+            <img src="covers/frankenstein.jpg" alt="" />
+            <img src="covers/mujercitas.jpg" alt="" />
+            <img src="covers/cumbres-borrascosas.jpg" alt="" />
+            <img src="covers/el-conde-de-montecristo.jpg" alt="" />
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- ══ HERO: tablet — reading with a word looked up ══ -->
+    <div class="screen tablet" id="screen-hero-tablet">
+      <div class="h-reader">
+        <div class="reader-top"><span>‹ Biblioteca</span><b>La Odisea</b><span>Aa</span></div>
+        <div class="h-page">
+          <div class="canto">CANTO I</div>
+          Háblame, Musa, de aquel varón de multiforme <span class="h-sel">ingenio</span> que,
+          después de destruir la sacra ciudad de Troya, anduvo peregrinando larguísimo tiempo.
+        </div>
+      </div>
+      <div class="h-lookup">
+        <div class="h-lookup-head"><b>ingenio</b><span>Sustantivo</span></div>
+        <div class="h-tabs">
+          <div class="on">Definición</div>
+          <div>Traducción</div>
+        </div>
+        <div class="h-def">
+          Capacidad para pensar con rapidez y dar con ideas o soluciones ingeniosas.
+        </div>
+        <div class="h-save">Guardar en mi diccionario</div>
+      </div>
+    </div>
+
+    <!-- ══ HERO: phone — today: streak, goal, next book ══ -->
+    <div class="screen phone" id="screen-hero-phone">
+      <div class="h-today">
+        <h1>Hoy</h1>
+        <div class="sub">Tu hábito va en racha</div>
+        <div class="h-card">
+          <div class="h-streak">
+            <svg viewBox="0 0 24 24">
+              <defs>
+                <linearGradient id="hf" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#ffd27a" />
+                  <stop offset="1" stop-color="#f06a2c" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M12 2.5c.6 3.2 3.7 4.9 4.9 8 1.6 4.2-1.2 9-4.9 9s-6.4-3.2-5.5-6.9c.4-1.7 1.4-2.9 2.4-3.7-.1 1.5.4 2.8 1.5 3.4C10.6 9.4 10.5 5.6 12 2.5Z"
+                fill="url(#hf)"
+              />
+            </svg>
+            <div><b>12 días</b><span>de racha</span></div>
+          </div>
+          <div class="h-week">
+            <div class="on">L</div>
+            <div class="on">M</div>
+            <div class="on">X</div>
+            <div class="on">J</div>
+            <div class="on">V</div>
+            <div>S</div>
+            <div>D</div>
+          </div>
+        </div>
+        <div class="h-card h-goal">
+          <svg viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="48" fill="none" stroke="#1e3150" stroke-width="14" />
+            <circle
+              cx="60"
+              cy="60"
+              r="48"
+              fill="none"
+              stroke="#ff8a3d"
+              stroke-width="14"
+              stroke-linecap="round"
+              pathLength="100"
+              stroke-dasharray="80 100"
+            />
+          </svg>
+          <div><b>12 / 15 min</b><span>Meta de hoy</span></div>
+        </div>
+        <div class="h-card h-next">
+          <img src="covers/odisea.jpg" alt="" />
+          <div>
+            <b>La Odisea</b><span>Canto VIII · 26 %</span>
+            <div class="h-btn">Seguir leyendo</div>
+          </div>
+        </div>
+        <div class="h-card h-mins">
+          <b>186 min</b><span>esta semana</span>
+          <div class="h-bars">
+            <i style="height: 44%"></i><i style="height: 78%"></i><i style="height: 58%"></i
+            ><i class="peak" style="height: 100%"></i><i style="height: 36%"></i
+            ><i style="height: 88%"></i><i style="height: 49%"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
