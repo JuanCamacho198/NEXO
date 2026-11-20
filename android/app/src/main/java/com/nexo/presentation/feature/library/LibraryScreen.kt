@@ -173,7 +173,7 @@ fun LibraryScreenContent(
     Box(modifier = Modifier.fillMaxSize()) {
         PullToRefreshBox(isRefreshing = uiState.isRefreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
-                LibraryToolbar(showSearch = uiState.showSearch, onSearchToggle = onSearchToggle, searchQuery = uiState.searchQuery, onSearchQueryChange = onSearchQueryChange, onFilterToggle = onFilterToggle, statusFilter = uiState.statusFilter, onStatusFilterChanged = onStatusFilterChanged, sortBy = uiState.sortBy, onSortByChanged = onSortByChanged, isGridView = uiState.isGridView, onViewToggle = onViewToggle, avatarImageUrl = authSession?.photoUrl, avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP", onAvatarClick = onOpenAccount, avatarContentDescription = stringResource(R.string.home_avatar_content_description))
+                LibraryToolbar(showSearch = uiState.showSearch, onSearchToggle = onSearchToggle, searchQuery = uiState.searchQuery, onSearchQueryChange = onSearchQueryChange, onFilterToggle = onFilterToggle, statusFilter = uiState.statusFilter, onStatusFilterChanged = onStatusFilterChanged, sortBy = uiState.sortBy, onSortByChanged = onSortByChanged, isGridView = uiState.isGridView, onViewToggle = onViewToggle, avatarImageUrl = authSession?.photoUrl, avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP", onAvatarClick = onOpenAccount, avatarContentDescription = stringResource(R.string.home_avatar_content_description), syncError = uiState.syncError, isSyncing = uiState.isSyncing)
                 BookGridSection(
                     books = searchedBooks,
                     readingMinutesByBook = uiState.readingMinutesByBook,
@@ -209,7 +209,6 @@ fun LibraryScreenContent(
         val activeDownload = uiState.downloadState.entries.firstOrNull { (_, state) -> state is DownloadState.Downloading || state is DownloadState.Success }
         val activeDownloadBook = activeDownload?.let { (id, _) -> uiState.downloadableBooks.firstOrNull { it.id == id } }
         if (activeDownload != null) NexoDownloadOverlay(bookTitle = (activeDownload.value as? DownloadState.Success)?.title ?: activeDownloadBook?.title ?: "", coverUrl = activeDownloadBook?.coverUrl, isCompleted = activeDownload.value is DownloadState.Success, visible = true)
-        LibrarySyncStatus(syncError = uiState.syncError, isSyncing = uiState.isSyncing)
         FilterSheetContent(showFilterSheet = uiState.showFilterSheet, filterFormat = uiState.filterFormat, onFormatSelected = onFormatSelected, onDismiss = onFilterToggle)
         if (showDriveConnectDialog) {
             NexoDialog(title = stringResource(R.string.drive_connect_prompt_title), body = stringResource(R.string.drive_connect_prompt_body), confirmText = stringResource(R.string.drive_connect_prompt_accept), dismissText = stringResource(R.string.drive_connect_prompt_decline), icon = NexoIcons.CloudDownload, onConfirm = {

@@ -9,6 +9,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
+import com.nexo.presentation.feature.library.LibrarySyncStatus
 import com.nexo.ui.components.molecules.LibraryHeader
 import com.nexo.ui.components.molecules.SortControlRow
 import com.nexo.ui.components.molecules.StatusChipRow
@@ -31,6 +32,8 @@ fun LibraryToolbar(
     avatarInitials: String = "NP",
     onAvatarClick: (() -> Unit)? = null,
     avatarContentDescription: String? = null,
+    syncError: String? = null,
+    isSyncing: Boolean = false,
 ) {
     Column {
         LibraryHeader(
@@ -51,16 +54,17 @@ fun LibraryToolbar(
             onTabSelected = onStatusFilterChanged,
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         SortControlRow(
             sortBy = sortBy,
             onSortByChanged = onSortByChanged,
             isGridView = isGridView,
             onViewToggle = onViewToggle,
+            trailingStatus = { LibrarySyncStatus(syncError = syncError, isSyncing = isSyncing) },
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
