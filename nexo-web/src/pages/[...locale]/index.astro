@@ -3,6 +3,7 @@ import Layout from '@/layouts/Layout.astro';
 import SiteHeader from '@/components/sections/SiteHeader.astro';
 import HomeSections from '@/components/sections/HomeSections.astro';
 import SiteFooter from '@/components/sections/SiteFooter.astro';
+import { heroSkyPreload } from '@/components/sections/hero-sky';
 import { defaultLang, localeStaticPaths, useTranslations, type Lang } from '@/i18n/utils';
 
 export function getStaticPaths() {
@@ -13,7 +14,12 @@ const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 ---
 
-<Layout lang={lang} title={t('meta.title')} description={t('hero.lead')}>
+<Layout
+  lang={lang}
+  title={t('meta.title')}
+  description={t('hero.lead')}
+  preloadImage={heroSkyPreload}
+>
   <!-- .hero-intro scopes the load timeline in global.css; it wraps the header
        too because the nav is the timeline's last beat. -->
   <div class="hero-intro">
