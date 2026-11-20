@@ -828,6 +828,14 @@
   /* OS detection, applied before first paint by the blocking head script in
      Layout.astro. `other` deliberately matches nothing: a phone or an
      unrecognised OS keeps the default order with no highlight. */
+  /* The OS probe is a deferred module now, not a blocking head script, so for a
+     few hundred milliseconds `data-os` is unset. Holding the detected badge and
+     the reorder until it lands removes the flash of the wrong card that a
+     deferred probe would otherwise cause. Nothing is hidden for a visitor
+     without JS: the hold only applies while JS is known to be running. */
+  html:not([data-os]) .dl-detected {
+    visibility: hidden;
+  }
   html[data-os='windows'] .dl-card[data-platform='windows'] .dl-detected,
   html[data-os='macos'] .dl-card[data-platform='macos'] .dl-detected,
   html[data-os='linux'] .dl-card[data-platform='linux'] .dl-detected,
