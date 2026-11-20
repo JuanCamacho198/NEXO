@@ -1,11 +1,5 @@
 package com.nexo.ui.components.molecules
 
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -34,7 +28,7 @@ import com.nexo.ui.theme.NexoTheme
  * @param onDelete Remove the book from the library. Item label is
  *   tinted `colorScheme.error` to signal destructive intent.
  *
- * **Visual**: standard Material 3 `DropdownMenu`. Items in order:
+ * **Visual**: the shared [NexoDropdownMenu]. Items in order:
  * Edit metadata, Mark completed, Mark plan to read, Share,
  * `HorizontalDivider`, Remove. Each item shows a leading icon
  * (Pencil, Check, Star, Share) tinted `onSurfaceVariant`; the "Remove"
@@ -56,83 +50,49 @@ fun BookContextMenu(
     onShare: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    DropdownMenu(
+    NexoDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
     ) {
-        DropdownMenuItem(
-            leadingIcon = {
-                Icon(
-                    imageVector = NexoIcons.Pencil,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            text = { Text(stringResource(R.string.library_menu_edit_metadata)) },
+        NexoDropdownMenuItem(
+            text = stringResource(R.string.library_menu_edit_metadata),
+            icon = NexoIcons.Pencil,
             onClick = {
                 onDismissRequest()
                 onEdit()
             },
         )
-        DropdownMenuItem(
-            leadingIcon = {
-                Icon(
-                    imageVector = NexoIcons.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            text = { Text(stringResource(R.string.library_menu_mark_completed)) },
+        NexoDropdownMenuItem(
+            text = stringResource(R.string.library_menu_mark_completed),
+            icon = NexoIcons.Check,
             onClick = {
                 onDismissRequest()
                 onMarkCompleted()
             },
         )
         if (showPlanToRead) {
-            DropdownMenuItem(
-                leadingIcon = {
-                    Icon(
-                        imageVector = NexoIcons.Star,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-                text = { Text(stringResource(R.string.library_menu_mark_plan_to_read)) },
+            NexoDropdownMenuItem(
+                text = stringResource(R.string.library_menu_mark_plan_to_read),
+                icon = NexoIcons.Star,
                 onClick = {
                     onDismissRequest()
                     onMarkPlanToRead()
                 },
             )
         }
-        DropdownMenuItem(
-            leadingIcon = {
-                Icon(
-                    imageVector = NexoIcons.Share,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            text = { Text(stringResource(R.string.library_menu_share)) },
+        NexoDropdownMenuItem(
+            text = stringResource(R.string.library_menu_share),
+            icon = NexoIcons.Share,
             onClick = {
                 onDismissRequest()
                 onShare()
             },
         )
-        HorizontalDivider()
-        DropdownMenuItem(
-            leadingIcon = {
-                Icon(
-                    imageVector = NexoIcons.Trash,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            },
-            text = {
-                Text(
-                    stringResource(R.string.library_menu_remove),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            },
+        NexoDropdownMenuDivider()
+        NexoDropdownMenuItem(
+            text = stringResource(R.string.library_menu_remove),
+            icon = NexoIcons.Trash,
+            destructive = true,
             onClick = {
                 onDismissRequest()
                 onDelete()

@@ -72,6 +72,7 @@ fun NexoBottomSheet(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 modifier =
                     Modifier
