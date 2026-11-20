@@ -86,6 +86,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.tooling.preview.Preview
@@ -140,6 +142,22 @@ object NexoIcons {
             fill = SolidColor(Color.Black),
         )
 
+
+    /**
+     * Stroked outline path, for the unselected bottom-nav glyphs. 1.8 units on
+     * the 24 viewport with round caps and joins, so the outlines carry the same
+     * soft corners as the filled originals they pair with.
+     */
+    private fun ImageVector.Builder.strokedPathFromXml(pathData: String): ImageVector.Builder =
+        addPath(
+            pathData = PathParser().parsePathString(pathData).toNodes(),
+            fill = null,
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = NavOutlineStroke,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round,
+        )
+
     // ── Icons ported verbatim from user XML drawables ──
 
     /**
@@ -177,6 +195,43 @@ object NexoIcons {
     val Settings =
         nexoIcon("Settings", viewportWidth = 512f, viewportHeight = 512f) {
             filledPathFromXml("M34.28,384c17.65,30.63 56.78,41.15 87.4,23.5c0.02,-0.01 0.04,-0.02 0.06,-0.04l9.49,-5.48c17.92,15.33 38.52,27.22 60.76,35.07V448c0,35.35 28.65,64 64,64s64,-28.65 64,-64v-10.94c22.24,-7.86 42.84,-19.77 60.76,-35.12l9.54,5.5c30.63,17.67 69.79,7.17 87.47,-23.47c17.67,-30.63 7.17,-69.79 -23.47,-87.47l0,0l-9.47,-5.46c4.26,-23.2 4.26,-46.99 0,-70.19l9.47,-5.46c30.63,-17.67 41.14,-56.83 23.47,-87.47c-17.67,-30.63 -56.83,-41.14 -87.47,-23.47l-9.49,5.48C362.86,94.64 342.25,82.77 320,74.94V64c0,-35.35 -28.65,-64 -64,-64s-64,28.65 -64,64v10.94c-22.24,7.86 -42.84,19.77 -60.76,35.12l-9.54,-5.53C91.07,86.86 51.91,97.37 34.24,128s-7.17,69.79 23.47,87.47l0,0l9.47,5.46c-4.26,23.2 -4.26,46.99 0,70.19l-9.47,5.46C27.16,314.3 16.69,353.38 34.28,384zM256,170.67c47.13,0 85.33,38.21 85.33,85.33S303.13,341.33 256,341.33S170.67,303.13 170.67,256S208.87,170.67 256,170.67z")
+        }
+
+    // ── Bottom-nav outline / filled pairs ──
+    //
+    // The bar shows the outline glyph for idle tabs and the filled original for
+    // the active one, so the active tab differs by shape, not by colour alone.
+    // Home/Library/Settings outlines are drawn on a 24 viewport to match the
+    // filled drawables' silhouettes; Highlights' original is already an outline
+    // (a marker with a cut-out), so its pair is the filled one instead.
+
+    /** Unselected "Home" tab: house outline with the arched door. */
+    val HomeOutline =
+        nexoIcon("HomeOutline") {
+            strokedPathFromXml(
+                "M3.5,10.6 L10.6,4 A2,2 0 0 1 13.4,4 L20.5,10.6 A2,2 0 0 1 21,11.9 V19 A2.5,2.5 0 0 1 18.5,21.5 H15 V16 " +
+                    "A3,3 0 0 0 9,16 V21.5 H5.5 A2.5,2.5 0 0 1 3,19 V11.9 A2,2 0 0 1 3.5,10.6Z",
+            )
+        }
+
+    /** Unselected "Library" tab: two upright spines and a leaning book, banded like [Library]. */
+    val LibraryOutline =
+        nexoIcon("LibraryOutline") {
+            strokedPathFromXml("M2.9,1.6 H4.6 A1.4,1.4 0 0 1 6,3 V21 A1.4,1.4 0 0 1 4.6,22.4 H2.9 A1.4,1.4 0 0 1 1.5,21 V3 A1.4,1.4 0 0 1 2.9,1.6Z M1.5,6.3 H6 M1.5,17.7 H6 M9.7,1.6 H11.4 A1.4,1.4 0 0 1 12.8,3 V21 A1.4,1.4 0 0 1 11.4,22.4 H9.7 A1.4,1.4 0 0 1 8.3,21 V3 A1.4,1.4 0 0 1 9.7,1.6Z M8.3,6.3 H12.8 M8.3,17.7 H12.8 M15.14,2.15 L19.59,1.48 L22.66,21.85 L18.21,22.52Z M15.83,6.7 L20.28,6.03 M17.52,17.97 L21.97,17.3")
+        }
+
+    /** Unselected "Settings" tab: six-tooth gear outline with the hub ring. */
+    val SettingsOutline =
+        nexoIcon("SettingsOutline") {
+            strokedPathFromXml(
+                "M12,2.2 L12.51,2.21 L13.02,2.25 L13.53,2.32 L13.98,2.7 L14.15,3.98 L14.19,5.25 L14.44,5.65 L14.77,5.79 L15.09,5.94 L15.4,6.11 L15.7,6.3 L16,6.5 L16.28,6.72 L16.75,6.73 L17.87,6.13 L19.06,5.64 L19.62,5.83 L19.93,6.24 L20.22,6.66 L20.49,7.1 L20.73,7.55 L20.95,8.01 L21.15,8.49 L21.04,9.06 L20.02,9.85 L18.94,10.52 L18.72,10.94 L18.76,11.29 L18.79,11.64 L18.8,12 L18.79,12.36 L18.76,12.71 L18.72,13.06 L18.94,13.48 L20.02,14.15 L21.04,14.94 L21.15,15.51 L20.95,15.99 L20.73,16.45 L20.49,16.9 L20.22,17.34 L19.93,17.76 L19.62,18.17 L19.06,18.36 L17.87,17.87 L16.75,17.27 L16.28,17.28 L16,17.5 L15.7,17.7 L15.4,17.89 L15.09,18.06 L14.77,18.21 L14.44,18.35 L14.19,18.75 L14.15,20.02 L13.98,21.3 L13.53,21.68 L13.02,21.75 L12.51,21.79 L12,21.8 L11.49,21.79 L10.98,21.75 L10.47,21.68 L10.02,21.3 L9.85,20.02 L9.81,18.75 L9.56,18.35 L9.23,18.21 L8.91,18.06 L8.6,17.89 L8.3,17.7 L8,17.5 L7.72,17.28 L7.25,17.27 L6.13,17.87 L4.94,18.36 L4.38,18.17 L4.07,17.76 L3.78,17.34 L3.51,16.9 L3.27,16.45 L3.05,15.99 L2.85,15.51 L2.96,14.94 L3.98,14.15 L5.06,13.48 L5.28,13.06 L5.24,12.71 L5.21,12.36 L5.2,12 L5.21,11.64 L5.24,11.29 L5.28,10.94 L5.06,10.52 L3.98,9.85 L2.96,9.06 L2.85,8.49 L3.05,8.01 L3.27,7.55 L3.51,7.1 L3.78,6.66 L4.07,6.24 L4.38,5.83 L4.94,5.64 L6.13,6.13 L7.25,6.73 L7.72,6.72 L8,6.5 L8.3,6.3 L8.6,6.11 L8.91,5.94 L9.23,5.79 L9.56,5.65 L9.81,5.25 L9.85,3.98 L10.02,2.7 L10.47,2.32 L10.98,2.25 L11.49,2.21Z M14.8,12 A2.8,2.8 0 1 1 9.2,12 A2.8,2.8 0 1 1 14.8,12Z",
+            )
+        }
+
+    /** Selected "Highlights" tab: [Highlights] with the barrel filled solid. */
+    val HighlightsFilled =
+        nexoIcon("HighlightsFilled") {
+            filledPathFromXml("M8.02,19c1.78,0 3.48,-0.76 4.7,-2.13l7.1,-8.52c1.65,-1.9 1.55,-4.79 -0.23,-6.58l-0.37,-0.37c-1.78,-1.78 -4.67,-1.88 -6.55,-0.25L4.09,8.31c-1.33,1.18 -2.09,2.88 -2.09,4.66v3.9l-1.56,1.56c-0.59,0.59 -0.59,1.54 0,2.12 0.29,0.29 0.68,0.44 1.06,0.44s0.77,-0.15 1.06,-0.44l1.56,-1.56h3.9ZM24,22.5c0,0.83 -0.67,1.5 -1.5,1.5L5.5,24c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5L22.5,21c0.83,0 1.5,0.67 1.5,1.5Z")
         }
 
     /**
@@ -762,3 +817,5 @@ private fun NexoIconsGalleryLightPreview() {
         }
     }
 }
+
+private const val NavOutlineStroke = 1.8f

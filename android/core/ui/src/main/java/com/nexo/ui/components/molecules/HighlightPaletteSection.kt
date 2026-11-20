@@ -1,5 +1,6 @@
 package com.nexo.ui.components.molecules
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,17 +9,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,13 +33,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.domain.model.HighlightColor
 import com.nexo.ui.components.molecules.highlight.rememberColorPickerState
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 /**
  * Settings section that displays the five customizable highlight
@@ -91,83 +95,71 @@ fun HighlightPaletteSection(
     var editorHex by remember { mutableStateOf("") }
 
     Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // ── Subtitle ──────────────────────────────────────────────
-        Text(
-            text = subtitle.orEmpty(),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        // ── Swatch rows ──────────────────────────────────────────
-        colors.forEachIndexed { index, hex ->
-            PaletteSwatchRow(
-                index = index,
-                hex = hex,
-                canDelete = colors.size > 3,
-                onDelete = onDeleteColor,
-                deleteContentDescription = deleteContentDescription.orEmpty(),
-                onClick = {
-                    editingIndex = index
-                    editorHex = hex
-                },
-            )
-        }
-
-        // ── Add color button ────────────────────────────────────
-        if (colors.size < 5) {
-            Surface(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onAddColor),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Icon(
-                        NexoIcons.Add,
-                        contentDescription = addColorLabel.orEmpty(),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = addColorLabel.orEmpty(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-        }
-
-        // ── Reset button ──────────────────────────────────────────
-        Surface(
+        // ── Preview strip: the palette at a glance ──────────────────
+        Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onReset),
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
+                    .height(56.dp)
+                    .clip(RoundedCornerShape(18.dp)),
+        ) {
+            colors.forEach { hex ->
+                Box(modifier = Modifier.weight(1f).fillMaxHeight().background(parseColorHex(hex)))
+            }
+        }
+
+        if (!subtitle.isNullOrBlank()) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = nexoColors.textSecondary,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
+
+        // ── Swatch rows, one card ───────────────────────────────────
+        NexoSettingsSection {
+            colors.forEachIndexed { index, hex ->
+                if (index > 0) NexoSettingsDivider()
+                PaletteSwatchRow(
+                    index = index,
+                    hex = hex,
+                    canDelete = colors.size > 3,
+                    onDelete = onDeleteColor,
+                    deleteContentDescription = deleteContentDescription.orEmpty(),
+                    onClick = {
+                        editingIndex = index
+                        editorHex = hex
+                    },
+                )
+            }
+            // ── Add color, last row of the same card ──────────────────
+            if (colors.size < 5) {
+                NexoSettingsDivider()
+                NexoSettingsNavRow(
+                    label = addColorLabel.orEmpty(),
+                    icon = NexoIcons.Add,
+                    onClick = onAddColor,
+                    trailing = {},
+                )
+            }
+        }
+
+        // ── Reset: outlined, red — it discards the custom palette ───
+        OutlinedButton(
+            onClick = onReset,
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
         ) {
             Text(
                 text = resetLabel.orEmpty(),
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center,
             )
         }
     }
@@ -201,7 +193,7 @@ fun HighlightPaletteSection(
     }
 }
 
-/** Single row: coloured circle + hex label + optional delete, tappable to edit. */
+/** Single row: a large swatch + its hex code + optional delete, tappable to edit. */
 @Composable
 private fun PaletteSwatchRow(
     index: Int,
@@ -212,47 +204,42 @@ private fun PaletteSwatchRow(
     deleteContentDescription: String = "",
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+                .heightIn(min = 56.dp)
+                .clickable(onClick = onClick)
+                .padding(start = 14.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Row(
+        Box(
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(parseColorHex(hex))
-                        .border(2.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape),
-            )
-            Spacer(Modifier.width(16.dp))
-            Text(
-                text = hex.uppercase(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-            )
-            if (canDelete) {
-                IconButton(onClick = { onDelete(index) }) {
-                    Icon(
-                        NexoIcons.Close,
-                        contentDescription = deleteContentDescription.orEmpty(),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
-                Spacer(Modifier.width(48.dp))
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(parseColorHex(hex))
+                    .border(1.dp, nexoColors.borderSubtle, RoundedCornerShape(10.dp)),
+        )
+        Text(
+            text = hex.uppercase(),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            color = nexoColors.textPrimary,
+            modifier = Modifier.weight(1f),
+        )
+        if (canDelete) {
+            IconButton(onClick = { onDelete(index) }) {
+                Icon(
+                    NexoIcons.Close,
+                    contentDescription = deleteContentDescription,
+                    tint = nexoColors.textSecondary,
+                    modifier = Modifier.size(18.dp),
+                )
             }
+        } else {
+            Spacer(Modifier.width(48.dp))
         }
     }
 }

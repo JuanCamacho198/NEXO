@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -47,6 +48,9 @@ private val DetailBarHorizontalPadding = 16.dp
 
 /** Vertical inset on the top-level bar. The `.pen` spec pairs it with [TopLevelBarHorizontalPadding]. */
 private val TopLevelBarVerticalPadding = 16.dp
+
+/** Vertical padding when the bar carries a subtitle and sizes to its content. */
+private val TopLevelBarSubtitleVerticalPadding = 12.dp
 
 /** Diameter of the avatar and of every trailing icon target in the bar. */
 private val BarAvatarSize = NexoDimens.topBarAvatarSize
@@ -156,13 +160,25 @@ fun NexoTopAppBar(
                 .background(colors.header)
                 .then(
                     when (variant) {
+                        // A title alone fits the fixed 64dp bar; title + subtitle needs
+                        // ~44dp of content, more than the 32dp the padding leaves, so
+                        // the bar grows instead of clipping the subtitle's lower half.
                         TopLevelVariant.Home ->
-                            Modifier
-                                .height(TopLevelBarHeight)
-                                .padding(
-                                    horizontal = TopLevelBarHorizontalPadding,
-                                    vertical = TopLevelBarVerticalPadding,
-                                )
+                            if (subtitle == null) {
+                                Modifier
+                                    .height(TopLevelBarHeight)
+                                    .padding(
+                                        horizontal = TopLevelBarHorizontalPadding,
+                                        vertical = TopLevelBarVerticalPadding,
+                                    )
+                            } else {
+                                Modifier
+                                    .heightIn(min = TopLevelBarHeight)
+                                    .padding(
+                                        horizontal = TopLevelBarHorizontalPadding,
+                                        vertical = TopLevelBarSubtitleVerticalPadding,
+                                    )
+                            }
 
                         TopLevelVariant.Detail ->
                             Modifier
