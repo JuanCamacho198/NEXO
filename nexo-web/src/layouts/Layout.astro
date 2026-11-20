@@ -1,5 +1,6 @@
 ---
 import '@/styles/global.css';
+import interWoff2 from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
 import { useTranslations, type Lang } from '@/i18n/utils';
 
 interface Props {
@@ -86,12 +87,11 @@ const t = useTranslations(lang);
         fetchpriority="high"
       />
     )}
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    {/* Inter's latin subset, discovered through global.css otherwise. Preloading
+        it removes one request from the critical chain: the CSS has to parse
+        before the @font-face url is even known. Hashed by Vite so it can be
+        cached for a year. */}
+    <link rel="preload" as="font" type="font/woff2" href={interWoff2} crossorigin />
   </head>
   <body>
     <a class="skip-link" href="#top">

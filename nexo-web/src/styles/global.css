@@ -1,9 +1,15 @@
 /* ═══════════════ tokens ═══════════════ */
 @import 'tailwindcss';
+/* Inter, self-hosted. The Google Fonts copy cost a stylesheet on a third-party
+   origin plus a render-blocking request chain (googleapis -> gstatic) before the
+   page could paint. `wght` is the variable weight axis only — 48 KB for latin —
+   and the other subsets are unicode-range gated, so a Spanish or English visitor
+   never downloads them. */
+@import '@fontsource-variable/inter/wght.css';
 
 @theme {
   /* type */
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-display: var(--font-sans);
 
   /* surfaces */

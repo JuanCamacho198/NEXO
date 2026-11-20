@@ -3,7 +3,13 @@ import Layout from '@/layouts/Layout.astro';
 import SiteHeader from '@/components/sections/SiteHeader.astro';
 import HomeSections from '@/components/sections/HomeSections.astro';
 import SiteFooter from '@/components/sections/SiteFooter.astro';
-import { heroSkyPreload } from '@/components/sections/hero-sky';
+import {
+  heroSky,
+  HERO_SKY_WIDTHS,
+  HERO_SKY_SIZES,
+  HERO_SKY_QUALITY,
+} from '@/components/sections/hero-sky';
+import { getImage } from 'astro:assets';
 import { defaultLang, localeStaticPaths, useTranslations, type Lang } from '@/i18n/utils';
 
 export function getStaticPaths() {
@@ -12,6 +18,26 @@ export function getStaticPaths() {
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
+
+// The hero sky is the LCP image. Its preload has to live in the head, which
+// means this page resolves the AVIF candidates itself and hands the srcset down
+// — Astro cannot hoist a preload for an asset it only meets inside a component.
+const heroSkyPreload = {
+  srcset: (
+    await Promise.all(
+      HERO_SKY_WIDTHS.map(async (width) => {
+        const result = await getImage({
+          src: heroSky,
+          width,
+          format: 'avif',
+          quality: HERO_SKY_QUALITY,
+        });
+        return `${result.src} ${width}w`;
+      }),
+    )
+  ).join(', '),
+  sizes: HERO_SKY_SIZES,
+};
 ---
 
 <Layout
