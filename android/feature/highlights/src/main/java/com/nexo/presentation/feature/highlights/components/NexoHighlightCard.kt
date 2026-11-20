@@ -15,9 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +34,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.feature.highlights.R
+import com.nexo.ui.components.molecules.NexoDropdownMenu
+import com.nexo.ui.components.molecules.NexoDropdownMenuDivider
+import com.nexo.ui.components.molecules.NexoDropdownMenuItem
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
 
@@ -197,13 +197,14 @@ fun NexoHighlightCard(
                             modifier = Modifier.size(20.dp),
                         )
                     }
-                    DropdownMenu(
+                    NexoDropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
                     ) {
                         onCopyText?.let { cb ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.highlights_menu_copy_text)) },
+                            NexoDropdownMenuItem(
+                                text = stringResource(R.string.highlights_menu_copy_text),
+                                icon = NexoIcons.Copy,
                                 onClick = {
                                     showMenu = false
                                     cb()
@@ -211,8 +212,9 @@ fun NexoHighlightCard(
                             )
                         }
                         onEditNote?.let { cb ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.highlights_menu_edit_note)) },
+                            NexoDropdownMenuItem(
+                                text = stringResource(R.string.highlights_menu_edit_note),
+                                icon = NexoIcons.Pencil,
                                 onClick = {
                                     showMenu = false
                                     cb()
@@ -220,8 +222,9 @@ fun NexoHighlightCard(
                             )
                         }
                         onChangeColor?.let { cb ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.highlights_menu_change_color)) },
+                            NexoDropdownMenuItem(
+                                text = stringResource(R.string.highlights_menu_change_color),
+                                icon = NexoIcons.Palette,
                                 onClick = {
                                     showMenu = false
                                     cb()
@@ -229,8 +232,9 @@ fun NexoHighlightCard(
                             )
                         }
                         onViewInBook?.let { cb ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.highlights_menu_view_in_book)) },
+                            NexoDropdownMenuItem(
+                                text = stringResource(R.string.highlights_menu_view_in_book),
+                                icon = NexoIcons.BookOpen,
                                 onClick = {
                                     showMenu = false
                                     cb()
@@ -238,28 +242,26 @@ fun NexoHighlightCard(
                             )
                         }
                         if (onCopyText != null || onEditNote != null || onChangeColor != null || onViewInBook != null) {
-                            HorizontalDivider()
+                            NexoDropdownMenuDivider()
                         }
                         onAddTag?.let { cb ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.highlights_menu_add_tag)) },
+                            NexoDropdownMenuItem(
+                                text = stringResource(R.string.highlights_menu_add_tag),
+                                icon = NexoIcons.Tag,
                                 onClick = {
                                     showMenu = false
                                     cb()
                                 },
                             )
                         }
-                        onDelete?.let { deleteCb ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        stringResource(R.string.highlights_menu_delete),
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                },
+                        onDelete?.let { cb ->
+                            NexoDropdownMenuItem(
+                                text = stringResource(R.string.highlights_menu_delete),
+                                icon = NexoIcons.Trash,
+                                destructive = true,
                                 onClick = {
                                     showMenu = false
-                                    deleteCb()
+                                    cb()
                                 },
                             )
                         }

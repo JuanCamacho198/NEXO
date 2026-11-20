@@ -163,7 +163,9 @@ internal fun HighlightsScreenContent(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 24.dp),
+                // No horizontal padding here: the top bar is full-bleed and every
+                // section below applies HighlightsHorizontalInset itself.
+                contentPadding = PaddingValues(bottom = NexoDimens.spacingMd),
                 verticalArrangement = Arrangement.spacedBy(NexoDimens.spacingMd),
             ) {
                 item {
