@@ -1,6 +1,7 @@
 package com.nexo.presentation.screen.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,20 +10,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nexo.R as AppR
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.addons.InstalledAddonRow
 import com.nexo.feature.settings.R
@@ -53,8 +50,12 @@ import com.nexo.ui.components.atoms.NexoDialog
 import com.nexo.ui.components.atoms.NexoDialogVariant
 import com.nexo.ui.components.atoms.NexoSnackbar
 import com.nexo.ui.components.atoms.NexoTextField
+import com.nexo.ui.components.molecules.NexoSettingsDivider
+import com.nexo.ui.components.molecules.NexoSettingsNavRow
+import com.nexo.ui.components.molecules.NexoSettingsSection
+import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
-import com.nexo.R as AppR
+import com.nexo.ui.theme.nexoColors
 
 /**
  * Stateful host for [AddonManagementScreen].
@@ -147,101 +148,91 @@ fun AddonManagementScreen(
     onOpenCapabilities: (String) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_addons_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = NexoIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.settings_addons_back),
-                        )
-                    }
-                },
-            )
-        },
-        snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState) { data ->
-                NexoSnackbar(
-                    snackbarData = data,
-                    dismissContentDescription = stringResource(com.nexo.R.string.action_dismiss_snackbar),
-                )
-            }
-        },
-    ) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+    Box(modifier = modifier.fillMaxSize()) {
+        NexoSettingsSubPage(
+            title = stringResource(R.string.settings_addons_title),
+            onBack = onBack,
+            backContentDescription = stringResource(R.string.settings_addons_back),
         ) {
-            Text(
-                text = stringResource(R.string.settings_addons_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            NexoTextField(
-                value = uiState.url,
-                onValueChange = onUrlChange,
-                label = stringResource(R.string.settings_addons_url_label),
-                placeholder = stringResource(R.string.settings_addons_url_placeholder),
-                enabled = !uiState.isBusy,
-            )
-
-            NexoButton(
-                text =
-                    stringResource(
-                        if (uiState.isBusy) {
-                            R.string.settings_addons_installing
-                        } else {
-                            R.string.settings_addons_install
-                        },
-                    ),
-                onClick = onInstall,
-                enabled = !uiState.isBusy && uiState.url.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            BuiltInSourcesSection()
-
-            if (uiState.installed.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.settings_addons_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(uiState.installed, key = { it.id }) { row ->
-                        AddonRow(
-                            row = row,
-                            isBusy = uiState.isBusy,
-                            hasConsent = row.id in uiState.consentedIds,
-                            onToggle = onToggle,
-                            onUninstall = onUninstall,
-                            onConsentChange = onConsentChange,
-                            onOpenCapabilities = onOpenCapabilities,
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                // Install from URL: the field and its action in one card.
+                NexoSettingsSection(footer = stringResource(R.string.settings_addons_description)) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        NexoTextField(
+                            value = uiState.url,
+                            onValueChange = onUrlChange,
+                            label = stringResource(R.string.settings_addons_url_label),
+                            placeholder = stringResource(R.string.settings_addons_url_placeholder),
+                            enabled = !uiState.isBusy,
+                        )
+                        NexoButton(
+                            text =
+                                stringResource(
+                                    if (uiState.isBusy) {
+                                        R.string.settings_addons_installing
+                                    } else {
+                                        R.string.settings_addons_install
+                                    },
+                                ),
+                            onClick = onInstall,
+                            enabled = !uiState.isBusy && uiState.url.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
-            }
 
-            AddonTrustNote(
-                onViewPolicy = onNavigateToLegal,
-                strings =
-                    DiscoverStringRes(
-                        capabilitiesTitle = AppR.string.addon_capabilities_title,
-                        consentTrustNote = AppR.string.addon_consent_trust_note,
-                        viewPolicyLabel = AppR.string.legal_disclaimer_view_policy,
-                    ),
+                BuiltInSourcesSection()
+
+                if (uiState.installed.isEmpty()) {
+                    NexoSettingsSection {
+                        NexoSettingsNavRow(
+                            label = stringResource(R.string.settings_addons_empty),
+                            icon = NexoIcons.GridView,
+                            accent = nexoColors.textSecondary,
+                            onClick = null,
+                        )
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        uiState.installed.forEach { row ->
+                            AddonRow(
+                                row = row,
+                                isBusy = uiState.isBusy,
+                                hasConsent = row.id in uiState.consentedIds,
+                                onToggle = onToggle,
+                                onUninstall = onUninstall,
+                                onConsentChange = onConsentChange,
+                                onOpenCapabilities = onOpenCapabilities,
+                            )
+                        }
+                    }
+                }
+
+                AddonTrustNote(
+                    onViewPolicy = onNavigateToLegal,
+                    strings =
+                        DiscoverStringRes(
+                            capabilitiesTitle = AppR.string.addon_capabilities_title,
+                            consentTrustNote = AppR.string.addon_consent_trust_note,
+                            viewPolicyLabel = AppR.string.legal_disclaimer_view_policy,
+                        ),
+                )
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) { data ->
+            NexoSnackbar(
+                snackbarData = data,
+                dismissContentDescription = stringResource(com.nexo.R.string.action_dismiss_snackbar),
             )
         }
     }
@@ -250,39 +241,26 @@ fun AddonManagementScreen(
 /**
  * U4: read-only built-in sources section, rendered above managed addons.
  *
- * Zero state writes; rows are plain Cards with no clickable, toggle, Switch,
- * or onClick on any row.
+ * Zero state writes; rows carry no clickable, toggle, Switch, or onClick.
  */
 @Composable
 fun BuiltInSourcesSection(
     modifier: Modifier = Modifier,
     sources: List<BuiltInSource> = builtInSources,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    NexoSettingsSection(
+        modifier = modifier,
+        title = stringResource(R.string.settings_addons_builtin_title),
     ) {
-        Text(
-            text = stringResource(R.string.settings_addons_builtin_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-        )
-        sources.forEach { source ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                    Text(
-                        text = source.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(source.roleResId),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+        sources.forEachIndexed { index, source ->
+            if (index > 0) NexoSettingsDivider()
+            NexoSettingsNavRow(
+                label = source.name,
+                supporting = stringResource(source.roleResId),
+                icon = NexoIcons.LibraryBooks,
+                accent = nexoColors.accentGreen,
+                onClick = null,
+            )
         }
     }
 }
@@ -315,7 +293,7 @@ private fun AddonRow(
             },
         )
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    NexoSettingsSection {
         Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -324,8 +302,8 @@ private fun AddonRow(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = row.manifest.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(

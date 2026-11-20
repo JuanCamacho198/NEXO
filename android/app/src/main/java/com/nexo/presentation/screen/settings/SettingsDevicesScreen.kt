@@ -1,29 +1,25 @@
 package com.nexo.presentation.screen.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Card
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,8 +27,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.domain.model.Device
@@ -40,62 +40,60 @@ import com.nexo.feature.settings.R
 import com.nexo.presentation.viewmodel.SettingsDevicesUiState
 import com.nexo.ui.components.atoms.NexoDialog
 import com.nexo.ui.components.atoms.NexoDialogVariant
+import com.nexo.ui.components.molecules.NexoSettingsDivider
+import com.nexo.ui.components.molecules.NexoSettingsSection
+import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 import java.time.Duration
 import java.time.Instant
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsDevicesScreen(
     uiState: SettingsDevicesUiState,
     onRemove: (String) -> Unit,
     onBack: () -> Unit,
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_devices_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(NexoIcons.ArrowBack, contentDescription = "Back")
+    NexoSettingsSubPage(
+        title = stringResource(R.string.settings_devices_title),
+        onBack = onBack,
+        backContentDescription = stringResource(com.nexo.R.string.nav_back),
+    ) {
+        when {
+            uiState.isLoading -> {
+                Box(modifier = Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            uiState.errorMessage != null -> {
+                Text(
+                    text = uiState.errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(vertical = 16.dp),
+                )
+            }
+            else -> {
+                val current = uiState.devices.firstOrNull { it.id == uiState.currentDeviceId }
+                val others = uiState.devices.filter { it.id != uiState.currentDeviceId }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                ) {
+                    if (current != null) {
+                        item(key = "current") { CurrentDeviceCard(device = current) }
                     }
-                },
-            )
-        },
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when {
-                uiState.isLoading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                uiState.errorMessage != null -> {
-                    Text(
-                        text = uiState.errorMessage,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        item {
-                            Text(
-                                text = stringResource(R.string.settings_devices_count, uiState.deviceCount),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-
-                        items(uiState.devices, key = { it.id }) { device ->
-                            DeviceItem(
-                                device = device,
-                                isCurrent = device.id == uiState.currentDeviceId,
-                                onRemove = { onRemove(device.id) },
-                            )
+                    if (others.isNotEmpty()) {
+                        item(key = "others") {
+                            NexoSettingsSection(
+                                title = stringResource(R.string.settings_devices_count, uiState.deviceCount),
+                            ) {
+                                others.forEachIndexed { index, device ->
+                                    if (index > 0) NexoSettingsDivider()
+                                    OtherDeviceRow(device = device, onRemove = { onRemove(device.id) })
+                                }
+                            }
                         }
                     }
                 }
@@ -105,80 +103,137 @@ fun SettingsDevicesScreen(
 }
 
 @Composable
-private fun DeviceItem(
+private fun deviceIcon(os: String): ImageVector =
+    when {
+        os.contains("Android") -> NexoIcons.Smartphone
+        os.contains("Windows") -> NexoIcons.Monitor
+        os.contains("macOS") || os.contains("Darwin") -> NexoIcons.Laptop
+        else -> NexoIcons.Devices
+    }
+
+/** The glyph is the only thing that says WHICH platform a row is, so it carries a label. */
+@Composable
+private fun deviceIconDescription(os: String): String =
+    stringResource(
+        when {
+            os.contains("Android") -> com.nexo.R.string.a11y_device_android
+            os.contains("Windows") -> com.nexo.R.string.a11y_device_windows
+            os.contains("macOS") || os.contains("Darwin") -> com.nexo.R.string.a11y_device_apple
+            else -> com.nexo.R.string.a11y_device_other
+        },
+    )
+
+/**
+ * The device in hand, set apart from the list: a tinted card with a large
+ * platform glyph and a green "this device" pill. It cannot be signed out from
+ * here, so it carries no action.
+ */
+@Composable
+private fun CurrentDeviceCard(device: Device) {
+    val colors = nexoColors
+    val shape = RoundedCornerShape(18.dp)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(Brush.linearGradient(listOf(colors.primary.copy(alpha = 0.20f), colors.surface)))
+                .border(1.dp, colors.borderSubtle, shape)
+                .padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(colors.primary.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = deviceIcon(device.os),
+                contentDescription = deviceIconDescription(device.os),
+                tint = colors.primary,
+                modifier = Modifier.size(26.dp),
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = device.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = deviceMeta(device),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textSecondary,
+            )
+            Row(
+                modifier =
+                    Modifier
+                        .padding(top = 4.dp)
+                        .clip(CircleShape)
+                        .background(colors.accentGreen.copy(alpha = 0.16f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(colors.accentGreen))
+                Text(
+                    text = stringResource(R.string.settings_devices_this_device),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.accentGreen,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OtherDeviceRow(
     device: Device,
-    isCurrent: Boolean,
     onRemove: () -> Unit,
 ) {
     var showRemoveDialog by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
+    val colors = nexoColors
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
+            modifier = Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(colors.accentPurple.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector =
-                    when {
-                        device.os.contains("Android") -> NexoIcons.Smartphone
-                        device.os.contains("Windows") -> NexoIcons.Monitor
-                        device.os.contains("macOS") || device.os.contains("Darwin") -> NexoIcons.Laptop
-                        else -> NexoIcons.Devices
-                    },
-                // The glyph is the only thing that says _which_ platform this row
-                // is; the row text carries the name and the date, not the OS.
-                contentDescription =
-                    stringResource(
-                        when {
-                            device.os.contains("Android") -> com.nexo.R.string.a11y_device_android
-                            device.os.contains("Windows") -> com.nexo.R.string.a11y_device_windows
-                            device.os.contains("macOS") || device.os.contains("Darwin") -> com.nexo.R.string.a11y_device_apple
-                            else -> com.nexo.R.string.a11y_device_other
-                        },
-                    ),
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.primary,
+                imageVector = deviceIcon(device.os),
+                contentDescription = deviceIconDescription(device.os),
+                tint = colors.accentPurple,
+                modifier = Modifier.size(18.dp),
             )
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = device.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    if (isCurrent) {
-                        Spacer(Modifier.width(8.dp))
-                        AssistChip(
-                            onClick = {},
-                            label = {
-                                Text(
-                                    stringResource(R.string.settings_devices_this_device),
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            },
-                        )
-                    }
-                }
-                Text(
-                    text = "${device.os} \u00B7 ${formatRelativeTime(device.lastActive)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            if (!isCurrent) {
-                TextButton(onClick = { showRemoveDialog = true }) {
-                    Text(
-                        stringResource(R.string.settings_devices_remove),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = device.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = deviceMeta(device),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textSecondary,
+            )
+        }
+        TextButton(onClick = { showRemoveDialog = true }) {
+            Text(
+                stringResource(R.string.settings_devices_remove),
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 
@@ -197,6 +252,9 @@ private fun DeviceItem(
         )
     }
 }
+
+/** "Android 15 · 9d ago": platform and last activity, shown under the device name. */
+private fun deviceMeta(device: Device): String = listOf(device.os, formatRelativeTime(device.lastActive)).joinToString(" · ")
 
 private fun formatRelativeTime(lastActive: String): String =
     try {
