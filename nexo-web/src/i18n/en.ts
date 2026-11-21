@@ -6,6 +6,7 @@ export const en = {
   'header.logoAria': 'Nexo — home',
   'header.skipLink': 'Skip to content',
   'header.navAria': 'Main',
+  'header.download': 'Download',
   'header.mobileNavAria': 'Mobile navigation',
   'header.openMenuAria': 'Open navigation menu',
   'header.languageAria': 'Change language',
@@ -34,7 +35,8 @@ export const en = {
   'hero.platformLinux': 'Linux',
 
   // Steps (how it works)
-  'steps.heading': 'Read on one. Pick up on another.',
+  'steps.heading': 'Read on one.',
+  'steps.headingAccent': 'Pick up on another.',
   'steps.lead': 'Three steps, and your library follows you everywhere.',
   'steps.listAria': 'Steps to get started with NEXO',
   'steps.s1Short': 'Import',
@@ -57,7 +59,8 @@ export const en = {
   'faq.lead': 'The essentials about NEXO, in short.',
   // Dictionary and habit sections
   'dict.eyebrow': 'Dictionary and translation',
-  'dict.heading': 'Understand every word.',
+  'dict.heading': 'Understand',
+  'dict.headingAccent': 'every word.',
   'dict.lead':
     'Tap a word as you read and NEXO tells you what it means and how it translates, without leaving the book.',
   'dict.f1Title': 'Instant definitions',
@@ -77,7 +80,8 @@ export const en = {
   'dict.myDictionary': 'My dictionary',
   'dict.empty': 'Words you save will show up here.',
   'habit.eyebrow': 'Your reading habit',
-  'habit.heading': 'Read a little every day.',
+  'habit.heading': 'Read a little',
+  'habit.headingAccent': 'every day.',
   'habit.lead': 'Free books to get started, and streaks, goals and stats to keep going.',
   'habit.storeKicker': 'Store',
   'habit.storeTitle': 'Free classics, ready to read',
@@ -87,6 +91,8 @@ export const en = {
   'habit.storeFree': 'Free',
   'habit.streakKicker': 'Streak',
   'habit.streakDays': '12 days',
+  'habit.streakBest': 'Best streak',
+  'habit.streakBestDays': '21 days',
   'habit.streakCopy': 'Read every day and keep the flame alive.',
   'habit.weekDays': 'M,T,W,T,F,S,S',
   'habit.weekAria': 'Days read this week',

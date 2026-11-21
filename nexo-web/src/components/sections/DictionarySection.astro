@@ -25,8 +25,21 @@ const features = [
   <div class="night-sky" aria-hidden="true"></div>
   <div class="shell dict-grid relative">
     <div class="dict-copy">
-      <p class="dict-eyebrow">{t('dict.eyebrow')}</p>
-      <h2 class="dict-title">{t('dict.heading')}</h2>
+      <p class="dict-eyebrow eyebrow-rule is-start">{t('dict.eyebrow')}</p>
+      <h2 class="dict-title title-split">
+        {t('dict.heading')}{' '}
+        <span class="title-accent">
+          {t('dict.headingAccent')}
+          <svg
+            class="title-swoosh"
+            viewBox="0 0 300 24"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <path d="M4 18C70 7 170 3 296 9" />
+          </svg>
+        </span>
+      </h2>
       <p class="dict-lead">{t('dict.lead')}</p>
       <ul class="dict-features">
         {features.map((feature) => (
@@ -66,49 +79,111 @@ const features = [
     </div>
 
     <div class="dict-demo" data-dict-demo>
-      <div class="dict-reader">
-        <div class="dict-reader-top">
-          <span>{demo.bookTitle}</span>
-          <span class="dict-hint">{t('dict.hint')}</span>
-        </div>
-        <article class="dict-page" lang={demo.bookLang}>
-          <p class="dict-chapter">{demo.chapter}</p>
-          <p class="dict-text">
-            {demo.segments.map((segment) =>
-              typeof segment === 'string' ? (
-                segment
-              ) : (
-                <button
-                  type="button"
-                  class="dict-word"
-                  data-word={segment.word}
-                  aria-pressed={segment.word === first.id ? 'true' : 'false'}
-                >
-                  {byId.get(segment.word)?.text}
-                </button>
-              ),
-            )}
-          </p>
-          <button type="button" class="dict-translate" data-translate-toggle aria-expanded="false">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
+      <!-- The reader sits in an iPhone: bezel, Dynamic Island, status bar,
+           side buttons and home indicator are all decorative. -->
+      <div class="dict-phone">
+        <div class="dict-reader">
+          <div class="phone-status" aria-hidden="true">
+            <span class="phone-time">9:41</span>
+            <span class="phone-island"></span>
+            <span class="phone-icons">
+              <svg viewBox="0 0 18 12" fill="currentColor">
+                <rect x="0" y="8" width="3" height="4" rx="1" />
+                <rect x="5" y="5.5" width="3" height="6.5" rx="1" />
+                <rect x="10" y="3" width="3" height="9" rx="1" />
+                <rect x="15" y="0" width="3" height="12" rx="1" />
+              </svg>
+              <svg viewBox="0 0 16 12" fill="currentColor">
+                <path d="M8 2.2c2.4 0 4.6.9 6.3 2.5l1.2-1.3A10.7 10.7 0 0 0 8 .4 10.7 10.7 0 0 0 .5 3.4l1.2 1.3A9 9 0 0 1 8 2.2Zm0 3.6c1.4 0 2.7.5 3.7 1.4l1.2-1.3A7.2 7.2 0 0 0 8 4 7.2 7.2 0 0 0 3.1 5.9l1.2 1.3c1-.9 2.3-1.4 3.7-1.4Zm0 3.5c-.6 0-1.2.2-1.6.6L8 11.6l1.6-1.7c-.4-.4-1-.6-1.6-.6Z" />
+              </svg>
+              <svg viewBox="0 0 27 12" fill="none">
+                <rect
+                  x="0.5"
+                  y="0.5"
+                  width="23"
+                  height="11"
+                  rx="3.5"
+                  stroke="currentColor"
+                  opacity="0.4"
+                />
+                <rect x="2" y="2" width="17" height="8" rx="2" fill="currentColor" />
+                <path
+                  d="M25 4v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2Z"
+                  fill="currentColor"
+                  opacity="0.4"
+                />
+              </svg>
+            </span>
+          </div>
+          <div class="dict-reader-top">
+            <span>{demo.bookTitle}</span>
+            <span class="dict-hint">{t('dict.hint')}</span>
+          </div>
+          <article class="dict-page" lang={demo.bookLang}>
+            <p class="dict-chapter">{demo.chapter}</p>
+            <p class="dict-text">
+              {demo.segments.map((segment) =>
+                typeof segment === 'string' ? (
+                  segment
+                ) : (
+                  <button
+                    type="button"
+                    class="dict-word"
+                    data-word={segment.word}
+                    aria-pressed={segment.word === first.id ? 'true' : 'false'}
+                  >
+                    {byId.get(segment.word)?.text}
+                  </button>
+                ),
+              )}
+            </p>
+            <button
+              type="button"
+              class="dict-translate"
+              data-translate-toggle
+              aria-expanded="false"
             >
-              <path d="M4 5h9M8.5 3v2M6 5c.5 3 2.5 5.5 5 7M11 5c-.6 3.4-3 6.4-6 8" />
-              <path d="m13 21 4-9 4 9M14.5 18h5" />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 5h9M8.5 3v2M6 5c.5 3 2.5 5.5 5 7M11 5c-.6 3.4-3 6.4-6 8" />
+                <path d="m13 21 4-9 4 9M14.5 18h5" />
+              </svg>
+              <span class="label-show">{t('dict.translateParagraph')}</span>
+              <span class="label-hide">{t('dict.hideTranslation')}</span>
+            </button>
+            <p class="dict-paragraph" lang={lang} hidden data-translation>
+              {demo.paragraphTranslation}
+            </p>
+          </article>
+          <div class="phone-progress" aria-hidden="true">
+            <span></span>
+          </div>
+          <!-- The reader's bottom toolbar: type, highlight, bookmark, contents. -->
+          <div class="phone-toolbar" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M3 19 8.5 5h1L15 19M5 14.5h8" />
+              <path d="M17 19v-6.5a2.5 2.5 0 0 1 5 0V19M17 15.5h5" />
             </svg>
-            <span class="label-show">{t('dict.translateParagraph')}</span>
-            <span class="label-hide">{t('dict.hideTranslation')}</span>
-          </button>
-          <p class="dict-paragraph" lang={lang} hidden data-translation>
-            {demo.paragraphTranslation}
-          </p>
-        </article>
+            <svg viewBox="0 0 24 24" class="is-on">
+              <path d="m14.5 4.5 5 5L10 19H5v-5Z" />
+              <path d="M3 21.5h18" />
+            </svg>
+            <svg viewBox="0 0 24 24">
+              <path d="M6.5 3.5h11v17L12 16l-5.5 4.5Z" />
+            </svg>
+            <svg viewBox="0 0 24 24">
+              <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
+            </svg>
+          </div>
+          <span class="phone-home" aria-hidden="true"></span>
+        </div>
       </div>
 
       <div class="dict-side">
@@ -265,17 +340,6 @@ const features = [
   .dict-title {
     margin-top: 14px;
     font-size: clamp(2.2rem, 4vw, 3.3rem);
-    line-height: 1.05;
-    letter-spacing: -0.03em;
-    background: linear-gradient(
-      100deg,
-      oklch(97% 0.01 80),
-      oklch(84% 0.08 60) 60%,
-      oklch(74% 0.17 48)
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
   }
   .dict-lead {
     margin-top: 16px;
@@ -331,26 +395,138 @@ const features = [
     display: grid;
     grid-template-columns: minmax(0, 1fr) 290px;
     gap: 18px;
-    align-items: start;
+    align-items: center;
   }
+  /* iPhone: a titanium frame (the outer ring), a black bezel, the screen
+     inside. Phone proportions come from aspect-ratio, which only sets a
+     minimum, so opening the paragraph translation grows the phone instead of
+     overflowing it. */
+  .dict-phone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-self: center;
+    width: min(100%, 350px);
+    aspect-ratio: 9 / 18;
+    padding: 11px;
+    border-radius: 56px;
+    background: #050507;
+    box-shadow:
+      0 0 0 2px oklch(42% 0.015 270),
+      0 0 0 3.5px oklch(24% 0.01 270),
+      inset 0 0 0 1px oklch(100% 0 0 / 0.06),
+      0 50px 90px -30px oklch(0% 0 0 / 0.85),
+      0 0 80px -20px oklch(70% 0.17 50 / 0.35);
+  }
+  /* Side buttons: action + volume on the left, power on the right. */
+  .dict-phone::before,
+  .dict-phone::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    border-radius: 2px;
+    background: oklch(36% 0.015 270);
+  }
+  .dict-phone::before {
+    left: -5.5px;
+    top: 17%;
+    height: 5%;
+    box-shadow:
+      0 calc(var(--vol-gap, 60px)) 0 oklch(36% 0.015 270),
+      0 calc(var(--vol-gap, 60px) * 2.1) 0 oklch(36% 0.015 270);
+  }
+  .dict-phone::after {
+    right: -5.5px;
+    top: 25%;
+    height: 12%;
+  }
+  /* flex: 1 rather than height: 100%, and overflow: clip rather than hidden
+     (hidden zeroes a flex item's minimum height), so a taller screen (the
+     translation open) stretches the phone instead of being cut off in it. */
   .dict-reader {
     position: relative;
-    border: 1px solid oklch(100% 0 0 / 0.09);
-    border-radius: 26px;
-    background: oklch(18% 0.03 270 / 0.75);
-    box-shadow:
-      inset 0 1px 0 oklch(100% 0 0 / 0.06),
-      0 40px 80px -40px oklch(0% 0 0 / 0.8);
-    padding: 18px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    overflow: clip;
+    border-radius: 46px;
+    background:
+      radial-gradient(120% 50% at 50% 0%, oklch(30% 0.06 50 / 0.35), transparent 60%),
+      oklch(15% 0.03 270);
+    padding: 0 12px 10px;
+  }
+  .phone-status {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 50px;
+    padding: 4px 18px 0 26px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .phone-island {
+    position: absolute;
+    left: 50%;
+    top: 11px;
+    width: 32%;
+    height: 30px;
+    border-radius: 999px;
+    background: #000;
+    translate: -50% 0;
+  }
+  .phone-icons {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .phone-icons svg {
+    height: 11px;
+    width: auto;
   }
   .dict-reader-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    padding: 2px 6px 14px;
+    padding: 6px 6px 12px;
     font-size: 14px;
     font-weight: 600;
+  }
+  .phone-progress {
+    margin: auto 10px 0;
+    padding-top: 16px;
+  }
+  .phone-progress span {
+    display: block;
+    height: 3px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, oklch(74% 0.18 52) 12%, oklch(100% 0 0 / 0.12) 12%);
+  }
+  .phone-toolbar {
+    display: flex;
+    justify-content: space-around;
+    padding: 14px 8px 0;
+  }
+  .phone-toolbar svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: oklch(100% 0 0 / 0.55);
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .phone-toolbar .is-on {
+    stroke: oklch(78% 0.16 58);
+  }
+  .phone-home {
+    display: block;
+    width: 36%;
+    height: 5px;
+    margin: 14px auto 0;
+    border-radius: 999px;
+    background: oklch(100% 0 0 / 0.75);
   }
   .dict-hint {
     color: oklch(80% 0.15 55);
@@ -358,10 +534,10 @@ const features = [
     font-weight: 600;
   }
   .dict-page {
-    border-radius: 18px;
+    border-radius: 22px;
     background: #f7f9fc;
     color: #1b2433;
-    padding: 34px 36px 26px;
+    padding: 26px 22px 22px;
   }
   .dict-chapter {
     font-size: 12px;
@@ -374,7 +550,7 @@ const features = [
   .dict-text {
     margin-top: 16px;
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: 1.24rem;
+    font-size: 1.1rem;
     line-height: 1.75;
   }
   .dict-word {
@@ -634,11 +810,15 @@ const features = [
     .dict-demo {
       grid-template-columns: 1fr;
     }
+    .dict-phone {
+      width: min(100%, 330px);
+      aspect-ratio: 9 / 16.5;
+    }
     .dict-page {
-      padding: 24px 20px 20px;
+      padding: 22px 18px 18px;
     }
     .dict-text {
-      font-size: 1.08rem;
+      font-size: 1.04rem;
     }
   }
   @media (prefers-reduced-motion: reduce) {

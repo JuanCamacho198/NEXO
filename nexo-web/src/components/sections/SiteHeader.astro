@@ -1,7 +1,6 @@
 ---
 import Logo from '@/components/ui/Logo.astro';
 import Button from '@/components/ui/Button.astro';
-import DownloadButton from '@/components/ui/DownloadButton.astro';
 import ThemeToggle from '@/components/ui/ThemeToggle.astro';
 import LanguagePicker from '@/components/ui/LanguagePicker.astro';
 import { defaultLang, localizePath, useTranslations, type Lang } from '@/i18n/utils';
@@ -89,17 +88,9 @@ const mobileLink =
            page the control would only ever change sections the visitor has not
            scrolled to. The OS preference still applies there. -->
       {!overHero && <ThemeToggle class="max-[640px]:hidden" />}
-      <!-- From 1024px the adaptive "Descargar para Windows" with its icon fits;
-           below that the bar already holds the logo, the burger and the CTA, so
-           the short label stays (a 20-character label at 390px overflows). -->
-      <span class="max-[1023px]:hidden">
-        <DownloadButton compact href={`${home}#descargar`} />
-      </span>
-      <span class="min-[1024px]:hidden">
-        <Button variant="primary" href={`${home}#descargar`}>
-          {t('cta.download')}
-        </Button>
-      </span>
+      <Button variant="primary" href={`${home}#descargar`} icon="download">
+        {t('header.download')}
+      </Button>
     </div>
   </div>
 </header>
