@@ -9,6 +9,11 @@ import {
 import deviceLaptop from '@/assets/hero/screen-laptop-v2.png';
 import devicePhone from '@/assets/hero/screen-phone-v2.png';
 import deviceTablet from '@/assets/hero/screen-tablet-v2.png';
+import bookFlip1 from '@/assets/hero/books/book-flip-1.png';
+import bookFlip2 from '@/assets/hero/books/book-flip-2.png';
+import bookFlip3 from '@/assets/hero/books/book-flip-3.png';
+import bookFlip4 from '@/assets/hero/books/book-flip-4.png';
+import bookFlip5 from '@/assets/hero/books/book-flip-5.png';
 import { defaultLang, useTranslations, type Lang } from '@/i18n/utils';
 
 const lang = (Astro.currentLocale ?? defaultLang) as Lang;
@@ -19,6 +24,18 @@ const highlights = [
   { title: t('heroBar.organizeTitle'), copy: t('heroBar.organizeCopy'), icon: 'bookmark' },
   { title: t('heroBar.readTitle'), copy: t('heroBar.readCopy'), icon: 'bolt' },
 ] as const;
+
+// Sync ring segments in the stage's 1000×600 viewBox (see the markup note).
+const ringA = 'M650 168 C800 150 990 214 988 330';
+const ringB = 'M988 330 C986 452 760 562 470 562 C200 562 26 500 30 420';
+const ringC = 'M30 420 C34 362 140 322 300 298';
+const ringD = 'M300 298 C440 276 600 290 690 330';
+// Floating books behind the devices; placement and depth live in the CSS
+// (.hero-book-1 … 5). The last three are desktop-only.
+const books = [bookFlip1, bookFlip3, bookFlip2, bookFlip4, bookFlip5];
+
+// Measured with getTotalLength(); update them whenever a path changes.
+const ringLen = { a: 414, b: 1100, c: 311, d: 396 };
 ---
 
 <!-- ══════════════ HERO ══════════════ -->
@@ -52,25 +69,87 @@ const highlights = [
 
   <div class="hero-card relative flex flex-col">
     <div class="hero-stage relative min-h-0 flex-1" id="dispositivos">
+      <!-- Renders of a Sketchfab book model (tools/device-renders), drifting
+           in the sky at different depths: the far ones are smaller, blurred
+           and move less with the pointer. Decorative. -->
+      {books.map((src, i) => (
+        <div class={`hero-book hero-book-${i + 1}`} aria-hidden="true">
+          <Image src={src} alt="" widths={[240, 480]} sizes="16vw" loading="lazy" />
+        </div>
+      ))}
+
       <h1 class="hero-word">{t('hero.wordmark')}</h1>
 
-      <!-- Sync ring. One ellipse split at its left and right ends: the upper
-           half passes behind the devices, the lower half in front, so the ring
-           wraps around them. A light travels phone, behind the laptop, to the
-           tablet, then in front back to the phone: reading carried from one
-           device to the next. preserveAspectRatio="none" lets it stretch with
-           the stage (the stroke stretches a little with it). Each half is
-           1040 user units long; the dash values in CSS are built on that. -->
+      <!-- Sync ring. One open loop in four segments: it leaves the orange O of
+           the wordmark (a), sweeps behind the tablet and around its right side,
+           crosses in front of the three devices low down (b), turns and rises
+           behind the phone (c), then passes behind the laptop and ends at the
+           tablet (d). Only b sits in front of the devices. A light runs
+           a → b → c → d. preserveAspectRatio="none" lets it stretch with the
+           stage. --len is each path's length in user units; the dash keyframes
+           in global.css are built on it (see the note there on pathLength). -->
       <svg
         class="hero-ring hero-ring-back"
         viewBox="0 0 1000 600"
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        <g transform="rotate(-5 500 400)">
-          <path class="ring-line" d="M30 400 A470 150 0 0 1 970 400" />
-          <path class="ring-comet" d="M30 400 A470 150 0 0 1 970 400" />
-        </g>
+        <defs>
+          <linearGradient
+            id="ring-a"
+            gradientUnits="userSpaceOnUse"
+            x1="650"
+            y1="0"
+            x2="990"
+            y2="0"
+          >
+            <stop offset="0" stop-color="oklch(92% 0.1 70)" stop-opacity="0" />
+            <stop offset="0.08" stop-color="oklch(92% 0.1 70)" />
+            <stop offset="0.45" stop-color="oklch(74% 0.17 52)" stop-opacity="0.55" />
+            <stop offset="1" stop-color="oklch(80% 0.16 58)" stop-opacity="0.95" />
+          </linearGradient>
+          <!-- Brightest where it rises behind the phone. -->
+          <linearGradient id="ring-c" gradientUnits="userSpaceOnUse" x1="30" y1="0" x2="300" y2="0">
+            <stop offset="0" stop-color="oklch(76% 0.16 55)" stop-opacity="0.7" />
+            <stop offset="0.6" stop-color="oklch(90% 0.12 68)" />
+            <stop offset="1" stop-color="oklch(80% 0.16 58)" stop-opacity="0.85" />
+          </linearGradient>
+          <linearGradient
+            id="ring-d"
+            gradientUnits="userSpaceOnUse"
+            x1="300"
+            y1="0"
+            x2="690"
+            y2="0"
+          >
+            <stop offset="0" stop-color="oklch(80% 0.16 58)" stop-opacity="0.85" />
+            <stop offset="1" stop-color="oklch(74% 0.17 52)" stop-opacity="0.5" />
+          </linearGradient>
+        </defs>
+        <path class="ring-glow" stroke="url(#ring-a)" d={ringA} />
+        <path class="ring-glow" stroke="url(#ring-c)" d={ringC} />
+        <path class="ring-glow" stroke="url(#ring-d)" d={ringD} />
+        <path
+          class="ring-line ring-a"
+          stroke="url(#ring-a)"
+          d={ringA}
+          style={`--len:${ringLen.a}`}
+        />
+        <path
+          class="ring-line ring-c"
+          stroke="url(#ring-c)"
+          d={ringC}
+          style={`--len:${ringLen.c}`}
+        />
+        <path
+          class="ring-line ring-d"
+          stroke="url(#ring-d)"
+          d={ringD}
+          style={`--len:${ringLen.d}`}
+        />
+        <path class="ring-comet ring-a" d={ringA} style={`--len:${ringLen.a}`} />
+        <path class="ring-comet ring-c" d={ringC} style={`--len:${ringLen.c}`} />
+        <path class="ring-comet ring-d" d={ringD} style={`--len:${ringLen.d}`} />
       </svg>
 
       <!-- 3D renders (transparent PNG) of the Sketchfab models, each showing a
@@ -143,10 +222,26 @@ const highlights = [
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        <g transform="rotate(-5 500 400)">
-          <path class="ring-line" d="M970 400 A470 150 0 0 1 30 400" />
-          <path class="ring-comet" d="M970 400 A470 150 0 0 1 30 400" />
-        </g>
+        <defs>
+          <!-- Two hot spots on the front pass: past the tablet and under the
+               laptop, where the light would catch the rock. -->
+          <linearGradient id="ring-b" gradientUnits="userSpaceOnUse" x1="990" y1="0" x2="30" y2="0">
+            <stop offset="0" stop-color="oklch(80% 0.16 58)" stop-opacity="0.95" />
+            <stop offset="0.14" stop-color="oklch(90% 0.12 68)" />
+            <stop offset="0.3" stop-color="oklch(74% 0.17 52)" stop-opacity="0.6" />
+            <stop offset="0.52" stop-color="oklch(90% 0.12 68)" />
+            <stop offset="0.75" stop-color="oklch(74% 0.17 52)" stop-opacity="0.55" />
+            <stop offset="1" stop-color="oklch(76% 0.16 55)" stop-opacity="0.7" />
+          </linearGradient>
+        </defs>
+        <path class="ring-glow" stroke="url(#ring-b)" d={ringB} />
+        <path
+          class="ring-line ring-b"
+          stroke="url(#ring-b)"
+          d={ringB}
+          style={`--len:${ringLen.b}`}
+        />
+        <path class="ring-comet ring-b" d={ringB} style={`--len:${ringLen.b}`} />
       </svg>
     </div>
 
@@ -308,8 +403,8 @@ const highlights = [
   }
 
   .hero-word {
-    --word-size: min(20cqw, 36cqh);
-    --word-top: 3cqh;
+    --word-size: min(21.5cqw, 39cqh);
+    --word-top: -1cqh;
     /* Intro only: how far the centred word sits below its resting spot, and how
        much larger it is there (see hero-word-in in global.css). */
     --word-rise: calc(50cqh - var(--word-top) - 0.4 * var(--word-size));
@@ -395,9 +490,9 @@ const highlights = [
     --float-r: 0deg;
     --float-dur: 6.4s;
     --float-phase: 0s;
-    left: 53%;
+    left: 51.5%;
     bottom: -1cqh;
-    width: min(46cqw, 96cqh);
+    width: min(51cqw, 106cqh);
     translate: calc(-50% + var(--px) * -18px) calc(var(--py) * -10px);
   }
   .hero-device-phone {
@@ -405,9 +500,9 @@ const highlights = [
     --float-r: -1.2deg;
     --float-dur: 5.2s;
     --float-phase: 0.6s;
-    left: 17cqw;
+    left: 18cqw;
     bottom: -3cqh;
-    width: min(17cqw, 40cqh);
+    width: min(14.5cqw, 34cqh);
     translate: calc(var(--px) * -30px) calc(var(--py) * -16px);
   }
   .hero-device-tablet {
@@ -415,10 +510,89 @@ const highlights = [
     --float-r: 1deg;
     --float-dur: 5.8s;
     --float-phase: 1.2s;
-    right: 10cqw;
+    /* Behind the laptop where they overlap; still above the back of the ring
+       (z-index 0 too, but later in the DOM). */
+    z-index: 0;
+    right: 9.5cqw;
     bottom: 0;
-    width: min(31cqw, 68cqh);
+    width: min(31.5cqw, 69cqh);
     translate: calc(var(--px) * -26px) calc(var(--py) * -14px);
+  }
+
+  /* Floating books. --depth (0 far … 1 near) drives the pointer parallax; the
+     far ones are also smaller, softer and dimmer, like the sky's haze. The
+     drift (book-drift in global.css) moves `transform`, the tilt is `rotate`
+     and the parallax is `translate`, so the three never fight. */
+  .hero-book {
+    --depth: 0.5;
+    --tilt: 0deg;
+    --drift-y: -14px;
+    --drift-r: 3deg;
+    --drift-dur: 11s;
+    --drift-phase: 0s;
+    position: absolute;
+    /* Above both halves of the ring (the front one is z-index 2). */
+    z-index: 3;
+    pointer-events: none;
+    rotate: var(--tilt);
+    translate: calc(var(--px) * var(--depth) * -26px) calc(var(--py) * var(--depth) * -14px);
+    filter: drop-shadow(0 18px 22px oklch(8% 0.03 280 / 0.45));
+  }
+  .hero-book :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .hero-book-1 {
+    --depth: 0.7;
+    --tilt: -10deg;
+    left: 5cqw;
+    top: 22cqh;
+    width: 9cqw;
+  }
+  .hero-book-2 {
+    --depth: 0.6;
+    --tilt: 12deg;
+    --drift-dur: 13s;
+    --drift-phase: -4s;
+    --drift-r: -3deg;
+    right: 5cqw;
+    top: 8cqh;
+    width: 8.1cqw;
+  }
+  .hero-book-3 {
+    --depth: 0.9;
+    --tilt: -6deg;
+    --drift-dur: 12s;
+    --drift-phase: -7s;
+    right: 0.5cqw;
+    top: 62cqh;
+    width: 9cqw;
+  }
+  /* The far left book stays under the ring: the loop passes in front of it. */
+  .hero-book-4 {
+    z-index: 0;
+    --depth: 0.35;
+    --tilt: 8deg;
+    --drift-dur: 14s;
+    --drift-phase: -2s;
+    left: 1cqw;
+    top: 66cqh;
+    width: 8.1cqw;
+    opacity: 0.95;
+    filter: blur(0.6px) drop-shadow(0 12px 16px oklch(8% 0.03 280 / 0.35));
+  }
+  .hero-book-5 {
+    --depth: 0.2;
+    --tilt: 16deg;
+    --drift-dur: 15s;
+    --drift-phase: -9s;
+    --drift-y: -8px;
+    left: 22cqw;
+    top: 8cqh;
+    width: 4.5cqw;
+    opacity: 0.9;
+    filter: blur(0.8px);
   }
 
   .placeholder-surface {
@@ -451,17 +625,44 @@ const highlights = [
   .hero-ring-back {
     z-index: 0;
   }
+  /* The front pass crosses the phone and the tablet but goes behind the
+     laptop: a horizontal mask cuts it out across the laptop's width, which is
+     known here in the stage's units (see .hero-device-laptop). */
   .hero-ring-front {
+    --lap-w: min(51cqw, 106cqh);
+    --lap-l: calc(51.5cqw - var(--lap-w) / 2);
+    --lap-r: calc(51.5cqw + var(--lap-w) / 2);
     z-index: 2;
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      #000 calc(var(--lap-l) + 1cqw),
+      transparent calc(var(--lap-l) + 4cqw),
+      transparent calc(var(--lap-r) - 4cqw),
+      #000 calc(var(--lap-r) - 1cqw)
+    );
+    mask-image: linear-gradient(
+      90deg,
+      #000 calc(var(--lap-l) + 1cqw),
+      transparent calc(var(--lap-l) + 4cqw),
+      transparent calc(var(--lap-r) - 4cqw),
+      #000 calc(var(--lap-r) - 1cqw)
+    );
   }
   .ring-line,
+  .ring-glow,
   .ring-comet {
     fill: none;
     stroke-linecap: round;
   }
   .ring-line {
-    stroke: oklch(76% 0.16 55 / 0.85);
-    stroke-width: 1.6;
+    stroke-width: 1.8;
+  }
+  /* A wide, blurred copy under the line: where the gradient is hot the ring
+     blooms, where it is cool it stays a thin thread. */
+  .ring-glow {
+    stroke-width: 9;
+    opacity: 0.35;
+    filter: blur(5px);
   }
   .ring-comet {
     stroke: oklch(96% 0.06 80);
@@ -546,6 +747,27 @@ const highlights = [
       left: 50%;
       width: 70cqw;
       bottom: 12cqh;
+    }
+    /* Stacked, the ring passes under the laptop, not across it. */
+    .hero-ring-front {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    /* Two books are enough at this size; five would crowd the devices. */
+    .hero-book-3,
+    .hero-book-4,
+    .hero-book-5 {
+      display: none;
+    }
+    .hero-book-1 {
+      left: 1cqw;
+      top: 30cqh;
+      width: 14.4cqw;
+    }
+    .hero-book-2 {
+      right: 1cqw;
+      top: 34cqh;
+      width: 13.5cqw;
     }
     .sync-chip {
       font-size: 11px;
