@@ -1,5 +1,11 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
+import org.gradle.api.Project
+import org.gradle.api.artifacts.component.ComponentIdentifier
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ArtifactResolutionResult
+import org.gradle.api.artifacts.result.ComponentArtifactsResult
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
@@ -10,7 +16,10 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.maven.MavenModule
+import org.gradle.maven.MavenPomArtifact
 import java.io.File
+import java.io.Serializable
 
 /**
  * Writes the third-party licence inventory of a resolved runtime classpath as
@@ -22,10 +31,14 @@ import java.io.File
  * cannot read `androidx.compose.material3` off `material3-android-1.3.0.aar`.
  *
  * The licence is read from each module's own POM, which is what the author
- * published. The raw `<name>` is free text, so [LicenseNormalizer] collapses it
- * to a canonical identifier before it reaches the file. A module whose POM
- * declares no `<licenses>` block is reported as [LicenseIds.NOT_DECLARED]; no
- * licence is ever inferred for it.
+ * published — obtained through Gradle's [ArtifactResolutionQuery] for
+ * `org.gradle.maven.MavenPomArtifact`, which resolves and downloads the POM
+ * whatever is on disk, instead of reading Gradle's private cache directory.
+ *
+ * The raw `<name>` is free text, so [LicenseNormalizer] collapses it to a
+ * canonical identifier before it reaches the file. A module whose POM declares
+ * no `<licenses>` block is reported as [LicenseIds.NOT_DECLARED]; no licence is
+ * ever inferred for it.
  *
  * Lives in build-logic rather than the consuming build script because this
  * repository enables the configuration cache: a `doLast` closure captures the
@@ -37,8 +50,8 @@ abstract class GenerateLicensesAssetTask : DefaultTask() {
     /**
      * Already-filtered `group:name:version` coordinates, one per shipped module.
      *
-     * The resolution graph is walked by the build script because a
-     * `ResolutionResult` is not a serializable task property and the
+     * Built by the build script from the runtime classpath's resolution graph
+     * because a `ResolutionResult` is not a serializable task property and the
      * configuration cache rejects it. What crosses into the task is plain
      * strings, which serialize.
      */
@@ -46,16 +59,31 @@ abstract class GenerateLicensesAssetTask : DefaultTask() {
     abstract val coordinates: ListProperty<String>
 
     /**
-     * Gradle's POM metadata for those modules, shaped
-     * `<group>/<name>/<version>/<sha1>/<name>-<version>.pom` under its cache.
+     * Every POM the shipped modules are distributed with, one entry per module.
      *
-     * Passed as a file set (not parsed content) so the task stays
-     * configuration-cache safe and incremental: adding a library changes the
-     * set, editing a POM re-runs the task.
+     * Deliberately COORDINATE-KEYED rather than a bare file set: the files come
+     * out of the resolution query and live under Gradle's identity-less
+     * `metadata-<version>/descriptors` store, so their on-disk path says nothing
+     * about which module they belong to. [pomCoordinates] therefore carries the
+     * keys, and [PomIndex] is a pure function of the declared graph.
+     *
+     * `@InputFiles` + [PathSensitivity.RELATIVE] makes adding a library or a
+     * changed POM re-run the task, while staying relocatable across CI runners.
      */
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val pomFiles: ConfigurableFileCollection
+
+    /**
+     * The key structure of [pomFiles] as plain data: each entry names the
+     * coordinate whose POM is at the same position in [pomFiles].
+     *
+     * The build script derives both from ONE ordered query result, so the task
+     * can rely on that positional match. It fails the build if the two ever
+     * disagree on length.
+     */
+    @get:Input
+    abstract val pomCoordinates: ListProperty<LicensePom>
 
     /** Header comment written above the entries. */
     @get:Input
@@ -66,20 +94,22 @@ abstract class GenerateLicensesAssetTask : DefaultTask() {
 
     @TaskAction
     fun writeInventory() {
-        val poms = PomIndex(pomFiles.files)
+        val files = pomFiles.files
+        val declared = pomCoordinates.get()
+        if (files.size != declared.size) {
+            throw GradleException(
+                "Licence POM inputs are inconsistent: ${files.size} files for ${declared.size} " +
+                    "declared coordinates. The inventory cannot be built from mismatched inputs.",
+            )
+        }
+        val poms = PomIndex(declared.mapIndexed { index, pom -> pom.coordinate to files.elementAt(index) })
         val entries =
             coordinates
                 .get()
                 .distinct()
                 .sortedWith(String.CASE_INSENSITIVE_ORDER)
                 .map { coordinate ->
-                    val parts = coordinate.split(':')
-                    val licence =
-                        if (parts.size < 3) {
-                            LicenseIds.NOT_DECLARED
-                        } else {
-                            poms.licenceOf(parts[0], parts[1], parts.drop(2).joinToString(":"))
-                        }
+                    val licence = poms.licenceOf(coordinate)
                     "$coordinate\t$licence"
                 }
 
@@ -102,25 +132,21 @@ abstract class GenerateLicensesAssetTask : DefaultTask() {
 }
 
 /**
- * Reads module licences out of Gradle's cached POM files.
+ * Reads module licences out of the POM file of each module, keyed by the
+ * coordinate the POM belongs to.
  *
- * Gradle stores each module's POM under an opaque SHA-1 directory, so the file
- * is matched by its cache shape (`group/name/version`) instead of one exact
- * path. Anything not at that depth is ignored, so an unexpected layout cannot
- * produce a wrong match.
+ * The key is supplied, never derived from the file path: a POM returned by the
+ * resolution query sits in a flat identity-less metadata store. Anything that
+ * arrives without a key is rejected instead of guessed at.
  */
 class PomIndex(
-    files: Collection<File>,
+    entries: List<Pair<String, File>>,
 ) {
-    private val byShape: Map<String, List<File>> =
-        files
-            .filter { it.isFile && it.name.endsWith(".pom") }
-            .mapNotNull { file -> shapeOf(file)?.let { shape -> shape to file } }
-            .groupBy({ it.first }, { it.second })
+    private val byCoordinate: Map<String, File> = entries.toMap()
 
     private val resolutions: Map<String, LicenseResolution> by lazy {
-        byShape
-            .mapValues { (_, poms) -> readLicence(poms.first()) }
+        byCoordinate
+            .mapValues { (_, pom) -> readLicence(pom) }
             .filterValues { it != null }
             .mapValues { it.value!! }
     }
@@ -129,22 +155,17 @@ class PomIndex(
      * The canonical id for a module, or [LicenseIds.NOT_DECLARED] when its POM
      * has no `<licenses>` block.
      */
-    fun licenceOf(
-        group: String,
-        name: String,
-        version: String,
-    ): String {
-        val shape = "$group/$name/$version"
-        if (!byShape.containsKey(shape)) {
-            // The module is in the shipped classpath, so Gradle read its POM to
-            // resolve it. A miss means the cache moved, not that it has no
-            // licence — fail loudly rather than write NOT_DECLARED.
+    fun licenceOf(coordinate: String): String {
+        if (!byCoordinate.containsKey(coordinate)) {
+            // The module is in the shipped classpath, so its POM must have been
+            // resolvable. A miss means the query did not return it, not that it
+            // has no licence — fail loudly rather than write NOT_DECLARED.
             throw GradleException(
-                "No POM metadata found for $group:$name:$version. " +
+                "No POM metadata found for $coordinate. " +
                     "The licence inventory cannot be built without it.",
             )
         }
-        return resolutions[shape]?.id ?: LicenseIds.NOT_DECLARED
+        return resolutions[coordinate]?.id ?: LicenseIds.NOT_DECLARED
     }
 
     /** Raw POM `<name>` text per normalised id, for the audit comment lines. */
@@ -160,20 +181,6 @@ class PomIndex(
         private val NAME_TAG = Regex("<name>([\\s\\S]*?)</name>", RegexOption.IGNORE_CASE)
         private val URL_TAG = Regex("<url>([\\s\\S]*?)</url>", RegexOption.IGNORE_CASE)
         private val ENTITY = Regex("&(amp|lt|gt|quot|apos|#\\d+);")
-
-        /** `.../<group>/<name>/<version>/<hash>/<artifact>.pom` -> `group/name/version`. */
-        fun shapeOf(file: File): String? {
-            val hashDir = file.parentFile ?: return null
-            val versionDir = hashDir.parentFile ?: return null
-            val nameDir = versionDir.parentFile ?: return null
-            val groupDir = nameDir.parentFile ?: return null
-            // Deeper caches use a 40-char SHA-1, but an older entry can carry a
-            // 39-char directory. Both are hex and both hold the same POM, so the
-            // shape only rejects a directory that cannot be a hash at all.
-            val looksLikeHash = hashDir.name.length in 32..40 && hashDir.name.all { it in '0'..'9' || it in 'a'..'f' }
-            if (!looksLikeHash) return null
-            return "${groupDir.name}/${nameDir.name}/${versionDir.name}"
-        }
 
         /** Null when the POM exists but declares no `<licenses>` block. */
         fun readLicence(pom: File): LicenseResolution? {
@@ -215,3 +222,74 @@ class PomIndex(
             }
     }
 }
+
+/**
+ * One module coordinate whose POM the resolution query returned.
+ *
+ * Covers the listed modules matched with the files. No path is stored here:
+ * the files travel as [GenerateLicensesAssetTask.pomFiles], so an absolute CI
+ * checkout path never becomes part of the task's serialized input.
+ *
+ * A plain data class so `@Input` can serialize it into the configuration cache.
+ */
+data class LicensePom(
+    val coordinate: String,
+) : Serializable
+
+/**
+ * Runs Gradle's POM resolution query for [components] and returns one entry per
+ * module whose POM could be found, in a deterministic order.
+ *
+ * This replaces reading Gradle's private `caches/modules-2/files-2.1` layout: on
+ * a CI runner the dependencies arrive from the build cache and that directory is
+ * never populated, so the walk found nothing. The query asks Gradle for the POM
+ * as an artifact of the component, which resolves (and downloads) it from the
+ * repository when it is not present. A module whose POM the query cannot return
+ * is omitted here and then fails the task by name, never silently downgraded.
+ *
+ * [from] is the project whose repositories serve the query: pass the project the
+ * components were resolved for (`:app`), not the consuming one.
+ */
+fun resolvePoms(
+    from: Project,
+    components: Set<ComponentIdentifier>,
+): List<ResolvedLicensePom> {
+    if (components.isEmpty()) return emptyList()
+    val result =
+        from.dependencies
+            .createArtifactResolutionQuery()
+            .forComponents(components)
+            .withArtifacts(MavenModule::class.java, setOf(MavenPomArtifact::class.java))
+            .execute()
+    val resolved = LinkedHashMap<String, File>()
+    components.forEach { component ->
+        val module = component as? ModuleComponentIdentifier ?: return@forEach
+        val coordinate = "${module.group}:${module.module}:${module.version}"
+        resolved[coordinate] = artifactOf(result, component) ?: return@forEach
+    }
+    // Sorted by coordinate so the list and the matching file collection are
+    // deterministic across runs and runners.
+    return resolved
+        .map { (coordinate, file) -> ResolvedLicensePom(LicensePom(coordinate), file) }
+        .sortedBy { it.pom.coordinate }
+}
+
+/** A POM as the query returned it: the coordinate to key it by, and the file. */
+class ResolvedLicensePom(
+    val pom: LicensePom,
+    val file: File,
+)
+
+/** The first resolved POM for [component], or null when the query returned none. */
+private fun artifactOf(
+    result: ArtifactResolutionResult,
+    component: ComponentIdentifier,
+): File? =
+    result
+        .resolvedComponents
+        .filterIsInstance<ComponentArtifactsResult>()
+        .firstOrNull { it.id == component }
+        ?.getArtifacts(MavenPomArtifact::class.java)
+        ?.filterIsInstance<ResolvedArtifactResult>()
+        ?.firstOrNull()
+        ?.file

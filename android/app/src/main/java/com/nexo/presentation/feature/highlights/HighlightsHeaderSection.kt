@@ -39,10 +39,14 @@ fun HighlightsHeaderSection(
     onOpenAccount: () -> Unit,
     onSearchClick: () -> Unit,
     syncState: HighlightsSyncState,
+    isManualTriggered: Boolean = false,
     onSyncRefresh: () -> Unit,
 ) {
     val isSyncing = syncState is HighlightsSyncState.Syncing
     val isSynced = syncState is HighlightsSyncState.Synced
+    // An automatic pull only announces itself if the holder surfaced it, which
+    // it does solely past the slow-pull threshold.
+    val showsSyncing = isSyncing && isManualTriggered
 
     NexoHeader(
         title = stringResource(R.string.home_nexo_title),
@@ -73,13 +77,14 @@ fun HighlightsHeaderSection(
         }
         IconButton(
             onClick = onSyncRefresh,
+            enabled = !isSyncing,
             modifier =
                 Modifier
                     .size(40.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
-            if (isSyncing) {
+            if (showsSyncing) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
                     strokeWidth = 2.dp,
@@ -94,7 +99,7 @@ fun HighlightsHeaderSection(
         }
     }
 
-    if (isSyncing || isSynced) {
+    if (showsSyncing || isSynced) {
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center,
@@ -109,7 +114,7 @@ fun HighlightsHeaderSection(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    if (isSyncing) {
+                    if (showsSyncing) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(14.dp),
                             strokeWidth = 2.dp,
