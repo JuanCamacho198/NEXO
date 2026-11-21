@@ -64,6 +64,10 @@ fun SettingsDataStorageScreen(
     userId: String? = null,
 ) {
     val context = LocalContext.current
+    // Resolved in composition: the export Toast fires from a Button click lambda,
+    // where `context.getString` trips `LocalContextGetResourceValueCall`.
+    val coldExportSuccess = stringResource(R.string.settings_drive_cold_export_success)
+    val coldExportError = stringResource(R.string.settings_drive_cold_export_error)
     var isAuthorizing by remember { mutableStateOf(false) }
     var driveAuthorized by remember { mutableStateOf(driveAuthHelper.isAuthorized()) }
     var isExporting by remember { mutableStateOf(false) }
@@ -237,13 +241,13 @@ fun SettingsDataStorageScreen(
                             val result = driveColdBackupService!!.exportColdBackup(userId!!)
                             val msg =
                                 if (result.isSuccess) {
-                                    context.getString(R.string.settings_drive_cold_export_success)
+                                    coldExportSuccess
                                 } else {
-                                    context.getString(R.string.settings_drive_cold_export_error)
+                                    coldExportError
                                 }
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         } catch (e: Exception) {
-                            Toast.makeText(context, e.message ?: context.getString(R.string.settings_drive_cold_export_error), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, e.message ?: coldExportError, Toast.LENGTH_SHORT).show()
                         } finally {
                             isExporting = false
                         }

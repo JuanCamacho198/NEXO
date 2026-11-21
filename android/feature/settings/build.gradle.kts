@@ -139,7 +139,7 @@ val licensingExcludedCoordinates =
 val licensingExcludedNameSuffixes = listOf("-test", "-test-jvm", "-test-common")
 
 /** The generated asset lands here and is registered as a source dir below. */
-val generatedLicensesDir = layout.buildDirectory.dir("generated/licensesAssets")
+val generatedLicensesDir = layout.projectDirectory.dir("src/main/assets")
 
 /**
  * The configuration AGP exposes for the shipped APK. An application module has
@@ -232,16 +232,23 @@ val generateLicensesAsset by
         outputDirectory.set(generatedLicensesDir)
     }
 
-// Merge the generated dir into the debug + release assets without detaching this
-// module's own `src/main/assets`, and make every asset-merge task depend on the
-// generator so a build never packages a stale or missing inventory.
+// The inventory is written straight into this module's OWN `src/main/assets`.
+//
+// The previous wiring generated into `build/generated/licensesAssets` and
+// registered it with `sourceSets.*.assets.srcDir(...)`. AGP's
+// `AndroidSourceDirectorySet` has no `builtBy` (checked against
+// gradle-api-8.11.1: only `srcDir`/`srcDirs`/`setSrcDirs`), so the source dir
+// could not carry its producer. Every consumer then had to be named by hand, and
+// naming them is unwinnable: `generateDebugLintModel` failed first, then
+// `generateDebugLintReportModel`, then `lintAnalyzeDebug` — and each one passed
+// locally only because a previous build had already left the directory on disk.
+//
+// Writing into an ordinary source directory removes the problem at the root: the
+// asset is simply always there, no task reads a directory that another task
+// produces, and there is no edge to declare. The file is regenerated on every
+// build, so it cannot go stale, and it is committed like any other asset.
 android {
-    sourceSets.named("debug") { assets.srcDir(generatedLicensesDir) }
-    sourceSets.named("release") { assets.srcDir(generatedLicensesDir) }
-}
-
-tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {
-    dependsOn(generateLicensesAsset)
+    // Nothing to register: `src/main/assets/licenses.txt` is a plain source file.
 }
 
 dependencies {

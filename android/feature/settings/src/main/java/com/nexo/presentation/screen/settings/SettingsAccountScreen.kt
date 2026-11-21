@@ -47,6 +47,10 @@ fun SettingsAccountScreen(
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    // Resolved in composition for the same reason as SyncScreen: the Toast fires
+    // from a click lambda, where `context.getString` trips
+    // `LocalContextGetResourceValueCall`.
+    val exportSuccess = stringResource(R.string.settings_account_export_success)
 
     if (showLogoutDialog) {
         NexoLogoutDialog(
@@ -147,7 +151,7 @@ fun SettingsAccountScreen(
                             Toast
                                 .makeText(
                                     context,
-                                    context.getString(R.string.settings_account_export_success),
+                                    exportSuccess,
                                     Toast.LENGTH_SHORT,
                                 ).show()
                         },
