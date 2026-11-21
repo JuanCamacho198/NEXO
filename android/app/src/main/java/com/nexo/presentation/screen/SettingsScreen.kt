@@ -40,6 +40,7 @@ import com.nexo.presentation.navigation.rememberSettingsDevicesViewModel
 import com.nexo.presentation.navigation.rememberStorageViewModel
 import com.nexo.presentation.screen.settings.AboutContact
 import com.nexo.presentation.screen.settings.AboutScreen
+import com.nexo.presentation.screen.settings.LicensesScreen
 import com.nexo.presentation.screen.settings.PerformanceScreen
 import com.nexo.presentation.screen.settings.PrivacyPolicyScreen
 import com.nexo.presentation.screen.settings.SettingsAccountScreen
@@ -93,6 +94,7 @@ fun SettingsScreen(
     translationPreferences: com.nexo.data.session.TranslationPreferences? = null,
     translationHistoryRepository: com.nexo.domain.repository.TranslationHistoryRepository? = null,
     definitionPreferences: com.nexo.data.session.DefinitionPreferences? = null,
+    definitionHistoryRepository: com.nexo.domain.repository.DefinitionHistoryRepository? = null,
 ) {
     SettingsScreenContent(
         contentPadding = contentPadding,
@@ -123,6 +125,7 @@ fun SettingsScreen(
         translationPreferences = translationPreferences,
         translationHistoryRepository = translationHistoryRepository,
         definitionPreferences = definitionPreferences,
+        definitionHistoryRepository = definitionHistoryRepository,
     )
 }
 
@@ -156,6 +159,7 @@ private fun SettingsScreenContent(
     translationPreferences: com.nexo.data.session.TranslationPreferences? = null,
     translationHistoryRepository: com.nexo.domain.repository.TranslationHistoryRepository? = null,
     definitionPreferences: com.nexo.data.session.DefinitionPreferences? = null,
+    definitionHistoryRepository: com.nexo.domain.repository.DefinitionHistoryRepository? = null,
 ) {
     val nestedNavController = rememberNavController()
     // Contact opens outside the app, so the nested NavHost needs a context to
@@ -279,6 +283,7 @@ private fun SettingsScreenContent(
                 SettingsDefinitionScreen(
                     onBack = { nestedNavController.popBackStack() },
                     preferencesStore = definitionPreferences,
+                    historyRepository = definitionHistoryRepository,
                     // Resolved here because the display names are string resources,
                     // and the feature module owns none.
                     languageLabels =
@@ -359,16 +364,22 @@ private fun SettingsScreenContent(
                 )
             }
 
+            composable(route = NexoDestination.SettingsLicenses.route) {
+                LicensesScreen(
+                    onBack = { nestedNavController.popBackStack() },
+                )
+            }
+
             composable(route = NexoDestination.SettingsAbout.route) {
                 val vm = updateViewModel
                 // Only rows with a destination get a handler. A null handler
                 // renders an inert row with no chevron, so About never promises
-                // a screen that does not exist: licences open the legal notice
-                // from inside this nested stack, contact opens the project's
-                // issue tracker, and a rating row has nowhere to go until there
-                // is a store listing to rate.
+                // a screen that does not exist: licences open the attribution
+                // page from inside this nested stack, contact opens the
+                // project's issue tracker, and a rating row has nowhere to go
+                // until there is a store listing to rate.
                 val onLicenses: () -> Unit = {
-                    nestedNavController.navigate(NexoDestination.SettingsLegal.route)
+                    nestedNavController.navigate(NexoDestination.SettingsLicenses.route)
                 }
                 val onContact: (() -> Unit)? =
                     remember {

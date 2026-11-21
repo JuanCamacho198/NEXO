@@ -3,6 +3,7 @@ package com.nexo.di.modules
 import android.content.Context
 import com.nexo.data.local.dao.BookDao
 import com.nexo.data.local.dao.BookmarkDao
+import com.nexo.data.local.dao.DefinitionCacheDao
 import com.nexo.data.local.dao.DictionaryWordDao
 import com.nexo.data.local.dao.DiscoverCacheDao
 import com.nexo.data.local.dao.HighlightDao
@@ -19,6 +20,7 @@ import com.nexo.data.repository.HomeRepositoryImpl
 import com.nexo.data.repository.LibraryRepositoryImpl
 import com.nexo.data.repository.ReaderRepositoryImpl
 import com.nexo.data.repository.ReadingStatsRepositoryImpl
+import com.nexo.data.repository.RoomDefinitionHistoryRepository
 import com.nexo.data.repository.RoomTranslationHistoryRepository
 import com.nexo.data.repository.StorageRepositoryImpl
 import com.nexo.data.storage.AppInternalCoverStorage
@@ -26,6 +28,7 @@ import com.nexo.data.sync.DictionarySyncService
 import com.nexo.data.sync.SessionGateImpl
 import com.nexo.di.AppStartTimings
 import com.nexo.domain.repository.CacheRepository
+import com.nexo.domain.repository.DefinitionHistoryRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.HomeRepository
 import com.nexo.domain.repository.LibraryRepository
@@ -197,6 +200,17 @@ object RepositoryModule {
     ): TranslationHistoryRepository =
         RoomTranslationHistoryRepository(
             cacheDao = cacheDao,
+            activeUser = activeUserProvider,
+        )
+
+    @Provides
+    @Singleton
+    fun provideDefinitionHistoryRepository(
+        definitionCacheDao: DefinitionCacheDao,
+        activeUserProvider: ActiveUserProvider,
+    ): DefinitionHistoryRepository =
+        RoomDefinitionHistoryRepository(
+            cacheDao = definitionCacheDao,
             activeUser = activeUserProvider,
         )
 }
