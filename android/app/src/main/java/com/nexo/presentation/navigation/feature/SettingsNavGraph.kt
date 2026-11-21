@@ -20,6 +20,7 @@ import com.nexo.debug.LogViewerScreen
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.model.ThemeMode
 import com.nexo.domain.repository.CacheRepository
+import com.nexo.domain.repository.DefinitionHistoryRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.LibraryRepository
 import com.nexo.domain.repository.StorageRepository
@@ -31,6 +32,7 @@ import com.nexo.presentation.feature.legal.addonCapabilitiesRoute
 import com.nexo.presentation.navigation.NexoDestination
 import com.nexo.presentation.screen.SettingsScreen
 import com.nexo.presentation.screen.settings.AddonManagementRoute
+import com.nexo.presentation.screen.settings.LicensesScreen
 import com.nexo.presentation.screen.settings.PrivacyPolicyScreen
 import com.nexo.presentation.screen.settings.TermsScreen
 import com.nexo.presentation.viewmodel.AuthViewModel
@@ -56,6 +58,7 @@ fun NavGraphBuilder.settingsGraph(
     activeUserProvider: ActiveUserProvider,
     translationPreferences: TranslationPreferences,
     translationHistoryRepository: TranslationHistoryRepository,
+    definitionHistoryRepository: DefinitionHistoryRepository,
     definitionPreferences: DefinitionPreferences,
     addonRegistry: AddonRegistry,
     authViewModel: AuthViewModel,
@@ -149,6 +152,7 @@ fun NavGraphBuilder.settingsGraph(
             translationPreferences = translationPreferences,
             translationHistoryRepository = translationHistoryRepository,
             definitionPreferences = definitionPreferences,
+            definitionHistoryRepository = definitionHistoryRepository,
             updateViewModel = updateViewModel,
             onNavigateToAddons = {
                 navController.navigate(NexoDestination.SettingsAddons.route)
@@ -197,6 +201,12 @@ fun NavGraphBuilder.settingsGraph(
 
     composable(route = NexoDestination.SettingsTerms.route) {
         TermsScreen(
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(route = NexoDestination.SettingsLicenses.route) {
+        LicensesScreen(
             onBack = { navController.popBackStack() },
         )
     }

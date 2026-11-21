@@ -12,6 +12,8 @@ import com.nexo.domain.definition.DefinitionSource
 import com.nexo.domain.definition.WordLanguage
 import com.nexo.domain.repository.DefinitionRepository
 import com.nexo.domain.session.ActiveUserProvider
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -45,6 +47,17 @@ class CachedDefinitionRepositoryTest {
         }
 
         override suspend fun count(userId: String): Int = rows.values.count { it.userId == userId }
+
+        override fun history(
+            userId: String,
+            limit: Int,
+        ): Flow<List<DefinitionCacheEntity>> =
+            flowOf(
+                rows.values
+                    .filter { it.userId == userId }
+                    .sortedByDescending { it.createdAtEpochMillis }
+                    .take(limit),
+            )
 
         override suspend fun deleteAll(userId: String): Int {
             val before = rows.size

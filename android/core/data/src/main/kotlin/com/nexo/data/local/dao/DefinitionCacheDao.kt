@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.nexo.data.local.entity.DefinitionCacheEntity
+import kotlinx.coroutines.flow.Flow
 
 /**
  * DAO for the local definition cache. Isolated table — no method touches
@@ -47,6 +48,30 @@ interface DefinitionCacheDao {
 
     @Query("SELECT COUNT(*) FROM definition_cache WHERE user_id = :userId")
     suspend fun count(userId: String): Int
+
+    /**
+     * Definition history for one owner, newest first, capped at [limit] rows.
+     *
+     * A `Flow` so a new lookup or a clear repaints the settings screen without a
+     * manual refresh. `LIMIT` is applied in SQL rather than in the caller: the
+     * table is pruned only by row count, so an unbounded query would eventually
+     * load and decode every word the account ever looked up.
+     *
+     * [limit] must be positive. SQLite reads a negative `LIMIT` as "no limit",
+     * so the repository clamps it before it ever reaches this method.
+     *
+     * Scoped to [userId] like every other method here: history is the most
+     * personal read in the cache, and an unfiltered version would show account B
+     * the words account A looked up.
+     */
+    @Query(
+        "SELECT * FROM definition_cache WHERE user_id = :userId " +
+            "ORDER BY `created_at` DESC LIMIT :limit",
+    )
+    fun history(
+        userId: String,
+        limit: Int,
+    ): Flow<List<DefinitionCacheEntity>>
 
     /** The privacy escape hatch: forget every definition this account looked up. */
     @Query("DELETE FROM definition_cache WHERE user_id = :userId")

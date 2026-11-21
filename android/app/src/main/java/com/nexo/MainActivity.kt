@@ -42,6 +42,7 @@ import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.model.ThemeMode
 import com.nexo.domain.notification.NotificationStore
 import com.nexo.domain.repository.CacheRepository
+import com.nexo.domain.repository.DefinitionHistoryRepository
 import com.nexo.domain.repository.DefinitionRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.LibraryRepository
@@ -125,6 +126,8 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var cacheRepository: CacheRepository
 
     @Inject lateinit var translationHistoryRepository: TranslationHistoryRepository
+
+    @Inject lateinit var definitionHistoryRepository: DefinitionHistoryRepository
 
     @Inject lateinit var notificationPreferencesStore: NotificationPreferencesStore
 
@@ -242,6 +245,7 @@ class MainActivity : AppCompatActivity() {
                     storageRepository = storageRepository,
                     cacheRepository = cacheRepository,
                     translationHistoryRepository = translationHistoryRepository,
+                    definitionHistoryRepository = definitionHistoryRepository,
                     notificationPreferencesStore = notificationPreferencesStore,
                     coverStorage = coverStorage,
                     checkForUpdatesUseCase = checkForUpdatesUseCase,
