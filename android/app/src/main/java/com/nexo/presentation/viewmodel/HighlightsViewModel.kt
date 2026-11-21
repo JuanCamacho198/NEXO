@@ -13,6 +13,7 @@ import com.nexo.presentation.util.StringResolver
 import com.nexo.presentation.viewmodel.highlights.CrudStateHolder
 import com.nexo.presentation.viewmodel.highlights.FilterStateHolder
 import com.nexo.presentation.viewmodel.highlights.SyncStateHolder
+import com.nexo.presentation.viewmodel.highlights.SyncTrigger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -46,7 +47,11 @@ class HighlightsViewModel
 
         val filterHolder = FilterStateHolder()
         val crudHolder = CrudStateHolder(readerRepository, activeUser, stringResolver, viewModelScope, _uiEvent)
-        val syncHolder = SyncStateHolder(supabaseSync, viewModelScope)
+        val syncHolder =
+            SyncStateHolder(
+                pull = supabaseSync?.let { sync -> { sync.pullAllHighlights() } },
+                scope = viewModelScope,
+            )
 
         val syncState: StateFlow<HighlightsSyncState> = syncHolder.syncState
 
@@ -152,7 +157,9 @@ class HighlightsViewModel
 
         fun onViewInBook(highlight: Highlight) = crudHolder.onViewInBook(highlight)
 
-        fun syncHighlights(force: Boolean = false) = syncHolder.syncHighlights(force)
+        fun syncHighlights(trigger: SyncTrigger = SyncTrigger.Automatic) = syncHolder.syncHighlights(trigger)
+
+        fun onManualSync() = syncHolder.syncHighlights(SyncTrigger.Manual)
 
         // Keep applyFilters for tests compatibility, delegate to filterHolder
         internal fun applyFilters(
