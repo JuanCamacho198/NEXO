@@ -142,6 +142,13 @@
             mat.color.setRGB(l * cfg.desat, l * cfg.desat, l * cfg.desat * 1.04);
           }
         }
+        // Recolour untextured materials by name, e.g. { 'Material.004': '#7a4a2a' }.
+        if (cfg.colors) {
+          for (const m of meshes) {
+            const hex = cfg.colors[m.material.name];
+            if (hex) m.material.color.set(hex);
+          }
+        }
         if (cfg.screen) {
           let tex = await texLoader.loadAsync('/assets/' + cfg.texture);
           // Inset the screenshot inside a black border (the bezel the mesh's own
@@ -218,6 +225,25 @@
         const front = new THREE.DirectionalLight(0xdfe4ff, cfg.front ?? 0.6);
         front.position.set(1, 3, 4);
         scene.add(key, rim, fill, front);
+        // Self-shadowing from the key (pages shading each other), off by default
+        // so the device renders stay as they were.
+        if (cfg.shadows) {
+          key.castShadow = true;
+          key.shadow.mapSize.set(2048, 2048);
+          key.shadow.bias = -0.0005;
+          key.shadow.normalBias = 0.02;
+          key.shadow.radius = 4;
+          Object.assign(key.shadow.camera, {
+            left: -2,
+            right: 2,
+            top: 2,
+            bottom: -2,
+            near: 0.1,
+            far: 20,
+          });
+        }
+        // Sky above, warm ground below: [skyColour, groundColour, intensity].
+        if (cfg.hemi) scene.add(new THREE.HemisphereLight(cfg.hemi[0], cfg.hemi[1], cfg.hemi[2]));
 
         const cam = cfg.cam ?? {};
         const camera = new THREE.PerspectiveCamera(cam.fov ?? 22, w / h, 0.01, 100);
