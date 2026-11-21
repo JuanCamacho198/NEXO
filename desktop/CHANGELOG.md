@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.8.0](https://github.com/JuanCamacho198/NEXO/compare/desktop-v0.7.0...desktop-v0.8.0) (2026-11-17)
+
+
+### Features
+
+* **desktop:** tighten capabilities and add a native menu ([dc344d8](https://github.com/JuanCamacho198/NEXO/commit/dc344d8b92b181053b14ae7c792678fe45369f0b))
+
+
+### Bug Fixes
+
+* **desktop:** confine file commands to app data and carry error codes ([df434ee](https://github.com/JuanCamacho198/NEXO/commit/df434eedbe658e678a5088fd3b00b2b847067df2))
+* **desktop:** confine Rust file commands to the app data directory ([62e54d1](https://github.com/JuanCamacho198/NEXO/commit/62e54d17713c95d7cb6ac6e4773dfa9f05b9318a))
+* **desktop:** give macOS window controls, because the window is borderless everywhere ([9b5a1b0](https://github.com/JuanCamacho198/NEXO/commit/9b5a1b08d2145451ce03a8442a3add74b85471ac))
+* **desktop:** hide sync stubs from the library and Home ([248e4e0](https://github.com/JuanCamacho198/NEXO/commit/248e4e01df0a8748386b3bf6ffe87f4d9dd0b7e3))
+* **desktop:** make diagnostics reachable and redaction real ([02d8ebf](https://github.com/JuanCamacho198/NEXO/commit/02d8ebfb5c0d9224ce47f2c3af5fe9034c58e7f1))
+* **desktop:** make secret protection honest off Windows ([bbd9971](https://github.com/JuanCamacho198/NEXO/commit/bbd99717842c614bb61d2b4a8635e7985279a5b7))
+* **desktop:** make the offline hangs explicit states ([8397c36](https://github.com/JuanCamacho198/NEXO/commit/8397c3607f203041d49dc0ff880769d9eaa6a01b))
+* **desktop:** narrow the webview CSP to what the renderer fetches ([c24ae1c](https://github.com/JuanCamacho198/NEXO/commit/c24ae1cca8710e50f1a0d21b665e4b8606fec034))
+* **desktop:** stop inlining the Google OAuth client secret ([8deb4e8](https://github.com/JuanCamacho198/NEXO/commit/8deb4e8966946759d96761b94fc8dccf2a2d16c8))
+* **desktop:** use a static Tauri import in the menu event bridge ([6e01053](https://github.com/JuanCamacho198/NEXO/commit/6e01053f11465c28d7252b0eb25291e47d3f6490))
+* **home:** drop sync stubs from both home partitions and the shelf badge ([5a777ff](https://github.com/JuanCamacho198/NEXO/commit/5a777ff120c97449d161e2e0c6f49c63db721121))
+* **library:** hide sync stubs from the shelf, its counts and its empty state ([9b29ec9](https://github.com/JuanCamacho198/NEXO/commit/9b29ec947661fd0fcbdd8cb05853942c5830f2c4))
+* **library:** stop fabricating an empty filePath on a readable book ([7fe2297](https://github.com/JuanCamacho198/NEXO/commit/7fe229783a518fd3ec4ac76274e10346ea7f0b55))
+
+
+### Performance Improvements
+
+* **desktop:** add an optimised release profile ([3ccd953](https://github.com/JuanCamacho198/NEXO/commit/3ccd95324fa757507a9a0824050b668c4a320e02))
+* **desktop:** skip the sync outbox flush while offline ([d242744](https://github.com/JuanCamacho198/NEXO/commit/d242744cb53aa61c7bd85afd957a109a3b655cf5))
+* **desktop:** stop sampling debug IPC and updating before first paint ([683a029](https://github.com/JuanCamacho198/NEXO/commit/683a0294600fc01eda880428410e89328fabde1f))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/desktop-v0.2.0...desktop-v0.3.0) (2026-09-17)
 
 

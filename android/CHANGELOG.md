@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.7.0](https://github.com/JuanCamacho198/NEXO/compare/android-v0.6.1...android-v0.7.0) (2026-11-17)
+
+
+### Features
+
+* **android:** label the icons that were the only label, and use large screens ([04d00e5](https://github.com/JuanCamacho198/NEXO/commit/04d00e57d1004a16d23ba409ab4527a17cc073af))
+* **settings:** real legal pages and manifest hardening ([e6d20bc](https://github.com/JuanCamacho198/NEXO/commit/e6d20bcba8ea4660e2676a7fb0ecc99522dff478))
+* **settings:** translate the legal copy and route contact to support mail ([6aea37f](https://github.com/JuanCamacho198/NEXO/commit/6aea37f407deaf4d3fe777692daca021b7aed25e))
+
+
+### Bug Fixes
+
+* **android:** deliver the crash notification and follow the locale ([727c366](https://github.com/JuanCamacho198/NEXO/commit/727c3663b3f7fac594dce1efc6951bed70fca2e6))
+* **android:** guard reader fullscreen insets controller below API 30 ([68ad210](https://github.com/JuanCamacho198/NEXO/commit/68ad210f92b2f45dbef93a003223f7aba0b47514))
+* **android:** guard the reader crash, free the main thread and make the legal pages real ([979952d](https://github.com/JuanCamacho198/NEXO/commit/979952d381f028fbfb290199c7cd510dc6088da6))
+* **android:** refuse to self-update a build that came from a store ([09d3dbc](https://github.com/JuanCamacho198/NEXO/commit/09d3dbc0b834a7bdf31fc877a2c6a6252c640e5e))
+* **android:** resolve baseline home paths independently of the machine ([2100428](https://github.com/JuanCamacho198/NEXO/commit/21004280b87febadec84c79f5ac097f65a6f057b))
+* **android:** triage the three real Sentry issues ([45d0da1](https://github.com/JuanCamacho198/NEXO/commit/45d0da1d01f005d18a200456a56cdf616d9cb5e6))
+* **sync:** refresh the Drive token once on a mid-flight 401 ([36738ec](https://github.com/JuanCamacho198/NEXO/commit/36738ecc14d951a9808af21a3e17094faad3e2eb))
+* **test:** update the four UserBookRow test references left stale ([c7052d4](https://github.com/JuanCamacho198/NEXO/commit/c7052d4c58c4af1f22b6d9fe0626063bc021e356))
+* **ui:** stop reporting a missing cover as a Sentry error ([a03a9bb](https://github.com/JuanCamacho198/NEXO/commit/a03a9bbdf9f32b230bcbfd0c08a4052ebd0d6283))
+
+
+### Performance Improvements
+
+* **android:** read chapter length off the main thread and time out auth ([fd30865](https://github.com/JuanCamacho198/NEXO/commit/fd30865957877ed8d8e8bb2b0e5373fbcac4bf6d))
+* **startup:** move crash-log rotation off main and defer the image loader ([d5ea8c9](https://github.com/JuanCamacho198/NEXO/commit/d5ea8c9b664b4b78e7b0ef672875bac05e74d382))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXO/compare/android-v0.2.0...android-v0.3.0) (2026-09-17)
 
 
