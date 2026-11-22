@@ -277,6 +277,8 @@
   --color-home-card: var(--color-surface);
   --color-sidebar-card: var(--color-surface-subtle);
   --color-edge: var(--color-border);
+  /* Dialog scrim: dims the shell so the dialog is the only lit plane. */
+  --color-scrim: rgba(2, 6, 14, 0.62);
   --color-edge-strong: var(--color-border-strong);
 
   /* NEXO ember — the orange of the logo ribbon (#FFA620 → #F7781A → #FF2D0F).
@@ -452,6 +454,7 @@
   /* Light edges are a clear pale blue: the default hairline is ~1.1:1 on the
      light planes, so cards read as floating with no outline. */
   --color-edge: #b9cbe2;
+  --color-scrim: rgba(15, 23, 42, 0.32);
   --color-edge-strong: #9bb3d1;
 
   /* NEXO ember (light). `brand-text` deepens to #C2410C to keep AA on white
