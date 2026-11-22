@@ -91,7 +91,12 @@ pub async fn saveBookFile(
     // boundary, so it is refused when it would climb out of app data instead of
     // being joined blindly.
     let root = app.app_data_root().map_err(CommandError::from)?;
-    let destination = root.join("books").join(&id);
+    // The destination must be built the same way the repository builds it, or
+    // this guard validates a path the write never uses. `books_dir(root)` is the
+    // legacy tree; after the layout migration every book lives in
+    // `data/books`, so joining `books` here refused every post-migration write
+    // with PATH_OUTSIDE_APP_DATA while the file itself was written elsewhere.
+    let destination = crate::layout::resolved_books_dir(&root).join(&id);
     resolve_within_app_data(&app, &destination.to_string_lossy())
         .map_err(CommandError::from)
         .map(|_| ())?;
@@ -135,6 +140,37 @@ mod tests {
         (root, book)
     }
 
+    /// After the layout migration every book lives under `data/books`, and the
+    /// write command must validate the path the repository will actually use.
+    /// Building `app_data/books/<id>` here instead refused every post-migration
+    /// upload with PATH_OUTSIDE_APP_DATA: the guard approved a path nothing
+    /// writes, while the real destination was never checked at all.
+    ///
+    /// This pins the two paths to the same layout helper, which is what the
+    /// command now does. It is a guard against the two drifting apart again;
+    /// the end-to-end proof is the live app.
+    #[test]
+    fn the_write_destination_follows_the_migrated_layout() {
+        let root = TempRoot::new();
+        std::fs::create_dir_all(crate::layout::books_dir(&root.root)).expect("data/books");
+        std::fs::write(
+            crate::layout::marker_path(&root.root),
+            serde_json::json!({ "version": crate::layout::LAYOUT_VERSION }).to_string(),
+        )
+        .expect("marker");
+
+        let resolved_dir = crate::layout::resolved_books_dir(&root.root);
+        assert!(!resolved_dir.ends_with("books") || resolved_dir.ends_with("data/books"));
+        assert!(
+            resolved_dir.starts_with(crate::layout::data_dir(&root.root)),
+            "with the marker at the current version the repository writes under \
+             data/, so the guard must resolve the same tree: {}",
+            resolved_dir.display()
+        );
+        let destination = resolved_dir.join("book-1.epub");
+        let resolved = confined(&root, &destination.to_string_lossy()).expect("inside app data");
+        assert_eq!(resolved.file_name().and_then(|n| n.to_str()), Some("book-1.epub"));
+    }
     #[test]
     fn reading_a_book_inside_app_data_still_works() {
         let (root, book) = fixture();
