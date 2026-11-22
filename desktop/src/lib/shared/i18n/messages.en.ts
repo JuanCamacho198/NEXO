@@ -1464,6 +1464,15 @@ export const messagesEn = {
   'update.errorUnreachable': 'Could not reach the update feed. Try again later.',
   'update.errorMalformed': 'The update feed is invalid. Try again later.',
   'update.errorOffline': 'You appear to be offline. Reconnect and try again.',
+  'oauthPage.signedIn.title': 'Signed in',
+  'oauthPage.signedIn.heading': "You're signed in",
+  'oauthPage.signedIn.body':
+    'Your NEXO account is connected. Your library will sync across your devices.',
+  'oauthPage.drive.title': 'Drive connected',
+  'oauthPage.drive.heading': 'Google Drive connected',
+  'oauthPage.drive.body':
+    'NEXO can now back up your library to Drive. The app picks up where you left off.',
+  'oauthPage.closeHint': 'You can close this tab and go back to NEXO.',
 } as const;
 
 export type MessageKey = keyof typeof messagesEn;

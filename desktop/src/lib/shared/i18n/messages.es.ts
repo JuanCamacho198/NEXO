@@ -1483,4 +1483,13 @@ export const messagesEs: Record<MessageKey, string> = {
     'No se pudo contactar el feed de actualizaciones. Inténtalo más tarde.',
   'update.errorMalformed': 'El feed de actualizaciones no es válido. Inténtalo más tarde.',
   'update.errorOffline': 'Parece que estás sin conexión. Reconéctate e inténtalo de nuevo.',
+  'oauthPage.signedIn.title': 'Sesión iniciada',
+  'oauthPage.signedIn.heading': 'Has iniciado sesión',
+  'oauthPage.signedIn.body':
+    'Tu cuenta de NEXO está conectada. Tu biblioteca se sincronizará entre tus dispositivos.',
+  'oauthPage.drive.title': 'Drive conectado',
+  'oauthPage.drive.heading': 'Google Drive conectado',
+  'oauthPage.drive.body':
+    'NEXO ya puede respaldar tu biblioteca en Drive. La app continúa donde lo dejaste.',
+  'oauthPage.closeHint': 'Puedes cerrar esta pestaña y volver a NEXO.',
 };

@@ -19,6 +19,7 @@
  * session carries no Drive tokens.
  */
 
+import { buildLoopbackPage } from './oauthLoopbackPage';
 import { start, cancel, onUrl } from '@fabianlars/tauri-plugin-oauth';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import type { Session } from '@supabase/supabase-js';
@@ -32,54 +33,6 @@ import { logger } from '$lib/shared/logger/Logger';
 
 let currentPort: number | null = null;
 let urlUnlisten: (() => void) | null = null;
-
-/**
- * Custom HTML shown in the browser tab after Supabase redirects back.
- * The user sees "You're signed in" and can close the tab.
- */
-const LOOPBACK_SUCCESS_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Signed in — Nexo</title>
-  <style>
-    :root { color-scheme: light dark; }
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100vh; margin: 0; padding: 24px;
-      background: #f0fdf4; color: #14532d;
-    }
-    .card {
-      max-width: 420px; width: 100%;
-      background: #fff; border: 1px solid #bbf7d0; border-radius: 16px;
-      padding: 32px 24px; text-align: center;
-    }
-    .check {
-      width: 64px; height: 64px; margin: 0 auto 16px;
-      background: #22c55e; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-    }
-    h1 { margin: 0 0 8px; font-size: 22px; }
-    p  { margin: 0; font-size: 14px; color: #4b5563; }
-    @media (prefers-color-scheme: dark) {
-      body { background: #052e16; color: #dcfce7; }
-      .card { background: #0f172a; border-color: #14532d; }
-      p { color: #94a3b8; }
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="check">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
-    </div>
-    <h1>You're signed in</h1>
-    <p>You can close this tab and return to Nexo.</p>
-  </div>
-</body>
-</html>`;
 
 /**
  * Listen for OAuth callbacks on the loopback URL (http://127.0.0.1:{port}/callback).
@@ -200,7 +153,7 @@ export async function signInWithGoogle(): Promise<void> {
   // Start loopback server
   let port: number;
   try {
-    port = await start({ response: LOOPBACK_SUCCESS_HTML });
+    port = await start({ response: buildLoopbackPage('signedIn') });
   } catch (err) {
     throw new Error(`Failed to start loopback server: ${String(err)}`);
   }
