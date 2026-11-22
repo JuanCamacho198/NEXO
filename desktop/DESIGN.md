@@ -174,6 +174,20 @@ The same roles invert on `[data-theme='light']`: ground becomes `#eef2f7`, surfa
 
 **The Token-Only Rule.** Components reference semantic tokens, never raw hex or `rgba()`. A theme-dependent color hardcoded in a component (`red-50`, `bg-[rgba(...)]`) is a bug, not a style.
 
+### NEXO Ember (shell and Home, 2026-11 redesign)
+
+The new logo's ribbon orange (`#FFA620 → #F7781A → #FF2D0F`) replaces NEXO Blue as the signal on the **sidebar, titlebar and Home**. It is a staged migration: every other screen keeps NEXO Blue until it is redesigned, so the ember lives in its own tokens (`--color-brand-*`) rather than in `--color-accent`. When the last screen moves, `--color-accent` points at the ember and these tokens collapse into it.
+
+- **Fill:** `brand-start → brand` gradient with `brand-on` (#1F0D02) ink. White text on the ember fails AA and is never used; the only cream-on-ember is the active-nav icon glyph (a graphic, ≥3:1 on `brand → brand-end`).
+- **Text:** `brand-text` — #FF8B3D on navy, #B03A0B on the light shell.
+- **Owners:** the resume CTA (the only filled ember surface), the active nav item, progress fills, the streak, section-heading markers, "view all" and Import (ember label on a quiet pill — Import no longer uses coral).
+- **Hero backdrop:** `HomeHorizon` — a night planet lit by the ember at its rim, drawn in SVG from `--color-horizon-*` tokens; its left third fades to the hero surface so text never sits on the geometry.
+- **Light shell layering:** rail `#E3E9F1` → ground `#EAEEF4` → cards `#F7F9FC` (`--color-sidebar-bg`, `--color-shell-ground`, `--color-home-card`), so the light window is three planes rather than one white sheet. In dark these alias the global tokens.
+
+### Shell chrome
+
+On sidebar routes the custom titlebar floats transparent over the window's top 36px (drag region plus window controls); the rail runs to the top edge and the content column starts below the band. The reader keeps the in-flow titlebar because its own chrome sits at the top of the content.
+
 ## Typography
 
 **Display Font:** Manrope (with Segoe UI, Arial, sans-serif)

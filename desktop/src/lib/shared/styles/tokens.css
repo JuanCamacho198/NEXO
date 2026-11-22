@@ -270,9 +270,35 @@
   --color-import: #ffb59a;
   --color-import-bg: rgba(255, 181, 154, 0.12);
   --color-sidebar-bg: #0b1626;
-  --color-accent-nav-bg: rgba(78, 140, 255, 0.14);
-  --color-accent-nav-fg: #8fb8ff;
-  --color-accent-nav-bar: #4e8cff;
+  --color-sidebar-bg-end: #0a1320;
+  /* Shell-scoped planes. Dark aliases the global tokens (no visual change);
+     light gives the shell and Home their own tinted layering. */
+  --color-shell-ground: var(--color-background);
+  --color-home-card: var(--color-surface);
+  --color-sidebar-card: var(--color-surface-subtle);
+
+  /* NEXO ember — the orange of the logo ribbon (#FFA620 → #F7781A → #FF2D0F).
+     Owns the shell (sidebar, titlebar) and Home. `brand-text` is the orange
+     used as text on the navy ground (≈6.4:1); `brand-on` is the ink placed on
+     an ember fill, because white on #F7781A fails AA. */
+  --color-brand-start: #ffa620;
+  --color-brand: #f7781a;
+  --color-brand-end: #ff2d0f;
+  --color-brand-text: #ff8b3d;
+  --color-brand-on: #1f0d02;
+  --color-brand-soft: rgba(247, 120, 26, 0.14);
+  --color-brand-glow: rgba(247, 120, 26, 0.45);
+  --color-brand-mark-ink: #fff6ec;
+  --color-accent-nav-bg: rgba(247, 120, 26, 0.34);
+  --color-accent-nav-bg-end: rgba(247, 120, 26, 0.03);
+  --color-accent-nav-fg: #fff6ec;
+  --color-accent-nav-bar: #f7781a;
+
+  /* Home hero horizon: a night planet lit from the right by the ember. */
+  --color-horizon-planet: #0b1729;
+  --color-horizon-grid: rgba(148, 173, 206, 0.11);
+  --color-horizon-lights: #ffb469;
+  --color-horizon-fade: #0e1a2b;
 
   /* Stats surface — sticky chrome, hero and chart (NEXO blue family).
      The chart ramp stays inside the product's blue→cyan range so the donut
@@ -411,10 +437,33 @@
      light surface. Selection stays a quiet NEXO-blue tint. */
   --color-import: #9a3412;
   --color-import-bg: rgba(154, 52, 18, 0.08);
-  --color-sidebar-bg: #ffffff;
-  --color-accent-nav-bg: rgba(0, 110, 200, 0.1);
-  --color-accent-nav-fg: #006ec8;
-  --color-accent-nav-bar: #006ec8;
+  /* Light shell layering, darkest to lightest: rail → ground → cards. The rail
+     is a tinted slate so the window is not a single white sheet. */
+  --color-sidebar-bg: #e3e9f1;
+  --color-sidebar-bg-end: #dce3ec;
+  --color-shell-ground: #eaeef4;
+  --color-home-card: #f7f9fc;
+  --color-sidebar-card: rgba(255, 255, 255, 0.55);
+
+  /* NEXO ember (light). `brand-text` deepens to #C2410C to keep AA on white
+     (≈5.2:1); fills keep the logo gradient with dark ink on top. */
+  --color-brand-start: #ffa620;
+  --color-brand: #f7781a;
+  --color-brand-end: #ff2d0f;
+  --color-brand-text: #b03a0b;
+  --color-brand-on: #1f0d02;
+  --color-brand-soft: rgba(234, 88, 12, 0.1);
+  --color-brand-glow: rgba(234, 88, 12, 0.35);
+  --color-brand-mark-ink: #fff6ec;
+  --color-accent-nav-bg: rgba(247, 120, 26, 0.22);
+  --color-accent-nav-bg-end: rgba(247, 120, 26, 0.02);
+  --color-accent-nav-fg: #7c2d12;
+  --color-accent-nav-bar: #ea580c;
+
+  --color-horizon-planet: #d9e1ec;
+  --color-horizon-grid: rgba(30, 58, 95, 0.13);
+  --color-horizon-lights: #ea580c;
+  --color-horizon-fade: #f1f4f8;
 
   /* Stats surface — light theme counterparts of the dark block above. Surfaces
      stay white-tinted (not a lightened dark) and the chart ramp deepens so it

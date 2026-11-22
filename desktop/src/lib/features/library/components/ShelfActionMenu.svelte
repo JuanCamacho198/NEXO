@@ -7,6 +7,7 @@
   import SquarePen from 'lucide-svelte/icons/square-pen';
   import Eye from 'lucide-svelte/icons/eye';
   import Trash2 from 'lucide-svelte/icons/trash-2';
+  import Ellipsis from 'lucide-svelte/icons/ellipsis';
   import { getShelfMenuId } from '../utils';
 
   const {
@@ -250,7 +251,7 @@
   <button
     bind:this={triggerEl}
     type="button"
-    class="rounded-md border border-(--color-border) bg-(--color-surface) px-2 py-1 text-xs text-(--color-text-muted)"
+    class="flex size-9 shrink-0 items-center justify-center rounded-full border border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted) transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-border-strong) hover:text-(--color-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-background)"
     aria-label={triggerLabel}
     aria-haspopup="menu"
     aria-expanded={isOpen}
@@ -259,7 +260,7 @@
     onclick={toggleMenu}
     onkeydown={handleTriggerKeyDown}
   >
-    ...
+    <Ellipsis size={16} strokeWidth={2} aria-hidden="true" />
   </button>
 
   {#if isOpen}

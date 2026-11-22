@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { MessageKey } from '$lib/shared/i18n';
   import Flame from 'lucide-svelte/icons/flame';
+  import CalendarDays from 'lucide-svelte/icons/calendar-days';
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
 
@@ -59,7 +60,7 @@
 </script>
 
 <aside
-  class="rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) px-4 py-3"
+  class="rounded-(--radius-lg) border border-(--color-border) bg-(--color-home-card) px-6 py-4"
   data-testid="stats-summary"
   aria-label={progressTitle}
   aria-busy={isLoading || undefined}
@@ -67,19 +68,27 @@
   {#if disabledReason}
     <p class="text-sm text-(--color-text-muted)">{disabledReason}</p>
   {:else}
-    <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+    <div class="flex flex-wrap items-center gap-x-10 gap-y-3">
       <div class="min-w-50 flex-1">
-        <div class="flex items-baseline justify-between gap-3">
-          <span class="text-xs font-medium text-(--color-text-muted)">{goalLabel}</span>
+        <div class="flex items-center justify-between gap-3">
+          <span class="flex items-center gap-2.5 text-sm font-medium text-(--color-secondary)">
+            <CalendarDays
+              size={18}
+              strokeWidth={1.8}
+              class="text-(--color-text-muted)"
+              aria-hidden="true"
+            />
+            {goalLabel}
+          </span>
           {#if isLoading}
             <span class="h-5 w-20 animate-pulse rounded bg-(--color-border)" aria-hidden="true"
             ></span>
           {:else}
-            <span class="text-sm font-semibold text-(--color-primary)">{goalValue}</span>
+            <span class="text-base font-bold tabular-nums text-(--color-primary)">{goalValue}</span>
           {/if}
         </div>
         <div
-          class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-(--color-border)"
+          class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-(--color-border)"
           role="progressbar"
           aria-label={progressGoalAria}
           aria-valuemin={0}
@@ -88,22 +97,31 @@
         >
           {#if !isLoading}
             <div
-              class="h-full w-full origin-left rounded-full bg-(--color-accent) transition-transform duration-(--duration-slow) ease-(--ease-smooth)"
+              class="h-full w-full origin-left rounded-full bg-linear-to-r from-(--color-brand-start) to-(--color-brand) transition-transform duration-(--duration-slow) ease-(--ease-smooth)"
               style="transform: scaleX({goalPct / 100})"
             ></div>
           {/if}
         </div>
       </div>
 
-      <div class="flex items-center gap-1.5">
-        <Flame size={14} strokeWidth={1.8} class="text-(--color-streak-text)" aria-hidden="true" />
+      <div class="flex items-center gap-2">
+        <Flame
+          size={20}
+          strokeWidth={1.8}
+          fill="currentColor"
+          class="text-(--color-brand)"
+          aria-hidden="true"
+        />
         {#if isLoading}
           <span
             class="inline-block h-4 w-12 animate-pulse rounded bg-(--color-border)"
             aria-hidden="true"
           ></span>
         {:else}
-          <span class="text-sm font-semibold text-(--color-streak-text)">{streakValue}</span>
+          <span
+            class="text-base font-bold tabular-nums text-(--color-brand-text)"
+            data-testid="home-streak-value">{streakValue}</span
+          >
         {/if}
       </div>
     </div>

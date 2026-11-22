@@ -14,7 +14,9 @@
     resolveRouteLayout,
     routeLayoutClass,
     routeUsesPadding,
+    routeShowsShell,
   } from '$lib/shared/ui/layout/routeLayout';
+  import { titlebarState } from '$lib/stores/titlebarState.svelte';
   import { fly } from 'svelte/transition';
 
   import { ContinueReadingSection, AppSidebar } from '$lib/shared/ui';
@@ -31,9 +33,10 @@
   import DiscoverScreen from '$lib/features/discover/DiscoverScreen.svelte';
   import AddonsScreen from '$lib/features/addons/AddonsScreen.svelte';
 
-  const showSidebar = $derived(
-    navigationState.route !== 'reader' && navigationState.route !== 'welcome',
-  );
+  const showSidebar = $derived(routeShowsShell(navigationState.route));
+  // The floating titlebar owns the window's top band over the content column;
+  // the column starts below it while the sidebar runs to the top edge.
+  const clearsFloatingTitlebar = $derived(titlebarState.isCustomTitlebar);
 
   const contentLayoutClass = $derived(routeLayoutClass(resolveRouteLayout(navigationState.route)));
   const mainUsesPadding = $derived(routeUsesPadding(navigationState.route));
@@ -92,7 +95,7 @@
   -->
   <WelcomeScreen t={appState.t} />
 {:else if showSidebar}
-  <div class="flex h-full flex-1 min-w-0">
+  <div class="flex h-full min-w-0 flex-1 bg-(--color-shell-ground)">
     <AppSidebar
       activeRoute={navigationState.route}
       {navItems}
@@ -111,6 +114,7 @@
       tabindex="-1"
       class="flex-1 overflow-y-auto relative flex flex-col min-h-0"
       class:scrollbar-hidden={navigationState.route === 'library'}
+      class:mt-9={clearsFloatingTitlebar}
       class:p-4={mainUsesPadding}
       class:md:p-6={mainUsesPadding}
     >

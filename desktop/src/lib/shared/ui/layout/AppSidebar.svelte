@@ -9,8 +9,9 @@
   import { notificationCenter, markAllRead } from '$lib/shared/stores/notificationCenter.svelte';
   import { Tooltip } from 'bits-ui';
   import Bell from 'lucide-svelte/icons/bell';
-  import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
+  import ChevronsLeft from 'lucide-svelte/icons/chevrons-left';
+  import ChevronsRight from 'lucide-svelte/icons/chevrons-right';
   import Moon from 'lucide-svelte/icons/moon';
   import Sun from 'lucide-svelte/icons/sun';
   import { theme, toggleTheme } from '$lib/shared/stores/theme';
@@ -51,10 +52,15 @@
   const labelFadeClass =
     'overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-(--duration-fast) ease-(--ease-smooth)';
 
+  const focusRing =
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-nav-bar)';
+
   let profile = $derived(profileSessionFromAuthState());
 
+  // The lockup's wordmark is cream (#FFF6EC); the light export recolours only
+  // the wordmark to the brand navy so it reads on a white rail.
   let wordmarkSrc = $derived(
-    $theme === 'light' ? './nexo-horizontal-light.svg' : './nexo-horizontal-dark.svg',
+    $theme === 'light' ? './nexo-logo-horizontal-light.svg' : './nexo-logo-horizontal-dark.svg',
   );
 
   /**
@@ -90,28 +96,30 @@
 
 {#snippet navButton(item: NavItem)}
   {@const ItemIcon = item.icon}
+  {@const isActive = activeRoute === item.id}
   <Tooltip.Root>
     <Tooltip.Trigger
-      class={`relative w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-        collapsed ? 'flex items-center justify-center' : 'flex items-center gap-3'
+      class={`group/nav relative flex w-full items-center rounded-full text-[15px] font-medium transition-[background-color,color] duration-(--duration-fast) ease-(--ease-smooth) ${focusRing} ${
+        collapsed ? 'justify-center p-1' : 'gap-3 py-1 pr-3 pl-1'
       } ${
-        activeRoute === item.id
-          ? 'bg-(--color-accent-nav-bg) text-(--color-accent-nav-fg)'
-          : 'text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary)'
+        isActive
+          ? 'bg-linear-to-r from-(--color-accent-nav-bg) to-(--color-accent-nav-bg-end) text-(--color-accent-nav-fg)'
+          : 'text-(--color-secondary) hover:bg-(--color-surface-subtle) hover:text-(--color-primary)'
       }`}
       aria-label={item.badgeKey
         ? `${t(item.messageKey)} (${t(item.badgeKey)})`
         : t(item.messageKey)}
+      aria-current={isActive ? 'page' : undefined}
       onclick={item.action}
     >
-      {#if activeRoute === item.id}
-        <span
-          class="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-(--color-accent-nav-bar)"
-          aria-hidden="true"
-        ></span>
-      {/if}
-      <span class="relative shrink-0">
-        <ItemIcon size={16} strokeWidth={1.8} aria-hidden="true" />
+      <span
+        class={`relative flex size-9 shrink-0 items-center justify-center rounded-full transition-colors duration-(--duration-fast) ease-(--ease-smooth) ${
+          isActive
+            ? 'bg-linear-to-br from-(--color-brand) to-(--color-brand-end) text-(--color-brand-mark-ink) shadow-[0_6px_16px_-6px_var(--color-brand-glow)]'
+            : 'text-(--color-text-muted) group-hover/nav:text-(--color-primary)'
+        }`}
+      >
+        <ItemIcon size={20} strokeWidth={1.8} aria-hidden="true" />
         {#if item.badgeKey && collapsed}
           <!--
             Collapsed there is no room to spell the status out, so the same
@@ -119,7 +127,7 @@
             geometry (bottom-right of the glyph) so the rail keeps one language
             for "there is something here".
           -->
-          <StatusChip dot tone="danger" class="absolute -right-1 -bottom-1" />
+          <StatusChip dot tone="danger" class="absolute right-1 bottom-1" />
         {/if}
       </span>
       <span
@@ -147,7 +155,7 @@
           class:opacity-100={!collapsed}
           aria-hidden={collapsed ? 'true' : undefined}
         >
-          <StatusChip text={t(item.badgeKey)} />
+          <StatusChip text={t(item.badgeKey)} tone="neutral" />
         </span>
       {/if}
     </Tooltip.Trigger>
@@ -161,8 +169,8 @@
         <Tooltip.Content
           role="tooltip"
           side="right"
-          sideOffset={8}
-          class="z-50 whitespace-nowrap rounded bg-(--color-surface) p-1 text-xs text-(--color-primary) shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
+          sideOffset={10}
+          class="z-50 whitespace-nowrap rounded-(--radius-sm) border border-(--color-border) bg-(--color-elevated) px-2.5 py-1.5 text-xs font-medium text-(--color-primary) shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]"
         >
           {item.badgeKey ? `${t(item.messageKey)} (${t(item.badgeKey)})` : t(item.messageKey)}
         </Tooltip.Content>
@@ -171,12 +179,21 @@
   </Tooltip.Root>
 {/snippet}
 
+{#snippet divider()}
+  <div class="mx-3 my-2.5 h-px bg-(--color-border)" aria-hidden="true"></div>
+{/snippet}
+
+<!--
+  The rail runs the full window height. The custom titlebar floats over its top
+  band as a drag region (and hosts the macOS traffic lights there), so the
+  header starts below that band.
+-->
 <aside
-  class="sticky top-0 flex h-full shrink-0 flex-col overflow-hidden border-r border-(--color-border) bg-(--color-sidebar-bg) transition-[width] duration-(--duration-slow) max-lg:hidden"
-  class:w-64={!collapsed}
+  class="sticky top-0 flex h-full shrink-0 flex-col overflow-hidden border-r border-(--color-border) bg-linear-to-b from-(--color-sidebar-bg) to-(--color-sidebar-bg-end) transition-[width] duration-(--duration-slow) ease-(--ease-smooth) max-lg:hidden"
+  class:w-68={!collapsed}
   class:w-18={collapsed}
 >
-  <div class="flex items-center p-3 {collapsed ? 'justify-center' : ''}">
+  <div class="flex items-center pt-11 pb-6 {collapsed ? 'justify-center px-3' : 'pr-3 pl-6'}">
     <span
       class="shrink-0 overflow-hidden transition-[max-width,opacity] duration-(--duration-fast) ease-(--ease-smooth)"
       class:max-w-0={collapsed}
@@ -191,34 +208,34 @@
       <button
         type="button"
         onclick={() => (collapsed = !collapsed)}
-        class="flex items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
+        class="flex size-9 items-center justify-center rounded-full text-(--color-text-muted) transition-colors hover:bg-(--color-surface-subtle) hover:text-(--color-primary) {focusRing}"
         aria-label={t('sidebar.expand')}
       >
-        <ChevronRight size={14} class="h-3.5 w-3.5" aria-hidden="true" />
+        <ChevronsRight size={16} aria-hidden="true" />
       </button>
     {:else}
       <button
         type="button"
         onclick={() => (collapsed = !collapsed)}
-        class="ml-auto flex shrink-0 items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
+        class="ml-auto flex size-8 shrink-0 items-center justify-center rounded-full text-(--color-text-muted) transition-colors hover:bg-(--color-surface-subtle) hover:text-(--color-primary) {focusRing}"
         aria-label={t('sidebar.collapse')}
       >
-        <ChevronLeft size={14} class="h-3.5 w-3.5" aria-hidden="true" />
+        <ChevronsLeft size={16} aria-hidden="true" />
       </button>
     {/if}
   </div>
 
-  <nav class="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+  <nav class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-1">
     <Tooltip.Provider delayDuration={0} skipDelayDuration={0}>
       {#each navItems as item, index (item.id)}
         {#if index > 0 && groupOf(navItems[index - 1].id) !== groupOf(item.id)}
-          <div class="my-2 h-px bg-(--color-border) opacity-60" aria-hidden="true"></div>
+          {@render divider()}
         {/if}
         {@render navButton(item)}
       {/each}
 
       {#if dataNavItems.length > 0}
-        <div class="my-2 h-px bg-(--color-border) opacity-60" aria-hidden="true"></div>
+        {@render divider()}
         {#each dataNavItems as item (item.id)}
           {@render navButton(item)}
         {/each}
@@ -226,18 +243,18 @@
     </Tooltip.Provider>
   </nav>
 
-  <div class="flex flex-col gap-1.5 border-t border-(--color-border) p-3">
+  <div class="flex flex-col gap-2 p-3 pb-4">
     {#if collapsed}
       <button
         type="button"
         onclick={toggleTheme}
-        class="mx-auto flex size-8 shrink-0 items-center justify-center rounded-lg border border-(--color-border) text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
+        class="mx-auto flex size-10 shrink-0 items-center justify-center rounded-full border border-(--color-border) bg-(--color-sidebar-card) text-(--color-text-muted) transition-colors hover:border-(--color-border-strong) hover:text-(--color-primary) {focusRing}"
         aria-label={$theme === 'dark' ? t('theme.switchToLight') : t('theme.switchToDark')}
       >
         {#if $theme === 'dark'}
-          <Moon size={14} class="h-3.5 w-3.5" aria-hidden="true" />
+          <Moon size={16} aria-hidden="true" />
         {:else}
-          <Sun size={14} class="h-3.5 w-3.5" aria-hidden="true" />
+          <Sun size={16} aria-hidden="true" />
         {/if}
       </button>
     {:else}
@@ -247,9 +264,10 @@
     <button
       type="button"
       onclick={openNotificationCenter}
-      class="relative flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
+      class="relative flex w-full items-center rounded-(--radius-lg) py-2.5 text-sm font-medium text-(--color-secondary) transition-colors hover:bg-(--color-surface-subtle) hover:text-(--color-primary) {focusRing}"
       class:justify-center={collapsed}
       class:gap-3={!collapsed}
+      class:px-3.5={!collapsed}
       aria-label={notificationCenter.unreadCount > 0
         ? t('notifications.bell.unreadBadge', {
             badge: unreadBadgeText,
@@ -257,9 +275,9 @@
           })
         : t('notifications.bell.label')}
     >
-      <span class="relative shrink-0">
-        <Bell size={16} strokeWidth={1.8} aria-hidden="true" />
-        {#if notificationCenter.unreadCount > 0}
+      <span class="relative shrink-0 text-(--color-text-muted)">
+        <Bell size={18} strokeWidth={1.8} aria-hidden="true" />
+        {#if notificationCenter.unreadCount > 0 && collapsed}
           <span
             class="absolute -top-1.5 -right-1.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-(--color-error) px-1 text-[10px] font-bold text-(--color-background)"
             aria-hidden="true"
@@ -278,10 +296,20 @@
       >
         {t('notifications.center.title')}
       </span>
+      {#if notificationCenter.unreadCount > 0 && !collapsed}
+        <span
+          class="ml-auto flex min-h-5 min-w-5 items-center justify-center rounded-full bg-(--color-error) px-1.5 text-[11px] font-bold tabular-nums text-(--color-background)"
+          aria-hidden="true"
+        >
+          {unreadBadgeText}
+        </span>
+      {/if}
     </button>
 
     <div
-      class="relative flex w-full cursor-pointer items-center rounded-lg p-2 transition-colors hover:bg-(--color-panel-accent) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
+      class="relative flex w-full cursor-pointer items-center rounded-(--radius-lg) border transition-colors {focusRing} {collapsed
+        ? 'border-transparent p-1 hover:bg-(--color-surface-subtle)'
+        : 'border-(--color-border) bg-(--color-sidebar-card) p-2.5 hover:border-(--color-border-strong)'}"
       class:justify-center={collapsed}
       class:gap-3={!collapsed}
       role="button"
@@ -294,28 +322,35 @@
         <img
           src={profile.avatarUrl}
           alt=""
-          class="size-8 shrink-0 rounded-full object-cover"
+          class="size-10 shrink-0 rounded-full object-cover ring-1 ring-(--color-border-strong)"
           aria-hidden="true"
         />
       {:else}
         <div
-          class="flex size-8 shrink-0 items-center justify-center rounded-full bg-(--color-accent) text-xs font-bold text-(--color-background)"
+          class="flex size-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-(--color-brand-start) to-(--color-brand) text-xs font-bold text-(--color-brand-on)"
           aria-hidden="true"
         >
           {getProfileInitials(profile.name)}
         </div>
       {/if}
+      <!-- Name over email; the hidden middle dot keeps the visible text a
+        verbatim substring of the accessible name (WCAG 2.5.3). -->
       <p
-        class="min-w-0 truncate text-xs {labelFadeClass}"
+        class="flex min-w-0 flex-1 flex-col {labelFadeClass}"
         class:max-w-0={collapsed}
         class:opacity-0={collapsed}
         class:max-w-full={!collapsed}
         class:opacity-100={!collapsed}
         aria-hidden={collapsed ? 'true' : undefined}
       >
-        <span class="font-medium text-(--color-primary)">{profile.name}</span>
-        <span class="text-(--color-text-muted)"> · {profile.email}</span>
+        <span class="truncate text-sm font-semibold text-(--color-primary)">{profile.name}</span>
+        <span class="truncate text-xs text-(--color-text-muted)"
+          ><span class="sr-only">{'· '}</span>{profile.email}</span
+        >
       </p>
+      {#if !collapsed}
+        <ChevronRight size={16} class="shrink-0 text-(--color-text-muted)" aria-hidden="true" />
+      {/if}
     </div>
   </div>
 </aside>
