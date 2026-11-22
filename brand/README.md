@@ -17,9 +17,14 @@ their own canvas, so they scale freely.
 
 ## Rules
 
-- **The tile is the app icon.** The tile is the icon body; a launcher mask cuts
-  its corners and that is intended. Do not ship the ribbon alone as an icon: it
-  fills the mask and reads as an oversized glyph.
+- **The tile is the app icon, as the background layer.** The tile's gradient is
+  the adaptive icon's `background`; the ribbon is its `foreground`, scaled to
+  78% so the head and tail stay inside the 66/108 safe area on every mask. Do
+  not ship the ribbon alone as an icon: it fills the mask and reads as an
+  oversized glyph.
+- **The splash is the same composite**, at 52% instead of 78%: the platform
+  masks a splash icon to a circle 2/3 of the drawable, so the same apparent size
+  needs a smaller scale.
 - **Only the wordmark flips with the theme.** For light surfaces the letters are
   navy `#0D1D3B`; for dark surfaces they are cream `#FFF6EC`. The tile, the
   ribbon and the knocked-out "N" keep their brand colours in both themes — the

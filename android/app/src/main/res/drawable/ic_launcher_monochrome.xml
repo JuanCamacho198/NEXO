@@ -5,10 +5,10 @@
     android:viewportWidth="512"
     android:viewportHeight="512">
     <group
-        android:scaleX="0.85"
-        android:scaleY="0.85"
-        android:translateX="38.4"
-        android:translateY="38.4">
+        android:scaleX="0.78"
+        android:scaleY="0.78"
+        android:translateX="56.32"
+        android:translateY="56.32">
     <group>
         <clip-path android:pathData="M0 0h512v512H0Z" />
         <path
@@ -67,4 +67,5 @@
     </group>
     </group>
 </vector>
+
 
