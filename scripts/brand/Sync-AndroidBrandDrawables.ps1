@@ -142,23 +142,14 @@ Copy-Item -LiteralPath (Join-Path $work 'launcher-background.xml') -Destination 
 Add-SafeAreaWrapper (Join-Path $work 'launcher-foreground.xml') (Join-Path $res 'ic_launcher_foreground.xml') 0.78
 Add-SafeAreaWrapper (Join-Path $work 'launcher-silhouette.xml') (Join-Path $res 'ic_launcher_monochrome.xml') 0.78
 
-# The splash shows the SAME composite the launcher shows — tile with the mark
-# inset — because a splash that draws the ribbon alone reads as a mark bigger
-# than the icon the user just tapped.
-$splashForeground = Join-Path $work 'splash-foreground.xml'
-Add-SafeAreaWrapper (Join-Path $work 'launcher-foreground.xml') $splashForeground 0.52
-
-function Merge-Drawables([string] $backgroundPath, [string] $foregroundPath, [string] $targetPath) {
-    $backgroundXml = Get-Content -LiteralPath $backgroundPath -Raw
-    $foregroundXml = Get-Content -LiteralPath $foregroundPath -Raw
-    $head = [regex]::Match($backgroundXml, '(?s)^(.*?<vector[^>]*>\r?\n)').Groups[1].Value
-    $backgroundBody = [regex]::Replace($backgroundXml, '(?s)^.*?<vector[^>]*>\r?\n', '')
-    $backgroundBody = [regex]::Replace($backgroundBody, '</vector>\s*$', '')
-    $foregroundBody = [regex]::Replace($foregroundXml, '(?s)^.*?<vector[^>]*>\r?\n', '')
-    $foregroundBody = [regex]::Replace($foregroundBody, '</vector>\s*$', '')
-    Set-Content -LiteralPath $targetPath -Value ($head + $backgroundBody + $foregroundBody + "</vector>`n") -Encoding utf8NoBOM
-}
-
-Merge-Drawables (Join-Path $work 'launcher-background.xml') $splashForeground (Join-Path $res 'nexo_splash_mark.xml')
+# The splash draws the mark alone, at the same apparent size as the icon: 52%
+# of the drawable, because the platform masks a splash icon to a circle 2/3 of
+# it while a launcher shows the whole canvas.
+#
+# It must NOT carry the tile. The splash background is already flat warm paper,
+# and a tile drawn inside the drawable shows up as a hard-edged square on any
+# device that does not mask the splash icon to a circle: the tile's gradient
+# ends at #FBE3CC while the surrounding paper is #FFFAF4, so the seam is visible.
+Add-SafeAreaWrapper (Join-Path $work 'launcher-foreground.xml') (Join-Path $res 'nexo_splash_mark.xml') 0.52
 
 Write-Host 'Android brand drawables regenerated from' $BrandSvg
