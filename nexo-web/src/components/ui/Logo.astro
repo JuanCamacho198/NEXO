@@ -5,9 +5,11 @@ const lang = (Astro.currentLocale ?? defaultLang) as Lang;
 const t = useTranslations(lang);
 ---
 
-<!-- brand/nexo-logo-horizontal.svg inlined. The ribbon keeps its brand
-     colours; the wordmark is currentColor so it follows the theme (the export's
-     cream would vanish on the light pages). -->
+<!-- brand/nexo-logo-inverso.svg inlined (the full canvas: tile, ribbon, mark and
+     wordmark). The tile and the ribbon keep their brand colours on both themes.
+     The wordmark is `currentColor`, and `.logo` sets it from --color-brand, which
+     the light theme keeps dark navy (#0d1d3b) and the dark theme flips to the warm
+     off-white — the export's own cream ink disappears on the light pages. -->
 <a class="logo" href="#top" aria-label={t('header.logoAria')}>
   <svg
     class="logo-mark"
@@ -17,6 +19,20 @@ const t = useTranslations(lang);
     aria-hidden="true"
     focusable="false"
   >
+    <g>
+      <g clip-path="url(#clip1)">
+        <path
+          d="M128 16L384 16C413.7 16 442.2 27.8 463.2 48.8C484.2 69.8 496 98.3 496 128L496 384C496 413.7 484.2 442.2 463.2 463.2C442.2 484.2 413.7 496 384 496L128 496C98.3 496 69.8 484.2 48.8 463.2C27.8 442.2 16 413.7 16 384L16 128C16 98.3 27.8 69.8 48.8 48.8C69.8 27.8 98.3 16 128 16Z"
+          fill="url(#paint2)"
+        />
+      </g>
+      <g clip-path="url(#clip1)">
+        <path
+          d="M128 16L384 16C413.7 16 442.2 27.8 463.2 48.8C484.2 69.8 496 98.3 496 128L496 384C496 413.7 484.2 442.2 463.2 463.2C442.2 484.2 413.7 496 384 496L128 496C98.3 496 69.8 484.2 48.8 463.2C27.8 442.2 16 413.7 16 384L16 128C16 98.3 27.8 69.8 48.8 48.8C69.8 27.8 98.3 16 128 16Z"
+          fill="url(#paint3)"
+        />
+      </g>
+    </g>
     <g>
       <g>
         <g clip-path="url(#clip1)">
@@ -97,7 +113,7 @@ const t = useTranslations(lang);
         </g>
       </g>
     </g>
-    <g fill="currentColor" transform="translate(0 -2.7)">
+    <g class="logo-wordmark" fill="currentColor" transform="translate(0 -2.7)">
       <path d="M472 160H574V188H500V226H566V254H500V292H574V320H472Z" />
       <g clip-path="url(#x-clip)">
         <path
@@ -201,3 +217,4 @@ const t = useTranslations(lang);
     </defs>
   </svg>
 </a>
+

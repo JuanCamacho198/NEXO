@@ -370,8 +370,8 @@
     gap: 10px;
     color: var(--color-brand);
   }
-  /* The wordmark sits a little above the lockup's middle (the ribbon hangs
-     below it), so the mark drops 1px to put the letters on the nav's line. */
+  /* The export frames itself with viewBox "98 40 982 434": 982 x 434 units,
+     aspect 2.26, the same shape the old lockup used. No CSS cropping. */
   .logo-mark {
     height: 49px;
     width: auto;
