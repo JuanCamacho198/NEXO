@@ -221,13 +221,13 @@ async function removeStaleTmp(): Promise<void> {
 
 let sessionClient: SupabaseClient | null = null;
 
-function getSupabaseUrl(): string {
+export function getSupabaseUrl(): string {
   const url = import.meta.env.VITE_SUPABASE_URL as string;
   if (!url) throw new Error('VITE_SUPABASE_URL is not set');
   return url;
 }
 
-function getSupabaseAnonKey(): string {
+export function getSupabaseAnonKey(): string {
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
   if (!key) throw new Error('VITE_SUPABASE_ANON_KEY is not set');
   return key;

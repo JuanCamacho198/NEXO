@@ -43,7 +43,7 @@ import {
 } from '$lib/shared/stores/drivePersistence';
 import { driveState } from '$lib/shared/stores/driveState.svelte';
 import { DRIVE_PROMPT_DECLINE_KEY_PREFIX } from '$lib/shared/services/driveConnectPromptGate';
-import { getSessionClient } from '$lib/services/supabase';
+import { getSessionClient, getSupabaseUrl, getSupabaseAnonKey } from '$lib/services/supabase';
 
 const REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke';
 
@@ -280,47 +280,67 @@ async function doRefreshDriveAccessToken(): Promise<string> {
   if (!grant) {
     throw driveNotConnected();
   }
+  // The Google refresh happens server-side in the `drive-token` function, which
+  // holds the client secret. It cannot happen here: the configured Google
+  // client requires a client_secret on refresh (measured for both the Web and
+  // Desktop clients), and a distributed bundle cannot hold one.
+  //
+  // It also cannot happen through `refreshSession()`: GoTrue emits
+  // `provider_token` only once, immediately after sign-in
+  // (`@supabase/auth-js` GoTrueClient: "The client library will emit these
+  // values only once immediately after the user signs in"), so a session
+  // refresh returns no Google token at all.
   const supabase = getSessionClient();
-  let result: Awaited<ReturnType<typeof supabase.auth.refreshSession>>;
-  try {
-    result = await supabase.auth.refreshSession();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const status = (error as { status?: number } | null)?.status ?? 0;
-    if (
-      (error as { isAuthError?: boolean } | null)?.isAuthError === true ||
-      status === 400 ||
-      status === 401
-    ) {
-      await clearDriveGrant();
-      driveState.setDriveAuthorized(false);
-      driveState.setDriveError('AUTH_REQUIRED');
-      throw driveAuthRequired();
-    }
-    throw new Error(redactLogLine(`Drive token refresh failed: ${message}`));
-  }
-  if (result.error) {
-    await clearDriveGrant();
-    driveState.setDriveAuthorized(false);
-    driveState.setDriveError('AUTH_REQUIRED');
-    throw driveAuthRequired();
-  }
-  const accessToken = result.data.session?.provider_token ?? null;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
   if (!accessToken) {
     await clearDriveGrant();
     driveState.setDriveAuthorized(false);
     driveState.setDriveError('AUTH_REQUIRED');
     throw driveAuthRequired();
   }
-  const rotated = result.data.session?.provider_refresh_token ?? null;
-  if (rotated && rotated !== grant.refreshToken) {
-    await saveDriveGrant({
-      refreshToken: rotated,
-      scope: grant.scope,
-      obtainedAt: Date.now(),
+
+  let response: Response;
+  try {
+    response = await fetch(`${getSupabaseUrl()}/functions/v1/drive-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        apikey: getSupabaseAnonKey(),
+      },
+      body: JSON.stringify({ refresh_token: grant.refreshToken }),
     });
+  } catch (error) {
+    // Network failure is transient: the grant is kept and the caller retries.
+    throw new Error(
+      redactLogLine(
+        `Drive token refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+      ),
+    );
   }
-  return accessToken;
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    // The function reports a revoked or expired Google grant as
+    // DRIVE_GRANT_REVOKED (401). Any other failure is transient: the grant
+    // stays so a network blip or an upstream 5xx is not mistaken for a
+    // disconnect the user has to redo.
+    if (body?.error === 'DRIVE_GRANT_REVOKED') {
+      await clearDriveGrant();
+      driveState.setDriveAuthorized(false);
+      driveState.setDriveError('AUTH_REQUIRED');
+      throw driveAuthRequired();
+    }
+    throw new Error(redactLogLine(`Drive token refresh failed: ${response.status}`));
+  }
+
+  const payload = (await response.json().catch(() => null)) as { access_token?: unknown } | null;
+  const fresh = typeof payload?.access_token === 'string' ? payload.access_token : '';
+  if (!fresh) {
+    throw new Error('Drive token refresh returned no access token');
+  }
+  return fresh;
 }
 
 export function refreshDriveAccessToken(): Promise<string> {

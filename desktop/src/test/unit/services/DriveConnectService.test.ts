@@ -26,6 +26,7 @@ const mockSaveDriveGrant = vi.fn();
 const mockSignInWithOAuth = vi.fn();
 const mockExchangeCodeForSession = vi.fn();
 const mockRefreshSession = vi.fn();
+const mockGetSession = vi.fn();
 
 vi.mock('@fabianlars/tauri-plugin-oauth', () => ({
   start: (...args: unknown[]) => mockPluginStart(...args),
@@ -65,8 +66,11 @@ vi.mock('$lib/services/supabase', () => ({
       signInWithOAuth: (...args: unknown[]) => mockSignInWithOAuth(...args),
       exchangeCodeForSession: (...args: unknown[]) => mockExchangeCodeForSession(...args),
       refreshSession: (...args: unknown[]) => mockRefreshSession(...args),
+      getSession: (...args: unknown[]) => mockGetSession(...args),
     },
   }),
+  getSupabaseUrl: () => 'https://supabase.test',
+  getSupabaseAnonKey: () => 'anon-test-key',
 }));
 
 import {
@@ -165,6 +169,9 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ data: { session: supabaseSession() }, error: null });
   mockRefreshSession
+    .mockReset()
+    .mockResolvedValue({ data: { session: supabaseSession() }, error: null });
+  mockGetSession
     .mockReset()
     .mockResolvedValue({ data: { session: supabaseSession() }, error: null });
   stubOAuthEnv();
@@ -383,35 +390,32 @@ describe('getDriveAccessToken', () => {
     expect(mockRefreshSession).not.toHaveBeenCalled();
   });
 
-  it('refreshes through Supabase with the stored grant', async () => {
+  it('refreshes through the drive-token function with the stored grant', async () => {
     memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ access_token: 'access-1' }));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(getDriveAccessToken()).resolves.toBe('access-1');
-    expect(mockRefreshSession).toHaveBeenCalledTimes(1);
-    expect(mockSaveDriveGrant).not.toHaveBeenCalled();
+
+    // Nothing may reach Google directly: the client holds no secret, so the
+    // Google refresh has to happen in the function.
     expect(googleTokenRequests(fetchMock)).toEqual([]);
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(String(url)).toContain('/functions/v1/drive-token');
+    expect(String(init.method)).toBe('POST');
+    expect(JSON.parse(String(init.body))).toEqual({ refresh_token: 'refresh-1' });
+    expect((init.headers as Record<string, string>).Authorization).toMatch(/^Bearer /);
+    // The grant is not rotated: the function returns an access token only.
+    expect(mockSaveDriveGrant).not.toHaveBeenCalled();
   });
 
-  it('persists a rotated provider refresh token', async () => {
-    memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
-    mockRefreshSession.mockReset().mockResolvedValue({
-      data: { session: supabaseSession({ provider_refresh_token: 'refresh-2' }) },
-      error: null,
-    });
-
-    await expect(refreshDriveAccessToken()).resolves.toBe('access-1');
-    expect(memoryGrant?.refreshToken).toBe('refresh-2');
-  });
-
-  it('a rejected session clears the store and throws AUTH_REQUIRED', async () => {
+  it('a revoked grant clears the store and throws AUTH_REQUIRED', async () => {
     memoryGrant = { refreshToken: 'revoked', scope: 'drive.file', obtainedAt: 1 };
-    mockRefreshSession.mockReset().mockResolvedValue({
-      data: { session: null },
-      error: { name: 'AuthApiError', message: 'Invalid Refresh Token', status: 400 },
-    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ error: 'DRIVE_GRANT_REVOKED' }, false, 401));
+    vi.stubGlobal('fetch', fetchMock);
 
     try {
       await getDriveAccessToken();
@@ -424,11 +428,12 @@ describe('getDriveAccessToken', () => {
     expect(driveState.lastError).toBe('AUTH_REQUIRED');
   });
 
-  it('a thrown auth error (401) clears the store: no retry of a dead token', async () => {
+  it('a dead grant is not retried after it was cleared', async () => {
     memoryGrant = { refreshToken: 'dead', scope: 'drive.file', obtainedAt: 1 };
-    mockRefreshSession
-      .mockReset()
-      .mockRejectedValue(Object.assign(new Error('Unauthorized'), { isAuthError: true }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ error: 'DRIVE_GRANT_REVOKED' }, false, 401));
+    vi.stubGlobal('fetch', fetchMock);
 
     try {
       await getDriveAccessToken();
@@ -437,20 +442,24 @@ describe('getDriveAccessToken', () => {
       expect((error as { code?: string }).code).toBe('AUTH_REQUIRED');
     }
     expect(memoryGrant).toBeNull();
-    // A second call short-circuits on the missing grant: no more refresh
-    // attempts, connect-route error instead.
+
+    // A second call short-circuits on the missing grant: no more requests, the
+    // connect-route error instead.
     try {
       await getDriveAccessToken();
       expect.unreachable();
     } catch (error) {
       expect((error as { code?: string }).code).toBe('DRIVE_NOT_CONNECTED');
     }
-    expect(mockRefreshSession).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('a transient network failure keeps the grant for the next attempt', async () => {
+  it('a transient function failure keeps the grant for the next attempt', async () => {
     memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
-    mockRefreshSession.mockReset().mockRejectedValue(new Error('network down'));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ error: 'DRIVE_UPSTREAM_UNAVAILABLE' }, false, 503));
+    vi.stubGlobal('fetch', fetchMock);
 
     try {
       await getDriveAccessToken();
@@ -462,20 +471,25 @@ describe('getDriveAccessToken', () => {
     expect(driveState.lastError).not.toBe('AUTH_REQUIRED');
   });
 
-  it('a session without a provider token is a dead grant', async () => {
+  it('a network failure reaching the function keeps the grant', async () => {
     memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
-    mockRefreshSession.mockReset().mockResolvedValue({
-      data: { session: supabaseSession({ provider_token: null }) },
-      error: null,
-    });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
 
     try {
       await getDriveAccessToken();
       expect.unreachable();
     } catch (error) {
-      expect((error as { code?: string }).code).toBe('AUTH_REQUIRED');
+      expect((error as { code?: string }).code).not.toBe('AUTH_REQUIRED');
     }
-    expect(memoryGrant).toBeNull();
+    expect(memoryGrant).not.toBeNull();
+  });
+
+  it('a function response without an access token is an error, not a silent success', async () => {
+    memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ access_token: '' })));
+
+    await expect(getDriveAccessToken()).rejects.toThrow(/no access token/i);
+    expect(memoryGrant).not.toBeNull();
   });
 });
 
