@@ -150,11 +150,11 @@ describe('SettingsAboutTab', () => {
     renderAbout();
 
     const copy = await screen.findByRole('button', { name: 'Copiar versión' });
-    expect(copy).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+    expect(copy).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
     expect(copy).toHaveAttribute('aria-label', 'Copiar versión');
 
     const source = screen.getByRole('button', { name: 'Fuente' });
-    expect(source).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+    expect(source).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
   });
 
   it('renders no raw buttons and folds the quote figure into a Panel', async () => {

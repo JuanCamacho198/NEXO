@@ -70,7 +70,7 @@ describe('settings icon migration', () => {
     const selected = screen.getByRole('tab', { selected: true });
     expect(selected).toHaveAttribute('aria-selected', 'true');
     expect(selected).toHaveAttribute('id', 'tab-cuenta');
-    expect(selected).toHaveClass('bg-(--color-accent-soft)', 'border-(--color-accent-start)');
+    expect(selected).toHaveClass('bg-(--color-brand-soft)', 'border-(--color-brand)');
 
     const idle = tabs.filter((tab) => tab.getAttribute('aria-selected') === 'false');
     expect(idle).toHaveLength(6);

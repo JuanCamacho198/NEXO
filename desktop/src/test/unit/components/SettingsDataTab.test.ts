@@ -420,7 +420,7 @@ describe('SettingsDataTab atom switches (UI-04)', () => {
     expect(switches).toHaveLength(5);
     for (const control of switches) {
       expect(control.tagName).toBe('BUTTON');
-      expect(control).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+      expect(control).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
     }
     expect(screen.getByTestId('notification-pref-system')).toBeInTheDocument();
     expect(screen.getByTestId('notification-pref-nudge')).toBeInTheDocument();

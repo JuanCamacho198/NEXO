@@ -54,7 +54,7 @@ describe('Button defaults are preserved', () => {
     expect(button).toHaveAttribute('type', 'button');
     expect(button?.classList.contains('px-4')).toBe(true);
     expect(button?.classList.contains('bg-(--color-primary)')).toBe(true);
-    expect(button?.classList.contains('shadow-sm')).toBe(true);
+    expect(button?.classList.contains('scale-100')).toBe(true);
     expect(button?.classList.contains('w-full')).toBe(false);
     expect(container.querySelector('label')).toBeNull();
 

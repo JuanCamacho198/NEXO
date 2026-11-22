@@ -121,7 +121,7 @@ describe('SettingsCuentaTab atom migration (UI-04)', () => {
     const light = screen.getByRole('button', { name: 'Light' });
     const dark = screen.getByRole('button', { name: 'Dark' });
     for (const control of [light, dark]) {
-      expect(control).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+      expect(control).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
       expect(control).not.toHaveClass('text-xs');
     }
 
@@ -136,13 +136,13 @@ describe('SettingsCuentaTab atom migration (UI-04)', () => {
     render(SettingsCuentaTab, { t, profileState });
 
     const trigger = screen.getByRole('button', { name: 'Change' });
-    expect(trigger).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+    expect(trigger).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
     expect(trigger).toHaveAttribute('aria-controls', 'daily-goal-options');
     expect(trigger).toHaveAttribute('id', 'daily-goal-trigger');
 
     await user.click(trigger);
     const chip = screen.getByRole('button', { name: /Relaxed/ });
-    expect(chip).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+    expect(chip).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
     expect(chip).toHaveAttribute('aria-pressed');
   });
 

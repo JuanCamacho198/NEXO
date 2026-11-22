@@ -43,10 +43,10 @@
 
 <section
   {...rest}
-  class={`shrink-0 overflow-hidden rounded-(--radius-xl) border border-(--color-border) ${variantClasses[variant]} shadow-(--shadow-soft) backdrop-blur-xl ${className}`}
+  class={`shrink-0 overflow-hidden rounded-(--radius-xl) border border-(--color-edge) ${variantClasses[variant]} shadow-(--shadow-soft) backdrop-blur-xl ${className}`}
 >
   {#if title || subtitle || hint || actions}
-    <div class="border-b border-(--color-border)/80 px-5 py-4">
+    <div class="border-b border-(--color-edge)/80 px-5 py-4">
       <div class="flex items-center justify-between gap-3">
         <div class="min-w-0">
           {#if title}

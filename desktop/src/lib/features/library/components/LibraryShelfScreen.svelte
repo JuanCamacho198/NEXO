@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from '$lib/shared/ui/forms/Button.svelte';
+  import FilterChip from '$lib/shared/ui/forms/FilterChip.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import SearchBar from '$lib/shared/ui/navigation/SearchBar.svelte';
   import Toast from '$lib/shared/ui/feedback/Toast.svelte';
@@ -159,21 +160,15 @@
           <legend class="sr-only">{t('shelf.filterAria')}</legend>
           <div class="flex flex-wrap items-center gap-1.5">
             {#each FILTER_OPTIONS as option}
-              <button
-                type="button"
+              <FilterChip
                 data-testid={`shelf-tab-${option.key}`}
-                aria-pressed={shelf.activeFilter === option.key}
-                class={`h-8 rounded-full border px-3.5 text-sm font-medium transition-colors duration-(--duration-fast) ease-(--ease-smooth) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) ${
-                  shelf.activeFilter === option.key
-                    ? 'border-(--color-brand)/60 bg-(--color-brand-soft) text-(--color-primary)'
-                    : 'border-(--color-edge) bg-transparent text-(--color-text-muted) hover:border-(--color-edge-strong) hover:text-(--color-primary)'
-                }`}
+                selected={shelf.activeFilter === option.key}
                 onclick={() => {
                   shelf.activeFilter = option.key;
                 }}
               >
                 {option.label}
-              </button>
+              </FilterChip>
             {/each}
           </div>
         </fieldset>
