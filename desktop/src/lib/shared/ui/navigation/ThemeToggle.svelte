@@ -23,7 +23,7 @@
 <button
   id="theme-toggle-btn"
   type="button"
-  class="group/theme flex w-full items-center gap-3 rounded-(--radius-lg) border border-(--color-border) bg-(--color-sidebar-card) py-2.5 pr-3 pl-3.5 text-sm font-medium text-(--color-secondary) transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-border-strong) hover:text-(--color-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-nav-bar)"
+  class="group/theme flex w-full items-center gap-3 rounded-(--radius-lg) border border-(--color-edge) bg-(--color-sidebar-card) py-2.5 pr-3 pl-3.5 text-sm font-medium text-(--color-secondary) transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-edge-strong) hover:text-(--color-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-nav-bar)"
   style="font-family: var(--font-sans);"
   onclick={toggleTheme}
   aria-label={`${label}. ${actionLabel}`}
@@ -87,7 +87,7 @@
     class="relative h-6 w-11 shrink-0 rounded-full border transition-colors duration-(--duration-normal) ease-(--ease-smooth) {$theme ===
     'dark'
       ? 'border-transparent bg-(--color-brand)'
-      : 'border-(--color-border-strong) bg-(--color-surface-hover)'}"
+      : 'border-(--color-edge-strong) bg-(--color-surface-hover)'}"
     aria-hidden="true"
   >
     <span

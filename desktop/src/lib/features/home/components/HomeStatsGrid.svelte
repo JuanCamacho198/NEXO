@@ -60,7 +60,7 @@
 </script>
 
 <aside
-  class="rounded-(--radius-lg) border border-(--color-border) bg-(--color-home-card) px-6 py-4"
+  class="rounded-(--radius-lg) border border-(--color-edge) bg-(--color-home-card) px-6 py-4"
   data-testid="stats-summary"
   aria-label={progressTitle}
   aria-busy={isLoading || undefined}
@@ -88,7 +88,7 @@
           {/if}
         </div>
         <div
-          class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-(--color-border)"
+          class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-(--color-edge)"
           role="progressbar"
           aria-label={progressGoalAria}
           aria-valuemin={0}

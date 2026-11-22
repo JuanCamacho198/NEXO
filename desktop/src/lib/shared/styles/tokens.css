@@ -276,6 +276,8 @@
   --color-shell-ground: var(--color-background);
   --color-home-card: var(--color-surface);
   --color-sidebar-card: var(--color-surface-subtle);
+  --color-edge: var(--color-border);
+  --color-edge-strong: var(--color-border-strong);
 
   /* NEXO ember — the orange of the logo ribbon (#FFA620 → #F7781A → #FF2D0F).
      Owns the shell (sidebar, titlebar) and Home. `brand-text` is the orange
@@ -444,6 +446,10 @@
   --color-shell-ground: #eaeef4;
   --color-home-card: #f7f9fc;
   --color-sidebar-card: rgba(255, 255, 255, 0.55);
+  /* Light edges are a clear pale blue: the default hairline is ~1.1:1 on the
+     light planes, so cards read as floating with no outline. */
+  --color-edge: #b9cbe2;
+  --color-edge-strong: #9bb3d1;
 
   /* NEXO ember (light). `brand-text` deepens to #C2410C to keep AA on white
      (≈5.2:1); fills keep the logo gradient with dark ink on top. */

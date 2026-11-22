@@ -170,7 +170,7 @@
           role="tooltip"
           side="right"
           sideOffset={10}
-          class="z-50 whitespace-nowrap rounded-(--radius-sm) border border-(--color-border) bg-(--color-elevated) px-2.5 py-1.5 text-xs font-medium text-(--color-primary) shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]"
+          class="z-50 whitespace-nowrap rounded-(--radius-sm) border border-(--color-edge) bg-(--color-elevated) px-2.5 py-1.5 text-xs font-medium text-(--color-primary) shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]"
         >
           {item.badgeKey ? `${t(item.messageKey)} (${t(item.badgeKey)})` : t(item.messageKey)}
         </Tooltip.Content>
@@ -180,7 +180,7 @@
 {/snippet}
 
 {#snippet divider()}
-  <div class="mx-3 my-2.5 h-px bg-(--color-border)" aria-hidden="true"></div>
+  <div class="mx-3 my-2.5 h-px bg-(--color-edge)" aria-hidden="true"></div>
 {/snippet}
 
 <!--
@@ -189,7 +189,7 @@
   header starts below that band.
 -->
 <aside
-  class="sticky top-0 flex h-full shrink-0 flex-col overflow-hidden border-r border-(--color-border) bg-linear-to-b from-(--color-sidebar-bg) to-(--color-sidebar-bg-end) transition-[width] duration-(--duration-slow) ease-(--ease-smooth) max-lg:hidden"
+  class="sticky top-0 flex h-full shrink-0 flex-col overflow-hidden border-r border-(--color-edge) bg-linear-to-b from-(--color-sidebar-bg) to-(--color-sidebar-bg-end) transition-[width] duration-(--duration-slow) ease-(--ease-smooth) max-lg:hidden"
   class:w-68={!collapsed}
   class:w-18={collapsed}
 >
@@ -248,7 +248,7 @@
       <button
         type="button"
         onclick={toggleTheme}
-        class="mx-auto flex size-10 shrink-0 items-center justify-center rounded-full border border-(--color-border) bg-(--color-sidebar-card) text-(--color-text-muted) transition-colors hover:border-(--color-border-strong) hover:text-(--color-primary) {focusRing}"
+        class="mx-auto flex size-10 shrink-0 items-center justify-center rounded-full border border-(--color-edge) bg-(--color-sidebar-card) text-(--color-text-muted) transition-colors hover:border-(--color-edge-strong) hover:text-(--color-primary) {focusRing}"
         aria-label={$theme === 'dark' ? t('theme.switchToLight') : t('theme.switchToDark')}
       >
         {#if $theme === 'dark'}
@@ -309,7 +309,7 @@
     <div
       class="relative flex w-full cursor-pointer items-center rounded-(--radius-lg) border transition-colors {focusRing} {collapsed
         ? 'border-transparent p-1 hover:bg-(--color-surface-subtle)'
-        : 'border-(--color-border) bg-(--color-sidebar-card) p-2.5 hover:border-(--color-border-strong)'}"
+        : 'border-(--color-edge) bg-(--color-sidebar-card) p-2.5 hover:border-(--color-edge-strong)'}"
       class:justify-center={collapsed}
       class:gap-3={!collapsed}
       role="button"
@@ -322,7 +322,7 @@
         <img
           src={profile.avatarUrl}
           alt=""
-          class="size-10 shrink-0 rounded-full object-cover ring-1 ring-(--color-border-strong)"
+          class="size-10 shrink-0 rounded-full object-cover ring-1 ring-(--color-edge-strong)"
           aria-hidden="true"
         />
       {:else}

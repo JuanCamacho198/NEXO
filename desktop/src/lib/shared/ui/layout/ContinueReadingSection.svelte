@@ -75,7 +75,7 @@
     </h3>
     {#if books.length > 0}
       <span
-        class="rounded-(--radius-sm) border border-(--color-border) bg-(--color-surface-subtle) px-2.5 py-0.5 text-sm font-semibold tabular-nums text-(--color-secondary)"
+        class="rounded-(--radius-sm) border border-(--color-edge) bg-(--color-surface-subtle) px-2.5 py-0.5 text-sm font-semibold tabular-nums text-(--color-secondary)"
         aria-label={appState.t('home.continue.countAria', { count: books.length })}
       >
         {books.length}
@@ -88,7 +88,7 @@
   <div class="space-y-4">
     {@render sectionHeading()}
     <div
-      class="relative isolate overflow-hidden rounded-(--radius-xl) border border-(--color-border) bg-(--color-horizon-fade) px-7 py-10"
+      class="relative isolate overflow-hidden rounded-(--radius-xl) border border-(--color-edge) bg-(--color-horizon-fade) px-7 py-10"
     >
       <div class="absolute inset-0 -z-10"><HomeHorizon /></div>
       <p class="max-w-md text-base text-(--color-secondary)">
@@ -103,14 +103,14 @@
       data-testid="continue-carousel"
       role="group"
       aria-labelledby="home-continue-heading"
-      class="relative isolate overflow-hidden rounded-(--radius-xl) border border-(--color-border) bg-(--color-horizon-fade)"
+      class="relative isolate overflow-hidden rounded-(--radius-xl) border border-(--color-edge) bg-(--color-horizon-fade)"
     >
       <div class="absolute inset-0 -z-10"><HomeHorizon /></div>
       {#if showArrows}
         <div class="absolute top-5 right-5 z-10 flex items-center gap-2">
           <button
             type="button"
-            class="flex size-10 items-center justify-center rounded-full border border-(--color-border-strong) bg-(--color-horizon-fade)/70 text-(--color-primary) backdrop-blur-sm transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-brand)/60 hover:text-(--color-brand-text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+            class="flex size-10 items-center justify-center rounded-full border border-(--color-edge-strong) bg-(--color-horizon-fade)/70 text-(--color-primary) backdrop-blur-sm transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-brand)/60 hover:text-(--color-brand-text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
             aria-label={appState.t('home.continue.prevBook')}
             onclick={handlePrev}
           >
@@ -118,7 +118,7 @@
           </button>
           <button
             type="button"
-            class="flex size-10 items-center justify-center rounded-full border border-(--color-border-strong) bg-(--color-horizon-fade)/70 text-(--color-primary) backdrop-blur-sm transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-brand)/60 hover:text-(--color-brand-text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+            class="flex size-10 items-center justify-center rounded-full border border-(--color-edge-strong) bg-(--color-horizon-fade)/70 text-(--color-primary) backdrop-blur-sm transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-brand)/60 hover:text-(--color-brand-text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
             aria-label={appState.t('home.continue.nextBook')}
             onclick={handleNext}
           >
@@ -153,7 +153,7 @@
                 {#snippet actions()}
                   {#if book.readingStatus === 'reading'}
                     <span
-                      class="inline-flex h-11 items-center rounded-full border border-(--color-border-strong) bg-(--color-surface-subtle) px-5 text-xs font-bold uppercase tracking-[0.12em] text-(--color-primary)"
+                      class="inline-flex h-11 items-center rounded-full border border-(--color-edge-strong) bg-(--color-surface-subtle) px-5 text-xs font-bold uppercase tracking-[0.12em] text-(--color-primary)"
                     >
                       {appState.t('home.continue.liveBadge')}
                     </span>

@@ -57,7 +57,7 @@
     }
     const edge = selected
       ? 'border-(--color-brand)/60 bg-(--color-home-card)'
-      : 'border-(--color-border) bg-(--color-home-card) hover:border-(--color-border-strong)';
+      : 'border-(--color-edge) bg-(--color-home-card) hover:border-(--color-edge-strong)';
     return `group/card relative isolate h-full overflow-hidden rounded-(--radius-lg) border ${
       compact ? 'p-3 pr-3.5' : 'p-4'
     } ${edge}`;
@@ -92,7 +92,7 @@
           alt={`Cover for ${book.title}`}
           className={`${coverSize} shrink-0 object-cover ${
             isContinue
-              ? 'rounded-(--radius-md) shadow-[0_18px_36px_-14px_rgba(0,0,0,0.7)]'
+              ? 'rounded-(--radius-md) shadow-[0_18px_36px_-14px_rgba(0,0,0,0.7)] ring-1 ring-(--color-edge)'
               : 'rounded-(--radius-sm) shadow-[0_6px_16px_-8px_rgba(0,0,0,0.6)]'
           }`}
         >
@@ -100,18 +100,18 @@
             <div
               class={`${coverSize} flex shrink-0 items-center justify-center ${
                 isContinue ? 'rounded-(--radius-md)' : 'rounded-(--radius-sm)'
-              } border border-(--color-border) bg-(--color-surface-subtle) text-micro uppercase tracking-widest text-(--color-text-muted)`}
+              } border border-(--color-edge) bg-(--color-surface-subtle) text-micro uppercase tracking-widest text-(--color-text-muted)`}
             >
               {t('library.cover')}
             </div>
           {/snippet}
         </SafeCover>
 
-        <div class={`min-w-0 flex-1 ${isContinue ? 'pt-1 pr-24' : ''}`}>
+        <div class={`min-w-0 flex-1 ${isContinue ? 'pt-1' : ''}`}>
           <p
             class={`font-semibold text-(--color-primary) ${
               isContinue
-                ? `${compact ? 'text-xl' : 'text-[1.75rem]'} leading-tight tracking-[-0.02em] text-balance line-clamp-2`
+                ? `${compact ? 'text-xl' : 'text-[1.75rem]'} pr-24 leading-tight tracking-[-0.02em] text-balance line-clamp-2`
                 : `${compact ? 'text-[15px]' : 'text-base'} leading-snug line-clamp-1`
             }`}
           >
@@ -138,7 +138,7 @@
           </p>
 
           {#if showProgress}
-            <div class={isContinue ? 'mt-7 max-w-3xl' : 'mt-2.5'}>
+            <div class={isContinue ? 'mt-7' : 'mt-2.5'}>
               <div
                 class={`mb-2 flex items-center gap-1.5 ${
                   isContinue
@@ -158,7 +158,7 @@
                 {/if}
               </div>
               <div
-                class={`w-full overflow-hidden rounded-full bg-(--color-border) ${isContinue ? 'h-2' : 'h-1'}`}
+                class={`w-full overflow-hidden rounded-full bg-(--color-edge) ${isContinue ? 'h-2' : 'h-1'}`}
               >
                 <div
                   class="h-full rounded-full bg-linear-to-r from-(--color-brand-start) to-(--color-brand)"
@@ -192,7 +192,7 @@
         {:else}
           <button
             type="button"
-            class={`inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-4 text-sm font-medium text-(--color-primary) transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-brand)/60 hover:text-(--color-brand-text) ${focusRing}`}
+            class={`inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full border border-(--color-edge) bg-(--color-surface-subtle) px-4 text-sm font-medium text-(--color-primary) transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-brand)/60 hover:text-(--color-brand-text) ${focusRing}`}
             onclick={onRead}
           >
             {readLabel}

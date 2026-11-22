@@ -251,7 +251,7 @@
   <button
     bind:this={triggerEl}
     type="button"
-    class="flex size-9 shrink-0 items-center justify-center rounded-full border border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted) transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-border-strong) hover:text-(--color-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-background)"
+    class="flex size-9 shrink-0 items-center justify-center rounded-full border border-(--color-edge) bg-(--color-surface-subtle) text-(--color-text-muted) transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-edge-strong) hover:text-(--color-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-background)"
     aria-label={triggerLabel}
     aria-haspopup="menu"
     aria-expanded={isOpen}
