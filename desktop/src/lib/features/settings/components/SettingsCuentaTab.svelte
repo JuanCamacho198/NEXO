@@ -15,6 +15,8 @@
   import type { createSettingsProfile } from '../useSettingsProfile.svelte';
   import type { createSettingsLocale } from '../useSettingsLocale.svelte';
   import { setTheme, theme } from '$lib/shared/stores/theme';
+  import Moon from 'lucide-svelte/icons/moon';
+  import Sun from 'lucide-svelte/icons/sun';
 
   type ProfileState = ReturnType<typeof createSettingsProfile>;
   type LocaleState = ReturnType<typeof createSettingsLocale>;
@@ -262,30 +264,31 @@
           <span class="mb-2 block text-sm font-medium text-(--color-primary)"
             >{t('settings.theme')}</span
           >
-          <!-- Segmented pair: the active side takes the ember fill, the other
-               stays bare in the track. Selection is also in `aria-pressed`. -->
+          <!-- Segmented pair in the same track as the settings tabs: the active
+               side takes the ember wash and outline. Selection is also in
+               `aria-pressed`. -->
           <div
-            class="flex w-full gap-1 rounded-full border border-(--color-edge) bg-(--color-surface-subtle) p-1"
+            class="flex w-fit gap-1 rounded-full border border-(--color-edge) bg-(--color-home-card) p-1"
             role="group"
             aria-label={t('settings.theme')}
           >
             <Button
-              variant={$theme === 'light' ? 'accent' : 'ghost'}
-              size="sm"
-              class="flex-1"
+              variant="tab"
+              selected={$theme === 'light'}
               aria-pressed={$theme === 'light'}
               onclick={() => setTheme('light')}
             >
-              {t('settings.theme.light')}
+              <Sun size={15} strokeWidth={1.8} aria-hidden="true" />
+              <span class="ml-2">{t('settings.theme.light')}</span>
             </Button>
             <Button
-              variant={$theme === 'dark' ? 'accent' : 'ghost'}
-              size="sm"
-              class="flex-1"
+              variant="tab"
+              selected={$theme === 'dark'}
               aria-pressed={$theme === 'dark'}
               onclick={() => setTheme('dark')}
             >
-              {t('settings.theme.dark')}
+              <Moon size={15} strokeWidth={1.8} aria-hidden="true" />
+              <span class="ml-2">{t('settings.theme.dark')}</span>
             </Button>
           </div>
         </div>
