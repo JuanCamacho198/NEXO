@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Button from '$lib/shared/ui/forms/Button.svelte';
   import Modal from '$lib/shared/ui/layout/Modal.svelte';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import { resolveAccess, type CatalogBook } from '$lib/shared/services/catalog';
@@ -141,19 +142,15 @@
       <p class="text-sm text-(--color-text-muted)">{t('discover.detailNotFound')}</p>
     {:else if detailStatus === 'offline'}
       <p class="text-sm text-(--color-text-muted)">{t('discover.offline')}</p>
-      <button
-        type="button"
-        class="mt-2 rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-        onclick={onRetryDetail}
-      >
+      <Button variant="secondary" size="sm" class="mt-2" onclick={onRetryDetail}>
         {t('discover.retry')}
-      </button>
+      </Button>
     {:else if detailStatus === 'error' || detail === null}
       <p class="text-sm text-(--color-text-muted)">{t('discover.errorUpstream')}</p>
     {:else}
       <div class="flex items-start gap-4">
         <div
-          class="relative aspect-2/3 w-24 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3"
+          class="relative aspect-2/3 w-28 shrink-0 overflow-hidden rounded-(--radius-md) border border-(--color-edge) bg-(--color-surface-subtle) shadow-[0_14px_28px_-16px_rgba(0,0,0,0.7)]"
         >
           {#if showCover && detail !== null}
             <img
@@ -180,7 +177,9 @@
           {/if}
         </div>
         <div class="min-w-0 flex-1">
-          <h3 class="truncate text-lg font-semibold text-(--color-primary)">{detail.title}</h3>
+          <h3 class="line-clamp-2 text-xl font-bold tracking-[-0.01em] text-(--color-primary)">
+            {detail.title}
+          </h3>
           <p class="text-sm text-(--color-text-muted)">
             {t('discover.byAuthors', { authors: detail.authors.join(', ') })}
           </p>
@@ -211,7 +210,7 @@
         {#if descriptionOverflows}
           <button
             type="button"
-            class="mt-1 text-sm font-medium text-(--color-primary) hover:underline"
+            class="mt-1 text-sm font-semibold text-(--color-brand-text) underline-offset-4 hover:underline"
             aria-expanded={descriptionExpanded}
             aria-controls={DESCRIPTION_ID}
             onclick={() => (descriptionExpanded = !descriptionExpanded)}
@@ -227,7 +226,7 @@
           <span class="text-xs font-medium text-(--color-primary)">{t('discover.formats')}</span>
           {#each formatLabels as label (label)}
             <span
-              class="inline-flex items-center rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-2 py-0.5 text-xs font-medium text-(--color-secondary)"
+              class="inline-flex items-center rounded-full border border-(--color-edge) bg-(--color-surface-subtle) px-2 py-0.5 text-xs font-medium text-(--color-secondary)"
             >
               {label}
             </span>
@@ -239,7 +238,7 @@
           href={externalLink.url}
           target="_blank"
           rel="noreferrer"
-          class="mt-3 inline-flex text-sm text-(--color-primary) hover:underline"
+          class="mt-3 inline-flex text-sm font-semibold text-(--color-brand-text) underline-offset-4 hover:underline"
         >
           {externalLabel}
         </a>
@@ -261,22 +260,14 @@
                 <p role="status" class="text-sm font-medium text-(--color-primary)">
                   {t('discover.inLibrary')}
                 </p>
-                <button
-                  type="button"
-                  class="inline-flex rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-                  onclick={onOpenBook}
-                >
+                <Button variant="secondary" size="sm" onclick={onOpenBook}>
                   {t('discover.openBook')}
-                </button>
+                </Button>
               </div>
             {:else}
-              <button
-                type="button"
-                class="inline-flex rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-                onclick={onDownload}
-              >
+              <Button variant="accent" onclick={onDownload}>
                 {t('discover.download')}
-              </button>
+              </Button>
             {/if}
           {:else if downloadState === 'downloading'}
             <p role="status" class="text-sm text-(--color-text-muted)">
@@ -288,17 +279,17 @@
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={progressPct}
-                class="mt-2 h-1.5 w-full rounded-full bg-(--color-border)"
+                class="mt-2 h-1.5 w-full rounded-full bg-(--color-edge)"
               >
                 <div
-                  class="h-1.5 rounded-full bg-(--color-primary) transition-all"
+                  class="h-1.5 rounded-full bg-linear-to-r from-(--color-brand-start) to-(--color-brand) transition-all"
                   style="width: {progressPct}%"
                 ></div>
               </div>
             {/if}
             <button
               type="button"
-              class="mt-2 text-sm text-(--color-primary) hover:underline"
+              class="mt-2 text-sm font-semibold text-(--color-brand-text) underline-offset-4 hover:underline"
               onclick={onCancelDownload}
             >
               {t('discover.downloadCancel')}
@@ -313,37 +304,25 @@
             <p role="status" class="text-sm text-(--color-text-muted)">
               {t('discover.downloadCancelled')}
             </p>
-            <button
-              type="button"
-              class="mt-2 rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-              onclick={onRetryDownload}
-            >
+            <Button variant="secondary" size="sm" class="mt-2" onclick={onRetryDownload}>
               {t('discover.retry')}
-            </button>
+            </Button>
           {:else}
             <p role="alert" class="text-sm text-(--color-text-muted)">
               {t('discover.downloadFailed')}{#if downloadError !== null}
                 {` (${downloadError})`}{/if}
             </p>
-            <button
-              type="button"
-              class="mt-2 rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-              onclick={onRetryDownload}
-            >
+            <Button variant="secondary" size="sm" class="mt-2" onclick={onRetryDownload}>
               {t('discover.retry')}
-            </button>
+            </Button>
           {/if}
         </div>
       {/if}
     {/if}
   {/snippet}
   {#snippet footer()}
-    <button
-      type="button"
-      class="rounded-md border border-(--color-border) px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-surface-subtle)"
-      onclick={onDismiss}
-    >
+    <Button variant="secondary" size="sm" onclick={onDismiss}>
       {t('discover.dismiss')}
-    </button>
+    </Button>
   {/snippet}
 </Modal>

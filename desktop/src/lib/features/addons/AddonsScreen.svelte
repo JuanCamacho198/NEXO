@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { headingMarker } from '$lib/shared/ui/emberStyles';
+  import StatusChip from '$lib/shared/ui/forms/StatusChip.svelte';
   import { addonsState, bindAddonsNotifier } from './addonsStore.svelte';
   import { createAddonConsentState } from './useAddonConsentState.svelte';
   import {
@@ -114,14 +116,18 @@
   at screen level with the production ports above (Hidden by default, so it
   composes nothing until an addon-source book opens it).
 -->
-<section aria-labelledby="addons-heading" class="flex h-auto flex-col gap-6">
-  <div class="flex max-w-2xl flex-col gap-1">
-    <h1
-      id="addons-heading"
-      class="m-0 text-2xl font-semibold tracking-tight text-(--color-primary)"
-    >
-      {t('addons.title')}
-    </h1>
+<section aria-labelledby="addons-heading" class="flex h-auto max-w-3xl flex-col gap-6">
+  <div class="flex max-w-3xl flex-col gap-1">
+    <div class="flex items-center gap-3">
+      <div class="h-8 {headingMarker}" aria-hidden="true"></div>
+      <h1
+        id="addons-heading"
+        class="m-0 text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)"
+      >
+        {t('addons.title')}
+      </h1>
+      <StatusChip text={t('sidebar.beta')} tone="neutral" />
+    </div>
     <p class="m-0 text-sm text-(--color-text-muted)">{t('addons.subtitle')}</p>
   </div>
 

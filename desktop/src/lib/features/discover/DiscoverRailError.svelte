@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Button from '$lib/shared/ui/forms/Button.svelte';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import type { CatalogErrorCode } from '$lib/shared/services/catalog';
   import { discoverErrorKey } from './discoverErrorCopy';
@@ -25,11 +26,7 @@
   <p class="m-0 text-sm text-(--color-text-muted)">
     {t(discoverErrorKey(code))}
   </p>
-  <button
-    type="button"
-    class="rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-    onclick={onRetry}
-  >
+  <Button variant="secondary" size="sm" onclick={onRetry}>
     {t('discover.retry')}
-  </button>
+  </Button>
 </div>

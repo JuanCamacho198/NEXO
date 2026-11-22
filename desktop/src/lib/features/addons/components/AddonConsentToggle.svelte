@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Button from '$lib/shared/ui/forms/Button.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -36,9 +37,10 @@
   AddonsInstalledList from the Addons screen.
 -->
 <div class="flex shrink-0 flex-col gap-1">
-  <label class="flex cursor-pointer items-center gap-1 text-sm">
+  <label class="flex cursor-pointer items-center gap-2 text-sm text-(--color-secondary)">
     <input
       type="checkbox"
+      class="size-4 accent-(--color-brand)"
       checked={granted}
       {disabled}
       aria-label={t('addons.consent.label', { name: addonName })}
@@ -47,13 +49,17 @@
     <span>{granted ? t('addons.consent.granted') : t('addons.consent.label')}</span>
   </label>
   {#if confirming && !granted}
-    <div role="dialog" aria-label={t('addons.consent.title')} class="flex flex-col gap-1 text-sm">
-      <p class="m-0 font-medium">{t('addons.consent.title')}</p>
+    <div
+      role="dialog"
+      aria-label={t('addons.consent.title')}
+      class="flex max-w-md flex-col gap-2 rounded-(--radius-md) border border-(--color-edge) bg-(--color-surface-subtle) p-3 text-sm"
+    >
+      <p class="m-0 font-semibold text-(--color-primary)">{t('addons.consent.title')}</p>
       <p class="m-0 text-(--color-text-muted)">{t('addons.consent.body', { name: addonName })}</p>
       <div class="flex gap-2">
-        <button
-          type="button"
-          class="text-sm"
+        <Button
+          variant="accent"
+          size="sm"
           {disabled}
           onclick={() => {
             confirming = false;
@@ -61,16 +67,16 @@
           }}
         >
           {t('addons.consent.allow')}
-        </button>
-        <button
-          type="button"
-          class="text-sm"
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
           onclick={() => {
             confirming = false;
           }}
         >
           {t('addons.consent.deny')}
-        </button>
+        </Button>
       </div>
     </div>
   {/if}

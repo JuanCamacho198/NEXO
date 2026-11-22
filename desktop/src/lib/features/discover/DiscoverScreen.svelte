@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Button from '$lib/shared/ui/forms/Button.svelte';
+  import { coverGrid } from '$lib/shared/ui/emberStyles';
   import { discoverState, filterBooksByChip } from './DiscoverDomainState.svelte';
   import { discoverErrorKey } from './discoverErrorCopy';
   import { DISCOVER_RAIL_LIMIT } from './railPlan';
@@ -218,14 +220,11 @@
 
   {#if searchActive}
     <div class="flex flex-col gap-3">
-      <h2 class="m-0 text-lg font-semibold text-(--color-primary)">
+      <h2 class="m-0 text-xl font-bold tracking-[-0.01em] text-(--color-primary)">
         {t('discover.searchResults')}
       </h2>
       {#if discoverState.status === 'loading'}
-        <div
-          class="grid gap-3"
-          style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))"
-        >
+        <div class={coverGrid}>
           {#each Array.from({ length: DISCOVER_RAIL_LIMIT }, (_, i) => i) as i (i)}
             <DiscoverSkeletonCard />
           {/each}
@@ -241,19 +240,12 @@
             {:else if discoverState.errorCode === 'NOT_FOUND'}{t('discover.errorNotFound')}
             {:else}{t(discoverErrorKey(discoverState.errorCode))}{/if}
           </p>
-          <button
-            type="button"
-            class="rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-            onclick={() => void discoverState.retry()}
-          >
+          <Button variant="secondary" size="sm" onclick={() => void discoverState.retry()}>
             {t('discover.retry')}
-          </button>
+          </Button>
         </div>
       {:else if showSearchGrid}
-        <div
-          class="grid gap-3"
-          style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))"
-        >
+        <div class={coverGrid}>
           {#each discoverState.books as book (book.id)}
             <DiscoverCard
               {book}
@@ -276,35 +268,30 @@
   {:else if scopeView}
     <div class="flex flex-col gap-3">
       <div class="flex items-baseline justify-between gap-3">
-        <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{t(scopeView.titleKey)}</h2>
-        <button
-          type="button"
-          class="rounded-md px-2 py-1 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/10"
-          onclick={() => discoverState.closeRailScope()}
-        >
+        <h2 class="m-0 text-xl font-bold tracking-[-0.01em] text-(--color-primary)">
+          {t(scopeView.titleKey)}
+        </h2>
+        <Button variant="link" size="sm" onclick={() => discoverState.closeRailScope()}>
           {t('discover.railScope.back')}
-        </button>
+        </Button>
       </div>
       {#if scopeView.error}
         <div class="flex max-w-2xl flex-col items-start gap-2">
           <p class="m-0 text-sm text-(--color-text-muted)">
             {t(discoverErrorKey(scopeView.error))}
           </p>
-          <button
-            type="button"
-            class="rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
+          <Button
+            variant="secondary"
+            size="sm"
             onclick={() => void discoverState.loadRailScopeNextPage()}
           >
             {t('discover.retry')}
-          </button>
+          </Button>
         </div>
       {:else if scopeView.books.length === 0}
         <p class="max-w-2xl text-sm text-(--color-text-muted)">{t('discover.empty')}</p>
       {:else}
-        <div
-          class="grid gap-3"
-          style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))"
-        >
+        <div class={coverGrid}>
           {#each scopeView.books as book (book.id)}
             <DiscoverCard
               {book}
