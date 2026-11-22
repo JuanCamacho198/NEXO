@@ -261,8 +261,8 @@
     radial-gradient(circle at top left, rgba(73, 212, 255, 0.12), transparent 26%),
     radial-gradient(circle at top right, rgba(245, 207, 122, 0.1), transparent 24%),
     linear-gradient(180deg, #07111d 0%, #09111d 45%, #08101a 100%);
-  --gradient-accent: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
-  --gradient-accent-h: linear-gradient(90deg, var(--color-accent-start), var(--color-accent-end));
+  --gradient-accent: linear-gradient(135deg, var(--color-brand-start), var(--color-brand));
+  --gradient-accent-h: linear-gradient(90deg, var(--color-brand-start), var(--color-brand));
   /* HOME-04 semantic roles. Import is a secondary warm action (solid coral,
      no gradient) so the reading/resume CTA can own the NEXO-blue primary.
      Selection is a quiet tinted field with a light-blue label and a thin
@@ -313,16 +313,19 @@
     rgba(78, 140, 255, 0.16),
     rgba(255, 196, 77, 0.12)
   );
-  --color-chart-center: rgba(9, 17, 29, 0.96);
+  --color-chart-center: var(--color-home-card);
   --color-chart-grid: rgba(148, 173, 206, 0.12);
-  --color-chart-fill-top: rgba(78, 140, 255, 0.35);
-  --color-chart-fill-bottom: rgba(78, 140, 255, 0.02);
-  --color-chart-1: #4e8cff;
-  --color-chart-2: #49d4ff;
-  --color-chart-3: #6ea0ff;
-  --color-chart-4: #38bdf8;
-  --color-chart-5: #8b7bff;
-  --color-chart-6: #7dd3fc;
+  --color-chart-fill-top: rgba(247, 120, 26, 0.32);
+  --color-chart-fill-bottom: rgba(247, 120, 26, 0.02);
+  /* Genre categorical order, ember first. Validated with the dataviz
+     validator (lightness band, chroma, adjacent CVD and normal-vision
+     separation, 3:1 vs the card surface) for each theme. */
+  --color-chart-1: #e8640f;
+  --color-chart-2: #4e8cff;
+  --color-chart-3: #14a89a;
+  --color-chart-4: #9373f0;
+  --color-chart-5: #b98208;
+  --color-chart-6: #e0558f;
 
   /* Reading streak — warm accent that stays distinct from --color-warning */
   --color-streak-border: rgba(251, 191, 36, 0.22);
@@ -431,8 +434,8 @@
     radial-gradient(circle at top left, rgba(0, 110, 200, 0.07), transparent 28%),
     radial-gradient(circle at top right, rgba(255, 190, 80, 0.08), transparent 26%),
     linear-gradient(180deg, #e8eef6 0%, #eef2f8 50%, #f0f4fa 100%);
-  --gradient-accent: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
-  --gradient-accent-h: linear-gradient(90deg, var(--color-accent-start), var(--color-accent-end));
+  --gradient-accent: linear-gradient(135deg, var(--color-brand-start), var(--color-brand));
+  --gradient-accent-h: linear-gradient(90deg, var(--color-brand-start), var(--color-brand));
   /* HOME-04 semantic roles (light). `--color-import: #9a3412` is a deep warm
      terracotta that stays clearly secondary — distinct from `--color-error`
      (#c0392b) and `--color-danger` (#dc2626) — and clears AA at ~6.3:1 on the
@@ -486,16 +489,19 @@
     rgba(0, 110, 200, 0.14),
     rgba(217, 119, 6, 0.12)
   );
-  --color-chart-center: rgba(255, 255, 255, 0.96);
+  --color-chart-center: var(--color-home-card);
   --color-chart-grid: rgba(30, 58, 95, 0.1);
-  --color-chart-fill-top: rgba(0, 110, 200, 0.28);
-  --color-chart-fill-bottom: rgba(0, 110, 200, 0.02);
-  --color-chart-1: #006ec8;
-  --color-chart-2: #0284c7;
-  --color-chart-3: #3b6fd4;
-  --color-chart-4: #0891b2;
-  --color-chart-5: #6366f1;
-  --color-chart-6: #0ea5e9;
+  --color-chart-fill-top: rgba(234, 88, 12, 0.24);
+  --color-chart-fill-bottom: rgba(234, 88, 12, 0.02);
+  /* Genre categorical order, ember first. Validated with the dataviz
+     validator (lightness band, chroma, adjacent CVD and normal-vision
+     separation, 3:1 vs the card surface) for each theme. */
+  --color-chart-1: #c2410c;
+  --color-chart-2: #2563eb;
+  --color-chart-3: #0d9488;
+  --color-chart-4: #7c3aed;
+  --color-chart-5: #a16207;
+  --color-chart-6: #db2777;
 
   --color-streak-border: rgba(217, 119, 6, 0.28);
   --color-streak-text: #b45309;
