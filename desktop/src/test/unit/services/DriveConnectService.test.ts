@@ -1,11 +1,16 @@
 /**
  * Unit tests for `DriveConnectService` (login-drive-separation, work unit 2).
  *
- * Covers the pure protocol core (callback parse, authorize URL shape) and the
- * Tauri adapter with mocked loopback/opener/persistence: state-mismatch →
+ * Covers the pure protocol core (callback parse) and the Tauri adapter with
+ * mocked loopback/opener/persistence/Supabase client: state-mismatch →
  * failure, missing code / denied → canceled + nothing persisted, success
- * persists, concurrent begin coalesced, transparent refresh, invalid grant →
+ * persists, concurrent begin coalesced, transparent refresh, dead grant →
  * AUTH_REQUIRED, disconnect clears only the Drive store.
+ *
+ * The Google exchange belongs to Supabase (GoTrue): the configured client
+ * needs a client_secret the desktop bundle cannot hold. Every connect and
+ * refresh path below asserts that no request reaches
+ * `oauth2.googleapis.com` (Google's token endpoint).
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
@@ -17,6 +22,10 @@ const mockOpenUrl = vi.fn();
 
 let memoryGrant: { refreshToken: string; scope: string; obtainedAt: number } | null = null;
 const mockSaveDriveGrant = vi.fn();
+
+const mockSignInWithOAuth = vi.fn();
+const mockExchangeCodeForSession = vi.fn();
+const mockRefreshSession = vi.fn();
 
 vi.mock('@fabianlars/tauri-plugin-oauth', () => ({
   start: (...args: unknown[]) => mockPluginStart(...args),
@@ -50,14 +59,21 @@ vi.mock('$lib/shared/logger/Logger', () => ({
   logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock('$lib/services/supabase', () => ({
+  getSessionClient: () => ({
+    auth: {
+      signInWithOAuth: (...args: unknown[]) => mockSignInWithOAuth(...args),
+      exchangeCodeForSession: (...args: unknown[]) => mockExchangeCodeForSession(...args),
+      refreshSession: (...args: unknown[]) => mockRefreshSession(...args),
+    },
+  }),
+}));
+
 import {
   beginDriveConnect,
-  buildDriveAuthorizeUrl,
   consumeDriveAuthResult,
   disconnectDrive,
-  DriveConfigError,
   DriveOAuthError,
-  generateDriveCodeChallenge,
   getDriveAccessToken,
   isDriveAuthorized,
   parseDriveCallbackUrl,
@@ -66,15 +82,32 @@ import {
 } from '$lib/shared/services/DriveConnectService';
 import { driveState } from '$lib/shared/stores/driveState.svelte';
 
-const CLIENT_ID = 'test-client-id';
+const GOOGLE_TOKEN_HOST = 'oauth2.googleapis.com';
 // A Desktop-type OAuth client has no secret. This value is stubbed into the
 // env on purpose to prove the service never reads it: if the service consumed
 // VITE_GOOGLE_OAUTH_CLIENT_SECRET it would be inlined into the shipped bundle.
 const INLINED_SECRET_SENTINEL = 'test-client-secret';
 
+const AUTHORIZE_URL =
+  'https://test.supabase.co/auth/v1/authorize?provider=google' +
+  '&scopes=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.file' +
+  '&redirect_to=http%3A%2F%2F127.0.0.1%3A42813%2F' +
+  '&access_type=offline&prompt=consent';
+
 function stubOAuthEnv(): void {
-  vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', CLIENT_ID);
+  vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'test-client-id');
   vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', INLINED_SECRET_SENTINEL);
+}
+
+function supabaseSession(overrides: Record<string, unknown> = {}): unknown {
+  return {
+    access_token: 'supabase-access',
+    refresh_token: 'supabase-refresh',
+    provider_token: 'access-1',
+    provider_refresh_token: 'refresh-1',
+    user: { id: 'user-1' },
+    ...overrides,
+  };
 }
 
 function fireCallback(params: string): void {
@@ -89,12 +122,21 @@ async function waitForConnectStarted(): Promise<void> {
   });
 }
 
+/**
+ * The state GoTrue echoes back on the loopback redirect.
+ *
+ * GoTrue owns the OAuth state for a Supabase authorize trip and substitutes its
+ * own value (measured), so the URL the app opens carries no state of ours. The
+ * flow therefore does not compare it; these tests model that by firing the
+ * callback with the state GoTrue would send, which the parser accepts.
+ */
 function authorizeStateFromOpenUrl(): string {
   expect(mockOpenUrl).toHaveBeenCalledTimes(1);
-  const url = new URL(mockOpenUrl.mock.calls[0][0] as string);
-  const state = url.searchParams.get('state');
-  expect(state).toBeTruthy();
-  return state as string;
+  return 'gotrue-owned-state';
+}
+
+function googleTokenRequests(fetchMock: { mock: { calls: unknown[][] } }): unknown[][] {
+  return fetchMock.mock.calls.filter((call) => String(call[0]).includes(GOOGLE_TOKEN_HOST));
 }
 
 function jsonResponse(payload: unknown, ok = true, status = 200): Response {
@@ -115,6 +157,16 @@ beforeEach(() => {
   mockPluginCancel.mockReset().mockResolvedValue(undefined);
   mockOpenUrl.mockReset().mockResolvedValue(undefined);
   mockSaveDriveGrant.mockClear();
+  mockSignInWithOAuth.mockReset().mockResolvedValue({
+    data: { url: AUTHORIZE_URL, provider: 'google' },
+    error: null,
+  });
+  mockExchangeCodeForSession
+    .mockReset()
+    .mockResolvedValue({ data: { session: supabaseSession() }, error: null });
+  mockRefreshSession
+    .mockReset()
+    .mockResolvedValue({ data: { session: supabaseSession() }, error: null });
   stubOAuthEnv();
   vi.unstubAllGlobals();
 });
@@ -157,34 +209,49 @@ describe('parseDriveCallbackUrl', () => {
   });
 });
 
-describe('buildDriveAuthorizeUrl', () => {
-  it('requests drive.file with offline access and consent', () => {
-    const url = new URL(
-      buildDriveAuthorizeUrl({
-        clientId: CLIENT_ID,
-        redirectUri: 'http://127.0.0.1:1/',
-        challenge: 'challenge',
-        state: 'state',
-      }),
-    );
-    expect(url.searchParams.get('scope')).toContain('https://www.googleapis.com/auth/drive.file');
-    expect(url.searchParams.get('access_type')).toBe('offline');
-    expect(url.searchParams.get('prompt')).toBe('consent');
-  });
-});
-
 describe('beginDriveConnect', () => {
-  it('state mismatch fails without persisting anything', async () => {
+  it('builds the authorize URL through Supabase and opens it', async () => {
     const pending = beginDriveConnect();
     await waitForConnectStarted();
-    fireCallback('code=abc&state=tampered');
+
+    expect(mockSignInWithOAuth).toHaveBeenCalledTimes(1);
+    const args = mockSignInWithOAuth.mock.calls[0][0] as {
+      provider: string;
+      options: Record<string, unknown>;
+    };
+    expect(args.provider).toBe('google');
+    expect(args.options.redirectTo).toBe('http://127.0.0.1:42813/');
+    expect(args.options.skipBrowserRedirect).toBe(true);
+    expect(args.options.scopes).toBe('https://www.googleapis.com/auth/drive.file');
+    expect(args.options.queryParams).toEqual({ access_type: 'offline', prompt: 'consent' });
+    const openedUrl = new URL(mockOpenUrl.mock.calls[0][0] as string);
+    expect(openedUrl.origin + openedUrl.pathname).toBe(
+      'https://test.supabase.co/auth/v1/authorize',
+    );
+    expect(openedUrl.searchParams.get('provider')).toBe('google');
+    expect(openedUrl.searchParams.get('redirect_to')).toBe('http://127.0.0.1:42813/');
+    expect(openedUrl.searchParams.get('access_type')).toBe('offline');
+    expect(openedUrl.searchParams.get('prompt')).toBe('consent');
+    expect(openedUrl.searchParams.get('scopes')).toBe('https://www.googleapis.com/auth/drive.file');
+
+    fireCallback(`code=auth-code&state=${authorizeStateFromOpenUrl()}`);
+    await pending;
+  });
+
+  it('accepts the callback whatever state GoTrue sends, because it owns that value', async () => {
+    // GoTrue substitutes its own OAuth state for a Supabase authorize trip
+    // (measured: a caller-supplied value reaches Google as a GoTrue UUID), so
+    // the connect flow cannot compare it and must not reject the callback over
+    // it. PKCE is the binding: the code is redeemed server-side against the
+    // verifier GoTrue stored for this flow.
+    const pending = beginDriveConnect();
+    await waitForConnectStarted();
+    fireCallback('code=abc&state=gotrue-generated-uuid');
     const result = await pending;
 
-    expect(result.kind).toBe('failure');
-    expect(result.kind === 'failure' && result.code).toBe('state_mismatch');
-    expect(memoryGrant).toBeNull();
-    expect(driveState.isAuthorized).toBe(false);
-    expect(mockSaveDriveGrant).not.toHaveBeenCalled();
+    expect(result.kind).toBe('success');
+    expect(mockExchangeCodeForSession).toHaveBeenCalledWith('abc');
+    expect(memoryGrant).toMatchObject({ refreshToken: 'refresh-1' });
   });
 
   it('missing code cancels without persisting anything', async () => {
@@ -209,10 +276,8 @@ describe('beginDriveConnect', () => {
     expect(memoryGrant).toBeNull();
   });
 
-  it('success persists the grant and authorizes the store', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ access_token: 'access-1', refresh_token: 'refresh-1' }));
+  it('success exchanges the code through Supabase and persists the grant', async () => {
+    const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
     const pending = beginDriveConnect();
@@ -221,15 +286,39 @@ describe('beginDriveConnect', () => {
     const result = await pending;
 
     expect(result).toEqual({ kind: 'success', accessToken: 'access-1' });
+    expect(mockExchangeCodeForSession).toHaveBeenCalledWith('auth-code');
     expect(memoryGrant).toMatchObject({ refreshToken: 'refresh-1' });
     expect(driveState.isAuthorized).toBe(true);
     expect(consumeDriveAuthResult()).toEqual(result);
     expect(consumeDriveAuthResult()).toBeNull();
+    // The Google exchange is GoTrue's job: nothing may reach Google's token
+    // endpoint from the bundle.
+    expect(googleTokenRequests(fetchMock)).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('exchange failure persists nothing and reports failure', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse('bad request', false, 400));
-    vi.stubGlobal('fetch', fetchMock);
+  it('surfaces the Supabase exchange error as a failure and persists nothing', async () => {
+    mockExchangeCodeForSession
+      .mockReset()
+      .mockResolvedValue({ data: { session: null }, error: { message: 'bad code' } });
+
+    const pending = beginDriveConnect();
+    await waitForConnectStarted();
+    fireCallback(`code=auth-code&state=${authorizeStateFromOpenUrl()}`);
+    const result = await pending;
+
+    expect(result.kind).toBe('failure');
+    expect(result.kind === 'failure' && result.code).toBe('server_failed');
+    expect(memoryGrant).toBeNull();
+    expect(driveState.isAuthorized).toBe(false);
+    expect(driveState.lastError).not.toBeNull();
+  });
+
+  it('refuses a grant with no provider refresh token', async () => {
+    mockExchangeCodeForSession.mockReset().mockResolvedValue({
+      data: { session: supabaseSession({ provider_refresh_token: null }) },
+      error: null,
+    });
 
     const pending = beginDriveConnect();
     await waitForConnectStarted();
@@ -239,15 +328,9 @@ describe('beginDriveConnect', () => {
     expect(result.kind).toBe('failure');
     expect(memoryGrant).toBeNull();
     expect(driveState.isAuthorized).toBe(false);
-    expect(driveState.lastError).not.toBeNull();
   });
 
   it('concurrent begin calls coalesce onto one loopback attempt', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ access_token: 'access-1', refresh_token: 'refresh-1' }));
-    vi.stubGlobal('fetch', fetchMock);
-
     const first = beginDriveConnect();
     const second = beginDriveConnect();
     await waitForConnectStarted();
@@ -258,79 +341,31 @@ describe('beginDriveConnect', () => {
     expect(r1.kind).toBe('success');
     expect(mockPluginStart).toHaveBeenCalledTimes(1);
     expect(mockOpenUrl).toHaveBeenCalledTimes(1);
+    expect(mockSignInWithOAuth).toHaveBeenCalledTimes(1);
   });
 
-  it('missing client ID fails fast without starting loopback (secret presence is irrelevant)', async () => {
-    // Only the client ID is required; the secret stays configured via
-    // beforeEach to prove it cannot satisfy the client-ID requirement.
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', '');
+  it('a Supabase authorize error fails fast without opening a browser', async () => {
+    mockSignInWithOAuth
+      .mockReset()
+      .mockResolvedValue({ data: { url: null }, error: { message: 'provider not enabled' } });
 
     const result = await beginDriveConnect();
 
     expect(result.kind).toBe('failure');
     expect(result.kind === 'failure' && result.code).toBe('DRIVE_CONFIG_MISSING');
-    expect(mockPluginStart).not.toHaveBeenCalled();
     expect(mockOpenUrl).not.toHaveBeenCalled();
+    expect(mockPluginCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('client ID alone is enough and the token exchange omits client_secret', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ access_token: 'access-1', refresh_token: 'refresh-1' }));
-    vi.stubGlobal('fetch', fetchMock);
+  it('a browser launch failure is reported and the loopback is closed', async () => {
+    mockOpenUrl.mockReset().mockRejectedValue(new Error('no browser'));
 
-    const pending = beginDriveConnect();
-    await waitForConnectStarted();
-    fireCallback(`code=auth-code&state=${authorizeStateFromOpenUrl()}`);
-    const result = await pending;
+    const result = await beginDriveConnect();
 
-    expect(result).toEqual({ kind: 'success', accessToken: 'access-1' });
-    const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
-    expect(body).toContain('client_id=test-client-id');
-    expect(body).toContain('grant_type=authorization_code');
-    expect(body).toContain('code_verifier=');
-    expect(body).not.toContain('client_secret');
-  });
-
-  it('never sends client_secret in the token exchange, even with the env var set', async () => {
-    // The env var is still stubbed by beforeEach; the exchange must ignore it.
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', INLINED_SECRET_SENTINEL);
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ access_token: 'access-1', refresh_token: 'refresh-1' }));
-    vi.stubGlobal('fetch', fetchMock);
-
-    const pending = beginDriveConnect();
-    await waitForConnectStarted();
-    fireCallback(`code=auth-code&state=${authorizeStateFromOpenUrl()}`);
-    const result = await pending;
-
-    expect(result.kind).toBe('success');
-    const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
-    expect(body).not.toContain('client_secret');
-    expect(body).not.toContain(INLINED_SECRET_SENTINEL);
-  });
-
-  it('sends an S256 code challenge that matches the code verifier', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ access_token: 'access-1', refresh_token: 'refresh-1' }));
-    vi.stubGlobal('fetch', fetchMock);
-
-    const pending = beginDriveConnect();
-    await waitForConnectStarted();
-    const authUrl = new URL(mockOpenUrl.mock.calls[0][0] as string);
-    const challenge = authUrl.searchParams.get('code_challenge');
-    expect(authUrl.searchParams.get('code_challenge_method')).toBe('S256');
-    expect(challenge).toBeTruthy();
-
-    fireCallback(`code=auth-code&state=${authorizeStateFromOpenUrl()}`);
-    await pending;
-
-    const body = new URLSearchParams((fetchMock.mock.calls[0][1] as RequestInit).body as string);
-    const verifier = body.get('code_verifier');
-    expect(verifier).toBeTruthy();
-    await expect(generateDriveCodeChallenge(verifier as string)).resolves.toBe(challenge);
+    expect(result.kind).toBe('failure');
+    expect(result.kind === 'failure' && result.code).toBe('BROWSER_LAUNCH_FAILED');
+    expect(mockPluginCancel).toHaveBeenCalledTimes(1);
+    expect(driveState.isConnecting).toBe(false);
   });
 });
 
@@ -345,38 +380,38 @@ describe('getDriveAccessToken', () => {
       // banner (v0.3.3 removed the Drive-not-connected notification).
       expect((error as { code?: string }).code).toBe('DRIVE_NOT_CONNECTED');
     }
+    expect(mockRefreshSession).not.toHaveBeenCalled();
   });
 
-  it('refreshes transparently with the stored grant', async () => {
+  it('refreshes through Supabase with the stored grant', async () => {
     memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ access_token: 'fresh-access' }));
+    const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(getDriveAccessToken()).resolves.toBe('fresh-access');
+    await expect(getDriveAccessToken()).resolves.toBe('access-1');
+    expect(mockRefreshSession).toHaveBeenCalledTimes(1);
     expect(mockSaveDriveGrant).not.toHaveBeenCalled();
+    expect(googleTokenRequests(fetchMock)).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('persists a rotated refresh token', async () => {
+  it('persists a rotated provider refresh token', async () => {
     memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(
-        jsonResponse({ access_token: 'fresh-access', refresh_token: 'refresh-2' }),
-      );
-    vi.stubGlobal('fetch', fetchMock);
+    mockRefreshSession.mockReset().mockResolvedValue({
+      data: { session: supabaseSession({ provider_refresh_token: 'refresh-2' }) },
+      error: null,
+    });
 
-    await expect(refreshDriveAccessToken()).resolves.toBe('fresh-access');
+    await expect(refreshDriveAccessToken()).resolves.toBe('access-1');
     expect(memoryGrant?.refreshToken).toBe('refresh-2');
   });
 
-  it('invalid grant clears the store and throws AUTH_REQUIRED', async () => {
+  it('a rejected session clears the store and throws AUTH_REQUIRED', async () => {
     memoryGrant = { refreshToken: 'revoked', scope: 'drive.file', obtainedAt: 1 };
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(
-        jsonResponse({ error: 'invalid_grant', error_description: 'revoked' }, false, 400),
-      );
-    vi.stubGlobal('fetch', fetchMock);
+    mockRefreshSession.mockReset().mockResolvedValue({
+      data: { session: null },
+      error: { name: 'AuthApiError', message: 'Invalid Refresh Token', status: 400 },
+    });
 
     try {
       await getDriveAccessToken();
@@ -389,14 +424,11 @@ describe('getDriveAccessToken', () => {
     expect(driveState.lastError).toBe('AUTH_REQUIRED');
   });
 
-  it('401 invalid_client clears the store and throws AUTH_REQUIRED (U5 dead session)', async () => {
+  it('a thrown auth error (401) clears the store: no retry of a dead token', async () => {
     memoryGrant = { refreshToken: 'dead', scope: 'drive.file', obtainedAt: 1 };
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(
-        jsonResponse({ error: 'invalid_client', error_description: 'unauthorized' }, false, 401),
-      );
-    vi.stubGlobal('fetch', fetchMock);
+    mockRefreshSession
+      .mockReset()
+      .mockRejectedValue(Object.assign(new Error('Unauthorized'), { isAuthError: true }));
 
     try {
       await getDriveAccessToken();
@@ -405,37 +437,20 @@ describe('getDriveAccessToken', () => {
       expect((error as { code?: string }).code).toBe('AUTH_REQUIRED');
     }
     expect(memoryGrant).toBeNull();
-    expect(driveState.isAuthorized).toBe(false);
-    expect(driveState.lastError).toBe('AUTH_REQUIRED');
-  });
-
-  it('401 with any body clears the store: no retry of a dead token (U5)', async () => {
-    memoryGrant = { refreshToken: 'dead', scope: 'drive.file', obtainedAt: 1 };
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse('Unauthorized', false, 401));
-    vi.stubGlobal('fetch', fetchMock);
-
-    try {
-      await getDriveAccessToken();
-      expect.unreachable();
-    } catch (error) {
-      expect((error as { code?: string }).code).toBe('AUTH_REQUIRED');
-    }
-    expect(memoryGrant).toBeNull();
-    // A second call short-circuits on the missing grant: no more token
-    // endpoint hits, connect-route error instead of another 401.
+    // A second call short-circuits on the missing grant: no more refresh
+    // attempts, connect-route error instead.
     try {
       await getDriveAccessToken();
       expect.unreachable();
     } catch (error) {
       expect((error as { code?: string }).code).toBe('DRIVE_NOT_CONNECTED');
     }
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(mockRefreshSession).toHaveBeenCalledTimes(1);
   });
 
-  it('transient 503 keeps the grant for the next attempt (U5)', async () => {
+  it('a transient network failure keeps the grant for the next attempt', async () => {
     memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse('overloaded', false, 503));
-    vi.stubGlobal('fetch', fetchMock);
+    mockRefreshSession.mockReset().mockRejectedValue(new Error('network down'));
 
     try {
       await getDriveAccessToken();
@@ -447,45 +462,20 @@ describe('getDriveAccessToken', () => {
     expect(driveState.lastError).not.toBe('AUTH_REQUIRED');
   });
 
-  it('missing client ID throws DRIVE_CONFIG_MISSING (secret presence is irrelevant)', async () => {
+  it('a session without a provider token is a dead grant', async () => {
     memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
-    // Only the client ID is required; the secret stays configured via
-    // beforeEach to prove it cannot satisfy the client-ID requirement.
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', '');
+    mockRefreshSession.mockReset().mockResolvedValue({
+      data: { session: supabaseSession({ provider_token: null }) },
+      error: null,
+    });
 
     try {
       await getDriveAccessToken();
       expect.unreachable();
     } catch (error) {
-      expect(error).toBeInstanceOf(DriveConfigError);
-      expect((error as DriveConfigError).code).toBe('DRIVE_CONFIG_MISSING');
+      expect((error as { code?: string }).code).toBe('AUTH_REQUIRED');
     }
-  });
-
-  it('refreshes without client_secret when the secret is empty', async () => {
-    memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', '');
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ access_token: 'fresh-access' }));
-    vi.stubGlobal('fetch', fetchMock);
-
-    await expect(getDriveAccessToken()).resolves.toBe('fresh-access');
-    const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
-    expect(body).toContain('client_id=test-client-id');
-    expect(body).toContain('grant_type=refresh_token');
-    expect(body).not.toContain('client_secret');
-  });
-
-  it('never sends client_secret in the refresh, even with the env var set', async () => {
-    // The env var is still stubbed by beforeEach; the refresh must ignore it.
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', INLINED_SECRET_SENTINEL);
-    memoryGrant = { refreshToken: 'refresh-1', scope: 'drive.file', obtainedAt: 1 };
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ access_token: 'fresh-access' }));
-    vi.stubGlobal('fetch', fetchMock);
-
-    await expect(getDriveAccessToken()).resolves.toBe('fresh-access');
-    const body = (fetchMock.mock.calls[0][1] as RequestInit).body as string;
-    expect(body).not.toContain('client_secret');
-    expect(body).not.toContain(INLINED_SECRET_SENTINEL);
+    expect(memoryGrant).toBeNull();
   });
 });
 

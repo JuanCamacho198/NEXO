@@ -128,11 +128,18 @@ describe('SettingsAboutTab', () => {
     // stylesheet, so its BSD-3 notice belongs here too.
     expect(notices).toContain('Readium CSS');
     expect(notices).toContain('BSD-3-Clause');
-    const rows = notices
+    // The file carries two tables: bundled libraries and 3D model credits. Only
+    // the library table is asserted here — the models live under their own
+    // heading and their row count has no reason to track library changes.
+    // Counting every `|` row made this fail as soon as a model was credited.
+    const modelSectionAt = notices.indexOf('## Landing hero device models');
+    expect(modelSectionAt, 'the model-credit section must exist').toBeGreaterThan(-1);
+    const libraryRows = notices
+      .slice(0, modelSectionAt)
       .split('\n')
       .filter((line) => line.startsWith('|'))
       .filter((line) => !line.includes('---') && !line.includes('Library'));
-    expect(rows).toHaveLength(16);
+    expect(libraryRows).toHaveLength(16);
   });
 
   it('renders the daily quote with author, source and a working source link', async () => {
