@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { panelClass } from '$lib/shared/ui/emberStyles';
   import type { DictionaryWordDto } from '$lib/shared/types';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
   import BookOpen from 'lucide-svelte/icons/book-open';
@@ -75,7 +76,7 @@
 </script>
 
 <section
-  class="flex min-w-0 flex-1 flex-col gap-5 rounded-lg bg-(--color-panel) p-6"
+  class="flex min-w-0 flex-1 flex-col gap-5 {panelClass} p-6"
   data-testid="dictionary-detail"
 >
   {#if word == null}
@@ -92,7 +93,7 @@
   {:else}
     <div class="flex min-w-0 flex-wrap items-center gap-3" data-testid="dictionary-detail-header">
       <h2
-        class="min-w-0 truncate text-[32px] text-(--color-primary)"
+        class="min-w-0 truncate text-[2.5rem] leading-tight tracking-[-0.01em] text-(--color-primary)"
         style="font-family: var(--font-serif)"
         data-testid="dictionary-detail-term"
       >
@@ -102,7 +103,7 @@
       {#if !editing}
         {#if tag}
           <span
-            class="shrink-0 rounded-full bg-(--color-accent-fill) px-2.5 py-1 text-xs font-semibold text-(--color-accent-blue)"
+            class="shrink-0 rounded-full bg-(--color-accent-fill) px-2.5 py-1 text-xs font-semibold text-(--color-brand-text)"
             data-testid="dictionary-detail-tag"
           >
             {tag}
@@ -111,7 +112,7 @@
 
         {#if phonetic}
           <span
-            class="min-w-0 truncate text-sm text-(--color-text-tertiary)"
+            class="min-w-0 truncate text-sm text-(--color-text-muted)"
             data-testid="dictionary-detail-phonetic"
           >
             {phonetic}
@@ -124,7 +125,7 @@
         >
           <button
             type="button"
-            class="flex cursor-pointer items-center gap-1.5 rounded-sm bg-(--color-panel-input) px-1.5 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:bg-(--color-accent-fill) disabled:cursor-not-allowed disabled:opacity-50"
+            class="flex cursor-pointer items-center gap-1.5 rounded-full border border-(--color-panel-border) bg-(--color-panel-input) px-3 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:border-(--color-brand)/60 hover:text-(--color-brand-text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) disabled:cursor-not-allowed disabled:opacity-50"
             data-testid="dictionary-detail-view-book"
             disabled={viewBookTarget == null}
             onclick={() => {
@@ -137,7 +138,7 @@
 
           <button
             type="button"
-            class="flex cursor-pointer items-center gap-1.5 rounded-sm bg-(--color-panel-input) px-1.5 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:bg-(--color-accent-fill)"
+            class="flex cursor-pointer items-center gap-1.5 rounded-full border border-(--color-panel-border) bg-(--color-panel-input) px-3 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:border-(--color-brand)/60 hover:text-(--color-brand-text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
             data-testid="dictionary-detail-edit"
             onclick={() => onEdit?.(word.id)}
           >
@@ -147,7 +148,7 @@
 
           <button
             type="button"
-            class="flex h-8.5 w-8.5 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-(--color-error-soft) text-(--color-error) transition-opacity hover:opacity-90"
+            class="flex size-8.5 shrink-0 cursor-pointer items-center justify-center rounded-full border border-(--color-error)/40 bg-transparent text-(--color-error) transition-colors hover:bg-(--color-error)/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-error)"
             aria-label={t('dictionary.delete')}
             data-testid="dictionary-detail-delete"
             onclick={() => onDelete?.(word.id)}
@@ -194,7 +195,7 @@
         <div class="flex flex-col gap-2.5" data-testid="dictionary-detail-section">
           {#if section === 'definition'}
             <span
-              class="flex items-center gap-2 text-xs font-semibold text-(--color-accent-blue)"
+              class="flex items-center gap-2 text-xs font-semibold text-(--color-brand-text)"
               data-testid="dictionary-detail-definition-label"
             >
               <BookText size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
@@ -205,7 +206,7 @@
             </p>
           {:else if section === 'example'}
             <span
-              class="flex items-center gap-2 text-xs font-semibold text-(--color-accent-blue)"
+              class="flex items-center gap-2 text-xs font-semibold text-(--color-brand-text)"
               data-testid="dictionary-detail-example-label"
             >
               <Quote size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
@@ -228,13 +229,15 @@
 </section>
 
 {#snippet citation()}
-  <div
-    class="flex flex-col gap-2.5 rounded-md bg-(--color-panel-input) p-3.5"
-    data-testid="dictionary-citation"
-  >
+  <div class="relative flex flex-col gap-4 pt-1" data-testid="dictionary-citation">
     {#if showQuote}
+      <span
+        class="block h-7 text-6xl leading-none text-(--color-brand-text)"
+        style="font-family: var(--font-serif)"
+        aria-hidden="true">&ldquo;</span
+      >
       <p
-        class="text-base text-(--color-secondary)"
+        class="-mt-1 text-[1.0625rem] leading-relaxed text-(--color-primary)"
         style="font-family: var(--font-serif)"
         data-testid="dictionary-quote"
       >
@@ -243,9 +246,12 @@
     {/if}
 
     {#if showReference}
-      <div class="flex items-center gap-2.5" data-testid="dictionary-reference">
+      <div
+        class="flex items-center gap-3 border-t border-(--color-panel-border) pt-4"
+        data-testid="dictionary-reference"
+      >
         <span
-          class="flex h-12.5 w-9 shrink-0 items-center justify-center rounded-[4px] bg-(--color-accent-blue) text-xs font-semibold text-(--color-accent-on)"
+          class="flex h-14 w-10 shrink-0 items-center justify-center rounded-(--radius-sm) bg-linear-to-br from-(--color-brand-start) to-(--color-brand-end) text-xs font-bold text-(--color-brand-on) shadow-[0_8px_18px_-10px_rgba(0,0,0,0.7)]"
           aria-hidden="true"
           data-testid="dictionary-reference-initials"
         >
@@ -254,7 +260,7 @@
 
         <div class="flex min-w-0 flex-col gap-0.5">
           <span
-            class="flex items-center gap-1.5 text-micro font-semibold text-(--color-accent-blue)"
+            class="flex items-center gap-1.5 text-micro font-semibold text-(--color-brand-text)"
             data-testid="dictionary-reference-label"
           >
             <BookOpen size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
@@ -262,7 +268,7 @@
           </span>
           {#if bookTitle}
             <span
-              class="truncate text-sm text-(--color-primary)"
+              class="truncate text-sm font-semibold text-(--color-primary)"
               data-testid="dictionary-reference-title"
             >
               {bookTitle}
@@ -270,7 +276,7 @@
           {/if}
           {#if referenceLine}
             <span
-              class="truncate text-micro text-(--color-text-tertiary)"
+              class="truncate text-micro text-(--color-text-muted)"
               data-testid="dictionary-reference-author"
             >
               {referenceLine}
@@ -281,7 +287,7 @@
     {/if}
 
     <p
-      class="flex items-start gap-1.5 text-micro text-(--color-text-tertiary)"
+      class="flex items-start gap-1.5 text-micro text-(--color-text-muted)"
       data-testid="dictionary-evidence-note"
     >
       <Info size={14} strokeWidth={1.8} class="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />

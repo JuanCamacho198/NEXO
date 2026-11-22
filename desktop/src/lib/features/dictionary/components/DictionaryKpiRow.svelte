@@ -24,19 +24,22 @@
   {#each cards as card (card.key)}
     {@const CardIcon = card.icon}
     <article
-      class="flex items-center justify-between gap-3 rounded-lg border border-(--color-panel-border) bg-(--color-panel) p-4"
+      class="flex items-center justify-between gap-3 rounded-(--radius-lg) border border-(--color-panel-border) bg-(--color-panel) p-4"
     >
       <div class="flex min-w-0 flex-col gap-1">
         <span
-          class="truncate text-xs font-semibold tracking-wide text-(--color-text-tertiary)"
+          class="truncate text-xs font-medium text-(--color-text-muted)"
           data-testid="dictionary-kpi-label"
         >
           {t(card.key)}
         </span>
-        <span class="text-2xl font-extrabold text-(--color-primary)">{card.value}</span>
+        <span
+          class="text-3xl leading-none font-bold tracking-tight tabular-nums text-(--color-primary)"
+          >{card.value}</span
+        >
       </div>
       <div
-        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--color-accent-fill) text-(--color-accent-blue)"
+        class="flex size-10 shrink-0 items-center justify-center rounded-full bg-(--color-accent-fill) text-(--color-brand-text)"
       >
         <CardIcon size={16} strokeWidth={1.8} class="h-4 w-4" aria-hidden="true" />
       </div>

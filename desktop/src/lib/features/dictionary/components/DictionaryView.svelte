@@ -1,4 +1,6 @@
 <script lang="ts">
+  import FilterChip from '$lib/shared/ui/forms/FilterChip.svelte';
+  import { headingMarker, panelClass } from '$lib/shared/ui/emberStyles';
   import { onDestroy, onMount } from 'svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import {
@@ -239,17 +241,20 @@
   }
 </script>
 
-<section class="flex w-full flex-col gap-6 p-6">
-  <header class="flex h-20 items-center justify-between gap-4">
-    <div class="flex min-w-0 flex-col gap-1.5">
-      <h1 class="truncate text-2xl font-extrabold text-(--color-primary)">
-        {t('dictionary.title')}
-      </h1>
-      <p class="truncate text-sm text-(--color-text-tertiary)">{t('dictionary.subtitle')}</p>
+<section class="flex w-full flex-col gap-5">
+  <header class="flex items-end justify-between gap-4">
+    <div class="flex min-w-0 flex-col gap-1">
+      <div class="flex items-center gap-3">
+        <div class="h-8 {headingMarker}" aria-hidden="true"></div>
+        <h1 class="truncate text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)">
+          {t('dictionary.title')}
+        </h1>
+      </div>
+      <p class="truncate text-sm text-(--color-text-muted)">{t('dictionary.subtitle')}</p>
     </div>
-    <button
-      type="button"
-      class="flex shrink-0 cursor-pointer items-center gap-2 rounded-[10px] bg-(--color-accent-blue) px-4 py-2.5 text-sm font-bold text-(--color-accent-on) transition-opacity hover:opacity-90"
+    <Button
+      variant="accent"
+      class="shrink-0 gap-2"
       aria-expanded={showAddForm}
       aria-controls="dictionary-add-form"
       onclick={toggleAddForm}
@@ -260,14 +265,14 @@
         <Plus size={16} strokeWidth={1.8} class="h-4 w-4" aria-hidden="true" />
       {/if}
       <span>{t('dictionary.newWord')}</span>
-    </button>
+    </Button>
   </header>
 
   <p class="sr-only" role="status" aria-live="polite">{announcement}</p>
 
   {#if actionError}
     <p
-      class="rounded-md bg-(--color-error-soft) px-3 py-2 text-xs text-(--color-error)"
+      class="rounded-(--radius-md) border border-(--color-error)/40 bg-(--color-error-soft) px-4 py-2.5 text-sm text-(--color-primary)"
       role="alert"
       data-testid="dictionary-action-error"
     >
@@ -279,9 +284,9 @@
     <DictionaryKpiRow {t} {kpis} />
   {/if}
 
-  <div class="flex gap-3">
+  <div class="flex gap-5">
     <div
-      class="flex w-110 shrink-0 flex-col gap-3.5 rounded-lg border border-(--color-panel-border) bg-(--color-panel) p-4"
+      class="flex w-110 shrink-0 flex-col gap-3.5 {panelClass} p-4"
       data-testid="dictionary-words-panel"
     >
       <label for="dictionary-search" class="sr-only">{t('dictionary.searchLabel')}</label>
@@ -296,25 +301,16 @@
 
       <div class="flex items-center gap-2" data-testid="dictionary-tabs">
         {#each tabs as tab (tab.id)}
-          <button
-            type="button"
-            class={`cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-              activeTab === tab.id
-                ? 'bg-(--color-accent-fill) text-(--color-accent-blue)'
-                : 'bg-(--color-panel-input) text-(--color-secondary)'
-            }`}
-            aria-pressed={activeTab === tab.id}
-            onclick={() => (activeTab = tab.id)}
-          >
+          <FilterChip selected={activeTab === tab.id} onclick={() => (activeTab = tab.id)}>
             {t(tab.label)}
-          </button>
+          </FilterChip>
         {/each}
       </div>
 
       {#if showAddForm}
         <form
           id="dictionary-add-form"
-          class="flex flex-col gap-2 rounded-md border border-(--color-panel-border) bg-(--color-panel-input) p-3"
+          class="flex flex-col gap-2 border-y border-(--color-panel-border) py-3"
           onsubmit={(event) => {
             event.preventDefault();
             void handleAdd();
@@ -323,19 +319,19 @@
           <div class="flex gap-2">
             <input
               type="text"
-              class="h-10 min-w-0 flex-1 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-3 text-sm text-(--color-primary) placeholder:text-(--color-text-tertiary)"
+              class="h-10 min-w-0 flex-1 rounded-full border border-(--color-panel-border) bg-(--color-panel) px-4 text-sm text-(--color-primary) placeholder:text-(--color-text-muted)"
               placeholder={t('dictionary.wordPlaceholder')}
               bind:value={newWord}
               disabled={isAdding}
             />
             <input
               type="text"
-              class="h-10 w-32 rounded-md border border-(--color-panel-border) bg-(--color-panel) px-2 text-xs text-(--color-primary) placeholder:text-(--color-text-tertiary)"
+              class="h-10 w-32 rounded-full border border-(--color-panel-border) bg-(--color-panel) px-3 text-xs text-(--color-primary) placeholder:text-(--color-text-muted)"
               placeholder={t('dictionary.tagsPlaceholder')}
               bind:value={newTags}
               disabled={isAdding}
             />
-            <Button size="sm" type="submit" disabled={!newWord.trim() || isAdding}>
+            <Button size="sm" variant="accent" type="submit" disabled={!newWord.trim() || isAdding}>
               {#if isAdding}
                 {t('settings.saving')}
               {:else}
@@ -352,9 +348,7 @@
       {/if}
 
       {#if dictionary.isLoading}
-        <div
-          class="rounded-md border border-(--color-panel-border) bg-(--color-panel-input) p-8 text-center text-sm text-(--color-text-tertiary)"
-        >
+        <div class="p-8 text-center text-sm text-(--color-text-muted)">
           {t('stats.loading')}
         </div>
       {:else if dictionary.error}
@@ -387,7 +381,7 @@
           />
         </div>
       {:else}
-        <ul class="m-0 flex list-none flex-col gap-1.5 p-0" data-testid="dictionary-list">
+        <ul class="m-0 flex list-none flex-col gap-1 p-0" data-testid="dictionary-list">
           {#each filteredWords as w, index (w.id)}
             <DictionaryRow
               word={w}
