@@ -188,6 +188,10 @@ The new logo's ribbon orange (`#FFA620 → #F7781A → #FF2D0F`) replaces NEXO B
 
 On sidebar routes the custom titlebar floats transparent over the window's top 36px (drag region plus window controls); the rail runs to the top edge and the content column starts below the band. The reader keeps the in-flow titlebar because its own chrome sits at the top of the content.
 
+### Estantería (Library)
+
+The catalogue is book-first: covers at a 2:3 ratio in an auto-fill grid (min 10.5rem), no card box around them, the reading progress as a hairline on the cover's bottom edge, and one action per book (ember "Continue" when started, quiet "Start" otherwise). The cover itself opens the book; "Open book", details and the rest live in the `···` menu. Titles reserve two lines so every row's action aligns. Toolbar, filters and view toggle use the ember for the active state; Import is the same ember-label pill as Home. A cover-less book shows a book glyph, not its title, so the title is never rendered twice.
+
 ## Typography
 
 **Display Font:** Manrope (with Segoe UI, Arial, sans-serif)

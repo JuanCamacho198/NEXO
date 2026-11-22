@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Button from '$lib/shared/ui/forms/Button.svelte';
   import Skeleton from '$lib/shared/ui/feedback/Skeleton.svelte';
+  import Play from 'lucide-svelte/icons/play';
   import SafeCover from './SafeCover.svelte';
   import ShelfBookActions from './ShelfBookActions.svelte';
   import {
@@ -34,35 +34,42 @@
     onViewDetails,
     onRemoveBook,
   }: Props = $props();
+
+  const focusRing =
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-background)';
 </script>
 
 {#if isLoading}
-  <ul class="space-y-3 list-none p-0 m-0" aria-hidden="true">
+  <ul class="m-0 list-none space-y-3 p-0" aria-hidden="true">
     {#each Array(5) as _, index (index)}
-      <li class="content-auto [contain-intrinsic-size:auto_160px]">
+      <li class="content-auto [contain-intrinsic-size:auto_128px]">
         <div
-          class="flex flex-col gap-4 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4 md:flex-row md:items-center"
+          class="flex items-center gap-5 rounded-(--radius-lg) border border-(--color-edge) bg-(--color-home-card) p-3"
         >
-          <Skeleton variant="rounded" width="80px" height="112px" class="shrink-0" />
+          <Skeleton variant="rounded" width="64px" height="96px" class="shrink-0" />
           <div class="min-w-0 flex-1 space-y-2">
             <Skeleton variant="text" class="w-2/3" />
             <Skeleton variant="text" class="w-1/3" />
-            <Skeleton variant="rounded" height="8px" class="mt-4 w-full max-w-xl" />
+            <Skeleton variant="rounded" height="6px" class="mt-4 w-full max-w-xl" />
           </div>
         </div>
       </li>
     {/each}
   </ul>
 {:else}
-  <ul class="space-y-3 list-none p-0 m-0">
+  <ul class="m-0 list-none space-y-3 p-0">
     {#each books as book}
-      <li class="content-auto [contain-intrinsic-size:auto_160px]">
+      {@const progress = getSafeProgressPercentage(book)}
+      <li class="content-auto [contain-intrinsic-size:auto_128px]">
         <article
-          class="flex flex-col gap-4 rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-4 shadow-(--shadow-panel) md:flex-row md:items-center"
+          class="group/row flex flex-col gap-4 rounded-(--radius-lg) border border-(--color-edge) bg-(--color-home-card) p-3 pr-4 transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-edge-strong) md:flex-row md:items-center"
         >
-          <div class="flex items-start gap-4 md:min-w-0 md:flex-1">
-            <div
-              class="h-28 w-20 shrink-0 overflow-hidden rounded-(--radius-lg) bg-(--color-surface-subtle)"
+          <div class="flex items-center gap-5 md:min-w-0 md:flex-1">
+            <button
+              type="button"
+              class="h-24 w-16 shrink-0 overflow-hidden rounded-(--radius-sm) border border-(--color-edge) bg-(--color-surface-subtle) shadow-[0_8px_18px_-10px_rgba(0,0,0,0.7)] {focusRing}"
+              aria-label={`${t('shelf.openBook')}: ${book.title}`}
+              onclick={() => onOpenBook?.(book)}
             >
               <SafeCover
                 path={book.coverPath ?? ''}
@@ -71,45 +78,45 @@
               >
                 {#snippet fallback()}
                   <div
-                    class="flex h-full w-full items-center justify-center bg-(--color-surface-subtle) px-2 text-center text-micro uppercase tracking-[0.16em] text-(--color-text-muted)"
+                    class="flex h-full w-full items-center justify-center bg-linear-to-b from-(--color-surface-subtle) to-(--color-horizon-fade) px-1.5 text-center text-micro uppercase tracking-[0.12em] text-(--color-text-muted)"
                   >
                     {t('shelf.noCover')}
                   </div>
                 {/snippet}
               </SafeCover>
-            </div>
+            </button>
 
             <div class="min-w-0 flex-1">
-              <div class="flex flex-wrap items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2.5">
                 <h2 class="line-clamp-1 text-base font-semibold text-(--color-primary)">
                   {book.title}
                 </h2>
                 <span
-                  class="rounded-full border border-(--color-border) px-2 py-1 text-micro uppercase tracking-[0.12em] text-(--color-text-muted)"
+                  class="rounded-full border border-(--color-edge) px-2 py-0.5 text-micro font-semibold uppercase tracking-[0.12em] text-(--color-text-muted)"
                 >
                   {getStateLabel(book)}
                 </span>
               </div>
-              <p class="mt-1 text-sm text-(--color-text-muted)">
+              <p class="mt-0.5 text-sm text-(--color-text-muted)">
                 {book.author || t('shelf.unknownAuthor')}
               </p>
 
               <div
-                class="mt-4 max-w-xl space-y-2"
+                class="mt-3 max-w-xl space-y-1.5"
                 role="progressbar"
                 aria-label={t('shelf.progressAria', { title: book.title })}
-                aria-valuenow={getSafeProgressPercentage(book)}
+                aria-valuenow={progress}
                 aria-valuemin="0"
                 aria-valuemax="100"
               >
-                <div class="h-2 w-full overflow-hidden rounded-full bg-(--color-border)">
+                <div class="h-1.5 w-full overflow-hidden rounded-full bg-(--color-edge)">
                   <div
-                    class="h-full rounded-full bg-(--color-accent)"
+                    class="h-full rounded-full bg-linear-to-r from-(--color-brand-start) to-(--color-brand)"
                     style={`width: ${formatPercent(book)};`}
                   ></div>
                 </div>
                 <div
-                  class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-(--color-text-muted)"
+                  class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-(--color-text-muted) tabular-nums"
                 >
                   <span>{t('shelf.percentRead', { percent: formatPercent(book) })}</span>
                   <span>{t('shelf.minutesLogged', { minutes: book.minutesRead })}</span>
@@ -124,23 +131,18 @@
             </div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2 md:justify-end">
-            <Button
-              variant="secondary"
-              size="sm"
-              class="rounded-xl whitespace-nowrap"
-              onclick={() => onOpenBook?.(book)}>{t('shelf.read')}</Button
-            >
-            <Button
-              variant="accent"
-              size="sm"
-              class="rounded-xl whitespace-nowrap"
+          <div class="flex items-center gap-2 md:justify-end">
+            <button
+              type="button"
+              class="inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-semibold whitespace-nowrap transition-[filter,background-color,border-color,color] duration-(--duration-fast) ease-(--ease-smooth) active:scale-96 {focusRing} {progress >
+              0
+                ? 'bg-linear-to-r from-(--color-brand-start) to-(--color-brand) text-(--color-brand-on) hover:brightness-110'
+                : 'border border-(--color-edge) bg-(--color-surface-subtle) text-(--color-primary) hover:border-(--color-brand)/60 hover:text-(--color-brand-text)'}"
               onclick={() => onContinueReading?.(book)}
             >
-              {getSafeProgressPercentage(book) > 0
-                ? t('shelf.continueReading')
-                : t('shelf.startReading')}
-            </Button>
+              <Play size={13} strokeWidth={2} fill="currentColor" aria-hidden="true" />
+              {progress > 0 ? t('shelf.continueReading') : t('shelf.startReading')}
+            </button>
             <ShelfBookActions
               {book}
               {t}
