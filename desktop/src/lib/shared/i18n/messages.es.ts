@@ -22,7 +22,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'app.locationLabel': 'Ubicacion',
   'app.start': 'inicio',
   'app.continue': 'Seguir leyendo',
-  'library.title': 'Biblioteca',
+  'library.title': 'Estantería',
   'library.list': 'Lista',
   'library.grid': 'Cuadricula',
   'library.loading': 'Cargando biblioteca...',
