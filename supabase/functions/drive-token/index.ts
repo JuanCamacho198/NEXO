@@ -29,10 +29,28 @@ interface RefreshRequest {
 
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 
+/**
+ * The desktop webview calls this from its own origin (`http://127.0.0.1:1420` in
+ * dev, `tauri://localhost` in the packaged app), so the browser sends a
+ * preflight and refuses the response unless every reply carries
+ * `Access-Control-Allow-Origin`. Without it the request never reaches the
+ * handler: the console shows a CORS failure, not a 4xx from here.
+ *
+ * The function is not a public data endpoint — `verify_jwt` rejects calls
+ * without a Supabase session before this code runs — so allowing any origin is
+ * safe and keeps the packaged app (whose origin is not a fixed host) working.
+ */
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Max-Age': '86400',
+};
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
   });
 }
 
@@ -43,6 +61,10 @@ function fail(code: string, message: string, status = 400): Response {
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
+  // Preflight: answer before any auth or body work.
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
   if (req.method !== 'POST') {
     return fail('METHOD_NOT_ALLOWED', 'POST a JSON body with refresh_token.', 405);
   }
