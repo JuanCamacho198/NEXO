@@ -29,6 +29,11 @@
      * in-list form through the default `true`.
      */
     showInstallForm?: boolean;
+    /**
+     * `false` drops the card frame so the list sits open inside a Settings
+     * section; the Addons screen keeps the framed list (default).
+     */
+    framed?: boolean;
     /** Slice 8 fills: per-addon consent control. Receives the row + current grant. */
     consentById?: Record<string, boolean>;
     onUrlChange: (value: string) => void;
@@ -49,6 +54,7 @@
     installOutcome,
     isLoading = false,
     showInstallForm = true,
+    framed = true,
     consentById = {},
     onUrlChange,
     onInstall,
@@ -57,6 +63,8 @@
     consentControl,
     capabilityBadges,
   }: Props = $props();
+
+  const frame = $derived(framed ? `${panelClass} px-5` : '');
 
   // ADD-01 B: uninstall is destructive, so the first click only arms the
   // confirmation for that row; the mutation leaves on the explicit confirm.
@@ -75,10 +83,7 @@
 -->
 <div class="flex flex-col gap-4" aria-busy={isLoading}>
   {#if isLoading && installed.length === 0}
-    <ul
-      class="flex max-w-3xl flex-col divide-y divide-(--color-edge) {panelClass} px-5"
-      aria-hidden="true"
-    >
+    <ul class="flex max-w-3xl flex-col divide-y divide-(--color-edge) {frame}" aria-hidden="true">
       {#each [0, 1, 2] as row (row)}
         <li class="flex items-center justify-between gap-3 py-3">
           <div class="flex min-w-0 flex-1 flex-col gap-2">
@@ -90,7 +95,7 @@
       {/each}
     </ul>
   {:else if installed.length === 0}
-    <div class="flex max-w-3xl items-center gap-4 {panelClass} px-5 py-5">
+    <div class="flex max-w-3xl items-center gap-4 {frame} {framed ? 'py-5' : 'py-1'}">
       <span
         class="flex size-11 shrink-0 items-center justify-center rounded-full border border-(--color-edge) bg-(--color-brand-soft) text-(--color-brand-text)"
         aria-hidden="true"
@@ -100,7 +105,7 @@
       <p class="m-0 text-sm text-(--color-secondary)">{t('settings.addons.empty')}</p>
     </div>
   {:else}
-    <ul class="flex max-w-3xl flex-col divide-y divide-(--color-edge) {panelClass} px-5">
+    <ul class="flex max-w-3xl flex-col divide-y divide-(--color-edge) {frame}">
       {#each installed as addon (addon.id)}
         <li class="flex flex-col gap-3 py-4">
           <div class="flex items-start justify-between gap-3">
@@ -185,6 +190,6 @@
   {/if}
 
   {#if showInstallForm}
-    <AddonInstallForm {t} {url} {isBusy} {installOutcome} {onUrlChange} {onInstall} />
+    <AddonInstallForm {t} {url} {isBusy} {installOutcome} {framed} {onUrlChange} {onInstall} />
   {/if}
 </div>

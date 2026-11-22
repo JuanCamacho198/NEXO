@@ -9,11 +9,13 @@
     url: string;
     isBusy: boolean;
     installOutcome: InstallOutcome;
+    /** `false` drops the card frame (Settings section); see AddonsInstalledList. */
+    framed?: boolean;
     onUrlChange: (value: string) => void;
     onInstall: () => void;
   };
 
-  let { t, url, isBusy, installOutcome, onUrlChange, onInstall }: Props = $props();
+  let { t, url, isBusy, installOutcome, framed = true, onUrlChange, onInstall }: Props = $props();
 
   const hasInlineProblem = $derived(
     installOutcome.kind === 'error' || installOutcome.kind === 'offline',
@@ -29,7 +31,11 @@
   leaves through onInstall. The inline role="alert" keeps retry reachable
   without unmounting either list (ADD-01 I).
 -->
-<div class="flex max-w-3xl flex-col gap-3 {panelClass} p-5">
+<div
+  class="flex max-w-3xl flex-col gap-3 {framed
+    ? `${panelClass} p-5`
+    : 'border-t border-(--color-edge) pt-5'}"
+>
   <div class="flex flex-col gap-1">
     <p class="m-0 text-sm text-(--color-text-muted)">{t('addons.install.description')}</p>
     <label class="text-sm font-medium text-(--color-secondary)" for="addon-install-url">

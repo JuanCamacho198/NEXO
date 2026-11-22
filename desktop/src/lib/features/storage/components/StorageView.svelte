@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { sectionClass } from '$lib/shared/ui/emberStyles';
+  import { headingMarker } from '$lib/shared/ui/emberStyles';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { LibraryBookDto } from '$lib/shared/types/library';
   import type { PerBookSize, StorageStats } from '$lib/shared/stores/StorageState.svelte';
@@ -110,27 +112,30 @@
   }
 </script>
 
-<section class="space-y-5 w-full max-w-none">
+<section class="w-full max-w-5xl space-y-6">
   <header class="flex flex-col gap-1">
-    <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
-      {t('storage.title')}
-    </h1>
+    <div class="flex items-center gap-3">
+      <div class="h-7 {headingMarker}" aria-hidden="true"></div>
+      <h1 class="m-0 text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)">
+        {t('storage.title')}
+      </h1>
+    </div>
     <p class="text-sm text-(--color-text-muted)">{t('storage.subtitle')}</p>
   </header>
 
   {#if storageState.isLoading}
-    <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-5">
+    <div class={sectionClass}>
       <p class="text-sm text-(--color-text-muted)">{t('storage.loading')}</p>
     </div>
   {:else if storageState.error}
     <div class="rounded-xl border border-(--color-error)/40 bg-(--color-error)/10 p-5 space-y-2">
       <p class="text-sm text-(--color-error)">{storageState.error}</p>
-      <Button size="sm" variant="ghost" onclick={() => void storageState.loadStats()}>
+      <Button size="sm" variant="secondary" onclick={() => void storageState.loadStats()}>
         {t('storage.retry')}
       </Button>
     </div>
   {:else if stats}
-    <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-5 space-y-4">
+    <div class="{sectionClass} space-y-4">
       <div class="flex flex-col gap-3">
         <p class="text-lg font-semibold text-(--color-primary)" data-testid="storage-usage-summary">
           {t('storage.usageSummary', { size: formatBytes(stats.totalBytes) })}
@@ -176,14 +181,11 @@
 
     <!-- Drive: one honest line, only when a grant actually exists. -->
     {#if storageState.isLoadingDriveUsage}
-      <div class="rounded-xl border border-(--color-border) bg-(--color-surface) px-5 py-3">
+      <div class={sectionClass}>
         <p class="text-sm text-(--color-text-muted)">{t('storage.drive.measuring')}</p>
       </div>
     {:else if driveUsage && driveUsage.state === 'measured'}
-      <div
-        class="flex flex-wrap items-center gap-3 rounded-xl border border-(--color-border) bg-(--color-surface) px-5 py-3"
-        data-testid="drive-line"
-      >
+      <div class="flex flex-wrap items-center gap-3 {sectionClass}" data-testid="drive-line">
         <p class="text-sm text-(--color-primary)">
           {t('storage.drive.onDrive', { size: formatBytes(driveUsage.bytes) })}
           <span class="text-(--color-text-muted)"
@@ -211,13 +213,13 @@
     {/if}
 
     <!-- Advanced: book-level sizes and per-book removal, out of the main flow. -->
-    <details class="rounded-xl border border-(--color-border) bg-(--color-background)">
+    <details class="group {sectionClass}">
       <summary
-        class="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--color-primary)"
+        class="cursor-pointer select-none text-sm font-semibold text-(--color-primary) marker:text-(--color-brand-text) hover:text-(--color-brand-text)"
       >
         {t('storage.advanced')}
       </summary>
-      <div class="space-y-3 border-t border-(--color-border) p-4">
+      <div class="space-y-3 pt-5">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="text-sm font-semibold text-(--color-primary)">
             {t('storage.perBook.title')} · {t('storage.perBook.count', { count: books.length })}
@@ -236,7 +238,7 @@
             {perBookLoading ? t('storage.perBook.loading') : t('storage.perBook.empty')}
           </p>
         {:else}
-          <ul class="divide-y divide-(--color-border)">
+          <ul class="divide-y divide-(--color-edge)">
             {#each storageState.perBookSizes as b (b.id)}
               <li
                 class="flex flex-wrap items-center justify-between gap-2 py-2"
@@ -283,9 +285,9 @@
       (for example a bridge that answers with null). Rendering nothing here
       left the screen blank with no explanation, so state it and offer a retry.
     -->
-    <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-5 space-y-2">
+    <div class="{sectionClass} space-y-2">
       <p class="text-sm text-(--color-text-muted)">{t('storage.unavailable')}</p>
-      <Button size="sm" variant="ghost" onclick={() => void storageState.loadStats()}>
+      <Button size="sm" variant="secondary" onclick={() => void storageState.loadStats()}>
         {t('storage.retry')}
       </Button>
     </div>

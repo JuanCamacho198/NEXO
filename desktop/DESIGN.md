@@ -200,6 +200,10 @@ One summary plane with hairline-divided figures (not a wall of tiles), the activ
 
 The catalogue is book-first: covers at a 2:3 ratio in an auto-fill grid (min 10.5rem), no card box around them, the reading progress as a hairline on the cover's bottom edge, and one action per book (ember "Continue" when started, quiet "Start" otherwise). The cover itself opens the book; "Open book", details and the rest live in the `···` menu. Titles reserve two lines so every row's action aligns. Toolbar, filters and view toggle use the ember for the active state; Import is the same ember-label pill as Home. A cover-less book shows a book glyph, not its title, so the title is never rendered twice.
 
+### Ajustes (Settings)
+
+A settings page is a divided list, not a stack of cards. `Panel` is an open section under a top hairline (`sectionClass`: `border-t` on the edge token, no fill, no radius); `inline` panels put the title and description left and their one or two controls right. Group headings (Respaldo, Exportar…) sit above their sections at `text-xl`. The only filled blocks left are transient callouts (a danger confirm, an error or warning line). Tabs are pills in one segmented track beside the back button; when the row is narrower than every label needs (Spanish ~61rem), idle tabs fold to their icon with the label kept as accessible name and tooltip, and only the selected tab keeps its text, so the track never wraps or paints a scrollbar. Switches are full-width rows (label and hint left, `SwitchTrack` right, ember when on, the same track as the sidebar theme toggle). Ember marks one action per section (Connect Drive, Export everything, Save when there are changes); the rest are edge pills.
+
 ## Typography
 
 **Display Font:** Manrope (with Segoe UI, Arial, sans-serif)
@@ -273,7 +277,7 @@ The form language is consistently rounded with no sharp corners. Radii scale wit
 - **Corner Style:** `24px` (`--radius-xl`).
 - **Background:** Glass surface by default; recessed surface for read-only blocks.
 - **Shadow Strategy:** `--shadow-soft` at rest (see Elevation & Depth).
-- **Border:** 1px `{colors.hairline}`; `Panel` headers use a bottom hairline at 80% opacity.
+- **Border:** 1px `{colors.hairline}` on cards. `Panel` is not a card: it renders as an open section under a top hairline (see Ajustes).
 - **Internal Padding:** `12 / 16 / 24px` (`sm / md / lg`), with a `16px`–`20px` header band.
 - **Rule:** Blocks are siblings on the ground, never cards inside cards. The Home continue-reading block is an accepted exception: it is a single bordered panel whose inner book row is borderless by design, so it reads as one visual plane rather than a card inside a card. The runtime detector's `nested-cards` hit on that block is a known false positive and must not be "fixed" by removing the panel border.
 

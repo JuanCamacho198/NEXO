@@ -26,25 +26,25 @@
   );
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex flex-col divide-y divide-(--color-edge)">
   {#each groups as group (group.id)}
-    <div class="flex flex-col gap-2">
-      <h2 class="m-0 text-xs font-semibold uppercase tracking-wide text-(--color-text-muted)">
+    <div class="flex flex-col gap-1 py-4">
+      <h2 class="m-0 mb-1 text-sm font-semibold text-(--color-brand-text)">
         {t(group.labelKey)}
       </h2>
-      <ul class="m-0 grid list-none gap-2 p-0">
+      <ul class="m-0 grid list-none gap-0.5 p-0">
         {#each group.entries as entry (entry.id)}
-          <li class="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span class="inline-flex min-w-21.5 items-center gap-1">
-              {#each bindingToCaps(resolveBinding(entry, platform), platform) as cap, i (i)}
-                <ShortcutKey label={cap} />
-              {/each}
-            </span>
-            <span class="ml-auto flex flex-wrap items-baseline justify-end gap-x-2 text-right">
+          <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-1.5">
+            <span class="flex min-w-0 flex-wrap items-baseline gap-x-2">
               <span class="text-sm text-(--color-primary)">{t(entry.descriptionKey)}</span>
               <span class="text-xs text-(--color-text-muted)"
                 >· {t(SHORTCUT_CONTEXT_LABELS[entry.context])}</span
               >
+            </span>
+            <span class="inline-flex shrink-0 items-center gap-1">
+              {#each bindingToCaps(resolveBinding(entry, platform), platform) as cap, i (i)}
+                <ShortcutKey label={cap} />
+              {/each}
             </span>
           </li>
         {/each}

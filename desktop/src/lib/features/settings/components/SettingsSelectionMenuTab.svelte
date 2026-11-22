@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { sectionClass } from '$lib/shared/ui/emberStyles';
+  import { headingMarker } from '$lib/shared/ui/emberStyles';
   /**
    * "Menú de selección" — the single settings surface for the selection menu
    * (D6).
@@ -110,18 +112,23 @@
   role="tabpanel"
   id="tabpanel-seleccion"
   aria-labelledby="tab-seleccion"
-  class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+  class="relative flex flex-1 flex-col overflow-y-auto px-8 pt-4 pb-12"
 >
-  <section class="space-y-5 w-full max-w-none">
+  <section class="w-full max-w-5xl space-y-6">
     <header class="flex flex-col gap-1">
-      <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
-        {t('settings.selectionMenu.title')}
-      </h1>
+      <div class="flex items-center gap-3">
+        <div class="h-7 {headingMarker}" aria-hidden="true"></div>
+        <h1 class="m-0 text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)">
+          {t('settings.selectionMenu.title')}
+        </h1>
+      </div>
       <p class="text-sm text-(--color-text-muted)">{t('settings.selectionMenu.subtitle')}</p>
     </header>
 
     {#if error}
-      <p class="rounded-lg border border-(--color-danger) px-3 py-2 text-sm text-(--color-danger)">
+      <p
+        class="rounded-(--radius-md) border border-(--color-danger)/45 bg-(--color-danger)/10 px-4 py-3 text-sm text-(--color-danger)"
+      >
         {error}
       </p>
     {/if}
@@ -129,8 +136,8 @@
     <!-- ── Option 1: Translation ──────────────────────────────────────────────
          The reused block renders its own card; only its heading is scoped to
          this tab, so the option is named in the menu's vocabulary. -->
-    <div class="flex flex-col gap-2">
-      <h2 class="text-xl font-semibold text-(--color-primary)">
+    <div class="{sectionClass} flex flex-col gap-1">
+      <h2 class="text-base font-semibold text-(--color-primary)">
         {t('settings.selectionMenu.translation.title')}
       </h2>
       <p class="text-sm text-(--color-text-muted)">
@@ -157,9 +164,9 @@
          NEXT OPTION GOES HERE: copy this card's shape, add a heading pair with
          `settings.selectionMenu.<option>.title` / `.subtitle` and the control
          itself. No other file needs to change. -->
-    <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-5 space-y-4">
+    <div class="{sectionClass} space-y-4">
       <header class="flex flex-col gap-1">
-        <h2 class="text-xl font-semibold text-(--color-primary)">
+        <h2 class="text-base font-semibold text-(--color-primary)">
           {t('settings.selectionMenu.definition.title')}
         </h2>
         <p class="text-sm text-(--color-text-muted)">
@@ -175,7 +182,7 @@
           options={definitionOptions}
           value={definitionValue}
           onchange={(detail) => handleDefinitionChange(detail.value)}
-          class="w-full"
+          class="w-full sm:max-w-sm"
         />
         <p class="text-xs text-(--color-text-muted)">
           {t('settings.selectionMenu.definition.languageHint')}

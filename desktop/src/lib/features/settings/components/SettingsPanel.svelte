@@ -154,31 +154,38 @@
 </script>
 
 {#if isOpen}
-  <aside class="w-full h-full flex-1 flex flex-col bg-(--color-background) overflow-hidden min-h-0">
-    <div class="flex items-center p-3 border-b border-(--color-border)">
-      <Button variant="secondary" size="sm" onclick={closePanel} aria-label={t('app.backToHome')}>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+  <aside class="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+    <div class="shrink-0 px-8 pt-6 pb-3">
+      <div class="flex w-full items-center gap-3">
+        <Button
+          variant="secondary"
+          size="sm"
+          class="size-10 shrink-0"
+          onclick={closePanel}
+          aria-label={t('app.backToHome')}
         >
-          <path d="M19 12H5m7-7l-7 7 7 7" />
-        </svg>
-      </Button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M19 12H5m7-7l-7 7 7 7" />
+          </svg>
+        </Button>
+        <SettingsTabs
+          activeTab={router.activeTab}
+          onTabChange={handleTabChange}
+          onKeydown={handleTabKeydown}
+          {t}
+        />
+      </div>
     </div>
-
-    <SettingsTabs
-      activeTab={router.activeTab}
-      onTabChange={handleTabChange}
-      onKeydown={handleTabKeydown}
-      {t}
-    />
 
     <form novalidate onsubmit={(e) => e.preventDefault()} class="flex-1 flex flex-col min-h-0">
       {#if router.activeTab === 'cuenta'}
@@ -188,61 +195,64 @@
           role="tabpanel"
           id="tabpanel-datos"
           aria-labelledby="tab-datos"
-          class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4 [&>*]:shrink-0"
+          class="relative flex flex-1 flex-col overflow-y-auto px-8 pt-4 pb-12"
         >
-          <SettingsDataTab
-            {t}
-            {books}
-            {collections}
-            isClearingCache={data.isClearingCache}
-            cacheCleared={data.cacheCleared}
-            selectedExportBook={data.selectedExportBook}
-            selectedExportFormat={data.selectedExportFormat}
-            annotationsOnlyWithNote={data.annotationsOnlyWithNote}
-            isExportingLibrary={data.isExportingLibrary}
-            isExportingHighlights={data.isExportingHighlights}
-            isExportingCollections={data.isExportingCollections}
-            isExportingBook={data.isExportingBook}
-            isExportingEverything={data.isExportingEverything}
-            isExportingColdBackup={data.isExportingColdBackup}
-            isImportingColdBackup={data.isImportingColdBackup}
-            isExportingDictionary={data.isExportingDictionary}
-            isImportingDictionary={data.isImportingDictionary}
-            dictionaryExportError={data.dictionaryExportError}
-            dictionaryImportResult={data.dictionaryImportResult}
-            dictionaryImportError={data.dictionaryImportError}
-            isDriveConnected={driveState.isAuthorized}
-            isConnectingDrive={driveState.isConnecting}
-            onConnectDrive={() => void handleConnectDrive()}
-            onClearCache={() => void data.handleClearCache()}
-            onExportLibrary={() => void data.handleExportLibrary(books)}
-            onExportHighlights={() => void data.handleExportHighlights(books)}
-            onExportCollections={() => void data.handleExportCollections(collections)}
-            onExportBook={(bookId: string) => void data.handleExportBook(bookId, books)}
-            onExportEverything={() => void data.handleExportEverything(books, collections)}
-            onExportColdBackup={() => void data.handleExportColdBackup()}
-            onImportColdBackup={() => void data.handleImportColdBackup()}
-            onExportDictionary={(format) => void data.handleExportDictionary(format)}
-            onImportDictionary={(file) => void data.handleImportDictionary(file)}
-            onNavigateToStorage={() => void handleTabChange('almacenamiento')}
-            onNavigateToAddons={() => navigationState.navigateToAddons()}
-            onSelectedExportBookChange={(v: string) => data.handleSelectedExportBookChange(v)}
-            onSelectedExportFormatChange={(v: 'json' | 'markdown') =>
-              data.handleSelectedExportFormatChange(v)}
-            onAnnotationsOnlyWithNoteChange={(v: boolean) =>
-              data.handleAnnotationsOnlyWithNoteChange(v)}
-          />
-          <SettingsAddonsSection
-            {t}
-            url={addonsState.url}
-            installed={addonsState.installed}
-            isBusy={addonsState.isBusy}
-            installOutcome={addonsState.installOutcome}
-            onUrlChange={(v: string) => (addonsState.url = v)}
-            onInstall={() => void addonsState.handleInstall()}
-            onToggle={(id: string, enabled: boolean) => void addonsState.handleToggle(id, enabled)}
-            onUninstall={(id: string) => void addonsState.handleUninstall(id)}
-          />
+          <div class="flex w-full max-w-5xl flex-col gap-6 [&>*]:shrink-0">
+            <SettingsDataTab
+              {t}
+              {books}
+              {collections}
+              isClearingCache={data.isClearingCache}
+              cacheCleared={data.cacheCleared}
+              selectedExportBook={data.selectedExportBook}
+              selectedExportFormat={data.selectedExportFormat}
+              annotationsOnlyWithNote={data.annotationsOnlyWithNote}
+              isExportingLibrary={data.isExportingLibrary}
+              isExportingHighlights={data.isExportingHighlights}
+              isExportingCollections={data.isExportingCollections}
+              isExportingBook={data.isExportingBook}
+              isExportingEverything={data.isExportingEverything}
+              isExportingColdBackup={data.isExportingColdBackup}
+              isImportingColdBackup={data.isImportingColdBackup}
+              isExportingDictionary={data.isExportingDictionary}
+              isImportingDictionary={data.isImportingDictionary}
+              dictionaryExportError={data.dictionaryExportError}
+              dictionaryImportResult={data.dictionaryImportResult}
+              dictionaryImportError={data.dictionaryImportError}
+              isDriveConnected={driveState.isAuthorized}
+              isConnectingDrive={driveState.isConnecting}
+              onConnectDrive={() => void handleConnectDrive()}
+              onClearCache={() => void data.handleClearCache()}
+              onExportLibrary={() => void data.handleExportLibrary(books)}
+              onExportHighlights={() => void data.handleExportHighlights(books)}
+              onExportCollections={() => void data.handleExportCollections(collections)}
+              onExportBook={(bookId: string) => void data.handleExportBook(bookId, books)}
+              onExportEverything={() => void data.handleExportEverything(books, collections)}
+              onExportColdBackup={() => void data.handleExportColdBackup()}
+              onImportColdBackup={() => void data.handleImportColdBackup()}
+              onExportDictionary={(format) => void data.handleExportDictionary(format)}
+              onImportDictionary={(file) => void data.handleImportDictionary(file)}
+              onNavigateToStorage={() => void handleTabChange('almacenamiento')}
+              onNavigateToAddons={() => navigationState.navigateToAddons()}
+              onSelectedExportBookChange={(v: string) => data.handleSelectedExportBookChange(v)}
+              onSelectedExportFormatChange={(v: 'json' | 'markdown') =>
+                data.handleSelectedExportFormatChange(v)}
+              onAnnotationsOnlyWithNoteChange={(v: boolean) =>
+                data.handleAnnotationsOnlyWithNoteChange(v)}
+            />
+            <SettingsAddonsSection
+              {t}
+              url={addonsState.url}
+              installed={addonsState.installed}
+              isBusy={addonsState.isBusy}
+              installOutcome={addonsState.installOutcome}
+              onUrlChange={(v: string) => (addonsState.url = v)}
+              onInstall={() => void addonsState.handleInstall()}
+              onToggle={(id: string, enabled: boolean) =>
+                void addonsState.handleToggle(id, enabled)}
+              onUninstall={(id: string) => void addonsState.handleUninstall(id)}
+            />
+          </div>
         </div>
       {:else if router.activeTab === 'seleccion'}
         <SettingsSelectionMenuTab
@@ -273,7 +283,7 @@
           role="tabpanel"
           id="tabpanel-acerca"
           aria-labelledby="tab-acerca"
-          class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4 [&>*]:shrink-0"
+          class="relative flex flex-1 flex-col overflow-y-auto px-8 pt-4 pb-12"
         >
           <SettingsAboutTab {t} {locale} />
         </div>

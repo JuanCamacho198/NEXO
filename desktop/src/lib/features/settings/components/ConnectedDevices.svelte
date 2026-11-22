@@ -75,11 +75,11 @@
     <!-- Other devices -->
     {#if otherDevices.length > 0}
       <div class="flex items-center gap-2">
-        <span class="h-px flex-1 bg-(--color-border)"></span>
-        <span class="shrink-0 text-xs text-(--color-text-muted) uppercase tracking-wider">
+        <span class="h-px flex-1 bg-(--color-edge)"></span>
+        <span class="shrink-0 text-xs font-medium text-(--color-text-muted)">
           {t('settings.connectedDevices.count', { count: otherDevices.length })}
         </span>
-        <span class="h-px flex-1 bg-(--color-border)"></span>
+        <span class="h-px flex-1 bg-(--color-edge)"></span>
       </div>
 
       {#each otherDevices as device (device.id)}
@@ -131,8 +131,9 @@
   onremove?: () => void;
 })}
   <div
-    class="flex items-center gap-3 rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2.5"
-    class:bg-(--color-accent-soft)={isCurrent}
+    class="-mx-3 flex items-center gap-3 rounded-(--radius-md) px-3 py-2.5 {isCurrent
+      ? 'bg-(--color-brand-soft)'
+      : ''}"
   >
     <!-- Device type icon -->
     {#if device.icon === 'laptop'}
@@ -224,7 +225,7 @@
         </span>
         {#if isCurrent}
           <span
-            class="shrink-0 rounded-md bg-(--color-accent-soft) px-1.5 py-0.5 text-xs font-medium text-(--color-accent-start)"
+            class="shrink-0 rounded-full border border-(--color-brand)/40 px-2 py-0.5 text-xs font-medium text-(--color-brand-text)"
           >
             {t('settings.connectedDevices.thisDevice')}
           </span>

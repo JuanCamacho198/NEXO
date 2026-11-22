@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Panel from '$lib/shared/ui/layout/Panel.svelte';
+  import { sectionClass } from '$lib/shared/ui/emberStyles';
   import AddonsInstalledList from '$lib/features/addons/components/AddonsInstalledList.svelte';
   import type { InstallOutcome } from '../useSettingsAddons.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -32,8 +32,15 @@
   }: Props = $props();
 </script>
 
-<Panel title={t('settings.addons.title')} subtitle={t('settings.addons.description')}>
+<section class="{sectionClass} flex flex-col gap-4">
+  <header>
+    <h2 class="text-base font-semibold text-(--color-primary)">{t('settings.addons.title')}</h2>
+    <p class="mt-1 text-sm leading-relaxed text-(--color-text-muted)">
+      {t('settings.addons.description')}
+    </p>
+  </header>
   <AddonsInstalledList
+    framed={false}
     {t}
     {url}
     {installed}
@@ -45,4 +52,4 @@
     {onToggle}
     {onUninstall}
   />
-</Panel>
+</section>

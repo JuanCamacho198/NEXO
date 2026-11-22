@@ -41,9 +41,9 @@ describe('settings icon migration', () => {
       'lucide-user',
       'lucide-database',
       'lucide-languages',
-      'lucide-database',
+      'lucide-hard-drive',
       'lucide-cloud-check',
-      'lucide-bookmark',
+      'lucide-keyboard',
       'lucide-info',
     ]);
     for (const icon of icons) {
@@ -64,7 +64,7 @@ describe('settings icon migration', () => {
     expect(tabs).toHaveLength(7);
     for (const tab of tabs) {
       expect(tab.tagName).toBe('BUTTON');
-      expect(tab).toHaveClass('text-sm', 'font-medium', 'rounded-none', 'inline-flex');
+      expect(tab).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
     }
 
     const selected = screen.getByRole('tab', { selected: true });

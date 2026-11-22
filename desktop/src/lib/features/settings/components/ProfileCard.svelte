@@ -21,7 +21,7 @@
   </p>
 {/if}
 
-<article class="flex gap-3 items-start">
+<article class="flex items-start gap-4">
   <Avatar src={profile.avatarUrl ?? undefined} name={profile.name} size="lg" />
 
   <div class="min-w-0 flex-1 flex flex-col gap-3">
@@ -35,7 +35,7 @@
     </div>
 
     {#if profile.isSignedIn}
-      <div class="border-t border-(--color-border) pt-3 flex flex-col gap-1">
+      <div class="flex flex-col gap-1">
         <span class="text-micro font-medium text-(--color-text-muted)"
           >{t('settings.profile.emailLabel')}</span
         >
@@ -44,9 +44,9 @@
         </span>
       </div>
     {:else}
-      <div class="border-t border-(--color-border) pt-3">
+      <div>
         <span
-          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-(--color-accent-soft) text-(--color-accent-start) text-xs font-medium w-fit"
+          class="inline-flex w-fit items-center gap-1.5 rounded-full border border-(--color-brand)/40 bg-(--color-brand-soft) px-2.5 py-0.5 text-xs font-medium text-(--color-brand-text)"
         >
           {t('settings.profile.localMode')}
         </span>

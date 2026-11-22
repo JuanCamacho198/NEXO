@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { headingMarker } from '$lib/shared/ui/emberStyles';
   import SettingsPrivacySection from './SettingsPrivacySection.svelte';
   import SettingsDebugSection from './SettingsDebugSection.svelte';
   import SettingsNotificationsSection from './SettingsNotificationsSection.svelte';
@@ -124,26 +125,32 @@
 </script>
 
 {#snippet groupHeading(testId: string, label: string)}
-  <h3 class="text-sm font-semibold text-(--color-primary)" data-testid={testId}>
+  <h3 class="pt-6 text-xl font-semibold tracking-tight text-(--color-primary)" data-testid={testId}>
     {label}
   </h3>
 {/snippet}
 
-<section class="space-y-5 w-full max-w-none">
+<section class="w-full max-w-5xl space-y-6">
   <header class="flex flex-col gap-1">
-    <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
-      {t('settings.tab.data')}
-    </h1>
+    <div class="flex items-center gap-3">
+      <div class="h-7 {headingMarker}" aria-hidden="true"></div>
+      <h1 class="m-0 text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)">
+        {t('settings.tab.data')}
+      </h1>
+    </div>
     <p class="text-sm text-(--color-text-muted)">{t('settings.data.subtitle')}</p>
   </header>
 
   {@render groupHeading('settings-group-backup', t('settings.data.group.backup'))}
   <Panel title={t('settings.data.coldBackup')} subtitle={t('settings.data.coldBackupDescription')}>
     {#if !isDriveConnected}
-      <div class="mb-3 flex flex-col gap-2 rounded-lg bg-(--color-background) p-3">
-        <p class="text-xs text-(--color-text-muted)">{t('settings.data.driveNotConnected')}</p>
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p class="m-0 flex items-center gap-2 text-sm text-(--color-secondary)">
+          <span class="size-2 shrink-0 rounded-full bg-(--color-warning)" aria-hidden="true"></span>
+          {t('settings.data.driveNotConnected')}
+        </p>
         <Button
-          variant="primary"
+          variant="accent"
           size="md"
           onclick={onConnectDrive}
           disabled={isConnectingDrive || isExportingColdBackup || isImportingColdBackup}
@@ -154,11 +161,10 @@
         </Button>
       </div>
     {/if}
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
       <Button
-        variant="primary"
+        variant={isDriveConnected ? 'accent' : 'secondary'}
         size="md"
-        class="flex-1"
         onclick={onExportColdBackup}
         disabled={isExportingColdBackup || isImportingColdBackup}
       >
@@ -167,7 +173,6 @@
       <Button
         variant="secondary"
         size="md"
-        class="flex-1"
         onclick={onImportColdBackup}
         disabled={isExportingColdBackup || isImportingColdBackup}
       >
@@ -178,18 +183,19 @@
 
   {@render groupHeading('settings-group-export', t('settings.data.group.export'))}
   <p
-    class="px-1 -mt-1 text-xs leading-relaxed text-(--color-text-muted)"
+    class="-mt-3 text-xs leading-relaxed text-(--color-text-muted)"
     data-testid="export-files-boundary"
   >
     {t('settings.data.exportFilesNotIncluded')}
   </p>
 
   <Panel
+    inline
     title={t('settings.data.exportEverything')}
     subtitle={t('settings.data.exportEverythingDescription')}
   >
     <Button
-      variant="primary"
+      variant="accent"
       size="md"
       onclick={onExportEverything}
       disabled={isExportingEverything}
@@ -218,6 +224,7 @@
   </Panel>
 
   <Panel
+    inline
     title={t('settings.data.exportLibraryTitle')}
     subtitle={t('settings.data.exportLibraryDescription')}
   >
@@ -250,12 +257,12 @@
     title={t('settings.data.exportHighlights')}
     subtitle={t('settings.data.exportHighlightsDescription')}
   >
-    <section class="flex flex-col gap-2 rounded-lg bg-(--color-background) p-3">
-      <div class="flex gap-2">
+    <section class="flex flex-col gap-3">
+      <div class="flex flex-wrap gap-2">
         <Dropdown
           options={exportBookOptions}
           value={selectedExportBook}
-          class="flex-1"
+          class="min-w-56 flex-1"
           onchange={({ value }) => onSelectedExportBookChange(value)}
         />
         <Dropdown
@@ -265,7 +272,7 @@
           onchange={({ value }) => onSelectedExportFormatChange(value as 'json' | 'markdown')}
         />
         <Button
-          variant="primary"
+          variant="secondary"
           size="md"
           onclick={onExportHighlights}
           disabled={isExportingHighlights}
@@ -289,11 +296,11 @@
         </Button>
       </div>
       <label
-        class="flex cursor-pointer items-center gap-2 text-xs text-(--color-secondary) select-none"
+        class="flex w-fit cursor-pointer items-center gap-2 text-sm text-(--color-secondary) select-none"
       >
         <input
           type="checkbox"
-          class="size-3.5 cursor-pointer accent-(--color-primary)"
+          class="size-4 cursor-pointer accent-(--color-brand)"
           checked={annotationsOnlyWithNote}
           onchange={(e) => onAnnotationsOnlyWithNoteChange(e.currentTarget.checked)}
           data-testid="annotations-only-with-note"
@@ -304,6 +311,7 @@
   </Panel>
 
   <Panel
+    inline
     title={t('settings.data.exportCollections')}
     subtitle={t('settings.data.exportCollectionsDescription')}
   >
@@ -340,16 +348,16 @@
     title={t('settings.data.exportOneBook')}
     subtitle={t('settings.data.exportOneBookDescription')}
   >
-    <section class="flex gap-2" data-testid="export-book-scope">
+    <section class="flex flex-wrap gap-2" data-testid="export-book-scope">
       <Dropdown
         options={bookScopeOptions}
         value={selectedBookForExport}
         placeholder={t('settings.data.selectBook')}
-        class="flex-1"
+        class="min-w-56 flex-1"
         onchange={({ value }) => (selectedBookForExport = value)}
       />
       <Button
-        variant="primary"
+        variant="secondary"
         size="md"
         class="shrink-0"
         onclick={() => onExportBook(selectedBookForExport)}
@@ -376,14 +384,14 @@
   </Panel>
 
   <Panel
+    inline
     title={t('settings.data.dictionary.title')}
     subtitle={t('settings.data.dictionary.description')}
   >
     <div class="flex flex-wrap items-center gap-2" data-testid="dictionary-transfer-actions">
       <Button
-        variant="primary"
+        variant="secondary"
         size="md"
-        class="border border-transparent"
         onclick={() => onExportDictionary('json')}
         disabled={isExportingDictionary || isImportingDictionary}
       >
@@ -449,7 +457,7 @@
     <div class="flex flex-col gap-2">
       <div class="flex flex-wrap items-center gap-2">
         <Button
-          variant="danger"
+          variant="danger-outline"
           size="md"
           onclick={() => (showClearConfirm = true)}
           disabled={isClearingCache}
@@ -473,9 +481,8 @@
         </Button>
         {#if onNavigateToStorage}
           <Button
-            variant="ghost"
+            variant="link"
             size="sm"
-            class="underline-offset-2 hover:underline"
             onclick={onNavigateToStorage}
             data-testid="open-storage-tab"
           >
@@ -500,9 +507,9 @@
           role="group"
           aria-label={t('settings.data.clearCacheConfirm')}
           data-testid="clear-cache-confirm"
-          class="flex flex-col gap-2 rounded-lg border border-(--color-danger)/40 bg-(--color-error-soft) px-3 py-2"
+          class="flex flex-col gap-3 rounded-(--radius-md) border border-(--color-danger)/40 bg-(--color-error-soft) px-4 py-3"
         >
-          <p class="m-0 text-xs text-(--color-primary)">{t('settings.data.clearCacheConfirm')}</p>
+          <p class="m-0 text-sm text-(--color-primary)">{t('settings.data.clearCacheConfirm')}</p>
           <div class="flex items-center gap-2">
             <Button
               variant="danger"
@@ -531,7 +538,11 @@
   </Panel>
 
   {@render groupHeading('settings-group-privacy-addons', t('settings.data.group.privacyAddons'))}
-  <Panel title={t('settings.manageAddons.title')} subtitle={t('settings.manageAddons.description')}>
+  <Panel
+    inline
+    title={t('settings.manageAddons.title')}
+    subtitle={t('settings.manageAddons.description')}
+  >
     <Button
       variant="secondary"
       size="md"

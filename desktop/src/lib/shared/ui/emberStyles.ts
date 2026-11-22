@@ -11,6 +11,12 @@ export const focusRing =
 export const panelClass =
   'rounded-(--radius-lg) border border-(--color-edge) bg-(--color-home-card)';
 
+/**
+ * A settings-style section: no box, a hairline on top. Stacked sections read
+ * as one divided list instead of a pile of cards.
+ */
+export const sectionClass = 'border-t border-(--color-edge) pt-6';
+
 /** The vertical ember bar that marks a page or section heading. */
 export const headingMarker =
   'w-1 shrink-0 rounded-full bg-linear-to-b from-(--color-brand-start) to-(--color-brand-end)';
