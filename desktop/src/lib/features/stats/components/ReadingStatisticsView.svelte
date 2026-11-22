@@ -88,9 +88,6 @@
   });
   const sd = $derived(statsState);
   const genreDistribution = $derived(calculateGenreDistribution(libraryState.books));
-  const classifiedGenres = $derived(
-    genreDistribution.filter((entry) => entry.genre !== UNCLASSIFIED_GENRE),
-  );
   const unclassifiedEntry = $derived(
     genreDistribution.find((entry) => entry.genre === UNCLASSIFIED_GENRE),
   );
