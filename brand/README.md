@@ -9,7 +9,8 @@ tile, so the letters read "EXO").
 
 | File | Lockup | Use |
 | --- | --- | --- |
-| `nexo-logo-inverso.svg` | tile + ribbon + "N", square 512×512 | app icon, launcher icon, favicon, splash |
+| `nexo-logo-inverso.svg` | tile + ribbon + "N", square 512×512 | Android launcher icon, favicon, splash |
+| `nexo-mark-only.svg` | ribbon + "N" on transparency, 120% of the square | desktop icon set |
 | `nexo-logo-horizontal.svg` | the square plus the "EXO" wordmark beside it | site header, footers, in-app welcome lockup |
 
 Both exports have transparent backgrounds and no width/height attributes beyond
@@ -17,11 +18,18 @@ their own canvas, so they scale freely.
 
 ## Rules
 
-- **The tile is the app icon, as the background layer.** The tile's gradient is
-  the adaptive icon's `background`; the ribbon is its `foreground`, scaled to
-  78% so the head and tail stay inside the 66/108 safe area on every mask. Do
-  not ship the ribbon alone as an icon: it fills the mask and reads as an
-  oversized glyph.
+- **Masked surfaces keep the tile.** On Android the adaptive icon's `background`
+  is the plate and the ribbon is its `foreground`, scaled to 78% so the head and
+  tail stay inside the 66/108 safe area on every mask shape. Shipping the ribbon
+  alone there fills the mask and reads as an oversized glyph. The plate is flat
+  white, not the tile's gradient: the gradient's peach end read as an orange
+  background. See `scripts/brand/Sync-AndroidBrandDrawables.ps1`.
+- **The desktop icon set ships the mark alone.** Windows and macOS draw the icon
+  as it is and never mask it, so the tile has nothing to do there:
+  `nexo-mark-only.svg` is the ribbon on transparency at 120%. The export insets
+  the ribbon inside the tile, so on its own it fills only 77% of the canvas;
+  scaling past 100% brings it to 93% tall, which is what makes it read at the
+  same size as the square icons beside it in a taskbar.
 - **The splash is the same composite**, at 52% instead of 78%: the platform
   masks a splash icon to a circle 2/3 of the drawable, so the same apparent size
   needs a smaller scale.
@@ -37,7 +45,7 @@ their own canvas, so they scale freely.
 
 | Surface | Source | Regenerate with |
 | --- | --- | --- |
-| Desktop icon set (`desktop/src-tauri/icons`) | `nexo-logo-inverso.svg` | `bunx tauri icon brand/nexo-logo-inverso.svg` |
+| Desktop icon set (`desktop/src-tauri/icons`) | `nexo-mark-only.svg` | from `desktop/`: `bunx tauri icon ../brand/nexo-mark-only.svg`, then delete the `icons/android` and `icons/ios` folders it also writes |
 | Desktop in-app lockup (`desktop/public`) | both exports | copy `nexo-logo-horizontal.svg` (dark) and its navy-ink variant (light) |
 | Desktop favicon (`desktop/public/favicon.svg`) | `nexo-logo-inverso.svg` | hand-built wrapper, one branch per `prefers-color-scheme` |
 | Android launcher/splash/monochrome | `nexo-logo-inverso.svg` | `scripts/brand/Sync-AndroidBrandDrawables.ps1` |
