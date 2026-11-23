@@ -84,3 +84,7 @@ tauri-debug-err.log
 THIRD-PARTY-NOTICES.md
 
 .tmp
+
+# Supabase CLI scratch state (link metadata, versions, generated seed files).
+# Written by `supabase` on every command; never versioned.
+supabase/.temp/
