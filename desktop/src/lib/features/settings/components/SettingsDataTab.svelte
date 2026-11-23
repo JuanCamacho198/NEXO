@@ -2,7 +2,6 @@
   import { headingMarker } from '$lib/shared/ui/emberStyles';
   import SettingsPrivacySection from './SettingsPrivacySection.svelte';
   import SettingsDebugSection from './SettingsDebugSection.svelte';
-  import SettingsNotificationsSection from './SettingsNotificationsSection.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
@@ -13,8 +12,6 @@
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     books: LibraryBookDto[];
     collections?: CollectionDto[];
-    isClearingCache: boolean;
-    cacheCleared: boolean;
     selectedExportBook: string;
     selectedExportFormat: 'json' | 'markdown';
     annotationsOnlyWithNote?: boolean;
@@ -32,7 +29,6 @@
     dictionaryImportError?: string | null;
     isDriveConnected?: boolean;
     isConnectingDrive?: boolean;
-    onClearCache: () => void;
     onExportLibrary: () => void;
     onExportHighlights: () => void;
     onExportCollections?: () => void;
@@ -43,8 +39,6 @@
     onExportDictionary?: (format: 'json' | 'csv') => void;
     onImportDictionary?: (file: File) => void;
     onConnectDrive?: () => void;
-    onNavigateToStorage?: () => void;
-    onNavigateToAddons?: () => void;
     onSelectedExportBookChange: (value: string) => void;
     onSelectedExportFormatChange: (value: 'json' | 'markdown') => void;
     onAnnotationsOnlyWithNoteChange?: (value: boolean) => void;
@@ -54,8 +48,6 @@
     t,
     books,
     collections = [],
-    isClearingCache,
-    cacheCleared,
     selectedExportBook,
     selectedExportFormat,
     annotationsOnlyWithNote = false,
@@ -73,7 +65,6 @@
     dictionaryImportError = null,
     isDriveConnected = true,
     isConnectingDrive = false,
-    onClearCache,
     onExportLibrary,
     onExportHighlights,
     onExportCollections = () => {},
@@ -84,8 +75,6 @@
     onExportDictionary = () => {},
     onImportDictionary = () => {},
     onConnectDrive = () => {},
-    onNavigateToStorage,
-    onNavigateToAddons = () => {},
     onSelectedExportBookChange,
     onSelectedExportFormatChange,
     onAnnotationsOnlyWithNoteChange = () => {},
@@ -94,7 +83,6 @@
   // Clear cache is destructive, so the first click only arms this inline
   // confirmation (the same role="group" + Cancel pattern as the addon
   // uninstall row). No modal: this needs a guard, not protected focus.
-  let showClearConfirm = $state(false);
 
   // The per-book scope owns its own selection so it cannot collide with the
   // highlights module's book filter above it.
@@ -452,108 +440,7 @@
     {/if}
   </Panel>
 
-  {@render groupHeading('settings-group-maintenance', t('settings.data.group.maintenance'))}
-  <Panel title={t('settings.data.clearCache')} subtitle={t('settings.data.clearCacheDescription')}>
-    <div class="flex flex-col gap-2">
-      <div class="flex flex-wrap items-center gap-2">
-        <Button
-          variant="danger-outline"
-          size="md"
-          onclick={() => (showClearConfirm = true)}
-          disabled={isClearingCache}
-          data-testid="clear-cache-button"
-        >
-          {#snippet leadingIcon()}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              ><polyline points="3 6 5 6 21 6" /><path
-                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-              /></svg
-            >
-          {/snippet}
-          {t('settings.data.clearCache')}
-        </Button>
-        {#if onNavigateToStorage}
-          <Button
-            variant="link"
-            size="sm"
-            onclick={onNavigateToStorage}
-            data-testid="open-storage-tab"
-          >
-            {t('settings.data.storageOptions')}
-          </Button>
-        {/if}
-      </div>
-
-      {#if isClearingCache || cacheCleared}
-        <p
-          class="text-xs text-(--color-text-muted)"
-          role="status"
-          aria-live="polite"
-          data-testid="clear-cache-status"
-        >
-          {isClearingCache ? t('settings.data.clearing') : t('settings.data.cleared')}
-        </p>
-      {/if}
-
-      {#if showClearConfirm}
-        <div
-          role="group"
-          aria-label={t('settings.data.clearCacheConfirm')}
-          data-testid="clear-cache-confirm"
-          class="flex flex-col gap-3 rounded-(--radius-md) border border-(--color-danger)/40 bg-(--color-error-soft) px-4 py-3"
-        >
-          <p class="m-0 text-sm text-(--color-primary)">{t('settings.data.clearCacheConfirm')}</p>
-          <div class="flex items-center gap-2">
-            <Button
-              variant="danger"
-              size="sm"
-              onclick={() => {
-                showClearConfirm = false;
-                onClearCache();
-              }}
-              disabled={isClearingCache}
-              data-testid="clear-cache-confirm-button"
-            >
-              {t('settings.data.clearCache')}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onclick={() => (showClearConfirm = false)}
-              data-testid="clear-cache-cancel-button"
-            >
-              {t('settings.data.cancel')}
-            </Button>
-          </div>
-        </div>
-      {/if}
-    </div>
-  </Panel>
-
   {@render groupHeading('settings-group-privacy-addons', t('settings.data.group.privacyAddons'))}
-  <Panel
-    inline
-    title={t('settings.manageAddons.title')}
-    subtitle={t('settings.manageAddons.description')}
-  >
-    <Button
-      variant="secondary"
-      size="md"
-      onclick={onNavigateToAddons}
-      data-testid="settings-manage-addons-button"
-    >
-      {t('settings.manageAddons')}
-    </Button>
-  </Panel>
   <SettingsPrivacySection {t} />
   <SettingsDebugSection {t} />
-  {@render groupHeading('settings-group-notifications', t('settings.data.group.notifications'))}
-  <SettingsNotificationsSection {t} />
 </section>

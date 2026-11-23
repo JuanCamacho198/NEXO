@@ -219,3 +219,14 @@ describe('SettingsCuentaTab daily goal', () => {
     expect(levels.filter((level) => level === 1)).toHaveLength(1);
   });
 });
+
+describe('SettingsCuentaTab reminders', () => {
+  // Notifications moved here from the Data tab: they are about the reader's
+  // reading habit, beside the daily goal, not about exporting data.
+  it('hosts the notification preferences', () => {
+    renderCuenta();
+    expect(screen.getByTestId('notification-pref-system')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-pref-nudge')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-quiet-enabled')).toBeInTheDocument();
+  });
+});

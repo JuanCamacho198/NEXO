@@ -6,6 +6,7 @@
   import { Button } from '$lib/shared/ui';
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import ProfileCard from './ProfileCard.svelte';
+  import SettingsNotificationsSection from './SettingsNotificationsSection.svelte';
   import ConnectedDevices from './ConnectedDevices.svelte';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
@@ -364,5 +365,9 @@
         {saveStatusMessage}
       </p>
     </Panel>
+
+    <!-- Reminders are about the reader's own habit, so they live with the
+      account and the daily goal, not with data export. -->
+    <SettingsNotificationsSection {t} />
   </section>
 </div>

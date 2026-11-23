@@ -3,8 +3,6 @@
   import { createSettingsLocale } from '../useSettingsLocale.svelte';
   import { createSettingsData } from '../useSettingsData.svelte';
   import { createTranslationSettings } from '../useTranslationSettings.svelte';
-  import { addonsState, bindAddonsNotifier } from '$lib/features/addons/addonsStore.svelte';
-  import SettingsAddonsSection from './SettingsAddonsSection.svelte';
   import { createSettingsProfile } from '../useSettingsProfile.svelte';
   import SettingsTabs from './SettingsTabs.svelte';
   import SettingsCuentaTab from './SettingsCuentaTab.svelte';
@@ -22,7 +20,6 @@
   import { driveState } from '$lib/shared/stores/driveState.svelte';
   import { beginDriveConnect } from '$lib/shared/services/DriveConnectService';
   import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
-  import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
 
   let {
@@ -65,12 +62,6 @@
   // shown, so loading them costs nothing until the reader opens the tab.
   $effect(() => {
     if (isOpen && router.activeTab === 'seleccion') void translation.load();
-  });
-  // Single shared addon state (slice 7): this surface and the Addons screen
-  // mutate the same instance, so either surface updates the other.
-  $effect(() => {
-    bindAddonsNotifier({ t });
-    void addonsState.refresh();
   });
 
   // Keep the local locale hook in sync if the parent changes locale externally
@@ -202,8 +193,6 @@
               {t}
               {books}
               {collections}
-              isClearingCache={data.isClearingCache}
-              cacheCleared={data.cacheCleared}
               selectedExportBook={data.selectedExportBook}
               selectedExportFormat={data.selectedExportFormat}
               annotationsOnlyWithNote={data.annotationsOnlyWithNote}
@@ -222,7 +211,6 @@
               isDriveConnected={driveState.isAuthorized}
               isConnectingDrive={driveState.isConnecting}
               onConnectDrive={() => void handleConnectDrive()}
-              onClearCache={() => void data.handleClearCache()}
               onExportLibrary={() => void data.handleExportLibrary(books)}
               onExportHighlights={() => void data.handleExportHighlights(books)}
               onExportCollections={() => void data.handleExportCollections(collections)}
@@ -232,25 +220,11 @@
               onImportColdBackup={() => void data.handleImportColdBackup()}
               onExportDictionary={(format) => void data.handleExportDictionary(format)}
               onImportDictionary={(file) => void data.handleImportDictionary(file)}
-              onNavigateToStorage={() => void handleTabChange('almacenamiento')}
-              onNavigateToAddons={() => navigationState.navigateToAddons()}
               onSelectedExportBookChange={(v: string) => data.handleSelectedExportBookChange(v)}
               onSelectedExportFormatChange={(v: 'json' | 'markdown') =>
                 data.handleSelectedExportFormatChange(v)}
               onAnnotationsOnlyWithNoteChange={(v: boolean) =>
                 data.handleAnnotationsOnlyWithNoteChange(v)}
-            />
-            <SettingsAddonsSection
-              {t}
-              url={addonsState.url}
-              installed={addonsState.installed}
-              isBusy={addonsState.isBusy}
-              installOutcome={addonsState.installOutcome}
-              onUrlChange={(v: string) => (addonsState.url = v)}
-              onInstall={() => void addonsState.handleInstall()}
-              onToggle={(id: string, enabled: boolean) =>
-                void addonsState.handleToggle(id, enabled)}
-              onUninstall={(id: string) => void addonsState.handleUninstall(id)}
             />
           </div>
         </div>
