@@ -207,6 +207,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.profile.emailLabel': 'Correo',
   'settings.profile.loading': 'Cargando...',
   'settings.profile.localMode': 'Modo local',
+  'settings.profile.syncOn': 'Sesión iniciada · sincronización activa',
   'settings.profile.signInPrompt':
     'Inicia sesion con Google desde la pestana Cuenta para personalizar este perfil.',
   'settings.shortcuts.title': 'Atajos de teclado',

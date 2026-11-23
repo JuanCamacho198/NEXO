@@ -209,6 +209,7 @@ export const messagesEn = {
   'settings.profile.emailLabel': 'Email',
   'settings.profile.loading': 'Loading...',
   'settings.profile.localMode': 'Local mode',
+  'settings.profile.syncOn': 'Signed in · sync on',
   'settings.profile.signInPrompt':
     'Sign in with Google from the Account tab to personalize this profile.',
   'settings.shortcuts.title': 'Keyboard Shortcuts',

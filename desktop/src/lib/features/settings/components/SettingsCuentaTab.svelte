@@ -195,21 +195,30 @@
       <p class="text-sm text-(--color-text-muted)">{t('settings.account.subtitle')}</p>
     </header>
 
-    <Panel title={t('settings.authentication')} subtitle={t('settings.authDescription')}>
-      <div class="flex max-w-sm flex-col">
-        <GoogleLoginButton {t} />
-        {#if authState.isAuthenticated}
-          <Button
-            variant="danger-outline"
-            size="md"
-            fullWidth
-            class="mt-3"
-            disabled={isSigningOut}
-            onclick={handleSignOut}
-          >
-            {isSigningOut ? t('welcome.signingOut') : t('welcome.signOut')}
-          </Button>
-        {/if}
+    <!-- Session and profile are one block: the account row says who is signed
+      in and holds sign-out; signed out, the Google button sits under it. -->
+    <Panel
+      title={t('settings.authentication')}
+      subtitle={authState.isAuthenticated ? undefined : t('settings.authDescription')}
+    >
+      <ProfileCard {profile} {isProfileLoading} {profileError} {t}>
+        {#snippet actions()}
+          {#if authState.isAuthenticated}
+            <Button
+              variant="danger-outline"
+              size="md"
+              disabled={isSigningOut}
+              onclick={handleSignOut}
+            >
+              {isSigningOut ? t('welcome.signingOut') : t('welcome.signOut')}
+            </Button>
+          {/if}
+        {/snippet}
+      </ProfileCard>
+      <!-- Stays mounted when signed in: it owns the "signed in" toast. Its own
+        status box is off here because the account row already says it. -->
+      <div class="max-w-sm {authState.isAuthenticated ? '' : 'mt-5'}">
+        <GoogleLoginButton {t} showSignedInStatus={false} />
       </div>
       {#if settingsUnavailable}
         <p
@@ -225,10 +234,6 @@
           {settingsError}
         </p>
       {/if}
-    </Panel>
-
-    <Panel>
-      <ProfileCard {profile} {isProfileLoading} {profileError} {t} />
     </Panel>
 
     {#if authState.isAuthenticated && authState.userId}
