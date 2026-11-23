@@ -189,7 +189,7 @@ fun GoogleSignInButton(
         },
         enabled = buttonEnabled,
         variant = NexoButtonVariant.FILLED,
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(16.dp),
         colors =
             ButtonDefaults.buttonColors(
                 containerColor = googleContainerColor,
@@ -222,7 +222,8 @@ fun GoogleSignInButton(
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.auth_continue_with_google),
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }
