@@ -221,24 +221,24 @@ describe('SettingsDataTab grouping and order', () => {
   // Clearing the cache lives in Storage (its "free up space" is the same
   // operation), add-ons in the Addons screen and reminders in Account, so the
   // Data tab keeps only what moves data in and out, then privacy.
-  it('renders the three group headings in safe-to-dangerous order', () => {
+  it('renders the three group headings, the Drive backup last', () => {
     renderTab();
 
     const headings = screen
       .getAllByRole('heading', { level: 3 })
       .map((heading) => heading.textContent?.trim());
-    expect(headings).toEqual(['Backup', 'Export', 'Privacy & advanced']);
+    expect(headings).toEqual(['Export', 'Privacy & advanced', 'Backup']);
   });
 
-  it('places the cold backup before the export group', () => {
+  it('places the cold backup last, after export and privacy', () => {
     const { container } = renderTab();
     const order = Array.from(container.querySelectorAll('[data-testid^="settings-group-"]')).map(
       (h) => h.getAttribute('data-testid'),
     );
     expect(order).toEqual([
-      'settings-group-backup',
       'settings-group-export',
       'settings-group-privacy-addons',
+      'settings-group-backup',
     ]);
   });
 

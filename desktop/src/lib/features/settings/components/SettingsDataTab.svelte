@@ -129,46 +129,6 @@
     <p class="text-sm text-(--color-text-muted)">{t('settings.data.subtitle')}</p>
   </header>
 
-  {@render groupHeading('settings-group-backup', t('settings.data.group.backup'))}
-  <Panel title={t('settings.data.coldBackup')} subtitle={t('settings.data.coldBackupDescription')}>
-    {#if !isDriveConnected}
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p class="m-0 flex items-center gap-2 text-sm text-(--color-secondary)">
-          <span class="size-2 shrink-0 rounded-full bg-(--color-warning)" aria-hidden="true"></span>
-          {t('settings.data.driveNotConnected')}
-        </p>
-        <Button
-          variant="accent"
-          size="md"
-          onclick={onConnectDrive}
-          disabled={isConnectingDrive || isExportingColdBackup || isImportingColdBackup}
-        >
-          {isConnectingDrive
-            ? t('settings.sync.drive.connecting')
-            : t('settings.data.connectDrive')}
-        </Button>
-      </div>
-    {/if}
-    <div class="flex flex-wrap gap-2">
-      <Button
-        variant={isDriveConnected ? 'accent' : 'secondary'}
-        size="md"
-        onclick={onExportColdBackup}
-        disabled={isExportingColdBackup || isImportingColdBackup}
-      >
-        {isExportingColdBackup ? t('settings.data.exporting') : t('settings.data.coldExport')}
-      </Button>
-      <Button
-        variant="secondary"
-        size="md"
-        onclick={onImportColdBackup}
-        disabled={isExportingColdBackup || isImportingColdBackup}
-      >
-        {isImportingColdBackup ? t('settings.data.importing') : t('settings.data.coldImport')}
-      </Button>
-    </div>
-  </Panel>
-
   {@render groupHeading('settings-group-export', t('settings.data.group.export'))}
   <p
     class="-mt-3 text-xs leading-relaxed text-(--color-text-muted)"
@@ -443,4 +403,43 @@
   {@render groupHeading('settings-group-privacy-addons', t('settings.data.group.privacyAddons'))}
   <SettingsPrivacySection {t} />
   <SettingsDebugSection {t} />
+  {@render groupHeading('settings-group-backup', t('settings.data.group.backup'))}
+  <Panel title={t('settings.data.coldBackup')} subtitle={t('settings.data.coldBackupDescription')}>
+    {#if !isDriveConnected}
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p class="m-0 flex items-center gap-2 text-sm text-(--color-secondary)">
+          <span class="size-2 shrink-0 rounded-full bg-(--color-warning)" aria-hidden="true"></span>
+          {t('settings.data.driveNotConnected')}
+        </p>
+        <Button
+          variant="accent"
+          size="md"
+          onclick={onConnectDrive}
+          disabled={isConnectingDrive || isExportingColdBackup || isImportingColdBackup}
+        >
+          {isConnectingDrive
+            ? t('settings.sync.drive.connecting')
+            : t('settings.data.connectDrive')}
+        </Button>
+      </div>
+    {/if}
+    <div class="flex flex-wrap gap-2">
+      <Button
+        variant={isDriveConnected ? 'accent' : 'secondary'}
+        size="md"
+        onclick={onExportColdBackup}
+        disabled={isExportingColdBackup || isImportingColdBackup}
+      >
+        {isExportingColdBackup ? t('settings.data.exporting') : t('settings.data.coldExport')}
+      </Button>
+      <Button
+        variant="secondary"
+        size="md"
+        onclick={onImportColdBackup}
+        disabled={isExportingColdBackup || isImportingColdBackup}
+      >
+        {isImportingColdBackup ? t('settings.data.importing') : t('settings.data.coldImport')}
+      </Button>
+    </div>
+  </Panel>
 </section>
