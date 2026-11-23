@@ -436,8 +436,7 @@ export const messagesEn = {
     '{{count}} book(s) could not be synced to the catalog ({{codes}}). They will retry automatically.',
   'settings.data.resetSection': 'Reset section',
   'settings.data.exportLibrary': 'Export library',
-  'settings.data.exportLibraryDescription':
-    'Metadata only — titles, authors, progress, reading status and dates. Book files are not included; the Drive cold backup carries those.',
+  'settings.data.exportLibraryDescription': 'Titles, authors and reading progress',
 
   'settings.addons.title': 'Catalog addons',
   'settings.addons.description': 'Install catalogs from a manifest URL (HTTPS only)',
@@ -486,8 +485,7 @@ export const messagesEn = {
   'addons.readSheet.empty.title': 'No reading access',
   'addons.readSheet.empty.body': 'This addon has no readable options for this title.',
   'settings.data.exportHighlights': 'Export highlights',
-  'settings.data.exportHighlightsDescription':
-    'Your highlights and their notes in JSON or Markdown. Book files are not included.',
+  'settings.data.exportHighlightsDescription': 'Highlights and notes · JSON or Markdown',
   'settings.data.allBooks': 'All books',
   'settings.data.markdown': 'Markdown',
   'settings.data.exporting': 'Exporting...',
@@ -1216,17 +1214,15 @@ export const messagesEn = {
   'settings.data.highlightsExportFailed': 'Could not export highlights',
   'settings.data.annotationsOnlyWithNote': 'Only entries with a note',
   'settings.data.exportFilesNotIncluded':
-    'These exports carry library and annotation data, never the book files themselves. Use the cold backup (Drive) to back up the actual files.',
+    'Exports carry your data, never the book files — the Drive backup covers those.',
   'settings.data.exportEverything': 'Export everything',
-  'settings.data.exportEverythingDescription':
-    'One file with every module: books, highlights and collections. Book files are not included.',
+  'settings.data.exportEverythingDescription': 'Library, highlights and collections in one file',
   'settings.data.exportEverythingButton': 'Export everything',
   'settings.data.exportedEverything': 'Everything exported',
   'settings.data.exportEverythingEmpty': 'There is nothing to export yet',
   'settings.data.exportEverythingFailed': 'Could not export everything',
   'settings.data.exportCollections': 'Export collections',
-  'settings.data.exportCollectionsDescription':
-    'Your collections with their names, colors and creation dates.',
+  'settings.data.exportCollectionsDescription': 'Names and colors',
   'settings.data.exportCollectionsButton': 'Export collections',
   'settings.data.collectionsExported': 'Collections exported',
   'settings.data.collectionsExportEmpty': 'No collections to export',
@@ -1241,21 +1237,18 @@ export const messagesEn = {
   'settings.data.cancel': 'Cancel',
   'settings.data.storageOptions': 'More options in Storage',
   'settings.data.coldBackup': 'Cold Backup (Drive)',
-  'settings.data.coldBackupDescription':
-    'Export or import your library as a cold backup to Drive. Settings-only — saves never touch Drive.',
+  'settings.data.coldBackupDescription': 'A copy of your library in Google Drive',
   'settings.data.coldExport': 'Export to Drive',
   'settings.data.coldImport': 'Import from Drive',
   'settings.data.importing': 'Importing...',
-  'settings.data.driveNotConnected':
-    'Google Drive is not connected. Connect Drive to use cold backup.',
+  'settings.data.driveNotConnected': 'Google Drive is not connected',
   'settings.data.connectDrive': 'Connect Drive',
 
   // Settings Data Tab — dictionary transfer. Kept separate from the cold-backup
   // pair above on purpose: these are local JSON/CSV files of saved words; no
   // Drive, no auth, no library.
   'settings.data.dictionary.title': 'Dictionary',
-  'settings.data.dictionary.description':
-    'Export or import your saved words and their references as JSON or CSV. Local files only — your books and Drive backups are untouched.',
+  'settings.data.dictionary.description': 'Saved words · JSON or CSV',
   'settings.data.dictionary.exportJson': 'Export JSON',
   'settings.data.dictionary.exportCsv': 'Export CSV',
   'settings.data.dictionary.import': 'Import',

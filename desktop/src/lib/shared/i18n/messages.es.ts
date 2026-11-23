@@ -442,8 +442,7 @@ export const messagesEs: Record<MessageKey, string> = {
     '{{count}} libro(s) no se pudieron sincronizar con el catálogo ({{codes}}). Se reintentará automáticamente.',
   'settings.data.resetSection': 'Restablecer seccion',
   'settings.data.exportLibrary': 'Exportar biblioteca',
-  'settings.data.exportLibraryDescription':
-    'Solo metadatos — títulos, autores, progreso, estado de lectura y fechas. Los archivos de los libros no se incluyen; de eso se encarga el respaldo frío (Drive).',
+  'settings.data.exportLibraryDescription': 'Títulos, autores y progreso de lectura',
 
   'settings.addons.title': 'Complementos de catálogo',
   'settings.addons.description': 'Instala catálogos desde una URL de manifiesto (solo HTTPS)',
@@ -494,8 +493,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'addons.readSheet.empty.title': 'Sin acceso de lectura',
   'addons.readSheet.empty.body': 'Este complemento no ofrece opciones de lectura para este título.',
   'settings.data.exportHighlights': 'Exportar resaltados',
-  'settings.data.exportHighlightsDescription':
-    'Tus resaltados y sus notas en JSON o Markdown. Los archivos de los libros no se incluyen.',
+  'settings.data.exportHighlightsDescription': 'Resaltados y notas · JSON o Markdown',
   'settings.data.allBooks': 'Todos los libros',
   'settings.data.markdown': 'Markdown',
   'settings.data.exporting': 'Exportando...',
@@ -1113,17 +1111,15 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.data.highlightsExportFailed': 'No se pudieron exportar los resaltados',
   'settings.data.annotationsOnlyWithNote': 'Solo entradas con nota',
   'settings.data.exportFilesNotIncluded':
-    'Estas exportaciones llevan datos de la biblioteca y de las anotaciones, nunca los archivos de los libros. Usa el respaldo frío (Drive) para respaldar los archivos.',
+    'Las exportaciones guardan tus datos, nunca los archivos de los libros: de eso se encarga el respaldo en Drive.',
   'settings.data.exportEverything': 'Exportar todo',
-  'settings.data.exportEverythingDescription':
-    'Un solo archivo con todos los módulos: libros, resaltados y colecciones. Los archivos de los libros no se incluyen.',
+  'settings.data.exportEverythingDescription': 'Biblioteca, resaltados y colecciones en un archivo',
   'settings.data.exportEverythingButton': 'Exportar todo',
   'settings.data.exportedEverything': 'Todo exportado',
   'settings.data.exportEverythingEmpty': 'Todavía no hay nada para exportar',
   'settings.data.exportEverythingFailed': 'No se pudo exportar todo',
   'settings.data.exportCollections': 'Exportar colecciones',
-  'settings.data.exportCollectionsDescription':
-    'Tus colecciones con sus nombres, colores y fechas de creación.',
+  'settings.data.exportCollectionsDescription': 'Nombres y colores',
   'settings.data.exportCollectionsButton': 'Exportar colecciones',
   'settings.data.collectionsExported': 'Colecciones exportadas',
   'settings.data.collectionsExportEmpty': 'No hay colecciones para exportar',
@@ -1138,21 +1134,18 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.data.cancel': 'Cancelar',
   'settings.data.storageOptions': 'Más opciones en Almacenamiento',
   'settings.data.coldBackup': 'Respaldo frío (Drive)',
-  'settings.data.coldBackupDescription':
-    'Exporta o importa tu biblioteca como respaldo frío a Drive. Solo desde Ajustes — guardar nunca toca Drive.',
+  'settings.data.coldBackupDescription': 'Una copia de tu biblioteca en Google Drive',
   'settings.data.coldExport': 'Exportar a Drive',
   'settings.data.coldImport': 'Importar desde Drive',
   'settings.data.importing': 'Importando…',
-  'settings.data.driveNotConnected':
-    'Google Drive no esta conectado. Conecta Drive para usar el respaldo frio.',
+  'settings.data.driveNotConnected': 'Google Drive no está conectado',
   'settings.data.connectDrive': 'Conectar Drive',
 
   // Settings Data Tab — diccionario. Separado a propósito del respaldo frío de
   // arriba: son archivos locales JSON/CSV de palabras guardadas; sin Drive, sin
   // sesión, sin biblioteca.
   'settings.data.dictionary.title': 'Diccionario',
-  'settings.data.dictionary.description':
-    'Exporta o importa tus palabras guardadas y sus referencias en JSON o CSV. Solo archivos locales — tus libros y el respaldo de Drive no se tocan.',
+  'settings.data.dictionary.description': 'Palabras guardadas · JSON o CSV',
   'settings.data.dictionary.exportJson': 'Exportar JSON',
   'settings.data.dictionary.exportCsv': 'Exportar CSV',
   'settings.data.dictionary.import': 'Importar',
