@@ -26,6 +26,8 @@
     id: SettingsTab;
     icon: TabIcon;
     labelKey: MessageKey;
+    /** A shorter visible label; the full one stays the accessible name and tooltip. */
+    shortKey?: MessageKey;
     fallback: string;
   };
 
@@ -36,6 +38,7 @@
       id: 'seleccion',
       icon: Languages,
       labelKey: 'settings.tab.selectionMenu',
+      shortKey: 'settings.tabShort.selectionMenu',
       fallback: 'Menú de selección',
     },
     {
@@ -50,15 +53,24 @@
       labelKey: 'sidebar.sync',
       fallback: 'Sincronización',
     },
-    { id: 'atajos', icon: Keyboard, labelKey: 'settings.shortcuts.title', fallback: 'Atajos' },
+    {
+      id: 'atajos',
+      icon: Keyboard,
+      labelKey: 'settings.shortcuts.title',
+      shortKey: 'settings.tabShort.shortcuts',
+      fallback: 'Atajos',
+    },
     { id: 'acerca', icon: Info, labelKey: 'settings.tab.about', fallback: 'Acerca' },
   ];
 
   const labelOf = (tab: TabMeta): string => t(tab.labelKey as MessageKey) || tab.fallback;
+  const shortLabelOf = (tab: TabMeta): string =>
+    (tab.shortKey ? t(tab.shortKey) : '') || labelOf(tab);
 </script>
 
-<!-- A segmented track that always fits its row. Where the row is too narrow
-     for every label (the Spanish labels need ~61rem), the idle tabs fold to
+<!-- A segmented track that always fits its row. Tabs show short labels
+     ("Selección", "Atajos") so the whole track fits beside an open sidebar
+     (~53rem in Spanish). Where the row is narrower still, the idle tabs fold to
      their icon, keeping the label as their accessible name and tooltip, and
      only the selected tab keeps its text. No scrollbar is ever painted. -->
 <div class="@container min-w-0 flex-1">
@@ -81,11 +93,14 @@
         id="tab-{tab.id}"
         tabindex={isSelected ? 0 : -1}
         title={labelOf(tab)}
-        class={isSelected ? '' : '@max-[62rem]:px-3'}
+        aria-label={labelOf(tab)}
+        class={isSelected ? '' : '@max-[54rem]:px-3'}
         onclick={() => onTabChange(tab.id)}
       >
         <TabIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        <span class="ml-1.5 {isSelected ? '' : '@max-[62rem]:sr-only'}">{labelOf(tab)}</span>
+        <span class="ml-1.5 {isSelected ? '' : '@max-[54rem]:sr-only'}" aria-hidden="true"
+          >{shortLabelOf(tab)}</span
+        >
       </Button>
     {/each}
   </div>

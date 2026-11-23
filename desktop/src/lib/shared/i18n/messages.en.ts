@@ -144,6 +144,8 @@ export const messagesEn = {
   'settings.tab.data': 'Data',
   'settings.tab.translation': 'Translation',
   'settings.tab.selectionMenu': 'Selection menu',
+  'settings.tabShort.selectionMenu': 'Selection',
+  'settings.tabShort.shortcuts': 'Shortcuts',
   'settings.theme': 'Theme',
   'settings.authDescription': 'Sign in to sync your data',
   'settings.account.subtitle': 'Manage your account, language and app theme.',

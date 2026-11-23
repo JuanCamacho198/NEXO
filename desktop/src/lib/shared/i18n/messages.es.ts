@@ -147,6 +147,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.tab.data': 'Datos',
   'settings.tab.translation': 'Traducción',
   'settings.tab.selectionMenu': 'Menú de selección',
+  'settings.tabShort.selectionMenu': 'Selección',
+  'settings.tabShort.shortcuts': 'Atajos',
   'settings.theme': 'Tema',
   'settings.authDescription': 'Inicia sesión para sincronizar tus datos',
   'settings.account.subtitle': 'Gestiona tu cuenta, el idioma y el tema de la app.',
