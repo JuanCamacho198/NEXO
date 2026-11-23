@@ -10,8 +10,8 @@
   import { Tooltip } from 'bits-ui';
   import Bell from 'lucide-svelte/icons/bell';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
-  import ChevronsLeft from 'lucide-svelte/icons/chevrons-left';
-  import ChevronsRight from 'lucide-svelte/icons/chevrons-right';
+  import PanelLeftClose from 'lucide-svelte/icons/panel-left-close';
+  import PanelLeftOpen from 'lucide-svelte/icons/panel-left-open';
   import Moon from 'lucide-svelte/icons/moon';
   import Sun from 'lucide-svelte/icons/sun';
   import { theme, toggleTheme } from '$lib/shared/stores/theme';
@@ -54,6 +54,10 @@
 
   const focusRing =
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-nav-bar)';
+
+  // The rail toggle: a quiet round control on the edge token, like the hero's
+  // carousel arrows, that takes the ember on hover.
+  const toggleClass = `flex shrink-0 items-center justify-center rounded-full border border-(--color-edge) text-(--color-text-muted) transition-colors hover:border-(--color-brand)/60 hover:text-(--color-brand-text) ${focusRing}`;
 
   let profile = $derived(profileSessionFromAuthState());
 
@@ -193,10 +197,13 @@
   class:w-68={!collapsed}
   class:w-18={collapsed}
 >
-  <div class="flex items-center pt-11 pb-6 {collapsed ? 'justify-center px-3' : 'pr-3 pl-6'}">
+  <div
+    class="flex items-center pt-11 pb-6 {collapsed ? 'flex-col justify-center px-3' : 'pr-3 pl-6'}"
+  >
     <span
       class="shrink-0 overflow-hidden transition-[max-width,opacity] duration-(--duration-fast) ease-(--ease-smooth)"
       class:max-w-0={collapsed}
+      class:max-h-0={collapsed}
       class:opacity-0={collapsed}
       class:max-w-full={!collapsed}
       class:opacity-100={!collapsed}
@@ -205,27 +212,43 @@
       <img src={wordmarkSrc} alt="NEXO" class="h-10 w-auto shrink-0" />
     </span>
     {#if collapsed}
+      <!-- The rail keeps the brand in one control: the ribbon mark (without
+        its tile) is the expand button, and hover or focus reveals the panel
+        glyph so the action is never a guess. -->
       <button
         type="button"
         onclick={() => (collapsed = !collapsed)}
-        class="flex size-9 items-center justify-center rounded-full text-(--color-text-muted) transition-colors hover:bg-(--color-surface-subtle) hover:text-(--color-primary) {focusRing}"
+        class="group grid size-11 shrink-0 place-items-center rounded-(--radius-md) transition-colors hover:bg-(--color-surface-hover) {focusRing}"
         aria-label={t('sidebar.expand')}
+        title={t('sidebar.expand')}
       >
-        <ChevronsRight size={16} aria-hidden="true" />
+        <img
+          src="./nexo-mark.svg"
+          alt=""
+          class="col-start-1 row-start-1 h-9 w-auto transition-opacity duration-(--duration-fast) group-hover:opacity-0 group-focus-visible:opacity-0"
+          aria-hidden="true"
+        />
+        <PanelLeftOpen
+          size={20}
+          strokeWidth={1.75}
+          class="col-start-1 row-start-1 text-(--color-brand-text) opacity-0 transition-opacity duration-(--duration-fast) group-hover:opacity-100 group-focus-visible:opacity-100"
+          aria-hidden="true"
+        />
       </button>
     {:else}
       <button
         type="button"
         onclick={() => (collapsed = !collapsed)}
-        class="ml-auto flex size-8 shrink-0 items-center justify-center rounded-full text-(--color-text-muted) transition-colors hover:bg-(--color-surface-subtle) hover:text-(--color-primary) {focusRing}"
+        class="{toggleClass} ml-auto size-9"
         aria-label={t('sidebar.collapse')}
+        title={t('sidebar.collapse')}
       >
-        <ChevronsLeft size={16} aria-hidden="true" />
+        <PanelLeftClose size={18} strokeWidth={1.75} aria-hidden="true" />
       </button>
     {/if}
   </div>
 
-  <nav class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-1">
+  <nav class="scrollbar-hidden flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-1">
     <Tooltip.Provider delayDuration={0} skipDelayDuration={0}>
       {#each navItems as item, index (item.id)}
         {#if index > 0 && groupOf(navItems[index - 1].id) !== groupOf(item.id)}
