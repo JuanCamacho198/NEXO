@@ -845,6 +845,13 @@ export const messagesEn = {
   'library.bulkImport.status.skipped': 'Skipped',
   'library.bulkImport.status.failed': 'Failed',
   'library.bulkImport.status.cancelled': 'Cancelled',
+  'library.bulkImport.step.folder': 'Folder',
+  'library.bulkImport.step.scan': 'Scan',
+  'library.bulkImport.step.import': 'Import',
+  'library.bulkImport.changeFolder': 'Change',
+  'library.bulkImport.scanHint': 'Scan the folder to see which books can be imported.',
+  'library.bulkImport.rescan': 'Scan again',
+  'library.bulkImport.progress': '{{done}} of {{total}} processed',
   // Reader - New redesign
   'reader.copiar': 'Copy',
   'reader.copiedToClipboard': 'Copied to clipboard',
