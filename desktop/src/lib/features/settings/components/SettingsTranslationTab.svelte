@@ -194,6 +194,11 @@
     onSave(draftSourceValue, draftTargetValue);
   }
 
+  /** Entries shown before "show all"; the rest stay one click away. */
+  const HISTORY_PREVIEW = 4;
+  let showFullHistory = $state(false);
+  const visibleHistory = $derived(showFullHistory ? history : history.slice(0, HISTORY_PREVIEW));
+
   function formatDate(iso: string): string {
     const parsed = new Date(iso);
     if (Number.isNaN(parsed.getTime())) return iso;
@@ -283,11 +288,19 @@
     </Button>
   </div>
 
-  <div class="{sectionClass} space-y-5">
+  <div class="{sectionClass} space-y-4">
     <header class="flex items-center justify-between gap-3">
-      <h2 class="text-base font-semibold text-(--color-primary)">
-        {t('settings.translation.historyTitle')}
-      </h2>
+      <div class="flex items-center gap-2.5">
+        <h2 class="text-base font-semibold text-(--color-primary)">
+          {t('settings.translation.historyTitle')}
+        </h2>
+        {#if history.length > 0}
+          <span
+            class="rounded-full bg-(--color-surface-hover) px-2 py-0.5 text-xs font-semibold tabular-nums text-(--color-secondary)"
+            >{history.length}</span
+          >
+        {/if}
+      </div>
       <Button
         variant="danger-outline"
         size="sm"
@@ -304,23 +317,53 @@
     {:else if history.length === 0}
       <p class="text-sm text-(--color-text-muted)">{t('settings.translation.historyEmpty')}</p>
     {:else}
-      <ul class="flex flex-col divide-y divide-(--color-edge)">
-        {#each history as entry (entry.cacheKey)}
-          <li class="flex flex-col gap-1 py-3">
-            <div class="flex items-center gap-2 text-xs text-(--color-text-muted)">
-              <span class="font-medium uppercase">{entry.sourceLanguage}</span>
-              <span aria-hidden="true">→</span>
-              <span class="font-medium uppercase">{entry.targetLanguage}</span>
-              <span aria-hidden="true">·</span>
+      <!-- A short preview by default: a long history used to push the
+        Definition section a screen away. Each side is clamped to three lines;
+        the full list is one click away. -->
+      <ul
+        class="-mx-3 flex flex-col gap-0.5"
+        id="translation-history"
+        data-testid="translation-history"
+      >
+        {#each visibleHistory as entry (entry.cacheKey)}
+          <li
+            class="grid gap-x-8 gap-y-1.5 rounded-(--radius-md) px-3 py-3 transition-colors hover:bg-(--color-surface-hover) sm:grid-cols-2"
+          >
+            <div class="flex items-center gap-2 text-xs text-(--color-text-muted) sm:col-span-2">
+              <span
+                class="inline-flex items-center gap-1 rounded-full bg-(--color-brand-soft) px-2 py-0.5 font-semibold tracking-wide text-(--color-brand-text) uppercase"
+              >
+                {entry.sourceLanguage}
+                <span aria-hidden="true">→</span>
+                {entry.targetLanguage}
+              </span>
               <time datetime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
             </div>
-            <p class="text-sm text-(--color-primary) wrap-break-word">{entry.originalText}</p>
-            <p class="text-sm text-(--color-text-muted) wrap-break-word">
+            <p class="line-clamp-3 text-sm leading-relaxed text-(--color-primary) wrap-break-word">
+              {entry.originalText}
+            </p>
+            <p
+              class="line-clamp-3 text-sm leading-relaxed text-(--color-text-muted) wrap-break-word"
+            >
               {entry.translatedText}
             </p>
           </li>
         {/each}
       </ul>
+      {#if history.length > HISTORY_PREVIEW}
+        <Button
+          variant="link"
+          size="sm"
+          class="-ml-3"
+          aria-expanded={showFullHistory}
+          aria-controls="translation-history"
+          onclick={() => (showFullHistory = !showFullHistory)}
+        >
+          {showFullHistory
+            ? t('settings.translation.historyShowLess')
+            : t('settings.translation.historyShowAll', { count: history.length })}
+        </Button>
+      {/if}
     {/if}
   </div>
 {/snippet}

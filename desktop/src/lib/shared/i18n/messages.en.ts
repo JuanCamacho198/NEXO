@@ -1415,6 +1415,8 @@ export const messagesEn = {
   'settings.translation.save': 'Save',
   'settings.translation.loading': 'Loading translation history…',
   'settings.translation.historyTitle': 'History',
+  'settings.translation.historyShowAll': 'Show full history ({{count}})',
+  'settings.translation.historyShowLess': 'Show less',
   'settings.translation.historyEmpty': 'You have not translated anything yet.',
   'settings.translation.clearHistory': 'Clear history',
   'settings.translation.language.en': 'English',

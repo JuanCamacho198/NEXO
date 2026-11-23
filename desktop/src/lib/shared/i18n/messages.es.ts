@@ -1432,6 +1432,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.translation.save': 'Guardar',
   'settings.translation.loading': 'Cargando historial de traducciones…',
   'settings.translation.historyTitle': 'Historial',
+  'settings.translation.historyShowAll': 'Ver todo el historial ({{count}})',
+  'settings.translation.historyShowLess': 'Mostrar menos',
   'settings.translation.historyEmpty': 'Todavía no has traducido nada.',
   'settings.translation.clearHistory': 'Borrar historial',
   'settings.translation.language.en': 'Inglés',

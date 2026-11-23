@@ -297,3 +297,40 @@ describe('SettingsTranslationTab — draft state', () => {
     expect(warning()).toBeNull();
   });
 });
+
+describe('translation history preview', () => {
+  const entry = (i: number) => ({
+    cacheKey: `k${i}`,
+    sourceLanguage: 'es',
+    targetLanguage: 'en',
+    originalText: `original ${i}`,
+    translatedText: `translated ${i}`,
+    createdAt: '2026-11-11T10:00:00Z',
+  });
+
+  // A long history used to push the Definition section a screen away; the
+  // list now previews a few entries and expands on demand.
+  it('shows a short preview and expands to the full list on demand', async () => {
+    const history = Array.from({ length: 7 }, (_, i) => entry(i));
+    render(SettingsTranslationTab, { ...baseProps, history: history as never });
+    const list = screen.getByTestId('translation-history');
+    expect(list.querySelectorAll('li')).toHaveLength(4);
+
+    const toggle = screen.getByRole('button', { name: 'settings.translation.historyShowAll' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await fireEvent.click(toggle);
+    expect(list.querySelectorAll('li')).toHaveLength(7);
+    expect(
+      screen.getByRole('button', { name: 'settings.translation.historyShowLess' }),
+    ).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('offers no toggle when the history fits the preview', () => {
+    render(SettingsTranslationTab, {
+      ...baseProps,
+      history: [entry(1), entry(2)] as never,
+    });
+    expect(screen.getByTestId('translation-history').querySelectorAll('li')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /historyShow/ })).toBeNull();
+  });
+});
