@@ -142,7 +142,6 @@ object NexoIcons {
             fill = SolidColor(Color.Black),
         )
 
-
     /**
      * Stroked outline path, for the unselected bottom-nav glyphs. 1.8 units on
      * the 24 viewport with round caps and joins, so the outlines carry the same
