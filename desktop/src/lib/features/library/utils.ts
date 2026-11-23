@@ -43,7 +43,7 @@ export function formatProgress(progress: number): string {
 
 export function getBulkImportStatusKey(status: string): string {
   const map: Record<string, string> = {
-    importing: 'library.bulkImport.status.ingesting',
+    importing: 'library.bulkImport.status.importing',
     success: 'library.bulkImport.status.success',
     skipped: 'library.bulkImport.status.skipped',
     failed: 'library.bulkImport.status.failed',
