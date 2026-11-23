@@ -62,34 +62,35 @@ describe('WelcomeScreen', () => {
     expect(wordmark.getAttribute('src')).toBe('./nexo-horizontal-dark.svg');
   });
 
-  it('renders the eyebrow, headline, subtitle and the 4 feature items', () => {
+  it('renders the eyebrow, headline, subtitle and three feature items', () => {
     render(WelcomeScreen, { props: { t } });
 
     expect(screen.getByText('welcome.eyebrow')).toBeInTheDocument();
     expect(screen.getByText('welcome.headline')).toBeInTheDocument();
     expect(screen.getByText('welcome.subtitle')).toBeInTheDocument();
-    for (const i of [1, 2, 3, 4]) {
+    // Read, annotate, sync: the stats promise was cut with the trust footer,
+    // which repeated "sync" three times.
+    for (const i of [1, 2, 4]) {
       expect(screen.getByText(`welcome.feature${i}Label`)).toBeInTheDocument();
       expect(screen.getByText(`welcome.feature${i}Description`)).toBeInTheDocument();
     }
+    expect(screen.queryByText('welcome.feature3Label')).toBeNull();
+    expect(screen.queryByText('welcome.footer.item1')).toBeNull();
   });
 
-  it('renders the login card with auth options and the create-account link', () => {
+  it('renders the login card with both ways in and says what local mode means', () => {
     render(WelcomeScreen, { props: { t } });
 
     expect(screen.getByText('welcome.cardTitle')).toBeInTheDocument();
     expect(screen.getByText('welcome.cardSubtitle')).toBeInTheDocument();
     expect(screen.getByTestId('google-login-stub')).toBeInTheDocument();
     expect(screen.getByText('welcome.continueLocal')).toBeInTheDocument();
-    expect(screen.getByText('welcome.cardCreateAccount')).toBeInTheDocument();
+    expect(screen.getByText('welcome.localHint')).toBeInTheDocument();
   });
 
-  it('renders the 3 trust items with title and description', () => {
+  // The link had no handler, and Google sign-in needs no separate account.
+  it('offers no dead "create account" link', () => {
     render(WelcomeScreen, { props: { t } });
-
-    for (const i of [1, 2, 3]) {
-      expect(screen.getByText(`welcome.footer.item${i}`)).toBeInTheDocument();
-      expect(screen.getByText(`welcome.footer.item${i}Desc`)).toBeInTheDocument();
-    }
+    expect(screen.queryByText('welcome.cardCreateAccount')).toBeNull();
   });
 });

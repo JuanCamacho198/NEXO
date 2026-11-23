@@ -10,12 +10,13 @@ import type { NotificationTarget } from '$lib/shared/types/notification';
 
 export type ToastType = 'success' | 'info' | 'error';
 
-/** Deep-link action carried by toasts dispatched from a notification (NOTIF-04). */
-export interface ToastAction {
-  label: string;
-  notificationId: string;
-  target?: NotificationTarget;
-}
+/**
+ * The button a toast carries: either a notification deep link (NOTIF-04) or a
+ * plain callback (e.g. "Undo").
+ */
+export type ToastAction =
+  | { label: string; notificationId: string; target?: NotificationTarget; run?: never }
+  | { label: string; run: () => void; notificationId?: never; target?: never };
 
 export interface ToastItem {
   id: number;

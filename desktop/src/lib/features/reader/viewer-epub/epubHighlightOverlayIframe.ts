@@ -10,6 +10,8 @@
  *   `persistedHighlights` changes.
  * - `hitTest(x, y)` — resolves a viewport point to the highlight whose
  *   Range contains it (used by the selection script's click handler).
+ * - `anchorRect(id, x, y)` — the on-screen box of a highlight (or of the
+ *   clicked line of a long one), so its menu can sit above the text.
  * - `rangeOverlapsHighlight(range)` — true when a selection Range
  *   overlaps any registered highlight (used to suppress Menu 1 when
  *   the user is interacting with an existing highlight).
@@ -134,6 +136,38 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
       if (pointInRangeInclusive(entry.range, container, offset)) {
         return { id: entry.id, color: entry.color, text: entry.text };
       }
+    }
+    return null;
+  }
+
+  // Where a highlight sits on screen, in this document's viewport, for the
+  // parent to anchor its menu ABOVE the text instead of at the click point.
+  // A short highlight anchors to its whole box; a long one (taller than a
+  // few lines) anchors to the line that was clicked, so the menu is not
+  // sent to a first line scrolled out of view.
+  var ANCHOR_MAX_HEIGHT = 96;
+  function anchorRect(id, x, y) {
+    for (var i = 0; i < registered.length; i++) {
+      var entry = registered[i];
+      if (entry.id !== id) continue;
+      var box = entry.range.getBoundingClientRect();
+      if (box.height <= ANCHOR_MAX_HEIGHT) {
+        return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+      }
+      var rects = entry.range.getClientRects();
+      var best = null;
+      var bestDistance = Infinity;
+      for (var r = 0; r < rects.length; r++) {
+        var rect = rects[r];
+        if (rect.width === 0 || rect.height === 0) continue;
+        var distance = y < rect.top ? rect.top - y : y > rect.bottom ? y - rect.bottom : 0;
+        if (distance < bestDistance) {
+          best = rect;
+          bestDistance = distance;
+        }
+      }
+      if (best) return { left: best.left, right: best.right, top: best.top, bottom: best.bottom };
+      return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
     }
     return null;
   }
@@ -594,6 +628,7 @@ export const IFRAME_HIGHLIGHT_OVERLAY_SCRIPT = `
   window.__epubHighlightOverlay = {
     render: render,
     hitTest: hitTest,
+    anchorRect: anchorRect,
     rangeOverlapsHighlight: rangeOverlapsHighlight,
     isReady: isReady
   };

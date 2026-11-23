@@ -12,6 +12,8 @@ export type HighlightMenuState = {
   color: string;
   text: string;
   position: { x: number; y: number } | null;
+  /** The highlight's on-screen box, when the viewer measured it (EPUB). */
+  anchor: { left: number; right: number; top: number; bottom: number } | null;
   assignedTags: TagDto[];
 };
 
@@ -37,7 +39,16 @@ export type HighlightMenuDeps = {
   /** "The reader dismissed the highlight menu." The workspace folds this into
    * the same single state, so closing here cannot leave the other menu up. */
   onIntentClose?: () => void;
+  /**
+   * A highlight was removed from the page and will be deleted for good after
+   * the undo window. The caller shows the "Deleted · Undo" message and calls
+   * `undo` if the reader asks for it.
+   */
+  onDeleted?: (undo: () => void) => void;
 };
+
+/** How long a deleted highlight can still be brought back. */
+export const HIGHLIGHT_UNDO_WINDOW_MS = 6000;
 
 export function createHighlightMenu(deps: HighlightMenuDeps): {
   highlightMenu: HighlightMenuState;
@@ -97,6 +108,7 @@ export function createHighlightMenu(deps: HighlightMenuDeps): {
     color: HIGHLIGHT_COLORS[0].hex,
     text: '',
     position: null,
+    anchor: null,
     assignedTags: [],
   });
   let allTags = $state<TagDto[]>([]);
@@ -140,6 +152,7 @@ export function createHighlightMenu(deps: HighlightMenuDeps): {
               x: typeof window !== 'undefined' ? window.innerWidth / 2 : 0,
               y: typeof window !== 'undefined' ? window.innerHeight / 2 : 0,
             },
+      anchor: opts?.anchor ?? null,
       assignedTags: [],
     };
     // Notify the single owner BEFORE the data loads: the workspace closes the
@@ -158,6 +171,7 @@ export function createHighlightMenu(deps: HighlightMenuDeps): {
       color: HIGHLIGHT_COLORS[0].hex,
       text: '',
       position: null,
+      anchor: null,
       assignedTags: [],
     };
     showColorPicker = false;
@@ -183,6 +197,7 @@ export function createHighlightMenu(deps: HighlightMenuDeps): {
       color: HIGHLIGHT_COLORS[0].hex,
       text: '',
       position: null,
+      anchor: null,
       assignedTags: [],
     };
     showColorPicker = false;
@@ -255,9 +270,56 @@ export function createHighlightMenu(deps: HighlightMenuDeps): {
     showNoteModal = true;
   }
 
+  // Undoable delete: the highlight leaves the page at once, and the real
+  // delete (database and sync) waits out the undo window. Leaving the book
+  // (cleanup) or deleting another one commits the pending delete first, so a
+  // delete is never lost — only delayed.
+  type PendingDelete = {
+    highlight: (typeof highlights.persistedHighlights)[number];
+    bookId: string | null;
+    index: number;
+    timer: ReturnType<typeof setTimeout>;
+  };
+  let pendingDelete: PendingDelete | null = null;
+
+  function commitPendingDelete(): void {
+    if (!pendingDelete) return;
+    const { highlight, bookId, timer } = pendingDelete;
+    pendingDelete = null;
+    clearTimeout(timer);
+    highlights.deleteHighlightById(highlight.id, { highlight, bookId });
+  }
+
+  function undoPendingDelete(): void {
+    if (!pendingDelete) return;
+    const { highlight, index, timer } = pendingDelete;
+    pendingDelete = null;
+    clearTimeout(timer);
+    const next = [...highlights.persistedHighlights];
+    next.splice(Math.min(index, next.length), 0, highlight);
+    highlights.persistedHighlights = next;
+  }
+
   function handleMenuDelete(): void {
-    if (!highlightMenu.highlightId) return;
-    deleteHighlightById(highlightMenu.highlightId);
+    const id = highlightMenu.highlightId;
+    if (!id) return;
+    const list = highlights.persistedHighlights;
+    const index = list.findIndex((h) => h.id === id);
+    if (index < 0 || !deps.onDeleted) {
+      deleteHighlightById(id);
+      return;
+    }
+    commitPendingDelete();
+    const highlight = list[index];
+    highlights.persistedHighlights = list.filter((h) => h.id !== id);
+    closeHighlightMenu();
+    pendingDelete = {
+      highlight,
+      bookId: highlights.activeBookId(),
+      index,
+      timer: setTimeout(commitPendingDelete, HIGHLIGHT_UNDO_WINDOW_MS),
+    };
+    deps.onDeleted(undoPendingDelete);
   }
 
   function handleNoteSave(note: string | null): void {
@@ -327,6 +389,7 @@ export function createHighlightMenu(deps: HighlightMenuDeps): {
   }
 
   function cleanup(): void {
+    commitPendingDelete();
     if (dismissTimer) {
       clearTimeout(dismissTimer);
       dismissTimer = null;

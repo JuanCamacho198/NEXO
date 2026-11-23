@@ -61,6 +61,8 @@ export function createEpubHighlights(deps: EpubHighlightsDeps): {
     y: number;
     color: string;
     text?: string;
+    /** The highlight's box in the iframe viewport (see the overlay's `anchorRect`). */
+    rect?: { left: number; right: number; top: number; bottom: number } | null;
     pageNumber: number;
   }): void;
   handleEpubHighlightFailed(msg: {
@@ -81,6 +83,8 @@ export function createEpubHighlights(deps: EpubHighlightsDeps): {
     y: number;
     color: string;
     text?: string;
+    /** The highlight's box in the iframe viewport (see the overlay's `anchorRect`). */
+    rect?: { left: number; right: number; top: number; bottom: number } | null;
     pageNumber: number;
   }): void {
     if (msg.pageNumber !== deps.getCurrentSpineIndex()) return;
@@ -92,6 +96,14 @@ export function createEpubHighlights(deps: EpubHighlightsDeps): {
       text: msg.text,
       x: msg.x + frameRect.left,
       y: msg.y + frameRect.top,
+      anchor: msg.rect
+        ? {
+            left: msg.rect.left + frameRect.left,
+            right: msg.rect.right + frameRect.left,
+            top: msg.rect.top + frameRect.top,
+            bottom: msg.rect.bottom + frameRect.top,
+          }
+        : undefined,
     });
   }
 

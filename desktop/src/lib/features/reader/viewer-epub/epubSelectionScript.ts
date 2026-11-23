@@ -158,11 +158,20 @@ export function buildChapterSelectionScript(opts: {
             suppressOwnCollapse(SELF_COLLAPSE_MS);
             var selHit = window.getSelection();
             if (selHit) selHit.removeAllRanges();
+            var hitRect = null;
+            try {
+              if (typeof window.__epubHighlightOverlay.anchorRect === 'function') {
+                hitRect = window.__epubHighlightOverlay.anchorRect(hit.id, ev.clientX, ev.clientY);
+              }
+            } catch (e) {
+              hitRect = null;
+            }
             window.parent.postMessage({
               type: 'epub-highlight-click',
               id: hit.id,
               x: ev.clientX,
               y: ev.clientY,
+              rect: hitRect,
               color: hit.color,
               text: hit.text,
               pageNumber: CHAPTER_INDEX

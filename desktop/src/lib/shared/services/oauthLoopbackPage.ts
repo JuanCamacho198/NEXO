@@ -24,6 +24,13 @@ const COPY: Record<LoopbackPageKind, { title: MessageKey; heading: MessageKey; b
     },
   };
 
+/**
+ * The app's own scheme (registered in `tauri.conf.json`). Opening it makes the
+ * OS hand the link to NEXO, whose single-instance hook brings the window
+ * forward. The browser asks first, with its own "always allow" checkbox.
+ */
+export const OPEN_APP_URL = 'nexo://open';
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -92,8 +99,18 @@ export function buildLoopbackPage(kind: LoopbackPageKind): string {
     }
     h1 { margin: 0 0 10px; font-size: 24px; line-height: 1.2; letter-spacing: -0.01em; font-weight: 700; }
     p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--muted); }
+    .open {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 24px; padding: 12px 26px; border-radius: 999px;
+      font-size: 15px; font-weight: 700; text-decoration: none;
+      color: var(--brand-on);
+      background: linear-gradient(90deg, var(--brand-start), var(--brand));
+      box-shadow: 0 12px 26px -12px var(--brand);
+    }
+    .open:hover { filter: brightness(1.08); }
+    .open:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
     .hint {
-      margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--edge);
+      margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--edge);
       font-size: 13px; color: var(--muted);
     }
   </style>
@@ -106,8 +123,15 @@ export function buildLoopbackPage(kind: LoopbackPageKind): string {
     </div>
     <h1>${t(copy.heading)}</h1>
     <p>${t(copy.body)}</p>
+    <a class="open" href="${OPEN_APP_URL}">${t('oauthPage.openApp')}</a>
     <p class="hint">${t('oauthPage.closeHint')}</p>
   </main>
+  <script>
+    // Hand the reader straight back, the way desktop apps do: the browser
+    // shows its "Open NEXO?" prompt (with "always allow"); the button above
+    // stays for when the prompt is dismissed or blocked.
+    setTimeout(function () { window.location.href = '${OPEN_APP_URL}'; }, 350);
+  </script>
 </body>
 </html>`;
 }

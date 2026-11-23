@@ -20,7 +20,8 @@
  */
 
 import { buildLoopbackPage } from './oauthLoopbackPage';
-import { start, cancel, onUrl } from '@fabianlars/tauri-plugin-oauth';
+import { cancel, onUrl } from '@fabianlars/tauri-plugin-oauth';
+import { startLoopbackServer } from './oauthLoopbackServer';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import type { Session } from '@supabase/supabase-js';
 
@@ -153,7 +154,7 @@ export async function signInWithGoogle(): Promise<void> {
   // Start loopback server
   let port: number;
   try {
-    port = await start({ response: buildLoopbackPage('signedIn') });
+    port = await startLoopbackServer(buildLoopbackPage('signedIn'));
   } catch (err) {
     throw new Error(`Failed to start loopback server: ${String(err)}`);
   }

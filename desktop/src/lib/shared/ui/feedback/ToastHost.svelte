@@ -4,14 +4,15 @@
   import { openNotification } from '$lib/shared/services/notificationNavigation';
 
   /**
-   * Follows a toast's notification deep link: marks the entry read,
+   * Runs a toast's callback action, or follows its notification deep link: marks the entry read,
    * navigates when its target resolves, and dismisses the toast either way.
    * Unknown targets degrade safely (read + dismissed, no navigation).
    */
   function handleAction(toast: ToastItem): void {
     const action = toast.action;
     if (!action) return;
-    openNotification({ id: action.notificationId, target: action.target });
+    if (action.run) action.run();
+    else openNotification({ id: action.notificationId, target: action.target });
     dismiss(toast.id);
   }
 </script>

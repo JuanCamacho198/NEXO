@@ -637,6 +637,8 @@ export const messagesEn = {
   'highlight.color.orange': 'Orange',
   'highlight.color.red': 'Red',
   'highlight.colors': 'Colors',
+  'highlight.deleted': 'Highlight deleted',
+  'highlight.undo': 'Undo',
   'highlight.customColor': 'Custom color',
   'highlight.changeColor': 'Change color',
   'highlight.tag': 'Tag',
@@ -1352,6 +1354,9 @@ export const messagesEn = {
   'welcome.divider': 'or',
   'welcome.continueGoogle': 'Continue with Google',
   'welcome.continueLocal': 'Continue locally',
+  'welcome.localHint': 'Your books stay on this computer. You can sign in later.',
+  'welcome.finishInBrowser': 'Finish signing in in your browser.',
+  'welcome.retryGoogle': 'Try Google again',
   'welcome.localFormAriaLabel': 'Local profile form',
   'welcome.localNameLabel': 'Your name',
   'welcome.localNamePlaceholder': 'What should we call you?',
@@ -1367,7 +1372,7 @@ export const messagesEn = {
   'welcome.signedInFallback': 'your Google account',
   'welcome.signedInToast': 'Signed in successfully',
   'welcome.signedOutToast': 'Signed out successfully',
-  'welcome.loggingIn': 'Logging in...',
+  'welcome.loggingIn': 'Opening your browser...',
   'welcome.devSkipHint': 'Dev mode: a mock local user will be created.',
   'welcome.nav.features': 'Features',
   'welcome.nav.trust': 'Why Nexo',
@@ -1479,7 +1484,8 @@ export const messagesEn = {
   'oauthPage.drive.heading': 'Google Drive connected',
   'oauthPage.drive.body':
     'NEXO can now back up your library to Drive. The app picks up where you left off.',
-  'oauthPage.closeHint': 'You can close this tab and go back to NEXO.',
+  'oauthPage.closeHint': 'If NEXO does not open, switch back to the app; you can close this tab.',
+  'oauthPage.openApp': 'Open NEXO',
 } as const;
 
 export type MessageKey = keyof typeof messagesEn;

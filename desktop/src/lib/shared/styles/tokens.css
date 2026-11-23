@@ -337,22 +337,6 @@
   --color-streak-text: #fbbf24;
   --gradient-streak: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(249, 115, 22, 0.12));
   --gradient-streak-icon: linear-gradient(135deg, #fbbf24, #f97316);
-
-  /* Welcome screen — dark glassmorphism (login-redesign change) */
-  --welcome-card-bg: rgba(21, 29, 44, 0.64);
-  --welcome-card-border: #1e293b;
-  --welcome-card-shadow: 0 25px 43.75px -12.5px rgba(0, 0, 0, 0.25);
-  --welcome-card-orb: rgba(79, 140, 255, 0.2);
-  --welcome-feature-blue-bg: rgba(30, 58, 138, 0.16);
-  --welcome-feature-blue-fg: #60a5fa;
-  --welcome-feature-green-bg: rgba(6, 78, 59, 0.09);
-  --welcome-feature-green-fg: #34d399;
-  --welcome-feature-purple-bg: rgba(88, 28, 135, 0.09);
-  --welcome-feature-purple-fg: #c084fc;
-  --welcome-feature-cyan-bg: rgba(12, 74, 110, 0.09);
-  --welcome-feature-cyan-fg: #38bdf8;
-  --welcome-brand-blue: #5f82ff;
-  --welcome-footer-icon: #9ca3af;
 }
 
 /* ============================================

@@ -30,7 +30,8 @@
  */
 
 import { buildLoopbackPage } from './oauthLoopbackPage';
-import { start, cancel, onUrl } from '@fabianlars/tauri-plugin-oauth';
+import { cancel, onUrl } from '@fabianlars/tauri-plugin-oauth';
+import { startLoopbackServer } from './oauthLoopbackServer';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
@@ -375,7 +376,7 @@ async function runDriveConnect(): Promise<DriveAuthResult> {
   driveState.setDriveConnecting(true);
   let port: number;
   try {
-    port = await start({ response: buildLoopbackPage('driveConnected') });
+    port = await startLoopbackServer(buildLoopbackPage('driveConnected'));
   } catch (error) {
     driveState.setDriveConnecting(false);
     return reportFailure(

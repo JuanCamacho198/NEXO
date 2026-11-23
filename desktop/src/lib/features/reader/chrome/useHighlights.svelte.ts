@@ -25,6 +25,11 @@ export type PersistedHighlight = {
   note?: string | null;
 };
 
+export type HighlightDeleteSnapshot = {
+  highlight: PersistedHighlight;
+  bookId: string | null;
+};
+
 export type SelectionData = {
   text: string;
   bounds: { left: number; top: number; right: number; bottom: number };
@@ -54,7 +59,14 @@ export function createHighlights(deps: HighlightsDeps): {
   handleColorSelect(color: string, data: SelectionData): Promise<void>;
   updateHighlightColor(id: string, color: string): void;
   updateHighlightNote(id: string, note: string | null): void;
-  deleteHighlightById(id: string): void;
+  /**
+   * `snapshot` is the highlight and its book as they were, for a delete
+   * committed after it already left the list (the menu's undo window): the
+   * sync payload is built from it, not from the list or the book open now.
+   */
+  deleteHighlightById(id: string, snapshot?: HighlightDeleteSnapshot): void;
+  /** The open book's id, for a caller that has to remember it (undo window). */
+  activeBookId(): string | null;
   enqueueHighlightUpdate(id: string, changes: { color?: string; note?: string | null }): void;
   cleanup(): void;
   readonly _timer: ReturnType<typeof setTimeout> | null;
@@ -356,9 +368,13 @@ export function createHighlights(deps: HighlightsDeps): {
     enqueueHighlightUpdate(id, { note });
   }
 
-  function deleteHighlightById(id: string): void {
-    const highlight = persistedHighlights.find((item) => item.id === id);
-    const bookId = untrack(getBook)?.id ?? null;
+  function activeBookId(): string | null {
+    return untrack(getBook)?.id ?? null;
+  }
+
+  function deleteHighlightById(id: string, snapshot?: HighlightDeleteSnapshot): void {
+    const highlight = snapshot?.highlight ?? persistedHighlights.find((item) => item.id === id);
+    const bookId = snapshot ? snapshot.bookId : activeBookId();
     captureBreadcrumb('action', BREADCRUMB_LABELS.HIGHLIGHT_DELETE, {
       bookId,
       highlightId: id,
@@ -373,7 +389,6 @@ export function createHighlights(deps: HighlightsDeps): {
     });
     const uidDel = getUserId();
     if (uidDel && highlight) {
-      const book = untrack(getBook);
       const updatedAt = new Date().toISOString();
       void outbox.add(
         'HIGHLIGHT',
@@ -381,7 +396,7 @@ export function createHighlights(deps: HighlightsDeps): {
         'DELETE',
         JSON.stringify({
           userId: uidDel,
-          bookId: book?.id ?? id,
+          bookId: bookId ?? id,
           cfiRange: highlight.cfi ?? '',
           textContent: highlight.text ?? '',
           color: highlight.color,
@@ -434,6 +449,7 @@ export function createHighlights(deps: HighlightsDeps): {
     updateHighlightColor,
     updateHighlightNote,
     deleteHighlightById,
+    activeBookId,
     enqueueHighlightUpdate,
     cleanup,
     get _timer() {

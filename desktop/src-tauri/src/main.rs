@@ -113,6 +113,13 @@ mod deep_link_tests {
     }
 
     #[test]
+    fn open_link_from_the_oauth_page_resolves_to_the_open_host() {
+        let argv = vec!["app.exe".to_string(), "nexo://open".to_string()];
+        let url = extract_install_url(&argv).expect("nexo:// argv is a deep link");
+        assert_eq!(deep_link_host(&url), "open");
+    }
+
+    #[test]
     fn extract_install_url_accepts_legacy_scheme() {
         let argv = vec![
             "app.exe".to_string(),
@@ -158,16 +165,23 @@ fn main() {
             // plugin (Tauri docs). Scan argv for a deep-link URL; only
             // install URLs are emitted, everything else is logged for QA.
             if let Some(url) = extract_install_url(&argv) {
-                if deep_link_host(&url) == "install" {
-                    use tauri::Emitter;
-                    let _ = app.emit("deep-link-install", url);
-                } else {
-                    eprintln!("[nexo] unhandled deep-link argv: {argv:?}");
+                match deep_link_host(&url).as_str() {
+                    "install" => {
+                        use tauri::Emitter;
+                        let _ = app.emit("deep-link-install", url);
+                    }
+                    // `nexo://open`: the OAuth page's "Open NEXO" hand-back.
+                    // Bringing the window forward (below) is the whole job.
+                    "open" => {}
+                    _ => eprintln!("[nexo] unhandled deep-link argv: {argv:?}"),
                 }
             } else if argv.iter().skip(1).any(|arg| arg.contains("://")) {
                 eprintln!("[nexo] unhandled deep-link argv: {argv:?}");
             }
             if let Some(window) = app.get_webview_window("main") {
+                // A minimised or hidden window ignores focus alone.
+                let _ = window.unminimize();
+                let _ = window.show();
                 let _ = window.set_focus();
             }
         }))
