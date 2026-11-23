@@ -273,8 +273,10 @@ describe('DiscoverDetail modal (WU2)', () => {
     const onDismiss = vi.fn();
     render(DiscoverDetail, { props: { detail: fakeBook(), detailStatus: 'loaded', t, onDismiss } });
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    // Title renders twice: modal header + detail heading.
-    expect(screen.getAllByText('Pride and Prejudice')).toHaveLength(2);
+    // The title renders once, as the detail heading; the modal header names the
+    // context instead of repeating it one line above.
+    expect(screen.getAllByText('Pride and Prejudice')).toHaveLength(1);
+    expect(screen.getByRole('dialog')).toHaveAccessibleName('sidebar.discover');
     expect(screen.getByText('Gutenberg')).toBeInTheDocument();
     expect(screen.getByText('A classic novel.')).toBeInTheDocument();
     expect(screen.getByText('EPUB')).toBeInTheDocument();
