@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Round variant of the adaptive launcher icon, requested by some launchers
      via android:roundIcon. Same three layers and the same geometry as
-     @mipmap/ic_launcher: the mark already sits inside the 66x66 of 108 that
-     survives both the square and the circular mask, so no separate drawing is
-     needed. See drawable/ic_launcher_foreground.xml for the brand source. -->
+     @mipmap/ic_launcher: the mark sits inside the 66x66 of 108 that survives
+     both the square and the circular mask, so no separate drawing is needed. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background" />
+    <background android:drawable="@drawable/ic_launcher_background" />
     <foreground android:drawable="@drawable/ic_launcher_foreground" />
     <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>
