@@ -30,6 +30,15 @@ if (header) {
   const overHero = header.hasAttribute('data-hero');
   const spyLinks = Array.from(header.querySelectorAll<HTMLElement>('[data-spy]'));
 
+  // Tapping a section in the mobile menu jumps within the page, so nothing
+  // would otherwise close the menu: uncheck its toggle on the way.
+  const menuToggle = header.querySelector<HTMLInputElement>('#nav-toggle');
+  for (const link of header.querySelectorAll('.mobile-menu-link')) {
+    link.addEventListener('click', () => {
+      if (menuToggle) menuToggle.checked = false;
+    });
+  }
+
   let ticking = false;
   let lastY = window.scrollY;
   // Geometry, cached in DOCUMENT space. Rebuilt only when the document size or
@@ -93,8 +102,12 @@ if (header) {
     if (dark === true) header!.setAttribute('data-theme', 'dark');
     else if (dark === false) header!.removeAttribute('data-theme');
 
+    // The desktop pill and the mobile menu both carry spy links, so match on
+    // the section id rather than on the one link that won.
+    const activeId = activeLink?.getAttribute('data-spy') ?? null;
     for (const link of spyLinks) {
-      if (link === activeLink) link.setAttribute('aria-current', 'location');
+      if (activeId && link.getAttribute('data-spy') === activeId)
+        link.setAttribute('aria-current', 'location');
       else link.removeAttribute('aria-current');
     }
   }

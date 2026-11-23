@@ -27,6 +27,9 @@ const highlights = [
 
 // Sync ring segments in the stage's 1000×600 viewBox (see the markup note).
 const ringA = 'M650 168 C800 150 990 214 988 330';
+// Stacked, the wordmark is larger and the O sits further right and higher,
+// so the first segment gets its own start (swapped in by CSS below 1024px).
+const ringAMobile = 'M800 122 C910 140 992 232 988 330';
 const ringB = 'M988 330 C986 452 760 562 470 562 C200 562 26 500 30 420';
 const ringC = 'M30 420 C34 362 140 322 300 298';
 const ringD = 'M300 298 C440 276 600 290 690 330';
@@ -35,7 +38,7 @@ const ringD = 'M300 298 C440 276 600 290 690 330';
 const books = [bookFlip1, bookFlip3, bookFlip2, bookFlip4, bookFlip5];
 
 // Measured with getTotalLength(); update them whenever a path changes.
-const ringLen = { a: 414, b: 1100, c: 311, d: 396 };
+const ringLen = { a: 414, aMobile: 306, b: 1100, c: 311, d: 396 };
 ---
 
 <!-- ══════════════ HERO ══════════════ -->
@@ -108,6 +111,19 @@ const ringLen = { a: 414, b: 1100, c: 311, d: 396 };
             <stop offset="0.45" stop-color="oklch(74% 0.17 52)" stop-opacity="0.55" />
             <stop offset="1" stop-color="oklch(80% 0.16 58)" stop-opacity="0.95" />
           </linearGradient>
+          <linearGradient
+            id="ring-a-m"
+            gradientUnits="userSpaceOnUse"
+            x1="800"
+            y1="0"
+            x2="990"
+            y2="0"
+          >
+            <stop offset="0" stop-color="oklch(92% 0.1 70)" stop-opacity="0" />
+            <stop offset="0.1" stop-color="oklch(92% 0.1 70)" />
+            <stop offset="0.5" stop-color="oklch(74% 0.17 52)" stop-opacity="0.6" />
+            <stop offset="1" stop-color="oklch(80% 0.16 58)" stop-opacity="0.95" />
+          </linearGradient>
           <!-- Brightest where it rises behind the phone. -->
           <linearGradient id="ring-c" gradientUnits="userSpaceOnUse" x1="30" y1="0" x2="300" y2="0">
             <stop offset="0" stop-color="oklch(76% 0.16 55)" stop-opacity="0.7" />
@@ -126,14 +142,21 @@ const ringLen = { a: 414, b: 1100, c: 311, d: 396 };
             <stop offset="1" stop-color="oklch(74% 0.17 52)" stop-opacity="0.5" />
           </linearGradient>
         </defs>
-        <path class="ring-glow" stroke="url(#ring-a)" d={ringA} />
+        <path class="ring-glow ring-desk" stroke="url(#ring-a)" d={ringA} />
+        <path class="ring-glow ring-mob" stroke="url(#ring-a-m)" d={ringAMobile} />
         <path class="ring-glow" stroke="url(#ring-c)" d={ringC} />
         <path class="ring-glow" stroke="url(#ring-d)" d={ringD} />
         <path
-          class="ring-line ring-a"
+          class="ring-line ring-a ring-desk"
           stroke="url(#ring-a)"
           d={ringA}
           style={`--len:${ringLen.a}`}
+        />
+        <path
+          class="ring-line ring-a ring-mob"
+          stroke="url(#ring-a-m)"
+          d={ringAMobile}
+          style={`--len:${ringLen.aMobile}`}
         />
         <path
           class="ring-line ring-c"
@@ -147,7 +170,12 @@ const ringLen = { a: 414, b: 1100, c: 311, d: 396 };
           d={ringD}
           style={`--len:${ringLen.d}`}
         />
-        <path class="ring-comet ring-a" d={ringA} style={`--len:${ringLen.a}`} />
+        <path class="ring-comet ring-a ring-desk" d={ringA} style={`--len:${ringLen.a}`} />
+        <path
+          class="ring-comet ring-a ring-mob"
+          d={ringAMobile}
+          style={`--len:${ringLen.aMobile}`}
+        />
         <path class="ring-comet ring-c" d={ringC} style={`--len:${ringLen.c}`} />
         <path class="ring-comet ring-d" d={ringD} style={`--len:${ringLen.d}`} />
       </svg>
@@ -245,9 +273,9 @@ const ringLen = { a: 414, b: 1100, c: 311, d: 396 };
       </svg>
     </div>
 
-    <div class="hero-chrome hero-bar grid grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.15fr)] items-center gap-0 max-[1023px]:grid-cols-1 max-[1023px]:gap-5">
+    <div class="hero-chrome hero-bar grid grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.15fr)] items-center gap-0 max-[1023px]:grid-cols-3 max-[1023px]:gap-y-5">
       {highlights.map((item) => (
-        <div class="flex min-w-0 items-center gap-4 border-r border-white/15 px-8 first:pl-0 max-[1023px]:border-r-0 max-[1023px]:px-0">
+        <div class="hero-highlight flex min-w-0 items-center gap-4 border-r border-white/15 px-8 first:pl-0">
           <svg
             class="h-9 w-9 flex-none text-ink"
             viewBox="0 0 24 24"
@@ -271,14 +299,16 @@ const ringLen = { a: 414, b: 1100, c: 311, d: 396 };
             )}
           </svg>
           <div class="min-w-0">
-            <p class="text-[1.2rem] leading-tight font-semibold text-ink">{item.title}</p>
-            <p class="mt-1 text-[0.95rem] leading-snug text-ink-soft">{item.copy}</p>
+            <p class="highlight-title text-[1.2rem] leading-tight font-semibold text-ink">
+              {item.title}
+            </p>
+            <p class="highlight-copy mt-1 text-[0.95rem] leading-snug text-ink-soft">{item.copy}</p>
           </div>
         </div>
       ))}
 
       <!-- Placeholder: there is no video yet, so this card is not interactive. -->
-      <div class="ml-8 flex items-center gap-4 rounded-[18px] border border-white/12 bg-white/[0.06] p-2.5 pr-4 backdrop-blur-md max-[1023px]:ml-0">
+      <div class="hero-video ml-8 flex items-center gap-4 rounded-[18px] border border-white/12 bg-white/[0.06] p-2.5 pr-4 backdrop-blur-md max-[1023px]:ml-0">
         <div
           class="placeholder-surface aspect-[3/2] w-24 flex-none rounded-xl"
           aria-hidden="true"
@@ -657,6 +687,9 @@ const ringLen = { a: 414, b: 1100, c: 311, d: 396 };
   .ring-line {
     stroke-width: 1.8;
   }
+  .ring-mob {
+    display: none;
+  }
   /* A wide, blurred copy under the line: where the gradient is hot the ring
      blooms, where it is cool it stays a thin thread. */
   .ring-glow {
@@ -743,10 +776,19 @@ const ringLen = { a: 414, b: 1100, c: 311, d: 396 };
       --word-size: 25cqw;
       --word-top: 6cqh;
     }
+    /* A triangle: the laptop up and centred, the phone in front on the left,
+       the tablet in front on the right (on desktop it hides behind the laptop,
+       which at this width left only a cut-off sliver of it). */
     .hero-device-laptop {
       left: 50%;
-      width: 70cqw;
-      bottom: 12cqh;
+      width: min(76cqw, 68cqh);
+      bottom: 20cqh;
+    }
+    .ring-desk {
+      display: none;
+    }
+    .ring-mob {
+      display: inline;
     }
     /* Stacked, the ring passes under the laptop, not across it. */
     .hero-ring-front {
@@ -774,17 +816,52 @@ const ringLen = { a: 414, b: 1100, c: 311, d: 396 };
       padding: 4px 9px 4px 7px;
     }
     .hero-device-phone {
-      left: 4cqw;
-      width: 24cqw;
-      bottom: 3cqh;
+      z-index: 3;
+      left: 3cqw;
+      width: min(25cqw, 23cqh);
+      bottom: 1cqh;
     }
     .hero-device-tablet {
-      right: 3cqw;
-      width: 38cqw;
-      bottom: 4cqh;
+      z-index: 2;
+      right: 2cqw;
+      width: min(46cqw, 42cqh);
+      bottom: 9cqh;
     }
     .hero-bar {
-      padding: 8px 20px 32px;
+      padding: 8px 16px 32px;
+    }
+    /* The three highlights as one compact row: icon over a short title and
+       copy, split by thin rules; the video card takes the full width below. */
+    .hero-highlight {
+      flex-direction: column;
+      gap: 8px;
+      padding: 0 8px;
+      text-align: center;
+    }
+    .hero-highlight:first-child {
+      padding-left: 0;
+    }
+    .hero-highlight:nth-child(3) {
+      border-right: 0;
+      padding-right: 0;
+    }
+    .hero-highlight svg {
+      width: 28px;
+      height: 28px;
+    }
+    .highlight-title {
+      font-size: 1rem;
+    }
+    .highlight-copy {
+      font-size: 0.78rem;
+    }
+    .hero-video {
+      grid-column: 1 / -1;
+      margin-left: 0;
+    }
+    /* A smaller thumbnail so "Descubre Nexo" fits on one line at 360px. */
+    .hero-video .placeholder-surface {
+      width: 64px;
     }
   }
 </style>

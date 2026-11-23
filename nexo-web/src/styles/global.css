@@ -840,6 +840,103 @@
     }
   }
 
+  /* ═══════════════ mobile menu ═══════════════ */
+  /* Closed and on desktop it is not rendered at all; the checkbox before it
+     opens it. A floating panel inset from the screen edges rather than a
+     full-width sheet, with large tap rows and the language and theme at the
+     foot. */
+  .mobile-menu {
+    display: none;
+  }
+  @media (max-width: 1023px) {
+    .nav-toggle:checked ~ .mobile-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 12px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 8px;
+      border: 1px solid var(--color-border);
+      border-radius: 22px;
+      /* Opaque: the header bar already has a backdrop-filter, and a nested
+         one only blurs the bar itself, so any translucency let the page's
+         bright wordmark read through the panel. */
+      background: var(--color-surface);
+      box-shadow: 0 24px 48px -16px oklch(0% 0 0 / 0.5);
+      animation: menu-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .nav-toggle:checked {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23101624' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");
+    }
+  }
+  .mobile-menu-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 50px;
+    padding: 0 14px;
+    border-radius: 14px;
+    color: var(--color-ink-soft);
+    font-size: 16px;
+    font-weight: 600;
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease;
+  }
+  .mobile-menu-link svg {
+    width: 18px;
+    height: 18px;
+    margin-left: auto;
+    opacity: 0.45;
+  }
+  .mobile-menu-link:hover {
+    background: color-mix(in oklch, var(--color-ink) 6%, transparent);
+    color: var(--color-ink);
+  }
+  /* The section in view: an orange dot and a lit row, like the desktop pill. */
+  .mobile-menu-link[aria-current] {
+    background: color-mix(in oklch, var(--color-ink) 8%, transparent);
+    color: var(--color-ink);
+  }
+  .mobile-menu-link[aria-current]::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: oklch(70% 0.19 48);
+    box-shadow: 0 0 10px oklch(70% 0.19 48 / 0.8);
+  }
+  .mobile-menu-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 6px;
+    padding: 12px 6px 4px;
+    border-top: 1px solid var(--color-border);
+  }
+  /* ES / EN as a small segmented control. */
+  .mobile-menu-langs {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+  }
+  .mobile-menu-langs a {
+    padding: 6px 14px;
+    border-radius: 999px;
+    color: var(--color-ink-soft);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .mobile-menu-langs a[aria-current] {
+    background: var(--color-ink);
+    color: var(--color-surface);
+  }
+
   /* ═══════════════ download ═══════════════ */
   /* The section sits on the home page's night background (DownloadSection.astro
      owns its layout). What stays here is what utilities cannot express: the
@@ -1137,6 +1234,12 @@
     box-shadow: 0 0 0 6px oklch(76% 0.18 55 / 0);
   }
 }
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
 @keyframes sky-twinkle {
   0% {
     opacity: 1;
@@ -1296,6 +1399,11 @@
    on this list; it now swaps through the --glass-* tokens instead. */
 [data-theme='dark'] .nav-toggle {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23f4f2ea' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h16M4 12h16M4 17h16'/%3E%3C/svg%3E");
+}
+@media (max-width: 1023px) {
+  [data-theme='dark'] .nav-toggle:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23f4f2ea' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");
+  }
 }
 [data-theme='dark'] .skip-link {
   color: var(--color-background);
