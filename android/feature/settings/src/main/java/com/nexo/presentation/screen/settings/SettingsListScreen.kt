@@ -19,14 +19,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,7 +56,6 @@ import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.motion.pressScaleClickable
 import com.nexo.ui.motion.rememberEntranceProgress
 import com.nexo.ui.motion.staggeredEnter
-import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.theme.nexoColors
 

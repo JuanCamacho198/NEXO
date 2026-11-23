@@ -166,11 +166,46 @@ private fun MiniPage(
                 .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        Box(modifier = Modifier.fillMaxWidth(0.55f).height(6.dp).clip(CircleShape).background(ink))
-        Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(ink.copy(alpha = 0.7f)))
-        Box(modifier = Modifier.fillMaxWidth(0.8f).height(4.dp).clip(CircleShape).background(ink.copy(alpha = 0.7f)))
-        Box(modifier = Modifier.fillMaxWidth(0.9f).height(4.dp).clip(CircleShape).background(ink.copy(alpha = 0.7f)))
-        Box(modifier = Modifier.fillMaxWidth(0.45f).height(8.dp).clip(CircleShape).background(accent))
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth(0.55f)
+                    .height(6.dp)
+                    .clip(CircleShape)
+                    .background(ink),
+        )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(ink.copy(alpha = 0.7f)),
+        )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(ink.copy(alpha = 0.7f)),
+        )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth(0.9f)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(ink.copy(alpha = 0.7f)),
+        )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth(0.45f)
+                    .height(8.dp)
+                    .clip(CircleShape)
+                    .background(accent),
+        )
     }
 }
 

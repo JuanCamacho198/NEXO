@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nexo.R as AppR
 import com.nexo.data.remote.addons.AddonRegistryLike
 import com.nexo.data.remote.addons.InstalledAddonRow
 import com.nexo.feature.settings.R
@@ -56,6 +55,7 @@ import com.nexo.ui.components.molecules.NexoSettingsSection
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.nexoColors
+import com.nexo.R as AppR
 
 /**
  * Stateful host for [AddonManagementScreen].

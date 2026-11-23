@@ -32,7 +32,6 @@ import com.nexo.domain.discover.DiscoverRailGroup
 import com.nexo.domain.discover.DiscoverRailState
 import com.nexo.domain.discover.DiscoverSourceFilter
 import com.nexo.domain.discover.DiscoverStatus
-import com.nexo.feature.discover.R as FeatureR
 import com.nexo.presentation.viewmodel.DiscoverUiState
 import com.nexo.presentation.viewmodel.DiscoverViewModel
 import com.nexo.ui.icons.NexoIcons
@@ -40,6 +39,7 @@ import com.nexo.ui.motion.rememberEntranceProgress
 import com.nexo.ui.motion.staggeredEnter
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.nexoColors
+import com.nexo.feature.discover.R as FeatureR
 
 /**
  * Discover shell: header, search field, trending chips, then exactly one body
