@@ -1017,6 +1017,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'home.continue.countAria': '{{count}} en curso',
   'home.continue.nextBook': 'Siguiente',
   'home.continue.prevBook': 'Anterior',
+  'home.continue.chapter': 'Capítulo actual',
+  'home.continue.lastRead': 'Última lectura',
 
   // Home reading desk (HOME-01..03)
   'home.pageTitle': 'Inicio',

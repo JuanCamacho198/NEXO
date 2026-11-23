@@ -6,6 +6,8 @@
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import HomeHorizon from '$lib/features/home/components/HomeHorizon.svelte';
+  import ContinueReadingBackdrop from '$lib/features/home/components/ContinueReadingBackdrop.svelte';
+  import ContinueReadingAside from '$lib/features/home/components/ContinueReadingAside.svelte';
 
   let scrollEl = $state<HTMLUListElement | null>(null);
   let activeIndex = $state(0);
@@ -105,7 +107,6 @@
       aria-labelledby="home-continue-heading"
       class="relative isolate overflow-hidden rounded-(--radius-xl) border border-(--color-edge) bg-(--color-horizon-fade)"
     >
-      <div class="absolute inset-0 -z-10"><HomeHorizon /></div>
       {#if showArrows}
         <div class="absolute top-5 right-5 z-10 flex items-center gap-2">
           <button
@@ -136,51 +137,55 @@
           style="scrollbar-width: none; -ms-overflow-style: none;"
         >
           {#each books as book (book.id)}
-            <li class="relative w-full shrink-0 snap-start p-6">
-              <BookCard
-                {book}
-                variant="continue-reading"
-                compact={false}
-                selected={navigationState.previewBookId === book.id}
-                onSelect={() => {
-                  navigationState.openShelfDetails(book.id);
-                }}
-                onRead={() => {
-                  void appState.startReading(book);
-                }}
-                t={appState.t}
-              >
-                {#snippet actions()}
-                  {#if book.readingStatus === 'reading'}
-                    <span
-                      class="inline-flex h-11 items-center rounded-full border border-(--color-edge-strong) bg-(--color-surface-subtle) px-5 text-xs font-bold uppercase tracking-[0.12em] text-(--color-primary)"
-                    >
-                      {appState.t('home.continue.liveBadge')}
-                    </span>
-                  {/if}
-                  <ShelfActionMenu
-                    bookId={book.id}
-                    isFavorite={Boolean(book.collectionIds?.includes(1))}
-                    readLabel={appState.t('app.read')}
-                    editLabel={appState.t('library.editMetadata.title')}
-                    removeLabel={appState.t('library.removeFromShelf')}
-                    favoriteAddLabel={appState.t('library.favoriteAdd')}
-                    favoriteRemoveLabel={appState.t('library.favoriteRemove')}
-                    triggerLabel={appState.t('library.optionsFor', { title: book.title })}
-                    onViewDetails={() => navigationState.openShelfDetails(book.id)}
-                    viewDetailsLabel={appState.t('shelf.viewDetails')}
-                    onEdit={() => {
-                      libraryState.handleEditBook(book);
-                    }}
-                    onRemove={() => {
-                      libraryState.pendingRemoveBook = book;
-                    }}
-                    onToggleFavorite={() => {
-                      void libraryState.handleToggleFavorite(book);
-                    }}
-                  />
-                {/snippet}
-              </BookCard>
+            <li class="relative isolate flex w-full shrink-0 snap-start gap-10 p-6">
+              <ContinueReadingBackdrop coverPath={book.coverPath} />
+              <div class="min-w-0 flex-1">
+                <BookCard
+                  {book}
+                  variant="continue-reading"
+                  compact={false}
+                  selected={navigationState.previewBookId === book.id}
+                  onSelect={() => {
+                    navigationState.openShelfDetails(book.id);
+                  }}
+                  onRead={() => {
+                    void appState.startReading(book);
+                  }}
+                  t={appState.t}
+                >
+                  {#snippet actions()}
+                    {#if book.readingStatus === 'reading'}
+                      <span
+                        class="inline-flex h-11 items-center rounded-full border border-(--color-edge-strong) bg-(--color-surface-subtle) px-5 text-xs font-bold uppercase tracking-[0.12em] text-(--color-primary)"
+                      >
+                        {appState.t('home.continue.liveBadge')}
+                      </span>
+                    {/if}
+                    <ShelfActionMenu
+                      bookId={book.id}
+                      isFavorite={Boolean(book.collectionIds?.includes(1))}
+                      readLabel={appState.t('app.read')}
+                      editLabel={appState.t('library.editMetadata.title')}
+                      removeLabel={appState.t('library.removeFromShelf')}
+                      favoriteAddLabel={appState.t('library.favoriteAdd')}
+                      favoriteRemoveLabel={appState.t('library.favoriteRemove')}
+                      triggerLabel={appState.t('library.optionsFor', { title: book.title })}
+                      onViewDetails={() => navigationState.openShelfDetails(book.id)}
+                      viewDetailsLabel={appState.t('shelf.viewDetails')}
+                      onEdit={() => {
+                        libraryState.handleEditBook(book);
+                      }}
+                      onRemove={() => {
+                        libraryState.pendingRemoveBook = book;
+                      }}
+                      onToggleFavorite={() => {
+                        void libraryState.handleToggleFavorite(book);
+                      }}
+                    />
+                  {/snippet}
+                </BookCard>
+              </div>
+              <ContinueReadingAside {book} t={appState.t} />
             </li>
           {/each}
         </ul>

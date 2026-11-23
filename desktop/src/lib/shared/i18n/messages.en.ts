@@ -1121,6 +1121,8 @@ export const messagesEn = {
   'home.continue.countAria': '{{count}} in progress',
   'home.continue.nextBook': 'Next',
   'home.continue.prevBook': 'Previous',
+  'home.continue.chapter': 'Current chapter',
+  'home.continue.lastRead': 'Last read',
 
   // Home reading desk (HOME-01..03)
   'home.pageTitle': 'Home',

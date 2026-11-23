@@ -304,6 +304,8 @@
   --color-horizon-grid: rgba(148, 173, 206, 0.11);
   --color-horizon-lights: #ffb469;
   --color-horizon-fade: #0e1a2b;
+  /* How strongly the blurred cover tints the Continue Reading hero. */
+  --hero-cover-tint: 0.2;
 
   /* Stats surface — sticky chrome, hero and chart (NEXO blue family).
      The chart ramp stays inside the product's blue→cyan range so the donut
@@ -477,6 +479,7 @@
   --color-horizon-grid: rgba(30, 58, 95, 0.13);
   --color-horizon-lights: #ea580c;
   --color-horizon-fade: #f1f4f8;
+  --hero-cover-tint: 0.32;
 
   /* Stats surface — light theme counterparts of the dark block above. Surfaces
      stay white-tinted (not a lightened dark) and the chart ramp deepens so it
