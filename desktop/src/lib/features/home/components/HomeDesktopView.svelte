@@ -45,21 +45,20 @@
   });
 </script>
 
-<div class="space-y-5">
+<div>
   <h1 class="sr-only text-2xl">{t('home.pageTitle')}</h1>
 
-  {#if navbarActions}
-    <div class="flex items-center justify-end">
-      {@render navbarActions()}
-    </div>
-  {/if}
-
-  <section aria-labelledby="home-active-reading-heading">
+  <section class="relative" aria-labelledby="home-active-reading-heading">
     <h2 id="home-active-reading-heading" class="sr-only">{t('home.activeReading')}</h2>
 
-    <div
-      class="min-w-0 rounded-(--radius-xl) border border-(--color-border) bg-(--color-panel-accent) p-4"
-    >
+    {#if navbarActions}
+      <!-- Shares the heading row of "continue reading", top-right. -->
+      <div class="absolute top-0 right-0 z-10 flex items-center">
+        {@render navbarActions()}
+      </div>
+    {/if}
+
+    <div class="min-w-0">
       {#if continueSection}
         {@render continueSection()}
       {:else}
@@ -68,13 +67,17 @@
     </div>
   </section>
 
-  <HomeStatsGrid
-    isLoading={isLoadingStats}
-    disabledReason={statsUnavailableReason}
-    {streakDays}
-    {isLoadingStreak}
-    {t}
-  />
+  <div class="mt-5">
+    <HomeStatsGrid
+      isLoading={isLoadingStats}
+      disabledReason={statsUnavailableReason}
+      {streakDays}
+      {isLoadingStreak}
+      {t}
+    />
+  </div>
 
-  <HomeMainContent {t} {shelfSection} {onNavigateLibrary} />
+  <div class="mt-10">
+    <HomeMainContent {t} {shelfSection} {onNavigateLibrary} />
+  </div>
 </div>

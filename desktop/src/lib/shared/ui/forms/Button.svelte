@@ -13,7 +13,8 @@
     leadingIcon?: Snippet;
     onclick?: () => void;
     type?: 'button' | 'submit' | 'reset';
-    variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent' | 'tab';
+    variant?:
+      'primary' | 'secondary' | 'danger' | 'danger-outline' | 'ghost' | 'accent' | 'link' | 'tab';
     /** Padding only — the type role is always Label (0.875rem/500). */
     size?: 'sm' | 'md' | 'lg';
     /** Only meaningful with `variant="tab"`: paints the selected tab treatment. */
@@ -53,32 +54,36 @@
   // Every button is the Label role (0.875rem / 500). `size` sets padding only.
   const isTab = $derived(variant === 'tab');
 
-  // The tab variant rides a bare track as a border-bottom indicator, so it drops
-  // the rounded chrome, the press shadow and the size padding the other
-  // variants share.
+  // The tab variant is a pill inside a segmented track: it carries its own
+  // padding and drops the press scale the other variants share. The ring is
+  // focus-visible only, so a clicked tab does not stay boxed.
   const baseClasses = $derived(
     isTab
-      ? 'inline-flex items-center justify-center gap-1.5 px-2 py-3 text-sm font-medium rounded-none border-b-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-(--color-primary)'
-      : 'inline-flex items-center justify-center font-sans text-sm font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-(--color-background) disabled:opacity-50 disabled:cursor-not-allowed',
+      ? 'inline-flex shrink-0 items-center justify-center whitespace-nowrap px-3.5 py-2 text-sm font-medium rounded-full border transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-background)'
+      : 'inline-flex items-center justify-center whitespace-nowrap font-sans text-sm font-medium rounded-full transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-background) disabled:opacity-50 disabled:cursor-not-allowed',
   );
 
-  const pressStyles = $derived(
-    isTab ? '' : isPressed ? 'scale-[0.96] shadow-inner' : 'scale-100 shadow-sm',
-  );
+  // Flat variants press with scale only; an inner shadow on a pill or a text
+  // link reads as a dent, not a press.
+  const pressStyles = $derived(isTab ? '' : isPressed ? 'scale-[0.96]' : 'scale-100');
 
+  // The NEXO ember language (DESIGN.md): `accent` is the one filled action of a
+  // surface, `secondary` a quiet pill on the edge token, `link` an ember text
+  // action ("view all", "back").
   const variants = {
     primary:
-      'bg-(--color-primary) text-(--color-background) hover:opacity-90 focus:ring-(--color-primary)',
+      'bg-(--color-primary) text-(--color-background) hover:opacity-90 focus-visible:ring-(--color-primary)',
     secondary:
-      'bg-(--color-surface) text-(--color-primary) border border-(--color-border) hover:bg-(--color-surface-hover) focus:ring-(--color-primary)',
+      'bg-(--color-surface-subtle) text-(--color-primary) border border-(--color-edge) hover:border-(--color-brand)/60 hover:text-(--color-brand-text) focus-visible:ring-(--color-brand)',
     danger:
-      'bg-(--color-error) text-(--color-background) hover:opacity-90 focus:ring-(--color-error)',
+      'bg-(--color-error) text-(--color-background) hover:opacity-90 focus-visible:ring-(--color-error)',
+    'danger-outline':
+      'border border-(--color-danger)/45 bg-transparent text-(--color-danger) hover:bg-(--color-danger)/10 focus-visible:ring-(--color-danger)',
     ghost:
-      'bg-transparent text-(--color-primary) hover:bg-(--color-surface-hover) focus:ring-(--color-primary)',
-    // NEXO-blue primary action for reading CTAs (HOME-04). Global `primary`
-    // stays untouched so unrelated screens are unaffected.
+      'bg-transparent text-(--color-primary) hover:bg-(--color-surface-hover) focus-visible:ring-(--color-brand)',
     accent:
-      'bg-(--color-accent) text-(--color-accent-on) hover:opacity-90 focus:ring-(--color-accent)',
+      'bg-linear-to-r from-(--color-brand-start) to-(--color-brand) font-semibold text-(--color-brand-on) shadow-[0_8px_20px_-10px_var(--color-brand-glow)] hover:brightness-110 focus-visible:ring-(--color-brand)',
+    link: 'bg-transparent font-semibold text-(--color-brand-text) hover:bg-(--color-brand-soft) focus-visible:ring-(--color-brand)',
   };
 
   const sizes = {
@@ -89,13 +94,13 @@
 
   const widthClasses = $derived(fullWidth ? 'w-full' : '');
 
-  // Selected/idle treatment of the tab variant: the accent-soft wash with the
-  // accent-start underline the strip used before the atoms migration. Keeping it
-  // in the atom is what lets the settings tree stay free of a raw <button>.
+  // Selected/idle treatment of the tab variant: the selected pill takes the
+  // ember wash and outline, the rest stay bare until hovered. Keeping it in the
+  // atom is what lets the settings tree stay free of a raw <button>.
   const tabClasses = $derived(
     selected
-      ? 'border-(--color-accent-start) bg-(--color-accent-soft) text-(--color-primary) font-semibold'
-      : 'border-transparent text-(--color-text-muted,var(--color-secondary)) hover:text-(--color-primary)',
+      ? 'border-(--color-brand) bg-(--color-brand-soft) text-(--color-brand-text)'
+      : 'border-transparent text-(--color-text-muted,var(--color-secondary)) hover:bg-(--color-surface-hover) hover:text-(--color-primary)',
   );
 
   const variantClasses = $derived(variant === 'tab' ? tabClasses : variants[variant]);
@@ -108,7 +113,7 @@
   // non-interactive element must not take mouse listeners.
   const labelStateClasses = $derived(
     as === 'label'
-      ? `scale-100 shadow-sm transition-transform active:scale-[0.96] active:shadow-inner focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-(--color-background) ${isInactive ? 'pointer-events-none cursor-not-allowed opacity-50' : ''}`
+      ? `scale-100 transition-transform active:scale-[0.96] focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-(--color-background) ${isInactive ? 'pointer-events-none cursor-not-allowed opacity-50' : ''}`
       : '',
   );
 

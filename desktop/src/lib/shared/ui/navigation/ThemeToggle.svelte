@@ -23,7 +23,7 @@
 <button
   id="theme-toggle-btn"
   type="button"
-  class="flex w-full items-center gap-2.5 rounded-lg border border-(--color-border) px-3 py-2 text-sm font-medium text-(--color-text-muted) transition-colors hover:border-(--color-border-strong) hover:bg-(--color-panel-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent-nav-fg)"
+  class="group/theme flex w-full items-center gap-3 rounded-(--radius-lg) border border-(--color-edge) bg-(--color-sidebar-card) py-2.5 pr-3 pl-3.5 text-sm font-medium text-(--color-secondary) transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-edge-strong) hover:text-(--color-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-nav-bar)"
   style="font-family: var(--font-sans);"
   onclick={toggleTheme}
   aria-label={`${label}. ${actionLabel}`}
@@ -38,8 +38,8 @@
       class:scale-[0.4]={$theme === 'dark'}
       class:rotate-0={$theme === 'light'}
       class:rotate-90={$theme === 'dark'}
-      width="18"
-      height="18"
+      width="17"
+      height="17"
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -62,8 +62,8 @@
       class:scale-[0.4]={$theme === 'light'}
       class:rotate-0={$theme === 'dark'}
       class:rotate-90={$theme === 'light'}
-      width="18"
-      height="18"
+      width="17"
+      height="17"
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -80,5 +80,19 @@
     </svg>
   </span>
 
-  <span class="flex-1 text-left">{label}</span>
+  <span class="flex-1 truncate text-left">{label}</span>
+
+  <!-- Visual switch: on = dark theme, matching the label it sits beside. -->
+  <span
+    class="relative h-6 w-11 shrink-0 rounded-full border transition-colors duration-(--duration-normal) ease-(--ease-smooth) {$theme ===
+    'dark'
+      ? 'border-transparent bg-(--color-brand)'
+      : 'border-(--color-edge-strong) bg-(--color-surface-hover)'}"
+    aria-hidden="true"
+  >
+    <span
+      class="absolute top-1/2 left-0.5 size-4.5 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.35)] transition-transform duration-(--duration-normal) ease-(--ease-smooth)"
+      class:translate-x-5={$theme === 'dark'}
+    ></span>
+  </span>
 </button>

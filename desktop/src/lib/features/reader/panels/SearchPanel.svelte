@@ -9,6 +9,8 @@
   import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import Button from '$lib/shared/ui/forms/Button.svelte';
+  import ReaderDrawerHeader from '../chrome/ReaderDrawerHeader.svelte';
+  import { READER_DRAWER, READER_DRAWER_FLY_X, READER_DRAWER_SCRIM } from '../chrome/readerDrawer';
 
   type Props = {
     open: boolean;
@@ -100,14 +102,14 @@
     role="presentation"
   >
     <!-- Backdrop -->
-    <div class="absolute inset-0 bg-(--color-surface)/70"></div>
+    <div class={READER_DRAWER_SCRIM}></div>
 
     <!-- Drawer -->
     <div
       bind:this={panelEl}
-      class="absolute right-0 top-0 flex h-full w-65 flex-col overflow-y-auto border-l border-(--color-border-deep) bg-(--color-surface)/70 pt-15 text-(--color-text-muted) backdrop-blur-sm"
+      class={READER_DRAWER}
       transition:fly={{
-        x: reducedMotion ? 0 : 260,
+        x: reducedMotion ? 0 : READER_DRAWER_FLY_X,
         opacity: 0,
         duration: reducedMotion ? 0 : 250,
         easing: cubicOut,
@@ -117,46 +119,20 @@
       aria-label={t('search.title')}
       tabindex="0"
     >
-      <!-- Heading -->
-      <header
-        class="flex items-center justify-between border-b border-(--color-border)/5 px-5 py-4"
-      >
-        <h2 class="text-base font-bold text-(--color-primary)">{t('search.title')}</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onclick={onClose}
-          class="shrink-0 px-2 text-(--color-text-muted) hover:text-(--color-text-inverse)"
-          aria-label={t('settings.close')}
-          title={t('settings.close')}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-            ><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"
-            ></line></svg
-          >
-        </Button>
-      </header>
+      <ReaderDrawerHeader title={t('search.title')} closeLabel={t('settings.close')} {onClose} />
 
       <div class="flex flex-col p-4">
         {#if disabledReason}
-          <div
-            class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
-          >
+          <p class="m-0 flex items-start gap-2 text-sm leading-relaxed text-(--color-secondary)">
+            <span
+              class="mt-1.5 size-2 shrink-0 rounded-full bg-(--color-warning)"
+              aria-hidden="true"
+            ></span>
             {disabledReason}
-          </div>
+          </p>
         {:else}
           <form
-            class="mb-3 flex gap-2"
+            class="mb-4 flex flex-col gap-2"
             onsubmit={(event) => {
               event.preventDefault();
               runSearch(1);
@@ -164,31 +140,32 @@
           >
             <input
               type="text"
-              class="min-w-0 flex-1 rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-2 text-sm text-(--color-primary)"
+              class="min-w-0 rounded-full! border-(--color-edge)! bg-(--color-home-card)! px-4 py-2.5 text-sm text-(--color-primary) transition-colors placeholder:text-(--color-text-muted) focus:border-(--color-brand)! focus:outline-none"
               bind:value={query}
               placeholder={t('search.placeholder')}
               disabled={isSearching || !bookId}
             />
-            <button
+            <Button
               type="submit"
-              class="rounded-md bg-(--color-primary) px-3 py-2 text-sm font-medium text-(--color-background) hover:opacity-90 disabled:opacity-60"
+              variant="accent"
+              fullWidth
               disabled={isSearching || !bookId || !query.trim()}
             >
               {isSearching ? t('search.searching') : t('search.search')}
-            </button>
+            </Button>
           </form>
 
           {#if hasResults()}
-            <ul class="space-y-2">
+            <ul class="-mx-2 flex flex-col gap-0.5">
               {#each response?.items ?? [] as item, index}
                 <li>
                   <button
                     type="button"
-                    class="w-full rounded-lg border border-(--color-border) bg-(--color-background) px-3 py-2 text-left hover:bg-(--color-surface-hover)"
+                    class="w-full cursor-pointer rounded-(--radius-md) px-3 py-2.5 text-left transition-colors hover:bg-(--color-surface-hover)"
                     onclick={() => jumpTo(item, index)}
                   >
-                    <p class="text-sm text-(--color-primary)">{item.snippet}</p>
-                    <p class="mt-1 text-xs text-(--color-text-muted)">
+                    <p class="text-sm leading-relaxed text-(--color-primary)">{item.snippet}</p>
+                    <p class="mt-1 text-xs font-medium text-(--color-brand-text)">
                       {t('search.locator')}: {item.locator}
                     </p>
                   </button>
@@ -197,7 +174,7 @@
             </ul>
 
             <nav
-              class="mt-3 flex items-center justify-between text-xs text-(--color-text-muted)"
+              class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-(--color-edge) pt-3 text-xs text-(--color-text-muted)"
               aria-label="Search pagination"
             >
               <span
@@ -206,22 +183,22 @@
                 {t('search.matches')}</span
               >
               <div class="flex gap-1">
-                <button
-                  type="button"
-                  class="rounded border border-(--color-border) px-2 py-1 text-(--color-primary) hover:bg-(--color-surface-hover) disabled:opacity-50"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onclick={() => runSearch(currentPage() - 1)}
                   disabled={currentPage() <= 1 || isSearching}
                 >
                   {t('search.prev')}
-                </button>
-                <button
-                  type="button"
-                  class="rounded border border-(--color-border) px-2 py-1 text-(--color-primary) hover:bg-(--color-surface-hover) disabled:opacity-50"
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onclick={() => runSearch(currentPage() + 1)}
                   disabled={!hasMore() || isSearching}
                 >
                   {t('search.next')}
-                </button>
+                </Button>
               </div>
             </nav>
           {:else if isNoMatch()}

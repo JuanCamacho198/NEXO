@@ -37,18 +37,18 @@
 <form class="flex flex-col gap-4" data-testid="dictionary-edit-form" onsubmit={handleSubmit}>
   {#each fields as field (field.key)}
     <label class="flex flex-col gap-2">
-      <span class="text-xs font-semibold text-(--color-accent-blue)">{t(field.label)}</span>
+      <span class="text-xs font-semibold text-(--color-brand-text)">{t(field.label)}</span>
       {#if field.multiline}
         <textarea
           rows="2"
-          class="resize-y rounded-[10px] border border-(--color-panel-border) bg-(--color-panel-input) px-3 py-2.5 text-sm text-(--color-primary) placeholder:text-(--color-text-tertiary)"
+          class="resize-y rounded-(--radius-md) border border-(--color-panel-border) bg-(--color-panel-input) focus:border-(--color-brand)/60 focus:outline-none px-3 py-2.5 text-sm text-(--color-primary) placeholder:text-(--color-text-muted)"
           value={draft[field.key]}
           data-testid={`dictionary-edit-${field.key}`}
           oninput={(event) => update(field.key, event.currentTarget.value)}></textarea>
       {:else}
         <input
           type="text"
-          class="rounded-[10px] border border-(--color-panel-border) bg-(--color-panel-input) px-3 py-2.5 text-sm text-(--color-primary) placeholder:text-(--color-text-tertiary)"
+          class="rounded-(--radius-md) border border-(--color-panel-border) bg-(--color-panel-input) focus:border-(--color-brand)/60 focus:outline-none px-3 py-2.5 text-sm text-(--color-primary) placeholder:text-(--color-text-muted)"
           value={draft[field.key]}
           data-testid={`dictionary-edit-${field.key}`}
           oninput={(event) => update(field.key, event.currentTarget.value)}
@@ -60,7 +60,7 @@
   <div class="flex items-center gap-2">
     <button
       type="button"
-      class="cursor-pointer rounded-sm bg-(--color-panel-input) px-1.5 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:bg-(--color-accent-fill)"
+      class="cursor-pointer rounded-full border border-(--color-panel-border) bg-(--color-panel-input) px-4 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:border-(--color-brand)/60 hover:text-(--color-brand-text)"
       data-testid="dictionary-edit-cancel"
       onclick={onCancelEdit}
     >
@@ -68,7 +68,7 @@
     </button>
     <button
       type="submit"
-      class="cursor-pointer rounded-[10px] bg-(--color-accent-blue) px-4 py-2.5 text-sm font-bold text-(--color-accent-on) transition-opacity hover:opacity-90"
+      class="cursor-pointer rounded-full bg-linear-to-r from-(--color-brand-start) to-(--color-brand) px-5 py-2.5 text-sm font-semibold text-(--color-brand-on) transition-[filter] hover:brightness-110"
       data-testid="dictionary-edit-save"
     >
       {t('dictionary.save')}

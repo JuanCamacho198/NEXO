@@ -180,7 +180,7 @@ describe('Modal — rendered contract', () => {
     const footer = dialog().querySelector('[class*="justify-end"]') as HTMLElement;
     expect(footer).toBeTruthy();
     expect(footer.className).toBe(
-      'flex shrink-0 items-center justify-end gap-3 border-t border-(--color-border) px-6 py-4',
+      'flex shrink-0 items-center justify-end gap-3 border-t border-(--color-edge) bg-(--color-surface-subtle) px-6 py-3.5',
     );
     expect(footer.textContent).toBe('Save changes');
     withFooter.unmount();
@@ -191,7 +191,7 @@ describe('Modal — rendered contract', () => {
       const { unmount } = openStub({ size });
       const content = dialog();
       expect(content.classList.contains(expected)).toBe(true);
-      expect(content.className).toContain('rounded-xl');
+      expect(content.className).toContain('rounded-(--radius-xl)');
       unmount();
     }
   });
@@ -203,19 +203,21 @@ describe('Modal — rendered contract', () => {
     expect(content.className).toContain(
       'flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden',
     );
-    expect(content.className).toContain('rounded-xl border border-(--color-border)');
+    expect(content.className).toContain('rounded-(--radius-xl) border border-(--color-edge)');
     expect(content.className).toContain('bg-(--color-elevated)');
     // One elevation: the modal sits on a dimmed scrim, so its hairline border is
     // the only elevation it declares — no shadow (the scrim is the depth).
     expect(content.className).not.toContain('shadow');
 
-    const header = content.querySelector('[class*="border-b"]') as HTMLElement;
+    const header = content.firstElementChild as HTMLElement;
     expect(header.className).toBe(
-      'flex shrink-0 items-center justify-between border-b border-(--color-border) px-6 py-4',
+      'flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3',
     );
 
     const body = content.querySelector('[role="region"]') as HTMLElement;
-    expect(body.className).toBe('modal-scroll-region min-h-0 flex-1 overflow-y-auto px-6 py-4');
+    expect(body.className).toBe(
+      'modal-scroll-region min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-5',
+    );
     expect(body.getAttribute('tabindex')).toBe('0');
     expect(body.getAttribute('aria-label')).toBe('Test Modal');
   });

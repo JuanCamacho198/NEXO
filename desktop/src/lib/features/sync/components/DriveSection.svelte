@@ -52,15 +52,15 @@
         class="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-(--color-text-muted)"
         aria-hidden="true"
       ></span>
-      <span class="flex-1 text-xs text-(--color-primary)"
+      <span class="flex-1 text-sm text-(--color-secondary)"
         >{t('settings.sync.drive.connecting')}</span
       >
     </div>
   {:else if showError}
     <div class="flex items-center gap-3">
       <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-(--color-error)" aria-hidden="true"></span>
-      <span class="flex-1 text-xs text-(--color-error)">{errorText}</span>
-      <Button variant="primary" data-testid="drive-retry" onclick={() => void handleConnect()}>
+      <span class="flex-1 text-sm text-(--color-error)">{errorText}</span>
+      <Button variant="accent" data-testid="drive-retry" onclick={() => void handleConnect()}>
         <span>{t('error.retry')}</span>
       </Button>
     </div>
@@ -72,7 +72,7 @@
           : 'bg-(--color-text-muted)'}"
         aria-hidden="true"
       ></span>
-      <span class="flex-1 text-xs text-(--color-primary)">
+      <span class="flex-1 text-sm text-(--color-secondary)">
         {isAuthorized ? t('settings.sync.drive.connected') : t('settings.sync.drive.notConnected')}
       </span>
       {#if isAuthorized}
@@ -84,7 +84,7 @@
           <span>{t('settings.sync.drive.disconnect')}</span>
         </Button>
       {:else}
-        <Button variant="primary" data-testid="drive-connect" onclick={() => void handleConnect()}>
+        <Button variant="accent" data-testid="drive-connect" onclick={() => void handleConnect()}>
           <span>{t('settings.sync.drive.connect')}</span>
         </Button>
       {/if}

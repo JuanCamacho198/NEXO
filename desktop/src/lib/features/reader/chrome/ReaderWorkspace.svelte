@@ -65,6 +65,7 @@
   import { FLOATING_MENU_SELECTOR } from './floatingMenu';
   import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
   import { logger } from '$lib/shared/logger/Logger';
+  import { saveLastChapter } from '$lib/shared/stores/lastChapterStore';
   import {
     buildEvidence,
     captureFromSelection,
@@ -334,6 +335,14 @@
     lastRWInitialLocationLog = loc;
     lastRWInitialChapterIdx = chapterIdx;
     lastRWInitialBookId = bookId;
+  });
+
+  // Home's Continue Reading hero names the chapter a book was left on; this is
+  // the only place that knows it, so it is recorded as it changes.
+  $effect(() => {
+    const bookId = activeReadingBook?.id;
+    const chapter = nav.currentChapterTitle;
+    if (bookId && chapter) saveLastChapter(bookId, chapter);
   });
 
   let searchPanelOpen = $state(false);

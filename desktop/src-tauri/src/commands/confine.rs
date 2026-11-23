@@ -46,8 +46,15 @@ pub(crate) fn resolve_within(root: &Path, candidate: &str) -> AppResult<PathBuf>
     // Lexical check first: a `..` that climbs above the root is refused even
     // when nothing exists yet, so a traversal cannot be "fixed" by creating
     // the parent later.
+    //
+    // `root_real` comes from `std::fs::canonicalize`, which on Windows returns
+    // a verbatim path (`\\?\C:\…`). `absolute` never carries that prefix, so
+    // comparing them directly reports every real path as outside the root —
+    // the guard refused valid books under `data/books` because of it. The
+    // prefix is stripped for the lexical comparison only; the canonical
+    // comparison below (the one that defeats symlinks) still uses `root_real`.
     let lexical = normalize_lexically(&absolute);
-    if !lexical.starts_with(&root_real) {
+    if !starts_with_ignoring_verbatim(&lexical, &root_real) {
         return Err(outside(trimmed));
     }
 
@@ -103,6 +110,31 @@ fn ensure_inside(root_real: &Path, resolved: &Path, candidate: &str) -> AppResul
     } else {
         Err(outside(candidate))
     }
+}
+
+/// Containment test that tolerates the Windows verbatim prefix on either side.
+///
+/// `std::fs::canonicalize` returns `\\?\C:\…` on Windows while a path built by
+/// the frontend is plain `C:\…`. `Path::starts_with` compares components, so
+/// the two report as unrelated even though they name the same directory. Both
+/// sides are stripped of the prefix before comparing; on every other platform
+/// this is a no-op.
+fn starts_with_ignoring_verbatim(path: &Path, base: &Path) -> bool {
+    strip_verbatim(path).starts_with(strip_verbatim(base))
+}
+
+fn strip_verbatim(path: &Path) -> PathBuf {
+    let text = path.to_string_lossy();
+    for prefix in ["\\\\?\\UNC\\", "\\\\?\\"] {
+        if let Some(rest) = text.strip_prefix(prefix) {
+            // A verbatim UNC path (`\\?\UNC\server\share`) maps back to
+            // `\\server\share`; a plain verbatim path drops the prefix only.
+            let restored =
+                if prefix == "\\\\?\\UNC\\" { format!("\\\\{rest}") } else { rest.to_string() };
+            return PathBuf::from(restored);
+        }
+    }
+    path.to_path_buf()
 }
 
 /// A path guard refusal. The path is kept so a log line still names what was
@@ -259,6 +291,43 @@ mod tests {
     fn an_empty_path_is_rejected() {
         let dir = app_data();
         assert!(resolve_within(&root_of(&dir), "   ").is_err());
+    }
+
+    /// `std::fs::canonicalize` returns a verbatim path (`\\?\C:\…`) on Windows
+    /// while a path built by the frontend is plain (`C:\…`). `Path::starts_with`
+    /// compares components, so the two look unrelated even though they name the
+    /// same directory — which made the guard refuse every real book under
+    /// `data/books` with PATH_OUTSIDE_APP_DATA.
+    ///
+    /// This pins the containment helper directly: the fixture root is
+    /// canonicalised (verbatim on Windows) exactly as the guard does it, and the
+    /// candidate is spelled the way the frontend spells it.
+    #[test]
+    fn a_verbatim_root_contains_its_plain_candidate() {
+        let dir = app_data();
+        let root = root_of(&dir);
+        // `root_of` canonicalises, so on Windows `root` carries `\\?\`.
+        let candidate = root.join("books").join("inside.epub");
+        let plain = strip_verbatim(&candidate);
+        if plain == candidate {
+            // Not Windows: no verbatim prefix to strip, nothing to prove.
+            return;
+        }
+        assert!(
+            !plain.starts_with(&root) || strip_verbatim(&root).starts_with(&root),
+            "precondition: the plain form must not match the verbatim root"
+        );
+        assert!(
+            starts_with_ignoring_verbatim(&plain, &root),
+            "a plain path inside a verbatim root must still count as inside"
+        );
+        // And a real sibling that genuinely leaves the root stays refused.
+        let outer = tempfile::tempdir().expect("outer");
+        let sibling = std::fs::canonicalize(outer.path()).expect("canonical").join("secret.txt");
+        assert!(
+            !starts_with_ignoring_verbatim(&sibling, &root),
+            "a path outside the root must not be tolerated by the prefix rule"
+        );
     }
 
     #[test]

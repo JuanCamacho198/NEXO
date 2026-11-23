@@ -82,8 +82,6 @@ function baseProps() {
     t,
     books: [] as LibraryBookDto[],
     collections: [] as CollectionDto[],
-    isClearingCache: false,
-    cacheCleared: false,
     selectedExportBook: 'all',
     selectedExportFormat: 'json' as 'json' | 'markdown',
     isExportingLibrary: false,
@@ -93,7 +91,6 @@ function baseProps() {
     dictionaryExportError: null as string | null,
     dictionaryImportResult: null as string | null,
     dictionaryImportError: null as string | null,
-    onClearCache: vi.fn(),
     onExportLibrary: vi.fn(),
     onExportHighlights: vi.fn(),
     onExportCollections: vi.fn(),
@@ -102,7 +99,6 @@ function baseProps() {
     onAnnotationsOnlyWithNoteChange: vi.fn(),
     onExportDictionary: vi.fn(),
     onImportDictionary: vi.fn(),
-    onNavigateToStorage: vi.fn(),
     onSelectedExportBookChange: vi.fn(),
     onSelectedExportFormatChange: vi.fn(),
   };
@@ -222,73 +218,35 @@ describe('SettingsDataTab dictionary transfer group', () => {
 });
 
 describe('SettingsDataTab grouping and order', () => {
-  it('renders the five group headings in safe-to-dangerous order', () => {
+  // Clearing the cache lives in Storage (its "free up space" is the same
+  // operation), add-ons in the Addons screen and reminders in Account, so the
+  // Data tab keeps only what moves data in and out, then privacy.
+  it('renders the three group headings, the Drive backup last', () => {
     renderTab();
 
     const headings = screen
       .getAllByRole('heading', { level: 3 })
       .map((heading) => heading.textContent?.trim());
-    expect(headings).toEqual([
-      'Backup',
-      'Export',
-      'Maintenance',
-      'Privacy & advanced',
-      'Notifications',
-    ]);
+    expect(headings).toEqual(['Export', 'Privacy & advanced', 'Backup']);
   });
 
-  it('places the cold backup before the export group and clear cache last', () => {
+  it('places the cold backup last, after export and privacy', () => {
     const { container } = renderTab();
     const order = Array.from(container.querySelectorAll('[data-testid^="settings-group-"]')).map(
       (h) => h.getAttribute('data-testid'),
     );
     expect(order).toEqual([
-      'settings-group-backup',
       'settings-group-export',
-      'settings-group-maintenance',
       'settings-group-privacy-addons',
-      'settings-group-notifications',
+      'settings-group-backup',
     ]);
   });
-});
 
-describe('SettingsDataTab clear-cache confirmation', () => {
-  it('arms an inline confirmation on first click and only clears on confirm', async () => {
-    const { props } = renderTab();
-
-    await fireEvent.click(screen.getByTestId('clear-cache-button'));
-    expect(screen.getByTestId('clear-cache-confirm')).toBeInTheDocument();
-    expect(props.onClearCache).not.toHaveBeenCalled();
-
-    await fireEvent.click(screen.getByTestId('clear-cache-confirm-button'));
-    expect(props.onClearCache).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId('clear-cache-confirm')).not.toBeInTheDocument();
-  });
-
-  it('cancels without clearing', async () => {
-    const { props } = renderTab();
-
-    await fireEvent.click(screen.getByTestId('clear-cache-button'));
-    await fireEvent.click(screen.getByTestId('clear-cache-cancel-button'));
-
-    expect(screen.queryByTestId('clear-cache-confirm')).not.toBeInTheDocument();
-    expect(props.onClearCache).not.toHaveBeenCalled();
-  });
-
-  it('separates the action label from the cache status and announces it', () => {
-    renderTab({ cacheCleared: true });
-
-    expect(screen.getByTestId('clear-cache-status')).toHaveTextContent('Cache cleared');
-    expect(screen.getByTestId('clear-cache-status')).toHaveAttribute('role', 'status');
-    // The action label is not replaced by the past-tense status.
-    expect(screen.getByTestId('clear-cache-button')).toHaveTextContent('Clear cache');
-  });
-
-  it('links to the rich storage options', async () => {
-    const { props } = renderTab();
-
-    await fireEvent.click(screen.getByTestId('open-storage-tab'));
-    expect(props.onNavigateToStorage).toHaveBeenCalledTimes(1);
+  it('no longer duplicates the cache, add-on or notification controls', () => {
+    renderTab();
+    expect(screen.queryByTestId('clear-cache-button')).toBeNull();
+    expect(screen.queryByTestId('settings-manage-addons-button')).toBeNull();
+    expect(screen.queryByTestId('notification-pref-system')).toBeNull();
   });
 });
 
@@ -413,18 +371,15 @@ describe('SettingsDataTab privacy switch', () => {
 });
 
 describe('SettingsDataTab atom switches (UI-04)', () => {
-  it('renders the telemetry, notification and debug switches through the Button atom', () => {
+  it('renders the telemetry and debug switches through the Button atom', () => {
     renderTab();
 
     const switches = screen.getAllByRole('switch');
-    expect(switches).toHaveLength(5);
+    expect(switches).toHaveLength(2);
     for (const control of switches) {
       expect(control.tagName).toBe('BUTTON');
-      expect(control).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+      expect(control).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
     }
-    expect(screen.getByTestId('notification-pref-system')).toBeInTheDocument();
-    expect(screen.getByTestId('notification-pref-nudge')).toBeInTheDocument();
-    expect(screen.getByTestId('notification-quiet-enabled')).toBeInTheDocument();
     expect(screen.getByTestId('privacy-telemetry-switch')).toBeInTheDocument();
     expect(screen.getByTestId('debug-enabled-switch')).toBeInTheDocument();
   });

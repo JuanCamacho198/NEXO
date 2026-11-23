@@ -26,7 +26,7 @@
     {#each capabilities as capability (capability)}
       <button
         type="button"
-        class="shrink-0 rounded border border-(--color-border) px-1.5 py-0.5 text-xs text-(--color-text-muted) transition-colors hover:border-(--color-accent) hover:text-(--color-primary) focus-visible:ring-2 ring-(--color-accent)"
+        class="shrink-0 rounded-full border border-(--color-edge) bg-(--color-surface-subtle) px-2.5 py-0.5 text-xs font-medium text-(--color-secondary) transition-colors hover:border-(--color-brand)/60 hover:text-(--color-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
         title={t('addons.capabilities.title')}
         onclick={() => (detailOpen = true)}
       >

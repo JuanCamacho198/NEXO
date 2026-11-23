@@ -71,3 +71,12 @@ const LAYOUT_CLASSES: Record<RouteLayout, string> = {
 export function routeLayoutClass(layout: RouteLayout): string {
   return LAYOUT_CLASSES[layout];
 }
+
+/**
+ * True for routes drawn inside the sidebar shell. Those routes also float the
+ * custom titlebar over the window's top band, so the shell and the titlebar
+ * must read this one rule.
+ */
+export function routeShowsShell(route: AppRoute): boolean {
+  return route !== 'reader' && route !== 'welcome';
+}

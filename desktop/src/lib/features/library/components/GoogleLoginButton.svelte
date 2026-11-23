@@ -17,7 +17,17 @@
    */
   const defaultT: Translator = (key) => String(key);
 
-  let { t = defaultT }: { t?: Translator } = $props();
+  let {
+    t = defaultT,
+    showSignedInStatus = true,
+  }: {
+    t?: Translator;
+    /**
+     * `false` hides the "signed in as" box while keeping the component (and its
+     * success toast) mounted, for a host that already shows the session.
+     */
+    showSignedInStatus?: boolean;
+  } = $props();
 
   let isLoggingIn = $state(false);
   let showSuccessToast = $state(false);
@@ -59,18 +69,22 @@
 </script>
 
 {#if authState.isAuthenticated}
-  <div
-    class="flex w-full items-center justify-center gap-2 rounded-md border border-(--color-success)/30 bg-(--color-success)/10 px-4 py-2 text-sm font-medium text-(--color-primary)"
-    role="status"
-    aria-live="polite"
-  >
-    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-    </svg>
-    <span
-      >{t('welcome.signedInAs', { email: authState.email ?? t('welcome.signedInFallback') })}</span
+  {#if showSignedInStatus}
+    <div
+      class="flex w-full items-center justify-center gap-2 rounded-md border border-(--color-success)/30 bg-(--color-success)/10 px-4 py-2 text-sm font-medium text-(--color-primary)"
+      role="status"
+      aria-live="polite"
     >
-  </div>
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      <span
+        >{t('welcome.signedInAs', {
+          email: authState.email ?? t('welcome.signedInFallback'),
+        })}</span
+      >
+    </div>
+  {/if}
 {:else}
   <Button
     variant="secondary"

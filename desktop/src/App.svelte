@@ -10,6 +10,7 @@
   import ImportProgressBanner from '$lib/shared/ui/feedback/ImportProgressBanner.svelte';
   import SyncAuthBanner from '$lib/shared/ui/feedback/SyncAuthBanner.svelte';
   import CustomTitlebar from '$lib/shared/ui/layout/CustomTitlebar.svelte';
+  import { routeShowsShell } from '$lib/shared/ui/layout/routeLayout';
   import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
@@ -148,7 +149,10 @@
 
 <div class="flex flex-col h-screen bg-(--color-background) text-(--color-primary)">
   {#if titlebarState.isCustomTitlebar}
-    <CustomTitlebar hidden={readerState.isFullscreen} />
+    <CustomTitlebar
+      hidden={readerState.isFullscreen}
+      floating={appState.isInitialized && routeShowsShell(navigationState.route)}
+    />
   {/if}
   <main class="flex flex-1 overflow-hidden">
     <!-- Skip link: visible only on keyboard focus for keyboard/screen reader users -->

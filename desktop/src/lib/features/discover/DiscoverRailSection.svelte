@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Button from '$lib/shared/ui/forms/Button.svelte';
+  import ArrowRight from 'lucide-svelte/icons/arrow-right';
+  import { railGrid } from '$lib/shared/ui/emberStyles';
   import type { CatalogBook } from '$lib/shared/services/catalog';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import type { DiscoverRailState } from './DiscoverRailsDomainState.svelte';
@@ -71,34 +74,31 @@
 </script>
 
 {#if railState.kind === 'Loading'}
-  <section bind:this={sectionEl} aria-label={title} class="flex flex-col gap-3">
-    <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{title}</h2>
-    <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
+  <section bind:this={sectionEl} aria-label={title} class="flex flex-col gap-4">
+    <h2 class="m-0 text-xl font-bold tracking-[-0.01em] text-(--color-primary)">{title}</h2>
+    <div class={railGrid}>
       {#each skeletonSlots as slot (slot)}
         <DiscoverSkeletonCard />
       {/each}
     </div>
   </section>
 {:else if railState.kind === 'Error'}
-  <section bind:this={sectionEl} aria-label={title} class="flex flex-col gap-3">
-    <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{title}</h2>
+  <section bind:this={sectionEl} aria-label={title} class="flex flex-col gap-4">
+    <h2 class="m-0 text-xl font-bold tracking-[-0.01em] text-(--color-primary)">{title}</h2>
     <DiscoverRailError code={railState.code} {t} {onRetry} />
   </section>
 {:else if visible.length > 0}
-  <section bind:this={sectionEl} aria-label={title} class="flex flex-col gap-3">
+  <section bind:this={sectionEl} aria-label={title} class="flex flex-col gap-4">
     <div class="flex items-baseline justify-between gap-3">
-      <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{title}</h2>
+      <h2 class="m-0 text-xl font-bold tracking-[-0.01em] text-(--color-primary)">{title}</h2>
       {#if canViewAll}
-        <button
-          type="button"
-          class="rounded-md px-2 py-1 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/10"
-          onclick={onViewAll}
-        >
+        <Button variant="link" size="sm" onclick={onViewAll}>
           {t('discover.rail.viewAll')}
-        </button>
+          <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
+        </Button>
       {/if}
     </div>
-    <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
+    <div class={railGrid}>
       {#each visible as book (book.id)}
         <DiscoverCard {book} {onOpen} {onPrefetch} />
       {/each}

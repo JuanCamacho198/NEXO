@@ -394,15 +394,10 @@ describe('addons screen composition', () => {
     expect(store).toContain('bindAddonsNotifier');
     expect(store).not.toContain('new AddonRegistry');
 
+    // The Addons screen is the one place add-ons are managed: Settings no
+    // longer mounts a second copy of the installed list and install form.
     const panel = readSource('../../../../lib/features/settings/components/SettingsPanel.svelte');
-    expect(panel).toContain('addonsState');
-    expect(panel).toContain('bindAddonsNotifier');
+    expect(panel).not.toContain('SettingsAddonsSection');
     expect(panel).not.toContain('createSettingsAddons(');
-
-    const section = readSource(
-      '../../../../lib/features/settings/components/SettingsAddonsSection.svelte',
-    );
-    expect(section).toContain('<AddonsInstalledList');
-    expect(section).toContain('installOutcome');
   });
 });

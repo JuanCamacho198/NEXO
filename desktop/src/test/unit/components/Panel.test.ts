@@ -7,37 +7,45 @@ function textSnippet(text: string) {
   return createRawSnippet(() => ({ render: () => `<span>${text}</span>` }));
 }
 
-describe('Panel title uses the Title role', () => {
-  it('renders the heading at text-xl, not the previous text-lg', () => {
+describe('Panel title', () => {
+  it('renders the card heading at text-base, below the page title', () => {
     const { container } = render(Panel, {
       props: { title: 'Statistics', children: textSnippet('body') },
     });
     const heading = container.querySelector('h2');
 
     expect(heading).not.toBeNull();
-    expect(heading?.classList.contains('text-xl')).toBe(true);
+    expect(heading?.classList.contains('text-base')).toBe(true);
     expect(heading?.classList.contains('text-lg')).toBe(false);
     expect(screen.getByText('Statistics')).toBeInTheDocument();
   });
 
-  it('keeps the documented padding and variant defaults', () => {
+  it('renders an open section under a hairline, not a card', () => {
     const { container } = render(Panel, {
       props: { title: 'Section', children: textSnippet('body') },
     });
-    const section = container.querySelector('section');
-    expect(section?.classList.contains('bg-(--color-surface)')).toBe(true);
+    const section = container.querySelector('section') as HTMLElement;
+    expect(section.classList.contains('border-t')).toBe(true);
+    expect(section.classList.contains('border-(--color-edge)')).toBe(true);
+    expect(section.className).not.toMatch(/rounded|bg-/);
 
     const body = screen.getByText('body').parentElement;
-    expect(body?.classList.contains('p-4')).toBe(true);
+    expect(body?.classList.contains('mt-4')).toBe(true);
   });
+});
 
-  it('renders the recessed surface variant', () => {
+describe('Panel inline row', () => {
+  it('puts the title block and the controls in one row', () => {
     const { container } = render(Panel, {
-      props: { variant: 'surface', children: textSnippet('body') },
+      props: { title: 'Export', subtitle: 'One file', inline: true, children: textSnippet('go') },
     });
-    expect(container.querySelector('section')?.classList.contains('bg-(--color-surface-dim)')).toBe(
-      true,
-    );
+    const heading = container.querySelector('h2') as HTMLElement;
+    const controls = screen.getByText('go').parentElement as HTMLElement;
+    const row = heading.parentElement?.parentElement as HTMLElement;
+
+    expect(screen.getByText('One file')).toBeInTheDocument();
+    expect(row.classList.contains('flex')).toBe(true);
+    expect(controls.parentElement).toBe(row);
   });
 });
 

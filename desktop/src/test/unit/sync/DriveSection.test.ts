@@ -102,7 +102,7 @@ describe('DriveSection atom migration (UI-04)', () => {
 
     const connect = await screen.findByTestId('drive-connect');
     expect(connect.tagName).toBe('BUTTON');
-    expect(connect).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+    expect(connect).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
   });
 
   it('renders Disconnect through the Button atom with its testid', async () => {
@@ -111,7 +111,7 @@ describe('DriveSection atom migration (UI-04)', () => {
 
     const disconnect = await screen.findByTestId('drive-disconnect');
     expect(disconnect.tagName).toBe('BUTTON');
-    expect(disconnect).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+    expect(disconnect).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
   });
 
   it('renders Retry through the Button atom with its testid', async () => {
@@ -120,7 +120,7 @@ describe('DriveSection atom migration (UI-04)', () => {
 
     const retry = await screen.findByTestId('drive-retry');
     expect(retry.tagName).toBe('BUTTON');
-    expect(retry).toHaveClass('text-sm', 'font-medium', 'rounded-lg', 'inline-flex');
+    expect(retry).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
   });
 
   it('renders no raw buttons in the connected state', async () => {

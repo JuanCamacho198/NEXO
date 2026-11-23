@@ -15,25 +15,21 @@
   (slice 7). No install/uninstall affordance, no registry access: it renders
   the static first-party model only. Consent (slice 8) and capability badges
   (slice 9) do not belong here. Each row carries the same trailing kind badge
-  so the list stays aligned (ADD-01 J), and the whole block sits on the
-  recessed `surface` Panel so it never competes with the installed addons.
+  so the list stays aligned (ADD-01 J), and the whole block is an open Panel
+  section under a hairline, so it never competes with the installed addons.
 -->
-<Panel
-  variant="surface"
-  title={t('addons.firstParty.title')}
-  subtitle={t('addons.firstParty.readOnly')}
->
+<Panel title={t('addons.firstParty.title')} subtitle={t('addons.firstParty.readOnly')}>
   <div class="flex flex-col gap-6">
     <div class="flex flex-col gap-2">
       <h3 class="m-0 text-sm font-semibold text-(--color-secondary)">
         {t('addons.firstParty.builtinTitle')}
       </h3>
-      <ul class="m-0 flex list-none flex-col gap-1 p-0">
+      <ul class="m-0 flex list-none flex-col divide-y divide-(--color-edge) p-0">
         {#each FIRST_PARTY_BUILTINS as source (source.sourceId)}
-          <li class="flex items-center justify-between gap-3 py-1">
-            <p class="m-0 truncate text-sm text-(--color-secondary)">{source.name}</p>
+          <li class="flex items-center justify-between gap-3 py-2">
+            <p class="m-0 truncate text-sm font-medium text-(--color-primary)">{source.name}</p>
             <span
-              class="shrink-0 rounded border border-(--color-border) px-1.5 py-0.5 text-xs text-(--color-text-muted)"
+              class="shrink-0 rounded-full border border-(--color-edge) px-2.5 py-0.5 text-xs font-medium text-(--color-text-muted)"
             >
               {t('addons.firstParty.builtinBadge')}
             </span>

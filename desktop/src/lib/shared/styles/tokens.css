@@ -206,9 +206,10 @@
   --color-reader-chrome: #0f1b2e;
   /* Progress-track fill for the chrome bars. A track on the chrome plane needs
      a step PAST the plane, not backwards to --color-surface-strong (1.29:1
-     against #0f1b2e). #3c5f88 is 2.52:1, so the empty track is a visible
-     affordance rather than a smear. */
-  --color-chrome-track: #3c5f88;
+     against #0f1b2e). #44546b is 2.24:1, so the empty track is a visible
+     affordance rather than a smear; it is a desaturated slate so the ember
+     fill, not a second blue, carries the reading. */
+  --color-chrome-track: #44546b;
 
   /* Surface hierarchy */
   --color-surface-hover: rgba(148, 173, 206, 0.18);
@@ -230,10 +231,10 @@
   /* Diccionario screen — pen `nuevo diseño.pen` `$--np-*` variables that have no
      exact semantic equivalent (DARK values from the measured spec, frame ZPZb7).
      Dark values only; the LIGHT block mirrors pen frame X6iIZ. */
-  --color-panel: #122336; /* $--np-panel */
-  --color-panel-input: #162844; /* $--np-input */
-  --color-accent-fill: #153040; /* $--np-accent-soft */
-  --color-panel-border: #1c324d; /* $--np-border */
+  --color-panel: var(--color-home-card); /* $--np-panel */
+  --color-panel-input: var(--color-surface-subtle); /* $--np-input */
+  --color-accent-fill: var(--color-brand-soft); /* $--np-accent-soft */
+  --color-panel-border: var(--color-edge); /* $--np-border */
   /* $--np-text-tertiary. The pen measured #64748b, which failed WCAG AA on
      every dark surface this token is used on (3.34:1 on --color-panel, 3.97:1
      on --color-background, 3.11:1 on --color-panel-input, 2.89:1 on
@@ -261,8 +262,8 @@
     radial-gradient(circle at top left, rgba(73, 212, 255, 0.12), transparent 26%),
     radial-gradient(circle at top right, rgba(245, 207, 122, 0.1), transparent 24%),
     linear-gradient(180deg, #07111d 0%, #09111d 45%, #08101a 100%);
-  --gradient-accent: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
-  --gradient-accent-h: linear-gradient(90deg, var(--color-accent-start), var(--color-accent-end));
+  --gradient-accent: linear-gradient(135deg, var(--color-brand-start), var(--color-brand));
+  --gradient-accent-h: linear-gradient(90deg, var(--color-brand-start), var(--color-brand));
   /* HOME-04 semantic roles. Import is a secondary warm action (solid coral,
      no gradient) so the reading/resume CTA can own the NEXO-blue primary.
      Selection is a quiet tinted field with a light-blue label and a thin
@@ -270,9 +271,41 @@
   --color-import: #ffb59a;
   --color-import-bg: rgba(255, 181, 154, 0.12);
   --color-sidebar-bg: #0b1626;
-  --color-accent-nav-bg: rgba(78, 140, 255, 0.14);
-  --color-accent-nav-fg: #8fb8ff;
-  --color-accent-nav-bar: #4e8cff;
+  --color-sidebar-bg-end: #0a1320;
+  /* Shell-scoped planes. Dark aliases the global tokens (no visual change);
+     light gives the shell and Home their own tinted layering. */
+  --color-shell-ground: var(--color-background);
+  --color-home-card: var(--color-surface);
+  --color-sidebar-card: var(--color-surface-subtle);
+  --color-edge: var(--color-border);
+  /* Dialog scrim: dims the shell so the dialog is the only lit plane. */
+  --color-scrim: rgba(2, 6, 14, 0.62);
+  --color-edge-strong: var(--color-border-strong);
+
+  /* NEXO ember — the orange of the logo ribbon (#FFA620 → #F7781A → #FF2D0F).
+     Owns the shell (sidebar, titlebar) and Home. `brand-text` is the orange
+     used as text on the navy ground (≈6.4:1); `brand-on` is the ink placed on
+     an ember fill, because white on #F7781A fails AA. */
+  --color-brand-start: #ffa620;
+  --color-brand: #f7781a;
+  --color-brand-end: #ff2d0f;
+  --color-brand-text: #ff8b3d;
+  --color-brand-on: #1f0d02;
+  --color-brand-soft: rgba(247, 120, 26, 0.14);
+  --color-brand-glow: rgba(247, 120, 26, 0.45);
+  --color-brand-mark-ink: #fff6ec;
+  --color-accent-nav-bg: rgba(247, 120, 26, 0.34);
+  --color-accent-nav-bg-end: rgba(247, 120, 26, 0.03);
+  --color-accent-nav-fg: #fff6ec;
+  --color-accent-nav-bar: #f7781a;
+
+  /* Home hero horizon: a night planet lit from the right by the ember. */
+  --color-horizon-planet: #0b1729;
+  --color-horizon-grid: rgba(148, 173, 206, 0.11);
+  --color-horizon-lights: #ffb469;
+  --color-horizon-fade: #0e1a2b;
+  /* How strongly the blurred cover tints the Continue Reading hero. */
+  --hero-cover-tint: 0.2;
 
   /* Stats surface — sticky chrome, hero and chart (NEXO blue family).
      The chart ramp stays inside the product's blue→cyan range so the donut
@@ -285,16 +318,19 @@
     rgba(78, 140, 255, 0.16),
     rgba(255, 196, 77, 0.12)
   );
-  --color-chart-center: rgba(9, 17, 29, 0.96);
+  --color-chart-center: var(--color-home-card);
   --color-chart-grid: rgba(148, 173, 206, 0.12);
-  --color-chart-fill-top: rgba(78, 140, 255, 0.35);
-  --color-chart-fill-bottom: rgba(78, 140, 255, 0.02);
-  --color-chart-1: #4e8cff;
-  --color-chart-2: #49d4ff;
-  --color-chart-3: #6ea0ff;
-  --color-chart-4: #38bdf8;
-  --color-chart-5: #8b7bff;
-  --color-chart-6: #7dd3fc;
+  --color-chart-fill-top: rgba(247, 120, 26, 0.32);
+  --color-chart-fill-bottom: rgba(247, 120, 26, 0.02);
+  /* Genre categorical order, ember first. Validated with the dataviz
+     validator (lightness band, chroma, adjacent CVD and normal-vision
+     separation, 3:1 vs the card surface) for each theme. */
+  --color-chart-1: #e8640f;
+  --color-chart-2: #4e8cff;
+  --color-chart-3: #14a89a;
+  --color-chart-4: #9373f0;
+  --color-chart-5: #b98208;
+  --color-chart-6: #e0558f;
 
   /* Reading streak — warm accent that stays distinct from --color-warning */
   --color-streak-border: rgba(251, 191, 36, 0.22);
@@ -372,10 +408,10 @@
   /* Diccionario screen — LIGHT values of the same pen `$--np-*` variables
      (pen frame X6iIZ; the measured spec did not record the LIGHT frame, the
      values come from the pen variable table). */
-  --color-panel: #f7fafc; /* $--np-panel */
-  --color-panel-input: #f1f5f9; /* $--np-input */
-  --color-accent-fill: #dbeafe; /* $--np-accent-soft */
-  --color-panel-border: #cbd5e1; /* $--np-border */
+  --color-panel: var(--color-home-card); /* $--np-panel */
+  --color-panel-input: var(--color-surface-subtle); /* $--np-input */
+  --color-accent-fill: var(--color-brand-soft); /* $--np-accent-soft */
+  --color-panel-border: var(--color-edge); /* $--np-border */
   /* $--np-text-tertiary. The pen value #94a3b8 failed WCAG AA on the light
      surfaces (2.28:1 on --color-background, 2.34:1 on --color-panel-input,
      2.10:1 on --color-accent-fill). Raised to #556377 for accessibility; it now
@@ -403,18 +439,47 @@
     radial-gradient(circle at top left, rgba(0, 110, 200, 0.07), transparent 28%),
     radial-gradient(circle at top right, rgba(255, 190, 80, 0.08), transparent 26%),
     linear-gradient(180deg, #e8eef6 0%, #eef2f8 50%, #f0f4fa 100%);
-  --gradient-accent: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
-  --gradient-accent-h: linear-gradient(90deg, var(--color-accent-start), var(--color-accent-end));
+  --gradient-accent: linear-gradient(135deg, var(--color-brand-start), var(--color-brand));
+  --gradient-accent-h: linear-gradient(90deg, var(--color-brand-start), var(--color-brand));
   /* HOME-04 semantic roles (light). `--color-import: #9a3412` is a deep warm
      terracotta that stays clearly secondary — distinct from `--color-error`
      (#c0392b) and `--color-danger` (#dc2626) — and clears AA at ~6.3:1 on the
      light surface. Selection stays a quiet NEXO-blue tint. */
   --color-import: #9a3412;
   --color-import-bg: rgba(154, 52, 18, 0.08);
-  --color-sidebar-bg: #ffffff;
-  --color-accent-nav-bg: rgba(0, 110, 200, 0.1);
-  --color-accent-nav-fg: #006ec8;
-  --color-accent-nav-bar: #006ec8;
+  /* Light shell layering, darkest to lightest: rail → ground → cards. The rail
+     is a tinted slate so the window is not a single white sheet. */
+  --color-sidebar-bg: #e3e9f1;
+  --color-sidebar-bg-end: #dce3ec;
+  --color-shell-ground: #eaeef4;
+  --color-home-card: #f7f9fc;
+  --color-sidebar-card: rgba(255, 255, 255, 0.55);
+  /* Light edges are a clear pale blue: the default hairline is ~1.1:1 on the
+     light planes, so cards read as floating with no outline. */
+  --color-edge: #b9cbe2;
+  --color-scrim: rgba(15, 23, 42, 0.32);
+  --color-edge-strong: #9bb3d1;
+
+  /* NEXO ember (light). `brand-text` deepens to #C2410C to keep AA on white
+     (≈5.2:1); fills keep the logo gradient with dark ink on top. */
+  --color-brand-start: #ffa620;
+  --color-brand: #f7781a;
+  --color-brand-end: #ff2d0f;
+  --color-brand-text: #b03a0b;
+  --color-brand-on: #1f0d02;
+  --color-brand-soft: rgba(234, 88, 12, 0.1);
+  --color-brand-glow: rgba(234, 88, 12, 0.35);
+  --color-brand-mark-ink: #fff6ec;
+  --color-accent-nav-bg: rgba(247, 120, 26, 0.22);
+  --color-accent-nav-bg-end: rgba(247, 120, 26, 0.02);
+  --color-accent-nav-fg: #7c2d12;
+  --color-accent-nav-bar: #ea580c;
+
+  --color-horizon-planet: #d9e1ec;
+  --color-horizon-grid: rgba(30, 58, 95, 0.13);
+  --color-horizon-lights: #ea580c;
+  --color-horizon-fade: #f1f4f8;
+  --hero-cover-tint: 0.32;
 
   /* Stats surface — light theme counterparts of the dark block above. Surfaces
      stay white-tinted (not a lightened dark) and the chart ramp deepens so it
@@ -431,16 +496,19 @@
     rgba(0, 110, 200, 0.14),
     rgba(217, 119, 6, 0.12)
   );
-  --color-chart-center: rgba(255, 255, 255, 0.96);
+  --color-chart-center: var(--color-home-card);
   --color-chart-grid: rgba(30, 58, 95, 0.1);
-  --color-chart-fill-top: rgba(0, 110, 200, 0.28);
-  --color-chart-fill-bottom: rgba(0, 110, 200, 0.02);
-  --color-chart-1: #006ec8;
-  --color-chart-2: #0284c7;
-  --color-chart-3: #3b6fd4;
-  --color-chart-4: #0891b2;
-  --color-chart-5: #6366f1;
-  --color-chart-6: #0ea5e9;
+  --color-chart-fill-top: rgba(234, 88, 12, 0.24);
+  --color-chart-fill-bottom: rgba(234, 88, 12, 0.02);
+  /* Genre categorical order, ember first. Validated with the dataviz
+     validator (lightness band, chroma, adjacent CVD and normal-vision
+     separation, 3:1 vs the card surface) for each theme. */
+  --color-chart-1: #c2410c;
+  --color-chart-2: #2563eb;
+  --color-chart-3: #0d9488;
+  --color-chart-4: #7c3aed;
+  --color-chart-5: #a16207;
+  --color-chart-6: #db2777;
 
   --color-streak-border: rgba(217, 119, 6, 0.28);
   --color-streak-text: #b45309;

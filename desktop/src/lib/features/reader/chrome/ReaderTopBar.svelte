@@ -6,7 +6,12 @@
   import Settings from 'lucide-svelte/icons/settings';
   import Shrink from 'lucide-svelte/icons/shrink';
   import X from 'lucide-svelte/icons/x';
-  import { CHROME_DIVIDER, CHROME_ICON_ACTION, chromeIconButton } from './chromeControl';
+  import {
+    CHROME_DIVIDER,
+    CHROME_ICON_ACTION,
+    CHROME_ICON_TOGGLE_IDLE,
+    chromeIconButton,
+  } from './chromeControl';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -50,16 +55,20 @@
 <!-- The single top bar. Bookmarks left this row for the bottom bar; row 2 is
   gone entirely, so this is the only header in both modes. -->
 <header
-  class="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-(--color-border) bg-(--color-reader-chrome) px-4 transition-transform duration-300 sm:px-8 {isFullscreen
+  class="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-(--color-edge) bg-(--color-reader-chrome) px-4 transition-transform duration-300 sm:px-8 {isFullscreen
     ? 'fixed inset-x-0 top-0 z-50 h-16'
     : 'h-16'} {barTransform}"
   class:shadow-md={isFullscreen}
 >
   <!-- Left: back + biblioteca -->
   <div class="flex items-center gap-2 justify-self-start">
-    <button type="button" onclick={onBackToHome} class={CHROME_ICON_ACTION}>
+    <button
+      type="button"
+      onclick={onBackToHome}
+      class="{CHROME_ICON_TOGGLE_IDLE} gap-1.5 pr-4 pl-3"
+    >
       <ChevronLeft size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
-      <span class="font-inter text-sm text-(--color-text-muted)">{t('reader.biblioteca')}</span>
+      <span class="font-inter text-sm font-medium">{t('reader.biblioteca')}</span>
     </button>
   </div>
 
@@ -67,7 +76,7 @@
     by `flex-1 text-center`: that centred it within the leftover space, which
     moves with the width of the two side groups. -->
   <span
-    class="font-inter text-sm text-(--color-text-muted) min-w-0 truncate px-2 text-center max-[480px]:hidden"
+    class="font-inter text-sm font-semibold text-(--color-primary) min-w-0 truncate px-2 text-center max-[480px]:hidden"
   >
     {title}
   </span>

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import FilterChip from '$lib/shared/ui/forms/FilterChip.svelte';
+  import { headingMarker, panelClass } from '$lib/shared/ui/emberStyles';
   import { onMount } from 'svelte';
   import type { HighlightDto } from '$lib/shared/types';
   import type { ViewerPort } from '$lib/shared/ports';
@@ -154,14 +156,17 @@
   <header class="mb-6">
     <div class="flex items-start justify-between gap-4">
       <div class="flex-1 min-w-0">
-        <h1 class="text-[1.875rem] font-bold text-(--color-primary) m-0 mb-1">
-          {t('home.highlightsTitle')}
-        </h1>
-        <p class="text-[0.875rem] text-(--color-text-muted) m-0">{t('home.highlightsSubtitle')}</p>
+        <div class="flex items-center gap-3">
+          <div class="h-8 {headingMarker}" aria-hidden="true"></div>
+          <h1 class="m-0 text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)">
+            {t('home.highlightsTitle')}
+          </h1>
+        </div>
+        <p class="m-0 mt-1 text-sm text-(--color-text-muted)">{t('home.highlightsSubtitle')}</p>
       </div>
       <button
         type="button"
-        class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center border border-(--color-border) bg-(--color-surface) text-(--color-text-muted) transition-all hover:border-(--color-border-strong) hover:text-(--color-primary) hover:bg-(--color-surface-hover,rgba(25,41,62,0.96)) disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        class="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-(--color-edge) bg-(--color-home-card) text-(--color-text-muted) transition-colors hover:border-(--color-brand)/60 hover:text-(--color-brand-text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) disabled:cursor-not-allowed disabled:opacity-50"
         aria-label={t('home.highlightsRefresh')}
         title={t('home.highlightsRefresh')}
         disabled={sync.syncState === 'syncing'}
@@ -178,7 +183,7 @@
         class="mt-3 flex justify-center"
       >
         <span
-          class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-(--color-border) bg-(--color-surface) text-[0.7rem] font-medium text-(--color-text-muted) shadow-sm"
+          class="inline-flex items-center gap-1.5 rounded-full border border-(--color-edge) bg-(--color-home-card) px-3 py-1 text-xs font-medium text-(--color-text-muted)"
           >{#if sync.syncState === 'syncing'}<LoaderCircle
               size={14}
               strokeWidth={1.8}
@@ -195,10 +200,9 @@
       </div>{/if}
   </header>
   <div class="flex flex-wrap items-center gap-2 mb-4">
-    {#each typeTabs as tab}<button
-        type="button"
-        class={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${filters.selectedType === tab.value ? 'bg-(--color-accent-soft) text-(--color-primary) border-(--color-accent)' : 'bg-(--color-surface) text-(--color-text-muted) border-(--color-border) hover:border-(--color-border-strong) hover:text-(--color-primary)'}`}
-        onclick={() => (filters.selectedType = tab.value)}>{t(tab.labelKey)}</button
+    {#each typeTabs as tab}<FilterChip
+        selected={filters.selectedType === tab.value}
+        onclick={() => (filters.selectedType = tab.value)}>{t(tab.labelKey)}</FilterChip
       >{/each}
   </div>
   <div class="relative flex items-center mb-5">
@@ -210,58 +214,53 @@
     /><input
       id="highlights-search"
       type="text"
-      class="w-full h-12 pl-14 pr-20 rounded-2xl border border-(--color-border) bg-(--color-surface) text-(--color-primary) text-[0.875rem] font-sans transition-colors focus:outline-none focus:border-(--color-accent-blue,#49d4ff) focus:shadow-[0_0_0_3px_rgba(73,212,255,0.15)] placeholder:text-(--color-text-muted)"
+      class="h-11 w-full rounded-full border border-(--color-edge) bg-(--color-home-card) pr-20 pl-12 font-sans text-sm text-(--color-primary) transition-colors placeholder:text-(--color-text-muted) hover:border-(--color-edge-strong) focus:border-(--color-brand)/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)/40"
       placeholder={t('home.highlightsSearchPlaceholder')}
       bind:value={filters.searchQuery}
     /><kbd
-      class="absolute right-4 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-(--color-border) bg-(--color-background) text-(--color-text-muted) text-[0.7rem] font-sans pointer-events-none"
+      class="pointer-events-none absolute right-3 inline-flex items-center gap-1 rounded-full border border-(--color-edge) bg-(--color-surface-subtle) px-2 py-0.5 font-sans text-[0.7rem] text-(--color-text-muted)"
       aria-hidden="true">{t('library.searchShortcut')}</kbd
     >
   </div>
-  <div class="mb-4 rounded-2xl border border-(--color-border) bg-(--color-surface) px-4 py-3">
+  <div class="mb-4 {panelClass} px-5 py-4">
     <div class="mb-3 flex items-center justify-between gap-3">
-      <h2
-        class="m-0 text-[0.75rem] font-semibold text-(--color-text-muted) uppercase tracking-wider"
-      >
+      <h2 class="m-0 text-sm font-semibold text-(--color-primary)">
         {t('home.highlightsFiltersHeading')}
       </h2>
-      <Button size="sm" variant="ghost" onclick={filters.clearFilters}
+      <Button size="sm" variant="link" onclick={filters.clearFilters}
         >{t('home.highlightsClearFilters')}</Button
       >
     </div>
     <div class="flex flex-wrap items-center gap-x-5 gap-y-3">
       <div class="flex items-center gap-2">
-        <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
+        <span class="text-xs font-medium text-(--color-text-muted)"
           >{t('home.highlightsFilterColor')}</span
         >
         <div class="flex items-center gap-1">
           {#each HIGHLIGHT_COLORS as color}<button
               type="button"
-              class="w-6 h-6 rounded-full border-2 border-transparent cursor-pointer transition-all hover:scale-[1.15] {filters.selectedColors.has(
+              class="size-6 cursor-pointer rounded-full border-2 border-(--color-home-card) transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) {filters.selectedColors.has(
                 color.key,
               )
-                ? 'border-(--color-primary) shadow-[0_0_0_3px_rgba(73,212,255,0.25)] scale-110'
+                ? 'scale-110 ring-2 ring-(--color-brand)'
                 : ''}"
               style="background: {color.hex};"
               aria-label={t('highlight.selectColor', {
                 color: t(`settings.color.${color.key}` as import('$lib/shared/i18n').MessageKey),
               })}
               onclick={() => filters.toggleColor(color.key)}
-            ></button>{/each}<button
-            type="button"
-            class="px-2 py-1 rounded-md border border-(--color-border) bg-transparent text-(--color-text-muted) text-[0.75rem] cursor-pointer transition-all font-sans hover:bg-(--color-surface-hover,rgba(25,41,62,0.96)) {filters
-              .selectedColors.size === 0
-              ? 'border-(--color-accent-blue,#49d4ff) text-(--color-primary) bg-(--color-panel-accent)'
-              : ''}"
+            ></button>{/each}<FilterChip
+            class="ml-1 h-7 px-3 text-xs"
+            selected={filters.selectedColors.size === 0}
             onclick={() => {
               filters.selectedColors = new Set();
-            }}>{t('home.shelfTab.all')}</button
+            }}>{t('home.shelfTab.all')}</FilterChip
           >
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div class="flex items-center gap-2">
-          <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
+          <span class="text-xs font-medium text-(--color-text-muted)"
             >{t('home.highlightsFilterBook')}</span
           ><Dropdown
             options={bookFilterOptions}
@@ -270,7 +269,7 @@
           />
         </div>
         <div class="flex items-center gap-2">
-          <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
+          <span class="text-xs font-medium text-(--color-text-muted)"
             >{t('home.highlightsFilterTag')}</span
           ><Dropdown
             options={tagFilterOptions}
@@ -279,7 +278,7 @@
           />
         </div>
         <div class="flex items-center gap-2">
-          <span class="text-[0.75rem] font-semibold text-(--color-primary) uppercase tracking-wider"
+          <span class="text-xs font-medium text-(--color-text-muted)"
             >{t('home.highlightsFilterDate')}</span
           ><Dropdown
             options={dateFilterOptions}
@@ -326,15 +325,23 @@
           highlight.bookId,
         )}
         <li
-          class="flex items-stretch gap-4 p-5 rounded-2xl border border-(--color-border) bg-(--color-surface) transition-all cursor-default hover:border-(--color-border-strong) hover:shadow-(--shadow-soft) hover:bg-(--color-surface-hover,rgba(25,41,62,0.96))"
+          class="flex cursor-default items-stretch gap-4 rounded-(--radius-lg) border border-(--color-edge) bg-(--color-home-card) p-5 transition-colors hover:border-(--color-edge-strong)"
           style="--bar-color: {resolveHighlightHex(highlight.color)}"
         >
-          <div class="w-1 min-h-full rounded bg-(--bar-color) shrink-0"></div>
+          <div
+            class="min-h-full w-1 shrink-0 rounded-full bg-(--bar-color)"
+            aria-hidden="true"
+          ></div>
           <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
-            <p class="text-[0.875rem] font-medium text-(--color-primary) m-0 line-height-[1.5]">
+            <p
+              class="m-0 text-[1.0625rem] leading-relaxed text-(--color-primary)"
+              style="font-family: var(--font-serif)"
+            >
               {highlight.text}
             </p>
-            {#if highlight.note}<p class="text-[0.75rem] text-(--color-text-muted) m-0 italic">
+            {#if highlight.note}<p
+                class="m-0 flex items-start gap-1.5 text-xs text-(--color-secondary) italic"
+              >
                 <SquarePen size={14} strokeWidth={1.8} />{highlight.note}
               </p>{/if}
             <p class="text-[0.75rem] text-(--color-text-muted) m-0">
@@ -344,7 +351,7 @@
           </div>
           {#if book}<div class="flex flex-col items-center gap-1 shrink-0 w-20 text-center">
               <div
-                class="w-12 h-16 rounded-md overflow-hidden border border-(--color-border) bg-(--color-background) flex items-center justify-center"
+                class="flex h-16 w-12 items-center justify-center overflow-hidden rounded-(--radius-sm) border border-(--color-edge) bg-(--color-surface-subtle) shadow-[0_8px_18px_-10px_rgba(0,0,0,0.7)]"
               >
                 {#if book.coverPath}<SafeCover
                     path={book.coverPath}
@@ -370,23 +377,23 @@
               >{formatDate(highlight.createdAt)}</span
             ><DropMenu position="bottom-right"
               >{#snippet trigger()}<button
-                  class="w-8 h-8 flex items-center justify-center rounded-md border border-transparent bg-transparent text-(--color-text-muted) text-[1.1rem] cursor-pointer transition-all font-sans hover:bg-(--color-panel-accent) hover:border-(--color-border) hover:text-(--color-primary)"
+                  class="flex size-8 cursor-pointer items-center justify-center rounded-full border border-(--color-edge) bg-(--color-surface-subtle) text-(--color-text-muted) transition-colors hover:border-(--color-edge-strong) hover:text-(--color-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                   aria-label="Opciones"><EllipsisVertical size={14} strokeWidth={1.8} /></button
                 >{/snippet}
               <div class="flex flex-col">
                 <button
-                  class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-panel-accent)"
+                  class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-surface-hover)"
                   onclick={() => handleCopy(highlight.text)}
                   ><Copy size={14} strokeWidth={1.8} />{t('home.highlightsCopy')}</button
                 ><button
-                  class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-panel-accent)"
+                  class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-surface-hover)"
                   onclick={() => handleViewInBook(highlight)}
                   ><Book size={14} strokeWidth={1.8} />{t('home.highlightsViewInBook')}</button
                 >{#if highlight.note}<button
-                    class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-panel-accent)"
+                    class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-surface-hover)"
                     ><SquarePen size={14} strokeWidth={1.8} />{t('home.highlightsEditNote')}</button
                   >{/if}<button
-                  class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-error) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-error-bg,rgba(255,123,131,0.14))"
+                  class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-error) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-error)/12"
                   onclick={() => sync.handleDelete(highlight, highlights, (v) => (highlights = v))}
                   ><Trash2 size={14} strokeWidth={1.8} />{t('home.highlightsDelete')}</button
                 >

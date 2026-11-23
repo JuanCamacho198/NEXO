@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { headingMarker } from '$lib/shared/ui/emberStyles';
   import { onMount } from 'svelte';
-  import Info from 'lucide-svelte/icons/info';
   import Star from 'lucide-svelte/icons/star';
   import { openUrl } from '@tauri-apps/plugin-opener';
   import { invoke } from '@tauri-apps/api/core';
@@ -223,11 +223,14 @@
   });
 </script>
 
-<section class="space-y-5 w-full max-w-none">
+<section class="w-full max-w-5xl space-y-6">
   <header class="flex flex-col gap-1">
-    <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
-      {t('settings.tab.about')}
-    </h1>
+    <div class="flex items-center gap-3">
+      <div class="h-7 {headingMarker}" aria-hidden="true"></div>
+      <h1 class="m-0 text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)">
+        {t('settings.tab.about')}
+      </h1>
+    </div>
     <p class="text-sm text-(--color-text-muted)">{t('settings.about.subtitle')}</p>
   </header>
 
@@ -235,8 +238,10 @@
        carries no title so the app name keeps its existing span (not a
        heading) and the page h1 stays the sole top heading. -->
   <Panel>
-    <div class="flex items-center gap-3">
-      <Info size={32} strokeWidth={2} class="text-(--color-primary)" aria-hidden="true" />
+    <div class="flex items-center gap-4">
+      <span class="block h-12 w-[2.125rem] shrink-0 overflow-hidden" aria-hidden="true">
+        <img src="./nexo-logo-horizontal-dark.svg" alt="" class="h-12 w-auto max-w-none" />
+      </span>
       <div class="flex min-w-0 flex-col">
         <span class="text-xl font-semibold text-(--color-primary)"
           >{t('settings.about.appName')}</span
@@ -245,11 +250,12 @@
           <Button
             variant="ghost"
             size="sm"
+            class="-ml-3 self-start"
             onclick={() => void copyVersion()}
             aria-label={t('settings.about.copyVersion')}
           >
             <span>{t('settings.about.version', { version: installedVersion })}</span>
-            <span aria-live="polite">
+            <span class="ml-2 text-xs font-normal text-(--color-text-muted)" aria-live="polite">
               {versionCopied ? t('settings.about.versionCopied') : t('settings.about.copyVersion')}
             </span>
           </Button>
@@ -265,7 +271,9 @@
         </span>
       </div>
     </div>
-    <p class="mt-3 text-sm text-(--color-text-muted)">{t('settings.about.tagline')}</p>
+    <p class="mt-4 text-sm leading-relaxed text-(--color-secondary)">
+      {t('settings.about.tagline')}
+    </p>
     {#if feedEnabled}
       <div class="mt-3 flex flex-col gap-2">
         <Button
@@ -297,7 +305,7 @@
     <Panel aria-labelledby="update-available-title">
       <h3
         id="update-available-title"
-        class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)"
+        class="mt-0 mb-2 text-base font-semibold text-(--color-primary)"
       >
         {t('update.availableTitle')}
       </h3>
@@ -314,7 +322,7 @@
           {t('update.relaunchConfirm')}
         </p>
         <div class="mt-2 flex gap-2">
-          <Button onclick={() => void handleRelaunch()} variant="primary" size="sm">
+          <Button onclick={() => void handleRelaunch()} variant="accent" size="sm">
             {t('update.now')}
           </Button>
           <Button
@@ -331,7 +339,7 @@
         <div class="mt-3 flex gap-2">
           <Button
             onclick={() => void handleUpdateNow()}
-            variant="primary"
+            variant="accent"
             size="sm"
             disabled={installPhase === 'downloading'}
           >
@@ -364,9 +372,14 @@
   {#if dailyQuote}
     {@const quote = dailyQuote}
     {@const display = quoteDisplayText(quote, locale)}
-    <Panel variant="surface">
-      <blockquote class="m-0">
-        <p class="whitespace-pre-line text-sm italic text-(--color-primary)">{display.text}</p>
+    <Panel>
+      <blockquote class="m-0 border-l-2 border-(--color-brand) pl-4">
+        <p
+          class="whitespace-pre-line text-[1.0625rem] leading-relaxed text-(--color-primary)"
+          style="font-family: var(--font-serif)"
+        >
+          {display.text}
+        </p>
       </blockquote>
       <div
         class="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs text-(--color-text-muted)"
@@ -377,7 +390,7 @@
         <span aria-hidden="true">·</span>
         <span>{quote.year}</span>
         {#if display.isTranslation}
-          <span class="rounded-full border border-(--color-border) px-1.5 py-0.5">
+          <span class="rounded-full border border-(--color-edge) px-2 py-0.5">
             {t('settings.about.quoteTranslated')}
           </span>
         {/if}
@@ -411,11 +424,11 @@
        Panel title: the license line is a span, not a heading. -->
   <Panel>
     <div class="flex items-center justify-between gap-3">
-      <span class="text-xs text-(--color-text-muted)">
+      <span class="text-sm text-(--color-text-muted)">
         {t('settings.about.license')}:
         <span class="font-medium text-(--color-primary)">{t('settings.about.licenseName')}</span>
       </span>
-      <Button variant="ghost" size="sm" onclick={() => void openUrl(LICENSE_URL)}>
+      <Button variant="link" size="sm" onclick={() => void openUrl(LICENSE_URL)}>
         {t('settings.about.viewLicense')}
       </Button>
     </div>
@@ -424,19 +437,19 @@
   <!-- Support: real repository URLs, opened through the Tauri opener.
        No Panel title: the h3 below must stay an h3 (heading-order test). -->
   <Panel>
-    <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+    <h3 class="mt-0 mb-1 text-base font-semibold text-(--color-primary)">
       {t('settings.about.links')}
     </h3>
-    <p class="mt-2 text-xs text-(--color-primary)">{t('settings.about.starBody')}</p>
-    <Button class="mt-2" onclick={() => void openUrl(REPOSITORY_URL)} variant="accent" size="sm">
-      <Star size={14} strokeWidth={1.8} aria-hidden="true" />
-      <span class="ml-1.5">{t('settings.about.starCta')}</span>
-    </Button>
-    <div class="mt-2 flex gap-2">
-      <Button onclick={() => void openUrl(REPOSITORY_URL)} variant="ghost" size="sm">
+    <p class="m-0 text-sm text-(--color-text-muted)">{t('settings.about.starBody')}</p>
+    <div class="mt-4 flex flex-wrap items-center gap-2">
+      <Button onclick={() => void openUrl(REPOSITORY_URL)} variant="accent" size="sm">
+        <Star size={14} strokeWidth={1.8} aria-hidden="true" />
+        <span class="ml-1.5">{t('settings.about.starCta')}</span>
+      </Button>
+      <Button onclick={() => void openUrl(REPOSITORY_URL)} variant="secondary" size="sm">
         {t('settings.about.github')}
       </Button>
-      <Button onclick={() => void openUrl(ISSUES_URL)} variant="ghost" size="sm">
+      <Button onclick={() => void openUrl(ISSUES_URL)} variant="secondary" size="sm">
         {t('settings.about.reportIssue')}
       </Button>
     </div>
@@ -446,12 +459,14 @@
          bundle is one click and copies to the clipboard rather than opening a
          viewer. Redaction happens in Rust before IPC; this button cannot make
          the payload less redacted, only fail closed. -->
-    <div class="mt-4 border-t border-(--color-border) pt-3">
-      <h4 class="mt-0 mb-1 text-xs font-semibold text-(--color-primary)">
+    <div class="mt-5 border-t border-(--color-edge) pt-5">
+      <h4 class="mt-0 mb-1 text-sm font-semibold text-(--color-primary)">
         {t('settings.about.diagnostics')}
       </h4>
-      <p class="text-xs text-(--color-text-muted)">{t('settings.about.diagnosticsBody')}</p>
-      <div class="mt-2 flex flex-wrap items-center gap-2">
+      <p class="text-sm leading-relaxed text-(--color-text-muted)">
+        {t('settings.about.diagnosticsBody')}
+      </p>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
         <Button
           onclick={() => void exportDiagnostics()}
           variant="secondary"

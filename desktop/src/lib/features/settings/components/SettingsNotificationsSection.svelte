@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SwitchTrack from '$lib/shared/ui/forms/SwitchTrack.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import {
@@ -53,31 +54,27 @@
   ontoggle: () => void,
 )}
   <Button
-    variant="secondary"
-    size="sm"
+    variant="ghost"
+    size="md"
     role="switch"
     aria-checked={checked}
     data-testid={testId}
-    class="self-start gap-2.5"
+    class="-mx-4 w-[calc(100%+2rem)] gap-4"
     onclick={ontoggle}
   >
-    <span
-      class={`w-9 h-5 rounded-full relative transition-colors ${checked ? 'bg-(--color-success)' : 'bg-(--color-border)'}`}
-    >
-      <span
-        class={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${checked ? 'left-4.5' : 'left-0.5'}`}
-      ></span>
+    <span class="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left whitespace-normal">
+      <span class="text-(--color-primary)">{label}</span>
+      <span class="text-xs font-normal text-(--color-text-muted)">{hint}</span>
     </span>
-    <span>{label}</span>
-    <span class="text-xs text-(--color-text-muted)">{hint}</span>
+    <SwitchTrack {checked} />
   </Button>
 {/snippet}
 
-<Panel title={t('settings.notifications.delivery.title')}>
-  <div class="flex flex-col gap-3">
-    <p class="text-xs text-(--color-text-muted)">
-      {t('settings.notifications.delivery.description')}
-    </p>
+<Panel
+  title={t('settings.notifications.delivery.title')}
+  subtitle={t('settings.notifications.delivery.description')}
+>
+  <div class="flex flex-col gap-1">
     {@render switchRow(
       'notification-pref-system',
       prefs.system,
@@ -99,7 +96,7 @@
       t('settings.notifications.delivery.quietHoursHint'),
       () => void toggleQuietHours(),
     )}
-    <div class="flex items-center gap-3 pl-1 text-xs text-(--color-text-muted)">
+    <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-(--color-text-muted)">
       <label class="flex items-center gap-2">
         {t('settings.notifications.delivery.quietStart')}
         <input
@@ -107,7 +104,7 @@
           value={prefs.quietHours.start}
           disabled={!prefs.quietHours.enabled}
           data-testid="notification-quiet-start"
-          class="rounded-lg border border-(--color-border) bg-(--color-background) px-2 py-1 text-xs text-(--color-primary) disabled:opacity-60"
+          class="rounded-full border border-(--color-edge) bg-(--color-surface-subtle) px-3 py-1.5 text-sm text-(--color-primary) tabular-nums focus:border-(--color-brand)/60 focus:outline-none disabled:opacity-50"
           onchange={changeQuietStart}
         />
       </label>
@@ -118,7 +115,7 @@
           value={prefs.quietHours.end}
           disabled={!prefs.quietHours.enabled}
           data-testid="notification-quiet-end"
-          class="rounded-lg border border-(--color-border) bg-(--color-background) px-2 py-1 text-xs text-(--color-primary) disabled:opacity-60"
+          class="rounded-full border border-(--color-edge) bg-(--color-surface-subtle) px-3 py-1.5 text-sm text-(--color-primary) tabular-nums focus:border-(--color-brand)/60 focus:outline-none disabled:opacity-50"
           onchange={changeQuietEnd}
         />
       </label>

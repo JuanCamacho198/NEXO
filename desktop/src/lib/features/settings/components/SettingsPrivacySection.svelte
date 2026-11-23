@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SwitchTrack from '$lib/shared/ui/forms/SwitchTrack.svelte';
   import * as Sentry from '@sentry/browser';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
@@ -41,29 +42,24 @@
   };
 </script>
 
-<Panel title={t('settings.privacy.title')}>
-  <div class="flex flex-col gap-3">
-    <p class="text-xs text-(--color-text-muted)">{t('settings.privacy.description')}</p>
-    <Button
-      variant="secondary"
-      size="sm"
-      role="switch"
-      aria-checked={telemetryEnabled}
-      data-testid="privacy-telemetry-switch"
-      class="self-start gap-2.5"
-      onclick={() => void onToggle()}
-    >
-      <span
-        class={`w-9 h-5 rounded-full relative transition-colors ${telemetryEnabled ? 'bg-(--color-success)' : 'bg-(--color-border)'}`}
+<Panel title={t('settings.privacy.title')} subtitle={t('settings.privacy.description')}>
+  <Button
+    variant="ghost"
+    size="md"
+    role="switch"
+    aria-checked={telemetryEnabled}
+    data-testid="privacy-telemetry-switch"
+    class="-mx-4 w-[calc(100%+2rem)] gap-4"
+    onclick={() => void onToggle()}
+  >
+    <span class="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left whitespace-normal">
+      <span class="text-(--color-primary)">{t('settings.privacy.sendTelemetry')}</span>
+      <span class="text-xs font-normal text-(--color-text-muted)"
+        >{telemetryEnabled
+          ? t('settings.privacy.telemetryOn')
+          : t('settings.privacy.telemetryOff')}</span
       >
-        <span
-          class={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${telemetryEnabled ? 'left-4.5' : 'left-0.5'}`}
-        ></span>
-      </span>
-      <span>{t('settings.privacy.sendTelemetry')}</span>
-      <span class="text-xs text-(--color-text-muted)">
-        {telemetryEnabled ? t('settings.privacy.telemetryOn') : t('settings.privacy.telemetryOff')}
-      </span>
-    </Button>
-  </div>
+    </span>
+    <SwitchTrack checked={telemetryEnabled} />
+  </Button>
 </Panel>

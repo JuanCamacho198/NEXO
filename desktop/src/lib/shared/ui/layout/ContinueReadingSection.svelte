@@ -5,6 +5,9 @@
   import { BookCard, ShelfActionMenu } from '$lib/features/library';
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
+  import HomeHorizon from '$lib/features/home/components/HomeHorizon.svelte';
+  import ContinueReadingBackdrop from '$lib/features/home/components/ContinueReadingBackdrop.svelte';
+  import ContinueReadingAside from '$lib/features/home/components/ContinueReadingAside.svelte';
 
   let scrollEl = $state<HTMLUListElement | null>(null);
   let activeIndex = $state(0);
@@ -60,106 +63,138 @@
   }
 </script>
 
+{#snippet sectionHeading()}
+  <div class="flex min-w-0 items-center gap-3">
+    <span
+      class="h-7 w-1 shrink-0 rounded-full bg-linear-to-b from-(--color-brand-start) to-(--color-brand-end)"
+      aria-hidden="true"
+    ></span>
+    <h3
+      id="home-continue-heading"
+      class="text-2xl font-bold tracking-[-0.02em] text-(--color-primary)"
+    >
+      {appState.t('home.continueReading')}
+    </h3>
+    {#if books.length > 0}
+      <span
+        class="rounded-(--radius-sm) border border-(--color-edge) bg-(--color-surface-subtle) px-2.5 py-0.5 text-sm font-semibold tabular-nums text-(--color-secondary)"
+        aria-label={appState.t('home.continue.countAria', { count: books.length })}
+      >
+        {books.length}
+      </span>
+    {/if}
+  </div>
+{/snippet}
+
 {#if books.length === 0}
-  <p class="text-sm text-(--color-text-muted)">{appState.t('home.continueReadingPlaceholder')}</p>
+  <div class="space-y-4">
+    {@render sectionHeading()}
+    <div
+      class="relative isolate overflow-hidden rounded-(--radius-xl) border border-(--color-edge) bg-(--color-horizon-fade) px-7 py-10"
+    >
+      <div class="absolute inset-0 -z-10"><HomeHorizon /></div>
+      <p class="max-w-md text-base text-(--color-secondary)">
+        {appState.t('home.continueReadingPlaceholder')}
+      </p>
+    </div>
+  </div>
 {:else}
-  <div data-testid="continue-carousel" role="group" class="space-y-3">
-    <div class="flex items-center justify-between gap-3">
-      <div class="flex min-w-0 items-center gap-2">
-        <h3 class="text-base font-semibold tracking-tight text-(--color-primary)">
-          {appState.t('home.continueReading')}
-        </h3>
-        <span
-          class="rounded-full bg-(--color-accent-soft) px-2 py-0.5 text-xs font-medium text-(--color-accent)"
-          aria-label={appState.t('home.continue.countAria', { count: books.length })}
-        >
-          {books.length}
-        </span>
-      </div>
+  <div class="space-y-4">
+    {@render sectionHeading()}
+    <div
+      data-testid="continue-carousel"
+      role="group"
+      aria-labelledby="home-continue-heading"
+      class="relative isolate overflow-hidden rounded-(--radius-xl) border border-(--color-edge) bg-(--color-horizon-fade)"
+    >
       {#if showArrows}
-        <div class="flex shrink-0 items-center gap-2">
+        <div class="absolute top-5 right-5 z-10 flex items-center gap-2">
           <button
             type="button"
-            class="rounded-full border border-(--color-border) bg-(--color-surface) p-1.5 shadow-md hover:bg-(--color-surface-hover)"
+            class="flex size-10 items-center justify-center rounded-full border border-(--color-edge-strong) bg-(--color-horizon-fade)/70 text-(--color-primary) backdrop-blur-sm transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-brand)/60 hover:text-(--color-brand-text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
             aria-label={appState.t('home.continue.prevBook')}
             onclick={handlePrev}
           >
-            <ChevronLeft size={14} strokeWidth={1.8} />
+            <ChevronLeft size={18} strokeWidth={2} aria-hidden="true" />
           </button>
           <button
             type="button"
-            class="rounded-full border border-(--color-border) bg-(--color-surface) p-1.5 shadow-md hover:bg-(--color-surface-hover)"
+            class="flex size-10 items-center justify-center rounded-full border border-(--color-edge-strong) bg-(--color-horizon-fade)/70 text-(--color-primary) backdrop-blur-sm transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-brand)/60 hover:text-(--color-brand-text) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
             aria-label={appState.t('home.continue.nextBook')}
             onclick={handleNext}
           >
-            <ChevronRight size={14} strokeWidth={1.8} />
+            <ChevronRight size={18} strokeWidth={2} aria-hidden="true" />
           </button>
         </div>
       {/if}
-    </div>
 
-    <div class="relative">
-      <ul
-        bind:this={scrollEl}
-        onscrollend={onScrollEnd}
-        data-active-index={activeIndex}
-        class="flex gap-0 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-        style="scrollbar-width: none; -ms-overflow-style: none;"
-      >
-        {#each books as book (book.id)}
-          <li class="relative snap-start shrink-0 w-full">
-            <BookCard
-              {book}
-              variant="continue-reading"
-              compact={false}
-              selected={navigationState.previewBookId === book.id}
-              onSelect={() => {
-                navigationState.openShelfDetails(book.id);
-              }}
-              onRead={() => {
-                void appState.startReading(book);
-              }}
-              t={appState.t}
-            >
-              {#snippet actions()}
-                {#if book.readingStatus === 'reading'}
-                  <span
-                    class="rounded-full bg-(--color-accent-soft) px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-(--color-primary)"
-                  >
-                    {appState.t('home.continue.liveBadge')}
-                  </span>
-                {/if}
-                <ShelfActionMenu
-                  bookId={book.id}
-                  isFavorite={Boolean(book.collectionIds?.includes(1))}
-                  readLabel={appState.t('app.read')}
-                  editLabel={appState.t('library.editMetadata.title')}
-                  removeLabel={appState.t('library.removeFromShelf')}
-                  favoriteAddLabel={appState.t('library.favoriteAdd')}
-                  favoriteRemoveLabel={appState.t('library.favoriteRemove')}
-                  triggerLabel={appState.t('library.optionsFor', { title: book.title })}
-                  onViewDetails={() => navigationState.openShelfDetails(book.id)}
-                  viewDetailsLabel={appState.t('shelf.viewDetails')}
-                  onEdit={() => {
-                    libraryState.handleEditBook(book);
+      <div class="relative">
+        <ul
+          bind:this={scrollEl}
+          onscrollend={onScrollEnd}
+          data-active-index={activeIndex}
+          class="flex gap-0 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          style="scrollbar-width: none; -ms-overflow-style: none;"
+        >
+          {#each books as book (book.id)}
+            <li class="relative isolate flex w-full shrink-0 snap-start gap-10 p-6">
+              <ContinueReadingBackdrop coverPath={book.coverPath} />
+              <div class="min-w-0 flex-1">
+                <BookCard
+                  {book}
+                  variant="continue-reading"
+                  compact={false}
+                  selected={navigationState.previewBookId === book.id}
+                  onSelect={() => {
+                    navigationState.openShelfDetails(book.id);
                   }}
-                  onRemove={() => {
-                    libraryState.pendingRemoveBook = book;
+                  onRead={() => {
+                    void appState.startReading(book);
                   }}
-                  onToggleFavorite={() => {
-                    void libraryState.handleToggleFavorite(book);
-                  }}
-                />
-              {/snippet}
-            </BookCard>
-          </li>
-        {/each}
-      </ul>
-    </div>
+                  t={appState.t}
+                >
+                  {#snippet actions()}
+                    {#if book.readingStatus === 'reading'}
+                      <span
+                        class="inline-flex h-11 items-center rounded-full border border-(--color-edge-strong) bg-(--color-surface-subtle) px-5 text-xs font-bold uppercase tracking-[0.12em] text-(--color-primary)"
+                      >
+                        {appState.t('home.continue.liveBadge')}
+                      </span>
+                    {/if}
+                    <ShelfActionMenu
+                      bookId={book.id}
+                      isFavorite={Boolean(book.collectionIds?.includes(1))}
+                      readLabel={appState.t('app.read')}
+                      editLabel={appState.t('library.editMetadata.title')}
+                      removeLabel={appState.t('library.removeFromShelf')}
+                      favoriteAddLabel={appState.t('library.favoriteAdd')}
+                      favoriteRemoveLabel={appState.t('library.favoriteRemove')}
+                      triggerLabel={appState.t('library.optionsFor', { title: book.title })}
+                      onViewDetails={() => navigationState.openShelfDetails(book.id)}
+                      viewDetailsLabel={appState.t('shelf.viewDetails')}
+                      onEdit={() => {
+                        libraryState.handleEditBook(book);
+                      }}
+                      onRemove={() => {
+                        libraryState.pendingRemoveBook = book;
+                      }}
+                      onToggleFavorite={() => {
+                        void libraryState.handleToggleFavorite(book);
+                      }}
+                    />
+                  {/snippet}
+                </BookCard>
+              </div>
+              <ContinueReadingAside {book} t={appState.t} />
+            </li>
+          {/each}
+        </ul>
+      </div>
 
-    <!-- Screen-reader announcement of the active book -->
-    <p class="sr-only" aria-live="polite" aria-atomic="true">
-      {activeBook?.title ?? ''}
-    </p>
+      <!-- Screen-reader announcement of the active book -->
+      <p class="sr-only" aria-live="polite" aria-atomic="true">
+        {activeBook?.title ?? ''}
+      </p>
+    </div>
   </div>
 {/if}
