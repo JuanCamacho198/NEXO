@@ -1,14 +1,24 @@
 package com.nexo.ui.components.molecules
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,14 +28,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
-import com.nexo.ui.components.atoms.NexoButton
-import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 /**
  * Row shown above the library list: a sort-by label and selector
@@ -67,6 +80,7 @@ fun SortControlRow(
     onSortByChanged: (String) -> Unit,
     isGridView: Boolean,
     onViewToggle: () -> Unit,
+    trailingStatus: (@Composable () -> Unit)? = null,
 ) {
     var showSortSelector by remember { mutableStateOf(false) }
 
@@ -95,55 +109,107 @@ fun SortControlRow(
         )
     }
 
+    val colors = nexoColors
+    val sortLabel = stringResource(R.string.library_sort_label)
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // Sort pill: the label is the accessible name, the active option the value.
+        Row(
+            modifier =
+                Modifier
+                    .height(ControlHeight)
+                    .clip(CircleShape)
+                    .background(colors.surface)
+                    .border(1.dp, colors.borderSubtle, CircleShape)
+                    .clickable(onClickLabel = sortLabel) { showSortSelector = true }
+                    .padding(start = 14.dp, end = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             Text(
-                text = stringResource(R.string.library_sort_label),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = stringResource(selectedSortLabel),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textPrimary,
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            NexoButton(
-                onClick = { showSortSelector = true },
-                variant = NexoButtonVariant.TEXT,
-            ) {
-                Text(text = stringResource(selectedSortLabel))
-            }
+            Icon(
+                imageVector = NexoIcons.ChevronDown,
+                contentDescription = null,
+                tint = colors.textSecondary,
+                modifier = Modifier.size(16.dp),
+            )
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            IconButton(onClick = { if (!isGridView) onViewToggle() }) {
-                Icon(
-                    imageVector = NexoIcons.GridView,
-                    contentDescription = stringResource(R.string.library_view_grid),
-                    tint =
-                        if (isGridView) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                )
-            }
-            IconButton(onClick = { if (isGridView) onViewToggle() }) {
-                Icon(
-                    imageVector = NexoIcons.ViewList,
-                    contentDescription = stringResource(R.string.library_view_list),
-                    tint =
-                        if (!isGridView) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                )
-            }
+        Spacer(modifier = Modifier.weight(1f))
+
+        if (trailingStatus != null) trailingStatus()
+
+        // Segmented grid/list toggle; the active segment's fill animates across.
+        Row(
+            modifier =
+                Modifier
+                    .height(ControlHeight)
+                    .clip(CircleShape)
+                    .background(colors.surface)
+                    .border(1.dp, colors.borderSubtle, CircleShape)
+                    .padding(3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ViewSegment(
+                icon = NexoIcons.GridView,
+                contentDescription = stringResource(R.string.library_view_grid),
+                selected = isGridView,
+                onClick = { if (!isGridView) onViewToggle() },
+            )
+            ViewSegment(
+                icon = NexoIcons.ViewList,
+                contentDescription = stringResource(R.string.library_view_list),
+                selected = !isGridView,
+                onClick = { if (isGridView) onViewToggle() },
+            )
         }
+    }
+}
+
+private val ControlHeight = 38.dp
+private val SegmentWidth = 40.dp
+private const val SegmentColorMs = 220
+
+@Composable
+private fun ViewSegment(
+    icon: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = nexoColors
+    val container by animateColorAsState(
+        targetValue = if (selected) colors.primary else colors.surface,
+        animationSpec = tween(SegmentColorMs),
+        label = "segmentContainer",
+    )
+    val tint by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.onPrimary else colors.textSecondary,
+        animationSpec = tween(SegmentColorMs),
+        label = "segmentTint",
+    )
+    Box(
+        modifier =
+            Modifier
+                .width(SegmentWidth)
+                .fillMaxHeight()
+                .clip(CircleShape)
+                .background(container)
+                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(imageVector = icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(18.dp))
     }
 }
 

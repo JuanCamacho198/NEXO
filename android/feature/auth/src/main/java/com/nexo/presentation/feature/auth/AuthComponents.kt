@@ -1,8 +1,14 @@
 package com.nexo.presentation.feature.auth
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,26 +18,30 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -44,9 +54,21 @@ import com.nexo.feature.auth.BuildConfig
 import com.nexo.feature.auth.R
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.tags.AuthTags
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.util.safePainterResource
 
+/**
+ * Auth layout: the bookshelf art fills the top of the screen untouched, and the
+ * form sits on a rounded sheet anchored to the bottom.
+ *
+ * The art keeps its shelves in the upper-right quadrant; the old layout centred
+ * the logo and title over the whole screen, so they landed on the books and the
+ * text lost its contrast. Splitting art and form keeps both legible in either
+ * theme. The compact lockup lives top-left, in the art's empty corner.
+ *
+ * The column is at least one screen tall, with a weighted spacer above the sheet:
+ * short content pins the sheet to the bottom, long content (the expanded email
+ * form, Register) pushes the art up and the whole screen scrolls.
+ */
 @Composable
 fun AuthScreenScaffold(
     showBackArrow: Boolean,
@@ -54,7 +76,16 @@ fun AuthScreenScaffold(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    Box(modifier = Modifier.fillMaxSize()) {
+    val entered = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { entered.animateTo(1f, tween(AuthEnterMs, easing = FastOutSlowInEasing)) }
+    val sheetShape = RoundedCornerShape(topStart = SheetCorner, topEnd = SheetCorner)
+    BoxWithConstraints(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+    ) {
+        val screenHeight = maxHeight
         Image(
             painter =
                 safePainterResource(
@@ -68,128 +99,119 @@ fun AuthScreenScaffold(
                     source = "auth_background",
                 ),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
+            alignment = Alignment.TopCenter,
             contentScale = ContentScale.Crop,
-        )
-        Box(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors =
-                                if (isDarkBackground) {
-                                    listOf(
-                                        MaterialTheme.colorScheme.background.copy(alpha = 0.25f),
-                                        Color.Black.copy(alpha = 0.65f),
-                                    )
-                                } else {
-                                    listOf(Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.35f))
-                                },
-                        ),
-                    ),
+                    .graphicsLayer {
+                        // The art settles from a slight zoom as the sheet rises.
+                        val scale = 1f + ArtZoom * (1f - entered.value)
+                        scaleX = scale
+                        scaleY = scale
+                    },
         )
-
-        Box(
+        Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
                     .verticalScroll(rememberScrollState()),
-            contentAlignment = Alignment.Center,
         ) {
-            if (showBackArrow) {
-                IconButton(
-                    onClick = onNavigateBack,
+            Column(modifier = Modifier.fillMaxWidth().heightIn(min = screenHeight)) {
+                AuthTopBar(
+                    showBackArrow = showBackArrow,
+                    onNavigateBack = onNavigateBack,
+                    modifier = Modifier.graphicsLayer { alpha = entered.value },
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(ArtMinVisible))
+                Column(
                     modifier =
                         Modifier
-                            .align(Alignment.TopStart)
-                            .padding(8.dp)
-                            .testTag(AuthTags.BACK),
+                            .fillMaxWidth()
+                            .graphicsLayer {
+                                translationY = (1f - entered.value) * SheetRise.toPx()
+                                alpha = entered.value
+                            }.shadow(elevation = 24.dp, shape = sheetShape, clip = false)
+                            .clip(sheetShape)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .navigationBarsPadding()
+                            .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Icon(
-                        imageVector = NexoIcons.ArrowBack,
-                        contentDescription = stringResource(com.nexo.feature.auth.R.string.nav_back),
-                    )
+                    content()
                 }
-            }
-
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 48.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                content()
             }
         }
     }
 }
 
 @Composable
-fun AuthLogo() {
-    val glowColor = NexoTheme.colors.welcomeBrandBlue
+private fun AuthTopBar(
+    showBackArrow: Boolean,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (showBackArrow) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                        .clickable(onClick = onNavigateBack)
+                        .testTag(AuthTags.BACK),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = NexoIcons.ArrowBack,
+                    contentDescription = stringResource(R.string.nav_back),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        AuthLogo()
+    }
+}
+
+/** Compact NEXO lockup, sized for the top-left corner of the auth art. */
+@Composable
+fun AuthLogo(modifier: Modifier = Modifier) {
     // Same dark-background signal AuthScreenScaffold uses to pick its bookshelf
     // art, so the lockup export always matches the surface behind it.
     val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.5f
     // Each export has its own canvas; the ratio comes from the vector actually drawn
     // so the lockup never gets stretched or letterboxed.
     val vector = if (isDarkBackground) NexoBrandLockup.Dark else NexoBrandLockup.Light
-    // The glow is a wide ellipse (~2.15:1), so it lives in a box wider than the icon's
-    // 176dp one and the icon keeps its own box centered on top of it.
-    val glowWidth = 430.dp
-    val glowHeight = 200.dp
-    Box(
-        modifier = Modifier.size(glowWidth, glowHeight),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(glowWidth, glowHeight)
-                    .drawBehind {
-                        // A radial brush has one radius for both axes, so drawing it
-                        // unscaled would fall off as a circle. Scaling the canvas by the
-                        // box's aspect ratio stretches the falloff into the wide ellipse;
-                        // the circle is drawn at the inverse radius so the oval still
-                        // spans the full box.
-                        val aspect = size.width / size.height
-                        withTransform({ scale(scaleX = aspect, scaleY = 1f, pivot = center) }) {
-                            drawCircle(
-                                brush =
-                                    Brush.radialGradient(
-                                        colors =
-                                            listOf(
-                                                glowColor.copy(alpha = 0.30f),
-                                                glowColor.copy(alpha = 0f),
-                                            ),
-                                        center = center,
-                                        radius = size.height / 2f,
-                                    ),
-                                radius = size.height / 2f,
-                                center = center,
-                            )
-                        }
-                    },
-        )
-        Box(
-            modifier = Modifier.size(176.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = vector,
-                contentDescription = stringResource(com.nexo.feature.auth.R.string.app_name),
-                modifier =
-                    Modifier
-                        .width(190.dp)
-                        .aspectRatio(vector.viewportWidth / vector.viewportHeight),
-                tint = Color.Unspecified,
-            )
-        }
-    }
+    Icon(
+        imageVector = vector,
+        contentDescription = stringResource(R.string.app_name),
+        modifier =
+            modifier
+                .width(LockupWidth)
+                .aspectRatio(vector.viewportWidth / vector.viewportHeight),
+        tint = Color.Unspecified,
+    )
 }
+
+private const val AuthEnterMs = 520
+private const val ArtZoom = 0.06f
+private val SheetCorner = 28.dp
+private val SheetRise = 72.dp
+private val LockupWidth = 128.dp
+
+/** Height of art always left visible above the sheet, so the shelves never vanish. */
+private val ArtMinVisible = 220.dp
 
 @Composable
 fun AuthOrDivider(text: String) {
@@ -240,7 +262,7 @@ fun AuthFooterLink(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

@@ -28,6 +28,7 @@ fun SettingsStatisticsScreen(
         StatisticsScreen(
             contentPadding = PaddingValues(),
             viewModel = viewModel,
+            showHeader = false,
         )
     }
 }

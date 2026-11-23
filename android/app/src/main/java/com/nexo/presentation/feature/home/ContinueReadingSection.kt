@@ -1,8 +1,10 @@
 package com.nexo.presentation.feature.home
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +23,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,28 +42,35 @@ import com.nexo.ui.components.atoms.CoverThumbnail
 import com.nexo.ui.components.atoms.NexoProgressBar
 import com.nexo.ui.components.molecules.BookContextMenuTrigger
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.motion.pressScaleClickable
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.nexoColors
 
-/** Card width in the carousel; wide enough for the cover plus the meta column. */
-private val CardWidth = 300.dp
+/** Cover dimensions in the card: a 2:3 book, tall enough to anchor the card. */
+private val CoverWidth = 84.dp
+private val CoverHeight = 126.dp
 
-/** Cover dimensions in the card, matching the `.pen` `cover` (100x148). */
-private val CoverWidth = 88.dp
-private val CoverHeight = 130.dp
+/** Diameter of the filled amber play button; a full 48dp touch target. */
+private val PlayButtonSize = 48.dp
 
-/** Diameter of the circular amber play affordance (`.pen` `play_btn` 42x42). */
-private val PlayButtonSize = 42.dp
-
-/** Corner radius of the card and its cover, from the `.pen` (20 / 12). */
 private val CardRadius = 20.dp
-private val CoverRadius = 12.dp
+private val CoverRadius = 10.dp
+
+/** Share of the row a card takes when there are several, so the next one peeks in. */
+private const val MultiCardWidthFraction = 0.86f
+
+/** Progress fill animation; starts after the section's own entrance has begun. */
+private const val ProgressFillDurationMs = 900
+private const val ProgressFillDelayMs = 300
+
+private val EmptyIconSize = 44.dp
 
 /**
  * Continue-reading section for the populated Home.
  *
- * A horizontal carousel, matching the `.pen`: one card per in-progress book,
- * scrolled sideways, with the section heading above it.
+ * A single in-progress book gets the full width; several become a carousel in
+ * which the next card peeks in from the edge, which is what tells the reader the
+ * row scrolls.
  */
 @Composable
 fun ContinueReadingSection(
@@ -71,70 +85,56 @@ fun ContinueReadingSection(
     onShare: (Book) -> Unit = {},
     onDelete: (Book) -> Unit = {},
 ) {
-    val colors = nexoColors
     Column {
-        ContinueSectionHeader(onViewAll = onViewAll)
+        HomeSectionHeader(title = stringResource(R.string.home_continue_reading), onAction = onViewAll)
         Spacer(modifier = Modifier.height(NexoDimens.spacingSm))
         if (books.isNotEmpty()) {
+            val widthFraction = if (books.size == 1) 1f else MultiCardWidthFraction
             LazyRow(horizontalArrangement = Arrangement.spacedBy(NexoDimens.spacingSm)) {
                 items(books, key = { it.id }) { book ->
                     val canonicalProgress = progressPercentByBook[book.id] ?: 0f
-                    ContinueReadingCard(book = book, progressFraction = (canonicalProgress / 100f).coerceIn(0f, 1f), onBookSelected = onBookSelected, onContinueReading = onContinueReading, onEdit = onEdit, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShare = onShare, onDelete = onDelete)
+                    ContinueReadingCard(book = book, progressFraction = (canonicalProgress / 100f).coerceIn(0f, 1f), onBookSelected = onBookSelected, onContinueReading = onContinueReading, onEdit = onEdit, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShare = onShare, onDelete = onDelete, modifier = Modifier.fillParentMaxWidth(widthFraction))
                 }
             }
         } else {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(NexoDimens.spacingSm))
-                        .background(colors.surfaceVariant)
-                        .padding(NexoDimens.spacingMd),
-            ) {
-                Text(text = stringResource(R.string.home_no_current_book), style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
-            }
+            NoCurrentBookCard(onClick = onViewAll)
         }
     }
 }
 
 /**
- * Section heading: the label on the left, an amber "Ver todo" link on the right.
- *
- * Mirrors the `.pen` `section_header` — the link is the accent colour with a
- * chevron, matching "Mi biblioteca" and the genres header below it.
+ * Empty state of the section: instead of a dead grey bar, a tappable row that
+ * takes the reader to their library to pick the next book.
  */
 @Composable
-private fun ContinueSectionHeader(onViewAll: () -> Unit) {
+private fun NoCurrentBookCard(onClick: () -> Unit) {
     val colors = nexoColors
+    val label = stringResource(R.string.home_ver_todo)
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .pressScaleClickable(shape = RoundedCornerShape(CardRadius), onClickLabel = label, onClick = onClick)
+                .background(colors.surface)
+                .border(1.dp, colors.borderSubtle, RoundedCornerShape(CardRadius))
+                .padding(NexoDimens.spacingMd),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(NexoDimens.spacingMd),
     ) {
+        Box(
+            modifier = Modifier.size(EmptyIconSize).clip(CircleShape).background(colors.backgroundYellowTransparent),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(imageVector = NexoIcons.BookOpen, contentDescription = null, tint = colors.accentOrange, modifier = Modifier.size(22.dp))
+        }
         Text(
-            text = stringResource(R.string.home_continue_reading),
-            style = MaterialTheme.typography.titleMedium,
+            text = stringResource(R.string.home_no_current_book),
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = colors.textPrimary,
+            modifier = Modifier.weight(1f),
         )
-        Row(
-            modifier = Modifier.clickable(onClick = onViewAll).padding(NexoDimens.spacingXs),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.home_ver_todo),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.accentOrange,
-            )
-            Icon(
-                imageVector = NexoIcons.ChevronRight,
-                contentDescription = null,
-                tint = colors.accentOrange,
-                modifier = Modifier.size(14.dp),
-            )
-        }
+        Icon(imageVector = NexoIcons.ChevronRight, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -182,19 +182,25 @@ fun ContinueReadingCard(
     onMarkPlanToRead: (Book) -> Unit = {},
     onShare: (Book) -> Unit = {},
     onDelete: (Book) -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     val colors = nexoColors
+    var progressTarget by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(progressFraction) { progressTarget = progressFraction }
+    val animatedProgress by animateFloatAsState(
+        targetValue = progressTarget,
+        animationSpec = tween(ProgressFillDurationMs, delayMillis = ProgressFillDelayMs, easing = FastOutSlowInEasing),
+        label = "continueProgress",
+    )
     Box(
         modifier =
-            Modifier
-                .width(CardWidth)
-                .clip(RoundedCornerShape(CardRadius))
+            modifier
+                .pressScaleClickable(shape = RoundedCornerShape(CardRadius)) { onBookSelected(book.id, book.filePath, book.format) }
                 .background(
-                    Brush.radialGradient(
-                        colors = listOf(colors.backgroundBlueTransparent, colors.surfaceVariant),
+                    Brush.linearGradient(
+                        colors = listOf(colors.surfaceVariant, colors.surface),
                     ),
-                ).border(1.dp, ContinueCardStroke, RoundedCornerShape(CardRadius))
-                .clickable { onBookSelected(book.id, book.filePath, book.format) }
+                ).border(1.dp, colors.borderSubtle, RoundedCornerShape(CardRadius))
                 .padding(NexoDimens.spacingMd),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(NexoDimens.spacingMd)) {
@@ -239,15 +245,15 @@ fun ContinueReadingCard(
                 Spacer(modifier = Modifier.height(NexoDimens.spacingSm))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(NexoDimens.spacingSm)) {
                     NexoProgressBar(
-                        progress = progressFraction,
-                        height = 8.dp,
+                        progress = animatedProgress,
+                        height = 6.dp,
                         showPercentage = false,
                         trackColor = colors.background,
                         indicatorColor = colors.accentOrange,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
-                        text = stringResource(R.string.home_progress_percent, (progressFraction * 100).toInt()),
+                        text = stringResource(R.string.home_progress_percent, (animatedProgress * 100).toInt()),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.textPrimary,
@@ -268,11 +274,6 @@ fun ContinueReadingCard(
         }
     }
 }
-
-/** Amber hairline around the card (`.pen` stroke `#14489c`). */
-private val ContinueCardStroke =
-    androidx.compose.ui.graphics
-        .Color(0xFF14489C)
 
 /**
  * Chapter line: a book glyph plus the chapter label.
@@ -303,10 +304,10 @@ private fun ChapterRow(book: Book) {
 }
 
 /**
- * Circular play affordance that resumes the book (`.pen` `play_btn`).
+ * Filled amber play button that resumes the book.
  *
- * Outlined, not filled: the `.pen` draws a `$accent` ring with an `$accent`
- * glyph, so the amber stays an outline against the card's blue tint.
+ * Filled rather than outlined: resuming is the single most likely action on
+ * the whole Home, so it carries the screen's one solid accent.
  */
 @Composable
 private fun PlayButton(onClick: () -> Unit) {
@@ -316,16 +317,15 @@ private fun PlayButton(onClick: () -> Unit) {
         modifier =
             Modifier
                 .size(PlayButtonSize)
-                .clip(CircleShape)
-                .border(1.5.dp, colors.accentOrange, CircleShape)
-                .clickable(onClickLabel = label, onClick = onClick),
+                .pressScaleClickable(shape = RoundedCornerShape(16.dp), onClickLabel = label, onClick = onClick)
+                .background(colors.accentOrange),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = NexoIcons.Play,
             contentDescription = label,
-            tint = colors.accentOrange,
-            modifier = Modifier.size(20.dp),
+            tint = colors.onAccentOrange,
+            modifier = Modifier.size(22.dp),
         )
     }
 }

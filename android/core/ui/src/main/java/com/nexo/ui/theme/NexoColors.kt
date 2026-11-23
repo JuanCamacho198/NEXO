@@ -55,6 +55,11 @@ data class NexoColors(
      * play button and progress fill, and the genre chips.
      */
     val accentOrange: Color,
+    /**
+     * Ink drawn on an [accentOrange] fill (play buttons, reading CTAs). Dark navy
+     * in both themes: white or the light page colour on orange stays under 3:1.
+     */
+    val onAccentOrange: Color,
     /** Background tint for yellow-accented chips/badges. Dark: [BgYellowTransparent]. */
     val backgroundYellowTransparent: Color,
     /** Reading-streak indicator (flame glyph in the top bar). Dark: [AccentYellow]. */
@@ -122,6 +127,7 @@ val darkNexoColors =
         textAccent = TextAccent,
         accentYellow = AccentYellow,
         accentOrange = AccentOrange,
+        onAccentOrange = BgMain,
         backgroundYellowTransparent = BgYellowTransparent,
         streak = AccentYellow,
         accentGreen = AccentGreen,
@@ -164,7 +170,8 @@ val lightNexoColors =
         textSecondary = TextSecondaryLight,
         textAccent = TextAccent,
         accentYellow = AccentYellow,
-        accentOrange = AccentOrange,
+        accentOrange = AccentOrangeLight,
+        onAccentOrange = TextPrimaryLight,
         backgroundYellowTransparent = BgYellowTransparentLight,
         streak = AccentYellow,
         accentGreen = AccentGreen,

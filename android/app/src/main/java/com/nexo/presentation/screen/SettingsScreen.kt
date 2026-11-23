@@ -1,5 +1,10 @@
 package com.nexo.presentation.screen
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -129,6 +135,8 @@ fun SettingsScreen(
     )
 }
 
+private const val SettingsNavMs = 260
+
 @Composable
 private fun SettingsScreenContent(
     contentPadding: PaddingValues,
@@ -182,10 +190,17 @@ private fun SettingsScreenContent(
                 .fillMaxSize()
                 .padding(contentPadding),
     ) {
+        // Sub-pages slide in from the right over a slight fade and slide back out
+        // on return, so drilling into Settings reads as moving deeper, not as a
+        // hard cut between unrelated screens.
         NavHost(
             navController = nestedNavController,
             startDestination = start,
             modifier = Modifier.fillMaxSize(),
+            enterTransition = { slideInHorizontally(tween(SettingsNavMs)) { it / 4 } + fadeIn(tween(SettingsNavMs)) },
+            exitTransition = { slideOutHorizontally(tween(SettingsNavMs)) { -it / 8 } + fadeOut(tween(SettingsNavMs)) },
+            popEnterTransition = { slideInHorizontally(tween(SettingsNavMs)) { -it / 8 } + fadeIn(tween(SettingsNavMs)) },
+            popExitTransition = { slideOutHorizontally(tween(SettingsNavMs)) { it / 4 } + fadeOut(tween(SettingsNavMs)) },
         ) {
             composable(route = NexoDestination.SettingsList.route) {
                 SettingsListScreen(
@@ -301,6 +316,10 @@ private fun SettingsScreenContent(
                     onDeleteCustomHighlightColor = onDeleteCustomHighlightColor,
                     onResetCustomHighlightColors = onResetCustomHighlightColors,
                     onBack = { nestedNavController.popBackStack() },
+                    subtitle = stringResource(com.nexo.R.string.palette_section_subtitle),
+                    addColorLabel = stringResource(com.nexo.R.string.palette_add_color),
+                    resetLabel = stringResource(com.nexo.R.string.palette_reset),
+                    pickColorLabel = stringResource(com.nexo.R.string.palette_pick_color),
                 )
             }
 
@@ -480,6 +499,7 @@ private fun SettingsScreenContent(
                             nestedNavController.popBackStack()
                         },
                         onNavigateBack = { nestedNavController.popBackStack() },
+                        padsSystemBars = false,
                     )
                 }
             }

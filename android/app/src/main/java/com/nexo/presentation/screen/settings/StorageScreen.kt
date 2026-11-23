@@ -1,14 +1,23 @@
 package com.nexo.presentation.screen.settings
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -16,25 +25,34 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.nexo.domain.model.BookStorageItem
 import com.nexo.domain.model.CacheUsage
 import com.nexo.feature.settings.R
 import com.nexo.presentation.screen.library.RemoveBookDialog
 import com.nexo.presentation.viewmodel.StorageUiState
+import com.nexo.ui.components.molecules.NexoSettingsDivider
+import com.nexo.ui.components.molecules.NexoSettingsIcon
+import com.nexo.ui.components.molecules.NexoSettingsNavRow
+import com.nexo.ui.components.molecules.NexoSettingsSection
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
+import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 import com.nexo.ui.util.formatFileSize
 
 /**
@@ -96,92 +114,88 @@ private fun StorageScreenContent(
         title = stringResource(R.string.settings_storage_title),
         onBack = onBack,
     ) {
+        val colors = nexoColors
+        val booksBytes = uiState.books.sumOf { it.sizeBytes }
+        // Fixed category order and colour, never cycled: the bar's segments and the
+        // rows below (which act as its legend) always pair the same hue to the same kind.
+        val segments =
+            listOf(
+                StorageSegment(stringResource(R.string.storage_cache_discover), uiState.cache.discoverCacheBytes, colors.primary),
+                StorageSegment(stringResource(R.string.storage_cache_images), uiState.cache.imageCacheBytes, colors.accentPurple),
+                StorageSegment(stringResource(R.string.storage_cache_reader), uiState.cache.readerCacheBytes, colors.accentOrange),
+                StorageSegment(stringResource(R.string.storage_books_section), booksBytes, colors.accentGreen),
+            )
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             // Header — total measured live, never a hardcoded number.
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(colors.surface)
+                        .border(1.dp, colors.borderSubtle, RoundedCornerShape(18.dp))
+                        .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text =
-                            stringResource(
-                                R.string.storage_header_total_used,
-                                formatFileSize(context, uiState.totalBytes),
-                            ),
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = stringResource(R.string.storage_header_subtitle),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    text =
+                        stringResource(
+                            R.string.storage_header_total_used,
+                            formatFileSize(context, uiState.totalBytes),
+                        ),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colors.textPrimary,
+                )
+                StorageBar(segments = segments)
+                Text(
+                    text = stringResource(R.string.storage_header_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textSecondary,
+                )
             }
 
             // ── Cache breakdown (clear-cache is cache-only) ──────────────
-            SectionTitle(text = stringResource(R.string.storage_cache_section))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    SizeRow(
-                        label = stringResource(R.string.storage_cache_discover),
-                        value = formatFileSize(context, uiState.cache.discoverCacheBytes),
-                    )
-                    SizeRow(
-                        label = stringResource(R.string.storage_cache_images),
-                        value = formatFileSize(context, uiState.cache.imageCacheBytes),
-                    )
-                    SizeRow(
-                        label = stringResource(R.string.storage_cache_reader),
-                        value = formatFileSize(context, uiState.cache.readerCacheBytes),
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                NexoSettingsSection(title = stringResource(R.string.storage_cache_section)) {
+                    segments.take(3).forEachIndexed { index, segment ->
+                        if (index > 0) NexoSettingsDivider(inset = false)
+                        SizeRow(label = segment.label, value = formatFileSize(context, segment.bytes), dot = segment.color)
+                    }
                 }
-            }
-            Button(
-                onClick = onClearCache,
-                enabled = !uiState.isClearingCache,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
-                    ),
-            ) {
-                if (uiState.isClearingCache) {
-                    CircularProgressIndicator(
-                        modifier =
-                            Modifier
-                                .padding(end = 8.dp)
-                                .size(16.dp),
-                        strokeWidth = 2.dp,
-                    )
+                Button(
+                    onClick = onClearCache,
+                    enabled = !uiState.isClearingCache,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    // Tonal, not solid red: clearing cache is safe and reversible
+                    // (it refills on use), so it should not shout like a delete.
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.14f),
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
+                ) {
+                    if (uiState.isClearingCache) {
+                        CircularProgressIndicator(
+                            modifier =
+                                Modifier
+                                    .padding(end = 8.dp)
+                                    .size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                    Text(text = stringResource(R.string.storage_action_clear_cache), fontWeight = FontWeight.SemiBold)
                 }
-                Text(text = stringResource(R.string.storage_action_clear_cache))
             }
 
             // ── Books breakdown (per-book delete is a separate action) ───
-            SectionTitle(text = stringResource(R.string.storage_books_section))
             when {
                 uiState.isLoading -> {
                     Row(
@@ -199,34 +213,39 @@ private fun StorageScreenContent(
                         Text(
                             text = stringResource(R.string.storage_loading),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = colors.textSecondary,
                         )
                     }
                 }
                 uiState.books.isEmpty() -> {
-                    Text(
-                        text = stringResource(R.string.storage_books_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 12.dp),
-                    )
+                    NexoSettingsSection(title = stringResource(R.string.storage_books_section)) {
+                        NexoSettingsNavRow(
+                            label = stringResource(R.string.storage_books_empty),
+                            icon = NexoIcons.LibraryBooks,
+                            accent = colors.textSecondary,
+                            onClick = null,
+                        )
+                    }
                 }
                 else ->
-                    uiState.books.forEach { book ->
-                        BookRow(
-                            book = book,
-                            sizeLabel = formatFileSize(context, book.sizeBytes),
-                            onDelete = { onRequestDeleteBook(book.bookId) },
-                        )
+                    NexoSettingsSection(title = stringResource(R.string.storage_books_section)) {
+                        uiState.books.forEachIndexed { index, book ->
+                            if (index > 0) NexoSettingsDivider()
+                            BookRow(
+                                book = book,
+                                sizeLabel = formatFileSize(context, book.sizeBytes),
+                                onDelete = { onRequestDeleteBook(book.bookId) },
+                            )
+                        }
                     }
             }
 
             OutlinedButton(
                 onClick = onSweepOrphans,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(14.dp),
             ) {
-                Text(text = stringResource(R.string.storage_action_sweep))
+                Text(text = stringResource(R.string.storage_action_sweep), fontWeight = FontWeight.SemiBold)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -234,39 +253,77 @@ private fun StorageScreenContent(
     }
 }
 
+private data class StorageSegment(
+    val label: String,
+    val bytes: Long,
+    val color: Color,
+)
+
+/**
+ * Where the space goes, as one horizontal bar of proportional segments with a
+ * 2dp surface gap between fills. Empty categories take no width. The rows below
+ * name each colour, so the bar needs no legend of its own.
+ */
 @Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 4.dp),
-    )
+private fun StorageBar(segments: List<StorageSegment>) {
+    val colors = nexoColors
+    val total = segments.sumOf { it.bytes }.coerceAtLeast(1L)
+    val grow = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { grow.animateTo(1f, tween(700, easing = FastOutSlowInEasing)) }
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(12.dp)
+                .clip(CircleShape)
+                .background(colors.surfaceVariant),
+    ) {
+        // The filled run grows from the left inside the clipped track.
+        Row(
+            modifier = Modifier.fillMaxWidth(grow.value).fillMaxHeight(),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            segments.filter { it.bytes > 0 }.forEach { segment ->
+                Box(
+                    modifier =
+                        Modifier
+                            .weight(segment.bytes.toFloat() / total)
+                            .fillMaxHeight()
+                            .background(segment.color),
+                )
+            }
+        }
+    }
 }
 
 @Composable
 private fun SizeRow(
     label: String,
     value: String,
+    dot: Color,
 ) {
+    val colors = nexoColors
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .heightIn(min = 52.dp)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(dot))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyLarge,
+            color = colors.textPrimary,
+            modifier = Modifier.weight(1f),
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.textSecondary,
         )
     }
 }
@@ -277,38 +334,39 @@ private fun BookRow(
     sizeLabel: String,
     onDelete: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+    val colors = nexoColors
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 60.dp)
+                .padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = book.title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = sizeLabel,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            TextButton(onClick = onDelete) {
-                Text(
-                    text = stringResource(R.string.storage_action_delete),
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
+        NexoSettingsIcon(icon = NexoIcons.Book, accent = colors.accentGreen)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = book.title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = sizeLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textSecondary,
+            )
+        }
+        TextButton(onClick = onDelete) {
+            Text(
+                text = stringResource(R.string.storage_action_delete),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }

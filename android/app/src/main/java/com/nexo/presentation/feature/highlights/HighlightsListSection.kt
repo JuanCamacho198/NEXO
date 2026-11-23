@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -17,6 +18,8 @@ import com.nexo.domain.model.Highlight
 import com.nexo.presentation.feature.highlights.components.NexoHighlightCard
 import com.nexo.ui.components.atoms.NexoEmptyState
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.motion.rememberEntranceProgress
+import com.nexo.ui.motion.staggeredEnter
 
 @Composable
 fun HighlightsListSection(
@@ -34,12 +37,14 @@ fun HighlightsListSection(
             uiState.books.associate { it.id to it.title }
         }
 
+    val entrance = rememberEntranceProgress(start = uiState.filteredHighlights.isNotEmpty())
     if (uiState.filteredHighlights.isEmpty()) {
         Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(200.dp),
+                    .padding(horizontal = HighlightsHorizontalInset)
+                    .height(240.dp),
             contentAlignment = Alignment.Center,
         ) {
             NexoEmptyState(
@@ -49,8 +54,9 @@ fun HighlightsListSection(
             )
         }
     } else {
-        for (highlight in uiState.filteredHighlights) {
+        uiState.filteredHighlights.forEachIndexed { index, highlight ->
             NexoHighlightCard(
+                modifier = Modifier.padding(horizontal = HighlightsHorizontalInset).staggeredEnter(entrance, index),
                 content =
                     stripSurroundingQuotes(
                         highlight.textContent.replace("\\n", " ").replace("\n", " "),

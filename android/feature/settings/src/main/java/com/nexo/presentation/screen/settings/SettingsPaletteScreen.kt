@@ -1,12 +1,8 @@
 package com.nexo.presentation.screen.settings
 
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.nexo.feature.settings.R
 import com.nexo.ui.components.molecules.HighlightPaletteSection
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
@@ -20,14 +16,25 @@ fun SettingsPaletteScreen(
     onDeleteCustomHighlightColor: (Int) -> Unit,
     onResetCustomHighlightColors: () -> Unit,
     onBack: () -> Unit,
+    // The palette copy lives in :app's resources, so the host resolves it.
+    // Without it every label rendered empty (a blank red "reset" row, an
+    // untitled colour dialog).
+    subtitle: String? = null,
+    addColorLabel: String? = null,
+    resetLabel: String? = null,
+    pickColorLabel: String? = null,
 ) {
     NexoSettingsSubPage(
         title = stringResource(R.string.palette_section_title),
         onBack = onBack,
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
-
         HighlightPaletteSection(
+            subtitle = subtitle,
+            addColorLabel = addColorLabel,
+            resetLabel = resetLabel,
+            pickColorLabel = pickColorLabel,
+            cancelLabel = stringResource(R.string.cancel),
+            deleteContentDescription = stringResource(R.string.storage_action_delete),
             customColors = customHighlightColors,
             onUpdateColor = { index, hex ->
                 onUpdateCustomHighlightColor(index, hex)

@@ -1,7 +1,10 @@
 package com.nexo.presentation.screen.settings
 
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,29 +14,33 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.nexo.feature.settings.R
+import com.nexo.ui.components.molecules.NexoSettingsDivider
+import com.nexo.ui.components.molecules.NexoSettingsIcon
+import com.nexo.ui.components.molecules.NexoSettingsNavRow
+import com.nexo.ui.components.molecules.NexoSettingsSection
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 @Composable
 fun SyncScreen(
@@ -59,162 +66,118 @@ fun SyncScreen(
         title = stringResource(R.string.settings_sync_title),
         onBack = onBack,
     ) {
+        val colors = nexoColors
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            // Card Realtime Conectado
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
+            // Status hero: realtime state on a tinted card, then the two figures.
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Brush.linearGradient(listOf(colors.primary.copy(alpha = 0.20f), colors.surface)))
+                        .border(1.dp, colors.borderSubtle, RoundedCornerShape(18.dp))
+                        .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            imageVector = NexoIcons.CloudSync,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.sync_card_realtime_title),
-                            style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        AssistChip(
-                            onClick = {},
-                            label = {
-                                Text(
-                                    text = stringResource(R.string.sync_realtime_connected),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                                )
-                            },
-                            colors =
-                                AssistChipDefaults.assistChipColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                ),
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.sync_last_sync_label),
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = stringResource(R.string.sync_last_sync_value),
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.sync_outbox_label),
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = stringResource(R.string.sync_outbox_value),
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
-                }
-            }
-
-            // Lista últimos 5
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
+                    NexoSettingsIcon(icon = NexoIcons.CloudSync)
                     Text(
-                        text = stringResource(R.string.sync_recent_title),
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                        fontWeight = FontWeight.SemiBold,
+                        text = stringResource(R.string.sync_card_realtime_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary,
+                        modifier = Modifier.weight(1f),
                     )
-                    recentEntries.forEach { (labelRes, time) ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = stringResource(labelRes),
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                                modifier = Modifier.weight(1f),
-                            )
-                            Text(
-                                text = time,
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                    Row(
+                        modifier =
+                            Modifier
+                                .clip(CircleShape)
+                                .background(colors.accentGreen.copy(alpha = 0.16f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(colors.accentGreen))
+                        Text(
+                            text = stringResource(R.string.sync_realtime_connected),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.accentGreen,
+                        )
                     }
+                }
+                SyncFact(label = stringResource(R.string.sync_last_sync_label), value = stringResource(R.string.sync_last_sync_value))
+                SyncFact(label = stringResource(R.string.sync_outbox_label), value = stringResource(R.string.sync_outbox_value))
+            }
+
+            NexoSettingsSection(title = stringResource(R.string.sync_recent_title)) {
+                recentEntries.forEachIndexed { index, (labelRes, time) ->
+                    if (index > 0) NexoSettingsDivider()
+                    NexoSettingsNavRow(
+                        label = stringResource(labelRes),
+                        icon = NexoIcons.Sync,
+                        accent = colors.accentGreen,
+                        onClick = null,
+                        value = time,
+                    )
                 }
             }
 
-            // Botones Sincronizar ahora y Ver logs
-            Button(
-                onClick = {
-                    Toast.makeText(context, syncNowSuccess, Toast.LENGTH_SHORT).show()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Icon(
-                    imageVector = NexoIcons.Sync,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = stringResource(R.string.sync_action_sync_now))
-            }
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = {
+                        Toast.makeText(context, syncNowSuccess, Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Icon(
+                        imageVector = NexoIcons.Sync,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.sync_action_sync_now), fontWeight = FontWeight.SemiBold)
+                }
 
-            OutlinedButton(
-                onClick = {
-                    if (onViewLogs != null) {
-                        onViewLogs()
-                    } else {
-                        Toast.makeText(context, logViewerLabel, Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(text = stringResource(R.string.sync_action_view_logs))
+                OutlinedButton(
+                    onClick = {
+                        if (onViewLogs != null) {
+                            onViewLogs()
+                        } else {
+                            Toast.makeText(context, logViewerLabel, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Text(text = stringResource(R.string.sync_action_view_logs), fontWeight = FontWeight.SemiBold)
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+private fun SyncFact(
+    label: String,
+    value: String,
+) {
+    val colors = nexoColors
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(text = label, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
+        Text(text = value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
     }
 }
 

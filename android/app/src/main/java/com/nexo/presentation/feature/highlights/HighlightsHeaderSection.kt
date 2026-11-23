@@ -1,38 +1,47 @@
 package com.nexo.presentation.feature.highlights
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.model.AuthSession
 import com.nexo.presentation.viewmodel.highlights.HighlightsSyncState
-import com.nexo.ui.components.molecules.NexoHeader
+import com.nexo.ui.components.atoms.NexoIconButton
+import com.nexo.ui.components.molecules.NexoTopAppBar
+import com.nexo.ui.components.molecules.TopLevelVariant
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.theme.nexoColors
 
+/**
+ * Highlights header: the same top-level bar as Library and Discover — avatar,
+ * the screen title with its subtitle, and the search and refresh actions —
+ * followed by a sync confirmation that slides in while syncing and right after.
+ *
+ * It replaces a "NEXO" brand bar stacked over a second, larger "Highlights"
+ * title with a refresh disc floating beside it.
+ */
 @Composable
 fun HighlightsHeaderSection(
     authSession: AuthSession?,
@@ -48,95 +57,84 @@ fun HighlightsHeaderSection(
     // it does solely past the slow-pull threshold.
     val showsSyncing = isSyncing && isManualTriggered
 
-    NexoHeader(
-        title = stringResource(R.string.home_nexo_title),
+    NexoTopAppBar(
+        title = stringResource(R.string.highlights_title),
+        subtitle = stringResource(R.string.highlights_subtitle),
+        variant = TopLevelVariant.Home,
+        userInitial =
+            authSession
+                ?.displayName
+                ?.trim()
+                ?.take(1)
+                ?.uppercase()
+                ?.ifEmpty { null },
         avatarImageUrl = authSession?.photoUrl,
-        avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP",
-        onAvatarClick = onOpenAccount,
         avatarContentDescription = stringResource(R.string.home_avatar_content_description),
-        onSearchClick = onSearchClick,
-    )
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.highlights_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+        onAvatarClick = onOpenAccount,
+        backContentDescription = stringResource(R.string.nav_back),
+        actions = {
+            NexoIconButton(
+                icon = NexoIcons.Search,
+                contentDescription = stringResource(R.string.search_label),
+                onClick = onSearchClick,
+                size = NexoDimens.topBarActionTarget,
+                iconSize = NexoDimens.topBarActionIcon,
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.highlights_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        IconButton(
-            onClick = onSyncRefresh,
-            enabled = !isSyncing,
-            modifier =
-                Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            if (showsSyncing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Filled.Refresh,
-                    contentDescription = stringResource(R.string.highlights_refresh_content_description),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-
-    if (showsSyncing || isSynced) {
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                tonalElevation = 2.dp,
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    if (showsSyncing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(14.dp),
-                            strokeWidth = 2.dp,
-                        )
-                        Text(
-                            text = stringResource(R.string.highlights_syncing),
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    } else {
-                        Icon(
-                            imageVector = NexoIcons.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = stringResource(R.string.highlights_synced),
-                            style = MaterialTheme.typography.labelSmall,
-                        )
+            Crossfade(targetState = showsSyncing, label = "highlightsRefresh") { syncing ->
+                if (syncing) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(NexoDimens.topBarActionTarget)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     }
+                } else {
+                    NexoIconButton(
+                        icon = NexoIcons.Sync,
+                        contentDescription = stringResource(R.string.highlights_refresh_content_description),
+                        // Ignored mid-sync, so a second pull cannot stack on the first.
+                        onClick = { if (!isSyncing) onSyncRefresh() },
+                        size = NexoDimens.topBarActionTarget,
+                        iconSize = NexoDimens.topBarActionIcon,
+                    )
                 }
             }
+        },
+    )
+
+    AnimatedVisibility(
+        visible = showsSyncing || isSynced,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), contentAlignment = Alignment.Center) {
+            SyncPill(isSyncing = showsSyncing)
+        }
+    }
+}
+
+@Composable
+private fun SyncPill(isSyncing: Boolean) {
+    val colors = nexoColors
+    Row(
+        modifier =
+            Modifier
+                .clip(CircleShape)
+                .background(colors.surface)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (isSyncing) {
+            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
+            Text(text = stringResource(R.string.highlights_syncing), style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
+        } else {
+            Icon(imageVector = NexoIcons.Check, contentDescription = null, modifier = Modifier.size(14.dp), tint = colors.accentGreen)
+            Text(text = stringResource(R.string.highlights_synced), style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
         }
     }
 }

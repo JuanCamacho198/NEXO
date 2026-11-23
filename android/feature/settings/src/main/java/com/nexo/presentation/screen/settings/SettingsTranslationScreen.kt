@@ -1,6 +1,6 @@
 package com.nexo.presentation.screen.settings
 
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,12 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,9 +31,14 @@ import com.nexo.domain.model.TranslationHistoryEntry
 import com.nexo.domain.repository.TranslationHistoryRepository
 import com.nexo.domain.translation.TranslationSettings
 import com.nexo.feature.settings.R
+import com.nexo.ui.components.molecules.NexoSettingsDivider
+import com.nexo.ui.components.molecules.NexoSettingsNavRow
+import com.nexo.ui.components.molecules.NexoSettingsOptionRow
+import com.nexo.ui.components.molecules.NexoSettingsSection
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -110,12 +112,12 @@ fun SettingsTranslationScreen(
                 onSelect = { update(settings.copy(sourceLanguage = it)) },
             )
 
-            if (sameLanguage) {
-                Spacer(modifier = Modifier.height(8.dp))
+            AnimatedVisibility(visible = sameLanguage) {
                 Text(
                     text = stringResource(R.string.settings_translation_same_language_warning),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(start = 4.dp, top = 8.dp),
                 )
             }
 
@@ -165,42 +167,14 @@ private fun LanguagePicker(
     selected: String?,
     onSelect: (String?) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
-        )
-        options.forEach { option ->
-            val isSelected = selected == option.code
-            Surface(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelect(option.code) },
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = stringResource(option.labelRes),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    if (isSelected) {
-                        Icon(
-                            imageVector = NexoIcons.Check,
-                            contentDescription = stringResource(R.string.a11y_selected),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            }
+    NexoSettingsSection(title = label) {
+        options.forEachIndexed { index, option ->
+            if (index > 0) NexoSettingsDivider(inset = false)
+            NexoSettingsOptionRow(
+                label = stringResource(option.labelRes),
+                selected = selected == option.code,
+                onClick = { onSelect(option.code) },
+            )
         }
     }
 }
@@ -209,35 +183,42 @@ private fun LanguagePicker(
 private fun TranslationHistorySection(historyRepository: TranslationHistoryRepository) {
     val entries by historyRepository.history().collectAsStateWithLifecycle(initialValue = emptyList())
     val scope = rememberCoroutineScope()
+    val colors = nexoColors
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(start = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
                 text = stringResource(R.string.settings_translation_history_title),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textSecondary,
             )
             if (entries.isNotEmpty()) {
                 TextButton(onClick = { scope.launch { historyRepository.clearHistory() } }) {
-                    Text(stringResource(R.string.settings_translation_history_clear))
+                    Text(
+                        text = stringResource(R.string.settings_translation_history_clear),
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (entries.isEmpty()) {
-            Text(
-                text = stringResource(R.string.settings_translation_history_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                entries.forEach { entry ->
+        NexoSettingsSection {
+            if (entries.isEmpty()) {
+                NexoSettingsNavRow(
+                    label = stringResource(R.string.settings_translation_history_empty),
+                    icon = NexoIcons.History,
+                    accent = colors.textSecondary,
+                    onClick = null,
+                )
+            } else {
+                entries.forEachIndexed { index, entry ->
+                    if (index > 0) NexoSettingsDivider(inset = false)
                     HistoryRow(entry)
                 }
             }
@@ -245,43 +226,38 @@ private fun TranslationHistorySection(historyRepository: TranslationHistoryRepos
     }
 }
 
+/** One translation: original, its translation in `primary`, then pair and date. */
 @Composable
 private fun HistoryRow(entry: TranslationHistoryEntry) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    val colors = nexoColors
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = entry.original,
+            style = MaterialTheme.typography.bodyLarge,
+            color = colors.textPrimary,
+        )
+        Text(
+            text = entry.translated,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = colors.primary,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                text = entry.original,
-                style = MaterialTheme.typography.bodyLarge,
+                text = entry.langPair,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textSecondary,
             )
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = entry.translated,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
+                text = formatHistoryDate(entry.createdAtEpochMillis),
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.textSecondary,
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = entry.langPair,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = formatHistoryDate(entry.createdAtEpochMillis),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }

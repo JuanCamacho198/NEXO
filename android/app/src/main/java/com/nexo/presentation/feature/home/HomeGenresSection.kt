@@ -1,26 +1,20 @@
 package com.nexo.presentation.feature.home
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.presentation.screen.HomeTags
@@ -81,49 +75,29 @@ fun HomeGenresSection(
 ) {
     val colors = nexoColors
     Column(modifier = modifier.fillMaxWidth().testTag(HomeTags.GENRES_SECTION)) {
-        GenresHeader(onBrowseAll = onBrowseAll)
-        Spacer(modifier = Modifier.height(NexoDimens.spacingMd))
+        HomeSectionHeader(
+            title = stringResource(R.string.home_genres_title),
+            actionLabel = stringResource(R.string.home_ver_todo),
+            onAction = onBrowseAll,
+        )
+        Spacer(modifier = Modifier.height(NexoDimens.spacingSm))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(NexoDimens.spacingSm)) {
             items(HomeGenreChips) { genre ->
                 val label = stringResource(genre.labelRes)
-                val (container, accent) = genre.palette(colors)
+                val (_, accent) = genre.palette(colors)
+                // One calm surface for every chip; the genre's colour lives in its
+                // glyph only, so the row no longer reads as five competing buttons.
                 NexoChip(
                     label = label,
                     selected = label == selectedGenreLabel,
                     onClick = { onGenreSelected(label) },
                     icon = genre.icon,
-                    containerColor = container,
+                    containerColor = colors.surface,
                     iconTint = accent,
                     labelColor = colors.textPrimary,
+                    modifier = Modifier.border(1.dp, colors.borderSubtle, CircleShape),
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun GenresHeader(onBrowseAll: () -> Unit) {
-    val colors = nexoColors
-    val contentDescription = stringResource(R.string.home_genres_content_description)
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClickLabel = contentDescription, onClick = onBrowseAll),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = stringResource(R.string.home_genres_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = colors.textPrimary,
-        )
-        Icon(
-            imageVector = NexoIcons.ChevronRight,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-            tint = colors.textSecondary,
-        )
     }
 }

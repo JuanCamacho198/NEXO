@@ -1,21 +1,30 @@
 package com.nexo.presentation.screen.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,11 +34,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nexo.data.session.AppLanguagePreferences
 import com.nexo.debug.DebugPrefs
 import com.nexo.domain.model.AuthSession
@@ -37,11 +52,12 @@ import com.nexo.domain.model.ThemeMode
 import com.nexo.feature.settings.BuildConfig
 import com.nexo.feature.settings.R
 import com.nexo.ui.components.atoms.NexoAvatar
-import com.nexo.ui.components.molecules.NexoHeader
-import com.nexo.ui.components.molecules.NexoPreferenceItem
 import com.nexo.ui.icons.NexoIcons
-import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.motion.pressScaleClickable
+import com.nexo.ui.motion.rememberEntranceProgress
+import com.nexo.ui.motion.staggeredEnter
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 private data class SettingsRow(
     val labelRes: Int,
@@ -115,11 +131,6 @@ fun SettingsListScreen(
                 titleRes = R.string.settings_account_section,
                 rows =
                     listOf(
-                        SettingsRow(
-                            labelRes = R.string.settings_account_title,
-                            icon = NexoIcons.Person,
-                            onClick = onNavigateToAccount,
-                        ),
                         SettingsRow(
                             labelRes = R.string.settings_devices_title,
                             icon = NexoIcons.Devices,
@@ -232,70 +243,73 @@ fun SettingsListScreen(
             ),
         )
 
+    val entrance = rememberEntranceProgress()
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(NexoDimens.spacingMd),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        val scrollState = rememberScrollState()
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(NexoDimens.spacingMd),
-        ) {
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-            NexoHeader(
-                title = stringResource(R.string.home_nexo_title),
-                avatarInitials = stringResource(R.string.app_logo_initials),
+        TitleSection()
+
+        ProfileCard(
+            authSession = authSession,
+            onClick = onNavigateToAccount,
+            modifier = Modifier.staggeredEnter(entrance, 0),
+        )
+
+        groups.forEachIndexed { index, group ->
+            SettingsGroupBlock(
+                group = group,
+                accent = groupAccent(index),
+                modifier = Modifier.staggeredEnter(entrance, index + 1),
             )
-
-            TitleSection()
-
-            AccountSection(
-                authSession = authSession,
-                onClick = onNavigateToAccount,
-            )
-
-            groups.forEach { group ->
-                SettingsGroupBlock(group = group)
-            }
-
-            // PP-3: privacy notice + telemetry opt-out (stops SENDING; the
-            // Android DSN is compile-time, so this vetoes at the SDK hooks).
-            PrivacyTelemetrySection(context = context)
-
-            DebugModeSection(
-                debugEnabled = debugEnabled,
-                onToggle = { enabled ->
-                    debugEnabled = enabled
-                    DebugPrefs.setEnabled(context, enabled)
-                },
-            )
-
-            if (debugEnabled) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = stringResource(R.string.debug_panel_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    NexoPreferenceItem(
-                        icon = NexoIcons.BugReport,
-                        label = stringResource(R.string.debug_settings_log_viewer),
-                        onClick = onNavigateToLogViewer,
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
+
+        // PP-3: privacy notice + telemetry opt-out (stops SENDING; the
+        // Android DSN is compile-time, so this vetoes at the SDK hooks).
+        PrivacyTelemetrySection(context = context)
+
+        DebugModeSection(
+            debugEnabled = debugEnabled,
+            onToggle = { enabled ->
+                debugEnabled = enabled
+                DebugPrefs.setEnabled(context, enabled)
+            },
+            onNavigateToLogViewer = onNavigateToLogViewer,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
+
+/**
+ * Icon tint per settings group, in group order, so each block reads as its own
+ * family (account, appearance, reading, data, info) instead of five identical
+ * stacks of grey rows.
+ */
+@Composable
+private fun groupAccent(index: Int): Color {
+    val colors = nexoColors
+    return when (index) {
+        0 -> colors.primary
+        1 -> colors.accentPurple
+        2 -> colors.accentOrange
+        3 -> colors.accentGreen
+        else -> colors.accentBlue
+    }
+}
+
+private val GroupShape = RoundedCornerShape(18.dp)
+private val RowMinHeight = 56.dp
+private val RowIconBox = 34.dp
+
+/** Divider inset: past the icon box, so rows read as one list per group. */
+private val DividerInset = 62.dp
 
 @Composable
 private fun TitleSection() {
@@ -303,87 +317,175 @@ private fun TitleSection() {
         Text(
             text = stringResource(R.string.settings_title),
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
+            color = nexoColors.textPrimary,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(R.string.settings_subtitle),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = nexoColors.textSecondary,
         )
     }
 }
 
+/**
+ * The signed-in reader, first: a tinted card with avatar, name and email that
+ * opens the account page. Replaces both the "NEXO" brand bar and the duplicated
+ * "Account" heading that used to sit above a plain grey card.
+ */
 @Composable
-private fun AccountSection(
+private fun ProfileCard(
     authSession: AuthSession?,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.settings_account_section),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+    val colors = nexoColors
+    val name = authSession?.displayName ?: stringResource(R.string.settings_user_default)
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .pressScaleClickable(shape = GroupShape, onClick = onClick)
+                .background(Brush.linearGradient(listOf(colors.accentOrange.copy(alpha = 0.20f), colors.surface)))
+                .border(1.dp, colors.borderSubtle, GroupShape)
+                .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        NexoAvatar(
+            imageUrl = authSession?.photoUrl,
+            initials = name.take(2).uppercase(),
+            size = 56.dp,
         )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = authSession?.email ?: stringResource(R.string.settings_email_placeholder),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Icon(imageVector = NexoIcons.ChevronRight, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(20.dp))
+    }
+}
 
-        Surface(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onClick),
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-        ) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                NexoAvatar(
-                    imageUrl = authSession?.photoUrl,
-                    initials =
-                        (authSession?.displayName ?: stringResource(R.string.settings_user_default))
-                            .take(2)
-                            .uppercase(),
-                    size = 48.dp,
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = authSession?.displayName ?: stringResource(R.string.settings_user_default),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        text = authSession?.email ?: stringResource(R.string.settings_email_placeholder),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+/** A labelled group: small heading, then every row inside ONE card with inset dividers. */
+@Composable
+private fun SettingsGroupBlock(
+    group: SettingsGroup,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        GroupHeading(text = stringResource(group.titleRes))
+        GroupCard {
+            group.rows.forEachIndexed { index, row ->
+                if (index > 0) RowDivider()
+                SettingsRowItem(row = row, accent = accent)
             }
         }
     }
 }
 
 @Composable
-private fun SettingsGroupBlock(group: SettingsGroup) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(group.titleRes),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
+private fun GroupHeading(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 0.6.sp,
+        color = nexoColors.textSecondary,
+        modifier = Modifier.padding(start = 4.dp),
+    )
+}
 
-        group.rows.forEach { row ->
-            NexoPreferenceItem(
-                icon = row.icon,
-                label = stringResource(row.labelRes),
-                value = row.value,
-                onClick = row.onClick,
+@Composable
+private fun GroupCard(content: @Composable () -> Unit) {
+    val colors = nexoColors
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(GroupShape)
+                .background(colors.surface)
+                .border(1.dp, colors.borderSubtle, GroupShape),
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun RowDivider() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = DividerInset)
+                .height(1.dp)
+                .background(nexoColors.borderSubtle),
+    )
+}
+
+@Composable
+private fun RowIcon(
+    icon: ImageVector,
+    accent: Color,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(RowIconBox)
+                .clip(RoundedCornerShape(10.dp))
+                .background(accent.copy(alpha = 0.16f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
+    }
+}
+
+@Composable
+private fun SettingsRowItem(
+    row: SettingsRow,
+    accent: Color,
+) {
+    val colors = nexoColors
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = RowMinHeight)
+                .clickable(onClick = row.onClick)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        RowIcon(icon = row.icon, accent = accent)
+        Text(
+            text = stringResource(row.labelRes),
+            style = MaterialTheme.typography.bodyLarge,
+            color = colors.textPrimary,
+            modifier = Modifier.weight(1f),
+        )
+        if (!row.value.isNullOrBlank()) {
+            Text(
+                text = row.value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
+        Icon(imageVector = NexoIcons.ChevronRight, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -391,42 +493,46 @@ private fun SettingsGroupBlock(group: SettingsGroup) {
 private fun DebugModeSection(
     debugEnabled: Boolean,
     onToggle: (Boolean) -> Unit,
+    onNavigateToLogViewer: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.debug_mode_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-        ) {
+    val colors = nexoColors
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        GroupHeading(text = stringResource(R.string.debug_mode_title))
+        GroupCard {
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .heightIn(min = RowMinHeight)
+                        .toggleable(value = debugEnabled, role = Role.Switch, onValueChange = onToggle)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
+                RowIcon(icon = NexoIcons.BugReport, accent = colors.textSecondary)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.debug_mode_title),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = colors.textPrimary,
                     )
                     Text(
                         text = stringResource(R.string.debug_mode_subtitle),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = colors.textSecondary,
                     )
                 }
-                androidx.compose.material3.Switch(
-                    checked = debugEnabled,
-                    onCheckedChange = onToggle,
-                )
+                // The whole row toggles; the switch only mirrors the state.
+                Switch(checked = debugEnabled, onCheckedChange = null)
+            }
+            AnimatedVisibility(visible = debugEnabled, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+                Column {
+                    RowDivider()
+                    SettingsRowItem(
+                        row = SettingsRow(labelRes = R.string.debug_settings_log_viewer, icon = NexoIcons.BugReport, onClick = onNavigateToLogViewer),
+                        accent = colors.textSecondary,
+                    )
+                }
             }
         }
     }
@@ -478,49 +584,54 @@ private fun PrivacyTelemetrySection(context: android.content.Context) {
                 .isEnabled(context),
         )
     }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
+    val colors = nexoColors
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        GroupHeading(text = stringResource(R.string.settings_privacy_title))
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .clip(GroupShape)
+                    .background(colors.surface)
+                    .border(1.dp, colors.borderSubtle, GroupShape)
                     .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = stringResource(R.string.settings_privacy_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
                 text = stringResource(R.string.settings_privacy_collected),
                 style = MaterialTheme.typography.bodySmall,
+                color = colors.textSecondary,
             )
             Text(
                 text = stringResource(R.string.settings_privacy_never),
                 style = MaterialTheme.typography.bodySmall,
+                color = colors.textSecondary,
             )
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .toggleable(
+                            value = enabled,
+                            role = Role.Switch,
+                            onValueChange = { checked ->
+                                enabled = checked
+                                com.nexo.debug.SentryPrivacyPrefs
+                                    .setEnabled(context, checked)
+                            },
+                        ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.settings_privacy_toggle_label),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
+                    color = colors.textPrimary,
+                    modifier = Modifier.weight(1f),
                 )
-                Switch(
-                    checked = enabled,
-                    onCheckedChange = { checked ->
-                        enabled = checked
-                        com.nexo.debug.SentryPrivacyPrefs
-                            .setEnabled(context, checked)
-                    },
-                )
+                Switch(checked = enabled, onCheckedChange = null)
             }
             Text(
                 text =

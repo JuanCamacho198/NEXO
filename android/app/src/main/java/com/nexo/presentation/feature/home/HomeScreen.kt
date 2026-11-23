@@ -6,10 +6,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,6 +30,8 @@ import com.nexo.ui.components.atoms.NexoEmptyState
 import com.nexo.ui.components.molecules.ContinueReadingSkeleton
 import com.nexo.ui.components.molecules.NotificationSheet
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.motion.rememberEntranceProgress
+import com.nexo.ui.motion.staggeredEnter
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.NexoTheme
 
@@ -53,6 +53,9 @@ internal enum class HomeSectionRenderState { SKELETON, EMPTY, CONTENT }
  * [NexoDimens] terms.
  */
 private val ScreenHorizontalInset = 24.dp
+
+/** How far the populated Home's sections tuck up under the hero's fade. */
+private val HeroOverlap = 24.dp
 
 /**
  * @return [HomeSectionRenderState.SKELETON] while [isLoading] and the section
@@ -131,6 +134,8 @@ fun HomeScreenContent(
             onDismiss = { showNotifications = false },
         )
     }
+    val entrance = rememberEntranceProgress()
+    val hasUnread = unreadNotificationCount > 0
     LazyColumn(
         modifier =
             Modifier
@@ -139,7 +144,7 @@ fun HomeScreenContent(
                 .testTag(HomeTags.SCREEN_ROOT),
         verticalArrangement =
             androidx.compose.foundation.layout.Arrangement
-                .spacedBy(NexoDimens.spacingMd),
+                .spacedBy(NexoDimens.spacingLg),
     ) {
         if (uiState.showSearch) {
             item { Box(modifier = Modifier.padding(horizontal = ScreenHorizontalInset)) { SearchBarSection(searchQuery = uiState.searchQuery, onSearchQueryChange = onSearchQueryChange, onCloseSearch = onToggleSearch) } }
@@ -155,22 +160,22 @@ fun HomeScreenContent(
                 // cloud-sync banner. No "continue reading" carousel and no shelf —
                 // there is nothing in the library to continue or to shelve.
                 item {
-                    HomeHeroSection(onExplore = onNavigateToDiscover, avatarUrl = uiState.avatarUrl, userName = uiState.userName, streakDays = uiState.currentStreak, onAvatarClick = onOpenAccount, onStreakClick = onNavigateToStatistics, onNotificationsClick = {
+                    HomeHeroSection(onExplore = onNavigateToDiscover, avatarUrl = uiState.avatarUrl, userName = uiState.userName, streakDays = uiState.currentStreak, onAvatarClick = onOpenAccount, onStreakClick = onNavigateToStatistics, hasUnreadNotifications = hasUnread, onNotificationsClick = {
                         showNotifications = true
                         onNotificationsOpened()
                     })
                 }
-                item { HomeGenresSection(modifier = Modifier.padding(horizontal = ScreenHorizontalInset), onBrowseAll = onNavigateToDiscover) }
-                item { HomeSyncBanner(onClick = onNavigateToDriveSetup, modifier = Modifier.padding(horizontal = ScreenHorizontalInset)) }
+                item { HomeGenresSection(modifier = Modifier.staggeredEnter(entrance, 1).padding(horizontal = ScreenHorizontalInset), onBrowseAll = onNavigateToDiscover) }
+                item { HomeSyncBanner(onClick = onNavigateToDriveSetup, modifier = Modifier.staggeredEnter(entrance, 2).padding(horizontal = ScreenHorizontalInset)) }
             } else {
                 item {
                     CollapsedHomeHeroSection(
-                        onExplore = onNavigateToDiscover,
                         avatarUrl = uiState.avatarUrl,
                         userName = uiState.userName,
                         streakDays = uiState.currentStreak,
                         onAvatarClick = onOpenAccount,
                         onStreakClick = onNavigateToStatistics,
+                        hasUnreadNotifications = hasUnread,
                         onNotificationsClick = {
                             showNotifications = true
                             onNotificationsOpened()
@@ -178,7 +183,9 @@ fun HomeScreenContent(
                     )
                 }
                 item {
-                    Box(modifier = Modifier.padding(horizontal = ScreenHorizontalInset)) {
+                    // The hero is tall and the first section tucks up under its fade,
+                    // so the card reads as rising out of the photo.
+                    Box(modifier = Modifier.offset(y = -HeroOverlap).staggeredEnter(entrance, 1).padding(horizontal = ScreenHorizontalInset)) {
                         if (homeSectionRenderState(uiState.isLoading, uiState.currentBooks.isEmpty()) == HomeSectionRenderState.SKELETON) {
                             ContinueReadingSkeleton()
                         } else {
@@ -187,7 +194,7 @@ fun HomeScreenContent(
                     }
                 }
                 item {
-                    Box(modifier = Modifier.padding(horizontal = ScreenHorizontalInset)) {
+                    Box(modifier = Modifier.offset(y = -HeroOverlap).staggeredEnter(entrance, 2).padding(horizontal = ScreenHorizontalInset)) {
                         if (homeSectionRenderState(uiState.isLoading, uiState.recentBooks.isEmpty()) == HomeSectionRenderState.SKELETON) {
                             // My Bookshelf is a horizontal card row like the carousel, so it
                             // reuses the horizontal card skeleton with the shelf's card count.
@@ -197,17 +204,10 @@ fun HomeScreenContent(
                         }
                     }
                 }
-                item { HomeGenresSection(modifier = Modifier.padding(horizontal = ScreenHorizontalInset), onBrowseAll = onNavigateToDiscover) }
+                item { HomeGenresSection(modifier = Modifier.offset(y = -HeroOverlap).staggeredEnter(entrance, 3).padding(horizontal = ScreenHorizontalInset), onBrowseAll = onNavigateToDiscover) }
             }
         }
         item { Spacer(modifier = Modifier.height(NexoDimens.spacingMd)) }
-        if (com.nexo.BuildConfig.DEBUG) {
-            item {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(text = stringResource(R.string.home_version_format, com.nexo.BuildConfig.VERSION_NAME, com.nexo.BuildConfig.GIT_SHA, com.nexo.BuildConfig.BUILD_TIME), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp))
-            }
-            item { Text(text = stringResource(R.string.debug_version_label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)) }
-        }
     }
 }
 

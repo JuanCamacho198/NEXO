@@ -382,7 +382,7 @@ fun NexoNavHost(
                         if (currentRoute != null && currentRoute in bottomNavRoutes) {
                             val bottomNavItems =
                                 bottomNavDestinations.map { dest ->
-                                    BottomNavItem(dest.route, dest.labelRes, checkNotNull(dest.icon))
+                                    BottomNavItem(dest.route, dest.labelRes, checkNotNull(dest.icon), dest.selectedIcon ?: checkNotNull(dest.icon))
                                 }
                             NexoBottomNavBar(
                                 destinations = bottomNavItems,

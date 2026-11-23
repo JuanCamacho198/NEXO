@@ -32,10 +32,11 @@ class HomeHeroTest {
 
     @Test
     fun collapsedHero_matchesTheDesignedPopulatedHeroHeight() {
-        // The `.pen` `hero_section` of `JlX0K` (populated Home) is 289dp.
+        // Home redesign: the populated hero shrank from the `.pen`'s 289dp to 248dp
+        // so the continue-reading card sits above the fold.
         assertEquals(
             "The collapsed hero height is a design decision, not a derived value",
-            289.dp,
+            248.dp,
             CollapsedHeroHeight,
         )
     }

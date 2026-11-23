@@ -1,6 +1,12 @@
 package com.nexo.presentation.feature.highlights
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -16,7 +22,7 @@ fun HighlightsSearchSection(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
 ) {
-    if (showSearch) {
+    AnimatedVisibility(visible = showSearch, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
         NexoTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
@@ -26,7 +32,7 @@ fun HighlightsSearchSection(
             leadingIconContentDescription = stringResource(R.string.highlights_search),
             singleLine = true,
             shape = RoundedCornerShape(24.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = HighlightsHorizontalInset),
             trailingIcon = NexoIcons.Close,
             trailingIconContentDescription = stringResource(R.string.reader_settings_close),
         )

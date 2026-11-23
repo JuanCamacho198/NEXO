@@ -4,13 +4,21 @@ import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -22,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -39,10 +48,14 @@ import com.nexo.data.remote.sync.CatalogSyncStatus
 import com.nexo.data.remote.sync.DriveColdBackupService
 import com.nexo.feature.settings.BuildConfig
 import com.nexo.feature.settings.R
-import com.nexo.ui.components.molecules.NexoPreferenceItem
+import com.nexo.ui.components.molecules.NexoSettingsDivider
+import com.nexo.ui.components.molecules.NexoSettingsIcon
+import com.nexo.ui.components.molecules.NexoSettingsNavRow
+import com.nexo.ui.components.molecules.NexoSettingsSection
 import com.nexo.ui.components.molecules.NexoSettingsSubPage
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 import kotlinx.coroutines.launch
 
 /**
@@ -121,198 +134,194 @@ fun SettingsDataStorageScreen(
         title = stringResource(R.string.settings_data_storage_title),
         onBack = onBack,
     ) {
-        NexoPreferenceItem(
-            icon = NexoIcons.Storage,
-            label = stringResource(R.string.settings_storage),
-            onClick = onNavigateToStorage,
-        )
+        val colors = nexoColors
+        Column(
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            NexoSettingsSection {
+                NexoSettingsNavRow(
+                    icon = NexoIcons.Storage,
+                    label = stringResource(R.string.settings_storage),
+                    onClick = onNavigateToStorage,
+                )
+                NexoSettingsDivider()
+                NexoSettingsNavRow(
+                    icon = NexoIcons.CloudSync,
+                    accent = colors.accentGreen,
+                    label = stringResource(R.string.settings_sync),
+                    onClick = {},
+                )
+                NexoSettingsDivider()
+                NexoSettingsNavRow(
+                    icon = NexoIcons.Statistics,
+                    accent = colors.accentOrange,
+                    label = stringResource(R.string.settings_statistics_title),
+                    onClick = onNavigateToStatistics,
+                )
+            }
 
-        NexoPreferenceItem(
-            icon = NexoIcons.CloudSync,
-            label = stringResource(R.string.settings_sync),
-            onClick = {},
-        )
+            // ── Google Drive Section ─────────────────────────────────────
+            NexoSettingsSection(title = stringResource(R.string.settings_drive_section)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        NexoSettingsIcon(icon = NexoIcons.CloudSync, accent = if (driveAuthorized) colors.accentGreen else colors.primary)
+                        Text(
+                            text = stringResource(R.string.settings_drive_description),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.textSecondary,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    when {
+                        isAuthorizing -> {
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
+                            }
+                        }
+                        driveAuthorized -> {
+                            OutlinedButton(
+                                onClick = {
+                                    driveAuthHelper.disconnect()
+                                    driveAuthorized = false
+                                },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                            ) {
+                                Text(text = stringResource(R.string.settings_drive_disconnect), fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                        else -> {
+                            val errorConfigText = stringResource(R.string.settings_drive_error_config)
+                            Button(
+                                onClick = {
+                                    val clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID
+                                    if (clientId.isBlank()) {
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                errorConfigText,
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        return@Button
+                                    }
 
-        NexoPreferenceItem(
-            icon = NexoIcons.Statistics,
-            label = stringResource(R.string.settings_statistics_title),
-            onClick = onNavigateToStatistics,
-        )
+                                    isAuthorizing = true
+                                    signInLauncher.launch(driveAuthHelper.beginAuth())
+                                },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                enabled = !isAuthorizing,
+                            ) {
+                                Text(
+                                    text =
+                                        if (isAuthorizing) {
+                                            stringResource(R.string.settings_drive_authorizing)
+                                        } else {
+                                            stringResource(R.string.settings_drive_authorize)
+                                        },
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            // ── Cold Backup Section (PR3) — Settings-only, no hot path ─────────
+            if (driveAuthorized) {
+                NexoSettingsSection(
+                    title = stringResource(R.string.settings_drive_cold_backup_section),
+                    footer = stringResource(R.string.settings_drive_cold_backup_description),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        // Export button — writes JSON+bin via GDrive parents-fix, chunk 100 not needed for export
+                        Button(
+                            onClick = {
+                                if (!coldBackupAvailable || isExporting || isImporting) return@Button
+                                scope.launch {
+                                    isExporting = true
+                                    try {
+                                        val result = driveColdBackupService!!.exportColdBackup(userId!!)
+                                        val msg =
+                                            if (result.isSuccess) {
+                                                coldExportSuccess
+                                            } else {
+                                                coldExportError
+                                            }
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, e.message ?: coldExportError, Toast.LENGTH_SHORT).show()
+                                    } finally {
+                                        isExporting = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            enabled = coldBackupAvailable && !isExporting && !isImporting,
+                        ) {
+                            if (isExporting) CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp).size(18.dp), strokeWidth = 2.dp)
+                            Icon(imageVector = NexoIcons.Upload, contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(18.dp))
+                            Text(text = stringResource(if (isExporting) R.string.settings_drive_cold_exporting else R.string.settings_drive_cold_export), fontWeight = FontWeight.SemiBold)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                if (!coldBackupAvailable || isExporting || isImporting) return@OutlinedButton
+                                scope.launch {
+                                    isImporting = true
+                                    try {
+                                        val result = driveColdBackupService!!.importColdBackup(userId!!)
+                                        val failures = result.getOrNull()?.failures.orEmpty()
+                                        val msg =
+                                            when {
+                                                result.isFailure -> importErrorText
+                                                failures.isNotEmpty() ->
+                                                    String.format(
+                                                        java.util.Locale.getDefault(),
+                                                        importPartialTemplate,
+                                                        failures.size,
+                                                        failures.map { it.error.code }.distinct().joinToString(", "),
+                                                    )
+                                                else -> importSuccessText
+                                            }
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, e.message ?: importErrorText, Toast.LENGTH_SHORT).show()
+                                    } finally {
+                                        isImporting = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            enabled = coldBackupAvailable && !isExporting && !isImporting,
+                        ) {
+                            if (isImporting) CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp).size(18.dp), strokeWidth = 2.dp)
+                            Icon(imageVector = NexoIcons.CloudDownload, contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(18.dp))
+                            Text(text = stringResource(if (isImporting) R.string.settings_drive_cold_importing else R.string.settings_drive_cold_import), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
 
-        // ── Google Drive Section ─────────────────────────────────────
-        Text(
-            text = stringResource(R.string.settings_drive_section),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 4.dp),
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = stringResource(R.string.settings_drive_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 4.dp),
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        when {
-            isAuthorizing -> {
-                CircularProgressIndicator(
+            // Background catalog sync status: aggregated per-book failures, silent
+            // when nothing failed, cleared when a later sync succeeds. Never a toast.
+            catalogFailure?.let { failure ->
+                Text(
+                    text =
+                        stringResource(
+                            R.string.settings_catalog_sync_partial,
+                            failure.failedCount,
+                            failure.codes.joinToString(", "),
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
             }
-            driveAuthorized -> {
-                OutlinedButton(
-                    onClick = {
-                        driveAuthHelper.disconnect()
-                        driveAuthorized = false
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Text(text = stringResource(R.string.settings_drive_disconnect))
-                }
-            }
-            else -> {
-                val errorConfigText = stringResource(R.string.settings_drive_error_config)
-                Button(
-                    onClick = {
-                        val clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID
-                        if (clientId.isBlank()) {
-                            Toast
-                                .makeText(
-                                    context,
-                                    errorConfigText,
-                                    Toast.LENGTH_SHORT,
-                                ).show()
-                            return@Button
-                        }
 
-                        isAuthorizing = true
-                        signInLauncher.launch(driveAuthHelper.beginAuth())
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    enabled = !isAuthorizing,
-                ) {
-                    Text(
-                        text =
-                            if (isAuthorizing) {
-                                stringResource(R.string.settings_drive_authorizing)
-                            } else {
-                                stringResource(R.string.settings_drive_authorize)
-                            },
-                    )
-                }
-            }
-        }
-
-        // ── Cold Backup Section (PR3) — Settings-only, no hot path ─────────
-        if (driveAuthorized) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.settings_drive_cold_backup_section),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 4.dp),
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.settings_drive_cold_backup_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp),
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            // Export button — writes JSON+bin via GDrive parents-fix, chunk 100 not needed for export
-            Button(
-                onClick = {
-                    if (!coldBackupAvailable || isExporting || isImporting) return@Button
-                    scope.launch {
-                        isExporting = true
-                        try {
-                            val result = driveColdBackupService!!.exportColdBackup(userId!!)
-                            val msg =
-                                if (result.isSuccess) {
-                                    coldExportSuccess
-                                } else {
-                                    coldExportError
-                                }
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {
-                            Toast.makeText(context, e.message ?: coldExportError, Toast.LENGTH_SHORT).show()
-                        } finally {
-                            isExporting = false
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                enabled = coldBackupAvailable && !isExporting && !isImporting,
-            ) {
-                if (isExporting) CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
-                Text(text = stringResource(if (isExporting) R.string.settings_drive_cold_exporting else R.string.settings_drive_cold_export))
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = {
-                    if (!coldBackupAvailable || isExporting || isImporting) return@OutlinedButton
-                    scope.launch {
-                        isImporting = true
-                        try {
-                            val result = driveColdBackupService!!.importColdBackup(userId!!)
-                            val failures = result.getOrNull()?.failures.orEmpty()
-                            val msg =
-                                when {
-                                    result.isFailure -> importErrorText
-                                    failures.isNotEmpty() ->
-                                        String.format(
-                                            java.util.Locale.getDefault(),
-                                            importPartialTemplate,
-                                            failures.size,
-                                            failures.map { it.error.code }.distinct().joinToString(", "),
-                                        )
-                                    else -> importSuccessText
-                                }
-                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                        } catch (e: Exception) {
-                            Toast.makeText(context, e.message ?: importErrorText, Toast.LENGTH_SHORT).show()
-                        } finally {
-                            isImporting = false
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                enabled = coldBackupAvailable && !isExporting && !isImporting,
-            ) {
-                if (isImporting) CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
-                Text(text = stringResource(if (isImporting) R.string.settings_drive_cold_importing else R.string.settings_drive_cold_import))
-            }
-        }
-
-        // Background catalog sync status: aggregated per-book failures, silent
-        // when nothing failed, cleared when a later sync succeeds. Never a toast.
-        catalogFailure?.let { failure ->
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text =
-                    stringResource(
-                        R.string.settings_catalog_sync_partial,
-                        failure.failedCount,
-                        failure.codes.joinToString(", "),
-                    ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 4.dp),
-            )
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

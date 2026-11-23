@@ -1,28 +1,25 @@
 package com.nexo.presentation.feature.discover
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -34,8 +31,8 @@ import com.nexo.domain.model.CatalogBook
 import com.nexo.domain.model.CatalogErrorCode
 import com.nexo.feature.discover.R
 import com.nexo.ui.components.atoms.NexoSkeletonBox
-import com.nexo.ui.components.molecules.NexoCardSurface
-import com.nexo.ui.theme.NexoDimens
+import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.motion.pressScaleClickable
 import com.nexo.ui.theme.nexoColors
 
 private val RAIL_CARD_WIDTH = 110.dp
@@ -117,8 +114,8 @@ fun DiscoverRailSection(
                 ) {
                     Text(
                         text = sectionTitle,
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
+                        fontWeight = FontWeight.Bold,
                         color = colors.textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -127,11 +124,19 @@ fun DiscoverRailSection(
                     TextButton(onClick = { onSeeAll(state, sectionTitle) }) {
                         Text(
                             text = stringResource(R.string.discover_view_all),
-                            style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-                            color = colors.textAccent,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.accentOrange,
+                        )
+                        Icon(
+                            imageVector = NexoIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = colors.accentOrange,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(4.dp))
                 LazyRow(
                     contentPadding = PaddingValues(end = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -150,10 +155,9 @@ fun DiscoverRailSection(
 }
 
 /**
- * One horizontal rail cell: a 110x165 slot plus title. When the book has no
- * usable cover the slot is a TEXT CARD — the title and author set on the theme's
- * surface — instead of an empty frame, so a coverless shelf still reads as
- * deliberate typography rather than a broken image.
+ * One horizontal rail cell: a 110x165 cover plus title and badges. A book with no
+ * usable cover gets [DiscoverBookCover]'s typographic cover, tagged
+ * [RAIL_TEXT_CARD_TAG], instead of an empty frame.
  */
 @Composable
 private fun DiscoverRailCard(
@@ -162,38 +166,34 @@ private fun DiscoverRailCard(
     attributionNames: Map<String, String> = emptyMap(),
 ) {
     val colors = nexoColors
+    val coverless = book.coverUrl.isNullOrBlank()
     Column(
         modifier =
             Modifier
                 .width(RAIL_CARD_WIDTH)
-                .clickable { onOpen(book.id) },
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+                .pressScaleClickable(shape = RoundedCornerShape(8.dp)) { onOpen(book.id) },
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        if (book.coverUrl.isNullOrBlank()) {
-            RailTextCard(
-                title = book.title,
-                author = book.authors.joinToString(", "),
-                modifier =
-                    Modifier
-                        .width(RAIL_CARD_WIDTH)
-                        .height(RAIL_COVER_HEIGHT),
-            )
-        } else {
-            DiscoverBookCover(
-                coverUrl = book.coverUrl,
-                title = book.title,
-                surface = "rail",
-                modifier =
-                    Modifier
-                        .width(RAIL_CARD_WIDTH)
-                        .height(RAIL_COVER_HEIGHT),
-            )
-        }
+        DiscoverBookCover(
+            coverUrl = book.coverUrl,
+            title = book.title,
+            author = book.authors.firstOrNull(),
+            surface = "rail",
+            modifier =
+                Modifier
+                    .width(RAIL_CARD_WIDTH)
+                    .height(RAIL_COVER_HEIGHT)
+                    .then(if (coverless) Modifier.testTag(RAIL_TEXT_CARD_TAG) else Modifier),
+        )
+        // Two reserved lines keep every card's badges on the same baseline,
+        // whether the title wraps or not.
         Text(
             text = book.title,
             style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
             color = colors.textPrimary,
             maxLines = 2,
+            minLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
         SourceAttributionBadge(
@@ -201,57 +201,6 @@ private fun DiscoverRailCard(
             attributionNames = attributionNames,
         )
         AccessBadge(book = book)
-    }
-}
-
-/**
- * Coverless rail slot: title and author on the shared card surface with a short
- * accent rule, so it reads as a typographic card. Every colour comes from
- * [nexoColors]; no literal palette value is used here.
- */
-@Composable
-private fun RailTextCard(
-    title: String,
-    author: String,
-    modifier: Modifier = Modifier,
-) {
-    val colors = nexoColors
-    NexoCardSurface(
-        modifier = modifier.testTag(RAIL_TEXT_CARD_TAG),
-        contentPadding = PaddingValues(NexoDimens.spacingSm),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.textPrimary,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(NexoDimens.spacingXs)) {
-                if (author.isNotBlank()) {
-                    Text(
-                        text = author,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colors.textSecondary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Box(
-                    modifier =
-                        Modifier
-                            .width(28.dp)
-                            .height(2.dp)
-                            .clip(RoundedCornerShape(1.dp))
-                            .background(colors.primary.copy(alpha = 0.4f)),
-                )
-            }
-        }
     }
 }
 

@@ -17,7 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nexo.R
 import com.nexo.domain.model.AuthSession
@@ -168,7 +167,9 @@ internal fun HighlightsScreenContent(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 24.dp),
+                // No horizontal padding here: the top bar is full-bleed and every
+                // section below applies HighlightsHorizontalInset itself.
+                contentPadding = PaddingValues(bottom = NexoDimens.spacingMd),
                 verticalArrangement = Arrangement.spacedBy(NexoDimens.spacingMd),
             ) {
                 item {

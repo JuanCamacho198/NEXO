@@ -1,6 +1,8 @@
 package com.nexo.presentation.feature.discover
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +35,8 @@ import com.nexo.domain.discover.DiscoverStatus
 import com.nexo.presentation.viewmodel.DiscoverUiState
 import com.nexo.presentation.viewmodel.DiscoverViewModel
 import com.nexo.ui.icons.NexoIcons
+import com.nexo.ui.motion.rememberEntranceProgress
+import com.nexo.ui.motion.staggeredEnter
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.nexoColors
 import com.nexo.feature.discover.R as FeatureR
@@ -136,41 +140,46 @@ fun DiscoverScreen(
                         .fillMaxWidth()
                         .weight(1f),
             ) {
-                when (uiState.status) {
-                    DiscoverStatus.IDLE ->
-                        DiscoverIdleRails(
-                            rails = uiState.visibleRails,
-                            attributionNames = uiState.attributionNames,
-                            onOpenBook = viewModel::openDetail,
-                            onSeeAll = onOpenSection,
-                            sourceName = idleSourceName(uiState),
-                            notices = uiState.visibleRailGroupNotices,
-                            onRetryGroup = viewModel::retryRailGroup,
-                            onDismissGroup = viewModel::dismissRailGroup,
-                            onRetryRail = viewModel::retryRail,
-                        )
-                    DiscoverStatus.LOADING -> DiscoverSkeletonState()
-                    DiscoverStatus.EMPTY ->
-                        DiscoverEmptyState(
-                            query = uiState.query,
-                            onSuggestionClick = { term ->
-                                viewModel.onQueryChange(term)
-                                viewModel.searchFirstPage()
-                            },
-                            legalEmpty = isLegalEmpty(uiState),
-                            sourceName = legalEmptySourceName(uiState),
-                        )
-                    DiscoverStatus.ERROR -> DiscoverErrorState(onRetry = viewModel::retry)
-                    DiscoverStatus.OFFLINE -> DiscoverOfflineState(onRetry = viewModel::retry)
-                    DiscoverStatus.LOADED, DiscoverStatus.LOADING_MORE ->
-                        DiscoverResultsGrid(
-                            books = uiState.visibleBooks,
-                            nextPage = uiState.nextPage,
-                            isLoadingMore = uiState.status == DiscoverStatus.LOADING_MORE,
-                            onOpen = viewModel::openDetail,
-                            onLoadNext = viewModel::loadNextPage,
-                            attributionNames = uiState.attributionNames,
-                        )
+                // LOADED and LOADING_MORE share one bucket so paging never crossfades
+                // (and never resets the scroll of) the results grid.
+                val bodyState = if (uiState.status == DiscoverStatus.LOADING_MORE) DiscoverStatus.LOADED else uiState.status
+                Crossfade(targetState = bodyState, animationSpec = tween(BodyCrossfadeMs), label = "discoverBody") { status ->
+                    when (status) {
+                        DiscoverStatus.IDLE ->
+                            DiscoverIdleRails(
+                                rails = uiState.visibleRails,
+                                attributionNames = uiState.attributionNames,
+                                onOpenBook = viewModel::openDetail,
+                                onSeeAll = onOpenSection,
+                                sourceName = idleSourceName(uiState),
+                                notices = uiState.visibleRailGroupNotices,
+                                onRetryGroup = viewModel::retryRailGroup,
+                                onDismissGroup = viewModel::dismissRailGroup,
+                                onRetryRail = viewModel::retryRail,
+                            )
+                        DiscoverStatus.LOADING -> DiscoverSkeletonState()
+                        DiscoverStatus.EMPTY ->
+                            DiscoverEmptyState(
+                                query = uiState.query,
+                                onSuggestionClick = { term ->
+                                    viewModel.onQueryChange(term)
+                                    viewModel.searchFirstPage()
+                                },
+                                legalEmpty = isLegalEmpty(uiState),
+                                sourceName = legalEmptySourceName(uiState),
+                            )
+                        DiscoverStatus.ERROR -> DiscoverErrorState(onRetry = viewModel::retry)
+                        DiscoverStatus.OFFLINE -> DiscoverOfflineState(onRetry = viewModel::retry)
+                        DiscoverStatus.LOADED, DiscoverStatus.LOADING_MORE ->
+                            DiscoverResultsGrid(
+                                books = uiState.visibleBooks,
+                                nextPage = uiState.nextPage,
+                                isLoadingMore = uiState.status == DiscoverStatus.LOADING_MORE,
+                                onOpen = viewModel::openDetail,
+                                onLoadNext = viewModel::loadNextPage,
+                                attributionNames = uiState.attributionNames,
+                            )
+                    }
                 }
             }
         }
@@ -210,6 +219,8 @@ fun DiscoverScreen(
     )
 }
 
+private const val BodyCrossfadeMs = 220
+
 /**
  * IDLE body: vertically scrollable stack of featured rails. A Hidden rail
  * composes nothing, so a partially servable IDLE shows only the rails that
@@ -235,15 +246,19 @@ private fun DiscoverIdleRails(
     onRetryRail: (Int) -> Unit = {},
 ) {
     val colors = nexoColors
+    // The cascade starts when the first shelf resolves, and only loaded shelves
+    // take part: a skeleton must stay visible while it loads, never fade in.
+    val entrance = rememberEntranceProgress(start = rails.any { it is DiscoverRailState.Loaded })
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
         rails.forEachIndexed { index, rail ->
             DiscoverRailSection(
+                modifier = if (rail is DiscoverRailState.Loaded) Modifier.staggeredEnter(entrance, index) else Modifier,
                 state = rail,
                 onBookClick = onOpenBook,
                 onSeeAll = onSeeAll,

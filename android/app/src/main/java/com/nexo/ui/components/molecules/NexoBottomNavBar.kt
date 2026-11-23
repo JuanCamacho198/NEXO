@@ -2,8 +2,10 @@ package com.nexo.ui.components.molecules
 
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,7 +32,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -45,41 +49,34 @@ import com.nexo.presentation.screen.NavTags
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoDimens
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 data class BottomNavItem(
     val route: String,
     @param:StringRes val labelRes: Int,
     val icon: ImageVector,
+    /** Glyph shown while the tab is active; defaults to [icon] for tabs without a pair. */
+    val selectedIcon: ImageVector = icon,
 )
 
 /**
  * Bottom navigation bar with icon+label tabs and a Material 3 active-tab pill.
  *
- * Equal-width tabs spread across the available width. The active tab shows an
- * animated pill behind its icon, a scaled-up icon, and a tinted
- * icon+label; inactive tabs show a smaller icon in the secondary tint.
+ * Equal-width tabs spread across the available width. The active tab shows a
+ * 56×32 primary-tinted pill behind its icon that grows out from the centre, and
+ * a primary icon + label; inactive tabs use the secondary tint.
  *
- * **Theme**: all colors come from [MaterialTheme.colorScheme] (surfaceContainer,
- * primary, onSurfaceVariant, surfaceVariant), so the bar responds to
- * light/dark theme switches automatically. It does NOT read the legacy
- * `NexoColors` object (which only holds fixed dark tokens). The bar
- * separates from content by tonal contrast (`surfaceContainer` vs
- * `background`) with no shadow or divider, so no edge artifacts appear in
- * dark mode. The active tab's label renders in `FontWeight.SemiBold` while
- * inactive labels use `FontWeight.Medium`, so the selected tab reads as
- * emphasized.
+ * **Theme**: the bar is `surfaceContainer` with a 1dp `borderSubtle` hairline
+ * on top. Tonal contrast alone separated it in light mode, but in dark mode the
+ * bar and the page are close enough that the bar dissolved into the content.
  *
  * **Behavior**: tap a tab → [onTabSelected] with its `route`. Each tab is
- * [selectable] with `Role.Tab` for accessibility and uses the local ripple
- * indication clipped to a rounded shape, so the press feedback stays
- * contained instead of flooding the whole row.
+ * [selectable] with `Role.Tab`; the icon carries no content description so
+ * TalkBack reads the label once instead of "Home, Home".
  *
- * @param destinations Ordered list of tabs to render. Each item is a
- *   [BottomNavItem] with `route`, `labelRes`, and `icon`.
- * @param currentRoute Currently active route, or `null` if no tab is
- *   active. Matched against each `dest.route` for the active state.
- * @param onTabSelected Invoked with the selected tab's `route` when
- *   the user taps any tab.
+ * @param destinations Ordered list of tabs to render.
+ * @param currentRoute Currently active route, or `null` if no tab is active.
+ * @param onTabSelected Invoked with the selected tab's `route`.
  * @param modifier Modifier applied to the outer `Surface`.
  */
 @Composable
@@ -89,19 +86,23 @@ fun NexoBottomNavBar(
     onTabSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val hairline = nexoColors.borderSubtle
     Surface(
         modifier =
             modifier
                 .fillMaxWidth()
-                .navigationBarsPadding(),
+                .drawWithContent {
+                    drawContent()
+                    drawLine(hairline, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx())
+                }.navigationBarsPadding(),
         color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(64.dp)
-                    .padding(horizontal = 12.dp),
+                    .height(68.dp)
+                    .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -127,9 +128,9 @@ fun NexoBottomNavBar(
 }
 
 /**
- * A single selectable tab. The active state animates the pill background,
- * the icon/label tint, and the icon scale so switching tabs reads as a
- * smooth transition instead of a hard color flip.
+ * A single selectable tab. The pill has a fixed 56×32 slot and only its scale
+ * and alpha animate, so switching tabs never shifts the icon or the label; the
+ * icon itself no longer scales up, which used to make it jump.
  */
 @Composable
 private fun NexoBottomNavTab(
@@ -139,25 +140,18 @@ private fun NexoBottomNavTab(
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-
     val activeTint = MaterialTheme.colorScheme.primary
     val inactiveTint = MaterialTheme.colorScheme.onSurfaceVariant
 
-    val iconTint by animateColorAsState(
+    val tint by animateColorAsState(
         targetValue = if (isSelected) activeTint else inactiveTint,
-        label = "navIconTint",
+        animationSpec = tween(200),
+        label = "navTint",
     )
-    val pillColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent,
-        label = "navPillColor",
-    )
-    val pillPadding by animateDpAsState(
-        targetValue = if (isSelected) 16.dp else 6.dp,
-        label = "navPillPadding",
-    )
-    val iconScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.15f else 1f,
-        label = "navIconScale",
+    val pill by animateFloatAsState(
+        targetValue = if (isSelected) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow),
+        label = "navPill",
     )
 
     Column(
@@ -170,28 +164,28 @@ private fun NexoBottomNavTab(
                     interactionSource = interactionSource,
                     indication = LocalIndication.current,
                     onClick = onClick,
-                ).padding(vertical = 4.dp),
+                ).padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(pillColor)
-                    .padding(horizontal = pillPadding, vertical = 4.dp),
-        ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = stringResource(id = item.labelRes),
-                tint = iconTint,
+        Box(modifier = Modifier.size(PillWidth, PillHeight), contentAlignment = Alignment.Center) {
+            Box(
                 modifier =
                     Modifier
-                        .size(NexoDimens.iconNavBar)
+                        .matchParentSize()
                         .graphicsLayer {
-                            scaleX = iconScale
-                            scaleY = iconScale
-                        },
+                            scaleX = 0.5f + 0.5f * pill
+                            alpha = pill
+                        }.clip(CircleShape)
+                        .background(activeTint.copy(alpha = PillAlpha)),
+            )
+            Icon(
+                imageVector = if (isSelected) item.selectedIcon else item.icon,
+                // The label below already names the tab; describing the icon too
+                // made TalkBack announce every tab twice.
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(NexoDimens.iconNavBar),
             )
         }
 
@@ -200,33 +194,42 @@ private fun NexoBottomNavTab(
         Text(
             text = stringResource(id = item.labelRes),
             fontSize = 12.sp,
-            color = iconTint,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+            color = tint,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1,
         )
     }
 }
+
+private val PillWidth = 56.dp
+private val PillHeight = 32.dp
+private const val PillAlpha = 0.16f
 
 private val previewDestinations =
     listOf(
         BottomNavItem(
             route = NexoDestination.Home.route,
             labelRes = R.string.nav_home,
-            icon = NexoIcons.Home,
+            icon = NexoIcons.HomeOutline,
+            selectedIcon = NexoIcons.Home,
         ),
         BottomNavItem(
             route = NexoDestination.Library.route,
             labelRes = R.string.nav_library,
-            icon = NexoIcons.Library,
+            icon = NexoIcons.LibraryOutline,
+            selectedIcon = NexoIcons.Library,
         ),
         BottomNavItem(
             route = NexoDestination.Highlights.route,
             labelRes = R.string.nav_highlights,
             icon = NexoIcons.Highlights,
+            selectedIcon = NexoIcons.HighlightsFilled,
         ),
         BottomNavItem(
             route = NexoDestination.Settings.route,
             labelRes = R.string.nav_settings,
-            icon = NexoIcons.Settings,
+            icon = NexoIcons.SettingsOutline,
+            selectedIcon = NexoIcons.Settings,
         ),
     )
 
@@ -248,7 +251,7 @@ private fun NexoBottomNavBarLightPreview() {
     NexoTheme(darkTheme = false) {
         NexoBottomNavBar(
             destinations = previewDestinations,
-            currentRoute = NexoDestination.Home.route,
+            currentRoute = NexoDestination.Highlights.route,
             onTabSelected = {},
         )
     }
