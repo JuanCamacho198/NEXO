@@ -2,18 +2,24 @@
 <!-- Adaptive launcher icon. Placed in `mipmap-anydpi` rather than the historical
      `mipmap-anydpi-v26`: minSdk is 26, so the `-v26` qualifier is dead weight
      (lint ObsoleteSdkInt) and `anydpi` already outranks every density bucket, so
-     all supported devices resolve this file. The legacy mipmap-*/ic_launcher.png
-     files are therefore shadowed and unreachable at minSdk 26.
+     all supported devices resolve this file.
 
-     - background: brand navy @color/ic_launcher_background (#0D1D3B).
-     - foreground: the NEXO mark (bookmark ribbon with the "N" knocked out), no
-       wordmark, scaled into the central 66x66 of the 108x108 canvas that stays
-       visible under any launcher mask. Brand source and the exact transform are
+     - background: flat white (@drawable/ic_launcher_background), full-bleed
+       512x512. A launcher masks this layer to its own shape, so this plate IS
+       the icon body on every mask, and white is the colour the "N" is knocked
+       out to. It used to be the brand tile's warm gradient; its peach end read
+       as an orange background, so the plate is neutral now.
+     - foreground: the bookmark ribbon with the "N" knocked out, no tile and no
+       wordmark, scaled to 78% so it stays inside the 66x66 of the 108x108 canvas
+       that survives any launcher mask. Geometry and the exact transform are
        documented in drawable/ic_launcher_foreground.xml.
      - monochrome: the same mark as a single-colour silhouette for Material You
-       themed icons (API 33+; ignored by the platform on older releases). -->
+       themed icons (API 33+; ignored by the platform on older releases).
+
+     Both layers are generated from brand/nexo-logo-inverso.svg by
+     scripts/brand/Sync-AndroidBrandDrawables.ps1. Do not hand-edit. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background" />
+    <background android:drawable="@drawable/ic_launcher_background" />
     <foreground android:drawable="@drawable/ic_launcher_foreground" />
     <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>

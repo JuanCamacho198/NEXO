@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { sectionClass } from '$lib/shared/ui/emberStyles';
+  import { headingMarker } from '$lib/shared/ui/emberStyles';
   import { onDestroy, onMount } from 'svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { SyncScope } from '$lib/shared/types/book';
@@ -117,14 +119,19 @@
   }
 </script>
 
-<section class="space-y-5 w-full max-w-none">
+<section class="w-full max-w-5xl space-y-6">
   <header class="flex flex-col gap-1">
-    <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">{t('sync.title')}</h1>
+    <div class="flex items-center gap-3">
+      <div class="h-7 {headingMarker}" aria-hidden="true"></div>
+      <h1 class="m-0 text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)">
+        {t('sync.title')}
+      </h1>
+    </div>
     <p class="text-sm text-(--color-text-muted)">{t('sync.subtitle')}</p>
   </header>
 
   <!-- One derived status line; the text carries the state, not a colour dot. -->
-  <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-5 space-y-3">
+  <div class="{sectionClass} space-y-3">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <p
         class="text-sm font-medium {statusClass}"
@@ -150,7 +157,7 @@
             {t('settings.sync.syncNow')}
           </Button>
           <Button
-            variant="primary"
+            variant="accent"
             size="sm"
             onclick={() => void handleSyncNow()}
             data-action-emphasis="primary"
@@ -184,16 +191,16 @@
   <DriveSection {t} />
 
   <!-- Advanced: scope controls and raw support values, collapsed by default. -->
-  <details class="rounded-xl border border-(--color-border) bg-(--color-background)">
+  <details class="group {sectionClass}">
     <summary
-      class="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--color-primary)"
+      class="cursor-pointer select-none text-sm font-semibold text-(--color-primary) marker:text-(--color-brand-text) hover:text-(--color-brand-text)"
     >
       {t('sync.advanced.title')}
     </summary>
-    <div class="space-y-6 border-t border-(--color-border) p-4">
+    <div class="space-y-6 pt-5">
       <div>
         <h3 class="text-sm font-semibold text-(--color-primary)">{t('sync.scope.title')}</h3>
-        <div class="mt-3 divide-y divide-(--color-border)">
+        <div class="mt-3 divide-y divide-(--color-edge)">
           {#each scopeEntries as entry, index (index)}
             {#if entry.kind === 'row'}
               <label class="flex cursor-pointer items-center justify-between gap-3 py-2">
@@ -202,15 +209,15 @@
                   type="checkbox"
                   checked={scopes[entry.key] !== false}
                   onchange={() => toggleScope(entry.key)}
-                  class="h-4 w-4 accent-(--color-primary)"
+                  class="size-4 accent-(--color-brand)"
                 />
               </label>
             {:else}
               <div class="py-2">
-                <p class="text-xs uppercase tracking-wider text-(--color-text-muted)">
+                <p class="text-xs font-medium text-(--color-text-muted)">
                   {t(entry.label)}
                 </p>
-                <div class="mt-1 divide-y divide-(--color-border)">
+                <div class="mt-1 divide-y divide-(--color-edge)">
                   {#each entry.scopes as scope (scope.key)}
                     <label class="flex cursor-pointer items-center justify-between gap-3 py-2">
                       <span class="text-sm text-(--color-primary)">{t(scope.label)}</span>
@@ -218,7 +225,7 @@
                         type="checkbox"
                         checked={scopes[scope.key] !== false}
                         onchange={() => toggleScope(scope.key)}
-                        class="h-4 w-4 accent-(--color-primary)"
+                        class="size-4 accent-(--color-brand)"
                       />
                     </label>
                   {/each}

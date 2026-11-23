@@ -41,9 +41,9 @@ describe('settings icon migration', () => {
       'lucide-user',
       'lucide-database',
       'lucide-languages',
-      'lucide-database',
+      'lucide-hard-drive',
       'lucide-cloud-check',
-      'lucide-bookmark',
+      'lucide-keyboard',
       'lucide-info',
     ]);
     for (const icon of icons) {
@@ -64,13 +64,13 @@ describe('settings icon migration', () => {
     expect(tabs).toHaveLength(7);
     for (const tab of tabs) {
       expect(tab.tagName).toBe('BUTTON');
-      expect(tab).toHaveClass('text-sm', 'font-medium', 'rounded-none', 'inline-flex');
+      expect(tab).toHaveClass('text-sm', 'font-medium', 'rounded-full', 'inline-flex');
     }
 
     const selected = screen.getByRole('tab', { selected: true });
     expect(selected).toHaveAttribute('aria-selected', 'true');
     expect(selected).toHaveAttribute('id', 'tab-cuenta');
-    expect(selected).toHaveClass('bg-(--color-accent-soft)', 'border-(--color-accent-start)');
+    expect(selected).toHaveClass('bg-(--color-brand-soft)', 'border-(--color-brand)');
 
     const idle = tabs.filter((tab) => tab.getAttribute('aria-selected') === 'false');
     expect(idle).toHaveLength(6);

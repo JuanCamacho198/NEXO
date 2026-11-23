@@ -366,6 +366,19 @@ pub fn verify_layout(root: &Path, conn: &Connection) -> AppResult<VerificationRe
         let paths =
             stmt.query_map([], |row| row.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
         for path in paths {
+            // A blank path is not a lost file: it is a row that never had one.
+            // The FK guard creates `Unknown Title (sync stub)` rows for books
+            // that exist only in the remote catalog, and those carry an empty
+            // `file_path` until the binary is downloaded. Counting them as
+            // missing failed verification on every install that had any
+            // catalog-only row, so the marker was never bumped: the app stayed
+            // on the legacy `books/` tree while the rows already pointed at
+            // `data/books/`, and every `saveBookFile` wrote to a directory
+            // nothing reads. Skipping them is what lets the marker advance;
+            // a row that HAS a path must still resolve or it is genuinely lost.
+            if path.trim().is_empty() {
+                continue;
+            }
             report.rows_checked += 1;
             referenced.insert(path.clone());
             if Path::new(&path).exists() {
@@ -568,5 +581,56 @@ mod tests {
         let report = verify_layout(tmp.path(), &conn).unwrap();
         assert_eq!(report.orphans, 0);
         assert!(report.missing.is_empty());
+    }
+
+    /// A catalog-only book (the FK guard's `Unknown Title (sync stub)` row) has
+    /// no binary yet, so its `file_path` is empty. That is "no file", not "file
+    /// lost": counting it as missing failed verification on every install with
+    /// a catalog-only row, the marker never advanced, and the app kept writing
+    /// new books to the legacy `books/` tree that the already-rewritten rows no
+    /// longer point at. The row must be skipped, not reported.
+    #[test]
+    fn a_book_row_without_a_file_path_does_not_fail_verification() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = test_conn();
+        seed_legacy_book(tmp.path(), &conn, "real", "real.epub");
+        conn.execute(
+            "INSERT INTO books (id, file_path, deleted_at)
+             VALUES ('stub', '', NULL), ('nullpath', NULL, NULL)",
+            [],
+        )
+        .unwrap();
+
+        let outcome = migrate_layout(tmp.path(), &conn).unwrap();
+        let MigrationOutcome::Migrated { report, .. } = outcome else {
+            panic!("a path-less row must not block the migration: {outcome:?}");
+        };
+        assert!(report.missing.is_empty(), "stubs are not missing files: {report:?}");
+        assert_eq!(report.rows_checked, 1, "only the row that has a path is checked");
+        assert_eq!(report.files_ok, 1);
+        assert_eq!(read_layout_version(tmp.path()), LAYOUT_VERSION, "marker must advance");
+
+        // The migrated tree is the one new writes target.
+        assert_eq!(resolved_books_dir(tmp.path()), books_dir(tmp.path()));
+    }
+
+    /// A row that DOES name a path must still fail verification when the file is
+    /// gone: the skip is for blank paths only, never a blanket exemption.
+    #[test]
+    fn a_book_row_with_a_missing_file_still_fails_verification() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = test_conn();
+        conn.execute(
+            "INSERT INTO books (id, file_path, deleted_at) VALUES ('gone', ?1, NULL)",
+            params![tmp.path().join("books").join("gone.epub").to_string_lossy().to_string()],
+        )
+        .unwrap();
+
+        let outcome = migrate_layout(tmp.path(), &conn).unwrap();
+        assert!(
+            matches!(outcome, MigrationOutcome::VerificationFailed { .. }),
+            "a real missing file must still block: {outcome:?}"
+        );
+        assert_eq!(read_layout_version(tmp.path()), 0, "marker must stay unbumped");
     }
 }

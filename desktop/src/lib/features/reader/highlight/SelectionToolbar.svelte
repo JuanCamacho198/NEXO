@@ -3,6 +3,13 @@
   import { cubicOut } from 'svelte/easing';
   import type { MessageKey } from '$lib/shared/i18n';
   import { HIGHLIGHT_COLORS } from '$lib/features/reader/highlight/highlightColors';
+  import {
+    MENU_DIVIDER,
+    MENU_ICON_BUTTON,
+    MENU_SWATCH,
+    MENU_SWATCH_DOT,
+    MENU_SWATCH_DOT_ACTIVE,
+  } from './floatingMenuStyles';
   import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
   import type { TranslationOutcome } from '$lib/shared/ports/TranslationPort';
   import type { DefinitionResult } from '$lib/shared/ports/DictionaryLookupPort';
@@ -733,6 +740,28 @@
   const toolbarY = $derived(toolbarPlacement.y);
 
   /**
+   * The caret that ties the pill to the selection, like the highlight menu's.
+   * It is drawn OUTSIDE the toolbar box (which clips its overflow for the
+   * panels' height ceiling), at a position computed from the same numbers the
+   * pill uses: the selection's centre, clamped inside the pill, on the pill's
+   * edge that faces the text. The wrapped layout has no single edge, so it
+   * goes without.
+   */
+  const caret = $derived.by((): { x: number; y: number; up: boolean } | null => {
+    if (toolbarWrapped) return null;
+    const pillLeft = toolbarX + pillOffset;
+    const pillWidth = toolbarCollapsed ? PILL_WIDTH_COLLAPSED : PILL_WIDTH_FULL;
+    const centre = (selectionWindowBounds.left + selectionWindowBounds.right) / 2;
+    const x = Math.max(pillLeft + 18, Math.min(centre, pillLeft + pillWidth - 18));
+    const above = toolbarPlacement.placement === 'above';
+    return {
+      x: x - 5,
+      y: above ? toolbarY + TOOLBAR_HEIGHT_ESTIMATE - 6 : toolbarY - 5,
+      up: !above,
+    };
+  });
+
+  /**
    * The panel's height ceiling, in pixels.
    *
    * A result panel is bounded by the ROOM IN THE WINDOW, not by a fixed
@@ -821,10 +850,32 @@
    * `actionsRowMinWidthClass` is folded in for the same reason it exists: the
    * wrapped row keeps a usable width instead of collapsing to its longest
    * label. */
+  /**
+   * The pill's own width, computed rather than measured: every piece has a
+   * fixed size (28px swatches, 32px actions, 4px gaps, 10px padding, a 1px
+   * divider with 4px margins, a 1px border each side). The placement reserves
+   * a wider box (380 / 240) so the result panels have room; the pill is
+   * centred inside it with this offset instead of being stretched across it.
+   */
+  const PILL_WIDTH_FULL = 5 * 28 + 4 * 2 + 9 + 4 * 32 + 5 * 4 + 2 * 10 + 2;
+  const PILL_WIDTH_COLLAPSED = 28 + 9 + 4 * 32 + 5 * 4 + 2 * 10 + 2;
+  const pillOffset = $derived(
+    toolbarWrapped
+      ? 0
+      : Math.max(
+          0,
+          Math.round(
+            (placementMenuSize.width -
+              (toolbarCollapsed ? PILL_WIDTH_COLLAPSED : PILL_WIDTH_FULL)) /
+              2,
+          ),
+        ),
+  );
+
   const actionsRowClass = $derived(
     toolbarWrapped
-      ? `flex flex-wrap items-center justify-center gap-3 rounded-3xl border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) px-4 py-2 shadow-xl ${actionsRowMinWidthClass}`
-      : 'flex items-center gap-3 rounded-full border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) px-4 py-2 shadow-xl',
+      ? `flex flex-wrap items-center justify-center gap-1.5 rounded-3xl border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) px-3 py-2 shadow-[0_16px_36px_-14px_rgba(0,0,0,0.6)] ${actionsRowMinWidthClass}`
+      : 'flex w-max items-center gap-1 rounded-full border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) px-2.5 py-1.5 shadow-[0_16px_36px_-14px_rgba(0,0,0,0.6)]',
   );
 
   function selectColor(hex: string): void {
@@ -987,6 +1038,18 @@
   }
 </script>
 
+{#if caret}
+  <span
+    class="pointer-events-none fixed z-[51] size-2.5 rotate-45 border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) {caret.up
+      ? 'border-t border-l'
+      : 'border-r border-b'}"
+    style="left: {caret.x}px; top: {caret.y}px;"
+    aria-hidden="true"
+    data-testid="selection-toolbar-caret"
+    in:scale={{ duration: 140, start: 0.6, easing: cubicOut }}
+  ></span>
+{/if}
+
 <div
   class="selection-toolbar fixed z-50 flex flex-col overflow-hidden {placementMoveTransitionClass}"
   data-floating-menu="true"
@@ -1000,7 +1063,12 @@
        cascade: in a normal window this renders the same single-line pill it
        always has, and the row only breaks once the viewport leaves it no
        choice. -->
-  <div class={actionsRowClass} role="toolbar" aria-label={t('highlight.menuAriaLabel')}>
+  <div
+    class={actionsRowClass}
+    style="margin-left: {pillOffset}px;"
+    role="toolbar"
+    aria-label={t('highlight.menuAriaLabel')}
+  >
     <!-- Color row. Expanded (five circles) is the default; collapsed is one
          swatch that opens the palette, which is the same trade the highlight
          context menu makes with its multicolor `+` trigger. Both branches
@@ -1008,17 +1076,19 @@
          `key` is the HIGHLIGHT_COLORS index — the palette is a constant and is
          not reordered, so the index identifies an entry as well as its hex. -->
     {#if !toolbarCollapsed}
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-0.5">
         {#each HIGHLIGHT_COLORS as color, index (index)}
           <button
             type="button"
-            class="h-6 w-6 cursor-pointer rounded-full transition-transform hover:scale-110"
-            class:ring-2={selectedColor === color.hex}
-            class:ring-white={selectedColor === color.hex}
-            style="background-color: {color.hex};"
+            class={MENU_SWATCH}
             onclick={() => selectColor(color.hex)}
             aria-label={t('highlight.selectColor', { color: t(color.i18nKey) })}
-          ></button>
+          >
+            <span
+              class="{MENU_SWATCH_DOT} {selectedColor === color.hex ? MENU_SWATCH_DOT_ACTIVE : ''}"
+              style="background-color: {color.hex};"
+            ></span>
+          </button>
         {/each}
       </div>
     {:else}
@@ -1026,21 +1096,16 @@
         <button
           type="button"
           bind:this={pickerAnchor}
-          class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full shadow-inner ring-2 ring-(--color-text-inverse) transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
-          style="background-image: linear-gradient(135deg, var(--color-error) 0%, var(--color-success) 50%, var(--color-accent-start) 100%);"
+          class={MENU_SWATCH}
           onclick={togglePicker}
           aria-label={t('highlight.changeColor')}
           aria-expanded={pickerOpen}
           title={t('highlight.changeColor')}
         >
-          <svg
-            class="h-3 w-3 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]"
-            viewBox="0 0 7 7"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M3 4l-3 0 0-1 3 0 0-3 1 0 0 3 3 0 0 1-3 0 0 3-1 0 0-3 0 0" />
-          </svg>
+          <span
+            class="{MENU_SWATCH_DOT} {MENU_SWATCH_DOT_ACTIVE}"
+            style="background-color: {selectedColor};"
+          ></span>
         </button>
         <span
           class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
@@ -1052,7 +1117,7 @@
         </span>
         {#if pickerOpen}
           <div
-            class="fixed z-[60] flex items-center gap-2 rounded-full border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) p-2 shadow-xl"
+            class="fixed z-[60] flex items-center gap-0.5 rounded-full border border-(--color-highlight-menu-border) bg-(--color-highlight-menu-bg) p-1.5 shadow-[0_16px_36px_-14px_rgba(0,0,0,0.6)]"
             style="left: {pickerLeft}px; top: {pickerTop}px;"
             role="group"
             aria-label={t('highlight.menuAriaLabel')}
@@ -1060,97 +1125,30 @@
             {#each HIGHLIGHT_COLORS as color, index (index)}
               <button
                 type="button"
-                class="h-6 w-6 cursor-pointer rounded-full transition-transform hover:scale-110"
-                class:ring-2={selectedColor === color.hex}
-                class:ring-white={selectedColor === color.hex}
-                style="background-color: {color.hex};"
+                class={MENU_SWATCH}
                 onclick={() => selectFromPicker(color.hex)}
                 aria-label={t('highlight.selectColor', { color: t(color.i18nKey) })}
-              ></button>
+              >
+                <span
+                  class="{MENU_SWATCH_DOT} {selectedColor === color.hex
+                    ? MENU_SWATCH_DOT_ACTIVE
+                    : ''}"
+                  style="background-color: {color.hex};"
+                ></span>
+              </button>
             {/each}
           </div>
         {/if}
       </div>
     {/if}
 
-    <!-- Separator -->
-    <span class="text-base font-normal text-(--color-text-auxiliary)">|</span>
-
-    <!-- Copy -->
-    <div class="group relative">
-      <button
-        type="button"
-        class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
-        onclick={handleCopy}
-        aria-label={t('reader.copiar')}
-        title={t('reader.copiar')}
-      >
-        <svg
-          class="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
-      </button>
-      <span
-        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
-          ? 'group-hover:opacity-100 group-focus-within:opacity-100 opacity-0'
-          : 'opacity-0'}"
-        role="tooltip"
-      >
-        {t('reader.copiar')}
-      </span>
-    </div>
-
-    <!-- Add to Dictionary -->
-    <div class="group relative">
-      <button
-        type="button"
-        class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
-        onclick={handleAddToDictionary}
-        aria-label={t('reader.addToDictionary')}
-        title={t('reader.addToDictionary')}
-      >
-        <svg
-          class="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-          <path d="M6 8h2"></path>
-          <path d="M6 12h2"></path>
-          <path d="M16 8h2"></path>
-          <path d="M16 12h2"></path>
-        </svg>
-      </button>
-      <span
-        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
-          ? 'group-hover:opacity-100 group-focus-within:opacity-100 opacity-0'
-          : 'opacity-0'}"
-        role="tooltip"
-      >
-        {t('reader.addToDictionary')}
-      </span>
-    </div>
+    <span class={MENU_DIVIDER} aria-hidden="true"></span>
 
     <!-- Translate -->
     <div class="group relative">
       <button
         type="button"
-        class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky) {translationHighlight}"
+        class="{MENU_ICON_BUTTON} {translationHighlight}"
         onclick={handleTranslate}
         disabled={translating}
         aria-label={t('reader.translate')}
@@ -1191,7 +1189,7 @@
     <div class="group relative">
       <button
         type="button"
-        class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-(--color-text-inverse) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky) disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent {definitionActive}"
+        class="{MENU_ICON_BUTTON} {definitionActive}"
         onclick={handleDefine}
         disabled={defining || !canDefine}
         aria-label={t('reader.define')}
@@ -1220,6 +1218,75 @@
         role="tooltip"
       >
         {t('reader.define')}
+      </span>
+    </div>
+    <!-- Add to Dictionary -->
+    <div class="group relative">
+      <button
+        type="button"
+        class={MENU_ICON_BUTTON}
+        onclick={handleAddToDictionary}
+        aria-label={t('reader.addToDictionary')}
+        title={t('reader.addToDictionary')}
+      >
+        <svg
+          class="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+          <path d="M6 8h2"></path>
+          <path d="M6 12h2"></path>
+          <path d="M16 8h2"></path>
+          <path d="M16 12h2"></path>
+        </svg>
+      </button>
+      <span
+        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
+          ? 'group-hover:opacity-100 group-focus-within:opacity-100 opacity-0'
+          : 'opacity-0'}"
+        role="tooltip"
+      >
+        {t('reader.addToDictionary')}
+      </span>
+    </div>
+
+    <!-- Copy -->
+    <div class="group relative">
+      <button
+        type="button"
+        class={MENU_ICON_BUTTON}
+        onclick={handleCopy}
+        aria-label={t('reader.copiar')}
+        title={t('reader.copiar')}
+      >
+        <svg
+          class="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </button>
+      <span
+        class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
+          ? 'group-hover:opacity-100 group-focus-within:opacity-100 opacity-0'
+          : 'opacity-0'}"
+        role="tooltip"
+      >
+        {t('reader.copiar')}
       </span>
     </div>
   </div>

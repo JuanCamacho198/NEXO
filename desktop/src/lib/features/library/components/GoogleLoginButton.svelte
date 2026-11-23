@@ -17,9 +17,24 @@
    */
   const defaultT: Translator = (key) => String(key);
 
-  let { t = defaultT }: { t?: Translator } = $props();
+  let {
+    t = defaultT,
+    showSignedInStatus = true,
+  }: {
+    t?: Translator;
+    /**
+     * `false` hides the "signed in as" box while keeping the component (and its
+     * success toast) mounted, for a host that already shows the session.
+     */
+    showSignedInStatus?: boolean;
+  } = $props();
 
   let isLoggingIn = $state(false);
+  // `signInWithGoogle` returns once the browser is open, long before the
+  // reader finishes there, so the button alone looked idle while they were
+  // away. This keeps saying where the sign-in continues until it lands.
+  let awaitingBrowser = $state(false);
+  let loginError = $state<string | null>(null);
   let showSuccessToast = $state(false);
   let mounted = $state(false);
 
@@ -46,12 +61,15 @@
   async function handleLogin(): Promise<void> {
     try {
       isLoggingIn = true;
+      loginError = null;
       logger.debug('Initiating Supabase Google login...', undefined, 'app_shell');
       await signInWithGoogle();
+      awaitingBrowser = true;
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       logger.error('Login Error:', { error: msg }, 'app_shell');
-      alert(t('errors.commandFailure') + ': ' + msg);
+      awaitingBrowser = false;
+      loginError = `${t('errors.commandFailure')}: ${msg}`;
     } finally {
       isLoggingIn = false;
     }
@@ -59,22 +77,26 @@
 </script>
 
 {#if authState.isAuthenticated}
-  <div
-    class="flex w-full items-center justify-center gap-2 rounded-md border border-(--color-success)/30 bg-(--color-success)/10 px-4 py-2 text-sm font-medium text-(--color-primary)"
-    role="status"
-    aria-live="polite"
-  >
-    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-    </svg>
-    <span
-      >{t('welcome.signedInAs', { email: authState.email ?? t('welcome.signedInFallback') })}</span
+  {#if showSignedInStatus}
+    <div
+      class="flex w-full items-center justify-center gap-2 rounded-md border border-(--color-success)/30 bg-(--color-success)/10 px-4 py-2 text-sm font-medium text-(--color-primary)"
+      role="status"
+      aria-live="polite"
     >
-  </div>
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      <span
+        >{t('welcome.signedInAs', {
+          email: authState.email ?? t('welcome.signedInFallback'),
+        })}</span
+      >
+    </div>
+  {/if}
 {:else}
   <Button
     variant="secondary"
-    class="w-full flex items-center justify-center gap-2 bg-white text-gray-900 border-gray-300 hover:bg-gray-100 px-3 py-2 text-sm rounded-xl"
+    class="w-full flex items-center justify-center gap-2.5 bg-white text-gray-900 border-gray-300 hover:bg-gray-100 px-4 py-2.5 text-sm"
     onclick={handleLogin}
     disabled={isLoggingIn}
   >
@@ -105,9 +127,21 @@
           fill="#EA4335"
         />
       </svg>
-      {t('welcome.continueGoogle')}
+      {awaitingBrowser ? t('welcome.retryGoogle') : t('welcome.continueGoogle')}
     {/if}
   </Button>
+  {#if awaitingBrowser && !loginError}
+    <p
+      class="m-0 mt-3 text-center text-sm text-(--color-secondary)"
+      role="status"
+      aria-live="polite"
+    >
+      {t('welcome.finishInBrowser')}
+    </p>
+  {/if}
+  {#if loginError}
+    <p class="m-0 mt-3 text-center text-sm text-(--color-error)" role="alert">{loginError}</p>
+  {/if}
 {/if}
 
 <Toast

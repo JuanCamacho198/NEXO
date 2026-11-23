@@ -1,7 +1,6 @@
 ---
 import Logo from '@/components/ui/Logo.astro';
 import Button from '@/components/ui/Button.astro';
-import DownloadButton from '@/components/ui/DownloadButton.astro';
 import ThemeToggle from '@/components/ui/ThemeToggle.astro';
 import LanguagePicker from '@/components/ui/LanguagePicker.astro';
 import { defaultLang, localizePath, useTranslations, type Lang } from '@/i18n/utils';
@@ -25,9 +24,6 @@ const sections = [
   { id: 'funciones', label: t('header.navFeatures') },
   { id: 'faq', label: t('faq.title') },
 ];
-const langSwitch = 'flex items-center gap-2.5 text-[13px] font-semibold tracking-[0.04em]';
-const mobileLink =
-  'transition-[color] duration-[180ms] ease-[ease] max-[1023px]:py-2.5 max-[1023px]:text-[15px] max-[1023px]:font-medium max-[1023px]:text-ink-soft max-[1023px]:hover:text-ink';
 ---
 
 <!-- ══════════════ HEADER ══════════════ -->
@@ -68,20 +64,38 @@ const mobileLink =
         id="nav-toggle"
         aria-label={t('header.openMenuAria')}
       />
-      <nav
-        class="hidden max-[1023px]:peer-checked:absolute max-[1023px]:peer-checked:inset-x-0 max-[1023px]:peer-checked:top-full max-[1023px]:peer-checked:flex max-[1023px]:peer-checked:flex-col max-[1023px]:peer-checked:gap-1 max-[1023px]:peer-checked:border-b max-[1023px]:peer-checked:border-border max-[1023px]:peer-checked:bg-surface max-[1023px]:peer-checked:pt-3.5 max-[1023px]:peer-checked:pr-5 max-[1023px]:peer-checked:pb-[22px] max-[1023px]:peer-checked:pl-5 max-[1023px]:peer-checked:shadow-soft"
-        aria-label={t('header.mobileNavAria')}
-      >
+      <!-- Mobile menu: a floating glass panel under the bar (styles in
+           global.css, `.mobile-menu`). Same scroll-spy as the desktop pill. -->
+      <nav class="mobile-menu" aria-label={t('header.mobileNavAria')}>
         {sections.map((section) => (
-          <a class={mobileLink} href={`${home}#${section.id}`}>
-            {section.label}
+          <a
+            class="mobile-menu-link"
+            href={`${home}#${section.id}`}
+            data-spy={overHero ? section.id : undefined}
+          >
+            <span>{section.label}</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="m9 6 6 6-6 6"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
           </a>
         ))}
-        <div class="flex items-center gap-4">
-          <div class={langSwitch}>
-            <LanguagePicker />
+        <div class="mobile-menu-foot">
+          <div class="mobile-menu-langs" aria-label={t('header.languageAria')}>
+            <a href="/" aria-current={lang === 'es' ? 'true' : undefined}>
+              ES
+            </a>
+            <a href="/en/" aria-current={lang === 'en' ? 'true' : undefined}>
+              EN
+            </a>
           </div>
-          {!overHero && <ThemeToggle class="hidden max-[640px]:grid" />}
+          {!overHero && <ThemeToggle />}
         </div>
       </nav>
       <LanguagePicker class="max-[1023px]:hidden" align="right" />
@@ -89,17 +103,9 @@ const mobileLink =
            page the control would only ever change sections the visitor has not
            scrolled to. The OS preference still applies there. -->
       {!overHero && <ThemeToggle class="max-[640px]:hidden" />}
-      <!-- From 1024px the adaptive "Descargar para Windows" with its icon fits;
-           below that the bar already holds the logo, the burger and the CTA, so
-           the short label stays (a 20-character label at 390px overflows). -->
-      <span class="max-[1023px]:hidden">
-        <DownloadButton compact href={`${home}#descargar`} />
-      </span>
-      <span class="min-[1024px]:hidden">
-        <Button variant="primary" href={`${home}#descargar`}>
-          {t('cta.download')}
-        </Button>
-      </span>
+      <Button variant="primary" href={`${home}#descargar`} icon="download">
+        {t('header.download')}
+      </Button>
     </div>
   </div>
 </header>

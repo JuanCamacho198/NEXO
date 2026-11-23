@@ -46,7 +46,8 @@ fun HighlightsScreen(
         authSession = authSession,
         onOpenAccount = onOpenAccount,
         syncState = syncState,
-        onSyncRefresh = { viewModel.syncHighlights(force = true) },
+        isManualTriggered = true,
+        onSyncRefresh = viewModel::onManualSync,
         onBookFilterChanged = viewModel::onBookFilterChanged,
         onTagFilterChanged = viewModel::onTagFilterChanged,
         onSearchQueryChange = viewModel::onSearchQueryChanged,
@@ -79,6 +80,7 @@ internal fun HighlightsScreenContent(
     authSession: AuthSession? = null,
     onOpenAccount: () -> Unit = {},
     syncState: com.nexo.presentation.viewmodel.highlights.HighlightsSyncState = com.nexo.presentation.viewmodel.highlights.HighlightsSyncState.Idle,
+    isManualTriggered: Boolean = false,
     onSyncRefresh: () -> Unit = {},
     onBookFilterChanged: (String?) -> Unit,
     onTagFilterChanged: (String?) -> Unit,
@@ -147,6 +149,9 @@ internal fun HighlightsScreenContent(
     }
 
     val isSyncing = syncState is com.nexo.presentation.viewmodel.highlights.HighlightsSyncState.Syncing
+    // The pull-to-refresh indicator belongs to the user's own gesture only: an
+    // automatic pull must never spin it, or screen entry looks like a refresh.
+    val isManualSyncing = isSyncing && isManualTriggered
     val pullState = rememberPullToRefreshState()
 
     Box(
@@ -156,7 +161,7 @@ internal fun HighlightsScreenContent(
                 .padding(contentPadding),
     ) {
         PullToRefreshBox(
-            isRefreshing = isSyncing,
+            isRefreshing = isManualSyncing,
             onRefresh = onSyncRefresh,
             state = pullState,
             modifier = Modifier.fillMaxSize(),
@@ -174,6 +179,7 @@ internal fun HighlightsScreenContent(
                         onOpenAccount = onOpenAccount,
                         onSearchClick = { showSearch = !showSearch },
                         syncState = syncState,
+                        isManualTriggered = isManualTriggered,
                         onSyncRefresh = onSyncRefresh,
                     )
                 }

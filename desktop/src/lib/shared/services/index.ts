@@ -50,23 +50,17 @@ export { isAnonymousSession } from './anonymousSession';
 export type { SupabaseSessionData } from '$lib/shared/stores/AuthState.svelte';
 export {
   beginDriveConnect,
-  buildDriveAuthorizeUrl,
-  buildDriveState,
   consumeDriveAuthResult,
   disconnectDrive,
   DriveConfigError,
   DriveOAuthError,
-  generateDriveCodeChallenge,
-  generateDriveCodeVerifier,
   getDriveAccessToken,
-  getDriveOAuthConfig,
   isDriveAuthorized,
   parseDriveCallbackUrl,
   refreshDriveAccessToken,
   type DriveAuthResult,
   type DriveCallbackErrorCode,
   type DriveConfigErrorCode,
-  type DriveOAuthConfig,
 } from './DriveConnectService';
 export {
   markDriveDeclined,

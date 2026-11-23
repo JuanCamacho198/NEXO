@@ -94,7 +94,7 @@
               </SafeCover>
               <button
                 type="button"
-                class="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                class="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border border-(--color-edge) bg-(--color-horizon-fade)/85 text-(--color-primary) backdrop-blur-sm transition-colors hover:text-(--color-brand-text)"
                 onclick={() => void onDeleteCover(shelfDetail)}
                 aria-label={t('shelf.deleteCoverAria' as MessageKey)}
                 ><svg
@@ -122,7 +122,7 @@
               </div>
               <button
                 type="button"
-                class="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                class="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border border-(--color-edge) bg-(--color-horizon-fade)/85 text-(--color-primary) backdrop-blur-sm transition-colors hover:text-(--color-brand-text)"
                 onclick={() => void shelfEdit.handleCoverImport(shelfDetail)}
                 aria-label={t('shelf.importCoverAria' as MessageKey)}
                 ><svg
@@ -195,7 +195,7 @@
             <section class="pb-4">
               <div class="grid grid-cols-2 gap-x-6 gap-y-2">
                 <p class="text-xs text-(--color-text-muted)">
-                  <span class="font-medium text-(--color-primary)"
+                  <span class="mr-1 font-medium text-(--color-primary)"
                     >{t('shelf.authorLabel' as MessageKey)}</span
                   >{#if shelfDetail.author}
                     {shelfDetail.author}{:else}
@@ -213,14 +213,14 @@
                   >
                 </p>
                 <p class="text-xs text-(--color-text-muted)">
-                  <span class="font-medium text-(--color-primary)"
+                  <span class="mr-1 font-medium text-(--color-primary)"
                     >{t('shelf.genreLabel' as MessageKey)}</span
                   >{#if shelfDetail.genre}
                     {shelfDetail.genre}{:else}
                     <span class="italic opacity-60">{t('shelf.noGenre' as MessageKey)}</span>{/if}
                 </p>
                 <p class="text-xs text-(--color-text-muted)">
-                  <span class="font-medium text-(--color-primary)"
+                  <span class="mr-1 font-medium text-(--color-primary)"
                     >{t('shelf.languageLabel' as MessageKey)}</span
                   >{#if shelfDetail.language}
                     {getLanguageName(shelfDetail.language, t)}{:else}
@@ -284,7 +284,7 @@
             </section>
           {/if}
           <section class="space-y-3 py-4">
-            <h3 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
+            <h3 class="text-sm font-semibold text-(--color-primary)">
               <Clock size={14} strokeWidth={1.8} class="inline -mt-0.5 mr-1" />{t(
                 'shelf.readingLabel' as MessageKey,
               )}
@@ -293,9 +293,9 @@
                 <div class="flex items-center gap-1 text-micro text-(--color-text-muted)">
                   <span>{t('shelf.progress' as MessageKey)} {progressPct}%</span>
                 </div>
-                <div class="h-1.5 w-full rounded-full bg-(--color-border)">
+                <div class="h-1.5 w-full rounded-full bg-(--color-edge)">
                   <div
-                    class="h-1.5 rounded-full bg-(--color-primary) transition-all"
+                    class="h-1.5 rounded-full bg-linear-to-r from-(--color-brand-start) to-(--color-brand) transition-all"
                     style="width: {progressPct}%"
                   ></div>
                 </div>
@@ -327,7 +327,7 @@
               </p>{/if}
           </section>
           <section class="space-y-3 pt-4">
-            <h3 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
+            <h3 class="text-sm font-semibold text-(--color-primary)">
               <Info size={14} strokeWidth={1.8} class="inline -mt-0.5 mr-1" />{t(
                 'shelf.details' as MessageKey,
               )}
@@ -368,7 +368,11 @@
           variant="ghost"
           onclick={shelfEdit.cancelEditing}
           disabled={shelfEdit.isSaving}>{t('highlight.cancel' as MessageKey)}</Button
-        ><Button size="sm" onclick={shelfEdit.saveEditing} disabled={shelfEdit.isSaving}
+        ><Button
+          size="sm"
+          variant="accent"
+          onclick={shelfEdit.saveEditing}
+          disabled={shelfEdit.isSaving}
           >{shelfEdit.isSaving
             ? t('shelf.saving' as MessageKey)
             : t('highlight.save' as MessageKey)}</Button
@@ -381,6 +385,7 @@
           >{t('common.close' as MessageKey)}</Button
         ><Button
           size="sm"
+          variant="accent"
           onclick={() => {
             open = false;
             void onStartReading(shelfDetail);

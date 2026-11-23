@@ -48,6 +48,11 @@ fun SyncScreen(
     onViewLogs: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    // Resolved in composition: `context.getString` inside a click lambda is what
+    // `LocalContextGetResourceValueCall` flags. A Toast fires outside composition,
+    // so the string is read here and captured by the lambda instead.
+    val syncNowSuccess = stringResource(R.string.sync_now_success)
+    val logViewerLabel = stringResource(R.string.debug_settings_log_viewer)
     val recentEntries =
         listOf(
             R.string.sync_entry_highlights to "14:30",
@@ -130,7 +135,7 @@ fun SyncScreen(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(
                     onClick = {
-                        Toast.makeText(context, context.getString(R.string.sync_now_success), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, syncNowSuccess, Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(16.dp),
@@ -149,7 +154,7 @@ fun SyncScreen(
                         if (onViewLogs != null) {
                             onViewLogs()
                         } else {
-                            Toast.makeText(context, context.getString(R.string.debug_settings_log_viewer), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, logViewerLabel, Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),

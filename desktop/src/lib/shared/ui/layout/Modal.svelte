@@ -169,7 +169,7 @@
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
   <Dialog.Portal>
     <Dialog.Overlay
-      class="fixed inset-0 {layerClass} flex items-center justify-center bg-black/50 p-4"
+      class="fixed inset-0 {layerClass} flex items-center justify-center bg-(--color-scrim) p-4 backdrop-blur-[2px]"
     >
       <!--
         Svelte 5 rejects `transition:` on a component ("This type of directive is
@@ -182,32 +182,41 @@
         <div {...props} transition:fade={{ duration: reducedMotion ? 0 : 200 }}>
           <Dialog.Content
             {onOpenAutoFocus}
-            class="flex max-h-[calc(100vh-2rem)] w-full {sizeClass} flex-col overflow-hidden rounded-xl border border-(--color-border) bg-(--color-elevated) {className}"
+            class="flex max-h-[calc(100vh-2rem)] w-full {sizeClass} flex-col overflow-hidden rounded-(--radius-xl) border border-(--color-edge) bg-(--color-elevated) {className}"
           >
             {#snippet child({ props })}
               <div
                 {...props}
                 transition:fly={{ duration: reducedMotion ? 0 : 200, opacity: 0, y: -20 }}
               >
-                <div
-                  class="flex shrink-0 items-center justify-between border-b border-(--color-border) px-6 py-4"
-                >
-                  <Dialog.Title
-                    id={titleId}
-                    level={2}
-                    class="text-lg font-semibold text-(--color-primary)"
-                  >
-                    {#snippet child({ props })}
-                      <h2 {...props}>{title}</h2>
-                    {/snippet}
-                  </Dialog.Title>
+                <div class="flex shrink-0 items-center justify-between gap-4 px-6 pt-5 pb-3">
+                  <div class="flex min-w-0 items-center gap-2.5">
+                    <span
+                      class="h-5 w-1 shrink-0 rounded-full bg-linear-to-b from-(--color-brand-start) to-(--color-brand-end)"
+                      aria-hidden="true"
+                    ></span>
+                    <Dialog.Title
+                      id={titleId}
+                      level={2}
+                      class="truncate text-xl font-bold tracking-[-0.01em] text-(--color-primary)"
+                    >
+                      {#snippet child({ props })}
+                        <h2 {...props}>{title}</h2>
+                      {/snippet}
+                    </Dialog.Title>
+                  </div>
                   {#if !noCloseButton}
                     <button
-                      class="flex items-center justify-center min-w-7 min-h-7 text-(--color-text-muted) transition-colors hover:text-(--color-primary)"
+                      class="flex size-8 shrink-0 items-center justify-center rounded-full text-(--color-text-muted) transition-colors hover:bg-(--color-surface-hover) hover:text-(--color-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                       onclick={() => handleOpenChange(false)}
                       aria-label={closeLabel ?? tFn('modal.closeAria')}
                     >
-                      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        class="h-4.5 w-4.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           stroke-linecap="round"
                           stroke-linejoin="round"
@@ -229,7 +238,7 @@
                 -->
                 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
                 <div
-                  class="modal-scroll-region min-h-0 flex-1 overflow-y-auto px-6 py-4"
+                  class="modal-scroll-region min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-5"
                   tabindex="0"
                   role="region"
                   aria-label={title}
@@ -250,7 +259,7 @@
 
                 {#if footer}
                   <div
-                    class="flex shrink-0 items-center justify-end gap-3 border-t border-(--color-border) px-6 py-4"
+                    class="flex shrink-0 items-center justify-end gap-3 border-t border-(--color-edge) bg-(--color-surface-subtle) px-6 py-3.5"
                   >
                     {@render footer()}
                   </div>

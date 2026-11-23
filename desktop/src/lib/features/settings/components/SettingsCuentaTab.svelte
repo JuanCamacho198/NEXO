@@ -1,9 +1,12 @@
 <script lang="ts">
+  import { sectionClass } from '$lib/shared/ui/emberStyles';
+  import { headingMarker } from '$lib/shared/ui/emberStyles';
   import { GoogleLoginButton } from '$lib/features/library';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import { Button } from '$lib/shared/ui';
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
   import ProfileCard from './ProfileCard.svelte';
+  import SettingsNotificationsSection from './SettingsNotificationsSection.svelte';
   import ConnectedDevices from './ConnectedDevices.svelte';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
@@ -13,6 +16,8 @@
   import type { createSettingsProfile } from '../useSettingsProfile.svelte';
   import type { createSettingsLocale } from '../useSettingsLocale.svelte';
   import { setTheme, theme } from '$lib/shared/stores/theme';
+  import Moon from 'lucide-svelte/icons/moon';
+  import Sun from 'lucide-svelte/icons/sun';
 
   type ProfileState = ReturnType<typeof createSettingsProfile>;
   type LocaleState = ReturnType<typeof createSettingsLocale>;
@@ -178,30 +183,44 @@
   role="tabpanel"
   id="tabpanel-cuenta"
   aria-labelledby="tab-cuenta"
-  class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+  class="relative flex flex-1 flex-col overflow-y-auto px-8 pt-4 pb-12"
 >
-  <section class="space-y-5 w-full max-w-none">
+  <section class="w-full max-w-5xl space-y-6">
     <header class="flex flex-col gap-1">
-      <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
-        {t('settings.tab.account')}
-      </h1>
+      <div class="flex items-center gap-3">
+        <div class="h-7 {headingMarker}" aria-hidden="true"></div>
+        <h1 class="m-0 text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)">
+          {t('settings.tab.account')}
+        </h1>
+      </div>
       <p class="text-sm text-(--color-text-muted)">{t('settings.account.subtitle')}</p>
     </header>
 
-    <Panel title={t('settings.authentication')} subtitle={t('settings.authDescription')}>
-      <GoogleLoginButton {t} />
-      {#if authState.isAuthenticated}
-        <Button
-          variant="danger"
-          size="md"
-          fullWidth
-          class="mt-4"
-          disabled={isSigningOut}
-          onclick={handleSignOut}
-        >
-          {isSigningOut ? t('welcome.signingOut') : t('welcome.signOut')}
-        </Button>
-      {/if}
+    <!-- Session and profile are one block: the account row says who is signed
+      in and holds sign-out; signed out, the Google button sits under it. -->
+    <Panel
+      title={t('settings.authentication')}
+      subtitle={authState.isAuthenticated ? undefined : t('settings.authDescription')}
+    >
+      <ProfileCard {profile} {isProfileLoading} {profileError} {t}>
+        {#snippet actions()}
+          {#if authState.isAuthenticated}
+            <Button
+              variant="danger-outline"
+              size="md"
+              disabled={isSigningOut}
+              onclick={handleSignOut}
+            >
+              {isSigningOut ? t('welcome.signingOut') : t('welcome.signOut')}
+            </Button>
+          {/if}
+        {/snippet}
+      </ProfileCard>
+      <!-- Stays mounted when signed in: it owns the "signed in" toast. Its own
+        status box is off here because the account row already says it. -->
+      <div class="max-w-sm {authState.isAuthenticated ? '' : 'mt-5'}">
+        <GoogleLoginButton {t} showSignedInStatus={false} />
+      </div>
       {#if settingsUnavailable}
         <p
           class="mb-2 rounded border border-(--color-warning)/40 bg-(--color-warning)/10 px-2 py-1 text-xs text-(--color-primary)"
@@ -218,14 +237,10 @@
       {/if}
     </Panel>
 
-    <Panel>
-      <ProfileCard {profile} {isProfileLoading} {profileError} {t} />
-    </Panel>
-
     {#if authState.isAuthenticated && authState.userId}
-      <!-- Device rows are self-bordered cards, so this group stays borderless to keep one border level. -->
-      <div class="space-y-3">
-        <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">
+      <!-- Device rows are open rows under the section hairline, like every other block. -->
+      <div class="{sectionClass} space-y-3">
+        <h3 class="mt-0 mb-2 text-base font-semibold text-(--color-primary)">
           {t('settings.connectedDevices.title')}
         </h3>
         <ConnectedDevices
@@ -239,9 +254,11 @@
     {/if}
 
     <Panel>
-      <div class="flex flex-col gap-4">
+      <div class="grid gap-x-8 gap-y-5 sm:grid-cols-2">
         <div>
-          <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.language')}</span>
+          <span class="mb-2 block text-sm font-medium text-(--color-primary)"
+            >{t('settings.language')}</span
+          >
           <Dropdown
             options={localeOptions}
             value={locale}
@@ -250,27 +267,34 @@
           />
         </div>
         <div>
-          <span class="mb-1 block text-xs text-(--color-text-muted)">{t('settings.theme')}</span>
-          <!-- Segmented pair: the active side takes the filled primary tone,
-               the other stays secondary. Selection is also in `aria-pressed`. -->
-          <div class="flex gap-2" role="group" aria-label={t('settings.theme')}>
+          <span class="mb-2 block text-sm font-medium text-(--color-primary)"
+            >{t('settings.theme')}</span
+          >
+          <!-- Segmented pair in the same track as the settings tabs: the active
+               side takes the ember wash and outline. Selection is also in
+               `aria-pressed`. -->
+          <div
+            class="flex w-fit gap-1 rounded-full border border-(--color-edge) bg-(--color-home-card) p-1"
+            role="group"
+            aria-label={t('settings.theme')}
+          >
             <Button
-              variant={$theme === 'light' ? 'primary' : 'secondary'}
-              size="sm"
-              class="flex-1"
+              variant="tab"
+              selected={$theme === 'light'}
               aria-pressed={$theme === 'light'}
               onclick={() => setTheme('light')}
             >
-              {t('settings.theme.light')}
+              <Sun size={15} strokeWidth={1.8} aria-hidden="true" />
+              <span class="ml-2">{t('settings.theme.light')}</span>
             </Button>
             <Button
-              variant={$theme === 'dark' ? 'primary' : 'secondary'}
-              size="sm"
-              class="flex-1"
+              variant="tab"
+              selected={$theme === 'dark'}
               aria-pressed={$theme === 'dark'}
               onclick={() => setTheme('dark')}
             >
-              {t('settings.theme.dark')}
+              <Moon size={15} strokeWidth={1.8} aria-hidden="true" />
+              <span class="ml-2">{t('settings.theme.dark')}</span>
             </Button>
           </div>
         </div>
@@ -280,10 +304,12 @@
     <!-- No Panel title: the h3 below must stay an h3 (heading-order test).
          Padding is none because the row keeps its own inner spacing. -->
     <Panel aria-label={t('settings.daily_goal_label')} padding="none">
-      <div class="flex items-center justify-between gap-3 p-4">
-        <h3 class="m-0 min-w-0 text-sm font-medium text-(--color-primary)">
+      <div class="flex items-center justify-between gap-3">
+        <h3 class="m-0 min-w-0 text-base font-semibold text-(--color-primary)">
           {t('settings.daily_goal_label')}
-          <span class="font-normal text-(--color-text-muted)"> · {savedDailyGoalMinutes} min</span>
+          <span class="font-normal text-(--color-brand-text) tabular-nums">
+            · {savedDailyGoalMinutes} min</span
+          >
         </h3>
         <Button
           variant="secondary"
@@ -298,7 +324,7 @@
       </div>
 
       {#if isDailyGoalLocal}
-        <p class="m-0 px-4 pb-4 text-xs text-(--color-text-muted)">
+        <p class="mt-1 mb-0 text-xs text-(--color-text-muted)">
           {t('settings.daily_goal_local_hint')}
         </p>
       {/if}
@@ -307,17 +333,17 @@
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
         <div
           id="daily-goal-options"
-          class="flex flex-wrap gap-2 border-t border-(--color-border) p-4"
+          class="mt-4 flex flex-wrap gap-2"
           role="group"
           aria-label={t('settings.daily_goal_label')}
           onkeydown={handleGoalOptionsKeydown}
         >
           {#each dailyGoalCards as card}
-            <!-- The pending pick takes the filled primary tone; the rest stay
+            <!-- The pending pick takes the ember fill; the rest stay
                  secondary. The old pill shape has no atom equivalent, so the
                  chips intentionally render at the atom's radius. -->
             <Button
-              variant={selectedDailyGoal === card.value ? 'primary' : 'secondary'}
+              variant={selectedDailyGoal === card.value ? 'accent' : 'secondary'}
               size="sm"
               aria-pressed={selectedDailyGoal === card.value}
               onclick={() => void chooseGoal(card.value)}
@@ -332,12 +358,16 @@
       <p
         role="status"
         aria-live="polite"
-        class="m-0 text-xs {saveStatusMessage ? 'px-4 pb-4' : 'sr-only'}"
+        class="m-0 text-xs {saveStatusMessage ? 'mt-3' : 'sr-only'}"
         class:text-(--color-error)={isSaveStatusError}
         class:text-(--color-text-muted)={!isSaveStatusError}
       >
         {saveStatusMessage}
       </p>
     </Panel>
+
+    <!-- Reminders are about the reader's own habit, so they live with the
+      account and the daily goal, not with data export. -->
+    <SettingsNotificationsSection {t} />
   </section>
 </div>

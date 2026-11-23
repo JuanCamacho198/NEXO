@@ -52,6 +52,7 @@ import com.nexo.domain.connectivity.ConnectivityObserver
 import com.nexo.domain.model.AuthSession
 import com.nexo.domain.notification.NotificationStore
 import com.nexo.domain.repository.CacheRepository
+import com.nexo.domain.repository.DefinitionHistoryRepository
 import com.nexo.domain.repository.DefinitionRepository
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.repository.LibraryRepository
@@ -145,6 +146,7 @@ fun NexoNavHost(
     storageRepository: StorageRepository,
     cacheRepository: CacheRepository,
     translationHistoryRepository: TranslationHistoryRepository,
+    definitionHistoryRepository: DefinitionHistoryRepository,
     notificationPreferencesStore: NotificationPreferencesStore,
     coverStorage: CoverStorage,
     checkForUpdatesUseCase: CheckForUpdatesUseCase,
@@ -553,6 +555,7 @@ fun NexoNavHost(
                             activeUserProvider = activeUserProvider,
                             translationPreferences = translationPreferences,
                             translationHistoryRepository = translationHistoryRepository,
+                            definitionHistoryRepository = definitionHistoryRepository,
                             definitionPreferences = definitionPreferences,
                             addonRegistry = addonRegistry,
                             authViewModel = authViewModel,

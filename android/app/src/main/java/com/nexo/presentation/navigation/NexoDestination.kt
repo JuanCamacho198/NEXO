@@ -94,6 +94,13 @@ sealed class NexoDestination(
     /** A2: terms of use, reachable from About. */
     data object SettingsTerms : NexoDestination("settings/terms")
 
+    /**
+     * Licence attribution, reachable from About. Distinct from [SettingsLegal],
+     * which is the catalog/public-domain policy shown from the addon flow: this
+     * one lists what the APK actually ships.
+     */
+    data object SettingsLicenses : NexoDestination("settings/licenses")
+
     /** U5: legal policy page, reachable from the disclaimer and addon screens. */
     data object SettingsLegal : NexoDestination("settings/legal", R.string.legal_policy_title, NexoIcons.LibraryBooks)
 

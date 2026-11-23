@@ -41,11 +41,15 @@ describe('ShortcutList', () => {
     }
   });
 
-  it('canonicalises the combo column width (no min-w-[86px])', () => {
+  it('reads the action first and right-aligns its keys (no arbitrary column width)', () => {
     const { container } = render(ShortcutList, { t });
-    const html = container.innerHTML;
-    expect(html).not.toContain('min-w-[86px]');
-    expect(html).toContain('min-w-21.5');
+    expect(container.innerHTML).not.toContain('min-w-[86px]');
+
+    const row = container.querySelector('li') as HTMLElement;
+    const [description, keys] = Array.from(row.children) as HTMLElement[];
+    expect(description.textContent).not.toBe('');
+    expect(keys.querySelector('kbd, [class*="font-mono"]')).not.toBeNull();
+    expect(row.classList.contains('justify-between')).toBe(true);
   });
 
   it('groups the list instead of one flat run', () => {

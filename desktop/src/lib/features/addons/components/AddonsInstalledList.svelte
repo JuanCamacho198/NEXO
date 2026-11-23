@@ -4,6 +4,9 @@
   import type { InstalledAddonRow } from '$lib/shared/services/addons/AddonRegistry';
   import type { InstallOutcome } from '$lib/features/settings/useSettingsAddons.svelte';
   import Skeleton from '$lib/shared/ui/feedback/Skeleton.svelte';
+  import Button from '$lib/shared/ui/forms/Button.svelte';
+  import Puzzle from 'lucide-svelte/icons/puzzle';
+  import { panelClass } from '$lib/shared/ui/emberStyles';
   import AddonInstallForm from './AddonInstallForm.svelte';
 
   type Props = {
@@ -26,6 +29,11 @@
      * in-list form through the default `true`.
      */
     showInstallForm?: boolean;
+    /**
+     * `false` drops the card frame so the list sits open inside a Settings
+     * section; the Addons screen keeps the framed list (default).
+     */
+    framed?: boolean;
     /** Slice 8 fills: per-addon consent control. Receives the row + current grant. */
     consentById?: Record<string, boolean>;
     onUrlChange: (value: string) => void;
@@ -46,6 +54,7 @@
     installOutcome,
     isLoading = false,
     showInstallForm = true,
+    framed = true,
     consentById = {},
     onUrlChange,
     onInstall,
@@ -55,15 +64,11 @@
     capabilityBadges,
   }: Props = $props();
 
+  const frame = $derived(framed ? `${panelClass} px-5` : '');
+
   // ADD-01 B: uninstall is destructive, so the first click only arms the
   // confirmation for that row; the mutation leaves on the explicit confirm.
   let confirmingId = $state<string | null>(null);
-
-  const actionButton =
-    'inline-flex min-h-6 items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2';
-  const neutralButton = `${actionButton} border-(--color-border) bg-(--color-surface) text-(--color-primary) hover:bg-(--color-surface-hover) focus-visible:ring-(--color-accent)`;
-  const dangerButton = `${actionButton} border-(--color-danger)/40 bg-transparent text-(--color-danger) hover:bg-(--color-danger)/10 focus-visible:ring-(--color-danger)`;
-  const confirmButton = `${actionButton} border-transparent bg-(--color-error) text-(--color-background) hover:opacity-90 focus-visible:ring-(--color-error)`;
 </script>
 
 <!--
@@ -78,7 +83,7 @@
 -->
 <div class="flex flex-col gap-4" aria-busy={isLoading}>
   {#if isLoading && installed.length === 0}
-    <ul class="flex max-w-2xl flex-col divide-y divide-(--color-border)" aria-hidden="true">
+    <ul class="flex max-w-3xl flex-col divide-y divide-(--color-edge) {frame}" aria-hidden="true">
       {#each [0, 1, 2] as row (row)}
         <li class="flex items-center justify-between gap-3 py-3">
           <div class="flex min-w-0 flex-1 flex-col gap-2">
@@ -90,35 +95,53 @@
       {/each}
     </ul>
   {:else if installed.length === 0}
-    <p class="m-0 max-w-2xl text-sm text-(--color-text-muted)">{t('settings.addons.empty')}</p>
+    <div class="flex max-w-3xl items-center gap-4 {frame} {framed ? 'py-5' : 'py-1'}">
+      <span
+        class="flex size-11 shrink-0 items-center justify-center rounded-full border border-(--color-edge) bg-(--color-brand-soft) text-(--color-brand-text)"
+        aria-hidden="true"
+      >
+        <Puzzle size={20} strokeWidth={1.8} />
+      </span>
+      <p class="m-0 text-sm text-(--color-secondary)">{t('settings.addons.empty')}</p>
+    </div>
   {:else}
-    <ul class="flex max-w-2xl flex-col divide-y divide-(--color-border)">
+    <ul class="flex max-w-3xl flex-col divide-y divide-(--color-edge) {frame}">
       {#each installed as addon (addon.id)}
-        <li class="flex flex-col gap-3 py-3">
+        <li class="flex flex-col gap-3 py-4">
           <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <p class="m-0 truncate text-sm font-medium text-(--color-primary)">
-                {addon.manifest.name}
-              </p>
-              <p class="m-0 truncate text-xs text-(--color-text-muted)">{addon.url}</p>
+            <div class="flex min-w-0 items-center gap-3">
+              <span
+                class="flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) border border-(--color-edge) bg-(--color-surface-subtle) {addon.enabled
+                  ? 'text-(--color-brand-text)'
+                  : 'text-(--color-text-muted)'}"
+                aria-hidden="true"
+              >
+                <Puzzle size={18} strokeWidth={1.8} />
+              </span>
+              <div class="min-w-0">
+                <p class="m-0 truncate text-base font-semibold text-(--color-primary)">
+                  {addon.manifest.name}
+                </p>
+                <p class="m-0 truncate text-xs text-(--color-text-muted)">{addon.url}</p>
+              </div>
             </div>
             <div class="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                class={neutralButton}
+              <Button
+                variant="secondary"
+                size="sm"
                 disabled={isBusy}
                 onclick={() => onToggle(addon.id, !addon.enabled)}
               >
                 {addon.enabled ? t('settings.addons.disable') : t('settings.addons.enable')}
-              </button>
-              <button
-                type="button"
-                class={dangerButton}
+              </Button>
+              <Button
+                variant="danger-outline"
+                size="sm"
                 disabled={isBusy}
                 onclick={() => (confirmingId = addon.id)}
               >
                 {t('settings.addons.uninstall')}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -133,15 +156,15 @@
             <div
               role="group"
               aria-label={t('addons.uninstall.confirm', { name: addon.manifest.name })}
-              class="flex flex-col gap-2 rounded-lg border border-(--color-danger)/40 bg-(--color-error-soft) px-3 py-2"
+              class="flex flex-col gap-3 rounded-(--radius-md) border border-(--color-danger)/40 bg-(--color-error-soft) px-4 py-3"
             >
               <p class="m-0 text-sm text-(--color-primary)">
                 {t('addons.uninstall.confirm', { name: addon.manifest.name })}
               </p>
               <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  class={confirmButton}
+                <Button
+                  variant="danger"
+                  size="sm"
                   disabled={isBusy}
                   onclick={() => {
                     confirmingId = null;
@@ -149,15 +172,15 @@
                   }}
                 >
                   {t('addons.uninstall.confirmAction')}
-                </button>
-                <button
-                  type="button"
-                  class={neutralButton}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   disabled={isBusy}
                   onclick={() => (confirmingId = null)}
                 >
                   {t('addons.uninstall.cancel')}
-                </button>
+                </Button>
               </div>
             </div>
           {/if}
@@ -167,6 +190,6 @@
   {/if}
 
   {#if showInstallForm}
-    <AddonInstallForm {t} {url} {isBusy} {installOutcome} {onUrlChange} {onInstall} />
+    <AddonInstallForm {t} {url} {isBusy} {installOutcome} {framed} {onUrlChange} {onInstall} />
   {/if}
 </div>

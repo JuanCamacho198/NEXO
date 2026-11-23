@@ -274,4 +274,33 @@
 	<string name="privacy_policy_rights_body">You can read this app without an account, sign out of sync at any time, keep everything offline, turn telemetry off, and delete the app to remove its local storage. Depending on where you live you may also have the right to ask for a copy of your data, its correction or its erasure, and to object to processing based on legitimate interest. Requests about account data can be sent to nexosupport@gmail.com. You can also complain to your local data protection authority.</string>
 	<string name="privacy_policy_changes_title">Changes</string>
 	<string name="privacy_policy_changes_body">This policy changes when the app\'s data practices change, and the date above is the copy shipped inside the build you installed. Because the text lives in the app, the policy you can read is always the one that applies to the version running on your device.</string>
+	<string name="licenses_product_title">NEXO</string>
+	<string name="licenses_product_body">NEXO is released under the Apache License 2.0. You may use, modify and redistribute it, including commercially, provided the copyright notice and this licence travel with it. The full text is in the LICENSE file of the project repository.</string>
+	<string name="licenses_third_party_title">Third-party libraries</string>
+	<string name="licenses_third_party_count">%1$d libraries ship inside this build. Each notice belongs to its author and is listed under the licence it was published with.</string>
+	<string name="licenses_unavailable_body">The licence inventory could not be read from this build. Every distributed library is still covered by its own licence; this list only formats that attribution.</string>
+	<string name="licenses_license_group_count">%1$d libraries</string>
+	<string name="licenses_library_coordinate">%1$s · %2$s</string>
+	<string name="licenses_text_show">Show licence text</string>
+	<string name="licenses_text_hide">Hide licence text</string>
+	<string name="licenses_not_declared_title">No licence declared</string>
+	<string name="licenses_not_declared_note">This library does not declare a licence in its published metadata, so no licence text can be attributed to it. Its terms, if any, are the author\'s alone. Nothing is assumed here.</string>
+	<string name="licenses_text_unavailable_body">The full text is not bundled with this build. It is published by the licence holder.</string>
+	<string name="licenses_text_android_sdk">The Android Software Development Kit License governs the Android platform libraries. Its terms are published by Google with the Android SDK.</string>
+	<string name="licenses_text_apache_acknowledgment">This library was published under an early Apache draft that differs from Apache 2.0 by dropping its acknowledgment clause. The Apache 2.0 text above is shown as a reference; the library\'s own terms prevail.</string>
+	<string name="licenses_text_cddl">The Common Development and Distribution License text is not bundled with this build. It is published by Oracle, and the library\'s own copy prevails.</string>
+	<string name="licenses_text_edl">The Eclipse Distribution License 1.0 is the three-clause BSD licence, whose text is bundled above under BSD-3-Clause.</string>
+	<string name="licenses_text_epl">The Eclipse Public License text is not bundled with this build. It is published by the Eclipse Foundation, and the library\'s own copy prevails.</string>
+	<string name="licenses_text_gpl">The GNU General Public License text is not bundled with this build. It is published by the Free Software Foundation, and the library\'s own copy prevails.</string>
+	<string name="licenses_text_lgpl">The GNU Lesser General Public License text is not bundled with this build. It is published by the Free Software Foundation, and the library\'s own copy prevails.</string>
+	<string name="licenses_text_mpl">The Mozilla Public License text is not bundled with this build. It is published by the Mozilla Foundation, and the library\'s own copy prevails.</string>
+	<string name="licenses_text_other">This library declared a licence this build cannot map to a standard identifier, so no licence text can be attributed to it automatically. The declaration is shown on the library itself.</string>
+
+    <string name="settings_definition_history_title">Recent definitions</string>
+    <string name="settings_definition_history_empty">No words looked up yet. Look up a word while reading and it will appear here.</string>
+    <string name="settings_definition_history_clear">Clear</string>
+    <string name="settings_definition_history_clear_title">Clear definition history?</string>
+    <string name="settings_definition_history_clear_message">This removes every word from this list and also empties the offline definitions. Words will be looked up online again next time.</string>
+    <string name="settings_definition_history_clear_confirm">Clear</string>
+    <string name="settings_definition_history_clear_cancel">Cancel</string>
 </resources>

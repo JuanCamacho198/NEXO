@@ -197,16 +197,18 @@ describe('reader chrome labels and surfaces (U3.3/U3.4)', () => {
     }
   });
 
-  // ADR-003/The pill criterion: the chrome never wears the paper pill. The
-  // recipe's base is `rounded-lg`; a `rounded-full` on an icon control means a
-  // consumer reintroduced the old paper pill (`bg-(--color-surface)`), which is
-  // what the button system exists to eliminate. The progress track and fill are
-  // bars, not controls, and are allowed to stay pill-shaped.
+  // ADR-003/The pill criterion: the chrome never wears the paper pill. Under
+  // NEXO ember every chrome control is round, so the radius is no longer the
+  // tell; the paper plane (`bg-(--color-surface)`) is, and it is what the button
+  // system exists to eliminate.
   it('never wears the paper pill on a chrome control', () => {
     for (const container of [renderTopBar().container, renderBottomBar().container]) {
       for (const control of container.querySelectorAll('button')) {
-        expect(control.className, 'a chrome control regained the paper pill').not.toContain(
+        expect(control.className, 'a chrome control regained the paper pill').toContain(
           'rounded-full',
+        );
+        expect(control.className, 'a chrome control regained the paper pill').not.toMatch(
+          /bg-\(--color-surface\)(?![-\w])/,
         );
       }
     }

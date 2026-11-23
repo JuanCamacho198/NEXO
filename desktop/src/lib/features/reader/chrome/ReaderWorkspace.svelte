@@ -36,7 +36,6 @@
   import { normalizeLanguageTag } from '$lib/shared/services/translation/translationLanguages';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import HighlightContextMenu from '../highlight/HighlightContextMenu.svelte';
-  import ColorPickerPopover from '../highlight/ColorPickerPopover.svelte';
   import TagPopover from '../highlight/TagPopover.svelte';
   import NoteEditorModal from '../highlight/NoteEditorModal.svelte';
   import { getReaderError as defaultGetReaderError } from '$lib/stores/readerErrorState.svelte';
@@ -65,6 +64,8 @@
   import { FLOATING_MENU_SELECTOR } from './floatingMenu';
   import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
   import { logger } from '$lib/shared/logger/Logger';
+  import { saveLastChapter } from '$lib/shared/stores/lastChapterStore';
+  import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
   import {
     buildEvidence,
     captureFromSelection,
@@ -195,6 +196,8 @@
     // this composable.
     onIntentOpen: () => raiseMenu('highlight'),
     onIntentClose: () => dismissToolbar('highlight-menu-closed'),
+    onDeleted: (undo) =>
+      pushToast('info', t('highlight.deleted'), { label: t('highlight.undo'), run: undo }),
   });
   const bookmarksPanel = createBookmarksPanel({ outboxDao, viewerPort });
 
@@ -334,6 +337,14 @@
     lastRWInitialLocationLog = loc;
     lastRWInitialChapterIdx = chapterIdx;
     lastRWInitialBookId = bookId;
+  });
+
+  // Home's Continue Reading hero names the chapter a book was left on; this is
+  // the only place that knows it, so it is recorded as it changes.
+  $effect(() => {
+    const bookId = activeReadingBook?.id;
+    const chapter = nav.currentChapterTitle;
+    if (bookId && chapter) saveLastChapter(bookId, chapter);
   });
 
   let searchPanelOpen = $state(false);
@@ -846,9 +857,6 @@
   ): void {
     highlightMenuState.handleHighlightAction(action, id, opts);
   }
-  function handleMenuCustomColor(): void {
-    highlightMenuState.handleMenuCustomColor();
-  }
   function handleMenuCopy(): void {
     highlightMenuState.handleMenuCopy();
   }
@@ -1073,6 +1081,7 @@
         class="fixed inset-0 z-[99]"
         role="presentation"
         onclick={closeHighlightMenu}
+        onwheel={closeHighlightMenu}
         onkeydown={(e) => {
           if (e.key === 'Escape') closeHighlightMenu();
         }}
@@ -1080,26 +1089,20 @@
         <HighlightContextMenu
           highlightId={highlightMenuState.highlightMenu.highlightId}
           position={highlightMenuState.highlightMenu.position}
+          anchor={highlightMenuState.highlightMenu.anchor}
+          currentColor={highlightMenuState.highlightMenu.color}
           assignedTags={highlightMenuState.highlightMenu.assignedTags}
-          onCustomColor={handleMenuCustomColor}
+          onSelectColor={handleColorPickerSelect}
           onCopy={handleMenuCopy}
           onTag={handleMenuTag}
           onNote={handleMenuNote}
           onDelete={handleMenuDelete}
           onClose={closeHighlightMenu}
-          setColorPickerAnchor={(el) => (highlightMenuState.colorPickerAnchor = el)}
           setTagPopoverAnchor={(el) => (highlightMenuState.tagPopoverAnchor = el)}
           {t}
         />
       </div>
     {/if}
-    <ColorPickerPopover
-      open={highlightMenuState.showColorPicker}
-      anchor={highlightMenuState.colorPickerAnchor}
-      currentColor={highlightMenuState.highlightMenu.color}
-      onSelect={handleColorPickerSelect}
-      onClose={() => (highlightMenuState.showColorPicker = false)}
-    />
     <TagPopover
       open={highlightMenuState.showTagPopover}
       anchor={highlightMenuState.tagPopoverAnchor}

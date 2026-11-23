@@ -22,23 +22,37 @@
   const darkSwatch = (theme: ReaderThemeMode): boolean => theme === 'night' || theme === 'oled';
 </script>
 
-<div class="flex items-center justify-between px-1">
+<div class="grid grid-cols-4 gap-2">
   {#each THEME_PRESETS as theme}
+    {@const isActive = readerSettings.themeMode === theme.name}
     <button
       type="button"
-      class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-110"
-      class:ring-2={readerSettings.themeMode === theme.name}
-      class:ring-(--color-accent-blue)={readerSettings.themeMode === theme.name}
-      style="background-color: {theme.bg};"
+      class="group flex cursor-pointer flex-col items-center gap-1.5 rounded-(--radius-md) py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
       onclick={() => onSettingsChange({ ...readerSettings, themeMode: theme.name })}
       aria-label={t(labelMap[theme.name])}
+      aria-pressed={isActive}
     >
       <span
-        class="text-micro font-normal"
-        class:text-white={darkSwatch(theme.name)}
-        class:text-black={!darkSwatch(theme.name)}
+        class="flex size-11 items-center justify-center rounded-full border transition-transform group-hover:scale-105 {isActive
+          ? 'border-transparent ring-2 ring-(--color-brand) ring-offset-2 ring-offset-(--color-reader-chrome)'
+          : 'border-(--color-edge)'}"
+        style="background-color: {theme.bg};"
       >
-        Aa
+        <span
+          class="font-serif text-sm font-medium"
+          class:text-white={darkSwatch(theme.name)}
+          class:text-black={!darkSwatch(theme.name)}
+        >
+          Aa
+        </span>
+      </span>
+      <span
+        class="text-xs {isActive
+          ? 'font-semibold text-(--color-brand-text)'
+          : 'text-(--color-text-muted)'}"
+        aria-hidden="true"
+      >
+        {t(labelMap[theme.name])}
       </span>
     </button>
   {/each}

@@ -141,8 +141,29 @@
     outline: 2px solid var(--color-ring);
     outline-offset: 3px;
   }
+  /* Scrollbar: a thin orange thumb (the hero ring's colour) on the page's own
+     surface, so it follows the theme instead of the OS grey. Firefox and
+     Chromium read scrollbar-color; Safari falls back to the -webkit rules. */
   html {
     scroll-behavior: smooth;
+    --scroll-thumb: oklch(70% 0.15 50 / 0.75);
+    --scroll-thumb-hover: oklch(76% 0.16 55);
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) var(--color-surface);
+  }
+  html::-webkit-scrollbar {
+    width: 10px;
+  }
+  html::-webkit-scrollbar-track {
+    background: var(--color-surface);
+  }
+  html::-webkit-scrollbar-thumb {
+    border: 2px solid var(--color-surface);
+    border-radius: 999px;
+    background: var(--scroll-thumb);
+  }
+  html::-webkit-scrollbar-thumb:hover {
+    background: var(--scroll-thumb-hover);
   }
   /* Every anchor target gets the offset, not just <section>: #dispositivos in
      Hero.astro is a <ul>, so the old `section[id]` selector gave it no offset at
@@ -349,9 +370,12 @@
     gap: 10px;
     color: var(--color-brand);
   }
+  /* The export frames itself with viewBox "98 40 982 434": 982 x 434 units,
+     aspect 2.26, the same shape the old lockup used. No CSS cropping. */
   .logo-mark {
     height: 49px;
     width: auto;
+    translate: 0 1px;
   }
 
   /* ═══════════════ theme toggle ═══════════════ */
@@ -506,26 +530,139 @@
   /* ═══════════════ night sky ═══════════════ */
   /* The far layer of the dark home sections: two soft glows and a scatter of
      stars. Absolutely positioned; the section supplies the base colour. */
+  /* Section headings: an eyebrow between fading orange rules, then a plain
+     first half and a glowing orange accent with a hand-drawn swoosh under it.
+     The accent's gradient is clipped to its text; the padding-bottom gives
+     descenders ("g", "p") room, since with a tight line-height they fell
+     outside the clipped box and were cut off. */
+  .eyebrow-rule {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .eyebrow-rule::before,
+  .eyebrow-rule::after {
+    content: '';
+    width: 56px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, oklch(74% 0.17 52 / 0.8));
+  }
+  .eyebrow-rule::after {
+    rotate: 180deg;
+  }
+  /* Left-aligned headings get the trailing rule only. */
+  .eyebrow-rule.is-start::before {
+    display: none;
+  }
+  .title-split {
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+    color: oklch(97% 0.01 80);
+  }
+  .title-accent {
+    position: relative;
+    display: inline-block;
+    padding-bottom: 0.14em;
+    margin-bottom: -0.14em;
+    background: linear-gradient(100deg, oklch(84% 0.13 68), oklch(72% 0.19 46) 70%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 18px oklch(70% 0.18 48 / 0.35));
+  }
+  .title-swoosh {
+    position: absolute;
+    left: 6%;
+    bottom: -0.16em;
+    width: 96%;
+    height: 0.32em;
+    overflow: visible;
+    fill: none;
+    stroke: oklch(74% 0.18 50);
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+
+  /* Night sky in three depths. The element itself holds the nebulae and two
+     dense fields of faint stars; ::before a sparser field of mid stars and
+     ::after a few bright ones with a halo, each twinkling on its own clock.
+     Tile sizes are mutually prime-ish so the repeats never line up. The
+     nebulae stay clear of the top and bottom edges so no seam shows where
+     one section meets the next. */
   .night-sky {
     position: absolute;
     inset: 0;
+    overflow: hidden;
     pointer-events: none;
     background:
-      radial-gradient(40% 50% at 18% 70%, oklch(62% 0.16 45 / 0.14), transparent 70%),
-      radial-gradient(36% 44% at 82% 30%, oklch(55% 0.14 285 / 0.16), transparent 70%),
-      radial-gradient(1.2px 1.2px at 12% 18%, oklch(100% 0 0 / 0.7), transparent),
-      radial-gradient(1px 1px at 37% 62%, oklch(100% 0 0 / 0.5), transparent),
-      radial-gradient(1.4px 1.4px at 58% 12%, oklch(100% 0 0 / 0.65), transparent),
-      radial-gradient(1px 1px at 74% 78%, oklch(100% 0 0 / 0.45), transparent),
-      radial-gradient(1.2px 1.2px at 91% 44%, oklch(100% 0 0 / 0.6), transparent);
+      radial-gradient(42% 34% at 16% 56%, oklch(62% 0.16 45 / 0.16), transparent 70%),
+      radial-gradient(38% 32% at 84% 40%, oklch(52% 0.15 290 / 0.2), transparent 70%),
+      radial-gradient(30% 30% at 55% 48%, oklch(45% 0.1 260 / 0.12), transparent 70%),
+      radial-gradient(0.9px 0.9px at 8% 14%, oklch(100% 0 0 / 0.5), transparent),
+      radial-gradient(0.8px 0.8px at 27% 71%, oklch(100% 0 0 / 0.4), transparent),
+      radial-gradient(0.9px 0.9px at 46% 33%, oklch(92% 0.04 250 / 0.45), transparent),
+      radial-gradient(0.8px 0.8px at 63% 88%, oklch(100% 0 0 / 0.35), transparent),
+      radial-gradient(0.9px 0.9px at 81% 52%, oklch(95% 0.04 80 / 0.45), transparent),
+      radial-gradient(0.8px 0.8px at 93% 9%, oklch(100% 0 0 / 0.4), transparent),
+      radial-gradient(0.8px 0.8px at 18% 42%, oklch(100% 0 0 / 0.35), transparent),
+      radial-gradient(0.9px 0.9px at 39% 92%, oklch(92% 0.04 250 / 0.4), transparent),
+      radial-gradient(0.8px 0.8px at 71% 21%, oklch(100% 0 0 / 0.4), transparent),
+      radial-gradient(0.9px 0.9px at 88% 77%, oklch(100% 0 0 / 0.35), transparent);
     background-size:
       100% 100%,
       100% 100%,
-      340px 260px,
-      300px 280px,
-      420px 300px,
-      260px 240px,
-      380px 320px;
+      100% 100%,
+      223px 181px,
+      223px 181px,
+      223px 181px,
+      223px 181px,
+      223px 181px,
+      223px 181px,
+      311px 263px,
+      311px 263px,
+      311px 263px,
+      311px 263px;
+  }
+  .night-sky::before,
+  .night-sky::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .night-sky::before {
+    background:
+      radial-gradient(1.4px 1.4px at 11% 23%, oklch(100% 0 0 / 0.85), transparent),
+      radial-gradient(1.2px 1.2px at 34% 64%, oklch(94% 0.05 250 / 0.75), transparent),
+      radial-gradient(1.5px 1.5px at 57% 15%, oklch(100% 0 0 / 0.8), transparent),
+      radial-gradient(1.2px 1.2px at 76% 81%, oklch(96% 0.05 75 / 0.75), transparent),
+      radial-gradient(1.4px 1.4px at 92% 41%, oklch(100% 0 0 / 0.8), transparent);
+    background-size: 433px 367px;
+    animation: sky-twinkle 5.5s ease-in-out infinite alternate;
+  }
+  .night-sky::after {
+    background:
+      radial-gradient(
+        5px 5px at 21% 31%,
+        oklch(100% 0 0 / 0.95),
+        oklch(90% 0.06 250 / 0.25) 30%,
+        transparent
+      ),
+      radial-gradient(
+        4px 4px at 68% 18%,
+        oklch(98% 0.05 75 / 0.9),
+        oklch(85% 0.1 60 / 0.25) 30%,
+        transparent
+      ),
+      radial-gradient(
+        4.5px 4.5px at 83% 66%,
+        oklch(100% 0 0 / 0.9),
+        oklch(90% 0.06 250 / 0.2) 30%,
+        transparent
+      ),
+      radial-gradient(3.5px 3.5px at 42% 84%, oklch(100% 0 0 / 0.85), transparent);
+    background-size: 911px 677px;
+    animation: sky-twinkle 7.5s ease-in-out -3s infinite alternate;
   }
 
   /* ═══════════════ motion ═══════════════ */
@@ -589,23 +726,49 @@
      to the entrance), and the contact shadow tightens and fades as the device
      rises, so it reads as lifting off the rock rather than sliding. Starting right
      after the intro, staggered by --float-phase, keeps the first frame at rest. */
-  /* Sync ring: the line draws itself in (back half, then front, one loop)
-     as the nav arrives, then the light starts lapping. */
+  /* Sync ring: the line draws itself out of the O (a, b, c, d in order) as
+     the nav arrives, then the light starts running the same way. */
   .hero-intro .hero-ring .ring-line {
-    stroke-dasharray: 1040 1040;
-    animation: ring-draw 0.55s var(--intro-ease) 1.15s both;
+    stroke-dasharray: var(--len) var(--len);
+    animation: ring-draw 0.4s linear 1.15s both;
   }
-  .hero-intro .hero-ring-front .ring-line {
-    animation-delay: 1.6s;
+  .hero-intro .hero-ring .ring-line.ring-b {
+    animation-duration: 0.7s;
+    animation-delay: 1.55s;
   }
-  .hero-intro .hero-ring-back .ring-comet {
-    animation: ring-comet-first var(--sync-lap) linear var(--sync-start) infinite both;
+  .hero-intro .hero-ring .ring-line.ring-c {
+    animation-duration: 0.25s;
+    animation-delay: 2.25s;
   }
-  .hero-intro .hero-ring-front .ring-comet {
-    animation: ring-comet-second var(--sync-lap) linear var(--sync-start) infinite both;
+  .hero-intro .hero-ring .ring-line.ring-d {
+    animation-timing-function: var(--intro-ease);
+    animation-duration: 0.45s;
+    animation-delay: 2.5s;
   }
-  /* The light leaves the phone at 0% of the lap and reaches the tablet at
-     50%, so the tablet's ping runs half a lap later on the same keyframes. */
+  /* Books fade in with the devices, then drift on their own slow clocks; the
+     negative phases start each one mid-cycle so they never move in step. */
+  .hero-intro .hero-book {
+    animation:
+      hero-book-in 1.2s var(--intro-ease) 0.9s both,
+      book-drift var(--drift-dur) ease-in-out var(--drift-phase) infinite alternate;
+  }
+  .hero-intro .hero-ring .ring-glow {
+    animation: ring-glow-in 0.8s ease-out 1.6s both;
+  }
+  .hero-intro .hero-ring .ring-comet {
+    animation: ring-comet-a var(--sync-lap) linear var(--sync-start) infinite both;
+  }
+  .hero-intro .hero-ring .ring-comet.ring-b {
+    animation-name: ring-comet-b;
+  }
+  .hero-intro .hero-ring .ring-comet.ring-c {
+    animation-name: ring-comet-c;
+  }
+  .hero-intro .hero-ring .ring-comet.ring-d {
+    animation-name: ring-comet-d;
+  }
+  /* On the lap clock (see the ring-comet keyframes) the light passes the
+     tablet at ~22% and rises behind the phone at ~67%; each ping starts there. */
   .hero-intro .hero-device-phone::before,
   .hero-intro .hero-device-tablet::before {
     animation: sync-glow var(--sync-lap) ease-out var(--sync-start) infinite both;
@@ -615,7 +778,11 @@
   }
   .hero-intro .hero-device-tablet::before,
   .hero-intro .hero-device-tablet .sync-chip {
-    animation-delay: calc(var(--sync-start) + var(--sync-lap) / 2);
+    animation-delay: calc(var(--sync-start) + var(--sync-lap) * 0.21);
+  }
+  .hero-intro .hero-device-phone::before,
+  .hero-intro .hero-device-phone .sync-chip {
+    animation-delay: calc(var(--sync-start) + var(--sync-lap) * 0.66);
   }
 
   .hero-intro .hero-device > img {
@@ -644,6 +811,11 @@
     .hero-intro .hero-device > img,
     .hero-intro .hero-device::after,
     .hero-intro .hero-ring .ring-line,
+    .dl-detected::before,
+    .night-sky::before,
+    .night-sky::after,
+    .hero-intro .hero-ring .ring-glow,
+    .hero-intro .hero-book,
     .hero-intro .hero-ring .ring-comet,
     .hero-intro .hero-device-phone::before,
     .hero-intro .hero-device-tablet::before,
@@ -666,6 +838,103 @@
       background-repeat: no-repeat;
       background-position: center;
     }
+  }
+
+  /* ═══════════════ mobile menu ═══════════════ */
+  /* Closed and on desktop it is not rendered at all; the checkbox before it
+     opens it. A floating panel inset from the screen edges rather than a
+     full-width sheet, with large tap rows and the language and theme at the
+     foot. */
+  .mobile-menu {
+    display: none;
+  }
+  @media (max-width: 1023px) {
+    .nav-toggle:checked ~ .mobile-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 12px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 8px;
+      border: 1px solid var(--color-border);
+      border-radius: 22px;
+      /* Opaque: the header bar already has a backdrop-filter, and a nested
+         one only blurs the bar itself, so any translucency let the page's
+         bright wordmark read through the panel. */
+      background: var(--color-surface);
+      box-shadow: 0 24px 48px -16px oklch(0% 0 0 / 0.5);
+      animation: menu-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .nav-toggle:checked {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23101624' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");
+    }
+  }
+  .mobile-menu-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 50px;
+    padding: 0 14px;
+    border-radius: 14px;
+    color: var(--color-ink-soft);
+    font-size: 16px;
+    font-weight: 600;
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease;
+  }
+  .mobile-menu-link svg {
+    width: 18px;
+    height: 18px;
+    margin-left: auto;
+    opacity: 0.45;
+  }
+  .mobile-menu-link:hover {
+    background: color-mix(in oklch, var(--color-ink) 6%, transparent);
+    color: var(--color-ink);
+  }
+  /* The section in view: an orange dot and a lit row, like the desktop pill. */
+  .mobile-menu-link[aria-current] {
+    background: color-mix(in oklch, var(--color-ink) 8%, transparent);
+    color: var(--color-ink);
+  }
+  .mobile-menu-link[aria-current]::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: oklch(70% 0.19 48);
+    box-shadow: 0 0 10px oklch(70% 0.19 48 / 0.8);
+  }
+  .mobile-menu-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 6px;
+    padding: 12px 6px 4px;
+    border-top: 1px solid var(--color-border);
+  }
+  /* ES / EN as a small segmented control. */
+  .mobile-menu-langs {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+  }
+  .mobile-menu-langs a {
+    padding: 6px 14px;
+    border-radius: 999px;
+    color: var(--color-ink-soft);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .mobile-menu-langs a[aria-current] {
+    background: var(--color-ink);
+    color: var(--color-surface);
   }
 
   /* ═══════════════ download ═══════════════ */
@@ -704,27 +973,33 @@
     color: var(--color-ink);
   }
 
-  .dl-badge,
+  /* A soft orange chip with a live dot, rather than an outlined pill that
+     crowded the card edge. */
   .dl-detected {
     align-items: center;
-    padding: 3px 9px;
+    gap: 6px;
+    padding: 4px 10px 4px 8px;
     border-radius: 999px;
-    font-size: 11px;
+    background: oklch(72% 0.18 50 / 0.14);
+    color: oklch(84% 0.14 60);
+    font-size: 11.5px;
     font-weight: 600;
-    letter-spacing: 0.04em;
     white-space: nowrap;
   }
-  .dl-badge {
-    display: inline-flex;
-    background: var(--color-muted);
-    color: var(--color-ink-soft);
+  .dl-detected::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: oklch(76% 0.18 55);
+    box-shadow: 0 0 0 0 oklch(76% 0.18 55 / 0.6);
+    animation: detected-ping 2s ease-out infinite;
   }
   /* Hidden until the visitor's own platform is known; the reveal rules below
      flip it to inline-flex through html[data-os=…]. */
   .dl-detected {
     display: none;
-    border: 1px solid oklch(72% 0.18 50 / 0.7);
-    color: oklch(80% 0.15 55);
   }
 
   .dl-meta {
@@ -953,35 +1228,100 @@
     transform: none;
   }
 }
+@keyframes detected-ping {
+  70%,
+  100% {
+    box-shadow: 0 0 0 6px oklch(76% 0.18 55 / 0);
+  }
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
+@keyframes sky-twinkle {
+  0% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0.9;
+  }
+}
 @keyframes ring-draw {
   from {
-    stroke-dashoffset: 1040;
+    stroke-dashoffset: var(--len);
   }
   to {
     stroke-dashoffset: 0;
   }
 }
-/* Each ring half is 1040 user units (fixed viewBox geometry, so constant).
-   With dasharray "52 3000", offset 52 parks the dash just before the start
-   and -1040 just past the end: it is visible only while crossing. Real units,
-   not pathLength: Chrome scales the dash array by pathLength but not the
-   offset, which left a stray dash parked mid-arc. */
-@keyframes ring-comet-first {
+@keyframes ring-glow-in {
+  from {
+    opacity: 0;
+  }
+}
+/* Opacity only from 0: the books' resting opacity differs per book. */
+@keyframes hero-book-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes book-drift {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(var(--drift-y)) rotate(var(--drift-r));
+  }
+}
+/* Each ring segment carries its length in user units as --len (set in
+   Hero.astro). With dasharray "52 3000", offset 52 parks the dash just before
+   the start and -len just past the end: it is visible only while crossing.
+   Real units, not pathLength: Chrome scales the dash array by pathLength but
+   not the offset, which left a stray dash parked mid-arc.
+   The light runs a → b → c → d in 85% of the lap, each segment's share
+   matching its length (414 / 1100 / 311 / 396), and rests for the last 15%. */
+@keyframes ring-comet-a {
   0% {
     stroke-dashoffset: 52;
   }
-  50%,
+  16%,
   100% {
-    stroke-dashoffset: -1040;
+    stroke-dashoffset: calc(var(--len) * -1);
   }
 }
-@keyframes ring-comet-second {
+@keyframes ring-comet-b {
   0%,
-  50% {
+  16% {
     stroke-dashoffset: 52;
   }
+  58%,
   100% {
-    stroke-dashoffset: -1040;
+    stroke-dashoffset: calc(var(--len) * -1);
+  }
+}
+@keyframes ring-comet-c {
+  0%,
+  58% {
+    stroke-dashoffset: 52;
+  }
+  70%,
+  100% {
+    stroke-dashoffset: calc(var(--len) * -1);
+  }
+}
+@keyframes ring-comet-d {
+  0%,
+  70% {
+    stroke-dashoffset: 52;
+  }
+  85%,
+  100% {
+    stroke-dashoffset: calc(var(--len) * -1);
   }
 }
 @keyframes sync-glow {
@@ -1059,6 +1399,11 @@
    on this list; it now swaps through the --glass-* tokens instead. */
 [data-theme='dark'] .nav-toggle {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23f4f2ea' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h16M4 12h16M4 17h16'/%3E%3C/svg%3E");
+}
+@media (max-width: 1023px) {
+  [data-theme='dark'] .nav-toggle:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23f4f2ea' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");
+  }
 }
 [data-theme='dark'] .skip-link {
   color: var(--color-background);

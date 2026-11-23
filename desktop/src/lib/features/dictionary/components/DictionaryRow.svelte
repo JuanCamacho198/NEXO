@@ -31,16 +31,16 @@
     type="button"
     aria-current={selected ? 'true' : undefined}
     data-testid="dictionary-row"
-    class={`flex w-full cursor-pointer items-center gap-3 rounded-[10px] p-3 text-left transition-colors ${
+    class={`flex w-full cursor-pointer items-center gap-3 rounded-(--radius-md) border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) ${
       selected
-        ? 'bg-(--color-accent-fill)'
-        : 'bg-(--color-panel-input) hover:bg-(--color-accent-fill)'
+        ? 'border-(--color-brand)/50 bg-(--color-accent-fill)'
+        : 'border-transparent bg-transparent hover:bg-(--color-panel-input)'
     }`}
     onclick={() => onselect(word.id)}
   >
     <span
-      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-sm font-semibold text-(--color-avatar-ink)"
-      style={`background-color: ${avatarColorVariable(index)}`}
+      class="flex size-10 shrink-0 items-center justify-center rounded-(--radius-md) text-base font-semibold text-(--color-primary)"
+      style={`background-color: color-mix(in srgb, ${avatarColorVariable(index)} 20%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, ${avatarColorVariable(index)} 45%, transparent)`}
       data-testid="dictionary-row-initial"
       aria-hidden="true"
     >
@@ -48,12 +48,15 @@
     </span>
 
     <span class="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span class="truncate text-sm text-(--color-primary)" data-testid="dictionary-row-term">
+      <span
+        class="truncate text-sm font-semibold text-(--color-primary)"
+        data-testid="dictionary-row-term"
+      >
         {word.word}
       </span>
       {#if bookTitle}
         <span
-          class="truncate text-micro text-(--color-text-tertiary)"
+          class="truncate text-micro text-(--color-text-muted)"
           data-testid="dictionary-row-book"
         >
           {bookTitle}
@@ -61,15 +64,16 @@
       {/if}
     </span>
 
-    <span class="flex shrink-0 flex-col items-end gap-0.5">
-      <span class="text-micro text-(--color-text-tertiary)" data-testid="dictionary-row-date">
+    <span class="flex shrink-0 flex-col items-end gap-1">
+      <span class="text-micro text-(--color-text-muted)" data-testid="dictionary-row-date">
         {dateLabel}
       </span>
       {#if !complete}
         <span
-          class="rounded-full border border-(--color-panel-border) bg-(--color-panel) px-2 py-0.5 text-micro font-semibold text-(--color-text-tertiary)"
+          class="inline-flex items-center gap-1.5 text-micro font-medium text-(--color-text-muted)"
           data-testid="dictionary-row-incomplete"
         >
+          <span class="size-1.5 rounded-full bg-(--color-warning)" aria-hidden="true"></span>
           {t('dictionary.incomplete')}
         </span>
       {/if}

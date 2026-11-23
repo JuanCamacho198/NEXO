@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { headingMarker } from '$lib/shared/ui/emberStyles';
+  import StatusChip from '$lib/shared/ui/forms/StatusChip.svelte';
   import { addonsState, bindAddonsNotifier } from './addonsStore.svelte';
   import { createAddonConsentState } from './useAddonConsentState.svelte';
   import {
@@ -114,57 +116,73 @@
   at screen level with the production ports above (Hidden by default, so it
   composes nothing until an addon-source book opens it).
 -->
-<section aria-labelledby="addons-heading" class="flex h-auto flex-col gap-6">
-  <div class="flex max-w-2xl flex-col gap-1">
-    <h1
-      id="addons-heading"
-      class="m-0 text-2xl font-semibold tracking-tight text-(--color-primary)"
-    >
-      {t('addons.title')}
-    </h1>
+<section aria-labelledby="addons-heading" class="flex h-auto max-w-6xl flex-col gap-6">
+  <div class="flex max-w-3xl flex-col gap-1">
+    <div class="flex items-center gap-3">
+      <div class="h-8 {headingMarker}" aria-hidden="true"></div>
+      <h1
+        id="addons-heading"
+        class="m-0 text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)"
+      >
+        {t('addons.title')}
+      </h1>
+      <StatusChip text={t('sidebar.beta')} tone="neutral" />
+    </div>
     <p class="m-0 text-sm text-(--color-text-muted)">{t('addons.subtitle')}</p>
   </div>
 
-  <AddonsInstalledList
-    {t}
-    url={addonsState.url}
-    installed={addonsState.installed}
-    isBusy={addonsState.isBusy}
-    installOutcome={addonsState.installOutcome}
-    {isLoading}
-    showInstallForm={false}
-    consentById={consentState.consentById}
-    onUrlChange={(v: string) => (addonsState.url = v)}
-    onInstall={() => void addonsState.handleInstall()}
-    onToggle={(id: string, enabled: boolean) => void addonsState.handleToggle(id, enabled)}
-    onUninstall={(id: string) => void addonsState.handleUninstall(id)}
-  >
-    {#snippet consentControl({ addon, granted })}
-      <AddonConsentToggle
+  <!-- Wide windows: your addons and the install form on the left, the
+       read-only first-party sources beside them. Grid placement keeps the DOM
+       (and reading) order: list, first-party, install form. -->
+  <div class="grid items-start gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)]">
+    <div class="min-w-0 lg:col-start-1 lg:row-start-1">
+      <AddonsInstalledList
         {t}
-        addonId={addon.id}
-        addonName={addon.manifest.name}
-        {granted}
-        disabled={addonsState.isBusy}
-        onToggle={(id: string, next: boolean) => void consentState.handleConsentToggle(id, next)}
+        url={addonsState.url}
+        installed={addonsState.installed}
+        isBusy={addonsState.isBusy}
+        installOutcome={addonsState.installOutcome}
+        {isLoading}
+        showInstallForm={false}
+        consentById={consentState.consentById}
+        onUrlChange={(v: string) => (addonsState.url = v)}
+        onInstall={() => void addonsState.handleInstall()}
+        onToggle={(id: string, enabled: boolean) => void addonsState.handleToggle(id, enabled)}
+        onUninstall={(id: string) => void addonsState.handleUninstall(id)}
+      >
+        {#snippet consentControl({ addon, granted })}
+          <AddonConsentToggle
+            {t}
+            addonId={addon.id}
+            addonName={addon.manifest.name}
+            {granted}
+            disabled={addonsState.isBusy}
+            onToggle={(id: string, next: boolean) =>
+              void consentState.handleConsentToggle(id, next)}
+          />
+        {/snippet}
+        {#snippet capabilityBadges(addon)}
+          <AddonCapabilityBadges capabilities={declaredCapabilities(addon.manifest)} {t} />
+        {/snippet}
+      </AddonsInstalledList>
+    </div>
+
+    <div class="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+      <AddonsFirstPartySection {t} />
+    </div>
+
+    <!-- ADD-01 A: install-by-URL is the secondary affordance, presented last. -->
+    <div class="min-w-0 lg:col-start-1 lg:row-start-2">
+      <AddonInstallForm
+        {t}
+        url={addonsState.url}
+        isBusy={addonsState.isBusy}
+        installOutcome={addonsState.installOutcome}
+        onUrlChange={(v: string) => (addonsState.url = v)}
+        onInstall={() => void addonsState.handleInstall()}
       />
-    {/snippet}
-    {#snippet capabilityBadges(addon)}
-      <AddonCapabilityBadges capabilities={declaredCapabilities(addon.manifest)} {t} />
-    {/snippet}
-  </AddonsInstalledList>
-
-  <AddonsFirstPartySection {t} />
-
-  <!-- ADD-01 A: install-by-URL is the secondary affordance, presented last. -->
-  <AddonInstallForm
-    {t}
-    url={addonsState.url}
-    isBusy={addonsState.isBusy}
-    installOutcome={addonsState.installOutcome}
-    onUrlChange={(v: string) => (addonsState.url = v)}
-    onInstall={() => void addonsState.handleInstall()}
-  />
+    </div>
+  </div>
 
   <AddonReadSheet
     state={readSheet.state}

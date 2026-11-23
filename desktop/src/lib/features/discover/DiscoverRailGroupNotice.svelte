@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Button from '$lib/shared/ui/forms/Button.svelte';
+  import { panelClass } from '$lib/shared/ui/emberStyles';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import { RAIL_SOURCE_LABEL_KEYS, type DiscoverRailSource } from './railPlan';
 
@@ -34,21 +36,13 @@
 <div
   role="status"
   aria-live="polite"
-  class="flex flex-wrap items-center gap-2 rounded-md border border-(--color-border) bg-(--color-surface) px-3 py-2"
+  class="flex flex-wrap items-center gap-2 {panelClass} px-4 py-2.5"
 >
   <p class="m-0 flex-1 text-sm text-(--color-text-muted)">{message}</p>
-  <button
-    type="button"
-    class="rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-    onclick={onRetry}
-  >
+  <Button variant="secondary" size="sm" onclick={onRetry}>
     {t('discover.retry')}
-  </button>
-  <button
-    type="button"
-    class="rounded-md px-2 py-1 text-sm font-medium text-(--color-text-muted) transition-colors hover:bg-(--color-primary)/10"
-    onclick={onDismiss}
-  >
+  </Button>
+  <Button variant="link" size="sm" onclick={onDismiss}>
     {t('discover.dismiss')}
-  </button>
+  </Button>
 </div>

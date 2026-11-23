@@ -144,6 +144,8 @@ export const messagesEn = {
   'settings.tab.data': 'Data',
   'settings.tab.translation': 'Translation',
   'settings.tab.selectionMenu': 'Selection menu',
+  'settings.tabShort.selectionMenu': 'Selection',
+  'settings.tabShort.shortcuts': 'Shortcuts',
   'settings.theme': 'Theme',
   'settings.authDescription': 'Sign in to sync your data',
   'settings.account.subtitle': 'Manage your account, language and app theme.',
@@ -209,6 +211,7 @@ export const messagesEn = {
   'settings.profile.emailLabel': 'Email',
   'settings.profile.loading': 'Loading...',
   'settings.profile.localMode': 'Local mode',
+  'settings.profile.syncOn': 'Signed in · sync on',
   'settings.profile.signInPrompt':
     'Sign in with Google from the Account tab to personalize this profile.',
   'settings.shortcuts.title': 'Keyboard Shortcuts',
@@ -435,8 +438,7 @@ export const messagesEn = {
     '{{count}} book(s) could not be synced to the catalog ({{codes}}). They will retry automatically.',
   'settings.data.resetSection': 'Reset section',
   'settings.data.exportLibrary': 'Export library',
-  'settings.data.exportLibraryDescription':
-    'Metadata only — titles, authors, progress, reading status and dates. Book files are not included; the Drive cold backup carries those.',
+  'settings.data.exportLibraryDescription': 'Titles, authors and reading progress',
 
   'settings.addons.title': 'Catalog addons',
   'settings.addons.description': 'Install catalogs from a manifest URL (HTTPS only)',
@@ -485,8 +487,7 @@ export const messagesEn = {
   'addons.readSheet.empty.title': 'No reading access',
   'addons.readSheet.empty.body': 'This addon has no readable options for this title.',
   'settings.data.exportHighlights': 'Export highlights',
-  'settings.data.exportHighlightsDescription':
-    'Your highlights and their notes in JSON or Markdown. Book files are not included.',
+  'settings.data.exportHighlightsDescription': 'Highlights and notes · JSON or Markdown',
   'settings.data.allBooks': 'All books',
   'settings.data.markdown': 'Markdown',
   'settings.data.exporting': 'Exporting...',
@@ -636,6 +637,8 @@ export const messagesEn = {
   'highlight.color.orange': 'Orange',
   'highlight.color.red': 'Red',
   'highlight.colors': 'Colors',
+  'highlight.deleted': 'Highlight deleted',
+  'highlight.undo': 'Undo',
   'highlight.customColor': 'Custom color',
   'highlight.changeColor': 'Change color',
   'highlight.tag': 'Tag',
@@ -844,6 +847,13 @@ export const messagesEn = {
   'library.bulkImport.status.skipped': 'Skipped',
   'library.bulkImport.status.failed': 'Failed',
   'library.bulkImport.status.cancelled': 'Cancelled',
+  'library.bulkImport.step.folder': 'Folder',
+  'library.bulkImport.step.scan': 'Scan',
+  'library.bulkImport.step.import': 'Import',
+  'library.bulkImport.changeFolder': 'Change',
+  'library.bulkImport.scanHint': 'Scan the folder to see which books can be imported.',
+  'library.bulkImport.rescan': 'Scan again',
+  'library.bulkImport.progress': '{{done}} of {{total}} processed',
   // Reader - New redesign
   'reader.copiar': 'Copy',
   'reader.copiedToClipboard': 'Copied to clipboard',
@@ -1121,6 +1131,8 @@ export const messagesEn = {
   'home.continue.countAria': '{{count}} in progress',
   'home.continue.nextBook': 'Next',
   'home.continue.prevBook': 'Previous',
+  'home.continue.chapter': 'Current chapter',
+  'home.continue.lastRead': 'Last read',
 
   // Home reading desk (HOME-01..03)
   'home.pageTitle': 'Home',
@@ -1213,17 +1225,15 @@ export const messagesEn = {
   'settings.data.highlightsExportFailed': 'Could not export highlights',
   'settings.data.annotationsOnlyWithNote': 'Only entries with a note',
   'settings.data.exportFilesNotIncluded':
-    'These exports carry library and annotation data, never the book files themselves. Use the cold backup (Drive) to back up the actual files.',
+    'Exports carry your data, never the book files — the Drive backup covers those.',
   'settings.data.exportEverything': 'Export everything',
-  'settings.data.exportEverythingDescription':
-    'One file with every module: books, highlights and collections. Book files are not included.',
+  'settings.data.exportEverythingDescription': 'Library, highlights and collections in one file',
   'settings.data.exportEverythingButton': 'Export everything',
   'settings.data.exportedEverything': 'Everything exported',
   'settings.data.exportEverythingEmpty': 'There is nothing to export yet',
   'settings.data.exportEverythingFailed': 'Could not export everything',
   'settings.data.exportCollections': 'Export collections',
-  'settings.data.exportCollectionsDescription':
-    'Your collections with their names, colors and creation dates.',
+  'settings.data.exportCollectionsDescription': 'Names and colors',
   'settings.data.exportCollectionsButton': 'Export collections',
   'settings.data.collectionsExported': 'Collections exported',
   'settings.data.collectionsExportEmpty': 'No collections to export',
@@ -1238,21 +1248,18 @@ export const messagesEn = {
   'settings.data.cancel': 'Cancel',
   'settings.data.storageOptions': 'More options in Storage',
   'settings.data.coldBackup': 'Cold Backup (Drive)',
-  'settings.data.coldBackupDescription':
-    'Export or import your library as a cold backup to Drive. Settings-only — saves never touch Drive.',
+  'settings.data.coldBackupDescription': 'A copy of your library in Google Drive',
   'settings.data.coldExport': 'Export to Drive',
   'settings.data.coldImport': 'Import from Drive',
   'settings.data.importing': 'Importing...',
-  'settings.data.driveNotConnected':
-    'Google Drive is not connected. Connect Drive to use cold backup.',
+  'settings.data.driveNotConnected': 'Google Drive is not connected',
   'settings.data.connectDrive': 'Connect Drive',
 
   // Settings Data Tab — dictionary transfer. Kept separate from the cold-backup
   // pair above on purpose: these are local JSON/CSV files of saved words; no
   // Drive, no auth, no library.
   'settings.data.dictionary.title': 'Dictionary',
-  'settings.data.dictionary.description':
-    'Export or import your saved words and their references as JSON or CSV. Local files only — your books and Drive backups are untouched.',
+  'settings.data.dictionary.description': 'Saved words · JSON or CSV',
   'settings.data.dictionary.exportJson': 'Export JSON',
   'settings.data.dictionary.exportCsv': 'Export CSV',
   'settings.data.dictionary.import': 'Import',
@@ -1347,6 +1354,9 @@ export const messagesEn = {
   'welcome.divider': 'or',
   'welcome.continueGoogle': 'Continue with Google',
   'welcome.continueLocal': 'Continue locally',
+  'welcome.localHint': 'Your books stay on this computer. You can sign in later.',
+  'welcome.finishInBrowser': 'Finish signing in in your browser.',
+  'welcome.retryGoogle': 'Try Google again',
   'welcome.localFormAriaLabel': 'Local profile form',
   'welcome.localNameLabel': 'Your name',
   'welcome.localNamePlaceholder': 'What should we call you?',
@@ -1362,7 +1372,7 @@ export const messagesEn = {
   'welcome.signedInFallback': 'your Google account',
   'welcome.signedInToast': 'Signed in successfully',
   'welcome.signedOutToast': 'Signed out successfully',
-  'welcome.loggingIn': 'Logging in...',
+  'welcome.loggingIn': 'Opening your browser...',
   'welcome.devSkipHint': 'Dev mode: a mock local user will be created.',
   'welcome.nav.features': 'Features',
   'welcome.nav.trust': 'Why Nexo',
@@ -1412,6 +1422,8 @@ export const messagesEn = {
   'settings.translation.save': 'Save',
   'settings.translation.loading': 'Loading translation history…',
   'settings.translation.historyTitle': 'History',
+  'settings.translation.historyShowAll': 'Show full history ({{count}})',
+  'settings.translation.historyShowLess': 'Show less',
   'settings.translation.historyEmpty': 'You have not translated anything yet.',
   'settings.translation.clearHistory': 'Clear history',
   'settings.translation.language.en': 'English',
@@ -1464,6 +1476,16 @@ export const messagesEn = {
   'update.errorUnreachable': 'Could not reach the update feed. Try again later.',
   'update.errorMalformed': 'The update feed is invalid. Try again later.',
   'update.errorOffline': 'You appear to be offline. Reconnect and try again.',
+  'oauthPage.signedIn.title': 'Signed in',
+  'oauthPage.signedIn.heading': "You're signed in",
+  'oauthPage.signedIn.body':
+    'Your NEXO account is connected. Your library will sync across your devices.',
+  'oauthPage.drive.title': 'Drive connected',
+  'oauthPage.drive.heading': 'Google Drive connected',
+  'oauthPage.drive.body':
+    'NEXO can now back up your library to Drive. The app picks up where you left off.',
+  'oauthPage.closeHint': 'If NEXO does not open, switch back to the app; you can close this tab.',
+  'oauthPage.openApp': 'Open NEXO',
 } as const;
 
 export type MessageKey = keyof typeof messagesEn;

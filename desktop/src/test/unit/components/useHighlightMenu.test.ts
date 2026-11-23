@@ -11,7 +11,10 @@ vi.mock('$lib/features/reader/highlight/highlightColors', async () => {
 });
 
 import { createHighlights } from '$lib/features/reader/chrome/useHighlights.svelte';
-import { createHighlightMenu } from '$lib/features/reader/highlight/useHighlightMenu.svelte';
+import {
+  createHighlightMenu,
+  HIGHLIGHT_UNDO_WINDOW_MS,
+} from '$lib/features/reader/highlight/useHighlightMenu.svelte';
 import { createSpineResolver } from '$lib/features/reader/chrome/useSpineResolver.svelte';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 
@@ -192,5 +195,60 @@ describe('useHighlightMenu', () => {
     m.handleMenuCopy();
     expect(m.highlightMenu.open).toBe(false);
     m.cleanup();
+  });
+
+  describe('undoable delete', () => {
+    function openOn(h: ReturnType<typeof makeHighlights>) {
+      const undoRef: { current: (() => void) | null } = { current: null };
+      const deleteSpy = vi.spyOn(h, 'deleteHighlightById');
+      const m = createHighlightMenu({
+        highlights: h,
+        onDeleted: (undo) => {
+          undoRef.current = undo;
+        },
+      });
+      m.openHighlightMenu('h1', { x: 10, y: 10 });
+      return { m, undoRef, deleteSpy };
+    }
+
+    it('hides the highlight at once and deletes it for good after the window', () => {
+      const h = makeHighlights();
+      const { m, undoRef, deleteSpy } = openOn(h);
+
+      m.handleMenuDelete();
+      expect(h.persistedHighlights).toHaveLength(0);
+      expect(m.highlightMenu.open).toBe(false);
+      expect(undoRef.current).not.toBeNull();
+      expect(deleteSpy).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(HIGHLIGHT_UNDO_WINDOW_MS);
+      expect(deleteSpy).toHaveBeenCalledTimes(1);
+      expect(deleteSpy.mock.calls[0][0]).toBe('h1');
+      // The snapshot carries the book it was deleted from.
+      expect(deleteSpy.mock.calls[0][1]).toMatchObject({ bookId: 'b1' });
+      m.cleanup();
+    });
+
+    it('brings the highlight back on undo and never deletes it', () => {
+      const h = makeHighlights();
+      const { m, undoRef, deleteSpy } = openOn(h);
+
+      m.handleMenuDelete();
+      undoRef.current?.();
+      expect(h.persistedHighlights.map((x) => x.id)).toEqual(['h1']);
+
+      vi.advanceTimersByTime(HIGHLIGHT_UNDO_WINDOW_MS * 2);
+      expect(deleteSpy).not.toHaveBeenCalled();
+      m.cleanup();
+    });
+
+    it('commits a pending delete when the reader closes the book', () => {
+      const h = makeHighlights();
+      const { m, deleteSpy } = openOn(h);
+
+      m.handleMenuDelete();
+      m.cleanup();
+      expect(deleteSpy).toHaveBeenCalledTimes(1);
+    });
   });
 });

@@ -47,7 +47,7 @@ describe('HomeStatsGrid', () => {
     expect(summary).not.toHaveTextContent('Completed');
     expect(summary?.querySelector('dl')).toBeNull();
 
-    const streak = summary?.querySelector('span[class*="color-streak-text"]');
+    const streak = summary?.querySelector('[data-testid="home-streak-value"]');
     expect(streak).toHaveTextContent('3 days');
   });
 

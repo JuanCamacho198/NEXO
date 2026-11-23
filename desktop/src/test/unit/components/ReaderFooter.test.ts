@@ -82,8 +82,9 @@ describe('ReaderBottomBar — geometry', () => {
   it('is a minimum height, not a fixed one', () => {
     const { container } = render(ReaderBottomBar, makeProps());
     const footer = container.querySelector('footer');
-    expect(footer?.className).toContain('min-h-12');
-    expect(footer?.className).not.toMatch(/(^|\s)h-12(\s|$)/);
+    // 60px: the pager track (44px targets in a bordered capsule) plus air.
+    expect(footer?.className).toContain('min-h-15');
+    expect(footer?.className).not.toMatch(/(^|\s)h-15(\s|$)/);
   });
 
   it('keeps the control row on one line', () => {

@@ -18,7 +18,6 @@ function renderAt(position: { x: number; y: number }) {
     highlightId: 'hl-1',
     position,
     assignedTags: [],
-    onCustomColor: () => undefined,
     onCopy: () => undefined,
     onTag: () => undefined,
     onNote: () => undefined,
@@ -62,5 +61,49 @@ describe('HighlightContextMenu placement (non-regression pin)', () => {
 
     // position.y - 56 - 8
     expect(styleOf(container)).toContain('top: 99935px');
+  });
+
+  // EPUB: with the highlight's box the menu leaves the click point and sits
+  // centred above the text, like the selection toolbar.
+  it('centres the menu above the highlight when it knows its box', () => {
+    const anchor = { left: 400, right: 520, top: 300, bottom: 320 };
+    const { container } = render(HighlightContextMenu, {
+      props: {
+        highlightId: 'hl-1',
+        position: { x: 10, y: 10 },
+        anchor,
+        assignedTags: [],
+        onCopy: () => undefined,
+        onTag: () => undefined,
+        onNote: () => undefined,
+        onDelete: () => undefined,
+        onClose: () => undefined,
+        t,
+      },
+    });
+    const style = styleOf(container);
+    // centre 460 - 224 / 2 = 348; top 300 - 56 - 12 = 232
+    expect(style).toContain('left: 348px');
+    expect(style).toContain('top: 232px');
+    expect(container.querySelector('[role="menu"]')?.getAttribute('data-placement')).toBe('above');
+  });
+
+  it('drops below the highlight when there is no room above it', () => {
+    const { container } = render(HighlightContextMenu, {
+      props: {
+        highlightId: 'hl-1',
+        position: { x: 10, y: 10 },
+        anchor: { left: 400, right: 520, top: 20, bottom: 40 },
+        assignedTags: [],
+        onCopy: () => undefined,
+        onTag: () => undefined,
+        onNote: () => undefined,
+        onDelete: () => undefined,
+        onClose: () => undefined,
+        t,
+      },
+    });
+    expect(styleOf(container)).toContain('top: 52px');
+    expect(container.querySelector('[role="menu"]')?.getAttribute('data-placement')).toBe('below');
   });
 });

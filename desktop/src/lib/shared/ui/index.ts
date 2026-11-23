@@ -8,6 +8,7 @@ export { default as Toast } from './feedback/Toast.svelte';
 
 // Forms components
 export { default as Button } from './forms/Button.svelte';
+export { default as FilterChip } from './forms/FilterChip.svelte';
 export { default as Field } from './forms/Field.svelte';
 export { default as ColorPicker } from './forms/ColorPicker.svelte';
 export { default as Avatar } from './forms/Avatar.svelte';

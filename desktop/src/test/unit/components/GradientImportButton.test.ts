@@ -41,13 +41,13 @@ describe('GradientImportButton', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('renders a secondary outline using the --color-import token without hex', () => {
+  it('renders the secondary import pill with the ember brand token and no hex', () => {
     const { container } = render(GradientImportButton, {
       props: { label: 'Import', onclick: () => undefined },
     });
 
     const html = container.innerHTML;
-    expect(html).toContain('--color-import');
+    expect(html).toContain('--color-brand-text');
     expect(html).not.toContain('gradient');
     expect(html).not.toMatch(hexPattern);
   });

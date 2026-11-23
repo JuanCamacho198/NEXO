@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from '$lib/shared/ui/forms/Button.svelte';
+  import FilterChip from '$lib/shared/ui/forms/FilterChip.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import SearchBar from '$lib/shared/ui/navigation/SearchBar.svelte';
   import Toast from '$lib/shared/ui/feedback/Toast.svelte';
@@ -105,7 +106,7 @@
 {#snippet importAction(extraClass: string, label: string)}
   <button
     type="button"
-    class={`inline-flex items-center justify-center rounded-2xl border border-(--color-import) bg-transparent text-(--color-import) transition-colors hover:bg-(--color-import-bg) focus-visible:ring-2 ring-(--color-import) active:scale-96 disabled:cursor-not-allowed disabled:opacity-50 ${extraClass}`}
+    class={`inline-flex items-center justify-center gap-2 rounded-full border border-(--color-edge) bg-(--color-home-card) font-semibold text-(--color-brand-text) transition-colors duration-(--duration-fast) ease-(--ease-smooth) hover:border-(--color-brand)/50 hover:bg-(--color-brand-soft) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) active:scale-96 disabled:cursor-not-allowed disabled:opacity-50 ${extraClass}`}
     disabled={isImporting}
     onclick={onImportBook}
   >
@@ -113,25 +114,31 @@
   </button>
 {/snippet}
 
-<section class="space-y-4">
-  <header class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-    <div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
-      <h1 class="text-2xl font-semibold tracking-tight text-(--color-primary)">
-        {t('library.title')}
-      </h1>
-      <p class="text-sm text-(--color-text-muted)">{t('library.subtitle')}</p>
-      <span class="text-xs text-(--color-text-muted)">
-        {t('shelf.booksCount', { count: totalBooks })} ·
-        {t('shelf.readingCount', { count: readingBooks })} ·
-        {t('shelf.completedCount', { count: completedBooks })}
-      </span>
+<section class="space-y-5">
+  <header class="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+    <div class="min-w-0">
+      <div class="flex items-center gap-3">
+        <div
+          class="h-8 w-1 shrink-0 rounded-full bg-linear-to-b from-(--color-brand-start) to-(--color-brand-end)"
+          aria-hidden="true"
+        ></div>
+        <h1 class="text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)">
+          {t('library.title')}
+        </h1>
+      </div>
+      <p class="mt-1 text-sm text-(--color-text-muted)">
+        {t('library.subtitle')}
+        <span class="ml-2 text-(--color-secondary) tabular-nums">
+          {t('shelf.booksCount', { count: totalBooks })} ·
+          {t('shelf.readingCount', { count: readingBooks })} ·
+          {t('shelf.completedCount', { count: completedBooks })}
+        </span>
+      </p>
     </div>
-    {@render importAction('h-10 min-w-[170px] px-4 text-sm font-medium', t('shelf.importBook'))}
+    {@render importAction('h-11 px-5 text-sm', t('shelf.importBook'))}
   </header>
 
-  <section
-    class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-bg-panel) px-3 py-2.5"
-  >
+  <section class="rounded-(--radius-lg) border border-(--color-edge) bg-(--color-home-card) p-3">
     <!-- One quiet band, two rows: the search line rides alone on top; the second
          row splits the filter chips (left) from the sort and view controls
          (right). Nothing here competes with the covers. -->
@@ -153,26 +160,21 @@
           <legend class="sr-only">{t('shelf.filterAria')}</legend>
           <div class="flex flex-wrap items-center gap-1.5">
             {#each FILTER_OPTIONS as option}
-              <button
-                type="button"
+              <FilterChip
                 data-testid={`shelf-tab-${option.key}`}
-                class={`rounded-full border px-3 py-1.5 text-xs font-medium transition focus-visible:ring-2 ring-(--color-accent) ${
-                  shelf.activeFilter === option.key
-                    ? 'border-(--color-accent) bg-(--color-accent-soft) text-(--color-primary)'
-                    : 'border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted) hover:text-(--color-primary)'
-                }`}
+                selected={shelf.activeFilter === option.key}
                 onclick={() => {
                   shelf.activeFilter = option.key;
                 }}
               >
                 {option.label}
-              </button>
+              </FilterChip>
             {/each}
           </div>
         </fieldset>
 
         <div class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-2">
-          <span class="whitespace-nowrap text-xs text-(--color-text-muted)"
+          <span class="whitespace-nowrap text-sm text-(--color-text-muted)"
             >{t('shelf.sortBy')}</span
           >
           <div data-testid="shelf-sort" class="shrink-0">
@@ -201,14 +203,15 @@
           </div>
           <fieldset
             data-testid="shelf-view-toggle"
-            class="inline-flex shrink-0 items-center rounded-full bg-(--color-surface-subtle) p-0.5"
+            class="inline-flex shrink-0 items-center rounded-full border border-(--color-edge) bg-(--color-surface-subtle) p-0.5"
           >
             <legend class="sr-only">{t('shelf.viewToggleAria')}</legend>
             <button
               type="button"
-              class={`flex h-9 w-9 items-center justify-center rounded-full transition focus-visible:ring-2 ring-(--color-accent) ${
+              aria-pressed={shelf.activeView === 'grid'}
+              class={`flex size-8 items-center justify-center rounded-full transition-colors duration-(--duration-fast) ease-(--ease-smooth) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) ${
                 shelf.activeView === 'grid'
-                  ? 'bg-(--color-accent-soft) text-(--color-accent)'
+                  ? 'bg-(--color-brand-soft) text-(--color-brand-text)'
                   : 'text-(--color-text-muted) hover:text-(--color-primary)'
               }`}
               aria-label={t('shelf.gridView')}
@@ -220,9 +223,10 @@
             </button>
             <button
               type="button"
-              class={`flex h-9 w-9 items-center justify-center rounded-full transition focus-visible:ring-2 ring-(--color-accent) ${
+              aria-pressed={shelf.activeView === 'list'}
+              class={`flex size-8 items-center justify-center rounded-full transition-colors duration-(--duration-fast) ease-(--ease-smooth) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) ${
                 shelf.activeView === 'list'
-                  ? 'bg-(--color-accent-soft) text-(--color-accent)'
+                  ? 'bg-(--color-brand-soft) text-(--color-brand-text)'
                   : 'text-(--color-text-muted) hover:text-(--color-primary)'
               }`}
               aria-label={t('shelf.listView')}
@@ -240,7 +244,7 @@
 
   {#if shelf.invalidTokens.length > 0}
     <div
-      class="rounded-2xl border border-(--color-border) bg-(--color-surface) px-4 py-2 text-xs text-(--color-primary) shadow-(--shadow-soft)"
+      class="rounded-(--radius-lg) border border-(--color-edge) bg-(--color-home-card) px-4 py-2 text-xs text-(--color-primary)"
       data-testid="shelf-warnings"
     >
       <p class="font-medium">{t('home.shelfWarningsLabel')}</p>
@@ -268,7 +272,7 @@
     </EmptyState>
   {:else if hasNoResults}
     <div
-      class="rounded-(--radius-2xl) border border-(--color-border) bg-(--color-surface) px-6 py-12 text-center"
+      class="rounded-(--radius-lg) border border-(--color-edge) bg-(--color-home-card) px-6 py-12 text-center"
     >
       <p class="text-base font-semibold text-(--color-primary)">{t('library.searchNoResults')}</p>
       <p class="mt-1 text-sm text-(--color-text-muted)">{t('library.noResultsDescription')}</p>

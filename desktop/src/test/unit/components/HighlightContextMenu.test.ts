@@ -34,7 +34,6 @@ describe('HighlightContextMenu', () => {
       highlightId: 'hl-1',
       position: { x: 100, y: 100 },
       assignedTags: [],
-      onCustomColor: () => undefined,
       onCopy: () => undefined,
       onTag: () => undefined,
       onNote: () => undefined,
@@ -50,13 +49,15 @@ describe('HighlightContextMenu', () => {
     expect(getByText('Delete highlight')).toBeTruthy();
   });
 
-  it('opens color picker via onCustomColor when palette trigger clicked', async () => {
-    const onCustomColor = vi.fn();
-    const { getByLabelText } = render(HighlightContextMenu, {
+  // One click shows the five colours in place; a second picks one.
+  it('opens the palette in place and picks a colour', async () => {
+    const onSelectColor = vi.fn();
+    const { getByLabelText, queryByLabelText } = render(HighlightContextMenu, {
       highlightId: 'hl-1',
       position: { x: 100, y: 100 },
+      currentColor: '#FACC15',
       assignedTags: [],
-      onCustomColor,
+      onSelectColor,
       onCopy: () => undefined,
       onTag: () => undefined,
       onNote: () => undefined,
@@ -65,9 +66,12 @@ describe('HighlightContextMenu', () => {
       t,
     });
 
-    const paletteBtn = getByLabelText('Change color');
-    await fireEvent.click(paletteBtn);
-    expect(onCustomColor).toHaveBeenCalledOnce();
+    expect(queryByLabelText('Select Green highlight')).toBeNull();
+    await fireEvent.click(getByLabelText('Change color'));
+    await fireEvent.click(getByLabelText('Select Green highlight'));
+    expect(onSelectColor).toHaveBeenCalledOnce();
+    // The palette folds back to the single swatch after a pick.
+    expect(queryByLabelText('Select Green highlight')).toBeNull();
   });
 
   it('fires onCopy and closes menu', async () => {
@@ -81,7 +85,6 @@ describe('HighlightContextMenu', () => {
       highlightId: 'hl-1',
       position: { x: 100, y: 100 },
       assignedTags: [],
-      onCustomColor: () => undefined,
       onCopy,
       onTag: () => undefined,
       onNote: () => undefined,
@@ -101,7 +104,6 @@ describe('HighlightContextMenu', () => {
       highlightId: 'hl-1',
       position: { x: 100, y: 100 },
       assignedTags: [],
-      onCustomColor: () => undefined,
       onCopy: () => undefined,
       onTag: () => undefined,
       onNote: () => undefined,

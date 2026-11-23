@@ -17,6 +17,8 @@ const read = [true, true, true, true, true, false, false];
 const minutes = [18, 32, 24, 41, 15, 36, 20];
 const peak = Math.max(...minutes);
 const goals = [10, 15, 20, 30];
+// The daily goal the goal tile shows (12 of 15 min), drawn across the chart.
+const dailyGoal = 15;
 ---
 
 <!-- ══════════════ HABIT ══════════════ -->
@@ -28,8 +30,21 @@ const goals = [10, 15, 20, 30];
   <div class="night-sky" aria-hidden="true"></div>
   <div class="shell relative">
     <div class="habit-head">
-      <p class="habit-eyebrow">{t('habit.eyebrow')}</p>
-      <h2 class="habit-title">{t('habit.heading')}</h2>
+      <p class="habit-eyebrow eyebrow-rule">{t('habit.eyebrow')}</p>
+      <h2 class="habit-title title-split">
+        {t('habit.heading')}{' '}
+        <span class="title-accent">
+          {t('habit.headingAccent')}
+          <svg
+            class="title-swoosh"
+            viewBox="0 0 300 24"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <path d="M4 18C70 7 170 3 296 9" />
+          </svg>
+        </span>
+      </h2>
       <p class="habit-lead">{t('habit.lead')}</p>
     </div>
 
@@ -74,18 +89,34 @@ const goals = [10, 15, 20, 30];
       <article class="tile tile-streak">
         <p class="tile-kicker">{t('habit.streakKicker')}</p>
         <div class="streak-count">
-          <svg class="streak-flame" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M12 2.5c.6 3.2 3.7 4.9 4.9 8 1.6 4.2-1.2 9-4.9 9s-6.4-3.2-5.5-6.9c.4-1.7 1.4-2.9 2.4-3.7-.1 1.5.4 2.8 1.5 3.4C10.6 9.4 10.5 5.6 12 2.5Z"
-              fill="url(#flame)"
-            />
-            <defs>
-              <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#ffd27a" />
-                <stop offset="1" stop-color="#f06a2c" />
-              </linearGradient>
-            </defs>
-          </svg>
+          <!-- A flame in a warm glow: an outer flame and a lighter core that
+               flicker out of step, with embers drifting up. -->
+          <span class="flame-wrap" aria-hidden="true">
+            <svg class="streak-flame" viewBox="0 0 24 24">
+              <defs>
+                <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#ffd27a" />
+                  <stop offset="1" stop-color="#f06a2c" />
+                </linearGradient>
+                <linearGradient id="flame-core" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#ffe9a8" />
+                  <stop offset="1" stop-color="#ffb04a" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M12 2.5c.6 3.2 3.7 4.9 4.9 8 1.6 4.2-1.2 9-4.9 9s-6.4-3.2-5.5-6.9c.4-1.7 1.4-2.9 2.4-3.7-.1 1.5.4 2.8 1.5 3.4C10.6 9.4 10.5 5.6 12 2.5Z"
+                fill="url(#flame)"
+              />
+              <path
+                class="flame-core"
+                d="M12 10.2c.5 2 2.5 3.1 2.7 5.4.2 2.3-1.2 3.9-2.7 3.9s-2.9-1.4-2.7-3.5c.2-1.4 1-2.1 1.6-2.7 0 .9.4 1.5 1 1.8-.3-1.6-.3-3.2.1-4.9Z"
+                fill="url(#flame-core)"
+              />
+            </svg>
+            <span class="ember ember-1"></span>
+            <span class="ember ember-2"></span>
+            <span class="ember ember-3"></span>
+          </span>
           <strong>{t('habit.streakDays')}</strong>
         </div>
         <p class="tile-copy">{t('habit.streakCopy')}</p>
@@ -106,6 +137,14 @@ const goals = [10, 15, 20, 30];
             </li>
           ))}
         </ol>
+        <p class="streak-best">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 4h10v4a5 5 0 0 1-10 0Z" />
+            <path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 3.2M17 6h2.5a2.5 2.5 0 0 1-2.6 3.2M12 13v4M8.5 20h7l-1-3h-5Z" />
+          </svg>
+          {t('habit.streakBest')}
+          <strong>{t('habit.streakBestDays')}</strong>
+        </p>
       </article>
 
       <!-- Daily goal -->
@@ -145,7 +184,7 @@ const goals = [10, 15, 20, 30];
             <h3 class="tile-title">{t('habit.statsTitle')}</h3>
           </div>
           <dl class="stats-figures">
-            <div>
+            <div class="is-lead">
               <dt>{t('habit.statsMinutes')}</dt>
               <dd>186</dd>
             </div>
@@ -159,15 +198,31 @@ const goals = [10, 15, 20, 30];
             </div>
           </dl>
         </div>
-        <ol class="bars" aria-label={t('habit.statsAria')}>
-          {minutes.map((value, i) => (
-            <li class:list={['bar', i === 3 && 'is-peak']} style={`--h: ${(value / peak) * 100}%`}>
-              <span class="bar-value">{value}</span>
-              <span class="bar-fill" />
-              <span class="bar-day">{days[i]}</span>
-            </li>
-          ))}
-        </ol>
+        <div class="bars-wrap" style={`--goal: ${dailyGoal / peak}`}>
+          <ol class="bars" aria-label={t('habit.statsAria')}>
+            {minutes.map((value, i) => (
+              <li
+                class:list={['bar', i === 3 && 'is-peak']}
+                style={`--h: ${(value / peak) * 100}%`}
+              >
+                <span class="bar-value">
+                  {value}
+                  {i === 3 && <small> {t('habit.minutesShort')}</small>}
+                </span>
+                <span class="bar-track">
+                  <span class="bar-fill" />
+                </span>
+                <span class="bar-day">{days[i]}</span>
+              </li>
+            ))}
+          </ol>
+          <!-- Daily goal: a dashed threshold across the chart. -->
+          <span class="goal-line" aria-hidden="true">
+            <span>
+              {t('habit.goalKicker')} · {dailyGoal} {t('habit.minutesShort')}
+            </span>
+          </span>
+        </div>
       </article>
     </div>
   </div>
@@ -185,6 +240,7 @@ const goals = [10, 15, 20, 30];
     text-align: center;
   }
   .habit-eyebrow {
+    justify-content: center;
     color: oklch(76% 0.16 55);
     font-size: 13px;
     font-weight: 700;
@@ -194,17 +250,6 @@ const goals = [10, 15, 20, 30];
   .habit-title {
     margin-top: 14px;
     font-size: clamp(2.2rem, 4.2vw, 3.4rem);
-    line-height: 1.05;
-    letter-spacing: -0.03em;
-    background: linear-gradient(
-      100deg,
-      oklch(97% 0.01 80),
-      oklch(84% 0.08 60) 60%,
-      oklch(74% 0.17 48)
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
   }
   .habit-lead {
     margin-top: 16px;
@@ -227,7 +272,10 @@ const goals = [10, 15, 20, 30];
     border-radius: 26px;
     background: linear-gradient(180deg, oklch(100% 0 0 / 0.05), oklch(100% 0 0 / 0.015));
     box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.06);
-    overflow: hidden;
+    /* clip, not hidden: hidden makes the tile a scroll container, so the bars'
+       and ring's view() timelines tracked the tile instead of the page and
+       froze part-way (the bars stopped at 50–80% of their height). */
+    overflow: clip;
   }
   .tile-store {
     grid-column: span 2;
@@ -241,6 +289,9 @@ const goals = [10, 15, 20, 30];
   }
   .tile-stats {
     grid-column: span 2;
+    background:
+      radial-gradient(60% 80% at 55% 100%, oklch(72% 0.18 50 / 0.1), transparent 70%),
+      linear-gradient(180deg, oklch(100% 0 0 / 0.05), oklch(100% 0 0 / 0.015));
   }
   .tile-kicker {
     color: oklch(80% 0.14 58);
@@ -330,49 +381,159 @@ const goals = [10, 15, 20, 30];
     gap: 10px;
     margin-top: 10px;
   }
+  .flame-wrap {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, oklch(72% 0.18 50 / 0.35), transparent);
+    animation: flame-glow 2.8s ease-in-out infinite;
+  }
   .streak-flame {
     width: 44px;
     height: 44px;
+    overflow: visible;
     filter: drop-shadow(0 0 14px oklch(72% 0.18 50 / 0.6));
+    transform-origin: 50% 90%;
     animation: flame-flicker 2.4s ease-in-out infinite;
+  }
+  .flame-core {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    opacity: 0.9;
+    animation: core-flicker 1.3s ease-in-out infinite alternate;
+  }
+  .ember {
+    position: absolute;
+    left: 50%;
+    bottom: 40%;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: oklch(86% 0.15 70);
+    box-shadow: 0 0 6px oklch(76% 0.18 55);
+    opacity: 0;
+    animation: ember-rise 2.6s ease-out infinite;
+  }
+  .ember-2 {
+    --ember-x: -10px;
+    width: 3px;
+    height: 3px;
+    animation-delay: -0.9s;
+    animation-duration: 2.2s;
+  }
+  .ember-3 {
+    --ember-x: 9px;
+    animation-delay: -1.7s;
+    animation-duration: 3s;
   }
   .streak-count strong {
     font-size: 2.6rem;
     font-weight: 800;
     letter-spacing: -0.03em;
+    background: linear-gradient(100deg, oklch(98% 0.01 80), oklch(86% 0.1 64));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
+  /* The week: a track runs through the day centres and fills orange up to
+     today, so the streak reads as one unbroken line. No gap between columns,
+     so each centre sits at exactly (2i + 1) / 14 of the row. */
   .week {
+    --dot: 34px;
+    position: relative;
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
     margin-top: 20px;
   }
+  .week::before,
+  .week::after {
+    content: '';
+    position: absolute;
+    top: calc(var(--dot) / 2 - 1.5px);
+    left: calc(100% / 14);
+    height: 3px;
+    border-radius: 3px;
+  }
+  .week::before {
+    right: calc(100% / 14);
+    background: oklch(100% 0 0 / 0.08);
+  }
+  .week::after {
+    width: calc(100% * 10 / 14);
+    background: linear-gradient(90deg, oklch(72% 0.18 50 / 0.5), oklch(78% 0.17 58));
+    box-shadow: 0 0 10px oklch(72% 0.18 50 / 0.6);
+    transform-origin: left;
+  }
   .day {
+    position: relative;
+    z-index: 1;
     display: grid;
     justify-items: center;
     gap: 6px;
   }
   .day-dot {
+    position: relative;
     display: grid;
     place-items: center;
-    width: 100%;
-    max-width: 38px;
+    width: var(--dot);
     aspect-ratio: 1;
     border: 1px solid oklch(100% 0 0 / 0.1);
     border-radius: 12px;
-    background: oklch(100% 0 0 / 0.03);
+    background: oklch(18% 0.03 270);
   }
   .day-dot svg {
     width: 55%;
     height: 55%;
   }
   .is-read .day-dot {
-    border-color: oklch(72% 0.18 50 / 0.45);
-    background: oklch(72% 0.18 50 / 0.16);
-    color: oklch(80% 0.17 58);
+    border-color: oklch(72% 0.18 50 / 0.55);
+    background:
+      linear-gradient(180deg, oklch(72% 0.18 50 / 0.3), oklch(72% 0.18 50 / 0.12)),
+      oklch(18% 0.03 270);
+    color: oklch(82% 0.17 60);
+    box-shadow: 0 0 14px -4px oklch(72% 0.18 50 / 0.7);
   }
   .is-today .day-dot {
-    border: 1.5px dashed oklch(80% 0.14 58 / 0.7);
+    border: 1.5px dashed oklch(80% 0.14 58 / 0.8);
+  }
+  /* Today is still open: a slow pulse asks for the next session. */
+  .is-today .day-dot::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 15px;
+    border: 1.5px solid oklch(76% 0.17 55 / 0.6);
+    animation: today-pulse 2.2s ease-out infinite;
+  }
+  .is-today .day-name {
+    color: oklch(82% 0.14 60);
+  }
+  .streak-best {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid oklch(100% 0 0 / 0.08);
+    color: var(--color-ink-soft);
+    font-size: 13.5px;
+  }
+  .streak-best svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: oklch(80% 0.15 60);
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .streak-best strong {
+    margin-left: auto;
+    color: var(--color-ink);
+    font-weight: 700;
   }
   .day-name {
     color: var(--color-muted-foreground);
@@ -461,9 +622,21 @@ const goals = [10, 15, 20, 30];
     align-items: flex-start;
     gap: 16px 28px;
   }
+  /* Figures separated by thin rules; the week's minutes lead in orange. */
   .stats-figures {
     display: flex;
-    gap: 28px;
+    gap: 0;
+  }
+  .stats-figures > div {
+    padding: 0 24px;
+    border-left: 1px solid oklch(100% 0 0 / 0.1);
+  }
+  .stats-figures > div:first-child {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .stats-figures > div:last-child {
+    padding-right: 0;
   }
   .stats-figures dt {
     color: var(--color-ink-soft);
@@ -471,49 +644,124 @@ const goals = [10, 15, 20, 30];
   }
   .stats-figures dd {
     margin: 2px 0 0;
-    font-size: 1.7rem;
+    font-size: 1.9rem;
     font-weight: 800;
     letter-spacing: -0.02em;
+  }
+  .stats-figures .is-lead dd {
+    background: linear-gradient(100deg, oklch(86% 0.13 68), oklch(72% 0.19 46));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Chart. Fixed label rows, so the bar area's height is known and the goal
+     line can sit at exactly --goal of it. */
+  .bars-wrap {
+    --bars-h: 180px;
+    --value-row: 26px;
+    --day-row: 16px;
+    --row-gap: 6px;
+    position: relative;
+    margin-top: 24px;
   }
   .bars {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 14px;
-    height: 170px;
-    margin-top: 22px;
+    height: var(--bars-h);
   }
   .bar {
     display: grid;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: var(--value-row) 1fr var(--day-row);
     justify-items: center;
-    gap: 6px;
+    gap: var(--row-gap);
     min-height: 0;
   }
+  /* The track is the positioning context for the fill. The fill used to be a
+     second grid item in row 2 with `height: <percentage>`, and a percentage
+     against a `1fr` row resolves to nothing once `align-self: end` leaves the
+     track indefinite: the bar computed a 46px height but painted 1.8px. An
+     absolutely positioned element inside a track of known height resolves the
+     percentage properly, and the capsule and the fill no longer compete for
+     the same cell. */
+  .bar-track {
+    grid-row: 2;
+    grid-column: 1;
+    position: relative;
+    width: 100%;
+    max-width: 46px;
+    height: 100%;
+    border-radius: 12px;
+    background: oklch(100% 0 0 / 0.035);
+  }
   .bar-value {
+    grid-row: 1;
+    align-self: end;
     color: var(--color-ink-soft);
     font-size: 12px;
     font-weight: 600;
+    white-space: nowrap;
   }
   .bar-fill {
-    align-self: end;
-    width: 100%;
-    max-width: 46px;
+    position: absolute;
+    inset: auto 0 0;
     height: var(--h);
-    border-radius: 10px 10px 4px 4px;
-    background: linear-gradient(180deg, oklch(80% 0.1 220 / 0.85), oklch(55% 0.12 240 / 0.5));
+    border-radius: 12px 12px 6px 6px;
+    /* Blue: the week is context, so it steps back from the one orange day the
+       goal is about. The previous amber sat too close to the peak's hue and
+       read as a duller version of it. */
+    background: linear-gradient(180deg, oklch(78% 0.11 245 / 0.8), oklch(48% 0.13 255 / 0.25));
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.28);
     transform-origin: bottom;
   }
   .is-peak .bar-fill {
-    background: linear-gradient(180deg, oklch(80% 0.16 60), oklch(65% 0.18 45 / 0.7));
-    box-shadow: 0 0 20px oklch(72% 0.18 50 / 0.45);
+    background: linear-gradient(180deg, oklch(84% 0.15 64), oklch(66% 0.19 44 / 0.75));
+    box-shadow:
+      inset 0 1px 0 oklch(100% 0 0 / 0.45),
+      0 0 26px oklch(72% 0.18 50 / 0.55);
   }
+  /* The best day's value as a small orange bubble. */
   .is-peak .bar-value {
-    color: oklch(84% 0.14 60);
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: oklch(72% 0.18 50);
+    color: oklch(18% 0.03 50);
+    font-weight: 800;
+    box-shadow: 0 6px 16px -6px oklch(72% 0.18 50 / 0.8);
   }
   .bar-day {
+    grid-row: 3;
     color: var(--color-muted-foreground);
     font-size: 11px;
     font-weight: 600;
+  }
+  .is-peak .bar-day {
+    color: oklch(82% 0.14 60);
+  }
+  /* The threshold sits on the track's own coordinate system: the track row
+     starts one value-row and one gap above the bottom, and is --track-h tall.
+     It used to be derived from --bars-h and sat about 20px too high. */
+  .goal-line {
+    --track-h: calc(var(--bars-h) - var(--value-row) - var(--day-row) - 2 * var(--row-gap));
+    position: absolute;
+    left: -6px;
+    right: -6px;
+    bottom: calc(var(--day-row) + var(--row-gap) + var(--track-h) * var(--goal));
+    border-top: 1.5px dashed oklch(80% 0.14 60 / 0.7);
+    pointer-events: none;
+  }
+  .goal-line span {
+    position: absolute;
+    right: 0;
+    bottom: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: oklch(18% 0.03 270 / 0.85);
+    color: oklch(84% 0.13 62);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
   }
 
   /* Fill on scroll where supported: the ring draws to 80% and the bars rise
@@ -525,28 +773,52 @@ const goals = [10, 15, 20, 30];
         animation-timeline: view();
         animation-range: entry 40% cover 45%;
       }
-      .bar-fill {
-        animation: bar-rise linear both;
+      .week::after {
+        animation: track-fill linear both;
         animation-timeline: view();
         animation-range: entry 20% cover 40%;
       }
+      .is-read .day-dot {
+        animation: day-on linear both;
+        animation-timeline: view();
+      }
+      .day:nth-child(1) .day-dot {
+        animation-range: entry 20% cover 24%;
+      }
+      .day:nth-child(2) .day-dot {
+        animation-range: entry 24% cover 28%;
+      }
+      .day:nth-child(3) .day-dot {
+        animation-range: entry 28% cover 32%;
+      }
+      .day:nth-child(4) .day-dot {
+        animation-range: entry 32% cover 36%;
+      }
+      .day:nth-child(5) .day-dot {
+        animation-range: entry 36% cover 40%;
+      }
+      .bar-fill {
+        animation: bar-rise linear both;
+        animation-timeline: view();
+        animation-range: entry 10% cover 28%;
+      }
       .bar:nth-child(2) .bar-fill {
-        animation-range: entry 25% cover 42%;
+        animation-range: entry 14% cover 30%;
       }
       .bar:nth-child(3) .bar-fill {
-        animation-range: entry 30% cover 44%;
+        animation-range: entry 18% cover 32%;
       }
       .bar:nth-child(4) .bar-fill {
-        animation-range: entry 35% cover 46%;
+        animation-range: entry 22% cover 34%;
       }
       .bar:nth-child(5) .bar-fill {
-        animation-range: entry 40% cover 48%;
+        animation-range: entry 26% cover 36%;
       }
       .bar:nth-child(6) .bar-fill {
-        animation-range: entry 45% cover 50%;
+        animation-range: entry 30% cover 38%;
       }
       .bar:nth-child(7) .bar-fill {
-        animation-range: entry 50% cover 52%;
+        animation-range: entry 34% cover 40%;
       }
     }
   }
@@ -572,6 +844,55 @@ const goals = [10, 15, 20, 30];
     }
     50% {
       transform: scale(1.06, 0.96) rotate(-2deg);
+    }
+  }
+  @keyframes core-flicker {
+    to {
+      scale: 0.9 1.12;
+      opacity: 1;
+    }
+  }
+  @keyframes flame-glow {
+    50% {
+      scale: 1.12;
+      opacity: 0.75;
+    }
+  }
+  @keyframes ember-rise {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, 0) scale(1);
+    }
+    15% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(calc(-50% + var(--ember-x, 4px)), -34px) scale(0.4);
+    }
+  }
+  @keyframes today-pulse {
+    0% {
+      opacity: 0.9;
+      scale: 0.9;
+    }
+    100% {
+      opacity: 0;
+      scale: 1.25;
+    }
+  }
+  @keyframes track-fill {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  @keyframes day-on {
+    from {
+      border-color: oklch(100% 0 0 / 0.1);
+      background: oklch(18% 0.03 270);
+      color: oklch(100% 0 0 / 0.15);
+      box-shadow: none;
+      scale: 0.85;
     }
   }
 
@@ -607,16 +928,27 @@ const goals = [10, 15, 20, 30];
     }
     .bars {
       gap: 8px;
-      height: 150px;
     }
-    .stats-figures {
-      gap: 20px;
+    .bars-wrap {
+      --bars-h: 160px;
+    }
+    .stats-figures > div {
+      padding: 0 14px;
+    }
+    .stats-figures dd {
+      font-size: 1.5rem;
     }
   }
   @media (prefers-reduced-motion: reduce) {
     .shelf-track,
-    .streak-flame {
+    .streak-flame,
+    .flame-core,
+    .flame-wrap,
+    .is-today .day-dot::after {
       animation: none;
+    }
+    .ember {
+      display: none;
     }
   }
 </style>

@@ -12,7 +12,9 @@
   import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import ThemeSwatches from './ThemeSwatches.svelte';
-  import Button from '$lib/shared/ui/forms/Button.svelte';
+  import SwitchTrack from '$lib/shared/ui/forms/SwitchTrack.svelte';
+  import ReaderDrawerHeader from './ReaderDrawerHeader.svelte';
+  import { READER_DRAWER, READER_DRAWER_FLY_X, READER_DRAWER_SCRIM } from './readerDrawer';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import {
     READER_BRIGHTNESS_MAX,
@@ -133,7 +135,9 @@
 </script>
 
 {#snippet sectionTitle(label: string)}
-  <h3 class="text-xs font-semibold tracking-wide text-(--color-text-muted) uppercase">{label}</h3>
+  <h3 class="text-xs font-semibold tracking-[0.08em] text-(--color-brand-text) uppercase">
+    {label}
+  </h3>
 {/snippet}
 
 {#snippet toggleRow(
@@ -147,19 +151,14 @@
     <span class="text-sm text-(--color-text-muted)">{label}</span>
     <button
       type="button"
-      class="relative flex h-5 w-10 cursor-pointer items-center rounded-full transition-colors"
-      style="background-color: {checked ? 'var(--color-accent-blue)' : 'rgba(148, 173, 206, 0.2)'};"
+      class="flex shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-reader-chrome)"
       {onclick}
       role="switch"
       aria-checked={checked}
       aria-label={ariaLabel}
       title={title || undefined}
     >
-      <span
-        class="h-4 w-4 rounded-full bg-white shadow transition-transform"
-        class:translate-x-[22px]={checked}
-        class:translate-x-[2px]={!checked}
-      ></span>
+      <SwitchTrack {checked} />
     </button>
   </div>
 {/snippet}
@@ -180,14 +179,19 @@
       <Dropdown
         {options}
         {value}
-        class="max-w-36 truncate rounded-xl border-transparent bg-(--color-border) px-3 py-2 text-(--color-accent-blue) hover:bg-(--color-border)"
+        class="max-w-40 truncate rounded-full border-(--color-edge) bg-(--color-home-card) px-3.5 py-2 text-(--color-primary) hover:border-(--color-brand)/60"
         onchange={(e) => onselect(e.value)}
       >
         {#snippet trigger()}
           <span class="truncate text-sm" {style}>
             {options.find((o) => o.value === value)?.label ?? label}
           </span>
-          <svg class="ml-2 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            class="ml-2 h-4 w-4 shrink-0 text-(--color-text-muted)"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -215,11 +219,15 @@
     width so the three rows align as a column instead of zig-zagging. -->
   <div class="flex items-center justify-between gap-3">
     <span class="text-sm text-(--color-text-muted)">{label}</span>
-    <div class="flex shrink-0 items-center gap-1" role="group" aria-label={label}>
+    <div
+      class="flex shrink-0 items-center rounded-full border border-(--color-edge) bg-(--color-home-card) p-0.5"
+      role="group"
+      aria-label={label}
+    >
       <button
         type="button"
         data-testid={`${testid}-dec`}
-        class="flex h-10 w-10 cursor-pointer items-center justify-center rounded text-(--color-text-muted) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30"
+        class="flex size-9 cursor-pointer items-center justify-center rounded-full text-(--color-primary) transition-colors hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
         onclick={ondecrement}
         aria-label={`${label} −`}
         disabled={decrementDisabled}
@@ -239,12 +247,13 @@
       <span
         data-testid={`${testid}-value`}
         aria-live="polite"
-        class="min-w-14 text-center text-sm font-medium text-(--color-text)">{value}</span
+        class="min-w-14 text-center text-sm font-semibold tabular-nums text-(--color-primary)"
+        >{value}</span
       >
       <button
         type="button"
         data-testid={`${testid}-inc`}
-        class="flex h-10 w-10 cursor-pointer items-center justify-center rounded text-(--color-text-muted) hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30"
+        class="flex size-9 cursor-pointer items-center justify-center rounded-full text-(--color-primary) transition-colors hover:bg-(--color-surface-hover) disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
         onclick={onincrement}
         aria-label={`${label} +`}
         disabled={incrementDisabled}
@@ -281,7 +290,9 @@
   <div class="flex flex-col gap-1.5">
     <div class="flex items-center justify-between">
       <span class="text-sm text-(--color-text-muted)">{label}</span>
-      <span class="text-xs text-(--color-accent-blue)">{value.toFixed(1)}rem</span>
+      <span class="text-xs font-semibold tabular-nums text-(--color-brand-text)"
+        >{value.toFixed(1)}rem</span
+      >
     </div>
     <input
       type="range"
@@ -291,7 +302,7 @@
       {value}
       data-testid={testid}
       oninput={(e) => oninput(Number((e.currentTarget as HTMLInputElement).value))}
-      class="slider-thumb w-full cursor-pointer accent-(--color-accent-blue)"
+      class="slider-thumb w-full cursor-pointer accent-(--color-brand)"
       aria-label={label}
     />
   </div>
@@ -301,7 +312,7 @@
   <div class="flex flex-col gap-1.5">
     <div class="flex items-center justify-between">
       <span class="text-sm text-(--color-text-muted)">{label}</span>
-      <span class="text-xs text-(--color-accent-blue)">{value}%</span>
+      <span class="text-xs font-semibold tabular-nums text-(--color-brand-text)">{value}%</span>
     </div>
     <input
       type="range"
@@ -310,7 +321,7 @@
       step="1"
       {value}
       oninput={(e) => oninput(Number((e.currentTarget as HTMLInputElement).value))}
-      class="slider-thumb w-full cursor-pointer accent-(--color-accent-blue)"
+      class="slider-thumb w-full cursor-pointer accent-(--color-brand)"
       aria-label={label}
     />
   </div>
@@ -319,25 +330,14 @@
 <!-- prettier-ignore-start -->
 {#if open}
   <div class="fixed inset-0 z-40" onclick={handleBackdropClick} onkeydown={(e) => e.key === 'Escape' && onClose()} role="presentation">
-    <div class="absolute inset-0 bg-(--color-surface)/70"></div>
-    <div bind:this={sidebarEl} class="absolute right-0 top-0 flex h-full w-65 flex-col overflow-y-auto border-l border-(--color-border-deep) bg-(--color-surface)/70 pt-15 text-(--color-text-muted) backdrop-blur-sm" transition:fly={{ x: reducedMotion ? 0 : 260, opacity: 0, duration: reducedMotion ? 0 : 250, easing: cubicOut }} onkeydown={(e) => e.key === 'Escape' && onClose()} role="dialog" aria-label={t('reader.ajustes_texto')} tabindex="0">
-      <header class="relative flex items-center justify-between border-b border-(--color-border)/5 px-4 py-4">
+    <div class={READER_DRAWER_SCRIM}></div>
+    <div bind:this={sidebarEl} class={READER_DRAWER} transition:fly={{ x: reducedMotion ? 0 : READER_DRAWER_FLY_X, opacity: 0, duration: reducedMotion ? 0 : 250, easing: cubicOut }} onkeydown={(e) => e.key === 'Escape' && onClose()} role="dialog" aria-label={t('reader.ajustes_texto')} tabindex="0">
+      <ReaderDrawerHeader title={t('reader.ajustes_texto')} closeLabel={t('settings.close')} {onClose}>
         {#if textSettings.showSavedToast}
-          <span class="absolute -top-2 right-4 flex items-center gap-1 rounded-full bg-(--color-accent-blue)/20 px-2.5 py-0.5 text-xs text-(--color-accent-blue)" transition:fly={{ y: -4, duration: 150 }}><Check size={14} strokeWidth={1.8} class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{t('reader.saved')}</span>
+          <span class="absolute top-full right-4 z-10 mt-2 flex items-center gap-1 rounded-full bg-(--color-brand-soft) px-2.5 py-0.5 text-xs font-medium text-(--color-brand-text)" transition:fly={{ y: -4, duration: 150 }}><Check size={14} strokeWidth={1.8} class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{t('reader.saved')}</span>
         {/if}
-        <h2 class="text-sm font-semibold text-(--color-text-inverse)">{t('reader.ajustes_texto')}</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onclick={onClose}
-          class="shrink-0 px-2 text-(--color-text-muted) hover:text-(--color-text-inverse)"
-          aria-label={t('settings.close')}
-          title={t('settings.close')}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </Button>
-      </header>
-      <section class="flex flex-col gap-6 p-4">
+      </ReaderDrawerHeader>
+      <section class="flex flex-col p-5 [&>*+*]:mt-5 [&>*+*]:border-t [&>*+*]:border-(--color-edge) [&>*+*]:pt-5">
         <ThemeSwatches {readerSettings} {onSettingsChange} {t} />
         {#if format === 'pdf'}
           <!-- U1: brightness/contrast only render in PDF, the one format whose
@@ -467,14 +467,14 @@
         <!-- U1: the showHeader/showFooter/verticalScrolling switches lived here.
           Removed: they persisted but no viewer reads them, so every toggle
           was fake feedback. Restore them only with a wired reader. -->
-        <section aria-label={t('reader.reset_defaults')} class="rounded-xl border border-(--color-error)/40 p-2">
+        <section aria-label={t('reader.reset_defaults')}>
           <button
             type="button"
             data-testid="reset-defaults"
             onclick={handleReset}
-            class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 hover:bg-(--color-surface-hover)"
-            class:text-(--color-error)={resetArmed}
-            class:text-(--color-text-muted)={!resetArmed}
+            class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border px-4 py-2.5 transition-colors {resetArmed
+              ? 'border-(--color-danger)/60 bg-(--color-danger)/10 text-(--color-danger)'
+              : 'border-(--color-edge) text-(--color-text-muted) hover:border-(--color-danger)/45 hover:text-(--color-danger)'}"
           >
             <RotateCcw size={14} strokeWidth={2} class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span class="text-sm font-medium"

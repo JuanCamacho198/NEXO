@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FilterChip from '$lib/shared/ui/forms/FilterChip.svelte';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import type { CatalogSourceInfo } from '$lib/shared/services/catalog';
   import { ALL_SOURCES, type DiscoverSourceFilter } from './discoverSourceFilter';
@@ -28,37 +29,17 @@
   function toggle(sourceId: string): void {
     onSelect(selected === sourceId ? ALL_SOURCES : sourceId);
   }
-
-  const activeClass = 'border-(--color-primary)/40 bg-(--color-primary)/12 text-(--color-primary)';
-  const idleClass =
-    'border-(--color-border) bg-(--color-surface-subtle) text-(--color-text-muted) hover:border-(--color-primary)/40 hover:text-(--color-primary)';
 </script>
 
 {#if sources.length > 0}
   <div role="group" aria-label={t('discover.sourceFilter.all')} class="flex flex-wrap gap-2">
-    <button
-      type="button"
-      aria-pressed={selected === ALL_SOURCES}
-      onclick={() => onSelect(ALL_SOURCES)}
-      class="rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)/50 {selected ===
-      ALL_SOURCES
-        ? activeClass
-        : idleClass}"
-    >
+    <FilterChip selected={selected === ALL_SOURCES} onclick={() => onSelect(ALL_SOURCES)}>
       {t('discover.sourceFilter.all')}
-    </button>
+    </FilterChip>
     {#each sources as source (source.sourceId)}
-      <button
-        type="button"
-        aria-pressed={selected === source.sourceId}
-        onclick={() => toggle(source.sourceId)}
-        class="rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary)/50 {selected ===
-        source.sourceId
-          ? activeClass
-          : idleClass}"
-      >
+      <FilterChip selected={selected === source.sourceId} onclick={() => toggle(source.sourceId)}>
         {providerLabel(source.sourceId)}
-      </button>
+      </FilterChip>
     {/each}
   </div>
 {/if}

@@ -1,6 +1,7 @@
 <script lang="ts">
-  import Button from '$lib/shared/ui/forms/Button.svelte';
   import Skeleton from '$lib/shared/ui/feedback/Skeleton.svelte';
+  import BookOpen from 'lucide-svelte/icons/book-open';
+  import Play from 'lucide-svelte/icons/play';
   import SafeCover from './SafeCover.svelte';
   import ShelfBookActions from './ShelfBookActions.svelte';
   import {
@@ -35,60 +36,70 @@
     onRemoveBook,
   }: Props = $props();
 
+  // Covers lead: the columns size to a book, not to the window.
   const gridClass =
-    'grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5 list-none p-0 m-0';
+    'm-0 grid list-none grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-x-6 gap-y-9 p-0';
+
+  const focusRing =
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-background)';
 </script>
 
 {#if isLoading}
   <ul class={gridClass} aria-hidden="true">
-    {#each Array(8) as _, index (index)}
-      <li class="content-auto [contain-intrinsic-size:auto_280px]">
-        <div
-          class="flex flex-col rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-3"
-        >
-          <Skeleton variant="rounded" width="100%" height="176px" class="mb-2.5" />
-          <Skeleton variant="text" class="w-3/4" />
-          <Skeleton variant="text" class="mt-2 w-1/2" />
-          <Skeleton variant="rounded" height="8px" class="mt-2.5" />
-          <div class="mt-2.5 grid grid-cols-2 gap-2">
-            <Skeleton variant="rounded" height="32px" />
-            <Skeleton variant="rounded" height="32px" />
-          </div>
-        </div>
+    {#each Array(10) as _, index (index)}
+      <li class="content-auto [contain-intrinsic-size:auto_360px]">
+        <Skeleton variant="rounded" width="100%" class="aspect-[2/3] h-auto" />
+        <Skeleton variant="text" class="mt-3 w-4/5" />
+        <Skeleton variant="text" class="mt-1.5 w-1/2" />
+        <Skeleton variant="rounded" height="36px" class="mt-3 rounded-full" />
       </li>
     {/each}
   </ul>
 {:else}
   <ul class={gridClass}>
     {#each books as book}
-      <li class="content-auto [contain-intrinsic-size:auto_280px]">
-        <article
-          class="group flex h-full flex-col rounded-(--radius-xl) border border-(--color-border) bg-(--color-surface) p-3 shadow-(--shadow-panel)"
-        >
+      {@const progress = getSafeProgressPercentage(book)}
+      <li class="flex flex-col content-auto [contain-intrinsic-size:auto_360px]">
+        <article class="group/book flex flex-1 flex-col">
           <div
-            class="relative mb-2.5 h-44 w-full overflow-hidden rounded-(--radius-lg) bg-(--color-surface-subtle)"
+            class="relative aspect-[2/3] w-full overflow-hidden rounded-(--radius-md) border border-(--color-edge) bg-(--color-surface-subtle) shadow-[0_16px_32px_-20px_rgba(0,0,0,0.75)] transition-[transform,box-shadow] duration-(--duration-normal) ease-(--ease-smooth) group-hover/book:-translate-y-1 group-hover/book:shadow-[0_22px_40px_-20px_rgba(0,0,0,0.8)]"
           >
-            <SafeCover
-              path={book.coverPath ?? ''}
-              alt={`Portada de ${book.title}`}
-              className="h-full w-full object-cover"
+            <button
+              type="button"
+              class="block h-full w-full rounded-(--radius-md) {focusRing}"
+              aria-label={`${t('shelf.openBook')}: ${book.title}`}
+              onclick={() => onOpenBook?.(book)}
             >
-              {#snippet fallback()}
-                <div
-                  class="flex h-full w-full items-center justify-center bg-(--color-surface-subtle) px-6 text-center text-xs uppercase tracking-[0.18em] text-(--color-text-muted)"
-                >
-                  {t('shelf.noCover')}
-                </div>
-              {/snippet}
-            </SafeCover>
+              <SafeCover
+                path={book.coverPath ?? ''}
+                alt={`Portada de ${book.title}`}
+                className="h-full w-full object-cover"
+              >
+                {#snippet fallback()}
+                  <div
+                    class="flex h-full w-full flex-col items-center justify-center gap-3 bg-linear-to-b from-(--color-surface-subtle) to-(--color-horizon-fade) px-5 text-center"
+                  >
+                    <BookOpen
+                      size={28}
+                      strokeWidth={1.5}
+                      class="text-(--color-text-muted)"
+                      aria-hidden="true"
+                    />
+                    <span class="text-micro uppercase tracking-[0.16em] text-(--color-text-muted)">
+                      {t('shelf.noCover')}
+                    </span>
+                  </div>
+                {/snippet}
+              </SafeCover>
+            </button>
 
             <span
-              class="absolute left-2 top-2 rounded-full border border-(--color-border) bg-(--color-surface) px-2 py-0.5 text-xs font-medium uppercase tracking-wider text-(--color-text-muted)"
+              class="pointer-events-none absolute top-2 left-2 rounded-full border border-(--color-edge) bg-(--color-horizon-fade)/85 px-2 py-0.5 text-micro font-semibold uppercase tracking-[0.12em] text-(--color-secondary) backdrop-blur-sm"
             >
               {getStateLabel(book)}
             </span>
 
-            <div class="absolute right-2 top-2">
+            <div class="absolute top-2 right-2">
               <ShelfBookActions
                 {book}
                 {t}
@@ -100,53 +111,52 @@
                 variant="grid"
               />
             </div>
+
+            {#if progress > 0}
+              <div
+                class="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-(--color-horizon-fade)/70"
+                role="progressbar"
+                aria-label={t('shelf.progressAria', { title: book.title })}
+                aria-valuenow={progress}
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
+                <div
+                  class="h-full bg-linear-to-r from-(--color-brand-start) to-(--color-brand)"
+                  style={`width: ${formatPercent(book)};`}
+                ></div>
+              </div>
+            {/if}
           </div>
 
-          <div class="space-y-1">
-            <h2 class="line-clamp-2 text-sm font-semibold text-(--color-primary)">{book.title}</h2>
-            <p class="line-clamp-1 text-xs text-(--color-text-muted)">
+          <div class="mt-3 mb-3 min-w-0">
+            <h2
+              class="line-clamp-2 min-h-[2.75em] text-sm leading-snug font-semibold text-(--color-primary)"
+            >
+              {book.title}
+            </h2>
+            <p class="mt-0.5 line-clamp-1 text-xs text-(--color-text-muted)">
               {book.author || t('shelf.unknownAuthor')}
+            </p>
+            <p class="mt-1.5 text-xs text-(--color-text-muted) tabular-nums">
+              {t('shelf.percentRead', { percent: formatPercent(book) })}
+              <span aria-hidden="true">·</span>
+              {book.minutesRead}
+              {t('library.min')}
             </p>
           </div>
 
-          <div
-            class="mt-auto space-y-1 pt-2.5"
-            role="progressbar"
-            aria-label={t('shelf.progressAria', { title: book.title })}
-            aria-valuenow={getSafeProgressPercentage(book)}
-            aria-valuemin="0"
-            aria-valuemax="100"
+          <button
+            type="button"
+            class="mt-auto inline-flex h-9 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold whitespace-nowrap transition-[filter,background-color,border-color,color] duration-(--duration-fast) ease-(--ease-smooth) active:scale-96 {focusRing} {progress >
+            0
+              ? 'bg-linear-to-r from-(--color-brand-start) to-(--color-brand) text-(--color-brand-on) hover:brightness-110'
+              : 'border border-(--color-edge) bg-(--color-home-card) text-(--color-primary) hover:border-(--color-brand)/60 hover:text-(--color-brand-text)'}"
+            onclick={() => onContinueReading?.(book)}
           >
-            <div class="h-2 w-full overflow-hidden rounded-full bg-(--color-border)">
-              <div
-                class="h-full rounded-full bg-(--color-accent)"
-                style={`width: ${formatPercent(book)};`}
-              ></div>
-            </div>
-            <div class="flex items-center justify-between text-xs text-(--color-text-muted)">
-              <span>{t('shelf.percentRead', { percent: formatPercent(book) })}</span>
-              <span>{book.minutesRead} {t('library.min')}</span>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2 pt-2.5">
-            <Button
-              variant="secondary"
-              size="sm"
-              class="rounded-xl whitespace-nowrap"
-              onclick={() => onOpenBook?.(book)}
-            >
-              {t('shelf.openBook')}
-            </Button>
-            <Button
-              variant="accent"
-              size="sm"
-              class="rounded-xl whitespace-nowrap"
-              onclick={() => onContinueReading?.(book)}
-            >
-              {getSafeProgressPercentage(book) > 0 ? t('app.continue') : t('shelf.start')}
-            </Button>
-          </div>
+            <Play size={13} strokeWidth={2} fill="currentColor" aria-hidden="true" />
+            {progress > 0 ? t('app.continue') : t('shelf.start')}
+          </button>
         </article>
       </li>
     {/each}

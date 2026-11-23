@@ -15,6 +15,9 @@
   control here suppresses its outline.
 -->
 <script lang="ts">
+  import Button from '$lib/shared/ui/forms/Button.svelte';
+  import CircleAlert from 'lucide-svelte/icons/circle-alert';
+  import CircleCheck from 'lucide-svelte/icons/circle-check';
   import Modal from '$lib/shared/ui/layout/Modal.svelte';
   import {
     notificationCenter,
@@ -81,27 +84,36 @@
 </script>
 
 {#snippet entryButton(entry: Notification)}
-  <button type="button" class="w-full text-left" onclick={() => handleOpen(entry)}>
-    <div class="flex items-center gap-2">
+  <button
+    type="button"
+    class="w-full rounded-(--radius-md) px-2 py-2.5 text-left transition-colors hover:bg-(--color-surface-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+    onclick={() => handleOpen(entry)}
+  >
+    <div class="flex items-center gap-3">
       <span
-        class="inline-block size-2 shrink-0 rounded-full {isFailure(entry)
-          ? 'bg-(--color-error)'
-          : 'bg-(--color-success)'}"
+        class="flex size-7 shrink-0 items-center justify-center rounded-full {isFailure(entry)
+          ? 'bg-(--color-error)/12 text-(--color-error)'
+          : 'bg-(--color-success)/12 text-(--color-success)'}"
       >
+        {#if isFailure(entry)}
+          <CircleAlert size={15} strokeWidth={2} aria-hidden="true" />
+        {:else}
+          <CircleCheck size={15} strokeWidth={2} aria-hidden="true" />
+        {/if}
         <span class="sr-only">
           {isFailure(entry) ? t('notifications.state.failure') : t('notifications.state.success')}
         </span>
       </span>
       <p class="text-sm font-medium text-(--color-primary)">{headingFor(entry)}</p>
       <time
-        class="ml-auto shrink-0 text-xs text-(--color-text-muted)"
+        class="ml-auto shrink-0 text-xs tabular-nums text-(--color-text-muted)"
         datetime={new Date(entry.createdAt).toISOString()}
       >
         {new Date(entry.createdAt).toLocaleString()}
       </time>
     </div>
     {#if detailFor(entry)}
-      <p class="mt-0.5 truncate text-xs text-(--color-text-muted)">{detailFor(entry)}</p>
+      <p class="mt-0.5 truncate pl-10 text-xs text-(--color-text-muted)">{detailFor(entry)}</p>
     {/if}
   </button>
 {/snippet}
@@ -117,36 +129,44 @@
       </p>
     </div>
   {:else}
-    <ul class="flex flex-col gap-2">
+    <ul class="m-0 flex list-none flex-col divide-y divide-(--color-edge) p-0">
       {#each groups as group (group.key)}
         {#if group.entries.length === 1}
-          <li class="rounded-xl border border-(--color-border) bg-(--color-surface) px-4 py-3">
+          <li class="py-1">
             {@render entryButton(group.entries[0])}
           </li>
         {:else}
           {@const representative = group.entries[0]}
-          <li class="rounded-xl border border-(--color-border) bg-(--color-surface) px-4 py-3">
+          <li class="py-1">
             <button
               type="button"
-              class="w-full text-left"
+              class="w-full rounded-(--radius-md) px-2 py-2.5 text-left transition-colors hover:bg-(--color-surface-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
               aria-expanded={isExpanded(group.key)}
               aria-label={isExpanded(group.key)
                 ? t('notifications.center.collapse')
                 : t('notifications.center.expand', { count: group.entries.length })}
               onclick={() => toggleGroup(group.key)}
             >
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-3">
                 <span
-                  class="inline-block size-2 shrink-0 rounded-full {isFailure(representative)
-                    ? 'bg-(--color-error)'
-                    : 'bg-(--color-success)'}"
+                  class="flex size-7 shrink-0 items-center justify-center rounded-full {isFailure(
+                    representative,
+                  )
+                    ? 'bg-(--color-error)/12 text-(--color-error)'
+                    : 'bg-(--color-success)/12 text-(--color-success)'}"
                   aria-hidden="true"
-                ></span>
+                >
+                  {#if isFailure(representative)}
+                    <CircleAlert size={15} strokeWidth={2} />
+                  {:else}
+                    <CircleCheck size={15} strokeWidth={2} />
+                  {/if}
+                </span>
                 <p class="text-sm font-medium text-(--color-primary)">
                   {t(representative.i18nKey)}
                 </p>
                 <span
-                  class="shrink-0 rounded-full bg-(--color-panel-accent) px-2 py-0.5 text-xs font-semibold text-(--color-primary)"
+                  class="shrink-0 rounded-full border border-(--color-edge) bg-(--color-surface-subtle) px-2 py-0.5 text-xs font-semibold tabular-nums text-(--color-secondary)"
                   aria-hidden="true"
                 >
                   ×{group.entries.length}
@@ -155,7 +175,7 @@
                   {t('notifications.center.groupCount', { count: group.entries.length })}
                 </span>
                 <time
-                  class="ml-auto shrink-0 text-xs text-(--color-text-muted)"
+                  class="ml-auto shrink-0 text-xs tabular-nums text-(--color-text-muted)"
                   datetime={new Date(representative.createdAt).toISOString()}
                 >
                   {new Date(representative.createdAt).toLocaleString()}
@@ -163,9 +183,11 @@
               </div>
             </button>
             {#if isExpanded(group.key)}
-              <ul class="mt-2 flex flex-col gap-2 border-t border-(--color-border) pt-2">
+              <ul
+                class="m-0 mt-1 mb-1 ml-5 flex list-none flex-col border-l border-(--color-edge) p-0 pl-2"
+              >
                 {#each group.entries as entry (entry.id)}
-                  <li class="rounded-lg px-2 py-1.5">
+                  <li>
                     {@render entryButton(entry)}
                   </li>
                 {/each}
@@ -178,12 +200,9 @@
   {/if}
   {#snippet footer()}
     {#if groups.length > 0}
-      <button
-        class="rounded-lg px-3 py-1.5 text-sm font-medium text-(--color-text-muted) transition-colors hover:bg-(--color-panel-accent) hover:text-(--color-primary)"
-        onclick={() => clearNotifications()}
-      >
+      <Button variant="secondary" size="sm" onclick={() => clearNotifications()}>
         {t('notifications.center.clear')}
-      </button>
+      </Button>
     {/if}
   {/snippet}
 </Modal>

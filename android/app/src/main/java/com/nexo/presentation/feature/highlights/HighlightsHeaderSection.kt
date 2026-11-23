@@ -48,10 +48,14 @@ fun HighlightsHeaderSection(
     onOpenAccount: () -> Unit,
     onSearchClick: () -> Unit,
     syncState: HighlightsSyncState,
+    isManualTriggered: Boolean = false,
     onSyncRefresh: () -> Unit,
 ) {
     val isSyncing = syncState is HighlightsSyncState.Syncing
     val isSynced = syncState is HighlightsSyncState.Synced
+    // An automatic pull only announces itself if the holder surfaced it, which
+    // it does solely past the slow-pull threshold.
+    val showsSyncing = isSyncing && isManualTriggered
 
     NexoTopAppBar(
         title = stringResource(R.string.highlights_title),
@@ -76,7 +80,7 @@ fun HighlightsHeaderSection(
                 size = NexoDimens.topBarActionTarget,
                 iconSize = NexoDimens.topBarActionIcon,
             )
-            Crossfade(targetState = isSyncing, label = "highlightsRefresh") { syncing ->
+            Crossfade(targetState = showsSyncing, label = "highlightsRefresh") { syncing ->
                 if (syncing) {
                     Box(
                         modifier =
@@ -92,7 +96,8 @@ fun HighlightsHeaderSection(
                     NexoIconButton(
                         icon = NexoIcons.Sync,
                         contentDescription = stringResource(R.string.highlights_refresh_content_description),
-                        onClick = onSyncRefresh,
+                        // Ignored mid-sync, so a second pull cannot stack on the first.
+                        onClick = { if (!isSyncing) onSyncRefresh() },
                         size = NexoDimens.topBarActionTarget,
                         iconSize = NexoDimens.topBarActionIcon,
                     )
@@ -102,12 +107,12 @@ fun HighlightsHeaderSection(
     )
 
     AnimatedVisibility(
-        visible = isSyncing || isSynced,
+        visible = showsSyncing || isSynced,
         enter = fadeIn() + expandVertically(),
         exit = fadeOut() + shrinkVertically(),
     ) {
         Box(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), contentAlignment = Alignment.Center) {
-            SyncPill(isSyncing = isSyncing)
+            SyncPill(isSyncing = showsSyncing)
         }
     }
 }

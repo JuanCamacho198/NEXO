@@ -92,7 +92,10 @@ bun -e 'const sharp = require("sharp"); for (const n of ["laptop","tablet","phon
 steps cards cross-fade between. Their screens are not Figma exports: they are
 redrawn in `screens.html` (the app's dark UI with type ~1.6x larger, so it
 reads at card size) and screenshotted to `assets/screen-step*.png` by element
-(`#screen-step1-a` … `#screen-step3-b`). Render each pair with the same camera:
+(`#screen-step1-a` … `#screen-step3-b`), at deviceScaleFactor 2 for steps 1
+and 2 (2880×1800 and 2732×2048) so the screens stay sharp on retina. Render
+each pair with the same camera. Steps 1 and 2 were re-rendered larger, and the
+tablet at a steeper angle with brighter metal so its edge reads as 3D:
 
 ```js
 const laptop = (tex, name) =>
@@ -109,7 +112,7 @@ const laptop = (tex, name) =>
     front: 1.1,
     fill: 1.1,
     rotation: [0, -14, 0],
-    size: [1600, 1200],
+    size: [2400, 1800],
     name,
     cam: { dist: 5.6, elev: 12, azim: 0 },
   });
@@ -120,10 +123,15 @@ const tablet = (tex, name) =>
     texture: tex,
     flipY: true,
     planar: {},
-    rotation: [-4, -16, -90],
-    size: [1500, 1200],
+    rotation: [-30, -30, -90],
+    size: [2400, 1950],
     name,
-    cam: { dist: 5.0, elev: 8, azim: 0 },
+    cam: { dist: 5.8, elev: 20, azim: 0 },
+    envIntensity: 0.9,
+    key: 3.6,
+    rim: 3.4,
+    fill: 1.0,
+    front: 0.8,
   });
 const phone = (tex, name) =>
   renderDevice({
@@ -141,4 +149,54 @@ const phone = (tex, name) =>
 ```
 
 Trim each pair with one shared box (the union of both trims), never
-separately, or state B will not land exactly on state A.
+separately, or state B will not land exactly on state A. Steps 1 and 2 are
+then downscaled to 1600px wide.
+
+## Hero books
+
+`src/assets/hero/books/book-flip-{1..5}.png` are the floating books behind the
+hero devices: five angles of one model, `assets/book.glb` (open, pages turning;
+not committed, git-ignored like the devices). Its licence and author still need
+recording here, and in the footer if it is CC-BY.
+
+Lit as the hero sky is: a strong warm key from behind with self-shadowing, a
+purple sky / orange ground hemisphere, almost no front light, so the faces
+turned away from the sun fall into shade. The canvas is large on purpose so no
+book touches its edge (a clipped edge shows as a cut-off book after the trim).
+
+```js
+const flip = (rotation, name) =>
+  renderDevice({
+    file: 'book.glb',
+    colors: {
+      'Material.004': '#4a2a1a',
+      SIDES: '#c9ab82',
+      paper: '#e6cfa8',
+      'Material.002': '#e3caa2',
+      'Material.003': '#e3caa2',
+    },
+    rotation,
+    size: [1400, 1300],
+    name,
+    cam: { dist: 8.5, elev: 10 },
+    key: 6.5,
+    rim: 4.0,
+    fill: 0.25,
+    front: 0.08,
+    envIntensity: 0.08,
+    exposure: 0.95,
+    shadows: true,
+    hemi: [0x5a4a8a, 0xc0602a, 0.65],
+  });
+await flip([24, -28, -14], 'flip-1');
+await flip([-30, 38, 16], 'flip-2');
+await flip([38, 150, 10], 'flip-3');
+await flip([-55, -120, -20], 'flip-4');
+await flip([12, 70, -28], 'flip-5');
+```
+
+Trim and downscale to 480px wide (from `nexo-web/`):
+
+```sh
+bun -e 'const sharp = require("sharp"); for (const n of [1,2,3,4,5]) await sharp(await sharp(`tools/device-renders/out/flip-${n}.png`).trim({ threshold: 1 }).toBuffer()).resize({ width: 480 }).png({ compressionLevel: 9 }).toFile(`src/assets/hero/books/book-flip-${n}.png`);'
+```

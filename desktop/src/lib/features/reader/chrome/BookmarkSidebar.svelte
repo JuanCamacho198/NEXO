@@ -1,5 +1,11 @@
 <script lang="ts">
+  import Bookmark from 'lucide-svelte/icons/bookmark';
+  import Plus from 'lucide-svelte/icons/plus';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
+  import Button from '$lib/shared/ui/forms/Button.svelte';
+  import ReaderDrawerHeader from './ReaderDrawerHeader.svelte';
+  import { READER_DRAWER, READER_DRAWER_SCRIM } from './readerDrawer';
   import type { BookmarksPanel } from './useBookmarksPanel.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { LibraryBookDto } from '$lib/shared/types/library';
@@ -40,21 +46,25 @@
     onkeydown={(e) => e.key === 'Escape' && (bookmarksPanel.showBookmarks = false)}
     role="presentation"
   >
-    <div class="absolute inset-0 bg-(--color-surface)/70"></div>
+    <div class={READER_DRAWER_SCRIM}></div>
     <div
       bind:this={bookmarksPanel.bookmarksPanelEl}
-      class="absolute right-0 top-0 flex h-full w-65 flex-col border-l border-(--color-border-deep) bg-(--color-surface)/70 pt-15 text-(--color-text-muted) backdrop-blur-sm"
+      class={READER_DRAWER}
       onkeydown={(e) => e.key === 'Escape' && (bookmarksPanel.showBookmarks = false)}
       role="dialog"
       aria-label={t('reader.bookmark')}
       tabindex="0"
     >
-      <!-- Header -->
-      <div class="flex items-center justify-between border-b border-(--color-border)/5 px-5 py-4">
-        <h2 class="text-base font-bold text-(--color-primary)">{t('reader.bookmark')}</h2>
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
+      <ReaderDrawerHeader
+        title={t('reader.bookmark')}
+        closeLabel={t('settings.close')}
+        onClose={() => (bookmarksPanel.showBookmarks = false)}
+      >
+        {#snippet actions()}
+          <Button
+            variant="accent"
+            size="sm"
+            class="size-9 shrink-0 p-0"
             onclick={() => {
               void bookmarksPanel.bookmarksState.addBookmark(
                 activeReadingBook.id,
@@ -63,88 +73,69 @@
               );
               bookmarksPanel.triggerBookmarkRibbon();
             }}
-            class="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-(--color-accent-blue) text-xs font-bold text-(--color-bg-deep) transition-colors hover:bg-(--color-accent-sky)"
             title={t('reader.bookmark')}
+            aria-label={t('reader.bookmark')}
           >
-            +
-          </button>
-          <button
-            type="button"
-            onclick={() => (bookmarksPanel.showBookmarks = false)}
-            class="cursor-pointer text-(--color-text-muted) hover:text-(--color-text-inverse)"
-            aria-label={t('settings.close')}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-      </div>
+            <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
+          </Button>
+        {/snippet}
+      </ReaderDrawerHeader>
 
       <!-- Content -->
-      <div class="flex-1 overflow-y-auto p-4">
+      <div class="flex-1 p-3">
         {#if bookmarksPanel.bookmarksState.bookmarksLoading}
-          <p class="text-center text-sm italic text-(--color-text-muted)/60">
+          <p class="py-10 text-center text-sm text-(--color-text-muted)">
             {t('settings.loadingBookmarks')}
           </p>
         {:else if bookmarksPanel.bookmarksState.bookmarksList.length === 0}
-          <p class="text-center text-sm italic text-(--color-text-muted)/60">
-            {t('settings.noBookmarks')}
-          </p>
+          <div class="flex flex-col items-center gap-3 px-4 py-12 text-center">
+            <span
+              class="flex size-12 items-center justify-center rounded-full bg-(--color-brand-soft) text-(--color-brand-text)"
+              aria-hidden="true"
+            >
+              <Bookmark size={20} strokeWidth={2} />
+            </span>
+            <p class="m-0 text-sm text-(--color-text-muted)">{t('settings.noBookmarks')}</p>
+          </div>
         {:else}
-          <ul class="flex flex-col gap-2">
+          <ul class="flex flex-col gap-0.5">
             {#each bookmarksPanel.bookmarksState.bookmarksList as bookmark (bookmark.id)}
               <li
-                class="flex items-center gap-2 rounded-lg border border-(--color-border-deep) bg-(--color-text-inverse)/2 px-3 py-2 transition-colors hover:bg-(--color-text-inverse)/5"
+                class="group flex items-center gap-1 rounded-(--radius-md) transition-colors hover:bg-(--color-surface-hover)"
               >
                 <button
                   type="button"
-                  class="flex flex-1 flex-col items-start gap-0.5 text-left"
+                  class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-2.5 pl-3 text-left"
                   onclick={() => {
                     bookmarksPanel.showBookmarks = false;
                   }}
                 >
-                  <span class="text-sm font-medium text-(--color-primary)"
-                    >Page {bookmark.pageNumber}</span
-                  >
-                  {#if bookmark.title}
-                    <span class="text-xs text-(--color-text-muted)/60">{bookmark.title}</span>
-                  {/if}
+                  <Bookmark
+                    size={16}
+                    strokeWidth={2}
+                    class="shrink-0 fill-(--color-brand-soft) text-(--color-brand-text)"
+                    aria-hidden="true"
+                  />
+                  <span class="flex min-w-0 flex-col gap-0.5">
+                    <span class="text-sm font-semibold text-(--color-primary)"
+                      >Page {bookmark.pageNumber}</span
+                    >
+                    {#if bookmark.title}
+                      <span class="truncate text-xs text-(--color-text-muted)"
+                        >{bookmark.title}</span
+                      >
+                    {/if}
+                  </span>
                 </button>
                 <button
                   type="button"
                   onclick={() =>
                     bookmarksPanel.bookmarksState.removeBookmark(bookmark.id, activeReadingBook.id)}
-                  class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sm text-(--color-text-muted) transition-colors hover:bg-red-500/20 hover:text-red-400"
+                  class="mr-1 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-(--color-text-muted) opacity-60 transition group-hover:opacity-100 hover:bg-(--color-danger)/12 hover:text-(--color-danger) focus-visible:opacity-100"
                   title={t('settings.deleteBookmark')}
+                  aria-label={t('settings.deleteBookmark')}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path
-                      d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
-                    ></path>
-                  </svg>
+                  <Trash2 size={14} strokeWidth={2} aria-hidden="true" />
                 </button>
               </li>
             {/each}
@@ -157,9 +148,14 @@
 
 {#if bookmarksPanel.showBookmarkRibbon}
   <div
-    class="pointer-events-none fixed top-20 right-8 z-50 animate-[bookmarkRibbon_2200ms_ease-out] flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 shadow-lg"
+    class="pointer-events-none fixed inset-x-0 bottom-20 z-50 mx-auto flex w-fit animate-[bookmarkRibbon_2200ms_ease-out] items-center gap-2.5 rounded-full border border-(--color-edge) bg-(--color-reader-chrome) py-2 pr-4 pl-2 text-sm font-medium text-(--color-primary) shadow-[0_18px_40px_-16px_rgba(0,0,0,0.55)]"
   >
-    <span class="text-amber-600">🔖</span>
+    <span
+      class="flex size-7 items-center justify-center rounded-full bg-linear-to-br from-(--color-brand-start) to-(--color-brand-end) text-(--color-brand-on)"
+      aria-hidden="true"
+    >
+      <Bookmark size={14} strokeWidth={2.5} />
+    </span>
     {t('reader.bookmarkAdded')}
   </div>
 {/if}

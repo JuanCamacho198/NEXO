@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Download from 'lucide-svelte/icons/download';
+  import ExternalLink from 'lucide-svelte/icons/external-link';
+  import Button from '$lib/shared/ui/forms/Button.svelte';
   import Modal from '$lib/shared/ui/layout/Modal.svelte';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import { resolveAccess, type CatalogBook } from '$lib/shared/services/catalog';
@@ -107,11 +110,22 @@
   // Measure only while collapsed: an expanded paragraph can never report
   // overflow, so its last collapsed reading is kept on screen (the "show less"
   // toggle stays available). Recomputed whenever the text or element changes.
+  //
+  // A single reading at mount is not enough: the dialog is still opening and
+  // laying out, so the paragraph measured 0×0 and the toggle never appeared
+  // under a visibly cut description. A ResizeObserver reads it again once it
+  // has its real size (and whenever the dialog resizes).
   $effect(() => {
     const element = descriptionEl;
     void description;
     if (!element || descriptionExpanded) return;
     descriptionOverflows = measureOverflow(element);
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      if (!descriptionExpanded) descriptionOverflows = measureOverflow(element);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
   });
 
   const formatLabels = $derived(detail?.formats ? discoverFormatLabels(detail.formats) : []);
@@ -133,7 +147,9 @@
   );
 </script>
 
-<Modal bind:open title={detail?.title ?? t('sidebar.discover')} size="xl">
+<!-- The header names the context; the book's title is the body's own heading,
+  so it is not printed twice one line apart. -->
+<Modal bind:open title={t('sidebar.discover')} size="xl">
   {#snippet children()}
     {#if detailStatus === 'loading'}
       <p class="text-sm text-(--color-text-muted)">{t('discover.loading')}</p>
@@ -141,209 +157,223 @@
       <p class="text-sm text-(--color-text-muted)">{t('discover.detailNotFound')}</p>
     {:else if detailStatus === 'offline'}
       <p class="text-sm text-(--color-text-muted)">{t('discover.offline')}</p>
-      <button
-        type="button"
-        class="mt-2 rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-        onclick={onRetryDetail}
-      >
+      <Button variant="secondary" size="sm" class="mt-2" onclick={onRetryDetail}>
         {t('discover.retry')}
-      </button>
+      </Button>
     {:else if detailStatus === 'error' || detail === null}
       <p class="text-sm text-(--color-text-muted)">{t('discover.errorUpstream')}</p>
     {:else}
-      <div class="flex items-start gap-4">
-        <div
-          class="relative aspect-2/3 w-24 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-(--color-primary)/8 to-(--color-primary)/3"
-        >
-          {#if showCover && detail !== null}
-            <img
-              src={detail.coverUrl ?? ''}
-              alt={detail.title}
-              loading="lazy"
-              decoding="async"
-              class="h-full w-full object-cover"
-              onerror={() => (coverFailed = true)}
-            />
-          {:else if detail !== null}
-            <div class="flex h-full w-full items-center justify-center">
-              <span class="text-3xl font-bold text-(--color-primary)/30"
-                >{detail.title.trim()[0]?.toUpperCase() || '?'}</span
+      <div class="flex flex-col gap-6 sm:flex-row sm:items-start">
+        <div class="flex shrink-0 flex-col items-center gap-3 sm:items-start">
+          <div
+            class="relative aspect-2/3 w-36 overflow-hidden rounded-(--radius-md) border border-(--color-edge) bg-(--color-surface-subtle) shadow-[0_18px_36px_-16px_rgba(0,0,0,0.7)]"
+          >
+            {#if showCover && detail !== null}
+              <img
+                src={detail.coverUrl ?? ''}
+                alt={detail.title}
+                loading="lazy"
+                decoding="async"
+                class="h-full w-full object-cover"
+                onerror={() => (coverFailed = true)}
+              />
+            {:else if detail !== null}
+              <div
+                class="flex h-full w-full items-center justify-center bg-linear-to-br from-(--color-brand-soft) to-transparent"
               >
-            </div>
-          {/if}
+                <span class="font-serif text-5xl font-semibold text-(--color-brand-text)/70"
+                  >{detail.title.trim()[0]?.toUpperCase() || '?'}</span
+                >
+              </div>
+            {/if}
+          </div>
           {#if detail !== null}
             <span
-              class="absolute top-1.5 left-1.5 rounded-full border border-(--color-border) bg-(--color-background)/85 px-2 py-0.5 text-xs font-medium text-(--color-secondary)"
+              class="inline-flex items-center gap-1.5 rounded-full border border-(--color-edge) px-2.5 py-0.5 text-xs font-medium text-(--color-secondary)"
             >
+              <span class="size-1.5 rounded-full bg-(--color-brand)" aria-hidden="true"></span>
               {providerLabel(detail.provider)}
             </span>
           {/if}
         </div>
+
         <div class="min-w-0 flex-1">
-          <h3 class="truncate text-lg font-semibold text-(--color-primary)">{detail.title}</h3>
-          <p class="text-sm text-(--color-text-muted)">
+          <h3
+            class="line-clamp-2 text-2xl leading-tight font-bold tracking-[-0.02em] text-balance text-(--color-primary)"
+          >
+            {detail.title}
+          </h3>
+          <p class="mt-1.5 text-base text-(--color-secondary)">
             {t('discover.byAuthors', { authors: detail.authors.join(', ') })}
           </p>
-          {#if detail.languages.length > 0}
-            <p class="mt-1 text-xs text-(--color-text-muted)">
-              <span class="font-medium text-(--color-primary)">{t('discover.languages')}</span>
-              {detail.languages.join(', ')}
-            </p>
-          {/if}
+
+          <dl class="mt-4 flex flex-col gap-2 text-sm">
+            {#if detail.languages.length > 0}
+              <div class="flex items-baseline gap-2">
+                <dt class="shrink-0 font-medium text-(--color-text-muted)">
+                  {t('discover.languages')}
+                </dt>
+                <dd class="m-0 text-(--color-primary) uppercase">{detail.languages.join(', ')}</dd>
+              </div>
+            {/if}
+            {#if formatLabels.length > 0}
+              <div class="flex flex-wrap items-center gap-1.5">
+                <dt class="mr-0.5 shrink-0 font-medium text-(--color-text-muted)">
+                  {t('discover.formats')}
+                </dt>
+                {#each formatLabels as label (label)}
+                  <dd
+                    class="m-0 inline-flex items-center rounded-full border border-(--color-edge) px-2 py-0.5 text-xs font-semibold tracking-wide text-(--color-secondary)"
+                  >
+                    {label}
+                  </dd>
+                {/each}
+              </div>
+            {/if}
+          </dl>
+
           {#if detail.subjects.length > 0}
-            <p class="mt-1 text-xs text-(--color-text-muted)">
-              <span class="font-medium text-(--color-primary)">{t('discover.subjects')}</span>
-              {detail.subjects.slice(0, 8).join(', ')}
-            </p>
+            <div class="mt-3 flex flex-wrap gap-1.5">
+              <span class="sr-only">{t('discover.subjects')}</span>
+              {#each detail.subjects.slice(0, 8) as subject (subject)}
+                <span
+                  class="rounded-full bg-(--color-surface-hover) px-2.5 py-0.5 text-xs text-(--color-secondary)"
+                  >{subject}</span
+                >
+              {/each}
+            </div>
           {/if}
+
+          <div class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-3">
+            {#if showDownloadCta}
+              <div class="min-w-0">
+                {#if downloadState === 'idle'}
+                  {#if inLibrary}
+                    <!--
+                      The catalog id is the library id for Discover imports, so an
+                      exact match means the transfer is already done. Only the idle
+                      state reaches this branch: an in-flight or terminal transfer
+                      state keeps its own rendering below.
+                    -->
+                    <div class="flex flex-wrap items-center gap-3">
+                      <p role="status" class="text-sm font-medium text-(--color-primary)">
+                        {t('discover.inLibrary')}
+                      </p>
+                      <Button variant="secondary" size="sm" onclick={onOpenBook}>
+                        {t('discover.openBook')}
+                      </Button>
+                    </div>
+                  {:else}
+                    <Button variant="accent" size="lg" onclick={onDownload}>
+                      {#snippet leadingIcon()}
+                        <Download size={16} strokeWidth={2.2} aria-hidden="true" />
+                      {/snippet}
+                      {t('discover.download')}
+                    </Button>
+                  {/if}
+                {:else if downloadState === 'downloading'}
+                  <p role="status" class="text-sm text-(--color-text-muted)">
+                    {t('discover.downloading')}
+                  </p>
+                  {#if progressPct !== null}
+                    <div
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={progressPct}
+                      class="mt-2 h-1.5 w-56 rounded-full bg-(--color-edge)"
+                    >
+                      <div
+                        class="h-1.5 rounded-full bg-linear-to-r from-(--color-brand-start) to-(--color-brand) transition-all"
+                        style="width: {progressPct}%"
+                      ></div>
+                    </div>
+                  {/if}
+                  <button
+                    type="button"
+                    class="mt-2 text-sm font-semibold text-(--color-brand-text) underline-offset-4 hover:underline"
+                    onclick={onCancelDownload}
+                  >
+                    {t('discover.downloadCancel')}
+                  </button>
+                {:else if downloadState === 'importing'}
+                  <p role="status" class="text-sm text-(--color-text-muted)">
+                    {t('discover.importing')}
+                  </p>
+                {:else if downloadState === 'imported'}
+                  <p role="status" class="text-sm font-medium text-(--color-primary)">
+                    {t('discover.imported')}
+                  </p>
+                {:else if downloadState === 'cancelled'}
+                  <p role="status" class="text-sm text-(--color-text-muted)">
+                    {t('discover.downloadCancelled')}
+                  </p>
+                  <Button variant="secondary" size="sm" class="mt-2" onclick={onRetryDownload}>
+                    {t('discover.retry')}
+                  </Button>
+                {:else}
+                  <p role="alert" class="text-sm text-(--color-text-muted)">
+                    {t('discover.downloadFailed')}{#if downloadError !== null}
+                      {` (${downloadError})`}{/if}
+                  </p>
+                  <Button variant="secondary" size="sm" class="mt-2" onclick={onRetryDownload}>
+                    {t('discover.retry')}
+                  </Button>
+                {/if}
+              </div>
+            {/if}
+            {#if externalLink !== null}
+              <a
+                href={externalLink.url}
+                target="_blank"
+                rel="noreferrer"
+                class="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-(--color-brand-text) transition-colors hover:bg-(--color-brand-soft)"
+              >
+                {externalLabel}
+                <ExternalLink size={14} strokeWidth={2} aria-hidden="true" />
+              </a>
+            {/if}
+          </div>
         </div>
       </div>
+
       {#if description !== undefined}
-        <p
-          id={DESCRIPTION_ID}
-          bind:this={descriptionEl}
-          class="mt-3 text-sm text-(--color-text-muted)"
-          class:max-h-20={!descriptionExpanded}
-          class:overflow-hidden={!descriptionExpanded}
-        >
-          {description}
-        </p>
-        {#if descriptionOverflows}
-          <button
-            type="button"
-            class="mt-1 text-sm font-medium text-(--color-primary) hover:underline"
-            aria-expanded={descriptionExpanded}
-            aria-controls={DESCRIPTION_ID}
-            onclick={() => (descriptionExpanded = !descriptionExpanded)}
+        <div class="mt-6 border-t border-(--color-edge) pt-5">
+          <p
+            id={DESCRIPTION_ID}
+            bind:this={descriptionEl}
+            class="text-sm leading-relaxed text-(--color-secondary) {!descriptionExpanded &&
+            descriptionOverflows
+              ? 'mask-b-from-45%'
+              : ''}"
+            class:max-h-20={!descriptionExpanded}
+            class:overflow-hidden={!descriptionExpanded}
           >
-            {descriptionExpanded
-              ? t('discover.descriptionShowLess')
-              : t('discover.descriptionShowMore')}
-          </button>
-        {/if}
-      {/if}
-      {#if formatLabels.length > 0}
-        <div class="mt-3 flex flex-wrap items-center gap-1.5">
-          <span class="text-xs font-medium text-(--color-primary)">{t('discover.formats')}</span>
-          {#each formatLabels as label (label)}
-            <span
-              class="inline-flex items-center rounded-full border border-(--color-border) bg-(--color-surface-subtle) px-2 py-0.5 text-xs font-medium text-(--color-secondary)"
+            {description}
+          </p>
+          {#if descriptionOverflows}
+            <button
+              type="button"
+              class="mt-2 text-sm font-semibold text-(--color-brand-text) underline-offset-4 hover:underline"
+              aria-expanded={descriptionExpanded}
+              aria-controls={DESCRIPTION_ID}
+              onclick={() => (descriptionExpanded = !descriptionExpanded)}
             >
-              {label}
-            </span>
-          {/each}
+              {descriptionExpanded
+                ? t('discover.descriptionShowLess')
+                : t('discover.descriptionShowMore')}
+            </button>
+          {/if}
         </div>
-      {/if}
-      {#if externalLink !== null}
-        <a
-          href={externalLink.url}
-          target="_blank"
-          rel="noreferrer"
-          class="mt-3 inline-flex text-sm text-(--color-primary) hover:underline"
-        >
-          {externalLabel}
-        </a>
       {/if}
       {#if access !== null}
         <DiscoverAccessSection {access} {t} />
       {/if}
-      {#if showDownloadCta}
-        <div class="mt-4">
-          {#if downloadState === 'idle'}
-            {#if inLibrary}
-              <!--
-                The catalog id is the library id for Discover imports, so an
-                exact match means the transfer is already done. Only the idle
-                state reaches this branch: an in-flight or terminal transfer
-                state keeps its own rendering below.
-              -->
-              <div class="flex flex-wrap items-center gap-3">
-                <p role="status" class="text-sm font-medium text-(--color-primary)">
-                  {t('discover.inLibrary')}
-                </p>
-                <button
-                  type="button"
-                  class="inline-flex rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-                  onclick={onOpenBook}
-                >
-                  {t('discover.openBook')}
-                </button>
-              </div>
-            {:else}
-              <button
-                type="button"
-                class="inline-flex rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-                onclick={onDownload}
-              >
-                {t('discover.download')}
-              </button>
-            {/if}
-          {:else if downloadState === 'downloading'}
-            <p role="status" class="text-sm text-(--color-text-muted)">
-              {t('discover.downloading')}
-            </p>
-            {#if progressPct !== null}
-              <div
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={progressPct}
-                class="mt-2 h-1.5 w-full rounded-full bg-(--color-border)"
-              >
-                <div
-                  class="h-1.5 rounded-full bg-(--color-primary) transition-all"
-                  style="width: {progressPct}%"
-                ></div>
-              </div>
-            {/if}
-            <button
-              type="button"
-              class="mt-2 text-sm text-(--color-primary) hover:underline"
-              onclick={onCancelDownload}
-            >
-              {t('discover.downloadCancel')}
-            </button>
-          {:else if downloadState === 'importing'}
-            <p role="status" class="text-sm text-(--color-text-muted)">{t('discover.importing')}</p>
-          {:else if downloadState === 'imported'}
-            <p role="status" class="text-sm font-medium text-(--color-primary)">
-              {t('discover.imported')}
-            </p>
-          {:else if downloadState === 'cancelled'}
-            <p role="status" class="text-sm text-(--color-text-muted)">
-              {t('discover.downloadCancelled')}
-            </p>
-            <button
-              type="button"
-              class="mt-2 rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-              onclick={onRetryDownload}
-            >
-              {t('discover.retry')}
-            </button>
-          {:else}
-            <p role="alert" class="text-sm text-(--color-text-muted)">
-              {t('discover.downloadFailed')}{#if downloadError !== null}
-                {` (${downloadError})`}{/if}
-            </p>
-            <button
-              type="button"
-              class="mt-2 rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-              onclick={onRetryDownload}
-            >
-              {t('discover.retry')}
-            </button>
-          {/if}
-        </div>
-      {/if}
     {/if}
   {/snippet}
   {#snippet footer()}
-    <button
-      type="button"
-      class="rounded-md border border-(--color-border) px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-surface-subtle)"
-      onclick={onDismiss}
-    >
+    <Button variant="secondary" size="sm" onclick={onDismiss}>
       {t('discover.dismiss')}
-    </button>
+    </Button>
   {/snippet}
 </Modal>

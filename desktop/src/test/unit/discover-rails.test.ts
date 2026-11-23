@@ -424,7 +424,7 @@ describe('discover rails — coverless books render as text cards, not dropped',
     const card = readSource('DiscoverCard.svelte');
     // The text card is a real surface with the title and author, not a blank tile.
     expect(card).toContain('discover-text-card');
-    expect(card).toContain('bg-(--color-surface)');
+    expect(card).toContain('to-(--color-horizon-fade)');
     expect(card).toContain('text-(--color-primary)');
     expect(card).toContain('text-(--color-text-muted)');
     expect(card).toContain('{book.title}');

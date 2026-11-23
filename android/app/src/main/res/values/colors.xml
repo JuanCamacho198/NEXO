@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Splash background matching the app's dark canvas (BgMain #0B1120). -->
-    <color name="splash_background">#0B1120</color>
+    <!-- Splash background: the brand tile's base warm paper. The launcher icon
+         plate is flat white (drawable/ic_launcher_background.xml), not this
+         colour: the two surfaces meet at the splash handoff, and #FFFAF4 is
+         warm enough to keep the splash from looking like a blank white screen. -->
+    <color name="splash_background">#FFFAF4</color>
 
-    <!-- Adaptive launcher icon background: the NEXO brand navy
-         (brand/README.md). A dark surface, which is why the mark layer is built
-         from the -dark brand export: see drawable/ic_launcher_foreground.xml. -->
-    <color name="ic_launcher_background">#0D1D3B</color>
+    <!-- Kept for the adaptive icon's background layer on any surface that still
+         resolves a colour instead of the drawable. The drawn plate is white; see
+         drawable/ic_launcher_background.xml. -->
+    <color name="ic_launcher_background">#FFFFFFFF</color>
 </resources>

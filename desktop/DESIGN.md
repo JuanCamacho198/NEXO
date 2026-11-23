@@ -174,6 +174,40 @@ The same roles invert on `[data-theme='light']`: ground becomes `#eef2f7`, surfa
 
 **The Token-Only Rule.** Components reference semantic tokens, never raw hex or `rgba()`. A theme-dependent color hardcoded in a component (`red-50`, `bg-[rgba(...)]`) is a bug, not a style.
 
+### NEXO Ember (shell and Home, 2026-11 redesign)
+
+The new logo's ribbon orange (`#FFA620 → #F7781A → #FF2D0F`) replaces NEXO Blue as the signal on the **sidebar, titlebar and Home**. It is a staged migration: every other screen keeps NEXO Blue until it is redesigned, so the ember lives in its own tokens (`--color-brand-*`) rather than in `--color-accent`. When the last screen moves, `--color-accent` points at the ember and these tokens collapse into it.
+
+- **Fill:** `brand-start → brand` gradient with `brand-on` (#1F0D02) ink. White text on the ember fails AA and is never used; the only cream-on-ember is the active-nav icon glyph (a graphic, ≥3:1 on `brand → brand-end`).
+- **Text:** `brand-text` — #FF8B3D on navy, #B03A0B on the light shell.
+- **Owners:** the resume CTA (the only filled ember surface), the active nav item, progress fills, the streak, section-heading markers, "view all" and Import (ember label on a quiet pill — Import no longer uses coral).
+- **Hero backdrop:** `HomeHorizon` — a night planet lit by the ember at its rim, drawn in SVG from `--color-horizon-*` tokens; its left third fades to the hero surface so text never sits on the geometry.
+- **Light shell layering:** rail `#E3E9F1` → ground `#EAEEF4` → cards `#F7F9FC` (`--color-sidebar-bg`, `--color-shell-ground`, `--color-home-card`), so the light window is three planes rather than one white sheet. In dark these alias the global tokens.
+
+### Shell chrome
+
+On sidebar routes the custom titlebar floats transparent over the window's top 36px (drag region plus window controls); the rail runs to the top edge and the content column starts below the band. The reader keeps the in-flow titlebar because its own chrome sits at the top of the content.
+
+### Atoms carry the language
+
+Controls are styled in the shared atoms, not per screen: `Button` (`accent` = the one ember fill, `secondary` = quiet pill on `--color-edge`, `link` = ember text, `danger-outline` = arms a destructive confirmation; every non-tab variant is a pill), `FilterChip` (toggle chip with `aria-pressed`) and `Panel` (edge border). Screens that use the atoms inherit the redesign without being edited. Non-control layout recipes (`panelClass`, `headingMarker`, `coverGrid`, `railGrid`) live in `shared/ui/emberStyles.ts`.
+
+### Estadísticas
+
+One summary plane with hairline-divided figures (not a wall of tiles), the activity chart beside the streak, genres beside the most-read ranking, then reading habits. Charts follow the dataviz method: the minutes series is the ember (2px smoothed line, area wash, dashed grid with minute ticks, a crosshair and a single drawn marker for the active or latest point over larger invisible hit targets); genres use a validated categorical order, ember first (`--color-chart-1..6`, separate light and dark steps, checked for lightness band, chroma, adjacent CVD and normal-vision separation and 3:1 against the card).
+
+### Estantería (Library)
+
+The catalogue is book-first: covers at a 2:3 ratio in an auto-fill grid (min 10.5rem), no card box around them, the reading progress as a hairline on the cover's bottom edge, and one action per book (ember "Continue" when started, quiet "Start" otherwise). The cover itself opens the book; "Open book", details and the rest live in the `···` menu. Titles reserve two lines so every row's action aligns. Toolbar, filters and view toggle use the ember for the active state; Import is the same ember-label pill as Home. A cover-less book shows a book glyph, not its title, so the title is never rendered twice.
+
+### Ajustes (Settings)
+
+A settings page is a divided list, not a stack of cards. `Panel` is an open section under a top hairline (`sectionClass`: `border-t` on the edge token, no fill, no radius); `inline` panels put the title and description left and their one or two controls right. Group headings (Respaldo, Exportar…) sit above their sections at `text-xl`. The only filled blocks left are transient callouts (a danger confirm, an error or warning line). Tabs are pills in one segmented track beside the back button; when the row is narrower than every label needs (Spanish ~61rem), idle tabs fold to their icon with the label kept as accessible name and tooltip, and only the selected tab keeps its text, so the track never wraps or paints a scrollbar. Switches are full-width rows (label and hint left, `SwitchTrack` right, ember when on, the same track as the sidebar theme toggle). Ember marks one action per section (Connect Drive, Export everything, Save when there are changes); the rest are edge pills.
+
+### Lector (Reader chrome)
+
+The reader's bars stay quiet so the page leads. Chrome controls are round (`chromeControl.ts`): bare until hovered, and the toggle of an open panel takes the ember wash. The bottom bar centres one instrument, the pager track: previous, the page field, next, then fit and zoom after a divider, all inside one edge-token capsule. Reading progress is an ember fill on a slate track, and the bookmark count is an ember badge on its button. The four side panels (contents, search, text settings, bookmarks) share one frame (`readerDrawer.ts` + `ReaderDrawerHeader`): a floating sheet on the dialog scrim, a heading marker beside the title, and the close button in the panel. Inside, rows are open (no bordered cards); the current chapter, the selected zoom and the active theme take the ember soft wash.
+
 ## Typography
 
 **Display Font:** Manrope (with Segoe UI, Arial, sans-serif)
@@ -247,7 +281,7 @@ The form language is consistently rounded with no sharp corners. Radii scale wit
 - **Corner Style:** `24px` (`--radius-xl`).
 - **Background:** Glass surface by default; recessed surface for read-only blocks.
 - **Shadow Strategy:** `--shadow-soft` at rest (see Elevation & Depth).
-- **Border:** 1px `{colors.hairline}`; `Panel` headers use a bottom hairline at 80% opacity.
+- **Border:** 1px `{colors.hairline}` on cards. `Panel` is not a card: it renders as an open section under a top hairline (see Ajustes).
 - **Internal Padding:** `12 / 16 / 24px` (`sm / md / lg`), with a `16px`–`20px` header band.
 - **Rule:** Blocks are siblings on the ground, never cards inside cards. The Home continue-reading block is an accepted exception: it is a single bordered panel whose inner book row is borderless by design, so it reads as one visual plane rather than a card inside a card. The runtime detector's `nested-cards` hit on that block is a known false positive and must not be "fixed" by removing the panel border.
 

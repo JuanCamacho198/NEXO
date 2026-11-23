@@ -153,6 +153,11 @@ export interface HighlightActionOpts {
   text?: string;
   x?: number;
   y?: number;
+  /**
+   * The highlight's on-screen box, when the viewer can measure it (EPUB). The
+   * menu then sits above the text; without it, it falls back to the point.
+   */
+  anchor?: { left: number; right: number; top: number; bottom: number };
 }
 
 // ─── Sync Observability (PR3) ─────────────────────────────────────

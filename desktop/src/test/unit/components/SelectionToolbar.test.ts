@@ -266,13 +266,37 @@ describe('SelectionToolbar', () => {
     expect(getByLabelText('Translate')).toBeTruthy();
     expect(getByLabelText('Define')).toBeTruthy();
 
-    // Each icon-only button has an associated tooltip
+    // Each icon-only button has an associated tooltip, in reading order: the
+    // two lookups a reader reaches for first, then saving, then copying.
     const tooltips = getAllByRole('tooltip');
     expect(tooltips).toHaveLength(4);
-    expect(tooltips[0]).toHaveTextContent('Copy');
-    expect(tooltips[1]).toHaveTextContent('Add to Dictionary');
-    expect(tooltips[2]).toHaveTextContent('Translate');
-    expect(tooltips[3]).toHaveTextContent('Define');
+    expect(tooltips[0]).toHaveTextContent('Translate');
+    expect(tooltips[1]).toHaveTextContent('Define');
+    expect(tooltips[2]).toHaveTextContent('Add to Dictionary');
+    expect(tooltips[3]).toHaveTextContent('Copy');
+  });
+
+  // The pill is compact and centred inside the box the placement reserved,
+  // and a caret points at the selection, like the highlight menu's.
+  it('centres the compact pill over the selection with a caret pointing at it', () => {
+    const { container } = render(SelectionToolbar, {
+      ...baseProps(),
+      selectedText: 'hello',
+      selectionData: makeSelectionData({ text: 'hello' }),
+    });
+    const row = container.querySelector('[role="toolbar"]') as HTMLElement;
+    expect(row.className).toContain('w-max');
+    expect(row.className).not.toContain('justify-between');
+    expect(
+      Number(/margin-left:\s*(\d+)px/.exec(row.getAttribute('style') ?? '')?.[1]),
+    ).toBeGreaterThan(0);
+
+    const caret = document.querySelector('[data-testid="selection-toolbar-caret"]') as HTMLElement;
+    expect(caret).not.toBeNull();
+    // Selection centre in window space: 100 + (40 + 160) / 2 = 200; the caret
+    // is 10px wide, so its left edge sits at 195 unless the pill clamps it.
+    const left = Number(/left:\s*(-?[\d.]+)px/.exec(caret.getAttribute('style') ?? '')?.[1]);
+    expect(left).toBeGreaterThan(0);
   });
 
   // ── Selection data forwarding (race-condition fix) ─────────────────────

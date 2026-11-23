@@ -114,7 +114,7 @@
     {@const book = recentShelfBooks[0]!}
     {@render shelfBookCard(book)}
   {:else}
-    <ul class="grid grid-cols-1 gap-2 md:grid-cols-2">
+    <ul class="grid grid-cols-1 gap-3 md:grid-cols-2">
       {#each recentShelfBooks as book}
         <li>
           {@render shelfBookCard(book)}

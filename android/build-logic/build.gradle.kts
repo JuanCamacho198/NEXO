@@ -1,5 +1,6 @@
 plugins {
     `kotlin-dsl`
+    id("com.diffplug.spotless") version "7.2.1"
 }
 
 dependencies {
@@ -15,4 +16,26 @@ dependencies {
     // `gradle/libs.versions.toml` (`spotless = "7.2.1"`), same as the entries
     // above mirror the catalog.
     implementation("com.diffplug.spotless:spotless-plugin-gradle:7.2.1")
+
+    // The licence-name normaliser is pure logic that decides how the shipped
+    // inventory is grouped, so it is unit-tested in the build it runs in rather
+    // than below the module it feeds.
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+}
+
+// build-logic is an `includeBuild`, so the repository-wide `nexo.kotlin.formatting`
+// plugin never reaches it (it is applied per module in the main build). This
+// module is where the licence task and its normaliser live, so it carries its
+// own identical gate instead of leaving those files unformatted.
+spotless {
+    kotlin {
+        target("**/*.kt", "**/*.kts")
+        targetExclude("build/**")
+        ktlint()
+    }
 }

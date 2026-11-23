@@ -49,7 +49,8 @@ describe('chrome control recipe (U4.1)', () => {
   it('exposes the shared constants with canonical Tailwind v4 syntax', () => {
     expect(CHROME_ICON_BUTTON).toContain('min-w-11');
     expect(CHROME_ICON_BUTTON).toContain('min-h-11');
-    expect(CHROME_ICON_BUTTON).toContain('rounded-lg');
+    // NEXO ember: chrome controls are round, like every other icon control.
+    expect(CHROME_ICON_BUTTON).toContain('rounded-full');
     expect(CHROME_PAGE_FIELD).toContain('w-12.5');
     expect(CHROME_DIVIDER).toBe('h-5 w-px bg-(--color-border)');
     for (const value of [
@@ -103,16 +104,16 @@ describe('no local chrome control class string remains (U4.3)', () => {
     }
   });
 
-  it('the recipe itself carries no pill', () => {
+  // The rejected form was never the radius but the paper plane: a control that
+  // wears `bg-(--color-surface)` reads as a white pill on the chrome.
+  it('the recipe itself never wears the paper plane', () => {
     const source = readComponent('chromeControl.ts');
-    expect(source).not.toContain('rounded-full');
     expect(source).not.toContain('bg-(--color-surface)');
   });
 
   it('FitControls uses the recipe for both fit buttons', () => {
     const source = readComponent('FitControls.svelte');
     expect(source).toContain("chromeIconButton('action')");
-    expect(source).not.toContain('rounded-full');
     expect(source).not.toContain('bg-(--color-surface)');
   });
 });

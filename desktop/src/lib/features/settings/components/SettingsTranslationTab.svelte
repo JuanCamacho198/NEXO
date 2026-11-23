@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { sectionClass } from '$lib/shared/ui/emberStyles';
+  import { headingMarker } from '$lib/shared/ui/emberStyles';
   import type { MessageKey } from '$lib/shared/i18n';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
@@ -192,6 +194,11 @@
     onSave(draftSourceValue, draftTargetValue);
   }
 
+  /** Entries shown before "show all"; the rest stay one click away. */
+  const HISTORY_PREVIEW = 4;
+  let showFullHistory = $state(false);
+  const visibleHistory = $derived(showFullHistory ? history : history.slice(0, HISTORY_PREVIEW));
+
   function formatDate(iso: string): string {
     const parsed = new Date(iso);
     if (Number.isNaN(parsed.getTime())) return iso;
@@ -204,13 +211,16 @@
     role="tabpanel"
     id="tabpanel-traduccion"
     aria-labelledby="tab-traduccion"
-    class="relative flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+    class="relative flex flex-1 flex-col overflow-y-auto px-8 pt-4 pb-12"
   >
-    <section class="space-y-5 w-full max-w-none">
+    <section class="w-full max-w-5xl space-y-6">
       <header class="flex flex-col gap-1">
-        <h1 class="text-3xl font-semibold tracking-tight text-(--color-primary)">
-          {t('settings.translation.title')}
-        </h1>
+        <div class="flex items-center gap-3">
+          <div class="h-7 {headingMarker}" aria-hidden="true"></div>
+          <h1 class="m-0 text-[1.75rem] font-bold tracking-[-0.02em] text-(--color-primary)">
+            {t('settings.translation.title')}
+          </h1>
+        </div>
         <p class="text-sm text-(--color-text-muted)">{t('settings.translation.subtitle')}</p>
       </header>
 
@@ -230,54 +240,69 @@
 {/if}
 
 {#snippet body()}
-  <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-5 space-y-4">
-    <div class="flex flex-col gap-2">
-      <label class="text-sm font-medium text-(--color-primary)" for="translation-source">
-        {t('settings.translation.sourceLabel')}
-      </label>
-      <Dropdown
-        options={sourceOptions}
-        value={draftSourceOption}
-        onchange={(detail) => handleSourceChange(detail.value)}
-        class="w-full"
-      />
-      <p class="text-xs text-(--color-text-muted)">{t('settings.translation.sourceHint')}</p>
-    </div>
+  <div class="space-y-5">
+    <div class="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium text-(--color-primary)" for="translation-source">
+          {t('settings.translation.sourceLabel')}
+        </label>
+        <Dropdown
+          options={sourceOptions}
+          value={draftSourceOption}
+          onchange={(detail) => handleSourceChange(detail.value)}
+          class="w-full"
+        />
+        <p class="text-xs text-(--color-text-muted)">{t('settings.translation.sourceHint')}</p>
+      </div>
 
-    <div class="flex flex-col gap-2">
-      <label class="text-sm font-medium text-(--color-primary)" for="translation-target">
-        {t('settings.translation.targetLabel')}
-      </label>
-      <Dropdown
-        options={targetOptions}
-        value={draftTargetOption}
-        onchange={(detail) => handleTargetChange(detail.value)}
-        class="w-full"
-      />
-      <p class="text-xs text-(--color-text-muted)">{t('settings.translation.targetHint')}</p>
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium text-(--color-primary)" for="translation-target">
+          {t('settings.translation.targetLabel')}
+        </label>
+        <Dropdown
+          options={targetOptions}
+          value={draftTargetOption}
+          onchange={(detail) => handleTargetChange(detail.value)}
+          class="w-full"
+        />
+        <p class="text-xs text-(--color-text-muted)">{t('settings.translation.targetHint')}</p>
+      </div>
     </div>
 
     {#if isDegeneratePair}
       <p
         data-testid="translation-same-language-warning"
-        class="rounded-lg border border-(--color-warning)/40 bg-(--color-warning)/10 px-3 py-2 text-sm text-(--color-primary)"
+        class="rounded-(--radius-md) border border-(--color-warning)/40 bg-(--color-warning)/10 px-4 py-3 text-sm text-(--color-primary)"
       >
         {t('settings.translation.sameLanguageWarning', { language: degenerateLanguageLabel })}
       </p>
     {/if}
 
-    <Button variant="primary" loading={isSaving} onclick={handleSave} disabled={!isDirty}>
+    <Button
+      variant={isDirty ? 'accent' : 'secondary'}
+      loading={isSaving}
+      onclick={handleSave}
+      disabled={!isDirty}
+    >
       {t('settings.translation.save')}
     </Button>
   </div>
 
-  <div class="rounded-xl border border-(--color-border) bg-(--color-surface) p-5 space-y-4">
+  <div class="{sectionClass} space-y-4">
     <header class="flex items-center justify-between gap-3">
-      <h2 class="text-xl font-semibold text-(--color-primary)">
-        {t('settings.translation.historyTitle')}
-      </h2>
+      <div class="flex items-center gap-2.5">
+        <h2 class="text-base font-semibold text-(--color-primary)">
+          {t('settings.translation.historyTitle')}
+        </h2>
+        {#if history.length > 0}
+          <span
+            class="rounded-full bg-(--color-surface-hover) px-2 py-0.5 text-xs font-semibold tabular-nums text-(--color-secondary)"
+            >{history.length}</span
+          >
+        {/if}
+      </div>
       <Button
-        variant="danger"
+        variant="danger-outline"
         size="sm"
         loading={isClearingHistory}
         disabled={history.length === 0}
@@ -292,23 +317,53 @@
     {:else if history.length === 0}
       <p class="text-sm text-(--color-text-muted)">{t('settings.translation.historyEmpty')}</p>
     {:else}
-      <ul class="flex flex-col divide-y divide-(--color-border)">
-        {#each history as entry (entry.cacheKey)}
-          <li class="flex flex-col gap-1 py-3">
-            <div class="flex items-center gap-2 text-xs text-(--color-text-muted)">
-              <span class="font-medium uppercase">{entry.sourceLanguage}</span>
-              <span aria-hidden="true">→</span>
-              <span class="font-medium uppercase">{entry.targetLanguage}</span>
-              <span aria-hidden="true">·</span>
+      <!-- A short preview by default: a long history used to push the
+        Definition section a screen away. Each side is clamped to three lines;
+        the full list is one click away. -->
+      <ul
+        class="-mx-3 flex flex-col gap-0.5"
+        id="translation-history"
+        data-testid="translation-history"
+      >
+        {#each visibleHistory as entry (entry.cacheKey)}
+          <li
+            class="grid gap-x-8 gap-y-1.5 rounded-(--radius-md) px-3 py-3 transition-colors hover:bg-(--color-surface-hover) sm:grid-cols-2"
+          >
+            <div class="flex items-center gap-2 text-xs text-(--color-text-muted) sm:col-span-2">
+              <span
+                class="inline-flex items-center gap-1 rounded-full bg-(--color-brand-soft) px-2 py-0.5 font-semibold tracking-wide text-(--color-brand-text) uppercase"
+              >
+                {entry.sourceLanguage}
+                <span aria-hidden="true">→</span>
+                {entry.targetLanguage}
+              </span>
               <time datetime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
             </div>
-            <p class="text-sm text-(--color-primary) wrap-break-word">{entry.originalText}</p>
-            <p class="text-sm text-(--color-text-muted) wrap-break-word">
+            <p class="line-clamp-3 text-sm leading-relaxed text-(--color-primary) wrap-break-word">
+              {entry.originalText}
+            </p>
+            <p
+              class="line-clamp-3 text-sm leading-relaxed text-(--color-text-muted) wrap-break-word"
+            >
               {entry.translatedText}
             </p>
           </li>
         {/each}
       </ul>
+      {#if history.length > HISTORY_PREVIEW}
+        <Button
+          variant="link"
+          size="sm"
+          class="-ml-3"
+          aria-expanded={showFullHistory}
+          aria-controls="translation-history"
+          onclick={() => (showFullHistory = !showFullHistory)}
+        >
+          {showFullHistory
+            ? t('settings.translation.historyShowLess')
+            : t('settings.translation.historyShowAll', { count: history.length })}
+        </Button>
+      {/if}
     {/if}
   </div>
 {/snippet}
