@@ -14,10 +14,10 @@
 
     The launcher icon is an adaptive icon with TWO layers, not one:
 
-      background  the tile's warm gradient, full-bleed 0..512.
+      background  flat white, full-bleed 0..512.
                   It must be the background layer, because a launcher masks
                   that layer to its own shape (circle, squircle, teardrop) and
-                  the tile is exactly the surface the icon is supposed to be.
+                  the plate is exactly the surface the icon is supposed to be.
 
       foreground  the ribbon and its knocked-out "N", scaled to 78%.
                   A launcher only guarantees the central 66 of its 108 canvas.
@@ -76,13 +76,14 @@ $mark = if ($wmStart -ge 0 -and $wmEnd -gt $wmStart) {
     [regex]::Replace($svg, $tilePattern, '')
 }
 
-# --- background: the tile's gradient, full bleed ---------------------------
-$tileGradient = [regex]::Match($svg, '<linearGradient id="paint2".*?</linearGradient>')
-if (-not $tileGradient.Success) { throw "No tile gradient (paint2) in $source." }
+# --- background: flat white, full bleed ------------------------------------
+# The plate used to be the tile's gradient (#FFFAF4 -> #FBE3CC, `paint2`). Its
+# warm end is a peach that reads as an orange background on every mask shape,
+# so the plate is flat white instead: the same colour the "N" is knocked out
+# to, which makes the icon one surface rather than a mark floating on paper.
 $backgroundSvg = @"
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>$($tileGradient.Value)</defs>
-  <rect width="512" height="512" fill="url(#paint2)" />
+  <rect width="512" height="512" fill="#FFFFFF" />
 </svg>
 "@
 $backgroundPath = Join-Path $work 'launcher-background.svg'

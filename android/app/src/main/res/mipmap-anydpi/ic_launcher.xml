@@ -4,9 +4,11 @@
      (lint ObsoleteSdkInt) and `anydpi` already outranks every density bucket, so
      all supported devices resolve this file.
 
-     - background: the brand tile's warm gradient (@drawable/ic_launcher_background),
-       full-bleed 512x512. A launcher masks this layer to its own shape, so the
-       tile IS the icon body on every mask.
+     - background: flat white (@drawable/ic_launcher_background), full-bleed
+       512x512. A launcher masks this layer to its own shape, so this plate IS
+       the icon body on every mask, and white is the colour the "N" is knocked
+       out to. It used to be the brand tile's warm gradient; its peach end read
+       as an orange background, so the plate is neutral now.
      - foreground: the bookmark ribbon with the "N" knocked out, no tile and no
        wordmark, scaled to 78% so it stays inside the 66x66 of the 108x108 canvas
        that survives any launcher mask. Geometry and the exact transform are

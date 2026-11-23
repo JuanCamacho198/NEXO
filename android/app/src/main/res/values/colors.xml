@@ -1,17 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Splash background: the brand tile's base warm paper. Same value as
-         @color/ic_launcher_background on purpose, so the Android 12 splash,
-         the launcher icon's plate and the tile are one surface. A navy here
-         would frame the warm tile in a colour the brand no longer uses. -->
+    <!-- Splash background: the brand tile's base warm paper. The launcher icon
+         plate is flat white (drawable/ic_launcher_background.xml), not this
+         colour: the two surfaces meet at the splash handoff, and #FFFAF4 is
+         warm enough to keep the splash from looking like a blank white screen. -->
     <color name="splash_background">#FFFAF4</color>
 
-    <!-- Adaptive launcher icon background, for every launcher mask shape
-         (circle, squircle, rounded square, teardrop). The foreground drawable
-         already carries the rounded tile of brand/nexo-logo-inverso.svg; this
-         layer only needs to fill the corners the mask keeps outside that tile,
-         and it does so with the same warm paper, so the icon reads as one
-         square instead of a tile floating on a contrasting plate.
-         See drawable/ic_launcher_foreground.xml. -->
-    <color name="ic_launcher_background">#FFFAF4</color>
+    <!-- Kept for the adaptive icon's background layer on any surface that still
+         resolves a colour instead of the drawable. The drawn plate is white; see
+         drawable/ic_launcher_background.xml. -->
+    <color name="ic_launcher_background">#FFFFFFFF</color>
 </resources>
