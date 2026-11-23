@@ -39,9 +39,10 @@
   // recipe width and the label never splits between the slash and the number.
   // Without `shrink-0` the label was a flex shrink victim and rendered as "/"
   // above "43" whenever the field grew greedy (see CHROME_PAGE_FIELD).
-  const wrapClass = 'flex shrink-0 items-center gap-1 text-xs text-(--color-text-muted)';
+  const wrapClass = 'flex shrink-0 items-center gap-0.5 text-sm text-(--color-text-muted)';
   const inputClass = CHROME_PAGE_FIELD;
-  const totalClass = 'shrink-0 whitespace-nowrap text-xs text-(--color-text-muted)';
+  const totalClass =
+    'shrink-0 whitespace-nowrap pr-1.5 text-sm tabular-nums text-(--color-text-muted)';
 </script>
 
 <span class={wrapClass}>

@@ -206,9 +206,10 @@
   --color-reader-chrome: #0f1b2e;
   /* Progress-track fill for the chrome bars. A track on the chrome plane needs
      a step PAST the plane, not backwards to --color-surface-strong (1.29:1
-     against #0f1b2e). #3c5f88 is 2.52:1, so the empty track is a visible
-     affordance rather than a smear. */
-  --color-chrome-track: #3c5f88;
+     against #0f1b2e). #44546b is 2.24:1, so the empty track is a visible
+     affordance rather than a smear; it is a desaturated slate so the ember
+     fill, not a second blue, carries the reading. */
+  --color-chrome-track: #44546b;
 
   /* Surface hierarchy */
   --color-surface-hover: rgba(148, 173, 206, 0.18);

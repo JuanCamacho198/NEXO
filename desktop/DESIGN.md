@@ -204,6 +204,10 @@ The catalogue is book-first: covers at a 2:3 ratio in an auto-fill grid (min 10.
 
 A settings page is a divided list, not a stack of cards. `Panel` is an open section under a top hairline (`sectionClass`: `border-t` on the edge token, no fill, no radius); `inline` panels put the title and description left and their one or two controls right. Group headings (Respaldo, Exportar…) sit above their sections at `text-xl`. The only filled blocks left are transient callouts (a danger confirm, an error or warning line). Tabs are pills in one segmented track beside the back button; when the row is narrower than every label needs (Spanish ~61rem), idle tabs fold to their icon with the label kept as accessible name and tooltip, and only the selected tab keeps its text, so the track never wraps or paints a scrollbar. Switches are full-width rows (label and hint left, `SwitchTrack` right, ember when on, the same track as the sidebar theme toggle). Ember marks one action per section (Connect Drive, Export everything, Save when there are changes); the rest are edge pills.
 
+### Lector (Reader chrome)
+
+The reader's bars stay quiet so the page leads. Chrome controls are round (`chromeControl.ts`): bare until hovered, and the toggle of an open panel takes the ember wash. The bottom bar centres one instrument, the pager track: previous, the page field, next, then fit and zoom after a divider, all inside one edge-token capsule. Reading progress is an ember fill on a slate track, and the bookmark count is an ember badge on its button. The four side panels (contents, search, text settings, bookmarks) share one frame (`readerDrawer.ts` + `ReaderDrawerHeader`): a floating sheet on the dialog scrim, a heading marker beside the title, and the close button in the panel. Inside, rows are open (no bordered cards); the current chapter, the selected zoom and the active theme take the ember soft wash.
+
 ## Typography
 
 **Display Font:** Manrope (with Segoe UI, Arial, sans-serif)
