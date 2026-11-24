@@ -12,6 +12,7 @@ import com.nexo.data.session.TranslationPreferences
 import com.nexo.debug.DebugLog
 import com.nexo.domain.definition.WordLanguage
 import com.nexo.domain.event.UiEvent
+import com.nexo.domain.model.Bookmark
 import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.SearchResult
 import com.nexo.domain.repository.DefinitionRepository
@@ -825,6 +826,35 @@ class ReaderViewModel(
             currentChapterIndex = session.currentChapterIndex,
             readiumLocator = session.readiumLocator,
         )
+    }
+
+    fun deleteBookmark(bookmarkId: String) = interactionHolder.deleteBookmark(bookmarkId)
+
+    /**
+     * Jumps to [bookmark]: PDF page, else its stored Readium locator, else (legacy
+     * bookmarks with only a chapter CFI) the chapter whose spine index matches.
+     */
+    fun onBookmarkSelected(bookmark: Bookmark) {
+        val location = bookmark.cfiLocation
+        if (location.startsWith("pdfpage:")) {
+            location.removePrefix("pdfpage:").toIntOrNull()?.let { lifecycleHolder.goToPdfPage(it) }
+            return
+        }
+        val locator = bookmark.locatorJson?.let { CfiMigrator.jsonToLocator(it) }
+        if (locator != null) {
+            viewModelScope.launch(mainDispatcher) { _navigateToLocator.emit(locator) }
+            return
+        }
+        val spineIndex =
+            Regex("/6/(\\d+)")
+                .find(location)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.toIntOrNull()
+                ?.minus(1) ?: return
+        val chapters = lifecycleHolder.state.value.chapters
+        val listPosition = chapters.indexOfFirst { it.index == spineIndex }.takeIf { it >= 0 }
+        lifecycleHolder.goToChapter(listPosition ?: spineIndex.coerceIn(chapters.indices))
     }
 
     companion object {

@@ -583,7 +583,60 @@ object NexoIcons {
 
     /** Alias for performance row. */
     val Performance = Icons.Rounded.BarChart
+
+    // ── Reader toolbar ──
+    //
+    // One outline family for the whole reader header: the same 1.8 stroke and
+    // round joins as the bottom-nav outlines, so no glyph in the bar reads
+    // heavier than its neighbours. Mixing filled Material glyphs (pencil,
+    // "TT", bullets) with outlines made the bar look assembled from parts.
+
+    val ReaderBack =
+        nexoIcon("ReaderBack", autoMirror = true) {
+            strokedPathFromXml("M19.5,12 H5 M11,5.5 L4.5,12 L11,18.5")
+        }
+
+    val ReaderSearch =
+        nexoIcon("ReaderSearch") {
+            strokedPathFromXml("M17.6,10.8 A6.8,6.8 0 1 1 4,10.8 A6.8,6.8 0 1 1 17.6,10.8Z M15.8,15.8 L20.5,20.5")
+        }
+
+    /** Big "A" beside a small "a": text appearance, not text editing. */
+    val ReaderAppearance =
+        nexoIcon("ReaderAppearance") {
+            strokedPathFromXml("M2.8,19 L7.6,5.5 L12.4,19 M4.4,14.6 H10.8")
+            strokedPathFromXml("M21,16.1 A2.9,2.9 0 1 1 15.2,16.1 A2.9,2.9 0 1 1 21,16.1Z M21,12.4 V19")
+        }
+
+    val ReaderContents =
+        nexoIcon("ReaderContents") {
+            strokedPathFromXml("M9,6.5 H20.5 M9,12 H20.5 M9,17.5 H20.5")
+            filledPathFromXml("M5.2,6.5 A1.2,1.2 0 1 1 2.8,6.5 A1.2,1.2 0 1 1 5.2,6.5Z")
+            filledPathFromXml("M5.2,12 A1.2,1.2 0 1 1 2.8,12 A1.2,1.2 0 1 1 5.2,12Z")
+            filledPathFromXml("M5.2,17.5 A1.2,1.2 0 1 1 2.8,17.5 A1.2,1.2 0 1 1 5.2,17.5Z")
+        }
+
+    /** Highlighter marker: the reader's highlights list, distinct from [Pencil] (edit). */
+    val ReaderHighlighter =
+        nexoIcon("ReaderHighlighter") {
+            strokedPathFromXml("M9,11 L3,17 V20 H12 L15,17")
+            strokedPathFromXml("M22,12 L17.4,16.6 A2,2 0 0 1 14.6,16.6 L9.4,11.4 A2,2 0 0 1 9.4,8.6 L14,4")
+        }
+
+    val ReaderBookmark =
+        nexoIcon("ReaderBookmark") {
+            strokedPathFromXml(READER_BOOKMARK_PATH)
+        }
+
+    /** [ReaderBookmark] filled, same silhouette so the press pulse does not jump. */
+    val ReaderBookmarkFilled =
+        nexoIcon("ReaderBookmarkFilled") {
+            filledPathFromXml(READER_BOOKMARK_PATH)
+            strokedPathFromXml(READER_BOOKMARK_PATH)
+        }
 }
+
+private const val READER_BOOKMARK_PATH = "M18.5,20.5 L12,16.8 L5.5,20.5 V5.5 A2,2 0 0 1 7.5,3.5 H16.5 A2,2 0 0 1 18.5,5.5Z"
 
 @Preview(showBackground = true, heightDp = 1200)
 @Composable
@@ -663,6 +716,13 @@ private fun NexoIconsGalleryDarkPreview() {
                 "BookmarkFilled" to NexoIcons.BookmarkFilled,
                 "Help" to NexoIcons.Help,
                 "MenuBurger" to NexoIcons.MenuBurger,
+                "ReaderBack" to NexoIcons.ReaderBack,
+                "ReaderSearch" to NexoIcons.ReaderSearch,
+                "ReaderAppearance" to NexoIcons.ReaderAppearance,
+                "ReaderContents" to NexoIcons.ReaderContents,
+                "ReaderHighlighter" to NexoIcons.ReaderHighlighter,
+                "ReaderBookmark" to NexoIcons.ReaderBookmark,
+                "ReaderBookmarkFilled" to NexoIcons.ReaderBookmarkFilled,
             )
 
         Column(
@@ -779,6 +839,13 @@ private fun NexoIconsGalleryLightPreview() {
                 "BookmarkFilled" to NexoIcons.BookmarkFilled,
                 "Help" to NexoIcons.Help,
                 "MenuBurger" to NexoIcons.MenuBurger,
+                "ReaderBack" to NexoIcons.ReaderBack,
+                "ReaderSearch" to NexoIcons.ReaderSearch,
+                "ReaderAppearance" to NexoIcons.ReaderAppearance,
+                "ReaderContents" to NexoIcons.ReaderContents,
+                "ReaderHighlighter" to NexoIcons.ReaderHighlighter,
+                "ReaderBookmark" to NexoIcons.ReaderBookmark,
+                "ReaderBookmarkFilled" to NexoIcons.ReaderBookmarkFilled,
             )
 
         Column(

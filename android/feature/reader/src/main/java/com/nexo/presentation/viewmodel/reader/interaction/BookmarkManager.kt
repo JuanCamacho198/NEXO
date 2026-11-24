@@ -99,6 +99,18 @@ internal class BookmarkManager(
         }
     }
 
+    /** Soft delete, so the removal syncs like any other edit. */
+    fun deleteBookmark(bookmarkId: String) {
+        val existing = store.value.bookmarks.find { it.id == bookmarkId } ?: return
+        val now = System.currentTimeMillis()
+        scope.launch(mainDispatcher) {
+            readerRepository.upsertBookmark(
+                existing.copy(deletedAtEpochMillis = now, updatedAtEpochMillis = now),
+                activeUser.requireUserId(),
+            )
+        }
+    }
+
     override fun onCleared() {
         observeBookmarksJob?.cancel()
     }
