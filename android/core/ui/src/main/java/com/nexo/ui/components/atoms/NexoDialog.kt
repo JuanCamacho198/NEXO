@@ -1,28 +1,44 @@
 package com.nexo.ui.components.atoms
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import com.nexo.ui.theme.nexoColors
 
 /**
  * Visual variant for [NexoDialog] that drives the confirm button
@@ -40,37 +56,26 @@ enum class NexoDialogVariant {
 }
 
 /**
- * Material 3 `AlertDialog` with a fixed two-button layout
- * (filled confirm + dismiss `TextButton`).
+ * NEXO confirmation dialog: an optional icon tile, a bold centred title, a
+ * quieter body, and two equal-width actions (tonal dismiss, filled confirm).
  *
- * @param title Dialog title rendered as Material 3 default `headlineSmall`
- *   (the `AlertDialog` title slot).
- * @param body Dialog body text rendered in the `AlertDialog` text slot
- *   with Material 3 default body styling.
- * @param confirmText Label of the confirm [Button].
- * @param dismissText Label of the dismiss `TextButton`.
- * @param onConfirm Invoked when the user taps the confirm button. NOT
- *   called on outside-tap or back-press — those go through [onDismiss].
- * @param onDismiss Invoked when the user taps the dismiss button,
- *   taps outside the dialog, or presses back. Use this to clear the
- *   dialog state in the ViewModel.
- * @param modifier Modifier applied to the underlying `AlertDialog`.
- * @param icon Optional icon rendered centered above the title inside a
- *   circular `surfaceVariant` container. Tint follows [variant] unless
- *   [confirmColor] is explicitly set.
- * @param variant Controls the confirm button color/content and icon tint.
- *   Default [NexoDialogVariant.INFO].
- * @param confirmColor Optional explicit color override for the confirm
- *   button container. When provided, takes precedence over [variant] for
- *   the container color; the content color still follows [variant].
+ * Built on [Dialog] rather than `AlertDialog`: the stock layout put the actions
+ * as small end-aligned buttons and the icon in a grey disc, which read as a
+ * system prompt instead of part of the app. The two full-width buttons give both
+ * choices a real touch target and make the primary one obvious.
  *
- * **Visual**: rounded `AlertDialog` with `extraLarge` corners; when [icon]
- * is set it renders inside a circular `surfaceVariant` container above the
- * title. The confirm action is a filled [Button] in the variant color with
- * `onPrimary`/`onError` contrast; the dismiss action is a `TextButton`.
- * **Behavior**: non-cancelable programmatically — the dialog can only
- * be dismissed via [onConfirm] or [onDismiss].
- * **Recomposition**: recomposes when any parameter changes.
+ * @param title Dialog title, `titleLarge` extra-bold, centred.
+ * @param body Body text, `bodyMedium` in the secondary text colour, centred.
+ * @param confirmText Label of the filled confirm button.
+ * @param dismissText Label of the tonal dismiss button.
+ * @param onConfirm Invoked when the user taps the confirm button. NOT called on
+ *   outside-tap or back-press — those go through [onDismiss].
+ * @param onDismiss Invoked on the dismiss button, an outside tap, or back.
+ * @param modifier Modifier applied to the dialog surface.
+ * @param icon Optional icon shown in a tile tinted with the action colour.
+ * @param variant Drives the confirm colour and icon tint. Default [NexoDialogVariant.INFO].
+ * @param confirmColor Optional override for the confirm container colour; the
+ *   content colour still follows [variant].
  */
 @Composable
 fun NexoDialog(
@@ -85,6 +90,7 @@ fun NexoDialog(
     variant: NexoDialogVariant = NexoDialogVariant.INFO,
     confirmColor: Color? = null,
 ) {
+    val colors = nexoColors
     val effectiveConfirmColor =
         confirmColor ?: when (variant) {
             NexoDialogVariant.INFO -> MaterialTheme.colorScheme.primary
@@ -97,53 +103,97 @@ fun NexoDialog(
             NexoDialogVariant.DESTRUCTIVE -> MaterialTheme.colorScheme.onError
             NexoDialogVariant.SUCCESS -> MaterialTheme.colorScheme.onPrimary
         }
+    // The window fades in on its own; the card adds a small spring so the
+    // dialog arrives instead of just appearing.
+    val appear = remember { Animatable(DialogEnterScale) }
+    LaunchedEffect(Unit) { appear.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow)) }
 
-    AlertDialog(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.extraLarge,
-        onDismissRequest = onDismiss,
-        title = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                if (icon != null) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(48.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = effectiveConfirmColor,
-                            modifier = Modifier.size(32.dp),
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = appear.value
+                        scaleY = appear.value
+                    }.clip(DialogShape)
+                    .background(colors.surface)
+                    .border(1.dp, colors.borderSubtle, DialogShape)
+                    .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (icon != null) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(effectiveConfirmColor.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = effectiveConfirmColor,
+                        modifier = Modifier.size(28.dp),
+                    )
                 }
-                Text(text = title)
+                Spacer(modifier = Modifier.height(16.dp))
             }
-        },
-        text = { Text(text = body) },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = effectiveConfirmColor,
-                        contentColor = effectiveContentColor,
-                    ),
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = colors.textPrimary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { heading() },
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.textSecondary,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(text = confirmText)
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(DialogButtonHeight),
+                    shape = DialogButtonShape,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = colors.surfaceVariant,
+                            contentColor = colors.textPrimary,
+                        ),
+                    elevation = null,
+                ) {
+                    Text(text = dismissText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                }
+                Button(
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f).height(DialogButtonHeight),
+                    shape = DialogButtonShape,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = effectiveConfirmColor,
+                            contentColor = effectiveContentColor,
+                        ),
+                ) {
+                    Text(text = confirmText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = dismissText)
-            }
-        },
-    )
+        }
+    }
 }
+
+private val DialogShape = RoundedCornerShape(28.dp)
+private val DialogButtonShape = RoundedCornerShape(14.dp)
+private val DialogButtonHeight = 48.dp
+private const val DialogEnterScale = 0.92f
 
 @Preview(showBackground = true)
 @Composable
