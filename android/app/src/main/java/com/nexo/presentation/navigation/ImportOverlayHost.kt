@@ -16,14 +16,8 @@ private const val IMPORT_OVERLAY_WATCHDOG_TIMEOUT_MS = 120_000L
 /**
  * Collects [LibraryViewModel.importState] → [NexoImportOverlay] + 120s watchdog.
  *
- * Verbatim from host:
- * ```
- * val importState by libraryViewModel.importState.collectAsStateWithLifecycle()
- * LaunchedEffect(importState) {
- *   if (importState !is BookImportState.Idle) { delay(120_000); libraryViewModel.resetImportState() }
- * }
- * if (importState !is BookImportState.Idle) { NexoImportOverlay(...) }
- * ```
+ * The watchdog resets a stuck import after 120s so the overlay can never trap
+ * the screen.
  */
 @Composable
 fun ImportOverlayHost(
@@ -38,10 +32,11 @@ fun ImportOverlayHost(
         }
     }
 
-    if (importState !is BookImportState.Idle) {
-        NexoImportOverlay(
-            importState = importState,
-            modifier = Modifier.fillMaxSize(),
-        )
-    }
+    // Always composed: the overlay animates itself in and out from importState.
+    // Composing it only while busy skipped both animations (it was already
+    // visible on its first frame and gone before it could fade out).
+    NexoImportOverlay(
+        importState = importState,
+        modifier = Modifier.fillMaxSize(),
+    )
 }
