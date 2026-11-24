@@ -188,8 +188,12 @@ private fun ProgressRing(progress: Float) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val stroke = RingStroke.toPx()
             val inset = stroke / 2
-            val arcSize = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
-            val topLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+            val arcSize =
+                androidx.compose.ui.geometry
+                    .Size(size.width - stroke, size.height - stroke)
+            val topLeft =
+                androidx.compose.ui.geometry
+                    .Offset(inset, inset)
             drawArc(
                 // A tint of the secondary text: surfaceVariant vanished on the dark card.
                 color = colors.textSecondary.copy(alpha = 0.18f),
