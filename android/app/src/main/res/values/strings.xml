@@ -622,4 +622,32 @@
     <string name="book_detail_error_not_found">Book not found</string>
     <string name="edit_metadata_tags">Tags</string>
     <string name="library_author_unknown">Unknown author</string>
+    <!-- Reader footer -->
+    <plurals name="reader_chapter_pages_left">
+        <item quantity="one">%d page left in chapter</item>
+        <item quantity="other">%d pages left in chapter</item>
+    </plurals>
+    <string name="reader_chapter_last_page">Last page of the chapter</string>
+    <string name="reader_scrub_back">Back to where you were</string>
+    <!-- Reader search -->
+    <string name="search_hint_idle">Search words or phrases across the whole book. Accents and capitals don\'t matter.</string>
+    <string name="search_min_chars">Type at least 2 letters</string>
+    <string name="search_no_results_for">No results for “%1$s”</string>
+    <string name="search_no_results_tip">Check the spelling or try a shorter word.</string>
+    <plurals name="search_results_found">
+        <item quantity="one">%d result</item>
+        <item quantity="other">%d results</item>
+    </plurals>
+    <plurals name="search_results_in_chapters">
+        <item quantity="one">in %d chapter</item>
+        <item quantity="other">in %d chapters</item>
+    </plurals>
+    <string name="search_results_capped">Showing the first %1$d</string>
+    <!-- Reader: tapping a note marker or an internal link -->
+    <string name="reader_note_title">Note</string>
+    <string name="reader_link_title">Link</string>
+    <string name="reader_note_go">Go to the note</string>
+    <string name="reader_link_go">Go there</string>
+    <string name="reader_note_close">Close</string>
+    <string name="reader_link_no_preview">This link takes you to another part of the book.</string>
 </resources>

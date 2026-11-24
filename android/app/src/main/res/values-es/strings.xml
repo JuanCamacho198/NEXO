@@ -618,4 +618,35 @@
     <string name="book_detail_error_not_found">Libro no encontrado</string>
     <string name="edit_metadata_tags">Etiquetas</string>
     <string name="library_author_unknown">Autor desconocido</string>
+    <!-- Pie del lector -->
+    <plurals name="reader_chapter_pages_left">
+        <item quantity="one">Queda %d pág. en el capítulo</item>
+        <item quantity="many">Quedan %d págs. en el capítulo</item>
+        <item quantity="other">Quedan %d págs. en el capítulo</item>
+    </plurals>
+    <string name="reader_chapter_last_page">Última página del capítulo</string>
+    <string name="reader_scrub_back">Volver a donde estabas</string>
+    <!-- Búsqueda en el lector -->
+    <string name="search_hint_idle">Busca palabras o frases en todo el libro. Da igual si usas tildes o mayúsculas.</string>
+    <string name="search_min_chars">Escribe al menos 2 letras</string>
+    <string name="search_no_results_for">Sin resultados para «%1$s»</string>
+    <string name="search_no_results_tip">Revisa la ortografía o prueba con una palabra más corta.</string>
+    <plurals name="search_results_found">
+        <item quantity="one">%d resultado</item>
+        <item quantity="many">%d resultados</item>
+        <item quantity="other">%d resultados</item>
+    </plurals>
+    <plurals name="search_results_in_chapters">
+        <item quantity="one">en %d capítulo</item>
+        <item quantity="many">en %d capítulos</item>
+        <item quantity="other">en %d capítulos</item>
+    </plurals>
+    <string name="search_results_capped">Mostrando los primeros %1$d</string>
+    <!-- Lector: tocar una nota o un enlace interno -->
+    <string name="reader_note_title">Nota</string>
+    <string name="reader_link_title">Enlace</string>
+    <string name="reader_note_go">Ir a la nota</string>
+    <string name="reader_link_go">Ir allá</string>
+    <string name="reader_note_close">Cerrar</string>
+    <string name="reader_link_no_preview">Este enlace lleva a otra parte del libro.</string>
 </resources>
