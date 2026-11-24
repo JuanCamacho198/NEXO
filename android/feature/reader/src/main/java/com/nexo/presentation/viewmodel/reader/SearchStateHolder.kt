@@ -15,8 +15,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.services.search.SearchService
+import org.readium.r2.shared.publication.services.search.search
 
 /**
  * UI-level state for the search feature in the reader.
@@ -88,10 +91,18 @@ class SearchStateHolder(
         query: String,
         publication: Publication?,
         bookFormat: String?,
+        chapters: List<BookChapter> = emptyList(),
     ) {
         if (query.isBlank()) {
             searchJob?.cancel()
             _state.update { it.copy(searchQuery = "", searchResults = emptyList(), isSearching = false) }
+            return
+        }
+        // One letter matches most of a book: keep the query but do not search
+        // until it can narrow anything down.
+        if (query.trim().length < MIN_SEARCH_QUERY_LENGTH) {
+            searchJob?.cancel()
+            _state.update { it.copy(searchQuery = query, searchResults = emptyList(), isSearching = false) }
             return
         }
 
@@ -101,7 +112,7 @@ class SearchStateHolder(
         searchJob =
             scope.launch(mainDispatcher) {
                 delay(SEARCH_DEBOUNCE_MS)
-                val results = searchReadiumPublication(query, publication, bookFormat)
+                val results = searchReadiumPublication(query.trim(), publication, bookFormat, chapters)
                 _state.update { it.copy(searchResults = results, isSearching = false) }
             }
     }
@@ -169,7 +180,10 @@ class SearchStateHolder(
             val pageIndex = result.cfi.removePrefix("pdfpage:").toIntOrNull() ?: return
             onGoToPdfPage(pageIndex)
         } else if (publication != null) {
-            val locator = resolveLocatorForSearchResult(result, publication, currentChapterIndex)
+            val locator =
+                result.locatorJson
+                    ?.let { json -> runCatching { Locator.fromJSON(JSONObject(json)) }.getOrNull() }
+                    ?: resolveLocatorForSearchResult(result, publication, currentChapterIndex)
             if (locator != null) {
                 onNavigateToLocator(locator)
             }
@@ -180,54 +194,126 @@ class SearchStateHolder(
     // ── Private helpers ─────────────────────────────────────────────
 
     /**
-     * Full-text search through all reading-order resources of a Readium [Publication].
+     * Full-text search through Readium's search service.
      *
-     * Iterates each resource, extracts plain text (stripping HTML tags), and
-     * returns up to 200 results with snippet context.
+     * Replaces a scan of each chapter's raw HTML, which kept only the FIRST hit
+     * per chapter, matched tag names and attributes ("div", "class"), cut
+     * snippets mid-tag, and was accent-sensitive ("pasion" missed "pasión").
+     * Readium searches the rendered text, case- and accent-insensitively, and
+     * returns every hit with its exact locator and the text around it; the
+     * locator is kept so a tap lands on the word, not on its chapter's start.
+     * Collection stops at [MAX_SEARCH_RESULTS].
      */
+    @OptIn(ExperimentalReadiumApi::class)
     private suspend fun searchReadiumPublication(
         query: String,
         publication: Publication?,
         bookFormat: String?,
+        chapters: List<BookChapter>,
     ): List<SearchResult> {
         if (publication == null || bookFormat != "epub") return emptyList()
 
         return withContext(Dispatchers.IO) {
             val results = mutableListOf<SearchResult>()
-            for ((index, link) in publication.readingOrder.withIndex()) {
-                try {
-                    val resource = publication.get(link) ?: continue
-                    val readResult = resource.read()
-                    val bytes = readResult.getOrNull() ?: continue
-                    val html = bytes.decodeToString()
-
-                    if (html.contains(query, ignoreCase = true)) {
-                        val lowerHtml = html.lowercase()
-                        val lowerQuery = query.lowercase()
-                        val snippetStart = lowerHtml.indexOf(lowerQuery)
-                        val snippetEnd = minOf(snippetStart + query.length + 80, html.length)
-                        val snippet =
-                            html
-                                .substring(maxOf(0, snippetStart - 40), snippetEnd)
-                                .replace(Regex("<[^>]*>"), "")
-                                .replace(Regex("\\s+"), " ")
-                                .trim()
-                        results.add(
-                            SearchResult(
-                                text = snippet,
-                                offset = snippetStart,
-                                chapterIndex = index,
-                                chapterTitle = link.title ?: "Chapter $index",
-                                cfi = "/$index/4/$snippetStart",
-                            ),
-                        )
+            val iterator =
+                runCatching {
+                    publication.search(
+                        query,
+                        SearchService.Options(caseSensitive = false, diacriticSensitive = false),
+                    )
+                }.getOrNull() ?: return@withContext legacySearch(query, publication)
+            try {
+                while (results.size < MAX_SEARCH_RESULTS) {
+                    val page = iterator.next().getOrNull() ?: break
+                    if (page.locators.isEmpty()) break
+                    page.locators.forEach { locator ->
+                        if (results.size < MAX_SEARCH_RESULTS) results += locator.toSearchResult(publication, chapters, results.size)
                     }
-                } catch (_: Exception) {
-                    // Skip resources that can't be read
                 }
+            } finally {
+                runCatching { iterator.close() }
             }
             results
         }
+    }
+
+    /** A Readium search hit as the reader's [SearchResult], with its chapter resolved from the TOC. */
+    private fun Locator.toSearchResult(
+        publication: Publication,
+        chapters: List<BookChapter>,
+        ordinal: Int,
+    ): SearchResult {
+        val file =
+            href
+                .toString()
+                .substringBefore('#')
+                .substringAfterLast('/')
+                .lowercase()
+        val chapterListIndex =
+            chapters.indexOfFirst {
+                it.href
+                    .substringBefore('#')
+                    .substringAfterLast('/')
+                    .lowercase() == file
+            }
+        val readingOrderIndex =
+            publication.readingOrder.indexOfFirst {
+                it.href
+                    .toString()
+                    .substringBefore('#')
+                    .substringAfterLast('/')
+                    .lowercase() == file
+            }
+        val chapterTitle =
+            cleanChapterTitle(chapters.getOrNull(chapterListIndex)?.title)
+                ?: cleanChapterTitle(title)
+                ?: ""
+        return SearchResult(
+            text = text.highlight.orEmpty(),
+            offset = ordinal,
+            chapterIndex = if (chapterListIndex >= 0) chapterListIndex else readingOrderIndex.coerceAtLeast(0),
+            chapterTitle = chapterTitle,
+            before = snippetBefore(text.before.orEmpty()),
+            after = snippetAfter(text.after.orEmpty()),
+            locatorJson = toJSON().toString(),
+            bookProgression = locations.totalProgression?.toFloat(),
+        )
+    }
+
+    /**
+     * The previous raw-HTML scan, kept only for a publication without a search
+     * service (Readium registers one for every EPUB it opens).
+     */
+    private suspend fun legacySearch(
+        query: String,
+        publication: Publication,
+    ): List<SearchResult> {
+        val results = mutableListOf<SearchResult>()
+        for ((index, link) in publication.readingOrder.withIndex()) {
+            try {
+                val resource = publication.get(link) ?: continue
+                val text =
+                    resource
+                        .read()
+                        .getOrNull()
+                        ?.decodeToString()
+                        ?.replace(Regex("<[^>]*>"), " ") ?: continue
+                val at = text.indexOf(query, ignoreCase = true)
+                if (at < 0) continue
+                results +=
+                    SearchResult(
+                        text = text.substring(at, at + query.length),
+                        offset = at,
+                        chapterIndex = index,
+                        chapterTitle = cleanChapterTitle(link.title).orEmpty(),
+                        before = snippetBefore(text.substring(0, at)),
+                        after = snippetAfter(text.substring(at + query.length)),
+                    )
+            } catch (_: Exception) {
+                // Skip resources that can't be read
+            }
+        }
+        return results
     }
 
     /**
