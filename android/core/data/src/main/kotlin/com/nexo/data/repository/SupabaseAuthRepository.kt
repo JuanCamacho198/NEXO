@@ -143,8 +143,19 @@ class SupabaseAuthRepository(
             Unit
         }
 
+    /**
+     * The persisted session, read only after supabase-kt has loaded it.
+     *
+     * supabase-kt restores the session from storage in the background on a cold
+     * start; `currentSessionOrNull()` before that finishes returns null, which
+     * reads as "signed out" and sent a signed-in user to the login on some
+     * launches (the startup check measured 0 ms: it never waited). Same wait as
+     * [com.nexo.data.session.SupabaseSessionManager].
+     */
     override suspend fun getCurrentSession(): Result<AuthSession?> =
         runCatching {
+            // A failed wait still falls through to the read below, as before.
+            runCatching { supabase.auth.awaitInitialization() }
             val session = supabase.auth.currentSessionOrNull()
             session?.let { mapToAuthSession(it.user) }
         }

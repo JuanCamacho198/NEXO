@@ -575,6 +575,27 @@ fun NexoNavHost(
                     ImportOverlayHost(libraryViewModel = libraryViewModel)
                 }
 
+                // Losing the session (sign-out, or an account removed while the app
+                // runs) sends the user to the login from HERE, once the session is
+                // actually null. Callers must not navigate themselves: signOut()
+                // first stops sync (up to 5s) and only then clears the session, so
+                // a caller that navigated straight away landed on the login while
+                // the old session was still set. The login's "already signed in"
+                // effect then bounced back to Home, and the session cleared under
+                // it, stranding the user on an empty Home with no bottom bar.
+                // Changing NavHost's startDestination does not move an existing
+                // back stack, so the transition needs this explicit navigation.
+                var wasAuthenticated by remember { mutableStateOf(isAuthenticated) }
+                LaunchedEffect(isAuthenticated) {
+                    if (wasAuthenticated && !isAuthenticated) {
+                        navController.navigate(NexoDestination.Auth.route) {
+                            popUpTo(0) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                    wasAuthenticated = isAuthenticated
+                }
+
                 // DrivePromptHost handles its own dialog; no host-level dialog needed
 
                 // ── Debug FAB ──────────────────────────────────────────────────

@@ -2,7 +2,14 @@ package com.nexo.presentation.navigation.feature
 
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -87,12 +94,9 @@ fun NavGraphBuilder.settingsGraph(
             onInitialRouteConsumed = onSettingsInitialRouteConsumed,
             appThemeMode = appThemeMode,
             onAppThemeModeChanged = onAppThemeModeChanged,
-            onLogout = {
-                authViewModel.signOut()
-                navController.navigate(NexoDestination.Auth.route) {
-                    popUpTo(0) { inclusive = true }
-                }
-            },
+            // Only signs out: NexoNavHost navigates to the login once the session
+            // is actually cleared. Navigating here raced the async sign-out.
+            onLogout = { authViewModel.signOut() },
             customHighlightColors = readerPreferences.load().customHighlightColors,
             onUpdateCustomHighlightColor = { index, hex ->
                 val prefs = readerPreferences
@@ -167,24 +171,26 @@ fun NavGraphBuilder.settingsGraph(
     }
 
     composable(route = NexoDestination.SettingsAddons.route) {
-        AddonManagementRoute(
-            registry = addonRegistry,
-            onBack = { navController.popBackStack() },
-            hasConsent = { addonId -> addonRegistry.hasAddonConsent(addonId) },
-            onConsentChange = { addonId, granted ->
-                if (granted) {
-                    addonRegistry.recordAddonConsent(addonId)
-                } else {
-                    addonRegistry.revokeAddonConsent(addonId)
-                }
-            },
-            onNavigateToLegal = {
-                navController.navigate(NexoDestination.SettingsLegal.route)
-            },
-            onOpenCapabilities = { addonId ->
-                navController.navigate(addonCapabilitiesRoute(addonId))
-            },
-        )
+        StatusBarInset {
+            AddonManagementRoute(
+                registry = addonRegistry,
+                onBack = { navController.popBackStack() },
+                hasConsent = { addonId -> addonRegistry.hasAddonConsent(addonId) },
+                onConsentChange = { addonId, granted ->
+                    if (granted) {
+                        addonRegistry.recordAddonConsent(addonId)
+                    } else {
+                        addonRegistry.revokeAddonConsent(addonId)
+                    }
+                },
+                onNavigateToLegal = {
+                    navController.navigate(NexoDestination.SettingsLegal.route)
+                },
+                onOpenCapabilities = { addonId ->
+                    navController.navigate(addonCapabilitiesRoute(addonId))
+                },
+            )
+        }
     }
 
     composable(route = NexoDestination.SettingsLegal.route) {
@@ -194,21 +200,27 @@ fun NavGraphBuilder.settingsGraph(
     }
 
     composable(route = NexoDestination.SettingsPrivacy.route) {
-        PrivacyPolicyScreen(
-            onBack = { navController.popBackStack() },
-        )
+        StatusBarInset {
+            PrivacyPolicyScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
     }
 
     composable(route = NexoDestination.SettingsTerms.route) {
-        TermsScreen(
-            onBack = { navController.popBackStack() },
-        )
+        StatusBarInset {
+            TermsScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
     }
 
     composable(route = NexoDestination.SettingsLicenses.route) {
-        LicensesScreen(
-            onBack = { navController.popBackStack() },
-        )
+        StatusBarInset {
+            LicensesScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
     }
 
     composable(
@@ -231,5 +243,24 @@ fun NavGraphBuilder.settingsGraph(
             },
             onBack = { navController.popBackStack() },
         )
+    }
+}
+
+/**
+ * Root-graph pages built on `NexoSettingsSubPage`. That frame zeroes its top bar
+ * insets because inside SettingsScreen's nested host the status bar is already
+ * padded; reached from this root graph nothing pads it, and the title drew under
+ * the status bar. The same pages inside Settings keep their frame untouched.
+ */
+@Composable
+private fun StatusBarInset(content: @Composable () -> Unit) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .statusBarsPadding(),
+    ) {
+        content()
     }
 }
