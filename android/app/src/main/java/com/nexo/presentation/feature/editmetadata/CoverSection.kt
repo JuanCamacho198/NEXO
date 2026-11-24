@@ -42,10 +42,10 @@ import coil3.request.fallback
 import coil3.request.placeholder
 import com.nexo.R
 import com.nexo.domain.model.Book
-import com.nexo.ui.R as UiR
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.motion.pressScaleClickable
 import com.nexo.ui.theme.nexoColors
+import com.nexo.ui.R as UiR
 
 /**
  * The cover as the head of the form: centred, lifted with a shadow, and itself
