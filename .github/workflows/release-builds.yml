@@ -415,14 +415,15 @@ jobs:
           # earlier in this same leg, so a renewal cannot leave a stale
           # thumbprint that makes signtool fail. `--config` takes a JSON patch.
           #
-          # It is inlined here from a file rather than from `${{ env.X }}`
-          # because the `env` context is NOT available on a step's `with:`
-          # inputs — it resolves to an empty string there, which would set
-          # certificateThumbprint to "" and silently turn OS signing back off
-          # while the job still went green. The import step writes the patch to
-          # signing-config.json on Linux/macOS too (as `{}`), so the shell
-          # substitution never fails and the patch is empty off Windows.
-          args: ${{ matrix.platform.args }} --config "$(cat ../signing-config.json)"
+          # The patch is passed by PATH, never as `--config "$(cat ...)"`:
+          # tauri-action hands this string straight to the CLI without a shell,
+          # so on the Linux leg the substitution arrived verbatim and the build
+          # died with "Provided config path .../$(cat ../signing-config.json)
+          # does not exist". `env` is still not used here because that context
+          # is unavailable on a step's `with:` inputs. The import step writes
+          # the patch on Linux/macOS too (as `{}`), so the path always resolves
+          # and the override is empty off Windows.
+          args: ${{ matrix.platform.args }} --config ../signing-config.json
 
   desktop-checksums:
     name: Desktop checksums (SHA256SUMS.txt)
