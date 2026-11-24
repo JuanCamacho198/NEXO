@@ -343,6 +343,29 @@ jobs:
         with:
           workspaces: desktop/src-tauri
 
+      - name: Export Apple signing env when it exists
+        # tauri-bundler decides to sign by checking whether these variables
+        # EXIST, not whether they carry a value: an empty APPLE_CERTIFICATE
+        # makes it run `security import` on nothing and fail the whole leg.
+        # Writing them to GITHUB_ENV only when non-empty keeps them out of the
+        # bundler's environment until the certificates are configured.
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -n "${!v:-}" ]; then
+              { echo "${v}<<EOF"; echo "${!v}"; echo 'EOF'; } >> "$GITHUB_ENV"
+            fi
+          done
+          echo "Apple signing env export finished; empty secrets were skipped, not exported."
+
       - name: Build Tauri bundles and attach to release
         # Pinned to a released tag: this is the release path, and the v0.2.0
         # incident was caused by a floating action ref changing behavior
@@ -376,21 +399,15 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.VITE_GOOGLE_OAUTH_CLIENT_ID }}
           VITE_GOOGLE_BOOKS_KEY: ${{ secrets.VITE_GOOGLE_BOOKS_KEY }}
-          # OS code signing (audit #16). tauri-bundler reads these names
-          # itself; passing them as env is the whole wiring. Empty on the
-          # Linux leg is fine — the bundler ignores them there, and the
-          # preflight step above already enforced presence on macOS/Windows.
-          #
-          # macOS: the bundler imports APPLE_CERTIFICATE into a temporary
-          # keychain, codesigns with APPLE_SIGNING_IDENTITY, and — when
-          # APPLE_ID/APPLE_PASSWORD/APPLE_TEAM_ID are also present — submits
-          # the .app to notarytool and staples the ticket to the .dmg.
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # OS code signing is NOT wired through this env block on purpose:
+          # tauri-bundler decides to sign by checking whether the variables
+          # EXIST, not whether they have a value, so an unset secret arriving
+          # as an empty string makes the macOS leg run `security import` on
+          # nothing and die with 'failed to import keychain certificate'.
+          # The 'Export Apple signing env when it exists' step above writes
+          # them to GITHUB_ENV only when they carry a value, so the bundler
+          # stays unsigned instead of broken. Windows carries its thumbprint
+          # through the signing patch file, never through env.
         with:
           # Monorepo: the Tauri project lives at desktop/, and the runner
           # has no cwd context for the action otherwise.
