@@ -1,13 +1,17 @@
 package com.nexo.presentation.screen.readium
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.viewinterop.AndroidView
@@ -17,11 +21,13 @@ import androidx.fragment.app.commit
 import com.nexo.presentation.viewmodel.ReaderViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import org.readium.r2.navigator.HyperlinkNavigator
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.util.AbsoluteUrl
 
 private const val FRAGMENT_COMMIT_MS = 200L
 private const val TAG = "ReadiumReaderContent"
@@ -54,6 +60,8 @@ fun rememberFragmentHost(
     containerId: Int,
     initialLocator: Locator?,
     viewModel: ReaderViewModel,
+    onInternalLink: (link: Link, noteHtml: String?) -> Unit = { _, _ -> },
+    onExternalLink: (url: String) -> Unit = {},
 ): FragmentHostState {
     val containerReady = remember { mutableStateOf(false) }
     val navigatorFragment = remember { mutableStateOf<EpubNavigatorFragment?>(null) }
@@ -61,6 +69,33 @@ fun rememberFragmentHost(
     val navigatorFactory =
         remember(publication, navigatorConfig) {
             EpubNavigatorFactory(publication, navigatorConfig)
+        }
+
+    // Links inside the book (footnote markers like [3], cross references) are
+    // never followed on the tap itself: a stray touch on a tiny superscript
+    // used to throw the reader to the end of the chapter. The tap is handed to
+    // the caller, which offers the note and a way to go there instead. Readium
+    // passes the note's HTML when the book marks it (epub:type="noteref").
+    // Callbacks arrive from the WebView's JS bridge, so they are posted to main.
+    val currentOnInternalLink by rememberUpdatedState(onInternalLink)
+    val currentOnExternalLink by rememberUpdatedState(onExternalLink)
+    val linkListener =
+        remember {
+            val main = Handler(Looper.getMainLooper())
+            object : EpubNavigatorFragment.Listener {
+                override fun shouldFollowInternalLink(
+                    link: Link,
+                    context: HyperlinkNavigator.LinkContext?,
+                ): Boolean {
+                    val noteHtml = (context as? HyperlinkNavigator.FootnoteContext)?.noteContent
+                    main.post { currentOnInternalLink(link, noteHtml) }
+                    return false
+                }
+
+                override fun onExternalLinkActivated(url: AbsoluteUrl) {
+                    main.post { currentOnExternalLink(url.toString()) }
+                }
+            }
         }
 
     // ── Reset container readiness when the publication changes ──
@@ -92,6 +127,7 @@ fun rememberFragmentHost(
         val factory =
             navigatorFactory.createFragmentFactory(
                 initialLocator = resolvedLocator,
+                listener = linkListener,
             )
         fragmentManager.fragmentFactory = factory
         fragmentManager.commit {

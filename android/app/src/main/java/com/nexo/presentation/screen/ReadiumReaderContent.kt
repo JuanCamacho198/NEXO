@@ -2,6 +2,8 @@
 
 package com.nexo.presentation.screen
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import android.view.View
 import androidx.compose.foundation.layout.Box
@@ -9,8 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
@@ -23,14 +28,21 @@ import com.nexo.presentation.screen.readium.rememberSelectionBridge
 import com.nexo.presentation.screen.readium.rememberTapZonesBridge
 import com.nexo.presentation.screen.readium.toEpubPreferences
 import com.nexo.presentation.viewmodel.ReaderViewModel
+import com.nexo.presentation.viewmodel.reader.extractFragmentText
+import com.nexo.presentation.viewmodel.reader.htmlToPlainText
+import com.nexo.ui.components.molecules.NoteLinkSheet
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
+import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.util.Url
 
 private const val TAG = "ReadiumReaderContent"
 
@@ -59,6 +71,10 @@ fun ReadiumReaderContent(
     val fragmentManager = remember { context.supportFragmentManager }
     val containerId = remember { View.generateViewId() }
 
+    // A tapped in-book link waits here for the reader's choice (see NoteLinkSheet).
+    var pendingLink by remember { mutableStateOf<PendingLink?>(null) }
+    val linkScope = rememberCoroutineScope()
+
     val hostState =
         rememberFragmentHost(
             publication = publication,
@@ -67,6 +83,22 @@ fun ReadiumReaderContent(
             containerId = containerId,
             initialLocator = initialLocator,
             viewModel = viewModel,
+            onInternalLink = { link, noteHtml ->
+                val bookNote = noteHtml?.let(::htmlToPlainText)
+                pendingLink = PendingLink(link = link, preview = bookNote, isLoading = bookNote == null)
+                if (bookNote == null) {
+                    // The book does not mark this as a note: read the text the
+                    // link points at, so a plain [3] still shows its note.
+                    linkScope.launch {
+                        val text = withContext(Dispatchers.IO) { readLinkTargetText(publication, link) }
+                        pendingLink = pendingLink?.takeIf { it.link == link }?.copy(preview = text, isLoading = false)
+                    }
+                }
+            },
+            onExternalLink = { url ->
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                    .onFailure { Log.w(TAG, "No app to open external link", it) }
+            },
         )
 
     rememberSelectionBridge(
@@ -248,6 +280,25 @@ fun ReadiumReaderContent(
 
     val currentOnShowChrome by rememberUpdatedState(onShowChrome)
 
+    pendingLink?.let { pending ->
+        NoteLinkSheet(
+            preview = pending.preview,
+            isLoading = pending.isLoading,
+            onGo = {
+                pendingLink = null
+                val frag = hostState.navigatorFragment.value ?: return@NoteLinkSheet
+                viewModel.lifecycleHolder.markReturnPoint()
+                linkScope.launch {
+                    runCatching { frag.go(pending.link, animated = false) }
+                        .onFailure { Log.w(TAG, "Failed to follow in-book link", it) }
+                }
+                // Show the footer so "Back to where you were" is in reach.
+                currentOnShowChrome?.invoke()
+            },
+            onDismiss = { pendingLink = null },
+        )
+    }
+
     Box(modifier = modifier) {
         Box(modifier = Modifier.fillMaxSize()) {
             hostState.FragmentHostView(viewModel = viewModel, modifier = Modifier.fillMaxSize())
@@ -268,3 +319,33 @@ private fun View.findWebView(): android.webkit.WebView? {
     }
     return null
 }
+
+/** An in-book link the reader tapped, with its note text once known. */
+private data class PendingLink(
+    val link: Link,
+    val preview: String?,
+    val isLoading: Boolean,
+)
+
+/**
+ * Text of the element [link]'s fragment points at (a note body), read from the
+ * linked resource. Null for a link without a fragment, or when nothing readable
+ * is there.
+ */
+private suspend fun readLinkTargetText(
+    publication: Publication,
+    link: Link,
+): String? =
+    runCatching {
+        val href = link.href.toString()
+        val fragment = href.substringAfter('#', "").takeIf { it.isNotBlank() } ?: return@runCatching null
+        val url = Url(href.substringBefore('#')) ?: return@runCatching null
+        val resourceLink = publication.linkWithHref(url) ?: return@runCatching null
+        val html =
+            publication
+                .get(resourceLink)
+                ?.read()
+                ?.getOrNull()
+                ?.decodeToString() ?: return@runCatching null
+        extractFragmentText(html, fragment)
+    }.getOrNull()
