@@ -45,6 +45,7 @@ import com.nexo.presentation.screen.reader.readerSnackbarMessage
 import com.nexo.presentation.screen.reader.rememberReaderSelectionCallbacks
 import com.nexo.presentation.viewmodel.ReaderViewModel
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
+import com.nexo.presentation.viewmodel.reader.cleanChapterTitle
 import com.nexo.ui.components.atoms.NexoSnackbar
 import com.nexo.ui.components.molecules.ReadingProgressBar
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -176,7 +177,15 @@ fun ReaderScreen(
             footer = {
                 ReadingProgressBar(
                     progressPercent = sessionUiState.progressPercent,
-                    label = sessionUiState.progressLabel,
+                    chapterTitle = sessionUiState.chapterTitle,
+                    chapterPagesLeft = sessionUiState.chapterPagesLeft,
+                    fallbackLabel = sessionUiState.progressLabel,
+                    chapterStarts = sessionUiState.chapterStartFractions,
+                    chapterTitles = remember(sessionUiState.chapters) { sessionUiState.chapters.map { cleanChapterTitle(it.title).orEmpty() } },
+                    canGoBack = sessionUiState.scrubReturnLocator != null,
+                    onScrubCommit = { viewModel.lifecycleHolder.onScrubCommitted(it) },
+                    onGoBack = { viewModel.lifecycleHolder.onScrubReturn() },
+                    onGoBackExpired = { viewModel.lifecycleHolder.onScrubReturnExpired() },
                     onRotateScreen = {
                         val activity = context as Activity
                         val portrait = activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
@@ -187,7 +196,6 @@ fun ReaderScreen(
                                 ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                             }
                     },
-                    onProgressChange = { viewModel.lifecycleHolder.onProgressChange(it) },
                 )
             },
             content = {

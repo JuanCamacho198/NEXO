@@ -60,6 +60,7 @@ fun ReaderScreenOverlaysHost(
                     it,
                     sessionUiState.readiumPublication,
                     sessionUiState.bookFormat,
+                    sessionUiState.chapters,
                 )
             },
             onClearQuery = { viewModel.onClearSearch() },
