@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import org.readium.r2.navigator.HyperlinkNavigator
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
@@ -60,6 +61,7 @@ fun rememberFragmentHost(
     containerId: Int,
     initialLocator: Locator?,
     viewModel: ReaderViewModel,
+    initialPreferences: EpubPreferences = EpubPreferences(),
     onInternalLink: (link: Link, noteHtml: String?) -> Unit = { _, _ -> },
     onExternalLink: (url: String) -> Unit = {},
 ): FragmentHostState {
@@ -127,6 +129,9 @@ fun rememberFragmentHost(
         val factory =
             navigatorFactory.createFragmentFactory(
                 initialLocator = resolvedLocator,
+                // The reader's saved appearance from the first frame, instead of
+                // Readium's defaults until the next settings change.
+                initialPreferences = initialPreferences,
                 listener = linkListener,
             )
         fragmentManager.fragmentFactory = factory

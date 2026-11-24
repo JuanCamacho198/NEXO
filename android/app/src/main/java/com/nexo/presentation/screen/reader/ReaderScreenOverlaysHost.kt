@@ -1,23 +1,30 @@
 package com.nexo.presentation.screen.reader
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import com.nexo.R
+import com.nexo.domain.model.Bookmark
 import com.nexo.presentation.feature.highlights.HighlightsSheet
 import com.nexo.presentation.feature.highlights.utils.ChapterLocation
-import com.nexo.presentation.screen.BookmarkRibbonOverlay
+import com.nexo.presentation.screen.PageBookmarkRibbon
 import com.nexo.presentation.viewmodel.ReaderViewModel
 import com.nexo.presentation.viewmodel.reader.AnnotationUiState
 import com.nexo.presentation.viewmodel.reader.SearchUiState
 import com.nexo.presentation.viewmodel.reader.SessionUiState
 import com.nexo.presentation.viewmodel.reader.SettingsUiState
 import com.nexo.presentation.viewmodel.reader.SleepTimerUiState
+import com.nexo.ui.components.molecules.BookmarksSheet
 import com.nexo.ui.components.molecules.ChaptersSheet
 import com.nexo.ui.components.molecules.HighlightAnnotationModal
 import com.nexo.ui.components.molecules.SearchBottomSheet
@@ -42,13 +49,23 @@ fun ReaderScreenOverlaysHost(
     onGoToPageInputChange: (String) -> Unit,
     onGoToPageConfirm: () -> Unit,
     onDismissGoToPage: () -> Unit,
-    bookmarkRibbonVisible: Boolean,
-    onBookmarkRibbonEnd: () -> Unit,
+    pageBookmark: Bookmark?,
+    showBookmarksSheet: Boolean,
+    onDismissBookmarksSheet: () -> Unit,
+    onAddBookmark: () -> Unit,
 ) {
-    BookmarkRibbonOverlay(
-        visible = bookmarkRibbonVisible,
-        onAnimationEnd = onBookmarkRibbonEnd,
-    )
+    PageBookmarkRibbon(visible = pageBookmark != null)
+
+    if (showBookmarksSheet) {
+        BookmarksSheet(
+            bookmarks = annotationUiState.bookmarks,
+            pageBookmark = pageBookmark,
+            onAddBookmark = onAddBookmark,
+            onRemoveBookmark = { viewModel.deleteBookmark(it.id) },
+            onBookmarkSelected = { viewModel.onBookmarkSelected(it) },
+            onDismiss = onDismissBookmarksSheet,
+        )
+    }
 
     if (searchUiState.isSearchActive) {
         SearchBottomSheet(
@@ -84,23 +101,20 @@ fun ReaderScreenOverlaysHost(
             currentChapterIndex = sessionUiState.currentChapterIndex,
             onChapterSelected = { idx -> viewModel.lifecycleHolder.goToChapter(idx) },
             onDismiss = { viewModel.lifecycleHolder.onToggleTocSheet() },
+            progressPercent = sessionUiState.progressPercent,
+            chapterStartFractions = sessionUiState.chapterStartFractions,
         )
     }
 
-    if (settingsUiState.showSplitSettings && sessionUiState.chapters.isNotEmpty()) {
-        val previewText =
-            remember(sessionUiState.previewText, annotationUiState.selectedText, sessionUiState.currentChapterIndex, sessionUiState.chapters) {
-                sessionUiState.previewText.ifBlank {
-                    annotationUiState.selectedText?.takeIf { it.isNotBlank() }
-                        ?: sessionUiState.chapters.getOrNull(sessionUiState.currentChapterIndex)?.title
-                        ?: ""
-                }
-            }
+    AnimatedVisibility(
+        visible = settingsUiState.showSplitSettings && sessionUiState.chapters.isNotEmpty(),
+        enter = slideInVertically(tween(280)) { it } + fadeIn(tween(180)),
+        exit = slideOutVertically(tween(220)) { it } + fadeOut(tween(180)),
+    ) {
         SplitSettingsSheet(
             settings = settingsUiState.readerSettings,
-            previewText = previewText,
             onSettingsChanged = { viewModel.settingsManager.updateReaderSettings(it) },
-            onDismiss = { viewModel.settingsManager.onToggleSplitSettings() },
+            onDismiss = { viewModel.settingsManager.onDismissSplitSettings() },
         )
     }
 

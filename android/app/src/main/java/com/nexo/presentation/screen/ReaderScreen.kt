@@ -38,9 +38,11 @@ import com.nexo.R
 import com.nexo.debug.DebugLog
 import com.nexo.debug.DebugPanel
 import com.nexo.debug.DebugPrefs
+import com.nexo.presentation.screen.reader.BookmarkSpots
 import com.nexo.presentation.screen.reader.ReaderScreenContentHost
 import com.nexo.presentation.screen.reader.ReaderScreenEffects
 import com.nexo.presentation.screen.reader.ReaderScreenOverlaysHost
+import com.nexo.presentation.screen.reader.ReadingSpot
 import com.nexo.presentation.screen.reader.readerSnackbarMessage
 import com.nexo.presentation.screen.reader.rememberReaderSelectionCallbacks
 import com.nexo.presentation.viewmodel.ReaderViewModel
@@ -77,8 +79,7 @@ fun ReaderScreen(
     var goToPageError by remember { mutableStateOf<String?>(null) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var debugPanelVisible by remember { mutableStateOf(false) }
-    var lastBookmarkTrigger by remember { mutableLongStateOf(0L) }
-    var bookmarkRibbonVisible by remember { mutableStateOf(false) }
+    var showBookmarksSheet by remember { mutableStateOf(false) }
 
     var controlsVisible by remember(chromeUiState.isFullscreen) { mutableStateOf(true) }
     var lastInteractionAt by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
@@ -90,18 +91,48 @@ fun ReaderScreen(
             annotationUiState.showTranslationPanel ||
             annotationUiState.showColorPickerPopover
 
+    // While the appearance panel is open the page above it is the live preview:
+    // a tap on the page closes the panel instead of bringing the chrome back.
+    val appearancePanelOpen = settingsUiState.showSplitSettings
+
     val onShowChrome: () -> Unit = {
-        if (!sessionUiState.isLoading && !isSelectionActive) {
+        if (appearancePanelOpen) {
+            viewModel.settingsManager.onDismissSplitSettings()
+        } else if (!sessionUiState.isLoading && !isSelectionActive) {
             controlsVisible = true
             lastInteractionAt = SystemClock.elapsedRealtime()
         }
     }
 
     val onToggleChrome: () -> Unit = {
-        if (!sessionUiState.isLoading && !isSelectionActive) {
+        if (appearancePanelOpen) {
+            viewModel.settingsManager.onDismissSplitSettings()
+        } else if (!sessionUiState.isLoading && !isSelectionActive) {
             controlsVisible = !controlsVisible
             lastInteractionAt = SystemClock.elapsedRealtime()
         }
+    }
+
+    // The page being read, reduced to what a bookmark is compared against.
+    val readingSpot =
+        if ((sessionUiState.bookFormat ?: bookFormat) == "pdf") {
+            ReadingSpot(pdfPage = sessionUiState.currentPdfPage)
+        } else {
+            sessionUiState.readiumLocator?.let { locator ->
+                ReadingSpot(
+                    href = locator.href.toString(),
+                    position = locator.locations.position,
+                    totalProgression = locator.locations.totalProgression,
+                )
+            }
+        }
+    val pageBookmark =
+        remember(annotationUiState.bookmarks, readingSpot) {
+            BookmarkSpots.bookmarkAt(annotationUiState.bookmarks, readingSpot)
+        }
+
+    LaunchedEffect(appearancePanelOpen) {
+        if (appearancePanelOpen) controlsVisible = false
     }
 
     val selectionCallbacks = rememberReaderSelectionCallbacks(viewModel, context, annotationUiState)
@@ -145,13 +176,11 @@ fun ReaderScreen(
         lastInteractionAt = lastInteractionAt,
         currentChapterIndex = sessionUiState.currentChapterIndex,
         currentPdfPage = sessionUiState.currentPdfPage,
-        lastBookmarkTrigger = lastBookmarkTrigger,
         viewModel = viewModel,
         view = view,
         controlsVisible = controlsVisible,
         onControlsVisibleChange = { controlsVisible = it },
         onLastInteractionChange = { lastInteractionAt = it },
-        onBookmarkRibbonVisibleChange = { bookmarkRibbonVisible = it },
         onShowChrome = onShowChrome,
     )
 
@@ -165,10 +194,8 @@ fun ReaderScreen(
                     onNavigateBack = onNavigateBack,
                     onToggleSearch = { viewModel.searchStateHolder.onToggleSearch() },
                     onToggleHighlights = { viewModel.interactionHolder.onToggleHighlightsPanel() },
-                    onCreateBookmark = {
-                        viewModel.createBookmarkFromCurrentPosition()
-                        lastBookmarkTrigger = SystemClock.elapsedRealtime()
-                    },
+                    onOpenBookmarks = { showBookmarksSheet = true },
+                    isPageBookmarked = pageBookmark != null,
                     onToggleSplitSettings = { viewModel.settingsManager.onToggleSplitSettings() },
                     onToggleToc = { viewModel.lifecycleHolder.onToggleTocSheet() },
                     onToggleDebugPanel = { debugPanelVisible = !debugPanelVisible },
@@ -247,8 +274,14 @@ fun ReaderScreen(
                         goToPageInput = ""
                         goToPageError = null
                     },
-                    bookmarkRibbonVisible = bookmarkRibbonVisible,
-                    onBookmarkRibbonEnd = { bookmarkRibbonVisible = false },
+                    pageBookmark = pageBookmark,
+                    showBookmarksSheet = showBookmarksSheet,
+                    onDismissBookmarksSheet = { showBookmarksSheet = false },
+                    onAddBookmark = {
+                        viewModel.createBookmarkFromCurrentPosition()
+                        // Clear the header so the ribbon is seen dropping onto the page.
+                        controlsVisible = false
+                    },
                 )
             },
         )

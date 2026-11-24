@@ -6,8 +6,10 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.view.View
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,7 +19,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.nexo.debug.DebugLog
 import com.nexo.domain.model.Highlight
@@ -83,6 +87,7 @@ fun ReadiumReaderContent(
             containerId = containerId,
             initialLocator = initialLocator,
             viewModel = viewModel,
+            initialPreferences = readerSettings.toEpubPreferences(),
             onInternalLink = { link, noteHtml ->
                 val bookNote = noteHtml?.let(::htmlToPlainText)
                 pendingLink = PendingLink(link = link, preview = bookNote, isLoading = bookNote == null)
@@ -119,7 +124,9 @@ fun ReadiumReaderContent(
     )
 
     // ── Settings sync (readerSettings → EpubPreferences) ──────────
-    LaunchedEffect(readerSettings) {
+    // Keyed on the fragment too: it is created after this effect first runs,
+    // and settings must reach it even if they do not change afterwards.
+    LaunchedEffect(readerSettings, hostState.navigatorFragment.value) {
         delay(300)
         val frag = hostState.navigatorFragment.value ?: return@LaunchedEffect
         try {
@@ -299,8 +306,20 @@ fun ReadiumReaderContent(
         )
     }
 
-    Box(modifier = modifier) {
-        Box(modifier = Modifier.fillMaxSize()) {
+    // The engine has no vertical margin, so it is space around the reading view,
+    // painted with the page colour so it reads as part of the page.
+    Box(modifier = modifier.background(pageBackground(readerSettings))) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        vertical =
+                            readerSettings.layoutPrefs.verticalMargin
+                                .coerceAtLeast(0)
+                                .dp,
+                    ),
+        ) {
             hostState.FragmentHostView(viewModel = viewModel, modifier = Modifier.fillMaxSize())
         }
         if (currentOnShowChrome != null) {
@@ -308,6 +327,12 @@ fun ReadiumReaderContent(
         }
     }
 }
+
+private fun pageBackground(settings: ReaderSettings): Color =
+    runCatching {
+        val clean = settings.theme.bgHex.removePrefix("#")
+        Color((if (clean.length == 6) "FF$clean" else clean).toLong(16))
+    }.getOrDefault(Color.Transparent)
 
 // Private extension to find WebView — keeps import local without exposing internals
 private fun View.findWebView(): android.webkit.WebView? {
