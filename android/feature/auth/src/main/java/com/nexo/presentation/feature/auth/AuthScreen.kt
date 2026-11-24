@@ -6,7 +6,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -76,15 +75,17 @@ fun LoginScreenContent(
             NexoButton(
                 onClick = { emailFormExpanded = true },
                 enabled = !uiState.isLoading,
-                variant = NexoButtonVariant.OUTLINED,
+                // Brand orange with navy ink, the same filled style as Sign in and
+                // Sign up, so every email action reads as one family next to the
+                // white Google button.
+                variant = NexoButtonVariant.FILLED,
                 shape = AuthButtonShape,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)),
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
                 modifier = Modifier.fillMaxWidth().height(AuthButtonHeight).testTag(AuthTags.EMAIL_TOGGLE),
             ) {
-                Icon(imageVector = NexoIcons.Email, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
+                Icon(imageVector = NexoIcons.Email, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(text = stringResource(R.string.auth_continue_with_email), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                Text(text = stringResource(R.string.auth_continue_with_email), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
             }
         }
         AnimatedVisibility(visible = emailFormExpanded, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
@@ -95,7 +96,7 @@ fun LoginScreenContent(
                 Spacer(modifier = Modifier.height(8.dp))
                 PasswordTextField(value = password, onValueChange = { password = it }, label = stringResource(R.string.auth_password_label))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onNavigateToForgot, modifier = Modifier.testTag(AuthTags.FORGOT_LINK)) { Text(text = stringResource(R.string.auth_forgot_password), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold) }
+                    TextButton(onClick = onNavigateToForgot, modifier = Modifier.testTag(AuthTags.FORGOT_LINK)) { Text(text = stringResource(R.string.auth_forgot_password), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = AuthLinkOrange) }
                 }
                 NexoButton(onClick = { onSignIn(email, password) }, enabled = !uiState.isLoading, variant = NexoButtonVariant.FILLED, shape = AuthButtonShape, contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp), modifier = Modifier.fillMaxWidth().height(AuthButtonHeight).testTag(AuthTags.SIGNIN)) {
                     Text(text = stringResource(R.string.auth_login_action), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
@@ -108,6 +109,8 @@ fun LoginScreenContent(
         AuthErrorText(uiState)
         Spacer(modifier = Modifier.height(16.dp))
         AuthFooterLink(prefix = stringResource(R.string.auth_register_footer_prefix), link = stringResource(R.string.auth_register_footer_link), onClick = onNavigateToRegister, modifier = Modifier.testTag(AuthTags.REGISTER_LINK))
+        Spacer(modifier = Modifier.height(8.dp))
+        AuthLegalNotice()
     }
 }
 

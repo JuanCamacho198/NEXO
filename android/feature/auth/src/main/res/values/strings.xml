@@ -41,4 +41,11 @@
     <string name="auth_wiring_error_incomplete">Setup error: Google sign-in setup is incomplete. Verify OAuth configuration. Local reading still works.</string>
     <string name="app_name">NEXO</string>
     <string name="nav_back">Back</string>
+    <!-- Login legal line. %1$s and %2$s are the two link labels below, which the screen turns into links. -->
+    <string name="auth_legal_notice">By continuing, you agree to the %1$s and the %2$s.</string>
+    <string name="auth_legal_terms">Terms of Use</string>
+    <string name="auth_legal_privacy">Privacy Policy</string>
+    <!-- Public policy pages on the NEXO site, per locale (Spanish has no prefix). -->
+    <string name="auth_legal_terms_url">https://trynexo.app/en/terminos</string>
+    <string name="auth_legal_privacy_url">https://trynexo.app/en/privacidad</string>
 </resources>

@@ -1,6 +1,7 @@
 package com.nexo.presentation.feature.auth
 
 import android.util.Log
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,7 +21,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -41,7 +41,6 @@ import com.nexo.feature.auth.R
 import com.nexo.ui.components.atoms.NexoButton
 import com.nexo.ui.components.atoms.NexoButtonVariant
 import com.nexo.ui.tags.AuthTags
-import com.nexo.ui.theme.NexoTheme
 import com.nexo.ui.util.safePainterResource
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -115,11 +114,10 @@ fun GoogleSignInButton(
     // colorScheme.error like onSetError() does.
     var neutralMessageRes by remember { mutableStateOf<Int?>(null) }
 
-    val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val googleContainerColor =
-        if (isDarkBackground) Color.White else NexoTheme.colors.welcomeBrandBlue
-    val googleContentColor =
-        if (isDarkBackground) Color(0xFF202124) else Color.White
+    // Google's neutral button: white with dark text and a hairline, the variant
+    // its branding guidelines ask for on a light canvas like the auth screens.
+    val googleContainerColor = Color.White
+    val googleContentColor = Color(0xFF1F1F1F)
 
     val unexpectedCredentialTemplate = stringResource(R.string.auth_google_unexpected_credential)
     val unexpectedErrorTemplate = stringResource(R.string.auth_google_unexpected_error)
@@ -199,6 +197,7 @@ fun GoogleSignInButton(
             Modifier
                 .fillMaxWidth()
                 .height(56.dp)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
                 .testTag(AuthTags.GOOGLE),
     ) {
         if (uiState.isLoading) {

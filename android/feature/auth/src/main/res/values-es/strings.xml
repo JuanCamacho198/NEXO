@@ -41,4 +41,9 @@
     <string name="auth_wiring_error_incomplete">Error de configuracion: la configuracion OAuth de Google esta incompleta. Verifica la configuracion OAuth. La lectura local sigue disponible.</string>
     <string name="app_name">NEXO</string>
     <string name="nav_back">Volver</string>
+    <string name="auth_legal_notice">Al continuar, aceptas los %1$s y la %2$s.</string>
+    <string name="auth_legal_terms">Términos de uso</string>
+    <string name="auth_legal_privacy">Política de privacidad</string>
+    <string name="auth_legal_terms_url">https://trynexo.app/terminos</string>
+    <string name="auth_legal_privacy_url">https://trynexo.app/privacidad</string>
 </resources>
