@@ -2,13 +2,16 @@ package com.nexo.data.session
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.nexo.domain.model.LayoutPreferences
 import com.nexo.domain.model.ReaderSettings
+import com.nexo.domain.model.ScrollMode
 import com.nexo.testutil.activeUserProviderFor
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -33,6 +36,10 @@ class ReaderPreferencesCustomColorsTest {
                 every { getInt(any<String>(), any()) } answers {
                     val key = firstArg<String>()
                     storedValues[key]?.toIntOrNull() ?: secondArg()
+                }
+                every { getBoolean(any<String>(), any()) } answers {
+                    val key = firstArg<String>()
+                    storedValues[key]?.toBooleanStrictOrNull() ?: secondArg()
                 }
                 every { edit() } returns editor
             }
@@ -105,6 +112,7 @@ class ReaderPreferencesCustomColorsTest {
             mockk<SharedPreferences.Editor>(relaxed = true) {
                 every { putString(capture(paletteKey), capture(paletteValue)) } returns this
                 every { putInt(any<String>(), any()) } returns this
+                every { putBoolean(any<String>(), any()) } returns this
             }
         val prefs =
             mockk<SharedPreferences> {
@@ -124,5 +132,67 @@ class ReaderPreferencesCustomColorsTest {
 
         assertEquals("highlight_palette", paletteKey.captured)
         assertEquals("""["#4ADE80","#3B82F6","#F97316","#EF4444","#FACC15"]""", paletteValue.captured)
+    }
+
+    // ── Appearance fields the reader panel edits ────────────────────
+
+    @Test
+    fun `load restores font, reading mode and publisher styles`() {
+        val prefs =
+            createMockPrefs(
+                mapOf(
+                    "font_name" to ReaderSettings.FONT_SANS,
+                    "scroll_mode" to ScrollMode.PAGINATED.name,
+                    "publisher_styles" to "false",
+                    "vertical_margin" to "40",
+                ),
+            )
+        val settings = prefs.load()
+        assertEquals(ReaderSettings.FONT_SANS, settings.fontName)
+        assertEquals(ScrollMode.PAGINATED, settings.scrollMode)
+        assertFalse(settings.verticalScroll)
+        assertFalse(settings.editorValues)
+        assertEquals(40, settings.layoutPrefs.verticalMargin)
+    }
+
+    @Test
+    fun `load without stored appearance keeps defaults`() {
+        val settings = createMockPrefs(emptyMap()).load()
+        val defaults = ReaderSettings()
+        assertEquals(defaults.fontName, settings.fontName)
+        assertEquals(defaults.scrollMode, settings.scrollMode)
+        assertEquals(defaults.verticalScroll, settings.verticalScroll)
+        assertEquals(defaults.editorValues, settings.editorValues)
+    }
+
+    @Test
+    fun `save writes font, reading mode and publisher styles`() {
+        val editor =
+            mockk<SharedPreferences.Editor>(relaxed = true) {
+                every { putString(any(), any()) } returns this
+                every { putInt(any<String>(), any()) } returns this
+                every { putBoolean(any<String>(), any()) } returns this
+            }
+        val prefs = mockk<SharedPreferences> { every { edit() } returns editor }
+        val context =
+            mockk<Context> {
+                every { applicationContext } returns this
+                every { getSharedPreferences(any(), any()) } returns prefs
+            }
+
+        ReaderPreferences(context, activeUserProviderFor()).save(
+            ReaderSettings(
+                fontName = ReaderSettings.FONT_ORIGINAL,
+                scrollMode = ScrollMode.PAGINATED,
+                verticalScroll = false,
+                editorValues = false,
+                layoutPrefs = LayoutPreferences(verticalMargin = 24),
+            ),
+        )
+
+        verify { editor.putString("font_name", ReaderSettings.FONT_ORIGINAL) }
+        verify { editor.putInt("vertical_margin", 24) }
+        verify { editor.putString("scroll_mode", ScrollMode.PAGINATED.name) }
+        verify { editor.putBoolean("publisher_styles", false) }
     }
 }

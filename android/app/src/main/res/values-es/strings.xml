@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="aa_close_settings">Cerrar</string>
     <!-- Reader / aA Settings -->
     <!-- U3: etiquetas de grupos de acceso -->
     <string name="action_cancel">Cancelar</string>
@@ -474,7 +473,6 @@
     <!-- Reader / Header -->
     <string name="reader_cancel">Cancelar</string>
     <string name="reader_chapter_fallback">Capítulo %1$d</string>
-    <string name="reader_chapters_title">Capítulos</string>
     <string name="reader_progress_empty">-- / --</string>
     <string name="reader_rotate_screen">Rotar pantalla</string>
     <string name="reader_save">Guardar</string>
@@ -490,7 +488,6 @@
     <string name="reader_sleep_timer_remaining_label">Tiempo restante:</string>
     <string name="reader_sleep_timer_sheet_title">Temporizador de lectura</string>
     <string name="reader_sleep_timer_tap_to_dismiss">Toca cualquier lugar para seguir leyendo</string>
-    <string name="reader_typography">Tipografía</string>
     <string name="search_clear">Limpiar búsqueda</string>
     <!-- Reader / Search -->
     <string name="search_input_hint">Buscar en el libro…</string>
@@ -579,24 +576,8 @@
     <!-- Duplicated from :feature:reader: the reader settings sections and the
          screen files that stay in :app still resolve these. Identical text in
          both modules. -->
-    <string name="aa_audio_coming_soon">Reproducción de audio próximamente</string>
-    <string name="aa_collapse">Contraer</string>
-    <string name="aa_direction_ltr">Izquierda a derecha</string>
-    <string name="aa_expand">Expandir</string>
-    <string name="aa_margin_left">Margen izquierdo</string>
-    <string name="aa_margin_right">Margen derecho</string>
-    <string name="aa_preview_text">El veloz murciélago hindú comía feliz cardillo y kiwi. Esta es una vista previa de la configuración actual de lectura.</string>
-    <string name="aa_section_audio">Audio</string>
-    <string name="aa_section_direction">Dirección</string>
-    <string name="aa_section_justification">Justificación</string>
     <string name="aa_section_margins">Márgenes</string>
-    <string name="bookmark_ribbon_announcement">Marcador guardado</string>
     <string name="debug_chip_label">DEBUG</string>
-    <string name="editor_values">Valores del editor</string>
-    <string name="font_name_arial">Arial</string>
-    <string name="font_name_georgia">Georgia</string>
-    <string name="font_name_merriweather">Merriweather</string>
-    <string name="reader_add_bookmark">Añadir marcador</string>
     <string name="reader_back">Volver</string>
     <string name="reader_go">Ir</string>
     <string name="reader_go_to_page">Ir a página</string>
@@ -612,7 +593,6 @@
     <string name="reader_theme_sepia">Sepia</string>
     <string name="reader_toc">Índice</string>
     <string name="theme_oled">OLED</string>
-    <string name="vertical_scroll">Desplazamiento vertical</string>
 
     <!-- Duplicated from :feature:bookdetail: :app still resolves these; text is identical. -->
     <string name="book_detail_error_not_found">Libro no encontrado</string>
@@ -649,4 +629,64 @@
     <string name="reader_link_go">Ir allá</string>
     <string name="reader_note_close">Cerrar</string>
     <string name="reader_link_no_preview">Este enlace lleva a otra parte del libro.</string>
+    <!-- Reader appearance panel -->
+    <string name="reader_appearance_title">Apariencia</string>
+    <string name="reader_appearance_done">Listo</string>
+    <string name="reader_appearance_text_size">Tamaño del texto</string>
+    <string name="reader_appearance_smaller">Texto más pequeño</string>
+    <string name="reader_appearance_larger">Texto más grande</string>
+    <string name="reader_appearance_size_state">Tamaño %1$d de %2$d</string>
+    <string name="reader_appearance_size_glyph">A</string>
+    <string name="reader_appearance_sample">Aa</string>
+    <string name="reader_appearance_font">Fuente</string>
+    <string name="reader_font_original">Del libro</string>
+    <string name="reader_font_serif">Con serifa</string>
+    <string name="reader_font_sans">Sin serifa</string>
+    <string name="reader_appearance_layout">Modo de lectura</string>
+    <string name="reader_layout_pages">Páginas</string>
+    <string name="reader_layout_scroll">Continuo</string>
+    <string name="reader_appearance_publisher_styles">Estilo original del libro</string>
+    <string name="reader_appearance_publisher_on">El libro decide el interlineado y la alineación.</string>
+    <string name="reader_appearance_publisher_off">Se aplican tu interlineado y tu alineación.</string>
+    <string name="reader_appearance_line_spacing">Interlineado</string>
+    <string name="reader_line_spacing_tight">Compacto</string>
+    <string name="reader_line_spacing_normal">Normal</string>
+    <string name="reader_line_spacing_comfortable">Cómodo</string>
+    <string name="reader_line_spacing_wide">Amplio</string>
+    <string name="reader_appearance_alignment">Alineación</string>
+    <string name="reader_align_left">Izquierda</string>
+    <string name="reader_align_justify">Justificado</string>
+    <string name="reader_appearance_reset">Restablecer valores</string>
+    <!-- Reader table of contents -->
+    <string name="reader_toc_book_progress">%1$d %% del libro leído</string>
+    <string name="reader_toc_reading_now">Leyendo ahora</string>
+    <string name="reader_toc_start_percent">%1$d %%</string>
+    <string name="reader_toc_empty">Este libro no tiene índice</string>
+    <!-- Reader highlights sheet -->
+    <plurals name="reader_highlights_count">
+        <item quantity="one">%d resaltado en este libro</item>
+        <item quantity="other">%d resaltados en este libro</item>
+    </plurals>
+    <string name="reader_highlights_empty_hint">Mantén pulsada una palabra y arrastra para elegir el fragmento que quieres resaltar.</string>
+    <string name="reader_highlights_filter_empty">No hay resaltados de este color</string>
+    <string name="reader_highlights_no_chapter">En otras partes del libro</string>
+    <string name="reader_margins_sides">Laterales</string>
+    <string name="reader_margins_vertical">Arriba y abajo</string>
+    <string name="reader_margin_level">Nivel %1$d de %2$d</string>
+    <!-- Reader bookmarks -->
+    <string name="reader_bookmarks_title">Marcadores</string>
+    <plurals name="reader_bookmarks_count">
+        <item quantity="one">%d marcador en este libro</item>
+        <item quantity="other">%d marcadores en este libro</item>
+    </plurals>
+    <string name="reader_bookmark_add_here">Marcar esta página</string>
+    <string name="reader_bookmark_remove_here">Quitar el marcador de esta página</string>
+    <string name="reader_bookmark_on_page">Esta página tiene marcador</string>
+    <string name="reader_bookmark_this_page">Esta página</string>
+    <string name="reader_bookmark_pdf_page">Página %1$d</string>
+    <string name="reader_bookmark_delete">Eliminar marcador</string>
+    <string name="reader_bookmarks_empty">Aún no hay marcadores</string>
+    <string name="reader_bookmarks_empty_hint">Marca esta página para volver a ella cuando quieras.</string>
+    <string name="reader_bookmark_book_position">%1$d %% del libro</string>
+    <string name="reader_bookmark_just_now">Ahora mismo</string>
 </resources>
