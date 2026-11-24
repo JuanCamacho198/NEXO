@@ -182,19 +182,21 @@ jobs:
             fi
           done
 
-      - name: Verify desktop code-signing secrets
-        # Fail-loud per platform leg, before a single line of Rust compiles.
-        # An UNSIGNED .dmg/.exe uploads to the release and the job goes green —
-        # the failure only shows up on a user's machine (SmartScreen "Unknown
-        # publisher", Gatekeeper "damaged and can't be opened"), and the macOS
-        # updater cannot install an unsigned bundle at all, which silently
-        # breaks the update feed as well. Same fail-loud shape as the Android
-        # "Verify release signing secrets" step, whose build falls back to
-        # debug signing when its keystore is absent.
+      - name: Check desktop code-signing secrets
+        # WARN-ONLY on purpose: no certificate exists yet, and a release that
+        # never ships is worse than one that ships unsigned. An unsigned
+        # .dmg/.exe still installs; the cost is a SmartScreen "Unknown
+        # publisher" or a Gatekeeper "damaged and can't be opened" on first
+        # launch, and the macOS updater refuses an unsigned bundle. That is
+        # what desktop-v0.7.0 shipped under, before this gate existed.
         #
-        # Linux is deliberately not gated: .AppImage/.deb/.rpm ship unsigned in
-        # this project and that is a documented decision, not an oversight
-        # (docs/desktop-code-signing.md, "Linux").
+        # When the certificates are configured (docs/desktop-code-signing.md),
+        # turn this back into a hard gate: change the ::warning:: below to
+        # ::error:: and restore the `exit 1` whose absence is the only thing
+        # separating "signed release" from "release with a warning".
+        #
+        # Linux is deliberately not listed: .AppImage/.deb/.rpm ship unsigned in
+        # this project, by decision (docs/desktop-code-signing.md, "Linux").
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -209,11 +211,11 @@ jobs:
           case "${{ runner.os }}" in
             macOS)
               vars="APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID"
-              hint="Without all six, tauri-bundler either skips codesign entirely (unsigned .app/.dmg, blocked by Gatekeeper and uninstallable by the updater) or signs without notarizing (Gatekeeper still reports 'Apple could not verify'). Import the Developer ID Application certificate into the Mac keychain, export it as .p12, and set the secrets as described in docs/desktop-code-signing.md."
+              hint="Signing and notarizing need all six. See docs/desktop-code-signing.md."
               ;;
             Windows)
               vars="WINDOWS_CERTIFICATE WINDOWS_CERTIFICATE_PASSWORD"
-              hint="Without them signtool is never invoked, the .msi and NSIS .exe ship unsigned, and every download opens a SmartScreen 'Windows protected your PC' wall that only clears after months of reputation. Export the Authenticode certificate as .pfx (with its private key) and set the secrets as described in docs/desktop-code-signing.md."
+              hint="Without them signtool is never invoked and the .msi/.exe ship unsigned. See docs/desktop-code-signing.md."
               ;;
             *)
               echo "Linux leg: no OS code-signing required; skipping the signing preflight."
@@ -223,14 +225,15 @@ jobs:
           missing=0
           for v in $vars; do
             if [ -z "${!v:-}" ]; then
-              echo "::error::Secret ${v} is missing or empty. ${hint}"
+              echo "::warning::Secret ${v} is missing or empty. ${hint} This leg publishes UNSIGNED artefacts."
               missing=1
             fi
           done
           if [ "$missing" -ne 0 ]; then
-            exit 1
+            echo "::warning::Shipping this leg without code signing. Not a build failure."
+          else
+            echo "Code-signing secrets present for ${RUNNER_OS}."
           fi
-          echo "Code-signing secrets present for ${RUNNER_OS}."
 
       - name: Prepare the Windows signing config patch
         # signtool needs the certificate AND its private key in the runner's
@@ -249,6 +252,14 @@ jobs:
           if ($env:RUNNER_OS -ne 'Windows') {
             Set-Content -Path $out -Value '{}' -Encoding utf8
             Write-Host "Non-Windows leg: empty signing patch written to $out"
+            exit 0
+          }
+          # No certificate configured: skip the import and hand tauri an empty
+          # patch. The bundle step then ships unsigned instead of failing here.
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE) -or
+              [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
+            Set-Content -Path $out -Value '{}' -Encoding utf8
+            Write-Host "WINDOWS_CERTIFICATE is empty: unsigned build, empty signing patch written to $out"
             exit 0
           }
           $pfx = Join-Path $env:RUNNER_TEMP 'nexo-signing.pfx'
