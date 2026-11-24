@@ -56,7 +56,27 @@ data class EditBookMetadataUiState(
     val coverUri: Uri? = null,
     val coverBytes: ByteArray? = null,
     val isSaving: Boolean = false,
-)
+) {
+    /**
+     * Whether the form differs from the stored book. Compared against the same
+     * normalisation the form was seeded with (chip lists sanitised, nulls as
+     * empty strings), so merely opening the screen never reads as an edit.
+     * Drives the Save button and the discard-changes prompt on back.
+     */
+    val hasChanges: Boolean
+        get() {
+            val stored = book ?: return false
+            return coverBytes != null ||
+                title != stored.title ||
+                author != stored.author.orEmpty() ||
+                description != stored.description.orEmpty() ||
+                publisher != stored.publisher.orEmpty() ||
+                language != stored.language ||
+                publishedDate != stored.publishedDate ||
+                genres != sanitizeChipList(parseChipList(stored.genre), MAX_GENRES) ||
+                tags != sanitizeChipList(parseChipList(stored.tags), MAX_TAGS)
+        }
+}
 
 /**
  * Loads a book by id, exposes an editable form derived from it, sanitizes

@@ -202,6 +202,12 @@
     <string name="edit_metadata_section_details">Detalles</string>
     <!-- Edit Metadata -->
     <string name="edit_metadata_title">Editar metadatos</string>
+    <string name="edit_metadata_section_basic">Información básica</string>
+    <string name="edit_metadata_discard_title">¿Descartar cambios?</string>
+    <string name="edit_metadata_discard_body">Se perderán los cambios que hiciste en este libro.</string>
+    <string name="edit_metadata_discard_confirm">Descartar</string>
+    <string name="edit_metadata_keep_editing">Seguir editando</string>
+    <string name="edit_metadata_saving">Guardando…</string>
     <string name="error_auth">Error de autenticación. Iniciá sesión de nuevo.</string>
     <string name="error_config">Error de configuración. Algunas funciones pueden no estar disponibles.</string>
     <!-- Global Error Messages -->

@@ -70,6 +70,39 @@ class EditBookMetadataViewModelTest {
             assertEquals("1937-09-21", state.publishedDate)
         }
 
+    // ── Unsaved-changes detection ──────────────────────────────────────
+
+    @Test
+    fun `hasChanges is false right after the form is seeded`() =
+        runTest {
+            val repository = mockk<LibraryRepository>()
+            coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
+
+            val viewModel = createViewModel(repository)
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.hasChanges)
+        }
+
+    @Test
+    fun `hasChanges turns true on an edit and false again when it is undone`() =
+        runTest {
+            val repository = mockk<LibraryRepository>()
+            coEvery { repository.observeBookById("book-1", TEST_USER_ID) } returns flowOf(sampleBook)
+
+            val viewModel = createViewModel(repository)
+            advanceUntilIdle()
+
+            viewModel.onTitleChange("Another title")
+            assertTrue(viewModel.uiState.value.hasChanges)
+
+            viewModel.onTitleChange("Test Book")
+            assertFalse(viewModel.uiState.value.hasChanges)
+
+            viewModel.onTagRemove("favorites")
+            assertTrue(viewModel.uiState.value.hasChanges)
+        }
+
     // ── Genre / tag editing ────────────────────────────────────────────
 
     @Test

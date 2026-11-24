@@ -75,6 +75,8 @@ internal fun LanguageDropdown(
             label = { Text(text = stringResource(R.string.edit_metadata_field_language)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             singleLine = true,
+            shape = FieldShape,
+            colors = formFieldColors(),
             modifier =
                 Modifier
                     .fillMaxWidth()
