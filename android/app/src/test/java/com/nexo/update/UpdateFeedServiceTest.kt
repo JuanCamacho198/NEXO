@@ -24,10 +24,10 @@ import java.net.SocketTimeoutException
 private const val FEED_URL = "https://example.com/latest-android.json"
 
 private const val VALID_FEED_BODY =
-    "{\"version\":\"0.7.0\",\"versionCode\":70000," +
+    "{\"version\":\"0.7.1\",\"versionCode\":70001," +
         "\"notes\":\"Mock release notes.\",\"pubDate\":\"2026-11-02T12:00:00Z\"," +
         "\"channel\":\"stable\",\"assets\":[{\"url\":" +
-        "\"https://github.com/nexo/nexo/releases/download/v0.7.0/nexo-android-v0.7.0.apk\"," +
+        "\"https://github.com/nexo/nexo/releases/download/v0.7.1/nexo-android-v0.7.1.apk\"," +
         "\"abi\":\"universal\",\"size\":12345678}]}"
 
 class UpdateFeedServiceTest {
@@ -53,10 +53,10 @@ class UpdateFeedServiceTest {
 
             assertTrue(result is UpdateFeedFetch.Found)
             val found = result as UpdateFeedFetch.Found
-            assertEquals("0.7.0", found.version)
-            assertEquals(70000, found.versionCode)
+            assertEquals("0.7.1", found.version)
+            assertEquals(70001, found.versionCode)
             assertEquals("stable", found.channel)
-            assertTrue(found.assetUrl.endsWith("nexo-android-v0.7.0.apk"))
+            assertTrue(found.assetUrl.endsWith("nexo-android-v0.7.1.apk"))
         }
 
     @Test
