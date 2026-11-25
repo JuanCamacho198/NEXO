@@ -3,6 +3,9 @@
   import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
   import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
   import { EditMetadataModal, BulkImportModal, RemoveBookModal } from '$lib/features/library';
+  import ShelfDetailModal from '$lib/features/library/ShelfDetailModal.svelte';
+  import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
+  import type { ReaderBook } from '$lib/shared/types';
   import ErrorToast from '$lib/shared/ui/feedback/ErrorToast.svelte';
   import ErrorFallback from '$lib/shared/ui/feedback/ErrorFallback.svelte';
   import ToastHost from '$lib/shared/ui/feedback/ToastHost.svelte';
@@ -24,6 +27,24 @@
   // on next-launch-after-crash the persisted last-event-id is read on mount
   // and the dialog opens automatically. The dialog itself owns the dismiss
   // marker so a dismissed eventId never re-prompts.
+
+  // The book details live here, once, for every screen that can ask for them
+  // (Home's shelf, the library grid and list, statistics, notifications). They
+  // used to be mounted inside Home's shelf only, so "Ver detalles" anywhere
+  // else set the request and nothing answered it.
+  const shelfDetailsBook = $derived(
+    navigationState.shelfDetailsBookId
+      ? (libraryState.books.find((b) => b.id === navigationState.shelfDetailsBookId) ?? null)
+      : null,
+  );
+  let shelfDetailsOpen = $state(false);
+  $effect(() => {
+    shelfDetailsOpen = shelfDetailsBook !== null;
+  });
+  $effect(() => {
+    if (!shelfDetailsOpen && navigationState.shelfDetailsBookId)
+      navigationState.closeShelfDetails();
+  });
 
   let feedbackOpen = $state(false);
   let feedbackEventId = $state<string | null>(null);
@@ -105,13 +126,34 @@
   setInstallDeepLinkHandler((url) => void installDeepLink.handleInstallUrl(url));
 </script>
 
+<ShelfDetailModal
+  bind:open={shelfDetailsOpen}
+  book={shelfDetailsBook}
+  collections={libraryState.collections}
+  t={appState.t}
+  onClose={() => navigationState.closeShelfDetails()}
+  onStartReading={(b) => {
+    navigationState.closeShelfDetails();
+    void appState.startReading(b as unknown as ReaderBook);
+  }}
+  onEdit={(b) => libraryState.handleEditBook(b as unknown as ReaderBook)}
+  onStatusChange={(b, s) =>
+    libraryState.handleStatusChange(
+      b as unknown as ReaderBook,
+      s as 'to_read' | 'reading' | 'completed',
+    )}
+  onToggleFavorite={(b) => libraryState.handleToggleFavorite(b as unknown as ReaderBook)}
+/>
+
 <EditMetadataModal
   book={libraryState.editingBook as import('$lib/shared/types').LibraryBookDto | null}
   open={libraryState.editingBook !== null}
   onClose={() => {
     libraryState.editingBook = null;
   }}
-  onSave={libraryState.handleSaveEditedBook}
+  onSave={(book) => libraryState.handleSaveEditedBook(book)}
+  onReplaceCover={(bookId, cover) => libraryState.handleReplaceCover(bookId, cover)}
+  onRemoveCover={(book) => libraryState.handleDeleteCover(book)}
   t={appState.t}
 />
 
