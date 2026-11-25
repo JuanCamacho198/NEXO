@@ -41,6 +41,10 @@ import type { ActiveUserPort } from '$lib/shared/ports/ActiveUserPort';
 import { TauriActiveUserAdapter } from '$lib/shared/ports/adapters/tauri/TauriActiveUserAdapter';
 import type { CommandErrorDto, ReaderBook } from '$lib/shared/types';
 import { createShelfQueryState, type AppRoute } from '$lib/shared/stores/HomeState';
+import {
+  createReadingSessionTracker,
+  type TrackedReadingSession,
+} from '$lib/shared/stores/readingSessionTracker';
 
 type MaybeCommandError = Error & { commandError?: CommandErrorDto };
 
@@ -53,6 +57,11 @@ export class AppState {
   discover = discoverState;
   settings = settingsState;
   statsDomain = statsState;
+  /**
+   * EPUB reading time. The PDF viewer reports its own per-page sessions; an
+   * EPUB had no writer at all, so desktop EPUB reading never reached Stats.
+   */
+  readonly readingSessions = createReadingSessionTracker();
 
   /**
    * The backend's active-user slot is what DB-layer queries scope on, so it
@@ -111,20 +120,44 @@ export class AppState {
     this.navigation.route = 'reader';
     this.search.resetSearch();
     this.library.recordReaderOpenMetric(book.format);
+    this.persistReadingSession(
+      book.format.toLowerCase() === 'epub'
+        ? this.readingSessions.start(book.id, book.progressPercentage)
+        : this.readingSessions.end(),
+    );
     await this.reader.startReading(book);
     void this.statsDomain.loadStats(book.id, authState.userId ?? '');
+  }
+
+  /** Closes the open reading session: the reader was left or went to the background. */
+  endReadingSession = (): void => {
+    this.persistReadingSession(this.readingSessions.end());
+  };
+
+  /** Reopens a session when the window comes back while an EPUB is still open. */
+  resumeReadingSession = (): void => {
+    const bookId = this.reader.activeReadingBookId;
+    if (this.navigation.route !== 'reader' || !bookId || this.readingSessions.activeBookId) return;
+    const book = this.library.getBookById(bookId);
+    if (book?.format.toLowerCase() !== 'epub') return;
+    this.readingSessions.start(bookId, this.reader.percentage);
+  };
+
+  private persistReadingSession(session: TrackedReadingSession | null): void {
+    if (!session) return;
+    const { bookId, ...event } = session;
+    void this.reader.saveReadingSession(bookId, event);
   }
 
   handleEpubLocationChange = async (
     nextLocation: string,
     nextPercentage: number,
   ): Promise<void> => {
-    if (!this.reader.activeReadingBookId) return;
-    await this.reader.handleEpubLocationChange(
-      this.reader.activeReadingBookId,
-      nextLocation,
-      nextPercentage,
-    );
+    const bookId = this.reader.activeReadingBookId;
+    if (!bookId) return;
+    this.persistReadingSession(this.readingSessions.activity(bookId, nextPercentage));
+    await this.reader.handleEpubLocationChange(bookId, nextLocation, nextPercentage);
+    this.library.recordProgress(bookId, this.reader.percentage, new Date().toISOString());
   };
 
   handlePdfPageChange = async (page: number, total: number): Promise<void> => {

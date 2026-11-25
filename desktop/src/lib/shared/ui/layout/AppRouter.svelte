@@ -41,6 +41,24 @@
   const contentLayoutClass = $derived(routeLayoutClass(resolveRouteLayout(navigationState.route)));
   const mainUsesPadding = $derived(routeUsesPadding(navigationState.route));
 
+  // A reading session ends however the reader is left (back button, sidebar,
+  // sign-out) and while the window is in the background.
+  $effect(() => {
+    if (navigationState.route !== 'reader') appState.endReadingSession();
+  });
+  $effect(() => {
+    const onVisibility = (): void => {
+      if (document.visibilityState === 'hidden') appState.endReadingSession();
+      else appState.resumeReadingSession();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', appState.endReadingSession);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', appState.endReadingSession);
+    };
+  });
+
   const navItems = $derived(
     getNavItems({
       onNavigateHome: () => navigationState.navigateToHome(),
@@ -175,11 +193,7 @@
                 {#snippet shelfSection()}
                   <ShelfSection
                     myShelfBooks={libraryState.myShelfBooks}
-                    collections={libraryState.collections}
                     previewBookId={navigationState.previewBookId}
-                    selectedShelfBook={libraryState.books.find(
-                      (b) => b.id === navigationState.shelfDetailsBookId,
-                    ) ?? null}
                     t={appState.t}
                     onOpenDetails={(book) => navigationState.openShelfDetails(book.id)}
                     onStartReading={(book) => void appState.startReading(book)}
@@ -188,18 +202,6 @@
                       libraryState.pendingRemoveBook = book;
                     }}
                     onToggleFavorite={(book) => libraryState.handleToggleFavorite(book)}
-                    onStatusChange={(book, status) =>
-                      libraryState.handleStatusChange(
-                        book,
-                        status as 'to_read' | 'reading' | 'completed',
-                      )}
-                    onDeleteCover={(book) => libraryState.handleDeleteCover(book)}
-                    onSaveEdit={(dto) => libraryState.handleSaveEditedBook(dto as never)}
-                    onCloseDetails={() => navigationState.closeShelfDetails()}
-                    onCoverUpdated={(bookId, path) => {
-                      const found = libraryState.books.find((b) => b.id === bookId);
-                      if (found) found.coverPath = path;
-                    }}
                   />
                 {/snippet}
               </HomeDesktopView>
@@ -232,6 +234,7 @@
                   );
                 }}
                 onViewDetails={(book) => navigationState.openShelfDetails(book.id)}
+                onEdit={(book) => libraryState.handleEditBook(book)}
                 onRemoveBook={(book) => {
                   libraryState.pendingRemoveBook = book;
                 }}

@@ -5,8 +5,71 @@ import {
   computeDelta,
   formatDelta,
   periodDeltaLabels,
+  calculateGenreDistribution,
+  booksOnThisDevice,
+  countPagesRead,
+  selectMostReadBooks,
 } from '$lib/features/stats/components/readingStatsState.svelte';
 import type { MessageKey } from '$lib/shared/i18n';
+import type { LibraryBookDto } from '$lib/shared/types';
+
+const statsBook = (over: Partial<LibraryBookDto>): LibraryBookDto => ({
+  id: 'b',
+  title: 'Book',
+  author: 'A',
+  format: 'epub',
+  currentPage: 0,
+  totalPages: 0,
+  progressPercentage: 0,
+  coverPath: null,
+  minutesRead: 0,
+  updatedAt: '2026-11-01T00:00:00.000Z',
+  createdAt: '2026-11-01T00:00:00.000Z',
+  filePath: '/books/b.epub',
+  ...over,
+});
+
+describe('per-book stats leave sync stubs out', () => {
+  const stub = statsBook({
+    id: 'c19e',
+    title: 'Unknown Title (sync stub) c19e',
+    filePath: '',
+    minutesRead: 215,
+  });
+  const prisioneros = statsBook({ id: 'p', title: 'Prisioneros', minutesRead: 29 });
+  const unread = statsBook({ id: 'u', title: 'Unread', minutesRead: 0 });
+
+  it('never lists a stub among the most-read books, nor a book never read', () => {
+    expect(selectMostReadBooks([stub, unread, prisioneros]).map((b) => b.id)).toEqual(['p']);
+  });
+
+  it('keeps stub minutes out of the genre split', () => {
+    const total = calculateGenreDistribution(booksOnThisDevice([stub, prisioneros])).reduce(
+      (sum, entry) => sum + entry.minutes,
+      0,
+    );
+    expect(total).toBe(29);
+  });
+});
+
+describe('countPagesRead', () => {
+  it('has no honest answer while a started book is an EPUB (it keeps no page)', () => {
+    const pdf = statsBook({ id: 'pdf', format: 'pdf', currentPage: 1, totalPages: 342 });
+    const epub = statsBook({ id: 'e', progressPercentage: 37 });
+    expect(countPagesRead([pdf, epub])).toBeNull();
+  });
+
+  it('sums PDF pages when every started book tracks pages', () => {
+    const a = statsBook({ id: 'a', format: 'pdf', currentPage: 12, totalPages: 100 });
+    const b = statsBook({ id: 'b2', format: 'pdf', currentPage: 30, totalPages: 50 });
+    const notStarted = statsBook({ id: 'n' });
+    expect(countPagesRead([a, b, notStarted])).toBe(42);
+  });
+
+  it('is null when nothing was started', () => {
+    expect(countPagesRead([statsBook({})])).toBeNull();
+  });
+});
 
 const deltaDictionary: Partial<Record<MessageKey, string>> = {
   'stats.noChange': 'Sin cambios',

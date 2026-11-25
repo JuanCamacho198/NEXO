@@ -8,7 +8,8 @@
   type Props = {
     minutesPerSession: number;
     minutesPerDay: number;
-    pagesRead: number;
+    /** Null when no honest count exists; the row is left out. */
+    pagesRead: number | null;
     unclassifiedPercent?: number;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
@@ -18,8 +19,13 @@
   const habits = $derived([
     { icon: Timer, label: t('stats.averagePerSession'), value: `${minutesPerSession} min` },
     { icon: CalendarDays, label: t('stats.averagePerDay'), value: `${minutesPerDay} min` },
-    { icon: FileText, label: t('stats.pagesRead'), value: pagesRead.toLocaleString('es-CO') },
+    ...(pagesRead === null
+      ? []
+      : [
+          { icon: FileText, label: t('stats.pagesRead'), value: pagesRead.toLocaleString('es-CO') },
+        ]),
   ]);
+  const gridCols = $derived(habits.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2');
 </script>
 
 <article class="{panelClass} p-5">
@@ -29,7 +35,7 @@
   <p class="text-sm text-(--color-text-muted)">{t('stats.additionalDesc')}</p>
 
   <dl
-    class="m-0 mt-5 grid grid-cols-1 divide-y divide-(--color-edge) sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+    class="m-0 mt-5 grid grid-cols-1 divide-y divide-(--color-edge) sm:divide-x sm:divide-y-0 {gridCols}"
   >
     {#each habits as habit (habit.label)}
       {@const Icon = habit.icon}

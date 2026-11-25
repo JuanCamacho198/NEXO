@@ -12,6 +12,9 @@
   import {
     periodLabels,
     calculateGenreDistribution,
+    booksOnThisDevice,
+    countPagesRead,
+    selectMostReadBooks,
     periodWindow,
     previousWindow,
     formatDelta,
@@ -87,7 +90,9 @@
     void statsState.loadStreak(undefined, authState.userId ?? '');
   });
   const sd = $derived(statsState);
-  const genreDistribution = $derived(calculateGenreDistribution(libraryState.books));
+  const genreDistribution = $derived(
+    calculateGenreDistribution(booksOnThisDevice(libraryState.books)),
+  );
   const unclassifiedEntry = $derived(
     genreDistribution.find((entry) => entry.genre === UNCLASSIFIED_GENRE),
   );
@@ -151,9 +156,7 @@
       : [],
   );
   const chartMeta = $derived(buildChartMeta(activitySeries));
-  const mostReadBooks = $derived.by(() =>
-    [...libraryState.books].sort((l, r) => r.minutesRead - l.minutesRead).slice(0, 3),
-  );
+  const mostReadBooks = $derived(selectMostReadBooks(libraryState.books));
   const streakDays = $derived(sd.streakDays);
   const streakCalendar = $derived.by(() => {
     const d = 14,
@@ -169,9 +172,7 @@
   const averageMinutesPerDay = $derived(
     activitySeries.length > 0 ? Math.round(totalMinutes / activitySeries.length) : 0,
   );
-  const totalPagesRead = $derived(
-    libraryState.books.reduce((s, b) => s + Math.max(b.currentPage, 0), 0),
-  );
+  const totalPagesRead = $derived(countPagesRead(libraryState.books));
   const isLoading = $derived(sd.isLoadingActivity || sd.isLoadingRange || sd.isLoadingStreak);
   const disabledReason = $derived(
     sd.rangeUnavailableReason || sd.activityUnavailableReason || sd.streakUnavailableReason,

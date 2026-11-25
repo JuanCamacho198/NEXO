@@ -269,6 +269,8 @@ export const upsertBook = async (book: {
   createdAt: string;
   updatedAt: string;
   genre?: string | null;
+  language?: string | null;
+  publicationDate?: string | null;
 }): Promise<void> => {
   await invoke('upsertBook', { book });
 };
