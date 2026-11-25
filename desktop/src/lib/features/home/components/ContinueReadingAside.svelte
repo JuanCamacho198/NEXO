@@ -2,7 +2,9 @@
   import { invoke } from '@tauri-apps/api/core';
   import type { LibraryBookDto } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
-  import { getProgress } from '$lib/shared/api/tauriClient';
+  import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
+  import { TauriViewerAdapter } from '$lib/shared/ports';
+  import type { ReadingProgressDto } from '$lib/shared/types';
   import { buildContinueStats } from '../continueReadingStats';
   import { resolveLastChapter } from '../resolveLastChapter';
   import { getLastChapter, saveLastChapter } from '$lib/shared/stores/lastChapterStore';
@@ -10,9 +12,13 @@
   type Props = {
     book: LibraryBookDto & { filePath?: string };
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
+    // The port, not the raw client: shared/api is off limits outside the
+    // adapters, and this keeps the rail testable with a fake.
+    viewerPort?: ViewerPort;
   };
 
-  let { book, t }: Props = $props();
+  let { book, t, viewerPort: viewerPortProp }: Props = $props();
+  const viewerPort: ViewerPort = $derived(viewerPortProp ?? new TauriViewerAdapter());
 
   let chapter = $state<string | null>(null);
 
@@ -27,7 +33,8 @@
     if (stored) return;
     let cancelled = false;
     void resolveLastChapter(book, {
-      getProgress,
+      getProgress: (bookId: string): Promise<ReadingProgressDto | null> =>
+        viewerPort.getProgress(bookId),
       getToc: async (bookId, filePath) =>
         (
           await invoke<{ toc: Array<{ index?: number; label?: string | null }> }>('parse_epub', {
