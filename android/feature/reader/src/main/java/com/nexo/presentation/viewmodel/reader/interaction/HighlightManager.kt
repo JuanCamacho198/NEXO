@@ -88,12 +88,9 @@ internal class HighlightManager(
         currentPdfPage: Int,
         currentChapterIndex: Int,
     ) {
-        val bookId = selectedBookId ?: return
-        val locator =
-            (store.value.selectionState as? ReaderSelectionState.New)?.locator
-                ?: readiumSelectionLocator
-                ?: return
-        val text = selectedText ?: store.value.selectedText ?: return
+        // Recolouring a tapped highlight needs neither a book id nor a locator:
+        // checking those first made it return early, because a tapped highlight
+        // has no selection locator and nothing ever writes the session one.
         val activeId = selectionManager.activeHighlightId()
         DebugLog.info(TAG, "Color selected: $color for id=${activeId ?: "<new>"}")
         if (activeId != null) {
@@ -101,6 +98,12 @@ internal class HighlightManager(
             selectionManager.dismissMenuAndClearSelection()
             return
         }
+        val bookId = selectedBookId ?: return
+        val locator =
+            (store.value.selectionState as? ReaderSelectionState.New)?.locator
+                ?: readiumSelectionLocator
+                ?: return
+        val text = selectedText ?: store.value.selectedText ?: return
         val locatorJson = CfiMigrator.locatorToJson(locator)
         createHighlight(
             bookId = bookId,

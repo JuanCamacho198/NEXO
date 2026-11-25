@@ -77,12 +77,17 @@ enum class ScrollMode {
 
 /**
  * Layout preferences for margins and alignment.
+ *
+ * [leftMargin]/[rightMargin] are px-like units that the EPUB engine turns into
+ * one symmetric side margin. [verticalMargin] is dp of space above and below
+ * the page, applied around the reading view (the engine has no vertical margin).
  */
 @Immutable
 data class LayoutPreferences(
     val leftMargin: Int = 16,
     val rightMargin: Int = 16,
     val alignment: Alignment = Alignment.JUSTIFY,
+    val verticalMargin: Int = 0,
 ) {
     enum class Alignment {
         LEFT,
@@ -96,10 +101,11 @@ data class LayoutPreferences(
  * User-customizable reading settings.
  *
  * New fields added during the Reader Pencil Redesign:
- * - [fontName]: selected font family ("Georgia", "Arial", "Merriweather")
+ * - [fontName]: [FONT_ORIGINAL], [FONT_SERIF] or [FONT_SANS] (legacy "Merriweather" reads as serif)
  * - [scrollMode]: vertical scrolling vs paginated
  * - [layoutPrefs]: margins and alignment preferences
- * - [editorValues]: whether to apply editor CSS values
+ * - [editorValues]: keep the publisher's styles. While on, the EPUB engine
+ *   ignores [lineHeight] and [LayoutPreferences.alignment].
  * - [verticalScroll]: whether vertical scroll mode is active
  */
 @Immutable
@@ -107,7 +113,7 @@ data class ReaderSettings(
     val fontSize: FontSizePreset = FontSizePreset.M,
     val theme: ReaderTheme = ReaderTheme.DARK,
     val lineHeight: LineHeightPreset = LineHeightPreset.NORMAL,
-    val fontName: String = "Georgia",
+    val fontName: String = FONT_SERIF,
     val scrollMode: ScrollMode = ScrollMode.VERTICAL,
     val layoutPrefs: LayoutPreferences = LayoutPreferences(),
     val editorValues: Boolean = true,
@@ -117,5 +123,14 @@ data class ReaderSettings(
 ) {
     companion object {
         const val PREFS_KEY = "reader_settings"
+
+        /** [fontName] that keeps the publisher's own font. */
+        const val FONT_ORIGINAL = "Original"
+
+        /** [fontName] for a serif face; the legacy default value, kept so saved settings still match. */
+        const val FONT_SERIF = "Georgia"
+
+        /** [fontName] for a sans-serif face. */
+        const val FONT_SANS = "Arial"
     }
 }

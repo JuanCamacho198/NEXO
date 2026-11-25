@@ -23,6 +23,22 @@ data class ReaderLifecycleState(
     val readiumSelectionLocator: Locator? = null,
     val progressPercent: Float = 0f,
     val progressLabel: String = "",
+    /** Title of the chapter being read, cleaned for one line ([cleanChapterTitle]); empty when the book gives none. */
+    val chapterTitle: String = "",
+    /**
+     * Pages left in the current chapter at the current typography, from the
+     * chapter's visible text ([chapterPagesRemaining]). `null` while that text is
+     * still being measured: the footer shows nothing rather than a guess.
+     */
+    val chapterPagesLeft: Int? = null,
+    /**
+     * Each chapter's start as a fraction of the book, aligned with [chapters];
+     * `null` where unknown. Empty until Readium's positions are computed. Drives
+     * the chapter ticks on the progress bar and the chapter named while scrubbing.
+     */
+    val chapterStartFractions: List<Float?> = emptyList(),
+    /** Where the reader was before the last scrub jump; non-null while "go back" is offered. */
+    val scrubReturnLocator: Locator? = null,
     val showTocSheet: Boolean = false,
     val previewText: String = "",
     val isLoading: Boolean = true,

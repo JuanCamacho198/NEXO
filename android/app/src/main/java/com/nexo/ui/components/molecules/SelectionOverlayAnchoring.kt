@@ -17,6 +17,9 @@ const val HEADER_RESERVE_DP = 80
 /** Reserve at the bottom (progress bar + nav) so the menu never tucks behind the footer when flipped below. */
 const val FOOTER_RESERVE_DP = 72
 
+/** Keeps the caret off the pill's rounded ends, where it would hang from a curve. */
+private const val CARET_EDGE_INSET_DP = 22
+
 /**
  * The **only** space an overlay anchor is allowed to be computed from.
  *
@@ -137,6 +140,49 @@ fun computeAnchor(
     return IntOffset(x, y)
 }
 
+/** Where the caret goes and which way it points; see [caretPlacement]. */
+data class CaretPlacement(
+    val offset: IntOffset,
+    val pointsDown: Boolean,
+)
+
+/**
+ * Places the caret between a surface placed by [computeAnchor] and the
+ * selection it belongs to.
+ *
+ * The caret hangs off the surface's edge that faces the selection, overlapping
+ * it by [overlapPx] so its base hides the pill's outline there, and points at
+ * the selection's horizontal centre, kept [edgeInsetPx] clear of the surface's
+ * rounded ends. Returns `null` when the surface overlaps the selection
+ * vertically (the pinned fallback in [computeAnchor]): there is no gap for a
+ * caret to bridge and an arrow into the text would point at nothing useful.
+ */
+fun caretPlacement(
+    selection: Rect,
+    surface: IntOffset,
+    surfaceWidth: Int,
+    surfaceHeight: Int,
+    caretWidth: Int,
+    caretHeight: Int,
+    edgeInsetPx: Int,
+    overlapPx: Int,
+): CaretPlacement? {
+    val surfaceBottom = surface.y + surfaceHeight
+    val pointsDown =
+        when {
+            surfaceBottom <= selection.top -> true
+            surface.y >= selection.bottom -> false
+            else -> return null
+        }
+    val minX = surface.x + edgeInsetPx
+    val maxX = surface.x + surfaceWidth - edgeInsetPx - caretWidth
+    if (maxX < minX) return null
+    val centerX = selection.left + (selection.right - selection.left) / 2
+    val x = (centerX - caretWidth / 2).coerceIn(minX, maxX)
+    val y = if (pointsDown) surfaceBottom - overlapPx else surface.y - caretHeight + overlapPx
+    return CaretPlacement(IntOffset(x, y), pointsDown)
+}
+
 /**
  * Positions [content] near the selection using [computeAnchor].
  *
@@ -192,6 +238,7 @@ fun AnchoredOverlayBox(
     viewportHeight: Int,
     gapDp: Int = 8,
     modifier: Modifier = Modifier,
+    caret: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -199,13 +246,14 @@ fun AnchoredOverlayBox(
     // navigator fragment root) from the WebView itself.
     val fallbackOrigin = LocalView.current
 
+    val caretContent: @Composable () -> Unit = caret ?: {}
     Layout(
         modifier = modifier,
-        content = content,
-    ) { measurables, constraints ->
+        contents = listOf(content, caretContent),
+    ) { (surfaceMeasurables, caretMeasurables), constraints ->
         // Measure the surface with the SAME constraints the parent offered, so
         // the size used for placement is the size that will actually be drawn.
-        val placeable = measurables.firstOrNull()?.measure(constraints)
+        val placeable = surfaceMeasurables.firstOrNull()?.measure(constraints)
         val width = placeable?.width ?: 0
         val height = placeable?.height ?: 0
 
@@ -229,10 +277,28 @@ fun AnchoredOverlayBox(
                 density = density,
             )
 
+        val caretPlaceable = caretMeasurables.firstOrNull()?.measure(Constraints())
+        val caretAt =
+            caretPlaceable?.let {
+                caretPlacement(
+                    selection = space.rect,
+                    surface = anchor,
+                    surfaceWidth = width,
+                    surfaceHeight = height,
+                    caretWidth = it.width,
+                    caretHeight = it.height,
+                    edgeInsetPx = CARET_EDGE_INSET_DP.dp.roundToPx(),
+                    overlapPx = 1.dp.roundToPx(),
+                )
+            }
+
         // The overlay root is a full-size Box, so the layout occupies no space
         // of its own and the child is positioned freely by the anchor.
         layout(0, 0) {
             placeable?.place(anchor)
+            if (caretPlaceable != null && caretAt != null) {
+                caretPlaceable.placeWithLayer(caretAt.offset) { rotationZ = if (caretAt.pointsDown) 0f else 180f }
+            }
         }
     }
 }

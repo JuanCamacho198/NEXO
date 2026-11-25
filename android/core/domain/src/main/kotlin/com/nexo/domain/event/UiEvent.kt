@@ -1,8 +1,12 @@
 package com.nexo.domain.event
 
+/** What a snackbar is confirming, so the surface can mark it: done, for your information, or failed. */
+enum class NoticeTone { SUCCESS, INFO, ERROR }
+
 sealed interface UiEvent {
     data class ShowSnackbar(
         val message: String,
+        val tone: NoticeTone = NoticeTone.INFO,
     ) : UiEvent
 
     data class ShowToast(

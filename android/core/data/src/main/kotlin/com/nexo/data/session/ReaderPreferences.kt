@@ -6,12 +6,14 @@ import com.nexo.domain.model.LayoutPreferences
 import com.nexo.domain.model.LineHeightPreset
 import com.nexo.domain.model.ReaderSettings
 import com.nexo.domain.model.ReaderTheme
+import com.nexo.domain.model.ScrollMode
 import com.nexo.domain.session.ActiveUserProvider
 import org.json.JSONArray
 
 /**
- * Persists reader settings (font size, theme, line height, layout, custom
- * highlight palette) to an account-scoped SharedPreferences file.
+ * Persists reader settings (font size and family, theme, line height, layout,
+ * reading mode, publisher styles, custom highlight palette) to an
+ * account-scoped SharedPreferences file.
  *
  * Uses enum [name] for stable persistence across enum reordering.
  *
@@ -67,6 +69,17 @@ class ReaderPreferences(
                 ?: LayoutPreferences.Alignment.JUSTIFY.name
         val leftMargin = prefs.getInt(KEY_LEFT_MARGIN, 16)
         val rightMargin = prefs.getInt(KEY_RIGHT_MARGIN, 16)
+        val verticalMargin = prefs.getInt(KEY_VERTICAL_MARGIN, 0)
+
+        val defaults = ReaderSettings()
+        val fontName = prefs.getString(KEY_FONT_NAME, null) ?: defaults.fontName
+        val scrollMode =
+            safeValueOf(
+                ScrollMode.entries,
+                prefs.getString(KEY_SCROLL_MODE, null) ?: defaults.scrollMode.name,
+                defaults.scrollMode,
+            )
+        val editorValues = prefs.getBoolean(KEY_PUBLISHER_STYLES, defaults.editorValues)
 
         val customColorsJson = prefs.getString(KEY_PALETTE, null)
         val customColors: List<String>? =
@@ -85,10 +98,15 @@ class ReaderPreferences(
             fontSize = safeValueOf(FontSizePreset.entries, fontSizeName, FontSizePreset.M),
             theme = safeValueOf(ReaderTheme.entries, themeName, ReaderTheme.DARK),
             lineHeight = safeValueOf(LineHeightPreset.entries, lineHeightName, LineHeightPreset.NORMAL),
+            fontName = fontName,
+            scrollMode = scrollMode,
+            verticalScroll = scrollMode == ScrollMode.VERTICAL,
+            editorValues = editorValues,
             layoutPrefs =
                 LayoutPreferences(
                     leftMargin = leftMargin,
                     rightMargin = rightMargin,
+                    verticalMargin = verticalMargin,
                     alignment =
                         safeValueOf(
                             LayoutPreferences.Alignment.entries,
@@ -115,6 +133,10 @@ class ReaderPreferences(
                 .putString(KEY_ALIGNMENT, settings.layoutPrefs.alignment.name)
                 .putInt(KEY_LEFT_MARGIN, settings.layoutPrefs.leftMargin)
                 .putInt(KEY_RIGHT_MARGIN, settings.layoutPrefs.rightMargin)
+                .putInt(KEY_VERTICAL_MARGIN, settings.layoutPrefs.verticalMargin)
+                .putString(KEY_FONT_NAME, settings.fontName)
+                .putString(KEY_SCROLL_MODE, settings.scrollMode.name)
+                .putBoolean(KEY_PUBLISHER_STYLES, settings.editorValues)
 
         if (settings.customHighlightColors != null) {
             val arr = JSONArray()
@@ -145,6 +167,10 @@ class ReaderPreferences(
         private const val KEY_ALIGNMENT = "alignment"
         private const val KEY_LEFT_MARGIN = "left_margin"
         private const val KEY_RIGHT_MARGIN = "right_margin"
+        private const val KEY_VERTICAL_MARGIN = "vertical_margin"
         private const val KEY_PALETTE = "highlight_palette"
+        private const val KEY_FONT_NAME = "font_name"
+        private const val KEY_SCROLL_MODE = "scroll_mode"
+        private const val KEY_PUBLISHER_STYLES = "publisher_styles"
     }
 }

@@ -42,6 +42,11 @@ class ReaderSettingsManager(
         _state.update { it.copy(showSplitSettings = !it.showSplitSettings) }
     }
 
+    /** Idempotent close: several close paths (back, drag, tap on the page) may fire together. */
+    fun onDismissSplitSettings() {
+        _state.update { it.copy(showSplitSettings = false) }
+    }
+
     fun onUpdateCustomHighlightColor(
         index: Int,
         hex: String,

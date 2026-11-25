@@ -273,6 +273,34 @@ class ReaderInteractionStateHolderTest {
             assertEquals("activeNoteText cleared", "", holder.state.value.activeNoteText)
         }
 
+    @Test
+    fun `recolouring a tapped highlight works without a selection locator`() =
+        runTest {
+            holder = createHolder(scope = this)
+            val highlight = createSampleHighlight(id = "h1")
+            setupHighlightInState(highlight)
+            holder.onHighlightTapped(highlight, sampleRectF)
+
+            // A tapped highlight never carries a selection locator, and nothing
+            // writes the session one: this used to return before recolouring.
+            holder.onReadiumHighlightColorSelected(
+                color = "#3B82F6",
+                selectedBookId = "book-1",
+                readiumSelectionLocator = null,
+                selectedText = null,
+                bookFormat = "epub",
+                currentPdfPage = 0,
+                currentChapterIndex = 0,
+            )
+            advanceUntilIdle()
+
+            val slot = slot<Highlight>()
+            coVerify { readerRepository.upsertHighlight(capture(slot), any()) }
+            assertEquals("h1", slot.captured.id)
+            assertEquals("#3B82F6", slot.captured.color)
+            assertEquals(ReaderSelectionState.None, holder.state.value.selectionState)
+        }
+
     // ── Tag Input ─────────────────────────────────────────────────
 
     @Test

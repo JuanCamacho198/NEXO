@@ -10,16 +10,23 @@ import com.nexo.domain.session.ActiveUserProvider
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
 import com.nexo.presentation.viewmodel.CfiMigrator
 import com.nexo.presentation.viewmodel.reader.BookChapter
+import com.nexo.presentation.viewmodel.reader.ChapterTextLengthCache
 import com.nexo.presentation.viewmodel.reader.ReaderLifecycleState
 import com.nexo.presentation.viewmodel.reader.ReadingProgressCalculator
+import com.nexo.presentation.viewmodel.reader.chapterPagesRemaining
+import com.nexo.presentation.viewmodel.reader.cleanChapterTitle
+import com.nexo.presentation.viewmodel.reader.visibleTextLength
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.services.positionsByReadingOrder
 import org.readium.r2.shared.util.Url
 
 /**
@@ -46,6 +53,14 @@ internal class ReadingProgressTracker(
     private var observeProgressJob: Job? = null
     private var typographySnapshot: ReadingProgressCalculator.ViewportTypography? = null
     private var densitySnapshot: Float = 3f
+
+    /** Readium positions of the open publication; see [ensurePositions]. */
+    private var positions: List<Locator>? = null
+    private var positionsFor: Publication? = null
+    private var positionsJob: Job? = null
+
+    /** First totalProgression of each reading-order resource, by href. */
+    private var resourceStartFractions: List<Pair<String, Float?>>? = null
 
     /**
      * The saved position this session opened at, handed over by the loader from
@@ -322,6 +337,8 @@ internal class ReadingProgressTracker(
         val snapshot = state.value
         val percent: Float
         val label: String
+        var title = ""
+        var pagesLeft: Int? = null
         var resolvedChapterIndex = snapshot.currentChapterIndex
 
         if (snapshot.totalPdfPages > 0) {
@@ -355,10 +372,12 @@ internal class ReadingProgressTracker(
             }
             val totalProgression = locator.locations.totalProgression?.toFloat() ?: 0f
             percent = (totalProgression * 100f).coerceIn(0f, 100f)
+            // Cleaned for one footer line: TOC leaders, dot runs and file names
+            // that stand in for a missing title are dropped (cleanChapterTitle).
             val chapterTitle =
-                chapters.getOrNull(resolvedChapterIndex)?.title?.takeIf { it.isNotBlank() }
-                    ?: locatorHref.substringAfterLast('/').substringBefore('#').takeIf { it.isNotBlank() }
-                    ?: "—"
+                cleanChapterTitle(chapters.getOrNull(resolvedChapterIndex)?.title)
+                    ?: cleanChapterTitle(locator.title)
+                    ?: ""
             val typography = typographySnapshot
             val viewportTypography =
                 typography?.copy(
@@ -373,21 +392,27 @@ internal class ReadingProgressTracker(
                     pageMarginsDp = 16f,
                     density = densitySnapshot,
                 )
-            val calc =
-                ReadingProgressCalculator.compute(
-                    publication = publication,
-                    locator = locator,
-                    chapters = chapters,
-                    currentChapterIndex = resolvedChapterIndex,
-                    viewport = viewportTypography,
-                )
-            val remaining = calc.remaining
+            // Pages left come from the chapter's measured visible text. Until that
+            // read lands (one background read per chapter) the count is unknown,
+            // and the footer shows nothing rather than a made-up number.
+            val chapterChars = chapterTextLength(publication, snapshot.selectedBookId, locatorHref)
+            pagesLeft =
+                chapterChars?.let {
+                    chapterPagesRemaining(
+                        chapterTextChars = it,
+                        progression = locator.locations.progression ?: 0.0,
+                        viewport = viewportTypography,
+                    )
+                }
+            title = chapterTitle
+            ensurePositions(publication)
+            if (resourceStartFractions != null && snapshot.chapterStartFractions.size != chapters.size) refreshChapterStarts()
             label =
-                if (remaining > 0 && chapterTitle != "—") {
+                if (pagesLeft != null && chapterTitle.isNotEmpty()) {
                     application.getString(
                         com.nexo.feature.reader.R.string.reader_pages_remaining,
                         chapterTitle,
-                        remaining,
+                        pagesLeft,
                     )
                 } else {
                     chapterTitle
@@ -401,7 +426,112 @@ internal class ReadingProgressTracker(
             percent = 0f
             label = ""
         }
-        state.update { it.copy(currentChapterIndex = resolvedChapterIndex, progressPercent = percent, progressLabel = label) }
+        state.update {
+            it.copy(
+                currentChapterIndex = resolvedChapterIndex,
+                progressPercent = percent,
+                progressLabel = label,
+                chapterTitle = title,
+                chapterPagesLeft = pagesLeft,
+            )
+        }
+    }
+
+    /**
+     * Visible text length of the chapter at [href] for [bookId], or null while it
+     * is being measured. The first call for a chapter starts one background read
+     * (resource bytes, tags stripped); when it lands the display is recomputed.
+     * Keyed by book as well as href: two books may both have `chapter1.xhtml`.
+     */
+    private fun chapterTextLength(
+        publication: Publication?,
+        bookId: String?,
+        href: String,
+    ): Int? {
+        if (publication == null || href.isBlank()) return null
+        val resourceHref = href.substringBefore('#')
+        val key = "${bookId.orEmpty()}|$resourceHref"
+        ChapterTextLengthCache.peek(key)?.let { return it }
+        if (!ChapterTextLengthCache.claimRead(key)) return null
+        scope.launch(Dispatchers.IO) {
+            val length =
+                runCatching {
+                    val url = Url(resourceHref) ?: return@runCatching null
+                    val link = publication.linkWithHref(url) ?: return@runCatching null
+                    val bytes = publication.get(link)?.read()?.getOrNull() ?: return@runCatching null
+                    visibleTextLength(bytes.decodeToString())
+                }.getOrNull()
+            if (length == null) {
+                ChapterTextLengthCache.release(key)
+                return@launch
+            }
+            ChapterTextLengthCache.store(key, length)
+            withContext(mainDispatcher) { updateProgressDisplay() }
+        }
+        return null
+    }
+
+    /**
+     * Computes Readium's positions for [publication] once, off the main thread:
+     * the flat list backs [locatorAtFraction] (exact scrub targets), and the first
+     * position of each chapter's resource gives the chapter starts the progress
+     * bar draws as ticks and names while scrubbing.
+     */
+    private fun ensurePositions(publication: Publication?) {
+        if (publication == null || positionsFor === publication) return
+        positionsFor = publication
+        positions = null
+        resourceStartFractions = null
+        positionsJob?.cancel()
+        positionsJob =
+            scope.launch(Dispatchers.IO) {
+                val byResource = runCatching { publication.positionsByReadingOrder() }.getOrNull() ?: return@launch
+                val flat = byResource.flatten()
+                val resourceStarts =
+                    publication.readingOrder.mapIndexed { index, link ->
+                        link.href.toString() to
+                            byResource
+                                .getOrNull(index)
+                                ?.firstOrNull()
+                                ?.locations
+                                ?.totalProgression
+                                ?.toFloat()
+                    }
+                withContext(mainDispatcher) {
+                    if (positionsFor !== publication) return@withContext
+                    positions = flat
+                    resourceStartFractions = resourceStarts
+                    refreshChapterStarts()
+                }
+            }
+    }
+
+    /**
+     * Maps the resource starts onto the TOC chapter list. Re-run whenever the two
+     * disagree in size, since the chapter list can land after the positions.
+     */
+    private fun refreshChapterStarts() {
+        val resourceStarts = resourceStartFractions ?: return
+        val chapters = state.value.chapters
+        if (chapters.isEmpty()) return
+        val starts =
+            chapters.map { chapter ->
+                val file = normalizeChapterFile(chapter.href)
+                resourceStarts.firstOrNull { (href, _) -> normalizeChapterFile(href) == file }?.second
+            }
+        state.update { it.copy(chapterStartFractions = starts) }
+    }
+
+    /**
+     * The Readium position closest to [fraction] of the book, for a scrub that
+     * should land where the finger let go instead of at a chapter start. Null
+     * until positions are computed; the caller then falls back to the chapter jump.
+     */
+    fun locatorAtFraction(fraction: Float): Locator? {
+        val list = positions ?: return null
+        if (list.isEmpty()) return null
+        val target = fraction.coerceIn(0f, 1f).toDouble()
+        return list.minByOrNull { kotlin.math.abs((it.locations.totalProgression ?: 0.0) - target) }
     }
 
     /**
@@ -522,5 +652,6 @@ internal class ReadingProgressTracker(
 
     override fun onCleared() {
         observeProgressJob?.cancel()
+        positionsJob?.cancel()
     }
 }

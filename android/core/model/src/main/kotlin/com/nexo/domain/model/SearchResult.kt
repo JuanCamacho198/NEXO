@@ -10,6 +10,11 @@ import androidx.compose.runtime.Immutable
  * @property page Approximate scroll position / page y-offset for navigation
  * @property chapterIndex Index of the chapter (EPUB) or zero (PDF)
  * @property rect Optional bounding rectangle in WebView coordinates (EPUB only)
+ * @property before Text right before the match (EPUB), for the result's snippet
+ * @property after Text right after the match (EPUB), for the result's snippet
+ * @property locatorJson The match's exact Readium locator (EPUB): navigating to
+ *   it lands on the word itself, not on the start of its chapter
+ * @property bookProgression Where the match sits in the whole book, 0..1 (EPUB)
  */
 @Immutable
 data class SearchResult(
@@ -20,6 +25,10 @@ data class SearchResult(
     val rect: BoundingRect? = null,
     val chapterTitle: String = "",
     val cfi: String = "",
+    val before: String = "",
+    val after: String = "",
+    val locatorJson: String? = null,
+    val bookProgression: Float? = null,
 )
 
 /**

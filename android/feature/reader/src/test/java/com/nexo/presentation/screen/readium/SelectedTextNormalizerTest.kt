@@ -5,6 +5,29 @@ import org.junit.Test
 
 class SelectedTextNormalizerTest {
     @Test
+    fun decodeJsStringResult_quotedWord_dropsTheJsonQuotes() {
+        // Measured: selecting "aspecto" logged a 9-char text whose ends were 0x22.
+        assertEquals("aspecto", decodeJsStringResult("\"aspecto\""))
+    }
+
+    @Test
+    fun decodeJsStringResult_escapes_areDecoded() {
+        assertEquals("dijo \"sí\"\nluego\\", decodeJsStringResult("\"dijo \\\"sí\\\"\\nluego\\\\\""))
+        assertEquals("día", decodeJsStringResult("\"d\\u00eda\""))
+    }
+
+    @Test
+    fun decodeJsStringResult_emptyScriptResult_isEmpty() {
+        assertEquals("", decodeJsStringResult("\"\""))
+    }
+
+    @Test
+    fun decodeJsStringResult_notAJsonString_isLeftAlone() {
+        assertEquals("null", decodeJsStringResult("null"))
+        assertEquals("palabra", decodeJsStringResult("palabra"))
+    }
+
+    @Test
     fun normalizeSelectedText_leadingSpace_trimsIt() {
         assertEquals("palabra", normalizeSelectedText(" palabra"))
     }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -61,15 +60,14 @@ internal fun MenuScrollRow(
     val scrollState = rememberScrollState()
     val showStartFade by remember { derivedStateOf { scrollState.value > 0 } }
     val showEndFade by remember { derivedStateOf { scrollState.value < scrollState.maxValue } }
-    // Solid at the menu's own surface, transparent toward the content: painting
-    // the surface colour rather than black keeps the gradient correct on both
-    // the light and the dark theme.
-    val surfaceColor = MaterialTheme.colorScheme.surface
+    // Solid at the menu's own surface, transparent toward the content, so the
+    // fade blends into the pill instead of drawing a band across it.
+    val surfaceColor = SelectionMenuColors.Surface
 
     Row(
         modifier = modifier.testTag(MENU_PILL_TAG),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.Start,
     ) {
         leading()
 
@@ -98,7 +96,7 @@ internal fun MenuScrollRow(
                             }
                         },
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.Start,
             ) {
                 actions()
             }

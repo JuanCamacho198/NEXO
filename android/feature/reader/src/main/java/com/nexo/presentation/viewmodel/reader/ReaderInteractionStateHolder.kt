@@ -276,6 +276,8 @@ class ReaderInteractionStateHolder(
         locatorJson: String? = null,
     ) = bookmarkManager.createBookmark(bookId, cfiLocation, titleOrSnippet, locatorJson)
 
+    fun deleteBookmark(bookmarkId: String) = bookmarkManager.deleteBookmark(bookmarkId)
+
     fun createBookmarkFromCurrentPosition(
         selectedBookId: String?,
         bookFormat: String?,

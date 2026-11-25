@@ -383,6 +383,58 @@ class ReaderLifecycleStateHolder(
         }
     }
 
+    /**
+     * The progress bar was released at [percent] of the book.
+     *
+     * EPUB: jumps to the Readium position nearest that point, so the reader
+     * lands where the finger let go (the old path jumped to the START of the
+     * chapter at that share of the chapter COUNT, which on uneven chapters
+     * missed by whole chapters), and keeps the position it left so the footer
+     * can offer to go back. PDF, or an EPUB whose positions are not computed
+     * yet, keeps the page/chapter jump.
+     */
+    @Suppress("DEPRECATION")
+    fun onScrubCommitted(percent: Float) {
+        val snapshot = _state.value
+        if (snapshot.totalPdfPages > 0 || snapshot.readiumPublication == null) {
+            onProgressChange(percent)
+            return
+        }
+        val target = progressTracker.locatorAtFraction(percent / 100f)
+        if (target == null) {
+            onProgressChange(percent)
+            return
+        }
+        val origin = snapshot.readiumLocator
+        _state.update { it.copy(scrubReturnLocator = origin, progressPercent = percent.coerceIn(0f, 100f)) }
+        progressTracker.onReaderMoved()
+        scope.launch(mainDispatcher) { onNavigateToLocator(target) }
+    }
+
+    /** Returns to where the reader was before the last scrub jump. */
+    fun onScrubReturn() {
+        val back = _state.value.scrubReturnLocator ?: return
+        _state.update { it.copy(scrubReturnLocator = null) }
+        progressTracker.onReaderMoved()
+        scope.launch(mainDispatcher) { onNavigateToLocator(back) }
+    }
+
+    /**
+     * Remembers the current position as the place to come back to, before a
+     * jump the reader chose from outside the progress bar (following a note).
+     * The footer then offers "Back to where you were" exactly as after a scrub.
+     */
+    fun markReturnPoint() {
+        val here = _state.value.readiumLocator ?: return
+        _state.update { it.copy(scrubReturnLocator = here) }
+        progressTracker.onReaderMoved()
+    }
+
+    /** The "go back" offer timed out or the reader moved on: drop it. */
+    fun onScrubReturnExpired() {
+        _state.update { it.copy(scrubReturnLocator = null) }
+    }
+
     // ── Navigation ───────────────────────────────────────────────
 
     fun onHighlightSelected(highlight: com.nexo.domain.model.Highlight) {

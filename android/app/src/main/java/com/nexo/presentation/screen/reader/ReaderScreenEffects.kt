@@ -34,13 +34,11 @@ fun ReaderScreenEffects(
     lastInteractionAt: Long,
     currentChapterIndex: Int,
     currentPdfPage: Int,
-    lastBookmarkTrigger: Long,
     viewModel: ReaderViewModel,
     view: View,
     controlsVisible: Boolean,
     onControlsVisibleChange: (Boolean) -> Unit,
     onLastInteractionChange: (Long) -> Unit,
-    onBookmarkRibbonVisibleChange: (Boolean) -> Unit,
     onShowChrome: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -99,14 +97,6 @@ fun ReaderScreenEffects(
     LaunchedEffect(currentChapterIndex, currentPdfPage) {
         if (isFullscreen) {
             onLastInteractionChange(SystemClock.elapsedRealtime())
-        }
-    }
-
-    LaunchedEffect(lastBookmarkTrigger) {
-        if (lastBookmarkTrigger != 0L) {
-            onBookmarkRibbonVisibleChange(true)
-            delay(2_200L)
-            onBookmarkRibbonVisibleChange(false)
         }
     }
 }

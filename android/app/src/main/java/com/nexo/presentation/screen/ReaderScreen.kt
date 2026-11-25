@@ -10,9 +10,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,16 +38,22 @@ import com.nexo.R
 import com.nexo.debug.DebugLog
 import com.nexo.debug.DebugPanel
 import com.nexo.debug.DebugPrefs
+import com.nexo.presentation.screen.reader.BookmarkSpots
 import com.nexo.presentation.screen.reader.ReaderScreenContentHost
 import com.nexo.presentation.screen.reader.ReaderScreenEffects
 import com.nexo.presentation.screen.reader.ReaderScreenOverlaysHost
+import com.nexo.presentation.screen.reader.ReadingSpot
+import com.nexo.presentation.screen.reader.chapterLabel
 import com.nexo.presentation.screen.reader.readerSnackbarMessage
 import com.nexo.presentation.screen.reader.rememberReaderSelectionCallbacks
 import com.nexo.presentation.viewmodel.ReaderViewModel
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
-import com.nexo.ui.components.atoms.NexoSnackbar
+import com.nexo.presentation.viewmodel.reader.cleanChapterTitle
 import com.nexo.ui.components.molecules.ReadingProgressBar
+import com.nexo.ui.components.molecules.reader.ReaderNoticeHost
+import com.nexo.ui.components.molecules.reader.ReaderNoticeVisuals
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -76,8 +82,7 @@ fun ReaderScreen(
     var goToPageError by remember { mutableStateOf<String?>(null) }
     var showSleepTimerSheet by remember { mutableStateOf(false) }
     var debugPanelVisible by remember { mutableStateOf(false) }
-    var lastBookmarkTrigger by remember { mutableLongStateOf(0L) }
-    var bookmarkRibbonVisible by remember { mutableStateOf(false) }
+    var showBookmarksSheet by remember { mutableStateOf(false) }
 
     var controlsVisible by remember(chromeUiState.isFullscreen) { mutableStateOf(true) }
     var lastInteractionAt by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
@@ -89,19 +94,51 @@ fun ReaderScreen(
             annotationUiState.showTranslationPanel ||
             annotationUiState.showColorPickerPopover
 
+    // While the appearance panel is open the page above it is the live preview:
+    // a tap on the page closes the panel instead of bringing the chrome back.
+    val appearancePanelOpen = settingsUiState.showSplitSettings
+
     val onShowChrome: () -> Unit = {
-        if (!sessionUiState.isLoading && !isSelectionActive) {
+        if (appearancePanelOpen) {
+            viewModel.settingsManager.onDismissSplitSettings()
+        } else if (!sessionUiState.isLoading && !isSelectionActive) {
             controlsVisible = true
             lastInteractionAt = SystemClock.elapsedRealtime()
         }
     }
 
     val onToggleChrome: () -> Unit = {
-        if (!sessionUiState.isLoading && !isSelectionActive) {
+        if (appearancePanelOpen) {
+            viewModel.settingsManager.onDismissSplitSettings()
+        } else if (!sessionUiState.isLoading && !isSelectionActive) {
             controlsVisible = !controlsVisible
             lastInteractionAt = SystemClock.elapsedRealtime()
         }
     }
+
+    // The page being read, reduced to what a bookmark is compared against.
+    val readingSpot =
+        if ((sessionUiState.bookFormat ?: bookFormat) == "pdf") {
+            ReadingSpot(pdfPage = sessionUiState.currentPdfPage)
+        } else {
+            sessionUiState.readiumLocator?.let { locator ->
+                ReadingSpot(
+                    href = locator.href.toString(),
+                    position = locator.locations.position,
+                    totalProgression = locator.locations.totalProgression,
+                )
+            }
+        }
+    val pageBookmark =
+        remember(annotationUiState.bookmarks, readingSpot) {
+            BookmarkSpots.bookmarkAt(annotationUiState.bookmarks, readingSpot)
+        }
+
+    LaunchedEffect(appearancePanelOpen) {
+        if (appearancePanelOpen) controlsVisible = false
+    }
+
+    val chapterFormat = stringResource(R.string.reader_chapter_short_label)
 
     val selectionCallbacks = rememberReaderSelectionCallbacks(viewModel, context, annotationUiState)
 
@@ -120,7 +157,12 @@ fun ReaderScreen(
                 is com.nexo.domain.event.UiEvent.ShowSnackbar -> {
                     // Immersive fullscreen: a system Toast is drawn behind the
                     // WebView surface. Route through the in-app host instead.
-                    readerSnackbarMessage(event)?.let { snackbarHostState.showSnackbar(it) }
+                    // A newer notice replaces the one on screen rather than
+                    // queueing behind it: it confirms the action just taken.
+                    readerSnackbarMessage(event)?.let { message ->
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                        launch { snackbarHostState.showSnackbar(ReaderNoticeVisuals(message, event.tone)) }
+                    }
                 }
                 is com.nexo.domain.event.UiEvent.ShareText -> {
                     val shareIntent =
@@ -144,13 +186,11 @@ fun ReaderScreen(
         lastInteractionAt = lastInteractionAt,
         currentChapterIndex = sessionUiState.currentChapterIndex,
         currentPdfPage = sessionUiState.currentPdfPage,
-        lastBookmarkTrigger = lastBookmarkTrigger,
         viewModel = viewModel,
         view = view,
         controlsVisible = controlsVisible,
         onControlsVisibleChange = { controlsVisible = it },
         onLastInteractionChange = { lastInteractionAt = it },
-        onBookmarkRibbonVisibleChange = { bookmarkRibbonVisible = it },
         onShowChrome = onShowChrome,
     )
 
@@ -164,10 +204,8 @@ fun ReaderScreen(
                     onNavigateBack = onNavigateBack,
                     onToggleSearch = { viewModel.searchStateHolder.onToggleSearch() },
                     onToggleHighlights = { viewModel.interactionHolder.onToggleHighlightsPanel() },
-                    onCreateBookmark = {
-                        viewModel.createBookmarkFromCurrentPosition()
-                        lastBookmarkTrigger = SystemClock.elapsedRealtime()
-                    },
+                    onOpenBookmarks = { showBookmarksSheet = true },
+                    isPageBookmarked = pageBookmark != null,
                     onToggleSplitSettings = { viewModel.settingsManager.onToggleSplitSettings() },
                     onToggleToc = { viewModel.lifecycleHolder.onToggleTocSheet() },
                     onToggleDebugPanel = { debugPanelVisible = !debugPanelVisible },
@@ -176,7 +214,18 @@ fun ReaderScreen(
             footer = {
                 ReadingProgressBar(
                     progressPercent = sessionUiState.progressPercent,
-                    label = sessionUiState.progressLabel,
+                    chapterTitle = chapterLabel(sessionUiState.chapterTitle, chapterFormat),
+                    chapterPagesLeft = sessionUiState.chapterPagesLeft,
+                    fallbackLabel = sessionUiState.progressLabel,
+                    chapterStarts = sessionUiState.chapterStartFractions,
+                    chapterTitles =
+                        remember(sessionUiState.chapters, chapterFormat) {
+                            sessionUiState.chapters.map { chapterLabel(cleanChapterTitle(it.title).orEmpty(), chapterFormat) }
+                        },
+                    canGoBack = sessionUiState.scrubReturnLocator != null,
+                    onScrubCommit = { viewModel.lifecycleHolder.onScrubCommitted(it) },
+                    onGoBack = { viewModel.lifecycleHolder.onScrubReturn() },
+                    onGoBackExpired = { viewModel.lifecycleHolder.onScrubReturnExpired() },
                     onRotateScreen = {
                         val activity = context as Activity
                         val portrait = activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
@@ -187,7 +236,6 @@ fun ReaderScreen(
                                 ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                             }
                     },
-                    onProgressChange = { viewModel.lifecycleHolder.onProgressChange(it) },
                 )
             },
             content = {
@@ -239,8 +287,14 @@ fun ReaderScreen(
                         goToPageInput = ""
                         goToPageError = null
                     },
-                    bookmarkRibbonVisible = bookmarkRibbonVisible,
-                    onBookmarkRibbonEnd = { bookmarkRibbonVisible = false },
+                    pageBookmark = pageBookmark,
+                    showBookmarksSheet = showBookmarksSheet,
+                    onDismissBookmarksSheet = { showBookmarksSheet = false },
+                    onAddBookmark = {
+                        viewModel.createBookmarkFromCurrentPosition()
+                        // Clear the header so the ribbon is seen dropping onto the page.
+                        controlsVisible = false
+                    },
                 )
             },
         )
@@ -299,14 +353,14 @@ fun ReaderScreen(
             )
         }
 
-        SnackbarHost(
+        // Clear of the footer's progress line, so a notice never covers it.
+        ReaderNoticeHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) { data ->
-            NexoSnackbar(
-                snackbarData = data,
-                dismissContentDescription = stringResource(R.string.action_dismiss_snackbar),
-            )
-        }
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 48.dp),
+        )
     }
 }

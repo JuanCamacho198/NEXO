@@ -7,7 +7,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -30,11 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,8 +45,6 @@ import com.nexo.debug.DebugPrefs
 import com.nexo.presentation.viewmodel.reader.BookChapter
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 // ── Reader Design Colors ──────────────────────────────────────────
 private val READER_BG = Color(0xFF0D1322)
@@ -60,9 +52,6 @@ private val HEADER_FG = Color(0xFFDDE2F8)
 
 /** Duration (ms) of the header/footer show/hide animation. */
 private const val CHROME_ANIM_MS = 300
-
-/** Duration (ms) the bookmark icon stays filled after a press (pulse feedback). */
-private const val BOOKMARK_PULSE_MS = 600L
 
 // ── ReaderChrome: structural layout ────────────────────────────────
 
@@ -173,13 +162,20 @@ fun ReaderChrome(
 
 // ── Header Component ──────────────────────────────────────────────
 
+/** Touch target of every header action; 44dp keeps six actions inside a 360dp phone. */
+private val HEADER_BUTTON_SIZE = 44.dp
+
+/** Glyph size inside [HEADER_BUTTON_SIZE]: large enough that the 1.8 outline stroke stays crisp. */
+private val HEADER_ICON_SIZE = 22.dp
+
 @Composable
 fun ReaderHeader(
     chapters: List<BookChapter>,
     onNavigateBack: () -> Unit,
     onToggleSearch: () -> Unit,
     onToggleHighlights: () -> Unit,
-    onCreateBookmark: () -> Unit,
+    onOpenBookmarks: () -> Unit,
+    isPageBookmarked: Boolean = false,
     onToggleSplitSettings: () -> Unit = {},
     onToggleToc: () -> Unit = {},
     onToggleDebugPanel: () -> Unit = {},
@@ -190,96 +186,65 @@ fun ReaderHeader(
             modifier
                 .fillMaxWidth()
                 .background(READER_BG)
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp)
                 .height(48.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        // Back button
-        IconButton(
+        HeaderActionButton(
+            icon = NexoIcons.ReaderBack,
+            contentDescription = stringResource(R.string.reader_back),
             onClick = onNavigateBack,
-            modifier =
-                Modifier
-                    .size(40.dp)
-                    .clip(CircleShape),
-        ) {
-            Icon(
-                imageVector = NexoIcons.ArrowBack,
-                contentDescription = stringResource(R.string.reader_back),
-                tint = HEADER_FG,
-                modifier = Modifier.size(20.dp),
-            )
-        }
+        )
 
-        // Action buttons row
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Search
+        Row(verticalAlignment = Alignment.CenterVertically) {
             HeaderActionButton(
-                icon = NexoIcons.Search,
+                icon = NexoIcons.ReaderSearch,
                 contentDescription = stringResource(R.string.search_label),
                 onClick = onToggleSearch,
             )
 
-            // aA Typography
             HeaderActionButton(
-                icon = NexoIcons.TextSize,
-                contentDescription = stringResource(R.string.reader_typography),
+                icon = NexoIcons.ReaderAppearance,
+                contentDescription = stringResource(R.string.reader_appearance_title),
                 onClick = onToggleSplitSettings,
             )
 
             // Index / TOC — hidden for books with no chapter list
             if (chapters.isNotEmpty()) {
                 HeaderActionButton(
-                    icon = NexoIcons.ListBullets,
+                    icon = NexoIcons.ReaderContents,
                     contentDescription = stringResource(R.string.reader_toc),
                     onClick = onToggleToc,
                 )
             }
 
-            // Highlights (Create / pencil icon) — kept for the user-facing
-            // highlights sheet. Tapping it should never crash, but the
-            // previous wiring also routed long-press on the title to a
-            // debug-only force-menu helper that could throw when the
-            // selection overlay was already open. Both call sites now go
-            // through safe state-only toggles.
             HeaderActionButton(
-                icon = NexoIcons.Pencil,
+                icon = NexoIcons.ReaderHighlighter,
                 contentDescription = stringResource(R.string.reader_highlights_button),
                 onClick = onToggleHighlights,
             )
 
-            // Bookmark — outline→filled pulse on press (visual feedback only;
-            // bookmark creation itself stays in the ViewModel).
-            var bookmarkFilled by remember { mutableStateOf(false) }
-            val bookmarkScope = rememberCoroutineScope()
+            // Bookmarks: opens the bookmarks sheet. Filled in the ribbon's
+            // orange while the current page has a bookmark.
             HeaderActionButton(
-                icon = NexoIcons.Bookmark,
-                contentDescription = stringResource(R.string.reader_add_bookmark),
-                onClick = {
-                    bookmarkFilled = true
-                    onCreateBookmark()
-                    bookmarkScope.launch {
-                        delay(BOOKMARK_PULSE_MS)
-                        bookmarkFilled = false
-                    }
-                },
+                icon = NexoIcons.ReaderBookmark,
+                contentDescription = stringResource(R.string.reader_bookmarks_title),
+                onClick = onOpenBookmarks,
                 animatedIcon = {
                     AnimatedContent(
-                        targetState = bookmarkFilled,
+                        targetState = isPageBookmarked,
                         transitionSpec = {
-                            (fadeIn(tween(120)) + scaleIn(tween(120)))
-                                .togetherWith(fadeOut(tween(120)) + scaleOut(tween(120)))
+                            (fadeIn(tween(160)) + scaleIn(tween(160), initialScale = 0.6f))
+                                .togetherWith(fadeOut(tween(120)))
                         },
-                        label = "bookmarkToggle",
-                    ) { filled ->
+                        label = "pageBookmarked",
+                    ) { bookmarked ->
                         Icon(
-                            imageVector = if (filled) NexoIcons.BookmarkFilled else NexoIcons.Bookmark,
-                            contentDescription = stringResource(R.string.reader_add_bookmark),
-                            tint = HEADER_FG,
-                            modifier = Modifier.size(18.dp),
+                            imageVector = if (bookmarked) NexoIcons.ReaderBookmarkFilled else NexoIcons.ReaderBookmark,
+                            contentDescription = stringResource(R.string.reader_bookmarks_title),
+                            tint = if (bookmarked) RIBBON_ORANGE else HEADER_FG,
+                            modifier = Modifier.size(HEADER_ICON_SIZE),
                         )
                     }
                 },
@@ -312,7 +277,7 @@ fun HeaderActionButton(
         onClick = onClick,
         modifier =
             modifier
-                .size(36.dp)
+                .size(HEADER_BUTTON_SIZE)
                 .clip(CircleShape),
     ) {
         if (animatedIcon != null) {
@@ -322,7 +287,7 @@ fun HeaderActionButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = HEADER_FG,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(HEADER_ICON_SIZE),
             )
         }
     }

@@ -1,85 +1,56 @@
 package com.nexo.ui.components.molecules
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.contentColorFor
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.model.HighlightColor
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
 
 /**
- * Horizontal pill of icon actions shown when the user taps an
- * existing highlight. Sibling of [TextSelectionMenu] but with a
- * different action set: color, copy, define, translate, tag, annotate, share,
- * delete (the "new selection" menu has Dictionary instead of Tag/Delete).
- *
- * Design node `FaPN3` — single pill with thin vertical dividers
- * between action groups:
+ * Floating menu for a highlight the reader tapped:
  * ```
- * [Palette] | [Copy] [Define] [Translate] [Tag] [Annotate] | [Share] [Delete]
+ * [● colour] | [Copy] [Define] [Translate] [Tag] [Note] | [Share] [Delete]
  * ```
- * The groups read as *appearance* | *act on the text* | *send or destroy*.
- * Define and Translate sit with the text actions because they consume the same
- * text the highlight already holds; neither opens an input, so neither is
- * grouped with the Palette trigger. Define is placed beside Translate — the two
- * are siblings in intent, a saved highlight being as definable as it is
- * translatable. All colors come from [MaterialTheme.colorScheme] so the
- * menu adapts to light/dark themes.
+ * Seven actions leave no room for five inline swatches on a phone, so the
+ * leading dot shows the highlight's current colour and, tapped, turns the same
+ * pill into the palette:
+ * ```
+ * [←] [● ● ◉ ● ●] [spectrum]
+ * ```
+ * with the current colour ringed. A swatch recolours in one tap; the spectrum
+ * ring opens the full picker for a colour outside the five.
  *
- * @param selectedColor Currently active highlight color (hex with or
- *   without `#`). Drives the Palette icon tint via
- *   [parseColorHex]. Bad hex strings resolve to opaque black.
- * @param onColorSelected Invoked when the Palette icon is tapped.
- *   Typically opens the [HighlightColorPickerPopover].
- * @param onCopy Copy the highlight text to the clipboard.
- * @param onDefine Look up the MEANING of the highlighted text
- *   ([AnchoredDefinitionPanel]). Mirrors the selection menu's Define:
- *   same callback path, same icon and content description — and that identity is
- *   a CONTRACT, not a coincidence: one Maestro selector addresses the Define
- *   action in whichever menu is open. See [NexoIcons.BookSearch] for why that
- *   glyph is what it is.
- * @param onTranslate Open the [AnchoredTranslationPanel] for the
- *   highlighted text (machine translation, MyMemory). Mirrors the selection
- *   menu's Translate: same icon [NexoIcons.Translate] and content description
- *   `R.string.text_selection_translate`, and that identity is a CONTRACT — one
- *   Maestro selector (`"Translate|Traducir"`) addresses the action in whichever
- *   menu is open.
- * @param onAddTag Open the [AnchoredTagInput] for this highlight.
- * @param onAnnotate Open the [HighlightAnnotationModal] for this
- *   highlight.
- * @param onShare Share the highlight text via the system share sheet.
- * @param onDelete Delete this highlight. The Delete icon is tinted
- *   `colorScheme.error` to signal destructive intent.
- * @param modifier Modifier applied to the outer `Row`.
+ * Define and Translate keep [TextSelectionMenu]'s content descriptions byte for
+ * byte (one Maestro selector per action across both menus). The colour dot
+ * keeps `R.string.context_menu_color`, the trigger's description since before
+ * the palette moved inline.
  *
- * **Visual**: pill-shaped `Row` with 12dp shadow, 6dp padding,
- *   50%-radius corners. Each icon is 40dp clickable circle; vertical
- *   dividers (1dp × 20dp) are placed between the Palette group and the
- *   TextActions group and between TextActions and the Share/Delete group.
- *   Delete uses `colorScheme.error` tint.
- * **Overflow**: the Palette trigger and its divider are pinned; the actions
- *   scroll horizontally when they exceed the width, with an edge fade on any
- *   side that still has content (see [MenuScrollRow]). On a screen wide enough
- *   to fit the whole menu nothing scrolls and no fade is drawn.
- * **Behavior**: each icon calls its respective callback. No internal
- *   state beyond the scroll offset.
- * **Recomposition**: recomposes when `selectedColor` or any callback
- *   changes.
+ * @param selectedColor the highlight's current colour (hex, with or without `#`)
+ * @param swatches the five highlight colours, see [highlightPalette]
+ * @param onColorSelected recolours the highlight
+ * @param onMoreColors opens the full colour picker
  */
 @Composable
 fun FloatingContextMenu(
     selectedColor: String,
-    onColorSelected: () -> Unit,
+    swatches: List<String>,
+    onColorSelected: (String) -> Unit,
+    onMoreColors: () -> Unit,
     onCopy: () -> Unit,
     onDefine: () -> Unit,
     onTranslate: () -> Unit,
@@ -89,120 +60,75 @@ fun FloatingContextMenu(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val containerColor = MaterialTheme.colorScheme.surface
-    val contentColor = contentColorFor(containerColor)
-    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+    val entrance = rememberMenuEntrance()
+    var choosingColor by rememberSaveable { mutableStateOf(false) }
 
-    MenuScrollRow(
-        modifier =
-            modifier
-                .shadow(12.dp, RoundedCornerShape(50))
-                .background(containerColor, RoundedCornerShape(50))
-                .padding(6.dp),
-        leading = {
-            SelectionMenuIcon(
-                icon = NexoIcons.Palette,
-                contentDescription = stringResource(R.string.context_menu_color),
-                tint = parseColorHex(selectedColor),
-                onClick = onColorSelected,
-            )
-
-            MenuVerticalDivider(dividerColor)
-        },
-        actions = {
-            SelectionMenuIcon(
-                icon = NexoIcons.Copy,
-                contentDescription = stringResource(R.string.text_selection_copy),
-                tint = contentColor,
-                onClick = onCopy,
-            )
-
-            SelectionMenuIcon(
-                icon = NexoIcons.BookSearch,
-                contentDescription = stringResource(R.string.text_selection_define),
-                tint = contentColor,
-                onClick = onDefine,
-            )
-
-            SelectionMenuIcon(
-                icon = NexoIcons.Translate,
-                contentDescription = stringResource(R.string.text_selection_translate),
-                tint = contentColor,
-                onClick = onTranslate,
-            )
-
-            SelectionMenuIcon(
-                icon = NexoIcons.Tag,
-                contentDescription = stringResource(R.string.context_menu_tag),
-                tint = contentColor,
-                onClick = onAddTag,
-            )
-
-            SelectionMenuIcon(
-                icon = NexoIcons.Pencil,
-                contentDescription = stringResource(R.string.context_menu_annotate),
-                tint = contentColor,
-                onClick = onAnnotate,
-            )
-
-            MenuVerticalDivider(dividerColor)
-
-            SelectionMenuIcon(
-                icon = NexoIcons.Share,
-                contentDescription = stringResource(R.string.context_menu_share),
-                tint = contentColor,
-                onClick = onShare,
-            )
-
-            SelectionMenuIcon(
-                icon = NexoIcons.Trash,
-                contentDescription = stringResource(R.string.context_menu_delete),
-                tint = MaterialTheme.colorScheme.error,
-                onClick = onDelete,
-            )
-        },
-    )
+    Box(modifier = modifier.menuEntrance(entrance).selectionMenuPill()) {
+        AnimatedContent(
+            targetState = choosingColor,
+            transitionSpec = { fadeIn(tween(120)) togetherWith fadeOut(tween(90)) },
+            contentAlignment = Alignment.Center,
+            label = "highlightMenuMode",
+        ) { choosing ->
+            if (choosing) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    MenuAction(
+                        icon = NexoIcons.ReaderBack,
+                        contentDescription = stringResource(R.string.reader_highlight_colors_back),
+                        onClick = { choosingColor = false },
+                    )
+                    swatches.forEach { hex ->
+                        ColorSwatch(
+                            hex = hex,
+                            contentDescription = swatchDescription(hex),
+                            selected = hex.equals(selectedColor, ignoreCase = true),
+                            onClick = { onColorSelected(hex) },
+                        )
+                    }
+                    MenuDivider()
+                    MoreColorsButton(onClick = onMoreColors)
+                }
+            } else {
+                MenuScrollRow(
+                    leading = {
+                        ColorSwatch(
+                            hex = selectedColor,
+                            contentDescription = stringResource(R.string.context_menu_color),
+                            selected = true,
+                            onClick = { choosingColor = true },
+                        )
+                        MenuDivider()
+                    },
+                    actions = {
+                        MenuAction(NexoIcons.ReaderCopy, stringResource(R.string.text_selection_copy), onCopy)
+                        MenuAction(NexoIcons.ReaderDefine, stringResource(R.string.text_selection_define), onDefine)
+                        MenuAction(NexoIcons.ReaderTranslate, stringResource(R.string.text_selection_translate), onTranslate)
+                        MenuAction(NexoIcons.ReaderTag, stringResource(R.string.context_menu_tag), onAddTag)
+                        MenuAction(NexoIcons.ReaderNote, stringResource(R.string.context_menu_annotate), onAnnotate)
+                        MenuDivider()
+                        MenuAction(NexoIcons.ReaderShare, stringResource(R.string.context_menu_share), onShare)
+                        MenuAction(
+                            icon = NexoIcons.ReaderDelete,
+                            contentDescription = stringResource(R.string.context_menu_delete),
+                            onClick = onDelete,
+                            tint = SelectionMenuColors.Destructive,
+                        )
+                    },
+                )
+            }
+        }
+    }
 }
 
-private fun parseColorHex(hex: String): Color =
-    try {
-        val sanitized = hex.removePrefix("#")
-        val longHex =
-            when (sanitized.length) {
-                6 -> "FF$sanitized"
-                8 -> sanitized
-                else -> "FF000000"
-            }
-        Color(longHex.toLong(16))
-    } catch (_: Exception) {
-        Color.Magenta
-    }
-
-@Preview(showBackground = true)
+@Preview(showBackground = true, backgroundColor = 0xFFFAF7F0)
 @Composable
-private fun FloatingContextMenuDarkPreview() {
+private fun FloatingContextMenuPreview() {
     NexoTheme(darkTheme = true) {
         FloatingContextMenu(
-            selectedColor = HighlightColor.YELLOW.hex,
+            selectedColor = HighlightColor.RED.hex,
+            swatches = HighlightColor.defaultHexList(),
             onColorSelected = {},
-            onCopy = {},
-            onDefine = {},
-            onTranslate = {},
-            onAddTag = {},
-            onAnnotate = {},
-            onShare = {},
-            onDelete = {},
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun FloatingContextMenuLightPreview() {
-    NexoTheme(darkTheme = false) {
-        FloatingContextMenu(
-            selectedColor = HighlightColor.YELLOW.hex,
-            onColorSelected = {},
+            onMoreColors = {},
             onCopy = {},
             onDefine = {},
             onTranslate = {},

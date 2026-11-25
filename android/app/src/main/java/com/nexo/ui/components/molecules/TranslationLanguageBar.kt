@@ -1,17 +1,22 @@
 package com.nexo.ui.components.molecules
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,15 +24,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.translation.ResolvedLanguages
 import com.nexo.domain.translation.SourceOrigin
 import com.nexo.domain.translation.TranslationLanguageSelection
+import com.nexo.ui.components.molecules.reader.ReaderSheetColors
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
 
@@ -101,7 +111,7 @@ fun TranslationLanguageBar(
 
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LanguageSide(
@@ -121,10 +131,10 @@ fun TranslationLanguageBar(
         )
 
         Icon(
-            imageVector = NexoIcons.ArrowRight,
+            imageVector = NexoIcons.ReaderBack,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(16.dp),
+            tint = ReaderSheetColors.TextSecondary,
+            modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = 180f },
         )
 
         LanguageSide(
@@ -162,38 +172,71 @@ private fun LanguageSide(
     options: List<LanguageOption>,
 ) {
     androidx.compose.foundation.layout.Box {
-        TextButton(
-            onClick = { onExpandedChange(true) },
+        ReaderChip(
+            label = label,
             enabled = enabled,
-            contentPadding =
-                androidx.compose.foundation.layout
-                    .PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+            onClick = { onExpandedChange(true) },
             modifier = Modifier.semantics { this.contentDescription = contentDescription },
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                maxLines = 1,
-            )
-        }
+        )
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { onExpandedChange(false) },
+            containerColor = ReaderSheetColors.SurfaceRaised,
         ) {
             // The automatic entry is FIRST, matching Settings' ordering, so the
             // "let the app work it out" escape is the first thing the reader
             // sees rather than the last.
             DropdownMenuItem(
-                text = { Text(autoLabel) },
+                text = { Text(autoLabel, color = ReaderSheetColors.TextPrimary) },
                 onClick = { onSelect(null) },
             )
             options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(stringResource(option.labelRes)) },
+                    text = { Text(stringResource(option.labelRes), color = ReaderSheetColors.TextPrimary) },
                     onClick = { onSelect(option.code) },
                 )
             }
         }
+    }
+}
+
+/**
+ * A language (or any short value) the reader can tap to change: a raised pill
+ * with a chevron, shared by the translation bar and the definition-language
+ * selector so the two lookup cards use one control.
+ */
+@Composable
+internal fun ReaderChip(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val alpha = if (enabled) 1f else 0.5f
+    Row(
+        modifier =
+            modifier
+                .clip(CircleShape)
+                .background(ReaderSheetColors.SurfaceRaised)
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+                .padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = ReaderSheetColors.TextPrimary.copy(alpha = alpha),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = 140.dp),
+        )
+        Spacer(Modifier.width(2.dp))
+        Icon(
+            imageVector = NexoIcons.ChevronDown,
+            contentDescription = null,
+            tint = ReaderSheetColors.TextSecondary.copy(alpha = alpha),
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 
