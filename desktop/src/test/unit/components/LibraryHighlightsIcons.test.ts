@@ -146,10 +146,9 @@ describe('library and highlights icon migration', () => {
       t,
       onClose: noop,
       onStartReading: noop,
-      onDeleteCover: noop,
+      onEdit: noop,
       onStatusChange: noop,
       onToggleFavorite: noop,
-      onSaveEdit: async () => {},
     });
 
     const dialog = await waitFor(() => screen.getByRole('dialog'));

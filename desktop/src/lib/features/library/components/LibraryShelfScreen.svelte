@@ -37,6 +37,7 @@
     onToggleFavorite?: (book: ShelfBook) => void;
     onStatusChange?: (book: ShelfBook, status: string) => void;
     onViewDetails?: (book: ShelfBook) => void;
+    onEdit?: (book: ShelfBook) => void;
     onRemoveBook?: (book: ShelfBook) => void;
     onDownloaded?: () => void;
   };
@@ -52,6 +53,7 @@
     onToggleFavorite,
     onStatusChange,
     onViewDetails,
+    onEdit,
     onRemoveBook,
     onDownloaded,
   }: Props = $props();
@@ -289,6 +291,7 @@
       {onToggleFavorite}
       {onStatusChange}
       {onViewDetails}
+      {onEdit}
       {onRemoveBook}
     />
   {:else}
@@ -300,6 +303,7 @@
       {onToggleFavorite}
       {onStatusChange}
       {onViewDetails}
+      {onEdit}
       {onRemoveBook}
     />
   {/if}
