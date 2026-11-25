@@ -477,6 +477,11 @@ class ReaderLifecycleStateHolder(
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun goToChapter(listPosition: Int) = navigator.goToChapter(listPosition)
 
+    fun onPdfPageReported(
+        pageIndex: Int,
+        totalPages: Int,
+    ) = progressTracker.onPdfPageReported(pageIndex, totalPages)
+
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun goToNextPdfPage() = navigator.goToNextPdfPage()
 

@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.positionsByReadingOrder
@@ -81,6 +82,7 @@ internal class ReadingProgressTracker(
         private const val READIUM_PREFIX = "readium:"
 
         private const val PDF_PAGE_PREFIX = "pdfpage:"
+        private const val PDF_FALLBACK_HREF = "document.pdf"
         private const val EPUB_CFI_PREFIX = "epubcfi("
     }
 
@@ -625,15 +627,59 @@ internal class ReadingProgressTracker(
     private fun updatePdfProgress(
         currentPage: Int,
         totalPages: Int,
+        locatorJson: String? = null,
     ) {
         val bookId = state.value.selectedBookId ?: return
         if (totalPages > 0) {
             val percentage = (((currentPage + 1).toFloat() / totalPages) * 100f).coerceIn(0f, 100f)
             val cfiLocation = "pdfpage:$currentPage"
             scope.launch(mainDispatcher) {
-                updateReadingProgressUseCase(bookId = bookId, userId = activeUser.requireUserId(), cfiLocation = cfiLocation, percentage = percentage)
+                updateReadingProgressUseCase(
+                    bookId = bookId,
+                    userId = activeUser.requireUserId(),
+                    cfiLocation = cfiLocation,
+                    percentage = percentage,
+                    locatorJson = locatorJson,
+                )
             }
         }
+    }
+
+    /**
+     * The PDF.js viewer reports where it already is. Unlike the page setters this
+     * neither arms the persistence gate nor navigates, or scrolling would fight itself.
+     */
+    fun onPdfPageReported(
+        pageIndex: Int,
+        totalPages: Int,
+    ) {
+        if (totalPages <= 0 || pageIndex !in 0 until totalPages) return
+        if (state.value.currentPdfPage == pageIndex && state.value.totalPdfPages == totalPages) return
+        state.update { it.copy(currentPdfPage = pageIndex, totalPdfPages = totalPages) }
+        updateProgressDisplay()
+        updatePdfProgress(pageIndex, totalPages, pdfLocatorJson(pageIndex, totalPages))
+    }
+
+    private fun pdfLocatorJson(
+        pageIndex: Int,
+        totalPages: Int,
+    ): String {
+        val href =
+            state.value.readiumPublication
+                ?.readingOrder
+                ?.getOrNull(pageIndex)
+                ?.href
+                ?.toString()
+                ?: PDF_FALLBACK_HREF
+        return JSONObject()
+            .put("href", href)
+            .put("type", "application/pdf")
+            .put(
+                "locations",
+                JSONObject()
+                    .put("position", pageIndex + 1)
+                    .put("totalProgression", pageIndex.toDouble() / totalPages),
+            ).toString()
     }
 
     private fun updateProgressForChapter(chapterIndex: Int) {

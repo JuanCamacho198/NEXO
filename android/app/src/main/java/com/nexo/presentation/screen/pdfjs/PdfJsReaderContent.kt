@@ -4,14 +4,14 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Rect
 import android.net.Uri
+import android.util.Log
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
-import android.util.Log
 import android.view.View
 import android.webkit.ConsoleMessage
-import android.webkit.WebChromeClient
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -24,13 +24,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.viewinterop.AndroidView
-import com.nexo.presentation.screen.ChromeEdgeTapZones
-import com.nexo.presentation.viewmodel.ReaderViewModel
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.nexo.debug.DebugLog
+import com.nexo.presentation.screen.ChromeEdgeTapZones
+import com.nexo.presentation.viewmodel.ReaderViewModel
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -149,89 +149,92 @@ fun PdfJsReaderContent(
 ) {
     val currentViewModel by rememberUpdatedState(viewModel)
     Box(modifier = modifier) {
-    AndroidView(
-        modifier =
-            Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
-                viewModel.lifecycleHolder.onReadiumViewportChanged(coordinates.size.height)
-            },
-        factory = { context ->
-            val loader =
-                WebViewAssetLoader
-                    .Builder()
-                    .setDomain("appassets.androidplatform.net")
-                    .addPathHandler("/assets/", MjsAwareHandler(WebViewAssetLoader.AssetsPathHandler(context)))
-                    .addPathHandler("/book/", BookPathHandler(context, bookPath))
-                    .build()
-            NoToolbarWebView(context).apply {
-                settings.javaScriptEnabled = true
-                settings.allowFileAccess = false
-                settings.allowContentAccess = false
-                settings.blockNetworkLoads = true
-                settings.domStorageEnabled = false
-                setLayerType(View.LAYER_TYPE_HARDWARE, null)
-                WebView.setWebContentsDebuggingEnabled(true)
-                webChromeClient =
-                    object : WebChromeClient() {
-                        override fun onConsoleMessage(message: ConsoleMessage): Boolean {
-                            Log.d(TAG, "console ${message.messageLevel()}: ${message.message()} (${message.sourceId()}:${message.lineNumber()})")
-                            return true
+        AndroidView(
+            modifier =
+                Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
+                    viewModel.lifecycleHolder.onReadiumViewportChanged(coordinates.size.height)
+                },
+            factory = { context ->
+                val loader =
+                    WebViewAssetLoader
+                        .Builder()
+                        .setDomain("appassets.androidplatform.net")
+                        .addPathHandler("/assets/", MjsAwareHandler(WebViewAssetLoader.AssetsPathHandler(context)))
+                        .addPathHandler("/book/", BookPathHandler(context, bookPath))
+                        .build()
+                NoToolbarWebView(context).apply {
+                    settings.javaScriptEnabled = true
+                    settings.allowFileAccess = false
+                    settings.allowContentAccess = false
+                    settings.blockNetworkLoads = true
+                    settings.domStorageEnabled = false
+                    setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                    WebView.setWebContentsDebuggingEnabled(true)
+                    webChromeClient =
+                        object : WebChromeClient() {
+                            override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+                                Log.d(TAG, "console ${message.messageLevel()}: ${message.message()} (${message.sourceId()}:${message.lineNumber()})")
+                                return true
+                            }
                         }
-                    }
-                webViewClient =
-                    object : WebViewClient() {
-                        override fun shouldInterceptRequest(
-                            view: WebView,
-                            request: WebResourceRequest,
-                        ): WebResourceResponse? = loader.shouldInterceptRequest(request.url)
+                    webViewClient =
+                        object : WebViewClient() {
+                            override fun shouldInterceptRequest(
+                                view: WebView,
+                                request: WebResourceRequest,
+                            ): WebResourceResponse? = loader.shouldInterceptRequest(request.url)
 
-                        override fun shouldOverrideUrlLoading(
-                            view: WebView,
-                            request: WebResourceRequest,
-                        ): Boolean = !request.url.toString().startsWith(ORIGIN)
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView,
+                                request: WebResourceRequest,
+                            ): Boolean = !request.url.toString().startsWith(ORIGIN)
 
-                        override fun onRenderProcessGone(
-                            view: WebView,
-                            detail: RenderProcessGoneDetail,
-                        ): Boolean {
-                            Log.e(TAG, "Render process gone, crashed=${detail.didCrash()}")
-                            DebugLog.error(TAG, "Render process gone, crashed=${detail.didCrash()}")
-                            return true
+                            override fun onRenderProcessGone(
+                                view: WebView,
+                                detail: RenderProcessGoneDetail,
+                            ): Boolean {
+                                Log.e(TAG, "Render process gone, crashed=${detail.didCrash()}")
+                                DebugLog.error(TAG, "Render process gone, crashed=${detail.didCrash()}")
+                                return true
+                            }
                         }
+                    if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+                        WebViewCompat.addWebMessageListener(
+                            this,
+                            "nexoPdf",
+                            setOf(ORIGIN),
+                        ) { _, message: WebMessageCompat, _, _, _ ->
+                            handleMessage(message.data) { currentViewModel }
+                        }
+                    } else {
+                        DebugLog.error(TAG, "WEB_MESSAGE_LISTENER not supported")
                     }
-                if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-                    WebViewCompat.addWebMessageListener(
-                        this,
-                        "nexoPdf",
-                        setOf(ORIGIN),
-                    ) { _, message: WebMessageCompat, _, _, _ ->
-                        handleMessage(message.data) { currentViewModel }
-                    }
-                } else {
-                    DebugLog.error(TAG, "WEB_MESSAGE_LISTENER not supported")
+                    loadUrl("$ORIGIN/assets/pdfjs/viewer.html")
                 }
-                loadUrl("$ORIGIN/assets/pdfjs/viewer.html")
-            }
-        },
-        onRelease = { it.destroy() },
-    )
-    if (onShowChrome != null) {
-        ChromeEdgeTapZones(onShowChrome = { onShowChrome() })
-    }
+            },
+            onRelease = { it.destroy() },
+        )
+        if (onShowChrome != null) {
+            ChromeEdgeTapZones(onShowChrome = { onShowChrome() })
+        }
     }
 }
 
 private fun handleMessage(
     raw: String?,
-    viewModel: () -> ReaderViewModel,
+    currentReader: () -> ReaderViewModel,
 ) {
     val message = parsePdfJsMessage(raw)
     val summary =
         when (message) {
             is PdfJsMessage.Loaded -> {
-                viewModel().lifecycleHolder.onPdfDocumentLoaded(message.numPages)
+                currentReader().lifecycleHolder.onPdfDocumentLoaded(message.numPages)
                 "loaded numPages=${message.numPages}"
             }
-            is PdfJsMessage.Page -> "page ${message.page}/${message.total}"
+            is PdfJsMessage.Page -> {
+                currentReader().lifecycleHolder.onPdfPageReported(message.page - 1, message.total)
+                "page ${message.page}/${message.total}"
+            }
             is PdfJsMessage.Selection ->
                 if (message.empty) "selection empty" else "selection page=${message.pageNumber} textLen=${message.textLength}"
             is PdfJsMessage.Error -> "error ${message.message}"

@@ -23,10 +23,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nexo.BuildConfig
 import com.nexo.R
-import com.nexo.presentation.screen.pdfjs.PdfJsReaderContent
-import com.nexo.presentation.screen.pdfjs.PdfJsSpike
 import com.nexo.presentation.screen.ReadiumPdfReaderContent
 import com.nexo.presentation.screen.ReadiumReaderContent
+import com.nexo.presentation.screen.pdfjs.PdfJsReaderContent
+import com.nexo.presentation.screen.pdfjs.PdfJsSpike
 import com.nexo.presentation.screen.readium.buildNavigatorConfig
 import com.nexo.presentation.viewmodel.ReaderViewModel
 import com.nexo.presentation.viewmodel.reader.AnnotationUiState
