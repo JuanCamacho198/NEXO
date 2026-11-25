@@ -8,6 +8,7 @@ const mockListBooks = vi.hoisted(() => vi.fn());
 const mockListCollections = vi.hoisted(() => vi.fn());
 const mockUpsertBook = vi.hoisted(() => vi.fn());
 const mockUpsertBookCover = vi.hoisted(() => vi.fn());
+const mockDeleteBookCover = vi.hoisted(() => vi.fn());
 const mockHideBookFromLibrary = vi.hoisted(() => vi.fn());
 const mockUpdateBookProgress = vi.hoisted(() => vi.fn());
 const mockSaveProgress = vi.hoisted(() => vi.fn());
@@ -30,6 +31,7 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
   listCollections: mockListCollections,
   upsertBook: mockUpsertBook,
   upsertBookCover: mockUpsertBookCover,
+  deleteBookCover: mockDeleteBookCover,
   hideBookFromLibrary: mockHideBookFromLibrary,
   updateBookProgress: mockUpdateBookProgress,
   saveProgress: mockSaveProgress,
@@ -163,6 +165,7 @@ function setupDefaultMocks(): void {
   mockListCollections.mockResolvedValue([]);
   mockUpsertBook.mockResolvedValue(undefined);
   mockUpsertBookCover.mockResolvedValue(undefined);
+  mockDeleteBookCover.mockResolvedValue(undefined);
   mockHideBookFromLibrary.mockResolvedValue(undefined);
   mockUpdateBookProgress.mockResolvedValue(undefined);
   mockSaveProgress.mockResolvedValue(undefined);
@@ -603,6 +606,80 @@ describe('LibraryDomainState', () => {
     expect(libraryState.books[0].title).toBe('New Title');
     expect(libraryState.books[0].author).toBe('New Author');
     expect(libraryState.editingBook).toBeNull();
+  });
+
+  it('handleSaveEditedBook sends the stored language and date when the edit omits them', async () => {
+    const book = makeBook({ id: 'b1', language: 'fr', publicationDate: '1999' } as never);
+    libraryState.books = [book as any];
+
+    await libraryState.handleSaveEditedBook({ id: 'b1', title: 'T', author: 'A' } as any);
+
+    expect(mockUpsertBook.mock.calls[0]![0]).toMatchObject({
+      language: 'fr',
+      publicationDate: '1999',
+    });
+  });
+
+  it('handleSaveEditedBook persists and mirrors an edited language and date', async () => {
+    const book = makeBook({ id: 'b1', language: 'fr', publicationDate: '1999' } as never);
+    libraryState.books = [book as any];
+
+    await libraryState.handleSaveEditedBook({
+      id: 'b1',
+      title: 'T',
+      author: 'A',
+      language: 'en',
+      publicationDate: '2001-02',
+    } as any);
+
+    expect(mockUpsertBook.mock.calls[0]![0]).toMatchObject({
+      language: 'en',
+      publicationDate: '2001-02',
+    });
+    expect(libraryState.books[0]).toMatchObject({ language: 'en', publicationDate: '2001-02' });
+  });
+
+  it('handleSaveEditedBook rethrows a failed save and keeps the editor open', async () => {
+    const book = makeBook({ id: 'b1' });
+    libraryState.books = [book as any];
+    libraryState.editingBook = book as any;
+    mockUpsertBook.mockRejectedValueOnce(new Error('locked'));
+
+    await expect(
+      libraryState.handleSaveEditedBook({ id: 'b1', title: 'T', author: 'A' } as any),
+    ).rejects.toThrow('locked');
+    expect(libraryState.editingBook?.id).toBe('b1');
+  });
+
+  it('handleReplaceCover uploads the bytes and repaints the shelf from the picked file', async () => {
+    const book = makeBook({ id: 'b1', coverPath: null } as never);
+    libraryState.books = [{ ...book, coverUserDeleted: true } as any];
+
+    await libraryState.handleReplaceCover('b1', {
+      data: [1, 2],
+      mimeType: 'image/png',
+      previewPath: 'C:/pics/a.png',
+    });
+
+    expect(mockUpsertBookCover).toHaveBeenCalledWith({
+      bookId: 'b1',
+      data: [1, 2],
+      mimeType: 'image/png',
+    });
+    expect(libraryState.books[0]).toMatchObject({
+      coverPath: 'C:/pics/a.png',
+      coverUserDeleted: false,
+    });
+  });
+
+  it('handleDeleteCover clears the cover and marks it user-deleted', async () => {
+    const book = makeBook({ id: 'b1', coverPath: 'C:/covers/b1.png' } as never);
+    libraryState.books = [book as any];
+
+    await libraryState.handleDeleteCover({ id: 'b1' });
+
+    expect(mockDeleteBookCover).toHaveBeenCalledWith('b1');
+    expect(libraryState.books[0]).toMatchObject({ coverPath: null, coverUserDeleted: true });
   });
 
   // ─── Shelf operations ───
