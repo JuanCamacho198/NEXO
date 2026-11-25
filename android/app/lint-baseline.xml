@@ -360,10 +360,7 @@
     <issue id="LocalContextGetResourceValueCall" message="Querying resource values using LocalContext.current" errorLine1="            viewModel.lifecycleHolder.reportLoadError(context.getString(R.string.book_not_found))" errorLine2="                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location file="src/main/java/com/nexo/presentation/screen/reader/ReaderScreenEffects.kt" line="80" column="55" />
     </issue>
-    <issue id="ModifierParameter" message="Modifier parameter should be the first optional parameter" errorLine1="    modifier: Modifier = Modifier," errorLine2="    ~~~~~~~~">
-        <location file="src/main/java/com/nexo/debug/DebugPanel.kt" line="78" column="5" />
-    </issue>
-    <issue id="ModifierParameter" message="Modifier parameter should be the first optional parameter" errorLine1="    modifier: Modifier = Modifier," errorLine2="    ~~~~~~~~">
+        <issue id="ModifierParameter" message="Modifier parameter should be the first optional parameter" errorLine1="    modifier: Modifier = Modifier," errorLine2="    ~~~~~~~~">
         <location file="src/main/java/com/nexo/ui/components/molecules/HighlightAnnotationModal.kt" line="109" column="5" />
     </issue>
     <issue id="ModifierParameter" message="Modifier parameter should be named modifier" errorLine1="    contentModifier: Modifier = Modifier," errorLine2="    ~~~~~~~~~~~~~~~">
@@ -392,9 +389,6 @@
     </issue>
     <issue id="ModifierParameter" message="Modifier parameter should be the first optional parameter" errorLine1="    modifier: Modifier = Modifier," errorLine2="    ~~~~~~~~">
         <location file="src/main/java/com/nexo/ui/components/molecules/SleepTimerSheet.kt" line="234" column="5" />
-    </issue>
-    <issue id="ModifierParameter" message="Modifier parameter should be the first optional parameter" errorLine1="    modifier: Modifier = Modifier," errorLine2="    ~~~~~~~~">
-        <location file="src/main/java/com/nexo/ui/components/molecules/TextSelectionMenu.kt" line="107" column="5" />
     </issue>
     <issue id="LogNotTimber" message="Using 'Log' instead of 'Timber'" errorLine1="            Log.d(TAG, &quot;Database initialized in ${elapsedMs}ms&quot;)" errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location file="src/main/java/com/nexo/di/AppStartTimings.kt" line="32" column="13" />
