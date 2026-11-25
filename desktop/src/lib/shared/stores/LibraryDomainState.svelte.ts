@@ -195,41 +195,62 @@ class LibraryDomainState {
   handleEditBook(book: ReaderBook): void {
     this.editingBook = book;
   }
-  async handleDeleteCover(book: ReaderBook): Promise<void> {
+  async handleDeleteCover(book: Pick<LibraryBookDto, 'id'>): Promise<void> {
     await this.libraryPort.deleteBookCover(book.id);
     const f = this.books.find((b) => b.id === book.id);
-    if (f) f.coverPath = null;
+    // coverUserDeleted mirrors the backend flag: the EPUB pass must not restore the cover.
+    if (f) Object.assign(f, { coverPath: null, coverUserDeleted: true });
   }
+  // previewPath is the picked file: the stored copy can keep its old path and not repaint.
+  async handleReplaceCover(
+    bookId: string,
+    cover: { data: number[]; mimeType: string; previewPath: string },
+  ): Promise<void> {
+    await this.libraryPort.upsertBookCover({ bookId, data: cover.data, mimeType: cover.mimeType });
+    const f = this.books.find((b) => b.id === bookId);
+    if (f) Object.assign(f, { coverPath: cover.previewPath, coverUserDeleted: false });
+  }
+  /** @throws the save failure, so the editing surface can show it inline. */
   async handleSaveEditedBook(updatedBook: LibraryBookDto): Promise<void> {
-    try {
-      const rb = this.books.find((b) => b.id === updatedBook.id);
-      if (!rb) return;
-      const normalizedGenre =
-        typeof updatedBook.genre === 'string' && updatedBook.genre.trim().length > 0
-          ? updatedBook.genre.trim()
-          : null;
-      await this.libraryPort.upsertBook({
-        id: updatedBook.id,
-        title: updatedBook.title,
-        author: updatedBook.author || '',
-        filePath: rb.filePath,
-        format: rb.format,
-        syncStatus: 'local' as const,
-        currentPage: rb.currentPage,
-        totalPages: rb.totalPages,
-        createdAt: rb.createdAt,
-        updatedAt: rb.updatedAt,
-        genre: normalizedGenre,
-      });
-      this.books = this.books.map((b) =>
-        b.id === updatedBook.id
-          ? { ...b, title: updatedBook.title, author: updatedBook.author, genre: normalizedGenre }
-          : b,
-      );
-      this.editingBook = null;
-    } catch (e) {
-      this.readerError = this.messageFrom(e);
-    }
+    const rb = this.books.find((b) => b.id === updatedBook.id);
+    if (!rb) return;
+    const normalizedGenre =
+      typeof updatedBook.genre === 'string' && updatedBook.genre.trim().length > 0
+        ? updatedBook.genre.trim()
+        : null;
+    // upsertBook NULLs every column it is not sent: unedited fields keep the stored value.
+    const pick = <K extends 'language' | 'publicationDate'>(k: K): string | null =>
+      (k in updatedBook ? updatedBook[k] : rb[k]) ?? null;
+    const language = pick('language');
+    const publicationDate = pick('publicationDate');
+    await this.libraryPort.upsertBook({
+      id: updatedBook.id,
+      title: updatedBook.title,
+      author: updatedBook.author || '',
+      filePath: rb.filePath,
+      format: rb.format,
+      syncStatus: 'local' as const,
+      currentPage: rb.currentPage,
+      totalPages: rb.totalPages,
+      createdAt: rb.createdAt,
+      updatedAt: rb.updatedAt,
+      genre: normalizedGenre,
+      language,
+      publicationDate,
+    });
+    this.books = this.books.map((b) =>
+      b.id === updatedBook.id
+        ? {
+            ...b,
+            title: updatedBook.title,
+            author: updatedBook.author,
+            genre: normalizedGenre,
+            language: language ?? undefined,
+            publicationDate: publicationDate ?? undefined,
+          }
+        : b,
+    );
+    this.editingBook = null;
   }
   setShelfTab(tab: (typeof this.SHELF_TAB_OPTIONS)[number]['key']): void {
     this.shelfQueryState = updateShelfQueryState(this.shelfQueryState, { tab });
@@ -250,9 +271,22 @@ class LibraryDomainState {
   promoteBookForReading(bookId: string): void {
     this.books = promoteBookForReading(this.books, bookId);
   }
-  updateBookPage(bookId: string, page: number, total: number): void {
+  // The page change also stamps the book row in the database (`updated_at`),
+  // which is what Home reads as a PDF's last-read time.
+  updateBookPage(bookId: string, page: number, total: number, atIso?: string): void {
+    const updatedAt = atIso ?? new Date().toISOString();
     this.books = this.books.map((b) =>
-      b.id === bookId ? { ...b, currentPage: page, totalPages: total } : b,
+      b.id === bookId ? { ...b, currentPage: page, totalPages: total, updatedAt } : b,
+    );
+  }
+  /**
+   * Mirror a saved EPUB position into the loaded list, so Home shows the new
+   * progress and "last read" on return instead of the boot-time snapshot (the
+   * list is otherwise only reloaded on launch, sign-in and imports).
+   */
+  recordProgress(bookId: string, percentage: number, atIso: string): void {
+    this.books = this.books.map((b) =>
+      b.id === bookId ? { ...b, progressPercentage: percentage, progressUpdatedAt: atIso } : b,
     );
   }
   recordReaderOpenMetric(format: string): void {

@@ -2,15 +2,18 @@ import { render, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import TagPopover from '$lib/features/reader/highlight/TagPopover.svelte';
 
-const t = (key: string) => {
+const t = (key: string, params?: Record<string, string | number>) => {
   const translations: Record<string, string> = {
     'highlight.tagPopoverAriaLabel': 'Tags',
     'highlight.tags': 'Tags',
     'highlight.createTag': 'Create',
     'highlight.newTagPlaceholder': 'New tag',
     'highlight.noTagsYet': 'No tags yet',
+    'highlight.createTagNamed': 'Create “{{name}}”',
   };
-  return translations[key] ?? key;
+  let value = translations[key] ?? key;
+  for (const [k, v] of Object.entries(params ?? {})) value = value.replace(`{{${k}}}`, String(v));
+  return value;
 };
 
 describe('TagPopover', () => {
@@ -95,5 +98,36 @@ describe('TagPopover', () => {
     await fireEvent.keyDown(input, { key: 'Enter' });
     expect(onCreate).not.toHaveBeenCalled();
     expect(onToggle).toHaveBeenCalledWith('tag-1');
+  });
+
+  // One field filters the list and, when nothing has that exact name, offers
+  // to create it as the first row.
+  it('filters as the reader types and offers to create a missing tag', async () => {
+    const anchor = createAnchor();
+    const onCreate = vi.fn();
+    const { getByPlaceholderText, queryByText, getByText } = render(TagPopover, {
+      props: {
+        open: true,
+        anchor,
+        assignedTagIds: [],
+        allTags: [
+          { id: 'tag-1', name: 'Review', createdAt: '2024-01-01T00:00:00Z' },
+          { id: 'tag-2', name: 'Quotes', createdAt: '2024-01-01T00:00:00Z' },
+        ],
+        onCreate,
+        onToggle: vi.fn(),
+        onClose: () => undefined,
+        t,
+      },
+    });
+
+    const input = getByPlaceholderText('New tag') as HTMLInputElement;
+    await fireEvent.input(input, { target: { value: 'quo' } });
+    expect(queryByText('Review')).toBeNull();
+    expect(getByText('Quotes')).toBeTruthy();
+    expect(getByText('Create “quo”')).toBeTruthy();
+
+    await fireEvent.click(getByText('Create “quo”'));
+    expect(onCreate).toHaveBeenCalledWith('quo');
   });
 });

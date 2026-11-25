@@ -5,6 +5,7 @@
   import { cubicOut } from 'svelte/easing';
   import ReaderDrawerHeader from './ReaderDrawerHeader.svelte';
   import { READER_DRAWER, READER_DRAWER_FLY_X, READER_DRAWER_SCRIM } from './readerDrawer';
+  import { splitTocTitle } from './tocTitle';
 
   export interface TocEntry {
     id: string;
@@ -27,6 +28,7 @@
   type Props = {
     open: boolean;
     entries: TocEntry[];
+    /** The entry the reader is in now: marked, and scrolled to on open. */
     activeId?: string;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onNavigate: (entry: TocEntry) => void;
@@ -54,6 +56,13 @@
   function handleBackdropClick(e: MouseEvent): void {
     if (e.target === e.currentTarget) onClose();
   }
+
+  // A long TOC opens on the chapter being read, not on "Cover".
+  $effect(() => {
+    if (!open || !sidebarEl || !activeId) return;
+    const current = sidebarEl.querySelector<HTMLElement>('[aria-current="location"]');
+    current?.scrollIntoView?.({ block: 'center' });
+  });
 
   // Focus trap: keep Tab focus inside the sidebar when open
   $effect(() => {
@@ -106,9 +115,10 @@
           {#each entries as entry, i (i)}
             {@const depth = Math.max(0, Math.min(entry.depth, 3))}
             {@const isActive = entry.id === activeId}
+            {@const parts = splitTocTitle(entry.title)}
             <button
               type="button"
-              class="flex w-full cursor-pointer items-start rounded-(--radius-md) py-2 pr-3 text-left transition-colors {isActive
+              class="relative flex w-full cursor-pointer items-start gap-2.5 rounded-(--radius-md) py-2 pr-3 text-left transition-colors {isActive
                 ? 'bg-(--color-brand-soft)'
                 : 'hover:bg-(--color-surface-hover)'}"
               class:mt-2={depth === 0 && i > 0}
@@ -116,20 +126,56 @@
               style="padding-left: {12 + depth * 16}px;"
               onclick={() => onNavigate(entry)}
             >
-              <span
-                class="leading-relaxed"
-                class:text-sm={depth === 0}
-                class:text-xs={depth >= 1}
-                class:font-medium={depth === 0 && !isActive}
-                class:font-semibold={isActive}
-                class:text-(--color-brand-text)={isActive}
-                style={entry.id === activeId
-                  ? undefined
-                  : `color: var(--color-${depth === 0 ? 'secondary' : 'text-muted'}); opacity: ${
-                      depth === 0 ? 1 : depth === 1 ? 0.8 : 0.6
-                    };`}
-              >
-                {entry.title}
+              {#if depth > 0}
+                <!-- A guide line ties sub-entries to their parent. -->
+                <span
+                  class="absolute inset-y-0 w-px bg-(--color-edge)"
+                  style="left: {depth * 16}px;"
+                  aria-hidden="true"
+                ></span>
+              {/if}
+              {#if isActive}
+                <span
+                  class="absolute inset-y-2 left-1 w-[3px] rounded-full bg-(--color-brand)"
+                  aria-hidden="true"
+                ></span>
+              {/if}
+              {#if parts.number}
+                <span
+                  class="min-w-5 shrink-0 pt-px text-right text-xs font-semibold tabular-nums {isActive
+                    ? 'text-(--color-brand-text)'
+                    : 'text-(--color-text-muted)'}">{parts.number}</span
+                >
+              {/if}
+              <span class="flex min-w-0 flex-1 flex-col">
+                <!-- The eyebrow carries the book's own label and, on the chapter
+                  being read, "you are here": on its own line it never squeezes
+                  the title. -->
+                {#if parts.label || isActive}
+                  <span
+                    class="flex items-center gap-1.5 text-[0.6875rem] font-semibold tracking-[0.08em] uppercase {isActive
+                      ? 'text-(--color-brand-text)'
+                      : 'text-(--color-text-muted)'}"
+                  >
+                    {#if parts.label}<span>{parts.label}</span>{/if}
+                    {#if parts.label && isActive}<span aria-hidden="true">·</span>{/if}
+                    {#if isActive}<span>{t('reader.tocYouAreHere')}</span>{/if}
+                  </span>
+                {/if}
+                <!-- Capitals a book shouts in are drawn as small caps rather
+                  than rewritten: lowercasing would lose the proper nouns. The
+                  larger size gives the synthesised small caps the height of
+                  the neighbouring titles' capitals. -->
+                <span
+                  class="leading-snug {isActive
+                    ? 'font-semibold text-(--color-brand-text)'
+                    : depth === 0
+                      ? 'font-medium text-(--color-primary)'
+                      : 'text-(--color-secondary)'} {parts.shouting
+                    ? 'text-[1.0625rem] leading-tight! tracking-[0.04em] [font-variant-caps:all-small-caps]'
+                    : 'text-sm'}"
+                  data-toc-depth={depth}>{parts.title}</span
+                >
               </span>
             </button>
           {/each}

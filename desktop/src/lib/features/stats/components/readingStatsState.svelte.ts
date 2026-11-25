@@ -2,8 +2,39 @@ import type { LibraryBookDto } from '$lib/shared/types';
 import { UNCLASSIFIED_GENRE, type CanonicalGenre } from '$lib/shared/services/genreHeuristic';
 import type { AppState } from '$lib/shared/stores/AppState.svelte';
 import type { MessageKey } from '$lib/shared/i18n';
+import { getSafeProgressPercentage, hasBookFile } from '$lib/shared/stores/HomeState';
 
 export type StatsBook = LibraryBookDto;
+
+/**
+ * Books this device can show. Sync stubs (no file here: placeholder rows for a
+ * book read only on another device) carry that device's minutes under an
+ * "Unknown Title" name, so they are left out of any per-book list.
+ */
+export function booksOnThisDevice(books: StatsBook[]): StatsBook[] {
+  return books.filter((book) => hasBookFile(book));
+}
+
+export function selectMostReadBooks(books: StatsBook[], limit = 3): StatsBook[] {
+  return booksOnThisDevice(books)
+    .filter((book) => book.minutesRead > 0)
+    .sort((left, right) => right.minutesRead - left.minutesRead)
+    .slice(0, limit);
+}
+
+/**
+ * Pages read, or null when the number would be wrong. Only a PDF keeps a page
+ * position; an EPUB's is always 0, so while any started book is an EPUB the
+ * sum would undercount (it read "1" with two EPUBs at 37% and 93%).
+ */
+export function countPagesRead(books: StatsBook[]): number | null {
+  const started = booksOnThisDevice(books).filter(
+    (book) => book.currentPage > 0 || getSafeProgressPercentage(book) > 0,
+  );
+  if (started.length === 0) return null;
+  if (started.some((book) => book.totalPages <= 0)) return null;
+  return started.reduce((sum, book) => sum + Math.max(book.currentPage, 0), 0);
+}
 
 export type PeriodKey = 'week' | 'month' | 'year' | 'all';
 export type Granularity = 'day' | 'week' | 'month';

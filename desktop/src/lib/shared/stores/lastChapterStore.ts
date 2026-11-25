@@ -4,7 +4,11 @@
  * records it here and the Continue Reading hero reads it back. Per device, in
  * browser storage: losing it only hides one line on Home.
  */
-const STORAGE_KEY = 'nexo.lastChapter.v1';
+// v2: every v1 value was written while the reader mapped a chapter's later
+// documents to the TOC's first entry, so books read mid-chapter were stored as
+// "Portada". Those titles are wrong and unrecoverable; a new key drops them and
+// the hero shows no chapter until the book is opened again.
+const STORAGE_KEY = 'nexo.lastChapter.v2';
 const MAX_TITLE_LENGTH = 120;
 
 function readAll(): Record<string, string> {

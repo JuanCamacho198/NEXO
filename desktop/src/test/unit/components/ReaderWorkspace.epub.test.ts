@@ -6,7 +6,8 @@ const t = (key: string) => key;
 
 vi.mock('@tauri-apps/api/webviewWindow', () => ({
   getCurrentWebviewWindow: () => ({
-    setFullscreen: vi.fn(),
+    isFullscreen: vi.fn().mockResolvedValue(false),
+    setFullscreen: vi.fn().mockResolvedValue(undefined),
     minimize: vi.fn(),
     toggleMaximize: vi.fn(),
     close: vi.fn(),

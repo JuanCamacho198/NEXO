@@ -20,6 +20,7 @@
     onToggleFavorite?: (book: ShelfBook) => void;
     onStatusChange?: (book: ShelfBook, status: string) => void;
     onViewDetails?: (book: ShelfBook) => void;
+    onEdit?: (book: ShelfBook) => void;
     onRemoveBook?: (book: ShelfBook) => void;
   };
 
@@ -32,6 +33,7 @@
     onToggleFavorite,
     onStatusChange,
     onViewDetails,
+    onEdit,
     onRemoveBook,
   }: Props = $props();
 
@@ -150,6 +152,7 @@
               {onToggleFavorite}
               {onStatusChange}
               {onViewDetails}
+              {onEdit}
               {onRemoveBook}
               variant="list"
             />

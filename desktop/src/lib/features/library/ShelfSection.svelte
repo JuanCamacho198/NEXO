@@ -1,8 +1,6 @@
 <script lang="ts">
   import { BookCard, ShelfActionMenu } from '$lib/features/library';
   import { FAVORITES_COLLECTION_ID } from '$lib/features/library/utils';
-  import ShelfDetailModal from './ShelfDetailModal.svelte';
-  import type { LibraryBookDto, CollectionDto } from '$lib/shared/types';
   import type { ReaderBook } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
 
@@ -12,59 +10,31 @@
 
   export type ShelfSectionProps = {
     myShelfBooks: ReaderBook[];
-    collections: CollectionDto[];
     previewBookId: string | null;
-    selectedShelfBook: LibraryBookDto | null;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     onOpenDetails: (book: ReaderBook) => void;
     onStartReading: (book: ReaderBook) => void;
     onEditBook: (book: ReaderBook) => void;
     onRemoveBook: (book: ReaderBook) => void;
     onToggleFavorite: (book: ReaderBook) => Promise<void>;
-    onStatusChange: (book: ReaderBook, status: string) => Promise<void>;
-    onDeleteCover: (book: ReaderBook) => Promise<void>;
-    onSaveEdit: (dto: Partial<LibraryBookDto>) => Promise<void>;
-    onCloseDetails: () => void;
-    onCoverUpdated?: (bookId: string, path: string) => void;
   };
 
   let {
     myShelfBooks,
-    collections,
     previewBookId,
-    selectedShelfBook,
     t,
     onOpenDetails,
     onStartReading,
     onEditBook,
     onRemoveBook,
     onToggleFavorite,
-    onStatusChange,
-    onDeleteCover,
-    onSaveEdit,
-    onCloseDetails,
-    onCoverUpdated,
   }: ShelfSectionProps = $props();
 
   // previewBookId is part of the public contract (PR3) but unused in presentation-only restyle
   // svelte-ignore state_referenced_locally
   void previewBookId;
 
-  let showShelfModal = $state(false);
-
   const recentShelfBooks = $derived(myShelfBooks.slice(0, RECENT_SHELF_LIMIT));
-
-  $effect(() => {
-    if (selectedShelfBook) {
-      showShelfModal = true;
-    }
-  });
-
-  $effect(() => {
-    if (!showShelfModal && selectedShelfBook) {
-      onCloseDetails();
-    }
-  });
 </script>
 
 {#snippet shelfBookCard(book: ReaderBook)}
@@ -123,17 +93,3 @@
     </ul>
   {/if}
 {/if}
-
-<ShelfDetailModal
-  bind:open={showShelfModal}
-  book={selectedShelfBook}
-  {collections}
-  {t}
-  onClose={onCloseDetails}
-  onStartReading={(b) => onStartReading(b as unknown as ReaderBook)}
-  onDeleteCover={(b) => onDeleteCover(b as unknown as ReaderBook)}
-  onStatusChange={(b, s) => onStatusChange(b as unknown as ReaderBook, s)}
-  onToggleFavorite={(b) => onToggleFavorite(b as unknown as ReaderBook)}
-  {onSaveEdit}
-  {onCoverUpdated}
-/>

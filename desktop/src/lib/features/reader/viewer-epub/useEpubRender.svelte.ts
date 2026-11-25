@@ -450,6 +450,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
   buildReaderOverrideCss(): string;
   refreshReaderStyles(): void;
   renderChapter(index: number): Promise<void>;
+  buildMeasureSrcdoc(index: number): Promise<string | null>;
   pageText(): string;
   resolveResourcePath: typeof resolveResourcePath;
   toAssetUrl: typeof toAssetUrl;
@@ -626,6 +627,63 @@ export function createEpubRender(deps: EpubRenderDeps): {
     applyImagePlateZoomToDocument(doc, (deps.getFontSize() * deps.getZoomLevel()) / 100);
   }
 
+  /** The stylesheet inputs as they stand, for a render or a measurement. */
+  function readerCssOptsNow(): ReaderCssOptions {
+    return {
+      fontSize: deps.getFontSize(),
+      zoomLevel: deps.getZoomLevel(),
+      themeMode: deps.getThemeMode(),
+      lineHeight: deps.getLineHeight(),
+      letterSpacing: deps.getLetterSpacing(),
+      paragraphSpacing: deps.getParagraphSpacing(),
+      textAlign: deps.getTextAlign(),
+      direction: deps.getDirection(),
+      hyphenation: deps.getHyphenation(),
+      margins: deps.getMargins(),
+      fontFamily: deps.getFontFamily(),
+      pagination: currentPageBox(),
+    };
+  }
+
+  /**
+   * The document for reading-order `index` exactly as a render would build it —
+   * same HTML, same stylesheet, same page box — without touching the frame on
+   * screen or any render state. Used to count the pages of a chapter's other
+   * documents off-screen. Null when the position is out of range or the book is
+   * not open.
+   */
+  async function buildMeasureSrcdoc(index: number): Promise<string | null> {
+    const metadata = deps.getMetadata();
+    if (!metadata) return null;
+    const spineIndex = deps.spineIndexForOrder(index);
+    const spineHrefs = deps.getSpineHrefs();
+    if (index < 0 || spineIndex < 0 || (spineHrefs.length > 0 && spineIndex >= spineHrefs.length)) {
+      return null;
+    }
+    const tocEntry = deps.getToc().find((candidate) => candidate.index === spineIndex);
+    const chapterData = await invoke<EpubChapterContent>('get_epub_chapter', {
+      bookId: deps.getBookId(),
+      chapterIndex: spineIndex,
+    });
+    const chapterHref = normalizeHref(
+      stripFragment(tocEntry?.href ?? '') || spineHrefs[spineIndex] || '',
+    );
+    const missingFonts = await probeMissingFontUrls(
+      collectFontFaceAssetUrls(chapterData.html, chapterData.chapterPath, metadata.resourcesPath),
+    );
+    return buildChapterSrcdoc(
+      chapterData,
+      metadata.resourcesPath,
+      spineHrefs,
+      chapterHref,
+      spineIndex,
+      missingFonts,
+      readerCssOptsNow(),
+      tocEntry?.label ?? null,
+      metadata.language ?? null,
+    );
+  }
+
   async function runChapterRender(index: number): Promise<void> {
     const metadata = deps.getMetadata();
     const iframeEl = deps.getIframeEl();
@@ -709,20 +767,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
         metadata.resourcesPath,
       );
       const missingFonts = await probeMissingFontUrls(fontUrls);
-      const readerCssOpts = {
-        fontSize: deps.getFontSize(),
-        zoomLevel: deps.getZoomLevel(),
-        themeMode: deps.getThemeMode(),
-        lineHeight: deps.getLineHeight(),
-        letterSpacing: deps.getLetterSpacing(),
-        paragraphSpacing: deps.getParagraphSpacing(),
-        textAlign: deps.getTextAlign(),
-        direction: deps.getDirection(),
-        hyphenation: deps.getHyphenation(),
-        margins: deps.getMargins(),
-        fontFamily: deps.getFontFamily(),
-        pagination: currentPageBox(),
-      };
+      const readerCssOpts = readerCssOptsNow();
       const srcdoc = buildChapterSrcdoc(
         chapterData,
         metadata.resourcesPath,
@@ -860,6 +905,7 @@ export function createEpubRender(deps: EpubRenderDeps): {
     buildReaderOverrideCss: buildReaderOverrideCssLocal,
     refreshReaderStyles,
     renderChapter,
+    buildMeasureSrcdoc,
     pageText,
     // Re-export pure helpers for direct testing without composable
     resolveResourcePath,

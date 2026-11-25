@@ -149,6 +149,14 @@ export const STACKED_IMAGE_ATTR = 'data-nexo-image-stack';
 export const SOLO_IMAGE_ATTR = 'data-nexo-image-solo';
 
 /**
+ * Marks the block that holds exactly two stacked images — the two halves of a
+ * map spread in the measured book. Scrolling mode ignores it (the halves stack,
+ * see {@link STACKED_IMAGE_ATTR}); paginated mode lays the pair side by side on
+ * ONE page, as the printed spread reads, instead of one half per page.
+ */
+export const IMAGE_PAIR_ATTR = 'data-nexo-image-pair';
+
+/**
  * Stars images for the stylesheet:
  *
  *  - {@link SOLO_IMAGE_ATTR} on an image that is alone in its parent and whose
@@ -178,9 +186,12 @@ export function markChapterImages(doc: Document): void {
     if (bucket) bucket.push(img);
     else groups.set(container, [img]);
   }
-  for (const bucket of groups.values()) {
+  for (const [container, bucket] of groups) {
     if (bucket.length < 2) continue;
     for (const img of bucket) img.setAttribute(STACKED_IMAGE_ATTR, '');
+    // `body` is the box paginated mode fragments into columns; it must never
+    // become the pair's row.
+    if (bucket.length === 2 && container !== doc.body) container.setAttribute(IMAGE_PAIR_ATTR, '');
   }
 }
 

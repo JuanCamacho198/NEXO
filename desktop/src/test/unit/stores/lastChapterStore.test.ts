@@ -15,7 +15,7 @@ describe('lastChapterStore', () => {
   it('ignores blank titles and survives corrupt storage', () => {
     saveLastChapter('a', '   ');
     expect(getLastChapter('a')).toBeNull();
-    localStorage.setItem('nexo.lastChapter.v1', '{not json');
+    localStorage.setItem('nexo.lastChapter.v2', '{not json');
     expect(getLastChapter('a')).toBeNull();
     saveLastChapter('a', 'Sinopsis');
     expect(getLastChapter('a')).toBe('Sinopsis');

@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import { describe, expect, it, vi } from 'vitest';
 import ReaderBottomBar from '$lib/features/reader/chrome/ReaderBottomBar.svelte';
 
 const t = (key: string) => key;
@@ -116,5 +116,48 @@ describe('ReaderBottomBar — geometry', () => {
     expect(label.className).toContain('truncate');
     expect(label.className).toContain('min-w-0');
     expect(label.className).toContain('w-full');
+  });
+});
+
+describe('ReaderBottomBar — chapter pages (EPUB paginated mode)', () => {
+  it('says what the page field counts and how much of the chapter is left', () => {
+    render(
+      ReaderBottomBar,
+      makeProps({ chapterTitle: 'Cap. 3', chapterPagesLeft: { count: 17, exact: true } }),
+    );
+    expect(screen.getByTestId('chapter-pages-left').textContent).toBe('reader.chapterPagesLeft');
+    expect(screen.getByLabelText('reader.chapterPageField')).toBeInTheDocument();
+  });
+
+  it('names the last page of the chapter', () => {
+    render(ReaderBottomBar, makeProps({ chapterPagesLeft: { count: 0, exact: true } }));
+    expect(screen.getByTestId('chapter-pages-left').textContent).toBe('reader.chapterLastPage');
+  });
+
+  it('gives only a floor while later documents of the chapter are unmeasured', () => {
+    render(ReaderBottomBar, makeProps({ chapterPagesLeft: { count: 1, exact: false } }));
+    expect(screen.getByTestId('chapter-pages-left').textContent).toBe(
+      'reader.chapterPagesLeftAtLeastOne',
+    );
+  });
+
+  it('shows no chapter line when the field counts the whole document', () => {
+    render(ReaderBottomBar, makeProps({ chapterPagesLeft: null }));
+    expect(screen.queryByTestId('chapter-pages-left')).toBeNull();
+    expect(screen.getByLabelText('reader.page_input')).toBeInTheDocument();
+  });
+});
+
+describe('PageInput — typing a page', () => {
+  it('selects the number on focus and gives it back on Escape', async () => {
+    render(ReaderBottomBar, makeProps({ currentPage: 4, totalPages: 31 }));
+    const field = screen.getByLabelText('reader.page_input') as HTMLInputElement;
+    const select = vi.spyOn(field, 'select');
+    await fireEvent.focus(field);
+    expect(select).toHaveBeenCalled();
+
+    field.value = '29';
+    await fireEvent.keyDown(field, { key: 'Escape' });
+    expect(field.value).toBe('4');
   });
 });

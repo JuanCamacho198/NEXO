@@ -16,12 +16,21 @@ type SpineMappedEntry = {
 };
 
 /**
- * TOC position for a spine index, or `fallback` when the TOC cannot answer.
+ * TOC position for a spine index — the chapter that CONTAINS that document —
+ * or `fallback` when the TOC cannot answer.
  *
- * `entries` is the only mapping the workspace holds. Entries that resolved to no
- * spine carry no `index` and are skipped, so a TOC built mostly from unresolved
- * nav points degrades to "keep the last known chapter" rather than jumping to
- * the top of the book.
+ * A chapter is often several spine documents and only its first one has an
+ * outline entry. An exact-match lookup found nothing for the rest and kept the
+ * fallback, which on open is entry 0: measured on the real app, the footer and
+ * the TOC read "Portada" 36% into the book. The containing chapter is the entry
+ * with the greatest spine index not past this one; among entries sharing that
+ * document (a "Part" heading and its first chapter) the later, more specific
+ * one wins.
+ *
+ * Entries that resolved to no spine carry no `index` and are skipped, so a TOC
+ * built mostly from unresolved nav points degrades to "keep the last known
+ * chapter" rather than jumping to the top of the book. A document before the
+ * first entry (a cover ahead of the outline) has no chapter either.
  */
 export function tocIndexForSpineIndex(
   spineIndex: number,
@@ -29,7 +38,16 @@ export function tocIndexForSpineIndex(
   fallback: number,
 ): number {
   if (!Number.isFinite(spineIndex) || spineIndex < 0) return fallback;
-  const found = entries.findIndex((entry) => entry.index === spineIndex);
+  let found = -1;
+  let foundSpine = -1;
+  entries.forEach((entry, position) => {
+    const at = entry.index;
+    if (typeof at !== 'number' || at > spineIndex) return;
+    if (at >= foundSpine) {
+      found = position;
+      foundSpine = at;
+    }
+  });
   return found === -1 ? fallback : found;
 }
 

@@ -4,6 +4,7 @@ import SelectionToolbar, {
   type SelectionData,
 } from '$lib/features/reader/highlight/SelectionToolbar.svelte';
 import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
+import { toastQueue } from '$lib/shared/stores/ToastQueue.svelte';
 import type { TranslationOutcome } from '$lib/shared/ports/TranslationPort';
 
 const t = (key: string, params?: Record<string, string | number>) => {
@@ -217,40 +218,48 @@ describe('SelectionToolbar', () => {
   // The parent resolves the selection and returns one `DictionaryCaptureFeedback`
   // value; the toolbar owes the user a localized message for every one of them.
 
+  // The message is a toast at the bottom of the window (not a line under the
+  // toolbar), and its tone follows the outcome.
   it.each([
-    ['created', 'Saved'],
-    ['evidence-updated', 'Evidence updated'],
-    ['already-in-dictionary', 'Already in your dictionary'],
-    ['no-match', 'No dictionary entry matches this selection'],
-    ['ambiguous', 'Several entries match - select a single word'],
-    ['error', 'Something went wrong'],
-  ] as const)('maps the %s feedback to its localized message', async (feedback, message) => {
-    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+    ['created', 'Saved', 'success'],
+    ['evidence-updated', 'Evidence updated', 'success'],
+    ['already-in-dictionary', 'Already in your dictionary', 'info'],
+    ['no-match', 'No dictionary entry matches this selection', 'error'],
+    ['ambiguous', 'Several entries match - select a single word', 'error'],
+    ['error', 'Something went wrong', 'error'],
+  ] as const)('maps the %s feedback to its localized toast', async (feedback, message, tone) => {
+    const before = toastQueue.items.length;
+    const { getByLabelText } = render(SelectionToolbar, {
       ...baseProps(),
       onAddToDictionary: async () => feedback,
     });
 
     await fireEvent.click(getByLabelText('Add to Dictionary'));
 
-    expect(queryByText(message)).toBeTruthy();
+    await waitFor(() => expect(toastQueue.items.length).toBe(before + 1));
+    const toast = toastQueue.items[toastQueue.items.length - 1];
+    expect(toast.message).toBe(message);
+    expect(toast.type).toBe(tone);
   });
 
-  it('calls onCopy and shows copy feedback when copy button clicked', async () => {
+  it('calls onCopy and confirms it with a toast, not a line under the menu', async () => {
     const onCopy = vi.fn();
+    const before = toastQueue.items.length;
     const { getByLabelText, queryByText } = render(SelectionToolbar, {
       ...baseProps(),
       selectedText: 'hello',
       onCopy,
     });
 
-    // Feedback hidden before click
-    expect(queryByText('Copied to clipboard')).toBeNull();
-
-    const button = getByLabelText('Copy');
-    await fireEvent.click(button);
+    await fireEvent.click(getByLabelText('Copy'));
 
     expect(onCopy).toHaveBeenCalledOnce();
-    expect(queryByText('Copied to clipboard')).toBeTruthy();
+    expect(toastQueue.items.length).toBe(before + 1);
+    expect(toastQueue.items[toastQueue.items.length - 1]).toMatchObject({
+      type: 'success',
+      message: 'Copied to clipboard',
+    });
+    expect(queryByText('Copied to clipboard')).toBeNull();
   });
 
   it('renders SVG icons and tooltips for copy, dictionary, translate and define actions', () => {

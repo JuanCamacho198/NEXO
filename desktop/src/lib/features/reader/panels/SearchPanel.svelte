@@ -8,6 +8,10 @@
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
   import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
+  import { tick } from 'svelte';
+  import ArrowRight from 'lucide-svelte/icons/arrow-right';
+  import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+  import Search from 'lucide-svelte/icons/search';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import ReaderDrawerHeader from '../chrome/ReaderDrawerHeader.svelte';
   import { READER_DRAWER, READER_DRAWER_FLY_X, READER_DRAWER_SCRIM } from '../chrome/readerDrawer';
@@ -37,7 +41,12 @@
   }: Props = $props();
 
   let query = $state('');
+  /** The query the shown results answer, for marking it in the snippets. */
+  let searchedQuery = $state('');
   let panelEl: HTMLElement | undefined = $state();
+  let inputEl: HTMLInputElement | undefined = $state();
+
+  const canSubmit = $derived(Boolean(bookId) && !isSearching && query.trim().length > 0);
 
   // Svelte JS transitions ignore the global `prefers-reduced-motion` CSS block,
   // so the panel reads the query itself and zeroes its own duration.
@@ -66,8 +75,31 @@
       return;
     }
 
+    searchedQuery = query.trim();
     onSearch?.(query.trim(), page);
   };
+
+  /** Splits a snippet around each case-insensitive occurrence of the query. */
+  function markMatches(snippet: string): { text: string; hit: boolean }[] {
+    const needle = searchedQuery.toLowerCase();
+    if (!needle) return [{ text: snippet, hit: false }];
+    const parts: { text: string; hit: boolean }[] = [];
+    const haystack = snippet.toLowerCase();
+    let from = 0;
+    for (let at = haystack.indexOf(needle); at !== -1; at = haystack.indexOf(needle, from)) {
+      if (at > from) parts.push({ text: snippet.slice(from, at), hit: false });
+      parts.push({ text: snippet.slice(at, at + needle.length), hit: true });
+      from = at + needle.length;
+    }
+    if (from < snippet.length) parts.push({ text: snippet.slice(from), hit: false });
+    return parts;
+  }
+
+  // Opening search means typing next: the field takes the focus.
+  $effect(() => {
+    if (!open || disabledReason) return;
+    void tick().then(() => inputEl?.focus());
+  });
 
   const jumpTo = (item: SearchResult, index: number): void => {
     onJump?.({
@@ -138,21 +170,49 @@
               runSearch(1);
             }}
           >
-            <input
-              type="text"
-              class="min-w-0 rounded-full! border-(--color-edge)! bg-(--color-home-card)! px-4 py-2.5 text-sm text-(--color-primary) transition-colors placeholder:text-(--color-text-muted) focus:border-(--color-brand)! focus:outline-none"
-              bind:value={query}
-              placeholder={t('search.placeholder')}
-              disabled={isSearching || !bookId}
-            />
-            <Button
-              type="submit"
-              variant="accent"
-              fullWidth
-              disabled={isSearching || !bookId || !query.trim()}
+            <!-- One field, one ring: `search-field` drops the global focus
+              outline so only the border lights up. The submit lives inside
+              the pill, so an empty query no longer shows a dead button. -->
+            <div
+              class="search-field flex items-center gap-2 rounded-full border border-(--color-edge) bg-(--color-home-card) py-1 pr-1 pl-3.5 transition-colors focus-within:border-(--color-brand)"
             >
-              {isSearching ? t('search.searching') : t('search.search')}
-            </Button>
+              <Search
+                size={16}
+                strokeWidth={2}
+                class="shrink-0 text-(--color-text-muted)"
+                aria-hidden="true"
+              />
+              <input
+                type="text"
+                bind:this={inputEl}
+                class="min-w-0 flex-1 rounded-none! border-0! bg-transparent! px-0 py-1.5 text-sm text-(--color-primary) placeholder:text-(--color-text-muted) focus:outline-none"
+                bind:value={query}
+                placeholder={t('search.placeholder')}
+                aria-label={t('search.placeholder')}
+                disabled={isSearching || !bookId}
+              />
+              <button
+                type="submit"
+                class="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition-[background-color,color,opacity] disabled:cursor-not-allowed {canSubmit ||
+                isSearching
+                  ? 'bg-linear-to-r from-(--color-brand-start) to-(--color-brand) text-(--color-brand-on)'
+                  : 'bg-(--color-surface-hover) text-(--color-text-muted)'}"
+                aria-label={isSearching ? t('search.searching') : t('search.search')}
+                title={isSearching ? t('search.searching') : t('search.search')}
+                disabled={!canSubmit}
+              >
+                {#if isSearching}
+                  <LoaderCircle
+                    size={16}
+                    strokeWidth={2.25}
+                    class="animate-spin"
+                    aria-hidden="true"
+                  />
+                {:else}
+                  <ArrowRight size={16} strokeWidth={2.25} aria-hidden="true" />
+                {/if}
+              </button>
+            </div>
           </form>
 
           {#if hasResults()}
@@ -164,7 +224,14 @@
                     class="w-full cursor-pointer rounded-(--radius-md) px-3 py-2.5 text-left transition-colors hover:bg-(--color-surface-hover)"
                     onclick={() => jumpTo(item, index)}
                   >
-                    <p class="text-sm leading-relaxed text-(--color-primary)">{item.snippet}</p>
+                    <p class="text-sm leading-relaxed text-(--color-secondary)">
+                      {#each markMatches(item.snippet) as part, partIndex (partIndex)}
+                        {#if part.hit}<mark
+                            class="rounded-sm bg-(--color-brand-soft) px-0.5 font-semibold text-(--color-brand-text)"
+                            >{part.text}</mark
+                          >{:else}{part.text}{/if}
+                      {/each}
+                    </p>
                     <p class="mt-1 text-xs font-medium text-(--color-brand-text)">
                       {t('search.locator')}: {item.locator}
                     </p>

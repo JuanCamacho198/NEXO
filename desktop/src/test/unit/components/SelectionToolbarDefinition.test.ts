@@ -400,3 +400,40 @@ describe('SelectionToolbar — empty result and failure are different truths', (
     expect(onDefine).not.toHaveBeenCalled();
   });
 });
+
+describe('SelectionToolbar — Translate and Define are one connected panel', () => {
+  it('moves from the translation to the definition from the panel tabs', async () => {
+    const onTranslate = vi.fn(async () => ({
+      status: 'ok' as const,
+      text: 'hola',
+      source: 'en',
+      target: 'es',
+      sourceOrigin: 'book' as const,
+    }));
+    const onDefine = vi.fn(async () => ({
+      word: 'hello',
+      definitions: [{ text: 'a greeting', partOfSpeech: null }],
+      source: 'native' as const,
+      attribution: 'Wiktionary',
+    }));
+    const { getByLabelText, getByTestId, findByText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      selectionData: makeSelectionData({ text: 'hello' }),
+      onTranslate,
+      onDefine,
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+    expect(await findByText('hola')).toBeTruthy();
+
+    await fireEvent.click(getByTestId('lookup-tab-define'));
+    expect(await findByText('a greeting')).toBeTruthy();
+    expect(queryByText('hola')).toBeNull();
+
+    // Back to the translation: it is shown again without a second request.
+    await fireEvent.click(getByTestId('lookup-tab-translate'));
+    expect(await findByText('hola')).toBeTruthy();
+    expect(onTranslate).toHaveBeenCalledOnce();
+    expect(onDefine).toHaveBeenCalledOnce();
+  });
+});

@@ -13,69 +13,21 @@
   import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
   import type { TranslationOutcome } from '$lib/shared/ports/TranslationPort';
   import type { DefinitionResult } from '$lib/shared/ports/DictionaryLookupPort';
-  import type {
-    NoTranslationReason,
-    SourceOrigin,
-  } from '$lib/shared/services/translation/translationLanguageResolution';
   import { isDefinableSelection } from '$lib/shared/services/definition/definitionSelectionGuard';
-  import TranslationLanguageBar from './TranslationLanguageBar.svelte';
+  import BookOpenText from 'lucide-svelte/icons/book-open-text';
+  import BookPlus from 'lucide-svelte/icons/book-plus';
+  import Copy from 'lucide-svelte/icons/copy';
+  import Languages from 'lucide-svelte/icons/languages';
+  import { pushToast, type ToastType } from '$lib/shared/stores/ToastQueue.svelte';
+  import LookupPanel from './LookupPanel.svelte';
+  import { createLookup } from './useLookup.svelte';
   import {
     PANEL_HEIGHT_FACTOR,
     floatingMenuAvailableWidth,
     placeFloatingMenu,
     resolveFloatingMenuLayout,
   } from '$lib/shared/services/placement/floatingMenuPlacement';
-  import {
-    reservesResultPanelSpace,
-    showsShortFeedback,
-    showsTooltips,
-  } from './selectionPanelReservation';
-
-  /**
-   * One message per refusal reason, and where a reason has more than one
-   * provenance, one per provenance — because the FIX differs.
-   *
-   * `unknown-source` is the only genuine detection failure: nothing could name
-   * the source, so the reader has to name one. `same-language` is told apart
-   * because when the reader CHOSE the source, calling it a detection failure is
-   * both false and useless — there was nothing to detect, and the choice is
-   * theirs to revise. The chosen variant is therefore keyed on the source
-   * ORIGIN, not on the reason alone: the same reason from an inferred source
-   * keeps the existing book copy.
-   *
-   * Each names the fix rather than the failure: "the book has no language,
-   * choose one in Settings" is actionable, a bare "no translation available" is
-   * not.
-   */
-  const TRANSLATION_REFUSAL_KEYS: Record<NoTranslationReason, MessageKey> = {
-    'same-language': 'reader.translationSameLanguage',
-    'unknown-source': 'reader.translationUnknownSource',
-    'invalid-source': 'reader.translationInvalidSource',
-    'invalid-target': 'reader.translationInvalidTarget',
-  };
-
-  /**
-   * The refusal key for an outcome, which consults the source ORIGIN before the
-   * reason alone.
-   *
-   * A source the reader chose (`preference` in Settings, `bookPreference` for
-   * this book) never reached the detector, so its failure must not be reported
-   * as one: `unknown-source` is unreachable for those origins by construction,
-   * but the two reasons that ARE reachable — a collision with the target and a
-   * value the app cannot use — read as the reader's own setting and say so.
-   * The detected/book origins keep the existing copy untouched.
-   */
-  function translationRefusalKey(
-    reason: NoTranslationReason,
-    sourceOrigin: SourceOrigin | null,
-  ): MessageKey {
-    const originIsAChoice = sourceOrigin === 'preference' || sourceOrigin === 'bookPreference';
-    if (originIsAChoice) {
-      if (reason === 'same-language') return 'reader.translationSameLanguageChosen';
-      if (reason === 'invalid-source') return 'reader.translationInvalidSourceChosen';
-    }
-    return TRANSLATION_REFUSAL_KEYS[reason];
-  }
+  import { reservesResultPanelSpace, showsTooltips } from './selectionPanelReservation';
 
   // The full data we need to persist a highlight. The parent captures this at
   // selection time and passes it back to us as a prop so that the click on a
@@ -219,122 +171,19 @@
   });
 
   let selectedColor = $state(HIGHLIGHT_COLORS[0].hex);
-  let copyFeedback = $state<string | null>(null);
-  let dictionaryFeedback = $state<string | null>(null);
-  let copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
-  let dictionaryFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
-  let translation = $state<TranslationOutcome | null>(null);
-  let translating = $state(false);
-  let translationActive = $state(false);
+  /**
+   * Translate and Define as one lookup with two tabs (see `useLookup`): the
+   * reader moves between them in the panel instead of stacking two panels.
+   */
+  const lookup = createLookup({
+    translate: () => onTranslate(selectionData!),
+    define: () => onDefine(selectionData!),
+    changeLanguages: (next) => onChangeLanguages(next),
+    canTranslate: () => Boolean(selectionData && selectionData.text.trim()),
+    canDefine: () => Boolean(selectionData) && canDefine,
+  });
   const translationHighlight = $derived(
-    translation !== null || translationActive ? 'bg-white/10' : '',
-  );
-  /**
-   * The pair the panel's selector shows, or `null` when the bar must not render
-   * at all. It is a `$derived` over BOTH `translation` and `pickedLanguages` so
-   * the picked pair can never OUTLIVE the outcome it was chosen for.
-   *
-   * `pickedLanguages` is the overlay, and it is not redundant: the select is a
-   * controlled input, so between the `change` and the fresh outcome the bar
-   * would otherwise snap back to the old pair and read as an ignored click.
-   *
-   * But the overlay alone is not enough, and letting it win unconditionally is
-   * the bug this shape fixes. `no-result` and `unavailable` carry NO pair on
-   * purpose (see `TranslationOutcome`): one is a service answer, the other a
-   * transport failure, and neither is a statement about languages — a selector
-   * there would offer to change something that was not the problem. With the
-   * overlay as the unconditional first branch, a change that landed on either
-   * outcome left `pickedLanguages` set — nothing clears it — so the bar kept
-   * rendering a pair beside "no translation" / "service unavailable", a pair
-   * that belonged to a request that is no longer on screen.
-   *
-   * So the outcome decides FIRST, and the overlay only overrides a pair the
-   * outcome already justified:
-   *
-   *   ok / refused     -> the outcome's own pair; `pickedLanguages` while a
-   *                       change is in flight, so the bar holds the pair just
-   *                       chosen instead of snapping back to the old one.
-   *   no-result /
-   *   unavailable      -> `null`, always. The overlay is not consulted.
-   *
-   * The source ORIGIN rides along with the pair and is deliberately NOT part of
-   * the overlay: `pickedLanguages` is a pair the reader just chose, so its source
-   * is by definition explicit (`preference`) — showing "Auto (español)" over a
-   * language they picked would be a lie. Only the outcome can say the source was
-   * inferred, and only the outcome is consulted for it.
-   *
-   * ## The overlay counts ONLY while a change is in flight
-   *
-   * `pickedLanguages` is written AND cleared by `handleLanguagesChange` — set
-   * before the request, dropped the moment the answer lands — so its presence
-   * means exactly "a retranslation is in flight". Reading it that way is what
-   * this predicate states, and it is the single rule the pair and its origin are
-   * both derived from.
-   *
-   * They have to share the rule, and the earlier shape is the reason: the pair
-   * read the overlay as `pickedLanguages ?? outcome` (present OR absent) while
-   * the origin read it as `pickedLanguages === null` (present vs absent), so a
-   * single truth was decided by two different predicates. MEASURED on the running
-   * app: a change to the source left the overlay set forever, so the bar printed
-   * the pair the reader had picked (`Español → Inglés`) while the refusal message
-   * beside it was drawn from the outcome and said both sides were the same.
-   *
-   * A change whose request never lands is covered by construction: the overlay is
-   * cleared in the request's `finally`, so a hung request simply keeps showing the
-   * pair the reader picked — which is what they asked for and what the bar was
-   * already holding. No third state exists.
-   */
-  let pickedLanguages = $state<{ source: string | null; target: string | null } | null>(null);
-  /**
-   * The outcome that CARRIES a pair, narrowed to its two variants, or `null`.
-   *
-   * Every value below is derived from THIS rather than from a separate boolean
-   * flag. TypeScript does not narrow a `$state` read across the branches of a
-   * `$derived` that tests a DIFFERENT expression, so a shared `$derived` boolean
-   * cannot make `translation.source` type-check — and, more to the point, a
-   * boolean would let the pair and the flag drift the way `shownLanguages` and
-   * `shownSourceOrigin` did. One narrowed value is the only shape in which the
-   * four dependents below can disagree about nothing.
-   */
-  const pairOutcome = $derived(
-    translation?.status === 'ok' || translation?.status === 'refused' ? translation : null,
-  );
-  /** The ONE overlay predicate. Both the pair and its origin are derived from
-   * it, so they cannot disagree about whether the overlay applies — the drift
-   * between them was the defect this replaces. */
-  const overlayIsAhead = $derived(pairOutcome !== null && pickedLanguages !== null);
-  const shownLanguages = $derived(
-    pairOutcome === null
-      ? null
-      : overlayIsAhead
-        ? pickedLanguages
-        : { source: pairOutcome.source, target: pairOutcome.target },
-  );
-  const shownSourceOrigin = $derived(
-    pairOutcome === null ? null : overlayIsAhead ? 'preference' : pairOutcome.sourceOrigin,
-  );
-  /**
-   * The pair the RESOLVER actually used — the outcome's own, with the overlay
-   * deliberately not consulted.
-   *
-   * This is what the bar reads for the side the reader did NOT move. The two
-   * pairs are the same value whenever no change is in flight, and that is the
-   * ordinary case; they differ exactly while the overlay is ahead, and there the
-   * difference matters. The bar builds its payload as "the side that moved takes
-   * its new value, the untouched side keeps what it had", and the value it had
-   * has to be the one the resolver ran with, not a pair the resolver has not seen
-   * yet. Sending the overlay's other side would hand the caller a pair the
-   * request in flight never resolved, which is the whole of what `changed` exists
-   * to prevent (`handleChangeLanguages` reads storage for exactly this reason —
-   * this keeps the layer that OWNS both values from handing it the wrong one).
-   *
-   * A `null` side is carried through as `null`: it is a real value downstream
-   * ("automatic"), and the caller is the one that decides whether a side is
-   * written at all. This value is a FACT about the last resolution, never an
-   * instruction to write.
-   */
-  const resolvedLanguages = $derived(
-    pairOutcome === null ? null : { source: pairOutcome.source, target: pairOutcome.target },
+    lookup.tab === 'translate' ? 'bg-white/10 text-(--color-brand-text)' : '',
   );
 
   /**
@@ -349,17 +198,9 @@
   let pickerOpen = $state(false);
   let pickerAnchor = $state<HTMLButtonElement | null>(null);
 
-  /**
-   * The definition panel's state. `definition` is the last resolved result and
-   * `definitionFailed` is a separate flag because a MISS and a FAILURE are
-   * different truths: a miss is the sources answering "nothing", a failure is
-   * the request never completing. Rendering the same copy for both would hide
-   * an outage behind a bland "no definition".
-   */
-  let definition = $state<DefinitionResult | null>(null);
-  let defining = $state(false);
-  let definitionFailed = $state(false);
-  const definitionActive = $derived(definition !== null || definitionFailed ? 'bg-white/10' : '');
+  const definitionActive = $derived(
+    lookup.tab === 'define' ? 'bg-white/10 text-(--color-brand-text)' : '',
+  );
 
   /**
    * The C+A limit, as a `$derived` over the SAME text the button would send.
@@ -470,6 +311,16 @@
     'no-match': 'reader.dictionaryNoMatch',
     ambiguous: 'reader.dictionarySeveralMatches',
     error: 'error.somethingWrong',
+  };
+  // The toast's tone follows the outcome: saved is a success, a no-op is
+  // information, and a capture that could not happen is an error.
+  const DICTIONARY_FEEDBACK_TONE: Record<DictionaryCaptureFeedback, ToastType> = {
+    created: 'success',
+    'evidence-updated': 'success',
+    'already-in-dictionary': 'info',
+    'no-match': 'error',
+    ambiguous: 'error',
+    error: 'error',
   };
 
   // The selection's box, translated from container space into the window space
@@ -603,7 +454,9 @@
    * an option: the panel is data-dependent and a measured one is the
    * place-then-correct jump this whole module exists to avoid.
    */
-  const PLACEMENT_PANEL_BUDGET = 120;
+  // Room for the lookup panel: its tab header (~44px) plus a few lines of
+  // answer. Longer answers scroll inside the panel instead of growing it.
+  const PLACEMENT_PANEL_BUDGET = 200;
   const PLACEMENT_PANEL_BUDGET_COLLAPSED = PANEL_HEIGHT_FACTOR * TOOLBAR_HEIGHT_ESTIMATE;
 
   /**
@@ -629,18 +482,19 @@
    * panel renders under, `reservesResultPanelSpace` is what the placement
    * budgets. A state in neither is a defect the tests make loud.
    */
+  // Copy and dictionary feedback are toasts at the bottom of the window now,
+  // so nothing short ever hangs under the pill: only the lookup panel does.
   const panelState = $derived({
-    copyFeedback: Boolean(copyFeedback),
-    dictionaryFeedback: Boolean(dictionaryFeedback),
-    translating,
-    translation: Boolean(translation),
-    defining,
-    definition: Boolean(definition),
-    definitionFailed,
+    copyFeedback: false,
+    dictionaryFeedback: false,
+    translating: lookup.tab === 'translate' && lookup.translating,
+    translation: lookup.tab === 'translate' && lookup.translation !== null,
+    defining: lookup.tab === 'define' && lookup.defining,
+    definition: lookup.tab === 'define' && lookup.definition !== null,
+    definitionFailed: lookup.tab === 'define' && lookup.definitionFailed,
   });
 
   const reservesPanelSpace = $derived(reservesResultPanelSpace(panelState));
-  const shortFeedbackOpen = $derived(showsShortFeedback(panelState));
 
   /**
    * Whether the button tooltips are allowed to reveal.
@@ -748,7 +602,9 @@
    * goes without.
    */
   const caret = $derived.by((): { x: number; y: number; up: boolean } | null => {
-    if (toolbarWrapped) return null;
+    // With the lookup panel open the pill is no longer the edge facing the
+    // text, so the caret would point into the panel: it steps aside.
+    if (toolbarWrapped || lookup.open) return null;
     const pillLeft = toolbarX + pillOffset;
     const pillWidth = toolbarCollapsed ? PILL_WIDTH_COLLAPSED : PILL_WIDTH_FULL;
     const centre = (selectionWindowBounds.left + selectionWindowBounds.right) / 2;
@@ -781,37 +637,11 @@
    */
   const resultPanelMaxHeight = $derived(
     toolbarPlacement.placement === 'above'
-      ? Math.max(120, toolbarY)
+      ? // Above the selection the panel hangs between the pill and the text,
+        // so its ceiling is the room the placement reserved for it — never
+        // more, or it covers the very words it is about.
+        Math.max(120, placementMenuSize.height - TOOLBAR_HEIGHT_ESTIMATE - 8)
       : Math.max(120, resolvedViewport.height - (toolbarY + placementMenuSize.height)),
-  );
-
-  /**
-   * The SHORT feedback panel's height ceiling: the room the pill leaves BELOW
-   * itself, and nothing more.
-   *
-   * Feedback no longer reserves space, so the pill is no longer lifted to make
-   * room for it — and a selection near the bottom edge is therefore the case
-   * where the one-line message can hang past the window. The ceiling is the
-   * window minus the pill's own bottom edge and the `mt-2` gap the panel sits
-   * below it: the last coordinate that keeps the panel's bottom edge on screen.
-   *
-   * It is derived from the pill's REAL row height rather than from
-   * `placementMenuSize.height`, which is the point: that is the box the
-   * placement RESERVED, and for feedback the reservation is deliberately zero.
-   * Bounding the feedback panel by it would let a 120px panel be drawn where 20px
-   * of room exists, which is the overflow this constant exists to prevent.
-   *
-   * No `max(120, …)` floor, unlike the result panel. A result panel is content
-   * the reader asked for and must stay usable; feedback is a transient one-line
-   * message and a bound that is genuinely small there is honest. The floor is the
-   * panel's own natural line height, so a message is never cut to a sliver.
-   */
-  const FEEDBACK_PANEL_MIN_HEIGHT = 26;
-  const feedbackPanelMaxHeight = $derived(
-    Math.max(
-      FEEDBACK_PANEL_MIN_HEIGHT,
-      resolvedViewport.height - (toolbarY + placementRenderedHeight + TOOLBAR_OFFSET),
-    ),
   );
 
   /**
@@ -901,12 +731,7 @@
 
   function handleCopy(): void {
     onCopy();
-    copyFeedback = t('reader.copiedToClipboard');
-    if (copyFeedbackTimer) clearTimeout(copyFeedbackTimer);
-    copyFeedbackTimer = setTimeout(() => {
-      copyFeedback = null;
-      copyFeedbackTimer = null;
-    }, 1500);
+    pushToast('success', t('reader.copiedToClipboard'));
   }
 
   async function handleAddToDictionary(): Promise<void> {
@@ -917,124 +742,10 @@
     if (!selectionData.text.trim()) return;
 
     const feedback = await onAddToDictionary(selectionData);
-    dictionaryFeedback = t(DICTIONARY_FEEDBACK_KEYS[feedback] ?? 'reader.addedToDictionary');
-    if (dictionaryFeedbackTimer) clearTimeout(dictionaryFeedbackTimer);
-    dictionaryFeedbackTimer = setTimeout(() => {
-      dictionaryFeedback = null;
-      dictionaryFeedbackTimer = null;
-    }, 1500);
-  }
-
-  /**
-   * Translate toggles a result panel. A second click (or the panel's close
-   * button) clears it, so the selection stays usable while the result is up.
-   * The request itself lives in the parent: the toolbar is presentational and
-   * owns no port.
-   */
-  async function handleTranslate(): Promise<void> {
-    if (translation) {
-      translation = null;
-      pickedLanguages = null;
-      return;
-    }
-    if (!selectionData || !selectionData.text.trim()) return;
-
-    translating = true;
-    try {
-      translation = await onTranslate(selectionData);
-    } finally {
-      translating = false;
-    }
-  }
-
-  /**
-   * Persist a language change and retranslate the SAME selection in place.
-   *
-   * It re-uses the request path `handleTranslate` uses instead of inventing a
-   * second one, so a retranslation cannot drift from a first translation. It
-   * does NOT call `handleTranslate`, though: that function's first branch CLEARS
-   * the panel, and it would also skip the request for the same-language pair the
-   * reader is asking to be told about — the refusal has to come from the
-   * resolver, which is the only thing that knows the book's language and the
-   * detected one.
-   *
-   * ## The overlay lives exactly as long as the request does
-   *
-   * `pickedLanguages` is written here and CLEARED here, the moment the answer
-   * lands. That is what makes the overlay's lifetime mean something: it is ahead
-   * of the outcome precisely while the retranslation is in flight (see
-   * `overlayIsAhead`), and it is dropped the instant the outcome that belongs to
-   * it arrives. Leaving it set — which is what the previous shape did — made the
-   * overlay UNCONDITIONAL and permanent, so the bar kept rendering the pair the
-   * reader picked even after a resolution had answered with a DIFFERENT one, and
-   * the message beside it described the outcome. Two pairs, one panel.
-   *
-   * The OVERLAY holds the whole pair — it is what the bar renders, and the bar
-   * renders two sides. The WRITE is a different question and is the caller's:
-   * this function forwards `next` verbatim, `changed` included, so only the side
-   * the reader moved is persisted as a choice.
-   */
-  async function handleLanguagesChange(next: {
-    source: string | null;
-    target: string | null;
-    changed: 'source' | 'target';
-  }): Promise<void> {
-    pickedLanguages = { source: next.source, target: next.target };
-    await onChangeLanguages(next);
-    if (!selectionData || !selectionData.text.trim()) {
-      // Nothing will replace the outcome, so the overlay has no answer to yield
-      // to. Dropping it would snap the bar back to a pair the reader just moved
-      // away from; keeping it is the honest "this is what you picked".
-      return;
-    }
-
-    translating = true;
-    translationActive = true;
-    try {
-      translation = await onTranslate(selectionData);
-    } finally {
-      translating = false;
-      translationActive = false;
-      // The outcome now belongs to the pair the reader picked, so the overlay has
-      // nothing left to say. Clearing it HERE and not before is what keeps the
-      // bar, the message and the payload reading the same value from the same
-      // place. `no-result` / `unavailable` carry no pair of their own, so this
-      // also hides the bar rather than leaving it advertising a pair the request
-      // did not produce.
-      pickedLanguages = null;
-    }
-  }
-
-  /**
-   * Define toggles a result panel, mirroring `handleTranslate`. The limit is
-   * enforced by the button's `disabled`, and re-checked here because a keyboard
-   * activation and a click on a stale render both reach this function — the
-   * guard is cheap and the request is not.
-   *
-   * A rejection sets `definitionFailed` and leaves `definition` untouched, so
-   * "could not reach the dictionary" never renders as "no definition".
-   */
-  async function handleDefine(): Promise<void> {
-    if (definition || definitionFailed) {
-      definition = null;
-      definitionFailed = false;
-      return;
-    }
-    if (!selectionData || !canDefine) return;
-
-    defining = true;
-    try {
-      definition = await onDefine(selectionData);
-    } catch {
-      definitionFailed = true;
-    } finally {
-      defining = false;
-    }
-  }
-
-  function closeDefinition(): void {
-    definition = null;
-    definitionFailed = false;
+    pushToast(
+      DICTIONARY_FEEDBACK_TONE[feedback] ?? 'info',
+      t(DICTIONARY_FEEDBACK_KEYS[feedback] ?? 'reader.addedToDictionary'),
+    );
   }
 </script>
 
@@ -1149,27 +860,13 @@
       <button
         type="button"
         class="{MENU_ICON_BUTTON} {translationHighlight}"
-        onclick={handleTranslate}
-        disabled={translating}
+        onclick={() => lookup.toggle('translate')}
+        disabled={lookup.translating && lookup.tab === 'translate'}
+        aria-pressed={lookup.tab === 'translate'}
         aria-label={t('reader.translate')}
         title={t('reader.translate')}
       >
-        <svg
-          class="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path d="M4 5h12"></path>
-          <path d="M10 5v2c0 4-2.5 7-6 9"></path>
-          <path d="M6 11c1.5 2.5 4 4 7 4.5"></path>
-          <path d="M14 21l4-9 4 9"></path>
-          <path d="M15.5 18h5"></path>
-        </svg>
+        <Languages size={16} strokeWidth={2} aria-hidden="true" />
       </button>
       <span
         class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
@@ -1190,26 +887,13 @@
       <button
         type="button"
         class="{MENU_ICON_BUTTON} {definitionActive}"
-        onclick={handleDefine}
-        disabled={defining || !canDefine}
+        onclick={() => lookup.toggle('define')}
+        disabled={(lookup.defining && lookup.tab === 'define') || !canDefine}
+        aria-pressed={lookup.tab === 'define'}
         aria-label={t('reader.define')}
         title={t('reader.define')}
       >
-        <svg
-          class="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-          <path d="M9 7h6"></path>
-          <path d="M9 11h6"></path>
-        </svg>
+        <BookOpenText size={16} strokeWidth={2} aria-hidden="true" />
       </button>
       <span
         class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
@@ -1229,23 +913,7 @@
         aria-label={t('reader.addToDictionary')}
         title={t('reader.addToDictionary')}
       >
-        <svg
-          class="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-          <path d="M6 8h2"></path>
-          <path d="M6 12h2"></path>
-          <path d="M16 8h2"></path>
-          <path d="M16 12h2"></path>
-        </svg>
+        <BookPlus size={16} strokeWidth={2} aria-hidden="true" />
       </button>
       <span
         class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
@@ -1266,19 +934,7 @@
         aria-label={t('reader.copiar')}
         title={t('reader.copiar')}
       >
-        <svg
-          class="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
+        <Copy size={16} strokeWidth={2} aria-hidden="true" />
       </button>
       <span
         class="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/85 px-2 py-1 text-xs font-medium text-white shadow-lg transition-opacity duration-150 {tooltipsAllowed
@@ -1291,171 +947,7 @@
     </div>
   </div>
 
-  <!-- Action feedback (copy / dictionary). The panel spans the pill it belongs
-       to, which is the fixed placement width in both layouts.
-
-       It renders under `shortFeedbackOpen` and NOT under the panel-budget
-       condition: the message still appears exactly as it always did, it simply
-       no longer reserves room in the placement (see `reservesPanelSpace`), so it
-       no longer moves the menu on every press. Its own ceiling is the room the
-       pill leaves below itself, so a selection at the bottom edge cannot push the
-       message off the window. -->
-  {#if shortFeedbackOpen}
-    <div
-      class="mt-2 overflow-hidden rounded-lg bg-(--color-highlight-menu-bg) text-center text-xs text-(--color-text-inverse) shadow-lg"
-      style="width: {placementMenuSize.width}px; max-height: {feedbackPanelMaxHeight}px;"
-      role="status"
-      aria-live="polite"
-    >
-      <p class="px-3 py-1">{copyFeedback ?? dictionaryFeedback}</p>
-    </div>
-  {/if}
-
-  <!-- Translation result. `no-result` (echo / entity / untranslatable) and
-       `unavailable` (offline / quota / HTTP) are shown apart on purpose: one
-       is the service answering, the other is the service failing. -->
-  {#if translating || translation}
-    <div
-      class="mt-2 overflow-y-auto rounded-lg bg-(--color-highlight-menu-bg) px-4 py-3 text-(--color-text-inverse) shadow-lg"
-      style="width: {resultPanelWidth}px; max-height: {resultPanelMaxHeight}px;"
-      role="status"
-      aria-live="polite"
-    >
-      {#if translating}
-        <p class="text-xs text-(--color-text-auxiliary)">{t('reader.translating')}</p>
-      {:else if translation?.status === 'ok'}
-        <div class="flex items-start gap-2">
-          <p class="min-w-0 grow text-sm wrap-break-word">{translation.text}</p>
-          <button
-            type="button"
-            class="shrink-0 cursor-pointer rounded p-0.5 text-sm leading-none font-medium text-(--color-text-auxiliary) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
-            onclick={() => {
-              translation = null;
-              pickedLanguages = null;
-            }}
-            aria-label={t('reader.dismissTranslation')}
-            title={t('reader.dismissTranslation')}
-          >
-            ✕
-          </button>
-        </div>
-      {:else if translation?.status === 'no-result'}
-        <p class="text-xs text-(--color-text-auxiliary)">{t('reader.translationNoResult')}</p>
-      {:else if translation?.status === 'unavailable'}
-        <p class="text-xs text-(--color-text-auxiliary)">{t('reader.translationUnavailable')}</p>
-      {:else if translation?.status === 'refused'}
-        <!-- The message is drawn from the outcome ONLY, and that is why it is
-             suppressed while the overlay is ahead of it. A refusal describes a
-             pair the RESOLVER refused, while the bar beside it would be showing
-             the pair the reader just picked — so for the interval between the
-             change and the answer the two describe DIFFERENT pairs, and the
-             message reads as a contradiction ("source and target are the same")
-             under a bar that plainly shows two different languages. Measured on
-             the running app: the bar read `Español → Inglés` while the message
-             said both sides were the same. Nothing can be rendered that makes a
-             stale outcome consistent with a fresh pair, so nothing is rendered:
-             the panel is already showing "translating", which is the truth.
-             The moment the request resolves, `pickedLanguages` still holds the
-             pair and the outcome now belongs to it, so the message and the bar
-             are consistent by construction. -->
-        {#if !overlayIsAhead}
-          <p class="text-xs text-(--color-text-auxiliary)">
-            {t(translationRefusalKey(translation.reason, translation.sourceOrigin))}
-          </p>
-        {/if}
-      {/if}
-      {#if !translating && shownLanguages}
-        <div class="mt-2">
-          <TranslationLanguageBar
-            source={shownLanguages.source}
-            target={shownLanguages.target}
-            resolvedSource={resolvedLanguages?.source ?? null}
-            resolvedTarget={resolvedLanguages?.target ?? null}
-            sourceOrigin={shownSourceOrigin}
-            {t}
-            onChange={handleLanguagesChange}
-          />
-        </div>
-      {/if}
-    </div>
-  {/if}
-
-  <!-- Definition result. The attribution is rendered on EVERY branch including
-       the empty one: the backend deliberately carries it on a miss too, because
-       the CC BY-SA license requires it accompany the reused text and the UI
-       cannot be trusted to reconstruct it. -->
-  {#if defining || definition || definitionFailed}
-    <div
-      class="mt-2 overflow-y-auto rounded-lg bg-(--color-highlight-menu-bg) px-4 py-3 text-(--color-text-inverse) shadow-lg"
-      style="width: {resultPanelWidth}px; max-height: {resultPanelMaxHeight}px;"
-      role="status"
-      aria-live="polite"
-    >
-      {#if defining}
-        <p class="text-xs text-(--color-text-auxiliary)">{t('reader.defining')}</p>
-      {:else if definitionFailed}
-        <div class="flex items-start gap-2">
-          <p class="min-w-0 grow text-xs text-(--color-text-auxiliary)">
-            {t('reader.definitionUnavailable')}
-          </p>
-          <button
-            type="button"
-            class="shrink-0 cursor-pointer rounded p-0.5 text-sm leading-none font-medium text-(--color-text-auxiliary) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
-            onclick={closeDefinition}
-            aria-label={t('reader.dismissDefinition')}
-            title={t('reader.dismissDefinition')}
-          >
-            ✕
-          </button>
-        </div>
-      {:else if definition}
-        <div class="flex items-start gap-2">
-          <div class="min-w-0 grow">
-            {#if definition.definitions.length === 0}
-              <p class="text-xs text-(--color-text-auxiliary)">
-                {t('reader.definitionNoResult')}
-              </p>
-            {:else}
-              <!-- The machine-translation mark. Not cosmetic: a translated gloss
-                   is usually right and wrong in ways the reader cannot see, so
-                   the reader is told which one they got. `native` needs no mark
-                   — a human wrote it in the reader's own language. -->
-              {#if definition.source === 'translated'}
-                <p class="mb-1 text-xs text-(--color-text-auxiliary)">
-                  {t('reader.definitionTranslated')}
-                </p>
-              {/if}
-              <ul class="flex flex-col gap-1">
-                {#each definition.definitions as item}
-                  <li class="text-sm wrap-break-word">
-                    {#if item.partOfSpeech}
-                      <span
-                        data-definition-pos
-                        class="mr-1 text-xs italic text-(--color-text-auxiliary)"
-                      >
-                        {item.partOfSpeech}
-                      </span>
-                    {/if}
-                    {item.text}
-                  </li>
-                {/each}
-              </ul>
-            {/if}
-            <p class="mt-1 text-[0.65rem] text-(--color-text-auxiliary)">
-              {definition.attribution}
-            </p>
-          </div>
-          <button
-            type="button"
-            class="shrink-0 cursor-pointer rounded p-0.5 text-sm leading-none font-medium text-(--color-text-auxiliary) transition-colors hover:bg-white/10 hover:text-(--color-accent-sky) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent-sky)"
-            onclick={closeDefinition}
-            aria-label={t('reader.dismissDefinition')}
-            title={t('reader.dismissDefinition')}
-          >
-            ✕
-          </button>
-        </div>
-      {/if}
-    </div>
+  {#if lookup.open}
+    <LookupPanel {lookup} {t} width={resultPanelWidth} maxHeight={resultPanelMaxHeight} />
   {/if}
 </div>

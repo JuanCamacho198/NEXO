@@ -9,6 +9,9 @@ export type ProgressLike = {
    * file to open, so the home partitions drop them.
    */
   filePath?: string;
+  /** When this book's reading position was last saved (`reading_progress.updated_at`). */
+  progressUpdatedAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type ReadingState = 'to_read' | 'reading' | 'completed';
@@ -625,10 +628,27 @@ export const partitionHomeBooks = <TBook extends ProgressLike>(
   }
 
   return {
-    continueReadingBooks,
+    continueReadingBooks: sortByLastRead(continueReadingBooks),
     myShelfBooks,
   };
 };
+
+/**
+ * When the book was last read on any device. A progress save stamps
+ * `progressUpdatedAt`; a book that never saved one (a PDF keeps its page on the
+ * book row) falls back to the row's own time.
+ */
+export const lastReadMillis = (
+  book: Pick<ProgressLike, 'progressUpdatedAt' | 'updatedAt'>,
+): number => parseDateAsMillis(book.progressUpdatedAt ?? book.updatedAt);
+
+// Newest first; equal or unknown times keep their incoming order (stable sort).
+const sortByLastRead = <TBook extends ProgressLike>(books: TBook[]): TBook[] =>
+  [...books].sort((left, right) => {
+    const l = lastReadMillis(left);
+    const r = lastReadMillis(right);
+    return l === r ? 0 : r > l ? 1 : -1;
+  });
 
 export const promoteBookForReading = <TBook extends ProgressLike>(
   books: TBook[],

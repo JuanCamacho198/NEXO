@@ -19,7 +19,11 @@
  * explicit reader font pick — which carries `!important` — still beats them.
  */
 import type { PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
-import { SOLO_IMAGE_ATTR, STACKED_IMAGE_ATTR } from '$lib/features/reader/viewer-epub/epubImageFit';
+import {
+  IMAGE_PAIR_ATTR,
+  SOLO_IMAGE_ATTR,
+  STACKED_IMAGE_ATTR,
+} from '$lib/features/reader/viewer-epub/epubImageFit';
 
 export type { PageBox };
 export interface ReaderCssOptions {
@@ -191,6 +195,39 @@ export function buildPaginationCss(
 }
 
 /**
+ * The prose measure, kept inside a paginated column.
+ *
+ * Scrolling mode holds a line to ~65 characters (`max-width: min(65ch, 100%)`
+ * on body). A column cannot use `max-width` — body is the fragmented box and
+ * must fill the page — so `buildPaginationCss` drops it, and on a wide window
+ * every line ran the whole page: measured on *Prisioneros de la geografía* at a
+ * 1120px page box, ~150 characters a line, twice what a reader can track.
+ *
+ * The same measure comes back as inline padding instead, which a column DOES
+ * honour on every fragment (see `buildPaginationCss`): each side gets at least
+ * the reader's margin, or half of what is left once the 65ch line is placed.
+ * The page box, the column width and the page step are untouched, so paging
+ * geometry cannot move. `ch` resolves against body's own font size, so the
+ * measure follows the reader's zoom exactly as in scrolling mode.
+ *
+ * Prose only: a plate or an image-only document has its measure released on
+ * purpose.
+ */
+function buildPaginatedMeasureCss(opts: ReaderCssOptions): string {
+  const pagination = opts.pagination;
+  if (!pagination || (opts.layout && opts.layout !== 'prose')) return '';
+  const w = Math.max(1, Math.round(pagination.width));
+  const left = Number.isFinite(opts.margins.left) ? Math.max(0, opts.margins.left) : 0;
+  const right = Number.isFinite(opts.margins.right) ? Math.max(0, opts.margins.right) : 0;
+  return `
+      body {
+        padding-left: max(${left}rem, calc((${w}px - 65ch) / 2)) !important;
+        padding-right: max(${right}rem, calc((${w}px - 65ch) / 2)) !important;
+      }
+`;
+}
+
+/**
  * The block height a paginated page has for its content, as a CSS length.
  *
  * One expression, shared by every rule that has to fit inside a page: `max()`
@@ -254,7 +291,59 @@ function buildPaginatedMediaCeiling(opts: ReaderCssOptions): string {
         max-height: ${ceiling} !important;
         ${plateDisplay}
       }
-    `;
+${opts.layout === 'image-only' ? buildPaginatedPlateCss(ceiling) : ''}    `;
+}
+
+/**
+ * Plates in paginated mode: no blank page, and a two-image spread on one page.
+ *
+ * Measured on *Prisioneros de la geografía*, chapter 4's map document laid out
+ * as THREE pages: an empty one, then the left half of the map, then the right
+ * half. The stacked rule's block margin (`margin-block: 0.5em`) plus a plate
+ * capped to the full page height cannot fit the first column, so the browser
+ * pushed the plate to the next one (where the margin is truncated after the
+ * break) and left the first blank; and stacking put each half on a page of its
+ * own, so the map was never seen whole.
+ *
+ * In a column the plates lose their block margin, and the block holding the
+ * pair (see `IMAGE_PAIR_ATTR`) becomes one row the height of the page: the two
+ * halves sit side by side, each capped to the page height and to half its
+ * width, and whatever spacer the book put between them is hidden. Scrolling
+ * mode never sees these rules.
+ */
+function buildPaginatedPlateCss(ceiling: string): string {
+  return `
+      body img[${STACKED_IMAGE_ATTR}] {
+        margin-block: 0 !important;
+      }
+      body [${IMAGE_PAIR_ATTR}] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: ${ceiling} !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        break-inside: avoid !important;
+      }
+      body [${IMAGE_PAIR_ATTR}] > * {
+        flex: 0 1 auto !important;
+        min-width: 0 !important;
+        max-width: 50% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      body [${IMAGE_PAIR_ATTR}] > :not(:has(img)) {
+        display: none !important;
+      }
+      body [${IMAGE_PAIR_ATTR}] img {
+        max-width: 100% !important;
+        width: auto !important;
+        height: auto !important;
+        margin: 0 !important;
+      }
+`;
 }
 
 /**
@@ -424,6 +513,7 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
   // (`max-height: none`) so a plate can be zoomed, which in a column would let a
   // plate grow taller than the page it is printed on. See the function.
   const paginatedMediaCss = buildPaginatedMediaCeiling(opts);
+  const paginatedMeasureCss = buildPaginatedMeasureCss(opts);
   // Last of the paginated blocks: it has to win over the generic `body table`
   // rule above (`overflow-x: auto` with no height bound), which is what left a
   // table taller than the page with its bottom unreachable.
@@ -674,7 +764,7 @@ export function buildReaderOverrideCss(opts: ReaderCssOptions): string {
       body :lang(ko) :is(em, i, cite, dfn) {
         font-style: normal;
       }
-${paginationCss}${imageOnlyCss}${paginatedMediaCss}${paginatedTableCss}    `;
+${paginationCss}${paginatedMeasureCss}${imageOnlyCss}${paginatedMediaCss}${paginatedTableCss}    `;
 }
 
 /**

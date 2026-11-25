@@ -7,7 +7,7 @@ import HighlightContextMenu from '$lib/features/reader/highlight/HighlightContex
 // These assertions capture the behaviour AS IT IS on purpose: the menu's clamp
 // is correct today, so the point of this file is to make any later refactor
 // (routing the placement through `placeFloatingMenu`) prove it did not move a
-// single pixel. The numbers below are the menu's own constants — width 224,
+// single pixel. The numbers below are the menu's own constants — width 204 (the row computed without lookups),
 // height estimate 56, padding 8 — read from the fixture's 1000x800 window, and
 // they must not be "improved" without also re-deriving the whole file.
 
@@ -40,7 +40,7 @@ describe('HighlightContextMenu placement (non-regression pin)', () => {
 
     expect(style).toContain('left: 100px');
     expect(style).toContain('top: 108px');
-    expect(style).toContain('width: 224px');
+    expect(style).toContain('width: 204px');
   });
 
   it('clamps the left edge to the 8px padding', () => {
@@ -49,8 +49,8 @@ describe('HighlightContextMenu placement (non-regression pin)', () => {
     expect(styleOf(container)).toContain('left: 8px');
   });
 
-  it('clamps the right edge to viewport width - 224 - 8', () => {
-    const expectedX = window.innerWidth - 224 - 8;
+  it('clamps the right edge to viewport width - 204 - 8', () => {
+    const expectedX = window.innerWidth - 204 - 8;
     const { container } = renderAt({ x: 99999, y: 100 });
 
     expect(styleOf(container)).toContain(`left: ${expectedX}px`);
@@ -82,8 +82,8 @@ describe('HighlightContextMenu placement (non-regression pin)', () => {
       },
     });
     const style = styleOf(container);
-    // centre 460 - 224 / 2 = 348; top 300 - 56 - 12 = 232
-    expect(style).toContain('left: 348px');
+    // centre 460 - 204 / 2 = 358; top 300 - 56 - 12 = 232
+    expect(style).toContain('left: 358px');
     expect(style).toContain('top: 232px');
     expect(container.querySelector('[role="menu"]')?.getAttribute('data-placement')).toBe('above');
   });

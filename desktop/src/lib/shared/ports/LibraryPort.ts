@@ -26,6 +26,8 @@ export type UpsertBookInput = {
   createdAt: string;
   updatedAt: string;
   genre?: string | null;
+  language?: string | null;
+  publicationDate?: string | null;
 };
 
 export interface LibraryPort {

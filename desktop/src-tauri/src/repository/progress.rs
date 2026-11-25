@@ -554,115 +554,12 @@ pub fn get_reading_stats_for_range(
 
     let from_str = from.to_rfc3339();
     let to_str = to.to_rfc3339();
-
-    let total_seconds: i64 = if book_id.is_some() {
-        repo.connection.query_row(
-            "SELECT COALESCE(SUM(duration_seconds), 0)
-             FROM reading_sessions
-             WHERE user_id = ?1 AND book_id = ?2 AND started_at BETWEEN ?3 AND ?4",
-            params![user_id, book_id, from_str, to_str],
-            |row| row.get(0),
-        )?
-    } else {
-        repo.connection.query_row(
-            "SELECT COALESCE(SUM(duration_seconds), 0)
-             FROM reading_sessions
-             WHERE user_id = ?1 AND started_at BETWEEN ?2 AND ?3",
-            params![user_id, from_str, to_str],
-            |row| row.get(0),
-        )?
-    };
-
-    let total_sessions: i64 = if book_id.is_some() {
-        repo.connection.query_row(
-            "SELECT COUNT(*) FROM reading_sessions
-             WHERE user_id = ?1 AND book_id = ?2 AND started_at BETWEEN ?3 AND ?4",
-            params![user_id, book_id, from_str, to_str],
-            |row| row.get(0),
-        )?
-    } else {
-        repo.connection.query_row(
-            "SELECT COUNT(*) FROM reading_sessions
-             WHERE user_id = ?1 AND started_at BETWEEN ?2 AND ?3",
-            params![user_id, from_str, to_str],
-            |row| row.get(0),
-        )?
-    };
-
-    let max_progress: Option<f64> = if book_id.is_some() {
-        repo.connection
-            .query_row(
-                "SELECT MAX(COALESCE(end_percentage, start_percentage))
-                 FROM reading_sessions
-                 WHERE user_id = ?1 AND book_id = ?2 AND started_at BETWEEN ?3 AND ?4",
-                params![user_id, book_id, from_str, to_str],
-                |row| row.get(0),
-            )
-            .optional()?
-            .flatten()
-    } else {
-        None
-    };
-
-    let books_started: i64 = if book_id.is_some() {
-        if total_sessions > 0 {
-            1
-        } else {
-            0
-        }
-    } else {
-        repo.connection.query_row(
-            "SELECT COUNT(DISTINCT book_id) FROM reading_sessions
-             WHERE user_id = ?1 AND started_at BETWEEN ?2 AND ?3",
-            params![user_id, from_str, to_str],
-            |row| row.get(0),
-        )?
-    };
-
-    let books_completed: i64 = if book_id.is_some() {
-        if max_progress.unwrap_or(0.0) >= 100.0 {
-            1
-        } else {
-            0
-        }
-    } else {
-        repo.connection.query_row(
-            "SELECT COUNT(*)
-             FROM (
-                SELECT book_id, MAX(COALESCE(end_percentage, start_percentage, 0)) AS max_progress
-                FROM reading_sessions
-                WHERE user_id = ?1 AND started_at BETWEEN ?2 AND ?3
-                GROUP BY book_id
-             ) x
-             WHERE x.max_progress >= 100.0",
-            params![user_id, from_str, to_str],
-            |row| row.get(0),
-        )?
-    };
-
-    let avg_progress_percentage: f64 = if book_id.is_some() {
-        max_progress.unwrap_or(0.0)
-    } else {
-        repo.connection.query_row(
-            "SELECT COALESCE(AVG(max_progress), 0.0)
-             FROM (
-                SELECT MAX(COALESCE(end_percentage, start_percentage, 0.0)) AS max_progress
-                FROM reading_sessions
-                WHERE user_id = ?1 AND started_at BETWEEN ?2 AND ?3
-                GROUP BY book_id
-             )",
-            params![user_id, from_str, to_str],
-            |row| row.get(0),
-        )?
-    };
-
-    Ok(ReadingStatsSummaryDto {
-        total_minutes_read: ((total_seconds as f64) / 60.0).round() as i64,
-        total_sessions,
-        books_started,
-        books_completed,
-        avg_progress_percentage,
-    })
+    super::reading_stats::summarize_reading_sessions(
+        repo,
+        user_id,
+        book_id,
+        Some((&from_str, &to_str)),
+    )
 }
 
 pub fn get_reading_streak(

@@ -12,7 +12,7 @@
  * prove the prop is honoured and that the resolver is fed
  * `dictionaryActions.words`.
  */
-import { render, screen, fireEvent } from '@testing-library/svelte';
+import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LibraryBookDto } from '$lib/shared/types/library';
 import type { DictionaryWordDto } from '$lib/shared/types';
@@ -86,6 +86,7 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
 
 import ReaderWorkspace from '$lib/features/reader/chrome/ReaderWorkspace.svelte';
 import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
+import { toastQueue } from '$lib/shared/stores/ToastQueue.svelte';
 import { resetCaptureSelection, setCaptureSelection } from '../../mocks/MockCaptureViewer.svelte';
 
 const USER_FIELDS = {
@@ -214,8 +215,14 @@ function renderReader(book: BookStub, extraProps: { dictionaryActions?: Dictiona
   });
 }
 
-/** Select, then click "Add to Dictionary", and return the feedback element. */
-async function selectAndCapture(): Promise<HTMLElement> {
+/**
+ * Select, then click "Add to Dictionary", and return the feedback the reader
+ * sees. The feedback is a toast at the bottom of the window now (not a line
+ * under the toolbar), so this waits for the NEW toast and hands back its text
+ * in the shape the assertions read.
+ */
+async function selectAndCapture(): Promise<{ textContent: string }> {
+  const before = toastQueue.items.length;
   const emit = await screen.findByTestId('mock-capture-select');
   await fireEvent.click(emit);
 
@@ -224,7 +231,8 @@ async function selectAndCapture(): Promise<HTMLElement> {
   });
   await fireEvent.click(dictionaryButton);
 
-  return screen.findByRole('status');
+  await waitFor(() => expect(toastQueue.items.length).toBeGreaterThan(before));
+  return { textContent: toastQueue.items[toastQueue.items.length - 1].message };
 }
 
 const EVIDENCE_KEYS = [

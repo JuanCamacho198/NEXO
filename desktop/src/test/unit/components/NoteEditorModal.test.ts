@@ -26,6 +26,7 @@ const t = (key: string, _params?: Record<string, string | number>): string => {
     'highlight.noteReference': 'Reference',
     'highlight.notePlaceholder': 'Write a note…',
     'highlight.save': 'Save',
+    'highlight.deleteNote': 'Delete note',
   };
   return translations[key] ?? key;
 };
@@ -213,5 +214,31 @@ describe('NoteEditorModal — save contract', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(onSave).toHaveBeenCalledWith(null);
+  });
+});
+
+describe('NoteEditorModal — keyboard save and delete', () => {
+  it('saves with Ctrl + Enter', async () => {
+    const onSave = vi.fn();
+    renderOpen({ onSave });
+    dialog();
+    const area = screen.getByPlaceholderText('Write a note…') as HTMLTextAreaElement;
+    await fireEvent.input(area, { target: { value: 'a thought' } });
+    await fireEvent.keyDown(area, { key: 'Enter', ctrlKey: true });
+    expect(onSave).toHaveBeenCalledWith('a thought');
+  });
+
+  it('offers Delete note only when there is a note, and saves null', async () => {
+    const onSave = vi.fn();
+    renderOpen({ onSave, note: 'old note' });
+    dialog();
+    await fireEvent.click(screen.getByRole('button', { name: 'Delete note' }));
+    expect(onSave).toHaveBeenCalledWith(null);
+  });
+
+  it('does not offer Delete note for a new note', () => {
+    renderOpen();
+    dialog();
+    expect(screen.queryByRole('button', { name: 'Delete note' })).toBeNull();
   });
 });

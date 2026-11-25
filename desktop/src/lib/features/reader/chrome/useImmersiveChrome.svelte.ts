@@ -36,6 +36,7 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
   handleWorkspaceMouseLeave(): void;
   handleGlobalKeydown(e: KeyboardEvent): void;
   toggleFullscreen(): void;
+  exitFullscreen(): void;
   toggleWindowFullscreen(): Promise<void>;
   cleanup(): void;
 } {
@@ -115,11 +116,36 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
     edgeNavVisible = false;
   }
 
+  // "Full screen" means the screen, not the window: entering also takes the
+  // window fullscreen, over the taskbar. Leaving gives back only what entering
+  // took, so a window that was already fullscreen (F11) stays that way. The
+  // calls are queued because a quick in-and-out must land in order.
+  let windowQueue: Promise<void> = Promise.resolve();
+  let ownsWindowFullscreen = false;
+
+  function syncWindowFullscreen(enter: boolean): void {
+    windowQueue = windowQueue.then(async () => {
+      try {
+        if (enter) {
+          if (ownsWindowFullscreen || (await appWindow!.isFullscreen())) return;
+          await appWindow!.setFullscreen(true);
+          ownsWindowFullscreen = true;
+        } else if (ownsWindowFullscreen) {
+          ownsWindowFullscreen = false;
+          await appWindow!.setFullscreen(false);
+        }
+      } catch {
+        logger.warn('Tauri window fullscreen API not available', {}, 'reader');
+      }
+    });
+  }
+
   function toggleFullscreen(): void {
     const next = !isFullscreen;
     isFullscreen = next;
     readerState.isFullscreen = next;
     cursorHidden = false;
+    syncWindowFullscreen(next);
     if (next) {
       // U6 discoverability: always open visible. The 2.5s idle clock fades
       // header + cursor; edges fade on the first move back to center.
@@ -134,6 +160,11 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
         idleTimer = null;
       }
     }
+  }
+
+  /** Leaving the reader must never strand the app in fullscreen. */
+  function exitFullscreen(): void {
+    if (isFullscreen) toggleFullscreen();
   }
 
   async function toggleWindowFullscreen(): Promise<void> {
@@ -230,6 +261,7 @@ export function createImmersiveChrome(deps: ImmersiveChromeDeps): {
     handleWorkspaceMouseLeave,
     handleGlobalKeydown,
     toggleFullscreen,
+    exitFullscreen,
     toggleWindowFullscreen,
     cleanup,
   };

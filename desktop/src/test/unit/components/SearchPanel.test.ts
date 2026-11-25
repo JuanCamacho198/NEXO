@@ -287,4 +287,25 @@ describe('SearchPanel', () => {
       expect(screen.getByRole('button', { name: 'Next' })).not.toBeDisabled();
     });
   });
+
+  it('focuses the field on open and marks the searched words in each result', async () => {
+    const { rendered } = renderPanel();
+    const input = screen.getByPlaceholderText('Search text in this book');
+    await vi.waitFor(() => expect(document.activeElement).toBe(input));
+
+    await fireEvent.input(input, { target: { value: 'Needle' } });
+    await fireEvent.submit(rendered.container.querySelector('form') as HTMLFormElement);
+    await rendered.rerender({
+      response: {
+        items: [
+          { chunkId: 'c1', bookId: 'book-1', locator: 'l1', snippet: 'a needle here', rank: 1 },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+      },
+    });
+    const mark = rendered.container.querySelector('mark');
+    expect(mark?.textContent).toBe('needle');
+  });
 });

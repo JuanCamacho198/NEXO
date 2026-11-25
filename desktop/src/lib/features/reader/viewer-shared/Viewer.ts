@@ -6,6 +6,9 @@ type ActiveBook = LibraryBookDto & { filePath: string };
 
 export type ViewerKind = 'pdf' | 'epub';
 
+/** Pages left in the chapter; `exact` false when it is only a floor. */
+export type ChapterPagesLeft = { count: number; exact: boolean };
+
 export type ViewerSelection = {
   text: string;
   bounds: { left: number; top: number; right: number; bottom: number };
@@ -43,6 +46,11 @@ export type ViewerHandle = {
    * turning back into the previous chapter.
    */
   getCanGoPrev?(): boolean;
+  /**
+   * Pages left in the current chapter when the page field counts a chapter's
+   * pages (EPUB paginated mode); null when it counts the whole document.
+   */
+  getChapterPagesLeft?(): ChapterPagesLeft | null;
 };
 
 export function createViewerSelection(
@@ -199,6 +207,13 @@ export function createViewerSelection(
       }
       const epub = refs.epub as unknown as { getCanGoPrev?: () => boolean } | null;
       return epub?.getCanGoPrev?.() ?? true;
+    },
+    getChapterPagesLeft(): ChapterPagesLeft | null {
+      if (getKind() !== 'epub') return null;
+      const epub = getRefs().epub as unknown as {
+        getChapterPagesLeft?: () => ChapterPagesLeft | null;
+      } | null;
+      return epub?.getChapterPagesLeft?.() ?? null;
     },
   };
 }

@@ -218,6 +218,52 @@ describe('useImmersiveChrome', () => {
     chrome.cleanup();
   });
 
+  it('takes the window fullscreen on the way in and gives it back on the way out', async () => {
+    const setFullscreen = vi.fn().mockResolvedValue(undefined);
+    const chrome = createImmersiveChrome({
+      getPanelOpen: () => false,
+      appWindow: { isFullscreen: vi.fn().mockResolvedValue(false), setFullscreen },
+    });
+    chrome.toggleFullscreen();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(setFullscreen).toHaveBeenLastCalledWith(true);
+    chrome.toggleFullscreen();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(setFullscreen).toHaveBeenLastCalledWith(false);
+    chrome.cleanup();
+  });
+
+  it('leaves a window that was already fullscreen (F11) as it found it', async () => {
+    const setFullscreen = vi.fn().mockResolvedValue(undefined);
+    const chrome = createImmersiveChrome({
+      getPanelOpen: () => false,
+      appWindow: { isFullscreen: vi.fn().mockResolvedValue(true), setFullscreen },
+    });
+    chrome.toggleFullscreen();
+    chrome.toggleFullscreen();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(setFullscreen).not.toHaveBeenCalled();
+    chrome.cleanup();
+  });
+
+  it('exitFullscreen releases everything, and is a no-op when windowed', async () => {
+    const setFullscreen = vi.fn().mockResolvedValue(undefined);
+    const chrome = createImmersiveChrome({
+      getPanelOpen: () => false,
+      appWindow: { isFullscreen: vi.fn().mockResolvedValue(false), setFullscreen },
+    });
+    chrome.exitFullscreen();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(setFullscreen).not.toHaveBeenCalled();
+    chrome.toggleFullscreen();
+    chrome.exitFullscreen();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(chrome.isFullscreen).toBe(false);
+    expect((readerState as unknown as { isFullscreen: boolean }).isFullscreen).toBe(false);
+    expect(setFullscreen).toHaveBeenLastCalledWith(false);
+    chrome.cleanup();
+  });
+
   it('one meaning per key: F immersive, Ctrl+Shift+F window, Esc exits (U5)', async () => {
     const setFullscreen = vi.fn().mockResolvedValue(undefined);
     const chrome = createImmersiveChrome({

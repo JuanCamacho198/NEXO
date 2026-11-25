@@ -124,6 +124,8 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    * what the page field's total must be — see `epubPageTurn.ts`.
    */
   readonly chapterTotal: number;
+  /** Documents of the chapter after the one on screen, each one page until laid out. */
+  readonly laterDocuments: number;
   readonly currentPage: number;
   refresh(): void;
   /**
@@ -147,7 +149,14 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
   /** Sync the page number from the container's offset (a user drag/scroll). */
   syncPageFromScroll(): void;
   /** Re-derive after a chapter render, restoring the reader to page 1. */
-  resetForChapter(): void;
+  /**
+   * A chapter has just been rendered. `atEnd` when the reader paged BACK into
+   * it: they continue from its last page, as in a printed book. `atPage` when
+   * a chapter page number named a page inside this document.
+   */
+  resetForChapter(options?: { atEnd?: boolean; atPage?: number }): void;
+  /** True while the reader is held on an entry page (`atEnd`/`atPage`). */
+  isAnchored(): boolean;
   /**
    * Re-measure for a re-render of the chapter already on screen, keeping the
    * reader's page where the new count allows.
@@ -203,6 +212,27 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    * re-asserted until the chapter changes.
    */
   let claimedPage = 0;
+  /**
+   * The page this document was entered on, held until the reader turns or the
+   * chapter changes: `'end'` from a backward step into it, a page number from a
+   * chapter page typed in the field. The page is a moving target while the
+   * columns keep arriving (measured: 9 -> 15 -> 25 pages over three re-renders),
+   * so every count published while this holds re-pins the reader, instead of
+   * leaving them on whatever existed when the first count landed.
+   */
+  let anchor: 'end' | number | null = null;
+
+  /** While anchored, put the reader on the anchored page of the live count. */
+  function pinEndIfAnchored(): void {
+    if (anchor === null || pageCount <= 0) return;
+    const el = scroller();
+    const box = pageBox;
+    if (!el || !box || box.width <= 0) return;
+    const page = anchor === 'end' ? pageCount : Math.min(Math.max(anchor, 1), pageCount);
+    const target = scrollLeftForPage(page, box.width, pageCount);
+    if (el.scrollLeft !== target) el.scrollLeft = target;
+    currentPage = page;
+  }
   /**
    * The page box a resize moved AWAY from, or 0 when no resize is outstanding.
    *
@@ -330,6 +360,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     if (count !== previous) markLayoutChange();
     if (currentPage > count && count > 0) currentPage = count;
     if (currentPage < 1) currentPage = 1;
+    pinEndIfAnchored();
     if (changed && previous !== count) {
       logger.debug(
         'epub-pagination: page count changed',
@@ -463,6 +494,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     if (!keepPage) currentPage = pageFromScrollLeft(el.scrollLeft, width, count);
     if (currentPage > count && count > 0) currentPage = count;
     if (currentPage < 1) currentPage = 1;
+    pinEndIfAnchored();
   }
 
   /**
@@ -539,7 +571,10 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     markLayoutChange();
     // The page the reader is on, clamped into the new count: widening a window
     // fits more prose per column, so a deep page can fall past the new end.
-    const wanted = Math.min(Math.max(currentPage, 1), Math.max(count, 1));
+    const wanted =
+      anchor === 'end'
+        ? Math.max(count, 1)
+        : Math.min(Math.max(anchor ?? currentPage, 1), Math.max(count, 1));
     const target = scrollLeftForPage(wanted, box.width, count);
     el.scrollLeft = target;
     // Snapping against the live client box upholds the same acceptance criterion
@@ -646,6 +681,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
       after.scrollLeft = scrollLeftForPage(currentPage, pageBox.width, pageCount);
       currentPage = pageFromScrollLeft(after.scrollLeft, pageBox.width, pageCount);
     }
+    pinEndIfAnchored();
   }
 
   /** Leave paginated mode: drop the pin, stop observing, restore vertical. */
@@ -661,6 +697,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     pageCount = 0;
     currentPage = 1;
     claimedPage = 0;
+    anchor = null;
     pendingResize = false;
     resizeSettling = false;
     deps.onHeightModeChange(false);
@@ -675,8 +712,14 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    * to page mapping to restore from (that is phase 3's "position must not be
    * lost on reflow").
    */
-  function resetForChapter(): void {
+  function resetForChapter(options: { atEnd?: boolean; atPage?: number } = {}): void {
     if (!deps.isPaginated()) return;
+    anchor =
+      options.atEnd === true
+        ? 'end'
+        : typeof options.atPage === 'number' && options.atPage > 1
+          ? Math.floor(options.atPage)
+          : null;
     // A new chapter is a new document, so the settle window starts here: a press
     // that arrives before its columns do must wait for them.
     markLayoutChange();
@@ -700,6 +743,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     const el = scroller();
     if (el) el.scrollLeft = 0;
     refresh();
+    pinEndIfAnchored();
   }
 
   /**
@@ -712,6 +756,8 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
    * that is what the header shows and what the next turn steps from.
    */
   function applyPage(page: number): boolean {
+    // The reader chose a page: the entry page no longer has a claim on them.
+    anchor = null;
     const container = scroller();
     const box = pageBox;
     if (!container || !box) return false;
@@ -867,6 +913,9 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     get chapterTotal(): number {
       return chapterTotal;
     },
+    get laterDocuments(): number {
+      return laterDocuments;
+    },
     get currentPage(): number {
       return currentPage;
     },
@@ -881,6 +930,7 @@ export function createEpubPagination(deps: EpubPaginationDeps): {
     isLayoutSettling: turnGate.isLayoutSettling,
     syncPageFromScroll,
     resetForChapter,
+    isAnchored: () => anchor !== null,
     restoreAfterRerender,
     cleanup,
   };
