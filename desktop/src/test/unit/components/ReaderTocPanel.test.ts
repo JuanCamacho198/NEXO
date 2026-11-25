@@ -108,9 +108,31 @@ describe('ReaderTocPanel', () => {
     expect(subPad - topPad).toBe(16);
 
     // A top-level entry is the emphasised one; a sub-entry is de-emphasised.
-    expect(top.classList.contains('text-sm')).toBe(true);
-    expect(top.style.opacity).toBe('1');
-    expect(sub.classList.contains('text-xs')).toBe(true);
-    expect(Number(sub.style.opacity)).toBeLessThan(1);
+    expect(top.className).toContain('font-medium');
+    expect(sub.className).not.toContain('font-medium');
+    expect(sub.className).toContain('text-(--color-secondary)');
+  });
+
+  it('marks the chapter being read, and only that one', () => {
+    render(ReaderTocPanel, { ...defaultProps, activeId: 'ch2' });
+    const current = screen.getByRole('button', { current: 'location' });
+    expect(current).toHaveTextContent('Chapter 2');
+    expect(current).toHaveTextContent('reader.tocYouAreHere');
+    expect(screen.getAllByText('reader.tocYouAreHere')).toHaveLength(1);
+  });
+
+  it('draws a book number and a "Part" label as structure, apart from the title', () => {
+    render(ReaderTocPanel, {
+      ...defaultProps,
+      entries: [
+        { id: 'p1', title: 'Primera parte. DEL EDÉN A CAJAMARCA', depth: 0 },
+        { id: 'c1', title: '1. En la línea de salida', depth: 1 },
+      ],
+    });
+    expect(screen.getByText('Primera parte')).toBeInTheDocument();
+    const shouted = screen.getByText('DEL EDÉN A CAJAMARCA');
+    expect(shouted.className).toContain('[font-variant-caps:all-small-caps]');
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('En la línea de salida')).toBeInTheDocument();
   });
 });
