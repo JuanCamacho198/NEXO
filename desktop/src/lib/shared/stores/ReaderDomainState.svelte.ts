@@ -205,6 +205,20 @@ class ReaderDomainState {
       endPercentage?: number;
     },
   ): Promise<void> {
+    await this.saveReadingSession(bookId, event);
+  }
+
+  /** Persists one reading session (any format) and queues it for sync. */
+  async saveReadingSession(
+    bookId: string,
+    event: {
+      startedAt: string;
+      endedAt?: string;
+      durationSeconds: number;
+      startPercentage?: number;
+      endPercentage?: number;
+    },
+  ): Promise<void> {
     if (event.durationSeconds < MIN_SESSION_DURATION_SECONDS) return;
     if (!this.isValidSessionProgressEvent(event)) return;
     const payload: ReadingSessionInput = {

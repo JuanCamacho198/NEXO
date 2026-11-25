@@ -245,6 +245,22 @@ describe('useReaderNavigation', () => {
     expect(nav.currentEpubChapter).toBe(2);
   });
 
+  it('names no chapter until the viewer reports where the reader is', () => {
+    const nav = createReaderNavigation({
+      getRefs: () => ({ pdf: null, epub: null }),
+      getActiveBook: () => makeEpubBook(),
+    });
+    // The TOC lands before the first location on open; index 0 is the cover.
+    nav.handleTocReady([
+      { id: 'a', title: 'Portada', depth: 0, index: 0 },
+      { id: 'b', title: 'Capítulo 3', depth: 0, index: 4 },
+    ]);
+    expect(nav.currentChapterTitle).toBeNull();
+
+    nav.handleEpubLocationChange('epubcfi(/6/6!', 40);
+    expect(nav.currentChapterTitle).toBe('Capítulo 3');
+  });
+
   it('keeps the last known chapter when the CFI resolves to no TOC entry', () => {
     const nav = createReaderNavigation({
       getRefs: () => ({ pdf: null, epub: null }),

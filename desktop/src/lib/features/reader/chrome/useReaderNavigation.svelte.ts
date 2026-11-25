@@ -58,8 +58,12 @@ export function createReaderNavigation(deps: ReaderNavigationDeps): {
   // asynchronously, and `tocEntries` here never receives that value, so the
   // page -> chapter correspondence is not reliable. PDF returns null and the
   // bar falls back to the book title (product decision in the feature doc).
+  // Until the viewer reports a location the chapter index is still its initial
+  // 0, which would name the TOC's first entry ("Portada") for a book reopened
+  // mid-way, and the reader would record that over the right chapter.
   const currentChapterTitle = $derived.by((): string | null => {
     if (resolveViewer().kind !== 'epub') return null;
+    if (!hasEpubProgress) return null;
     const title = tocEntries[currentEpubChapter]?.title?.trim() ?? '';
     return title.length > 0 ? title : null;
   });
