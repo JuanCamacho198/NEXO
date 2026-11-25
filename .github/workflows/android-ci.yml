@@ -509,6 +509,14 @@ jobs:
         # Same task the test step runs, so the second invocation is incremental.
         # `--max-workers=2` for the same peak-OOM reason documented on that step.
         working-directory: android
+        # Bigger heap here than the test step, and only here: the emulator is
+        # still NOT resident at this point, so this step can spend the ~2 GB the
+        # AVD would otherwise hold. The precompile has OOMed in this job before
+        # (hiltAggregateDepsDebug pulls the whole app plus androidTest graph),
+        # and raising it globally would fight the emulator later.
+        env:
+          GRADLE_OPTS: >-
+            -Dorg.gradle.jvmargs=-Xmx3072m -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=1024m
         run: ./gradlew --build-cache --max-workers=2 -Dorg.gradle.vfs.watch=false :app:assembleDebug :app:assembleDebugAndroidTest
 
       - name: Run instrumented tests on the emulator
