@@ -689,4 +689,14 @@
     <string name="reader_bookmarks_empty_hint">Marca esta página para volver a ella cuando quieras.</string>
     <string name="reader_bookmark_book_position">%1$d %% del libro</string>
     <string name="reader_bookmark_just_now">Ahora mismo</string>
+    <string name="reader_chapter_short_label">Cap. %1$s</string>
+    <string name="reader_highlight_in_color">Resaltar en %1$s</string>
+    <string name="reader_highlight_more_colors">Más colores</string>
+    <string name="reader_highlight_colors_back">Volver a las acciones</string>
+    <string name="reader_lookup_quoted">“%1$s”</string>
+    <string name="reader_lookup_copy_translation">Copiar traducción</string>
+    <string name="reader_lookup_copied">Copiado</string>
+    <string name="reader_lookup_define_words_only">Definir funciona con palabras sueltas. Traducir te muestra qué dice este fragmento.</string>
+    <string name="reader_lookup_translate_instead">Traducir en su lugar</string>
+    <string name="reader_lookup_definitions_in">Definiciones en</string>
 </resources>

@@ -634,6 +634,75 @@ object NexoIcons {
             filledPathFromXml(READER_BOOKMARK_PATH)
             strokedPathFromXml(READER_BOOKMARK_PATH)
         }
+
+    // ── Reader selection menus ──
+    //
+    // The same 1.8 outline family as the toolbar: the two floating menus sit on
+    // the page under that toolbar and must read as one set. They replace a mix
+    // of filled Material glyphs where "Define" was `MenuOpen`, a list-collapse
+    // arrow that said nothing about meaning.
+
+    val ReaderCopy =
+        nexoIcon("ReaderCopy") {
+            strokedPathFromXml("M10.5,8.5 H17.5 A2,2 0 0 1 19.5,10.5 V17.5 A2,2 0 0 1 17.5,19.5 H10.5 A2,2 0 0 1 8.5,17.5 V10.5 A2,2 0 0 1 10.5,8.5Z")
+            strokedPathFromXml("M15.5,8.5 V6.5 A2,2 0 0 0 13.5,4.5 H6.5 A2,2 0 0 0 4.5,6.5 V13.5 A2,2 0 0 0 6.5,15.5 H8.5")
+        }
+
+    /**
+     * Open book under a magnifier: look up what the text means. The page edges
+     * stop short of the lens instead of running through it, so the two shapes
+     * stay separate at 22dp. Distinct from [ReaderSaveWord] (closed book, plus).
+     */
+    val ReaderDefine =
+        nexoIcon("ReaderDefine") {
+            strokedPathFromXml("M9.5,5.6 C8,4.6 5.8,4.2 2.5,4.4 V14.6 C5.8,14.4 8,14.8 9.5,15.8 V5.6 C11,4.6 13.2,4.2 16.5,4.4 V9.4")
+            strokedPathFromXml("M9.5,15.8 C10.1,15.4 10.8,15.1 11.8,14.9")
+            strokedPathFromXml("M20.1,15.5 A3.6,3.6 0 1 1 12.9,15.5 A3.6,3.6 0 1 1 20.1,15.5Z M19,18.2 L21.4,20.6")
+        }
+
+    /** Closed book with a plus: save the word to the reader's own dictionary. */
+    val ReaderSaveWord =
+        nexoIcon("ReaderSaveWord") {
+            strokedPathFromXml("M4.5,18.5 V5.5 A2,2 0 0 1 6.5,3.5 H19.5 V20.5 H6.5 A2,2 0 0 1 4.5,18.5Z M19.5,16.5 H6.5 A2,2 0 0 0 4.5,18.5")
+            strokedPathFromXml("M12,6.6 V13 M8.8,9.8 H15.2")
+        }
+
+    /** A CJK-like stroke group beside a Latin "A": change the language. */
+    val ReaderTranslate =
+        nexoIcon("ReaderTranslate") {
+            strokedPathFromXml("M3,6 H12 M7.5,3.8 V6 M10.2,6 C9.4,9.6 7,12.6 3.6,14.4 M5.6,8.8 C6.9,11 8.7,12.6 11,13.6")
+            strokedPathFromXml("M12.8,20.5 L16.6,10.8 L20.4,20.5 M14.2,17.2 H19")
+        }
+
+    val ReaderShare =
+        nexoIcon("ReaderShare") {
+            strokedPathFromXml("M20.5,5.5 A2.5,2.5 0 1 1 15.5,5.5 A2.5,2.5 0 1 1 20.5,5.5Z")
+            strokedPathFromXml("M8.5,12 A2.5,2.5 0 1 1 3.5,12 A2.5,2.5 0 1 1 8.5,12Z")
+            strokedPathFromXml("M20.5,18.5 A2.5,2.5 0 1 1 15.5,18.5 A2.5,2.5 0 1 1 20.5,18.5Z")
+            strokedPathFromXml("M8.2,10.8 L15.8,6.7 M8.2,13.2 L15.8,17.3")
+        }
+
+    val ReaderTag =
+        nexoIcon("ReaderTag") {
+            strokedPathFromXml(
+                "M3.5,12.6 V5.5 A2,2 0 0 1 5.5,3.5 H12.6 A2,2 0 0 1 14,4.1 L20.3,10.4 A2,2 0 0 1 20.3,13.2 " +
+                    "L13.2,20.3 A2,2 0 0 1 10.4,20.3 L4.1,14 A2,2 0 0 1 3.5,12.6Z",
+            )
+            filledPathFromXml("M9.4,8 A1.4,1.4 0 1 1 6.6,8 A1.4,1.4 0 1 1 9.4,8Z")
+        }
+
+    /** Pencil over a baseline: write a note on the highlight. */
+    val ReaderNote =
+        nexoIcon("ReaderNote") {
+            strokedPathFromXml("M4.5,19.5 L5.2,15.8 L15.4,5.6 A2,2 0 0 1 18.2,5.6 L18.4,5.8 A2,2 0 0 1 18.4,8.6 L8.2,18.8Z M13.6,7.4 L16.6,10.4")
+            strokedPathFromXml("M13,19.5 H20")
+        }
+
+    val ReaderDelete =
+        nexoIcon("ReaderDelete") {
+            strokedPathFromXml("M4,6.5 H20 M9.5,6.5 V5 A1.5,1.5 0 0 1 11,3.5 H13 A1.5,1.5 0 0 1 14.5,5 V6.5")
+            strokedPathFromXml("M6,6.5 L6.8,18.6 A2,2 0 0 0 8.8,20.5 H15.2 A2,2 0 0 0 17.2,18.6 L18,6.5 M10,10.5 V16.5 M14,10.5 V16.5")
+        }
 }
 
 private const val READER_BOOKMARK_PATH = "M18.5,20.5 L12,16.8 L5.5,20.5 V5.5 A2,2 0 0 1 7.5,3.5 H16.5 A2,2 0 0 1 18.5,5.5Z"
@@ -723,6 +792,14 @@ private fun NexoIconsGalleryDarkPreview() {
                 "ReaderHighlighter" to NexoIcons.ReaderHighlighter,
                 "ReaderBookmark" to NexoIcons.ReaderBookmark,
                 "ReaderBookmarkFilled" to NexoIcons.ReaderBookmarkFilled,
+                "ReaderCopy" to NexoIcons.ReaderCopy,
+                "ReaderDefine" to NexoIcons.ReaderDefine,
+                "ReaderSaveWord" to NexoIcons.ReaderSaveWord,
+                "ReaderTranslate" to NexoIcons.ReaderTranslate,
+                "ReaderShare" to NexoIcons.ReaderShare,
+                "ReaderTag" to NexoIcons.ReaderTag,
+                "ReaderNote" to NexoIcons.ReaderNote,
+                "ReaderDelete" to NexoIcons.ReaderDelete,
             )
 
         Column(
@@ -846,6 +923,14 @@ private fun NexoIconsGalleryLightPreview() {
                 "ReaderHighlighter" to NexoIcons.ReaderHighlighter,
                 "ReaderBookmark" to NexoIcons.ReaderBookmark,
                 "ReaderBookmarkFilled" to NexoIcons.ReaderBookmarkFilled,
+                "ReaderCopy" to NexoIcons.ReaderCopy,
+                "ReaderDefine" to NexoIcons.ReaderDefine,
+                "ReaderSaveWord" to NexoIcons.ReaderSaveWord,
+                "ReaderTranslate" to NexoIcons.ReaderTranslate,
+                "ReaderShare" to NexoIcons.ReaderShare,
+                "ReaderTag" to NexoIcons.ReaderTag,
+                "ReaderNote" to NexoIcons.ReaderNote,
+                "ReaderDelete" to NexoIcons.ReaderDelete,
             )
 
         Column(

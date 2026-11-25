@@ -690,4 +690,14 @@
     <string name="reader_bookmarks_empty_hint">Bookmark this page to come back to it whenever you like.</string>
     <string name="reader_bookmark_book_position">%1$d%% through the book</string>
     <string name="reader_bookmark_just_now">Just now</string>
+    <string name="reader_chapter_short_label">Ch. %1$s</string>
+    <string name="reader_highlight_in_color">Highlight in %1$s</string>
+    <string name="reader_highlight_more_colors">More colors</string>
+    <string name="reader_highlight_colors_back">Back to actions</string>
+    <string name="reader_lookup_quoted">“%1$s”</string>
+    <string name="reader_lookup_copy_translation">Copy translation</string>
+    <string name="reader_lookup_copied">Copied</string>
+    <string name="reader_lookup_define_words_only">Define works on single words. Translate shows what this passage says.</string>
+    <string name="reader_lookup_translate_instead">Translate instead</string>
+    <string name="reader_lookup_definitions_in">Definitions in</string>
 </resources>

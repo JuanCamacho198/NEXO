@@ -21,19 +21,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.Locale
 
 /**
- * Instrumented layout assertions for T6 — the menu overflow treatment.
+ * Layout assertions for the two floating menus, by selector and measured
+ * width, never by eyeballing pixels.
  *
- * Every assertion is selector- or layout-based; nothing here reads a pixel
- * coordinate and eyeballs it. The widths come from
- * [getUnclippedBoundsInRoot], which is the layout's own reported extent, so a
- * menu that is drawn narrower than its content reports the CLAMPED width and
- * the measured value is the number the reader sees.
- *
- * The measurement runs at a caller-chosen width so both cases are exercised:
- * the 411dp viewport (where the old menu just fit) and the 360dp one (where it
- * overflowed by ~45dp).
+ * The selection menu carries its five colours inline and pins them; at 411dp
+ * the whole pill fits, at 360dp and below only the actions scroll. The
+ * highlight menu keeps one colour dot that swaps the pill to the palette.
  */
 @RunWith(AndroidJUnit4::class)
 class SelectionMenuOverflowTest {
@@ -42,25 +38,42 @@ class SelectionMenuOverflowTest {
 
     private fun description(resId: Int): String = composeRule.activity.getString(resId)
 
-    private val paletteDesc: String get() = description(R.string.context_menu_color)
+    private val colorDotDesc: String get() = description(R.string.context_menu_color)
     private val copyDesc: String get() = description(R.string.text_selection_copy)
     private val dictionaryDesc: String get() = description(R.string.context_menu_dictionary_action)
     private val defineDesc: String get() = description(R.string.text_selection_define)
     private val translateDesc: String get() = description(R.string.text_selection_translate)
     private val shareDesc: String get() = description(R.string.context_menu_share)
 
+    private fun swatchDesc(nameRes: Int): String =
+        composeRule.activity.getString(
+            R.string.reader_highlight_in_color,
+            description(nameRes).lowercase(Locale.getDefault()),
+        )
+
+    private val swatchNames =
+        listOf(
+            R.string.highlight_filter_yellow,
+            R.string.highlight_filter_green,
+            R.string.highlight_filter_blue,
+            R.string.highlight_filter_orange,
+            R.string.highlight_filter_red,
+        )
+
     private fun widthOf(node: androidx.compose.ui.test.SemanticsNodeInteraction): Dp = node.getUnclippedBoundsInRoot().width
 
     /** The menu pill's own reported width — NOT the host Box's, which is always the full viewport. */
     private fun measuredMenuWidth(): Dp = widthOf(composeRule.onNodeWithTag(MENU_PILL_TAG))
 
-    @Test
-    fun selectionMenu_at360dp_fitsWithinWidth_andEveryActionIsReachable() {
+    private fun setSelectionMenu(
+        width: Dp,
+        onColorSelected: (String) -> Unit = {},
+    ) {
         composeRule.setContent {
-            Box(modifier = Modifier.width(360.dp)) {
+            Box(modifier = Modifier.width(width)) {
                 TextSelectionMenu(
-                    selectedColor = HighlightColor.YELLOW.hex,
-                    onColorSelected = {},
+                    swatches = HighlightColor.defaultHexList(),
+                    onColorSelected = onColorSelected,
                     onCopy = {},
                     onDictionary = {},
                     onDefine = {},
@@ -70,70 +83,43 @@ class SelectionMenuOverflowTest {
             }
         }
         composeRule.waitForIdle()
+    }
+
+    @Test
+    fun selectionMenu_at360dp_fitsWithinWidth_andKeepsEveryColourVisible() {
+        setSelectionMenu(360.dp)
 
         val menuWidth = measuredMenuWidth()
         assertTrue(
             "Selection menu measured ${menuWidth.value}dp on a 360dp viewport; it must not exceed the viewport",
             menuWidth.value <= 360f,
         )
-        assertTrue(
-            "Selection menu measured ${menuWidth.value}dp; the palette button should have brought it well under 330dp",
-            menuWidth.value <= 330f,
-        )
-
-        // The menu must never report a width beyond the screen — the overflow
-        // defect was exactly this: content wider than the box that holds it.
-        composeRule.onNodeWithContentDescription(paletteDesc).assertIsDisplayed()
+        swatchNames.forEach { composeRule.onNodeWithContentDescription(swatchDesc(it)).assertIsDisplayed() }
+        composeRule.onNodeWithContentDescription(defineDesc).assertIsDisplayed()
         composeRule.onNodeWithContentDescription(copyDesc).assertIsDisplayed()
     }
 
     @Test
-    fun selectionMenu_paletteTrigger_present_andFiveInlineSwatchesGone() {
-        var paletteTaps = 0
-        composeRule.setContent {
-            TextSelectionMenu(
-                selectedColor = HighlightColor.YELLOW.hex,
-                onColorSelected = { paletteTaps++ },
-                onCopy = {},
-                onDictionary = {},
-                onDefine = {},
-                onTranslate = {},
-                onShare = {},
-            )
-        }
+    fun selectionMenu_swatchTap_highlightsInThatColour() {
+        var picked: String? = null
+        setSelectionMenu(411.dp, onColorSelected = { picked = it })
+
+        composeRule.onNodeWithContentDescription(swatchDesc(R.string.highlight_filter_blue)).performClick()
         composeRule.waitForIdle()
 
-        // One palette trigger, mirroring FloatingContextMenu — not five swatches.
-        composeRule.onNodeWithContentDescription(paletteDesc).assertIsDisplayed().performClick()
-        composeRule.waitForIdle()
-        assertEquals(1, paletteTaps)
+        assertEquals(HighlightColor.BLUE.hex, picked)
     }
 
     @Test
-    fun selectionMenu_at411dp_showsNoScrollAndEveryActionReachable() {
-        composeRule.setContent {
-            Box(modifier = Modifier.width(411.dp)) {
-                TextSelectionMenu(
-                    selectedColor = HighlightColor.YELLOW.hex,
-                    onColorSelected = {},
-                    onCopy = {},
-                    onDictionary = {},
-                    onDefine = {},
-                    onTranslate = {},
-                    onShare = {},
-                )
-            }
-        }
-        composeRule.waitForIdle()
+    fun selectionMenu_at411dp_showsEveryColourAndAction() {
+        setSelectionMenu(411.dp)
 
         val menuWidth = measuredMenuWidth()
         assertTrue(
             "Selection menu measured ${menuWidth.value}dp on a 411dp viewport; it must fit",
             menuWidth.value <= 411f,
         )
-
-        // All five actions present in the tree (reachable by selector).
-        composeRule.onNodeWithContentDescription(paletteDesc).assertIsDisplayed()
+        swatchNames.forEach { composeRule.onNodeWithContentDescription(swatchDesc(it)).assertIsDisplayed() }
         composeRule.onNodeWithContentDescription(copyDesc).assertIsDisplayed()
         composeRule.onNodeWithContentDescription(dictionaryDesc).assertIsDisplayed()
         composeRule.onNodeWithContentDescription(defineDesc).assertIsDisplayed()
@@ -143,20 +129,7 @@ class SelectionMenuOverflowTest {
 
     @Test
     fun selectionMenu_at280dp_forcesScroll_andFadeAppearsWithoutClippingTheActions() {
-        composeRule.setContent {
-            Box(modifier = Modifier.width(280.dp)) {
-                TextSelectionMenu(
-                    selectedColor = HighlightColor.YELLOW.hex,
-                    onColorSelected = {},
-                    onCopy = {},
-                    onDictionary = {},
-                    onDefine = {},
-                    onTranslate = {},
-                    onShare = {},
-                )
-            }
-        }
-        composeRule.waitForIdle()
+        setSelectionMenu(280.dp)
 
         val menuWidth = measuredMenuWidth()
         assertTrue(
@@ -179,17 +152,19 @@ class SelectionMenuOverflowTest {
     }
 
     @Test
-    fun highlightMenu_at360dp_fitsWithinWidth_paletteAndEveryActionReachable() {
+    fun highlightMenu_at360dp_fitsWithinWidth_andTheColourDotOpensThePalette() {
         val tagDesc = description(R.string.context_menu_tag)
         val annotateDesc = description(R.string.context_menu_annotate)
         val deleteDesc = description(R.string.context_menu_delete)
-        var paletteTaps = 0
+        var picked: String? = null
 
         composeRule.setContent {
             Box(modifier = Modifier.width(360.dp)) {
                 FloatingContextMenu(
                     selectedColor = HighlightColor.YELLOW.hex,
-                    onColorSelected = { paletteTaps++ },
+                    swatches = HighlightColor.defaultHexList(),
+                    onColorSelected = { picked = it },
+                    onMoreColors = {},
                     onCopy = {},
                     onDefine = {},
                     onTranslate = {},
@@ -207,11 +182,6 @@ class SelectionMenuOverflowTest {
             "Highlight menu measured ${menuWidth.value}dp on a 360dp viewport; it must not exceed the viewport",
             menuWidth.value <= 360f,
         )
-
-        composeRule.onNodeWithContentDescription(paletteDesc).assertIsDisplayed().performClick()
-        composeRule.waitForIdle()
-        assertEquals("The highlight menu's palette trigger must still open the popover path", 1, paletteTaps)
-
         composeRule.onNodeWithContentDescription(copyDesc).assertIsDisplayed()
         composeRule.onNodeWithContentDescription(defineDesc).assertIsDisplayed()
         composeRule.onNodeWithContentDescription(translateDesc).assertIsDisplayed()
@@ -219,5 +189,12 @@ class SelectionMenuOverflowTest {
         composeRule.onNodeWithContentDescription(annotateDesc).assertIsDisplayed()
         composeRule.onNodeWithContentDescription(shareDesc).assertIsDisplayed()
         composeRule.onNodeWithContentDescription(deleteDesc).assertIsDisplayed()
+
+        composeRule.onNodeWithContentDescription(colorDotDesc).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription(swatchDesc(R.string.highlight_filter_green)).assertIsDisplayed().performClick()
+        composeRule.waitForIdle()
+
+        assertEquals(HighlightColor.GREEN.hex, picked)
     }
 }
