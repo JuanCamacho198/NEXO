@@ -48,6 +48,7 @@ import com.nexo.domain.model.Bookmark
 import com.nexo.presentation.screen.RIBBON_ORANGE
 import com.nexo.presentation.screen.RibbonGlyph
 import com.nexo.presentation.screen.reader.BookmarkSpots
+import com.nexo.presentation.screen.reader.chapterLabel
 import com.nexo.ui.components.molecules.reader.ReaderSheetColors
 import com.nexo.ui.components.molecules.reader.ReaderSheetHandle
 import com.nexo.ui.components.molecules.reader.ReaderSheetShape
@@ -242,7 +243,10 @@ private fun BookmarkRow(
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = bookmark.titleOrSnippet.ifBlank { stringResource(R.string.reader_bookmarks_title) },
+                text =
+                    bookmark.titleOrSnippet
+                        .ifBlank { stringResource(R.string.reader_bookmarks_title) }
+                        .let { chapterLabel(it, stringResource(R.string.reader_chapter_short_label)) },
                 style = MaterialTheme.typography.bodyLarge,
                 color = ReaderSheetColors.TextPrimary,
                 fontWeight = if (isThisPage) FontWeight.SemiBold else FontWeight.Normal,

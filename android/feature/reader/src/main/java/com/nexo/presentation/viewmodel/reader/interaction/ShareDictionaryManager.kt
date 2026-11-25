@@ -1,6 +1,7 @@
 package com.nexo.presentation.viewmodel.reader.interaction
 
 import android.content.Context
+import com.nexo.domain.event.NoticeTone
 import com.nexo.domain.event.UiEvent
 import com.nexo.domain.repository.DictionaryRepository
 import com.nexo.domain.session.ActiveUserProvider
@@ -36,7 +37,7 @@ internal class ShareDictionaryManager(
 
     fun onCopySelectedText() {
         if (store.value.selectedText == null) return
-        onEvent(UiEvent.ShowSnackbar(appContext.getString(R.string.highlights_snackbar_copied)))
+        onEvent(UiEvent.ShowSnackbar(appContext.getString(R.string.highlights_snackbar_copied), NoticeTone.SUCCESS))
         selectionManager.dismissMenuAndClearSelection()
     }
 
@@ -50,19 +51,19 @@ internal class ShareDictionaryManager(
             val userId = activeUser.requireUserId()
             if (repo.exists(text, userId)) {
                 onEvent(
-                    UiEvent.ShowSnackbar(appContext.getString(R.string.dictionary_duplicate, text)),
+                    UiEvent.ShowSnackbar(appContext.getString(R.string.dictionary_duplicate, text), NoticeTone.INFO),
                 )
             } else {
                 val result = repo.save(text, userId)
                 if (result.isSuccess) {
                     onEvent(
-                        UiEvent.ShowSnackbar(appContext.getString(R.string.dictionary_added, text)),
+                        UiEvent.ShowSnackbar(appContext.getString(R.string.dictionary_added, text), NoticeTone.SUCCESS),
                     )
                 } else {
                     val msg =
                         result.exceptionOrNull()?.message
                             ?: appContext.getString(R.string.reader_snackbar_save_error)
-                    onEvent(UiEvent.ShowSnackbar(msg))
+                    onEvent(UiEvent.ShowSnackbar(msg, NoticeTone.ERROR))
                 }
             }
         }
@@ -78,7 +79,7 @@ internal class ShareDictionaryManager(
             val userId = activeUser.requireUserId()
             if (repo.exists(text, userId)) {
                 onEvent(
-                    UiEvent.ShowSnackbar(appContext.getString(R.string.dictionary_duplicate, text)),
+                    UiEvent.ShowSnackbar(appContext.getString(R.string.dictionary_duplicate, text), NoticeTone.INFO),
                 )
             } else {
                 repo.save(text, userId, trimmedDefinition).fold(
@@ -86,6 +87,7 @@ internal class ShareDictionaryManager(
                         onEvent(
                             UiEvent.ShowSnackbar(
                                 appContext.getString(R.string.highlights_snackbar_added_to_dictionary),
+                                NoticeTone.SUCCESS,
                             ),
                         )
                     },
@@ -94,6 +96,7 @@ internal class ShareDictionaryManager(
                             UiEvent.ShowSnackbar(
                                 e.message
                                     ?: appContext.getString(R.string.highlights_snackbar_add_to_dictionary_failed),
+                                NoticeTone.ERROR,
                             ),
                         )
                     },

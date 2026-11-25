@@ -2,6 +2,7 @@ package com.nexo.presentation.viewmodel.reader.lifecycle
 
 import android.app.Application
 import android.util.Log
+import com.nexo.domain.event.NoticeTone
 import com.nexo.domain.event.UiEvent
 import com.nexo.presentation.viewmodel.reader.ReaderLifecycleState
 import kotlinx.coroutines.CoroutineDispatcher
@@ -98,7 +99,7 @@ internal class PdfBookLoader(
                     val message = "File not found. Try importing the book again."
                     state.update { it.copy(isLoading = false, error = message) }
                     _isLoading.value = false
-                    onErrorEvent(UiEvent.ShowSnackbar(message))
+                    onErrorEvent(UiEvent.ShowSnackbar(message, NoticeTone.ERROR))
                     return@launch
                 }
                 val fileUri =
@@ -166,7 +167,7 @@ internal class PdfBookLoader(
                 val userMessage = e.message ?: "Failed to open PDF with Readium"
                 state.update { it.copy(isLoading = false, error = userMessage) }
                 _isLoading.value = false
-                onErrorEvent(UiEvent.ShowSnackbar(userMessage))
+                onErrorEvent(UiEvent.ShowSnackbar(userMessage, NoticeTone.ERROR))
             }
         }
     }

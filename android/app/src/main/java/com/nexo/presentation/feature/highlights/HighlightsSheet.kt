@@ -65,6 +65,7 @@ import com.nexo.domain.model.Highlight
 import com.nexo.domain.model.HighlightColor
 import com.nexo.presentation.feature.highlights.utils.ChapterLocation
 import com.nexo.presentation.feature.highlights.utils.matchesHighlightFilter
+import com.nexo.presentation.screen.reader.chapterLabel
 import com.nexo.ui.components.molecules.reader.ReaderSheetColors
 import com.nexo.ui.components.molecules.reader.ReaderSheetHandle
 import com.nexo.ui.components.molecules.reader.ReaderSheetShape
@@ -159,6 +160,7 @@ fun HighlightsSheet(
                 HighlightsEmptyState(title = stringResource(R.string.reader_highlights_filter_empty), hint = null)
             } else {
                 val elsewhere = stringResource(R.string.reader_highlights_no_chapter)
+                val chapterFormat = stringResource(R.string.reader_chapter_short_label)
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
@@ -166,7 +168,7 @@ fun HighlightsSheet(
                     groups.forEach { group ->
                         item(key = "chapter:${group.chapterTitle}") {
                             ChapterHeader(
-                                title = group.chapterTitle ?: elsewhere,
+                                title = group.chapterTitle?.let { chapterLabel(it, chapterFormat) } ?: elsewhere,
                                 count = group.highlights.size,
                             )
                         }

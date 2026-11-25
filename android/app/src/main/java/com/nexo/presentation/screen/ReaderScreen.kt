@@ -10,9 +10,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,14 +43,17 @@ import com.nexo.presentation.screen.reader.ReaderScreenContentHost
 import com.nexo.presentation.screen.reader.ReaderScreenEffects
 import com.nexo.presentation.screen.reader.ReaderScreenOverlaysHost
 import com.nexo.presentation.screen.reader.ReadingSpot
+import com.nexo.presentation.screen.reader.chapterLabel
 import com.nexo.presentation.screen.reader.readerSnackbarMessage
 import com.nexo.presentation.screen.reader.rememberReaderSelectionCallbacks
 import com.nexo.presentation.viewmodel.ReaderViewModel
 import com.nexo.presentation.viewmodel.reader.ReaderSelectionState
 import com.nexo.presentation.viewmodel.reader.cleanChapterTitle
-import com.nexo.ui.components.atoms.NexoSnackbar
 import com.nexo.ui.components.molecules.ReadingProgressBar
+import com.nexo.ui.components.molecules.reader.ReaderNoticeHost
+import com.nexo.ui.components.molecules.reader.ReaderNoticeVisuals
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -135,6 +138,8 @@ fun ReaderScreen(
         if (appearancePanelOpen) controlsVisible = false
     }
 
+    val chapterFormat = stringResource(R.string.reader_chapter_short_label)
+
     val selectionCallbacks = rememberReaderSelectionCallbacks(viewModel, context, annotationUiState)
 
     val inspectHighlightsHtmlTrigger = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
@@ -152,7 +157,12 @@ fun ReaderScreen(
                 is com.nexo.domain.event.UiEvent.ShowSnackbar -> {
                     // Immersive fullscreen: a system Toast is drawn behind the
                     // WebView surface. Route through the in-app host instead.
-                    readerSnackbarMessage(event)?.let { snackbarHostState.showSnackbar(it) }
+                    // A newer notice replaces the one on screen rather than
+                    // queueing behind it: it confirms the action just taken.
+                    readerSnackbarMessage(event)?.let { message ->
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                        launch { snackbarHostState.showSnackbar(ReaderNoticeVisuals(message, event.tone)) }
+                    }
                 }
                 is com.nexo.domain.event.UiEvent.ShareText -> {
                     val shareIntent =
@@ -204,11 +214,14 @@ fun ReaderScreen(
             footer = {
                 ReadingProgressBar(
                     progressPercent = sessionUiState.progressPercent,
-                    chapterTitle = sessionUiState.chapterTitle,
+                    chapterTitle = chapterLabel(sessionUiState.chapterTitle, chapterFormat),
                     chapterPagesLeft = sessionUiState.chapterPagesLeft,
                     fallbackLabel = sessionUiState.progressLabel,
                     chapterStarts = sessionUiState.chapterStartFractions,
-                    chapterTitles = remember(sessionUiState.chapters) { sessionUiState.chapters.map { cleanChapterTitle(it.title).orEmpty() } },
+                    chapterTitles =
+                        remember(sessionUiState.chapters, chapterFormat) {
+                            sessionUiState.chapters.map { chapterLabel(cleanChapterTitle(it.title).orEmpty(), chapterFormat) }
+                        },
                     canGoBack = sessionUiState.scrubReturnLocator != null,
                     onScrubCommit = { viewModel.lifecycleHolder.onScrubCommitted(it) },
                     onGoBack = { viewModel.lifecycleHolder.onScrubReturn() },
@@ -340,14 +353,14 @@ fun ReaderScreen(
             )
         }
 
-        SnackbarHost(
+        // Clear of the footer's progress line, so a notice never covers it.
+        ReaderNoticeHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) { data ->
-            NexoSnackbar(
-                snackbarData = data,
-                dismissContentDescription = stringResource(R.string.action_dismiss_snackbar),
-            )
-        }
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 48.dp),
+        )
     }
 }

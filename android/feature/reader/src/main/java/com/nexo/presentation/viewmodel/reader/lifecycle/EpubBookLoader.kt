@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import com.nexo.data.remote.supabase.SupabaseProgressSync
 import com.nexo.debug.DebugLog
+import com.nexo.domain.event.NoticeTone
 import com.nexo.domain.event.UiEvent
 import com.nexo.domain.model.ReadingProgress
 import com.nexo.domain.repository.ReaderRepository
@@ -148,7 +149,7 @@ class EpubBookLoader(
                     DebugLog.warn(TAG, "loadEpubBook missing file bookId=$bookId epoch=$epoch")
                     state.update { it.copy(isLoading = false, error = message) }
                     _isLoading.value = false
-                    onErrorEvent(UiEvent.ShowSnackbar(message))
+                    onErrorEvent(UiEvent.ShowSnackbar(message, NoticeTone.ERROR))
                     return@launch
                 }
                 val fileUri =
@@ -262,7 +263,7 @@ class EpubBookLoader(
                 val timeoutMessage = application.getString(R.string.error_unknown)
                 state.update { it.copy(isLoading = false, error = timeoutMessage) }
                 _isLoading.value = false
-                onErrorEvent(UiEvent.ShowSnackbar(timeoutMessage))
+                onErrorEvent(UiEvent.ShowSnackbar(timeoutMessage, NoticeTone.ERROR))
             } catch (e: Exception) {
                 if (epoch != loadEpoch) {
                     DebugLog.warn(TAG, "loadEpubBook stale failure ignored bookId=$bookId epoch=$epoch")
@@ -273,7 +274,7 @@ class EpubBookLoader(
                 val message = e.message ?: "Failed to open EPUB with Readium"
                 state.update { it.copy(isLoading = false, error = message) }
                 _isLoading.value = false
-                onErrorEvent(UiEvent.ShowSnackbar(message))
+                onErrorEvent(UiEvent.ShowSnackbar(message, NoticeTone.ERROR))
             }
         }
     }
