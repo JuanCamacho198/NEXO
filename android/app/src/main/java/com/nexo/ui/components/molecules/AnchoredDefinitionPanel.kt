@@ -1,29 +1,22 @@
 package com.nexo.ui.components.molecules
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,25 +24,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nexo.R
+import com.nexo.domain.definition.DefinableSelection
 import com.nexo.domain.definition.DefinitionItem
 import com.nexo.domain.definition.DefinitionResult
 import com.nexo.domain.definition.DefinitionSource
 import com.nexo.domain.definition.WIKTIONARY_ATTRIBUTION
 import com.nexo.presentation.viewmodel.reader.DefinitionPanelState
+import com.nexo.ui.components.molecules.reader.ReaderSheetColors
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
-
-/**
- * The definition-language options the panel's selector offers. Kept as data so
- * the same list backs the selector and its test, and so the settings sub-page
- * can reuse it.
- */
 
 /**
  * The body's minimum usable height.
@@ -63,15 +53,10 @@ import com.nexo.ui.theme.NexoTheme
 internal val DEFINITION_BODY_MIN_HEIGHT = 96.dp
 
 /**
- * What the card keeps for itself: its own 16dp padding both sides, the header
- * row, the language row, the attribution and the Close row.
- *
- * The chrome is NOT scrolled away — that is the point of the cap — so the space
- * left for the body is the room the overlay has, MINUS this. Measured against
- * the card as it renders: an 18dp header row, a ~40dp language row, the 8dp
- * gaps between sections, the attribution line and a ~48dp Close row come to
- * roughly 220dp. The floor on the cap means a card that cannot fit the chrome
- * still gives the body its minimum instead of collapsing it.
+ * What a lookup card keeps for itself, outside its scrolling body: the tabs and
+ * close row, the headword, the language rows, the action button and the
+ * attribution, roughly 220dp together. The floor on the cap means a card that
+ * cannot fit the chrome still gives the body its minimum instead of collapsing it.
  */
 internal val DEFINITION_CHROME_HEIGHT = 220.dp
 
@@ -109,65 +94,32 @@ internal fun definitionPanelMaxHeightPx(
 }
 
 /**
- * Anchored 280dp-wide card showing the definition of a selected word.
- * Read-only sibling of [AnchoredTranslationPanel].
+ * The definition of the current selection in a [ReaderLookupCard] anchored to it.
  *
  * ## The language controls: a LABEL and a SELECTOR, never two selectors
  *
- * - The **word language** renders as a read-only TEXT label, because it is a
- *   fact about the book, almost never changed, and a selector for it would cost
- *   panel width and reader attention for nothing. When it is UNKNOWN the label
- *   SAYS SO (the cascade then assumed `en`), instead of presenting the guess as
- *   a fact.
- * - The **definition language** is a real SELECTOR: it is the reader's own
- *   preference and they can change it without leaving the panel, which re-runs
- *   the lookup for the same word.
- *
- * The two are different inputs and are NEVER conflated (invariant 1).
+ * - The **word language** is a read-only label, because it is a fact about the
+ *   book. When it is UNKNOWN the label SAYS SO (the cascade then assumed `en`)
+ *   instead of presenting the guess as a fact.
+ * - The **definition language** is a real selector: the reader's own
+ *   preference, changed without leaving the card, which re-runs the lookup.
  *
  * ## Every branch renders the attribution
  *
  * Wiktionary text is CC BY-SA 4.0 and the licence requires the attribution to
  * accompany the reused text, so [WIKTIONARY_ATTRIBUTION] is rendered on the
- * result AND on the empty and failure branches. The UI does not reconstruct it;
- * it prints the value the domain carries.
+ * result AND on the empty and failure branches, outside the scrolling body so
+ * it cannot scroll away.
  *
- * @param sourceWord The word being defined, rendered as a `titleSmall` label.
- * @param state Current [DefinitionPanelState] driving the body.
- * @param definitionLanguage The reader's definition language (selector value).
- * @param onDefinitionLanguageChosen A language picked in the selector.
- * @param onDismiss Invoked when the reader taps "Close".
- * @param onAddToDictionary The explicit bridge to the personal dictionary: the
- *   ONLY path from the lookup result to `dictionary_words`.
- * @param modifier Modifier applied to the outer `Surface`.
+ * ## A passage is not a dictionary entry
  *
- * ## The body is capped and scrolls; the chrome does not
+ * The lookup gate refuses anything that is not a word (see
+ * [DefinableSelection]); the card then says Define works on words and offers
+ * Translate for the same text, instead of "no definition found", which blamed
+ * the text. A word simply missing from the dictionary gets the same offer.
  *
- * A word with many senses used to grow the card until it consumed the screen,
- * pushing the Close button past the fold where the reader could not reach it: a
- * working button that was practically unusable. Desktop's result panel is capped
- * (`max-height` <= 300px) with `overflow-y-auto` for exactly this; this is the
- * Android equivalent.
- *
- * The cap is on the BODY (`heightIn(max = …)` + `verticalScroll`), never on the
- * card. The header, the language row, the attribution and the Close button sit
- * OUTSIDE the scrolling region, so they are painted whatever the definition
- * does — the body is what scrolls, the chrome does not. The attribution is a
- * licence obligation on every result, so it must not be able to scroll away.
- *
- * The cap is [definitionPanelMaxHeightPx] of the room the overlay has, not a
- * bare constant: see that function. Because it is a MAXIMUM, a one-sense
- * definition renders at its natural height and gets no empty card.
- *
- * **Anchoring**: the card is fixed at 280dp and `AnchoredOverlayBox` measures it
- *   with `onGloballyPositioned` AFTER layout. Adding the language row grows the
- *   card's measured HEIGHT, and because `AnchoredOverlayBox` holds its size in
- *   `mutableIntStateOf` read during composition, the new measurement triggers a
- *   recomposition and the anchor lands on the real card. Nothing here changes
- *   the card's WIDTH, so the horizontal clamp is unaffected — the same solution
- *   [AnchoredTranslationPanel] uses. The cap changes the measured HEIGHT of a
- *   long definition, which is the intent: the anchor is computed from the card
- *   as it will actually be drawn, not from the unbounded one.
+ * @param onAddToDictionary the ONLY path from a lookup result to the personal dictionary
+ * @param onSwitchToTranslate opens the translation of the same selection
  */
 @Composable
 fun AnchoredDefinitionPanel(
@@ -178,148 +130,73 @@ fun AnchoredDefinitionPanel(
     definitionLanguage: String = "es",
     onDefinitionLanguageChosen: (String) -> Unit = {},
     onAddToDictionary: () -> Unit = {},
+    onSwitchToTranslate: () -> Unit = {},
 ) {
-    Surface(
-        modifier = modifier.width(280.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp,
+    ReaderLookupCard(
+        mode = LookupMode.DEFINE,
+        sourceText = sourceWord,
+        closeDescription = stringResource(R.string.definition_close),
+        onModeChange = { if (it == LookupMode.TRANSLATE) onSwitchToTranslate() },
+        onClose = onDismiss,
+        modifier = modifier,
     ) {
-        val density = LocalDensity.current
-        val minBodyHeightPx = with(density) { DEFINITION_BODY_MIN_HEIGHT.roundToPx() }
-        val chromeHeightPx = with(density) { DEFINITION_CHROME_HEIGHT.roundToPx() }
-
-        // The room the overlay has. `maxHeight` is the inset content box the
-        // surface is being placed into — the same box `AnchoredOverlayBox`
-        // anchors against — so the cap follows the phone's real orientation
-        // instead of a constant chosen for one of them.
-        BoxWithConstraints {
-            val availableHeightPx = constraints.maxHeight.takeIf { it != Int.MAX_VALUE } ?: 0
-            val bodyMaxHeightPx =
-                definitionPanelMaxHeightPx(
-                    availableHeightPx = availableHeightPx,
-                    chromeHeightPx = chromeHeightPx,
-                    minHeightPx = minBodyHeightPx,
-                )
-
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-            ) {
-                // The header mark and the "Definir" action share ONE glyph
-                // (`NexoIcons.BookSearch`), so the panel is visibly the thing the
-                // action opened. The icon is tinted `onSurfaceVariant` rather than
-                // `primary`: a saturated accent glyph immediately left of the word
-                // took the eye before the word did, and in this build `primary` is
-                // a HIGH-CHROMA blue, so the eye landed on the icon as the panel's
-                // most colourful element instead of on the term being defined.
-                // The mark is orientation, not the message.
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = NexoIcons.BookSearch,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = sourceWord,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+        // The language rows only mean something for a word: a passage is never
+        // looked up, so they would describe a lookup that does not happen.
+        if (DefinableSelection.isDefinable(sourceWord)) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = wordLanguageLabel(state.wordLanguage, state.wordLanguageKnown),
+                style = MaterialTheme.typography.labelMedium,
+                color = ReaderSheetColors.TextSecondary,
+            )
+            Spacer(Modifier.height(10.dp))
+            DefinitionLanguageSelector(
+                selected = definitionLanguage,
+                onChosen = onDefinitionLanguageChosen,
+                disabled = state is DefinitionPanelState.Loading,
+            )
+        }
+        Spacer(Modifier.height(14.dp))
+        LookupBody {
+            when (state) {
+                is DefinitionPanelState.Loading, DefinitionPanelState.Idle ->
+                    LookupSkeleton(stringResource(R.string.definition_loading))
+                is DefinitionPanelState.Result -> DefinitionResultBody(state.result)
+                is DefinitionPanelState.Empty -> {
+                    val message =
+                        if (DefinableSelection.isDefinable(sourceWord)) R.string.definition_no_definition else R.string.reader_lookup_define_words_only
+                    LookupMessage(stringResource(message))
                 }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                DefinitionLanguageRow(
-                    wordLanguage = state.wordLanguage,
-                    wordLanguageKnown = state.wordLanguageKnown,
-                    definitionLanguage = definitionLanguage,
-                    onDefinitionLanguageChosen = onDefinitionLanguageChosen,
-                    disabled = state is DefinitionPanelState.Loading,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // The ONLY scrolling region: `heightIn` bounds it to a MAXIMUM,
-                // so a short definition keeps its natural height and gets no
-                // empty card, and `verticalScroll` reaches the extra senses
-                // without the card moving.
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = with(density) { bodyMaxHeightPx.toDp() })
-                            .verticalScroll(rememberScrollState()),
-                ) {
-                    when (state) {
-                        is DefinitionPanelState.Loading -> DefinitionLoadingBody()
-                        is DefinitionPanelState.Result -> DefinitionResultBody(state.result)
-                        is DefinitionPanelState.Empty ->
-                            MutedBody(stringResource(R.string.definition_no_definition))
-                        is DefinitionPanelState.Failure -> FailureBody(state.message)
-                        DefinitionPanelState.Idle ->
-                            MutedBody(stringResource(R.string.definition_loading))
-                    }
-
-                    if (state is DefinitionPanelState.Result) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TextButton(
-                            onClick = onAddToDictionary,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.definition_add_to_dictionary),
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Start,
-                            )
-                        }
-                    }
-                }
-
-                AttributionFooter()
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text(stringResource(R.string.definition_close))
-                    }
-                }
+                is DefinitionPanelState.Failure ->
+                    LookupMessage(stringResource(R.string.definition_service_failed), isError = true, detail = state.message)
             }
         }
-    }
-}
-
-/**
- * The word-language LABEL and the definition-language SELECTOR, side by side.
- *
- * The label states the word's language (or that it is unknown); the selector is
- * the reader's own preference and re-runs the lookup when changed. Separate
- * controls for separate facts.
- */
-@Composable
-private fun DefinitionLanguageRow(
-    wordLanguage: String?,
-    wordLanguageKnown: Boolean,
-    definitionLanguage: String,
-    onDefinitionLanguageChosen: (String) -> Unit,
-    disabled: Boolean,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+        when (state) {
+            is DefinitionPanelState.Result -> {
+                Spacer(Modifier.height(14.dp))
+                LookupPillButton(
+                    label = stringResource(R.string.definition_add_to_dictionary),
+                    icon = NexoIcons.ReaderSaveWord,
+                    onClick = onAddToDictionary,
+                    emphasized = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            is DefinitionPanelState.Empty -> {
+                Spacer(Modifier.height(14.dp))
+                LookupPillButton(
+                    label = stringResource(R.string.reader_lookup_translate_instead),
+                    icon = NexoIcons.ReaderTranslate,
+                    onClick = onSwitchToTranslate,
+                )
+            }
+            else -> Unit
+        }
+        Spacer(Modifier.height(12.dp))
         Text(
-            text = wordLanguageLabel(wordLanguage, wordLanguageKnown),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        DefinitionLanguageSelector(
-            selected = definitionLanguage,
-            onChosen = onDefinitionLanguageChosen,
-            disabled = disabled,
+            text = WIKTIONARY_ATTRIBUTION,
+            style = MaterialTheme.typography.labelSmall,
+            color = ReaderSheetColors.TextSecondary,
         )
     }
 }
@@ -333,13 +210,9 @@ private fun wordLanguageLabel(
     if (!wordLanguageKnown) {
         stringResource(R.string.definition_word_language_unknown)
     } else {
-        stringResource(
-            R.string.definition_word_language,
-            definitionLanguageName(wordLanguage.orEmpty()),
-        )
+        stringResource(R.string.definition_word_language, definitionLanguageName(wordLanguage.orEmpty()))
     }
 
-/** A single dropdown selector for the definition language. */
 @Composable
 private fun DefinitionLanguageSelector(
     selected: String,
@@ -347,156 +220,113 @@ private fun DefinitionLanguageSelector(
     disabled: Boolean,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    AssistChip(
-        onClick = { if (!disabled) expanded = true },
-        label = { Text(definitionLanguageName(selected)) },
-        trailingIcon = {
-            // `onSurfaceVariant`, not the chip's default `localContentColor`.
-            // At 18dp this chevron is a wide open "V" sitting immediately
-            // right of the language name inside the chip border, and at the
-            // content colour it was a third side of that box rather than an
-            // affordance — the second of the two shapes the reader read beside
-            // the word. Recessing it separates the control from the box.
-            Icon(
-                imageVector = NexoIcons.ChevronDown,
-                contentDescription = null,
-                tint = LocalContentColor.current.copy(alpha = 0.6f),
-                modifier = Modifier.size(18.dp),
-            )
-        },
-        enabled = !disabled,
-    )
-    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-        DEFINITION_LANGUAGE_OPTIONS.forEach { code ->
-            DropdownMenuItem(
-                text = { Text(definitionLanguageName(code)) },
-                onClick = {
-                    expanded = false
-                    onChosen(code)
-                },
-            )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(R.string.reader_lookup_definitions_in),
+            style = MaterialTheme.typography.labelLarge,
+            color = ReaderSheetColors.TextSecondary,
+        )
+        Spacer(Modifier.width(8.dp))
+        Box {
+            ReaderChip(label = definitionLanguageName(selected), enabled = !disabled, onClick = { expanded = true })
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                containerColor = ReaderSheetColors.SurfaceRaised,
+            ) {
+                DEFINITION_LANGUAGE_OPTIONS.forEach { code ->
+                    DropdownMenuItem(
+                        text = { Text(definitionLanguageName(code), color = ReaderSheetColors.TextPrimary) },
+                        onClick = {
+                            expanded = false
+                            onChosen(code)
+                        },
+                    )
+                }
+            }
         }
     }
 }
 
-/** The definitions with their part of speech, and the "translated" mark. */
+/** Numbered senses, each with its part of speech, after the "translated" mark when there is one. */
 @Composable
 private fun DefinitionResultBody(result: DefinitionResult) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        if (result.source == DefinitionSource.Translated) {
+    SelectionContainer {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (result.source == DefinitionSource.Translated) {
+                Text(
+                    text = stringResource(R.string.definition_translated_mark),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ReaderSheetColors.Accent,
+                )
+            }
+            result.definitions.forEachIndexed { index, item ->
+                DefinitionSense(number = index + 1, item = item, numbered = result.definitions.size > 1)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DefinitionSense(
+    number: Int,
+    item: DefinitionItem,
+    numbered: Boolean,
+) {
+    Row(verticalAlignment = Alignment.Top) {
+        if (numbered) {
+            Box(
+                modifier =
+                    Modifier
+                        .padding(top = 1.dp)
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(ReaderSheetColors.SurfaceRaised),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(text = number.toString(), style = MaterialTheme.typography.labelSmall, color = ReaderSheetColors.TextSecondary)
+            }
+            Spacer(Modifier.width(10.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            // Local val: `item.partOfSpeech` is declared in :core:domain, so the
+            // cross-module boundary blocks the smart cast after the check.
+            val partOfSpeech = item.partOfSpeech
+            if (!partOfSpeech.isNullOrBlank()) {
+                Text(
+                    text = partOfSpeech.uppercase(),
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp),
+                    color = ReaderSheetColors.Accent,
+                )
+                Spacer(Modifier.height(2.dp))
+            }
             Text(
-                text = stringResource(R.string.definition_translated_mark),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.tertiary,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-        }
-        result.definitions.forEachIndexed { index, item ->
-            if (index > 0) Spacer(modifier = Modifier.height(6.dp))
-            DefinitionItemRow(item)
-        }
-    }
-}
-
-@Composable
-private fun DefinitionItemRow(item: DefinitionItem) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Local val: `item.partOfSpeech` is a property declared in :core:domain, so
-        // the cross-module boundary blocks the implicit smart cast after the check.
-        val partOfSpeech = item.partOfSpeech
-        if (!partOfSpeech.isNullOrBlank()) {
-            Text(
-                text = partOfSpeech,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
+                text = item.text,
+                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Serif),
+                color = ReaderSheetColors.TextPrimary,
             )
         }
-        Text(
-            text = item.text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
     }
 }
 
-@Composable
-private fun DefinitionLoadingBody() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(18.dp),
-            strokeWidth = 2.dp,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = stringResource(R.string.definition_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-/**
- * The failure body. Deliberately NOT the same copy as the empty branch (ODD
- * invariant 2): this says the service failed, the empty branch says the word
- * was not found. Conflating them tells the reader their word does not exist when
- * the network was down.
- */
-@Composable
-private fun FailureBody(message: String) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(R.string.definition_service_failed),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun MutedBody(message: String) {
-    Text(
-        text = message,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
-
-/**
- * The CC BY-SA attribution. Rendered on EVERY branch — result, empty and
- * failure — because the licence requires it to accompany the reused text.
- */
-@Composable
-private fun AttributionFooter() {
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(
-        text = WIKTIONARY_ATTRIBUTION,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
-
-/** Human-readable name for a language code, falling back to the code itself. */
-@Preview(showBackground = true)
+@Preview(showBackground = true, backgroundColor = 0xFFFAF7F0)
 @Composable
 private fun AnchoredDefinitionPanelResultPreview() {
     NexoTheme(darkTheme = true) {
         AnchoredDefinitionPanel(
-            sourceWord = "juxtaposition",
+            sourceWord = "descontento",
             state =
                 DefinitionPanelState.Result(
                     result =
                         DefinitionResult(
-                            word = "juxtaposition",
-                            definitions = listOf(DefinitionItem("yuxtaposición", "sustantivo")),
-                            source = DefinitionSource.Translated,
-                            wordLanguage = "en",
+                            word = "descontento",
+                            definitions =
+                                listOf(
+                                    DefinitionItem("Disgusto o desagrado.", "sustantivo"),
+                                    DefinitionItem("Que no está satisfecho.", "adjetivo"),
+                                ),
+                            source = DefinitionSource.Native,
+                            wordLanguage = "es",
                             readerLanguage = "es",
                         ),
                 ),
@@ -506,18 +336,13 @@ private fun AnchoredDefinitionPanelResultPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, backgroundColor = 0xFFFAF7F0)
 @Composable
-private fun AnchoredDefinitionPanelEmptyPreview() {
-    NexoTheme(darkTheme = false) {
+private fun AnchoredDefinitionPanelPassagePreview() {
+    NexoTheme(darkTheme = true) {
         AnchoredDefinitionPanel(
-            sourceWord = "zzz",
-            state =
-                DefinitionPanelState.Empty(
-                    word = "zzz",
-                    wordLanguage = "en",
-                    wordLanguageKnown = false,
-                ),
+            sourceWord = "Hoy trabajé mucho en la oficina.",
+            state = DefinitionPanelState.Empty(word = "Hoy trabajé mucho en la oficina.", wordLanguage = "es", wordLanguageKnown = true),
             onDismiss = {},
             definitionLanguage = "es",
         )

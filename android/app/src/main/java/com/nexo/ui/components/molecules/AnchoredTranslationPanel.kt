@@ -1,65 +1,51 @@
 package com.nexo.ui.components.molecules
 
+import android.content.ClipData
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.translation.NoTranslationReason
 import com.nexo.presentation.viewmodel.reader.TranslationPanelState
+import com.nexo.ui.components.molecules.reader.ReaderSheetColors
 import com.nexo.ui.icons.NexoIcons
 import com.nexo.ui.theme.NexoTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
- * Anchored 280dp-wide card showing the machine translation of a selected word
- * or phrase. Read-only sibling of [AnchoredDefinitionInput] — it does NOT own
- * a text field, request focus, or show the keyboard, because a translation is
- * a result, not user input.
+ * The machine translation of the current selection, word or paragraph, in a
+ * [ReaderLookupCard] anchored to it.
  *
- * @param sourceWord The word being translated, rendered as a `titleSmall`
- *   label (the panel is anchored to it).
- * @param state Current [TranslationPanelState] driving the body. It also
- *   carries the language pair the body was built from, which is what the bar
- *   renders — one value, so the two cannot disagree (invariant 6).
- * @param onDismiss Invoked when the user taps "Close". The caller is expected
- *   to close the surrounding overlay.
- * @param onSourceChosen A source picked in the bar, or `null` for
- *   "Automatic (detect)" which clears the book's choice. Defaulted so the
- *   previews and any non-interactive call site need not supply it.
- * @param onTargetChosen A destination picked in the bar, or `null` to follow
- *   the device.
- * @param modifier Modifier applied to the outer `Surface`.
+ * Under the source text sits the [TranslationLanguageBar]: a refusal's copy
+ * ("change one of them above") points at a control that is literally above it,
+ * and the bar is fed the pair carried by [state], so the bar and the answer
+ * always describe one value.
  *
- * **Visual**: 280dp-wide `Surface`, 16dp radius, 8dp elevation. Header shows
- *   the source word; below it the [TranslationLanguageBar]; the body is either
- *   a spinner ([TranslationPanelState.Loading]), the translated `bodyLarge`
- *   text ([TranslationPanelState.Result]), or a muted message for the
- *   no-translation / error states. Footer is a single right-aligned "Close"
- *   text button.
- * **Behavior**: purely presentational; all state is hoisted.
- * **Recomposition**: recomposes when any parameter changes.
- * **Anchoring**: this card's height now includes the bar, and
- *   `AnchoredOverlayBox` measures it AFTER layout. See the note on
- *   [TranslationLanguageBar]'s placement below.
+ * The result is set in the reading serif and is selectable, so part of a long
+ * translation can be copied; "Copy" takes all of it and confirms in place
+ * rather than with a second notification.
+ *
+ * @param onSourceChosen a source picked in the bar, or `null` for "Automatic (detect)"
+ * @param onTargetChosen a destination picked in the bar, or `null` to follow the device
+ * @param onSwitchToDefine opens the definition of the same selection
  */
 @Composable
 fun AnchoredTranslationPanel(
@@ -69,124 +55,75 @@ fun AnchoredTranslationPanel(
     modifier: Modifier = Modifier,
     onSourceChosen: (String?) -> Unit = {},
     onTargetChosen: (String?) -> Unit = {},
+    onSwitchToDefine: () -> Unit = {},
 ) {
-    Surface(
-        modifier = modifier.width(280.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp,
+    ReaderLookupCard(
+        mode = LookupMode.TRANSLATE,
+        sourceText = sourceWord,
+        closeDescription = stringResource(R.string.translation_close),
+        onModeChange = { if (it == LookupMode.DEFINE) onSwitchToDefine() },
+        onClose = onDismiss,
+        modifier = modifier,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = NexoIcons.Language,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = sourceWord,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // The bar sits ABOVE the body, inside the card, so a refusal's copy
-            // ("change one of them in the bar above") points at a control that is
-            // literally above it. It is fed the pair from `state`, never a pair
-            // derived separately, so the fix and the answer describe one value.
-            //
-            // The card is fixed at 280dp and `AnchoredOverlayBox` measures it
-            // with `onGloballyPositioned` — AFTER layout. The bar therefore grows
-            // the card's measured HEIGHT, and the anchor is recomputed from that
-            // measurement. Because `AnchoredOverlayBox` holds its width/height in
-            // `mutableIntStateOf` read during composition, the new measurement
-            // triggers a recomposition and the anchor lands on the real card, not
-            // the pre-bar one. Nothing is added inside the card that changes its
-            // WIDTH, so the horizontal clamp (`computeAnchor` centring on the
-            // selection) is unaffected.
-            TranslationLanguageBar(
-                languages = state.languages,
-                onSourceChosen = onSourceChosen,
-                onTargetChosen = onTargetChosen,
-                disabled = state is TranslationPanelState.Loading,
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
+        Spacer(Modifier.height(10.dp))
+        TranslationLanguageBar(
+            languages = state.languages,
+            onSourceChosen = onSourceChosen,
+            onTargetChosen = onTargetChosen,
+            disabled = state is TranslationPanelState.Loading,
+        )
+        Spacer(Modifier.height(12.dp))
+        LookupBody {
             when (state) {
-                is TranslationPanelState.Loading -> TranslationLoadingBody()
+                is TranslationPanelState.Loading, TranslationPanelState.Idle ->
+                    LookupSkeleton(stringResource(R.string.translation_loading))
                 is TranslationPanelState.Result ->
-                    Text(
-                        text = state.translated,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                    SelectionContainer {
+                        Text(
+                            text = state.translated,
+                            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Serif),
+                            color = ReaderSheetColors.TextPrimary,
+                        )
+                    }
                 is TranslationPanelState.NoTranslation ->
-                    MutedBody(stringResource(noTranslationMessage(state.reason)))
-                is TranslationPanelState.Error -> MutedBody(state.message)
-                TranslationPanelState.Idle -> MutedBody(stringResource(R.string.translation_loading))
+                    LookupMessage(stringResource(noTranslationMessage(state.reason)))
+                is TranslationPanelState.Error -> LookupMessage(state.message, isError = true)
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.translation_close))
-                }
-            }
+        }
+        if (state is TranslationPanelState.Result) {
+            Spacer(Modifier.height(14.dp))
+            CopyTranslationButton(state.translated)
         }
     }
 }
 
 @Composable
-private fun TranslationLoadingBody() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(18.dp),
-            strokeWidth = 2.dp,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = stringResource(R.string.translation_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+private fun CopyTranslationButton(text: String) {
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    var copied by remember(text) { mutableStateOf(false) }
+    LaunchedEffect(copied) {
+        if (copied) {
+            delay(COPIED_FEEDBACK_MS)
+            copied = false
+        }
     }
-}
-
-@Composable
-private fun MutedBody(message: String) {
-    Text(
-        text = message,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    LookupPillButton(
+        label = stringResource(if (copied) R.string.reader_lookup_copied else R.string.reader_lookup_copy_translation),
+        icon = if (copied) NexoIcons.Check else NexoIcons.ReaderCopy,
+        onClick = {
+            scope.launch { clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("translation", text))) }
+            copied = true
+        },
     )
 }
 
+private const val COPIED_FEEDBACK_MS = 1_600L
+
 /**
- * The message for a refusal, keyed on WHY it is a refusal.
- *
- * Each reason names the cause and, where the reader can act, the FIX — never the
- * failure alone. [NoTranslationReason.SAME_LANGUAGE] is the case that was
- * measured wrong: it used the generic "no translation available for this text",
- * which blames the text for a problem in the language PAIR. It now says the pair
- * is the problem and how to change it.
- *
- * Exhaustive `when` with no `else`, so a new reason cannot be added without a
- * decision about its copy.
+ * The message for a refusal, keyed on WHY it is a refusal: each names the
+ * cause and, where the reader can act, the fix. Exhaustive `when` with no
+ * `else`, so a new reason cannot ship without a decision about its copy.
  */
 @StringRes
 private fun noTranslationMessage(reason: NoTranslationReason): Int =
@@ -197,22 +134,22 @@ private fun noTranslationMessage(reason: NoTranslationReason): Int =
         NoTranslationReason.INVALID_TARGET -> R.string.translation_invalid_target
     }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, backgroundColor = 0xFFFAF7F0)
 @Composable
 private fun AnchoredTranslationPanelResultPreview() {
     NexoTheme(darkTheme = true) {
         AnchoredTranslationPanel(
-            sourceWord = "francés",
-            state = TranslationPanelState.Result("French"),
+            sourceWord = "Hoy trabajé mucho en la oficina. El patrón estuvo amable.",
+            state = TranslationPanelState.Result("Today I worked a lot at the office. The boss was kind."),
             onDismiss = {},
         )
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, backgroundColor = 0xFFFAF7F0)
 @Composable
 private fun AnchoredTranslationPanelNoResultPreview() {
-    NexoTheme(darkTheme = false) {
+    NexoTheme(darkTheme = true) {
         AnchoredTranslationPanel(
             sourceWord = "francés",
             state = TranslationPanelState.NoTranslation(NoTranslationReason.SAME_LANGUAGE),
