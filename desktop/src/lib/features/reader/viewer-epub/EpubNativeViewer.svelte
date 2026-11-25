@@ -17,7 +17,13 @@
   import { createEpubZoomTheme } from '$lib/features/reader/viewer-epub/useEpubZoomTheme.svelte';
   import { createEpubBridge } from '$lib/features/reader/viewer-epub/useEpubBridge.svelte';
   import { createEpubPagination } from '$lib/features/reader/viewer-epub/useEpubPagination.svelte';
-  import type { PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
+  import { pageBoxKey, type PageBox } from '$lib/features/reader/viewer-epub/readerPagination';
+  import {
+    chapterPagePosition,
+    chapterPageTarget,
+    chapterSpanAt,
+  } from '$lib/features/reader/viewer-epub/epubChapterPages';
+  import { createPageMeasurer } from '$lib/features/reader/viewer-epub/epubPageMeasurer';
   import { resolveFootnoteNote } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
   import { resolveReaderArrowIntent } from '$lib/features/reader/viewer-epub/keyboardNav';
   import { attachFrameZoomWheel } from '$lib/features/reader/viewer-epub/epubZoomWheel';
@@ -289,7 +295,16 @@
     getPageText: () => pageText,
     setPageText: (v) => (pageText = v),
     scrollToCfi: (cfi: string) => bridge.scrollToCfi(cfi),
-    scrollToFragment: (f: string | null) => bridge.scrollToFragment(f),
+    // A document entered on a chosen page (its last, or one a chapter page
+    // number named) must not be moved to the chapter's start by the fragment
+    // the render queues for it.
+    scrollToFragment: (f: string | null) => {
+      if (paginated && pagination.isAnchored()) {
+        navigation.clearPendingFragment();
+        return;
+      }
+      return bridge.scrollToFragment(f);
+    },
     emitPreciseLocation: () => bridge.emitPreciseLocation(),
     setError: (msg: string) => (error = msg),
   });
@@ -397,7 +412,66 @@
   // Paginated mode replaces the total outright. Leaving the document count here
   // is what let the field claim "of 43" while the chapter on screen had 37
   // columns.
-  let displayTotal = $derived(paginatedMeasured ? pagination.pageCount : documentTotal);
+  // -- Whole-chapter page numbers --------------------------------------------
+  // A chapter is often several documents (title page, plate, body) and only the
+  // one on screen has columns; the field counts the CHAPTER, so the others are
+  // measured off-screen (see `epubChapterPages.ts` and `epubPageMeasurer.ts`).
+  const chapterStartSpines = $derived(
+    new Set(
+      spine
+        .getToc()
+        .map((entry) => entry.index)
+        .filter((index): index is number => typeof index === 'number' && index >= 0),
+    ),
+  );
+  function isChapterStart(position: number): boolean {
+    return chapterStartSpines.has(navigation.resolve(position).spine);
+  }
+  const chapterSpan = $derived(
+    paginatedMeasured && lastRenderedChapter >= 0
+      ? chapterSpanAt(lastRenderedChapter, documentTotal, isChapterStart)
+      : null,
+  );
+  // Everything a column count depends on. A count measured under another box or
+  // another type setting is a different number, so it is keyed apart.
+  const layoutKey = $derived(
+    pageBox
+      ? [
+          pageBoxKey(pageBox),
+          fontSize,
+          zoomTheme.zoomLevel,
+          fontFamily,
+          lineHeight,
+          letterSpacing,
+          paragraphSpacing,
+          textAlign,
+          direction,
+          hyphenation,
+          margins.top,
+          margins.right,
+          margins.bottom,
+          margins.left,
+        ].join('|')
+      : '',
+  );
+  const measuredCounts = new Map<string, number>();
+  let measuredVersion = $state(0);
+  function countFor(position: number): number | null {
+    if (position === lastRenderedChapter) {
+      return pagination.pageCount > 0 ? pagination.pageCount : null;
+    }
+    void measuredVersion;
+    return measuredCounts.get(`${layoutKey}|${position}`) ?? null;
+  }
+  const chapterPages = $derived(
+    chapterSpan
+      ? chapterPagePosition(chapterSpan, lastRenderedChapter, pagination.currentPage, countFor)
+      : null,
+  );
+
+  let displayTotal = $derived(
+    chapterPages ? chapterPages.total : paginatedMeasured ? pagination.pageCount : documentTotal,
+  );
 
   // The header reports the chapter that is ON SCREEN, not the one navigation has
   // requested. A Next at a chapter's last page bumps `currentChapterIndex`
@@ -419,6 +493,7 @@
   // 0 -> 6660 -> 3330 across five forward and three backward turns while this
   // field sat on 16 for all eight. The count existed and nobody asked for it.
   let displayCurrentPage = $derived.by(() => {
+    if (chapterPages) return chapterPages.page;
     if (paginatedMeasured) return pagination.currentPage;
     const committed =
       lastRenderedChapter >= 0 ? lastRenderedChapter : navigation.currentChapterIndex;
@@ -518,6 +593,28 @@
     // turn falls through to the chapter itself, so the reader can keep going
     // backwards across a boundary instead of hitting a dead stop.
     if (paginated && pagination.goToPrevPage()) return;
+    stepBackOneDocument();
+  }
+
+  /**
+   * The reading-order position whose next render must open on its LAST page,
+   * or null. Set by a backward step out of a chapter's first page: the reader
+   * is reading backwards, so they continue from the end of the previous
+   * chapter — not from its start, which skipped the whole chapter (measured on
+   * the real app: Prev at page 1 of a 35-page chapter landed on page 1 of the
+   * previous 3-page one).
+   */
+  let entryPage: { position: number; page: 'end' | number } | null = null;
+
+  function stepBackOneDocument(): void {
+    if (paginated && navigation.currentChapterIndex > 0) {
+      navigation.goToPrev();
+      entryPage = { position: navigation.currentChapterIndex, page: 'end' };
+      // The fragment names where the chapter STARTS; scrolling to it is exactly
+      // the jump to the front this step must not make.
+      navigation.clearPendingFragment();
+      return;
+    }
     navigation.goToPrev();
   }
   export function goToNext(): void {
@@ -568,14 +665,14 @@
         } else {
           turnQueued = false;
           if (delta === 1) navigation.goToNext();
-          else navigation.goToPrev();
+          else stepBackOneDocument();
         }
         return;
       }
       turnQueued = false;
       if (delta === 1 ? pagination.goToNextPage() : pagination.goToPrevPage()) return;
       if (delta === 1) navigation.goToNext();
-      else navigation.goToPrev();
+      else stepBackOneDocument();
     };
     requestAnimationFrame(retry);
   }
@@ -593,7 +690,28 @@
    * not measured yet, where a column number has nothing to address.
    */
   export async function handleGoToPage(page: number): Promise<boolean> {
-    if (paginatedMeasured && pagination.goToPage(page)) return true;
+    // Measured paginated mode answers in columns, ALWAYS. `goToPage` reports
+    // whether the offset moved, and a page the reader is already on does not
+    // move it; falling through then handed the same number to the document
+    // path, which read "1" as reading-order position 0 and threw the reader to
+    // the cover.
+    if (chapterSpan && chapterPages) {
+      const target = chapterPageTarget(chapterSpan, page, countFor);
+      if (!target) return false;
+      if (target.position === lastRenderedChapter) {
+        pagination.goToPage(target.page);
+        return true;
+      }
+      // Another document of the chapter: render it, entering on that page.
+      entryPage = { position: target.position, page: target.page };
+      navigation.goToChapter(target.position);
+      navigation.clearPendingFragment();
+      return true;
+    }
+    if (paginatedMeasured) {
+      pagination.goToPage(page);
+      return true;
+    }
     return navigation.handleGoToPage(page);
   }
   export function setZoom(percent: number): void {
@@ -619,6 +737,29 @@
   }
   export function getTotalPages(): number {
     return displayTotal;
+  }
+  /**
+   * Pages left in the chapter on screen, or null outside measured paginated
+   * mode. Counted against `chapterTotal` — the same total that disables Next —
+   * so "last page of the chapter" and a dead Next can never disagree.
+   *
+   * `exact` is false while documents of this chapter that are not on screen are
+   * still ahead: each counts as one page until it is laid out, so the number is
+   * only a floor (measured: a 3-page title document said "1 page left" ahead of
+   * the chapter's 53-page body).
+   */
+  export function getChapterPagesLeft(): { count: number; exact: boolean } | null {
+    if (chapterPages) {
+      return {
+        count: Math.max(0, chapterPages.total - chapterPages.page),
+        exact: chapterPages.exact,
+      };
+    }
+    if (!paginatedMeasured) return null;
+    return {
+      count: Math.max(0, pagination.chapterTotal - pagination.currentPage),
+      exact: pagination.laterDocuments === 0,
+    };
   }
   /**
    * Read-only snapshot for the opt-in diagnostic panel (`ReaderDiagnosticPanel`).
@@ -689,6 +830,65 @@
     );
     zoomTheme.cleanup();
     pagination.cleanup();
+    pageMeasurer.dispose();
+  });
+
+  // The live count of the document on screen is the authority for it: it is
+  // what the reader actually sees, after every image and font settled. It is
+  // kept so walking back into this document needs no new measure.
+  $effect(() => {
+    const count = pagination.pageCount;
+    const position = lastRenderedChapter;
+    const key = layoutKey;
+    if (!paginated || position < 0 || count <= 0 || !key) return;
+    untrack(() => {
+      const id = `${key}|${position}`;
+      if (measuredCounts.get(id) === count) return;
+      measuredCounts.set(id, count);
+      measuredVersion += 1;
+    });
+  });
+
+  // Measure the chapter's other documents off-screen, one at a time. A chapter
+  // has a handful; a book whose outline names almost nothing can have dozens, so
+  // the run is capped and the rest stay "at least".
+  const pageMeasurer = createPageMeasurer();
+  const MAX_MEASURED_DOCUMENTS = 12;
+  $effect(() => {
+    const span = chapterSpan;
+    const box = pageBox;
+    const key = layoutKey;
+    const onScreen = lastRenderedChapter;
+    if (!span || !box || !key) return;
+    const wanted: number[] = [];
+    for (let at = span.start; at <= span.end && wanted.length < MAX_MEASURED_DOCUMENTS; at++) {
+      if (at !== onScreen) wanted.push(at);
+    }
+    let cancelled = false;
+    void (async () => {
+      for (const position of wanted) {
+        const id = `${key}|${position}`;
+        if (cancelled) return;
+        if (measuredCounts.has(id)) continue;
+        let srcdoc: string | null = null;
+        try {
+          srcdoc = await render.buildMeasureSrcdoc(position);
+        } catch {
+          srcdoc = null;
+        }
+        if (cancelled) return;
+        if (!srcdoc) continue;
+        const count = await pageMeasurer.measure(srcdoc, box);
+        if (cancelled) return;
+        if (count > 0 && !measuredCounts.has(id)) {
+          measuredCounts.set(id, count);
+          measuredVersion += 1;
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   });
 
   $effect(() => {
@@ -790,7 +990,11 @@
     untrack(() => {
       if (changedChapter) {
         paginationChapter = lastRenderedChapter;
-        pagination.resetForChapter();
+        const entry = entryPage?.position === lastRenderedChapter ? entryPage.page : null;
+        entryPage = null;
+        pagination.resetForChapter(
+          entry === 'end' ? { atEnd: true } : typeof entry === 'number' ? { atPage: entry } : {},
+        );
       } else {
         pagination.restoreAfterRerender();
       }
