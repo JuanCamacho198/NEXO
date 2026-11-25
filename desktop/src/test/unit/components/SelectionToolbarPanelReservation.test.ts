@@ -10,6 +10,7 @@ import {
   type SelectionPanelState,
 } from '$lib/features/reader/highlight/selectionPanelReservation';
 import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
+import { toastQueue } from '$lib/shared/stores/ToastQueue.svelte';
 import type { TranslationOutcome } from '$lib/shared/ports/TranslationPort';
 
 // The reported defect: "cuando le doy a cualquiera de los botones de copiar,
@@ -223,15 +224,17 @@ function reservedHeight(container: HTMLElement): number {
 }
 
 describe('SelectionToolbar — feedback does not move the menu', () => {
-  it('keeps the Copy feedback panel rendered', async () => {
-    // The message must still appear. Only the RESERVATION was removed.
+  it('confirms Copy with a toast and draws nothing under the pill', async () => {
+    // The message moved to a toast at the bottom of the window: it still
+    // appears, but never hangs under the menu or covers the text.
+    const before = toastQueue.items.length;
     const { container, getByLabelText } = render(SelectionToolbar, baseProps());
 
     await fireEvent.click(getByLabelText('Copy'));
 
-    const status = container.querySelector('[role="status"]');
-    expect(status, 'the copy feedback panel stopped rendering').not.toBeNull();
-    expect(status!.textContent).toContain('Copied to clipboard');
+    expect(toastQueue.items.length).toBe(before + 1);
+    expect(toastQueue.items[toastQueue.items.length - 1].message).toBe('Copied to clipboard');
+    expect(container.querySelector('[role="status"]')).toBeNull();
   });
 
   it('does NOT reserve panel space when Copy feedback is up', async () => {
@@ -242,11 +245,8 @@ describe('SelectionToolbar — feedback does not move the menu', () => {
 
     await fireEvent.click(getByLabelText('Copy'));
 
-    // The panel is on screen...
-    expect(container.querySelector('[role="status"]')).not.toBeNull();
-    // ...and yet the reserved box and the placement are byte-for-byte the ones
-    // from before the press. Before this change both numbers moved: the box grew
-    // by 120px and the menu was lifted by the same amount.
+    // The reserved box and the placement are byte-for-byte the ones from
+    // before the press: a Copy press never moves the menu.
     expect(
       reservedHeight(container),
       'the reserved box grew for a one-line feedback message — this is the menu moving',
@@ -263,12 +263,13 @@ describe('SelectionToolbar — feedback does not move the menu', () => {
     const reservedBefore = reservedHeight(container);
     const topBefore = toolbarTop(container);
 
+    const toastsBefore = toastQueue.items.length;
     await fireEvent.click(getByLabelText('Add to Dictionary'));
 
     await vi.waitFor(() => {
-      expect(container.querySelector('[role="status"]')).not.toBeNull();
+      expect(toastQueue.items.length).toBe(toastsBefore + 1);
     });
-    expect(container.querySelector('[role="status"]')!.textContent).toContain('Saved');
+    expect(toastQueue.items[toastQueue.items.length - 1].message).toBe('Saved');
     expect(reservedHeight(container)).toBe(reservedBefore);
     expect(toolbarTop(container)).toBe(topBefore);
   });
@@ -308,39 +309,6 @@ describe('SelectionToolbar — feedback does not move the menu', () => {
 
     expect(reservedHeight(container)).toBeGreaterThan(reservedBefore);
     expect(toolbarTop(container)).not.toBe(topBefore);
-  });
-});
-
-describe('SelectionToolbar — the feedback panel stays on screen', () => {
-  it('bounds the short feedback panel by the room the pill leaves below it', async () => {
-    // The consequence of "does not move the menu": with the pill no longer
-    // lifted, a selection at the bottom edge leaves the message less room. Its
-    // ceiling has to be the space that actually exists, not the 120px result
-    // budget the placement reserves for a panel that is not there.
-    const { container, getByLabelText } = render(SelectionToolbar, {
-      ...baseProps(),
-      viewport: { width: 1024, height: 300 },
-      selectionBounds: { left: 40, top: 260, right: 160, bottom: 280 },
-      containerRect: { left: 0, top: 0, width: 600, height: 300 },
-    });
-
-    await fireEvent.click(getByLabelText('Copy'));
-
-    const status = container.querySelector('[role="status"]') as HTMLElement;
-    expect(status, 'the copy feedback panel stopped rendering').not.toBeNull();
-
-    const maxHeight = Number(
-      /max-height:\s*(-?[\d.]+)px/.exec(status.getAttribute('style') ?? '')?.[1],
-    );
-    const top = toolbarTop(container);
-    // The pill is placed `above` a bottom-anchored selection. Its bottom edge plus
-    // the panel's own top edge plus the panel's ceiling must not pass the window.
-    const pillBottom = top + 46;
-    expect(
-      pillBottom + maxHeight,
-      `the feedback panel is allowed to reach ${pillBottom + maxHeight}px in a ` +
-        `${300}px window — the message would be drawn off the bottom edge`,
-    ).toBeLessThanOrEqual(300);
   });
 });
 
@@ -428,22 +396,16 @@ describe('SelectionToolbar — the tooltip reveal follows the panel', () => {
     }
   });
 
-  it('drops the reveal for every tooltip once Copy feedback is up', async () => {
+  it('keeps the tooltip reveal after Copy: nothing is drawn under the pill', async () => {
+    // Copy's confirmation is a toast at the bottom of the window, so the band
+    // under the pill stays empty and the tooltips have nothing to collide with.
     const { container, getByLabelText } = render(SelectionToolbar, baseProps());
 
     await fireEvent.click(getByLabelText('Copy'));
 
-    // The answer is on screen...
-    expect(container.querySelector('[role="status"]')).not.toBeNull();
-    // ...and no tooltip is left revealing into the same band. The press left the
-    // button focused, so without this the `group-focus-within` span would still
-    // be at `opacity-100` on top of the message — the reported overlap.
+    expect(container.querySelector('[role="status"]')).toBeNull();
     for (const className of tooltipClasses(container)) {
-      expect(
-        className,
-        `a tooltip is still revealing while the Copy message is up: ${className}`,
-      ).not.toContain('group-focus-within:opacity-100');
-      expect(className).not.toContain('group-hover:opacity-100');
+      expect(className).toContain('group-focus-within:opacity-100');
     }
   });
 
@@ -458,35 +420,6 @@ describe('SelectionToolbar — the tooltip reveal follows the panel', () => {
     for (const className of tooltipClasses(container)) {
       expect(className).not.toContain('group-hover:opacity-100');
       expect(className).not.toContain('group-focus-within:opacity-100');
-    }
-  });
-
-  it('restores the reveal when the Copy message clears itself', async () => {
-    // The other half of "the tooltip must not stick": the focus left by the press
-    // must not keep it suppressed forever. Once the message expires and the band
-    // below the pill is empty again, the reveal is back — so the keyboard reader
-    // who stays on the button gets their tooltip when the answer is gone.
-    vi.useFakeTimers();
-    try {
-      const { container, getByLabelText } = render(SelectionToolbar, baseProps());
-
-      await fireEvent.click(getByLabelText('Copy'));
-      expect(tooltipClasses(container)[0]).not.toContain('group-focus-within:opacity-100');
-
-      await vi.advanceTimersByTimeAsync(1_600);
-
-      expect(
-        container.querySelector('[role="status"]'),
-        'the Copy message never cleared — the toolbar would keep suppressing tooltips',
-      ).toBeNull();
-      for (const className of tooltipClasses(container)) {
-        expect(
-          className,
-          `the reveal did not come back after the message cleared: ${className}`,
-        ).toContain('group-focus-within:opacity-100');
-      }
-    } finally {
-      vi.useRealTimers();
     }
   });
 });
