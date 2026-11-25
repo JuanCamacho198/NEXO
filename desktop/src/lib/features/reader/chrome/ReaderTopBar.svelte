@@ -1,21 +1,17 @@
 <script lang="ts">
+  import ALargeSmall from 'lucide-svelte/icons/a-large-small';
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
-  import Expand from 'lucide-svelte/icons/expand';
-  import Menu from 'lucide-svelte/icons/menu';
+  import Maximize from 'lucide-svelte/icons/maximize';
+  import Minimize from 'lucide-svelte/icons/minimize';
   import Search from 'lucide-svelte/icons/search';
-  import Settings from 'lucide-svelte/icons/settings';
-  import Shrink from 'lucide-svelte/icons/shrink';
-  import X from 'lucide-svelte/icons/x';
-  import {
-    CHROME_DIVIDER,
-    CHROME_ICON_ACTION,
-    CHROME_ICON_TOGGLE_IDLE,
-    chromeIconButton,
-  } from './chromeControl';
+  import TableOfContents from 'lucide-svelte/icons/table-of-contents';
+  import { CHROME_DIVIDER, CHROME_ICON_TOGGLE_IDLE, chromeIconButton } from './chromeControl';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
     title: string;
+    /** The chapter being read: the TOC button says where you are. */
+    chapterTitle?: string | null;
     showTocPanel: boolean;
     searchPanelOpen: boolean;
     showTextSettings: boolean;
@@ -31,6 +27,7 @@
 
   let {
     title,
+    chapterTitle = null,
     showTocPanel,
     searchPanelOpen,
     showTextSettings,
@@ -46,10 +43,19 @@
 
   const barTransform = $derived(visible ? 'translate-y-0' : '-translate-y-full');
 
-  const TocIcon = $derived(showTocPanel ? X : Menu);
-  const SearchIcon = $derived(searchPanelOpen ? X : Search);
-  const TextSettingsIcon = $derived(showTextSettings ? X : Settings);
-  const FullscreenIcon = $derived(isFullscreen ? Shrink : Expand);
+  // A panel's button keeps its own glyph while the panel is open: the ember
+  // wash says "open", and three identical X's no longer said which was which.
+  // The text-settings glyph is "Aa", what reading apps use for type, not a
+  // gear that reads as the app's settings.
+  const tocLabel = $derived(
+    chapterTitle
+      ? `${t('reader.tabla_contenidos')} · ${chapterTitle}`
+      : t('reader.tabla_contenidos'),
+  );
+  const FullscreenIcon = $derived(isFullscreen ? Minimize : Maximize);
+  const fullscreenLabel = $derived(
+    isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter'),
+  );
 </script>
 
 <!-- The single top bar. Bookmarks left this row for the bottom bar; row 2 is
@@ -90,37 +96,43 @@
         type="button"
         onclick={onToggleToc}
         class={chromeIconButton('toggle', showTocPanel)}
-        aria-label={showTocPanel ? t('settings.close') : t('reader.tabla_contenidos')}
-        title={showTocPanel ? t('settings.close') : t('reader.tabla_contenidos')}
+        aria-label={tocLabel}
+        title={tocLabel}
+        aria-pressed={showTocPanel}
       >
-        <TocIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
+        <TableOfContents size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
       </button>
       <button
         type="button"
         onclick={onToggleSearch}
         class={chromeIconButton('toggle', searchPanelOpen)}
-        aria-label={searchPanelOpen ? t('settings.close') : t('search.title')}
-        title={searchPanelOpen ? t('settings.close') : t('search.title')}
+        aria-label={t('search.title')}
+        title={t('search.title')}
+        aria-pressed={searchPanelOpen}
+        aria-keyshortcuts="Control+F"
       >
-        <SearchIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
+        <Search size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
       </button>
       <button
         type="button"
         onclick={onToggleTextSettings}
         class={chromeIconButton('toggle', showTextSettings)}
-        aria-label={showTextSettings ? t('settings.close') : t('reader.ajustes_texto')}
-        title={showTextSettings ? t('settings.close') : t('reader.ajustes_texto')}
+        aria-label={t('reader.ajustes_texto')}
+        title={t('reader.ajustes_texto')}
+        aria-pressed={showTextSettings}
       >
-        <TextSettingsIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
+        <ALargeSmall size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
     <div class={CHROME_DIVIDER} aria-hidden="true"></div>
     <button
       type="button"
       onclick={onToggleFullscreen}
-      class={CHROME_ICON_ACTION}
-      aria-label={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
-      title={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
+      class={chromeIconButton('toggle', isFullscreen)}
+      aria-label={fullscreenLabel}
+      title={fullscreenLabel}
+      aria-pressed={isFullscreen}
+      aria-keyshortcuts={isFullscreen ? 'Escape' : 'F'}
     >
       <FullscreenIcon size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
     </button>

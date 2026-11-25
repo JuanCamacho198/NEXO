@@ -142,15 +142,15 @@ describe('reader chrome icon migration', () => {
 
     expect(glyphs(container)).toEqual([
       'lucide-chevron-left',
-      'lucide-menu',
+      'lucide-table-of-contents',
       'lucide-search',
-      'lucide-settings',
-      'lucide-expand',
+      'lucide-a-large-small',
+      'lucide-maximize',
     ]);
     for (const icon of container.querySelectorAll('svg.lucide-icon')) expectGlyphContract(icon);
   });
 
-  it('swaps all four top bar ternaries to the close glyph when their panel is open', () => {
+  it('keeps each top bar glyph when its panel is open, marking it pressed', () => {
     const { container } = renderTopBar({
       showTocPanel: true,
       searchPanelOpen: true,
@@ -161,11 +161,13 @@ describe('reader chrome icon migration', () => {
 
     expect(glyphs(container)).toEqual([
       'lucide-chevron-left',
-      'lucide-x',
-      'lucide-x',
-      'lucide-x',
-      'lucide-shrink',
+      'lucide-table-of-contents',
+      'lucide-search',
+      'lucide-a-large-small',
+      'lucide-minimize',
     ]);
+    const pressed = container.querySelectorAll('button[aria-pressed="true"]');
+    expect(pressed).toHaveLength(4);
   });
 
   // There is no separate status strip anymore: fullscreen renders the same
@@ -180,10 +182,10 @@ describe('reader chrome icon migration', () => {
 
     expect(glyphs(container)).toEqual([
       'lucide-chevron-left',
-      'lucide-menu',
+      'lucide-table-of-contents',
       'lucide-search',
-      'lucide-settings',
-      'lucide-shrink',
+      'lucide-a-large-small',
+      'lucide-minimize',
     ]);
   });
 

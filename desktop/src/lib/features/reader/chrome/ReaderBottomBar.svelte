@@ -9,12 +9,19 @@
   import type { FitMode } from './fitZoom';
   import { CHROME_DIVIDER, CHROME_PAGER_TRACK, chromeIconButton } from './chromeControl';
   import type { MessageKey } from '$lib/shared/i18n';
+  import type { ChapterPagesLeft } from '../viewer-shared/Viewer';
   import { debugState } from '$lib/shared/debug/debugState.svelte';
 
   type Props = {
     title: string;
     /** Current chapter title when known; the bar falls back to `title` otherwise. */
     chapterTitle?: string | null;
+    /**
+     * Pages left in the chapter when the page field counts the chapter's pages
+     * (EPUB paginated mode), else null. It says what "1 / 31" counts, and how
+     * far the chapter still goes.
+     */
+    chapterPagesLeft?: ChapterPagesLeft | null;
     bookProgress: number;
     currentPdfPage: number;
     totalPdfPages: number;
@@ -54,6 +61,7 @@
   let {
     title,
     chapterTitle = null,
+    chapterPagesLeft = null,
     bookProgress,
     currentPdfPage,
     totalPdfPages,
@@ -85,6 +93,18 @@
   // The bar names where the reader is, not what they already know: the chapter
   // when known, the book title otherwise. Never empty.
   const locationLabel = $derived(chapterTitle ?? title);
+  const chapterProgressLabel = $derived.by((): string | null => {
+    if (chapterPagesLeft === null) return null;
+    const { count, exact } = chapterPagesLeft;
+    if (!exact) {
+      return count <= 1
+        ? t('reader.chapterPagesLeftAtLeastOne')
+        : t('reader.chapterPagesLeftAtLeast', { count });
+    }
+    if (count <= 0) return t('reader.chapterLastPage');
+    if (count === 1) return t('reader.chapterPagesLeftOne');
+    return t('reader.chapterPagesLeft', { count });
+  });
   // Zero bookmarks is the default state, so a bare count there is noise. The
   // count only appears once the book is known to have any.
   const hasBookmarkCount = $derived(!bookmarksLoading && bookmarkCount > 0);
@@ -158,10 +178,16 @@
     ellipsize into — a long chapter title measured 912px wide inside a 444px
     track and ran under the paging controls. Filling the track keeps the title
     one ellipsized line and the bar its 48px. -->
-  <span
-    class="w-full justify-self-start font-inter text-sm font-medium text-(--color-secondary) min-w-0 truncate"
-  >
-    {locationLabel}
+  <span class="flex w-full min-w-0 flex-col justify-self-start">
+    <span class="w-full font-inter text-sm font-medium text-(--color-secondary) min-w-0 truncate">
+      {locationLabel}
+    </span>
+    {#if chapterProgressLabel}
+      <span
+        class="min-w-0 truncate text-xs text-(--color-text-muted) tabular-nums"
+        data-testid="chapter-pages-left">{chapterProgressLabel}</span
+      >
+    {/if}
   </span>
 
   <!-- No vertical padding and no wrapping. The row used `py-2` on top of 44px
@@ -189,7 +215,13 @@
       >
         <ChevronLeft size={16} strokeWidth={2} class="h-4 w-4" aria-hidden="true" />
       </button>
-      <PageInput {currentPage} {totalPages} {t} {onGoToPage} />
+      <PageInput
+        {currentPage}
+        {totalPages}
+        {t}
+        {onGoToPage}
+        unitLabel={chapterPagesLeft !== null ? t('reader.chapterPageField') : undefined}
+      />
       <button
         type="button"
         bind:this={nextButton}

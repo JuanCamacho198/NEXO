@@ -6,7 +6,8 @@ const t = (key: string) => key;
 
 vi.mock('@tauri-apps/api/webviewWindow', () => ({
   getCurrentWebviewWindow: () => ({
-    setFullscreen: vi.fn(),
+    isFullscreen: vi.fn().mockResolvedValue(false),
+    setFullscreen: vi.fn().mockResolvedValue(undefined),
     minimize: vi.fn(),
     toggleMaximize: vi.fn(),
     close: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock('$lib/shared/api/tauriClient', () => ({
 }));
 
 import ReaderWorkspace from '$lib/features/reader/chrome/ReaderWorkspace.svelte';
+import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
 
 const makeBook = (overrides: Partial<{ format: string; filePath: string }> = {}) => ({
   id: 'book-1',
@@ -134,6 +136,21 @@ describe('ReaderWorkspace', () => {
     const root = container.querySelector('section');
     expect(root?.className).toContain('fixed inset-0');
     expect(root?.className).toContain('h-screen');
+  });
+  it('leaving the reader from fullscreen does not strand the app in it', async () => {
+    const { unmount } = render(ReaderWorkspace, {
+      activeReadingBook: makeBook(),
+      t,
+      onBackToHome: () => undefined,
+    });
+
+    await fireEvent.click(screen.getByLabelText('pdf.fullscreenEnter'));
+    await tick();
+    expect(readerState.isFullscreen).toBe(true);
+    expect(screen.getByTestId('fullscreen-exit-hint')).toBeInTheDocument();
+
+    unmount();
+    expect(readerState.isFullscreen).toBe(false);
   });
   it('renders no phantom h-16 spacer for an overlay header (U1.3)', () => {
     const { container } = render(ReaderWorkspace, {

@@ -472,6 +472,14 @@
   }
 
   const bookProgress = $derived(nav.hasEpubProgress ? nav.bookProgress : Math.round(percentage));
+  // The TOC marks where the reader IS, not the entry last clicked: an EPUB
+  // knows its chapter from the location. A PDF outline has no reliable page
+  // mapping (see `currentChapterTitle`), so it keeps the last jump.
+  const currentTocId = $derived(
+    viewer.kind === 'epub'
+      ? (nav.tocEntries[nav.currentEpubChapter]?.id ?? nav.tocNavigate?.id)
+      : nav.tocNavigate?.id,
+  );
   // ── Opt-in diagnostics ──────────────────────────────────────────────────
   // The panel is fed by polling the viewer's own read-only snapshot rather
   // than by mirroring the numbers into `$state` here. Two reasons:
@@ -981,6 +989,7 @@
 >
   <ReaderTopBar
     title={activeReadingBook?.title ?? ''}
+    chapterTitle={nav.currentChapterTitle}
     showTocPanel={nav.showTocPanel}
     {searchPanelOpen}
     {showTextSettings}
@@ -1157,6 +1166,7 @@
   <ReaderBottomBar
     title={activeReadingBook?.title ?? ''}
     chapterTitle={nav.currentChapterTitle}
+    chapterPagesLeft={viewer.getChapterPagesLeft?.() ?? null}
     {bookProgress}
     currentPdfPage={nav.currentPdfPage}
     totalPdfPages={nav.totalPdfPages}
@@ -1223,7 +1233,7 @@
 <ReaderTocPanel
   open={nav.showTocPanel}
   entries={nav.tocEntries}
-  activeId={nav.tocNavigate?.id}
+  activeId={currentTocId}
   onNavigate={handleTocNavigate}
   onClose={() => (nav.showTocPanel = false)}
   {t}
