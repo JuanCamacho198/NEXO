@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -82,18 +84,50 @@ fun SelectionOverlay(
     // and the rect is already in this content box. Locating the WebView here,
     // once, is what lets `AnchoredOverlayBox` convert every surface at exactly
     // one point. `null` means "already in the overlay's space".
-    val selectionSource = rememberSelectionSource()
+    val selectionSource = currentSelectionSource()
+    val palette = remember(customHighlightColors) { highlightPalette(customHighlightColors) }
     if (anyMenuVisible) {
         Box(modifier = Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onDismissContextMenu() })
     }
     if (selectionState is ReaderSelectionState.New && !showTagInput && !showDefinitionInput && !showColorPickerPopover && !showTranslationPanel && !showDefinitionPanel) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
-            TextSelectionMenu(selectedColor = activeHighlightColor, onColorSelected = onShowColorPickerPopover, onCopy = onCopy, onDictionary = onDictionary, onDefine = onDefine, onTranslate = onTranslate, onShare = onShare)
+        AnchoredOverlayBox(
+            selectionRect = selectionRect,
+            webView = selectionSource,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+            gapDp = SELECTION_MENU_GAP_DP,
+            modifier = modifier,
+            caret = { SelectionCaret() },
+        ) {
+            TextSelectionMenu(swatches = palette, onColorSelected = onColorSelected, onCopy = onCopy, onDictionary = onDictionary, onDefine = onDefine, onTranslate = onTranslate, onShare = onShare)
         }
     }
     if (selectionState is ReaderSelectionState.Existing && !showTagInput && !showDefinitionInput && !showColorPickerPopover && !showTranslationPanel && !showDefinitionPanel) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
-            FloatingContextMenu(selectedColor = activeHighlightColor ?: HighlightColor.YELLOW.hex, onColorSelected = onShowColorPickerPopover, onCopy = onCopy, onDefine = onDefine, onTranslate = onTranslate, onAddTag = onAddTag, onAnnotate = onAnnotate, onShare = onShare, onDelete = onDelete)
+        // Keyed by highlight so tapping another one never inherits the palette mode.
+        key(selectionState.highlight.id) {
+            AnchoredOverlayBox(
+                selectionRect = selectionRect,
+                webView = selectionSource,
+                viewportWidth = viewportWidth,
+                viewportHeight = viewportHeight,
+                gapDp = SELECTION_MENU_GAP_DP,
+                modifier = modifier,
+                caret = { SelectionCaret() },
+            ) {
+                FloatingContextMenu(
+                    selectedColor = activeHighlightColor ?: selectionState.highlight.color,
+                    swatches = palette,
+                    onColorSelected = onColorSelected,
+                    onMoreColors = onShowColorPickerPopover,
+                    onCopy = onCopy,
+                    onDefine = onDefine,
+                    onTranslate = onTranslate,
+                    onAddTag = onAddTag,
+                    onAnnotate = onAnnotate,
+                    onShare = onShare,
+                    onDelete = onDelete,
+                )
+            }
         }
     }
     if (showTagInput) {
@@ -109,19 +143,41 @@ fun SelectionOverlay(
             AnchoredDefinitionInput(word = selectedText ?: "", definition = activeDefinitionText, onDefinitionChange = onDefinitionTextChanged, onSave = onSaveDefinition, onDismiss = onDismissDefinitionInput)
         }
     }
+    // Switching between Define and Translate opens the new lookup BEFORE closing
+    // the old one: the new card may arrive a moment later (the book's language
+    // is read first), and closing first would flash the selection menu between
+    // the two. Whichever card opened last closes the other.
+    LaunchedEffect(showTranslationPanel) { if (showTranslationPanel && showDefinitionPanel) onDismissDefinition() }
+    LaunchedEffect(showDefinitionPanel) { if (showDefinitionPanel && showTranslationPanel) onDismissTranslation() }
     if (showTranslationPanel) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
+        AnchoredOverlayBox(
+            selectionRect = selectionRect,
+            webView = selectionSource,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+            gapDp = SELECTION_MENU_GAP_DP,
+            modifier = modifier,
+            caret = { SelectionCaret() },
+        ) {
             AnchoredTranslationPanel(
                 sourceWord = selectedText ?: "",
                 state = translationPanelState,
                 onDismiss = onDismissTranslation,
                 onSourceChosen = onTranslationSourceChosen,
                 onTargetChosen = onTranslationTargetChosen,
+                onSwitchToDefine = onDefine,
             )
         }
-    }
-    if (showDefinitionPanel) {
-        AnchoredOverlayBox(selectionRect = selectionRect, webView = selectionSource, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
+    } else if (showDefinitionPanel) {
+        AnchoredOverlayBox(
+            selectionRect = selectionRect,
+            webView = selectionSource,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+            gapDp = SELECTION_MENU_GAP_DP,
+            modifier = modifier,
+            caret = { SelectionCaret() },
+        ) {
             AnchoredDefinitionPanel(
                 sourceWord = definitionWord ?: selectedText ?: "",
                 state = definitionPanelState,
@@ -129,6 +185,7 @@ fun SelectionOverlay(
                 definitionLanguage = definitionLanguage,
                 onDefinitionLanguageChosen = { code -> onDefinitionLanguageChosen(code) },
                 onAddToDictionary = onAddDefinitionToDictionary,
+                onSwitchToTranslate = onTranslate,
             )
         }
     }
@@ -170,9 +227,11 @@ fun SelectionOverlay(
  * [SelectionOverlaySpace.of] treats it as "no conversion needed".
  */
 @Composable
-private fun rememberSelectionSource(): android.view.View? {
+private fun currentSelectionSource(): android.view.View? {
     val view = LocalView.current
-    return remember(view) { ReadiumOverlaySpace.findWebView(view) }
+    // Not remembered per view: turning to another chapter makes a different
+    // pager page current, and a cached WebView would be the old, off-screen one.
+    return ReadiumOverlaySpace.findWebView(view)
 }
 
 /**

@@ -107,9 +107,10 @@ fun rememberSelectionBridge(
                 val rawText: String =
                     try {
                         val jsResult =
-                            frag.evaluateJavascript(
-                                "(function(){var s=window.getSelection();return s?s.toString():'';})()",
-                            )
+                            frag
+                                .evaluateJavascript(
+                                    "(function(){var s=window.getSelection();return s?s.toString():'';})()",
+                                )?.let(::decodeJsStringResult)
                         Log.d("SelectionDebug", "evaluateJavascript result: len=${jsResult?.length ?: 0}")
                         if (jsResult.isNullOrBlank()) {
                             val fallback = sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
@@ -177,7 +178,9 @@ fun rememberSelectionBridge(
                             DebugLog.warn("Readium", "Decoration group mismatch (got ${event.group})")
                             return false
                         }
-                        val rect: RectF = event.rect ?: return false
+                        val reported: RectF = event.rect ?: return false
+                        val pageInset = frag.view?.let(ReadiumOverlaySpace::findWebView)?.let(ReadiumOverlaySpace::pageInsetTop) ?: 0
+                        val rect = ReadiumOverlaySpace.decorationRect(reported, pageInset)
                         val highlight = latestHighlights.firstOrNull { it.id == event.decoration.id }
                         if (highlight == null) {
                             val knownIds = latestHighlights.map { it.id }

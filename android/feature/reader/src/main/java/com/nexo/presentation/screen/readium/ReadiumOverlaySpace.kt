@@ -123,7 +123,30 @@ object ReadiumOverlaySpace {
     }
 
     /**
-     * Walks [root] for the first [android.webkit.WebView].
+     * Puts the rect of a tapped highlight in the same space as a selection's.
+     *
+     * Readium 3.2.0's `EpubNavigatorFragment.adjustedToViewport(RectF)` adds the
+     * page's top inset to `top` and leaves `bottom` alone. Measured on device: a
+     * highlight tap reported top 741 / bottom 669 while a selection on the same
+     * line reported 613 / 669, the gap being the 128px inset. Uncorrected, the
+     * top lands below the bottom, the "inverted" rect gets normalised, and the
+     * menu anchors onto the highlighted line instead of above it.
+     *
+     * @param pageInsetTop see [pageInsetTop]
+     */
+    fun decorationRect(
+        reported: RectF,
+        pageInsetTop: Int,
+    ): RectF = RectF(reported.left, reported.top - pageInsetTop, reported.right, reported.bottom)
+
+    /**
+     * The inset Readium adds to a decoration's top: each page's root view is
+     * padded by it, so the WebView sits exactly that far below the page top.
+     */
+    fun pageInsetTop(webView: View): Int = webView.top
+
+    /**
+     * Walks [root] for the [android.webkit.WebView] the reader is looking at.
      *
      * The WebView's own origin is the Readium viewport origin; the navigator
      * fragment's root is a `FrameLayout` that wraps it in the scroll layout, so
@@ -131,13 +154,28 @@ object ReadiumOverlaySpace {
      * padding as a second, invisible offset.
      */
     fun findWebView(root: View): android.webkit.WebView? {
-        if (root is android.webkit.WebView) return root
-        if (root is android.view.ViewGroup) {
-            for (i in 0 until root.childCount) {
-                findWebView(root.getChildAt(i))?.let { return it }
-            }
+        val all = mutableListOf<android.webkit.WebView>()
+        collectWebViews(root, all)
+        // Readium's pager keeps the neighbouring chapters loaded beside the
+        // current one, often FIRST in the hierarchy. Taking the first WebView
+        // measured the selection against an off-screen page 1080px away, and
+        // every menu pinned itself to the screen's left edge. The page the
+        // reader is looking at is the one with the most of itself on screen.
+        val visible = android.graphics.Rect()
+        return all.maxByOrNull { if (it.isShown && it.getGlobalVisibleRect(visible)) visible.width() * visible.height() else -1 }
+    }
+
+    private fun collectWebViews(
+        node: View,
+        into: MutableList<android.webkit.WebView>,
+    ) {
+        if (node is android.webkit.WebView) {
+            into += node
+            return
         }
-        return null
+        if (node is android.view.ViewGroup) {
+            for (i in 0 until node.childCount) collectWebViews(node.getChildAt(i), into)
+        }
     }
 
     /**
