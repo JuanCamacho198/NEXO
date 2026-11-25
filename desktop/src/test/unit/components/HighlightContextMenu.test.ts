@@ -18,6 +18,10 @@ const t = (key: string, params?: Record<string, string | number>) => {
     'highlight.tag': 'Tag',
     'highlight.note': 'Note',
     'reader.eliminar_destacado': 'Delete highlight',
+    'reader.translate': 'Translate',
+    'reader.define': 'Define',
+    'reader.dismissTranslation': 'Close translation',
+    'reader.dismissDefinition': 'Close definition',
   };
   let value = translations[key] ?? key;
   if (params) {
@@ -115,5 +119,62 @@ describe('HighlightContextMenu', () => {
     const menu = container.querySelector('[role="menu"]');
     await fireEvent.keyDown(menu!, { key: 'Escape' });
     expect(onClose).toHaveBeenCalled();
+  });
+
+  // The highlight menu offers the same lookups as the selection toolbar, in
+  // the same connected panel.
+  it('looks up the highlighted text and moves between translation and definition', async () => {
+    const onTranslate = vi.fn(async () => ({
+      status: 'ok' as const,
+      text: 'hola',
+      source: 'en',
+      target: 'es',
+      sourceOrigin: 'book' as const,
+    }));
+    const onDefine = vi.fn(async () => ({
+      word: 'hello',
+      definitions: [{ text: 'a greeting', partOfSpeech: null }],
+      source: 'native' as const,
+      attribution: 'Wiktionary',
+    }));
+    const { getByLabelText, getByTestId, findByText } = render(HighlightContextMenu, {
+      props: {
+        highlightId: 'hl-1',
+        position: { x: 100, y: 100 },
+        text: 'hello',
+        assignedTags: [],
+        onTranslate,
+        onDefine,
+        onCopy: () => undefined,
+        onTag: () => undefined,
+        onNote: () => undefined,
+        onDelete: () => undefined,
+        onClose: () => undefined,
+        t,
+      },
+    });
+
+    await fireEvent.click(getByLabelText('Translate'));
+    expect(await findByText('hola')).toBeTruthy();
+    await fireEvent.click(getByTestId('lookup-tab-define'));
+    expect(await findByText('a greeting')).toBeTruthy();
+    expect(onTranslate).toHaveBeenCalledOnce();
+    expect(onDefine).toHaveBeenCalledOnce();
+  });
+
+  it('hides the lookups when the host gives no lookup handlers', () => {
+    const { queryByLabelText } = render(HighlightContextMenu, {
+      highlightId: 'hl-1',
+      position: { x: 100, y: 100 },
+      assignedTags: [],
+      onCopy: () => undefined,
+      onTag: () => undefined,
+      onNote: () => undefined,
+      onDelete: () => undefined,
+      onClose: () => undefined,
+      t,
+    });
+    expect(queryByLabelText('Translate')).toBeNull();
+    expect(queryByLabelText('Define')).toBeNull();
   });
 });
