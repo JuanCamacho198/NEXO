@@ -49,6 +49,15 @@ new MutationObserver((records) => {
 eventBus.on('pagesinit', () => {
   viewer.currentScaleValue = 'page-width';
   post({ type: 'loaded', numPages: viewer.pagesCount });
+  postPage();
+});
+
+let pageTimer = null;
+const postPage = () =>
+  post({ type: 'page', page: viewer.currentPageNumber, total: viewer.pagesCount });
+eventBus.on('pagechanging', () => {
+  clearTimeout(pageTimer);
+  pageTimer = setTimeout(postPage, 200);
 });
 
 const bookUrl = new URL('/book/current.pdf', location.origin).href;

@@ -120,6 +120,8 @@ fun ReaderScreenContentHost(
             !sessionUiState.bookFilePath.isNullOrBlank() -> {
             PdfJsReaderContent(
                 bookPath = sessionUiState.bookFilePath.orEmpty(),
+                viewModel = viewModel,
+                onShowChrome = { currentOnShowChrome() },
                 modifier = modifier.fillMaxSize(),
             )
         }

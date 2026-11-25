@@ -16,15 +16,21 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.viewinterop.AndroidView
+import com.nexo.presentation.screen.ChromeEdgeTapZones
+import com.nexo.presentation.viewmodel.ReaderViewModel
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.nexo.debug.DebugLog
-import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -137,10 +143,17 @@ private class MjsAwareHandler(
 @Composable
 fun PdfJsReaderContent(
     bookPath: String,
+    viewModel: ReaderViewModel,
+    onShowChrome: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
+    val currentViewModel by rememberUpdatedState(viewModel)
+    Box(modifier = modifier) {
     AndroidView(
-        modifier = modifier,
+        modifier =
+            Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
+                viewModel.lifecycleHolder.onReadiumViewportChanged(coordinates.size.height)
+            },
         factory = { context ->
             val loader =
                 WebViewAssetLoader
@@ -190,7 +203,9 @@ fun PdfJsReaderContent(
                         this,
                         "nexoPdf",
                         setOf(ORIGIN),
-                    ) { _, message: WebMessageCompat, _, _, _ -> logMessage(message.data) }
+                    ) { _, message: WebMessageCompat, _, _, _ ->
+                        handleMessage(message.data) { currentViewModel }
+                    }
                 } else {
                     DebugLog.error(TAG, "WEB_MESSAGE_LISTENER not supported")
                 }
@@ -199,27 +214,28 @@ fun PdfJsReaderContent(
         },
         onRelease = { it.destroy() },
     )
+    if (onShowChrome != null) {
+        ChromeEdgeTapZones(onShowChrome = { onShowChrome() })
+    }
+    }
 }
 
-private fun logMessage(raw: String?) {
+private fun handleMessage(
+    raw: String?,
+    viewModel: () -> ReaderViewModel,
+) {
+    val message = parsePdfJsMessage(raw)
     val summary =
-        try {
-            val json = JSONObject(raw ?: "{}")
-            when (json.optString("type")) {
-                "selection" ->
-                    if (json.optBoolean("empty")) {
-                        "selection empty"
-                    } else {
-                        "selection page=${json.optInt("pageNumber")} textLen=${json.optString("text").length} " +
-                            "rects=${json.optJSONArray("rects")?.length() ?: 0} bounds=${json.optJSONObject("bounds")} " +
-                            "scale=${json.optDouble("scale")}"
-                    }
-                "loaded" -> "loaded numPages=${json.optInt("numPages")}"
-                "error" -> "error ${json.optString("message")}"
-                else -> "unknown type len=${raw?.length ?: 0}"
+        when (message) {
+            is PdfJsMessage.Loaded -> {
+                viewModel().lifecycleHolder.onPdfDocumentLoaded(message.numPages)
+                "loaded numPages=${message.numPages}"
             }
-        } catch (e: Exception) {
-            "unparseable len=${raw?.length ?: 0}"
+            is PdfJsMessage.Page -> "page ${message.page}/${message.total}"
+            is PdfJsMessage.Selection ->
+                if (message.empty) "selection empty" else "selection page=${message.pageNumber} textLen=${message.textLength}"
+            is PdfJsMessage.Error -> "error ${message.message}"
+            null -> "unparseable len=${raw?.length ?: 0}"
         }
     Log.d(TAG, summary)
     DebugLog.info(TAG, summary)
