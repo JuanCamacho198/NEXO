@@ -397,6 +397,10 @@
     chrome.toggleFullscreen();
     syncDebugReaderInfo();
   }
+  // No dependencies, so this runs only when the reader unmounts: going back
+  // to the library from fullscreen used to leave the title bar hidden and,
+  // now that the window follows, would leave the whole app fullscreen.
+  $effect(() => () => chrome.exitFullscreen());
   $effect(() => {
     void chrome.isFullscreen;
     void panelOpen;
@@ -858,7 +862,26 @@
     highlightMenuState.handleHighlightAction(action, id, opts);
   }
   function handleMenuCopy(): void {
+    const hadText = Boolean(highlightMenuState.highlightMenu.text);
     highlightMenuState.handleMenuCopy();
+    if (hadText) pushToast('success', t('reader.copiedToClipboard'));
+  }
+
+  /**
+   * The highlight menu looks up the highlight's own text with the SAME
+   * handlers the selection toolbar uses; they only read `text`, so the rest of
+   * the selection shape is filled with neutral values.
+   */
+  function highlightLookupData(): SelectionData {
+    const menu = highlightMenuState.highlightMenu;
+    const highlight = highlightsState.persistedHighlights.find((h) => h.id === menu.highlightId);
+    return {
+      text: menu.text,
+      bounds: menu.anchor ?? { left: 0, top: 0, right: 0, bottom: 0 },
+      rects: [],
+      pageNumber: highlight?.pageNumber ?? 0,
+      cfi: highlight?.cfi ?? null,
+    };
   }
   function handleMenuTag(): void {
     highlightMenuState.handleMenuTag();
@@ -1091,8 +1114,12 @@
           position={highlightMenuState.highlightMenu.position}
           anchor={highlightMenuState.highlightMenu.anchor}
           currentColor={highlightMenuState.highlightMenu.color}
+          text={highlightMenuState.highlightMenu.text}
           assignedTags={highlightMenuState.highlightMenu.assignedTags}
           onSelectColor={handleColorPickerSelect}
+          onTranslate={() => handleTranslate(highlightLookupData())}
+          onDefine={() => handleDefine(highlightLookupData())}
+          onChangeLanguages={handleChangeLanguages}
           onCopy={handleMenuCopy}
           onTag={handleMenuTag}
           onNote={handleMenuNote}
@@ -1121,6 +1148,7 @@
           )?.note ?? null)
         : null}
       highlightText={highlightMenuState.highlightMenu.text}
+      highlightColor={highlightMenuState.highlightMenu.color}
       onSave={handleNoteSave}
       onClose={() => (highlightMenuState.showNoteModal = false)}
       {t}
