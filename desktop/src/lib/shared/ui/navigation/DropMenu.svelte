@@ -49,7 +49,6 @@
            registration bits-ui cannot, because the five items are caller-owned
            plain buttons. `role="none"` keeps the `role="menu"` ownership
            relationship intact across this layout wrapper. -->
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
       <div class="py-1" role="none" use:menuItemSemantics onclick={closeOnPick}>
         {@render children?.()}
       </div>
