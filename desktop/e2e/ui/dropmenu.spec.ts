@@ -57,9 +57,11 @@ test('library grid: the book action menu answers the keyboard and returns focus'
   const trigger = bookMenu(page);
   await trigger.click();
 
-  // The items are the caller's five plain buttons, now tagged as menuitems.
+  // The items are the caller's six plain buttons (open, favourite, complete,
+  // edit metadata, details, remove), now tagged as menuitems; the separator
+  // before "remove" is not one.
   const items = page.getByRole('menuitem');
-  await expect(items).toHaveCount(5);
+  await expect(items).toHaveCount(6);
   await expect(items.first()).toHaveText('Open book');
 
   // Focus enters the menu on open, and the arrows walk the items in DOM order.
@@ -67,7 +69,7 @@ test('library grid: the book action menu answers the keyboard and returns focus'
   await page.keyboard.press('ArrowDown');
   await expect(items.nth(1)).toBeFocused();
   await page.keyboard.press('End');
-  await expect(items.nth(4)).toBeFocused();
+  await expect(items.nth(5)).toBeFocused();
 
   // Escape closes without activating, and focus returns to the caller's button.
   await page.keyboard.press('Escape');

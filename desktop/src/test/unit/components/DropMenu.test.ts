@@ -115,7 +115,7 @@ describe('DropMenu — children render verbatim', () => {
     for (const item of items) {
       expect(item.tagName).toBe('BUTTON');
       // The caller's own classes survived; the menu did not substitute markup.
-      expect(item.className).toContain('w-full');
+      expect(item.className).toContain('rounded-lg');
     }
     expect(items[0].parentElement?.className).toBe('py-1');
   });
