@@ -62,6 +62,14 @@
     return () => mq.removeEventListener('change', apply);
   });
 
+  // The menu lives on <body>, not under its card. A card is its own stacking
+  // layer (`isolate`, for its hover glow), so a menu inside it, however high
+  // its z-index, was painted under the next card in the list.
+  function portal(node: HTMLElement): { destroy: () => void } {
+    document.body.appendChild(node);
+    return { destroy: () => node.remove() };
+  }
+
   function updateMenuPosition(): void {
     if (!triggerEl) return;
     const rect = triggerEl.getBoundingClientRect();
@@ -206,7 +214,8 @@
         return;
       }
 
-      if (containerEl && !containerEl.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (containerEl && !containerEl.contains(target) && !menuEl?.contains(target)) {
         closeMenu(false);
       }
     };
@@ -266,6 +275,7 @@
   {#if isOpen}
     <div
       bind:this={menuEl}
+      use:portal
       id={getShelfMenuId(bookId)}
       role="menu"
       tabindex="-1"
