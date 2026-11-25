@@ -68,6 +68,9 @@ internal fun Modifier.selectionMenuPill(): Modifier =
  * A 150ms fade-and-grow, started when the menu enters composition. Read it
  * inside `graphicsLayer` so the animation runs without recomposing the menu.
  */
+private val MenuEntranceStartScale = 0.94f
+private val MenuEntranceGrow = 0.06f
+
 @Composable
 internal fun rememberMenuEntrance(): Animatable<Float, AnimationVector1D> {
     val progress = remember { Animatable(0f) }
@@ -78,7 +81,7 @@ internal fun rememberMenuEntrance(): Animatable<Float, AnimationVector1D> {
 internal fun Modifier.menuEntrance(progress: Animatable<Float, AnimationVector1D>): Modifier =
     graphicsLayer {
         alpha = progress.value
-        val scale = 0.94f + 0.06f * progress.value
+        val scale = MenuEntranceStartScale + MenuEntranceGrow * progress.value
         scaleX = scale
         scaleY = scale
     }

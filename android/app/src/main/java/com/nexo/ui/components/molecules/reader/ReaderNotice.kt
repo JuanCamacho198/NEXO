@@ -133,11 +133,14 @@ internal fun ReaderNotice(
     }
 }
 
+private val SuccessTone = Color(0xFF4ADE80)
+private val ErrorTone = Color(0xFFF87171)
+
 private fun toneColor(tone: NoticeTone): Color =
     when (tone) {
-        NoticeTone.SUCCESS -> Color(0xFF4ADE80)
+        NoticeTone.SUCCESS -> SuccessTone
         NoticeTone.INFO -> ReaderSheetColors.Accent
-        NoticeTone.ERROR -> Color(0xFFF87171)
+        NoticeTone.ERROR -> ErrorTone
     }
 
 @Preview(showBackground = true, backgroundColor = 0xFFFAF7F0)
