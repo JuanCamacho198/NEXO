@@ -19,6 +19,7 @@ type TestBook = {
   author?: string;
   progressPercentage?: number | null;
   updatedAt?: string;
+  progressUpdatedAt?: string | null;
   createdAt?: string;
   lastReadAt?: string;
   fileSizeBytes?: number;
@@ -121,6 +122,60 @@ describe('homeState section membership', () => {
     expect(continueReadingBooks.map((book) => book.id)).toEqual(['b']);
     expect(myShelfBooks.map((book) => book.id)).toEqual(['a', 'b', 'c']);
     expect(new Set([...continueReadingBooks, ...myShelfBooks].map((book) => book.id)).size).toBe(3);
+  });
+
+  it('orders continue reading by last read, not by when the book row changed', () => {
+    const books: TestBook[] = [
+      {
+        id: 'edited-recently',
+        title: 'Supercomunicadores',
+        filePath: '/books/a.epub',
+        progressPercentage: 93,
+        updatedAt: '2026-11-24T12:00:00.000Z',
+        progressUpdatedAt: '2026-11-20T12:00:00.000Z',
+      },
+      {
+        id: 'read-last',
+        title: 'Prisioneros',
+        filePath: '/books/b.epub',
+        progressPercentage: 37,
+        updatedAt: '2026-10-01T12:00:00.000Z',
+        progressUpdatedAt: '2026-11-25T09:00:00.000Z',
+      },
+      {
+        id: 'pdf-no-progress-row',
+        title: 'PDF',
+        filePath: '/books/c.pdf',
+        progressPercentage: 10,
+        updatedAt: '2026-11-22T12:00:00.000Z',
+        progressUpdatedAt: null,
+      },
+    ];
+
+    const { continueReadingBooks, myShelfBooks } = partitionHomeBooks(books);
+
+    expect(continueReadingBooks.map((book) => book.id)).toEqual([
+      'read-last',
+      'pdf-no-progress-row',
+      'edited-recently',
+    ]);
+    expect(myShelfBooks.map((book) => book.id)).toEqual([
+      'edited-recently',
+      'read-last',
+      'pdf-no-progress-row',
+    ]);
+  });
+
+  it('keeps incoming order for books with no known read time', () => {
+    const books: TestBook[] = [
+      { id: 'x', title: 'X', filePath: '/books/x.epub', progressPercentage: 5 },
+      { id: 'y', title: 'Y', filePath: '/books/y.epub', progressPercentage: 5 },
+    ];
+
+    expect(partitionHomeBooks(books).continueReadingBooks.map((book) => book.id)).toEqual([
+      'x',
+      'y',
+    ]);
   });
 });
 

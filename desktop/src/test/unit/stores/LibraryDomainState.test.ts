@@ -652,6 +652,24 @@ describe('LibraryDomainState', () => {
     expect(libraryState.books[0].totalPages).toBe(100);
   });
 
+  it('updateBookPage stamps the book row time Home reads as a PDF last read', () => {
+    const book = makeBook({ id: 'b1', updatedAt: '2026-01-01T00:00:00.000Z' });
+    libraryState.books = [book as any];
+    libraryState.updateBookPage('b1', 5, 100, '2026-11-25T10:00:00.000Z');
+    expect(libraryState.books[0].updatedAt).toBe('2026-11-25T10:00:00.000Z');
+  });
+
+  it('recordProgress mirrors a saved EPUB position so Home is current on return', () => {
+    const stale = makeBook({ id: 'b1', progressPercentage: 10 });
+    const other = makeBook({ id: 'b2', progressPercentage: 50 });
+    libraryState.books = [stale as any, other as any];
+    libraryState.recordProgress('b1', 42.5, '2026-11-25T10:00:00.000Z');
+    expect(libraryState.books[0].progressPercentage).toBe(42.5);
+    expect(libraryState.books[0].progressUpdatedAt).toBe('2026-11-25T10:00:00.000Z');
+    expect(libraryState.books[1].progressPercentage).toBe(50);
+    expect(libraryState.books[1].progressUpdatedAt).toBeUndefined();
+  });
+
   it('recordReaderOpenMetric records metric', () => {
     libraryState.recordReaderOpenMetric('epub');
     expect(mockRecordMetric).toHaveBeenCalledWith('reader_open', { feature: 'epub' });
