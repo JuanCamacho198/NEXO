@@ -117,6 +117,7 @@ fun ReaderScreenContentHost(
         BuildConfig.DEBUG &&
             PdfJsSpike.ENABLED &&
             sessionUiState.bookFormat == "pdf" &&
+            readiumPublication != null &&
             !sessionUiState.bookFilePath.isNullOrBlank() -> {
             PdfJsReaderContent(
                 bookPath = sessionUiState.bookFilePath.orEmpty(),

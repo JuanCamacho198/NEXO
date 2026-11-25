@@ -46,19 +46,35 @@ new MutationObserver((records) => {
   attributeFilter: ['style'],
 });
 
+const startPage = parseInt(new URLSearchParams(location.search).get('page'), 10) || 1;
+let reporting = false;
+
+const postPage = () =>
+  post({ type: 'page', page: viewer.currentPageNumber, total: viewer.pagesCount });
+
 eventBus.on('pagesinit', () => {
   viewer.currentScaleValue = 'page-width';
+  const target = Math.min(Math.max(startPage, 1), viewer.pagesCount);
+  viewer.currentPageNumber = target;
   post({ type: 'loaded', numPages: viewer.pagesCount });
-  postPage();
+  setTimeout(() => {
+    reporting = true;
+    post({ type: 'page', page: target, total: viewer.pagesCount });
+  }, 250);
 });
 
 let pageTimer = null;
-const postPage = () =>
-  post({ type: 'page', page: viewer.currentPageNumber, total: viewer.pagesCount });
 eventBus.on('pagechanging', () => {
+  if (!reporting) return;
   clearTimeout(pageTimer);
   pageTimer = setTimeout(postPage, 200);
 });
+
+window.nexoGoToPage = (n) => {
+  const page = Math.trunc(Number(n));
+  if (!viewer.pagesCount || !(page >= 1 && page <= viewer.pagesCount)) return;
+  viewer.currentPageNumber = page;
+};
 
 const bookUrl = new URL('/book/current.pdf', location.origin).href;
 pdfjsLib

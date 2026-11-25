@@ -1,6 +1,7 @@
 package com.nexo.presentation.screen.pdfjs
 
 import org.json.JSONObject
+import org.readium.r2.shared.publication.Locator
 
 sealed class PdfJsMessage {
     data class Loaded(
@@ -39,3 +40,16 @@ fun parsePdfJsMessage(raw: String?): PdfJsMessage? {
         else -> null
     }
 }
+
+fun pdfPageFromLocator(locator: Locator): Int? =
+    (
+        locator.locations.position
+            ?: locator.locations.fragments
+                .firstNotNullOfOrNull {
+                    it
+                        .removePrefix("#")
+                        .takeIf { f -> f.startsWith("page=") }
+                        ?.removePrefix("page=")
+                        ?.toIntOrNull()
+                }
+    )?.takeIf { it >= 1 }

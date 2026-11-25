@@ -19,8 +19,12 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.viewinterop.AndroidView
@@ -148,6 +152,21 @@ fun PdfJsReaderContent(
     modifier: Modifier = Modifier,
 ) {
     val currentViewModel by rememberUpdatedState(viewModel)
+    val startPage = remember { viewModel.sessionUiState.value.currentPdfPage + 1 }
+    var webView by remember { mutableStateOf<WebView?>(null) }
+    LaunchedEffect(webView) {
+        val target = webView ?: return@LaunchedEffect
+        viewModel.navigateToLocator.collect { locator ->
+            val page = pdfPageFromLocator(locator) ?: return@collect
+            target.evaluateJavascript("window.nexoGoToPage($page)", null)
+        }
+    }
+    LaunchedEffect(webView) {
+        val target = webView ?: return@LaunchedEffect
+        viewModel.navigateToPdfPage.collect { pageIndex ->
+            target.evaluateJavascript("window.nexoGoToPage(${pageIndex + 1})", null)
+        }
+    }
     Box(modifier = modifier) {
         AndroidView(
             modifier =
@@ -209,10 +228,15 @@ fun PdfJsReaderContent(
                     } else {
                         DebugLog.error(TAG, "WEB_MESSAGE_LISTENER not supported")
                     }
-                    loadUrl("$ORIGIN/assets/pdfjs/viewer.html")
+                    DebugLog.info(TAG, "open at page $startPage")
+                    loadUrl("$ORIGIN/assets/pdfjs/viewer.html?page=$startPage")
+                    webView = this
                 }
             },
-            onRelease = { it.destroy() },
+            onRelease = {
+                webView = null
+                it.destroy()
+            },
         )
         if (onShowChrome != null) {
             ChromeEdgeTapZones(onShowChrome = { onShowChrome() })

@@ -36,6 +36,7 @@ internal class PdfBookLoader(
     private val onErrorEvent: (UiEvent) -> Unit,
     private val onBookLoaded: (String) -> Unit,
     private val onProgressDisplay: () -> Unit,
+    private val savedPdfPage: suspend (String) -> Int = { 0 },
 ) : BookLoader,
     Clearable {
     private val _isLoading = MutableStateFlow(false)
@@ -149,11 +150,13 @@ internal class PdfBookLoader(
                     .distribution("reader_ttfp_native", bucketedLoad, readerTags)
                 Log.d(TAG, "Readium loaded PDF in ${loadTime}ms")
                 val chapters = TocBuilder.buildChaptersFromPublication(publication)
+                val startPage = savedPdfPage(bookId)
                 state.update {
                     it.copy(
                         readiumPublication = publication,
                         chapters = chapters,
                         currentChapterIndex = 0,
+                        currentPdfPage = startPage,
                         isLoading = false,
                         loadTimeMs = loadTime,
                     )

@@ -5,6 +5,7 @@ import android.util.Log
 import com.nexo.domain.repository.ReaderRepository
 import com.nexo.domain.repository.ReadingStatsRepository
 import com.nexo.domain.usecase.UpdateReadingProgressUseCase
+import com.nexo.presentation.viewmodel.reader.lifecycle.pdfStartPageIndex
 import com.nexo.testutil.MainDispatcherRule
 import com.nexo.testutil.activeUserProviderFor
 import io.mockk.coEvery
@@ -27,7 +28,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.readium.r2.shared.publication.Locator
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PdfPageReportTest {
@@ -35,7 +35,7 @@ class PdfPageReportTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val useCase = mockk<UpdateReadingProgressUseCase>(relaxed = true)
-    private val navigations = mutableListOf<Locator>()
+    private val navigations = mutableListOf<Int>()
 
     @Before
     fun setUp() {
@@ -107,6 +107,40 @@ class PdfPageReportTest {
             coVerify(exactly = 0) { useCase(any(), any(), any(), any(), any()) }
         }
 
+    @Test
+    fun `go to pdf page beyond the first emits a locator with that position`() =
+        runTest {
+            val holder = openPdf(testScheduler, this, pages = 8)
+
+            holder.goToPdfPage(6)
+            advanceUntilIdle()
+
+            assertEquals(1, navigations.size)
+            assertEquals(6, navigations.single())
+            assertEquals(6, holder.state.value.currentPdfPage)
+        }
+
+    @Test
+    fun `go to pdf page out of range emits nothing`() =
+        runTest {
+            val holder = openPdf(testScheduler, this, pages = 8)
+
+            holder.goToPdfPage(8)
+            advanceUntilIdle()
+
+            assertTrue(navigations.isEmpty())
+        }
+
+    @Test
+    fun `start page comes from pdfpage rows only`() {
+        assertEquals(4, pdfStartPageIndex("pdfpage:4"))
+        assertEquals(0, pdfStartPageIndex("readium:document.pdf"))
+        assertEquals(0, pdfStartPageIndex("epubcfi(/6/4)"))
+        assertEquals(0, pdfStartPageIndex("pdfpage:x"))
+        assertEquals(0, pdfStartPageIndex("pdfpage:-3"))
+        assertEquals(0, pdfStartPageIndex(null))
+    }
+
     private fun openPdf(
         scheduler: TestCoroutineScheduler,
         scope: CoroutineScope,
@@ -122,7 +156,7 @@ class PdfPageReportTest {
                 scope = scope,
                 onChapterChanged = {},
                 onErrorEvent = {},
-                onNavigateToLocator = { navigations += it },
+                onNavigateToPdfPage = { navigations += it },
                 mainDispatcher = StandardTestDispatcher(scheduler),
             )
         holder.loadBook("book1", "/path/book.pdf", "pdf")

@@ -667,7 +667,7 @@ internal class ReadingProgressTracker(
         val href =
             state.value.readiumPublication
                 ?.readingOrder
-                ?.getOrNull(pageIndex)
+                ?.firstOrNull()
                 ?.href
                 ?.toString()
                 ?: PDF_FALLBACK_HREF
@@ -701,3 +701,11 @@ internal class ReadingProgressTracker(
         positionsJob?.cancel()
     }
 }
+
+fun pdfStartPageIndex(cfiLocation: String?): Int =
+    cfiLocation
+        ?.takeIf { it.startsWith("pdfpage:") }
+        ?.removePrefix("pdfpage:")
+        ?.toIntOrNull()
+        ?.coerceAtLeast(0)
+        ?: 0
