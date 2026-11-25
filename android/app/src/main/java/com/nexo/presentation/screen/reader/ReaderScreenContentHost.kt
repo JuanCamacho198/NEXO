@@ -21,7 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.nexo.BuildConfig
 import com.nexo.R
+import com.nexo.presentation.screen.pdfjs.PdfJsReaderContent
+import com.nexo.presentation.screen.pdfjs.PdfJsSpike
 import com.nexo.presentation.screen.ReadiumPdfReaderContent
 import com.nexo.presentation.screen.ReadiumReaderContent
 import com.nexo.presentation.screen.readium.buildNavigatorConfig
@@ -110,6 +113,15 @@ fun ReaderScreenContentHost(
         }
         error != null -> {
             ErrorContent(error = error, onRetry = onRetry, modifier = modifier)
+        }
+        BuildConfig.DEBUG &&
+            PdfJsSpike.ENABLED &&
+            sessionUiState.bookFormat == "pdf" &&
+            !sessionUiState.bookFilePath.isNullOrBlank() -> {
+            PdfJsReaderContent(
+                bookPath = sessionUiState.bookFilePath.orEmpty(),
+                modifier = modifier.fillMaxSize(),
+            )
         }
         sessionUiState.bookFormat == "pdf" && readiumPublication != null -> {
             Box(modifier = modifier.fillMaxSize()) {

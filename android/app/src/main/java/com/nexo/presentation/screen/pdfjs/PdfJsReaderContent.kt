@@ -1,0 +1,226 @@
+package com.nexo.presentation.screen.pdfjs
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Rect
+import android.net.Uri
+import android.view.ActionMode
+import android.view.Menu
+import android.view.MenuItem
+import android.util.Log
+import android.view.View
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
+import android.webkit.RenderProcessGoneDetail
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.webkit.WebMessageCompat
+import androidx.webkit.WebViewAssetLoader
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
+import com.nexo.debug.DebugLog
+import org.json.JSONObject
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStream
+import java.io.SequenceInputStream
+
+object PdfJsSpike {
+    const val ENABLED = true
+}
+
+private const val TAG = "PdfJs"
+private const val ORIGIN = "https://appassets.androidplatform.net"
+private const val WORKER_URL_PARSE_POLYFILL =
+    "if(typeof URL.parse!==\"function\"){URL.parse=(u,b)=>{try{return new URL(u,b)}catch{return null}}};\n"
+
+private class EmptyToolbarCallback(
+    private val original: ActionMode.Callback,
+) : ActionMode.Callback2() {
+    override fun onCreateActionMode(
+        mode: ActionMode,
+        menu: Menu,
+    ): Boolean {
+        val result = original.onCreateActionMode(mode, menu)
+        menu.clear()
+        if (!toolbarSuppressionLogged) {
+            toolbarSuppressionLogged = true
+            DebugLog.info(TAG, "Native selection toolbar suppressed")
+        }
+        return result
+    }
+
+    override fun onPrepareActionMode(
+        mode: ActionMode,
+        menu: Menu,
+    ): Boolean = original.onPrepareActionMode(mode, menu).also { menu.clear() }
+
+    override fun onActionItemClicked(
+        mode: ActionMode,
+        item: MenuItem,
+    ): Boolean = original.onActionItemClicked(mode, item)
+
+    override fun onDestroyActionMode(mode: ActionMode) = original.onDestroyActionMode(mode)
+
+    override fun onGetContentRect(
+        mode: ActionMode,
+        view: View,
+        outRect: Rect,
+    ) {
+        (original as? ActionMode.Callback2)?.onGetContentRect(mode, view, outRect)
+            ?: super.onGetContentRect(mode, view, outRect)
+    }
+}
+
+private var toolbarSuppressionLogged = false
+
+private class NoToolbarWebView(
+    context: Context,
+) : WebView(context) {
+    override fun startActionMode(callback: ActionMode.Callback): ActionMode? = super.startActionMode(EmptyToolbarCallback(callback))
+
+    override fun startActionMode(
+        callback: ActionMode.Callback,
+        type: Int,
+    ): ActionMode? = super.startActionMode(EmptyToolbarCallback(callback), type)
+}
+
+private class BookPathHandler(
+    private val context: Context,
+    private val bookPath: String,
+) : WebViewAssetLoader.PathHandler {
+    override fun handle(path: String): WebResourceResponse? {
+        val stream: InputStream =
+            try {
+                if (bookPath.startsWith("content://")) {
+                    context.contentResolver.openInputStream(Uri.parse(bookPath))
+                } else {
+                    FileInputStream(File(bookPath.removePrefix("file://")))
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Cannot open book: ${e::class.java.simpleName}")
+                DebugLog.warn(TAG, "Cannot open book: ${e::class.java.simpleName}")
+                null
+            } ?: return WebResourceResponse("text/plain", "utf-8", 404, "Not Found", emptyMap(), ByteArrayInputStream(ByteArray(0)))
+        return WebResourceResponse("application/pdf", null, stream)
+    }
+}
+
+private class MjsAwareHandler(
+    private val delegate: WebViewAssetLoader.PathHandler,
+) : WebViewAssetLoader.PathHandler {
+    override fun handle(path: String): WebResourceResponse? {
+        val response = delegate.handle(path) ?: return null
+        val mime =
+            when {
+                path.endsWith(".mjs") || path.endsWith(".js") -> "text/javascript"
+                path.endsWith(".wasm") -> "application/wasm"
+                else -> return response
+            }
+        val data =
+            if (path.endsWith("pdf.worker.min.mjs")) {
+                SequenceInputStream(ByteArrayInputStream(WORKER_URL_PARSE_POLYFILL.toByteArray()), response.data)
+            } else {
+                response.data
+            }
+        return WebResourceResponse(mime, "utf-8", data)
+    }
+}
+
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+fun PdfJsReaderContent(
+    bookPath: String,
+    modifier: Modifier = Modifier,
+) {
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            val loader =
+                WebViewAssetLoader
+                    .Builder()
+                    .setDomain("appassets.androidplatform.net")
+                    .addPathHandler("/assets/", MjsAwareHandler(WebViewAssetLoader.AssetsPathHandler(context)))
+                    .addPathHandler("/book/", BookPathHandler(context, bookPath))
+                    .build()
+            NoToolbarWebView(context).apply {
+                settings.javaScriptEnabled = true
+                settings.allowFileAccess = false
+                settings.allowContentAccess = false
+                settings.blockNetworkLoads = true
+                settings.domStorageEnabled = false
+                setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                WebView.setWebContentsDebuggingEnabled(true)
+                webChromeClient =
+                    object : WebChromeClient() {
+                        override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+                            Log.d(TAG, "console ${message.messageLevel()}: ${message.message()} (${message.sourceId()}:${message.lineNumber()})")
+                            return true
+                        }
+                    }
+                webViewClient =
+                    object : WebViewClient() {
+                        override fun shouldInterceptRequest(
+                            view: WebView,
+                            request: WebResourceRequest,
+                        ): WebResourceResponse? = loader.shouldInterceptRequest(request.url)
+
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView,
+                            request: WebResourceRequest,
+                        ): Boolean = !request.url.toString().startsWith(ORIGIN)
+
+                        override fun onRenderProcessGone(
+                            view: WebView,
+                            detail: RenderProcessGoneDetail,
+                        ): Boolean {
+                            Log.e(TAG, "Render process gone, crashed=${detail.didCrash()}")
+                            DebugLog.error(TAG, "Render process gone, crashed=${detail.didCrash()}")
+                            return true
+                        }
+                    }
+                if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+                    WebViewCompat.addWebMessageListener(
+                        this,
+                        "nexoPdf",
+                        setOf(ORIGIN),
+                    ) { _, message: WebMessageCompat, _, _, _ -> logMessage(message.data) }
+                } else {
+                    DebugLog.error(TAG, "WEB_MESSAGE_LISTENER not supported")
+                }
+                loadUrl("$ORIGIN/assets/pdfjs/viewer.html")
+            }
+        },
+        onRelease = { it.destroy() },
+    )
+}
+
+private fun logMessage(raw: String?) {
+    val summary =
+        try {
+            val json = JSONObject(raw ?: "{}")
+            when (json.optString("type")) {
+                "selection" ->
+                    if (json.optBoolean("empty")) {
+                        "selection empty"
+                    } else {
+                        "selection page=${json.optInt("pageNumber")} textLen=${json.optString("text").length} " +
+                            "rects=${json.optJSONArray("rects")?.length() ?: 0} bounds=${json.optJSONObject("bounds")} " +
+                            "scale=${json.optDouble("scale")}"
+                    }
+                "loaded" -> "loaded numPages=${json.optInt("numPages")}"
+                "error" -> "error ${json.optString("message")}"
+                else -> "unknown type len=${raw?.length ?: 0}"
+            }
+        } catch (e: Exception) {
+            "unparseable len=${raw?.length ?: 0}"
+        }
+    Log.d(TAG, summary)
+    DebugLog.info(TAG, summary)
+}
