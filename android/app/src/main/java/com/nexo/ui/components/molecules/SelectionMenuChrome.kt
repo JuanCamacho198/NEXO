@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import com.nexo.R
 import com.nexo.domain.model.HighlightColor
 import com.nexo.ui.components.molecules.reader.ReaderSheetColors
-import java.util.Locale
 
 /** The two floating menus share the reader sheets' palette, so they read as part of the same reader. */
 internal object SelectionMenuColors {
@@ -237,7 +236,9 @@ internal fun swatchDescription(hex: String): String {
             HighlightColor.ORANGE -> stringResource(R.string.highlight_filter_orange)
             HighlightColor.RED -> stringResource(R.string.highlight_filter_red)
         }
-    return stringResource(R.string.reader_highlight_in_color, name.lowercase(Locale.getDefault()))
+    // Invariant lowercase: a locale-aware one would make the label depend on a
+    // non-observable read, and Compose lint rejects that in a composable.
+    return stringResource(R.string.reader_highlight_in_color, name.lowercase())
 }
 
 internal fun hexToColor(hex: String): Color =
