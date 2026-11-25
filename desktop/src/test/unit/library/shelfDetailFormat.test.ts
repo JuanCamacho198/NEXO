@@ -74,7 +74,14 @@ describe('shelfDetailFormat pure helpers', () => {
     ).toBe('shelf.monthsAgo {"n":2}');
     expect(
       formatRelativeDate(new Date(now.getTime() - 400 * 24 * 60 * 60 * 1000).toISOString(), now, t),
-    ).toBe('shelf.yearsAgo {"n":1}');
+    ).toBe('shelf.yearAgo');
+    // One of a unit is singular: "Hace 1 mes", never "Hace 1 meses".
+    expect(
+      formatRelativeDate(new Date(now.getTime() - 35 * 24 * 60 * 60 * 1000).toISOString(), now, t),
+    ).toBe('shelf.monthAgo');
+    expect(
+      formatRelativeDate(new Date(now.getTime() - 800 * 24 * 60 * 60 * 1000).toISOString(), now, t),
+    ).toBe('shelf.yearsAgo {"n":2}');
   });
 
   it('getLanguageName fallback toUpperCase and map', () => {

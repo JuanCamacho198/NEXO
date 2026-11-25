@@ -250,9 +250,24 @@ class LibraryDomainState {
   promoteBookForReading(bookId: string): void {
     this.books = promoteBookForReading(this.books, bookId);
   }
-  updateBookPage(bookId: string, page: number, total: number): void {
+  // The page change also stamps the book row in the database (`updated_at`),
+  // which is what Home reads as a PDF's last-read time.
+  updateBookPage(bookId: string, page: number, total: number, atIso?: string): void {
+    const updatedAt = atIso ?? new Date().toISOString();
     this.books = this.books.map((b) =>
-      b.id === bookId ? { ...b, currentPage: page, totalPages: total } : b,
+      b.id === bookId ? { ...b, currentPage: page, totalPages: total, updatedAt } : b,
+    );
+  }
+  /**
+   * Mirror a saved EPUB position into the loaded list, so Home shows the new
+   * progress and "last read" on return instead of the boot-time snapshot (the
+   * list is otherwise only reloaded on launch, sign-in and imports).
+   */
+  recordProgress(bookId: string, percentage: number, atIso: string): void {
+    this.books = this.books.map((b) =>
+      b.id === bookId
+        ? { ...b, progressPercentage: percentage, progressUpdatedAt: atIso }
+        : b,
     );
   }
   recordReaderOpenMetric(format: string): void {

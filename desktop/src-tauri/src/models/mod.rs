@@ -411,6 +411,12 @@ pub struct LibraryBookDto {
     /// here. Consumers treat an empty path as "not a real book".
     #[serde(default)]
     pub file_path: String,
+    /// When the reading position last moved (`reading_progress.updated_at`),
+    /// i.e. when the book was last read. `updated_at` is the book ROW's time —
+    /// an import or a metadata edit — and read as "last read" it said "a month
+    /// ago" for a book read today.
+    #[serde(default)]
+    pub progress_updated_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

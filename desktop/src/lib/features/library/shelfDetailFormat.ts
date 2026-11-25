@@ -67,8 +67,16 @@ export function formatRelativeDate(iso: string, now: Date, t: Translator): strin
     if (diffDays === 1) return t('shelf.yesterday' as MessageKey);
     if (diffDays < 7) return t('shelf.daysAgo' as MessageKey, { n: diffDays });
     if (diffDays < 30) return t('shelf.weeksAgo' as MessageKey, { n: Math.floor(diffDays / 7) });
-    if (diffDays < 365) return t('shelf.monthsAgo' as MessageKey, { n: Math.floor(diffDays / 30) });
-    return t('shelf.yearsAgo' as MessageKey, { n: Math.floor(diffDays / 365) });
+    if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return months === 1
+        ? t('shelf.monthAgo' as MessageKey)
+        : t('shelf.monthsAgo' as MessageKey, { n: months });
+    }
+    const years = Math.floor(diffDays / 365);
+    return years === 1
+      ? t('shelf.yearAgo' as MessageKey)
+      : t('shelf.yearsAgo' as MessageKey, { n: years });
   } catch {
     return '';
   }

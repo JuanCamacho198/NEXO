@@ -433,7 +433,8 @@ pub fn list_library_books(repo: &LibraryRepository) -> AppResult<Vec<LibraryBook
                 b.publication_date,
                 (SELECT MAX(user_deleted) FROM book_covers bc2 WHERE bc2.book_id = b.id) AS cover_user_deleted,
                 brs.status AS reading_status,
-                b.file_path
+                b.file_path,
+                rp.updated_at AS progress_updated_at
          FROM books b
          LEFT JOIN reading_progress rp
            ON rp.book_id = b.id
@@ -480,6 +481,7 @@ pub fn list_library_books(repo: &LibraryRepository) -> AppResult<Vec<LibraryBook
             cover_user_deleted: row.get(15)?,
             reading_status: sql_text::text_opt(row, 16)?,
             file_path: sql_text::text(row, 17)?,
+            progress_updated_at: sql_text::text_opt(row, 18)?,
         })
     })?;
 
