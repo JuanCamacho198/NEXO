@@ -1223,6 +1223,22 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * PDF highlight geometry (P3-T1 of `android-pdfjs-phase3-highlights`).
+     *
+     * Two nullable columns, no table rebuild: `page` (1-based, PDF only) and `rect_json`
+     * (the approved `{"v":1,"rects":[…]}`, page-relative CSS px at scale 1). Every existing
+     * row migrates with both NULL, which is exactly the "EPUB highlight / legacy PDF row"
+     * state the readers and the sync tolerate, so old highlights keep opening untouched.
+     */
+    val MIGRATION_37_38 =
+        object : Migration(37, 38) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE highlights ADD COLUMN page INTEGER")
+                connection.execSQL("ALTER TABLE highlights ADD COLUMN rect_json TEXT")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -1261,5 +1277,6 @@ object AppDatabaseMigrations {
             MIGRATION_34_35,
             MIGRATION_35_36,
             MIGRATION_36_37,
+            MIGRATION_37_38,
         )
 }

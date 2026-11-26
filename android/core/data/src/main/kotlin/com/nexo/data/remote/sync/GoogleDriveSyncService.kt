@@ -688,6 +688,8 @@ private fun com.nexo.data.local.entity.HighlightEntity.toDomain(): com.nexo.doma
         locatorJson = locatorJson,
         type = type,
         tag = tag,
+        page = page,
+        rects = com.nexo.data.sync.HighlightRectCodec.decode(rectJson),
     )
 
 private fun com.nexo.domain.model.Highlight.toEntity(): com.nexo.data.local.entity.HighlightEntity =
@@ -703,6 +705,8 @@ private fun com.nexo.domain.model.Highlight.toEntity(): com.nexo.data.local.enti
         locatorJson = locatorJson,
         type = type,
         tag = tag,
+        page = page,
+        rectJson = com.nexo.data.sync.HighlightRectCodec.encode(rects),
     )
 
 private fun com.nexo.data.local.entity.BookmarkEntity.toDomain(): com.nexo.domain.model.Bookmark =

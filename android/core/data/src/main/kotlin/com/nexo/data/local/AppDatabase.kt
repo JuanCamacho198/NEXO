@@ -50,7 +50,7 @@ import com.nexo.data.local.entity.TranslationCacheEntity
         TranslationCacheEntity::class,
         DefinitionCacheEntity::class,
     ],
-    version = 37,
+    version = 38,
     exportSchema = true,
 )
 @TypeConverters(NotificationConverters::class)

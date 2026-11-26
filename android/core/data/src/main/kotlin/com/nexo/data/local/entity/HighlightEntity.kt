@@ -41,4 +41,13 @@ data class HighlightEntity(
     val tag: String? = null,
     @ColumnInfo(name = "user_id")
     val userId: String = "",
+    /**
+     * Page the highlight starts on, **1-based**. PDF only; null for EPUB and for PDF rows
+     * written before geometry existed. `cfi_range` keeps its own 0-based `pdfpage:N` convention.
+     */
+    @ColumnInfo(name = "page")
+    val page: Int? = null,
+    /** Approved `{"v":1,"rects":[…]}` payload — page-relative CSS px at scale 1. Null without geometry. */
+    @ColumnInfo(name = "rect_json")
+    val rectJson: String? = null,
 )
